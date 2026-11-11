@@ -826,7 +826,7 @@ export function Now(props: ViewProps) {
             <section className="next-up">
               <p className="eyebrow">Up Next</p>
               {editing ? (
-                <button className="next-song" aria-label={`Edit upcoming song ${next.title} and its transition`} onClick={() => setView('Edit')}>
+                <button className="next-song" onClick={() => setView('Edit')}>
                   <b>{next.title}</b>
                   <span>{next.artist}</span>
                   <RequestTag item={next} />

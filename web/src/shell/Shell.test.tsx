@@ -145,7 +145,7 @@ describe('requests', () => {
   it('open from anywhere, and close again', async () => {
     backend();
     render(<App />);
-    fireEvent.click((await nav()).getByRole('button', { name: 'Requests' }));
+    fireEvent.click((await nav()).getByRole('button', { name: 'Requests: Request a song' }));
     const drawer = await screen.findByRole('dialog', { name: 'Requests' });
     expect(within(drawer).getByRole('combobox', { name: 'Request a song' })).toBeInTheDocument();
     fireEvent.click(within(drawer).getByRole('button', { name: 'Close Requests' }));
@@ -155,7 +155,7 @@ describe('requests', () => {
   it('show how many are waiting', async () => {
     backend({ 'GET /requests': { requests: [{ id: 1, song_id: 9, title: 'Wanted', artist: 'A', status: 'waiting', available: 1 }] } });
     render(<App />);
-    expect(await (await nav()).findByRole('button', { name: 'Requests, 1 waiting' })).toBeInTheDocument();
+    expect(await (await nav()).findByRole('button', { name: 'Requests: Request a song, 1 waiting' })).toBeInTheDocument();
   });
 
   it('open with R', async () => {

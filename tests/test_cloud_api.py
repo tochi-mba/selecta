@@ -337,13 +337,18 @@ def test_cloud_settings_refuse_local_or_incomplete_configuration(monkeypatch):
         CloudSettings.from_environment()
 
 
-def test_serve_defaults_to_local_and_cloud_does_not_start_local_workers(monkeypatch):
+def test_serve_defaults_to_local_and_cloud_does_not_start_local_workers(monkeypatch, tmp_path):
     monkeypatch.delenv("SELECTA_MODE", raising=False)
     assert current_mode() is Mode.LOCAL
     local_app = object()
     import selecta.homes
 
-    monkeypatch.setattr(api, "load_settings", lambda: type("S", (), {"home": "temporary"})())
+    settings = type(
+        "S",
+        (),
+        {"home": "temporary", "db_path": tmp_path / "selecta.sqlite"},
+    )()
+    monkeypatch.setattr(api, "load_settings", lambda: settings)
     monkeypatch.setattr(selecta.homes, "gather_if_needed", lambda _home: None)
     monkeypatch.setattr(api, "create_app", lambda **_kwargs: local_app)
     assert api.serve() is local_app

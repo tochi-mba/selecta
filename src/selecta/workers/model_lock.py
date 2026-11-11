@@ -21,7 +21,7 @@ import sys
 import tempfile
 import urllib.request
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import BinaryIO
 
@@ -40,7 +40,7 @@ class ModelLockError(RuntimeError):
 @dataclass(frozen=True)
 class PinnedModel:
     model_id: str
-    url: str
+    url: str = field(repr=False)
     path: str
     sha256: str
     size: int
