@@ -26,7 +26,8 @@ CHECK_LINE = re.compile(
     r"^- \[( |x)\] \*\*(LX-0(\d{3})-0[1-8]) - [^*]+\*\* \*\*Acceptance:\*\* .+? "
     r"\*\*Verification:\*\* .+? \*\*Implementation:\*\* ([^;]+); \*\*Independently Verified:\*\* "
     r"(Yes|No); \*\*Owner:\*\* [^;]+; \*\*Implementing PR/SHA:\*\* [^;]+; "
-    r"\*\*Evidence/reviewer:\*\* .+$"
+    # ticked lines also cite Evidence:, which checklist_evidence.py requires
+    r"(?:\*\*Evidence:\*\* .+?; )?\*\*Evidence/reviewer:\*\* .+$"
 )
 ADR_LINE = re.compile(
     r"^\d\. \*\*(LX-0\d{3}-0[1-8]) - [^*]+\*\* \*\*Acceptance:\*\* .+? "
