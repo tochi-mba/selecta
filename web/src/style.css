@@ -4,7 +4,8 @@ body {
   margin: 0;
   background: var(--surface-base);
   color: var(--ink);
-  font: 16px/1.5 var(--body);
+  /* MP-0275-07: rem, not px, so the browser's text size setting scales the page; 16px by default */
+  font: var(--text-md)/1.5 var(--body);
   min-height: 100vh;
 }
 button, input, select { font: inherit; color: inherit; }
@@ -496,10 +497,10 @@ kbd { font: 0.82rem var(--mono); background: var(--surface-control); border: 1px
 .coming-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-bottom: var(--space-2); }
 .coming-words { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: var(--space-hair); }
 .coming-words b { color: var(--request); }
-.coming-words span { font-size: 13px; color: var(--soft); }
-.coming-progress { font-size: 13px; color: var(--request); white-space: nowrap; }
+.coming-words span { font-size: 0.8125rem; color: var(--soft); }
+.coming-progress { font-size: 0.8125rem; color: var(--request); white-space: nowrap; }
 .coming-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-dense); }
-.seam-too-soon { margin: var(--space-1) 0; font-size: 13px; }
+.seam-too-soon { margin: var(--space-1) 0; font-size: 0.8125rem; }
 
 .request-force { margin-top: var(--space-dense); gap: var(--space-dense); }
 .bridge-finder { grid-column: 1 / -1; margin-top: var(--space-2); padding: var(--space-snug); border: 1px solid var(--line); border-radius: var(--radius); display: grid; gap: var(--space-2); }
@@ -508,8 +509,8 @@ kbd { font: 0.82rem var(--mono); background: var(--surface-control); border: 1px
 .bridge-options > li { padding: var(--space-snug); border: 1px solid var(--line); border-radius: var(--radius); display: grid; gap: var(--space-dense); }
 .bridge-options > li.best { border-color: var(--request); }
 .bridge-title { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
-.bridge-title span:last-child { color: var(--soft); font-size: 13px; }
-.bridge-chain { margin: 0; font-size: 13px; color: var(--soft); overflow-wrap: anywhere; }
+.bridge-title span:last-child { color: var(--soft); font-size: 0.8125rem; }
+.bridge-chain { margin: 0; font-size: 0.8125rem; color: var(--soft); overflow-wrap: anywhere; }
 .bridge-step { color: var(--ink); }
 .bridge-wanted { color: var(--request); font-weight: 600; }
 

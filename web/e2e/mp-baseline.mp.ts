@@ -352,10 +352,10 @@ test("dialogs 'fx.overlay.delete_mix' and 'fx.overlay.delete_draft'", async ({ p
 test("replace dialogs 'fx.overlay.replace_mix', 'fx.overlay.library_replace' and 'fx.overlay.replace_with_draft'", async ({ page, request }) => {
   // each one asks only while something is playing, so the music starts first and every page after
   // it is reached in-app, without a reload that would stop it
-  const made = await request.post('/api/drafts', { data: { name: 'A draft that would replace the playing mix', copy_current: false } });
+  await resetMix(request, STRESS_MIX);
+  const made = await request.post('/api/drafts', { data: { name: 'A draft that would replace the playing mix', copy_current: true } });
   expect(made.ok()).toBe(true);
   const id = (await made.json()).id as number;
-  await request.post(`/api/drafts/${id}/songs`, { data: { song_id: 19 } }).catch(() => null);
   try {
     await playListen(page, request);
 
@@ -368,7 +368,7 @@ test("replace dialogs 'fx.overlay.replace_mix', 'fx.overlay.library_replace' and
 
     await page.setViewportSize({ width: 1280, height: 800 });
     await go(page, 'Library', '/library');
-    await page.locator('.library-rows .song-row').first().getByRole('button', { name: 'Start a mix' }).click();
+    await page.locator('.library-rows').getByRole('button', { name: 'Start a mix' }).first().click();
     const library = page.getByRole('dialog', { name: 'Replace your current mix?' });
     await expect(library).toBeVisible();
     await sweep(page, 'fx.overlay.library_replace', 'overlay.library.replace_mix');
@@ -484,6 +484,9 @@ test('every measured P0 and P1 defect is in the defect register', async () => {
   const files = ['fx.listen.playing', 'fx.handoff.mini', 'fx.stage', 'fx.edit.inspector', 'fx.studio', 'fx.export.dialog',
     'fx.overlay.clear_mix', 'fx.requests.bridge', 'fx.fail.offline', 'fx.fail.library', 'fx.overlay.palette', 'fx.overlay.help',
     'fx.overlay.glossary', 'fx.overlay.activity', 'fx.overlay.shaping', 'fx.overlay.song_details', 'fx.overlay.more',
+    'fx.studio.open', 'fx.toast', 'fx.overlay.delete_mix', 'fx.overlay.delete_draft', 'fx.overlay.replace_mix',
+    'fx.overlay.library_replace', 'fx.overlay.replace_with_draft', 'fx.overlay.library_batch', 'fx.overlay.folder_stop',
+    'fx.overlay.folder_relink', 'fx.overlay.backup_restore', 'fx.overlay.lucy_settings', 'fx.overlay.lucy_conversations',
     ...INVENTORY.routes.map((route) => route.id)];
   const found = new Map<string, Defect & { fixture: string; widths: Set<number> }>();
   const coverage: Record<string, number> = {};

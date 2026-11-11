@@ -40,7 +40,7 @@
 - [x] T0012 - Create render/request/stem fixtures for pending, ready, failed, canceled, stale and storage-blocked operations. **Evidence (2026-11-10):** `web/src/test/operations.ts` holds render, request, stem and export fixtures for all six states (pending, ready, failed, canceled, stale, storage-blocked); `web/src/test/operations.test.ts` (7 tests, operation fixtures (T0012)) checks each one means what its name says. Passed 2026-11-10 (vitest).
 - [x] T0013 - Set up a browser E2E test harness and deterministic clock/network failure injection.
  **Evidence (2026-11-11):** `web/e2e/harness.ts` (`fixClock`, `failNetwork`); `web/e2e/harness.e2e.ts` ("the clock starts at a known moment and only moves when the spec moves it", "a lost connection is noticed and recovered from on the fake clock, with no real waiting", "a server fault and a full disk reach the page as what they are") passed 2026-11-11 (3 passed).
-- [ ] T0014 - Set up accessible component tests, visual-regression baseline and real Web Audio browser smoke tests.
+- [ ] T0014 - Set up accessible component tests, visual-regression baseline and real Web Audio browser smoke tests. **Needs a person:** the owner approves and commits the baseline images. **Implementation:** Implemented; browser check pending (`web/e2e/visual-baseline.e2e.ts`, "visual baseline: <page> at <width>px in <theme>", captured with `pnpm e2e:baseline`) (2026-11-11).
  **Needs a person:** the owner approves the visual-regression baseline images that `web/e2e/visual.e2e.ts` captures; accessible component tests and real Web Audio smoke tests already exist (checked 2026-11-11).
 - [x] T0015 - Record manual listening procedure and blind A/B benchmark separate from renderer assertions.
 - [x] T0016 - Document how changed DOM text/selectors can be updated without removing behavioural coverage.
@@ -86,7 +86,7 @@
 - [x] T0040 - Define keyboard-equivalent actions for every drag/reorder and every waveform or grid operation.
 - [x] T0041 - Implement screen-reader-friendly live status announcements without noisy high-frequency narration.
 - [x] T0042 - Ensure visible focus is never obscured by sticky navigation or sheets.
-- [ ] T0043 - Audit form validation, meaningful errors, non-colour state and reduced motion.
+- [x] T0043 - Audit form validation, meaningful errors, non-colour state and reduced motion. **Evidence (2026-11-11):** audit `docs/engineering/form-validation-audit.md`; fixes in `views/Drafts.tsx`, `views/Listening.tsx`, `views/LucySettings.tsx`, `views/WorkshopPanels.tsx`; `web/src/views/formValidationAudit.test.tsx` ("every control marked invalid in the app also points at the words that say why" and 4 per-page tests) passed 2026-11-11 (vitest).
 - [ ] T0044 - Run keyboard-only, NVDA/VoiceOver and 200/400% zoom journeys; log fixes with evidence. **Needs a person:** keyboard and zoomed layouts are tested automatically; NVDA and VoiceOver journeys need a person with those screen readers (checked 2026-11-10).
 - [x] T0045 - Approve ADR-0023 accessibility standards. **Evidence (2026-11-10):** The owner accepted ADR-0023 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 

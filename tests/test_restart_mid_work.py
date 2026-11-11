@@ -62,8 +62,9 @@ def test_an_edit_survives_a_restart_and_its_retry_cannot_apply_twice(tmp_path):
     second = _server(tmp_path)
     assert _order(second) == [1, 2, 3]
     retry = second.post("/api/mix/songs", json={"song_id": 3}, headers=headers)
-    assert retry.status_code == 409
-    assert retry.json()["code"] == "mix_changed"
+    # T0094/T0256: the first answer is kept on disk, so the retry gets it back instead of a conflict
+    # or a second insert
+    assert retry.status_code == 200
     assert _order(second) == [1, 2, 3]
 
 
