@@ -19,7 +19,7 @@ async function showProblem(page: Page, words = 'Something to notice.') {
   await expect(page.locator('.toast-row').filter({ hasText: words })).toBeVisible();
 }
 
-type Frame = { kind: string; head: string; body: string; foot: string | null; titleLeft: number; bodyLeft: number; radii: string[]; panel: DOMRect };
+type Frame = { kind: string; head: string; body: string; foot: string | null; titleLeft: number; bodyLeft: number; radii: string[]; panel: DOMRect; area: DOMRect };
 
 async function frame(page: Page): Promise<Frame> {
   await settle(page);
@@ -35,6 +35,8 @@ async function frame(page: Page): Promise<Frame> {
       bodyLeft: body.getBoundingClientRect().left + parseFloat(getComputedStyle(body).paddingLeft),
       radii: [style.borderTopLeftRadius, style.borderTopRightRadius, style.borderBottomRightRadius, style.borderBottomLeftRadius],
       panel: panel.getBoundingClientRect().toJSON(),
+      // the space the overlay may use: the window, less any bars it keeps on screen (overlay-keeps-chrome)
+      area: panel.parentElement!.getBoundingClientRect().toJSON(),
     };
   });
 }
@@ -72,10 +74,12 @@ test('MP-0295-01 dialog, sheet, drawer and palette share header, body, footer in
       expect(reading.body, `${at}: body inset`).toBe(base.body);
       if (reading.foot) expect(reading.foot, `${at}: footer inset`).toBe(base.head);
       expect(Math.abs(reading.titleLeft - reading.bodyLeft), `${at}: title and body start apart`).toBeLessThanOrEqual(1);
-      // a panel's free corners are all the same; a corner on a screen edge may be square
+      // a panel's free corners are all the same; a corner on an edge of its space (the screen, or the
+      // bars a sheet that keeps the chrome sits against) may be square
       const onEdge = (corner: number) => {
         const { left, right, top, bottom } = reading.panel;
-        const edges = [[top <= 0.5, left <= 0.5], [top <= 0.5, right >= width - 0.5], [bottom >= height - 0.5, right >= width - 0.5], [bottom >= height - 0.5, left <= 0.5]][corner];
+        const area = { left: Math.max(reading.area.left, 0), top: Math.max(reading.area.top, 0), right: Math.min(reading.area.right, width), bottom: Math.min(reading.area.bottom, height) };
+        const edges = [[top <= area.top + 0.5, left <= area.left + 0.5], [top <= area.top + 0.5, right >= area.right - 0.5], [bottom >= area.bottom - 0.5, right >= area.right - 0.5], [bottom >= area.bottom - 0.5, left <= area.left + 0.5]][corner];
         return edges.some(Boolean);
       };
       const free = reading.radii.filter((_, corner) => !onEdge(corner));
