@@ -380,7 +380,7 @@ function TransitionCountdown({
             {index === 0 && <i style={{ width: `${countdown.barProgress * 100}%` }} />}
           </span>
         ))}
-        <b />
+        <i className="countdown-end" />
       </div>
       <div className="countdown-meta">
         {countdown.aligned && <span>Bar {countdown.barNumber} · </span>}

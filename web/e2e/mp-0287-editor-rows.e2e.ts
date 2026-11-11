@@ -106,7 +106,9 @@ test('MP-0287-04 selected, focused, locked, playing and pending each have their 
   await page.goto('/listen');
   await page.getByRole('button', { name: 'Play', exact: true }).first().click();
   await expect.poll(async () => (await audioClock(page))[0] ?? 0).toBeGreaterThan(0.2);
-  await open(page, 1440);
+  // inside the app, as the rail would, so the song keeps playing (a page load would stop it)
+  await page.evaluate(() => { history.pushState({}, '', '/mix/current/edit'); window.dispatchEvent(new PopStateEvent('popstate')); });
+  await expect(page.locator('.timeline .song').first()).toBeVisible();
   const rows = page.locator('.timeline > .song');
   await rows.nth(1).locator('.song-select').click();
   const more = rows.nth(2).getByRole('button', { name: /More for/ });

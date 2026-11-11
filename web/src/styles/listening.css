@@ -433,7 +433,9 @@
 .listen-next-steering h3 { margin: 0; font-size: var(--text-md); }
 .listen-next-steering .steer {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 110px), 1fr));
+  /* wide enough that each label (and its working label) stays on one line, so a steering button is
+     never taller than Play (MP-0284-06) */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
   gap: var(--space-2);
   margin: 0;
 }

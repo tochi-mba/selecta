@@ -2,7 +2,10 @@
 
 /* The editor's three regions: a scoped header, a fluid timeline, and what's selected beside it. */
 .page.mix { padding-top: var(--space-4); }
-.editor-head { margin-bottom: var(--space-4); }
+/* The header's parts sit straight in the page, so the scope bar is pinned for the whole editor rather than
+   only while the header itself is on screen, where it slid up under the context bar (MP-0274-06, MP-0287-07) */
+.editor-head { display: contents; }
+.editor-head > :last-child { margin-bottom: var(--space-4); }
 .editor-scope {
   position: sticky;
   /* MP-0274-05/06: pinned under the bar's real height, its top hairline tucked under the bar's own

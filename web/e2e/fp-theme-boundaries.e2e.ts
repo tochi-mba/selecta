@@ -227,7 +227,8 @@ for (const theme of ['light', 'dark'] as const) {
     await page.goto('/listen');
     await page.getByRole('button', { name: /^(Play|Resume from)/ }).first().click();
     await expect.poll(async () => (await audioClock(page))[0] ?? 0).toBeGreaterThan(0.2);
-    await page.goto('/mix/current/edit');
+    // inside the app, as the rail would, so the song keeps playing (a page load would stop it)
+    await page.evaluate(() => { history.pushState({}, '', '/mix/current/edit'); window.dispatchEvent(new PopStateEvent('popstate')); });
     const current = page.locator('.timeline > .song').first();
     await expect(current).toHaveClass(/playing/);
     await expect(current.locator('.story-tag.playing')).toHaveText(/Playing now/);

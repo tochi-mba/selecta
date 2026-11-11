@@ -207,7 +207,8 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         <div className="row wrap">
           <Action
             className="primary big"
-            disabled={!hero?.ready || !!building}
+            disabled={!hero?.ready || (!!building && building !== 'pick')}
+            busy={building === 'pick'}
             working="Building…"
             title={replacing ? `Replaces ${mixName}, which you can undo` : undefined}
             run={() => hero && ask({ key: 'pick', name: hero.name, open: false })}

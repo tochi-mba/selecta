@@ -13,6 +13,7 @@ export function Action({
   working,
   failed,
   waiting,
+  busy: workingElsewhere,
   children,
   ...rest
 }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> & {
@@ -20,8 +21,11 @@ export function Action({
   working?: ReactNode;
   failed?: string;
   waiting?: boolean;
+  /** Its work is going on somewhere else, such as a confirmation it opened (MI-0138-08). */
+  busy?: boolean;
 }) {
-  const [busy, setBusy] = useState(false);
+  const [pressed, setBusy] = useState(false);
+  const busy = pressed || !!workingElsewhere;
   const going = useRef(false);
   const mounted = useRef(true);
   useEffect(() => {
@@ -29,7 +33,7 @@ export function Action({
     return () => { mounted.current = false; };
   }, []);
   const press = async () => {
-    if (going.current || waiting) return;
+    if (going.current || waiting || workingElsewhere) return;
     going.current = true;
     setBusy(true);
     try {
