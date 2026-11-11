@@ -222,6 +222,7 @@ test('MI-0162-05 a 100-song draft and the 64-cell Studio keep focus and stay qui
       keyboard_moves_ms: moves,
       slowest_key_paint_ms: reordering.nextPaintWorstMs,
       slowest_event_timing_ms: reordering.eventTimingWorstMs,
+      slowest_event: reordering.eventTimingWorst,
       focus_kept: true,
     },
     studio: {
@@ -234,6 +235,7 @@ test('MI-0162-05 a 100-song draft and the 64-cell Studio keep focus and stay qui
       slowest_key_paint_ms: gridKeys.nextPaintWorstMs,
       key_paint_p50_ms: gridKeys.nextPaintP50Ms,
       slowest_event_timing_ms: gridKeys.eventTimingWorstMs,
+      slowest_event: gridKeys.eventTimingWorst,
       long_tasks_ms: gridKeys.longTasks,
       focus_path: path.join(' '),
     },

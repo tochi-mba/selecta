@@ -263,7 +263,8 @@ test('MI-0162-03 a seam stays contiguous on the audio clock with a busy main thr
   test.setTimeout(420_000);
   await recordSchedule(page);
   await installProbe(page);
-  await resetMix(request);
+  // two songs, so only one transition has to render first on a loaded machine
+  await resetMix(request, [1, 2]);
   await allRendered(request);
   await page.setViewportSize(VIEWPORT);
   await page.goto('/listen');
@@ -277,9 +278,9 @@ test('MI-0162-03 a seam stays contiguous on the audio clock with a busy main thr
 
   // Load: a song added at the end starts a real background render on the server, the page's main
   // thread is kept about 70% busy with a 250 ms task every second, and the listener moves around.
-  await request.post('/api/mix/songs', { data: { song_id: 5 } });
+  await request.post('/api/mix/songs', { data: { song_id: 3 } });
   await request.post('/api/mix/render');
-  const renderAtJump = ((await (await request.get('/api/mix')).json()).mix as { seam: { state: { status: string } } | null }[])[4]?.seam?.state.status ?? 'none';
+  const renderAtJump = ((await (await request.get('/api/mix')).json()).mix as { seam: { state: { status: string } } | null }[])[2]?.seam?.state.status ?? 'none';
   await busyMainThread(page);
   const from = await mark(page);
   const wallBegun = Date.now();
@@ -305,7 +306,7 @@ test('MI-0162-03 a seam stays contiguous on the audio clock with a busy main thr
   const [clockEnded] = await page.evaluate(() => window.mi0162Audio.contexts.map((context) => context.currentTime));
   const wallEnded = Date.now();
   await page.evaluate(() => window.mi0162Load?.stop());
-  const renderAfter = ((await (await request.get('/api/mix')).json()).mix as { seam: { state: { status: string } } | null }[])[4]?.seam?.state.status ?? 'none';
+  const renderAfter = ((await (await request.get('/api/mix')).json()).mix as { seam: { state: { status: string } } | null }[])[2]?.seam?.state.status ?? 'none';
   const load = await interactionsSince(page, from);
   const sources = await page.evaluate(() => window.mi0162Audio.sources);
   const [song, clip, after] = sources.slice(earlier);

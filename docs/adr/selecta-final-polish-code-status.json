@@ -14,17 +14,17 @@
       "priority": "P0",
       "owner": null,
       "implemented": [
+        "01",
+        "02",
         "03",
         "04",
+        "05",
         "07"
       ],
       "in_progress": [
-        "05"
+        "06"
       ],
       "not_started": [
-        "01",
-        "02",
-        "06",
         "08"
       ],
       "independently_verified": [],
@@ -172,15 +172,15 @@
       "owner": null,
       "implemented": [
         "01",
+        "02",
         "03",
+        "04",
         "05",
         "06",
         "07"
       ],
       "in_progress": [],
       "not_started": [
-        "02",
-        "04",
         "08"
       ],
       "independently_verified": [],
