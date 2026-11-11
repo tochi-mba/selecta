@@ -1,14 +1,14 @@
 # ADR-0066: Blind study interface and evaluation integrity
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Not started
+- **Implementation status:** In progress: 7 of 8 tasks implemented with automated evidence on 2026-11-11; 1 need a person; 0 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
 - **Phase:** 5 - Discovery and operations
 - **Extends existing decisions:** ADR-0021, ADR-0029, ADR-0043
 - **Dependencies:** [programme roadmap](selecta-3-roadmap.md) and verified baseline; see phase order.
-- **Work item statuses:** Every S3-0066-XX item below is **Not started**. No runtime feature, test or UI change is claimed by this ADR.
+- **Work item statuses:** Recorded on each item below (2026-11-11). Implemented means its automated evidence ran green; nothing here is independently Verified.
 
 ## Context and rationale
 
@@ -26,16 +26,16 @@ Preserve exact trial, grade and response meanings while making trial progress, A
 
 - Completion displays a true confirmation with no hidden metadata. A Cannot judge outcome is offered when a clip cannot be played according to the existing contract.
 
-## Detailed implementation work (all Not started)
+## Detailed implementation work
 
-1. **S3-0066-01 - Not started.** Redesign study login/setup fields with accurate requirements and error states.
-2. **S3-0066-02 - Not started.** Design readable one-trial A/B layout with stable labels and symmetric transport.
-3. **S3-0066-03 - Not started.** Preserve grade scale, issue tags, preference, cannot-judge and method blindness.
-4. **S3-0066-04 - Not started.** Use one audio owner and expose currently playing A/B clip to assistive technology.
-5. **S3-0066-05 - Not started.** Preserve session recovery, failed submit retries and duplicate prevention.
-6. **S3-0066-06 - Not started.** Test missing clips, incomplete grade, multiple study sessions and study completion.
-7. **S3-0066-07 - Not started.** Protect results from method leakage in UI/diagnostic text and anonymize shared screenshots.
-8. **S3-0066-08 - Not started.** Perform manual listening and accessible keyboard study passes.
+1. **S3-0066-01 - Implemented.** Redesign study login/setup fields with accurate requirements and error states. **Evidence:** web/src/views/Listening.tsx setup form (labelled, required, help text, Open disabled until all three are filled, load failure and empty study reported); web/src/views/s3-0066-study.test.tsx 'each setup field is labelled and required, Open waits for all three, and a bad code or an empty study says so (S3-0066-01)' (passed 2026-11-11).
+2. **S3-0066-02 - Implemented.** Design readable one-trial A/B layout with stable labels and symmetric transport. **Evidence:** web/src/views/Listening.tsx one .study-trial at a time with Version A and Version B built from one VERSIONS map; web/src/views/s3-0066-study.test.tsx 'one comparison at a time, with A and B built the same way and the same labels on every trial (S3-0066-02)' (passed 2026-11-11).
+3. **S3-0066-03 - Implemented.** Preserve grade scale, issue tags, preference, cannot-judge and method blindness. **Evidence:** web/src/views/Listening.test.tsx 'what’s saved is the same grade and tags as ever', 'issues are ordinary checkboxes, and only count once it’s been rated' and 'won’t let you choose between two you haven’t both heard'; web/src/views/ListeningStudyFlow.test.tsx 'a missing clip says so and still lets you record cannot judge'; method blindness in web/src/views/s3-0066-study.test.tsx 'nothing on the trial, its labels or its clip addresses names a method or condition (S3-0066-07)' (passed 2026-11-11).
+4. **S3-0066-04 - Implemented.** Use one audio owner and expose currently playing A/B clip to assistive technology. **Evidence:** web/src/views/s3-0066-study.test.tsx 'says which version is playing, and starting B stops A through the one audio owner (S3-0066-04)' (passed 2026-11-11).
+5. **S3-0066-05 - Implemented.** Preserve session recovery, failed submit retries and duplicate prevention. **Evidence:** web/src/views/Listening.test.tsx 'restores unfinished ratings for the same study, without leaking them to another study' and 'keeps a failed save on its current trial'; web/src/views/ListeningStudyFlow.test.tsx 'a refresh part way returns to the same comparison with its ratings and heard clips' and 'a double submit stores one response and moves on once' (passed 2026-11-11).
+6. **S3-0066-06 - Implemented.** Test missing clips, incomplete grade, multiple study sessions and study completion. **Evidence:** web/src/views/ListeningStudyFlow.test.tsx 'a missing clip says so and still lets you record cannot judge' and 'finishing every comparison saves each once and says the study is complete'; web/src/views/Listening.test.tsx 'won’t let you choose between two you haven’t both heard' (incomplete listening) and 'restores unfinished ratings for the same study, without leaking them to another study' (two study sessions) (passed 2026-11-11).
+7. **S3-0066-07 - Implemented.** Protect results from method leakage in UI/diagnostic text and anonymize shared screenshots. **Evidence:** web/src/views/s3-0066-study.test.tsx 'nothing on the trial, its labels or its clip addresses names a method or condition (S3-0066-07)'; shared screenshots use only the made-up library from tests/e2e_server.py, per docs/adr/selecta-3-privacy.md 'Diagnostics and shared material' (passed 2026-11-11).
+8. **S3-0066-08 - Needs a person.** Perform manual listening and accessible keyboard study passes. **Status:** Needs a person: manual listening passes and a keyboard-only and screen-reader study pass with a real listener; the automated keyboard run (web/src/views/ListeningStudyFlow.test.tsx 'can be answered with the keyboard alone through to the end') passed 2026-11-11
 
 ## Preservation and integration constraints
 

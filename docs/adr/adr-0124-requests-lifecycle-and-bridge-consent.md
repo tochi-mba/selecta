@@ -2,7 +2,7 @@
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation status:** Implemented 5/5 new tasks (2026-11-10, uncommitted on `feat/finish-checklists`).
-- **Independent verification:** Automated verification 2/5 on 2026-11-10; open items name a person or a pending run in the checklist.
+- **Independent verification:** Automated verification 3/5 on 2026-11-10; open items name a person or a pending run in the checklist.
 - **Programme/date/baseline:** Experience-first UI/UX; 2026-11-07; `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` after merged PR #29.
 - **Priority / phase:** P1 / Collection.
 - **Related ADRs:** ADR-0103, ADR-0060; does not silently supersede earlier decisions.
@@ -33,7 +33,7 @@ A stale or duplicate confirmation can affect the mix; preserve server guards and
 1. **EX-0124-01 - Define canonical user-facing lifecycle**. Acceptance: Every actual stage has truthful display and recovery. Required verification: Backend state map and error fixtures. **Implementation: Implemented; Verified: Yes (automated, 2026-11-10). Evidence: see checklist.**
 2. **EX-0124-02 - Redesign pending requests panel**. Acceptance: User sees what is likely versus merely asked. Required verification: Listener comprehension test. **Implementation: Implemented; Verified: No. Needs a person: listener comprehension test of likely versus merely asked. Evidence: see checklist.**
 3. **EX-0124-03 - Specify bridge consent presentation**. Acceptance: Each extra song and route explicitly approved or declined. Required verification: Consent/decline/reopen scenarios. **Implementation: Implemented; Verified: Yes (automated, 2026-11-10). Evidence: see checklist.**
-4. **EX-0124-04 - Verify atomic/duplicate safeguards**. Acceptance: No partial or duplicated bridge under races. Required verification: Concurrent API and browser E2E. **Implementation: Implemented; Verified: No. Browser E2E `web/e2e/integration.e2e.ts` "two requests at once" still to run. Evidence: see checklist.**
+4. **EX-0124-04 - Verify atomic/duplicate safeguards**. Acceptance: No partial or duplicated bridge under races. Required verification: Concurrent API and browser E2E. **Implementation: Implemented; Verified: Yes (automated, 2026-11-10). Evidence: see checklist.**
 5. **EX-0124-05 - Test audible handover and preview focus**. Acceptance: No unexpected overlap or transport interruption. Required verification: Real music request-join test. **Implementation: Implemented; Verified: No. Needs a person: real-music request-join listening test for overlap or transport interruption. Evidence: see checklist.**
 
 ## Adversarial cases and research

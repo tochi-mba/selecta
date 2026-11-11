@@ -11,10 +11,10 @@ import { audioClock, resetMix, spyOnAudio } from './helpers';
  * browser's own computed colours. A control's boundary is whichever of its border, its own filled
  * background or its outline stands out most from the surface around it.
  *
- * Roles (tokens.css): interactive (a field, select, tab or checkbox: must reach 3:1), selected and
+ * Roles (tokens.css): interactive (a field, select, combobox or checkbox: must reach 3:1), selected and
  * focus (state markers: must reach 3:1), and decorative (dividers between rows: exempt, recorded so
  * the exemption is explicit). A row or button named by its own text is identified by that text, so
- * its outline is decorative under WCAG 1.4.11; it is recorded, not failed.
+ * its outline is decorative under WCAG 1.4.11 (so is an unchosen tab); it is recorded, not failed.
  *
  * The JSON report written to the test's output folder is the contrast report FP-0264-02 asks for.
  * It is candidate evidence for a reviewer, never an independent sign-off.
@@ -115,7 +115,10 @@ async function measure(page: Page, state: string, theme: string): Promise<Edge[]
       ['input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=range]), textarea', 'interactive: text field', true],
       ['select', 'interactive: dropdown', true],
       ['input[type=checkbox], input[type=radio]', 'interactive: choice', true],
-      ['[role=tab], [role=combobox], [role=switch]', 'interactive: tab/combobox/switch', true],
+      ['[role=combobox], [role=switch]', 'interactive: combobox/switch', true],
+      // the chosen tab's marker is a state indicator and must reach 3:1; the other tabs are named by their text
+      ['[role=tab][aria-selected=true]', 'selected: chosen tab', true],
+      ['[role=tab]', 'decorative: text-named tab', false],
       ['[aria-selected=true], [aria-current=true], [aria-current=page], .song-row.selected, [aria-pressed=true]', 'selected', true],
       ['.song-row, .lib-card, li[role=option], [role=menuitem], [role=menuitemradio]', 'decorative: text-named row', false],
       ['[role=dialog], .overlay-panel', 'interactive: dialog edge', false],
@@ -238,6 +241,22 @@ for (const theme of ['light', 'dark'] as const) {
     const ring = await markContrast(page, '.library-rows .library-batch-check', 1, 'outline-color');
     expect(ring.width, 'focus ring on a selected row').toBeGreaterThanOrEqual(2);
     expect(ring.ratio, `focus ring ${ring.raw}`).toBeGreaterThanOrEqual(3);
+
+    // Error and focus together: a field the app marks invalid keeps its error edge and bar under a keyboard
+    // focus ring of a different colour (the rule is foundation.css's [aria-invalid] one, shared by every field)
+    const search = page.getByRole('searchbox', { name: 'Search your library' });
+    await search.evaluate((node) => node.setAttribute('aria-invalid', 'true'));
+    await search.focus();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await expect(search).toBeFocused();
+    const errorEdge = await markContrast(page, 'input[aria-invalid="true"]', 0, 'border-top-color');
+    expect(errorEdge.ratio, `error edge ${errorEdge.raw}`).toBeGreaterThanOrEqual(3);
+    const both = await search.evaluate((node) => ({ shadow: getComputedStyle(node).boxShadow, border: getComputedStyle(node).borderTopColor, outline: getComputedStyle(node).outlineColor, width: Number.parseFloat(getComputedStyle(node).outlineWidth) || 0 }));
+    expect(both.shadow, 'error bar').toContain('inset');
+    expect(both.width, 'focus ring on an invalid field').toBeGreaterThanOrEqual(2);
+    expect(both.outline, 'focus and error are different colours').not.toBe(both.border);
+    await search.evaluate((node) => node.removeAttribute('aria-invalid'));
 
     // Editor: the playing song, also selected, with the keyboard on it, keeps all three marks
     await page.goto('/listen');
