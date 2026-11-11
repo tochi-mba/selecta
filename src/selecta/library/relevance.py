@@ -38,6 +38,15 @@ def _closeness(needle: str, candidate: str) -> float:
     Repeated words in a 20,000-song library are compared once per search, not per row.
     ``quick_ratio`` avoids a full comparison for names that cannot meet the threshold.
     """
+    # A bound on quick_ratio from which characters each side has at all: most names in a large
+    # library fail it, so they never build a SequenceMatcher (GP-0258-08 search paging at 20k).
+    have, want = set(candidate), set(needle)
+    shared = min(
+        len(needle) - sum(ch not in have for ch in needle),
+        len(candidate) - sum(ch not in want for ch in candidate),
+    )
+    if 2.0 * shared / (len(needle) + len(candidate)) < 0.84:
+        return 0.0
     matcher = SequenceMatcher(None, needle, candidate, autojunk=False)
     return matcher.ratio() if matcher.quick_ratio() >= 0.84 else 0.0
 

@@ -20,7 +20,8 @@ from selecta.planner.choose import choose_transition
 
 
 def _env(track):
-    return onset_envelope(soxr.resample(audio.to_mono(track.audio), SR, FEATURE_SR).astype(np.float32))
+    mono = soxr.resample(audio.to_mono(track.audio), SR, FEATURE_SR)
+    return onset_envelope(mono.astype(np.float32))
 
 
 def test_fixture_audio_is_identical_every_time():

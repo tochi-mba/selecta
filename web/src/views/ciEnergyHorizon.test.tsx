@@ -7,15 +7,15 @@ import { EditorStory } from './EditorStory';
 
 /** CI-0169-01: one five-stop, start-to-finish horizon in the builder, a draft and the editor. */
 const song = (id: number, energy: number | null): MixItem => ({
-  id, title: `Song ${id}`, artist: 'Synthetic', energy, seam: null,
-} as unknown as MixItem);
+  position: id, song_id: id, title: `Song ${id}`, artist: 'Synthetic', duration: 200, bpm: null, key: null, energy, locked: false, seam: null,
+});
 const mix = [song(1, 0.2), song(2, 0.4), song(3, 0.9), song(4, 0.6), song(5, 0.3)];
 
 afterEach(() => setFlags(null));
 
 function story(items: MixItem[], scope?: 'current' | 'draft') {
   return render(
-    <EditorStory mix={items} keys={items.map((item) => `k${item.id}`)} names={{}} selected={null} playingIndex={-1}
+    <EditorStory mix={items} keys={items.map((item) => `k${item.song_id}`)} names={{}} selected={null} playingIndex={-1}
       headingId="story" onSelectSong={() => {}} onEditSong={() => {}} onEditSeam={() => {}} scope={scope} />,
   );
 }

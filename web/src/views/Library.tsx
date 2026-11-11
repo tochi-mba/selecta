@@ -87,6 +87,11 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   // dimension invalidates it rather than selecting a different filtered row.
   const [batchSelection, setBatchSelection] = useState<{ identity: string; ids: number[] }>({ identity: '', ids: [] });
   const selectedIds = batchSelection.identity === selectionIdentity ? batchSelection.ids : [];
+  // FP-0267-06: a changed result drops the old selection for good, so returning to an earlier
+  // search (Back) shows fresh rows with nothing ticked, never the old IDs re-attached.
+  useEffect(() => {
+    setBatchSelection((before) => (before.identity === selectionIdentity ? before : { identity: selectionIdentity, ids: [] }));
+  }, [selectionIdentity]);
   // A selected set keeps 20k-item row scans O(n), not O(n × 200), as playback updates arrive.
   const selectedIdSet = useMemo(() => new Set(selectedIds), [batchSelection, selectionIdentity]);
   type BatchAction = 'prioritize' | 'deprioritize' | 'never' | 'allow';

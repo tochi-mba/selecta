@@ -57,7 +57,11 @@ INVALID_GRIDS: dict[str, Callable[[SynthTrack], np.ndarray]] = {
 def cue_bars(track: SynthTrack) -> dict[str, float]:
     """Mix-in, mid and mix-out cue times, each on a known downbeat."""
     bars = track.downbeats
-    return {"mix_in": float(bars[0]), "middle": float(bars[bars.size // 2]), "mix_out": float(bars[-8])}
+    return {
+        "mix_in": float(bars[0]),
+        "middle": float(bars[bars.size // 2]),
+        "mix_out": float(bars[-8]),
+    }
 
 
 def off_grid_time(track: SynthTrack) -> float:
@@ -66,5 +70,5 @@ def off_grid_time(track: SynthTrack) -> float:
 
 
 def fallback_pair() -> tuple[SynthTrack, SynthTrack]:
-    """120 and 85 BPM: too far apart for a beat-matched blend, so a seam must fall back to an exit."""
+    """120 and 85 BPM: too far apart for a beat-matched blend, so a seam must fall back."""
     return make_track(bpm=120, bars=48, seed=1), make_track(bpm=85, bars=48, seed=2)

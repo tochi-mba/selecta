@@ -17,13 +17,20 @@ test('a frozen tab wakes up still working, with its mix, and reads fresh state a
 
   let reads = 0;
   page.on('request', (sent) => { if (/\/api\/(status|mix)(\?|$)/.test(sent.url())) reads += 1; });
+  // A browser only freezes a tab that is in the background, so another tab comes to the front first.
+  const other = await page.context().newPage();
+  await other.bringToFront();
+  await expect.poll(() => page.evaluate(() => document.visibilityState)).toBe('hidden');
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Page.setWebLifecycleState', { state: 'frozen' });
+  reads = 0;
   // While frozen, the server changes underneath it.
   await request.post('/api/mix/songs', { data: { song_id: 4 } });
   await page.waitForTimeout(3000);
   expect(reads).toBe(0);
   await cdp.send('Page.setWebLifecycleState', { state: 'active' });
+  await page.bringToFront();
+  await other.close();
 
   await expect.poll(() => reads, { timeout: 20_000 }).toBeGreaterThan(0);
   await expect(page.locator('h1.display')).toHaveText('Morning Light');

@@ -157,3 +157,19 @@ every capability is listed and every test named exists in its file.
 | Keyboard/AT/responsive | `web/e2e/flows.e2e.ts` "keyboard alone gets from the top of the page to the content, and dialogs give focus back" |
 | Performance and recovery | `web/e2e/flows.e2e.ts` "it says so, keeps what’s on screen, and recovers by itself" |
 | Privacy and source safety | `web/e2e/pages.e2e.ts` "the page only ever talks to this computer" |
+
+## Accessibility automation and its manual gap (SF-0239-05)
+
+What a machine checks on every run, and what only a person can. `tests/test_flow_screenshot_approval.py`
+checks every test named here still exists in its file.
+
+| Check | Automated proof | Manual gap |
+|---|---|---|
+| Contrast (text, large text, field edges) | `web/e2e/mp-0298-responsive-and-a11y.e2e.ts` "MP-0298-05 text meets 4.5:1, large text 3:1 and field edges 3:1 in both themes"; `web/e2e/pages.e2e.ts` "every page passes the automatic accessibility checks in" (axe, light and dark) | Judging contrast over moving art and in dim rooms |
+| Names, roles and labels | `web/e2e/pages.e2e.ts` "dialogs and drawers pass the automatic accessibility checks too"; `web/e2e/mp-0277-icon-geometry.e2e.ts` "MP-0277-07 icon-only controls have a name, a hint, a focus ring and a usable target" | Whether a name makes sense when heard in NVDA or VoiceOver |
+| Focus order and visibility | `web/e2e/finishing.e2e.ts` "Tab reaches everything on every page at"; `web/e2e/flows.e2e.ts` "keyboard alone gets from the top of the page to the content, and dialogs give focus back" | A full NVDA with Edge session through each journey |
+| Target size | `web/e2e/mp-0298-responsive-and-a11y.e2e.ts` "MP-0298-03 every target meets 24px or a WCAG exception, and primary touch targets reach 44px" | Real fingers and styluses on real phones |
+| Reflow and zoom | `web/e2e/mp-0298-responsive-and-a11y.e2e.ts` "MP-0298-02 200% and 400% zoom keep every page actionable, and the Studio has its list form" | Browser zoom and OS text scaling on real devices |
+| Reduced motion | `web/e2e/mp-0296-motion.e2e.ts` "MP-0296-06 Still and reduced motion remove decorative movement while the music data keeps updating"; `web/e2e/motion-preference.e2e.ts` "motion intensity is local and OS reduced-motion always wins" | Whether remaining motion is comfortable for people sensitive to it |
+| Forced colours | `web/e2e/flow-forced-colors.e2e.ts` "forced colours keep controls visible, and selection and focus distinct" | Windows High Contrast themes other than the emulated one |
+| Live announcements | `web/e2e/finishing.e2e.ts` "playing doesn’t flood a screen reader" | A screen-reader listening study (SF-0234-05) |

@@ -34,9 +34,11 @@ person list.
 ## Coverage denominator
 
 Required widths: 320×568, 375×667, 768×1024, 1280×800, 1440×900, 1920×1080, plus a short landscape
-1280×600. Each width captures 19 states × 2 themes = 38 images, 266 in total per run, with reduced
-motion and the Still motion setting. 400 % zoom is covered by the reflow test in `pages.e2e.ts`
-("zoomed in as far as browsers go"), not by screenshots.
+1280×600, and 320×200 for 400 % zoom (the CSS layout a 1280×800 window gets at 400 %). Each size
+captures 19 states × 2 themes = 38 images, 304 in total per run, with reduced motion and the Still
+motion setting. The spec's `COVERAGE` object is written into every manifest with its exclusions: 2560px
+is not paired (no breakpoint above 761px), and Stage, Studio, Inspector and Requests have driven states
+in `mp-baseline.mp.ts`, light only.
 
 ## Provenance
 

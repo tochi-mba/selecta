@@ -54,7 +54,7 @@ Dispositions: **existing** means the acceptance was already met by code that pre
 | CI-0168-05 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0168-06 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0168-07 | person | Needs a person: uncoached task completion and hesitation counts |
-| CI-0169-01 | open | In progress: the five-stop EnergyHorizon is the builder’s shape (web/src/views/MixSetup.tsx); drafts and the editor show measured energy (EnergyOverview, EnergyThumb), not the same five-stop form |
+| CI-0169-01 | built | Built or given a focused test on 2026-11-11 |
 | CI-0169-02 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0169-03 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0169-04 | existing | Met by earlier code; tests named on the checklist line |

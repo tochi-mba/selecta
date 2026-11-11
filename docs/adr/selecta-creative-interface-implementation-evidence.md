@@ -1,6 +1,6 @@
 # Selecta - creative-interface implementation and independent evidence ledger
 
-**20 Accepted ADRs; 2026-11-10: 101 Implemented, 2 In progress, 33 Need a person, 4 Not started, 0 independently Verified.** Evidence for each implemented task is on its checklist line; dispositions are cross-checked in [the source baseline](selecta-creative-interface-source-baseline.md). A docs-only PR is not implementation evidence.
+**20 Accepted ADRs; 2026-11-10: 102 Implemented, 1 In progress, 33 Need a person, 4 Not started, 0 independently Verified.** Evidence for each implemented task is on its checklist line; dispositions are cross-checked in [the source baseline](selecta-creative-interface-source-baseline.md). A docs-only PR is not implementation evidence.
 
 | CI task | ADR | Implementation | Independently Verified | Owner | Implementing PR / SHA | Evidence / reviewer |
 |---|---|---|---|---|---|---|
@@ -32,7 +32,7 @@
 | CI-0168-05 | [ADR-0168](adr-0168-expressive-mix-selection-and-reveal.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0168-06 | [ADR-0168](adr-0168-expressive-mix-selection-and-reveal.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0168-07 | [ADR-0168](adr-0168-expressive-mix-selection-and-reveal.md) | Needs a person: uncoached task completion and hesitation counts | No | Unassigned | - | - |
-| CI-0169-01 | [ADR-0169](adr-0169-energy-horizon-and-scoped-shaping.md) | In progress: the five-stop EnergyHorizon is the builder’s shape (web/src/views/MixSetup.tsx); drafts and the editor show measured energy (EnergyOverview, EnergyThumb), not the same five-stop form | No | Unassigned | - | - |
+| CI-0169-01 | [ADR-0169](adr-0169-energy-horizon-and-scoped-shaping.md) | Implemented (built 2026-11-11) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-11 |
 | CI-0169-02 | [ADR-0169](adr-0169-energy-horizon-and-scoped-shaping.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0169-03 | [ADR-0169](adr-0169-energy-horizon-and-scoped-shaping.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0169-04 | [ADR-0169](adr-0169-energy-horizon-and-scoped-shaping.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
