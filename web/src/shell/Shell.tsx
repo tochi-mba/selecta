@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { MixItem } from '../api';
 import { useFlags } from '../flags';
 import { NowState, SetPlayer } from '../player';
@@ -127,13 +127,26 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
 
 /** MP-0274-06: publishes the context bar's real height as --header-block. Crumbs wrap on a phone and at
  * high zoom, so a fixed number would let the editor scope, Listen's side column and Lucy's tabs pin
- * underneath the bar. Removed again when the bar goes (the Stage), which falls back to --header-height. */
+ * underneath the bar. Removed again when the bar goes (the Stage), which falls back to --header-height.
+ * Measured again in the same commit whenever the bar itself renders: a count or the Workspace warning
+ * arriving can wrap the crumbs, and a ResizeObserver only reports that a frame later, long enough for
+ * the pinned scope to sit 18px under the taller bar (MP-0274-06 at 768px). The observer still catches
+ * what React doesn't render: the window, the theme menu, fonts. */
+function measureHeaderBlock(element: HTMLElement) {
+  const root = document.documentElement;
+  const value = `${Math.ceil(element.getBoundingClientRect().height)}px`;
+  if (root.style.getPropertyValue('--header-block') !== value) root.style.setProperty('--header-block', value);
+}
+
 function useHeaderBlock(bar: { current: HTMLElement | null }) {
+  useLayoutEffect(() => {
+    if (bar.current) measureHeaderBlock(bar.current);
+  });
   useEffect(() => {
     const element = bar.current;
     const root = document.documentElement;
     if (!element) return;
-    const measure = () => root.style.setProperty('--header-block', `${Math.ceil(element.getBoundingClientRect().height)}px`);
+    const measure = () => measureHeaderBlock(element);
     measure();
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
     observer?.observe(element);
