@@ -86,8 +86,13 @@ async function withStudio(page: Page) {
 
 async function oneRound(page: Page) {
   await goWithin(page, '/mix/current/edit');
-  await page.getByRole('button', { name: 'Change', exact: true }).first().click();
+  // S4-0092-07 reopens the transition left open on the previous round, so open transition 1 only
+  // when it is closed; a bare first "Change" would now pick transition 2, which has no Studio stub.
+  const toggle = page.locator('.seam-actions').first().getByRole('button', { name: /^(Change|Close)$/ });
+  await expect(toggle).toBeVisible();
+  if ((await toggle.textContent())?.trim() === 'Change') await toggle.click();
   await expect(page.locator('.inspector-identity')).toBeVisible();
+  await expect(page.locator('.inspector-number')).toHaveText('Transition 1');
   await page.getByRole('tab', { name: 'Studio' }).click();
   await page.getByRole('button', { name: 'Open the Studio' }).click();
   await expect(page.locator('.studio-cell').first()).toBeVisible({ timeout: 60_000 });
