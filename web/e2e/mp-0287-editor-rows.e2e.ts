@@ -222,6 +222,9 @@ test('MP-0287-08 a 100-song mix opens quickly, keeps focus on a moved song and n
   await page.goto('/listen');
   await page.getByRole('button', { name: 'Play', exact: true }).first().click();
   await expect.poll(async () => (await audioClock(page))[0] ?? 0).toBeGreaterThan(0.2);
+  // the audio clock runs while the first song is still loading; count from once it has really started
+  await expect(page.getByRole('button', { name: 'Pause', exact: true }).first()).toBeVisible({ timeout: 30_000 });
+  await expect.poll(() => soundsRestarted(page)).toBeGreaterThan(0);
   const started = await soundsRestarted(page);
   const began = Date.now();
   await page.evaluate(() => { window.history.pushState({}, '', '/mix/current/edit'); window.dispatchEvent(new PopStateEvent('popstate')); });
@@ -242,5 +245,6 @@ test('MP-0287-08 a 100-song mix opens quickly, keeps focus on a moved song and n
   // moving a song far from the playing one restarts nothing and the clock keeps running
   const clock = (await audioClock(page))[0];
   await expect.poll(async () => (await audioClock(page))[0]).toBeGreaterThan(clock + 0.3);
-  expect(await soundsRestarted(page), 'no sound restarted').toBe(started);
+  const sounds = await page.evaluate(() => window.audioSpy.started);
+  expect(await soundsRestarted(page), `no sound restarted: ${JSON.stringify(sounds)}`).toBe(started);
 });
