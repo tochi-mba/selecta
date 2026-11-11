@@ -10,6 +10,7 @@ import { Icon } from '../ui/Icon';
 import { SongMotif } from '../ui/MusicObjects';
 import { moveInGrid } from '../ui/primitives';
 import { seamFacts } from '../ui/seam';
+import { useStickyClearance } from '../ui/useStickyClearance';
 import { useMixPath } from './mixScope';
 
 type Session = {
@@ -191,6 +192,8 @@ export function Studio(props: {
   };
   const deck = useRef<StemDeck | null>(null);
   const grid = useRef<HTMLDivElement>(null);
+  const head = useRef<HTMLElement>(null);
+  useStickyClearance(head);
   // SF-0243-03: a stroke remembers the grid from before it started, so a cancelled pointer, Escape
   // or leaving the page mid-stroke puts every square it touched back
   const paintStroke = useRef<{ id: number; value: 0 | 1; visited: Set<string>; before: Shape; key?: string } | null>(null);
@@ -507,7 +510,7 @@ export function Studio(props: {
 
   return (
     <section className="studio" aria-label="Stem studio">
-      <header className="studio-head">
+      <header className="studio-head" ref={head}>
         <div className="studio-pair">
           <h3>Shape transition {position}</h3>
           <p><SongMotif songId={previous.song_id} /><b>{previous.title}</b> <span aria-hidden="true">→</span><span className="visually-hidden"> into </span> <SongMotif songId={item.song_id} /><b>{item.title}</b></p>

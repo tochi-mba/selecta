@@ -153,6 +153,9 @@
   border-bottom: 1px solid var(--border);
 }
 .overlay-sheet .overlay-body:has(.inspector-identity) { padding-top: 0; }
+/* P0074 / MP-0288-06: a focused control scrolls clear of the pinned identity or Studio head, never under
+   it (WCAG 2.4.11). --sticky-clearance is the pinned header's measured height (useStickyClearance). */
+:is(.overlay-body, .edit-inspector):has(.inspector-identity, .studio-head) { scroll-padding-top: calc(var(--sticky-clearance, 0px) + var(--space-3)); }
 .inspector-identity p { margin: 0; }
 .inspector-identity .inspector-pair { padding-bottom: 0; border-bottom: 0; }
 .inspector-scope { display: flex; flex-wrap: wrap; gap: var(--space-hair) var(--space-3); font-size: var(--text-sm); color: var(--text-soft); margin-top: var(--space-1) !important; }
@@ -207,6 +210,9 @@
   max-width: 100%;
   max-height: min(72dvh, 680px);
   overflow: auto;
+  /* P0081: arrowing to a square scrolls it clear of the pinned bar ruler and part names, so the focused
+     square is never under them */
+  scroll-padding: var(--space-6) 0 0 var(--name-width);
 }
 .studio-lane {
   grid-template-columns: var(--name-width) repeat(var(--cells, 8), minmax(44px, 1fr));

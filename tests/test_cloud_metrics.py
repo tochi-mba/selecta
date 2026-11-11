@@ -41,7 +41,9 @@ def _referenced() -> set[str]:
     found: set[str] = set()
     for path in files:
         if path.is_file():
-            for name in NAME.findall(path.read_text("utf-8")):
+            lines = path.read_text("utf-8").splitlines()
+            text = "\n".join(line for line in lines if not line.lstrip().startswith("#"))
+            for name in NAME.findall(text):
                 for suffix in SUFFIXES:
                     if name.endswith(suffix) and name.removesuffix(suffix) in metrics.SERIES:
                         name = name.removesuffix(suffix)

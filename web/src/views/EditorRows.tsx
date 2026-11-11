@@ -5,6 +5,7 @@ import { clock, etaWords, seamStatusWords } from '../lib';
 import { Action, announce, Menu } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { SeamDiagram, SongMotif } from '../ui/MusicObjects';
+import { useStickyClearance } from '../ui/useStickyClearance';
 import { useMixPath } from './mixScope';
 import { RequestTag, useRequestComing } from './Requests';
 
@@ -376,9 +377,11 @@ export function SongInspector(props: {
   onSeamOut: () => void;
 }) {
   const { item, hasIn, hasOut, onPlay, onAddAfter, onSeamIn, onSeamOut } = props;
+  const identity = useRef<HTMLDivElement>(null);
+  useStickyClearance(identity);
   return (
     <div className="inspector">
-      <div className="inspector-identity">
+      <div className="inspector-identity" ref={identity}>
         <p className="inspector-pair"><b>{item.title}</b></p>
         <p className="song-detail-artist">{item.artist}</p>
         <RequestTag item={item} />

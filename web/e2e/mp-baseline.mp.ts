@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { APIRequestContext, expect, Page, test } from '@playwright/test';
-import { resetMix } from './helpers';
+import { resetMix, rewriteJson } from './helpers';
 import { Defect, measure, Reading } from './mp-measure';
 
 /**
@@ -155,20 +155,41 @@ test("dynamic 'fx.edit.inspector' and 'fx.studio'", async ({ page, request }) =>
   await reopen();
   await sweep(page, 'fx.edit.inspector', 'overlay.inspector', VIEWPORTS, reopen);
 
+  // the unavailable state, whatever this pair could really do: the options answer says no, with a
+  // reason long enough to wrap, the way a tempo gap or a build without stems would
+  await page.route('**/api/mix/*/options*', (route) => rewriteJson(route, (body) => ({
+    ...body, studio: { available: false, reason: 'These two are 12% apart in tempo, too far to play their stems together.' },
+  })));
   await page.setViewportSize({ width: 1280, height: 800 });
   await reopen();
-  const tab = page.getByRole('tab', { name: 'Studio', exact: true }).or(page.getByRole('button', { name: 'Studio', exact: true })).first();
-  await tab.click();
-  // with stems set to never (tests/e2e_server.py) the Studio says why it can't open: the unavailable
-  // state. If this build can open it, measure the open workspace instead.
-  const opener = page.getByRole('button', { name: 'Open the Studio' });
-  const reason = page.locator('.warn').filter({ hasText: /stem|Studio/i }).first();
-  await expect(opener.or(reason).first()).toBeVisible();
-  if (await opener.isVisible()) {
-    await opener.click();
-    await expect(page.locator('.overlay-workspace')).toBeVisible();
-  }
+  await studioTab(page).click();
+  const reason = page.locator('.warn').filter({ hasText: /stems together/ }).first();
+  await expect(reason).toBeVisible();
   await sweep(page, 'fx.studio', 'overlay.studio');
+});
+
+const studioTab = (page: Page) => page.getByRole('tab', { name: 'Studio', exact: true }).or(page.getByRole('button', { name: 'Studio', exact: true })).first();
+
+test("dynamic 'fx.studio.open'", async ({ page, request }) => {
+  // tests/e2e_server.py SELECTA_E2E_STEMS=1 caches the stems for the first transition, so the real
+  // Studio lays out its grid without the separation model (tests/test_e2e_studio_stems.py)
+  test.setTimeout(600_000);
+  await openEditor(page, request);
+  const transport = page.locator('.studio .studio-transport');
+  const open = async () => {
+    if (await transport.isVisible()) return;
+    if (!(await page.locator('.overlay-workspace').isVisible())) {
+      if (!(await studioTab(page).isVisible())) await page.getByRole('button', { name: 'Change', exact: true }).first().click();
+      await studioTab(page).click();
+      await page.getByRole('button', { name: 'Open the Studio' }).click({ timeout: 60_000 });
+      await expect(page.locator('.overlay-workspace')).toBeVisible();
+    }
+    // the worker may be finishing a render first; laying out cached stems itself takes seconds
+    await expect(transport).toBeVisible({ timeout: 240_000 });
+  };
+  await open();
+  await expect(page.locator('.studio')).not.toContainText('Separating vocals');
+  await sweep(page, 'fx.studio.open', 'overlay.studio', VIEWPORTS, open);
 });
 
 test("dynamic 'fx.export.dialog' and 'fx.overlay.clear_mix'", async ({ page, request }) => {
@@ -268,6 +289,177 @@ test("overlays 'fx.overlay.song_details' and 'fx.overlay.more'", async ({ page, 
   await page.locator('.nav-more-mobile').click();
   await expect(page.getByRole('dialog', { name: 'More' })).toBeVisible();
   await sweep(page, 'fx.overlay.more', 'overlay.more', NARROW);
+});
+
+/** A real notice through the app's own path for an uncaught failure, raised again if it timed out. */
+async function raiseToast(page: Page) {
+  const words = 'A synthetic notice for the MP-0272 baseline, long enough to wrap onto a second line on a phone.';
+  if (await page.locator('.toast-row').filter({ hasText: words }).isVisible()) return;
+  await page.evaluate((message) => {
+    window.dispatchEvent(new PromiseRejectionEvent('unhandledrejection', { promise: Promise.resolve(), reason: new Error(message) }));
+  }, words);
+  await expect(page.locator('.toast-row').filter({ hasText: words })).toBeVisible();
+}
+
+const MAIN_NAV = (page: Page, name: string) => page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name, exact: true });
+/** In-app navigation, so the music keeps playing; the bottom bar may hide a destination under More. */
+async function go(page: Page, name: string, path: string) {
+  const link = MAIN_NAV(page, name);
+  if (await link.isVisible()) await link.click();
+  else await page.evaluate((to) => { window.history.pushState({}, '', to); window.dispatchEvent(new PopStateEvent('popstate')); }, path);
+  await expect(page).toHaveURL(new RegExp(`${path.replace(/\//g, '\\/')}$`));
+  await settle(page);
+}
+
+test("'fx.toast' over the playing mini-player", async ({ page, request }) => {
+  await playListen(page, request);
+  await go(page, 'Library', '/library');
+  await expect(page.locator('.mini')).toBeVisible();
+  await raiseToast(page);
+  await sweep(page, 'fx.toast', 'persistent.toasts', VIEWPORTS, () => raiseToast(page));
+});
+
+test("dialogs 'fx.overlay.delete_mix' and 'fx.overlay.delete_draft'", async ({ page, request }) => {
+  await resetMix(request, STRESS_MIX);
+  const name = 'A draft to delete, named long enough to wrap twice on a phone';
+  const made = await request.post('/api/drafts', { data: { name, copy_current: true } });
+  expect(made.ok()).toBe(true);
+  const id = (await made.json()).id as number;
+  try {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`/mixes/drafts/${id}/edit`);
+    await settle(page);
+    await page.getByRole('button', { name: 'Delete', exact: true }).first().click();
+    await expect(page.getByRole('dialog', { name: `Delete ${name}?` })).toBeVisible();
+    await sweep(page, 'fx.overlay.delete_mix', 'overlay.delete_mix');
+    await page.keyboard.press('Escape');
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/mixes/mine');
+    await settle(page);
+    const card = page.locator('.draft-list .draft').filter({ hasText: name }).first();
+    await card.getByRole('button', { name: /^More actions for / }).click();
+    await page.getByRole('menuitem', { name: /^Delete / }).click();
+    const dialog = page.getByRole('dialog', { name: /^Delete .*\?$/ });
+    await expect(dialog.getByRole('button', { name: 'Keep draft' })).toBeVisible();
+    await sweep(page, 'fx.overlay.delete_draft', 'overlay.delete_draft');
+    await dialog.getByRole('button', { name: 'Keep draft' }).click();
+  } finally {
+    await request.delete(`/api/drafts/${id}`);
+  }
+});
+
+test("replace dialogs 'fx.overlay.replace_mix', 'fx.overlay.library_replace' and 'fx.overlay.replace_with_draft'", async ({ page, request }) => {
+  // each one asks only while something is playing, so the music starts first and every page after
+  // it is reached in-app, without a reload that would stop it
+  const made = await request.post('/api/drafts', { data: { name: 'A draft that would replace the playing mix', copy_current: false } });
+  expect(made.ok()).toBe(true);
+  const id = (await made.json()).id as number;
+  await request.post(`/api/drafts/${id}/songs`, { data: { song_id: 19 } }).catch(() => null);
+  try {
+    await playListen(page, request);
+
+    await go(page, 'Make a Mix', '/mixes');
+    await page.getByRole('main').getByRole('button', { name: 'Play', exact: true }).first().click({ timeout: 60_000 });
+    const replace = page.getByRole('dialog', { name: /^Replace .*\?$/ });
+    await expect(replace).toBeVisible();
+    await sweep(page, 'fx.overlay.replace_mix', 'overlay.replace_mix');
+    await replace.getByRole('button', { name: 'Cancel', exact: true }).click();
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await go(page, 'Library', '/library');
+    await page.locator('.library-rows .song-row').first().getByRole('button', { name: 'Start a mix' }).click();
+    const library = page.getByRole('dialog', { name: 'Replace your current mix?' });
+    await expect(library).toBeVisible();
+    await sweep(page, 'fx.overlay.library_replace', 'overlay.library.replace_mix');
+    await library.getByRole('button', { name: 'Keep current mix' }).click();
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await go(page, 'My Mixes', '/mixes/mine');
+    await page.getByRole('button', { name: /^Play A draft that would replace/ }).first().click();
+    const draft = page.getByRole('dialog', { name: /^Replace .*\?$/ });
+    await expect(draft.getByRole('button', { name: 'Keep current mix' })).toBeVisible();
+    await sweep(page, 'fx.overlay.replace_with_draft', 'overlay.replace_with_draft');
+    await draft.getByRole('button', { name: 'Keep current mix' }).click();
+  } finally {
+    await request.delete(`/api/drafts/${id}`);
+  }
+});
+
+test("dialog 'fx.overlay.library_batch'", async ({ page, request }) => {
+  await resetMix(request, STRESS_MIX);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/library');
+  await settle(page);
+  await page.getByRole('button', { name: 'Select up to 200 loaded songs' }).click();
+  await page.getByRole('button', { name: 'Prioritize selected' }).or(page.getByRole('button', { name: 'Never play selected' })).first().click();
+  const dialog = page.getByRole('dialog', { name: 'Apply batch Library action?' });
+  await expect(dialog).toBeVisible();
+  await sweep(page, 'fx.overlay.library_batch', 'overlay.library_batch');
+  await dialog.getByRole('button', { name: 'Cancel - change nothing' }).click();
+});
+
+test("folder dialogs 'fx.overlay.folder_stop' and 'fx.overlay.folder_relink'", async ({ page }) => {
+  // one watched folder that has gone missing, served in the browser: nothing on disk moves
+  const folder = 'D:\\Synthetic Music\\An Evening Of Records Kept In A Folder With A Long Name';
+  await page.route('**/api/folders', (route) => route.fulfill({ json: { folders: [{ path: folder, available: false, songs: 20 }], watch_every: 60 } }));
+  await page.route('**/api/folders/check*', (route) => route.fulfill({ json: { ok: true, kind: 'ok', reason: '' } }));
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/workshop/sources');
+  await settle(page);
+  await page.locator('.folder-list li').getByRole('button', { name: 'Stop watching' }).click();
+  const stop = page.getByRole('dialog', { name: 'Stop watching this folder?' });
+  await expect(stop).toBeVisible();
+  await sweep(page, 'fx.overlay.folder_stop', 'overlay.folder_stop');
+  await stop.getByRole('button', { name: 'Keep watching' }).click();
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.getByRole('button', { name: 'Find moved folder' }).click();
+  const relink = page.getByRole('dialog', { name: 'Re-link a moved music folder' });
+  await expect(relink).toBeVisible();
+  await sweep(page, 'fx.overlay.folder_relink', 'overlay.folder_relink');
+  await relink.getByRole('button', { name: 'Cancel - keep original paths' }).click();
+});
+
+test("dialog 'fx.overlay.backup_restore'", async ({ page }) => {
+  // a synthetic archive and preview answered in the browser: nothing is staged or restored
+  await page.route('**/api/backup/status', (route) => route.fulfill({ json: { pending_restart: false, rollback_available: false, problem: null } }));
+  await page.route('**/api/backup/preview', (route) => route.fulfill({ json: {
+    token: 'synthetic-token', created_utc: '2026-11-01 09:30 UTC', counts: { songs: 20, drafts: 2, ratings: 7 },
+    replaces: 'library records, drafts, feedback and preferences', skips: 'music files, audio caches and exports',
+  } }));
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/workshop/storage');
+  await settle(page);
+  const backup = page.locator('section.panel').filter({ has: page.getByRole('heading', { name: 'Local data backup' }) });
+  await backup.locator('input[type="file"]').setInputFiles({ name: 'synthetic-backup.zip', mimeType: 'application/zip', buffer: Buffer.from('PK synthetic') });
+  await backup.getByRole('button', { name: 'Validate and preview restore' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Replace local data on next restart?' });
+  await expect(dialog).toBeVisible();
+  await sweep(page, 'fx.overlay.backup_restore', 'overlay.backup_restore');
+  await dialog.getByRole('button', { name: 'Cancel - keep current data' }).click();
+});
+
+test("Lucy drawers 'fx.overlay.lucy_settings' and 'fx.overlay.lucy_conversations'", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/mixes/lucy');
+  await settle(page);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const settings = page.getByRole('dialog', { name: 'Lucy settings' });
+  await expect(settings).toBeVisible();
+  await sweep(page, 'fx.overlay.lucy_settings', 'overlay.lucy.settings');
+  await page.keyboard.press('Escape');
+
+  // the list is a drawer only below 1280px; wider, it is a column of the page (measured with the route)
+  const narrower = VIEWPORTS.filter((viewport) => viewport.width < 1280);
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.getByRole('button', { name: 'Conversations', exact: true }).click();
+  const conversations = page.getByRole('dialog', { name: 'Conversations' });
+  await expect(conversations).toBeVisible();
+  await sweep(page, 'fx.overlay.lucy_conversations', 'overlay.lucy.conversations', narrower, async () => {
+    if (!(await conversations.isVisible())) await page.getByRole('button', { name: 'Conversations', exact: true }).click();
+    await expect(conversations).toBeVisible();
+  });
 });
 
 test('D-01: Library rows reflow when the window narrows without a reload', async ({ page }) => {

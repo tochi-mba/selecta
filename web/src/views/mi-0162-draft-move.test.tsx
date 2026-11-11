@@ -37,6 +37,7 @@ function heldMove() {
       sent.push({ url, headers: (init?.headers ?? {}) as Record<string, string>, body: JSON.parse(String(init?.body)) });
       return held;
     }
+    if (url.includes('/drafts')) return new Response(JSON.stringify({ drafts: [] }), { status: 200 });
     return new Response('{}', { status: 200 });
   }));
   return { sent, answer };

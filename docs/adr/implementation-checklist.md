@@ -406,13 +406,13 @@
 
 - [x] T0250 - Complete current-vs-draft isolation sequence while listening, requesting, editing and undoing.
 - [ ] T0251 - Complete two simultaneous requests competing for a slot, bridge approval and stale cancellation replay.
-- [ ] T0252 - Complete manual cue change while a previous render finishes and fallback plays; verify intended/actual difference.
+- [x] T0252 - Complete manual cue change while a previous render finishes and fallback plays; verify intended/actual difference. **Evidence (2026-11-11):** `tests/test_cue_change_during_render.py` (2 passed) runs the sequence on the server; `web/src/ui/seamCueChange.test.ts` (3 passed) shows the words the page gives; the fallback playing meanwhile is `a transition that isn't ready doesn't stop the music` in `web/e2e/listen.e2e.ts`, passed in Edge 2026-11-11.
 - [ ] T0253 - Complete Studio local audition → pause main playback → navigate → commit exact seam → render failure recovery. **Needs a person:** needs real stems on the owner's machine and someone listening to the committed seam (checked 2026-11-10).
 - [x] T0254 - Complete export of a draft while switching/reordering other mixes; verify snapshot and FLAC bytes.
 - [x] T0255 - Complete metadata override while background analysis finishes and the library watch detects new files. **Evidence (2026-11-11):** `tests/test_correction_during_watch.py` (2 passed): a tempo/key correction, then analysis finishing for that song, then the folder watch (`/api/library/check`) bringing in new files; the correction, the measured values beside it and the new songs all stay right. The page side is `web/e2e/integration.e2e.ts`.
 - [x] T0256 - Complete backend restart during mutation, reconnect/retry and two-tab active playback takeover. **Evidence (2026-11-11):** new `src/selecta/operation_log.py` keeps each operation's first answer on disk, so a retry after a restart no longer repeats the change; `tests/test_restart_during_mutation.py` (4 passed). Two-tab takeover: `only one tab plays at a time` in `web/e2e/listen.e2e.ts` passed in Edge on 2026-11-11.
 - [x] T0257 - Confirm no preserved feature in feature-parity ledger has lost navigation or an authoritative backend side effect.
-- [ ] T0258 - Run end-to-end integration tests with representative song fixtures and audit all discovered regressions.
+- [ ] T0258 - Run end-to-end integration tests with representative song fixtures and audit all discovered regressions. **Needs a person:** run the integration flows on the owner's own representative songs and listen; the made-up-library runs are in `web/e2e/integration.e2e.ts` (checked 2026-11-11).
 
 
 ## Phase 12 - Quality, accessibility, performance and verification
@@ -421,7 +421,7 @@
 
 - [x] T0259 - Run unchanged/backwards-compatible legacy unit tests and explain any necessary selector updates.
 - [x] T0260 - Run extended frontend tests, Python tests, API contracts and browser E2E suites on PR and main.
-- [ ] T0261 - Run deterministic real Web Audio tests for seek, late seam, fallback, preview focus and exact media key behaviour.
+- [ ] T0261 - Run deterministic real Web Audio tests for seek, late seam, fallback, preview focus and exact media key behaviour. **Implementation:** Implemented; browser check pending (`web/e2e/listen.e2e.ts`: 14 of 17 passed in Edge 2026-11-11; rerun `Play makes real sound`, `Next and Previous go song by song` and `the end of the mix comes to a stop` after the `Next song` selector fix).
 - [ ] T0262 - Run visual regression for dark/light, 320px–4K, safe areas, reduced motion and high zoom. **Needs a person:** approve the golden screenshot baselines that `web/e2e/visual.e2e.ts` captures as review candidates (checked 2026-11-11).
 - [ ] T0263 - Complete keyboard-only workflows for request, Mixes, Edit, Studio, Library, export and study.
 - [ ] T0264 - Complete NVDA, VoiceOver and applicable mobile assistive-technology testing against WCAG 2.2 AA. **Needs a person:** NVDA, VoiceOver and mobile assistive-technology sessions run by a person (checked 2026-11-10).

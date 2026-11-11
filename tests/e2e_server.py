@@ -163,9 +163,10 @@ def _add_song(conn, settings: Settings, music: Path, number: int, song: tuple) -
         conn.execute("INSERT INTO lyrics(song_id,status) VALUES(?,?)", (song_id, "instrumental"))
 
 
-# MP-0272-03: with SELECTA_E2E_STEMS=1 the Studio can open for the mix's first transition. Stems stay
-# set to never for planning; this only fills the stem cache that separating would have filled, so
-# the Studio lays out its grid without the big model. Each "stem" is a quieter copy of the window.
+# MP-0272-03: with SELECTA_E2E_STEMS=1 the Studio can open for the mix's first transition. Stems
+# stay set to never for planning; this only fills the stem cache that separating would have filled,
+# so the Studio lays out its grid without the big model. Each "stem" is a quieter copy of the
+# window.
 STEMS = os.environ.get("SELECTA_E2E_STEMS") == "1"
 
 

@@ -296,7 +296,8 @@ export async function send<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       /* the status text will do */
     }
-    throw new ApiError(detail, response.status, code, operationOf(init));
+    // an id post() made up only for resending is not one a page can look up in Diagnostics (T0244)
+    throw new ApiError(detail, response.status, code, init && madeUpIds.has(init) ? '' : operationOf(init));
   }
   return await response.json();
   } catch (error) {
@@ -311,13 +312,19 @@ export async function send<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const get = <T,>(path: string) => send<T>(path);
 
-export const post = <T,>(path: string, body?: unknown, headers?: Record<string, string>) =>
-  send<T>(path, {
+/** Requests whose operation id post() made up, rather than the page choosing it. */
+const madeUpIds = new WeakSet<RequestInit>();
+
+export const post = <T,>(path: string, body?: unknown, headers?: Record<string, string>) => {
+  const init: RequestInit = {
     method: 'POST',
     // T0094: every change carries an operation id, so resending it after a lost answer is safe
     headers: { 'content-type': 'application/json', 'x-operation-id': newOperationId(), ...headers },
     body: JSON.stringify(body ?? {}),
-  });
+  };
+  if (!headers || !('x-operation-id' in headers)) madeUpIds.add(init);
+  return send<T>(path, init);
+};
 
 export const del = <T,>(path: string, headers?: Record<string, string>) => send<T>(path, { method: 'DELETE', headers });
 

@@ -24,7 +24,7 @@ def _report(settings, key, state):  # noqa: F811
     """What the render worker leaves behind for a seam."""
     folder = settings.renders_dir / "seams" / key
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / "seam.json").write_text(json.dumps({"key": key, **state}), "utf-8")
+    (folder / "seam.json").write_text(json.dumps({"key": key, "tried": [], **state}), "utf-8")
     if state["status"] == "ready":
         (folder / "clip.flac").write_bytes(b"fLaC")
 
@@ -64,7 +64,13 @@ def test_a_cue_moved_while_the_old_render_finishes_never_plays_the_old_one(
     _report(
         settings,
         new_key,
-        {"status": "ready", "passed": True, "style": "bass_swap_blend", "exit_bar": 1},
+        {
+            "status": "ready",
+            "passed": True,
+            "style": "bass_swap_blend",
+            "exit_bar": 1,
+            "tried": [{"move": "echo_out"}],
+        },
     )
     done = _seam(client)
     assert done["state"]["key"] == new_key and done["state"]["status"] == "ready"
@@ -81,4 +87,6 @@ def test_moving_the_cue_back_picks_the_old_render_up_again(client, conn, setting
     _report(settings, first, {"status": "ready", "passed": True, "style": "echo_out"})
     client.post("/api/mix/1/seam", json={"move": "echo_out", "exit_bar": 1}).raise_for_status()
     assert _seam(client)["state"]["status"] != "ready"
-   
+    client.post("/api/mix/1/seam", json={"move": "echo_out", "exit_bar": 0}).raise_for_status()
+    back = _seam(client)
+    assert back["state"]["key"] == first and back["state"]["status"] == "ready"
