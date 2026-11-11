@@ -1,6 +1,6 @@
 import { APIRequestContext, expect, Page, test } from '@playwright/test';
 import { rewriteJson } from '../e2e/helpers';
-import { browserLine, frameWindow, installProbe, interactionsSince, mark, percentile, timed } from '../e2e/perf-probe';
+import { apiSince, browserLine, frameWindow, installProbe, interactionsSince, mark, navigationTimes, percentile, timed } from '../e2e/perf-probe';
 
 /**
  * ADR-0162 MI-0162-04 (a 20,000-song Library) and MI-0162-05 (a 100-song draft in the Editor and the
@@ -52,6 +52,8 @@ test('MI-0162-04 a 20,000-song library opens, searches, filters and scrolls deep
   const firstRowsMs = await timed(() => page.goto('/library'), () => expect(rows.first()).toBeVisible({ timeout: 60_000 }));
   await expect(shown).toContainText(`of ${everything} songs`);
   const loadLongTasks = (await interactionsSince(page, 0)).longTasks;
+  // where the first-rows time went: the page itself, then the API calls it made, in page time
+  const boot = { navigation: await navigationTimes(page), api: await apiSince(page, 0, '/api/') };
 
   // typing a search, one key at a time, timed from the last key to the narrowed count
   const golden = await total(request, 'q=golden&state=all');
@@ -59,10 +61,12 @@ test('MI-0162-04 a 20,000-song library opens, searches, filters and scrolls deep
   await box.click();
   const typingFrom = await mark(page);
   await box.pressSequentially('golden', { delay: 120 });
+  const typingDone = await mark(page);
   const searchSettleMs = await timed(async () => undefined, () => expect(shown).toContainText(`of ${golden} songs`, { timeout: 30_000 }));
   await expect(rows.first()).toContainText(/golden/i);
   await expect(box).toBeFocused();
   const typing = await interactionsSince(page, typingFrom);
+  const searchRequests = (await apiSince(page, typingFrom, '/api/library')).map((call) => ({ ...call, typing_ended_at: Math.round(typingDone - typingFrom) }));
   await box.fill('');
   await expect(shown).toContainText(`of ${everything} songs`, { timeout: 30_000 });
 
@@ -95,7 +99,8 @@ test('MI-0162-04 a 20,000-song library opens, searches, filters and scrolls deep
     counts,
     first_rows_ms: firstRowsMs,
     load_long_tasks_ms: loadLongTasks,
-    search: { words: 'golden', matches: golden, settle_after_last_key_ms: searchSettleMs, slowest_key_paint_ms: typing.nextPaintWorstMs, slowest_event_timing_ms: typing.eventTimingWorstMs, long_tasks_ms: typing.longTasks },
+    boot,
+    search: { words: 'golden', matches: golden, settle_after_last_key_ms: searchSettleMs, requests: searchRequests, slowest_key_paint_ms: typing.nextPaintWorstMs, slowest_event_timing_ms: typing.eventTimingWorstMs, long_tasks_ms: typing.longTasks },
     filter: { ready, ms: filterMs, slowest_paint_ms: filtering.nextPaintWorstMs, slowest_event_timing_ms: filtering.eventTimingWorstMs },
     more_pages: { rows_loaded: await rows.count(), median_ms: percentile(pages, 0.5), worst_ms: Math.max(...pages), slowest_key_paint_ms: paging.nextPaintWorstMs, slowest_event_timing_ms: paging.eventTimingWorstMs },
     scroll: scrolling,
