@@ -1,9 +1,9 @@
 # Selecta 3.1 - 116-item UI/UX finishing implementation checklist
 
 - **Decision:** Accepted (11 ADRs, ADR-0078–0088).
-- **Implementation:** PR #25 merged as `6d78cf420c55817e967fc3b8db45749c9817926e` with 29 historically mapped partial tasks; this ledger still records **0/116 independently Verified**.
+- **Implementation:** PR #25 merged as `6d78cf4` on 2026-11-07. 70 Implemented, 34 partly implemented, 10 need a person, 2 not started; **0/116 Verified**. Each task's status and evidence is in the [ledger](selecta-3-1-evidence.md#task-status).
 - **Baseline:** `main` at `3b01dc1` (merged Selecta 3.0).
-- **Checklist discipline:** Every checkbox intentionally remains unchecked. PR #25 now includes a small amount of implementation, but no task yet has independent Verified evidence.
+- **Checklist discipline:** Every checkbox stays unchecked until Verified, which needs the person-only checks named in the ledger and owner review. Implemented means merged code with automated evidence.
 - **Identity:** `S31-XXXX-NN` is unique to this finishing programme; historical T, P and S3 IDs remain unchanged.
 
 ## How to use
@@ -24,7 +24,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0078 - Reconcile the shipped 3.0 baseline and govern finishing work](adr-0078-baseline-evidence-and-governance.md)
 
-**Phase:** 0 Baseline. **Decision:** Accepted. **Implementation:** 7 Implemented (automated), 0 In progress, 3 need a person only (2026-11-10 reconciliation). **Verified:** 0/10.
+**Phase:** 0 Baseline. **Decision:** Accepted. **Implementation:** 5 implemented, 2 partly implemented, 2 need a person, 1 not started. **Verified:** 0/10.
 
 - [ ] **S31-0078-01 - Pin baseline to actual 3.0 merge and current release head.** Acceptance: Evidence record names commit, environment, browser, installed/PWA assumptions and support boundary. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `docs/adr/completion/baseline.md` names the 3.0 merge `3b01dc1` and every later programme head; `selecta-3-1-release-readiness.md` records Windows + Edge + local server, installed-PWA assumptions and the support boundary. **Needs a person:** owner review for Verified; owner names the release head and environment actually being signed off.
 - [ ] **S31-0078-02 - Reconcile the 258 inherited S3 IDs with merged code and CI.** Acceptance: Every S3 ID maps to code/PR/tests or remains unresolved; no unchecked legacy item is silently marked done. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** Re-read on 2026-11-10 evening: all 258 S3 IDs in `selecta-3-implementation-checklist.md` carry an explicit status (119 ticked Implemented, each with an Evidence field; 11 In progress, 10 Needs a person and 118 Not started remain unchecked and unresolved; the S3 owner is still advancing items); nothing here marks an S3 item done. **Needs a person:** owner review for Verified of the S3 mapping.
@@ -41,7 +41,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0079 - Unify typography, themes, visual rhythm and CSS ownership](adr-0079-visual-system-and-css-ownership.md)
 
-**Phase:** 1 Foundations. **Decision:** Accepted. **Implementation:** 6 Implemented (automated), 2 In progress, 2 need a person only (2026-11-10 reconciliation). **Verified:** 0/10.
+**Phase:** 1 Foundations. **Decision:** Accepted. **Implementation:** 1 implemented, 7 partly implemented, 1 needs a person, 1 not started. **Verified:** 0/10.
 
 - [ ] **S31-0079-01 - Approve visual hierarchy for page, song, metadata and technical values.** Acceptance: Screens use a documented typographic scale; long/RTL/missing song metadata remains readable. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/styles/typography.test.ts`; `web/src/views/Mix.test.tsx` ("keeps duplicate, RTL and CJK song names readable"); `web/e2e/finishing.e2e.ts` ("long, right-to-left and duplicate names stay readable and whole at the smallest size") passed. **Needs a person:** visual approval of the hierarchy in both themes.
 - [ ] **S31-0079-02 - Specify semantic colour role mapping for both themes.** Acceptance: Buttons, links, statuses, playback, requests, caution, focus and selections preserve contrast and meaning in light/dark. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/styles/tokens.css` semantic roles for both themes; `web/src/ui/controls.test.tsx` ("never rely on colour alone") passed. **Needs a person:** contrast and meaning review of every role in light and dark by a named reviewer.
@@ -58,7 +58,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0080 - Make controls, asynchronous states, recovery and Undo dependable](adr-0080-interaction-state-recovery-and-undo.md)
 
-**Phase:** 1 Foundations. **Decision:** Accepted. **Implementation:** 10 Implemented (automated), 0 In progress, 0 need a person only (2026-11-10 reconciliation). **Verified:** 0/10.
+**Phase:** 1 Foundations. **Decision:** Accepted. **Implementation:** 8 implemented, 2 partly implemented. **Verified:** 0/10.
 
 - [ ] **S31-0080-01 - Define shared initial/empty/partial/refresh/error/offline/recovery presentation rules.** Acceptance: Each state includes visible facts, allowed actions, focus/announcement behaviour and next step. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/state/async.test.tsx` (keeps the last good answer only for a failed refresh); `Library.test.tsx` ("not being able to load isn't the same as having no songs"); `Drafts.test.tsx`, `Links.test.tsx` load-failure cases passed. **Needs a person:** review the presentation of each state on each surface.
 - [ ] **S31-0080-02 - Review skeleton geometry for every high-traffic content surface.** Acceptance: Placeholders match real content structure and do not cause large avoidable layout jumps. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/e2e/finishing.e2e.ts` ("pages hold their shape while they load, even when every answer is slow") passed. **Needs a person:** visual review of skeleton geometry.
@@ -75,7 +75,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0081 - Reduce friction from first music folder to a confident first mix](adr-0081-first-run-explore-and-mix-choice.md)
 
-**Phase:** 2 Listener. **Decision:** Accepted. **Implementation:** 8 Implemented (automated), 1 In progress, 1 need a person only (2026-11-10 reconciliation). **Verified:** 0/10.
+**Phase:** 2 Listener. **Decision:** Accepted. **Implementation:** 8 implemented, 2 need a person. **Verified:** 0/10.
 
 - [ ] **S31-0081-01 - Review new-user entry and folder path guidance.** Acceptance: User knows where to find a path, what stays local, what metadata can leave, and why a path can be rejected. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/e2e/finishing.e2e.ts` ("a first run says what leaves this PC before anything is sent"); `web/src/localPrivacyCopy.test.ts` passed. **Needs a person:** first-run comprehension by an unguided user.
 - [ ] **S31-0081-02 - Design distinct source-check, scan, analysis and mix-ready states.** Acceptance: Every stage has accurate progress or uncertainty, separate failures, and useful next action. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/e2e/finishing.e2e.ts` ("the first run says which stage it's at ... each can go wrong on its own"); `web/src/views/Setup.test.tsx` passed. **Needs a person:** owner review for Verified.
@@ -92,7 +92,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0082 - Polish Listen, navigation, mini-player and Stage without audio regressions](adr-0082-listen-shell-stage-and-audio-trust.md)
 
-**Phase:** 2 Listener. **Decision:** Accepted. **Implementation:** 10 Implemented (automated), 1 In progress, 0 need a person only (2026-11-10 reconciliation). **Verified:** 0/11.
+**Phase:** 2 Listener. **Decision:** Accepted. **Implementation:** 6 implemented, 5 partly implemented. **Verified:** 0/11.
 
 - [ ] **S31-0082-01 - Review primary hierarchy across Listen playing/paused/empty/error states.** Acceptance: Song, artist, progress, Play/Pause and Next are immediately recognizable; optional controls do not compete. **Status (2026-11-10):** In progress, not Verified. **Evidence:** `web/src/views/Now.test.tsx` ("keeps expert view controls discoverable without competing with playback") passed. **Needs a person:** listener tasks in playing/paused/empty/error in both themes.
 - [ ] **S31-0082-02 - Test Next versus Skip semantics and transition countdown wording.** Acceptance: Users understand whether the next song is immediate or transition-aligned without changing transport behaviour. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/player.test.ts` ("Next goes straight to the next song", "jumping to the transition isn't the same thing"); `listenNextUp.test.tsx`; `Shell.test.tsx` (N and Shift N) passed. **Needs a person:** comprehension check of the wording with listeners.
@@ -110,7 +110,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0083 - Make drafts, timeline editing, transition intent and export unambiguous](adr-0083-mixes-editor-inspector-and-export.md)
 
-**Phase:** 3 Creator. **Decision:** Accepted. **Implementation:** 10 Implemented (automated), 2 In progress, 0 need a person only (2026-11-10 reconciliation). **Verified:** 0/12.
+**Phase:** 3 Creator. **Decision:** Accepted. **Implementation:** 10 implemented, 2 partly implemented. **Verified:** 0/12.
 
 - [ ] **S31-0083-01 - Review My Mixes current/draft/render-line hierarchy.** Acceptance: Users distinguish what plays, what is saved, what is queued and what will render next. **Status (2026-11-10):** In progress, not Verified. **Evidence:** `Drafts.test.tsx`, `MyMixes.test.tsx`, `CurrentMix.test.tsx` passed. **Needs a person:** users distinguish playing, saved, queued and next render.
 - [ ] **S31-0083-02 - Test new, rename, copy, delete, restore and reorder drafts.** Acceptance: Each action has clear scope, durable feedback, failure recovery and correct Undo identity. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `Drafts.test.tsx` (confirm delete, Undo, copy, rename, serialized render line); `Mix.test.tsx` ("renames in place", "deleting ... can be undone") passed. **Needs a person:** owner review for Verified.
@@ -129,7 +129,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0084 - Refine Stem Studio's expert controls without reducing capability](adr-0084-stem-studio-workstation-polish.md)
 
-**Phase:** 3 Creator. **Decision:** Accepted. **Implementation:** 8 Implemented (automated), 1 In progress, 0 need a person only (2026-11-10 reconciliation). **Verified:** 0/9.
+**Phase:** 3 Creator. **Decision:** Accepted. **Implementation:** 5 implemented, 4 partly implemented. **Verified:** 0/9.
 
 - [ ] **S31-0084-01 - Review session identity and the A/B song context.** Acceptance: User can always tell which songs/pair and revision are being changed. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/views/Studio.test.tsx` ("shows which numbered pair is being shaped") passed. **Needs a person:** A/B context check with a person.
 - [ ] **S31-0084-02 - Improve lane and square visual/readable semantics.** Acceptance: Voice, drums, bass and melody cells are distinguishable without colour alone. **Status (2026-11-10):** In progress, not Verified. **Evidence:** `Studio.test.tsx` ("shows a square for every part of both songs, named for a screen reader") passed. **Needs a person:** visual check that lanes differ without colour.
@@ -145,7 +145,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0085 - Clarify Requests, consented bridges and discovery auditions](adr-0085-requests-and-music-discovery.md)
 
-**Phase:** 4 Discovery/Operations. **Decision:** Accepted. **Implementation:** 10 Implemented (automated), 0 In progress, 0 need a person only (2026-11-10 reconciliation). **Verified:** 0/10.
+**Phase:** 4 Discovery/Operations. **Decision:** Accepted. **Implementation:** 8 implemented, 2 partly implemented. **Verified:** 0/10.
 
 - [ ] **S31-0085-01 - Review request search and duplicate/pre-existing choices.** Acceptance: Users understand requested versus already planned/playing songs and can cancel safely. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/views/Requests.test.tsx` ("won't let a song be asked for twice, or one already in the mix", cancel cases) passed. **Needs a person:** owner review for Verified.
 - [ ] **S31-0085-02 - Clarify waiting, preparing, ready, inserted, failed and cancelled states.** Acceptance: Status and detail agree with server truth, including late updates and refresh. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `Requests.test.tsx`, `RequestsJoining.test.tsx` state cases; `tests/test_request_routes.py`, `tests/test_requests.py` passed. **Needs a person:** owner review for Verified.
@@ -162,7 +162,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0086 - Polish Library, Workspace, studies and operational status](adr-0086-library-workspace-study-and-operational-trust.md)
 
-**Phase:** 4 Discovery/Operations. **Decision:** Accepted. **Implementation:** 9 Implemented (automated), 1 In progress, 1 need a person only (2026-11-10 reconciliation). **Verified:** 0/11.
+**Phase:** 4 Discovery/Operations. **Decision:** Accepted. **Implementation:** 8 implemented, 3 partly implemented. **Verified:** 0/11.
 
 - [ ] **S31-0086-01 - Review Library search, sort, filters, density and URL/history state.** Acceptance: Results match query, Back restores selected filter, and deep links remain valid. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/src/views/Library.test.tsx` ("keeps what you were looking for in the address", deep-link cases); `router.test.tsx` ("remembers filters in the address") passed. **Needs a person:** owner review for Verified.
 - [ ] **S31-0086-02 - Rebalance library row title, artist, readiness and action hierarchy.** Acceptance: Scanning reveals song identity and blockers before secondary maintenance controls. **Status (2026-11-10):** In progress, not Verified. **Evidence:** `Library.test.tsx` ("preserves the same song actions, readiness reason and list while switching layouts") passed. **Needs a person:** visual scan review of row hierarchy.
@@ -180,7 +180,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0087 - Verify WCAG, device reflow, audio latency and scale](adr-0087-accessibility-responsive-and-performance-gates.md)
 
-**Phase:** 5 Cross-cutting quality. **Decision:** Accepted. **Implementation:** 4 Implemented (automated), 1 In progress, 6 need a person only (2026-11-10 reconciliation). **Verified:** 0/11.
+**Phase:** 5 Cross-cutting quality. **Decision:** Accepted. **Implementation:** 5 implemented, 5 partly implemented, 1 needs a person. **Verified:** 0/11.
 
 - [ ] **S31-0087-01 - Approve platform, width, zoom, orientation and keyboard matrix.** Acceptance: Matrix covers 320/375/390/430/768/1024/1280/1440/1920/3840 CSS px where meaningful. **Status (2026-11-10):** Not Verified. **Evidence:** Matrix drafted in `selecta-3-1-verification-matrix.md`. **Needs a person:** owner approves the platform/width/zoom/keyboard matrix.
 - [ ] **S31-0087-02 - Run full keyboard-only tasks across core journeys.** Acceptance: Skip link, menus, forms, tabs, waveform, timeline, Studio grid, requests and export have no traps. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/e2e/finishing.e2e.ts` ("Tab reaches everything on every page at ${width}px", keyboard request, reorder, Studio, palette) passed. **Needs a person:** full keyboard-only journeys by a person.
@@ -198,7 +198,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 
 ### [ADR-0088 - Require observable user, visual and product acceptance before release](adr-0088-research-visual-regression-and-release.md)
 
-**Phase:** 6 Verification. **Decision:** Accepted. **Implementation:** 5 Implemented (automated), 1 In progress, 6 need a person only (2026-11-10 reconciliation). **Verified:** 0/12.
+**Phase:** 6 Verification. **Decision:** Accepted. **Implementation:** 6 implemented, 2 partly implemented, 4 need a person. **Verified:** 0/12.
 
 - [ ] **S31-0088-01 - Create deterministic visual snapshot matrix for approved screen/state/theme fixtures.** Acceptance: Include full UI, modal open, empty, loading, error, recovery, 320px and desktop examples. **Status (2026-11-10):** Implemented (automated), not Verified. **Evidence:** `web/e2e/visual.e2e.ts`, `web/e2e/paired-theme.e2e.ts` candidate matrix (`docs/adr/completion/visual-evidence.md`). **Needs a person:** named reviewer approves the baselines.
 - [ ] **S31-0088-02 - Require reviewed diffs rather than bulk baseline replacement.** Acceptance: All visual changes have owner approval and intentional reasons; no accidentally hidden content. **Status (2026-11-10):** Not Verified. **Needs a person:** owner approves each visual diff with a reason.

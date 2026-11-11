@@ -17,4 +17,4 @@ The workflow uploads `selecta-3-1-visual-review-1` and `selecta-3-1-visual-revie
 5. Only after owner approval, commit an intentional screenshot baseline per supported browser/OS/font configuration and run `toHaveScreenshot` comparisons with documented diff thresholds. Do not claim Playwright captured images are pixel stable across operating systems before validating them.
 6. Perform independent keyboard/AT, reduced motion, 200%/400% zoom, real audio and human task reviews. Screenshots alone cannot mark S31-0078-05, S31-0079-10 or S31-0088-01 Verified.
 
-**Current disposition:** capture infrastructure added; no approved screenshots, reviews or visual-baseline diffs are claimed.
+**Current disposition:** `web/e2e/visual.e2e.ts` captures 19 states at 320/375/1280/1440 px, light and dark: the six main pages, export, customize, requests, song details, no results, the transition inspector, long and right-to-left names, an empty mix, nothing to hear, the server gone, never reached and back, and the first run. CI uploads them on every run. None are approved, and no screenshot comparison runs yet.

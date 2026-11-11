@@ -1,6 +1,6 @@
 # Selecta 3.1 - inspected surface and state inventory
 
-**Status: source-indexed work in progress, not tested or owner approved.** This is a route/overlay checklist grounded in `web/src/router.ts`, `web/src/App.tsx` and `web/e2e/helpers.ts` at PR #25. A link or component's presence proves neither responsive quality nor task success.
+**Status: every route here is visited by the reflow, accessibility, keyboard and slow-loading tests, and the overlays by the dialog tests; not owner approved.** This is a route/overlay checklist grounded in `web/src/router.ts`, `web/src/App.tsx` and `web/e2e/helpers.ts` at PR #25. A link or component's presence proves neither responsive quality nor task success.
 
 ## Route and destination inventory
 

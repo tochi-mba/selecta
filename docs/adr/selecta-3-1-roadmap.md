@@ -3,7 +3,7 @@
 - **Date:** 2026-11-07
 - **Baseline:** `main` 3.0 merge `3b01dc1336aab0f1cb0a4d85be5eba359de81831` (PR #24 merged).
 - **Decision status:** Accepted for ADR-0078–0088; the owner has not approved their design decisions.
-- **Implementation status:** Selected tasks In progress on PR #25; **Implemented:** 0/116, **Verified:** 0/116.
+- **Implementation status:** PR #25 merged (`6d78cf4`). 70 Implemented, 34 partly implemented, 10 need a person, 2 not started; **0/116 Verified**. See the [ledger](selecta-3-1-evidence.md#task-status).
 - **Scope:** Initially documentation-only; PR #25 now contains frontend and regression tests, plus non-blocking synthetic screenshot artifact upload in CI. Backend, schema, audio engine and dependencies are unchanged.
 - **History:** Existing ADR-0001–0077 and T/P/S3 task IDs remain intact. Prior roadmap ledgers, including the still-stale 3.0 "PR open" snapshot, are not proof of merged/verified work.
 
@@ -21,18 +21,18 @@ The [Selecta 3.0 INV-01–INV-20 requirements](selecta-3-roadmap.md) remain bind
 
 | ADR | Phase | Workstream | Open S31 tasks | Decision | Implementation |
 |---|---|---|---:|---|---|
-| [ADR-0078](adr-0078-baseline-evidence-and-governance.md) | 0 Baseline | Reconcile the shipped 3.0 baseline and govern finishing work | 10 | Accepted | In progress (partial) |
-| [ADR-0079](adr-0079-visual-system-and-css-ownership.md) | 1 Foundations | Unify typography, themes, visual rhythm and CSS ownership | 10 | Accepted | In progress (partial) |
-| [ADR-0080](adr-0080-interaction-state-recovery-and-undo.md) | 1 Foundations | Make controls, asynchronous states, recovery and Undo dependable | 10 | Accepted | In progress (partial) |
-| [ADR-0081](adr-0081-first-run-explore-and-mix-choice.md) | 2 Listener | Reduce friction from first music folder to a confident first mix | 10 | Accepted | In progress (partial) |
-| [ADR-0082](adr-0082-listen-shell-stage-and-audio-trust.md) | 2 Listener | Polish Listen, navigation, mini-player and Stage without audio regressions | 11 | Accepted | In progress (partial) |
-| [ADR-0083](adr-0083-mixes-editor-inspector-and-export.md) | 3 Creator | Make drafts, timeline editing, transition intent and export unambiguous | 12 | Accepted | In progress (partial) |
-| [ADR-0084](adr-0084-stem-studio-workstation-polish.md) | 3 Creator | Refine Stem Studio's expert controls without reducing capability | 9 | Accepted | In progress (partial) |
-| [ADR-0085](adr-0085-requests-and-music-discovery.md) | 4 Discovery/Operations | Clarify Requests, consented bridges and discovery auditions | 10 | Accepted | In progress (partial) |
-| [ADR-0086](adr-0086-library-workspace-study-and-operational-trust.md) | 4 Discovery/Operations | Polish Library, Workspace, studies and operational status | 11 | Accepted | In progress (partial) |
-| [ADR-0087](adr-0087-accessibility-responsive-and-performance-gates.md) | 5 Cross-cutting quality | Verify WCAG, device reflow, audio latency and scale | 11 | Accepted | In progress (partial) |
-| [ADR-0088](adr-0088-research-visual-regression-and-release.md) | 6 Verification | Require observable user, visual and product acceptance before release | 12 | Accepted | In progress (partial) |
-| **Total** | | | **116** | | **0 Implemented / 0 Verified** |
+| [ADR-0078](adr-0078-baseline-evidence-and-governance.md) | 0 Baseline | Reconcile the shipped 3.0 baseline and govern finishing work | 10 | Accepted | 5 implemented, 2 partly implemented, 2 need a person, 1 not started |
+| [ADR-0079](adr-0079-visual-system-and-css-ownership.md) | 1 Foundations | Unify typography, themes, visual rhythm and CSS ownership | 10 | Accepted | 1 implemented, 7 partly implemented, 1 needs a person, 1 not started |
+| [ADR-0080](adr-0080-interaction-state-recovery-and-undo.md) | 1 Foundations | Make controls, asynchronous states, recovery and Undo dependable | 10 | Accepted | 8 implemented, 2 partly implemented |
+| [ADR-0081](adr-0081-first-run-explore-and-mix-choice.md) | 2 Listener | Reduce friction from first music folder to a confident first mix | 10 | Accepted | 8 implemented, 2 need a person |
+| [ADR-0082](adr-0082-listen-shell-stage-and-audio-trust.md) | 2 Listener | Polish Listen, navigation, mini-player and Stage without audio regressions | 11 | Accepted | 6 implemented, 5 partly implemented |
+| [ADR-0083](adr-0083-mixes-editor-inspector-and-export.md) | 3 Creator | Make drafts, timeline editing, transition intent and export unambiguous | 12 | Accepted | 10 implemented, 2 partly implemented |
+| [ADR-0084](adr-0084-stem-studio-workstation-polish.md) | 3 Creator | Refine Stem Studio's expert controls without reducing capability | 9 | Accepted | 5 implemented, 4 partly implemented |
+| [ADR-0085](adr-0085-requests-and-music-discovery.md) | 4 Discovery/Operations | Clarify Requests, consented bridges and discovery auditions | 10 | Accepted | 8 implemented, 2 partly implemented |
+| [ADR-0086](adr-0086-library-workspace-study-and-operational-trust.md) | 4 Discovery/Operations | Polish Library, Workspace, studies and operational status | 11 | Accepted | 8 implemented, 3 partly implemented |
+| [ADR-0087](adr-0087-accessibility-responsive-and-performance-gates.md) | 5 Cross-cutting quality | Verify WCAG, device reflow, audio latency and scale | 11 | Accepted | 5 implemented, 5 partly implemented, 1 needs a person |
+| [ADR-0088](adr-0088-research-visual-regression-and-release.md) | 6 Verification | Require observable user, visual and product acceptance before release | 12 | Accepted | 6 implemented, 2 partly implemented, 4 need a person |
+| **Total** | | | **116** | | **70 Implemented / 0 Verified** |
 
 ## Dependencies and proposed delivery order
 
@@ -72,5 +72,6 @@ PR #25 began as planning documentation; it now includes scoped source/test work 
 - [Route, overlay and state inventory](selecta-3-1-surface-inventory.md)
 - [Release readiness and outstanding human acceptance](selecta-3-1-release-readiness.md)
 - [Per-task evidence ledger](selecta-3-1-evidence.md)
+- [Measurements: scale, FLAC, rollback](selecta-3-1-measurements.md)
 - [Source inspection and research references](../research/selecta-3-1-polish.md)
 - [Selecta 3.0 road map](selecta-3-roadmap.md), [parity](selecta-3-parity-matrix.md), [verification](selecta-3-verification-matrix.md), [legacy evidence](selecta-3-evidence.md)
