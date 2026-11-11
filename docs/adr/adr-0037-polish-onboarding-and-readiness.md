@@ -1,7 +1,7 @@
 # ADR-0037: First-run setup, truthful readiness and local privacy explanations
 
 - **Decision status:** Accepted (owner requested implementation in PR #23)
-- **Implementation status:** In progress: P0044-P0049 implemented with evidence (2026-11-10); P0050 superseded by ADR-0126; P0051 open pending browser run
+- **Implementation status:** In progress: P0044-P0049 and P0051 implemented with evidence (2026-11-10/11); P0050 superseded by ADR-0126
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
 - **Delivery phase:** 3 - Core listening, mixes and requests
@@ -52,7 +52,7 @@ The owner accepted proceeding with implementation in PR #23. Implementation prog
 |---|---|---|---|
 | 2026-11-06 | Proposed | Not started | Original documentation-only proposal |
 | 2026-11-06 | Accepted | In progress | Owner requested full implementation and merge after green CI in PR #23; verification pending |
-| 2026-11-10 | Accepted | In progress | In progress: P0044-P0049 implemented with evidence (2026-11-10); P0050 superseded by ADR-0126; P0051 open pending browser run |
+| 2026-11-10 | Accepted | In progress | In progress: P0044-P0049 and P0051 implemented with evidence (2026-11-10/11); P0050 superseded by ADR-0126 |
 
 ## References
 

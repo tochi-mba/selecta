@@ -88,15 +88,23 @@ test('SF-0235-07 a 64-cell Studio paints a whole lane by dragging with no long t
     const box = (await squares.nth(index).boundingBox())!;
     return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
   };
-  await squares.first().scrollIntoViewIfNeeded();
-  const first = await centre(0);
-  const last = await centre(63);
-  const started = Date.now();
-  await page.mouse.move(first.x, first.y);
-  await page.mouse.down();
-  for (let step = 1; step <= 63; step += 1) await page.mouse.move(first.x + ((last.x - first.x) * step) / 63, first.y);
-  await page.mouse.up();
-  const took = Date.now() - started;
+  // 64 squares are wider than the panel, so the lane scrolls sideways: a person paints what they can
+  // see, scrolls, and carries on. Sixteen squares at a time always fit on screen.
+  let took = 0;
+  for (let from = 0; from < 64; from += 16) {
+    // centre the sixteen, clear of the sticky part names on the left
+    await squares.nth(from + 8).evaluate((square) => square.scrollIntoView({ block: 'nearest', inline: 'center' }));
+    await expect(squares.nth(from)).toBeInViewport({ ratio: 1 });
+    await expect(squares.nth(from + 15)).toBeInViewport({ ratio: 1 });
+    const first = await centre(from);
+    const last = await centre(from + 15);
+    const started = Date.now();
+    await page.mouse.move(first.x, first.y);
+    await page.mouse.down();
+    for (let step = 1; step <= 15; step += 1) await page.mouse.move(first.x + ((last.x - first.x) * step) / 15, first.y);
+    await page.mouse.up();
+    took += Date.now() - started;
+  }
 
   await expect(squares.locator('xpath=self::*[@aria-pressed="true"]')).toHaveCount(64);
   const longTasks = await page.evaluate(() => (window as unknown as { longTasks: number[] }).longTasks);

@@ -1,7 +1,7 @@
 # ADR-0039: Calm listening hierarchy, stable transport and shell continuity
 
 - **Decision status:** Accepted (owner requested implementation in PR #23)
-- **Implementation status:** In progress: P0061, P0063, P0064 implemented with evidence (2026-11-10); P0062, P0065-P0068 open pending browser run; P0069 needs a person (installed-app layout, hardware media keys)
+- **Implementation status:** In progress: P0061-P0068 implemented with evidence (2026-11-10/11); P0069 needs a person (installed-app layout, hardware media keys)
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
 - **Delivery phase:** 3 - Core listening, mixes and requests
@@ -53,7 +53,7 @@ The owner accepted proceeding with implementation in PR #23. Implementation prog
 |---|---|---|---|
 | 2026-11-06 | Proposed | Not started | Original documentation-only proposal |
 | 2026-11-06 | Accepted | In progress | Owner requested full implementation and merge after green CI in PR #23; verification pending |
-| 2026-11-10 | Accepted | In progress | In progress: P0061, P0063, P0064 implemented with evidence (2026-11-10); P0062, P0065-P0068 open pending browser run; P0069 needs a person (installed-app layout, hardware media keys) |
+| 2026-11-10 | Accepted | In progress | In progress: P0061-P0068 implemented with evidence (2026-11-10/11); P0069 needs a person (installed-app layout, hardware media keys) |
 
 ## References
 

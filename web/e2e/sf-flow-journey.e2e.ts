@@ -67,7 +67,12 @@ test('SF-0242-06 at 320px every control keeps an accessible name, and the main n
     await page.setViewportSize({ width: 320, height: 720 });
     await page.waitForTimeout(300);
     const narrow = await controlNames(page);
-    const unnamed = narrow.filter((control) => control.name === '');
+    // the browser's own accessibility tree decides the name (aria-label, labelledby, label, content,
+    // an icon's title...), so a control with no name is one listed by its role alone
+    const tree = await page.locator('body').ariaSnapshot();
+    const unnamed = tree.split('\n')
+      .filter((line) => /^\s*- (button|link|textbox|searchbox|combobox|checkbox|radio|switch|tab|slider|spinbutton|menuitem|option)(?: \[[^\]]*\])*:?\s*$/.test(line))
+      .map((line) => line.trim());
     expect(unnamed, `${path}: controls with no accessible name at 320px`).toEqual([]);
     // the main destinations are all still there by the same names, whatever shape the navigation takes
     const destinations = ['Listen', 'Make a Mix', 'My Mixes', 'Library', 'Workspace'];
@@ -87,7 +92,13 @@ test('SF-0246-04 unapplied Studio cells survive going to another page and coming
   await cell.click();
   await expect(cell).toHaveAttribute('aria-pressed', 'true');
 
-  // an intentional route change through the app's own navigation, then the browser's Back
+  // an intentional route change through the app's own navigation, then the browser's Back. The
+  // Studio sits in the transition's panel, which keeps the page behind it inert, so the person
+  // closes the Studio and the panel first, without applying anything
+  await page.locator('.studio').getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(page.locator('.studio')).toHaveCount(0);
+  for (let i = 0; i < 3 && await page.getByRole('dialog').count(); i += 1) await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: /Library/ }).first().click();
   await expect(page).toHaveURL(/\/library/);
   await expect(page.locator('.studio')).toHaveCount(0);

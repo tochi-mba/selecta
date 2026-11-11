@@ -1,7 +1,7 @@
 # ADR-0038: Mix browsing, creation defaults and unmistakable draft scope
 
 - **Decision status:** Accepted (owner requested implementation in PR #23)
-- **Implementation status:** In progress: P0052-P0059 implemented with evidence (2026-11-10); P0060 open pending browser run
+- **Implementation status:** Implemented: P0052-P0060 all implemented with evidence (2026-11-10/11)
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
 - **Delivery phase:** 3 - Core listening, mixes and requests
@@ -53,7 +53,7 @@ The owner accepted proceeding with implementation in PR #23. Implementation prog
 |---|---|---|---|
 | 2026-11-06 | Proposed | Not started | Original documentation-only proposal |
 | 2026-11-06 | Accepted | In progress | Owner requested full implementation and merge after green CI in PR #23; verification pending |
-| 2026-11-10 | Accepted | In progress | In progress: P0052-P0059 implemented with evidence (2026-11-10); P0060 open pending browser run |
+| 2026-11-10 | Accepted | Implemented | Implemented: P0052-P0060 all implemented with evidence (2026-11-10/11) |
 
 ## References
 

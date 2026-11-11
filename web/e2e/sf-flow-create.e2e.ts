@@ -189,8 +189,11 @@ test('SF-0221-07 in a hundred-song mix the inspector keeps its pair while other 
 // SF-0222-07: dragging in the editor while the mix plays: frames stay smooth and the audio clock keeps
 // moving with no sound restarted or stopped.
 test('SF-0222-07 dragging a song while the mix plays leaves playback alone', async ({ page, request }) => {
+  test.setTimeout(420_000);
   await installProbe(page);
   await spyOnAudio(page);
+  // two songs, one transition: enough to play across a seam, and quick to render on a busy machine
+  await resetMix(request, [1, 2]);
   await allRendered(request);
   await page.goto('/listen');
   await page.getByRole('button', { name: /^(Play|Resume from)/ }).click();

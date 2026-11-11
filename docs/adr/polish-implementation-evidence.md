@@ -103,6 +103,7 @@ All checks below are vitest files run on 2026-11-10 (`pnpm exec vitest run <file
 | P0048 | Implemented | Library, progress and sources stay reachable while preparing | `polishPhase03Start.test.tsx` P0048 | - |
 | P0049 | Implemented | Lookup sends only artist, title, album, duration; starts on folder add, new songs in added folders and `selecta lyrics`; nothing when `lyrics.lookup` is off; README reconciled | `tests/test_polish_phase03.py` (5), `localPrivacyCopy.test.ts` | - |
 | P0050 | Superseded | ADR-0126: native picker declined by the owner | - | - |
+| P0051 | Implemented | Retry, copied-in, removed, Unicode, restart and return visit keep setup progress | `pytest tests/test_scan.py` 27 passed; Playwright 2026-11-11, 25/26 passed (finishing first-run folder, MP-0282-06/08) | - |
 
 ## ADR-0040 task evidence (reconciled 2026-11-10, uncommitted working tree)
 
@@ -166,6 +167,7 @@ Playwright: `slot.py browser -- pnpm exec playwright test e2e/mp-0279-component-
 | P0057 | Implemented | Measured energy normalised to the mix's own range, labelled as not comparable | `polishPhase03Mixes.test.tsx` 4/4, `MixSetup.test.tsx` 3/3 | - |
 | P0058 | Implemented | No ready match vs failed search with Retry | `polishPhase03Mixes.test.tsx` | - |
 | P0059 | Implemented | Draft feedback; render line vs playback order | `Drafts.test.tsx` | - |
+| P0060 | Implemented | Building/switching while playing, failures, stale answers, Undo, long names | `Mixes.test.tsx`, `Drafts.test.tsx`; Playwright 2026-11-11, 25/26 passed (MP-0283-07, MP-0286-01/07, MP-0280-04) | - |
 
 ## ADR-0041 task evidence (reconciled 2026-11-10, uncommitted working tree)
 
@@ -201,6 +203,20 @@ No task in this ADR is ticked: each needs a full candidate run, recorded hardwar
 | P0141 | Implemented | Rollback from this tree to `main` (`405cf7f`) and forward again: "identical across all three" for songs, settings, mix, seam settings, drafts, corrected tempo, export record and requests | `.venv\Scripts\python tests/rollback_check.py <git archive main src>` under the slot lock | Ratings are not yet in the harness |
 | P0142 | Open | Section entries updated 2026-11-10 | - | PR and verification links at final reconciliation |
 | P0143 | Open (Needs a person) | - | - | Release-candidate review and owner disposition |
+
+## ADR-0039 task evidence (reconciled 2026-11-10/11, uncommitted working tree)
+
+| Task | Status | Acceptance and result | Automated check run | Remaining |
+|---|---|---|---|---|
+| P0061 | Implemented | Identity, transport, next song first; view options disclosed and remembered | `Now.test.tsx` with `NowFlow`, `listenSeek`, `player` 79 passed (2026-11-10) | - |
+| P0062 | Implemented | Transport stable across states | Playwright 2026-11-11, 25/26 passed (MP-0284-02, MP-0281-03) | - |
+| P0063 | Implemented | Next song vs Jump to the transition in label, icon, tooltip, help | `polishPhase03Listen.test.tsx` P0063 | - |
+| P0064 | Implemented | Missing, untimed, instrumental, no beat grid, failed details, last song | `lyricHonesty.test.tsx` 4/4, `Now.test.tsx`, `polishPhase03Listen.test.tsx` P0064 | - |
+| P0065 | Implemented | Next-song changes never move the transport; made/planned said | Playwright 2026-11-11, 25/26 passed (MP-0281-03, MP-0284-05); `listenNextUp.test.tsx` 3/3 | - |
+| P0066 | Implemented | New spec: seek, seam marker and countdown units in words at 100/200/400% | Playwright 2026-11-11, 25/26 passed (`polish-p0066-listen-zoom.e2e.ts`) | - |
+| P0067 | Implemented | Rail, phone bar, mini-player, overlays and focus | Playwright 2026-11-11, 25/26 passed (MP-0280-06/07, MP-0281-05..08, finishing overlap) | - |
+| P0068 | Implemented | Fullscreen refusal, restored preferences, reduced motion | Playwright 2026-11-11, 25/26 passed (finishing fullscreen refused + reduced motion, listen fullscreen, MP-0284-07/08) | - |
+| P0069 | Open (Needs a person) | Automated parts pass except media keys (timed out waiting for renders under load) | Playwright 2026-11-11, 25/26 passed (MP-0280-07, one tab plays) | Installed-app layout and hardware media keys by a person; rerun media keys |
 
 ## ADR-0042 task evidence (reconciled 2026-11-10, uncommitted working tree)
 
