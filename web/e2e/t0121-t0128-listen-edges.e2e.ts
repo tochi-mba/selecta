@@ -1,5 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
-import { allRendered, resetMix, rewriteJson, spyOnAudio, stickingOut } from './helpers';
+import { resetMix, rewriteJson, spyOnAudio, stickingOut } from './helpers';
 
 /* Selecta 2.0 T0121 (ADR-0008) and T0128 (ADR-0009): Listen on a phone with reduced motion, with no
  * next song, very long and right-to-left names and a transition that fails; and the fullscreen Stage
@@ -57,7 +57,11 @@ test('T0121 very long and right-to-left names wrap inside a phone screen', async
 
 test('T0121 a failed transition on a phone with reduced motion still carries the music on', async ({ page, request }) => {
   await resetMix(request);
-  await allRendered(request);
+  // The next transition is reported as failed, and its audio can't be fetched either.
+  await page.route('**/api/mix', (route) => rewriteJson(route, (body) => {
+    if (body.mix[1]?.seam) body.mix[1].seam.state.status = 'failed';
+    return body;
+  }));
   await page.route('**/api/seams/*/clip', (route) => route.fulfill({ status: 404, body: '{}' }));
   await page.goto('/listen');
   await expect(title(page)).toHaveText('Morning Light');
@@ -77,7 +81,8 @@ test('T0128 changing route while the fullscreen Stage is open leaves it cleanly 
   await page.setViewportSize({ width: 1280, height: 800 });
   await resetMix(request);
   await page.goto('/library');
-  await page.goto('/listen');
+  // inside the app, so Back is the app's own route change rather than loading a new page
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Listen', exact: true }).click();
   await expect(title(page)).toHaveText('Morning Light');
   await play(page);
   await page.keyboard.press('f');
@@ -86,11 +91,13 @@ test('T0128 changing route while the fullscreen Stage is open leaves it cleanly 
   await expect(page).toHaveURL(/\/library/);
   await expect(page.locator('.now.stage')).toHaveCount(0);
   expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
-  await expect(pauseButton(page)).toBeVisible();
+  // the mini-player carries on
+  await expect(page.getByRole('button', { name: 'Pause' }).first()).toBeVisible();
   await page.goForward();
   await expect(page).toHaveURL(/\/listen/);
-  await expect(title(page)).toBeVisible();
+  await expect(title(page)).toHaveText('Morning Light');
   await expect(pauseButton(page)).toBeVisible();
+  expect(await page.evaluate(() => window.audioSpy.contexts.length)).toBe(1);
   const states = await page.evaluate(() => window.audioSpy.contexts.map((context) => context.state));
   expect(states).toContain('running');
 });

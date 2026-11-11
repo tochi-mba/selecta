@@ -88,7 +88,7 @@ describe('one transport under StrictMode and responsive swaps', () => {
     });
 
     for (const place of ['Library', 'Workspace', 'Listen']) {
-      fireEvent.click(links.getByRole('link', { name: place, exact: true }));
+      fireEvent.click(links.getByRole('link', { name: place }));
       fireEvent.keyDown(document.body, { key: ' ', code: 'Space' });
     }
     act(() => swap(true));

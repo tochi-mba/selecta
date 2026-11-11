@@ -241,7 +241,8 @@ def add_routes(app, ctx) -> None:
         return library_cache["ranked"]
 
     @app.get("/api/links")
-    def links(q: str = "", limit: int = 60) -> dict:
+    def links(q: str = "", limit: int = 60, song: int | None = None) -> dict:
+        """`song` (CI-0177-05) keeps only the links that touch that one song, for its details."""
         from selecta.planner.prepare import LINKS_TO_PREPARE, link_state
         from selecta.planner.wordreel import modes_for
 
@@ -262,6 +263,8 @@ def add_routes(app, ctx) -> None:
             done = state["status"] == "ready" and state.get("passed", False)
             prepared += 1 if done else 0
             if text and text not in link.phrase:
+                continue
+            if song is not None and song not in (link.song_a, link.song_b):
                 continue
             order = {"ready": 0 if done else 3, "rendering": 1, "queued": 1, "none": 2}.get(
                 state["status"], 4

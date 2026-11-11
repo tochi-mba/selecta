@@ -37,7 +37,10 @@ def read_everything(home: Path) -> dict:
         drafts = client.get("/api/drafts").json()["drafts"]
         draft = client.get(f"/api/mix?draft={drafts[0]['id']}").json() if drafts else None
         song = client.get("/api/songs/3").json()
-        jobs = client.get("/api/exports/jobs").json()["jobs"]
+        try:
+            jobs = client.get("/api/exports/jobs").json()["jobs"]
+        except Exception:  # an older build without export jobs, such as pre-overhaul 911c981
+            jobs = None
         requests = client.get("/api/requests").json()["requests"]
         remembered = client.get("/api/memory").json()
         rated = {
@@ -54,7 +57,11 @@ def read_everything(home: Path) -> dict:
                 "drafts": [(item["name"], item["id"]) for item in drafts],
                 "draft_songs": [item["song_id"] for item in draft["mix"]] if draft else [],
                 "corrected_bpm": song.get("bpm"),
-                "export_jobs": [(job["id"], job["state"], job["name"]) for job in jobs],
+                "export_jobs": (
+                    None
+                    if jobs is None
+                    else [(job["id"], job["state"], job["name"]) for job in jobs]
+                ),
                 "requests": sorted((row["id"], row["song_id"]) for row in requests),
                 # T0273: a Good and a Bad, as the server's own memory of them counts them
                 "ratings": {"liked": remembered["liked"], "disliked": remembered["disliked"]},
@@ -154,7 +161,13 @@ def main() -> int:
         print(json.dumps(before, indent=1))
         rolled_back = report_from(older, "the older checkout")
         forward = report_from(ROOT, "this checkout again")
-        same = before == rolled_back == forward
+        # A feature the older build never had (None) can't be read by it, but it must survive the
+        # trip: this checkout has to see it again afterwards, exactly as before.
+        unknown = sorted(key for key, value in rolled_back.items() if value is None)
+        known = {key: value for key, value in before.items() if key not in unknown}
+        same = before == forward and known == {k: rolled_back[k] for k in known}
+        if unknown:
+            print(f"the older checkout doesn't have: {', '.join(unknown)}")
         print("identical across all three" if same else json.dumps(rolled_back, indent=1))
         return 0 if same else 1
 

@@ -25,11 +25,48 @@ long, right-to-left, CJK, accented and duplicate names; no private music). Captu
 | `library-selection` | Library with one recording selected (rail open) | `views/Library.tsx` |
 | `library-empty-search` | Library search with no match | `views/Library.tsx` |
 
-Not yet fixtures (states that need playback, real stems or a failing server):
-Listen while playing and during a handoff, Stage, Studio, Requests with a bridge, export job
-progress, loading and error states. These are covered behaviourally by `listen.e2e.ts`,
-`finishing.e2e.ts`, `flows.e2e.ts` and `integration.e2e.ts`; pixel review of them is on the
-person list.
+Driven states, paired at 375×667 and 1280×800 by `web/e2e/fp-0271-paired-states.e2e.ts` (each
+carries the matching MP-0272 fixture from `docs/adr/mp-0272-surface-inventory.json`):
+
+| Fixture ID | State | Source of the state |
+|---|---|---|
+| `setup-first-run` | `/` with an empty library: the folder step | `views/Start.tsx` |
+| `library-failed` | Library whose list request fails | `views/Library.tsx` |
+| `offline` | the server stops answering: the connection banner | `App.tsx` |
+| `listen-playing` | Listen with the first song playing (muted) | `views/Now.tsx` |
+| `stage` | Fullscreen lyrics over the playing song | `views/Now.tsx` |
+| `inspector` | Editor with the first transition open | `views/SeamInspector.tsx` |
+| `studio` | the transition's Studio tab | `views/Studio.tsx` |
+| `requests-bridge` | Requests with a bridge awaiting consent and a waiting request | `views/Requests.tsx` |
+| `song-details` | Library song details | `views/SongDetails.tsx` |
+
+## Canonical route-state fixtures (FP-0271-01)
+
+Every surface ADR-0271 names, with the fixture IDs that stand for it. Held to the specs and the source by
+`web/src/shell/fp0271Fixtures.test.ts`.
+
+| Surface | Fixture IDs | Source |
+|---|---|---|
+| Start | `start-explore`, `setup-first-run` | `views/Mixes.tsx` |
+| Setup | `setup-first-run` | `views/Start.tsx` |
+| Explore | `explore`, `shape-dialog` | `views/Mixes.tsx` |
+| Listen | `listen`, `listen-playing` | `views/Now.tsx` |
+| Stage | `stage` | `views/Now.tsx` |
+| My Mixes | `my-mixes` | `views/MyMixes.tsx` |
+| Edit | `editor` | `views/Mix.tsx` |
+| Inspector | `inspector` | `views/SeamInspector.tsx` |
+| Studio | `studio` | `views/Studio.tsx` |
+| Requests | `requests-bridge` | `views/Requests.tsx` |
+| Discovery | `discovery-words`, `discovery-harmonic` | `views/Links.tsx` |
+| Library | `library`, `library-selection`, `library-empty-search`, `library-failed`, `offline` | `views/Library.tsx` |
+| Details | `song-details` | `views/SongDetails.tsx` |
+| Workspace | `workspace`, `analysis`, `sources`, `learning`, `diagnostics` | `views/Workshop.tsx` |
+| Backups | `storage-backups` | `views/LocalBackup.tsx` |
+| Export | `export-dialog` | `views/ExportPanel.tsx` |
+
+Empty states: `library-empty-search`, `setup-first-run`. Error states: `library-failed`, `offline`.
+Loading is not a still: `finishing.e2e.ts` "pages hold their shape while they load" measures it.
+Export job progress needs a running render and stays on the person list.
 
 ## Coverage denominator
 
