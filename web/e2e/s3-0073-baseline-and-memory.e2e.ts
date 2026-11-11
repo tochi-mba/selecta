@@ -130,3 +130,4 @@ test('S3-0073-07 repeated Studio, inspector, preview, palette and route mounts l
   expect(growth.nodes, 'DOM nodes kept growing (detached trees held)').toBeLessThan(500);
   expect(growth.listeners, 'event listeners kept growing').toBeLessThan(50);
 });
+

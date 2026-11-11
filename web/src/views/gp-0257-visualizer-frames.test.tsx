@@ -8,6 +8,7 @@ import { MusicVisualizer } from './Now';
 
 let queued: FrameRequestCallback[] = [];
 let drawn = 0;
+let resize: (() => void) | null = null;
 const player = { getSpectrum: () => new Uint8Array(64).fill(120) } as never;
 
 function pump(frames: number, step = 1000 / 60) {
@@ -21,6 +22,7 @@ function pump(frames: number, step = 1000 / 60) {
 beforeEach(() => {
   queued = [];
   drawn = 0;
+  resize = null;
   const context = new Proxy({}, {
     get: (_target, name) => {
       if (name === 'createLinearGradient') return () => ({ addColorStop() {} });
@@ -35,6 +37,12 @@ beforeEach(() => {
     return queued.length;
   }));
   vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  vi.stubGlobal('ResizeObserver', class {
+    constructor(callback: ResizeObserverCallback) { resize = () => callback([], this as never); }
+    observe() {}
+    disconnect() {}
+    unobserve() {}
+  });
 });
 
 afterEach(() => {
@@ -51,6 +59,15 @@ describe('GP-0257-05 the visualizer only spends frames when someone can see it m
     show();
     pump(120);
     expect(window.requestAnimationFrame).not.toHaveBeenCalled();
+    expect(drawn).toBe(1);
+  });
+
+  it('does not sample a new analyser frame when a still canvas is woken again', () => {
+    setPrefs({ ...DEFAULT_PREFS, motion: 'still' });
+    show();
+    expect(drawn).toBe(1);
+    resize?.();
+    resize?.();
     expect(drawn).toBe(1);
   });
 

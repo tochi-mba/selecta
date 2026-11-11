@@ -181,6 +181,7 @@ describe('things on top of the page', () => {
   it('take focus, keep it inside, and give it back', () => {
     const opener = document.createElement('button');
     document.body.append(opener);
+    const focus = vi.spyOn(opener, 'focus');
     opener.focus();
     const { unmount } = render(<Dialog title="Hello" onClose={() => {}}><button>Only</button></Dialog>);
     expect(screen.getByRole('dialog')).toHaveFocus();
@@ -193,6 +194,7 @@ describe('things on top of the page', () => {
     expect(only).toHaveFocus();
     unmount();
     expect(opener).toHaveFocus();
+    expect(focus).toHaveBeenLastCalledWith({ preventScroll: true });
     opener.remove();
   });
   it('give focus to the opener’s replacement when a re-render swapped the opener out', () => {
@@ -206,8 +208,10 @@ describe('things on top of the page', () => {
     const replacement = document.createElement('button');
     replacement.dataset.focusKey = 'song-details-7';
     document.body.append(replacement);
+    const focus = vi.spyOn(replacement, 'focus');
     unmount();
     expect(replacement).toHaveFocus();
+    expect(focus).toHaveBeenLastCalledWith({ preventScroll: true });
     replacement.remove();
   });
   it('makes the parent inert during a nested dialog and restores the nested opener', () => {
