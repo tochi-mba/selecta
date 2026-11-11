@@ -378,12 +378,14 @@ export function Studio(props: {
     if (!stroke || applying.current) return;
     if (JSON.stringify(stroke.before) !== JSON.stringify(latestShape.current)) change(stroke.before);
   };
+  const cancelPaintNow = useRef(cancelPaint);
+  cancelPaintNow.current = cancelPaint;
   useEffect(() => {
     const escape = (event: globalThis.KeyboardEvent) => {
       if (event.key !== 'Escape' || !paintStroke.current) return;
       event.preventDefault();
       event.stopPropagation();
-      cancelPaint();
+      cancelPaintNow.current();
     };
     window.addEventListener('keydown', escape, true);
     return () => {
@@ -393,7 +395,7 @@ export function Studio(props: {
       paintStroke.current = null;
       if (stroke?.key) keepShape(stroke.key, stroke.before);
     };
-  });
+  }, []);
   const setLane = (side: Side, lane: Lane, value: 0 | 1) => {
     if (!shape || missing.includes(`${side}_${lane}`)) return;
     change({ ...shape, [side]: { ...shape[side], [lane]: shape[side][lane].map(() => value) } });

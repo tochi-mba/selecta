@@ -49,8 +49,7 @@ describe('GP-0257-01 motion changes, counted by severity', () => {
   });
 
   it('stops every animation under the system setting and under Still', () => {
-    const reduced = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\) \{([\s\S]*?)
-\}/g)].map((found) => found[1]);
+    const reduced = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\) \{([\s\S]*?)\n\}/g)].map((found) => found[1]);
     expect(reduced.some((block) => /\*, \*::before, \*::after/.test(block)
       && /animation-duration: 0ms !important/.test(block) && /animation-iteration-count: 1 !important/.test(block))).toBe(true);
     expect(css).toMatch(/:root\[data-motion='still'\] \*,[\s\S]*?animation: none !important;/);

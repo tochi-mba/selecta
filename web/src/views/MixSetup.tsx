@@ -101,7 +101,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
     setArcSaving(true);
     const timer = window.setTimeout(() => {
       arcWrites.current += 1;
-      void enqueueSteer('energy_arc', energyArc, () => JSON.parse(savedArc.current))
+      void enqueueSteer('energy_arc', energyArc, () => (savedArc.current ? JSON.parse(savedArc.current) : null))
         .then(() => {
           savedArc.current = snapshot;
           if (mine !== arcSaves.current) return;

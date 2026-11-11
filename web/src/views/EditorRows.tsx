@@ -1,4 +1,4 @@
-import { DragEvent, KeyboardEvent, memo, MouseEvent, PointerEvent, RefObject, useRef, useState } from 'react';
+import { DragEvent, KeyboardEvent, memo, MouseEvent, PointerEvent, RefObject, useEffect, useRef, useState } from 'react';
 import { MixItem, post } from '../api';
 import { flagOn, useFlags } from '../flags';
 import { clock, etaWords, seamStatusWords } from '../lib';
@@ -173,6 +173,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
     if (!started.moved) {
       if (Math.hypot(event.clientX - started.x, event.clientY - started.y) < 8) return;
       started.moved = true;
+      setDragging(true);
       actions.current.dragFrom(rowKey);
     }
     actions.current.dragOver(rowUnder(event)?.dataset.songKey ?? null);
@@ -184,6 +185,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
     const started = holding.current;
     if (!started || started.id !== event.pointerId) return;
     holding.current = null;
+    setDragging(false);
     const target = started.moved ? rowUnder(event) : null;
     actions.current.dragOver(null);
     actions.current.dragFrom(null);
@@ -191,6 +193,23 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
       void actions.current.move(item.position, Number(target.dataset.position), 'drag');
     }
   };
+  // SF-0243-03: Escape during a finger or pen drag drops nothing: the song stays where it was
+  const [dragging, setDragging] = useState(false);
+  useEffect(() => {
+    if (!dragging) return;
+    const escape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'Escape' || !holding.current) return;
+      event.preventDefault();
+      event.stopPropagation();
+      holding.current = null;
+      setDragging(false);
+      actions.current.dragOver(null);
+      actions.current.dragFrom(null);
+      announce(`Put ${item.title} back where it was.`);
+    };
+    window.addEventListener('keydown', escape, true);
+    return () => window.removeEventListener('keydown', escape, true);
+  }, [dragging, actions, item.title]);
   const handleKeys = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === ' ' || event.key === 'Enter') {
       event.preventDefault();
@@ -264,8 +283,8 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         onPointerDown={pressHandle}
         onPointerMove={moveHandle}
         onPointerUp={releaseHandle}
-        onPointerCancel={() => { holding.current = null; actions.current.dragOver(null); actions.current.dragFrom(null); }}
-        onLostPointerCapture={() => { holding.current = null; actions.current.dragOver(null); actions.current.dragFrom(null); }}
+        onPointerCancel={() => { holding.current = null; setDragging(false); actions.current.dragOver(null); actions.current.dragFrom(null); }}
+        onLostPointerCapture={() => { holding.current = null; setDragging(false); actions.current.dragOver(null); actions.current.dragFrom(null); }}
       >
         <Icon name="grip" />
       </span>
