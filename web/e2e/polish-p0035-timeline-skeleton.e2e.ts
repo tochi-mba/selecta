@@ -12,6 +12,8 @@ const DRAFT = /\/api\/mix\?draft=\d+/;
 
 test.beforeEach(async ({ page, request }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  // Other E2E tests change global flags; use the same baseline on every run.
+  await request.post('/api/test/flags', { data: { flags: '' } });
   await resetMix(request);
 });
 
