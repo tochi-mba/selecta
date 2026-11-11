@@ -352,6 +352,29 @@ describe('the seam studio', () => {
     expect(screen.queryByRole('button', { name: 'Put it back' })).toBeNull();
   });
 
+  it('a fine tune answer that comes back after a stroke keeps the stroke and says so', async () => {
+    open();
+    const backend = globalThis.fetch;
+    let release: () => void = () => {};
+    const held = new Promise<void>((done) => { release = done; });
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (!url.endsWith('/studio/tune')) return backend(url, init);
+      await held;
+      return new Response(JSON.stringify({ shape: shape(1, 1), changes: ['Brought every part in.'] }), { status: 200 });
+    }));
+    const cell = await square('Song 2 bass, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Fine tune mine' }));
+    await screen.findByRole('button', { name: 'Fine tuning…' });
+    fireEvent.click(cell);
+    expect(cell).toHaveAttribute('aria-pressed', 'true');
+    await act(async () => release());
+    expect(await screen.findByText('You changed the grid while Selecta was working, so your version stays.')).toBeInTheDocument();
+    expect(cell).toHaveAttribute('aria-pressed', 'true');
+    expect(await square('Song 2 bass, square 2')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByText('Brought every part in.')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Put it back' })).toBeNull();
+  });
+
   it('explains when Selecta can’t arrange these two, and keeps the grid as it is', async () => {
     open();
     const cell = await square('Song 1 voice, square 1');
