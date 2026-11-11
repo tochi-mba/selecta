@@ -63,7 +63,7 @@
 - [x] T0025 - Define type scales, spacing, radii, motion, elevation and stacking tokens.
 - [x] T0026 - Implement scoped feature styles or CSS modules; remove accidental global cross-feature selectors. **Evidence (2026-11-11):** owned feature sheets in `web/src/styles/` with load order in `docs/engineering/css-ownership.md`; `web/src/styles/scope-collisions.test.ts` ("no bare class is styled by two page stylesheets", "page stylesheets never restyle bare elements globally") and `css-ownership.test.ts`. Passed 2026-11-11 (vitest).
 - [x] T0027 - Build visual examples for default, hover, focus, disabled, loading, selected, warning and error states.
-- [ ] T0028 - Verify both themes, long text, fallback fonts, reduced motion and accessible contrasts.
+- [x] T0028 - Verify both themes, long text, fallback fonts, reduced motion and accessible contrasts. **Evidence (2026-11-11):** `web/e2e/pages.e2e.ts` accessibility checks in dark and light plus dialogs, with reduced motion and the `SELECTA_E2E_STRESS=1` long-name library (3 passed); `web/src/styles/flow-fonts.test.ts` for fallback fonts (passed). Both run 2026-11-11.
 - [ ] T0029 - Approve ADR-0003 and document visual exceptions. **Needs a person:** ADR-0003 was accepted in #37 on 2026-11-08; the owner has to write down which visual exceptions are allowed, since none are documented (checked 2026-11-10).
 
 ### Accessible shared components and feedback - [ADR-0004](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0004-interaction-primitives-and-notifications.md)

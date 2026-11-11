@@ -16,10 +16,10 @@ async function withStudio(page: Page) {
   const lanes: Lanes = { vocals: row, drums: row, bass: row, other: row };
   const shape = { a: lanes, b: lanes };
   const stem = await (await page.request.get('/api/songs/1/audio')).body();
-  await page.route('**/api/mix/1/studio*', (route) => (/\/mix\/1\/studio(\?|$)/.test(route.request().url())
-    ? route.fulfill({ json: { status: 'ready', key: 'sf0246-8', cells: 8, seconds: 8, bars: 16, start_shape: shape, shape } })
-    : route.fallback()));
-  await page.route('**/api/mix/1/options*', (route) => rewriteJson(route, (body) => ({ ...body, studio: { available: true } })));
+  // whichever transition the first Change button opens: the session, not the position, is what's served
+  await page.route(/\/api\/mix\/\d+\/studio(\?|$)/, (route) =>
+    route.fulfill({ json: { status: 'ready', key: 'sf0246-8', cells: 8, seconds: 8, bars: 16, start_shape: shape, shape } }));
+  await page.route(/\/api\/mix\/\d+\/options/, (route) => rewriteJson(route, (body) => ({ ...body, studio: { available: true } })));
   await page.route('**/api/studio/**', (route) => route.fulfill({ body: stem, contentType: 'audio/flac' }));
 }
 

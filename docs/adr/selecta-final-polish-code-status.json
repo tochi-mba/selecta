@@ -5,7 +5,7 @@
   "as_of": "2026-11-08",
   "scope": "FP-0264-01 through FP-0271-08",
   "decision_summary": "8 Proposed; owner decisions pending",
-  "implementation_status": "64 Not started; 0 In progress; 0 Implemented",
+  "implementation_status": "52 Implemented; 3 In progress; 9 Not started (2026-11-11)",
   "independent_verification": "0 Verified",
   "scope_note": "New acceptance deltas only; old SF/GP tasks and working source features are not missing claims.",
   "groups": {
@@ -151,14 +151,14 @@
       "implemented": [
         "01",
         "02",
+        "03",
+        "04",
         "05",
+        "06",
         "07"
       ],
       "in_progress": [],
       "not_started": [
-        "03",
-        "04",
-        "06",
         "08"
       ],
       "independently_verified": [],
