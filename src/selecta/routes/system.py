@@ -13,6 +13,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from fastapi import HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from selecta import db, flags, jobs, mix, self_service
@@ -182,6 +183,20 @@ def add_routes(app, ctx) -> None:
         wanted = int(body.budget_gb * 1024**3)
         if wanted < MIN_CACHE_BYTES:
             raise HTTPException(400, "The limit can't go below 0.5 GB.")
+        # T0096: another window may have changed the limit since this page read it. Say so
+        # rather than silently replacing the newer choice.
+        current = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
+        if body.expected_budget_bytes is not None and body.expected_budget_bytes != current:
+            return JSONResponse(
+                {
+                    "detail": f"The storage limit was changed somewhere else to "
+                    f"{current / 1024**3:.1f} GB, so it wasn't changed here. "
+                    "Choose again if you still want a different limit.",
+                    "code": "setting_changed",
+                    "budget_bytes": current,
+                },
+                status_code=409,
+            )
         settings.set_storage_budget(min(wanted, largest_cache_bytes(settings)))
         prune_cache(settings)
         return storage()

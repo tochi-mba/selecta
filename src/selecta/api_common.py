@@ -116,6 +116,8 @@ class SteerRequest(BaseModel):
 
 class StorageRequest(BaseModel):
     budget_gb: float
+    # T0096: the limit the page last saw. Older pages that don't send it still work.
+    expected_budget_bytes: int | None = None
 
 
 class BuildRequest(BaseModel):
