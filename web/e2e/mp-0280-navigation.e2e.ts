@@ -13,7 +13,7 @@ async function open(page: Page, route: string, width: number, height = 900) {
   await page.setViewportSize({ width, height });
   await page.goto(route);
   await expect(page.locator('main#main')).toBeVisible();
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))));
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
 }
 
 async function railCollapsed(page: Page, collapsed: boolean) {

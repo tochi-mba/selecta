@@ -63,7 +63,7 @@ test('Enter on Start a new mix only goes to Explore, and the mix that is playing
   await page.keyboard.press('Control+k');
   const box = page.getByRole('combobox', { name: 'Search for a page or a command' });
   await box.fill('Start a new mix');
-  const option = page.getByRole('option', { name: /Start a new mix/ });
+  const option = page.getByRole('option', { name: /^Action: Start a new mix/ });
   await expect(option).toBeVisible();
   if ((await option.getAttribute('aria-disabled')) === 'true') {
     await page.keyboard.press('Enter');

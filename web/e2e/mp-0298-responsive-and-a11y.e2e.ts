@@ -12,7 +12,7 @@ async function open(page: Page, route: string, width: number, height: number) {
   await page.setViewportSize({ width, height });
   await page.goto(route);
   await expect(page.locator('main#main')).toBeVisible();
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))));
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
 }
 
 test.beforeEach(async ({ page, request }) => {
@@ -140,7 +140,7 @@ test('MP-0298-03 every target meets 24px or a WCAG exception, and primary touch 
     for (const route of PAGES) {
       await page.goto(route);
       await expect(page.locator('main#main')).toBeVisible();
-      await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))));
+      await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
       const found = await targets(page);
       const key = `${mode} ${route}`;
       report[key] = { measured: found.length, exceptions: [] };

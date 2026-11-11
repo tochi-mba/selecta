@@ -24,7 +24,7 @@ async function mine(page: Page, width = 1440, height = 900) {
   await page.setViewportSize({ width, height });
   await page.goto('/mixes/mine');
   await expect(page.locator('.draft-list .draft').first()).toBeVisible();
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))));
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
 }
 
 const ids = async (request: APIRequestContext, draftId?: number) => ((await (await request.get(draftId ? `/api/mix?draft=${draftId}` : '/api/mix')).json()).mix as { song_id: number }[]).map((item) => item.song_id);

@@ -9,7 +9,7 @@ import { audioStates, resetMix, spyOnAudio } from './helpers';
  */
 
 async function settle(page: Page) {
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))));
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
 }
 
 /** Holds matching requests until released, so a loading state can be measured. */
@@ -37,7 +37,8 @@ test('MP-0297-01 loading placeholders take the real layout’s place, with no ma
     const library = gate(page, LIBRARY);
     await library.ready;
     await page.goto('/library');
-    const skeleton = page.locator('main .skeleton').first();
+    // the Library's own placeholder, not the app's brief start-up one while the status loads
+    const skeleton = page.locator('main .skeleton[aria-label="Loading your songs"]');
     await expect(skeleton).toBeVisible();
     await settle(page);
     const placeholder = await skeleton.evaluate((node) => ({
@@ -84,7 +85,7 @@ test('MP-0297-02 a failed or unreachable server never looks like an empty librar
   // the same for Workspace panels
   await page.route('**/api/diagnostics', (route) => route.abort('connectionrefused'));
   await page.goto('/workshop/diagnostics');
-  await expect(page.locator('main .problem[role="alert"]')).toContainText('The server isn’t answering');
+  await expect(page.locator('main .problem[role="alert"]:not(details.control-gallery .problem)')).toContainText('The server isn’t answering');
 });
 
 test('MP-0297-03 a refresh keeps selection, focus, the known list and the music', async ({ page }) => {
@@ -180,9 +181,11 @@ test('MP-0297-05 retry sits beside the failure and keeps the input, the selected
   await page.route('**/api/mix/*/options*', (route) => (failOptions ? route.fulfill({ status: 500, json: { detail: 'Options are unavailable right now.' } }) : route.fallback()));
   await page.goto('/mix/current/edit');
   await page.getByRole('button', { name: 'Change', exact: true }).first().click();
-  const sheet = page.locator('.overlay-sheet .overlay-panel');
+  // at 1440px the transition opens in the side inspector; a narrow window gets the bottom sheet
+  const sheet = page.locator('.edit-inspector, .overlay-sheet .overlay-panel').first();
   await expect(sheet).toBeVisible();
-  const title = await sheet.locator('.overlay-head h2').textContent();
+  const heading = sheet.locator('.inspector-head h2, .overlay-head h2');
+  const title = await heading.textContent();
   const identity = await sheet.locator('.inspector-identity').textContent().catch(() => null);
   const problem = sheet.locator('.problem[role="alert"]').first();
   await expect(problem).toContainText('Options are unavailable right now.');
@@ -190,7 +193,7 @@ test('MP-0297-05 retry sits beside the failure and keeps the input, the selected
   failOptions = false;
   await problem.getByRole('button', { name: 'Try again' }).click();
   await expect(sheet.locator('.problem[role="alert"]')).toHaveCount(0);
-  await expect(sheet.locator('.overlay-head h2')).toHaveText(title!);
+  await expect(heading).toHaveText(title!);
   if (identity) await expect(sheet.locator('.inspector-identity')).toHaveText(identity);
   await page.keyboard.press('Escape');
 
@@ -212,7 +215,7 @@ test('MP-0297-05 retry sits beside the failure and keeps the input, the selected
   await expect(page.getByRole('radio', { name: '3' }).first()).toBeChecked();
   const near = await page.evaluate(() => {
     const message = document.querySelector('.study [role="alert"]')!.getBoundingClientRect();
-    const button = [...document.querySelectorAll('.study-choices button')].find((node) => node.textContent === 'Retry the same answer')!.getBoundingClientRect();
+    const button = [...document.querySelectorAll('.study-choices button')].find((node) => node.textContent?.startsWith('Retry the same answer'))!.getBoundingClientRect();
     return Math.abs(button.top - message.bottom);
   });
   expect(near, 'Retry is far from its failure').toBeLessThanOrEqual(page.viewportSize()!.height / 2);

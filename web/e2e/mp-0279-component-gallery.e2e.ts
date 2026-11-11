@@ -16,7 +16,7 @@ async function openGallery(page: Page, width = 1280, height = 900) {
   await expect(gallery, 'build the site with VITE_SELECTA_GALLERY=1 for this spec').toHaveCount(1);
   await gallery.evaluate((details) => { (details as HTMLDetailsElement).open = true; });
   await expect(gallery.getByRole('heading', { name: 'Actions and feedback' })).toBeVisible();
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))));
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
   return gallery;
 }
 

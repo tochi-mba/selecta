@@ -16,7 +16,7 @@ async function open(page: Page, route: string, width: number, height = 900) {
   await page.goto(route);
   await expect(page.locator('main#main')).toBeVisible();
   // the route reveal and any late data both settle before a pixel is read
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))));
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
 }
 
 /** The Studio, at the smallest real size, with stems served from a synthetic song (as finishing.e2e.ts does). */

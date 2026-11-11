@@ -41,7 +41,7 @@ export type Reading = { documentWidth: number; documentHeight: number; geometry:
 /** Measure the page as it is now. Scrolls to the end and back to find controls fixed chrome hides. */
 export async function measure(page: Page): Promise<Reading> {
   // let overlay and route animations come to rest, so a box is where it stays
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => null))));
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => null))));
   return page.evaluate((selectors) => {
     const vw = window.innerWidth;
     const vh = window.innerHeight;

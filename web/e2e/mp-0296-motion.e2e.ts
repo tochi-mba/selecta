@@ -8,7 +8,7 @@ import { allRendered, resetMix, spyOnAudio } from './helpers';
  */
 
 async function settle(page: Page) {
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))));
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
 }
 
 async function play(page: Page) {

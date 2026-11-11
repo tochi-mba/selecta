@@ -22,6 +22,7 @@ COLD_ENTRY_DB = -3.0
 """A section this far below a song's usual level is an intro or a breakdown, not a landing."""
 
 _TIMBRE_COEFFICIENTS = slice(1, 14)
+_TIMBRE_WIDTH = _TIMBRE_COEFFICIENTS.stop
 
 
 def folded_gap(a: SongInfo, b: SongInfo) -> float:
@@ -49,9 +50,12 @@ def level_step(a: SongInfo, b: SongInfo, exit_bar: int, entry_bar: int) -> float
 
 
 def _timbre(song: SongInfo) -> np.ndarray | None:
-    if song.mfcc_bars is None or song.mfcc_bars.size == 0:
+    bars = song.mfcc_bars
+    # too few coefficients (an older or partial analysis) would give a shorter vector than the
+    # rest of the library, and np.stack refuses mixed widths, so such a song has no timbre
+    if bars is None or bars.ndim != 2 or bars.shape[0] == 0 or bars.shape[1] < _TIMBRE_WIDTH:
         return None
-    return song.mfcc_bars[:, _TIMBRE_COEFFICIENTS].mean(axis=0)
+    return bars[:, _TIMBRE_COEFFICIENTS].mean(axis=0)
 
 
 @dataclass

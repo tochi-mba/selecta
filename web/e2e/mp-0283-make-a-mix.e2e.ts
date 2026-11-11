@@ -13,7 +13,7 @@ async function open(page: Page, width: number, height = 900) {
   await page.setViewportSize({ width, height });
   await page.goto('/mixes');
   await expect(page.locator('.vibe-card').first()).toBeVisible();
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))));
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
 }
 
 /** Rectangles for each selector, inside the page. */

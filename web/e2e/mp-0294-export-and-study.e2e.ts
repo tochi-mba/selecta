@@ -29,7 +29,7 @@ function job(mix: MixItem[], state: string, extra: Record<string, unknown> = {})
 }
 
 async function settle(page: Page) {
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))));
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
 }
 
 test.beforeEach(async ({ page, request }) => {

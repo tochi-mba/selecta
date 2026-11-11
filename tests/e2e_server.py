@@ -108,7 +108,7 @@ def _add_song(conn, settings: Settings, music: Path, number: int, song: tuple) -
         raw_beats=track.beats.astype(np.float32),
         raw_downbeats=track.downbeats.astype(np.float32),
         chroma_bars=rng.random((BARS, 12)).astype(np.float16),
-        mfcc_bars=rng.normal(size=(BARS, 13)).astype(np.float16),
+        mfcc_bars=rng.normal(size=(BARS, 20)).astype(np.float16),
         energy_bars=np.full(BARS, energy).astype(np.float16),
         rms_db_bars=np.full(BARS, -14.0).astype(np.float16),
         low_share_bars=np.full(BARS, 0.3).astype(np.float16),

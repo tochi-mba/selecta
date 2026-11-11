@@ -23,11 +23,13 @@ for (const theme of THEMES) {
         await expect(gallery, 'build the site with VITE_SELECTA_GALLERY=1 for this spec').toHaveCount(1);
         await gallery.evaluate((details) => { (details as HTMLDetailsElement).open = true; });
         await expect(gallery.getByRole('heading', { name: 'Overlays and recovery' })).toBeVisible();
-        await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))));
+        await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
         const where = `${theme}, ${motion}, ${width}px`;
 
-        // the page follows the requested theme (the default preference matches the computer)
-        await expect(page.locator('html'), where).toHaveAttribute('data-theme', theme);
+        // the page follows the requested theme: the default preference matches the computer, so no
+        // manual theme is set (data-theme stays off, as finishing.e2e.ts expects) and the computer's is this one
+        expect(await page.evaluate(() => document.documentElement.dataset.theme ?? 'system'), where).toBe('system');
+        expect(await page.evaluate((scheme) => matchMedia(`(prefers-color-scheme: ${scheme})`).matches, theme), where).toBe(true);
         backgrounds.add(await page.evaluate(() => getComputedStyle(document.body).backgroundColor));
 
         // error states: an invalid field with its reason bound, a failed load with a retry, a failed status

@@ -597,8 +597,10 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
               <div className="song-name">
                 {batch && filter !== 'set_aside' && <label className="library-batch-check">
                   <input type="checkbox" aria-label={`Select recording ${name} by ${song.artist ?? 'Unknown artist'}, ID ${song.id}`}
-                    checked={selectedIdSet.has(song.id)} disabled={searching || failed || selectedIdSet.size >= 200 && !selectedIdSet.has(song.id)}
-                    onChange={(event) => toggleBatch(song.id, (event.nativeEvent as MouseEvent).shiftKey === true)} />
+                    checked={selectedIdSet.has(song.id)} disabled={searching || selectedIdSet.size >= 200 && !selectedIdSet.has(song.id)}
+                    // a failed refresh holds the choice without disabling the box, so focus stays on it (MP-0297-03)
+                    aria-disabled={failed || undefined}
+                    onChange={(event) => { if (!failed) toggleBatch(song.id, (event.nativeEvent as MouseEvent).shiftKey === true); }} />
                 </label>}
                 <button className="link song-open" onClick={() => { if (songAsked !== null) setAddressQuery({ song: null }); setOpened(song.id); }} aria-label={`Details for ${spoken}`} data-focus-key={`song-details-${song.id}`}>
                   <SongMotif songId={song.id} /><b dir="auto" title={title}>{title}</b>

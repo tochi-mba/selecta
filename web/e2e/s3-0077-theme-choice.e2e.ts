@@ -47,9 +47,9 @@ test('header, Workspace and palette choose the theme and all show the same curre
   await page.keyboard.press('Control+k');
   const box = page.getByRole('combobox', { name: 'Search for a page or a command' });
   await box.fill('Theme: dark');
-  await expect(page.getByRole('option', { name: /Theme: dark/ })).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.getByRole('option', { name: /^Action: Theme: dark/ })).toHaveAttribute('aria-disabled', 'true');
   await box.fill('Theme: light');
-  await page.getByRole('option', { name: /Theme: light/ }).click();
+  await page.getByRole('option', { name: /^Action: Theme: light/ }).click();
   expect(await shown(page)).toBe('light');
   await expect(group.getByRole('radio', { name: 'Light' })).toBeChecked();
   expect(await headerChecked(page)).toEqual(['Light']);

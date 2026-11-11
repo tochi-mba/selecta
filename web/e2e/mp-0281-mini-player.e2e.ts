@@ -14,7 +14,7 @@ const transport = (page: Page) => page.locator('.now .transport .primary');
 const mini = (page: Page) => page.locator('.mini');
 
 async function settle(page: Page) {
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))));
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
 }
 
 /** Playing from Listen, then over to the Library by the rail, so the music never reloads. */

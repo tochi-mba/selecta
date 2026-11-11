@@ -21,7 +21,7 @@ async function measure<A, R>(page: Page, fn: (arg: A) => R, arg: A): Promise<R> 
 
 async function settle(page: Page) {
   await expect(page.locator('main#main')).toBeVisible();
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))));
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
 }
 
 /** The theme is chosen the way a person chooses it: the OS setting, and Selecta's own preference. */

@@ -21,7 +21,7 @@ async function stage(page: Page, width: number, height: number) {
   await expect(playButton(page)).toHaveText('Pause', { timeout: 30_000 });
   await page.keyboard.press('f');
   await expect(page.locator('.now.stage')).toBeVisible();
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))));
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
 }
 
 /** Every line shown on Stage: whole, inside the window and not cut. */

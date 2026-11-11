@@ -40,6 +40,8 @@ h2 { font-size: 1.1rem; margin: 0; }
 .primary.big { padding: var(--space-3) var(--space-6); font-size: 1.1rem; }
 .link { background: none; border: 0; padding: 0; min-height: 0; color: var(--link); text-decoration: underline; }
 .soft { color: var(--soft); }
+/* on a pressed chip's dark fill the soft colour falls under 4.5:1, so the aside takes the chip's own ink */
+button[aria-pressed='true'] .soft { color: inherit; }
 .hint { color: var(--soft); font-size: 0.9rem; margin: var(--space-dense) 0 0; }
 .warn { color: var(--warn); margin: var(--space-2) 0 0; }
 .notice { color: var(--soft); margin: var(--space-2) 0; }

@@ -13,7 +13,7 @@ async function listen(page: Page, width = 1440, height = 900) {
   await page.setViewportSize({ width, height });
   await page.goto('/listen');
   await expect(page.locator('.listen-identity h1')).toBeVisible();
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))));
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
 }
 
 async function play(page: Page) {
