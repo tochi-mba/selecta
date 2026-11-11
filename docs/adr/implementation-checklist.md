@@ -23,7 +23,8 @@
 
 - [ ] T0001 - Pin the pre-redesign main SHA and archive representative screenshots, API responses, settings and playback traces.
 - [x] T0002 - Inventory every existing feature and expose each in the new Listen/Mixes/Library/Discover/Workshop structure.
-- [ ] T0003 - Record current user journeys for casual listening, live requesting, mix creation and expert seam editing.
+- [x] T0003 - Record current user journeys for casual listening, live requesting, mix creation and expert seam editing.
+ **Evidence (2026-11-11):** `docs/user-journeys.md` records the four journeys step by step, each step naming its `web/e2e` test; `tests/test_user_journeys.py` (`test_every_journey_is_recorded`, `test_every_step_names_a_test_that_exists`) passed 2026-11-11 (2 passed).
 - [ ] T0004 - Verify the existing acceptance ledger against actual code and flag historical limits rather than copying speculative claims.
 - [ ] T0005 - Agree with reviewers which features are in scope, non-goals and blocked-by-backend capabilities. **Needs a person:** agree in-scope features, non-goals and backend-blocked capabilities with a named reviewer and record it. ADR-0001 itself was accepted in #37 on 2026-11-08, but no reviewer scope record exists (checked 2026-11-10).
 - [x] T0006 - Document hard invariants for no lost user data, no wrong-mix edits, no unauthorized bridge and no audio interruption.
@@ -268,7 +269,7 @@
 - [x] T0164 - Add drag handle, insertion indicator, autoscroll and keyboard Move up/down.
 - [x] T0165 - Use stable seam/song IDs and current/draft scope on every mutation.
 - [x] T0166 - Protect playing audio commitment boundary and rollback rejected reorders.
-- [ ] T0167 - Test wrong-scope, locked moves, request ghost state, song removed while playing, reorder/poll race.
+- [x] T0167 - Test wrong-scope, locked moves, request ghost state, song removed while playing, reorder/poll race. **Evidence (2026-11-11):** Song removed while playing: new `web/src/s2PlayerRemoval.test.ts` (keeps sounding with no restart; Next goes to the song that followed it; the end fade brings that song in) plus a fix in `web/src/player.ts` (`tick`, `next`, `fadeInto`: a removed playing song no longer makes Next jump to the top of the mix or skip the following song, and the seam listed there is not used). Wrong scope, request ghost rows and reorder/poll race: `web/src/views/Mix.test.tsx` (`keeps each mix scope's exact selection separate...`, `show up faded in the timeline...`, `stop and catch up if the mix has moved on`). Locked moves: `tests/test_mix.py::test_a_new_plan_keeps_locked_songs_where_they_are`, `tests/test_request_routes.py::test_playing_it_anyway_never_moves_a_locked_song`. Run 2026-11-11: vitest player 38 passed, Mix 59 passed; pytest 2 + 167 passed. Known limit: while a removed song finishes, the Now card shows the next song's title (display only).
 - [x] T0168 - Approve ADR-0013. **Evidence (2026-11-10):** The owner accepted ADR-0013 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 ### Seam inspector and render truth - [ADR-0014](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0014-seam-inspector.md)
@@ -315,12 +316,12 @@
 
 - [x] T0194 - Preserve both songs × four stems × eight cells (64 toggles), two-bar timing and all existing presets.
 - [x] T0195 - Implement clear song labels, four stem lane labels, time ruler, playhead and audition transport.
-- [ ] T0196 - Keep local instantaneous Web Audio response and individual stem solo.
+- [x] T0196 - Keep local instantaneous Web Audio response and individual stem solo. **Evidence (2026-11-11):** New `web/src/s2StemDeck.test.ts`: a toggled cell sets that stem's gain at the current AudioContext time (8 ms edge) with no network call, and solo plays one stem alone then un-solo restores the grid (`web/src/studio.ts` StemDeck). UI path: `web/src/views/Studio.test.tsx` (`tapping a square is heard straight away and renders nothing`, `pressing a name plays only that part`). Vitest 2026-11-11: 9 passed with s2Steering.
 - [x] T0197 - Implement accessible roving-keyboard grid and full mobile lane navigation.
 - [x] T0198 - Preserve Let Selecta arrange, Fine tune mine, explain diff and Put it back.
 - [x] T0199 - Track local dirty candidate separately from committed seam shape; recover when navigating.
 - [x] T0200 - Commit Use this to exact seam revision and retain shape on render failure.
-- [ ] T0201 - Test every cell, rapid toggling, all presets, incomplete stems, AI success/failure, undo and A/B audio.
+- [ ] T0201 - Test every cell, rapid toggling, all presets, incomplete stems, AI success/failure, undo and A/B audio. **Status:** Needs a person: listening to A/B audio of real stems in Seam Studio (switching shapes and solos on a real pair and confirming what is heard). Automated parts pass 2026-11-11: every cell and rapid toggling (`web/src/views/Studio.test.tsx`, `web/src/views/gp-0261-studio.test.tsx`, 36 passed), every ready-made shape (new `web/src/s2StemDeck.test.ts`), incomplete stems, AI success/failure and undo (`Studio.test.tsx`, `web/src/views/StudioSafety.test.tsx`).
 - [x] T0202 - Approve ADR-0016. **Evidence (2026-11-10):** The owner accepted ADR-0016 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 
@@ -344,7 +345,7 @@
 - [x] T0213 - Invalidate only dependent features/seams/caches when analysis correction changes.
 - [x] T0214 - Preserve priority analysis, Never-play exclusion and Set aside semantics separately.
 - [x] T0215 - Improve watched folder list, scan progress, unavailable folder and typed path fallback.
-- [ ] T0216 - Use native folder picker only with safe host-local path binding; no insecure browser access.
+- [ ] T0216 - Use native folder picker only with safe host-local path binding; no insecure browser access. **Status:** Superseded by ADR-0134: the owner rejected native folder picker work (also docs/adr/README.md owner-directed scope); the typed host-local path stays, validated by `tests/test_s4_folder_input.py`.
 - [ ] T0217 - Test half/double BPM, invalid key, worker race, moved source, Unicode paths and malicious input.
 - [x] T0218 - Approve ADR-0018. **Evidence (2026-11-10):** The owner accepted ADR-0018 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
@@ -356,7 +357,7 @@
 - [x] T0222 - Preserve Yes/No/Skip judgment, revisiting/adjusting feedback and history.
 - [x] T0223 - Add atomic pair insertion and explicit current/draft destination when backend supports it.
 - [x] T0224 - Prevent partial insertion and audio conflicts across discovery previews.
-- [ ] T0225 - Test missing lyric timing, same word many times, failed render, stage skip and duplicate songs.
+- [x] T0225 - Test missing lyric timing, same word many times, failed render, stage skip and duplicate songs. **Evidence (2026-11-11):** Missing lyric timing, same word many times, duplicate songs: new `tests/test_s2_word_edges.py` (3 passed 2026-11-11). Failed render and stage skip: `web/src/views/Links.test.tsx` (`says so when a pair cannot be played, and you can still answer`, `lets you jump to any step`, `never plays an obsolete prepared audition after the user skips that pair`, `never calls a requested harmonic stage playing until the media element starts`); Links + LinksRating vitest 25 passed 2026-11-11.
 - [x] T0226 - Approve ADR-0019. **Evidence (2026-11-10):** The owner accepted ADR-0019 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 

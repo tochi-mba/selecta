@@ -764,6 +764,7 @@ export function Mix(props: ViewProps) {
           onSelectSong={selectSongAt}
           onEditSong={editSong}
           onEditSeam={editSeam}
+          scope={inDraft ? 'draft' : 'current'}
         />
       )}
 

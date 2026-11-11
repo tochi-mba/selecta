@@ -45,6 +45,8 @@ A native dialog opened by the server would work but needs its own review: it ope
 
 None were added for this work: no runtime dependency, no UI library, no font and no CDN. `package.json` runtime dependencies are unchanged. New features use the platform: `<dialog>`-style overlays built on existing code, `inert`, `visualViewport` and `BroadcastChannel`.
 
+Audit on 2026-11-10: two runtime dependencies have been added since, both by the Cloud programme. `@noble/hashes` 2.4.0 (MIT) hashes upload parts in the browser and makes no request. `@workos-inc/authkit-react` 0.16.3 (MIT) signs a Cloud listener in through WorkOS, which is a remote host, and is covered by [Cloud authentication](../saas/07a-authentication.md). Both are imported only under `web/src/cloud/`, which `RuntimeApp.tsx` loads lazily in Cloud mode, so the built local page never loads them: in a local build they sit only in the `CloudRoot` chunk. `web/e2e/s3-0072-local-requests.e2e.ts` and `web/e2e/pages.e2e.ts` 'the page only ever talks to this computer' fail on any request from the local app that isn't to the local server.
+
 There's no Content Security Policy header today. Nothing here needs external sources, so one could be added later without changing the app, as its own reviewed change.
 
 ## Diagnostics and shared material

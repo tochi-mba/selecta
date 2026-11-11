@@ -3,7 +3,7 @@ import { expect, Page, test } from '@playwright/test';
 import { audioClock, resetMix, spyOnAudio } from './helpers';
 
 /**
- * FP-0264-01/02/05/07 (ADR-0264): every functional edge in the app, measured where it actually sits.
+ * FP-0264-01/02/05 (ADR-0264): every functional edge in the app, measured where it actually sits.
  *
  * For each route and state below, in Light and in Dark, this finds the form controls, tabs, menus,
  * dialogs and selectable rows on screen, records the edge role each one plays and the surface it
@@ -39,6 +39,13 @@ const STATES: { id: string; path: string; prepare?: (page: Page) => Promise<void
     prepare: async (page) => {
       const cards = page.getByRole('radio', { name: /cards/i });
       if (await cards.count()) await cards.first().check();
+    },
+  },
+  {
+    id: 'library-menu', path: '/library',
+    prepare: async (page) => {
+      await page.getByRole('button', { name: /^More actions for / }).first().click();
+      await expect(page.getByRole('menu')).toBeVisible();
     },
   },
   {
@@ -105,6 +112,7 @@ async function measure(page: Page, state: string, theme: string): Promise<Edge[]
       ['[aria-selected=true], [aria-current=true], [aria-current=page], .song-row.selected, [aria-pressed=true]', 'selected', true],
       ['.song-row, .lib-card, li[role=option], [role=menuitem], [role=menuitemradio]', 'decorative: text-named row', false],
       ['[role=dialog], .overlay-panel', 'interactive: dialog edge', false],
+      ['[role=menu], [role=listbox]', 'interactive: menu edge', false],
     ];
     const out: Edge[] = [];
     const seen = new Set<Element>();

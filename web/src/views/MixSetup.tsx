@@ -2,11 +2,11 @@ import { type PointerEvent, useEffect, useRef, useState } from 'react';
 import { get, MixItem, post, SongRow, Status } from '../api';
 import { flagOn, useFlags } from '../flags';
 import { Action, Dialog, Problem } from '../ui/controls';
-import { EnergyHorizon, FeelDiagram } from '../ui/MusicObjects';
+import { EnergyHorizon, FeelDiagram, HORIZON_STOPS, measuredHorizon } from '../ui/MusicObjects';
 import { SET_LENGTHS } from '../lib';
 import { ViewProps } from './shared';
 
-const ARC_STOPS = ['Start', 'Early', 'Middle', 'Late', 'Finish'];
+const ARC_STOPS = HORIZON_STOPS;
 const DEFAULT_ARC = [62, 72, 100, 85, 68];
 const ARC_PRESETS = [
   { label: 'Build to a peak', values: [35, 50, 65, 85, 100] },
@@ -27,22 +27,6 @@ export function buildSummary(steering: Status['steering']): string {
     flagOn('mixes.shaping.destination') && (steering.target ? `ending on ${steering.target_label ?? 'your chosen song'}` : 'Selecta chooses the ending'),
   ];
   return parts.filter(Boolean).join(' · ');
-}
-
-/** The energy each song in a mix actually has, on that mix's own scale, from its quietest song to its
- * most energetic. It's a different scale from the shape someone asks for, so the two are never drawn
- * on one chart as if they could be compared number for number. */
-function achievedArc(mix: MixItem[]): number[] | null {
-  const known = mix.map((item) => item.energy).filter((energy): energy is number => typeof energy === 'number');
-  // A gap is unknown, not a quieter song or an invitation to interpolate across it.
-  if (mix.length < 2 || known.length !== mix.length) return null;
-  const low = Math.min(...known);
-  const high = Math.max(...known);
-  const span = high - low || 1;
-  return ARC_STOPS.map((_, index) => {
-    const at = Math.round((index / (ARC_STOPS.length - 1)) * (known.length - 1));
-    return Math.round(((known[at] - low) / span) * 100);
-  });
 }
 
 /** How the next mix gets built. It stays out of the way until someone wants it. */
@@ -203,7 +187,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
 
   const arcSaved = JSON.stringify(energyArc) === savedArc.current;
   const arcPreview = energyArc ?? DEFAULT_ARC;
-  const achieved = achievedArc(mix);
+  const achieved = measuredHorizon(mix);
   const updateStop = (index: number, value: number) => {
     const next = [...arcPreview];
     next[index] = Math.round(Math.min(100, Math.max(0, Number.isFinite(value) ? value : 0)));

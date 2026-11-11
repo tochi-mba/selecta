@@ -192,6 +192,50 @@ export function EnergyHorizon({ values, source, onPointerDown, onPointerMove, on
   );
 }
 
+/** CI-0169-01: the five named stops every Energy Horizon uses, in the builder, a draft and the editor. */
+export const HORIZON_STOPS = ['Start', 'Early', 'Middle', 'Late', 'Finish'] as const;
+
+/** The energy each song in a mix actually has, on that mix's own scale, from its quietest song to its
+ * most energetic, read at the five stops. It's a different scale from the shape someone asks for, so the
+ * two are never drawn on one chart as if they could be compared number for number. */
+export function measuredHorizon(items: ReadonlyArray<Pick<MixItem, 'energy'>>): number[] | null {
+  const known = items.map((item) => item.energy).filter((energy): energy is number => typeof energy === 'number' && Number.isFinite(energy));
+  // A gap is unknown, not a quieter song or an invitation to interpolate across it.
+  if (items.length < 2 || known.length !== items.length) return null;
+  const low = Math.min(...known);
+  const high = Math.max(...known);
+  const span = high - low || 1;
+  return HORIZON_STOPS.map((_, index) => {
+    const at = Math.round((index / (HORIZON_STOPS.length - 1)) * (known.length - 1));
+    return Math.round(((known[at] - low) / span) * 100);
+  });
+}
+
+/** CI-0169-01: the same five-stop, start-to-finish horizon the builder draws, measured from this exact
+ * mix or draft's songs in order. It is read-only and never compared number for number with a request. */
+export function MixHorizon({ items, scope }: { items: ReadonlyArray<Pick<MixItem, 'energy'>>; scope: 'current' | 'draft' }) {
+  const values = measuredHorizon(items);
+  const whose = scope === 'draft' ? 'this draft' : 'this mix';
+  return (
+    <figure className="mix-horizon" data-scope={scope}>
+      <figcaption className="energy-arc-title">Start to finish</figcaption>
+      {values ? (
+        <>
+          <EnergyHorizon values={values} source="measured" />
+          <ol className="mix-horizon-stops" aria-label="Measured energy at each stop">
+            {HORIZON_STOPS.map((stop, index) => (
+              <li key={stop}><span>{stop}</span> <span className="visually-hidden">{values[index]} out of 100</span></li>
+            ))}
+          </ol>
+          <p className="hint">Measured from {whose}’s own songs, quietest to most energetic. It isn’t a score against the shape you asked for.</p>
+        </>
+      ) : (
+        <p className="hint">Not every song in {whose} has a measured energy yet, so there’s no start-to-finish shape to show.</p>
+      )}
+    </figure>
+  );
+}
+
 /** CI-0169-05: a small drawing of how two songs overlap for each transition feel. It illustrates the
  * preference only: it is not a recording, a promise of any one transition, or a measure of how it sounds. */
 export function FeelDiagram({ feel }: { feel: string }) {

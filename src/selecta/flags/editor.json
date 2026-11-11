@@ -13,6 +13,12 @@
       "surfaces": ["edit", "listen", "mine", "overlay.palette"],
       "words": ["Edit current mix"]
     },
+    "editor.energy_horizon": {
+      "label": "Start-to-finish horizon",
+      "about": "Story view draws the same five-stop energy horizon as the mix builder, measured from this mix or draft's own songs.",
+      "requires": ["editor"],
+      "surfaces": ["edit"]
+    },
     "editor.suggestions": {
       "label": "Song suggestions",
       "about": "Songs suggested for a spot before you search, each saying how it would hand over.",

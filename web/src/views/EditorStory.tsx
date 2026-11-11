@@ -3,7 +3,8 @@ import type { MixItem } from '../api';
 import { clock } from '../lib';
 import { Status } from '../ui/controls';
 import { Icon } from '../ui/Icon';
-import { EnergyOverview, EnergyThumb } from '../ui/MusicObjects';
+import { flagOn } from '../flags';
+import { EnergyOverview, EnergyThumb, MixHorizon } from '../ui/MusicObjects';
 import { EDITOR_MODES, EditorMode, EditorSelection, storySeamWords } from './editorMode';
 
 /** Story, Arrange or Detail. Ordinary radio buttons, so there's one tab stop and the arrow keys move
@@ -79,6 +80,8 @@ export function EditorStory(props: {
   onSelectSong: (index: number) => void;
   onEditSong: (key: string) => void;
   onEditSeam: (a: string, b: string) => void;
+  /** CI-0169-01: whose songs the start-to-finish horizon is measured from */
+  scope?: 'current' | 'draft';
 }) {
   const { mix, keys, names, selected, playingIndex, headingId, onSelectSong, onEditSong, onEditSeam } = props;
   const selectedSongIndex = selected?.kind === 'song' ? keys.indexOf(selected.key) : -1;
@@ -86,6 +89,7 @@ export function EditorStory(props: {
     <section className={`editor-story ${mix.length > 40 ? 'long' : ''}`} aria-labelledby={headingId}>
       <h2 id={headingId} className="editor-story-title" tabIndex={-1} data-mode-heading="story">Song by song</h2>
       <p className="hint">Each song in order, and how it leads into the next. To change something, choose Edit.</p>
+      {mix.length > 1 && flagOn('editor.energy_horizon') && <MixHorizon items={mix} scope={props.scope ?? 'current'} />}
       {mix.length > 1 && <EnergyOverview items={mix} selectedIndex={selectedSongIndex} playingIndex={playingIndex} onSelect={onSelectSong} />}
       <ol className="story-chapters">
         {mix.map((item, index) => {
