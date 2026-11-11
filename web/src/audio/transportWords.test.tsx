@@ -25,12 +25,12 @@ function mini(item: MixItem, now: NowState) {
   );
 }
 
-function listen(item: MixItem, now: NowState) {
+function listen(item: MixItem, now: NowState, stage = false) {
   fakeBackend({ 'GET /status': status(), [`GET /songs/${item.song_id}`]: { id: item.song_id, peaks: [], sections: [], lines: [], duration: now.duration } });
   const player = new SetPlayer(() => [item], () => {});
   return render(
     <Now status={status()} mix={[item]} mixName="Test mix" canUndo={false} refreshMix={() => {}} setMixData={() => {}}
-      refreshStatus={() => {}} player={player} now={now} setView={() => {}} notify={() => {}} stage={false} toggleStage={() => {}} />,
+      refreshStatus={() => {}} player={player} now={now} setView={() => {}} notify={() => {}} stage={stage} toggleStage={() => {}} />,
   );
 }
 
@@ -66,6 +66,11 @@ describe('one set of transport words', () => {
       expect(screen.getByText('Unknown artist')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: playLabel(phase) })).toBeInTheDocument();
       expect(await screen.findByText(timeLabel(89.6, 200))).toBeInTheDocument();
+    });
+
+    it(`Stage's own Play/Pause reads the same as the mini-player and Listen while ${phase}`, () => {
+      listen(song('Song A', 'Artist A'), state({ phase, songTime: 30, duration: 200 }), true);
+      expect(within(document.querySelector<HTMLElement>('.stage-controls')!).getByRole('button', { name: playLabel(phase) })).toBeInTheDocument();
     });
   }
 

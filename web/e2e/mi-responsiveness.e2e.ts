@@ -266,6 +266,10 @@ for (const outcome of ['answered', 'refused'] as const) {
 }
 
 test('MI-0138-08 starting an export says Starting at once and reports a refusal instead of a file', async ({ page }) => {
+  // The server is shared by the whole shard, so an earlier spec (flows: "a real FLAC") can leave a
+  // ready file of this very mix, and then the dialog rightly offers that download, not Save it.
+  // This measures a fresh start, so the job list it reads is empty.
+  await page.route(/\/api\/exports\/jobs(\?.*)?$/, (route) => route.request().method() === 'GET' ? route.fulfill({ json: { jobs: [] } }) : route.fallback());
   await page.goto('/mix/current/edit');
   await page.getByRole('button', { name: 'Download audio' }).click();
   const dialog = page.getByRole('dialog', { name: 'Save as an audio file' });

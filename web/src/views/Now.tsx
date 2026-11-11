@@ -946,7 +946,7 @@ export function Now(props: ViewProps) {
       {stage && (
         <div className="stage-controls">
           {stageFallback && <p className="hint stage-notice" role="status">Your browser didn’t allow fullscreen, so this fills the page instead. Press Escape to go back.</p>}
-          <button onClick={() => void player.togglePause()} disabled={now.phase === 'loading'}>{now.phase === 'playing' ? 'Pause' : 'Play'}</button>
+          <button onClick={() => void player.togglePause()} disabled={now.phase === 'loading'}>{playLabel(now.phase)}</button>
           <button className="exit-stage" onClick={toggleStage}>Exit fullscreen</button>
         </div>
       )}

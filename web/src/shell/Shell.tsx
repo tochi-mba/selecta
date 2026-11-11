@@ -104,13 +104,13 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
           </button>
         )}
         {on('requests') && (
-          <button className="context-button context-request" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'} title={on('app.shortcuts') ? 'Request a song (R)' : 'Request a song'}>
+          <button className="context-button context-request context-counted" onClick={onRequests} aria-label={waiting ? `Requests, ${waiting} waiting` : 'Requests'} title={on('app.shortcuts') ? 'Request a song (R)' : 'Request a song'}>
             <Icon name="request" />{waiting ? <span className="count">{waiting}</span> : null}
           </button>
         )}
         {on('app.theme_choice') && <ThemeMenu />}
         {on('app.activity') && (
-          <button className="context-button" onClick={onActivity} aria-label={unseen ? `Activity, ${unseen} new` : 'Activity'} title="Activity and Undo">
+          <button className="context-button context-counted" onClick={onActivity} aria-label={unseen ? `Activity, ${unseen} new` : 'Activity'} title="Activity and Undo">
             <Icon name="bell" />{unseen ? <span className="count">{unseen}</span> : null}
           </button>
         )}
