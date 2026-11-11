@@ -182,6 +182,8 @@ test('MP-0285-06 loading, instrumental, untimed and unavailable lyrics each say 
   });
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/listen');
+  // F is a shortcut of the running app, so wait for Listen itself before pressing it
+  await expect(page.locator('.now')).toBeVisible();
   await page.keyboard.press('f');
   await expect(page.locator('.now.stage')).toBeVisible();
   await expect(page.locator('.stage [aria-label="Loading this song"], .stage .skeleton').first()).toBeVisible();
