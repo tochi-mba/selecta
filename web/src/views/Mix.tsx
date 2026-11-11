@@ -458,13 +458,26 @@ export function Mix(props: ViewProps) {
     notify(`Rendering ${waiting} seam${waiting === 1 ? '' : 's'}, in order, ahead of everything else.`);
   };
 
+  // MI-0138-08: Save copy says Saving at once, and the form only closes once the draft exists
+  const [savingCopy, setSavingCopy] = useState(false);
+  const savingCopyNow = useRef(false);
   const saveMix = async (event: FormEvent) => {
     event.preventDefault();
     const clean = name.trim();
-    if (!clean) return;
-    const made = await post<{ name: string }>('/drafts', { name: clean, copy_current: true }, guard);
-    setNaming(false);
-    notify(`Saved a copy as a draft: ${made.name}. It’s in My Mixes.`);
+    if (!clean || savingCopyNow.current) return;
+    savingCopyNow.current = true;
+    setSavingCopy(true);
+    setProblem('');
+    try {
+      const made = await post<{ name: string }>('/drafts', { name: clean, copy_current: true }, guard);
+      setNaming(false);
+      notify(`Saved a copy as a draft: ${made.name}. It’s in My Mixes.`);
+    } catch (error) {
+      setProblem((error as Error).message);
+    } finally {
+      savingCopyNow.current = false;
+      setSavingCopy(false);
+    }
   };
 
   const prioritize = async (take: boolean) => {
@@ -732,7 +745,7 @@ export function Mix(props: ViewProps) {
       {naming && (
         <form className="row" onSubmit={saveMix}>
           <input autoFocus value={name} onChange={(event) => setName(event.target.value)} aria-label="Name this mix" />
-          <button className="primary" disabled={!name.trim()}>Save copy</button>
+          <button className="primary" disabled={!name.trim()} aria-busy={savingCopy || undefined}>{savingCopy ? 'Saving…' : 'Save copy'}</button>
           <button type="button" onClick={() => setNaming(false)}>Cancel</button>
         </form>
       )}
