@@ -1,7 +1,7 @@
 # ADR-0119 - My Mixes: distinct current, draft and render scopes
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Implemented (5/5 on 2026-11-10; evidence in the checklist). **Verified (automated):** EX-0119-02, -04 and -05 on 2026-11-10; -03 awaits a browser rerun; -01 needs a person.
+- **Implementation status:** Implemented (5/5 on 2026-11-10; evidence in the checklist). **Verified (automated):** EX-0119-02 to -05 by 2026-11-11; -01 needs a person.
 - **Independent verification:** No (0/5).
 - **Programme/date:** Experience-first UI/UX; 2026-11-07; baseline `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` (merged PR #29).
 - **Priority / phase:** P0 / Creator.
@@ -28,11 +28,11 @@ A single queue may look neater but misrepresents meaning. Separate areas can tak
 
 Never imply a queued render will automatically play. UI scope text is not a substitute for backend revision guards. Preserve original audio, routes, preferences, local security, current/draft/revision identity, scoped Undo, consented atomic bridges, full Stem Studio controls, blind study and decodable frozen-revision FLAC. No backend/audio/schema changes are implicitly approved.
 
-## Implementation tasks (all Not started / Not verified)
+## Implementation tasks (status per task below, 2026-11-11)
 
 1. **EX-0119-01 - Design current/draft/render hierarchy.** Acceptance: Users can identify what is live, saved and merely rendering. Verification: Comprehension exercises. **Implementation: Implemented (2026-11-10); Verified: No. Needs a person: comprehension exercises.**
 2. **EX-0119-02 - Retain complete draft control set.** Acceptance: All existing creation/management actions reachable. Verification: Feature parity E2E. **Implementation: Implemented (2026-11-10); Verified: Yes (automated, 2026-11-10).**
-3. **EX-0119-03 - Preserve scope on risky actions.** Acceptance: Wrong mix cannot be activated, deleted or changed. Verification: Concurrent current/draft testing. **Implementation: Not started; Verified: No.**
+3. **EX-0119-03 - Preserve scope on risky actions.** Acceptance: Wrong mix cannot be activated, deleted or changed. Verification: Concurrent current/draft testing. **Implementation: Implemented (2026-11-10); Verified: Yes (automated, 2026-11-11).**
 4. **EX-0119-04 - Clarify render readiness and storage.** Acceptance: Partial/blocked/failed truth remains visible. Verification: Job failure and full-cache fixtures. **Implementation: Implemented (2026-11-10); Verified: Yes (automated, 2026-11-10).**
 5. **EX-0119-05 - Validate navigation and recovery.** Acceptance: Undo and draft context survive returning to My Mixes. Verification: History/refresh and action tests. **Implementation: Implemented (2026-11-10); Verified: Yes (automated, 2026-11-10).**
 

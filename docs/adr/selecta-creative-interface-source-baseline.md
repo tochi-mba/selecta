@@ -131,7 +131,7 @@ Dispositions: **existing** means the acceptance was already met by code that pre
 | CI-0179-05 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0179-06 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0179-07 | person | Needs a person: timed multi-draft retrieval task |
-| CI-0180-01 | open | In progress: Workspace “What needs you” reflects real counts but can list several actions rather than one most relevant next action; a glance review needs a person |
+| CI-0180-01 | built | Built or given a focused test on 2026-11-11 |
 | CI-0180-02 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0180-03 | built | Built or given a focused test on 2026-11-10 |
 | CI-0180-04 | built | Built or given a focused test on 2026-11-10 |

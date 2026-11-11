@@ -327,6 +327,10 @@ test('MI-0162-03 a seam stays contiguous on the audio clock with a busy main thr
     slowest_interaction_ms: Math.max(load.eventTimingWorstMs, load.nextPaintWorstMs),
     render_at_jump: renderAtJump,
     render_after: renderAfter,
+    audio: await page.evaluate(() => {
+      const [context] = window.mi0162Audio.contexts;
+      return { sample_rate: context.sampleRate, base_latency_ms: Math.round(context.baseLatency * 1000 * 10) / 10, output_latency_ms: Math.round((context.outputLatency ?? 0) * 1000 * 10) / 10 };
+    }),
   };
   console.log(`MI-0162 ${JSON.stringify({ test: 'MI-0162-03', machine: await browserLine(page), tolerance_ms: 1, reading })}`);
 

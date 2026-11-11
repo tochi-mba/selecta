@@ -232,6 +232,8 @@ legend { padding: 0; margin-bottom: var(--space-2); font-weight: 600; }
 .metrics span { color: var(--soft); font-size: 0.9rem; }
 
 .start { padding-top: 12vh; }
+/* MI-0141-07: room to scroll the folder field, Start and a problem above an on-screen keyboard */
+:root[data-keyboard='open'] .start { padding-bottom: calc(var(--page-end) + var(--keyboard-inset)); }
 
 .round { border-radius: var(--radius-pill); width: 42px; height: 42px; padding: 0; flex: none; }
 

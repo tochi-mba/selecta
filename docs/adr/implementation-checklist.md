@@ -31,7 +31,7 @@
 
 ### Baseline and test architecture - [ADR-0029](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0029-testing-and-quality.md)
 
-- [ ] T0008 - Run and record baseline Windows CI: Ruff, pytest with coverage >=70%, pnpm test and pnpm build.
+- [x] T0008 - Run and record baseline Windows CI: Ruff, pytest with coverage >=70%, pnpm test and pnpm build. **Evidence (2026-11-11):** green `test` workflow run [42899772224](https://github.com/tochi-mba/selecta/actions/runs/42899772224) on main `14b9709` (2026-11-10): Python pytest shards on `windows-latest` with coverage, `verify` combining them with `coverage report --fail-under=70`, `Lint / ruff`, `Web / unit tests and production build` (`pnpm test`, `pnpm build`) and the Windows Edge E2E jobs that run `pnpm build`, all success (`.github/workflows/test.yml`). The pre-redesign baseline was main `911c981`.
 - [ ] T0009 - Inventory component and player tests; map every existing behavioural assertion to parity requirements.
 - [ ] T0010 - Create deterministic original/licensed fixture audio with valid/invalid beat grids, cue positions and fallback seams.
 - [x] T0011 - Create metadata fixtures for empty library, one song, short library, duplicate title, unicode/RTL, wrong tempo and missing files.
@@ -55,10 +55,10 @@
 
 ### Semantic visual language - [ADR-0003](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0003-design-tokens-and-brand.md)
 
-- [ ] T0023 - Audit current styles and CSS scope collisions including `.handoff`.
+- [x] T0023 - Audit current styles and CSS scope collisions including `.handoff`. **Evidence (2026-11-11):** audit in `docs/engineering/css-ownership.md` ("Scope collisions"); `web/src/styles/scope-collisions.test.ts` ("only Listen renders the .handoff card classes", ".handoff rules live only in the base layout, Listen and the shared musical objects", plus page-sheet collision checks) and `css-ownership.test.ts`. Passed 2026-11-11 (vitest).
 - [x] T0024 - Codify dark/light colours and semantic surfaces/text/focus/status tokens without changing Selecta's existing identity.
 - [x] T0025 - Define type scales, spacing, radii, motion, elevation and stacking tokens.
-- [ ] T0026 - Implement scoped feature styles or CSS modules; remove accidental global cross-feature selectors.
+- [x] T0026 - Implement scoped feature styles or CSS modules; remove accidental global cross-feature selectors. **Evidence (2026-11-11):** owned feature sheets in `web/src/styles/` with load order in `docs/engineering/css-ownership.md`; `web/src/styles/scope-collisions.test.ts` ("no bare class is styled by two page stylesheets", "page stylesheets never restyle bare elements globally") and `css-ownership.test.ts`. Passed 2026-11-11 (vitest).
 - [x] T0027 - Build visual examples for default, hover, focus, disabled, loading, selected, warning and error states.
 - [ ] T0028 - Verify both themes, long text, fallback fonts, reduced motion and accessible contrasts.
 - [ ] T0029 - Approve ADR-0003 and document visual exceptions. **Needs a person:** ADR-0003 was accepted in #37 on 2026-11-08; the owner has to write down which visual exceptions are allowed, since none are documented (checked 2026-11-10).
@@ -218,7 +218,7 @@
 - [x] T0132 - Keep Good/Bad seam ratings effortless and tied to the exact ordered pair/style.
 - [x] T0133 - Show why an energy curve, requested song or chosen seam could not be achieved.
 - [x] T0134 - Do not overclaim word alignment, chord correctness or transition sound quality.
-- [ ] T0135 - Test explanatory fallback, missing backend factors, stale rating and screen-reader announcements. **Needs a person:** fallback, missing factors and stale ratings are tested; the screen-reader announcements need NVDA or VoiceOver run by a person (checked 2026-11-10).
+- [ ] T0135 - Test explanatory fallback, missing backend factors, stale rating and screen-reader announcements. **Needs a person:** someone runs NVDA or VoiceOver on Listen and confirms the notices are announced. Automated part: `web/src/views/explanations.test.tsx` (5 tests, passed 2026-11-11) covers fallback, missing factors, stale rating and polite status regions.
 - [x] T0136 - Approve ADR-0027. **Evidence (2026-11-10):** The owner accepted ADR-0027 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 
@@ -288,7 +288,7 @@
 - [x] T0178 - Expose unmet seam render dependencies, actual progress and blocking errors.
 - [x] T0179 - Keep FLAC export and final download link once artifact is confirmed ready.
 - [x] T0180 - Define immutable export snapshot or invalidation when a mix changes mid-export.
-- [ ] T0181 - Test partial seam, disk full, failed render, retry, stale URL and playable FLAC decode.
+- [x] T0181 - Test partial seam, disk full, failed render, retry, stale URL and playable FLAC decode. **Evidence (2026-11-11):** Partial seam and stale URL: `tests/test_s2_export_edges.py` (`test_a_partly_rendered_mix_waits_and_writes_no_file`, `test_a_ready_file_that_has_gone_is_shown_expired_and_its_link_is_refused`, `test_a_download_link_cannot_reach_outside_the_exports_folder`). Disk full before and mid-write, failed render and retry: `tests/test_flow_export_jobs.py` (`test_no_room_fails_before_encoding_and_a_retry_keeps_the_same_snapshot`, `test_a_corrupt_file_or_full_disk_mid_write_is_reported_specifically`, `test_a_failed_transition_names_the_pair_and_the_job_says_failed`), `tests/test_export_retry.py`. Playable FLAC decode: `tests/test_export_validation.py::test_complete_export_is_decoded_frame_by_frame`. Run 2026-11-11 with the request tests: 167 passed.
 - [x] T0182 - Approve ADR-0022. **Evidence (2026-11-10):** The owner accepted ADR-0022 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
 
 
@@ -305,8 +305,8 @@
 - [x] T0189 - Implement idempotent, revision-aware multi-song bridge commit when every seam is ready.
 - [x] T0190 - Recheck after live playhead advances, edits, new requests and cancellation.
 - [x] T0191 - Prevent canceled requests from resurrection after stale poll; no wrong or partial insertion.
-- [ ] T0192 - Test duplicate submit, approval-vs-cancel race, bridge partial render, preemption and imminent seam.
-- [ ] T0193 - Approve ADR-0015 and verify original request tests.
+- [x] T0192 - Test duplicate submit, approval-vs-cancel race, bridge partial render, preemption and imminent seam. **Evidence (2026-11-11):** Duplicate submit and approval-vs-cancel: `tests/test_requests.py::test_requests_survive_restart_deduplicate_and_cancel_without_changing_mix`, `tests/test_request_routes.py::test_answering_a_cancelled_request_says_so`, `test_playing_it_anyway_twice_is_refused_kindly`. Bridge partial render: `test_a_bridge_does_not_join_until_every_transition_is_ready`. Preemption: `tests/test_drafts.py::test_what_is_about_to_be_heard_still_beats_a_request`, `test_a_request_seam_stops_for_what_is_about_to_be_heard`, `test_lesser_work_stops_for_a_request`. Imminent seam: `tests/test_requests.py::test_request_waits_past_protected_audio_and_checks_return_to_mix`, `tests/test_request_routes.py::test_with_no_time_left_it_is_left_to_fade`, `test_going_past_the_way_out_makes_another_further_on`. Run 2026-11-11: 167 passed.
+- [x] T0193 - Approve ADR-0015 and verify original request tests. **Evidence (2026-11-11):** ADR-0015 Decision status reads Accepted (owner, 2026-11-08, #37). Original request tests re-run 2026-11-11: `tests/test_requests.py`, `tests/test_request_routes.py`, `tests/test_requests_together.py`, `tests/test_request_planner.py` all pass (in a 167-passed run with the export tests).
 
 
 ## Phase 08 - Stem Studio

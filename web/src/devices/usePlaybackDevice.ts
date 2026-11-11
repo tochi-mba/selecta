@@ -170,11 +170,15 @@ export function usePlaybackDevice({ api, workspaceId, speaker }: { api: Api; wor
           method: 'POST', body: JSON.stringify({ device_id: deviceId, ...at, seq: appliedSeq.current }),
         }, workspaceId);
         learnClock(sentAt, answer.server_time);
-        if (answer.outcome === 'refused') becomeRemote('Playback moved to another device');
+        if (answer.outcome === 'refused') {
+          // Another device took over: the session says which, so the message can name it.
+          await poll();
+          becomeRemote('Playback moved to another device');
+        }
       } catch { /* the lease outlives a missed heartbeat; the next one tries again */ }
     }, HEARTBEAT_MS);
     return () => window.clearInterval(beat);
-  }, [api, becomeRemote, deviceId, speaker, workspaceId]);
+  }, [api, becomeRemote, deviceId, poll, speaker, workspaceId]);
 
   useEffect(() => () => { speaker?.stop(0); wake.current?.release(); }, [speaker]);
 

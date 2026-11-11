@@ -10,6 +10,7 @@ import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { ViewProps } from './shared';
 import { refreshJobs, useJobsStatus } from '../state/jobs';
 import { words } from '../copy';
+import { WhatWentWrong } from './WhatWentWrong';
 
 const GB = 1024 ** 3;
 
@@ -532,6 +533,7 @@ export function safeDiagnostics(info: Record<string, unknown>): Record<string, u
     'api_version', 'analysis_version', 'python', 'platform',
     'worker_running', 'analysis_failures', 'mix_songs',
     'drafts_in_line', 'seam_records', 'typical_estimate_miss',
+    'scan_failed', 'folders_missing', 'storage_full',
   ] as const;
   const safe: Record<string, unknown> = {};
   for (const key of allowed) {
@@ -550,6 +552,20 @@ export function safeDiagnostics(info: Record<string, unknown>): Record<string, u
     }
     safe.songs = selected;
   }
+  // GP-0263: measured checks, copied only as the known booleans and counts
+  const known = (from: unknown, keys: string[], kind: 'boolean' | 'number') => {
+    if (!from || typeof from !== 'object' || Array.isArray(from)) return undefined;
+    const picked: Record<string, unknown> = {};
+    for (const key of keys) {
+      const value = (from as Record<string, unknown>)[key];
+      if (kind === 'boolean' ? typeof value === 'boolean' : typeof value === 'number' && Number.isFinite(value)) picked[key] = value;
+    }
+    return picked;
+  };
+  const checks = known(info.checks, ['ffmpeg', 'data_writable', 'disk_low'], 'boolean');
+  if (checks) safe.checks = checks;
+  const exports = known(info.exports, ['failed', 'failed_no_room', 'interrupted'], 'number');
+  if (exports) safe.exports = exports;
   if (Array.isArray(info.recent_operations)) {
     safe.recent_operations = info.recent_operations.slice(-20).flatMap((item) => {
       if (!item || typeof item !== 'object') return [];
@@ -586,6 +602,7 @@ export function Diagnostics() {
   return (
     <section className="panel stack">
       <h2>Diagnostics</h2>
+      {flagOn('workspace.self_service') && <WhatWentWrong info={info} />}
       <ul className="diagnostic-facts">
         {diagnosticFacts(info).map((fact) => <li key={fact.key}><Status kind={fact.kind}>{fact.words}</Status></li>)}
       </ul>

@@ -154,6 +154,12 @@ export function requestWords(row: RequestRow, stage: Stage): { label: string; to
   }
 }
 
+/** GP-0262-07: how many requests are saved, counted the same way by the Requests panel, Listen and
+ * the navigation, so a pick that is still being saved is never counted in one place and not another. */
+export function savedRequestCount(rows: RequestRow[] | null | undefined): number {
+  return rows?.filter((request) => request.id > 0).length ?? 0;
+}
+
 export type RequestsState = {
   requests: RequestRow[] | null;
   error: string;
@@ -800,7 +806,7 @@ export function RequestsPanel() {
     <section className="requests" aria-label="Song requests">
       <div className="requests-head">
         <h2>Requests</h2>
-        {!!requests?.length && <span className="hint">{requests.length} waiting</span>}
+        {savedRequestCount(requests) > 0 && <span className="hint">{savedRequestCount(requests)} waiting</span>}
       </div>
       <label htmlFor="request-song-search">Request a song</label>
       <div className="request-search">

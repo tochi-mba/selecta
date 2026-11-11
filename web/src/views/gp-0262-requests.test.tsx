@@ -2,11 +2,12 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { describe, expect, it, vi } from 'vitest';
 import { SetPlayer } from '../player';
 import { fakeBackend, songs } from '../test/backend';
-import { Requests } from './Requests';
+import { ComingSongs, RequestRow, RequestsContext, RequestsPanel, RequestsState, savedRequestCount, Requests } from './Requests';
 
 /** GP-0262-03: a request keeps the exact recording that was picked. Two recordings with the same
  * title and artist are told apart by song number, and the one asked for is the one sent and listed.
- * GP-0262-06: a request that is only waiting says nothing new on each recheck. */
+ * GP-0262-06: a request that is only waiting says nothing new on each recheck.
+ * GP-0262-07: Listen, the navigation and the Requests panel count and describe one request the same way. */
 
 const found = (id: number, title: string, artist: string) => ({ id, title, artist, genre: null, duration: 200, bpm: 120, camelot: '8A', lyric_status: 'synced', never: false, priority: false });
 
@@ -58,5 +59,59 @@ describe('GP-0262-06 no repeated news while a request only waits', () => {
     rerender(<Requests playback={{ ...playback }} notify={notify} />);
     await waitFor(() => expect(notify).toHaveBeenCalledTimes(1));
     expect(notify).toHaveBeenCalledWith('Wanted is in your mix now, so that request is done.');
+  });
+});
+
+describe('GP-0262-07 Listen and Requests tell one story', () => {
+  const row = (more: Partial<RequestRow> = {}): RequestRow => ({ id: 7, song_id: 9, title: 'Wanted', artist: 'Artist', status: 'waiting', available: 1, ...more });
+  const playing = (phase = 'playing') => ({
+    mix: songs(undefined, undefined),
+    player: { state: { phase, position: 0, duration: 200, songTime: 20, inSeam: false }, togglePause: vi.fn(async () => {}) } as unknown as SetPlayer,
+    onMix: vi.fn(),
+  });
+  const both = (rows: RequestRow[], phase = 'playing') => {
+    const value = { requests: rows, error: '', message: '', playback: playing(phase), add: vi.fn(), cancel: vi.fn(async () => {}), chooseBridge: vi.fn(), addAnyway: vi.fn(), findBridges: vi.fn(), pickBridge: vi.fn() } as unknown as RequestsState;
+    return render(
+      <RequestsContext.Provider value={value}>
+        <RequestsPanel />
+        <ol aria-label="Listen timeline"><ComingSongs afterSongId={2} /></ol>
+      </RequestsContext.Provider>,
+    );
+  };
+
+  it('a pick still being saved is counted nowhere, so the panel, Listen and the navigation agree', () => {
+    const rows = [row(), row({ id: -1, song_id: 10, title: 'Saving', saving: true })];
+    expect(savedRequestCount(rows)).toBe(1);
+    expect(savedRequestCount(null)).toBe(0);
+    both(rows);
+    // the panel header says the same number the Listen button and navigation are given
+    expect(screen.getByText('1 waiting')).toBeInTheDocument();
+  });
+
+  it('a request getting ready reads as getting ready in both places, with no play time promised', () => {
+    both([row({ stage: 'preparing', after: 'Song 2', after_id: 2, transitions: [{ from: 'Song 2', to: 'Wanted', key: 'k', status: 'rendering' }] })]);
+    const panel = within(screen.getByRole('list', { name: 'Your requests' }));
+    expect(panel.getByText('Getting ready')).toBeInTheDocument();
+    const timeline = within(screen.getByRole('list', { name: 'Listen timeline' }));
+    expect(timeline.getByText('0 of 1 ready')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/plays in|queue position|\d+:\d\d/i);
+  });
+
+  it('a ready request is ready for an opening in both places, not guaranteed a time', () => {
+    both([row({ stage: 'ready', after: 'Song 2', after_id: 2, transitions: [{ from: 'Song 2', to: 'Wanted', key: 'k', status: 'ready' }] })]);
+    expect(within(screen.getByRole('list', { name: 'Your requests' })).getByText('Ready for an opening')).toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'Listen timeline' })).getByText('Ready - waiting for a valid opening')).toBeInTheDocument();
+  });
+
+  it('a request that is only waiting, or has nothing playing, shows no placement on Listen', () => {
+    both([row({ stage: 'searching', after_id: 2 })]);
+    expect(within(screen.getByRole('list', { name: 'Your requests' })).getByText('Finding a place')).toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'Listen timeline' })).queryByRole('listitem')).toBeNull();
+  });
+
+  it('when playback stops, a placed request goes back to waiting in the panel and leaves the Listen timeline', () => {
+    both([row({ stage: 'preparing', after: 'Song 2', after_id: 2 })], 'idle');
+    expect(within(screen.getByRole('list', { name: 'Your requests' })).getByText('Requested · waiting')).toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'Listen timeline' })).queryByRole('listitem')).toBeNull();
   });
 });

@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 from fastapi import HTTPException, Request, Response
 from pydantic import BaseModel
 
-from selecta import db, flags, jobs, mix
+from selecta import db, flags, jobs, mix, self_service
 from selecta.api_common import (
     API_FEATURES,
     API_VERSION,
@@ -364,7 +364,12 @@ def add_routes(app, ctx) -> None:
             ).fetchone()[0]
             line = len(mix.line_order(conn))
             mix_songs = len(mix._items(conn))
+            from selecta.library.scan import library_folders
+
+            missing = sum(not folder.is_dir() for folder in library_folders(conn))
         worker = store._worker
+        limit = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
+        scan = background.scan if isinstance(background.scan, dict) else {}
         return {
             "api_version": API_VERSION,
             "analysis_version": ANALYSIS_VERSION,
@@ -378,6 +383,12 @@ def add_routes(app, ctx) -> None:
             "drafts_in_line": line,
             "seam_records": len(store.remembered().clean),
             "typical_estimate_miss": store.clock.accuracy().get("typical_miss"),
+            # GP-0263: measured now, booleans and counts only
+            "checks": self_service.local_checks(settings.home),
+            "exports": self_service.export_outcomes(settings.home),
+            "scan_failed": scan.get("status") == "failed",
+            "folders_missing": missing,
+            "storage_full": cache_bytes(settings) >= limit,
         }
 
     @app.post("/api/steer")

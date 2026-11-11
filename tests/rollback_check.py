@@ -19,6 +19,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+# seam keys of two made-up rated transitions, and the rating each was given
+RATED = {"rollback-good-seam": "good", "rollback-bad-seam": "bad"}
+
 
 def read_everything(home: Path) -> dict:
     """What a person would look for, as this checkout's own server reports it."""
@@ -36,6 +39,11 @@ def read_everything(home: Path) -> dict:
         song = client.get("/api/songs/3").json()
         jobs = client.get("/api/exports/jobs").json()["jobs"]
         requests = client.get("/api/requests").json()["requests"]
+        remembered = client.get("/api/memory").json()
+        rated = {
+            key: json.loads((home / "seam-history" / f"{key}.json").read_text("utf-8"))["rating"]
+            for key in RATED
+        }
         return {
             "code_from": str(Path(sys.modules["selecta"].__file__).parent.parent.parent),
             "report": {
@@ -48,6 +56,9 @@ def read_everything(home: Path) -> dict:
                 "corrected_bpm": song.get("bpm"),
                 "export_jobs": [(job["id"], job["state"], job["name"]) for job in jobs],
                 "requests": sorted((row["id"], row["song_id"]) for row in requests),
+                # T0273: a Good and a Bad, as the server's own memory of them counts them
+                "ratings": {"liked": remembered["liked"], "disliked": remembered["disliked"]},
+                "rated_seams": rated,
             },
         }
 
@@ -72,6 +83,19 @@ def save_things(home: Path) -> None:
         client.post("/api/requests", json={"song_id": 9}).raise_for_status()
         gone = client.post("/api/requests", json={"song_id": 10}).json()["id"]
         client.delete(f"/api/requests/{gone}").raise_for_status()
+        # two finished seams, rated through the server the way the page rates them
+        for (key, rating), (a, b) in zip(RATED.items(), ((1, 2), (2, 3)), strict=True):
+            finished = settings.renders_dir / "seams" / key
+            finished.mkdir(parents=True, exist_ok=True)
+            state = {
+                "status": "ready",
+                "key": key,
+                "passed": True,
+                "style": "bass_swap_blend",
+                "request": {"a": a, "b": b, "move": "bass_swap_blend"},
+            }
+            (finished / "seam.json").write_text(json.dumps(state), "utf-8")
+            client.post(f"/api/seams/{key}/rate", json={"rating": rating}).raise_for_status()
     # a job's record, as a finished export leaves it
     jobs = home / "exports" / "jobs"
     jobs.mkdir(parents=True, exist_ok=True)

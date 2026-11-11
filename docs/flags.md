@@ -167,6 +167,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `workspace.backup` | **Local backup.** Back up the library's data and restore it on the next start. |  |
 | `workspace.diagnostics` | **Diagnostics.** The raw details of what Selecta is doing, for when something goes wrong. |  |
 | `workspace.library_health` | **Library health.** Overview says whether the library can be mixed or what blocks it, and which one thing to do first. |  |
+| `workspace.self_service` | **What went wrong.** Faults Selecta has measured on this PC, each with its confirmed or possible cause and a scoped way to put it right. | `workspace.diagnostics` |
 
 ## Across the app
 

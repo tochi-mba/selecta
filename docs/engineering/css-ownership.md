@@ -42,3 +42,12 @@ Later sheets win ties of equal specificity. A sheet only refines what an earlier
 | `styles/shell.css` | 1 | The desktop More menu is removed on phones, where the tab bar has its own. |
 | `styles/music-objects.css` | 1 | Forced colours: motifs use the system text colour so they stay visible. |
 | `styles/lucy.css` | 1 | The `hidden` attribute always hides, even on a Lucy element that sets its own `display`. |
+
+## Scope collisions
+
+Audit for Selecta 2.0 T0023 and T0026, re-run 2026-11-11. `web/src/styles/scope-collisions.test.ts` keeps it true:
+
+- **`.handoff`.** The Listen hand-off card (`.handoff`, `.handoff-next`, `.handoff-progress`, `.handoff-pair`, `.handoff-phrase` and friends) is rendered only by `views/Now.tsx`. Its rules live in `style.css` (base card), `styles/listening.css` (Listen and stage placement, all scoped by `.now` or `.stage`) and `styles/music-objects.css` (the shared pair and phrase text). Discovery's `.link-handoff` is a different class, and Export's "handoff" is only words in a sentence.
+- **Page sheets.** No bare class is styled by two of `listening.css`, `creation.css`, `operations.css` and `lucy.css`, apart from two shared on purpose: `.page`, always compounded with the page's own class (`.page.mix`, `.page.lucy`), and `.draft-list`, My Mixes' list, where `creation.css` adds only the `.long` modifier for long lists.
+- **Elements.** No page sheet restyles a bare element (`button`, `input`, `p`, `section` and so on) for the whole app; element defaults belong to `style.css`.
+- **What remains global on purpose.** `style.css` still holds element defaults and legacy layouts, and the shared parts in `shell.css` and `foundation.css` are global by design. The app keeps plain stylesheets scoped by page class rather than CSS modules.

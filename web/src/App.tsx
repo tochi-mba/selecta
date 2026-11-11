@@ -29,7 +29,7 @@ import { Mix } from './views/Mix';
 import { Mixes } from './views/Mixes';
 import { MyMixes } from './views/MyMixes';
 import { Now } from './views/Now';
-import { RequestsContext, RequestsPanel, useRequests } from './views/Requests';
+import { RequestsContext, RequestsPanel, savedRequestCount, useRequests } from './views/Requests';
 import { Start } from './views/Start';
 import { Workshop } from './views/Workshop';
 import { MixScope } from './views/mixScope';
@@ -566,7 +566,7 @@ export function App() {
     undo: undoNewest,
   };
   const nothingToHear = route.page === 'listen' && !mix.length;
-  const waitingRequests = requests.requests?.filter((request) => request.id > 0).length ?? 0;
+  const waitingRequests = savedRequestCount(requests.requests);
   const counts = status.counts;
   const editingDraft = draftId !== null;
   const draftLoaded = editingDraft && draftData?.draft?.id === draftId;

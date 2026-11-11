@@ -158,8 +158,8 @@ function useHeaderBlock(bar: { current: HTMLElement | null }) {
 }
 
 /** Keeps everything fixed to the bottom above an on-screen keyboard, or out of its way, by working out
- * how much of the window the keyboard is covering. */
-function useKeyboardInset() {
+ * how much of the window the keyboard is covering. The first screen uses it too (MI-0141-07). */
+export function useKeyboardInset() {
   useEffect(() => {
     const view = window.visualViewport;
     if (!view) return;

@@ -1,6 +1,6 @@
 # Selecta - creative-interface implementation and independent evidence ledger
 
-**20 Accepted ADRs; 2026-11-10: 96 Implemented, 7 In progress, 33 Need a person, 4 Not started, 0 independently Verified.** Evidence for each implemented task is on its checklist line; dispositions are cross-checked in [the source baseline](selecta-creative-interface-source-baseline.md). A docs-only PR is not implementation evidence.
+**20 Accepted ADRs; 2026-11-10: 101 Implemented, 2 In progress, 33 Need a person, 4 Not started, 0 independently Verified.** Evidence for each implemented task is on its checklist line; dispositions are cross-checked in [the source baseline](selecta-creative-interface-source-baseline.md). A docs-only PR is not implementation evidence.
 
 | CI task | ADR | Implementation | Independently Verified | Owner | Implementing PR / SHA | Evidence / reviewer |
 |---|---|---|---|---|---|---|
@@ -109,7 +109,7 @@
 | CI-0179-05 | [ADR-0179](adr-0179-my-mixes-drafts-and-render-line-presence.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0179-06 | [ADR-0179](adr-0179-my-mixes-drafts-and-render-line-presence.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0179-07 | [ADR-0179](adr-0179-my-mixes-drafts-and-render-line-presence.md) | Needs a person: timed multi-draft retrieval task | No | Unassigned | - | - |
-| CI-0180-01 | [ADR-0180](adr-0180-workspace-library-health-and-progress.md) | In progress: Workspace “What needs you” reflects real counts but can list several actions rather than one most relevant next action; a glance review needs a person | No | Unassigned | - | - |
+| CI-0180-01 | [ADR-0180](adr-0180-workspace-library-health-and-progress.md) | Implemented (built 2026-11-11) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-11 |
 | CI-0180-02 | [ADR-0180](adr-0180-workspace-library-health-and-progress.md) | Implemented (existing code) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0180-03 | [ADR-0180](adr-0180-workspace-library-health-and-progress.md) | Implemented (built 2026-11-10) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |
 | CI-0180-04 | [ADR-0180](adr-0180-workspace-library-health-and-progress.md) | Implemented (built 2026-11-10) | No | Unassigned | feat/finish-checklists (uncommitted) | See checklist evidence, 2026-11-10 |

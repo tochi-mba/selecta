@@ -1,7 +1,7 @@
 # ADR-0042: Understandable requests, explicit bridge consent and auditionable discovery
 
 - **Decision status:** Accepted (owner requested implementation in PR #23)
-- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23))
+- **Implementation status:** Implemented: P0089-P0099 all implemented with evidence (2026-11-10); no human-only checks in this range
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
 - **Delivery phase:** 3 - Core listening, mixes and requests (Discover integration also lands in phase 5)
@@ -55,6 +55,7 @@ The owner accepted proceeding with implementation in PR #23. Implementation prog
 |---|---|---|---|
 | 2026-11-06 | Proposed | Not started | Original documentation-only proposal |
 | 2026-11-06 | Accepted | In progress | Owner requested full implementation and merge after green CI in PR #23; verification pending |
+| 2026-11-10 | Accepted | Implemented | Implemented: P0089-P0099 all implemented with evidence (2026-11-10); no human-only checks in this range |
 
 ## References
 

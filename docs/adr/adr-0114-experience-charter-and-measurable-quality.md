@@ -26,7 +26,7 @@ Retaining all current layouts minimizes disruption but misses structural opportu
 
 More up-front research and scoped review are needed. Never weaken regression assertions to make new UI pass. Each change must preserve keyboard access and demonstrate route/audio continuity, appropriate real audio, accessibility and recovery. All targets are proposals, not measured outcomes.
 
-## Implementation tasks (all new, Not started / Not verified)
+## Implementation tasks (status per task below, 2026-11-11)
 
 1. **EX-0114-01 - Inventory end-to-end user journeys.** Acceptance: listener, creator and expert goals have action/error/recovery maps. Verification: route/control/API inspection and uncoached baseline tasks. **Implementation: Implemented (2026-11-10); Verified: No. Needs a person: uncoached baseline tasks.**
 2. **EX-0114-02 - Reconcile current main against prior programmes.** Acceptance: PR #29 and older S4 task claims separated from implemented source. Verification: exact SHA, merged diff and task evidence crosswalk. **Implementation: In progress (2026-11-10); Verified: No. Needs a person: owner review of the S4/EX crosswalk.**

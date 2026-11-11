@@ -5,6 +5,7 @@ import { Action } from '../ui/controls';
 import { Field } from '../ui/primitives';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { SetupSteps } from './Setup';
+import { useKeyboardInset } from '../shell/Shell';
 import { words } from '../copy';
 
 /** What to try next, for each reason a folder can't be read. */
@@ -22,6 +23,28 @@ const WHAT_TO_TRY: Record<FolderCheck['kind'], string> = {
 
 /** The kinds of audio file Selecta reads (selecta.library.scan.AUDIO_EXTENSIONS). */
 export const SUPPORTED_AUDIO = 'Selecta reads MP3, FLAC, M4A, AAC, OGG, Opus, WAV and AIFF files. Anything else is left where it is.';
+
+/** MI-0141-07: the folder field, Start and anything wrong with the folder are scrolled into the part of
+ * the window that can be seen, above an on-screen keyboard: all together when they fit, and otherwise
+ * what's wrong, since that is what just changed. */
+function keepInView(form: HTMLFormElement | null) {
+  const view = window.visualViewport;
+  // a pinch zoom shrinks the visual viewport too, and is left alone
+  if (view && view.scale > 1.1) return;
+  const parts = ['.field input', '.field button', '.field .warn']
+    .map((selector) => form?.querySelector<HTMLElement>(selector)?.getBoundingClientRect())
+    .filter((box): box is DOMRect => !!box);
+  if (parts.length < 2) return;
+  const room = 8;
+  const top = (view?.offsetTop ?? 0) + room;
+  const bottom = (view ? view.offsetTop + view.height : window.innerHeight) - room;
+  const first = Math.min(...parts.map((box) => box.top));
+  const last = Math.max(...parts.map((box) => box.bottom));
+  const alone = parts.length > 2 ? parts[2] : parts[0];
+  const anchor = last - first <= bottom - top ? { first, last } : { first: alone.top, last: alone.bottom };
+  const by = anchor.last > bottom ? Math.min(anchor.last - bottom, anchor.first - top) : anchor.first < top ? anchor.first - top : 0;
+  if (by) window.scrollBy({ top: by, behavior: 'auto' });
+}
 
 /** The very first screen: where's your music? Everything else waits on this one answer. A browser's
  * folder picker can't help here, because what it hands back isn't an address the Selecta server can
@@ -41,6 +64,26 @@ export function Start({ status, onChange }: { status: Status; onChange: () => vo
   }, [scanning]);
   // The folder keeps being read with the tab hidden. Progress is only asked for while it can be seen.
   useVisiblePoll(onChange, 1000, scanning);
+
+  // MI-0141-07: an on-screen keyboard coming up, or a folder being refused, keeps the field, Start and
+  // what's wrong where they can be seen
+  const form = useRef<HTMLFormElement>(null);
+  useKeyboardInset();
+  useEffect(() => {
+    let frame = 0;
+    const settle = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        if (problem || form.current?.contains(document.activeElement)) keepInView(form.current);
+      });
+    };
+    if (problem) settle();
+    window.visualViewport?.addEventListener('resize', settle);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', settle);
+      window.cancelAnimationFrame(frame);
+    };
+  }, [problem]);
 
   const start = async (event: FormEvent) => {
     event.preventDefault();
@@ -94,7 +137,7 @@ export function Start({ status, onChange }: { status: Status; onChange: () => vo
         together. {words().startAudioStays} Your original files are never moved or changed.
         {flagOn('lyrics.lookup') && ' Adding a folder starts lyric lookup: artist, title, album and duration are sent to LRCLIB to find lyrics.'}
       </p>
-      <form onSubmit={(event) => void start(event)} className="stack">
+      <form ref={form} onSubmit={(event) => void start(event)} className="stack">
         <Field
           label="Music folder"
           help={`${words().startFolderHelp} ${SUPPORTED_AUDIO}`}

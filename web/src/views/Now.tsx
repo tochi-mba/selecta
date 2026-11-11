@@ -14,7 +14,7 @@ import { useMediaQuery } from '../ui/useMediaQuery';
 import { useReducedMotion } from '../ui/useReducedMotion';
 import { seamFacts } from '../ui/seam';
 import { seamFamily, SongMotif } from '../ui/MusicObjects';
-import { RequestsContext, RequestTag } from './Requests';
+import { RequestsContext, RequestTag, savedRequestCount } from './Requests';
 import { frequencyLevels, paintFrequencyFrame, SPECTRUM_MODES, spectrumLevelCount, type SpectrumShape } from './spectrumVisuals';
 import { ViewProps } from './shared';
 
@@ -749,7 +749,7 @@ export function Now(props: ViewProps) {
           ? `Paused · ${mixName}`
           : mixName;
   const shown = detail && detail.id === item?.song_id ? detail : null;
-  const waiting = requests?.requests?.filter((request) => request.id > 0).length ?? 0;
+  const waiting = savedRequestCount(requests?.requests);
 
   const showChanged = changed && changed.id === next?.song_id ? changed : null;
   const on = useFlags();

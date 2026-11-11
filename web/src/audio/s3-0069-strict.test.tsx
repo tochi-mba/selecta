@@ -1,7 +1,8 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../App';
+import { SetPlayer } from '../player';
 import { fakeBackend, seam, songs, status } from '../test/backend';
 import { clearToasts } from '../ui/toasts';
 
@@ -10,6 +11,25 @@ import { clearToasts } from '../ui/toasts';
  * not leave a second sound source behind: nothing makes an AudioContext or an audio element until the
  * listener presses Play, and swapping between the phone and desk layouts adds none either.
  */
+
+function phone(start: boolean) {
+  const lists = new Set<(event: MediaQueryListEvent) => void>();
+  let matches = start;
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    get matches() { return matches; },
+    media: query,
+    onchange: null,
+    addEventListener: (_: string, listener: (event: MediaQueryListEvent) => void) => lists.add(listener),
+    removeEventListener: (_: string, listener: (event: MediaQueryListEvent) => void) => lists.delete(listener),
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => true,
+  }));
+  return (next: boolean) => {
+    matches = next;
+    for (const listener of lists) listener({ matches: next } as MediaQueryListEvent);
+  };
+}
 
 let contexts = 0;
 beforeEach(() => {
@@ -40,5 +60,45 @@ describe('S3-0069-06 StrictMode and layout swaps', () => {
     }
     expect(contexts).toBe(0);
     expect(document.querySelectorAll('audio')).toHaveLength(0);
+  });
+});
+
+describe('one transport under StrictMode and responsive swaps', () => {
+  it('every press reaches the same player, and no audio element or context is added', async () => {
+    fakeBackend({
+      'GET /status': status(),
+      'GET /mix': { mix: songs(seam('ready', 'a')), name: 'Test mix', can_undo: false },
+      'GET /vibes': [],
+      'GET /requests': { requests: [] },
+      'GET /drafts': { drafts: [], current: { name: 'Test mix', songs: 2, left: 0, eta: { seconds: 0, low: 0, high: 0 } }, out_of_room: false },
+    });
+    const swap = phone(false);
+    const owners: SetPlayer[] = [];
+    vi.spyOn(SetPlayer.prototype, 'togglePause').mockImplementation(async function (this: SetPlayer) {
+      owners.push(this);
+    });
+    vi.spyOn(SetPlayer.prototype, 'playFrom').mockImplementation(async () => {});
+
+    render(<StrictMode><App /></StrictMode>);
+    const links = within(await screen.findByRole('navigation', { name: 'Main' }));
+    // wait for the mix to arrive, so Space has something to play
+    await waitFor(async () => {
+      fireEvent.keyDown(document.body, { key: ' ', code: 'Space' });
+      expect(owners.length).toBeGreaterThan(0);
+    });
+
+    for (const place of ['Library', 'Workspace', 'Listen']) {
+      fireEvent.click(links.getByRole('link', { name: place, exact: true }));
+      fireEvent.keyDown(document.body, { key: ' ', code: 'Space' });
+    }
+    act(() => swap(true));
+    fireEvent.keyDown(document.body, { key: ' ', code: 'Space' });
+    act(() => swap(false));
+    fireEvent.keyDown(document.body, { key: ' ', code: 'Space' });
+
+    expect(owners.length).toBeGreaterThanOrEqual(6);
+    expect(new Set(owners).size).toBe(1);
+    expect(document.querySelectorAll('audio')).toHaveLength(0);
+    expect(contexts).toBe(0);
   });
 });
