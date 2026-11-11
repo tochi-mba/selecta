@@ -39,7 +39,10 @@ test('SF-0217-04 the next-mix default and this mix’s own choices stay apart th
   expect(mixAfter.mix.map((item: { song_id: number }) => item.song_id)).toEqual(mixBefore.mix.map((item: { song_id: number }) => item.song_id));
   expect(mixAfter.mix[1].seam.settings).toEqual(mixBefore.mix[1].seam.settings);
   expect(mixAfter.mix[1].seam.settings.move).toBe('cut_on_one');
-  expect(await (await request.get(`/api/mix?draft=${draft.id}`)).json()).toEqual(draftBefore);
+  const draftAfter = await (await request.get(`/api/mix?draft=${draft.id}`)).json();
+  // ETA is a live estimate, not persisted draft data; it may change during the browser test.
+  expect({ ...draftAfter, eta: undefined }).toEqual({ ...draftBefore, eta: undefined });
+  expect(draftAfter.eta.seams).toBe(draftBefore.eta.seams);
 
   await request.post('/api/steer', { data: { action: 'mix_language', value: 'balanced' } });
   await request.delete(`/api/drafts/${draft.id}`);
@@ -176,6 +179,7 @@ test('SF-0221-07 in a hundred-song mix the inspector keeps its pair while other 
   await page.keyboard.press('ArrowDown');
   await expect(page.locator('.timeline .song').nth(10)).toContainText('Stress 010');
   await page.keyboard.press('ArrowUp');
+  await expect(page.locator('.timeline .song').nth(9)).toContainText('Stress 010');
   await page.keyboard.press('ArrowUp');
   await expect(page.locator('.timeline .song').nth(8)).toContainText('Stress 010');
   await expect(side).toContainText('Stress 060');
