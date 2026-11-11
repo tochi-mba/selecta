@@ -5,7 +5,8 @@ import { fakeBackend, Reply, status } from '../test/backend';
 import { MixSetup } from './MixSetup';
 import { Workshop } from './Workshop';
 
-/* Selecta 2.0 T0096 (ADR-0028): a storage limit changed in another window is shown, not overwritten. */
+/* Selecta 2.0 T0096 (ADR-0028): a storage limit or steering setting changed in another window is shown,
+ * not overwritten. */
 
 const GB = 1024 ** 3;
 

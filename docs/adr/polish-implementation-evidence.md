@@ -53,12 +53,14 @@ Implementing history: PR #23 (`84b8b5c`) plus later programmes (Microinteraction
 | Task | Status | Acceptance and result | Automated check run 2026-11-10 | Remaining |
 |---|---|---|---|---|
 | P0021 | Implemented | Dev-only gallery `web/src/ui/ControlGallery.tsx` holds every listed family; links, chips, badges, rows and cards added in this pass | `pnpm exec vitest run src/ui/polish-components.test.tsx`: 8/8 passed | Named visual review |
+| P0022 | Open (measurement not green) | State contract in `completion/components.md` and the gallery | MP-0279-01 and -05 passed; MP-0279-02/03/04/06/07 failed (addendum below) | Green state measurement (findings PF-16) |
 | P0023 | Implemented | `Action` reserves both labels, `aria-busy`/`aria-disabled`, one run per press | `polish-components.test.tsx` P0023; `controls.test.tsx` (passed in an 11-file run) | - |
 | P0024 | Implemented | `Field` label/help/error wiring; form table in `completion/copy-audit.md` | `polish-components.test.tsx` P0024 | Screen-reader listen-through |
 | P0025 | Implemented | `Tabs` ARIA pattern with roving focus; route subpages are `LinkTabs` links | `polish-components.test.tsx` P0025 (2); `ufSeamInspector.test.tsx` arrow keys | Screen-reader listen-through |
 | P0026 | Implemented | Focus entry/trap/Escape/restore/nested inert; `overscroll-behavior: contain`; Studio working copy survives close/reopen | `controls.test.tsx`; `ex0122StudioParity.test.tsx`, `StudioSafety.test.tsx`: 168/169 passed in an 11-file vitest run (only failure: unrelated `Drafts.test.tsx` "large draft collections") | - |
 | P0027 | Open (Needs a person) | Pointer and keyboard pass | `controls.test.tsx` menu/tooltip; `Glossary.test.tsx` | Real touch device |
 | P0028 | Implemented | 5 Undo toasts: 3 shown, 5 undoable in Activity, the evicted one still runs | `polish-components.test.tsx` P0028 | - |
+| P0029 | Implemented | Failures actionable near their source; repeated connectivity notices de-duplicated; no notification storms | `toastsCoalesce.test.tsx`, `gp-0257-comfort.test.tsx`, `toastPriority.test.tsx`, `polish-loading.test.tsx` passed (addendum below) | - |
 | P0030 | Implemented | Destructive actions separated (trash icon + word), confirmation kept on deletion failure, Undo preserved | `destructiveIcons.test.ts`, `actionTierRegister.test.ts`, `Drafts.test.tsx` delete confirmation | - |
 | P0031 | Open (Needs a person) | Automated keyboard/visual checks only | as above | NVDA/Narrator pass, named visual reviewer |
 
@@ -297,4 +299,4 @@ Classifies every failure or gap recorded above, plus the copy findings in [compl
 | PF-17 | P2 | Lab budgets | MP-0298-06 failed: layout shift, paint, interaction delay | Budgets not reported green | `web/e2e/mp-0298-responsive-and-a11y.e2e.ts` MP-0298-06 | Open, unconfirmed | P0136 |
 | PF-18 | P2 | Short-load reveal, `web/src/ui/Skeleton.tsx` | No measurement showed a quick answer never flashes a placeholder | Possible flicker on fast loads | `web/src/ui/polishReveal.test.tsx`; `web/e2e/polish-p0038-reveal.e2e.ts` | Built 2026-11-11; browser measurement pending | P0038, P0042 |
 | PF-19 | P2 | Visual baselines, `web/e2e/visual.e2e.ts` | Review candidates only; no committed pixel baselines | Visual regressions caught only by people | `web/e2e/polish-p0132-baselines.e2e.ts` | Built 2026-11-11; baselines not yet generated | P0132, P0133 |
-| PF-20 | P2 | Copy, `docs/adr/completion/copy-audit.md` | Copy findings, each with a severity, fixed in the audit | Inconsistent words | `web/src/ui/Glossary.test.tsx`, `web/src/ui/actionTierRegister.test.ts` | Resolved (P0113, 2026-11-10) | P0113 |
+| PF-20 | P2 | Copy, `docs/adr/completion/copy-audit.md` | Copy findings, each with a severity, fixed in the audit | Inconsistent words | `web/src/ui/Glossary.test.tsx`, `web/src/shell/actionTierRegister.test.ts` | Resolved (P0113, 2026-11-10) | P0113 |
