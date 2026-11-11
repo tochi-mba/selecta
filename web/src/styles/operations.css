@@ -92,6 +92,11 @@
 .sources-add { align-items: flex-end; }
 .sources-add .field { flex: 1 1 280px; }
 .folder-list b { unicode-bidi: plaintext; }
+/* MP-0291-06: the song sheet's facts read as one table, every value starting on the same line,
+   so what's in use and what was measured sit straight under each other */
+.song-facts.song-facts-table { grid-template-columns: max-content minmax(0, 1fr); column-gap: var(--space-3); }
+.song-facts.song-facts-table > div { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; }
+.song-facts.song-facts-table dd { overflow-wrap: anywhere; }
 /* MP-0293-03: the re-link dialog names a long missing folder in full, wrapping instead of scrolling sideways */
 .relink-path { overflow-wrap: anywhere; unicode-bidi: plaintext; }
 /* MP-0293-04: the browser's own 2px range margin would set the slider in from the GB amount and the Saved line */
@@ -114,6 +119,10 @@
 .study-version h3 { margin: 0; }
 .study-version audio { width: 100%; }
 .study-version .chips + .chips { margin-top: var(--space-2); }
+/* MP-0294-06: the four judgement buttons share one line wherever the window is 768px or wider,
+   including beside the side navigation, where the study column is only about 445px */
+.study-choices > button { padding-inline: var(--space-3); }
+@media (min-width: 768px) { .study-choices { flex-wrap: nowrap; } }
 .study-done { padding: var(--space-4); border: 1px solid var(--status-ready); border-radius: var(--radius); }
 .study-done p { margin: 0; }
 .request-group { list-style: none; margin: var(--space-5) 0 var(--space-2); padding-bottom: var(--space-2); border-bottom: 1px solid var(--border); }

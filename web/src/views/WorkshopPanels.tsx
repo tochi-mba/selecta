@@ -75,7 +75,9 @@ export function StoragePanel() {
   useVisiblePoll(() => refresh().catch(() => {}), 15000);
 
   if ((!storage || limit === null) && loadFailed) return <Problem retry={refresh}>Couldn’t read storage information.</Problem>;
-  if (!storage || limit === null) return <Skeleton variant="metrics" label="Working out how much room there is" />;
+  // MP-0298-06: the placeholder is the panel itself, about as tall as the real one, so the backup
+  // panel under it doesn't jump down when the numbers arrive
+  if (!storage || limit === null) return <section className="panel stack"><h2>Storage</h2><Skeleton variant="metrics" lines={6} label="Working out how much room there is" /></section>;
   const words = storageWords(storage);
   const overBudget = storage.cache_bytes > storage.budget_bytes;
   const largest = Math.max(storage.largest_budget_bytes / GB, 0.5);

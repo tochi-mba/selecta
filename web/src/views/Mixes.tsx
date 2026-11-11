@@ -188,7 +188,8 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
 
       <div className="mix-paths" role="group" aria-label="Ways to make a mix">
       <section className="hero mix-quick" aria-labelledby="mix-quick-title">
-        <p className="eyebrow">Quick Play · {firstMix ? 'Your library is ready' : 'Tap and play'}</p>
+        {/* MP-0282-07: on the first run the notice under Play already says the library is ready */}
+        {!firstMix && <p className="eyebrow">Quick Play · Tap and play</p>}
         <h2 id="mix-quick-title" className="mix-path-label">Listen now, shape later</h2>
         <h3 className="display">{hero?.name ?? 'Selecta’s pick'}</h3>
         {/* MP-0283-01: what the pick can draw on sits between its name and its description, on the same edge as Play */}

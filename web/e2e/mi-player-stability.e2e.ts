@@ -35,7 +35,14 @@ async function traceAudio(page: Page) {
         trace.made += 1;
         contexts.push(this);
         trace.states.push({ state: this.state, wall: performance.now() });
-        this.addEventListener('statechange', () => trace.states.push({ state: this.state, wall: performance.now() }));
+        // Chromium can fire a statechange that leaves the state as it was (running, then running again
+        // as its render thread settles); only a real change is a change
+        let last = this.state;
+        this.addEventListener('statechange', () => {
+          if (this.state === last) return;
+          last = this.state;
+          trace.states.push({ state: this.state, wall: performance.now() });
+        });
       }
     };
     const records = new WeakMap<AudioBufferSourceNode, Source>();

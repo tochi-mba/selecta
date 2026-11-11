@@ -78,6 +78,9 @@ for (const size of SIZES) {
 
     // what was typed is kept, so the person can correct it rather than start again
     await expect(field).toHaveValue('C:\\Users\\you\\Music\\a folder that is not there');
+    // going back to the field brings it into view; focus() on the field that already has focus moves
+    // nothing, so focus leaves it first, as it does when the person goes to read the problem
+    await field.blur();
     await field.focus();
     expect(await onScreen(page, '.page.start input')).toEqual({ ok: true, why: '' });
   });

@@ -89,16 +89,11 @@ test('MP-0287-03 the grip and move buttons stay full targets at 320px, and drag 
   await page.keyboard.press('ArrowDown');
   await expect.poll(() => order(page)).toEqual(['Slow Tide', 'Morning Light', 'Paper Moon', 'Neon Rain']);
   await expect(page.getByRole('button', { name: 'Reorder Morning Light' })).toBeFocused();
-  // pointer: drag the grip of the last song onto the first, in a window tall enough to hold both rows
-  // (a pointer cannot press a grip that is below the bottom of the window)
-  await page.setViewportSize({ width: 320, height: 1600 });
-  await page.evaluate(() => window.scrollTo(0, 0));
-  const from = (await page.getByRole('button', { name: 'Reorder Neon Rain' }).boundingBox())!;
-  const to = (await page.locator('.timeline > .song').first().boundingBox())!;
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
-  await page.mouse.down();
-  for (let step = 1; step <= 12; step += 1) await page.mouse.move(from.x + from.width / 2, from.y + ((to.y + 8 - from.y) * step) / 12);
-  await page.mouse.up();
+  // pointer: drag the grip of the last song onto the first. Playwright's own drag carries the drag data
+  // as a browser would; it drops low on the first row, clear of the scope bar pinned over its top.
+  const first = page.locator('.timeline > .song').first();
+  const height = (await first.boundingBox())!.height;
+  await page.getByRole('button', { name: 'Reorder Neon Rain' }).dragTo(first, { targetPosition: { x: 24, y: height - 12 } });
   await expect.poll(() => order(page)).toEqual(['Neon Rain', 'Slow Tide', 'Morning Light', 'Paper Moon']);
 });
 

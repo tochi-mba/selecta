@@ -196,6 +196,8 @@ test('MP-0285-06 loading, instrumental, untimed and unavailable lyrics each say 
   await page.unroute('**/api/songs/*');
   await page.route('**/api/songs/*', (route) => (route.request().method() === 'GET' && !/\/audio|\/peaks/.test(route.request().url()) ? route.fulfill({ status: 503, json: { detail: 'down' } }) : route.fallback()));
   await page.goto('/listen');
+  // as above: F belongs to the running Listen page, so wait for it before pressing
+  await expect(page.locator('.now')).toBeVisible();
   await page.keyboard.press('f');
   await expect(page.locator('.stage .problem, .stage [role="alert"]').first()).toContainText(/Couldn’t load lyrics/);
 });

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
-import { ApiError, get, LibraryPage, LibrarySong, MixData, post } from '../api';
+import { ApiError, get, LibraryPage, LibrarySong, MixData, post, problemKind } from '../api';
 import { Gate, useFlags, visible } from '../flags';
 import { analysingWords, analysisWords, askedToAnalyse, clock, etaWords } from '../lib';
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
@@ -69,6 +69,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   const [total, setTotal] = useState(0);
   const [next, setNext] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  // T0013: a server fault says so, apart from a dropped connection
+  const [serverFault, setServerFault] = useState(false);
   const [pageProblem, setPageProblem] = useState('');
   const [opened, setOpened] = useState<number | null>(null);
   const preferences = usePrefs();
@@ -192,9 +194,10 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       pageBySong.current = pagesBySong;
       setFailed(false);
       setPageProblem('');
-    } catch {
+    } catch (error) {
       if (mine === asked.current) {
         setFailed(true);
+        setServerFault(problemKind(error) === 'server');
         setSearching(false);
       }
     }
@@ -573,7 +576,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         </section>
       )}
       {searching && committedRows !== null && <p className="hint" role="status">Updating results…</p>}
-      {failed && committedRows === null && <Problem retry={load}>Couldn’t load your library. Your songs are fine.</Problem>}
+      {failed && committedRows === null && <Problem retry={load}>Couldn’t load your library. Your songs are fine.{serverFault && ' Something went wrong inside Selecta, not your connection.'}</Problem>}
       {failed && committedRows !== null && <div className="row wrap" role="status"><span className="warn">Can’t check on your library right now, so what’s shown may be out of date.</span><Action working="Retrying…" run={load}>Retry loading</Action></div>}
       {committedRows === null && !failed && <Skeleton variant={cardLayout ? 'cards' : 'library'} lines={6} label="Loading your songs" retry={() => void load()} />}
       {committedRows !== null && <p className="hint library-count" role="status">{committedRows.length < total ? `Showing ${committedRows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>}

@@ -174,6 +174,9 @@ a.button:hover { border-color: var(--text); }
   /* with a keyboard up, what's being typed gets the room */
   :root[data-keyboard='open'] .nav, :root[data-keyboard='open'] .mini { display: none; }
 }
+/* the Stage takes the whole window: with the frame's player reservation at zero, the mini-player goes
+   too, visually only, whatever has marked the Stage on (FP-0270-05) */
+:root[data-stage='on'] .mini { display: none; }
 .more-nav ul { list-style: none; padding: 0; margin: var(--space-4) 0 0; display: grid; gap: var(--space-2); }
 .more-nav a { display: block; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); text-decoration: none; }
 .more-nav a[aria-current='page'] { border-color: var(--focus); background: var(--surface-selected); }
@@ -233,6 +236,11 @@ a.button:hover { border-color: var(--text); }
   .context-bar { gap: var(--space-1); }
   .context-actions { gap: 0; }
   .crumbs { flex: 1 1 0; }
+  /* beside five actions, a whole trail broke letter by letter ("My Mixe/s") and the bar grew taller than
+     a 400% zoomed window can spare (MP-0275-07); the phone bar already reaches every section, so a
+     narrow bar keeps only where you are */
+  .crumbs li:not(:last-child) { display: none; }
+  .crumbs li + li::before { content: none; }
 }
 
 .mini {

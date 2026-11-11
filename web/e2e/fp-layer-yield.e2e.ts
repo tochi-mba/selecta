@@ -15,8 +15,12 @@ test.beforeEach(async ({ request }) => resetMix(request));
 
 /** the element under the centre of `name`'s box is that control, not a bar or notice painted over it */
 async function uncovered(page: Page, button: ReturnType<Page['getByRole']>) {
-  await button.scrollIntoViewIfNeeded();
-  await expect(button).toBeInViewport();
+  // Library rows lay out only near the screen (content-visibility, MP-0272 D-01), so the first scroll to a
+  // far row lands on its estimated place; once the rows on the way have their real height, scroll again
+  await expect(async () => {
+    await button.scrollIntoViewIfNeeded();
+    await expect(button).toBeInViewport({ timeout: 1_000 });
+  }).toPass({ timeout: 20_000 });
   return button.evaluate((node) => {
     const box = node.getBoundingClientRect();
     if (box.bottom > innerHeight + 0.5 || box.top < -0.5) return `outside the viewport (${Math.round(box.top)}-${Math.round(box.bottom)} of ${innerHeight})`;

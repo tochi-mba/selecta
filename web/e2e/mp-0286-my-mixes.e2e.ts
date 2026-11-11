@@ -88,8 +88,12 @@ test('MP-0286-03 renaming keeps the card in place, starts in the field and gives
   for (const width of [320, 1440]) {
     await mine(page, width);
     const card = page.locator('.draft-list .draft').first();
+    // on a phone the card starts below the fold; bring its menu into view first, so pressing it scrolls
+    // nothing and any movement measured is the rename's own
+    const more = card.getByRole('button', { name: `More actions for ${made.name}` });
+    await more.scrollIntoViewIfNeeded();
     const before = (await card.boundingBox())!;
-    await card.getByRole('button', { name: `More actions for ${made.name}` }).click();
+    await more.click();
     await page.getByRole('menuitem', { name: `Rename ${made.name}` }).click();
     const field = card.getByRole('textbox', { name: 'Name this draft' });
     await expect(field).toBeFocused();

@@ -24,7 +24,8 @@ type Shot = { left: number; top: number; width: number; height: number; outline:
 const snapshot = (control: Locator): Promise<Shot> => control.evaluate((element) => {
   const rect = element.getBoundingClientRect();
   const style = getComputedStyle(element);
-  return { left: rect.left, top: rect.top, width: rect.width, height: rect.height, outline: style.outlineStyle, outlineWidth: style.outlineWidth, shadow: style.boxShadow, background: style.backgroundColor, border: style.borderColor, color: style.color, opacity: style.opacity, transform: style.transform };
+  // on the page, not the viewport: clicking the page away to clear focus may scroll it
+  return { left: rect.left + window.scrollX, top: rect.top + window.scrollY, width: rect.width, height: rect.height, outline: style.outlineStyle, outlineWidth: style.outlineWidth, shadow: style.boxShadow, background: style.backgroundColor, border: style.borderColor, color: style.color, opacity: style.opacity, transform: style.transform };
 });
 const looks = (shot: Shot) => [shot.outline, shot.outlineWidth, shot.shadow, shot.background, shot.border, shot.color, shot.opacity].join('|');
 

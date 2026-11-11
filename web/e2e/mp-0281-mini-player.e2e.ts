@@ -197,8 +197,17 @@ test('MP-0281-05 on a phone the 58px tab bar and the player stack without overla
     // the frame pads once, for exactly the bars that are there
     expect(padding.content, `${where}: content padding`).toBeCloseTo(58 + 66 + padding.space, 0);
     expect(padding.main, `${where}: the page pads for the bars a second time`).toBeLessThan(58 + 66);
-    // and the end of the page scrolls clear of both
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    // and the end of the page scrolls clear of both. Library rows lay out only near the screen
+    // (content-visibility, MP-0272), so rows remembered at a wider window grow as they come into
+    // view: keep going to the end until the page stops growing, as a person scrolling would.
+    await page.evaluate(async () => {
+      for (let tries = 0; tries < 20; tries++) {
+        const height = document.documentElement.scrollHeight;
+        window.scrollTo(0, height);
+        await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+        if (document.documentElement.scrollHeight === height && Math.ceil(window.scrollY + window.innerHeight) >= height) return;
+      }
+    });
     const last = await page.evaluate(() => {
       const items = [...document.querySelectorAll<HTMLElement>('main#main button, main#main a, main#main input')].filter((item) => item.getClientRects().length);
       return items.at(-1)!.getBoundingClientRect().bottom;

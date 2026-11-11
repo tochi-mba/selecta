@@ -31,6 +31,8 @@ function rowsFor(all: Song[]) {
 /** The mix playing, the request list served from `rows`, and the drawer open. */
 async function openDrawer(page: Page, rows: unknown[], width = 1440, height = 900) {
   await page.route('**/api/requests', (route) => (route.request().method() === 'GET' ? route.fulfill({ json: { requests: rows } }) : route.fallback()));
+  // the look for a spot answers with the list too, so it comes from the same fixtures
+  await page.route('**/api/requests/consider', (route) => route.fulfill({ json: { requests: rows } }));
   await page.setViewportSize({ width, height });
   await page.goto('/listen');
   const play = page.locator('.now .transport .primary');
@@ -65,7 +67,7 @@ test('MP-0290-01 title, search, close and the request list fit phone and desktop
     const panel = await rect(drawer);
     expect(panel.left).toBeGreaterThanOrEqual(-1);
     expect(panel.right).toBeLessThanOrEqual(width + 1);
-    const close = drawer.getByRole('button', { name: 'Close', exact: true }).first();
+    const close = drawer.getByRole('button', { name: 'Close Requests', exact: true });
     const title = drawer.locator('.overlay-head h2, .overlay-title, h2').first();
     const search = drawer.getByRole('combobox', { name: 'Request a song' });
     for (const [name, part] of [['title', title], ['close', close], ['search', search], ['list', drawer.locator('.request-list')]] as const) {
@@ -230,6 +232,8 @@ test('MP-0290-06 a late answer cannot bring back a cancelled request', async ({ 
     await route.fulfill({ json: { requests: snapshot } });
   });
   await page.route('**/api/requests/903', (route) => route.fulfill({ json: { requests: rows.filter((row) => row.id !== 903), cancelled: true } }));
+  // the look for a spot is late too: it still lists the request it started with
+  await page.route('**/api/requests/consider', (route) => route.fulfill({ json: { requests: rows } }));
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/listen');
   const play = page.locator('.now .transport .primary');
@@ -259,7 +263,7 @@ test('MP-0290-07 (automated part) the player and toasts never cover the drawerâ€
   for (const [width, height] of [[375, 420], [375, 812], [1440, 900]] as const) {
     const drawer = await openDrawer(page, rows, width, height);
     // a toast on screen as well: a cancel that fails says so
-    await page.route('**/api/requests/905', (route) => route.fulfill({ status: 500, json: { detail: 'synthetic' } }));
+    await page.route('**/api/requests/905', (route) => route.fulfill({ status: 500, json: { detail: 'Internal Server Error' } }));
     await drawer.getByRole('button', { name: `Cancel request for ${all[9].title}` }).click();
     await expect(page.getByText('Couldnâ€™t cancel that. Itâ€™s still on the list.').first()).toBeVisible();
     const search = drawer.getByRole('combobox', { name: 'Request a song' });
@@ -269,7 +273,7 @@ test('MP-0290-07 (automated part) the player and toasts never cover the drawerâ€
       drawer.getByRole('button', { name: 'No, keep waiting' }),
       drawer.getByRole('button', { name: 'Add to mix anyway' }),
       ...rows.map((row) => drawer.getByRole('button', { name: `Cancel request for ${row.title}` })),
-      drawer.getByRole('button', { name: 'Close', exact: true }).first(),
+      drawer.getByRole('button', { name: 'Close Requests', exact: true }),
     ];
     for (const action of actions) {
       await action.scrollIntoViewIfNeeded();

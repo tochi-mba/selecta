@@ -77,7 +77,7 @@ test('MP-0291-02 track, facts, readiness and actions headers sit over their colu
   await expect(page.locator('.library-column-head')).toBeHidden();
 });
 
-test('MP-0291-03 comfortable and compact rows stay readable with safe targets', async ({ page }) => {
+test('MP-0291-03 comfortable and compact rows stay readable with safe targets', async ({ page, browser }) => {
   const sizes: Record<string, number> = {};
   for (const density of ['Comfortable', 'Compact']) {
     for (const width of [375, 1440]) {
@@ -87,7 +87,8 @@ test('MP-0291-03 comfortable and compact rows stay readable with safe targets', 
       const reading = await page.locator('.library-rows .song-row').first().evaluate((row) => {
         const title = row.querySelector('.song-open b')!;
         const facts = row.querySelector('.song-columns')!;
-        const targets = [...row.querySelectorAll('button, input')].filter((element) => (element as HTMLElement).offsetParent !== null).map((element) => element.getBoundingClientRect());
+        // a checkbox's target is its whole label (operations.css gives that the 44px), not the 20px box drawn inside it
+        const targets = [...row.querySelectorAll('button, input')].filter((element) => (element as HTMLElement).offsetParent !== null).map((element) => (element.matches('input[type=checkbox]') ? element.closest('label') ?? element : element).getBoundingClientRect());
         return {
           height: row.getBoundingClientRect().height,
           title: parseFloat(getComputedStyle(title).fontSize),
@@ -105,10 +106,22 @@ test('MP-0291-03 comfortable and compact rows stay readable with safe targets', 
   }
   // compact really is denser at the same width
   expect(sizes['Compact-1440']).toBeLessThan(sizes['Comfortable-1440']);
-  // the row's main actions stay at least 44px on a touch screen in either density
-  await page.setViewportSize({ width: 375, height: 812 });
-  const actions = await page.locator('.library-rows .song-row').first().locator('.song-actions button').evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().height));
-  for (const height of actions) expect(height).toBeGreaterThanOrEqual(44);
+  // the row's main actions stay at least 44px on a touch screen in either density: a real touch
+  // screen (a coarse pointer, which tokens.css answers), not only a narrow window
+  const touch = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 375, height: 812 } });
+  const phone = await touch.newPage();
+  try {
+    await phone.emulateMedia({ reducedMotion: 'reduce' });
+    await open(phone, 375, '/library', 812);
+    for (const density of ['Comfortable', 'Compact']) {
+      await phone.getByRole('group', { name: 'Row size' }).getByRole('button', { name: density }).click();
+      await expect(phone.getByRole('group', { name: 'Row size' }).getByRole('button', { name: density })).toHaveAttribute('aria-pressed', 'true');
+      const actions = await phone.locator('.library-rows .song-row').first().locator('.song-actions button').evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().height));
+      for (const height of actions) expect(height, `${density} on a touch screen`).toBeGreaterThanOrEqual(44);
+    }
+  } finally {
+    await touch.close();
+  }
 });
 
 test('MP-0291-04 loading, ready, attention, missing and excluded read as different states', async ({ page }) => {
@@ -173,7 +186,8 @@ test('MP-0291-06 measured values, your correction, its error and the way back fi
   const details = page.getByRole('dialog').last();
   await expect(details.getByText('Tempo in use')).toBeVisible();
   // in use and measured are separate rows of one list, labelled the same way, and the correction says it is yours
-  const facts = await details.locator('dl').first().evaluate((list) => [...list.querySelectorAll(':scope > div')].map((row) => {
+  // the facts list, not the "What it's ready for" list above it (library.capability_readiness)
+  const facts = await details.locator('dl', { hasText: 'Tempo in use' }).evaluate((list) => [...list.querySelectorAll(':scope > div')].map((row) => {
     const dt = row.querySelector('dt')!.getBoundingClientRect();
     const dd = row.querySelector('dd')!.getBoundingClientRect();
     return { label: row.querySelector('dt')!.textContent, value: row.querySelector('dd')!.textContent, dtLeft: dt.left, ddLeft: dd.left };
@@ -228,7 +242,9 @@ test('MP-0291-07 a 20,000-song library pages, searches and keeps focus without j
   const more = page.getByRole('button', { name: 'Show more songs' });
   const anchor = page.locator('.library-rows .song-row').nth(40);
   await anchor.scrollIntoViewIfNeeded();
-  const before = await anchor.boundingBox();
+  // where the row sits on the page: focusing Show more scrolls the window to it, which is not a jump
+  const pageTop = () => anchor.evaluate((element) => element.getBoundingClientRect().top + window.scrollY);
+  const before = await pageTop();
   for (let round = 0; round < 3; round += 1) {
     await more.focus();
     const started = Date.now();
@@ -237,8 +253,8 @@ test('MP-0291-07 a 20,000-song library pages, searches and keeps focus without j
     expect(Date.now() - started, 'a page took too long to show').toBeLessThan(3000);
     await expect(more).toBeFocused();
   }
-  const after = await anchor.boundingBox();
-  expect(Math.abs(after!.y - before!.y), 'rows already shown moved').toBeLessThanOrEqual(1);
+  const after = await pageTop();
+  expect(Math.abs(after - before), 'rows already shown moved').toBeLessThanOrEqual(1);
   // a layout shift observer sees nothing big while a search narrows the list
   await page.evaluate(() => {
     (window as unknown as { shift: number }).shift = 0;

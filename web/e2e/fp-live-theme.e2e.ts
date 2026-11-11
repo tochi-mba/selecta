@@ -47,7 +47,8 @@ test('System follows the OS as it flips, and an explicit choice ignores it (FP-0
   expect((await shown(page)).bars).toEqual(['#100f0c', '#f5f2e9']);
 });
 
-/** Mean luminance of the painted spectrum pixels: Dark paints bright lime, Light paints dark olive. */
+/** Mean luminance of the painted spectrum pixels: Dark paints bright lime (about 0.78), Light its dark olive
+ * and green (about 0.36, the green --ok stop dominating). A gap between 0.45 and 0.55 tells the palettes apart. */
 const paintLuminance = (page: Page) => page.locator('canvas.music-visualizer').evaluate((node) => {
   const canvas = node as HTMLCanvasElement;
   const data = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data;
@@ -77,8 +78,9 @@ test('a theme change while playing repaints the spectrum and leaves music, style
     const clock = (await audioClock(page))[0];
     await choose(page, pick);
     // every painted pixel is in the new palette within a few frames, never the old one
-    await expect.poll(() => paintLuminance(page), { message: `${pick} spectrum palette` })
-      .toSatisfy((value: number) => value >= 0 && (bright ? value > 0.45 : value < 0.3));
+    // (Playwright's poll has no toSatisfy, so poll the verdict)
+    await expect.poll(async () => { const value = await paintLuminance(page); return value >= 0 && (bright ? value > 0.55 : value < 0.45); }, { message: `${pick} spectrum palette` })
+      .toBe(true);
     await expect(style).toHaveValue('skyline');
     await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
     expect(await soundsRestarted(page)).toBe(started);
@@ -96,7 +98,7 @@ test('a theme change while playing repaints the spectrum and leaves music, style
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
     document.dispatchEvent(new Event('visibilitychange'));
   });
-  await expect.poll(() => paintLuminance(page)).toSatisfy((value: number) => value >= 0 && value < 0.3);
+  await expect.poll(async () => { const value = await paintLuminance(page); return value >= 0 && value < 0.45; }, { message: 'first frame back is in the Light palette' }).toBe(true);
   expect(await soundsRestarted(page)).toBe(started);
 });
 
@@ -150,7 +152,9 @@ for (const view of [
           const name = card.querySelector('h3')?.textContent ?? '?';
           const box = card.getBoundingClientRect();
           const buttons = [...card.querySelectorAll<HTMLButtonElement>('.card-actions button')];
-          if (!buttons.some((button) => button.textContent?.trim() === 'Play')) out.push(`${name}: no Play`);
+          // an Action keeps its working label ("Building…") in the button, hidden, so read the shown one
+          const label = (button: HTMLButtonElement) => (button.querySelector('.action-labels > span') ?? button).textContent?.trim();
+          if (!buttons.some((button) => label(button) === 'Play')) out.push(`${name}: no Play`);
           for (const button of buttons) {
             const own = button.getBoundingClientRect();
             if (own.width < 24 || own.height < 24) out.push(`${name}: ${button.textContent} too small`);

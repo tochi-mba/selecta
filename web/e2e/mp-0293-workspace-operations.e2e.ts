@@ -199,7 +199,8 @@ test('MP-0293-04 the GB amount, slider and saved or warning line share one edge 
     const warned = await measure();
     expect(warned.alert).toBe(true);
     expect(Math.abs(warned.line.left - warned.slider.left), `${at}: warning and slider start apart`).toBeLessThanOrEqual(1);
-    expect(Math.abs(warned.line.top - saved.line.top), `${at}: warning moved from where Saved was`).toBeLessThanOrEqual(1);
+    // measured from the slider: focusing the slider can scroll the page, which moves both alike
+    expect(Math.abs((warned.line.top - warned.slider.bottom) - (saved.line.top - saved.slider.bottom)), `${at}: warning moved from where Saved was`).toBeLessThanOrEqual(1);
     await expect(page.locator('label.limit b')).toHaveText('5.0 GB');
     const retry = page.getByRole('button', { name: 'Retry saving budget' });
     await expect(retry).toBeVisible();

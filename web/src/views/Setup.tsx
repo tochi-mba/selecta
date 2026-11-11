@@ -23,7 +23,7 @@ export function SetupSteps({ stage }: { stage: SetupStage }) {
     <ol className="setup-steps" aria-label="Getting started">
       {STAGES.map((item, index) => (
         <li key={item.id} className={index < at ? 'done' : undefined} aria-current={index === at ? 'step' : undefined}>
-          {item.label}
+          <span className="setup-step-label">{item.label}</span>
           {index < at && <span className="visually-hidden"> (done)</span>}
         </li>
       ))}

@@ -47,6 +47,8 @@ button[aria-disabled='true'] { cursor: progress; }
    the source space between <Icon /> and the label never decides the gap. :where() keeps this at
    zero specificity: any control that sets its own display (hidden, grid, column) still wins. */
 :where(button:has(> .ui-icon), a.button:has(> .ui-icon)) { display: inline-flex; align-items: center; justify-content: center; gap: var(--icon-gap); }
+/* MP-0277-03: words that wrap beside an icon start at the same gap; centred lines would drift from it */
+:where(button:has(> .ui-icon), a.button:has(> .ui-icon)) { text-align: start; }
 :where(.menu-list button:has(> .ui-icon)) { justify-content: flex-start; }
 .action-labels { display: inline-grid; align-items: center; justify-items: center; }
 .action-labels > span { grid-area: 1 / 1; }
@@ -64,7 +66,8 @@ button[aria-disabled='true'] { cursor: progress; }
 .inspector [role='tabpanel']:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; }
 .overlay-panel { overscroll-behavior: contain; }
 .overlay-head { gap: var(--space-4); }
-.overlay-close { flex: none; display: grid; place-items: center; }
+/* MP-0290-01: a square 44px target at every width, whatever the icon's own size */
+.overlay-close { flex: none; display: grid; place-items: center; min-width: 44px; min-height: 44px; }
 .overlay-body { scrollbar-gutter: stable; }
 .menu-list { max-height: min(65dvh, 480px); overflow-y: auto; }
 .toasts { max-height: min(42dvh, 420px); overflow-y: auto; overscroll-behavior: contain; }
@@ -212,6 +215,14 @@ button[aria-disabled='true'] { cursor: progress; }
     button[aria-pressed='true']) {
     outline: 2px solid Highlight;
     outline-offset: -3px;
+  }
+  /* SF-0201-06: keyboard focus on the selected item still reads as focus, the thicker ring outside it,
+     not the selected mark inside (the selected rule above is more specific than plain :focus-visible) */
+  :is(.nav a[aria-current='page'], .tabs a[aria-current='page'],
+    .inspector-tabs button[aria-selected='true'], [role='option'][aria-selected='true'],
+    button[aria-pressed='true']):focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
   }
   .status {
     border: 1px solid CanvasText;

@@ -51,7 +51,14 @@ test('the seek strip takes a tap on a touch screen and arrow keys, at 320px', as
   await strip.scrollIntoViewIfNeeded();
   const box = (await strip.boundingBox())!;
   expect(box.height).toBeGreaterThanOrEqual(44);
-  expect(box.width).toBeGreaterThanOrEqual(280);
+  // full width: it fills its column edge to edge (a desktop scrollbar's gutter is not the strip's to take)
+  const column = await strip.evaluate((node) => {
+    const page = node.closest('main')!;
+    const style = getComputedStyle(page);
+    return page.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  });
+  expect(box.width).toBeGreaterThanOrEqual(column - 1);
+  expect(box.width).toBeGreaterThanOrEqual(260);
   await page.touchscreen.tap(box.x + box.width * 0.25, box.y + box.height / 2);
   await expect.poll(() => shownTime(page)).toBeGreaterThan(15);
   const tapped = await shownTime(page);

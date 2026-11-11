@@ -380,10 +380,9 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
       'Couldn’t cancel that. It’s still on the list.',
     );
     if (data?.cancelled === false) setMessage('That one has already joined your mix. You can change it in Edit.');
-    if (data) {
-      settle(data.requests);
-      leaving.current.delete(request.id);
-    }
+    // a cancelled request's ID never comes back, so it stays held out: a list that was already on its
+    // way before the cancel (a poll, a look for a spot) can't put it back on screen (MP-0290-06)
+    if (data) settle(data.requests);
   };
   /** What someone says about a bridge reaches the server one answer at a time, in the order they
    * said it, so the last thing they said is what stands. Saying the same thing twice sends it once,

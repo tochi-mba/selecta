@@ -453,3 +453,17 @@
   .now .listen-view { border-color: CanvasText; }
   .listen-visualizer-help { border-color: CanvasText; }
 }
+
+/* MP-0285-01: the lyric timing note is a caption, not a lyric line. Set as one (on Listen and on Stage,
+   where `.stage .lyrics p` would otherwise blow it up to lyric size) so it never pushes the current line
+   below the fold. */
+.now .lyrics p.lyric-confidence { font: 400 var(--text-xs) / 1.4 var(--body); letter-spacing: normal; color: var(--soft); margin: 0 0 var(--space-2); }
+/* Short Stage windows (a laptop at 1280x600, a phone held sideways, 320x568): the heading, visualiser and
+   countdown give up height so the current lyric still fits above the fold, with even gutters kept. */
+@media (max-height: 760px) {
+  .now.stage { padding-block: 2vh; }
+  .now.stage .music-visualizer, .now.stage .music-visualizer.focused { height: clamp(48px, 12svh, 110px); margin: 0.5vh 0 1vh; }
+  .now.stage .handoff { padding: var(--space-2) var(--space-4); margin: 0.5vh 0 1.5vh; }
+  .now.stage .countdown-track { height: clamp(16px, 4vh, 32px); }
+  .now.stage .countdown-number strong { font-size: clamp(1.8rem, 6vh, 3rem); }
+}

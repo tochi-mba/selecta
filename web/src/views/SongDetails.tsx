@@ -131,7 +131,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
           ))}
         </dl>
       )}
-      <dl className="song-facts">
+      <dl className="song-facts song-facts-table">
         <div><dt>Length</dt><dd>{clock(song.duration)}</dd></div>
         <div><dt>Tempo in use</dt><dd>{song.bpm ? `${Math.round(song.bpm)} BPM` : 'Not measured yet'}{song.override_bpm ? ' (your correction)' : ''}</dd></div>
         <div><dt>Tempo measured</dt><dd>{detectedTempo ? `${detectedTempo} BPM` : 'Not measured yet'}</dd></div>

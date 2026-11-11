@@ -50,7 +50,7 @@ function TrackTitle({ title, songId, stage }: { title: string; songId?: number; 
         const size = (low + high) / 2;
         node.style.fontSize = `${size}px`;
         const height = node.getBoundingClientRect().height;
-        const fits = slot === null ? height - Math.max(0, motif - line(size)) <= size * 3.4 : height <= slot + 0.5;
+        const fits = slot === null ? height - Math.max(0, motif - line(size)) <= size * 3.4 : height <= slot; // not a hair over, or Play and the seek bar slip a pixel (GP-0248-05)
         if (fits || !height) low = size;
         else high = size;
       }

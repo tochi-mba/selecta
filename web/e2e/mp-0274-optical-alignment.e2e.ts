@@ -250,8 +250,9 @@ test('MP-0274-06 the context bar, editor scope, inspector and Studio ruler never
       const now = await page.evaluate(chrome);
       const where = `scrolled ${y}px at ${width}px`;
       expect(now.header!.top, where).toBe(0);
-      // pinned, the scope sits under the bar sharing its 1px hairline; never further under it
-      if (now.editorHead!.bottom > now.header!.bottom + now.scope!.height) {
+      // pinned, the scope sits under the bar sharing its 1px hairline; never further under it. The editor
+      // head is display: contents (creation.css), so the scope is pinned for the whole editor and has no box of its own
+      if (!now.editorHead || now.editorHead.bottom > now.header!.bottom + now.scope!.height) {
         expect(now.scope!.top, `${where}: scope under the bar`).toBeGreaterThanOrEqual(now.header!.bottom - 1);
       }
     }

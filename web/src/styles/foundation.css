@@ -19,6 +19,9 @@
 .icon-button { display: inline-grid; place-items: center; padding: var(--space-dense); min-width: var(--control-height); }
 .field { display: grid; gap: var(--field-gap); min-width: 0; }
 .field > label { font-weight: 600; }
+/* MP-0279-03: an invalid field is the same box as a valid one, told apart by its error edge and a
+   marker down its start side, so it doesn't rest on colour alone */
+input[aria-invalid='true'], select[aria-invalid='true'], textarea[aria-invalid='true'] { border-color: var(--edge-error); box-shadow: inset var(--marker) 0 0 var(--edge-error); }
 .search-field { position: relative; display: flex; align-items: center; min-width: 0; flex: 1 1 auto; }
 .search-field > .ui-icon { position: absolute; left: var(--space-3); color: var(--text-soft); pointer-events: none; }
 .search-field input { padding-left: calc(var(--space-3) + var(--icon-size) + var(--icon-gap)); padding-right: var(--space-7); }
@@ -63,3 +66,8 @@
 .setup-steps li[aria-current='step'] { color: var(--text); font-weight: 700; }
 .setup-steps li[aria-current='step']::before { background: var(--primary-fill); color: var(--primary-ink); border-color: var(--primary-edge); }
 .setup-steps li.done::before { content: '✓'; color: var(--status-ready); border-color: var(--status-ready); }
+/* MP-0282-07: on a phone a finished step is just its tick (its name is still read out), so the steps
+   take one line and the next action stays in the first screen */
+@media (max-width: 480px) {
+  .setup-steps li.done .setup-step-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
