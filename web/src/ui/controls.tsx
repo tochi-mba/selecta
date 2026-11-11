@@ -192,6 +192,7 @@ function Overlay({
     // A list can re-render while the overlay is open and replace the button that opened it.
     // `data-focus-key` names that button stably, so focus goes back to its replacement.
     const beforeKey = before?.dataset.focusKey;
+    const beforeScroll = { x: window.scrollX, y: window.scrollY, url: window.location.href };
     if (openOverlays++ === 0) {
       previousOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
@@ -231,6 +232,11 @@ function Overlay({
       if (before?.isConnected && before !== document.body) before.focus({ preventScroll: true });
       else if (replacement) replacement.focus({ preventScroll: true });
       else document.getElementById('content')?.focus({ preventScroll: true });
+      // Unlocking body overflow must not reset the long Library's scroll position.
+      // Route changes deliberately choose their own scroll position, so leave those alone.
+      if (openOverlays === 0 && window.location.href === beforeScroll.url) {
+        window.scrollTo(beforeScroll.x, beforeScroll.y);
+      }
     };
   }, []);
   const keys = (event: KeyboardEvent) => {

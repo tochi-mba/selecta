@@ -953,7 +953,7 @@ export function Now(props: ViewProps) {
               )}
               {steering && (
                 <section className="listen-next-steering" aria-labelledby="listen-next-steering-title">
-                  <h3 id="listen-next-steering-title" ref={steeringHeading} tabIndex={-1}>Change the next song</h3>
+                  <h2 id="listen-next-steering-title" ref={steeringHeading} tabIndex={-1}>Change the next song</h2>
                   <div className="chips steer" role="group" aria-label="Change what plays next">
                     <Action waiting={swapBusy} run={() => swap(1)} working="Finding one…">Bigger</Action>
                     <Action waiting={swapBusy} run={() => swap(-1)} working="Finding one…">Calmer</Action>

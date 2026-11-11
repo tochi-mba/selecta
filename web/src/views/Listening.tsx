@@ -84,8 +84,11 @@ export function Listening() {
       setIndex(valid ? restored!.index : 0);
       setHeard(valid && Array.isArray(restored!.heard) ? restored!.heard : []);
       setQuality(valid && restored!.quality && typeof restored!.quality === 'object' ? restored!.quality : {});
-    } catch {
-      setCodeProblem('Could not load this listening study. Check the study code and try again.');
+    } catch (failure) {
+      // Invalid codes are tied to their field. A server outage belongs after the Open study action.
+      const words = 'Could not load this listening study. Check the study code and try again.';
+      if (failure instanceof ApiError && failure.status >= 400 && failure.status < 500) setCodeProblem(words);
+      else setError(words);
     } finally { operation.current = false; setLoading(false); }
   };
 
