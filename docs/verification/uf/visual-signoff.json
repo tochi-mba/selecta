@@ -1,0 +1,20 @@
+{
+  "about": "UF-0389-01: one row per fixture in docs/adr/completion/visual-evidence.md, signing the exact Light and Dark capture pair by hash. Checked by python -m selecta.audit.uf_human_logs.",
+  "tasks": [
+    "UF-0389-01"
+  ],
+  "key": "fixture",
+  "required": [],
+  "fields": [
+    "route",
+    "state",
+    "revision",
+    "viewport",
+    "light_sha256",
+    "dark_sha256",
+    "reviewer",
+    "date",
+    "verdict"
+  ],
+  "entries": []
+}

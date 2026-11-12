@@ -1,6 +1,6 @@
 # Selecta 2.0: the implementation and its checklist
 
-**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 279 tasks: 251 Implemented, 0 In progress, 3 Not started, 24 Needs a person, 1 Superseded. 24 name a person-only step. 248 ticked. 0 independently Verified.
+**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 279 tasks: 252 Implemented, 0 In progress, 2 Not started, 24 Needs a person, 1 Superseded. 24 name a person-only step. 249 ticked. 0 independently Verified.
 
 > **One PR for everything:** the implementation now lands on this branch too, instead of in separate PRs, as the owner asked. A ticked box means the code is on this branch and [implementation-evidence.md](https://github.com/tochi-mba/selecta/blob/main/docs/adr/implementation-evidence.md) says how we know. This description holds the live checkbox state, and the committed `docs/adr/implementation-checklist.md` is the first snapshot of the scope.
 
@@ -15,7 +15,7 @@
 
 **Invariants:** Preserve the whole current app and warm colour identity. No lost source music or drafts, no wrong current/draft mutation, no unintended audio silence/late seam, no unapproved/partial bridge joins, no inaccessible essential action, no invalid exported audio, no unsafe localhost access.
 
-**Initial task count:** 279 tasks across 14 delivery phases, covering all 32 ADRs. **Completed so far (ticked, 2026-11-12): 248.** The recount under the title has the full status split.
+**Initial task count:** 279 tasks across 14 delivery phases, covering all 32 ADRs. **Completed so far (ticked, 2026-11-12): 249.** The recount under the title has the full status split.
 
 **Related docs:** [ADR index](https://github.com/tochi-mba/selecta/tree/main/docs/adr) · [feature parity](https://github.com/tochi-mba/selecta/blob/main/docs/adr/feature-parity.md) · [test matrix](https://github.com/tochi-mba/selecta/blob/main/docs/adr/test-coverage-matrix.md) · [acceptance ledger](https://github.com/tochi-mba/selecta/blob/main/docs/acceptance.md)
 
@@ -431,7 +431,7 @@
 - [x] T0260 - Run extended frontend tests, Python tests, API contracts and browser E2E suites on PR and main.
 - [ ] T0261 - Run deterministic real Web Audio tests for seek, late seam, fallback, preview focus and exact media key behaviour. **Implementation:** Implemented; browser check pending (`web/e2e/listen.e2e.ts`: 14 of 17 passed in Edge 2026-11-11; rerun `Play makes real sound`, `Next and Previous go song by song` and `the end of the mix comes to a stop` after the `Next song` selector fix).
 - [ ] T0262 - Run visual regression for dark/light, 320px–4K, safe areas, reduced motion and high zoom. **Needs a person:** approve the golden screenshot baselines that `web/e2e/visual.e2e.ts` captures as review candidates (checked 2026-11-11).
-- [ ] T0263 - Complete keyboard-only workflows for request, Mixes, Edit, Studio, Library, export and study.
+- [x] T0263 - Complete keyboard-only workflows for request, Mixes, Edit, Studio, Library, export and study. **Evidence (2026-11-12):** `web/e2e/t0263-keyboard-workflows.e2e.ts` walks each workflow start to finish in Edge with keys only (no click or focus() call; every control reached with Tab or the page's own shortcut): `T0263 request: ask for a song, cancel it and close, from the keyboard alone`, `T0263 Mixes: start a mix from the Mixes page with Tab and Enter`, `T0263 Edit: move a song down and back with its handle, focus staying on it`, `T0263 Studio: open a transition, reach the Studio, turn a square over and leave, by keyboard`, `T0263 Library: search with /, open a song’s menu and add it to the mix, by keyboard`, `T0263 export: open the save dialog from Edit, start saving, cancel it and close back to the button` (focus held in the dialog, then returned to Download audio), `T0263 study: open a study, grade a version and answer, by keyboard to the end` (both clips played with Space, then Prefer A with grade 4 posted). 7 passed 2026-11-12 (Playwright, Edge, dist-rb, slot-locked). No app change was needed. Whether the walk is comfortable is a person's judgement, tracked as P0126 in the polish checklist.
 - [ ] T0264 - Complete NVDA, VoiceOver and applicable mobile assistive-technology testing against WCAG 2.2 AA. **Needs a person:** NVDA, VoiceOver and mobile assistive-technology sessions run by a person (checked 2026-11-10).
 - [ ] T0265 - Profile >20k Library, >100-song Edit, 64-cell Studio and concurrent render under constrained CPU/storage.
 - [ ] T0266 - Conduct user task tests for casual listener, creator and expert editor without guided help. **Needs a person:** unguided task tests with a casual listener, a creator and an expert editor (checked 2026-11-10).

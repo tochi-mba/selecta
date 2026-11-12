@@ -14,6 +14,13 @@
       "core": "An upgrade must never be the thing that loses a library.",
       "modes": ["local"]
     },
+    "core.durable_local_jobs": {
+      "label": "Durable local jobs",
+      "about": "Local background work through the durable job store in the library home (work.sqlite), so it survives restarts and crashes. Off by default while the local audio jobs move onto it.",
+      "modes": ["local"],
+      "default": false,
+      "kind": "release"
+    },
     "core.library": {
       "label": "Library",
       "about": "Reading a music folder, setting aside what isn't music, and the Library page with search, filters and sorting.",

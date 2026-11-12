@@ -278,14 +278,14 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 
 | Sitting | Tasks | Tracker |
 |---|---|---|
-| 1. Visual review and baseline approval | 121 | [tracker/visual-review.md](tracker/visual-review.md) |
+| 1. Visual review and baseline approval | 120 | [tracker/visual-review.md](tracker/visual-review.md) |
 | 2. Screen-reader and keyboard session | 95 | [tracker/screen-reader.md](tracker/screen-reader.md) |
 | 3. Phones, touch, zoom and hardware | 106 | [tracker/devices.md](tracker/devices.md) |
 | 4. Listening session | 73 | [tracker/listening.md](tracker/listening.md) |
 | 5. User-study sessions | 221 | [tracker/user-study.md](tracker/user-study.md) |
 | 6. Staging, drills and rollback | 14 | [tracker/staging.md](tracker/staging.md) |
 | 7. Legal and business list | 9 | [tracker/legal-business.md](tracker/legal-business.md) |
-| 8. Sign-off pass | 175 | [tracker/sign-off.md](tracker/sign-off.md) |
+| 8. Sign-off pass | 176 | [tracker/sign-off.md](tracker/sign-off.md) |
 
 ### Task IDs closed by sitting 1: Visual review and baseline approval
 
@@ -298,7 +298,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 - `selecta-final-polish-implementation-checklist.md` (4): FP-0264-08, FP-0265-02, FP-0265-08, FP-0266-08
 - `selecta-flow-implementation-checklist.md` (28): SF-0200-01, SF-0200-03, SF-0200-05, SF-0200-06, SF-0200-07, SF-0201-02, SF-0201-03, SF-0201-08, SF-0202-08, SF-0203-04, SF-0204-08, SF-0206-05, SF-0206-07, SF-0207-05, SF-0209-02, SF-0210-01, SF-0210-06, SF-0212-02, SF-0213-06, SF-0218-02, SF-0227-01, SF-0227-07, SF-0245-01, SF-0245-02, SF-0245-03, SF-0245-05, SF-0245-07, SF-0245-08
 - `selecta-gap-polish-implementation-checklist.md` (1): GP-0257-04
-- `selecta-library-lucy-experience-implementation-checklist.md` (8): LX-0340-08, LX-0341-01, LX-0352-08, LX-0355-02, LX-0358-03, LX-0364-02, LX-0364-03, LX-0364-08
+- `selecta-library-lucy-experience-implementation-checklist.md` (7): LX-0340-08, LX-0341-01, LX-0352-08, LX-0355-02, LX-0358-03, LX-0364-02, LX-0364-08
 - `selecta-measured-micro-polish-implementation-checklist.md` (3): MP-0279-08, MP-0295-08, MP-0299-02
 - `selecta-unified-finish-implementation-checklist.md` (11): UF-0368-03, UF-0368-08, UF-0369-04, UF-0369-08, UF-0370-02, UF-0370-08, UF-0375-06, UF-0382-03, UF-0387-06, UF-0388-04, UF-0389-01
 
@@ -386,7 +386,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 - `selecta-final-polish-implementation-checklist.md` (2): FP-0269-08, FP-0271-08
 - `selecta-flow-implementation-checklist.md` (8): SF-0198-07, SF-0200-08, SF-0229-03, SF-0230-06, SF-0234-08, SF-0240-08, SF-0241-08, SF-0247-08
 - `selecta-gap-polish-implementation-checklist.md` (1): GP-0253-08
-- `selecta-library-lucy-experience-implementation-checklist.md` (2): LX-0363-06, LX-0365-08
+- `selecta-library-lucy-experience-implementation-checklist.md` (3): LX-0363-06, LX-0364-03, LX-0365-08
 - `selecta-measured-micro-polish-implementation-checklist.md` (3): MP-0298-08, MP-0299-07, MP-0299-08
 - `selecta-microinteraction-implementation-checklist.md` (3): MI-0135-08, MI-0162-08, MI-0164-08
 - `selecta-unified-finish-implementation-checklist.md` (19): UF-0366-02, UF-0366-03, UF-0366-04, UF-0366-05, UF-0366-06, UF-0366-07, UF-0366-08, UF-0367-04, UF-0367-07, UF-0367-08, UF-0376-01, UF-0377-01, UF-0377-08, UF-0378-01, UF-0379-04, UF-0380-07, UF-0385-01, UF-0389-06, UF-0389-08

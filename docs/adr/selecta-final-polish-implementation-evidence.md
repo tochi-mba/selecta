@@ -2,7 +2,7 @@
 
 **2026-11-08 docs-only planning baseline:** main `5347e7309c5ff8b2e2965c2194bf2089b6ad2721`. **8 Proposed ADRs** (0264–0271), **64 task acceptances Not started**, 0 In progress, 0 Implemented, **0 independently Verified**. Owner decisions/implementing PRs are not supplied. Existing prior programme ledgers are not changed.
 
-**2026-11-12 status (recounted from the task lines of the [checklist](selecta-final-polish-implementation-checklist.md)):** 8 Accepted ADRs (0264-0271); 64 task acceptances: 53 Implemented, 2 In progress, 9 Not started (each names a person-only step); **0 independently Verified**. The line above is the historical 2026-11-08 baseline. The per-task rows below still show that baseline and have not been brought forward; the checklist task lines are the current record.
+**2026-11-12 status (recounted from the task lines of the [checklist](selecta-final-polish-implementation-checklist.md)):** 8 Accepted ADRs (0264-0271); 64 task acceptances: 53 Implemented, 11 In progress, 0 Not started (each names a person-only step; their code parts are built); **0 independently Verified**. The line above is the historical 2026-11-08 baseline. The per-task rows below still show that baseline and have not been brought forward; the checklist task lines are the current record.
 
 | Task | ADR | Implementation | Independently verified | Owner | Implementing PR / code SHA | Independent reviewer / evidence |
 |---|---|---|---|---|---|---|

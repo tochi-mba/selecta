@@ -84,6 +84,25 @@ def write(
             ("workspace_id", "kind", "input_hash"),
             REPLACED_ON_REPUBLISH,
         )
+        if output.kind == EXPORT_KIND:
+            _charge_export(connection, workspace_id, output)
+
+
+EXPORT_KIND = "export"
+
+
+def _charge_export(connection: Connection, workspace_id: str, output: ArtifactOutput) -> None:
+    """A kept export counts against storage (ADR-0402), charged in the transaction that keeps it."""
+    from selecta.storage.export_expiry import charge_export
+
+    export_id = connection.execute(
+        sa.select(artifacts.c.id).where(
+            artifacts.c.workspace_id == workspace_id,
+            artifacts.c.kind == output.kind,
+            artifacts.c.input_hash == output.input_hash,
+        )
+    ).scalar_one()
+    charge_export(connection, workspace_id, export_id, int(output.size_bytes or 0))
 
 
 def find(

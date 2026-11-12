@@ -1,12 +1,14 @@
 import { useAuth } from '@workos-inc/authkit-react';
 import { FormEvent, lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { DevicesPanel } from '../devices/DevicesPanel';
+import { DeviceCheck, showsDeviceCheck } from '../devices/DeviceCheck';
 import { CloudListen } from '../rooms/CloudListen';
 import { LucyCloudSettings } from '../views/LucyCloudSettings';
 import { AccountData } from './AccountData';
 import { Account, apiOrigin, CloudError, featureOn, idempotencyKey, isOverQuota, lockedTo, messageOf, Page, pageShown, planName } from './api';
 import { BLOCKED_MESSAGES, BlockedCode, blockedCode, callbackProblem, refusalMessage, SUSPENDED_NOTICE, withoutCallbackError } from './authConfig';
 import { Billing } from './Billing';
+import { PrivacyNoticeDraft, showsPrivacyDraft } from './PrivacyNoticeDraft';
 import { checkoutBody, Consent, consentVersionFor, useCheckoutReturn } from './checkout';
 import { CloudEvent, useCloudEvents } from './events';
 import { LibraryPanel } from './Library';
@@ -218,7 +220,7 @@ export function CloudApp() {
         {shown === 'library' && account && <LibraryPanel api={api} workspaceId={account.workspace.id} setError={setError} refreshAccount={refreshAccount} go={choosePage} reload={libraryVersion} />}
         {shown === 'uploads' && account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} />}
         {shown === 'billing' && account && <Billing account={account} busy={busy} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} />}
-        {shown === 'settings' && account && <div className="cloud-settings"><AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} />{featureOn(account, 'devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{featureOn(account, 'lucy') && featureOn(account, 'account.lucy_settings') && <LucyCloudSettings request={lucyRequest} features={account.features} />}</div>}
+        {shown === 'settings' && account && <div className="cloud-settings"><AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} />{featureOn(account, 'devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{featureOn(account, 'lucy') && featureOn(account, 'account.lucy_settings') && <LucyCloudSettings request={lucyRequest} features={account.features} />}{showsDeviceCheck(account.features) && <DeviceCheck />}{showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />}</div>}
         <footer className="cloud-footer">Selecta Cloud · Your originals remain private to your workspace.</footer>
       </main>
     </div>

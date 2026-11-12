@@ -182,7 +182,8 @@ def report_problems(text: str, records: list[dict]) -> list[str]:
         problems.append("report does not state its sample-size caveats")
     for cohort, row in cohort_summary(records, "candidate").items():
         if row["participants"] and f"{row['successes']} of {row['attempts']}" not in text:
-            problems.append(f"{cohort}: report must give the count as 'N of M', not only a %")
+            count = f"{row['successes']} of {row['attempts']}"
+            problems.append(f"{cohort}: report must give the count ({count}), not only a %")
     if not re.search(r"reviewed by\s+\S", text, re.IGNORECASE):
         problems.append("report has no researcher review line ('Reviewed by <name>')")
     return problems

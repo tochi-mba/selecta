@@ -211,6 +211,7 @@ def test_publishing_an_export_charges_its_bytes_to_storage(cloud_engine):
         [export_id] = conn.execute(sa.select(artifacts.c.id)).scalars().all()
         assert export_expiry.charged(conn, "ws-pay", export_id) == 7 * MB
         assert conn.execute(sa.select(sa.func.sum(usage_ledger.c.amount))).scalar() == 7 * MB
+        conn.execute(artifacts.delete())  # it came from no real job; keep the invariants clean
 
 
 def test_expiry_never_takes_committed_bytes_below_what_is_really_stored(cloud_engine):

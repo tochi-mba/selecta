@@ -5,7 +5,7 @@
   "as_of": "2026-11-12",
   "scope": "MP-0272-01 through MP-0299-08",
   "decision_summary": "28 Proposed",
-  "implementation_status": "194 Implemented; 11 In progress; 19 Not started (2026-11-12, recounted from the checklist task lines; the per-group lists below were synced to those lines the same day; Needs a person tasks are also listed in not_started)",
+  "implementation_status": "194 Implemented; 29 In progress; 1 Not started (2026-11-12, recounted from the checklist task lines; the per-group lists below were synced to those lines the same day; Needs a person tasks are also listed in not_started)",
   "independent_verification": "0 Verified",
   "groups": {
     "272": {
@@ -195,10 +195,10 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
@@ -262,10 +262,10 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
@@ -308,10 +308,10 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
@@ -333,10 +333,10 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
@@ -379,10 +379,10 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
@@ -429,11 +429,10 @@
         "06"
       ],
       "in_progress": [
-        "07"
-      ],
-      "not_started": [
+        "07",
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
@@ -456,10 +455,10 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
@@ -481,10 +480,10 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
@@ -582,10 +581,10 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": "6a55b1643b0bbfaed47656588f74ad3390b08b0e",
       "implementation_pr": 38,
@@ -607,10 +606,10 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
@@ -630,13 +629,12 @@
         "05"
       ],
       "in_progress": [
-        "06",
-        "07"
-      ],
-      "not_started": [
         "04",
+        "06",
+        "07",
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
@@ -656,16 +654,15 @@
         "01"
       ],
       "in_progress": [
-        "07"
-      ],
-      "not_started": [
         "02",
         "03",
         "04",
         "05",
         "06",
+        "07",
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,

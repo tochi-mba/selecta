@@ -91,3 +91,14 @@ Use an isolated copied data directory; never the participant's only library.
 
 Destructive and playback-affecting actions name the object and consequence: “Delete Friday night” plus recovery, “Replace current mix with draft” plus preservation, “Play next” versus “Add”, and “Take out of render line” explicitly not changing playback order. Success copy is emitted only after the authoritative mutation response.
 
+
+## Study kit for the person-run MI tasks - MI-0135-06 to MI-0164-08
+
+`src/selecta/audit/mi_study_kit.py` holds the code half of the 24 MI tasks that only people can close (the studies, the listening sessions, the accessibility review and the three sign-offs). It does not record results; it makes the sheet, refuses a record that could not be evidence, and prints the raw counts.
+
+1. `python -m selecta.audit.mi_study_kit list` names each task's kit entry.
+2. `python -m selecta.audit.mi_study_kit sheet MI-0150-08 --participants 6 --out <outside the repo>/mi-0150-08.json` writes a blank record: participant codes P01 onward, each participant's counterbalanced order (a Williams Latin square, so each condition comes first and follows every other equally often), the measures per trial and the setup to use. For blind listening (MI-0151-08, MI-0155-08) pass `--conditions` with the sample ids; the labels are shuffled per participant and the mapping goes to a separate `.key.json` the listener never sees.
+3. Fill the record during the session. `check <record>` lists every reason it is not yet evidence: no exact 40-character SHA or date, no named facilitator or environment, a name instead of a participant code, no consent, an order that is not the sheet's, a measure out of range, a coached trial counted as a pass, or a superiority claim. Sign-offs need their named people, and: MI-0135-08 an owner, alternatives, no-go and evidence per scene; MI-0161-08 a device, browser, assistive technology and passed/total per session with every failure written; MI-0164-08 GO or NO-GO, decision owners, every P1 dispositioned with an owner, and no GO over a P0 that is not fixed.
+4. `summary <record>` prints denominators, successes, counts, times, rating spreads, every answer as written and the outcome by position (order effects). `report <records...> --sha <sha> --date <date>` (MI-0158-08) joins several checked records at one SHA with the total sample count. Neither ranks conditions.
+
+Keep records, notes and recordings outside the repository; cite the record's file name, SHA and date in the evidence ledger. `tests/test_mi_study_kit.py` covers the kit.

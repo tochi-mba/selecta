@@ -12,6 +12,12 @@ physical deletion drain then erases the exports-bucket copy after the recovery w
 objects the row named go after the commit, as `storage.eviction` does: a crash in between leaves
 an orphaned object, never a row pointing at nothing. The maintenance leader runs it hourly
 (`selecta maintain`, task `export_expiry`), behind the `cloud.export_expiry` flag.
+
+Kept exports count against storage (ADR-0402: "Storage counts originals and kept exports only").
+`charge_export` adds an export's bytes to committed usage when the job store writes its row
+(`work.artifacts.write`), with a storage ledger entry whose ref is `export:{id}:...`. Expiry gives
+back exactly what those entries charged (`charged`), never the row's size: an export made before
+exports were charged releases nothing, so committed bytes never drop below what is stored.
 """
 
 from __future__ import annotations
@@ -25,7 +31,8 @@ from sqlalchemy.engine import Connection, Engine
 from selecta import persistence
 from selecta.billing.plans import UnknownPlan, plan_for
 from selecta.storage.deletion import DeletionKind, tombstone
-from selecta.usage import quota
+from selecta.usage import ledger, quota
+from selecta.usage.schema import usage_ledger
 from selecta.work.schema import artifacts, revision_artifacts
 
 FLAG = "cloud.export_expiry"
@@ -46,6 +53,38 @@ class _QuotaRelease:
     @staticmethod
     def release_committed(conn: Connection, workspace_id: str, size: int, ref: str) -> None:
         quota.release_deleted(conn, workspace_id, size, ref=ref)
+
+
+def _charge_ref(export_id: str) -> str:
+    return f"export:{export_id}:"
+
+
+def charged(conn: Connection, workspace_id: str, export_id: str) -> int:
+    """The bytes this export has been charged to the workspace's storage, net."""
+    total = conn.execute(
+        sa.select(sa.func.sum(usage_ledger.c.amount)).where(
+            usage_ledger.c.workspace_id == workspace_id,
+            usage_ledger.c.kind == ledger.Kind.STORAGE_BYTES.value,
+            usage_ledger.c.ref.startswith(_charge_ref(export_id), autoescape=True),
+        )
+    ).scalar()
+    return max(0, int(total or 0))
+
+
+def charge_export(conn: Connection, workspace_id: str, export_id: str, size_bytes: int) -> int:
+    """Charge a kept export's bytes to storage, or the difference when it was published again.
+    Returns the change in committed bytes."""
+    change = max(0, int(size_bytes or 0)) - charged(conn, workspace_id, export_id)
+    if change == 0:
+        return 0
+    ref = _charge_ref(export_id) + persistence.new_id()
+    if change < 0:
+        quota.release_deleted(conn, workspace_id, -change, ref=ref)
+        return change
+    held = quota._locked(conn, workspace_id)
+    quota._store(conn, held, committed=held.committed_bytes + change)
+    ledger.record(conn, workspace_id, ledger.Kind.STORAGE_BYTES, change, ref=ref)
+    return change
 
 
 def retention_days(conn: Connection, workspace_id: str) -> tuple[str, int] | None:
@@ -105,7 +144,9 @@ def expire_workspace(
                 workspace_id,
                 DeletionKind.EXPORT,
                 row.id,
-                size=int(row.size_bytes or 0),
+                # What it was charged, never more: committed bytes can't drop below the
+                # originals and exports still stored.
+                size=charged(conn, workspace_id, row.id),
                 quota=_QuotaRelease(),
             )
             expired.append(Expired(workspace_id, row.id, plan_id, days, made.bytes_to_release))

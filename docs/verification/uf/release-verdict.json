@@ -1,0 +1,13 @@
+{
+  "about": "UF-0389-08: the documented release verdict. Filled only by the release owner and an independent reviewer. Checked by python -m selecta.audit.uf_release_gate (dry run).",
+  "owner": null,
+  "date": null,
+  "sha": null,
+  "p1_decisions": [],
+  "rollback": null,
+  "go_signoff": {
+    "reviewer": null,
+    "date": null,
+    "verdict": null
+  }
+}

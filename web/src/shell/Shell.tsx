@@ -5,7 +5,7 @@ import { NowState, SetPlayer } from '../player';
 import { Route, savedScroll, useLocationText } from '../router';
 import { setPrefs, usePrefs } from '../state/prefs';
 import { useUnseenActivity } from '../state/activity';
-import { jobAttention, useJobsStatus } from '../state/jobs';
+import { attentionWords, jobAttention, useJobsStatus } from '../state/jobs';
 import { announce, Drawer, LiveRegion } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { playLabel, SEAM_LABEL, songArtist, songTitle, timeLabel, transportClock } from '../audio/transportWords';

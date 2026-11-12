@@ -117,6 +117,11 @@ CREATE TABLE IF NOT EXISTS drafts (
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+-- My Mixes lists drafts in this order (mix.LISTED_ORDER) without sorting them, and the render line
+-- (and clearing it) reads only the few drafts in line, never every draft with its revisions.
+CREATE INDEX IF NOT EXISTS drafts_listed
+    ON drafts(line IS NULL, line, updated_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS drafts_in_line ON drafts(line, id) WHERE line IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS queue (
     position INTEGER PRIMARY KEY,

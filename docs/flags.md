@@ -188,12 +188,14 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `app.classic_nav` | **Classic navigation.** The older navigation labels over the same pages, with ?ui=classic as a way back. |  |
 | `app.scene_transitions` | **Page cross-fades.** With Expressive motion, pages cross-fade where the browser supports it; otherwise they change at once. | `app.motion_choice` |
 | `app.install` | **Install as an app.** Chrome and Edge can install Selecta as its own window. |  |
+| `app.attention_announce` | **Say when Workspace needs attention.** When storage fills, analysis pauses with songs left, or a song or transition fails, a screen reader hears it once on whatever page is open. The header mark stays either way. |  |
 
 ## Tools
 
 | Flag | What it is | Needs |
 |---|---|---|
 | `tools.reels` | **Listening reels.** Render one transition or a reel of them, check beats by ear, and play reels in a browser. |  |
+| `tools.key_benchmark` | **Key method benchmark.** Score a replacement key method against S-KEY's stored keys on this library, read-only, for choosing S-KEY's Cloud replacement. |  |
 | `tools.set_mix` | **Whole-set render.** Render a planned set straight to one file from the command line. |  |
 | `tools.stem_preview` | **Stem preview.** Hear two songs' stems side by side from the command line. | `stems` |
 | `tools.old_planner` | **Rolling set planner.** The original rolling set plan, before mix ideas. |  |
@@ -217,6 +219,9 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `cloud.metrics` | **Service metrics.** OpenTelemetry metrics the SLOs and alerts read: lost jobs, webhook-to-entitlement time, queue age, quarantines, spend ceilings, audit writes, reconciliation drift, backups and the maintenance leader. |  |
 | `cloud.export_expiry` | **Export expiry.** The maintenance leader deletes finished exports when their plan's retention runs out (Free 7 days, Standard 30, Premium 90) and gives their bytes back to the quota. |  |
 | `cloud.autoscale` | **Worker autoscaling.** The maintenance leader sizes each worker pool from the queue and asks the configured launcher (Modal) to start or stop workers. |  |
+| `cloud.dmca_renewal_reminder` | **DMCA agent renewal reminder.** The maintenance leader raises an owner alert from 90 days before the DMCA designated agent's three-year registration lapses, and daily once it has. |  |
+| `cloud.privacy_notice_draft` | **Privacy notice draft.** Shows the draft privacy notice, marked as a draft pending legal review, under Settings so the owner and a privacy adviser can read it in place. Off by default: it is not published. |  |
+| `cloud.device_check` | **Device check.** A checklist under Settings for the real-device checks (Play here, an offline speaker, the iPhone screen-on note, seam alignment) that reads what this browser supports and writes a copyable record. Off by default. |  |
 | `billing.webhooks` | **Billing updates.** Accept signed subscription state changes from Stripe. **Core:** Billing changes must be applied even when checkout is paused. |  |
 | `devices` | **Playback devices.** Sign browsers in as devices, list, rename and sign them out, and move playback between them with Play here. |  |
 | `devices.remote_control` | **Remote playback control.** Control the account's active playback session from another device. | `devices` |

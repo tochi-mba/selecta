@@ -199,9 +199,9 @@ P0141 is ticked (rollback check with ratings, 2026-11-11); every other task need
 | P0133 | Open (Needs a person) | - | - | Named reviewer compares differences |
 | P0134 | Verified (automated) | Full frontend, backend, browser, flag-sweep and file-length checks green without weakened assertions | CI run 43123598913 on main `fcf745f` (PR #55 merge), 15 jobs green, Edge E2E 539 passed, 2026-11-12 | - |
 | P0135 | Open (Needs a person) | - | - | Traces on recorded hardware |
-| P0136 | Open | Lab spec MP-0298-06 failed | `mp-0298-responsive-and-a11y.e2e.ts` | Fix and report labelled lab results |
+| P0136 | Open (built, browser check pending) | Budgets, method and lab-versus-field rule in `docs/adr/completion/performance.md`; shared measurement code `web/e2e/perf-probe.ts` `vitalsSince` and `web/e2e/vitals.ts` (also used by MP-0298-06 and SF-0235-02) | `web/e2e/vitals.test.ts`; `web/e2e/p0136-responsiveness.e2e.ts` | Run the lab spec green and record its labelled lab report |
 | P0137 | Open (Needs a person) | - | - | Actual audio evidence |
-| P0138 | Open | `integration.e2e.ts` 5/7 passed (two draft/current tests timed out) | Playwright | All recovery scenarios green together |
+| P0138 | Open (built, browser check pending) | Six integrated scenarios P0138-01 to -06 (disconnect/reconnect, stale response, failed render, failed save, missing source, export recovery) added to `web/e2e/integration.e2e.ts` | `web/e2e/integration.e2e.ts` describe 'P0138 integrated failure and recovery' | All recovery scenarios green together |
 | P0139 | Open (Needs a person) | - | - | Unguided participant tasks |
 | P0140 | Open (Needs a person) | - | - | Owner blocker review |
 | P0141 | Implemented | Rollback to `main` (`405cf7f`) and forward again: "nothing lost"; songs, steering, mix, seam settings, drafts, corrected tempo, export record, requests, ratings (liked 1, disliked 1) and rated seams identical | `.venv\Scripts\python tests/rollback_check.py <git archive main src>` under the slot lock, exit 0, 2026-11-11 | - |

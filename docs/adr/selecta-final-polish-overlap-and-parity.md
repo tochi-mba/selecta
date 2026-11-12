@@ -2,7 +2,7 @@
 
 **Historical baseline - FP documentation proposal as of 2026-11-08:** baseline main `5347e7309c5ff8b2e2965c2194bf2089b6ad2721`. 8 Proposed ADRs (0264–0271), 64 task acceptances Not started, 0 In progress, 0 Implemented, 0 independently Verified. All owner decisions pending; no source change or human verification is claimed.
 
-**2026-11-12 status (recounted from the task lines of the [checklist](selecta-final-polish-implementation-checklist.md)):** 8 Accepted ADRs (0264-0271); 64 task acceptances: 53 Implemented, 2 In progress, 9 Not started (each names a person-only step); **0 independently Verified**.
+**2026-11-12 status (recounted from the task lines of the [checklist](selecta-final-polish-implementation-checklist.md)):** 8 Accepted ADRs (0264-0271); 64 task acceptances: 53 Implemented, 11 In progress, 0 Not started (each names a person-only step; their code parts are built); **0 independently Verified**.
 
 ## How to read this matrix
 

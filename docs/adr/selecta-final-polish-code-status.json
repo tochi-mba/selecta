@@ -5,7 +5,7 @@
   "as_of": "2026-11-12",
   "scope": "FP-0264-01 through FP-0271-08",
   "decision_summary": "8 Accepted",
-  "implementation_status": "53 Implemented; 2 In progress; 9 Not started (2026-11-12, recounted from the checklist task lines; the per-group lists below were synced to those lines the same day; Needs a person tasks are also listed in not_started)",
+  "implementation_status": "53 Implemented; 11 In progress; 0 Not started (2026-11-12, recounted from the checklist task lines; every In progress task has its code part built and names the person step left)",
   "independent_verification": "0 Verified",
   "scope_note": "New acceptance deltas only; old SF/GP tasks and working source features are not missing claims.",
   "groups": {
@@ -22,11 +22,10 @@
         "07"
       ],
       "in_progress": [
-        "06"
-      ],
-      "not_started": [
+        "06",
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
@@ -48,11 +47,11 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "02",
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
@@ -75,10 +74,10 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
@@ -100,11 +99,10 @@
         "07"
       ],
       "in_progress": [
-        "01"
-      ],
-      "not_started": [
+        "01",
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
@@ -127,10 +125,10 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
@@ -152,10 +150,10 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
@@ -177,10 +175,10 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
@@ -202,10 +200,10 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,

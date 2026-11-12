@@ -1,0 +1,23 @@
+{
+  "about": "UF-0389-05: one row per aspect judged by ear on real audio output, never a synthetic or muted test. Checked by python -m selecta.audit.uf_human_logs.",
+  "tasks": [
+    "UF-0389-05"
+  ],
+  "key": "aspect",
+  "required": [
+    "seams",
+    "stems",
+    "audio-focus",
+    "output"
+  ],
+  "fields": [
+    "listener",
+    "date",
+    "output_device",
+    "revision",
+    "source",
+    "outcome",
+    "notes"
+  ],
+  "entries": []
+}

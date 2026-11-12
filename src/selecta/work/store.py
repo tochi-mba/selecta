@@ -151,9 +151,12 @@ class JobStore:
                     pass
 
     def _lock_lanes(self, connection: Connection) -> None:
-        if not self._lanes_ready:
-            heads.create_lanes(connection, db_now(connection))
-            self._lanes_ready = True
+        # Checked by count, not just the flag: the transaction that first made the clocks may
+        # have rolled back, and a lock on rows that don't exist orders nothing.
+        if self._lanes_ready and heads.lock_all_lanes(connection) >= heads.ALL_CLOCKS:
+            return
+        heads.create_lanes(connection, db_now(connection))
+        self._lanes_ready = True
         heads.lock_all_lanes(connection)
 
     def _remember(self, attempt_id: str, workspace_id: str) -> None:
@@ -189,7 +192,10 @@ class JobStore:
         with self._tx(spec.workspace_id, heads_first=True) as (connection, now):
             made = enqueue.enqueue(connection, spec, now)
         tracing.record_job_span(
-            "job.enqueue", made.job.id, started, service=self.trace_service,
+            "job.enqueue",
+            made.job.id,
+            started,
+            service=self.trace_service,
             **{"selecta.job_type": made.job.type, "selecta.created": made.created},
         )
         return made
@@ -215,8 +221,9 @@ class JobStore:
         kind = lookup(spec.type)
         lane = Lane(spec.lane) if spec.lane is not None else kind.lane
         standing = self.entitlements.standing(spec.workspace_id)
-        unstarted = [str(s) for s in (JobState.QUEUED, JobState.WAITING_DEPS,
-                                       JobState.RETRY_SCHEDULED)]
+        unstarted = [
+            str(s) for s in (JobState.QUEUED, JobState.WAITING_DEPS, JobState.RETRY_SCHEDULED)
+        ]
         with self._tx(spec.workspace_id) as (connection, now):
             queued_of_type = connection.execute(
                 sa.select(sa.func.count()).where(
@@ -291,8 +298,11 @@ class JobStore:
         while made < wanted:
             with self._tx(workspace_id, fence, heads_first=True) as (connection, now):
                 step = plans.write_chunk(
-                    connection, plan_id, plan.materialised + made,
-                    min(plans.CHUNK, wanted - made), now,
+                    connection,
+                    plan_id,
+                    plan.materialised + made,
+                    min(plans.CHUNK, wanted - made),
+                    now,
                 )
             if step == 0:
                 break
@@ -339,12 +349,17 @@ class JobStore:
             if claimed.job.queued_at:
                 # Queue wait as its own span, so span metrics give wait time by lane (SLOs).
                 tracing.record_job_span(
-                    "job.wait", claimed.job.id, int(claimed.job.queued_at * 1e9),
+                    "job.wait",
+                    claimed.job.id,
+                    int(claimed.job.queued_at * 1e9),
                     service=self.trace_service,
                     **{"selecta.lane": str(claimed.job.lane), "selecta.pool": pool},
                 )
             tracing.record_job_span(
-                "job.claim", claimed.job.id, started, service=self.trace_service,
+                "job.claim",
+                claimed.job.id,
+                started,
+                service=self.trace_service,
                 **{"selecta.attempt_id": claimed.attempt_id, "selecta.pool": pool},
             )
         return claimed
@@ -414,9 +429,15 @@ class JobStore:
             )
         self._forget(attempt_id)
         tracing.record_job_span(
-            "job.complete", getattr(job, "id", ""), started, service=self.trace_service,
-            **{"selecta.attempt_id": attempt_id, "selecta.state": str(getattr(job, "state", "")),
-               "selecta.artifacts": len(outputs)},
+            "job.complete",
+            getattr(job, "id", ""),
+            started,
+            service=self.trace_service,
+            **{
+                "selecta.attempt_id": attempt_id,
+                "selecta.state": str(getattr(job, "state", "")),
+                "selecta.artifacts": len(outputs),
+            },
         )
         if problem is not None:
             raise problem
@@ -437,7 +458,10 @@ class JobStore:
             )
         self._forget(attempt_id)
         tracing.record_job_span(
-            "job.fail", getattr(job, "id", ""), started, service=self.trace_service,
+            "job.fail",
+            getattr(job, "id", ""),
+            started,
+            service=self.trace_service,
             **{"selecta.attempt_id": attempt_id, "selecta.error_class": str(error_class)},
         )
         return job
@@ -459,9 +483,7 @@ class JobStore:
                 slots = fleet.pool_slots(connection, pool, now - self.config.worker_ttl_s)
             if free_slots is None:
                 free_slots = slots - heads.pool_busy(connection, pool)
-            target = claims.preemption_target(
-                connection, pool, slots=slots, free_slots=free_slots
-            )
+            target = claims.preemption_target(connection, pool, slots=slots, free_slots=free_slots)
             if target is not None and lifecycle.request_preemption(connection, target, now):
                 return target
         return None

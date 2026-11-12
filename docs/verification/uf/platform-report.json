@@ -1,0 +1,23 @@
+{
+  "about": "UF-0389-02: one row per check (mobile, 400% zoom, forced colours, physical keyboard, screen reader), each covering every core route. Checked by python -m selecta.audit.uf_human_logs.",
+  "tasks": [
+    "UF-0389-02"
+  ],
+  "key": "check",
+  "required": [
+    "mobile",
+    "zoom-400",
+    "forced-colours",
+    "physical-keyboard",
+    "screen-reader"
+  ],
+  "fields": [
+    "reviewer",
+    "date",
+    "device",
+    "browser",
+    "routes",
+    "outcome"
+  ],
+  "entries": []
+}

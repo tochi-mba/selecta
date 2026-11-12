@@ -33,6 +33,7 @@ STEPS = [
     "Storage reconciliation",
     "Stripe reconciliation",
     "Expire leases",
+    "Deleted data stays gone",
 ]
 
 
@@ -80,6 +81,7 @@ def test_the_drill_replays_the_ledger_reconciles_and_reports_every_step_in_order
     assert hidden(engine) == {"song-1": True, "song-2": False, "song-9": False}
     assert report.steps[0].detail.startswith("1 tombstones")
     assert report.steps[2].detail == "ledger, quota and inventory agree"
+    assert report.steps[-1].detail == "all 1 deleted songs stay hidden"
     assert all(step.seconds == 5.0 for step in report.steps)
     assert report.total_s == clock.now - 900.0
     assert report.passed
@@ -98,7 +100,7 @@ def test_the_drill_reclaims_leases_that_expired_while_the_database_was_down(rest
     report = restore_drill.after_restore(
         engine, fake, BUCKET, restore_started=0.0, store=store, clock=Clock()
     )
-    assert report.steps[-1].detail == "1 expired leases reclaimed"
+    assert report.steps[-2].detail == "1 expired leases reclaimed"
 
 
 def test_a_failed_step_stops_the_drill_and_keeps_traffic_closed(restored, monkeypatch):
@@ -108,6 +110,30 @@ def test_a_failed_step_stops_the_drill_and_keeps_traffic_closed(restored, monkey
     assert [step.ok for step in report.steps] == [False]
     assert not report.completed and not report.passed
     assert "Keep customer traffic closed" in report.markdown()
+
+
+def test_a_deleted_song_that_comes_back_after_the_replay_fails_the_drill(restored):
+    """SC-0412-03: traffic stays closed if anything deleted since the backup is visible again."""
+    engine, fake = restored
+
+    class Resurrecting:
+        """A lease sweep with a bug that brings the deleted song back after the replay."""
+
+        def reap_expired(self):
+            with transaction(engine) as conn:
+                conn.execute(
+                    sa.update(assets).where(assets.c.id == "song-1").values(deleted_at=None)
+                )
+            return []
+
+    report = restore_drill.after_restore(
+        engine, fake, BUCKET, restore_started=0.0, store=Resurrecting(), clock=Clock()
+    )
+    assert report.steps[-1].name == "Deleted data stays gone" and not report.steps[-1].ok
+    assert "1 deleted songs are visible again: ['song-1']" in report.steps[-1].detail
+    assert not report.passed and "Keep customer traffic closed" in report.markdown()
+    with transaction(engine) as conn:  # put it right for the fixture's invariant check
+        conn.execute(sa.update(assets).where(assets.c.id == "song-1").values(deleted_at=1.0))
 
 
 def test_a_recovery_slower_than_an_hour_fails_the_drill(restored):

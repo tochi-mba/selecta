@@ -63,3 +63,25 @@ describe('GP-0252-04 a changed recording needs your yes, song by song', () => {
     expect(committed.body).toMatchObject({ token: 'f'.repeat(64), confirmed: [7] });
   });
 });
+
+describe('GP-0252-04 changing an answer after a preview', () => {
+  it('takes away Confirm until the folder is previewed again with the new answers', async () => {
+    const previews = [changed, answered];
+    fakeBackend({
+      'GET /folders': folders,
+      'POST /folders/relink/preview': () => previews.shift(),
+    });
+    render(<FoldersPanel status={status()} refreshStatus={() => {}} notify={vi.fn()} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Find moved folder' }));
+    const dialog = screen.getByRole('dialog', { name: 'Re-link a moved music folder' });
+    fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: 'E:/Music' } });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Preview without changing anything' }));
+    await userEvent.click(await within(dialog).findByRole('checkbox', { name: /Same recording: Café del Mar/ }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Preview again with these answers' }));
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: /^Confirm 2 verified songs/ })).toBeInTheDocument());
+    // the answer the token was made for is taken back
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: /Same recording: Café del Mar/ }));
+    expect(within(dialog).queryByRole('button', { name: /^Confirm/ })).toBeNull();
+    expect(within(dialog).getByRole('button', { name: 'Preview again with these answers' })).toBeInTheDocument();
+  });
+});

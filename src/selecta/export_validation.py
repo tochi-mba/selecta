@@ -19,11 +19,14 @@ CHUNK_FRAMES = 65536
 
 
 def pcm_checksum(audio: np.ndarray) -> str:
-    """The sha256 of these samples as the 16-bit stereo PCM a FLAC export holds. They pass through
-    the same libsndfile conversion an export does, so the same audio gives the same checksum."""
+    """The sha256 of these samples as the 16-bit stereo PCM a FLAC export holds. They go through
+    the same FLAC encode an export does (libsndfile's FLAC float conversion differs from its WAV
+    and raw ones), so the same audio gives the same checksum as its exported file."""
     buffer = io.BytesIO()
-    sf.write(buffer, audio, SAMPLE_RATE, subtype="PCM_16", format="RAW", endian="LITTLE")
-    return hashlib.sha256(buffer.getvalue()).hexdigest()
+    sf.write(buffer, audio, SAMPLE_RATE, subtype="PCM_16", format="FLAC")
+    buffer.seek(0)
+    samples, _ = sf.read(buffer, dtype="int16", always_2d=True)
+    return hashlib.sha256(np.ascontiguousarray(samples.astype("<i2")).tobytes()).hexdigest()
 
 
 def verify_export(path: Path, expected_seconds: float) -> str:

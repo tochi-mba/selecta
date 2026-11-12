@@ -65,6 +65,9 @@ def backup_before_migrating(conn: sqlite3.Connection, path: Path) -> Path | None
                     raise UpgradeBackupError(f"The copy at {copy} failed its integrity check.")
             finally:
                 dest.close()
+        except UpgradeBackupError:
+            copy.unlink(missing_ok=True)  # a damaged copy must never count as a kept one
+            raise
         except (sqlite3.Error, OSError) as problem:
             copy.unlink(missing_ok=True)
             raise UpgradeBackupError(
