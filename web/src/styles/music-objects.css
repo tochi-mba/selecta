@@ -179,7 +179,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-raised);
-  contain-intrinsic-size: auto 240px;
+  /* the card estimates live with the list ones, in operations.css (--library-row-estimate) */
+  contain-intrinsic-size: auto var(--library-row-estimate);
 }
 .library-rows .song-row.selected { background: var(--surface-selected); box-shadow: inset var(--marker) 0 0 var(--edge-selected); }
 .library-rows .song-row.selected:focus-within { outline: 2px solid var(--edge-focus); outline-offset: 2px; }

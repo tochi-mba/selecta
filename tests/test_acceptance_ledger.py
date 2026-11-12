@@ -91,3 +91,16 @@ def test_flagged_rows_say_what_changed():
     web = ROOT / "web" / "src"
     sources = "".join(path.read_text(encoding="utf-8") for path in web.rglob("*.tsx"))
     assert "showDirectoryPicker" not in sources and "webkitdirectory" not in sources
+
+
+def test_real_library_measurements_are_flagged_as_historical_snapshots():
+    note = LEDGER.split("## Works", 1)[0]
+    assert "tests/test_acceptance_ledger.py" in note
+    assert "**historical snapshot**" in note and "not re-measured since" in note
+    # the snapshot and the measured batches carry the date they were true on
+    for dated in (
+        "Latest live-library snapshot - 5 November 2026",
+        "Local export batch - 5 November 2026",
+        "Measured on 6 November",
+    ):
+        assert dated in LEDGER

@@ -1,17 +1,17 @@
 # Selecta 2.0: ADR acceptance audit
 
-- **Task:** T0269 ([checklist](implementation-checklist.md)); generated 2026-11-11 by `src/selecta/audit/adr_acceptance.py --write` from the checklist and [implementation-evidence.md](implementation-evidence.md).
+- **Task:** T0269 ([checklist](implementation-checklist.md)); generated today by `src/selecta/audit/adr_acceptance.py --write` from the checklist and [implementation-evidence.md](implementation-evidence.md).
 - **Gate:** `tests/test_adr_acceptance_audit.py` refuses any ADR-0001 to ADR-0032 marked Verified while a task of its own lacks a ticked Done row citing concrete proof.
 - **Rule:** each ADR's acceptance criterion is proven through the tasks that implement it. The proof for a task is its row in the evidence ledger; a docs-only row never counts.
 - **Necessary, not sufficient:** every task proven lets an ADR be reviewed for Verified; its own browser, accessibility, audio and human checks still decide it.
 
 | ADR | Status | Proven | Still open | Every task proven |
 |---|---|---|---|---|
-| [ADR-0001](adr-0001-product-contract-and-parity.md) | In progress | 4 of 7 | T0001, T0004, T0005 | no |
+| [ADR-0001](adr-0001-product-contract-and-parity.md) | In progress | 5 of 7 | T0001, T0005 | no |
 | [ADR-0002](adr-0002-routing-and-shell.md) | Implemented | 7 of 8 | T0049 | no |
 | [ADR-0003](adr-0003-design-tokens-and-brand.md) | In progress | 5 of 7 | T0027, T0029 | no |
 | [ADR-0004](adr-0004-interaction-primitives-and-notifications.md) | In progress | 8 of 8 | none | yes |
-| [ADR-0005](adr-0005-domain-state-mutations.md) | In progress | 7 of 8 | T0068 | no |
+| [ADR-0005](adr-0005-domain-state-mutations.md) | In progress | 8 of 8 | none | yes |
 | [ADR-0006](adr-0006-audio-transport-and-media.md) | In progress | 8 of 8 | none | yes |
 | [ADR-0007](adr-0007-audio-focus-ownership.md) | In progress | 7 of 7 | none | yes |
 | [ADR-0008](adr-0008-listen-screen.md) | In progress | 9 of 9 | none | yes |
@@ -34,7 +34,7 @@
 | [ADR-0025](adr-0025-local-privacy.md) | Implemented | 8 of 8 | none | yes |
 | [ADR-0026](adr-0026-api-compatibility.md) | In progress | 9 of 9 | none | yes |
 | [ADR-0027](adr-0027-explanations-and-feedback.md) | In progress | 5 of 7 | T0134, T0135 | no |
-| [ADR-0028](adr-0028-recovery-and-multitab.md) | In progress | 5 of 7 | T0094, T0097 | no |
+| [ADR-0028](adr-0028-recovery-and-multitab.md) | In progress | 6 of 7 | T0097 | no |
 | [ADR-0029](adr-0029-testing-and-quality.md) | In progress | 10 of 22 | T0014, T0017, T0259, T0260, T0261, T0262, T0263, T0264, T0265, T0266, T0267, T0269 | no |
 | [ADR-0030](adr-0030-migration-and-release.md) | Implemented | 12 of 23 | T0018, T0019, T0251, T0253, T0258, T0274, T0275, T0276, T0277, T0278, T0279 | no |
 | [ADR-0031](adr-0031-pwa-and-browsers.md) | In progress | 2 of 6 | T0061, T0062, T0064, T0065 | no |
@@ -52,7 +52,7 @@ Acceptance criteria:
 | T0001 | no | Partly | open |
 | T0002 | yes | Done | `docs/adr/feature-parity.md` lists every feature with where it now lives. `web/e2e/pages.e2e.ts` opens every page. |
 | T0003 | yes | Done | Written record in `docs/user-journeys.md`: casual listening, live requesting, mix creation and expert seam editing, 22 steps, each naming the browser test in `web/e2e/` (listen, flows, integration, mp-0283, mp-0288, mp-0290) that walks it. `tests/test_user_journeys.py` (2 tests) fails if a named test is renamed or removed. Passed 2026-11-11 (pytest, 2 passed). |
-| T0004 | no | Partly | open |
+| T0004 | yes | Done | `docs/acceptance.md` now says how it is checked: every code-decided number or rule is re-read from the code by `tests/test_acceptance_ledger.py` (11 claim tests, incl. `test_flagged_rows_say_what_changed`), and every real-library or listening measurement is flagged as a dated historical snapshot, not re-measured (`test_real_library_measurements_are_flagged_as_historical_snapshots`). Passed 2026-11-12 (12 passed). Re-measuring the owner library is not part of this task. |
 | T0005 | no | Needs a person | open |
 | T0006 | yes | Done | Invariants are written down in `docs/adr/feature-parity.md`. |
 | T0007 | yes | Done | The owner accepted ADR-0001 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header. |
@@ -116,7 +116,7 @@ Acceptance criteria:
 | Task | Ticked | Ledger status | Proof |
 |---|---|---|---|
 | T0067 | yes | Done | `web/src/api.ts`. |
-| T0068 | no | Partly | open |
+| T0068 | yes | Done | Server calls go through `web/src/api.ts` (`send`/`get`/`post`/`del`, and `fetchBytes` for raw bytes; `lucy/listening.ts`, `views/LocalBackup.tsx` and `views/SeamCompare.tsx` moved onto it 2026-11-12). `web/src/state/pollingPolicy.ts` lists every timer and poll with its hidden-tab rule and names one owner per shared resource; `web/src/state/pollingPolicy.test.ts` (6 tests: every timer listed, no stale entries, one owner each, only api.ts and the separate cloud/admin/rooms clients call fetch) and `web/src/importBoundaries.test.ts` passed 2026-11-12 (vitest). |
 | T0069 | yes | Done | `mixChanges` in `App.tsx`, sequence checks on sliders and searches. |
 | T0070 | yes | Done | `Action`, scope in the address, `x-mix-order`. |
 | T0071 | yes | Done | `web/src/views/Requests.tsx` with `x-operation-id`. |
@@ -508,7 +508,7 @@ Acceptance criteria:
 |---|---|---|---|
 | T0092 | yes | Done | `problemKind` in `api.ts`. |
 | T0093 | yes | Done | `web/e2e/flows.e2e.ts`: what's on screen stays when the server goes. |
-| T0094 | no | Partly | open |
+| T0094 | yes | Done | Policy, built 2026-11-11 in `web/src/api.ts`: every `post()` change carries an operation id (a page's own id is kept; otherwise `newOperationId()` makes one), and a change that got no answer at all (server stopped, restarting or connection dropped) is resent with the same id after 0.5 s and 1.5 s before saying `OFFLINE_WORDS`; an answer of any kind (a refusal, an error) is never resent, and reads keep their 20 s deadline. The server keeps the first answer to each operation on disk (`src/selecta/operation_log.py`, from T0256), so a resend after a lost reply or a restart gets that answer instead of the change happening twice. Deletes are not resent automatically: they are idempotent (a request or draft already gone answers without harm) or, for mix rows, guarded by `x-mix-order`. Storage limit and steering settings also treat a retry that finds its own value as a success (`src/selecta/routes/system.py`). Tests run 2026-11-11: `web/src/mutationRecovery.test.ts` (5 passed: ids on every change, resend with the same id until the server is back, giving up in plain words, no resend of a refusal, reads and deletes not resent); `tests/test_restart_during_mutation.py`, `tests/test_restart_mid_work.py` and `tests/test_setting_conflicts.py` (16 passed); `src/apiFaults.test.ts`, `src/diagnosticsOperations.test.ts`, `src/gp-0263-offline.test.tsx` and the Library, Links, Requests, Drafts, Mix, LucyLx and Shell suites still pass (264 tests). Tests turn the resend pauses off in `web/src/test/setup.ts`. |
 | T0095 | yes | Done | `state/tabs.ts`, `web/e2e/listen.e2e.ts`. |
 | T0096 | yes | Done | Mix, seam and cue edits are refused with a message when the mix changed (`x-mix-order`, `src/selecta/api.py`, tested in `tests/test_api_contracts.py`), and requests answer 409 with a reason when they have already joined, been cancelled or lost their place (`src/selecta/routes/song_requests.py`). Settings, built 2026-11-11: `POST /api/storage` takes `expected_budget_bytes` and `POST /api/steer` takes `expected` for every setting it replaces outright (wordplay, flash, mix language, stems, energy arc, destination, length); a mismatch answers 409 `setting_changed` with the newer value (`src/selecta/routes/system.py`, `src/selecta/api_common.py`). Workspace storage (`web/src/views/WorkshopPanels.tsx`) and Mix setup (`web/src/views/MixSetup.tsx`) send what they last saw and, on a conflict, say so and show the newer value; nudges (more/less) and older pages that send nothing are unchanged. Tests run 2026-11-11: `tests/test_setting_conflicts.py` (8 passed), `web/src/views/settingConflicts.test.tsx` (3 passed), and the existing storage and steering suites (`Workshop`, `sfFlowWorkspace`, `polishWorkshopShowcase`, `s2WorkshopStorage`, `MixSetup`, `s2Steering`, `s4Destination`: all passing; `Mixes.test.tsx` 'five-stop energy arc' fails from the separate SF-0243 draw-until-release change, not this). |
 | T0097 | no | Partly | open |

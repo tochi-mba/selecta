@@ -373,11 +373,10 @@ def add_routes(app, ctx) -> None:
                 # GP-0251-08: the count and page share one score per song. MI-0162-04: every
                 # song is ranked in one pass and only the matches go to a table of this
                 # connection's own, so SQLite joins them instead of calling back per row.
+                names = conn.cursor()
+                names.row_factory = None  # plain tuples: 20,000 named rows cost far more
                 scores = rank_songs(
-                    q,
-                    conn.execute(
-                        "SELECT id,artist,title FROM songs WHERE duplicate_of IS NULL"
-                    ).fetchall(),
+                    q, names.execute("SELECT id,artist,title FROM songs WHERE duplicate_of IS NULL")
                 )
                 conn.execute(
                     "CREATE TEMP TABLE IF NOT EXISTS search_hits("

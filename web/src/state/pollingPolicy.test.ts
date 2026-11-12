@@ -29,6 +29,12 @@ const OWN_CLIENTS = [
 ];
 
 describe('polling policy (T0068)', () => {
+  it('the guard sees the real source tree and its timers', () => {
+    expect(files.length).toBeGreaterThan(100);
+    expect(files.filter((file) => TIMER.test(read(file)))).toEqual(expect.arrayContaining(['App.tsx', 'views/Library.tsx', 'player.ts']));
+    expect(files).toContain('api.ts');
+  });
+
   it('lists every file that starts a timer or a poll', () => {
     const listed = new Set(POLLING.map((rule) => rule.file));
     const unlisted = files.filter((file) => TIMER.test(read(file)) && !listed.has(file));

@@ -25,7 +25,8 @@
 - [x] T0002 - Inventory every existing feature and expose each in the new Listen/Mixes/Library/Discover/Workshop structure.
 - [x] T0003 - Record current user journeys for casual listening, live requesting, mix creation and expert seam editing.
  **Evidence (2026-11-11):** `docs/user-journeys.md` records the four journeys step by step, each step naming its `web/e2e` test; `tests/test_user_journeys.py` (`test_every_journey_is_recorded`, `test_every_step_names_a_test_that_exists`) passed 2026-11-11 (2 passed).
-- [ ] T0004 - Verify the existing acceptance ledger against actual code and flag historical limits rather than copying speculative claims.
+- [x] T0004 - Verify the existing acceptance ledger against actual code and flag historical limits rather than copying speculative claims.
+ **Evidence (2026-11-12):** `docs/acceptance.md` now says how it is checked: every code-decided number or rule is re-read from the code by `tests/test_acceptance_ledger.py` (11 claim tests, incl. `test_flagged_rows_say_what_changed`), and every real-library or listening measurement is flagged as a dated historical snapshot, not re-measured (`test_real_library_measurements_are_flagged_as_historical_snapshots`). Passed 2026-11-12 (12 passed). Re-measuring the owner library is not part of this task.
 - [ ] T0005 - Agree with reviewers which features are in scope, non-goals and blocked-by-backend capabilities. **Needs a person:** agree in-scope features, non-goals and backend-blocked capabilities with a named reviewer and record it. ADR-0001 itself was accepted in #37 on 2026-11-08, but no reviewer scope record exists (checked 2026-11-10).
 - [x] T0006 - Document hard invariants for no lost user data, no wrong-mix edits, no unauthorized bridge and no audio interruption.
 - [x] T0007 - Approve ADR-0001 or document any explicitly superseding decision. **Evidence (2026-11-10):** The owner accepted ADR-0001 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header.
@@ -129,7 +130,8 @@
 ### Typed frontend state and mutations - [ADR-0005](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0005-domain-state-mutations.md)
 
 - [x] T0067 - Define canonical domain types for current mix, draft, song, seam, request, analysis, render, storage and preferences.
-- [ ] T0068 - Move API calls into typed client/services and centralize cache ownership and polling policy.
+- [x] T0068 - Move API calls into typed client/services and centralize cache ownership and polling policy.
+ **Evidence (2026-11-12):** Server calls go through `web/src/api.ts` (`send`/`get`/`post`/`del`, and `fetchBytes` for raw bytes; `lucy/listening.ts`, `views/LocalBackup.tsx` and `views/SeamCompare.tsx` moved onto it 2026-11-12). `web/src/state/pollingPolicy.ts` lists every timer and poll with its hidden-tab rule and names one owner per shared resource; `web/src/state/pollingPolicy.test.ts` (6 tests: every timer listed, no stale entries, one owner each, only api.ts and the separate cloud/admin/rooms clients call fetch) and `web/src/importBoundaries.test.ts` passed 2026-11-12 (vitest).
 - [x] T0069 - Add cancellation/sequence protection so stale queries cannot overwrite newer data.
 - [x] T0070 - Add mutation pending/error/rollback state with clearly scoped current-versus-draft resource IDs.
 - [x] T0071 - Add optimistic request reconciliation keyed by operation ID and backend confirmation.

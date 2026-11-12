@@ -173,7 +173,7 @@ def _ranker(query: str) -> Callable[[int, str | None, str | None], int | None]:
             return None
         best = 0.0
         for candidate in (name, creator):
-            if candidate and abs(len(candidate) - size) <= 3:
+            if candidate and size - 3 <= len(candidate) <= size + 3:
                 best = max(best, closeness(candidate))
         if not seen.issuperset(tokens):
             for token in tokens.difference(seen):

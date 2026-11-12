@@ -48,7 +48,28 @@
   padding: var(--row-pad) var(--space-hair);
   /* a long list only lays out what's near the screen, and stays one real list for screen readers */
   content-visibility: auto;
-  contain-intrinsic-size: auto 72px;
+  contain-intrinsic-size: auto var(--library-row-estimate);
+}
+/* The height a row not drawn yet stands in at. Measured in Edge on 2026-11-12 (the median row of
+   tests/e2e_server.py's library, e2e/library-row-estimate.e2e.ts) at each layout breakpoint below
+   (wide over 1024px, two columns to 621px, stacked at 620px and under) and in both densities. An estimate
+   far off the real height makes rows jump as they come into view, and scroll anchoring has to chase it.
+   `auto` keeps a drawn row's real size once it has been seen, so only rows never drawn use these.
+   Specificity: the compact and card selectors outrank the plain one, and the narrower media blocks come
+   later, so each pair below wins only where it should. */
+.library-rows { --library-row-estimate: 126px; }
+:root[data-density='compact'] .library-rows { --library-row-estimate: 118px; }
+.library-rows.library-cards { --library-row-estimate: 230px; }
+:root[data-density='compact'] .library-rows.library-cards { --library-row-estimate: 222px; }
+@media (max-width: 1024px) {
+  .library-rows { --library-row-estimate: 169px; }
+  :root[data-density='compact'] .library-rows { --library-row-estimate: 161px; }
+}
+@media (max-width: 620px) {
+  .library-rows { --library-row-estimate: 221px; }
+  :root[data-density='compact'] .library-rows { --library-row-estimate: 205px; }
+  .library-rows.library-cards { --library-row-estimate: 234px; }
+  :root[data-density='compact'] .library-rows.library-cards { --library-row-estimate: 226px; }
 }
 /* a row with its menu open is lifted over the rows after it: each row is its own stacking context
    (content-visibility, and the dimmed Never play row's opacity), so without this the next row paints over the menu */
