@@ -65,7 +65,7 @@ test('P0136 / SF-0235-02 lab INP stays at most 200 ms and CLS at most 0.1 on eac
     await page.waitForTimeout(500);
     // the same keyboard interactions everywhere: the command palette, then a few Tab presses
     await page.keyboard.press('Control+k');
-    await expect(page.getByRole('dialog').first()).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Search and commands' })).toBeVisible();
     await page.keyboard.press('Escape');
     for (let step = 0; step < 3; step += 1) await page.keyboard.press('Tab');
     if (surface.act) await surface.act(page);

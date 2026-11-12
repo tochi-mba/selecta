@@ -45,16 +45,27 @@ def _plan(conn, workspace: str, plan_id: str | None) -> None:
     )
 
 
-def _export(conn, workspace: str, age_days: float, size: int = 5 * MB) -> str:
+def _export(
+    conn, workspace: str, age_days: float, size: int = 5 * MB, *, charged: bool = True
+) -> str:
     artifact_id = new_id()
     input_hash = hashlib.sha256(artifact_id.encode()).hexdigest()
-    conn.execute(artifacts.insert().values(
-        id=artifact_id, workspace_id=workspace, kind="export", input_hash=input_hash,
-        keys=[f"w/{workspace}/export/{input_hash}/attempts/{artifact_id}/mix.flac"],
-        checksum="c" * 64, size_bytes=size,
-        provenance=build({"songs": ["a" * 64]}, {"export": 1}),
-        created_at=NOW - age_days * DAY, last_used_at=NOW,
-    ))
+    conn.execute(
+        artifacts.insert().values(
+            id=artifact_id,
+            workspace_id=workspace,
+            kind="export",
+            input_hash=input_hash,
+            keys=[f"w/{workspace}/export/{input_hash}/attempts/{artifact_id}/mix.flac"],
+            checksum="c" * 64,
+            size_bytes=size,
+            provenance=build({"songs": ["a" * 64]}, {"export": 1}),
+            created_at=NOW - age_days * DAY,
+            last_used_at=NOW,
+        )
+    )
+    if charged:  # as publishing an export does: kept exports count against storage
+        export_expiry.charge_export(conn, workspace, artifact_id, size)
     return artifact_id
 
 
@@ -174,3 +185,44 @@ def test_the_maintenance_leader_runs_the_sweep_behind_its_flag(world, monkeypatc
     monkeypatch.setattr(maintain, "_flag_on", lambda flag: flag == export_expiry.FLAG)
     monkeypatch.setattr(export_expiry.persistence, "db_now", lambda conn: NOW)
     assert task.run(None) == 9
+
+
+def test_publishing_an_export_charges_its_bytes_to_storage(cloud_engine):
+    """docs/adr/adr-0402 (Decision): storage counts originals and kept exports. The job store's
+    artifact write is where an export becomes kept, so that is where it is charged, once."""
+    from selecta.usage.schema import usage_ledger
+    from selecta.work import artifacts as manifest
+    from selecta.work.ports import ArtifactOutput
+
+    input_hash = "e" * 64
+    output = ArtifactOutput(
+        "export",
+        input_hash,
+        [f"w/ws-pay/export/{input_hash}/attempts/at-1/mix.flac"],
+        "c" * 64,
+        7 * MB,
+        build({"songs": ["a" * 64]}, {"export": 1}),
+        False,
+    )
+    with transaction(cloud_engine) as conn:
+        manifest.write(conn, "ws-pay", "job-1", "at-1", [output], NOW)
+        manifest.write(conn, "ws-pay", "job-1", "at-1", [output], NOW)  # a repeat charges nothing
+        assert quota.usage(conn, "ws-pay").committed_bytes == 7 * MB
+        [export_id] = conn.execute(sa.select(artifacts.c.id)).scalars().all()
+        assert export_expiry.charged(conn, "ws-pay", export_id) == 7 * MB
+        assert conn.execute(sa.select(sa.func.sum(usage_ledger.c.amount))).scalar() == 7 * MB
+
+
+def test_expiry_never_takes_committed_bytes_below_what_is_really_stored(cloud_engine):
+    """An export that was never charged (made before exports counted) releases nothing, so the
+    songs' own bytes stay committed."""
+    with transaction(cloud_engine) as conn:
+        _export(conn, "ws-old", 400, charged=False)
+        held = quota._locked(conn, "ws-old")
+        quota._store(conn, held, committed=40 * MB)  # the songs it really stores
+        charged = _export(conn, "ws-old", 400, size=3 * MB)
+    expired = export_expiry.expire_exports(cloud_engine, now=NOW)
+    assert {e.bytes_released for e in expired} == {0, 3 * MB}
+    with transaction(cloud_engine) as conn:
+        assert quota.usage(conn, "ws-old").committed_bytes == 40 * MB
+        assert export_expiry.charged(conn, "ws-old", charged) == 3 * MB

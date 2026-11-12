@@ -3,9 +3,9 @@
   "scope": "SF-0198-01 through SF-0247-08",
   "programme": "Selecta / Flow artistic UI/UX",
   "baseline_main_sha": "c3715b14a70a0a9005e9fbc08d44576f3eac3c15",
-  "as_of": "2026-11-08",
+  "as_of": "2026-11-12",
   "decision": "50 Accepted (owner approval 2026-11-08); approval is not implementation",
-  "implementation_status": "263 Implemented; 17 In progress; 70 Not started; 46 Needs a person; 4 Superseded (2026-11-12, recounted from the checklist task lines; 400 Not started at the 2026-11-08 baseline; the per-group lists below lag the checklist for 127 tasks)",
+  "implementation_status": "263 Implemented; 18 In progress; 69 Not started; 46 Needs a person; 4 Superseded (2026-11-12, recounted from the checklist task lines; the per-group lists below were synced to those lines the same day; Needs a person tasks are also listed in not_started)",
   "independent_verification": "0 Verified; no independent visual/real-audio/AT/performance acceptance claimed",
   "status_scope_note": "New artistic acceptance delta only; not a judgment that existing source features are absent. Historical programmes unchanged.",
   "groups": {
@@ -39,15 +39,14 @@
       "decision": "Accepted",
       "implemented": [
         "01",
+        "02",
         "03",
         "04",
         "05",
         "07",
         "08"
       ],
-      "in_progress": [
-        "02"
-      ],
+      "in_progress": [],
       "not_started": [
         "06"
       ],
@@ -194,11 +193,11 @@
         "03",
         "04",
         "05",
-        "06"
+        "06",
+        "07"
       ],
       "in_progress": [],
       "not_started": [
-        "07",
         "08"
       ],
       "independently_verified": [],
@@ -206,7 +205,6 @@
       "implementation_pr": "feat/finish-checklists, 2026-11-10",
       "implementation_sha": null,
       "needs_a_person": [
-        "07",
         "08"
       ]
     },
@@ -215,14 +213,12 @@
       "implemented": [
         "01",
         "02",
+        "04",
         "06",
         "08"
       ],
-      "in_progress": [
-        "04"
-      ],
+      "in_progress": [],
       "not_started": [
-        "03",
         "05",
         "07"
       ],
@@ -233,6 +229,9 @@
       "needs_a_person": [
         "05",
         "07"
+      ],
+      "superseded": [
+        "03"
       ]
     },
     "0207": {
@@ -241,11 +240,10 @@
         "01",
         "02",
         "03",
-        "06"
-      ],
-      "in_progress": [
+        "06",
         "07"
       ],
+      "in_progress": [],
       "not_started": [
         "04",
         "05",
@@ -268,13 +266,13 @@
         "03",
         "04",
         "05",
+        "07",
         "08"
       ],
       "in_progress": [],
       "not_started": [
         "02",
-        "06",
-        "07"
+        "06"
       ],
       "independently_verified": [],
       "owner": "Flow checklist agent (Claude)",
@@ -363,13 +361,13 @@
       "implemented": [
         "01",
         "04",
-        "05"
+        "05",
+        "06"
       ],
       "in_progress": [],
       "not_started": [
         "02",
         "03",
-        "06",
         "07",
         "08"
       ],
@@ -380,7 +378,6 @@
       "needs_a_person": [
         "02",
         "03",
-        "06",
         "07",
         "08"
       ]
@@ -436,477 +433,820 @@
     },
     "0215": {
       "decision": "Accepted",
-      "implemented": ["02", "03", "05", "06"],
+      "implemented": [
+        "02",
+        "03",
+        "05",
+        "06"
+      ],
       "in_progress": [],
-      "not_started": ["01", "04", "07", "08"],
+      "not_started": [
+        "01",
+        "04",
+        "07",
+        "08"
+      ],
       "independently_verified": [],
       "owner": "Claude agent flb",
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "01",
+        "04",
+        "07",
+        "08"
+      ]
     },
     "0216": {
       "decision": "Accepted",
-      "implemented": ["02", "03", "05", "06", "07"],
+      "implemented": [
+        "02",
+        "03",
+        "05",
+        "06",
+        "07"
+      ],
       "in_progress": [],
-      "not_started": ["01", "04", "08"],
+      "not_started": [
+        "01",
+        "04",
+        "08"
+      ],
       "independently_verified": [],
       "owner": "Claude agent flb",
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "01",
+        "04",
+        "08"
+      ]
     },
     "0217": {
       "decision": "Accepted",
-      "implemented": ["01", "03", "07"],
-      "in_progress": ["04", "05"],
-      "not_started": ["02", "06", "08"],
+      "implemented": [
+        "01",
+        "03",
+        "04",
+        "05",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
+        "02",
+        "06",
+        "08"
+      ],
       "independently_verified": [],
       "owner": "Claude agent flb",
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "02",
+        "06",
+        "08"
+      ]
     },
     "0218": {
       "decision": "Accepted",
-      "implemented": ["01", "04", "05", "06"],
+      "implemented": [
+        "01",
+        "03",
+        "04",
+        "05",
+        "06"
+      ],
       "in_progress": [],
-      "not_started": ["02", "03", "07", "08"],
+      "not_started": [
+        "02",
+        "07",
+        "08"
+      ],
       "independently_verified": [],
       "owner": "Claude agent flb",
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "02",
+        "07",
+        "08"
+      ]
     },
     "0219": {
       "decision": "Accepted",
-      "implemented": ["01", "05", "06", "07"],
+      "implemented": [
+        "01",
+        "05",
+        "06",
+        "07"
+      ],
       "in_progress": [],
-      "not_started": ["02", "03", "04", "08"],
+      "not_started": [
+        "02",
+        "03",
+        "04",
+        "08"
+      ],
       "independently_verified": [],
       "owner": "Claude agent flb",
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "02",
+        "03",
+        "04",
+        "08"
+      ]
     },
     "0220": {
       "decision": "Accepted",
-      "implemented": ["01", "02", "06"],
-      "in_progress": ["03", "05"],
-      "not_started": ["04", "07", "08"],
+      "implemented": [
+        "01",
+        "02",
+        "03",
+        "05",
+        "06",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
+        "04",
+        "08"
+      ],
       "independently_verified": [],
       "owner": "Claude agent flb",
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "04",
+        "08"
+      ]
     },
     "0221": {
       "decision": "Accepted",
-      "implemented": ["02", "03"],
-      "in_progress": ["05", "07"],
-      "not_started": ["01", "04", "06", "08"],
+      "implemented": [
+        "02",
+        "03",
+        "05",
+        "06",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "04",
+        "08"
+      ],
       "independently_verified": [],
       "owner": "Claude agent flb",
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "01",
+        "04",
+        "08"
+      ]
     },
     "0222": {
       "decision": "Accepted",
-      "implemented": ["01", "02", "04", "05", "06"],
+      "implemented": [
+        "01",
+        "02",
+        "04",
+        "05",
+        "06",
+        "07"
+      ],
       "in_progress": [],
-      "not_started": ["03", "07", "08"],
+      "not_started": [
+        "03",
+        "08"
+      ],
       "independently_verified": [],
       "owner": "Claude agent flb",
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "03",
+        "08"
+      ]
     },
     "0223": {
       "decision": "Accepted",
-      "implemented": ["01", "02", "03", "05", "06", "07"],
+      "implemented": [
+        "01",
+        "02",
+        "03",
+        "05",
+        "06",
+        "07"
+      ],
       "in_progress": [],
-      "not_started": ["04", "08"],
+      "not_started": [
+        "04",
+        "08"
+      ],
       "independently_verified": [],
       "owner": "Claude agent flb",
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "04",
+        "08"
+      ]
     },
     "0224": {
       "decision": "Accepted",
-      "implemented": ["01", "04", "05", "06", "07"],
-      "in_progress": ["03"],
-      "not_started": ["02", "08"],
+      "implemented": [
+        "01",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
+        "02",
+        "08"
+      ],
       "independently_verified": [],
       "owner": "Claude agent flb",
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "02",
+        "08"
+      ]
     },
     "0225": {
       "decision": "Accepted",
-      "implemented": ["01", "02", "03", "05", "06"],
+      "implemented": [
+        "01",
+        "02",
+        "03",
+        "05",
+        "06"
+      ],
       "in_progress": [],
-      "not_started": ["04", "07", "08"],
+      "not_started": [
+        "04",
+        "07",
+        "08"
+      ],
       "independently_verified": [],
       "owner": "Claude agent flb",
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "04",
+        "07",
+        "08"
+      ]
     },
     "0226": {
       "decision": "Accepted",
-      "implemented": ["01", "03", "04", "05", "06", "07"],
+      "implemented": [
+        "01",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07"
+      ],
       "in_progress": [],
-      "not_started": ["02", "08"],
+      "not_started": [
+        "02",
+        "08"
+      ],
       "independently_verified": [],
       "owner": "Claude agent flb",
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "02",
+        "08"
+      ]
     },
     "0227": {
       "decision": "Accepted",
-      "implemented": ["02", "04", "05", "06", "08"],
-      "in_progress": ["03"],
-      "not_started": ["01", "07"],
+      "implemented": [
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "08"
+      ],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "07"
+      ],
       "independently_verified": [],
       "owner": "Claude agent flb",
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "01",
+        "07"
+      ]
     },
     "0228": {
       "decision": "Accepted",
-      "implemented": ["02", "04", "05", "07", "08"],
+      "implemented": [
+        "02",
+        "04",
+        "05",
+        "07",
+        "08"
+      ],
       "in_progress": [],
-      "not_started": ["01", "03", "06"],
+      "not_started": [
+        "01",
+        "03",
+        "06"
+      ],
       "independently_verified": [],
       "owner": "Claude agent flb",
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "01",
+        "03",
+        "06"
+      ]
     },
     "0229": {
       "decision": "Accepted",
-      "implemented": ["02", "04", "05", "06"],
+      "implemented": [
+        "02",
+        "04",
+        "05",
+        "06"
+      ],
       "in_progress": [],
-      "not_started": ["01", "03", "07", "08"],
+      "not_started": [
+        "01",
+        "03",
+        "07",
+        "08"
+      ],
       "independently_verified": [],
       "owner": "Claude agent flb",
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "01",
+        "03",
+        "07",
+        "08"
+      ]
     },
     "0230": {
       "decision": "Accepted",
-      "implemented": ["03", "04"],
-      "in_progress": ["02", "05", "07"],
-      "not_started": ["01", "06", "08"],
+      "implemented": [
+        "02",
+        "03",
+        "04",
+        "05",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
+        "01",
+        "06",
+        "08"
+      ],
       "independently_verified": [],
       "owner": "Claude agent flb",
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "01",
+        "06",
+        "08"
+      ]
     },
     "0231": {
       "decision": "Accepted",
-      "implemented": ["01", "02", "03", "04", "05", "06", "07"],
+      "implemented": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07"
+      ],
       "in_progress": [],
-      "not_started": ["08"],
+      "not_started": [
+        "08"
+      ],
       "independently_verified": [],
       "owner": "Claude agent flb",
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "08"
+      ]
     },
     "0232": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
-        "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [
+        "06"
+      ],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "06",
+        "08"
+      ]
     },
     "0233": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
-        "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [
+        "02"
+      ],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "02",
+        "08"
+      ]
     },
     "0234": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
-        "02",
         "03",
         "04",
-        "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [
+        "05"
+      ],
+      "not_started": [
+        "02",
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "02",
+        "05",
+        "08"
+      ]
     },
     "0235": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
-        "01",
+      "implemented": [
+        "05",
+        "06",
+        "08"
+      ],
+      "in_progress": [
         "02",
         "03",
         "04",
-        "05",
-        "06",
-        "07",
-        "08"
+        "07"
+      ],
+      "not_started": [
+        "01"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "01",
+        "03",
+        "04"
+      ]
     },
     "0236": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
-        "08"
+        "07"
       ],
+      "in_progress": [],
+      "not_started": [],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "superseded": [
+        "08"
+      ]
     },
     "0237": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
-        "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [
+        "06"
+      ],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "06",
+        "08"
+      ]
     },
     "0238": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
-        "05",
-        "06",
         "07",
         "08"
       ],
+      "in_progress": [],
+      "not_started": [],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "superseded": [
+        "05",
+        "06"
+      ]
     },
     "0239": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
         "08"
+      ],
+      "in_progress": [],
+      "not_started": [
+        "07"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "07"
+      ]
     },
     "0240": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
-        "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
+        "03",
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "03",
+        "08"
+      ]
     },
     "0241": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "08"
+      ]
     },
     "0242": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
-        "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [
+        "04"
+      ],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "04",
+        "08"
+      ]
     },
     "0243": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
-        "04",
         "05",
-        "06",
-        "07",
+        "06"
+      ],
+      "in_progress": [
+        "04",
+        "07"
+      ],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "04",
+        "07",
+        "08"
+      ]
     },
     "0244": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
-        "02",
         "03",
         "04",
         "05",
-        "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [
+        "02",
+        "06"
+      ],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "02",
+        "06",
+        "08"
+      ]
     },
     "0245": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
+        "04",
+        "06"
+      ],
+      "in_progress": [
         "01",
         "02",
-        "03",
-        "04",
         "05",
-        "06",
-        "07",
+        "07"
+      ],
+      "not_started": [
+        "03",
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "01",
+        "02",
+        "03",
+        "05",
+        "07",
+        "08"
+      ]
     },
     "0246": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
+      "implemented": [
+        "04"
+      ],
+      "in_progress": [
+        "06"
+      ],
       "not_started": [
         "01",
         "02",
         "03",
-        "04",
         "05",
-        "06",
         "07",
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "01",
+        "02",
+        "03",
+        "05",
+        "07",
+        "08"
+      ]
     },
     "0247": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "08"
+      ]
     }
   }
 }

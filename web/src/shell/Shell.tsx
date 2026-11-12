@@ -84,6 +84,13 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
   const on = useFlags();
   const bar = useRef<HTMLElement>(null);
   useHeaderBlock(bar);
+  // S4-0092-09: a new blocker is said once, on whatever page is open; a count that falls is not news
+  const heard = useRef(0);
+  const speak = on('app.attention_announce');
+  useEffect(() => {
+    if (speak && attention > heard.current) announce(attentionWords(jobs));
+    heard.current = attention;
+  }, [attention, jobs, speak]);
   return (
     <header className="context-bar" ref={bar}>
       <nav className="crumbs" aria-label="Breadcrumb">

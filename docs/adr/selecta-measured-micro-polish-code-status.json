@@ -2,88 +2,84 @@
   "schema_version": 1,
   "programme": "Selecta measured micro-polish (MP)",
   "baseline_main_sha": "100df40463d05b3d6a4cba8f5d06cbe193a1b0c4",
-  "as_of": "2026-11-08",
+  "as_of": "2026-11-12",
   "scope": "MP-0272-01 through MP-0299-08",
   "decision_summary": "28 Proposed",
-  "implementation_status": "19 Not started; 11 In Progress; 194 Implemented (recounted from the checklist task lines 2026-11-12; the per-ADR groups below were last synced 2026-11-08 and lag the checklist)",
+  "implementation_status": "194 Implemented; 11 In progress; 19 Not started (2026-11-12, recounted from the checklist task lines; the per-group lists below were synced to those lines the same day; Needs a person tasks are also listed in not_started)",
   "independent_verification": "0 Verified",
   "groups": {
     "272": {
       "decision": "Proposed",
       "priority": "P0",
       "owner": null,
-      "implemented": [],
-      "in_progress": [
+      "implemented": [
+        "01",
         "02",
         "03",
-        "04"
-      ],
-      "not_started": [
-        "01",
+        "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "implementation_sha": "2588f96a3fb497782914175f53ac16827d597021",
       "implementation_pr": 38,
-      "evidence": "MP-0272-02: web/e2e/micro-polish-geometry.e2e.ts records geometry candidates; test run and broader states pending; MP-0272-03: Playing mini-player, keyboard yield and overlay candidate added; Stage, Studio, bridge, export and failure still needed; MP-0272-04: 11 viewport geometry cases added; test execution and human audit pending"
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md"
     },
     "273": {
       "decision": "Proposed",
       "priority": "P0",
       "owner": null,
       "implemented": [
-        "05"
-      ],
-      "in_progress": [],
-      "not_started": [
-        "01",
-        "02",
-        "03",
-        "04",
-        "06",
-        "07",
-        "08"
-      ],
-      "independently_verified": [],
-      "implementation_sha": "6a55b1643b0bbfaed47656588f74ad3390b08b0e",
-      "implementation_pr": 38,
-      "evidence": "MP-0273-05: web/src/style.css and web/src/styles/polish.css now own 24px card/panel padding without duplicate override; web/e2e/micro-polish-geometry.e2e.ts asserts computed padding (unrun)"
-    },
-    "274": {
-      "decision": "Proposed",
-      "priority": "P0",
-      "owner": null,
-      "implemented": [],
-      "in_progress": [
-        "07"
-      ],
-      "not_started": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
+        "07",
         "08"
       ],
+      "in_progress": [],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": "6a55b1643b0bbfaed47656588f74ad3390b08b0e",
       "implementation_pr": 38,
-      "evidence": "MP-0274-07: web/src/style.css sets scrollbar-gutter: stable; scroll-state measurement pending"
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md"
+    },
+    "274": {
+      "decision": "Proposed",
+      "priority": "P0",
+      "owner": null,
+      "implemented": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07"
+      ],
+      "in_progress": [
+        "08"
+      ],
+      "not_started": [],
+      "independently_verified": [],
+      "implementation_sha": "6a55b1643b0bbfaed47656588f74ad3390b08b0e",
+      "implementation_pr": 38,
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md"
     },
     "275": {
       "decision": "Proposed",
       "priority": "P0",
       "owner": null,
       "implemented": [
-        "02"
-      ],
-      "in_progress": [],
-      "not_started": [
         "01",
+        "02",
         "03",
         "04",
         "05",
@@ -91,18 +87,18 @@
         "07",
         "08"
       ],
+      "in_progress": [],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": "6a55b1643b0bbfaed47656588f74ad3390b08b0e",
       "implementation_pr": 38,
-      "evidence": "MP-0275-02: web/src/style.css owns .display and .display.small metrics; duplicate rules removed from polish.css; computed type E2E added (unrun)"
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md"
     },
     "276": {
       "decision": "Proposed",
       "priority": "P1",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
@@ -112,18 +108,18 @@
         "07",
         "08"
       ],
+      "in_progress": [],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md"
     },
     "277": {
       "decision": "Proposed",
       "priority": "P1",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
@@ -133,104 +129,110 @@
         "07",
         "08"
       ],
+      "in_progress": [],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md"
     },
     "278": {
       "decision": "Proposed",
       "priority": "P0",
       "owner": null,
       "implemented": [
-        "03"
-      ],
-      "in_progress": [],
-      "not_started": [
         "01",
         "02",
+        "03",
         "04",
         "05",
         "06",
         "07",
         "08"
       ],
+      "in_progress": [],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": "6a55b1643b0bbfaed47656588f74ad3390b08b0e",
       "implementation_pr": 38,
-      "evidence": "MP-0278-03: Duplicate .panel, .card, .row and .display overrides consolidated in web/src/style.css and polish.css; computed cascade test added (unrun)"
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md"
     },
     "279": {
       "decision": "Proposed",
       "priority": "P0",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "08"
+      ]
     },
     "280": {
       "decision": "Proposed",
       "priority": "P0",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "08"
+      ]
     },
     "281": {
       "decision": "Proposed",
       "priority": "P0",
       "owner": null,
-      "implemented": [],
-      "in_progress": [
-        "02",
-        "03"
-      ],
-      "not_started": [
+      "implemented": [
         "01",
+        "02",
+        "03",
         "04",
         "05",
         "06",
         "07",
         "08"
       ],
+      "in_progress": [],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": "6a55b1643b0bbfaed47656588f74ad3390b08b0e",
       "implementation_pr": 38,
-      "evidence": "MP-0281-02: web/src/styles/shell.css enforces 44px primary and Next targets; narrow geometry E2E added (unrun); MP-0281-03: web/src/shell/Shell.tsx guards progress/title and reserves count width; dynamic stress not independently measured"
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md"
     },
     "282": {
       "decision": "Proposed",
       "priority": "P1",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
@@ -240,39 +242,43 @@
         "07",
         "08"
       ],
+      "in_progress": [],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md"
     },
     "283": {
       "decision": "Proposed",
       "priority": "P0",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "08"
+      ]
     },
     "284": {
       "decision": "Proposed",
       "priority": "P0",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
@@ -282,60 +288,68 @@
         "07",
         "08"
       ],
+      "in_progress": [],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md"
     },
     "285": {
       "decision": "Proposed",
       "priority": "P1",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "08"
+      ]
     },
     "286": {
       "decision": "Proposed",
       "priority": "P1",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "08"
+      ]
     },
     "287": {
       "decision": "Proposed",
       "priority": "P0",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
@@ -345,252 +359,318 @@
         "07",
         "08"
       ],
+      "in_progress": [],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md"
     },
     "288": {
       "decision": "Proposed",
       "priority": "P1",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "08"
+      ]
     },
     "289": {
       "decision": "Proposed",
       "priority": "P1",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "08"
+      ]
     },
     "290": {
       "decision": "Proposed",
       "priority": "P1",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
-        "06",
-        "07",
+        "06"
+      ],
+      "in_progress": [
+        "07"
+      ],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "07",
+        "08"
+      ]
     },
     "291": {
       "decision": "Proposed",
       "priority": "P1",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "08"
+      ]
     },
     "292": {
       "decision": "Proposed",
       "priority": "P1",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "08"
+      ]
     },
     "293": {
       "decision": "Proposed",
       "priority": "P1",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "08"
+      ]
     },
     "294": {
       "decision": "Proposed",
       "priority": "P1",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "08"
+      ]
     },
     "295": {
       "decision": "Proposed",
       "priority": "P0",
       "owner": null,
       "implemented": [
-        "05"
-      ],
-      "in_progress": [],
-      "not_started": [
         "01",
         "02",
         "03",
         "04",
-        "06",
+        "05",
+        "06"
+      ],
+      "in_progress": [
         "07",
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_sha": "11aa13ec25affa3b9ec60c2ad8ec76a47a3129ef",
       "implementation_pr": 38,
-      "evidence": "MP-0295-05: web/src/ui/controls.tsx focusable summary and hidden-control filter; web/src/ui/controls.test.tsx tests nested Escape/inert/focus return and Tab loop (unrun)"
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "07",
+        "08"
+      ]
     },
     "296": {
       "decision": "Proposed",
       "priority": "P1",
       "owner": null,
-      "implemented": [],
-      "in_progress": [
-        "03"
-      ],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
+        "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "implementation_sha": "6a55b1643b0bbfaed47656588f74ad3390b08b0e",
       "implementation_pr": 38,
-      "evidence": "MP-0296-03: web/src/style.css and polish.css remove active transform; pointer-down box measurement pending"
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "08"
+      ]
     },
     "297": {
       "decision": "Proposed",
       "priority": "P0",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "08"
+      ]
     },
     "298": {
       "decision": "Proposed",
       "priority": "P0",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
-        "04",
-        "05",
+        "05"
+      ],
+      "in_progress": [
         "06",
-        "07",
+        "07"
+      ],
+      "not_started": [
+        "04",
         "08"
       ],
       "independently_verified": [],
       "implementation_sha": null,
       "implementation_pr": null,
-      "evidence": null
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "04",
+        "06",
+        "07",
+        "08"
+      ]
     },
     "299": {
       "decision": "Proposed",
       "priority": "P0",
       "owner": null,
-      "implemented": [],
-      "in_progress": [],
+      "implemented": [
+        "01"
+      ],
+      "in_progress": [
+        "07"
+      ],
       "not_started": [
-        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "08"
+      ],
+      "independently_verified": [],
+      "implementation_sha": null,
+      "implementation_pr": null,
+      "evidence": "see the Evidence field of each task in selecta-measured-micro-polish-implementation-checklist.md",
+      "needs_a_person": [
         "02",
         "03",
         "04",
@@ -598,11 +678,7 @@
         "06",
         "07",
         "08"
-      ],
-      "independently_verified": [],
-      "implementation_sha": null,
-      "implementation_pr": null,
-      "evidence": null
+      ]
     }
   }
 }

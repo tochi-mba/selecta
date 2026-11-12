@@ -191,14 +191,25 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   };
   const skip = (target: HarmonicDiscovery) => setSkipped((ids) => [...ids.filter((id) => id !== target.id), target.id]);
 
+  // P0036: the heading and what this is about are known before any pair arrives, so they stay real and
+  // only the pair itself is a placeholder, in a pair card's place
+  const harmonicIntro = (
+    <p className="hint">
+      Selecta plays you the chords it heard, then each song with them underneath. If they fit both, you’ve got a connection. Your answer only teaches Selecta what you hear. It never adds anything to a mix.<TermHint term="harmonic-match" />
+    </p>
+  );
   if (!loaded && !error) {
     return (
-      <Skeleton
-        variant="pairs"
-        lines={1}
-        label="Finding harmonic discoveries"
-        retry={() => setAttempt((value) => value + 1)}
-      />
+      <section className="next-up discoveries">
+        <div className="row wrap discoveries-head"><h2>Songs that might share chords</h2></div>
+        {harmonicIntro}
+        <Skeleton
+          variant="pairs"
+          lines={1}
+          label="Finding harmonic discoveries"
+          retry={() => setAttempt((value) => value + 1)}
+        />
+      </section>
     );
   }
   if (!loaded && error) return <Problem retry={() => setAttempt((value) => value + 1)}>{error}</Problem>;
@@ -211,9 +222,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
         <h2>Songs that might share chords</h2>
         {waiting.length > 0 && <span className="hint">{waiting.length} to hear</span>}
       </div>
-      <p className="hint">
-        Selecta plays you the chords it heard, then each song with them underneath. If they fit both, you’ve got a connection. Your answer only teaches Selecta what you hear. It never adds anything to a mix.<TermHint term="harmonic-match" />
-      </p>
+      {harmonicIntro}
       {error && <p role="alert" className="warn">{error}</p>}
       {unsaved && <button disabled={saving} onClick={() => void review(unsaved.target, unsaved.verdict)}>Try saving that again</button>}
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}

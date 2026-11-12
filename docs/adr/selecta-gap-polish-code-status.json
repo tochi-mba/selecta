@@ -2,51 +2,58 @@
   "schema_version": 1,
   "programme": "Selecta gap-focused UI/UX polish",
   "baseline_main_sha": "2956bc47fd735339e7216e03d27817fb3a31e92b",
-  "as_of": "2026-11-10",
+  "as_of": "2026-11-12",
   "scope": "GP-0248-01 through GP-0263-08",
   "decision": "16 Accepted (owner 2026-11-08)",
-  "implementation_status": "17 Not started; 0 In progress; 111 Implemented (2026-11-12, recounted from the checklist task lines; the per-group lists below are as of 2026-11-10 and lag the checklist)",
+  "implementation_status": "111 Implemented; 17 Not started (2026-11-12, recounted from the checklist task lines; the per-group lists below were synced to those lines the same day; Needs a person tasks are also listed in not_started)",
   "independent_verification": "0 Verified",
   "status_scope_note": "New acceptance deltas, not missing source features. Earlier programmes unchanged.",
   "groups": {
     "0248": {
       "decision": "Accepted",
-      "implemented": [],
-      "in_progress": [],
-      "not_started": [
+      "implemented": [
         "01",
         "02",
         "03",
         "04",
         "05",
         "06",
-        "07",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "08"
+      ]
     },
     "0249": {
       "decision": "Accepted",
       "implemented": [
         "01",
-        "04"
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07"
       ],
       "in_progress": [],
       "not_started": [
-        "02",
-        "03",
-        "05",
-        "06",
-        "07",
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "08"
+      ]
     },
     "0250": {
       "decision": "Accepted",
@@ -55,18 +62,21 @@
         "02",
         "03",
         "04",
-        "05"
+        "05",
+        "06",
+        "07"
       ],
       "in_progress": [],
       "not_started": [
-        "06",
-        "07",
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "08"
+      ]
     },
     "0251": {
       "decision": "Accepted",
@@ -75,14 +85,13 @@
         "02",
         "03",
         "04",
+        "05",
+        "06",
         "07",
         "08"
       ],
       "in_progress": [],
-      "not_started": [
-        "05",
-        "06"
-      ],
+      "not_started": [],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
@@ -93,21 +102,23 @@
       "implemented": [
         "01",
         "02",
+        "03",
+        "04",
         "05",
         "06",
         "07"
       ],
-      "in_progress": [
-        "03",
-        "04"
-      ],
+      "in_progress": [],
       "not_started": [
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "08"
+      ]
     },
     "0253": {
       "decision": "Accepted",
@@ -127,7 +138,10 @@
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "08"
+      ]
     },
     "0254": {
       "decision": "Accepted",
@@ -147,11 +161,16 @@
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "05",
+        "08"
+      ]
     },
     "0255": {
       "decision": "Accepted",
       "implemented": [
+        "01",
         "02",
         "03",
         "04",
@@ -159,16 +178,17 @@
         "06",
         "07"
       ],
-      "in_progress": [
-        "01"
-      ],
+      "in_progress": [],
       "not_started": [
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "08"
+      ]
     },
     "0256": {
       "decision": "Accepted",
@@ -188,28 +208,34 @@
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "08"
+      ]
     },
     "0257": {
       "decision": "Accepted",
       "implemented": [
+        "01",
         "02",
         "03",
+        "05",
         "06",
         "07"
       ],
-      "in_progress": [
-        "01"
-      ],
+      "in_progress": [],
       "not_started": [
         "04",
-        "05",
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "04",
+        "08"
+      ]
     },
     "0258": {
       "decision": "Accepted",
@@ -219,17 +245,20 @@
         "04",
         "05",
         "06",
-        "07"
+        "07",
+        "08"
       ],
       "in_progress": [],
       "not_started": [
-        "01",
-        "08"
+        "01"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "01"
+      ]
     },
     "0259": {
       "decision": "Accepted",
@@ -249,7 +278,10 @@
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "08"
+      ]
     },
     "0260": {
       "decision": "Accepted",
@@ -257,19 +289,22 @@
         "01",
         "02",
         "03",
+        "04",
         "05",
         "06",
         "07"
       ],
       "in_progress": [],
       "not_started": [
-        "04",
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "08"
+      ]
     },
     "0261": {
       "decision": "Accepted",
@@ -289,7 +324,10 @@
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "08"
+      ]
     },
     "0262": {
       "decision": "Accepted",
@@ -299,37 +337,43 @@
         "03",
         "04",
         "05",
-        "06"
-      ],
-      "in_progress": [],
-      "not_started": [
-        "07",
-        "08"
-      ],
-      "independently_verified": [],
-      "owner": null,
-      "implementation_pr": null,
-      "implementation_sha": null
-    },
-    "0263": {
-      "decision": "Accepted",
-      "implemented": [
-        "03",
-        "05",
+        "06",
         "07"
       ],
       "in_progress": [],
       "not_started": [
-        "01",
-        "02",
-        "04",
-        "06",
         "08"
       ],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": [
+        "08"
+      ]
+    },
+    "0263": {
+      "decision": "Accepted",
+      "implemented": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07"
+      ],
+      "in_progress": [],
+      "not_started": [
+        "08"
+      ],
+      "independently_verified": [],
+      "owner": null,
+      "implementation_pr": null,
+      "implementation_sha": null,
+      "needs_a_person": [
+        "08"
+      ]
     }
   }
 }

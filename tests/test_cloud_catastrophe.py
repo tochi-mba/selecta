@@ -13,6 +13,11 @@ accounted for, nothing was published twice, every deletion holds, and the invari
 - `test_flaky_r2_delayed_stripe_and_a_restore_during_traffic_with_pending_deletions`: R2 refuses
   purges, Stripe events arrive late, out of order and many times over while billing is in safe
   mode, and the database is restored from before recent deletions while new ones keep coming.
+- `test_the_ai_provider_goes_down_while_people_keep_asking_lucy_and_comes_back`: every model
+  call fails, a server dies mid-turn, the breakers open and Lucy falls back to the built-in
+  planner, two operators switch the deployment off at once, then the provider recovers.
+- `test_launch_day_signups_uploads_upgrades_and_mix_requests_all_at_once`: the launch-day
+  stampede, every request retried: signups, uploads, upgrades and mix requests on six threads.
 
 The full-size L6 (L3 load plus these failures) needs staging; see `tests/load/`.
 """
@@ -23,6 +28,7 @@ import dataclasses
 import random
 import threading
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 import sqlalchemy as sa
@@ -34,16 +40,26 @@ from test_cloud_storage_fakes import FakeS3
 
 from selecta.admin import state
 from selecta.admin.state import DbWorkControls
+from selecta.ai import registry
+from selecta.ai.gateway import finish_turn, plan_turn, sweep_abandoned
+from selecta.ai.registry import RequestClass, Tier
+from selecta.ai.runs import Outcome
+from selecta.ai.schema import ai_concurrency, ai_runs, ai_usage
+from selecta.ai.spend import PlatformPolicy, ProviderGuard, platform_totals
 from selecta.audit import invariants
 from selecta.billing.maintenance import drain_stripe_events
+from selecta.billing.schema import stripe_events
 from selecta.billing.webhooks import store_event
-from selecta.identity import privileged
+from selecta.identity import accounts, privileged
+from selecta.identity.tokens import Claims
 from selecta.persistence import transaction
 from selecta.storage.deletion import read_ledger, replay_after_restore, tombstone
 from selecta.storage.keys import original_key
 from selecta.storage.maintenance import drain_physical_deletions
 from selecta.storage.objects import R2Error
 from selecta.storage.schema import assets, deletions
+from selecta.usage import quota
+from selecta.usage.schema import quota_state, usage_ledger
 from selecta.work.enqueue import JobSpec
 from selecta.work.maintenance import Leadership, MaintenanceLoop, Schedule
 from selecta.work.model import TERMINAL, AttemptOutcome, JobState
@@ -65,8 +81,9 @@ def _fresh_staff_sessions(world, now: float) -> None:
     with transaction(world.engine) as conn:
         for name in list(world.sessions):
             fresh = dataclasses.replace(tokens.add(name), issued_at=now, expires_at=now + 3000)
-            world.sessions[name] = privileged.start(conn, fresh,
-                                                    staff_organization_id="staff-org").id
+            world.sessions[name] = privileged.start(
+                conn, fresh, staff_organization_id="staff-org"
+            ).id
 
 
 def _engage_together(world, control: str, target: str, now: float) -> list[int]:
@@ -77,8 +94,9 @@ def _engage_together(world, control: str, target: str, now: float) -> list[int]:
 
     def press(who: str) -> None:
         barrier.wait()
-        answer = world.post(f"/api/admin/emergency/{control}/engage", who,
-                            reason="catastrophe drill", target=target)
+        answer = world.post(
+            f"/api/admin/emergency/{control}/engage", who, reason="catastrophe drill", target=target
+        )
         codes.append(answer.status_code)
 
     threads = [threading.Thread(target=press, args=(who,)) for who in ("owner", "operator")]
@@ -90,8 +108,9 @@ def _engage_together(world, control: str, target: str, now: float) -> list[int]:
 
 
 def _release(world, control: str, target: str | None = None) -> None:
-    proposed = world.post(f"/api/admin/emergency/{control}/release", "operator",
-                          reason="recovered", target=target)
+    proposed = world.post(
+        f"/api/admin/emergency/{control}/release", "operator", reason="recovered", target=target
+    )
     assert proposed.status_code == 200, proposed.text
     action_id = proposed.json()["action"]["id"]
     make_due(world.engine, action_id)
@@ -112,8 +131,12 @@ def test_every_worker_dies_while_users_keep_working_and_two_operators_race_a_dra
 
     def submit(count: int) -> None:
         for _ in range(count):
-            spec = JobSpec(rng.choice(customers), "analyse.song",
-                           input_ref={"n": len(accepted)}, max_attempts=rng.choice([2, 6]))
+            spec = JobSpec(
+                rng.choice(customers),
+                "analyse.song",
+                input_ref={"n": len(accepted)},
+                max_attempts=rng.choice([2, 6]),
+            )
             accepted.append(store.enqueue(spec).job.id)
 
     submit(40)
@@ -154,8 +177,9 @@ def test_every_worker_dies_while_users_keep_working_and_two_operators_race_a_dra
             loop.run_once(moment=clock.now)
             continue
         store.start(claim.attempt_id, claim.fencing_token)
-        store.complete(claim.attempt_id, claim.fencing_token, result={"ok": True},
-                       artifacts=[_output(claim)])
+        store.complete(
+            claim.attempt_id, claim.fencing_token, result={"ok": True}, artifacts=[_output(claim)]
+        )
 
     # Reconciliation: nothing accepted is lost, nothing published twice, no drift.
     assert len(accepted) == 75 and sum(killed.values()) >= 40
@@ -171,22 +195,33 @@ def test_every_worker_dies_while_users_keep_working_and_two_operators_race_a_dra
 
 
 def _song(conn, workspace: str, asset_id: str, size: int) -> None:
-    conn.execute(sa.insert(assets).values(
-        id=asset_id, workspace_id=workspace, original_key=original_key(workspace, asset_id),
-        size=size, sha256="a" * 64, format="mp3", created_at=1_800_000_000.0))
+    conn.execute(
+        sa.insert(assets).values(
+            id=asset_id,
+            workspace_id=workspace,
+            original_key=original_key(workspace, asset_id),
+            size=size,
+            sha256="a" * 64,
+            format="mp3",
+            created_at=1_800_000_000.0,
+        )
+    )
 
 
 def _delete_song(engine, workspace: str, asset_id: str) -> None:
     with transaction(engine, workspace) as conn:
         tombstone(conn, workspace, "song", asset_id)
-        conn.execute(sa.update(deletions).where(deletions.c.ref == asset_id)
-                     .values(physical_after=0.0))
+        conn.execute(
+            sa.update(deletions).where(deletions.c.ref == asset_id).values(physical_after=0.0)
+        )
 
 
 def _hidden(engine, asset_id: str) -> bool:
     with transaction(engine) as conn:
-        return conn.execute(sa.select(assets.c.deleted_at).where(assets.c.id == asset_id)
-                            ).scalar_one() is not None
+        return (
+            conn.execute(sa.select(assets.c.deleted_at).where(assets.c.id == asset_id)).scalar_one()
+            is not None
+        )
 
 
 def test_flaky_r2_delayed_stripe_and_a_restore_during_traffic_with_pending_deletions(world):
@@ -203,8 +238,12 @@ def test_flaky_r2_delayed_stripe_and_a_restore_during_traffic_with_pending_delet
     kept = [s for s in songs if s not in doomed]
 
     # Billing is in safe mode (Stripe events held) while R2 starts refusing purges.
-    assert world.post("/api/admin/emergency/billing.safe_mode/engage", "operator",
-                      reason="catastrophe drill").status_code == 200
+    assert (
+        world.post(
+            "/api/admin/emergency/billing.safe_mode/engage", "operator", reason="catastrophe drill"
+        ).status_code
+        == 200
+    )
     stripe = FakeStripe()
     stripe.put(subscription(price="price_premium_month", workspace=a))
     r2.fail_next("delete_objects", R2Error("down", status=503), times=8)
@@ -220,12 +259,24 @@ def test_flaky_r2_delayed_stripe_and_a_restore_during_traffic_with_pending_delet
     # Stripe delivers late, out of order and many times over while safe mode holds them.
     with transaction(engine) as conn:
         for _copy in range(5):
-            store_event(conn, event("evt_paid", "invoice.paid",
-                                    {"object": "invoice", "subscription": "sub_1"},
-                                    created=1_800_000_100))
-            store_event(conn, event("evt_created", "customer.subscription.created",
-                                    {"object": "subscription", "id": "sub_1"},
-                                    created=1_800_000_000))
+            store_event(
+                conn,
+                event(
+                    "evt_paid",
+                    "invoice.paid",
+                    {"object": "invoice", "subscription": "sub_1"},
+                    created=1_800_000_100,
+                ),
+            )
+            store_event(
+                conn,
+                event(
+                    "evt_created",
+                    "customer.subscription.created",
+                    {"object": "subscription", "id": "sub_1"},
+                    created=1_800_000_000,
+                ),
+            )
     assert drain_stripe_events(engine, stripe, PRICE_MAP).processed == 0
 
     # The database is restored from before those deletions, while traffic goes on: more
@@ -260,3 +311,266 @@ def test_flaky_r2_delayed_stripe_and_a_restore_during_traffic_with_pending_delet
     assert first.processed == 2, first
     assert drain_stripe_events(engine, stripe, PRICE_MAP).processed == 0
     invariants.assert_clean(engine)
+
+
+# An AI-provider outage ---------------------------------------------------------------------
+
+AI_POLICY = PlatformPolicy(daily_cap_usd=25.0, monthly_cap_usd=500.0, alert_percents=())
+
+
+def _claims(name: str, now: float) -> Claims:
+    return Claims(
+        f"subject-{name}",
+        now,
+        now + 3000,
+        email=f"{name}@example.test",
+        email_verified=True,
+        session_id=f"workos-{name}",
+    )
+
+
+def _sign_up(engine, names, now: float) -> dict[str, str]:
+    """New accounts, as onboarding makes them. Returns each person's workspace id."""
+    with transaction(engine) as conn:
+        return {
+            name: accounts.provision(conn, _claims(name, now), age_confirmed=True).workspace.id
+            for name in names
+        }
+
+
+class ProviderOutage:
+    """The model provider: every call fails while `down`."""
+
+    def __init__(self) -> None:
+        self.down = True
+        self.calls: Counter = Counter()
+
+    def call(self, deployment_id: str) -> bool:
+        self.calls[deployment_id] += 1
+        return not self.down
+
+
+def _lucy_turn(engine, guard, provider, workspace: str, *, server_dies: bool = False):
+    """One planning turn the way the cloud runs it: plan, call the provider through the
+    breaker, settle. A server that dies leaves the run open for the sweep."""
+    with transaction(engine, workspace) as conn:
+        turn = plan_turn(
+            conn,
+            workspace_id=workspace,
+            tier=Tier.STANDARD,
+            request_class=RequestClass.PLANNING,
+            prompt_version="drill",
+            tool_schema_version="drill",
+            health=guard,
+            policy=AI_POLICY,
+        )
+    if server_dies:
+        return turn, None
+    outcome, tokens = Outcome.COMPLETED, {}
+    if not turn.is_builtin:
+        ok = guard.try_acquire(turn.deployment)
+        if ok:
+            ok = provider.call(turn.deployment.id)
+            guard.release(turn.deployment.id, ok=ok)
+        outcome = Outcome.COMPLETED if ok else Outcome.FAILED
+        tokens = {"tokens_in": 2_000, "tokens_out": 300} if ok else {}
+    with transaction(engine, workspace) as conn:
+        finish_turn(
+            conn,
+            turn,
+            outcome=outcome,
+            policy=AI_POLICY,
+            error_code=None if outcome is Outcome.COMPLETED else "provider",
+            **tokens,
+        )
+    return turn, outcome
+
+
+def _turns_counted(engine) -> int:
+    with transaction(engine) as conn:
+        return int(
+            conn.execute(sa.select(sa.func.coalesce(sa.func.sum(ai_usage.c.turns), 0))).scalar_one()
+        )
+
+
+def test_the_ai_provider_goes_down_while_people_keep_asking_lucy_and_comes_back(world, clock):
+    engine = world.engine
+    with transaction(engine) as conn:
+        registry.seed_defaults(conn)
+    people = list(_sign_up(engine, [f"lucy-{n}" for n in range(6)], clock.now).values())
+    guard = ProviderGuard(
+        failure_threshold=5, window_seconds=60.0, cooldown_seconds=30.0, clock=clock.time
+    )
+    provider = ProviderOutage()
+
+    # A turn starts on Sonnet, then its server dies with the outage.
+    orphan, _ = _lucy_turn(engine, guard, provider, people[0], server_dies=True)
+    assert orphan.deployment.id == "sonnet-medium" and orphan.reserved_usd > 0
+
+    # Everyone keeps asking. Five failures open Sonnet's breaker, five more open Haiku's, and
+    # from then on the built-in planner answers: Lucy gets smaller, she doesn't break.
+    served = [_lucy_turn(engine, guard, provider, people[1 + n % 5]) for n in range(30)]
+    assert provider.calls == Counter({"sonnet-medium": 5, "haiku-medium": 5})
+    assert all(outcome is Outcome.FAILED for _, outcome in served[:10])
+    assert all(turn.is_builtin and turn.limited == "no_model" for turn, _ in served[10:])
+    # Two operators switch the failing deployment off at the same moment: one control.
+    assert _engage_together(world, "lucy.deployment_disabled", "sonnet-medium", clock.now) == [
+        200,
+        200,
+    ]
+
+    # The provider recovers. The sweep closes the dead server's run: the platform books its
+    # reservation and the person is charged nothing.
+    provider.down = False
+    clock.advance(600)
+    with transaction(engine) as conn:
+        swept = sweep_abandoned(conn, policy=AI_POLICY)
+    assert [s.run_id for s in swept] == [orphan.run_id]
+    assert _turns_counted(engine) == 0  # failed turns given back; the planner uses none
+
+    # After their cooldown the breakers let a probe through. With Sonnet still switched off,
+    # planning falls back to Haiku; once released, Sonnet answers again.
+    back = [_lucy_turn(engine, guard, provider, workspace) for workspace in people[1:4]]
+    assert [(t.deployment.id, o) for t, o in back] == [("haiku-medium", Outcome.COMPLETED)] * 3
+    _release(world, "lucy.deployment_disabled", "sonnet-medium")
+    again = [_lucy_turn(engine, guard, provider, workspace) for workspace in people[1:4]]
+    assert [(t.deployment.id, o) for t, o in again] == [("sonnet-medium", Outcome.COMPLETED)] * 3
+
+    # Reconciliation: only completed model turns count, no run is left open, no lease or
+    # reservation is held, and the platform booked the dead run's reservation.
+    assert _turns_counted(engine) == 6
+    with transaction(engine) as conn:
+        open_runs = conn.execute(
+            sa.select(sa.func.count())
+            .select_from(ai_runs)
+            .where(ai_runs.c.outcome == Outcome.RUNNING.value)
+        ).scalar_one()
+        held = conn.execute(sa.select(sa.func.count()).select_from(ai_concurrency)).scalar_one()
+        totals = platform_totals(conn)
+    assert open_runs == 0 and held == 0
+    assert totals.day_reserved_usd == pytest.approx(0.0, abs=1e-9)
+    assert totals.day_spent_usd >= orphan.reserved_usd
+    invariants.assert_clean(engine)
+
+
+# The launch-day stampede -------------------------------------------------------------------
+
+MB = 1_000_000
+
+
+def test_launch_day_signups_uploads_upgrades_and_mix_requests_all_at_once(world, clock):
+    """Signups, uploads, upgrades and mix requests arrive together, each retried the way
+    impatient people and flaky networks retry: a double-tapped signup, an upload completed
+    twice, every Stripe event delivered three times, a mix asked for twice with one key."""
+    engine = world.engine
+    rng = random.Random(20261112)
+    store = make_store(engine, controls=DbWorkControls(), rng=random.Random(11))
+    stripe = FakeStripe()
+    people = [f"launch-{n:02d}" for n in range(24)]
+    upgrading = set(people[::3])
+    workspaces: dict[str, str] = {}
+    mixes: dict[str, set[str]] = {}
+    lock = threading.Lock()
+
+    def sign_up(name: str) -> None:
+        with transaction(engine) as conn:
+            made = accounts.provision(conn, _claims(name, clock.now), age_confirmed=True)
+        with lock:
+            assert workspaces.setdefault(name, made.workspace.id) == made.workspace.id
+
+    def upload(name: str, n: int) -> None:
+        workspace = workspaces[name]
+        with transaction(engine, workspace) as conn:
+            held = quota.reserve(conn, workspace, 3 * MB, f"{name}-upload-{n}")
+        for _ in range(2):  # the completion is retried
+            with transaction(engine, workspace) as conn:
+                quota.commit(conn, held.id)
+
+    def upgrade(name: str) -> None:
+        workspace = workspaces[name]
+        with lock:
+            stripe.put(
+                subscription(
+                    f"sub_{name}",
+                    price="price_premium_month",
+                    workspace=workspace,
+                    customer=f"cus_{name}",
+                )
+            )
+        for _ in range(3):
+            with transaction(engine) as conn:
+                store_event(
+                    conn,
+                    event(
+                        f"evt_{name}",
+                        "customer.subscription.created",
+                        subscription(f"sub_{name}", workspace=workspace),
+                    ),
+                )
+        drain_stripe_events(engine, stripe, PRICE_MAP)
+
+    def ask_for_mix(name: str) -> None:
+        spec = JobSpec(
+            workspaces[name],
+            "seam.render",
+            input_ref={"mix": name},
+            idempotency_key=f"{name}-first-mix",
+        )
+        made = {store.enqueue(spec).job.id for _ in range(2)}
+        with lock:
+            mixes[name] = made
+
+    # Everyone signs up at once, most of them tapping the button twice.
+    taps = people + rng.sample(people, 16)
+    rng.shuffle(taps)
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        list(pool.map(sign_up, taps))
+    assert len(workspaces) == len(people) == len(set(workspaces.values()))
+
+    # Then uploads, upgrades and mix requests all land together.
+    work = [(upload, name, n) for name in people for n in range(2)]
+    work += [(upgrade, name) for name in upgrading] + [(ask_for_mix, name) for name in people]
+    rng.shuffle(work)
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        for future in [pool.submit(task, *args) for task, *args in work]:
+            future.result()
+    while drain_stripe_events(engine, stripe, PRICE_MAP).processed:
+        pass
+
+    # The backlog of mixes finishes.
+    accepted = sorted(job for made in mixes.values() for job in made)
+    assert all(len(made) == 1 for made in mixes.values()), mixes
+    while not all(JobState(store.job(j).state) in TERMINAL for j in accepted):
+        claim = store.claim(POOL, worker(POOL, worker_id="launch-worker"))
+        assert claim is not None
+        store.start(claim.attempt_id, claim.fencing_token)
+        store.complete(
+            claim.attempt_id, claim.fencing_token, result={"ok": True}, artifacts=[_output(claim)]
+        )
+
+    # Reconciliation: one account per person, every upload counted once, every upgrade applied
+    # once, one mix job per request, and no drift anywhere.
+    with transaction(engine) as conn:
+        rows = {row.workspace_id: row for row in conn.execute(sa.select(quota_state))}
+        storage_refs = Counter(
+            row.ref
+            for row in conn.execute(
+                sa.select(usage_ledger.c.ref).where(usage_ledger.c.kind == "storage_bytes")
+            )
+        )
+        applied = Counter(
+            row.id
+            for row in conn.execute(
+                sa.select(stripe_events.c.id).where(stripe_events.c.status == "processed")
+            )
+        )
+    for name in people:
+        row = rows[workspaces[name]]
+        assert (int(row.committed_bytes), int(row.reserved_bytes)) == (6 * MB, 0)
+        assert (row.plan_id == "premium") is (name in upgrading), (name, row.plan_id)
+    assert sum(storage_refs.values()) == 2 * len(people)
+    assert all(count == 1 for count in storage_refs.values())
+    assert applied == Counter({f"evt_{name}": 1 for name in upgrading})
+    assert len(accepted) == len(people)
+    assert all(JobState(store.job(j).state) == JobState.SUCCEEDED for j in accepted)
+    invariants.assert_clean(engine, accepted=accepted)

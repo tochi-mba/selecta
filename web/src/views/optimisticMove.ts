@@ -9,7 +9,8 @@ export function movedLocally(mix: MixItem[], from: number, to: number): MixItem[
   const items = [...mix];
   const [moving] = items.splice(from, 1);
   items.splice(to, 0, moving);
-  const fresh = new Set([to, from, to + 1]);
+  // the song that closes the gap sits at `from` after a move down, at `from + 1` after a move up
+  const fresh = new Set([to, from < to ? from : from + 1, to + 1]);
   return items.map((item, position) => {
     const renumbered = item.position === position ? item : { ...item, position };
     if (!fresh.has(position) || position >= items.length) return renumbered;

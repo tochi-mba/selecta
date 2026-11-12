@@ -660,7 +660,8 @@ export function App() {
         ) : undefined}
       >
         <Section name={pageTitle} key={route.page}>
-          <Suspense fallback={<main className="page" id="main" aria-busy="true"><Skeleton label={`Opening ${pageTitle}`} /></main>}>
+          {/* a split page names itself straight away, so the loading shell is never a page without a heading */}
+          <Suspense fallback={<main className="page" id="main" aria-busy="true"><h1 className="display small">{pageTitle}</h1><Skeleton label={`Opening ${pageTitle}`} /></main>}>
           {route.page === 'mixes' && route.tab === 'mine' && <MyMixes {...shared} />}
           {route.page === 'mixes' && route.tab === 'browse' && <Mixes {...shared} />}
           {nothingToHear && <ListenEmpty />}

@@ -128,9 +128,7 @@ def add_routes(app, ctx) -> None:
     # Used by the mix-order middleware to distinguish genuine lost replies from
     # new writes after a restart. This checks durable records, not memory alone.
     def has_export_operation(operation: str) -> bool:
-        return bool(operation) and any(
-            job.get("operation") == operation for job in every_job()
-        )
+        return bool(operation) and any(job.get("operation") == operation for job in every_job())
 
     ctx.has_export_operation = has_export_operation
 
@@ -259,7 +257,9 @@ def add_routes(app, ctx) -> None:
             # Encoding finishing does not prove the frozen file is playable. Decode
             # every frame from the final path before it is ever reported as ready.
             try:
-                verify_export(exports / job["name"], made["seconds"])
+                # SF-0246-06: the decoded samples' checksum is kept with the frozen revision, so
+                # the file can be checked against exactly what this job froze
+                checksum = verify_export(exports / job["name"], made["seconds"])
             except (OSError, ValueError):
                 (exports / job["name"]).unlink(missing_ok=True)
                 raise ValueError(
@@ -269,7 +269,13 @@ def add_routes(app, ctx) -> None:
             store.clock.record(
                 "export_per_song", (time.monotonic() - started) / max(len(job["songs"]), 1)
             )
-            finish(job, "ready", seconds=made["seconds"], finished_at=time.time())
+            finish(
+                job,
+                "ready",
+                seconds=made["seconds"],
+                checksum=checksum or None,
+                finished_at=time.time(),
+            )
         except Exception as problem:  # noqa: BLE001 - it becomes the job's reason, not a lost thread
             finish(job, "failed", error=_words_for(problem))
         finally:
@@ -314,6 +320,7 @@ def add_routes(app, ctx) -> None:
                     "created_at": now,
                     "last_progress_at": now,
                     "seconds": None,
+                    "checksum": None,
                     "error": None,
                 }
                 cancel = threading.Event()

@@ -50,6 +50,7 @@ a = song_from_track(work, "a", make_track(bpm=120, bars=48, seed=1))
 b = song_from_track(work, "b", make_track(bpm=123, bars=48, seed=2))
 cue_a, cue_b = Cue(24, a.bar_time(24), "t", 0.8, 8), Cue(0, b.bar_time(0), "t", 0.8, 8)
 done = []
+(work / "rendering").touch()
 while not stop.exists() or not done:
     began = time.perf_counter()
     rendered = render(bass_swap_blend(a, b, cue_a, cue_b, 8))
@@ -153,10 +154,18 @@ class _Contention:
             )
         self.worker = threading.Thread(target=self._analyse, daemon=True)
         self.worker.start()
+        # measure only once the render is really under way (its songs built, its first render begun)
+        deadline = time.monotonic() + 180
+        while not (work / "rendering").exists():
+            assert self.render.poll() is None, "the render process died before rendering"
+            assert time.monotonic() < deadline, "the render never started"
+            time.sleep(0.1)
         time.sleep(0.3)  # let the burners reach full load before measuring
         return self
 
     def __exit__(self, *_: object) -> None:
+        # the paging is done: was the render still going the whole time?
+        self.rendering_throughout = self.render.poll() is None
         self.stop.set()
         (self.work / "stop").touch()
         for burner in self.burners:
@@ -212,6 +221,7 @@ def test_over_twenty_thousand_songs_page_during_a_render_on_full_cpu_and_a_nearl
     assert busy_load.written > 100 and full_load.written > 100, "analysis must be writing"
     for load in (busy_load, full_load):
         assert load.renders, "a real render ran alongside the paging"
+        assert load.rendering_throughout, "the render was still going when the paging ended"
         # a render on a starved machine is slower, but it finishes, with real audio
         for entry in load.renders:
             assert entry["seconds"] > 5 and 0.01 < entry["peak"] <= 1.0, entry

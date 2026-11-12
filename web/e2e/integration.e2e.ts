@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Route } from '@playwright/test';
+import { failNetwork, fixClock } from './harness';
 import { allRendered, audioStates, resetMix, spyOnAudio } from './helpers';
 
 const ids = (body: { mix: { song_id: number }[] }) => body.mix.map((item) => item.song_id);
@@ -155,4 +156,151 @@ test('a hundred quick looks at a page never lose what’s on it', async ({ page 
   for (const typed of ['S', 'Sl', 'Slo', 'Slow', 'Slo', 'Sl', 'Slow']) await search.fill(typed);
   await expect(page.getByText('Slow Tide').first()).toBeVisible();
   await expect(page.getByText('Morning Light')).toHaveCount(0);
+});
+
+/**
+ * P0138 (Polish): the integrated failure and recovery set, run together against the same server. Each
+ * scenario breaks one thing the way the real world does (via ./harness or a held or rewritten answer),
+ * checks the page says what happened and offers the way back, recovers, and checks that the current
+ * mix on the server was never touched by the failure.
+ */
+test.describe('P0138 integrated failure and recovery', () => {
+  const currentMix = async (request: APIRequestContext) => ids(await (await request.get('/api/mix')).json());
+  const draftName = async (request: APIRequestContext, id: number) => ((await (await request.get('/api/drafts')).json()).drafts as { id: number; name: string }[])
+    .find((item) => item.id === id)?.name;
+
+  test('P0138-01 disconnect and reconnect: the page says so, keeps the mix, and recovers by itself', async ({ page, request }) => {
+    await fixClock(page);
+    await page.goto('/mix/current/edit');
+    await expect(page.locator('.song .song-name b').first()).toHaveText('Morning Light');
+    const restore = await failNetwork(page, 'offline');
+    await expect(async () => {
+      await page.clock.runFor(5_000);
+      await expect(page.getByText('Can’t reach Selecta.').first()).toBeVisible({ timeout: 500 });
+    }).toPass({ timeout: 30_000 });
+    // what was loaded stays on screen while the server is away
+    await expect(page.locator('.song .song-name b')).toHaveCount(4);
+    await restore();
+    await expect(async () => {
+      await page.clock.runFor(5_000);
+      await expect(page.getByText('Can’t reach Selecta.')).toHaveCount(0, { timeout: 500 });
+    }).toPass({ timeout: 30_000 });
+    await expect(page.locator('.song .song-name b').first()).toHaveText('Morning Light');
+    expect(await currentMix(request)).toEqual([1, 2, 3, 4]);
+  });
+
+  test('P0138-02 a stale search answer that arrives late never replaces the newer one', async ({ page, request }) => {
+    const held: Route[] = [];
+    await page.route(/\/api\/library\?.*q=Paper/, (route) => void held.push(route));
+    await page.goto('/library');
+    await expect(page.locator('.library-rows li').first()).toBeVisible();
+    const search = page.getByRole('searchbox', { name: 'Search your library' });
+    await search.fill('Paper');
+    await expect.poll(() => held.length, { timeout: 20_000 }).toBeGreaterThan(0);
+    await search.fill('Slow');
+    await expect(page.getByRole('button', { name: /^Details for Slow Tide/ })).toBeVisible();
+    // the older answer now lands, after the newer one
+    for (const route of held.splice(0)) await route.fallback();
+    await page.waitForTimeout(1_000);
+    await expect(page.getByRole('button', { name: /^Details for Slow Tide/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Details for Paper Moon/ })).toHaveCount(0);
+    await expect(search).toHaveValue('Slow');
+    expect(await currentMix(request)).toEqual([1, 2, 3, 4]);
+  });
+
+  test('P0138-03 a failed render says why and Try again asks for it again', async ({ page, request }) => {
+    let failed = true;
+    const retries: string[] = [];
+    await page.route(/\/api\/mix(\?.*)?$/, async (route) => {
+      if (!failed || route.request().method() !== 'GET' || route.request().url().includes('draft=')) return route.fallback();
+      const answer = await route.fetch();
+      const body = await answer.json();
+      body.mix[1].seam.state = { ...body.mix[1].seam.state, status: 'failed', error: 'The render ran out of room.' };
+      return route.fulfill({ response: answer, json: body });
+    });
+    await page.route(/\/api\/mix\/\d+\/render/, (route) => {
+      retries.push(route.request().url());
+      failed = false;
+      return route.fulfill({ json: { ok: true } });
+    });
+    await page.goto('/mix/current/edit');
+    const seam = page.locator('li.seam').filter({ hasText: 'Remembered failed attempt' });
+    await expect(seam).toContainText('Remembered failed attempt: The render ran out of room.');
+    await seam.getByRole('button', { name: 'Try again' }).click();
+    await expect.poll(() => retries.length).toBe(1);
+    expect(retries[0]).toContain('retry=true');
+    await expect(page.getByText('Remembered failed attempt')).toHaveCount(0);
+    expect(await currentMix(request)).toEqual([1, 2, 3, 4]);
+  });
+
+  test('P0138-04 a failed save keeps what was typed, says why, and saves on the next try', async ({ page, request }) => {
+    const made = await (await request.post('/api/drafts', { data: { name: 'Keep me' } })).json();
+    try {
+      let failing = true;
+      await page.route('**/api/drafts/*/name', (route) => (failing
+        ? route.fulfill({ status: 507, json: { detail: 'There isn’t enough free space to save that.', code: 'storage_full' } })
+        : route.fallback()));
+      await page.goto('/mixes/mine');
+      await page.getByRole('button', { name: `More actions for ${made.name}` }).click();
+      await page.getByRole('menuitem', { name: `Rename ${made.name}` }).click();
+      const field = page.getByRole('textbox', { name: 'Name this draft' });
+      await field.fill('Renamed after a full disk');
+      await page.getByRole('button', { name: 'Save name' }).click();
+      await expect(page.locator('.rename-draft [role="alert"]')).toHaveText('There isn’t enough free space to save that.');
+      await expect(field).toHaveValue('Renamed after a full disk');
+      expect(await draftName(request, made.id)).toBe(made.name);
+      failing = false;
+      await page.getByRole('button', { name: 'Save name' }).click();
+      await expect(field).toHaveCount(0);
+      await expect(page.locator('.draft-list .draft').filter({ hasText: 'Renamed after a full disk' })).toHaveCount(1);
+      expect(await draftName(request, made.id)).toBe('Renamed after a full disk');
+      expect(await currentMix(request)).toEqual([1, 2, 3, 4]);
+    } finally {
+      await request.delete(`/api/drafts/${made.id}`);
+    }
+  });
+
+  test('P0138-05 a missing source says so, and plays again once it is back', async ({ page, request }) => {
+    await spyOnAudio(page);
+    await page.route('**/api/songs/*/audio', (route) => route.fulfill({ status: 404, body: '{}' }));
+    await page.goto('/listen');
+    await page.getByRole('button', { name: /^(Play|Resume)/ }).click();
+    await expect(page.getByText('That song isn’t available.')).toBeVisible();
+    await expect(page.getByRole('button', { name: /^(Play|Resume)/ })).toBeVisible();
+    await page.unroute('**/api/songs/*/audio');
+    await page.getByRole('button', { name: /^(Play|Resume)/ }).click();
+    await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible({ timeout: 30_000 });
+    await page.getByRole('button', { name: 'Pause', exact: true }).click();
+    expect(await currentMix(request)).toEqual([1, 2, 3, 4]);
+  });
+
+  test('P0138-06 export recovery: a lost job list and a failed export each lead back to a new export', async ({ page, request }) => {
+    const failedJob = {
+      id: 'p0138-failed', state: 'failed', scope: 'current', draft: null, mix_name: 'Current mix',
+      revision: 'p0138', songs: [{ song_id: 1, title: 'Morning Light', artist: 'Ada Reyes' }], seams: [],
+      seams_total: 3, seams_ready: 1, seconds_estimate: 600, name: 'p0138.flac', seconds: null,
+      error: 'The export stopped: the disk filled up.', created_at: 1_767_607_200, can_cancel: false, quiet_seconds: 0,
+    };
+    let jobs: 'down' | 'failed' = 'down';
+    await page.route('**/api/exports/jobs', (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      return jobs === 'down'
+        ? route.fulfill({ status: 500, json: { detail: 'Internal Server Error' } })
+        : route.fulfill({ json: { jobs: [failedJob] } });
+    });
+    await page.goto('/workshop');
+    const lost = page.locator('section.panel').filter({ hasText: 'Couldn’t check on your exports.' });
+    await expect(lost).toBeVisible();
+    jobs = 'failed';
+    await lost.getByRole('button', { name: 'Try again' }).click();
+    const row = page.locator('.exports-list .export-job[data-state="failed"]');
+    await expect(row).toContainText('Didn’t work');
+    await expect(row).toContainText('The export stopped: the disk filled up.');
+    await row.getByRole('link', { name: 'Open this mix to export it again' }).click();
+    await expect(page).toHaveURL(/\/mix\/current\/edit$/);
+    await page.getByRole('button', { name: 'Download audio' }).click();
+    await expect(page.getByRole('dialog', { name: 'Save as an audio file' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    expect(await currentMix(request)).toEqual([1, 2, 3, 4]);
+  });
 });

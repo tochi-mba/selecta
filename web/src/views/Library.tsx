@@ -48,7 +48,10 @@ const pagesFrom = (text: string | null) => {
 
 export function Library({ mix, now, player, setMixData, setView, notify, status, refreshMix, refreshStatus }: ViewProps) {
   const query = useQueryParam('q') ?? '';
-  const filter = useQueryParam('show') ?? 'all';
+  // S4-0105-10: only filters the server supports count, so an old or hand-typed `?show=genre` (or
+  // tempo, key) never reads as a filter that exists; it shows everything instead.
+  const shown = useQueryParam('show') ?? 'all';
+  const filter = FILTERS.some((option) => option.name === shown) ? shown : 'all';
   const sort = useQueryParam('sort') ?? 'title';
   const pagesAsked = useQueryParam('pages');
   const pagesWanted = useRef(pagesFrom(pagesAsked));

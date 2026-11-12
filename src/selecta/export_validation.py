@@ -7,6 +7,7 @@ it froze and a later check can compare a file against the frozen plan without tr
 """
 
 import hashlib
+import io
 from pathlib import Path
 
 import numpy as np
@@ -18,13 +19,11 @@ CHUNK_FRAMES = 65536
 
 
 def pcm_checksum(audio: np.ndarray) -> str:
-    """The sha256 of these samples as the 16-bit stereo PCM a FLAC export holds."""
-    return hashlib.sha256(_as_pcm16(audio).tobytes()).hexdigest()
-
-
-def _as_pcm16(audio: np.ndarray) -> np.ndarray:
-    clipped = np.clip(np.asarray(audio, dtype=np.float64), -1.0, 1.0 - 1.0 / 32768)
-    return np.ascontiguousarray(np.round(clipped * 32768).astype("<i2"))
+    """The sha256 of these samples as the 16-bit stereo PCM a FLAC export holds. They pass through
+    the same libsndfile conversion an export does, so the same audio gives the same checksum."""
+    buffer = io.BytesIO()
+    sf.write(buffer, audio, SAMPLE_RATE, subtype="PCM_16", format="RAW", endian="LITTLE")
+    return hashlib.sha256(buffer.getvalue()).hexdigest()
 
 
 def verify_export(path: Path, expected_seconds: float) -> str:

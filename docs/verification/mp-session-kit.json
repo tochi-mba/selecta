@@ -1,0 +1,231 @@
+{
+  "$comment": "MP person-step session kit. One entry per open MP task whose last step needs a person. Code wrote the setup, the uncoached wording, the pass rule and the automated prechecks; only the person part is left. Rendered to mp-session-kit.md by python -m selecta.audit.mp_session_kit --write and checked by tests/test_mp_session_kit.py. MP-0272-08 and MP-0274-08 are kept by their own owner and are not listed here.",
+  "version": 1,
+  "server": "python tests/e2e_server.py <port> after pnpm build in web/ (SELECTA_E2E_STRESS=1 for long, duplicate, missing, RTL and CJK names); a fresh browser profile per participant",
+  "tasks": [
+    {
+      "id": "MP-0279-08", "sitting": "visual", "who": "a named visual reviewer who did not generate the specimens",
+      "routes": [],
+      "setup": "Run the MP-0279 gallery spec; it writes mp-0279-02-states.json into its test output marked generated-not-approved.",
+      "steps": ["Open the generated specimens for every control and state.", "Accept or reject each control's state set with a reason.", "Record the decision in mp-signoffs.json, never in the generated file."],
+      "pass": "Every control's state set has an accept or reject with reviewer, date and the commit the specimens were generated at.",
+      "prechecks": [["web/e2e/mp-0279-component-gallery.e2e.ts", "MP-0279-02 rest, hover, focus, pressed and selected keep each control’s geometry and look different"]]
+    },
+    {
+      "id": "MP-0280-08", "sitting": "study", "who": "three or more novice participants, uncoached",
+      "routes": ["/mixes", "/mixes/mine", "/listen", "/library", "/workshop"],
+      "setup": "Start on /mixes with the rail open at 1440 for desktop participants, and at 375 for phone participants.",
+      "steps": ["Say: \"Find where your saved mixes are kept.\"", "Say: \"Find the page that shows what is playing now.\"", "Say: \"Find your songs, then find where Selecta tells you about problems.\"", "Only help allowed: \"What would you try?\""],
+      "pass": "Each destination found unaided, with clicks and seconds per destination recorded against the thresholds fixed before the study.",
+      "prechecks": [["web/e2e/mp-0280-navigation.e2e.ts", "MP-0280-05 the phone bar spaces its icons, captions, More and targets evenly"], ["web/e2e/mp-0280-navigation.e2e.ts", "MP-0280-06 the skip link and the focused destination stay discoverable in every rail mode"]]
+    },
+    {
+      "id": "MP-0283-08", "sitting": "study", "who": "three or more novice participants, uncoached",
+      "routes": ["/mixes"],
+      "setup": "Start on /mixes with the made-up library ready.",
+      "steps": ["Say: \"Pick a mix idea you would like and start it.\"", "Then ask: \"How closely do the songs match what the card said?\"", "Then ask: \"Will the songs play in the order you saw, and how long will it last?\""],
+      "pass": "The participant says matches are approximate and that order and length can change, without being told; answers recorded word for word.",
+      "prechecks": [["web/e2e/mp-0283-make-a-mix.e2e.ts", "MP-0283-05 an opened card disclosure shows every reason whole, with the actions still in the card"], ["web/e2e/mp-0283-make-a-mix.e2e.ts", "MP-0283-03 Play leads, Shape first follows, Save draft is the quiet third"]]
+    },
+    {
+      "id": "MP-0285-08", "sitting": "listening", "who": "a listener on real music, 30 minutes or more",
+      "routes": ["/listen"],
+      "setup": "A copy of the owner's home with real music; open Stage from /listen (F) on the main display.",
+      "steps": ["Listen for at least 30 minutes across several transitions.", "Every 10 minutes note lyric legibility at the listening distance and anything that pulls attention.", "Note any moment the visualiser or countdown competes with the lyric."],
+      "pass": "Lyrics stay legible at distance for the whole session and no Stage element is noted as distracting; notes timed and kept apart from the automated results.",
+      "prechecks": [["web/e2e/mp-0285-stage.e2e.ts", "MP-0285-02 the active lyric stays large and whole for long, CJK and right-to-left lines"], ["web/e2e/mp-0285-stage.e2e.ts", "MP-0285-04 the visualiser and countdown stay smaller than the lyrics and keep their place"]]
+    },
+    {
+      "id": "MP-0286-08", "sitting": "study", "who": "three or more participants who made a draft earlier",
+      "routes": ["/mixes/mine", "/mixes/drafts/1/edit"],
+      "setup": "Session 1: the participant makes and names two drafts and edits one. Session 2, a day later, fresh tab on /mixes/mine.",
+      "steps": ["Say: \"Carry on with the mix you were changing yesterday.\"", "Watch which draft they open and whether the edit is there.", "Ask: \"Is anything playing that you did not choose?\""],
+      "pass": "The participant opens the draft they edited, sees their edit and does not confuse it with the current mix.",
+      "prechecks": [["web/e2e/mp-0286-my-mixes.e2e.ts", "MP-0286-01 while the current mix plays, no draft looks or reads as playing"], ["web/e2e/mp-0286-my-mixes.e2e.ts", "MP-0286-07 Copy, Delete, Undo and Play each touch exactly the draft or current mix they name"]]
+    },
+    {
+      "id": "MP-0288-08", "sitting": "study", "who": "two or more DJs or expert editors",
+      "routes": ["/mix/current/edit"],
+      "setup": "Real music copy; open a transition inspector on a seam that uses the fallback and one that does not.",
+      "steps": ["Say: \"Tell me how this transition will sound and how sure Selecta is.\"", "Say: \"Hear it, then leave it exactly as it was.\"", "After the session, compare the draft before and after."],
+      "pass": "The DJ names the fallback seam correctly and the draft is byte-identical after previewing.",
+      "prechecks": [["web/e2e/mp-0288-seam-inspector.e2e.ts", "MP-0288-03 Hear it leads Good and Bad, and only previews"], ["web/e2e/mp-0288-seam-inspector.e2e.ts", "MP-0288-04 You chose, In progress, Made so far and You would hear share one column line"]]
+    },
+    {
+      "id": "MP-0289-08", "sitting": "study", "who": "two or more DJs or expert editors",
+      "routes": ["/mix/current/edit"],
+      "setup": "Real music copy with stems cached for one transition.",
+      "steps": ["Say: \"Solo the drums, change the stems for this transition and preview it.\"", "Say: \"Go to Library, then come back and use your change.\"", "Check the applied pair against the pair they edited."],
+      "pass": "The change applied is the exact pair and cells the participant edited, with no confusion noted.",
+      "prechecks": [["web/e2e/mp-0289-stem-studio.e2e.ts", "MP-0289-08 (automated part) solo, edit, preview, leave, return and Apply keep the exact pair"]]
+    },
+    {
+      "id": "MP-0290-07", "sitting": "device", "who": "the owner with a real Android phone and a real iPhone",
+      "routes": ["/listen"],
+      "setup": "Serve the site on the LAN; open Requests while a mix plays.",
+      "steps": ["Tap the search field so the software keyboard opens.", "Trigger a failure toast (stop the server briefly).", "Check Submit, Cancel and Close can each be tapped without closing the keyboard first."],
+      "pass": "No keyboard, toast or player covers Submit, Cancel or Close on either phone; screenshots recorded.",
+      "prechecks": [["web/e2e/mp-0290-requests.e2e.ts", "MP-0290-07 (automated part) the player and toasts never cover the drawer’s Submit or Cancel"]]
+    },
+    {
+      "id": "MP-0290-08", "sitting": "study", "who": "three or more uncoached requesters",
+      "routes": ["/listen"],
+      "setup": "A mix playing; the made-up library has a request that needs a bridge.",
+      "steps": ["Say: \"Ask for this song to play.\"", "When the bridge offer shows, ask: \"What will happen if you say yes?\"", "Ask: \"Is your song certain to play next?\""],
+      "pass": "The participant names the extra songs and says the outcome is not certain, without being told.",
+      "prechecks": [["web/e2e/mp-0290-requests.e2e.ts", "MP-0290-04 the extra songs and their order are spelled out before consent"], ["web/e2e/mp-0290-requests.e2e.ts", "MP-0290-05 Use this, Don’t use a bridge and Add to mix anyway each say what they will do"]]
+    },
+    {
+      "id": "MP-0291-08", "sitting": "study", "who": "three or more participants",
+      "routes": ["/library"],
+      "setup": "SELECTA_E2E_STRESS=1 so two songs share a title.",
+      "steps": ["Say: \"Leave out this one song from mixes.\" (name the second of the duplicates)", "Say: \"Now leave out these three songs together.\"", "Check exactly those song IDs changed."],
+      "pass": "Only the named song IDs change in both tasks, and the participant reports no doubt about what was selected.",
+      "prechecks": [["web/e2e/mp-0291-library.e2e.ts", "MP-0291-05 the batch rail appears only with a real selection, with the right count and scope"]]
+    },
+    {
+      "id": "MP-0292-08", "sitting": "study", "who": "two or more DJs or expert editors",
+      "routes": ["/discover", "/discover/harmonic"],
+      "setup": "Made-up library on Discover with both suggested and verified connections showing.",
+      "steps": ["Say: \"Which of these pairs has Selecta checked, and which is only a suggestion?\"", "Ask them to point at what told them."],
+      "pass": "Every pair is classed correctly, and the cue they point at is the on-screen label.",
+      "prechecks": [["web/e2e/mp-0292-discovery.e2e.ts", "MP-0292-01 both songs, their order and the kind of connection are unambiguous"], ["web/e2e/mp-0292-discovery.e2e.ts", "MP-0292-02 seam and route diagrams keep their evidence meaning"]]
+    },
+    {
+      "id": "MP-0293-08", "sitting": "study", "who": "three or more participants",
+      "routes": ["/workshop", "/workshop/sources"],
+      "setup": "Made-up library with one moved folder so Workspace shows a top issue.",
+      "steps": ["Say: \"Selecta says something needs fixing. Fix it.\"", "Do not point at any control."],
+      "pass": "The participant reaches Sources, finds the moved folder and relinks it unaided; time and wrong turns recorded.",
+      "prechecks": [["web/e2e/mp-0293-workspace-operations.e2e.ts", "MP-0293-08 the top issue can be diagnosed and repaired with the keyboard, with no hidden control on the way"]]
+    },
+    {
+      "id": "MP-0294-08", "sitting": "study", "who": "three or more participants",
+      "routes": ["/mix/current/edit", "/listening"],
+      "setup": "Real music copy with a mix ready to export; a listening study configured.",
+      "steps": ["Say: \"Save this mix as a file.\"", "Then: \"Take part in the listening test on /listening.\"", "Do not hint at which version is new."],
+      "pass": "The FLAC is saved and plays, and every trial is completed; the participant cannot say which arm is which.",
+      "prechecks": [["web/e2e/mp-0294-export-and-study.e2e.ts", "MP-0294-08 (automated part) a participant hears both versions and completes the trials without a nudge"], ["web/e2e/mp-0294-export-and-study.e2e.ts", "MP-0294-07 the study page shows no private path and nothing that unblinds a version"]]
+    },
+    {
+      "id": "MP-0295-07", "sitting": "device", "who": "the owner with a real Android phone and a real iPhone",
+      "routes": ["/mixes/mine"],
+      "setup": "Serve the site on the LAN; open a rename or delete dialog that has a text field.",
+      "steps": ["Focus the field so the software keyboard opens.", "Check the dialog's main action and Cancel can be tapped with the keyboard open.", "Check the tab bar and mini-player move aside."],
+      "pass": "Both actions are tappable and no fixed chrome covers them on either phone; screenshots recorded.",
+      "prechecks": [["web/e2e/mp-0295-overlays-and-toasts.e2e.ts", "MP-0295-07 an open software keyboard leaves the dialog action reachable and pushes chrome aside"]]
+    },
+    {
+      "id": "MP-0295-08", "sitting": "visual", "who": "a named reviewer",
+      "routes": ["/listen", "/library"],
+      "setup": "Made-up library; trigger a save notice, a copy notice and a server failure.",
+      "steps": ["Watch each routine notice while a mix plays.", "Watch the failure notice.", "Rate each 1 to 5 for calm and for noticeability."],
+      "pass": "Routine notices rated calm (4 or more) and the failure rated obvious (4 or more), with reviewer, date and commit.",
+      "prechecks": [["web/e2e/mp-0295-overlays-and-toasts.e2e.ts", "MP-0295-08 (automated part) routine notices are calm and a problem stays obvious"]]
+    },
+    {
+      "id": "MP-0296-08", "sitting": "listening", "who": "a listener on real music, 45 minutes or more",
+      "routes": ["/listen"],
+      "setup": "A copy of the owner's home with real music; motion setting on the default, then Still for the last 10 minutes.",
+      "steps": ["Listen across at least five transitions with the visualiser on.", "At each transition note whether motion drew attention away from the sound.", "Repeat one transition with Still and compare."],
+      "pass": "No transition is noted where motion overwhelmed the audible transition; notes timed and kept apart from test results.",
+      "prechecks": [["web/e2e/mp-0296-motion.e2e.ts", "MP-0296-06 Still and reduced motion remove decorative movement while the music data keeps updating"], ["web/e2e/mp-0296-motion.e2e.ts", "MP-0296-07 the visualizer draws at most 15 frames a second while playing and nothing while hidden"]]
+    },
+    {
+      "id": "MP-0297-08", "sitting": "study", "who": "three or more participants",
+      "routes": ["/mix/current/edit"],
+      "setup": "Made-up library with a mix playing; the facilitator stops the server mid-edit and restarts it after 20 seconds.",
+      "steps": ["Say: \"Change the transition between songs 3 and 4.\"", "Stop the server while they edit; restart it.", "Say: \"Finish what you were doing.\""],
+      "pass": "The participant retries and finishes, the music keeps playing and their edit is kept.",
+      "prechecks": [["web/e2e/mp-0297-loading-and-recovery.e2e.ts", "MP-0297-03 a refresh keeps selection, focus, the known list and the music"], ["web/e2e/mp-0297-loading-and-recovery.e2e.ts", "MP-0297-05 retry sits beside the failure and keeps the input, the selected transition and the next step"]]
+    },
+    {
+      "id": "MP-0298-04", "sitting": "screen-reader", "who": "the owner or a screen-reader user with NVDA and Edge",
+      "routes": ["/mixes", "/listen", "/mix/current/edit", "/library", "/workshop"],
+      "setup": "NVDA latest with Edge; made-up library; speech viewer on.",
+      "steps": ["Tab and browse each listed route; note every control read without a name or with the wrong role.", "Open and close each overlay in the inventory; note where focus lands each time.", "Note any focus that goes behind an open overlay."],
+      "pass": "Every control has a spoken name and role, focus enters and returns from every overlay, and nothing behind an overlay is reachable; signed with NVDA and Edge versions.",
+      "prechecks": [["web/e2e/mp-0277-icon-geometry.e2e.ts", "MP-0277-07 icon-only controls have a name, a hint, a focus ring and a usable target"], ["web/e2e/mp-0279-component-gallery.e2e.ts", "MP-0279-05 label, hint, invalid reason and control stay bound on screen and for assistive technology"]]
+    },
+    {
+      "id": "MP-0298-06", "sitting": "device", "who": "the owner on a real low-end laptop or phone",
+      "routes": ["/listen", "/library"],
+      "setup": "The lab budgets: CLS under 0.1, LCP under 2500ms, slowest interaction under 200ms; a 20k-song library; the visualiser playing.",
+      "steps": ["Record a Performance trace in Edge DevTools on each listed route.", "Search and page the 20k library.", "Record frame rate with the visualiser on."],
+      "pass": "The same budgets hold on the real device; numbers and device recorded beside the lab numbers.",
+      "prechecks": [["web/e2e/mp-0298-responsive-and-a11y.e2e.ts", "MP-0298-06 (lab part) layout shift, largest paint and interaction delay stay inside budget"], ["web/e2e/mp-0291-library.e2e.ts", "MP-0291-07 a 20,000-song library pages, searches and keeps focus without jumping"]]
+    },
+    {
+      "id": "MP-0298-07", "sitting": "device", "who": "the owner with Edge and Chrome on a physical device",
+      "routes": ["/listen"],
+      "setup": "Install the app from Edge and from Chrome.",
+      "steps": ["Launch the installed app; check icon, title bar and that it opens on the right page.", "Reload a deep route inside it.", "Close the window while music plays and reopen it."],
+      "pass": "Both installed apps launch, reload deep routes and reopen without duplicate audio; screenshots recorded.",
+      "prechecks": [["web/e2e/mp-0298-responsive-and-a11y.e2e.ts", "MP-0298-07 (automated part) the installable app manifest is complete"]]
+    },
+    {
+      "id": "MP-0298-08", "sitting": "sign-off", "who": "a release reviewer who did not implement MP",
+      "routes": [],
+      "setup": "The critical-regression gate below lists the automated test behind each of the five categories; run them at the release commit first.",
+      "steps": ["Confirm each gate test passed at the release commit.", "Spot-check each category by hand on the release build.", "Record any finding as P0 in the defect register."],
+      "pass": "All five categories have a green gate test and a clean hand check at one exact commit, signed by the reviewer.",
+      "prechecks": [["web/e2e/mp-baseline.mp.ts", "every measured P0 and P1 defect is in the defect register"], ["web/e2e/mp-0286-my-mixes.e2e.ts", "MP-0286-07 Copy, Delete, Undo and Play each touch exactly the draft or current mix they name"], ["web/e2e/mp-0281-mini-player.e2e.ts", "MP-0281-08 changing page or theme keeps one audio owner, and Pause stays paused"], ["web/e2e/mp-0298-responsive-and-a11y.e2e.ts", "MP-0298-03 every target meets 24px or a WCAG exception, and primary touch targets reach 44px"], ["web/e2e/mp-0294-export-and-study.e2e.ts", "MP-0294-07 the study page shows no private path and nothing that unblinds a version"]]
+    },
+    {
+      "id": "MP-0299-02", "sitting": "visual", "who": "a named visual reviewer",
+      "routes": [],
+      "setup": "The critical adjustments table below comes from the defect register; take same-data before and after screenshots at the listed viewports.",
+      "steps": ["For each row, compare before and after at the same data and viewport.", "Accept or reject each with a reason in mp-signoffs.json."],
+      "pass": "Every critical adjustment has an accept or reject, reviewer, date and commit.",
+      "prechecks": [["web/e2e/mp-baseline.mp.ts", "D-01: Library rows reflow when the window narrows without a reload"], ["web/e2e/mp-baseline.mp.ts", "every measured P0 and P1 defect is in the defect register"]]
+    },
+    {
+      "id": "MP-0299-03", "sitting": "study", "who": "three or more uncoached listeners",
+      "routes": ["/mixes", "/listen"],
+      "setup": "Fresh home (no library yet) with the made-up music folder available.",
+      "steps": ["Say: \"Set Selecta up with this music folder.\"", "Say: \"Choose a mix and play it.\"", "Say: \"Make it calmer.\" then \"Ask for a song you want.\""],
+      "pass": "Setup, choose, play, steer and request each recorded as done unaided, stalled, gave up or wrong, with time per task.",
+      "prechecks": [["web/e2e/mp-0282-onboarding.e2e.ts", "MP-0282-07 a newly ready library leads with the Make a Mix action"], ["web/e2e/mp-0284-listen.e2e.ts", "MP-0284-06 Bigger, Calmer, Something else, Good and Bad are one disclosure away and never primary"]]
+    },
+    {
+      "id": "MP-0299-04", "sitting": "study", "who": "three or more uncoached creators",
+      "routes": ["/mixes", "/mix/current/edit", "/mixes/mine"],
+      "setup": "Made-up library ready, stems cached for one transition.",
+      "steps": ["Say: \"Save a mix as a draft and change two transitions.\"", "Say: \"Use the Studio to change one of them.\"", "Say: \"Accept a bridge for a request, then save the mix as a file.\""],
+      "pass": "Draft, edit, Studio, bridge consent and export each recorded as done unaided, stalled, gave up or wrong, with time per task.",
+      "prechecks": [["web/e2e/mp-0289-stem-studio.e2e.ts", "MP-0289-04 Play and Stop preview lead the Studio and hold the one audio focus"], ["web/e2e/mp-0294-export-and-study.e2e.ts", "MP-0294-01 mix name, revision, FLAC and what it waits on read as one clear hierarchy"]]
+    },
+    {
+      "id": "MP-0299-05", "sitting": "screen-reader", "who": "the owner or an accessibility reviewer",
+      "routes": ["/mixes", "/listen", "/mix/current/edit", "/library"],
+      "setup": "Edge with NVDA; Windows contrast themes; browser zoom 200% and 400%; one real phone.",
+      "steps": ["Keyboard only: complete choose, play and edit.", "NVDA: the MP-0298-04 pass.", "Zoom 200% and 400%, and a Windows contrast theme: each listed route.", "Real phone: each listed route."],
+      "pass": "Each of keyboard, NVDA, zoom, forced colours and device has a signed outcome with versions and commit.",
+      "prechecks": [["web/e2e/mp-0298-responsive-and-a11y.e2e.ts", "MP-0298-02 200% and 400% zoom keep every page actionable, and the Studio has its list form"], ["web/e2e/mp-0276-surface-depth.e2e.ts", "MP-0276-08 System, Light, Dark and forced colours keep the same state meaning"]]
+    },
+    {
+      "id": "MP-0299-06", "sitting": "listening", "who": "an independent listener",
+      "routes": ["/listen", "/mix/current/edit"],
+      "setup": "A copy of the owner's home with real music and a rendered mix.",
+      "steps": ["Listen through at least five transitions.", "Preview one stem change in Studio.", "Pause mid-transition and resume.", "Export the FLAC and play it in another player."],
+      "pass": "No gap, overlap, double preview or stale resume heard; the FLAC decodes and matches the mix; notes kept apart from test results.",
+      "prechecks": [["tests/test_sf0246_frozen_export.py", "test_the_saved_flac_decodes_to_exactly_the_frozen_revision"], ["web/e2e/mp-0281-mini-player.e2e.ts", "MP-0281-08 changing page or theme keeps one audio owner, and Pause stays paused"]]
+    },
+    {
+      "id": "MP-0299-07", "sitting": "sign-off", "who": "a reviewer independent of MP's implementation",
+      "routes": [],
+      "setup": "tests/test_mp_evidence_audit.py proves every checked task names an implementing change and evidence.",
+      "steps": ["For each checked task, rerun or inspect its evidence independently.", "Record a named reviewer on the task line only after that."],
+      "pass": "Every checked task has an implementing SHA and a separate, named independent proof.",
+      "prechecks": [["tests/test_mp_evidence_audit.py", "test_checked_tasks_name_an_implementing_change_and_evidence"], ["tests/test_mp_evidence_audit.py", "test_verified_only_with_a_named_separate_reviewer"]]
+    },
+    {
+      "id": "MP-0299-08", "sitting": "sign-off", "who": "the owner",
+      "routes": [],
+      "setup": "The release decision sheet below is computed from the defect register; the rollback check is python tests/rollback_check.py <older checkout>.",
+      "steps": ["Write down git rev-parse HEAD.", "Confirm the open P0 count is zero and accept or defer each open P1.", "Run the rollback check.", "Sign GO or NO-GO in mp-signoffs.json."],
+      "pass": "A signed record with zero open P0, a disposition for each open P1, a rollback result, the exact SHA and GO or NO-GO.",
+      "prechecks": [["web/e2e/mp-baseline.mp.ts", "every measured P0 and P1 defect is in the defect register"]]
+    }
+  ]
+}

@@ -261,7 +261,13 @@ export function JobsPanel({ status, onJobs }: { status: ViewProps['status']; onJ
     if (jobs) onJobs?.(jobs);
   }, [jobs, onJobs]);
   if (unsupported) return <p className="hint">{words().jobsNeedRestart}</p>;
-  if (!jobs) return failed ? <Problem retry={refreshJobs}>Couldn’t find out what’s running.</Problem> : <Skeleton variant="metrics" label="Finding out what’s running" retry={refreshJobs} />;
+  if (!jobs && failed) return <Problem retry={refreshJobs}>Couldn’t find out what’s running.</Problem>;
+  // P0036: the panel and its heading are known, so they stay real; only the rows (one per job kind this
+  // build shows) are placeholders, at the job list's own tracks
+  if (!jobs) {
+    const rows = 2 + Number(flagOn('render_line')) + Number(flagOn('render.spare_time'));
+    return <section className="panel stack"><h2>What’s happening now</h2><Skeleton variant="rows" lines={rows} label="Finding out what’s running" retry={refreshJobs} /></section>;
+  }
   const left = jobs.mix.queued + jobs.mix.rendering + jobs.mix.none;
   return (
     <section className="panel stack">
@@ -655,7 +661,7 @@ export function Diagnostics() {
     void load();
   }, [load]);
   if (failed) return <Problem retry={load}>The server isn’t answering, which is the first thing to look at. Is Selecta still running?</Problem>;
-  if (!info) return <Skeleton variant="metrics" label="Gathering details" retry={() => void load()} />;
+  if (!info) return <section className="panel stack"><h2>Diagnostics</h2><Skeleton variant="rows" lines={6} label="Gathering details" retry={() => void load()} /></section>;
   const text = JSON.stringify(safeDiagnostics(info), null, 2);
   const canCopy = typeof navigator.clipboard?.writeText === 'function';
   return (

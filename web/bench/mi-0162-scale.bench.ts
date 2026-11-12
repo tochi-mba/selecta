@@ -29,6 +29,26 @@ const BUDGET = {
 };
 const WINDOW_MS = 3000;
 
+// MI-0162-08: with MI_0162_TRACE=1 each test also records a DevTools performance trace (open it in
+// the Performance panel) and prints a `MI-0162-TRACE {...}` line naming the file and its time range.
+// Off by default, because tracing costs time and the budgets above are measured without it.
+const TRACE = process.env.MI_0162_TRACE === '1';
+const traceStarted = new WeakMap<Page, string>();
+test.beforeEach(async ({ browser, page }) => {
+  if (!TRACE) return;
+  await browser.startTracing(page, {
+    path: test.info().outputPath(`${test.info().title.slice(0, 10)}-trace.json`),
+    categories: ['devtools.timeline', 'disabled-by-default-devtools.timeline', 'disabled-by-default-devtools.timeline.frame', 'blink.user_timing', 'loading', 'v8.execute'],
+  });
+  traceStarted.set(page, new Date().toISOString());
+});
+test.afterEach(async ({ browser, page }) => {
+  if (!TRACE || !traceStarted.has(page)) return;
+  await browser.stopTracing();
+  const file = test.info().outputPath(`${test.info().title.slice(0, 10)}-trace.json`);
+  console.log(`MI-0162-TRACE ${JSON.stringify({ test: test.info().title.slice(0, 10), file, started: traceStarted.get(page), ended: new Date().toISOString(), tracing_overhead_present: true })}`);
+});
+
 /** The app's own router, so the player keeps playing between pages. */
 async function go(page: Page, path: string) {
   await page.evaluate((path) => {

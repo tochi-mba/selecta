@@ -170,6 +170,14 @@ describe('movedLocally mirrors the server move', () => {
       [2, 0, null], [3, 1, 'ready'], [1, 2, 'none'], [4, 3, 'none'],
     ]);
   });
+
+  it('after a move up past several songs, resets the song that closes the gap, not an unchanged pair', () => {
+    const five = songs(ready('a'), ready('b'), ready('c'), ready('d'));
+    // 1 2 3 4 5, move 4 to the second place: 1 4 2 3 5; 2-3 is unchanged, 3-5 is new
+    expect(ids(movedLocally(five, 3, 1))).toEqual([
+      [1, 0, null], [4, 1, 'none'], [2, 2, 'none'], [3, 3, 'ready'], [5, 4, 'none'],
+    ]);
+  });
 });
 
 describe('MI-0162-05 a draft move still on its way when another draft opens', () => {

@@ -150,6 +150,29 @@
       "kind": "ops",
       "owner": "platform"
     },
+    "cloud.dmca_renewal_reminder": {
+      "label": "DMCA agent renewal reminder",
+      "about": "The maintenance leader raises an owner alert from 90 days before the DMCA designated agent's three-year registration lapses, and daily once it has.",
+      "modes": ["cloud"],
+      "kind": "ops",
+      "owner": "legal"
+    },
+    "cloud.privacy_notice_draft": {
+      "label": "Privacy notice draft",
+      "about": "Shows the draft privacy notice, marked as a draft pending legal review, under Settings so the owner and a privacy adviser can read it in place. Off by default: it is not published.",
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "legal"
+    },
+    "cloud.device_check": {
+      "label": "Device check",
+      "about": "A checklist under Settings for the real-device checks (Play here, an offline speaker, the iPhone screen-on note, seam alignment) that reads what this browser supports and writes a copyable record. Off by default.",
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
     "billing.webhooks": {
       "label": "Billing updates",
       "about": "Accept signed subscription state changes from Stripe.",

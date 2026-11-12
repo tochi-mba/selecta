@@ -6,6 +6,11 @@
       "about": "Render one transition or a reel of them, check beats by ear, and play reels in a browser.",
       "cli": ["mix", "reel", "beat-check", "listen"]
     },
+    "tools.key_benchmark": {
+      "label": "Key method benchmark",
+      "about": "Score a replacement key method against S-KEY's stored keys on this library, read-only, for choosing S-KEY's Cloud replacement.",
+      "cli": ["key-benchmark"]
+    },
     "tools.set_mix": {
       "label": "Whole-set render",
       "about": "Render a planned set straight to one file from the command line.",

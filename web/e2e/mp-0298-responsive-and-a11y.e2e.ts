@@ -1,6 +1,8 @@
 import { writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { PAGES, resetMix, rewriteJson } from './helpers';
+import { installProbe, vitalsSince } from './perf-probe';
+import { BUDGETS, LAB_KIND } from './vitals';
 
 /**
  * ADR-0298 responsive geometry, accessibility and lab performance, measured in Edge against the
@@ -244,13 +246,8 @@ test('MP-0298-05 text meets 4.5:1, large text 3:1 and field edges 3:1 in both th
 });
 
 test('MP-0298-06 (lab part) layout shift, largest paint and interaction delay stay inside budget', async ({ page }, info) => {
-  await page.addInitScript(() => {
-    const lab = { shift: 0, lcp: 0, events: [] as number[] };
-    (window as unknown as { lab: typeof lab }).lab = lab;
-    new PerformanceObserver((list) => { for (const entry of list.getEntries() as (PerformanceEntry & { value: number; hadRecentInput: boolean })[]) if (!entry.hadRecentInput) lab.shift += entry.value; }).observe({ type: 'layout-shift', buffered: true });
-    new PerformanceObserver((list) => { for (const entry of list.getEntries()) lab.lcp = Math.max(lab.lcp, entry.startTime); }).observe({ type: 'largest-contentful-paint', buffered: true });
-    new PerformanceObserver((list) => { for (const entry of list.getEntries()) lab.events.push(entry.duration); }).observe({ type: 'event', durationThreshold: 16 } as PerformanceObserverInit);
-  });
+  // P0136 / SF-0235-02 share these observers and this arithmetic (./perf-probe, ./vitals)
+  await installProbe(page);
   const results: Record<string, unknown> = {};
   for (const route of PAGES) {
     await open(page, route, 1440, 900);
@@ -259,13 +256,13 @@ test('MP-0298-06 (lab part) layout shift, largest paint and interaction delay st
     await page.keyboard.press('Control+k');
     await page.keyboard.press('Escape');
     await page.waitForTimeout(300);
-    const lab = await page.evaluate(() => (window as unknown as { lab: { shift: number; lcp: number; events: number[] } }).lab);
-    results[route] = { cls: Number(lab.shift.toFixed(3)), lcp: Math.round(lab.lcp), slowest_event: Math.round(Math.max(0, ...lab.events)) };
-    expect(lab.shift, `${route}: cumulative layout shift`).toBeLessThan(0.1);
-    expect(lab.lcp, `${route}: largest contentful paint`).toBeLessThan(2500);
-    expect(Math.max(0, ...lab.events), `${route}: slowest interaction`).toBeLessThan(200);
+    const reading = await vitalsSince(page, 0, route);
+    results[route] = { cls: reading.cls, lcp: reading.lcpMs, inp: reading.inpMs, slowest: reading.worst };
+    expect(reading.cls, `${route}: cumulative layout shift`).toBeLessThan(BUDGETS.cls);
+    expect(reading.lcpMs, `${route}: largest contentful paint`).toBeLessThan(BUDGETS.lcpMs);
+    expect(reading.inpMs, `${route}: slowest interaction`).toBeLessThan(BUDGETS.inpMs);
   }
-  writeFileSync(info.outputPath('mp-0298-06-lab.json'), JSON.stringify({ status: 'lab-candidate-one-machine', results }, null, 2));
+  writeFileSync(info.outputPath('mp-0298-06-lab.json'), JSON.stringify({ status: 'lab-candidate-one-machine', kind: LAB_KIND, results }, null, 2));
 });
 
 test('MP-0298-07 (automated part) the installable app manifest is complete', async ({ page }) => {

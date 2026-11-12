@@ -8,6 +8,7 @@ import { playLabel, SEAM_LABEL, songArtist, songTitle, transportClock } from '..
 import { orderOf } from '../state/readiness';
 import { Action, announce, Problem, Skeleton, Status, Tooltip } from '../ui/controls';
 import { useShownTheme } from '../state/prefs';
+import { useRevealed } from '../ui/Skeleton';
 import { TermHint } from '../ui/Glossary';
 import { Icon } from '../ui/Icon';
 import { useMediaQuery } from '../ui/useMediaQuery';
@@ -128,6 +129,15 @@ const CANT_SEEK = 'You can’t move around during a transition, because it plays
 /** The whole song as one strip, with its sections named. Where the seam falls is marked. During a
  * transition it stays the same control, and says why it won't move rather than quietly becoming
  * something else. */
+/** P0034: while this song's details load, the waveform's place is held at the strip's own height and
+ * margins by one flat, even block: no peaks, no shape, nothing that could be read as this song's audio.
+ * It appears only after the same short wait as every placeholder (P0038), and says nothing to a screen
+ * reader; the lyric placeholder below carries the one "Loading this song" announcement. */
+function StripPlaceholder() {
+  const revealed = useRevealed();
+  return <div className="skeleton-strip" aria-hidden="true" data-revealed={revealed} />;
+}
+
 function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDetail; time: number; seamAt: number | null; onSeek: (seconds: number) => void; seekBlocked?: boolean }) {
   const noteId = useId();
   const duration = Number.isFinite(detail.duration) && detail.duration > 0 ? detail.duration : 0;
@@ -826,6 +836,7 @@ export function Now(props: ViewProps) {
           )}
 
           {shown && !stage && <Strip detail={shown} time={now.songTime} seamAt={now.seamAt} seekBlocked={now.inSeam} onSeek={(seconds) => void player.seek(seconds)} />}
+          {!shown && item && !detailFailed && !stage && <StripPlaceholder />}
           {(on('listen.visualizers') && view.intensity !== 'quiet' && (stage || (spectrum && !lyricFocus))) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} intensity={view.intensity} spectrumShape={view.spectrumShape} />}
           {detailFailed && !shown && <Problem retry={() => setDetailAttempt((attempt) => attempt + 1)}>{hasLyrics ? 'Couldn’t load lyrics and song details.' : 'Couldn’t load this song’s details.'} Playback controls are still available.</Problem>}
           {hasLyrics && (shown ? <Lyrics detail={shown} time={now.songTime} focus={lyricFocus && !stage} canBrowse /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" retry={() => setDetailAttempt((attempt) => attempt + 1)} />)}
