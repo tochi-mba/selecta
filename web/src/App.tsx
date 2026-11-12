@@ -11,6 +11,7 @@ import { describeRoute, shownRoute } from './shell/manifest';
 import { PageLink, Shell } from './shell/Shell';
 import { markNewestUndone } from './state/activity';
 import { prefs, readFlagFromAddress, setPrefs, usePrefs } from './state/prefs';
+import { Links, Mix, MyMixes, warmRouteChunks, Workshop } from './routeChunks';
 import { watchLowPower } from './ui/lowPower';
 import { orderOf } from './state/readiness';
 import { shortcutFor, shortcutsOn } from './state/shortcuts';
@@ -24,15 +25,11 @@ import { setToastsQuiet, showProblem, showToast } from './ui/toasts';
 import { useVisiblePoll } from './ui/useVisiblePoll';
 import { ExportJobs } from './views/ExportJobs';
 import { Library } from './views/Library';
-import { Links } from './views/Links';
 import { ListenEmpty } from './views/ListenEmpty';
-import { Mix } from './views/Mix';
 import { Mixes } from './views/Mixes';
-import { MyMixes } from './views/MyMixes';
 import { Now } from './views/Now';
 import { RequestsContext, RequestsPanel, waitingRequestCount, useRequests } from './views/Requests';
 import { Start } from './views/Start';
-import { Workshop } from './views/Workshop';
 import { MixScope } from './views/mixScope';
 import { prefetchLibrary } from './views/libraryPrefetch';
 import { draftMovesWaiting } from './views/optimisticMove';
@@ -78,6 +75,11 @@ export function App() {
   const route = shownRoute(useRoute());
   const routeRef = useRef(route);
   routeRef.current = route;
+
+  // Keep the player and the first listening/browsing surfaces in the entry bundle. Once that
+  // first frame has painted, fetch the editor and secondary workspaces while the browser is idle.
+  // The route loaders contain page code only, so this can never delay or reschedule audio.
+  useEffect(() => warmRouteChunks(), []);
   const [status, setStatus] = useState<Status | null>(null);
   const [problem, setProblem] = useState('');
   const [data, setData] = useState<MixData>({ mix: [], name: 'Your mix', can_undo: false });
@@ -658,6 +660,7 @@ export function App() {
         ) : undefined}
       >
         <Section name={pageTitle} key={route.page}>
+          <Suspense fallback={<main className="page" id="main" aria-busy="true"><Skeleton label={`Opening ${pageTitle}`} /></main>}>
           {route.page === 'mixes' && route.tab === 'mine' && <MyMixes {...shared} />}
           {route.page === 'mixes' && route.tab === 'browse' && <Mixes {...shared} />}
           {nothingToHear && <ListenEmpty />}
@@ -691,11 +694,7 @@ export function App() {
           {route.page === 'discover' && <Links {...shared} tab={route.tab} />}
           {route.page === 'workshop' && <Workshop {...shared} tab={route.tab} />}
           {route.page === 'listening' && <Workshop {...shared} tab="learning" />}
-          {route.page === 'lucy' && (
-            <Suspense fallback={<main className="page" aria-busy="true"><Skeleton label="Opening Lucy" /></main>}>
-              <Lucy conversation={route.conversation} setMixData={setMixData} player={player} />
-            </Suspense>
-          )}
+          {route.page === 'lucy' && <Lucy conversation={route.conversation} setMixData={setMixData} player={player} />}
           {route.page === 'missing' && (
             <main className="page" id="main">
               <h1 className="display small">There’s nothing at this address.</h1>
@@ -703,6 +702,7 @@ export function App() {
               <PageLink to="/mixes" className="button primary">Go to Make a Mix</PageLink>
             </main>
           )}
+          </Suspense>
         </Section>
       </Shell>
       {confirmDraft && (
