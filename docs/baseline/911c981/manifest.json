@@ -1,0 +1,29 @@
+{
+ "task": "T0001",
+ "commit": "911c98106795e9ce0154afc8d9a53a886a8643ef",
+ "captured": "2026-11-12",
+ "how": "tests/baseline_capture.py: the 911c981 checkout's own server and built page, serving a made-up library from tests/e2e_server.py, in headless Edge",
+ "contracts": "tests/fixtures/api_contracts_baseline.json",
+ "files": [
+  "api/drafts.json",
+  "api/memory.json",
+  "api/mix.json",
+  "api/requests.json",
+  "api/status.json",
+  "api/storage.json",
+  "playback-trace.json",
+  "screens/edit-desktop.png",
+  "screens/edit-phone.png",
+  "screens/library-desktop.png",
+  "screens/library-phone.png",
+  "screens/mixes-desktop.png",
+  "screens/mixes-phone.png",
+  "screens/now-desktop.png",
+  "screens/now-phone.png",
+  "screens/words-desktop.png",
+  "screens/words-phone.png",
+  "screens/workshop-desktop.png",
+  "screens/workshop-phone.png",
+  "settings.json"
+ ]
+}

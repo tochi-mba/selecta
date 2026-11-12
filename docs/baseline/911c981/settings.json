@@ -1,0 +1,31 @@
+{
+ "settings_defaults": {
+  "cache_cap_bytes": 5368709120,
+  "beat_model": "small0",
+  "beat_model_fallback": "final0"
+ },
+ "steering": {
+  "energy": 0,
+  "wordplay": "sometimes",
+  "flash": "balanced",
+  "mix_language": "balanced",
+  "stems": "never",
+  "energy_arc": null,
+  "target": null,
+  "length_mode": "party",
+  "target_label": null
+ },
+ "storage": {
+  "used_bytes": 38991696,
+  "cache_bytes": 0,
+  "kept_bytes": 38991696,
+  "budget_bytes": 5368709120,
+  "largest_budget_bytes": 37688369152,
+  "smallest_budget_bytes": 536870912,
+  "free_bytes": 39835852800,
+  "total_bytes": 510659653632
+ },
+ "browser_storage": {
+  "selecta-now": "{\"songId\":1,\"position\":0,\"time\":4.950997732426304}"
+ }
+}
