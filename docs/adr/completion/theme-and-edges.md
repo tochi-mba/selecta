@@ -65,8 +65,8 @@ The installed-app and non-Edge rows still need a person with those browsers (see
 
 | Graphic | Source of data | Light / dark treatment | Non-colour cue | Owner |
 |---|---|---|---|---|
-| Waveform + playhead | analysed peaks; player clock | `--text-soft` peaks, `--playing` playhead | playhead line + time text | `views/Now.tsx` |
-| Seek target (ghost) | pointer/keyboard before release | dashed `--focus` marker | "Seek to m:ss" in the time readout | `views/Now.tsx` |
+| Waveform + playhead | analysed peaks; player clock | `--text-soft` peaks, `--playing` playhead | playhead line + time text | `views/NowStrip.tsx` |
+| Seek target (ghost) | pointer/keyboard before release | dashed `--focus` marker | "Seek to m:ss" in the time readout | `views/NowStrip.tsx` |
 | Transition countdown | seam switch time + beat grid | `--status-working` | beats/bars as numbers | `views/Now.tsx` |
 | Spectrum (15 styles) | `AnalyserNode` of the real mix | `--accent` / `--ok` read from tokens at draw time; `CanvasText`/`Highlight` in forced colours | none needed (decorative, `aria-hidden`) | `views/spectrumVisuals.ts` |
 | Seam diagram | requested vs rendered move | family shapes | label of the move actually playing | `ui/MusicObjects.tsx` `SeamDiagram` |

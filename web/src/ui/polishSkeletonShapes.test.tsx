@@ -6,7 +6,8 @@ import { Skeleton } from './Skeleton';
 const node = (globalThis as unknown as { process: { cwd(): string; getBuiltinModule(id: string): unknown } }).process;
 const fs = node.getBuiltinModule('node:fs') as { readFileSync(path: string, encoding: 'utf8'): string };
 const polish = fs.readFileSync(`${node.cwd()}/src/styles/polish.css`, 'utf8');
-const now = fs.readFileSync(`${node.cwd()}/src/views/Now.tsx`, 'utf8');
+// the Listen view and its seek strip (split into NowStrip.tsx for the file length limit)
+const now = ['Now.tsx', 'NowStrip.tsx'].map((file) => fs.readFileSync(`${node.cwd()}/src/views/${file}`, 'utf8')).join('\n');
 
 /** UI/UX polish ADR-0036 P0032, P0034 and P0036: the shapes behind each content-shaped placeholder.
  * The rendered geometry is measured in web/e2e/polish-p0032-p0036-skeleton-geometry.e2e.ts. */

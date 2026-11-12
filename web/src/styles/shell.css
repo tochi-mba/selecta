@@ -257,6 +257,11 @@ a.button:hover { border-color: var(--text); }
   /* and the name breaks between words wherever a word fits */
   .crumbs li { overflow-wrap: break-word; }
 }
+/* SF-0207-05: at 320px the four actions leave the name about 80px, so a one-word name ("Workspace",
+   "Diagnostics") still broke inside the word; the smaller step keeps every page name's words whole */
+@media (max-width: 360px) {
+  .crumbs { font-size: var(--text-xs); }
+}
 
 .mini {
   position: fixed;

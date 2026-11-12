@@ -166,13 +166,21 @@ test('MP-0280-04 deep crumbs and a long draft name stay whole and readable at na
   const made = await (await request.post('/api/drafts', { data: { name: long } })).json();
   try {
     for (const width of [320, 375, 768]) {
-      for (const route of [`/mixes/drafts/${made.id}/edit`, '/workshop/diagnostics', '/discover/harmonic']) {
+      for (const route of [`/mixes/drafts/${made.id}/edit`, '/workshop/diagnostics', '/discover/harmonic', '/workshop', '/discover', '/mix/current/edit']) {
         await open(page, route, width);
         const where = `${route} at ${width}px`;
         const found = await page.evaluate(() => {
           const crumbs = document.querySelector('.crumbs')!;
           const actions = document.querySelector('.context-actions')!.getBoundingClientRect();
-          const items = [...crumbs.querySelectorAll<HTMLElement>('li')].map((item) => ({ text: item.textContent, clipped: item.scrollWidth > item.clientWidth + 1, right: item.getBoundingClientRect().right, size: parseFloat(getComputedStyle(item).fontSize) }));
+          // a word wider than its crumb would break letter by letter ("Workspac/e"); measure it with breaking off
+          const splitsWord = (item: HTMLElement) => {
+            const before = item.style.overflowWrap;
+            item.style.overflowWrap = 'normal';
+            const split = item.scrollWidth > item.clientWidth + 1;
+            item.style.overflowWrap = before;
+            return split;
+          };
+          const items = [...crumbs.querySelectorAll<HTMLElement>('li')].filter((item) => item.getClientRects().length > 0).map((item) => ({ text: item.textContent, clipped: item.scrollWidth > item.clientWidth + 1, splitsWord: splitsWord(item), right: item.getBoundingClientRect().right, size: parseFloat(getComputedStyle(item).fontSize) }));
           const heading = document.querySelector<HTMLElement>('main#main h1');
           return { items, actionsLeft: actions.left, overflow: document.documentElement.scrollWidth - window.innerWidth, heading: heading ? { text: heading.textContent, clipped: heading.scrollWidth > heading.clientWidth + 1 || heading.scrollHeight > heading.clientHeight + 1 } : null };
         });
@@ -180,6 +188,7 @@ test('MP-0280-04 deep crumbs and a long draft name stay whole and readable at na
         expect(found.items.length, `${where}: crumbs`).toBeGreaterThanOrEqual(1);
         for (const item of found.items) {
           expect(item.clipped, `${where}: crumb “${item.text}” is clipped`).toBe(false);
+          expect(item.splitsWord, `${where}: crumb “${item.text}” breaks inside a word`).toBe(false);
           expect(item.right, `${where}: crumb “${item.text}” runs under the actions`).toBeLessThanOrEqual(found.actionsLeft + 0.5);
           expect(item.size, `${where}: crumb text too small`).toBeGreaterThanOrEqual(12);
         }

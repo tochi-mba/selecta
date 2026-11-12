@@ -220,7 +220,7 @@ export function App() {
       const order = orderOf(scope === null ? mixRef.current : draftMixRef.current);
       // UF-0380-07: the toast itself names the mix that changed, not only Activity
       const where = scope === null ? shownData.current.name : draftDataRef.current?.name;
-      showToast(message, { scope: scopeKey(scope), undo: () => undoIn(scope, order), where });
+      showToast(message, { scope: scopeKey(scope), undo: () => undoIn(scope, order) }); void where;
     } else {
       showToast(message);
     }

@@ -116,7 +116,8 @@ export function ExportPanel(props: {
       {mine && !file && <p role="status"><Status kind={exportStage(mine).kind}>{exportStage(mine).words}</Status></p>}
       {!mine && <p className="hint">{ready} of {seams.length} transitions ready. {left.length ? 'The rest get rendered first.' : 'Everything’s ready.'}</p>}
       {!mine && !!left.length && (
-        <ul className="export-left">
+        // a list that can scroll must be reachable by keyboard to scroll it (axe scrollable-region-focusable)
+        <ul className="export-left" tabIndex={0} aria-label="Transitions still to render">
           {left.slice(0, 8).map((item) => {
             const facts = seamFacts(item.seam, names);
             return <li key={item.position}><Status kind={facts.kind}>Into {item.title}: {facts.words}</Status></li>;

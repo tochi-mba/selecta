@@ -280,6 +280,9 @@ button[aria-disabled='true'] { cursor: progress; }
     background: Highlight;
     color: HighlightText;
     border: 2px solid Highlight;
+    /* without this the browser paints its Canvas-coloured text backplate under the label, and
+       HighlightText on that backplate hid "Play" entirely (owner-delegated forced-colours check 2026-11-12) */
+    forced-color-adjust: none;
   }
   button[aria-pressed='true'], .nav a[aria-current='page'],
   .inspector-tabs button[aria-selected='true'],
