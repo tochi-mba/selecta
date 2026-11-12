@@ -94,10 +94,13 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
   };
 
   const on = useFlags();
+  // SF-0204-02: one primary action. Continue editing leads when offered, then the drafts (first Edit or
+  // Start your first draft), and the current mix only when drafts are off.
+  const continuing = !!recent && on('mymixes.continue_working') && on('editor');
   return (
     <main className="page mixes my-mixes" id="main">
       <h1 className="display small">My Mixes</h1>
-      {recent && on('mymixes.continue_working') && on('editor') && <section className="panel stack" aria-label="Continue working">
+      {recent && continuing && <section className="panel stack" aria-label="Continue working">
         <h2>Continue working</h2>
         <p>Return to <b>{recent.name}</b> at its last saved song order. This only opens the editor - no playback starts and no pending Studio edits are applied.</p>
         <div className="row wrap">
@@ -126,9 +129,9 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
       </section>}
       {problem && <p className="warn" role="alert">{problem}</p>}
       {mix.length > 0
-        ? <CurrentMix prominent mix={mix} mixName={mixName} now={now} player={player} setView={setView} />
-        : <NoCurrentMix />}
-      {on('drafts') && <Drafts notify={notify} openDraft={openDraft} playDraft={playDraft} setView={setView} />}
+        ? <CurrentMix prominent lead={!continuing && !on('drafts')} mix={mix} mixName={mixName} now={now} player={player} setView={setView} />
+        : <NoCurrentMix lead={!continuing && !on('drafts')} />}
+      {on('drafts') && <Drafts lead={!continuing} notify={notify} openDraft={openDraft} playDraft={playDraft} setView={setView} />}
     </main>
   );
 }

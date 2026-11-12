@@ -155,3 +155,26 @@ def test_pinning_again_can_freeze_but_never_thaw(world):
         eviction.pin(connection, WS, "rev", [ids[1]], frozen=True)
         eviction.pin(connection, WS, "rev", [ids[1]])
         assert ids[1] in eviction.protected_ids(connection, WS)
+
+
+def test_exports_are_never_evicted_and_never_use_the_derived_budget(world):
+    """Kept exports count against storage, not the derived budget (ADR-0402), and leave only by
+    plan expiry (`storage.export_expiry`, SC-0397-05), which tombstones them and gives their
+    bytes back. Eviction must neither take one nor count one towards being over budget."""
+    from selecta.work.provenance import build
+
+    engine, _, files, ids = world
+    export_hash = h(99)
+    with transaction(engine, WS) as connection:
+        connection.execute(artifacts.insert().values(
+            id="export-1", workspace_id=WS, kind="export", input_hash=export_hash,
+            keys=[f"w/{WS}/export/{export_hash}/attempts/mix.flac"], checksum="c" * 64,
+            size_bytes=500 * KB, provenance=build({"songs": ["a" * 64]}, {"export": 1}),
+            created_at=0.0, last_used_at=0.0,  # the least recently used row of all
+        ))
+    result = eviction.evict(engine, WS, files, budget_bytes=50 * KB)
+    assert "export-1" not in result.removed
+    assert result.removed == (ids[1],), "only derived bytes count: 60 KB over a 50 KB budget"
+    assert "export-1" in left(engine)
+    with transaction(engine, WS) as connection:
+        connection.execute(artifacts.delete().where(artifacts.c.id == "export-1"))

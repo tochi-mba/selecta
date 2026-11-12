@@ -1,1 +1,0 @@
-{"extends":"./tsconfig.json","compilerOptions":{"types":["node"],"noEmit":true},"include":["e2e/vitals.ts","e2e/vitals.test.ts","e2e/perf-probe.ts","e2e/p0136-responsiveness.e2e.ts","e2e/integration.e2e.ts","e2e/mp-0298-responsive-and-a11y.e2e.ts"]}

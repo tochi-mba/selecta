@@ -63,6 +63,9 @@ CREATE TABLE IF NOT EXISTS analysis (
     error TEXT,
     analysed_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+-- r8d: status polls count current analyses and the library asks for the newest version. Rows
+-- carry sections and timbre, so counting them without this reads every page of the table.
+CREATE INDEX IF NOT EXISTS analysis_version ON analysis(version, error);
 
 CREATE TABLE IF NOT EXISTS lyrics (
     song_id INTEGER PRIMARY KEY REFERENCES songs(id) ON DELETE CASCADE,
@@ -71,6 +74,8 @@ CREATE TABLE IF NOT EXISTS lyrics (
     plain TEXT,
     fetched_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+-- r8d: status polls count synced lyrics; without this each count reads every lyric's text.
+CREATE INDEX IF NOT EXISTS lyrics_status ON lyrics(status);
 
 CREATE TABLE IF NOT EXISTS song_overrides (
     song_id INTEGER PRIMARY KEY REFERENCES songs(id) ON DELETE CASCADE,
@@ -95,6 +100,10 @@ CREATE TABLE IF NOT EXISTS seam_book (
     status TEXT NOT NULL DEFAULT 'new',
     UNIQUE(song_a, song_b, kind, payload)
 );
+-- r8d: Discover reads one kind best first, and every connect looks for legacy kinds, so neither
+-- walks every word link. Removing a song finds its links as song_b without a full scan too.
+CREATE INDEX IF NOT EXISTS seam_book_kind ON seam_book(kind, score DESC, id);
+CREATE INDEX IF NOT EXISTS seam_book_song_b ON seam_book(song_b);
 
 CREATE TABLE IF NOT EXISTS ratings (
     id INTEGER PRIMARY KEY,
@@ -106,6 +115,11 @@ CREATE TABLE IF NOT EXISTS ratings (
     tags TEXT NOT NULL DEFAULT '[]',
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+-- r8d: the foreign keys' own lookups. Without these, removing one song or one link scans every
+-- rating (SQLite doesn't index a foreign key by itself), and a relink counts them the same way.
+CREATE INDEX IF NOT EXISTS ratings_seam ON ratings(seam_id);
+CREATE INDEX IF NOT EXISTS ratings_song_a ON ratings(song_a);
+CREATE INDEX IF NOT EXISTS ratings_song_b ON ratings(song_b);
 
 CREATE TABLE IF NOT EXISTS drafts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

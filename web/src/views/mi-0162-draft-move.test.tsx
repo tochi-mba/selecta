@@ -164,7 +164,8 @@ describe('movedLocally mirrors the server move', () => {
   const ids = (mix: MixItem[]) => mix.map((item) => [item.song_id, item.position, item.seam?.state.status ?? null]);
   it('renumbers and marks the three new pairs as not rendered, like move_song', () => {
     expect(ids(movedLocally(start, 3, 1))).toEqual([
-      [1, 0, null], [4, 1, 'none'], [2, 2, 'none'], [3, 3, 'none'],
+      // 1 4 2 3: the moved song was last, so no song closes its gap and 2-3 keeps its seam
+      [1, 0, null], [4, 1, 'none'], [2, 2, 'none'], [3, 3, 'ready'],
     ]);
     expect(ids(movedLocally(start, 0, 2))).toEqual([
       [2, 0, null], [3, 1, 'ready'], [1, 2, 'none'], [4, 3, 'none'],

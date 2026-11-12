@@ -1,4 +1,4 @@
-import { DRAFT_BANNER, PRIVACY_NOTICE_DRAFT } from './privacyNoticeDraft';
+import { DRAFT_BANNER, PRIVACY_NOTICE_DRAFT } from './privacyNoticeDraftText';
 
 /** The draft privacy notice under Settings, behind the off-by-default `cloud.privacy_notice_draft`
  * flag (SC-0412-01). An explicit `true` is needed, so a server that doesn't know the flag never

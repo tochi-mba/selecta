@@ -21,12 +21,11 @@ from collections.abc import Callable, Iterable
 from dataclasses import asdict
 from pathlib import Path
 
-import soundfile as sf
-
 from selecta import db, flags, jobs
 from selecta.analysis.song import SongInfo, load_song
 from selecta.arrange import can_arrange
 from selecta.audit.checks import AuditReport
+from selecta.cache_care import write_flac_atomically
 from selecta.config import SAMPLE_RATE, Settings
 from selecta.eta import JobClock, combine
 from selecta.lyrics.align import Aligner
@@ -221,6 +220,7 @@ class SeamStore:
         self._records: dict[Path, tuple[tuple[int, int], dict]] = {}
         self._asked_by_requests: set[str] = set()
         self.next_idle_job: Callable[[], SeamRequest | None] = lambda: None
+        self.when_idle: Callable[[], None] = lambda: None  # tidying, once nothing waits
         self._worker: subprocess.Popen | None = None
         self.prepare_links = False
         self._cache = SongCache(capacity=7)
@@ -683,6 +683,7 @@ class SeamStore:
                 self._running_rank = PREPARING
                 return request
             jobs.mark_mix_rendering(self.settings.home, False)
+            self.when_idle()
             self._arrived.wait(IDLE_CHECK_SECONDS)
 
     def _give_way(self) -> bool:
@@ -944,9 +945,9 @@ class SeamStore:
         folder = self.folder(request.key)
         folder.mkdir(parents=True, exist_ok=True)
         script = rendered.script
-        sf.write(folder / "clip.flac", rendered.audio, SAMPLE_RATE, subtype="PCM_16")
+        write_flac_atomically(folder / "clip.flac", rendered.audio, SAMPLE_RATE)
         heard, clip_at = in_context(rendered, PREVIEW_SECONDS, PREVIEW_SECONDS, self._cache)
-        sf.write(folder / "preview.flac", heard, SAMPLE_RATE, subtype="PCM_16")
+        write_flac_atomically(folder / "preview.flac", heard, SAMPLE_RATE)
         result = {
             "status": "ready",
             "key": request.key,

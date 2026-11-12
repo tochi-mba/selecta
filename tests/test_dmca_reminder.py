@@ -26,8 +26,8 @@ def test_the_setting_must_be_a_real_date():
     assert dmca.configured({dmca.ENV: " 2026-11-12 "}) == REGISTERED
 
 
-def test_the_alert_is_raised_once_a_week_while_due_and_names_the_date(cloud_engine, clock):
-    with transaction(cloud_engine) as conn:
+def test_the_alert_is_raised_once_a_week_while_due_and_names_the_date(sqlite_engine, clock):
+    with transaction(sqlite_engine) as conn:
         assert dmca.remind(conn, REGISTERED, dt.date(2029, 1, 1)) is None
         first = dmca.remind(conn, REGISTERED, dt.date(2029, 9, 1))
         assert first is not None
@@ -36,16 +36,16 @@ def test_the_alert_is_raised_once_a_week_while_due_and_names_the_date(cloud_engi
     assert len(found) == 1 and "2029-11-12" in found[0].summary
     assert found[0].metadata["state"] == "due"
     clock.advance(dmca.REPEAT_DUE_S + 1)
-    with transaction(cloud_engine) as conn:
+    with transaction(sqlite_engine) as conn:
         assert dmca.remind(conn, REGISTERED, dt.date(2029, 9, 9)) is not None
 
 
-def test_a_lapsed_designation_is_raised_daily(cloud_engine, clock):
-    with transaction(cloud_engine) as conn:
+def test_a_lapsed_designation_is_raised_daily(sqlite_engine, clock):
+    with transaction(sqlite_engine) as conn:
         assert dmca.remind(conn, REGISTERED, dt.date(2030, 1, 1)) is not None
         assert dmca.remind(conn, REGISTERED, dt.date(2030, 1, 1)) is None
     clock.advance(dmca.REPEAT_LAPSED_S + 1)
-    with transaction(cloud_engine) as conn:
+    with transaction(sqlite_engine) as conn:
         assert dmca.remind(conn, REGISTERED, dt.date(2030, 1, 2)) is not None
         assert "lapsed" in alerts.recent(conn, kind=dmca.KIND)[0].summary
 
@@ -57,4 +57,4 @@ def test_the_maintenance_plan_runs_it_daily_only_when_the_date_is_set(cloud_engi
     plan = maintain.Plan()
     maintain._dmca(cloud_engine, {dmca.ENV: "2020-01-01"}, plan)
     (task,) = plan.tasks
-    assert task.name == "dmca_renewal" and task.interval_s == maintain.DAY_S
+    assert task.name == "dmca_renewal" and task.every_s == maintain.DAY_S

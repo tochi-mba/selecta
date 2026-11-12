@@ -43,6 +43,9 @@ class Limits:
     max_cost_ratio: float = 1.25
 
 
+DEFAULT_LIMITS = Limits()
+
+
 @dataclass(frozen=True)
 class Metrics:
     deployment_id: str
@@ -115,7 +118,7 @@ def compare(
     candidate_id: str,
     previous_id: str,
     since: float,
-    limits: Limits = Limits(),
+    limits: Limits = DEFAULT_LIMITS,
 ) -> Comparison:
     new, old = metrics(conn, candidate_id, since), metrics(conn, previous_id, since)
     if new.turns < limits.min_turns:
@@ -141,7 +144,7 @@ def advance(
     candidate_id: str,
     previous_id: str,
     since: float,
-    limits: Limits = Limits(),
+    limits: Limits = DEFAULT_LIMITS,
     *,
     dry_run: bool = False,
 ) -> Step:

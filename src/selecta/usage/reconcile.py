@@ -206,7 +206,8 @@ def storage_drift(connection: Connection, workspace_id: str | None = None) -> li
                 Drift(
                     "storage",
                     workspace,
-                    f"the ledger records {ledger_bytes:.0f} bytes but {committed:.0f} are committed",
+                    f"the ledger records {ledger_bytes:.0f} bytes but "
+                    f"{committed:.0f} are committed",
                     ledger_bytes,
                     committed,
                 )

@@ -6,7 +6,8 @@ Reads every Python, web unit, browser (Edge) and bench test file at the pinned b
 and in the working tree, takes the name of every test in each, and follows git's rename
 detection from the baseline to HEAD. Each baseline test is then `kept` (same name in the same or
 renamed file), `moved` (same name in another file of the same kind) or `not found` (dropped or
-renamed; a person decides which). The report is a machine map for a person to review; it proves no assertion is equivalent.
+renamed; a person decides which). The report is a machine map for a person to review; it does
+not prove any assertion is equivalent.
 """
 
 from __future__ import annotations

@@ -11,7 +11,11 @@ import { MenuItem } from '../ui/primitives';
 import { MixSignature } from '../ui/MusicObjects';
 import { ViewProps } from './shared';
 
-type Props = Pick<ViewProps, 'notify' | 'openDraft' | 'playDraft' | 'setView'>;
+type Props = Pick<ViewProps, 'notify' | 'openDraft' | 'playDraft' | 'setView'> & {
+  /** SF-0204-02: My Mixes has one primary action, and the drafts own it (the first draft's Edit, or
+   * starting the first draft) unless the page leads with something else. */
+  lead?: boolean;
+};
 
 const CHECK_EVERY_MS = 4000;
 
@@ -82,7 +86,7 @@ function RenderLine({ inLine, current, onMove, onLeave }: {
 
 /** Mixes being worked on. Nothing here touches what's playing until you press Play. Saved and able to
  * be heard are different things, so a draft says each of them. */
-export function Drafts({ notify, openDraft, playDraft }: Props) {
+export function Drafts({ notify, openDraft, playDraft, lead = true }: Props) {
   const [list, setList] = useState<DraftList | null>(null);
   const [problem, setProblem] = useState('');
   const [failures, setFailures] = useState<Record<number, string>>({});
@@ -285,7 +289,7 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
           <div className="empty-state">
             <h3>A place for your next mix</h3>
             <p>Create a draft, or save a copy of your current mix. Editing a draft leaves playback alone.</p>
-            <Action className="primary" working="Starting…" run={startNew}>Start your first draft</Action>
+            <Action className={lead ? 'primary' : undefined} working="Starting…" run={startNew}>Start your first draft</Action>
           </div>
         )}
         {drafts.length > 0 && shownDrafts.length === 0 && (
@@ -296,7 +300,7 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
         )}
         {shownDrafts.length > 0 && (
           <ul className={shownDrafts.length > 20 ? 'draft-list density long' : 'draft-list density'}>
-            {shownDrafts.slice(0, visibleCount).map((draft) => {
+            {shownDrafts.slice(0, visibleCount).map((draft, index) => {
               const facts = draftReadiness(draft);
               const failure = failures[draft.id];
               return (
@@ -330,7 +334,7 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
                     {failure && <p className="warn" role="alert">{failure}</p>}
                   </div>
                   <div className="row wrap draft-actions">
-                    {on('editor') && <button className="primary" aria-label={`Edit ${who(draft)}`} onClick={() => openDraft?.(draft.id)}>Edit</button>}
+                    {on('editor') && <button className={lead && index === 0 ? 'primary' : undefined} aria-label={`Edit ${who(draft)}`} onClick={() => openDraft?.(draft.id)}>Edit</button>}
                     <Action disabled={draft.songs === 0} working="Starting…" title={draft.songs === 0 ? 'Add a song first' : 'Plays this now. What was playing is kept in your drafts.'} aria-label={`Play ${who(draft)}`} run={() => playDraft?.(draft.id)}>
                       Play
                     </Action>

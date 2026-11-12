@@ -184,6 +184,34 @@ def _pinned_ready_seams(settings):
     return keys
 
 
+def _protecting(settings, keys):
+    """The seams the mix and the render line use, recorded each time they're asked for, so a prune
+    from any process (the app lowering the limit, a stem split) leaves them alone."""
+
+    def keep() -> set[str]:
+        found = keys()
+        cache_care.remember_protected(settings, found)
+        return found
+
+    return keep
+
+
+def _tidier(settings):
+    """Tidy the caches when the worker first has nothing to do, and every few hours after, so it
+    never runs while the mix is waiting for a seam."""
+    state = {"at": float("-inf")}
+
+    def tidy() -> None:
+        if time.monotonic() - state["at"] < TIDY_EVERY_SECONDS:
+            return
+        state["at"] = time.monotonic()
+        swept = cache_care.tidy(settings)
+        if swept.removed or swept.linked:
+            print(f"Tidied the caches: {swept.removed}, {swept.linked} clips shared", flush=True)
+
+    return tidy
+
+
 def _read_requests(store: SeamStore, app_input: TextIO) -> None:
     for line in app_input:
         if line.strip():
@@ -212,7 +240,8 @@ def main() -> None:
     store.next_mix_seam, mix_keys, store.mix_moves = _mix_seams(store, settings)
     store.next_line_seam, line_keys, store.draft_moves = _line_seams(store, settings)
     pinned = _pinned_ready_seams(settings)
-    store.keep_for_now = lambda: mix_keys() | line_keys() | pinned()
+    store.keep_for_now = _protecting(settings, lambda: mix_keys() | line_keys() | pinned())
+    store.when_idle = _tidier(settings)
     store.run_forever()
 
 

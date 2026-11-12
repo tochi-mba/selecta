@@ -3,7 +3,8 @@
 `docs/saas/13-hosting-and-cost.md` §13.5 orders the steps after any restore: replay the
 deletions ledger, run storage reconciliation, re-run Stripe reconciliation, expire leases, then
 reopen. Before reopening, the drill also checks that every song in the deletions ledger is still
-hidden (SC-0412-03: data deleted since the backup stays gone). `after_restore` runs them in that order against the restored database, stops at the
+hidden (SC-0412-03: data deleted since the backup stays gone). `after_restore` runs them in
+that order against the restored database, stops at the
 first failure (customer traffic stays closed), and returns a report with each step's time. The
 monthly drill (`infra/backup/restore_drill.sh`) restores last night's dump into a scratch
 database first and passes the time the restore began, so the report's total is the whole

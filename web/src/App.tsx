@@ -10,6 +10,7 @@ import { buildCommands } from './shell/commands';
 import { describeRoute, shownRoute } from './shell/manifest';
 import { PageLink, Shell } from './shell/Shell';
 import { markNewestUndone } from './state/activity';
+import { keepIfSame, keepUnchangedMix } from './state/keepUnchanged';
 import { prefs, readFlagFromAddress, setPrefs, usePrefs } from './state/prefs';
 import { Links, Mix, MyMixes, warmRouteChunks, Workshop } from './routeChunks';
 import { watchLowPower } from './ui/lowPower';
@@ -100,6 +101,8 @@ export function App() {
   const mix = data.mix;
   const mixRef = useRef<MixItem[]>([]);
   mixRef.current = mix;
+  const shownData = useRef(data);
+  shownData.current = data;
 
   // an edit's answer is newer than a check that was already on its way, so that check is ignored
   const mixChanges = useRef(0);
@@ -112,7 +115,8 @@ export function App() {
     const seen = mixChanges.current;
     get<MixData>('/mix')
       .then((next) => {
-        if (seen === mixChanges.current) setMixData(next);
+        // r8c: an answer that changes nothing keeps what's shown, so a long editor doesn't redraw
+        if (seen === mixChanges.current) setMixData(keepUnchangedMix(shownData.current, next));
       })
       .catch((error: Error) => {
         // a stopped server is shown once, across the top, not as a stream of messages
@@ -128,7 +132,7 @@ export function App() {
     const work = get<Status>('/status')
       .then((next) => {
         setFlags(next.flags);
-        setStatus(next);
+        setStatus((before) => keepIfSame(before, next));
         setProblem('');
       })
       .catch((error: Error) => setProblem(error.message))
@@ -163,9 +167,12 @@ export function App() {
     const seen = draftChanges.current;
     get<MixData>(`/mix?draft=${asked}`)
       .then((next) => {
-        // MI-0162-05: nor while draft moves are on their way, which this read may predate
-        if (draftRef.current !== asked || seen !== draftChanges.current || draftMovesWaiting()) return;
-        setDraftMix(next);
+        // MI-0162-05: nor while draft moves are on their way, which this read may predate. Only moves
+        // already on screen in this draft count: one not shown yet has none, and another draft's moves
+        // must not leave it on its loading skeleton.
+        const movesShown = draftMovesWaiting() && draftDataRef.current?.draft?.id === asked;
+        if (draftRef.current !== asked || seen !== draftChanges.current || movesShown) return;
+        setDraftMix(keepUnchangedMix(draftDataRef.current?.draft?.id === asked ? draftDataRef.current : null, next));
         setDraftGone(false);
       })
       .catch((error: Error) => {
@@ -353,11 +360,12 @@ export function App() {
 
   // A draft being rendered has to show that as it happens too.
   const draftBusy = !!draftData && (draftData.draft?.place != null || draftData.mix.some((item) => ['queued', 'rendering'].includes(item.seam?.state.status ?? '')));
-  useVisiblePoll(refreshDraft, 2000, draftBusy);
+  // r8c: while the server is away only the status check keeps trying; coming back reads both again
+  useVisiblePoll(refreshDraft, 2000, draftBusy && !problem);
 
   // Anything still rendering gets checked often, so its status changes on its own.
   const busy = mix.some((item) => ['none', 'queued', 'rendering'].includes(item.seam?.state.status ?? ''));
-  useVisiblePoll(refreshMix, 1500, busy);
+  useVisiblePoll(refreshMix, 1500, busy && !problem);
 
   const playing = mix[now.position];
   const active = now.phase !== 'idle';

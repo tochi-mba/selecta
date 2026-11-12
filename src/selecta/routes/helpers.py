@@ -6,6 +6,7 @@ import json
 import sqlite3
 import threading
 import time
+from collections.abc import Callable
 
 from fastapi import HTTPException
 
@@ -59,14 +60,36 @@ def add_routes(app, ctx) -> None:
             if not db.is_analysed(conn, song, ANALYSIS_VERSION)
         ]
 
-    def read_with_windows(conn: sqlite3.Connection, draft: int | None = None) -> list[dict]:
+    def one_look(scan: bool = True) -> Callable[[str], dict]:
+        """Seam states for reading many mixes in one request: one look at which seams exist on
+        disk (unless `scan` is off, for a handful of seams), and each seam read at most once
+        however many mixes, or passes over a mix, ask for it."""
+        reader = store.status_reader() if scan else store.status
+        seen: dict[str, dict] = {}
+
+        def status(key: str) -> dict:
+            if key not in seen:
+                seen[key] = reader(key)
+            # a copy each time, since a mix's own reading adds to its states
+            return dict(seen[key])
+
+        return status
+
+    def read_with_windows(
+        conn: sqlite3.Connection,
+        draft: int | None = None,
+        rows: list | None = None,
+        status: Callable[[str], dict] | None = None,
+    ) -> list[dict]:
         """A mix, with how many stems each unfinished seam still has to split, which is what most
-        decides how long it will take. Songs that can't be looked at just get the usual estimate."""
+        decides how long it will take. Songs that can't be looked at just get the usual estimate.
+        `rows` (from mix.rows_for_drafts) and `status` (from one_look) are for reading many."""
         try:
-            mix.settle_chain(conn, store, draft)
+            if mix.settle_chain(conn, store, draft, rows, status):
+                rows = None  # a seam changed, so read the mix again as it now is
         except sqlite3.OperationalError:
             pass  # the worker is writing, and the next look will do it
-        items = mix.read_mix(conn, store, draft)
+        items = mix.read_mix(conn, store, draft, rows, status)
         waiting = [
             (before, item)
             for before, item in zip(items, items[1:], strict=False)
@@ -94,8 +117,9 @@ def add_routes(app, ctx) -> None:
         """Analysis waits while mixes render, so that wait is part of how long it will take."""
         if not jobs.mix_is_rendering(settings.home):
             return []
-        mixes = [read_with_windows(conn)]
-        mixes += [read_with_windows(conn, draft) for draft in mix.line_order(conn)]
+        status = one_look()
+        mixes = [read_with_windows(conn, status=status)]
+        mixes += [read_with_windows(conn, draft, status=status) for draft in mix.line_order(conn)]
         return time_ahead(mixes, store.clock)[0]
 
     def studio_request_at(
@@ -112,7 +136,10 @@ def add_routes(app, ctx) -> None:
         return request, session
 
     def mix_payload(conn: sqlite3.Connection, draft: int | None = None) -> dict:
-        items = read_with_windows(conn, draft)
+        # each seam read from disk once, though settling and reading both ask, and so may the
+        # mixes ahead of this one
+        status = one_look(scan=False)
+        items = read_with_windows(conn, draft, status=status)
         payload = {
             "mix": items,
             "name": mix.mix_name(conn, draft),
@@ -127,7 +154,10 @@ def add_routes(app, ctx) -> None:
         line = mix.line_order(conn)
         before = line[: line.index(draft)] if draft in line else line
         ahead, seen = time_ahead(
-            [read_with_windows(conn), *(read_with_windows(conn, other) for other in before)],
+            [
+                read_with_windows(conn, status=status),
+                *(read_with_windows(conn, other, status=status) for other in before),
+            ],
             store.clock,
         )
         eta = mix_time_left(items, store.clock, ahead=ahead, seen=seen)
@@ -168,20 +198,25 @@ def add_routes(app, ctx) -> None:
         }
 
     def drafts_payload(conn: sqlite3.Connection) -> dict:
+        # One query for the drafts (without their revisions), one for all of their songs, and one
+        # look at the seams on disk, rather than several queries and a disk read per seam per draft.
         rows = {row["id"]: row for row in mix.all_drafts(conn)}
-        items = {draft: read_with_windows(conn, draft) for draft in rows}
+        status = one_look()
+        loaded = mix.rows_for_drafts(conn, {draft: row["items"] for draft, row in rows.items()})
+        items = {draft: read_with_windows(conn, draft, loaded[draft], status) for draft in rows}
         for draft in mix.line_order(conn):
             # a mix with nothing left to render has had its turn
             if not any(seam_unfinished(item) for item in items[draft]):
                 mix.leave_line(conn, draft)
         line = mix.line_order(conn)
-        current = read_with_windows(conn)
-        ahead = [current]
+        current = read_with_windows(conn, status=status)
+        # each place adds one more mix to what is ahead of it, rather than adding them all up again
+        ahead, seen = time_ahead([current], store.clock)
         places: dict[int, tuple[int, dict]] = {}
         for index, draft in enumerate(line):
-            ahead = [*ahead, items[draft]]
-            estimates, _ = time_ahead(ahead, store.clock)
-            places[draft] = (index + 1, combine(estimates).as_dict())
+            more, seen = time_ahead([items[draft]], store.clock, seen=seen)
+            ahead = [*ahead, *more]
+            places[draft] = (index + 1, combine(ahead).as_dict())
         summaries = []
         for draft in sorted(rows, key=lambda d: line.index(d) if d in line else len(line)):
             place, eta = places.get(draft, (None, None))

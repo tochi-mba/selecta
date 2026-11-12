@@ -8,7 +8,11 @@ import { ViewProps } from './shared';
 
 /** The one mix that's really yours to hear right now. Its transitions being ready is a different thing
  * from its songs being saved, so it says which. */
-export function CurrentMix({ mix, mixName, now, player, setView, prominent }: Pick<ViewProps, 'mix' | 'mixName' | 'now' | 'player' | 'setView'> & { prominent?: boolean }) {
+export function CurrentMix({ mix, mixName, now, player, setView, prominent, lead }: Pick<ViewProps, 'mix' | 'mixName' | 'now' | 'player' | 'setView'> & {
+  prominent?: boolean;
+  /** whether Play/Open is the page's one primary action (SF-0204-02); on My Mixes the drafts usually lead */
+  lead?: boolean;
+}) {
   const facts = mixReadiness(mix);
   const editing = useFlag('editor');
   return (
@@ -31,14 +35,14 @@ export function CurrentMix({ mix, mixName, now, player, setView, prominent }: Pi
       </div>
       <div className="row wrap">
         {now.phase === 'idle' ? (
-          <Action className={prominent ? 'primary' : undefined} run={async () => {
+          <Action className={lead ? 'primary' : undefined} run={async () => {
             setView('Now');
             await player.togglePause();
           }}>
             Play
           </Action>
         ) : (
-          <button className={prominent ? 'primary' : undefined} onClick={() => setView('Now')}>Open</button>
+          <button className={lead ? 'primary' : undefined} onClick={() => setView('Now')}>Open</button>
         )}
         {editing && <button onClick={() => setView('Edit')}>Edit</button>}
       </div>
@@ -47,7 +51,7 @@ export function CurrentMix({ mix, mixName, now, player, setView, prominent }: Pi
 }
 
 /** Nothing is current yet, which isn't a problem, and here's what to do about it. */
-export function NoCurrentMix() {
+export function NoCurrentMix({ lead = true }: { lead?: boolean }) {
   const drafts = useFlag('drafts');
   return (
     <section className="carry-on prominent" aria-label="Current mix">
@@ -56,7 +60,7 @@ export function NoCurrentMix() {
         <h2>Nothing’s playing yet</h2>
         <p className="soft">{drafts ? 'Pick a mix to hear it, or play one of your drafts.' : 'Pick a mix to hear it.'}</p>
       </div>
-      <PageLink to="/mixes" className="button primary">Find a mix</PageLink>
+      <PageLink to="/mixes" className={lead ? 'button primary' : 'button'}>Find a mix</PageLink>
     </section>
   );
 }

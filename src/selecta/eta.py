@@ -208,8 +208,23 @@ class JobClock:
 
     def __init__(self, home: Path):
         self.path = home / FILE_NAME
+        self._read: tuple[tuple[int, int], dict] | None = None
 
     def _everything(self) -> dict:
+        """What the file holds. Every seam's estimate asks, and a list of 500 drafts has thousands
+        of seams, so the file is only read again once it has changed (by its size and time)."""
+        try:
+            info = self.path.stat()
+        except OSError:
+            return {}
+        stamp = (info.st_mtime_ns, info.st_size)
+        if self._read is not None and self._read[0] == stamp:
+            return dict(self._read[1])
+        loaded = self._parsed()
+        self._read = (stamp, loaded)
+        return dict(loaded)
+
+    def _parsed(self) -> dict:
         try:
             loaded = json.loads(self.path.read_text("utf-8"))
         except (OSError, ValueError):
@@ -368,12 +383,16 @@ def mix_time_left(
 
 
 def time_ahead(
-    mixes: list[list[dict]], clock: JobClock, now: float | None = None
+    mixes: list[list[dict]],
+    clock: JobClock,
+    now: float | None = None,
+    seen: set[str] | None = None,
 ) -> tuple[list[Estimate], set[str]]:
-    """All the work in these mixes, in order, counting a seam that's in two of them once."""
+    """All the work in these mixes, in order, counting a seam that's in two of them once. `seen`
+    carries on from an earlier call, so a long line can be added up one mix at a time."""
     now = time.time() if now is None else now
     estimates: list[Estimate] = []
-    seen: set[str] = set()
+    seen = set() if seen is None else set(seen)
     for items in mixes:
         for item in _in_turn(items):
             key = item["seam"]["state"].get("key")

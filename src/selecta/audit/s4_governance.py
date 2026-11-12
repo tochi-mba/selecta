@@ -200,6 +200,58 @@ def boundary_markdown(rows: list[BoundaryRow], merge: str = PR28_MERGE) -> str:
     return "\n".join(lines) + "\n"
 
 
+# ---------------------------------------------------------------- S4-0113-06: dependencies
+
+
+def declared_dependencies(pyproject: str, package_json: str) -> dict[str, str]:
+    """`python:<name>` / `web:<name>` to the declared spec, from every dependency list."""
+    import tomllib
+
+    out: dict[str, str] = {}
+    project = tomllib.loads(pyproject) if pyproject else {}
+    lists = [project.get("project", {}).get("dependencies", [])]
+    lists += list(project.get("project", {}).get("optional-dependencies", {}).values())
+    lists += list(project.get("dependency-groups", {}).values())
+    for specs in lists:
+        for spec in specs:
+            if isinstance(spec, str):
+                name = re.split(r"[<>=!~\[ ;]", spec, maxsplit=1)[0].lower()
+                out[f"python:{name}"] = spec
+    package = json.loads(package_json) if package_json else {}
+    for group in ("dependencies", "devDependencies"):
+        for name, spec in package.get(group, {}).items():
+            out[f"web:{name}"] = spec
+    return out
+
+
+def dependency_changes(before: dict[str, str], after: dict[str, str]) -> list[tuple[str, str, str]]:
+    """(name, change, detail) for every added, removed or re-specified dependency."""
+    rows = []
+    for name in sorted(set(before) | set(after)):
+        if name not in before:
+            rows.append((name, "added", after[name]))
+        elif name not in after:
+            rows.append((name, "removed", before[name]))
+        elif before[name] != after[name]:
+            rows.append((name, "changed", f"{before[name]} -> {after[name]}"))
+    return rows
+
+
+def dependency_rows(root: Path = ROOT, since: str = BASELINE) -> list[tuple[str, str, str]]:
+    def show(path: str) -> str:
+        try:
+            return _git("show", f"{since}:{path}", root=root)
+        except RuntimeError:
+            return ""
+
+    before = declared_dependencies(show("pyproject.toml"), show("web/package.json"))
+    after = declared_dependencies(
+        (root / "pyproject.toml").read_text("utf-8"),
+        (root / "web" / "package.json").read_text("utf-8"),
+    )
+    return dependency_changes(before, after)
+
+
 # ---------------------------------------------------------------- release report
 
 
@@ -217,6 +269,7 @@ class ReleaseFacts:
     ci_runs: list[dict] | None = None
     rollback: dict | None = None
     open_p0: list[str] = field(default_factory=list)
+    dependencies: list[tuple[str, str, str]] | None = None
 
 
 PHASE = re.compile(r"^### \[(ADR-\d{4}) - ([^\]]+)\]")
@@ -326,6 +379,7 @@ def gather(root: Path = ROOT, *, ci: bool = False, rollback: dict | None = None)
         phases=phases((root / CHECKLIST).read_text(encoding="utf-8")),
         ci_runs=runs,
         rollback=rollback,
+        dependencies=dependency_rows(root),
     )
 
 
@@ -407,6 +461,18 @@ def report_markdown(facts: ReleaseFacts) -> str:
         "",
         *[f"- {_cell(merge)}" for merge in facts.merges],
     ]
+    if facts.dependencies is not None:
+        lines += [
+            "",
+            f"## Dependency changes since the baseline (S4-0113-06, {len(facts.dependencies)})",
+            "",
+            "Declared in `pyproject.toml` and `web/package.json`; each needs an owner review for "
+            "engine, data, network and security impact.",
+            "",
+            "| Dependency | Change | Spec | Reviewed by |",
+            "|---|---|---|---|",
+            *[f"| `{n}` | {c} | `{_cell(d)}` |  |" for n, c, d in facts.dependencies],
+        ]
     return "\n".join(lines) + "\n"
 
 

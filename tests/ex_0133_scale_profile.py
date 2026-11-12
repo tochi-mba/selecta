@@ -76,13 +76,13 @@ def profile(songs: int, in_mix: int) -> dict:
         grow(settings, songs, in_mix)
         process = psutil.Process()
         with TestClient(create_app(settings, home / "no-web", prepare_links=False)) as client:
-            timed(client, "/api/library", {"limit": 200})  # builds the caches; not counted
+            total = timed(client, "/api/library", {"limit": 200})[1]["total"]  # warms caches
             pages, seen, after = [], 0, None
             while True:
                 params = {"limit": 200, **({"after": after} if after else {})}
                 elapsed, page = timed(client, "/api/library", params)
                 pages.append(elapsed)
-                seen += len(page.get("songs", page.get("items", [])))
+                seen += len(page["songs"])
                 after = page.get("next")
                 if not after:
                     break
@@ -94,15 +94,16 @@ def profile(songs: int, in_mix: int) -> dict:
             for _ in range(5):
                 elapsed, current = timed(client, "/api/mix")
                 mixes.append(elapsed)
-            for position in (0, in_mix // 2, max(in_mix - 2, 0)):
+            for position in (1, max(in_mix // 2, 1), max(in_mix - 1, 1)):  # seams count from 1
                 options.append(timed(client, f"/api/mix/{position}/options")[0])
             peak = process.memory_info().rss
         return {
             "task": "EX-0133-03",
             "library_songs": songs,
             "mix_songs": in_mix,
+            "library_total": total,
             "songs_paged": seen,
-            "mix_reported": len(current.get("queue", current.get("songs", []))),
+            "mix_reported": len(current["mix"]),
             "library_pages": timings(pages),
             "library_search": timings(searches),
             "open_mix": timings(mixes),

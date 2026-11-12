@@ -178,3 +178,44 @@ test('Forgot password leads to the hosted reset page, which says the same for an
   const log = await (await context.request.get(`${server}/test/authkit/log`)).json() as { kind: string; known?: boolean }[];
   expect(log.filter((entry) => entry.kind === 'reset').slice(-2).map((entry) => entry.known)).toEqual([true, false]);
 });
+
+test('a reset link sets a new password once, and only the new password signs in', async ({ context }) => {
+  const address = email('reset');
+  await signUpVerified(context, address);
+  const page = await browserWithAuthDomain(context);
+  await welcome(page);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByRole('link', { name: 'Forgot password?' }).click();
+  await page.getByLabel('Email').fill(address);
+  await page.getByRole('button', { name: 'Send reset link' }).click();
+  await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible();
+
+  const { link } = await (await context.request.get(`${server}/test/authkit/reset-link?email=${encodeURIComponent(address)}`)).json() as { link: string };
+  const hosted = `${AUTH}${link.replace('/fake-authkit', '')}`;
+  await page.goto(hosted);
+  await expect(page.getByRole('heading', { name: 'Choose a new password' })).toBeVisible();
+  await page.getByLabel('New password').fill('a brand new passphrase');
+  await page.getByRole('button', { name: 'Change password' }).click();
+  await expect(page.getByRole('heading', { name: 'Password changed' })).toBeVisible();
+  await page.goto(hosted);
+  await expect(page.getByRole('heading', { name: 'This reset link has expired' })).toBeVisible();
+
+  await welcome(page);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await hostedForm(page, address, 'Sign in');
+  await expect(page.getByText('Incorrect email or password.')).toBeVisible();
+  await welcome(page);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByLabel('Email').fill(address);
+  await page.getByLabel('Password').fill('a brand new passphrase');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Your music workspace');
+});
+
+test('cancelling on the hosted page comes back to the welcome screen with a plain reason', async ({ context }) => {
+  const page = await browserWithAuthDomain(context);
+  await page.goto(`${site}/?error=access_denied&error_description=${encodeURIComponent('Visit evil.test')}`);
+  await expect(page.getByRole('alert')).toHaveText('Sign-in was cancelled. Choose Sign in to try again.');
+  await expect(page.getByText('evil.test')).toHaveCount(0);
+  await expect(page).toHaveURL(`${site}/`);
+});

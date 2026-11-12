@@ -1,4 +1,5 @@
-"""The real subject for the Lucy evaluation gate: a model deployment answering each case (SC-0404-06).
+"""The real subject for the Lucy evaluation gate: a model deployment answering each case
+(SC-0404-06).
 
 `evaluation.run` needs a `Subject` that turns a case into what Lucy proposed. `ProviderSubject`
 does that with one of Lucy's own providers (`selecta.lucy.providers`: Anthropic, any

@@ -58,7 +58,7 @@ def test_api_rows_classify_side_effects_and_owners():
     assert keyed[("POST", "/api/things")].flag == "UNOWNED"
     assert keyed[("POST", "/api/things")].body == "Body"
     text = gov.api_markdown(rows)
-    assert "1 have no feature-flag owner" in text and "—" not in text
+    assert "1 have no feature-flag owner" in text and chr(0x2014) not in text
 
 
 def test_committed_api_inventory_matches_the_live_app_and_every_route_has_an_owner():
@@ -152,4 +152,23 @@ def test_report_leaves_the_owner_verdict_blank():
     text = gov.report_markdown(_facts(verified=0))
     assert "**NO-GO** because:" in text
     assert "| GO or NO-GO |  |" in text
-    assert "nothing lost" in text and "ADR-0089" in text and "—" not in text
+    assert "nothing lost" in text and "ADR-0089" in text and chr(0x2014) not in text
+
+
+def test_dependency_changes_since_baseline_are_listed():
+    before = gov.declared_dependencies(
+        '[project]\ndependencies = ["fastapi>=0.115", "rich>=13"]\n',
+        '{"dependencies": {"react": "18.3.1"}}',
+    )
+    after = gov.declared_dependencies(
+        '[project]\ndependencies = ["fastapi>=0.162", "httpx[http2]>=0.27"]\n'
+        '[dependency-groups]\ndev = ["ruff>=0.6"]\n',
+        '{"dependencies": {"react": "18.3.1"}, "devDependencies": {"vitest": "3.0.0"}}',
+    )
+    assert gov.dependency_changes(before, after) == [
+        ("python:fastapi", "changed", "fastapi>=0.115 -> fastapi>=0.162"),
+        ("python:httpx", "added", "httpx[http2]>=0.27"),
+        ("python:rich", "removed", "rich>=13"),
+        ("python:ruff", "added", "ruff>=0.6"),
+        ("web:vitest", "added", "3.0.0"),
+    ]
