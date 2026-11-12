@@ -101,6 +101,8 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
             ))}
           </div>
           {!consentComplete(consent) && <p className="cloud-hint">Tick all three boxes above to choose a plan.</p>}
+          {/* a slow checkout answer otherwise looks like nothing happened (2026-11-12 flow walk) */}
+          {busy && consentComplete(consent) && <p className="cloud-hint" role="status">Opening secure checkout…</p>}
         </>}
       {blocked && (paid ? portal : checkout) && <p className="cloud-hint">Upgrading lifts the pause on uploads and exports as soon as your new plan is confirmed.</p>}
     </div>

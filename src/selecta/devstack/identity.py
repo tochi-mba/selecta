@@ -35,7 +35,7 @@ from dataclasses import dataclass
 from html import escape
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlencode, urlsplit
+from urllib.parse import parse_qs, urlencode
 
 import httpx
 import jwt
@@ -46,6 +46,7 @@ from jwt.algorithms import RSAAlgorithm
 from selecta.devstack import guard
 from selecta.devstack.identity_store import MIN_PASSWORD, IdentityStore, Person, iso
 from selecta.devstack.pages import page
+from selecta.devstack.redirects import site_target
 from selecta.identity import workos_signature
 
 GOOGLE = "GoogleOAuth"
@@ -239,10 +240,6 @@ class LocalIdentity:
         self.notify("password_reset.succeeded", {"user_id": owner, "created_at": iso(time.time())})
         return self.store.person(owner)
 
-    def site_allows(self, url: str) -> bool:
-        parts = urlsplit(url)
-        return f"{parts.scheme}://{parts.netloc}" in self.config.site_origins
-
     def home(self) -> str:
         return self.config.site_origins[0] + "/"
 
@@ -316,7 +313,7 @@ def create_identity_app(config: IdentityConfig, *, host: str = "127.0.0.1") -> F
             code, query = store.issue_code(request_id, person.id, method)
         except LookupError:
             return expired()
-        target = query["redirect_uri"]
+        target = site_target(query.get("redirect_uri"), config.site_origins)
         extra = {"code": code} | ({"state": query["state"]} if query.get("state") else {})
         joiner = "&" if "?" in target else "?"
         return RedirectResponse(f"{target}{joiner}{urlencode(extra)}", status_code=303)
@@ -424,9 +421,7 @@ verified test identity.</p>
             store.mark_verified(person.id)
             person = store.person(person.id)
         if person is None:
-            person = store.create(
-                email, None, verified=True, first_name=fields.get("name") or None
-            )
+            person = store.create(email, None, verified=True, first_name=fields.get("name") or None)
         assert person is not None
         return back(request_id, person, GOOGLE)
 
@@ -542,8 +537,7 @@ verified test identity.</p>
         found = store.session(session_id)
         if found is not None and store.end_session(session_id):
             provider.notify("session.revoked", {"id": session_id, "user_id": found["person_id"]})
-        target = return_to if return_to and provider.site_allows(return_to) else provider.home()
-        return RedirectResponse(target, status_code=303)
+        return RedirectResponse(site_target(return_to, config.site_origins), status_code=303)
 
     # -- WorkOS User Management API, server side ------------------------------------------------
 

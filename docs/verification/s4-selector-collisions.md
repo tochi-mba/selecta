@@ -2,7 +2,7 @@
 
 Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.selector_collisions --write`; `tests/test_s4_selector_collisions.py` fails when it falls behind. Load order: `style.css`, `styles/shell.css`, `styles/polish.css`, `styles/foundation.css`, `styles/listening.css`, `styles/creation.css`, `styles/operations.css`, `styles/music-objects.css`, `styles/glossary.css`, `styles/palette.css`, `styles/icons.css`, `styles/depth.css`, `styles/typography.css`. The proposed owner is the earliest sheet that styles the class unscoped, else the earliest that styles it. Verdicts for the seven shared class names are in `docs/adr/completion/css-ownership.md`. Rules inside media queries count, so a responsive refinement shows here too; each row is for review, not a defect.
 
-## Identical selectors in more than one sheet (167)
+## Identical selectors in more than one sheet (166)
 
 | Selector | Sheets, in load order | Wins the cascade |
 |---|---|---|
@@ -127,7 +127,6 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.studio-cell` | style.css, styles/polish.css, styles/creation.css | styles/creation.css |
 | `.studio-cell.now` | style.css, styles/polish.css | styles/polish.css |
 | `.studio-cell[aria-pressed='true']` | style.css, styles/polish.css | styles/polish.css |
-| `.studio-cell[aria-pressed='true']::after` | styles/polish.css, styles/creation.css | styles/creation.css |
 | `.studio-grid` | style.css, styles/polish.css, styles/creation.css | styles/creation.css |
 | `.studio-head` | style.css, styles/creation.css, styles/typography.css | styles/typography.css |
 | `.studio-lane` | style.css, styles/polish.css, styles/creation.css | styles/creation.css |

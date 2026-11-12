@@ -33,6 +33,7 @@ from selecta.billing import stripe_sync
 from selecta.billing.plans import plan_for
 from selecta.billing.schema import stripe_customers
 from selecta.devstack.pages import page
+from selecta.devstack.redirects import safe_path
 from selecta.persistence import db_now, transaction
 from selecta.usage import quota
 
@@ -56,10 +57,9 @@ def environment() -> dict[str, str]:
 
 
 def same_site(url: str) -> str:
-    """Only the path and query of a return URL, so these pages can't send anyone elsewhere."""
+    """Only a same-site path from a return URL, so these pages can't send anyone elsewhere."""
     parts = urlsplit(url)
-    path = "/" + parts.path.lstrip("/\\")
-    return path + (f"?{parts.query}" if parts.query else "")
+    return safe_path((parts.path or "/") + (f"?{parts.query}" if parts.query else ""))
 
 
 class Checkouts:
@@ -129,7 +129,7 @@ card is asked for: this page stands in for Stripe Checkout on this computer.</p>
 </form>
 <form method="post" action="{action}/decline"><button class="danger">Use a declined card
 </button></form>
-<p><a href="{escape(same_site(fields['cancel_url']))}">Cancel and return to SelectaDJ</a></p>""",
+<p><a href="{escape(same_site(fields["cancel_url"]))}">Cancel and return to SelectaDJ</a></p>""",
             ribbon="Pretend Stripe checkout for local development. No real payment is made.",
         )
 
@@ -188,8 +188,7 @@ card is asked for: this page stands in for Stripe Checkout on this computer.</p>
     @app.post(PREFIX + "/portal/cancel", include_in_schema=False)
     async def cancel(request: Request):
         fields = {
-            name: values[0]
-            for name, values in parse_qs((await request.body()).decode()).items()
+            name: values[0] for name, values in parse_qs((await request.body()).decode()).items()
         }
         with transaction(engine) as conn:
             workspace_id = conn.execute(

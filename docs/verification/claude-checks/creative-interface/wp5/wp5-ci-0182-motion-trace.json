@@ -1,0 +1,348 @@
+{
+ "when": "2026-11-12T15:09:17.241Z",
+ "browser": "Microsoft Edge 157.0.4341.46 (headed, real window)",
+ "cpu": "Intel(R) Core(TM) i7-10510U CPU @ 1.80GHz (4 cores, 8 threads), 32 GB RAM",
+ "gpu": "Intel(R) UHD Graphics (integrated)",
+ "viewport": "1440x900",
+ "theme": "dark",
+ "reducedMotion": false,
+ "windows": [
+  {
+   "surface": "Listen, stopped (baseline)",
+   "ms": 6002,
+   "frames": 360,
+   "frameP50": 16.7,
+   "frameP95": 16.9,
+   "frameWorst": 18.8,
+   "animations": 1,
+   "longTasks": [],
+   "longFrames": [],
+   "audioState": "running",
+   "audioClockPerWallSecond": 0.935,
+   "playbackStatsBefore": {
+    "underrunDuration": 0,
+    "underrunEvents": 0,
+    "totalDuration": 0,
+    "averageLatency": 0,
+    "minimumLatency": 0,
+    "maximumLatency": 0
+   },
+   "playbackStatsAfter": {
+    "underrunDuration": 0,
+    "underrunEvents": 0,
+    "totalDuration": 5.0524,
+    "averageLatency": 0.0456,
+    "minimumLatency": 0,
+    "maximumLatency": 0.0509
+   },
+   "sourcesStartedInWindow": 0
+  },
+  {
+   "surface": "Listen, playing (lyrics, visualizer, waveform)",
+   "ms": 10007,
+   "frames": 599,
+   "frameP50": 16.7,
+   "frameP95": 17.1,
+   "frameWorst": 31.7,
+   "animations": 1,
+   "longTasks": [],
+   "longFrames": [],
+   "audioState": "running",
+   "audioClockPerWallSecond": 1,
+   "playbackStatsBefore": {
+    "underrunDuration": 0,
+    "underrunEvents": 0,
+    "totalDuration": 11.0827,
+    "averageLatency": 0.0458,
+    "minimumLatency": 0,
+    "maximumLatency": 0.0514
+   },
+   "playbackStatsAfter": {
+    "underrunDuration": 0,
+    "underrunEvents": 0,
+    "totalDuration": 21.112099999999998,
+    "averageLatency": 0.046,
+    "minimumLatency": 0,
+    "maximumLatency": 0.0515
+   },
+   "sourcesStartedInWindow": 0
+  },
+  {
+   "surface": "Stage (fullscreen lyrics and visuals), playing",
+   "ms": 10006,
+   "frames": 407,
+   "frameP50": 16.7,
+   "frameP95": 66.7,
+   "frameWorst": 483.3,
+   "animations": 1,
+   "longTasks": [],
+   "longFrames": [
+    68,
+    126,
+    169,
+    181,
+    242,
+    124,
+    418,
+    151,
+    52,
+    71,
+    73,
+    144,
+    109,
+    101,
+    92,
+    94,
+    117,
+    69,
+    58,
+    51,
+    64,
+    59,
+    69,
+    155,
+    113
+   ],
+   "audioState": "running",
+   "audioClockPerWallSecond": 0.999,
+   "playbackStatsBefore": {
+    "underrunDuration": 0,
+    "underrunEvents": 0,
+    "totalDuration": 21.112099999999998,
+    "averageLatency": 0.046,
+    "minimumLatency": 0,
+    "maximumLatency": 0.0515
+   },
+   "playbackStatsAfter": {
+    "underrunDuration": 0,
+    "underrunEvents": 0,
+    "totalDuration": 31.1704,
+    "averageLatency": 0.0461,
+    "minimumLatency": 0,
+    "maximumLatency": 0.0515
+   },
+   "sourcesStartedInWindow": 0
+  },
+  {
+   "surface": "Make a Mix, playing, scrolling",
+   "ms": 10133,
+   "frames": 434,
+   "frameP50": 16.7,
+   "frameP95": 66.6,
+   "frameWorst": 150,
+   "animations": 0,
+   "longTasks": [],
+   "longFrames": [
+    77,
+    59,
+    67,
+    53,
+    92,
+    95,
+    57,
+    65,
+    68,
+    85,
+    140,
+    123,
+    123,
+    147,
+    99,
+    67,
+    87,
+    60,
+    53,
+    50,
+    53,
+    75,
+    54,
+    116,
+    53,
+    67,
+    57,
+    83,
+    67,
+    80,
+    63,
+    58,
+    74,
+    101
+   ],
+   "audioState": "running",
+   "audioClockPerWallSecond": 1.001,
+   "playbackStatsBefore": {
+    "underrunDuration": 0,
+    "underrunEvents": 0,
+    "totalDuration": 33.178599999999996,
+    "averageLatency": 0.0461,
+    "minimumLatency": 0,
+    "maximumLatency": 0.0515
+   },
+   "playbackStatsAfter": {
+    "underrunDuration": 0,
+    "underrunEvents": 0,
+    "totalDuration": 43.2166,
+    "averageLatency": 0.0461,
+    "minimumLatency": 0,
+    "maximumLatency": 0.0515
+   },
+   "sourcesStartedInWindow": 0
+  },
+  {
+   "surface": "Editor (Arrange), playing, scrolling",
+   "ms": 10009,
+   "frames": 581,
+   "frameP50": 16.7,
+   "frameP95": 17.1,
+   "frameWorst": 83.4,
+   "animations": 0,
+   "longTasks": [
+    85,
+    57
+   ],
+   "longFrames": [
+    52,
+    60,
+    95
+   ],
+   "audioState": "running",
+   "audioClockPerWallSecond": 1,
+   "playbackStatsBefore": {
+    "underrunDuration": 0,
+    "underrunEvents": 0,
+    "totalDuration": 45.2277,
+    "averageLatency": 0.0461,
+    "minimumLatency": 0,
+    "maximumLatency": 0.0515
+   },
+   "playbackStatsAfter": {
+    "underrunDuration": 0,
+    "underrunEvents": 0,
+    "totalDuration": 55.265699999999995,
+    "averageLatency": 0.0461,
+    "minimumLatency": 0,
+    "maximumLatency": 0.0515
+   },
+   "sourcesStartedInWindow": 0
+  },
+  {
+   "surface": "My Mixes, playing",
+   "ms": 8005,
+   "frames": 475,
+   "frameP50": 16.7,
+   "frameP95": 16.9,
+   "frameWorst": 66.7,
+   "animations": 0,
+   "longTasks": [
+    83
+   ],
+   "longFrames": [
+    88
+   ],
+   "audioState": "running",
+   "audioClockPerWallSecond": 1.001,
+   "playbackStatsBefore": {
+    "underrunDuration": 0,
+    "underrunEvents": 0,
+    "totalDuration": 57.2738,
+    "averageLatency": 0.0461,
+    "minimumLatency": 0,
+    "maximumLatency": 0.0515
+   },
+   "playbackStatsAfter": {
+    "underrunDuration": 0,
+    "underrunEvents": 0,
+    "totalDuration": 65.3066,
+    "averageLatency": 0.0461,
+    "minimumLatency": 0,
+    "maximumLatency": 0.0515
+   },
+   "sourcesStartedInWindow": 0
+  },
+  {
+   "surface": "Library, playing, scrolling",
+   "ms": 8014,
+   "frames": 469,
+   "frameP50": 16.7,
+   "frameP95": 16.9,
+   "frameWorst": 83.4,
+   "animations": 0,
+   "longTasks": [],
+   "longFrames": [
+    58,
+    89,
+    59
+   ],
+   "audioState": "running",
+   "audioClockPerWallSecond": 1,
+   "playbackStatsBefore": {
+    "underrunDuration": 0,
+    "underrunEvents": 0,
+    "totalDuration": 66.302,
+    "averageLatency": 0.0461,
+    "minimumLatency": 0,
+    "maximumLatency": 0.0515
+   },
+   "playbackStatsAfter": {
+    "underrunDuration": 0,
+    "underrunEvents": 0,
+    "totalDuration": 74.3522,
+    "averageLatency": 0.0461,
+    "minimumLatency": 0,
+    "maximumLatency": 0.0515
+   },
+   "sourcesStartedInWindow": 0
+  },
+  {
+   "surface": "Listen again, playing",
+   "ms": 8002,
+   "frames": 467,
+   "frameP50": 16.7,
+   "frameP95": 16.8,
+   "frameWorst": 116.7,
+   "animations": 1,
+   "longTasks": [],
+   "longFrames": [
+    53,
+    84,
+    116
+   ],
+   "audioState": "running",
+   "audioClockPerWallSecond": 1.001,
+   "playbackStatsBefore": {
+    "underrunDuration": 0,
+    "underrunEvents": 0,
+    "totalDuration": 75.362,
+    "averageLatency": 0.0461,
+    "minimumLatency": 0,
+    "maximumLatency": 0.0515
+   },
+   "playbackStatsAfter": {
+    "underrunDuration": 0,
+    "underrunEvents": 0,
+    "totalDuration": 83.4092,
+    "averageLatency": 0.0461,
+    "minimumLatency": 0,
+    "maximumLatency": 0.0515
+   },
+   "sourcesStartedInWindow": 0
+  }
+ ],
+ "gpuInfo": "ANGLE (Intel, Intel(R) UHD Graphics (0x00009B41) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+ "sources": [
+  {
+   "at": 9.671,
+   "when": 9.721,
+   "offset": 0,
+   "length": 89.5
+  }
+ ],
+ "audio": {
+  "state": "running",
+  "sampleRate": 44100,
+  "baseLatencyMs": 10,
+  "outputLatencyMs": 40,
+  "playbackStatsSupported": true
+ },
+ "stillPlaying": true
+}

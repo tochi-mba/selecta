@@ -214,7 +214,9 @@ STUDY_TASKS = {
 
 
 def test_every_lx_study_task_has_exactly_one_protocol_named_in_the_checklist():
-    assert set(kit.BY_TASK) == STUDY_TASKS and len(kit.STUDIES) == len(STUDY_TASKS)
+    assert {study.task for study in kit.STUDIES} == STUDY_TASKS
+    assert len(kit.STUDIES) == len(STUDY_TASKS)
+    assert set(kit.BY_TASK) == STUDY_TASKS | {card.task for card in kit.CARDS}
     for study in kit.STUDIES:
         assert re.search(rf"\*\*{study.task} - ", CHECKLIST), study.task
         assert study.prompts and study.success and set(study.groups) <= kit.GROUPS
@@ -309,7 +311,7 @@ def test_a_study_card_record_needs_consent_confidence_and_hesitation():
     assert kit.record_problems(good) == []
     for key, bad in (("confidence", 7), ("hesitated", "maybe")):
         record = session(task=task, seconds=(4,), consent=True)
-        record["outcomes"][0].update(confidence=4, hesitated=False, **{key: bad})
+        record["outcomes"][0].update({"confidence": 4, "hesitated": False, key: bad})
         assert any(key in p for p in kit.record_problems(record))
     unconsented = session(task=task, seconds=(4,))
     unconsented["outcomes"][0].update(confidence=4, hesitated=False)

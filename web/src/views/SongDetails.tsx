@@ -14,10 +14,24 @@ const LOWEST_TEMPO = 40;
 const HIGHEST_TEMPO = 240;
 const KEY_SHAPE = /^(1[0-2]|[1-9])[AB]$/;
 
+/** S4-0106-03: a tempo as typed, in either decimal separator: "120,5" in a German browser and "120.5"
+ * in an English one are both 120.5. Anything else (letters, two separators, thousands groups) is NaN, so
+ * it is refused rather than read as something else: "120,5" must never become 1205. */
+export function parseDecimal(text: string): number {
+  const plain = text.trim().replace(/\s/g, '');
+  if (!/^\d+(?:[.,]\d+)?$/.test(plain)) return Number.NaN;
+  return Number(plain.replace(',', '.'));
+}
+
+/** A number shown the way this browser's language writes it: 120,5 in German, 120.5 in English. */
+export function localDecimal(value: number): string {
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 1, useGrouping: false }).format(value);
+}
+
 /** Is this tempo acceptable? Says what's wrong if not. The server checks too. */
 export function tempoProblem(text: string): string {
   if (!text.trim()) return '';
-  const value = Number(text);
+  const value = parseDecimal(text);
   if (!Number.isFinite(value) || value < LOWEST_TEMPO || value > HIGHEST_TEMPO) return `Tempo has to be between ${LOWEST_TEMPO} and ${HIGHEST_TEMPO}.`;
   return '';
 }
@@ -54,7 +68,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
   onPriority: (song: LibrarySong) => Promise<void>;
   onNever: (song: LibrarySong) => Promise<void>;
 }) {
-  const savedBpm = song.override_bpm ? String(song.override_bpm) : '';
+  const savedBpm = song.override_bpm ? localDecimal(song.override_bpm) : '';
   const savedKey = song.override_camelot ?? '';
   const [bpm, setBpm] = useState(savedBpm);
   const [camelot, setCamelot] = useState(savedKey);
@@ -105,7 +119,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
       return;
     }
     await send({
-      ...(bpm ? { bpm: Number(bpm) } : {}),
+      ...(bpm ? { bpm: parseDecimal(bpm) } : {}),
       ...(camelot ? { camelot: camelot.trim() } : {}),
       clear: [...(bpm ? [] : ['bpm']), ...(camelot ? [] : ['camelot'])],
     }, 'Saved your correction.');
@@ -156,10 +170,11 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
               <input
                 {...field}
                 ref={bpmBox}
-                type="number"
-                min={LOWEST_TEMPO}
-                max={HIGHEST_TEMPO}
-                step="0.1"
+                // text, not number: a number box in a German browser dropped the comma from "120,5"
+                // and sent 1205 (S4-0106-03); this one takes either separator and checks the range itself
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
                 value={bpm}
                 onChange={(event) => { setBpm(event.target.value); setBpmError(''); }}
                 placeholder={detectedTempo ? String(detectedTempo) : ''}
