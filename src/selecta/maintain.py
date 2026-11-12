@@ -21,6 +21,7 @@ depends on a cron somebody forgot:
 | `derived_eviction` | 10 min | Workspaces over their derived-data budget (`storage.eviction`) |
 | `export_expiry` | 1 h | Exports past their plan's retention (`storage.export_expiry`) |
 | `autoscale` | 30 s | Size each worker pool and tell the launcher (`work.autoscale_leader`) |
+| `dmca_renewal` | 24 h | Owner alert as the DMCA agent's renewal nears (`admin.dmca`) |
 | `queue_metrics`, `lost_jobs`, `backup_freshness` | 15 s, 10 min, 10 min | The SLO and alert
   series only the leader sees (`observability.leader_metrics`) |
 
@@ -307,6 +308,23 @@ def _autoscale(engine: Engine, env: Mapping[str, str], plan: Plan) -> None:
         plan.tasks.append(task)
 
 
+def _dmca(engine: Engine, env: Mapping[str, str], plan: Plan) -> None:
+    from selecta.admin import dmca
+
+    registered = dmca.configured(env)
+    if isinstance(registered, str):
+        plan.disabled["dmca_renewal"] = registered
+        return
+
+    def check(_fence: TermFence) -> object:
+        if not _flag_on(dmca.FLAG):
+            return None
+        with transaction(engine) as conn:
+            return dmca.remind(conn, registered)
+
+    plan.tasks.append(Task("dmca_renewal", DAY_S, check))
+
+
 def cloud_plan(engine: Engine, env: Mapping[str, str] | None = None) -> Plan:
     """Every recurring cloud task this environment can run."""
     env = os.environ if env is None else env
@@ -317,6 +335,7 @@ def cloud_plan(engine: Engine, env: Mapping[str, str] | None = None) -> Plan:
     _eviction(engine, env, plan)
     _export_expiry(engine, env, plan)
     _autoscale(engine, env, plan)
+    _dmca(engine, env, plan)
     from selecta.observability import leader_metrics
 
     made, off = leader_metrics.tasks(engine, env)

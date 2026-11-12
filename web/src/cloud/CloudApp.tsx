@@ -5,7 +5,7 @@ import { CloudListen } from '../rooms/CloudListen';
 import { LucyCloudSettings } from '../views/LucyCloudSettings';
 import { AccountData } from './AccountData';
 import { Account, apiOrigin, CloudError, featureOn, idempotencyKey, isOverQuota, lockedTo, messageOf, Page, pageShown, planName } from './api';
-import { BLOCKED_MESSAGES, BlockedCode, blockedCode, refusalMessage, SUSPENDED_NOTICE } from './authConfig';
+import { BLOCKED_MESSAGES, BlockedCode, blockedCode, callbackProblem, refusalMessage, SUSPENDED_NOTICE, withoutCallbackError } from './authConfig';
 import { Billing } from './Billing';
 import { checkoutBody, Consent, consentVersionFor, useCheckoutReturn } from './checkout';
 import { CloudEvent, useCloudEvents } from './events';
@@ -48,6 +48,11 @@ export function CloudApp() {
   const [notice, setNotice] = useState('');
   const [libraryVersion, setLibraryVersion] = useState(0);
   const [inAdmin, setInAdmin] = useState(() => window.location.pathname.startsWith('/admin'));
+  // AuthKit sent the person back without signing them in: say why, then clean the address.
+  const [signInProblem] = useState(() => callbackProblem(window.location.search));
+  useEffect(() => {
+    if (signInProblem) window.history.replaceState({}, '', withoutCallbackError(window.location.pathname, window.location.search, window.location.hash));
+  }, [signInProblem]);
 
   const api = useCallback(async <T,>(path: string, init: RequestInit = {}, workspaceId?: string): Promise<T> => {
     const token = await getAccessToken();
@@ -178,7 +183,7 @@ export function CloudApp() {
   const lucyRequest = useCallback(<T,>(path: string, init?: RequestInit) => api<T>(path, init, account?.workspace.id), [api, account?.workspace.id]);
 
   if (isLoading) return <main className="cloud-runtime-message"><span className="cloud-mark">S</span><p>Checking your sign-in…</p></main>;
-  if (!user) return <main className="cloud-welcome"><span className="cloud-mark">S</span><p className="cloud-eyebrow">SELECTA CLOUD</p><h1>Your music, ready to move.</h1><p>Build your library, shape the set and keep the transitions ready on every device.</p><div className="cloud-actions"><button className="primary" onClick={() => void signUp()}>Create your account</button><button onClick={startSignIn}>Sign in</button></div><small>Your music stays private to your workspace.</small></main>;
+  if (!user) return <main className="cloud-welcome"><span className="cloud-mark">S</span><p className="cloud-eyebrow">SELECTA CLOUD</p><h1>Your music, ready to move.</h1><p>Build your library, shape the set and keep the transitions ready on every device.</p>{signInProblem && <p className="cloud-feedback error" role="alert">{signInProblem}</p>}<div className="cloud-actions"><button className="primary" onClick={() => void signUp()}>Create your account</button><button onClick={startSignIn}>Sign in</button></div><small>Your music stays private to your workspace.</small></main>;
   if (blocked) return <BlockedAccount code={blocked} onSignOut={() => signOut({ returnTo: window.location.origin })} />;
   if (!user.emailVerified) return <main className="cloud-runtime-message"><span className="cloud-mark">S</span><h1>Verify your email</h1><p>Open the verification email for {user.email}, then refresh this page.</p><button onClick={() => window.location.reload()}>I’ve verified my email</button><button onClick={() => signOut({ returnTo: window.location.origin })}>Sign out</button></main>;
   if (needsOnboarding) return <main className="cloud-onboarding"><span className="cloud-mark">S</span><p className="cloud-eyebrow">ONE QUICK CHECK</p><h1>Set up your Selecta workspace</h1><p>Your personal space starts with 10 GB of private music storage.</p><form onSubmit={(event) => void completeOnboarding(event)}><label className="cloud-check"><input type="checkbox" checked={ageConfirmed} onChange={(event) => setAgeConfirmed(event.target.checked)} /> I confirm that I’m at least 13 years old.</label><button className="primary" disabled={!ageConfirmed || busy}>Create workspace</button></form><Feedback error={error} notice="" /></main>;
