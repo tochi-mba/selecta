@@ -7,8 +7,8 @@ publish their OpenAPI titles as SelectaDJ.
 
 from __future__ import annotations
 
-from pathlib import Path
 import re
+from pathlib import Path
 
 from selecta.ai import eval_subject
 from selecta.lucy import context
