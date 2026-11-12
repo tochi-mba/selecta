@@ -106,6 +106,7 @@ Only these modules may open outbound connections:
 | `src/selecta/analysis/key.py` | GitHub raw (S-KEY weights, pinned commit) | Nothing but the download request | First key analysis without cached weights |
 | Cloud-only: `src/selecta/billing/webhooks.py`, `src/selecta/identity/tokens.py`, `src/selecta/identity/workos.py`, `src/selecta/identity/deletion_effects.py`, `src/selecta/storage/r2.py`, `src/selecta/workers/remote.py` | Cloud services | Cloud mode only (ADR-0391, ADR-0392) | Never in local mode |
 | Cloud image build only: `src/selecta/workers/model_lock.py` | The pinned model URLs in `services/worker/models.lock.json` | Nothing but the download request; each file is checked against its SHA-256 | Only when the Cloud worker image is built (ADR-0396); never at run time or in local mode |
+| Dev-only: `src/selecta/devstack/identity.py` | The locally configured Cloud API webhook endpoint | Signed identity events; no external identity provider is contacted | Only in the guarded local development identity service; never in production |
 
 Local files: original music is only read; analysis, stems, renders and exports go under the Selecta
 home (`SELECTA_HOME`, default `~/.selecta`). No module changes file permissions.

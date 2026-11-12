@@ -149,3 +149,254 @@ codes (P01, P02), never names. One JSON record per participant and study:
 - Who: novice and expert
 - Prompt 1: Come back, find the last proposal and say what was saved.
 - Success: Last proposal found and saved state stated correctly.
+
+## Per-task study cards
+
+One card per LX task that closes with a short study (triage package WP3). Each is timed:
+record `seconds`, `confidence` (1 to 5, asked after the task) and `hesitated` (true or
+false, by the card's rule) on every outcome, plus `"consent": true` on the record.
+
+Consent line, read before starting: This session tests SelectaDJ, not you. It uses made-up songs only. You can stop at any time. We note the time, whether you paused and how sure you felt, under a code such as P01; no name, voice or screen recording is kept.
+
+The pilot line on each card is Claude's own walkthrough on the made-up library, done to
+check the task can be completed and the prompt is clear. It is preparation only: no
+participant took part and it is not a study result.
+
+### LX-0340-01 - Collection-first journeys
+
+- Route: /library
+- Who: novice and expert (participant codes only)
+- Prompt (read as written, no coaching): You want something to listen to from this collection. Show me how you would choose. Then find the song Same Name by Iris Vale.
+- Success: Browses to a song and finds the exact recording without asking what a word means.
+- Hesitation: a pause over 10 s, a question to the facilitator, or asking what any Library word means.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0340-04 - Browse versus manage
+
+- Route: /library
+- Who: novice and expert (participant codes only)
+- Prompt (read as written, no coaching): Narrow the list to songs that need attention, then stop one song from ever playing.
+- Success: Narrows with a visible control first, then finds Never play in the row's menu.
+- Hesitation: a pause over 10 s, a question to the facilitator, or opening two or more menus before finding the record action.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0341-03 - Readiness meaning
+
+- Route: /library
+- Who: novice and expert (participant codes only)
+- Set up first: Use the stress fixture (SELECTA_E2E_STRESS=1) so the counts differ.
+- Prompt (read as written, no coaching): Looking only at the top of this page, how many songs could go into a mix right now?
+- Success: Answers with the Ready count and does not confuse it with analysed songs or transitions.
+- Hesitation: a pause over 10 s, a question to the facilitator, or reading a different count aloud first.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0342-06 - Zero-match recovery
+
+- Route: /library
+- Who: novice and expert (participant codes only)
+- Set up first: Turn on Needs attention and search for zzqx before handing over.
+- Prompt (read as written, no coaching): You searched and nothing came back. Get your songs back without losing the filter.
+- Success: Clears only the search and the Needs attention filter stays on.
+- Hesitation: a pause over 10 s, a question to the facilitator, or clearing everything and setting the filter again.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0343-01 - Frequent filters
+
+- Route: /library
+- Who: novice and expert (participant codes only)
+- Prompt (read as written, no coaching): Show only the songs that are ready, then only the ones you have set aside.
+- Success: Uses the Ready chip, then the Set aside chip, and says what each one shows.
+- Hesitation: a pause over 10 s, a question to the facilitator, or hovering over three or more chips before choosing.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0343-07 - Empty and combined constraints
+
+- Route: /library
+- Who: novice and expert (participant codes only)
+- Set up first: Turn on Ready and search for Episode before handing over.
+- Prompt (read as written, no coaching): Nothing shows. Say why, then bring back the song you were looking for.
+- Success: Names both the search and the filter, then undoes one step and finds Episode 12.
+- Hesitation: a pause over 10 s, a question to the facilitator, or clearing everything without first saying why the list is empty.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0344-04 - Row action choice
+
+- Route: /library
+- Who: novice and expert (participant codes only)
+- Prompt (read as written, no coaching): Add Last Call to the mix that is playing, then make it analyse sooner.
+- Success: Finds both actions on the Last Call row, the second in its More menu.
+- Hesitation: a pause over 10 s, a question to the facilitator, or opening a different row's menu first.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0345-01 - Cards versus list
+
+- Route: /library (List view, then Card view)
+- Who: novice and expert (participant codes only)
+- Prompt (read as written, no coaching): Look at the list for 5 seconds, then at the cards for 5 seconds. Which would you use to pick something new, and why?
+- Success: Names a reason tied to what the cards show (motif, title, artist, readiness).
+- Hesitation: a pause over 10 s, a question to the facilitator, or asking what the two views are for.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0346-02 - Action priority
+
+- Route: /library
+- Who: novice and expert (participant codes only)
+- Prompt (read as written, no coaching): On any row, show me the one thing you would most often do with a song.
+- Success: Points to the row's one visible action and reaches the rest through More.
+- Hesitation: a pause over 10 s, a question to the facilitator, or pointing at two different controls before deciding.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0348-02 - Facts before controls
+
+- Route: /library?song=11
+- Who: novice and expert (participant codes only)
+- Prompt (read as written, no coaching): Without editing anything, tell me this song's tempo, key and length.
+- Success: Reads tempo, key and length from the facts without opening an edit field.
+- Hesitation: a pause over 10 s, a question to the facilitator, or opening a correction field to read a value.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0348-06 - Advanced facts
+
+- Route: /library?song=11
+- Who: expert (participant codes only)
+- Prompt (read as written, no coaching): Find where this song's file lives and when it was last analysed.
+- Success: Opens the folded advanced section and reads the file and analysis facts.
+- Hesitation: a pause over 10 s, a question to the facilitator, or scrolling past the advanced section twice.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0349-01 - Correction form
+
+- Route: /library?song=11
+- Who: novice and expert (participant codes only)
+- Prompt (read as written, no coaching): The tempo looks wrong. Before saving, tell me what a correction will change and how you would undo it.
+- Success: States the allowed format, the active value and what Reset does before pressing Save.
+- Hesitation: a pause over 10 s, a question to the facilitator, or pressing Save before describing the effect.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0349-04 - Priority meaning
+
+- Route: /library
+- Who: novice and expert (participant codes only)
+- Prompt (read as written, no coaching): Before pressing Prioritize on Last Call, tell me what it will change.
+- Success: Says it moves the song up for analysis and keeps it cached, not that it plays sooner.
+- Hesitation: a pause over 10 s, a question to the facilitator, or saying it changes play order and then correcting themself.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0352-03 - Empty versus no match
+
+- Route: /library
+- Who: novice and expert (participant codes only)
+- Set up first: Show Needs attention plus search zzqx, then Set aside with no search.
+- Prompt (read as written, no coaching): For each of these two screens, say what is wrong and what you would do next.
+- Success: Tells an empty filter from a search with no match and picks each screen's own action.
+- Hesitation: a pause over 10 s, a question to the facilitator, or giving the same next step for both screens.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0353-01 - Two creation paths
+
+- Route: /mixes
+- Who: novice and expert (participant codes only)
+- Prompt (read as written, no coaching): Before you press anything: what would happen with each of the two ways to start?
+- Success: Says Quick Play starts music now and Lucy plans first, before pressing either.
+- Hesitation: a pause over 10 s, a question to the facilitator, or pressing a button to find out.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0353-03 - Lucy entry in 5 seconds
+
+- Route: /mixes
+- Who: novice and expert (participant codes only)
+- Prompt (read as written, no coaching): Look at this page for 5 seconds. Where would you go to plan a mix with help?
+- Success: Points to Create with Lucy within 5 seconds.
+- Hesitation: a pause over 10 s, a question to the facilitator, or naming another control first.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0354-01 - Mood cards
+
+- Route: /mixes
+- Who: novice and expert (participant codes only)
+- Prompt (read as written, no coaching): Pick one feeling card and tell me what it is, what it is based on and what its button does.
+- Success: Reads the name, the feeling and a real fact, and names the one action.
+- Hesitation: a pause over 10 s, a question to the facilitator, or reading a different card's text as this card's.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0354-03 - Three action paths
+
+- Route: /mixes
+- Who: novice and expert (participant codes only)
+- Prompt (read as written, no coaching): For one feeling, say what Play, Shape first and Save draft would each do. Do not press them.
+- Success: Three different correct predictions; none says Save draft starts music.
+- Hesitation: a pause over 10 s, a question to the facilitator, or giving two of them the same outcome.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0357-01 - First message
+
+- Route: /mixes/lucy/<id> (new conversation)
+- Who: novice and expert (participant codes only)
+- Set up first: Turn Lucy on (built-in planner, no AI service); open a new conversation.
+- Prompt (read as written, no coaching): Ask for a mix you would like, in your own words.
+- Success: Types into the Message to Lucy box and sends a musical request unaided.
+- Hesitation: a pause over 10 s, a question to the facilitator, or looking for a form or settings before typing.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0359-01 - Lifecycle words
+
+- Route: /mixes/lucy/<id>
+- Who: novice and expert (participant codes only)
+- Set up first: A conversation with one proposal from 'make me 6 songs'.
+- Prompt (read as written, no coaching): Is this mix only an idea, saved, or ready to play? How can you tell?
+- Success: Names the stage shown and points to the words that say so.
+- Hesitation: a pause over 10 s, a question to the facilitator, or asking what a stage word means.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0361-04 - Critique outcomes
+
+- Route: /mixes/lucy/<id>
+- Who: novice and expert (participant codes only)
+- Set up first: Proposal, then the critique 'keep Morning Light and make it calmer'.
+- Prompt (read as written, no coaching): You asked Lucy to keep a song and make the mix calmer. Which of those did it do?
+- Success: Reads each instruction's met, not met or unknown wording correctly.
+- Hesitation: a pause over 10 s, a question to the facilitator, or scrolling the whole chat to work it out.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0362-01 - Save draft versus Save and play
+
+- Route: /mixes/lucy/<id> (Your mix)
+- Who: novice and expert (participant codes only)
+- Set up first: A conversation with one proposal; open the Your mix tab.
+- Prompt (read as written, no coaching): Before pressing either, say what Save as draft and Save and play would each do.
+- Success: Says only Save and play replaces what is playing; draft leaves the player alone.
+- Hesitation: a pause over 10 s, a question to the facilitator, or pressing one to find out.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet
+
+### LX-0363-02 - Archive versus delete
+
+- Route: /mixes/lucy/<id> (Conversations)
+- Who: novice and expert (participant codes only)
+- Set up first: A conversation with one proposal; open the conversation list.
+- Prompt (read as written, no coaching): You want this conversation out of the way but might want it back. What do you press, and what would Delete do instead?
+- Success: Chooses Archive and says Delete removes the chat but keeps drafts and music.
+- Hesitation: a pause over 10 s, a question to the facilitator, or opening Delete's confirmation to read it.
+- Record: seconds, confidence 1 to 5, hesitated, success
+- Pilot (preparation, not a result): not piloted yet

@@ -88,7 +88,12 @@ for (const width of [375, 1440] as const) {
       const keep = process.env.S4_CAPTURE_DIR;
       if (keep) {
         mkdirSync(keep, { recursive: true });
-        writeFileSync(join(keep, `s4-0098-04-lyrics-${width}-${scheme}.png`), shot);
+        const filename = `s4-0098-04-lyrics-${width}-${scheme}.png`;
+        writeFileSync(join(keep, filename), shot);
+        writeFileSync(
+          join(keep, `${filename}.json`),
+          JSON.stringify({ file: filename, status: 'candidate-not-independently-verified' }, null, 2) + '\n',
+        );
       }
     }
   });
