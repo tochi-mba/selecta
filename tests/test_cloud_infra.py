@@ -80,6 +80,8 @@ def test_every_env_var_render_sets_is_one_the_code_reads():
         read |= set(re.findall(r'"((?:SELECTA|OTEL|ANTHROPIC)_[A-Z0-9_]+)"',
                                path.read_text("utf-8")))
     read.add("OTEL_EXPORTER_OTLP_HEADERS")  # read by the OpenTelemetry exporter itself
+    # storage.api._bucket constructs these four names from the bucket kind at runtime.
+    read.update(name for name in _R2 if name.startswith("SELECTA_R2_BUCKET_"))
     set_by_render = {item["key"] for group in blueprint()["envVarGroups"]
                      for item in group["envVars"]}
     for env in environments().values():
