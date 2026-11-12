@@ -64,7 +64,17 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   pagesWanted.current = pagesFrom(pagesAsked);
   const [typed, setTyped] = useState(query);
   const [searching, setSearching] = useState(true);
-  useEffect(() => setTyped(query), [query]);
+  // Ignore the echo of our own debounced URL update: a slow render can otherwise
+  // replace newer keystrokes with a shorter query while the user is still typing.
+  const ownSearchEcho = useRef<string | null>(null);
+  useEffect(() => {
+    if (ownSearchEcho.current === query) {
+      ownSearchEcho.current = null;
+      return;
+    }
+    ownSearchEcho.current = null;
+    setTyped(query);
+  }, [query]);
   const [rows, setRows] = useState<LibrarySong[] | null>(null);
   const [total, setTotal] = useState(0);
   const [next, setNext] = useState<string | null>(null);
@@ -318,7 +328,10 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
 
   useEffect(() => {
     if (typed === query) return;
-    const wait = window.setTimeout(() => setAddressQuery({ q: typed || null, pages: null }), 200);
+    const wait = window.setTimeout(() => {
+      ownSearchEcho.current = typed;
+      setAddressQuery({ q: typed || null, pages: null });
+    }, 200);
     return () => window.clearTimeout(wait);
   }, [typed, query]);
 
