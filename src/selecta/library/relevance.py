@@ -72,9 +72,7 @@ def relevance(query: str, song_id: int, artist: str | None, title: str | None) -
     return _ranker(query)(song_id, artist, title)
 
 
-def rank_songs(
-    query: str, songs: Iterable[tuple[int, str | None, str | None]]
-) -> dict[int, int]:
+def rank_songs(query: str, songs: Iterable[tuple[int, str | None, str | None]]) -> dict[int, int]:
     """Rank a whole library at once: ``{song id: rank}`` for every (id, artist, title) that
     matches, each rank exactly what ``relevance`` gives that song (MI-0162-04).
 

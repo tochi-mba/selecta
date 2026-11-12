@@ -96,18 +96,17 @@ def _reference(query: str, song_id: int, artist: str | None, title: str | None) 
 
 
 # ---- awkward names and queries ----
-_WORDS = [
-    "Golden", "golden", "Goldn", "River", "Rivers", "Ørsted", "Łódź", "Beyoncé", "AC/DC", "ACDC",
-    "feat.", "ft", "Featuring", "left", "soft", "100%", "1000", "Hey!", "Heyday", "Love", "Lovers",
-    "  ", "-", "Remix", "(Live)", "café", "Cafe", "Naïve", "über", "Straße", "Ⅷ", "ﬁre", "fire",
-    "Signal", "Signals", "Smith", "Smithers", "a_b", "Mötley", "Crüe", "Sigur", "Rós", "Ægis",
-]
-_QUERIES = [
-    "golden", "goldn", "gold", "river", "rivr", "orsted", "lodz", "beyonce", "ac dc", "acdc!",
-    "feat", "ft", "100%", "100", "hey!", "love!", "lov", "remix", "live", "cafe", "naive", "fire",
-    "signal", "signl", "smith!", "motley crue", "sigur ros", "aegis", "golden river", "x", "",
-    "  ", "12", "7", "straße", "strasse", "fi", "a_b", "golden 3", "artist 5", "ab",
-]
+# "|" separates entries, so names with spaces and an empty query stay exact
+_WORDS = (
+    "Golden|golden|Goldn|River|Rivers|Ørsted|Łódź|Beyoncé|AC/DC|ACDC|feat.|ft|Featuring|left|soft|"
+    "100%|1000|Hey!|Heyday|Love|Lovers|  |-|Remix|(Live)|café|Cafe|Naïve|über|Straße|Ⅷ|ﬁre|fire|"
+    "Signal|Signals|Smith|Smithers|a_b|Mötley|Crüe|Sigur|Rós|Ægis"
+).split("|")
+_QUERIES = (
+    "golden|goldn|gold|river|rivr|orsted|lodz|beyonce|ac dc|acdc!|feat|ft|100%|100|hey!|love!|lov|"
+    "remix|live|cafe|naive|fire|signal|signl|smith!|motley crue|sigur ros|aegis|golden river|x||"
+    "  |12|7|straße|strasse|fi|a_b|golden 3|artist 5|ab"
+).split("|")
 
 
 def _library(size: int, seed: int) -> list[tuple[int, str | None, str | None]]:
@@ -196,7 +195,7 @@ def test_mi_0162_04_searching_twenty_thousand_songs_is_quick_and_unchanged(tmp_p
     assert answers["golden"]["total"] == 2500
     assert answers["zzz"]["total"] == 0
 
-    # generous: a shared, loaded 4-core laptop answered the first search in about 0.6 s and later
-    # ones in about 0.3 s, against 1.5 to 1.7 s before (MI-0162-04 bench, q=golden)
+    # generous: on a shared, loaded 4-core laptop the first search took 0.5 to 1.3 s and later ones
+    # 0.2 to 0.9 s, against 1.5 to 1.7 s for q=golden in the MI-0162-04 bench before this work
     assert timings["golden"] < 4.0
     assert max(t for query, t in timings.items() if query != "golden") < 3.0

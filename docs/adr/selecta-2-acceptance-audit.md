@@ -35,7 +35,7 @@
 | [ADR-0026](adr-0026-api-compatibility.md) | In progress | 9 of 9 | none | yes |
 | [ADR-0027](adr-0027-explanations-and-feedback.md) | In progress | 5 of 7 | T0134, T0135 | no |
 | [ADR-0028](adr-0028-recovery-and-multitab.md) | In progress | 6 of 7 | T0097 | no |
-| [ADR-0029](adr-0029-testing-and-quality.md) | In progress | 10 of 22 | T0014, T0017, T0259, T0260, T0261, T0262, T0263, T0264, T0265, T0266, T0267, T0269 | no |
+| [ADR-0029](adr-0029-testing-and-quality.md) | In progress | 11 of 22 | T0014, T0017, T0259, T0260, T0261, T0262, T0263, T0264, T0265, T0266, T0267 | no |
 | [ADR-0030](adr-0030-migration-and-release.md) | Implemented | 12 of 23 | T0018, T0019, T0251, T0253, T0258, T0274, T0275, T0276, T0277, T0278, T0279 | no |
 | [ADR-0031](adr-0031-pwa-and-browsers.md) | In progress | 2 of 6 | T0061, T0062, T0064, T0065 | no |
 | [ADR-0032](adr-0032-diagnostics-and-operations.md) | Implemented | 7 of 7 | none | yes |
@@ -542,7 +542,7 @@ Acceptance criteria:
 | T0266 | no | Needs a person | open |
 | T0267 | no | Needs a person | open |
 | T0268 | yes | Done | `tests/test_api_contracts.py`, `web/e2e/pages.e2e.ts`. |
-| T0269 | no | Partly | open |
+| T0269 | yes | Done | `src/selecta/audit/adr_acceptance.py` links each ADR's own criteria to its tasks' proof in `docs/adr/selecta-2-acceptance-audit.md` and refuses Verified without it; `tests/test_adr_acceptance_audit.py` passed 2026-11-12. |
 | T0270 | yes | Done | `docs/adr/` updated in this PR. |
 
 ## [ADR-0030](adr-0030-migration-and-release.md)

@@ -168,7 +168,7 @@ describe('P0104 a 20,000-song library pages and searches without losing place or
     const search = screen.getByRole('searchbox', { name: 'Search your library' });
     await userEvent.click(search);
     await userEvent.type(search, 'Night');
-    expect(await screen.findByText('Showing 100 of 1200 songs.', {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(await screen.findByText('Showing 100 of 1200 songs.', {}, { timeout: 10_000 })).toBeInTheDocument();
     expect(search).toHaveFocus();
     expect(document.querySelectorAll('.library-rows .song-row')).toHaveLength(100);
     // 400 full rows in jsdom are slow to draw on a loaded machine; the timing itself is MP-0291-07's job

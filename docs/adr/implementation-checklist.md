@@ -13,7 +13,7 @@
 
 **Invariants:** Preserve the whole current app and warm colour identity. No lost source music or drafts, no wrong current/draft mutation, no unintended audio silence/late seam, no unapproved/partial bridge joins, no inaccessible essential action, no invalid exported audio, no unsafe localhost access.
 
-**Initial task count:** 279 tasks across 14 delivery phases, covering all 32 ADRs. **Completed so far: 212.**
+**Initial task count:** 279 tasks across 14 delivery phases, covering all 32 ADRs. **Completed so far: 213.**
 
 **Related docs:** [ADR index](https://github.com/tochi-mba/selecta/tree/main/docs/adr) · [feature parity](https://github.com/tochi-mba/selecta/blob/main/docs/adr/feature-parity.md) · [test matrix](https://github.com/tochi-mba/selecta/blob/main/docs/adr/test-coverage-matrix.md) · [acceptance ledger](https://github.com/tochi-mba/selecta/blob/main/docs/acceptance.md)
 
@@ -407,7 +407,8 @@
 ### Cross-feature integration scenarios
 
 - [x] T0250 - Complete current-vs-draft isolation sequence while listening, requesting, editing and undoing.
-- [ ] T0251 - Complete two simultaneous requests competing for a slot, bridge approval and stale cancellation replay.
+- [x] T0251 - Complete two simultaneous requests competing for a slot, bridge approval and stale cancellation replay.
+ **Evidence (2026-11-12):** `web/e2e/t0251-request-race.e2e.ts` ("T0251 two requests race for one spot, one bridge is approved and a late answer cannot revive the cancelled one") runs the whole scenario against the real server in Edge: simultaneous requests (one sent twice) land once each, a click on Add both reaches the real `/api/requests/{id}/bridge`, which records the choice and route for that request only, and a cancel made while a late answer is in flight stays cancelled. Passed 2026-11-12 with `web/e2e/integration.e2e.ts` ("two requests at once", "a cancelled request that is answered late") (3 passed).
 - [x] T0252 - Complete manual cue change while a previous render finishes and fallback plays; verify intended/actual difference. **Evidence (2026-11-11):** `tests/test_cue_change_during_render.py` (2 passed) runs the sequence on the server; `web/src/ui/seamCueChange.test.ts` (3 passed) shows the words the page gives; the fallback playing meanwhile is `a transition that isn't ready doesn't stop the music` in `web/e2e/listen.e2e.ts`, passed in Edge 2026-11-11.
 - [ ] T0253 - Complete Studio local audition → pause main playback → navigate → commit exact seam → render failure recovery. **Needs a person:** needs real stems on the owner's machine and someone listening to the committed seam (checked 2026-11-10).
 - [x] T0254 - Complete export of a draft while switching/reordering other mixes; verify snapshot and FLAC bytes.
@@ -431,7 +432,8 @@
 - [ ] T0266 - Conduct user task tests for casual listener, creator and expert editor without guided help. **Needs a person:** unguided task tests with a casual listener, a creator and an expert editor (checked 2026-11-10).
 - [ ] T0267 - Conduct actual listener blind comparisons; document subjective audio quality separately from render pass. **Needs a person:** blind comparisons with real listeners, following `docs/listening-procedure.md` (checked 2026-11-10).
 - [x] T0268 - Verify local networking/origin/security and no private telemetry or original-file deletion.
-- [ ] T0269 - Audit every ADR acceptance criterion and link concrete CI/QA proof before marking Verified.
+- [x] T0269 - Audit every ADR acceptance criterion and link concrete CI/QA proof before marking Verified.
+ **Evidence (2026-11-12):** `src/selecta/audit/adr_acceptance.py` reads each of ADR-0001 to ADR-0032's own acceptance criteria, the tasks that implement it and each task's ledger row, and refuses an ADR marked Verified unless every task is ticked with a Done row citing concrete proof; `--write` regenerated `docs/adr/selecta-2-acceptance-audit.md` (all 32 ADRs, criteria and proof per task). `tests/test_adr_acceptance_audit.py` (3 tests) passed 2026-11-12 and the gate printed no errors.
 - [x] T0270 - Update ADR decision/implementation status history, the ADR index, parity matrix and roadmap with merged implementation PR links.
 
 
@@ -446,5 +448,5 @@
 - [ ] T0275 - Resolve all critical data-integrity, audio continuity, bridge atomicity, accessibility, export and privacy blockers. **Needs a person:** the screen-reader, listening and installed-app gates must run first; none known in code (checked 2026-11-11).
 - [ ] T0276 - Run Windows CI plus browser/audio/a11y gates on release candidate commit. **Needs a person:** choose the release candidate commit and run the gates on it, with people for screen readers and listening (checked 2026-11-11).
 - [ ] T0277 - Record final human listening evidence and explicitly accepted remaining noncritical limitations. **Needs a person:** the owner's own listening evidence and sign-off on remaining noncritical limitations (checked 2026-11-10).
-- [ ] T0278 - Verify every checklist item has a linked implementing PR and evidence; do not infer completion from docs.
+- [ ] T0278 - Verify every checklist item has a linked implementing PR and evidence; do not infer completion from docs. **Implementation:** Implemented; the check runs (`src/selecta/audit/t_task_evidence.py`; `tests/test_t_task_evidence.py`, 4 passed 2026-11-12): every task has one ledger row naming PR #22, ticks and Done rows agree both ways, cited files exist. Open because 10 Done rows still cite prose only (T0019, T0027, T0040, T0049, T0064, T0134, T0173, T0240, T0259, T0260); each needs a file, test, PR or CI run added to its own row by that task's owner.
 - [ ] T0279 - Merge/close this tracking PR only after the programme's delivery is actually complete; keep it open otherwise. **Needs a person:** the owner merges or closes the tracking PR once delivery is complete (checked 2026-11-10).
