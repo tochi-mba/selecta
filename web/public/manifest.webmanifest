@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Selecta",
-  "short_name": "Selecta",
-  "description": "Make and play mixes from your music library.",
+  "name": "SelectaDJ",
+  "short_name": "SelectaDJ",
+  "description": "Make and play mixes from your music library. SelectaDJ is a REX Technologies product.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -185,7 +185,7 @@ export function CloudApp() {
   const lucyRequest = useCallback(<T,>(path: string, init?: RequestInit) => api<T>(path, init, account?.workspace.id), [api, account?.workspace.id]);
 
   if (isLoading) return <main className="cloud-runtime-message"><span className="cloud-mark">S</span><p>Checking your sign-in…</p></main>;
-  if (!user) return <main className="cloud-welcome"><span className="cloud-mark">S</span><p className="cloud-eyebrow">SELECTA CLOUD</p><h1>Your music, ready to move.</h1><p>Build your library, shape the set and keep the transitions ready on every device.</p>{signInProblem && <p className="cloud-feedback error" role="alert">{signInProblem}</p>}<div className="cloud-actions"><button className="primary" onClick={() => void signUp()}>Create your account</button><button onClick={startSignIn}>Sign in</button></div><small>Your music stays private to your workspace.</small></main>;
+  if (!user) return <main className="cloud-welcome"><span className="cloud-mark">S</span><p className="cloud-eyebrow cloud-caps">SelectaDJ Cloud</p><h1>Your music, ready to move.</h1><p>Build your library, shape the set and keep the transitions ready on every device.</p>{signInProblem && <p className="cloud-feedback error" role="alert">{signInProblem}</p>}<div className="cloud-actions"><button className="primary" onClick={() => void signUp()}>Create your account</button><button onClick={startSignIn}>Sign in</button></div><small>Your music stays private to your workspace.</small><footer className="cloud-footer"><CloudCredit /></footer></main>;
   if (blocked) return <BlockedAccount code={blocked} onSignOut={() => signOut({ returnTo: window.location.origin })} />;
   if (!user.emailVerified) return <main className="cloud-runtime-message"><span className="cloud-mark">S</span><h1>Verify your email</h1><p>Open the verification email for {user.email}, then refresh this page.</p><button onClick={() => window.location.reload()}>I’ve verified my email</button><button onClick={() => signOut({ returnTo: window.location.origin })}>Sign out</button></main>;
   if (needsOnboarding) return <main className="cloud-onboarding"><span className="cloud-mark">S</span><p className="cloud-eyebrow">ONE QUICK CHECK</p><h1>Set up your SelectaDJ workspace</h1><p>Your personal space starts with 10 GB of private music storage.</p><form onSubmit={(event) => void completeOnboarding(event)}><label className="cloud-check"><input type="checkbox" checked={ageConfirmed} onChange={(event) => setAgeConfirmed(event.target.checked)} /> I confirm that I’m at least 13 years old.</label><button className="primary" disabled={!ageConfirmed || busy}>Create workspace</button></form><Feedback error={error} notice="" /></main>;
@@ -201,7 +201,7 @@ export function CloudApp() {
   return (
     <div className="cloud-shell" data-stream={stream}>
       <aside className="cloud-rail">
-        <button className="cloud-brand" title="Return to Cloud home" onClick={() => choosePage('home')}><span className="cloud-mark" aria-hidden="true">S</span><span>SelectaDJ{' '}<span className="cloud-brand-sub">CLOUD</span></span></button>
+        <button className="cloud-brand" title="Return to Cloud home" onClick={() => choosePage('home')}><span className="cloud-mark" aria-hidden="true">S</span><span>SelectaDJ{' '}<span className="cloud-brand-sub">REX Technologies</span></span></button>
         <nav aria-label="Cloud workspace">
           {(Object.keys(LABELS) as Page[]).filter((target) => pageShown(account, target)).map((target) => (
             <button key={target} aria-current={shown === target ? 'page' : undefined} onClick={() => choosePage(target)}>{LABELS[target]}</button>
@@ -221,10 +221,15 @@ export function CloudApp() {
         {shown === 'uploads' && account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} />}
         {shown === 'billing' && account && <Billing account={account} busy={busy} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} />}
         {shown === 'settings' && account && <div className="cloud-settings"><AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} />{featureOn(account, 'devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{featureOn(account, 'lucy') && featureOn(account, 'account.lucy_settings') && <LucyCloudSettings request={lucyRequest} features={account.features} />}{showsDeviceCheck(account.features) && <DeviceCheck />}{showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />}</div>}
-        <footer className="cloud-footer">SelectaDJ Cloud · Your originals remain private to your workspace.</footer>
+        <footer className="cloud-footer">SelectaDJ Cloud · Your originals remain private to your workspace.<CloudCredit /></footer>
       </main>
     </div>
   );
+}
+
+/** Who makes SelectaDJ, shown once at the foot of Cloud pages. */
+export function CloudCredit() {
+  return <span className="cloud-credit">SelectaDJ is a REX Technologies product. © {new Date().getFullYear()} REX Technologies</span>;
 }
 
 function BlockedAccount({ code, onSignOut }: { code: BlockedCode; onSignOut: () => void }) {

@@ -100,6 +100,10 @@ function Overview({ status }: { status: ViewProps['status'] }) {
       <JobsPanel status={status} />
       {flagOn('export') && <ExportJobs always />}
       <InterfaceChoices />
+      <section className="panel stack about-app" aria-labelledby="about-app-title">
+        <h2 id="about-app-title">About</h2>
+        <p className="hint">SelectaDJ is a REX Technologies product.</p>
+      </section>
     </>
   );
 }

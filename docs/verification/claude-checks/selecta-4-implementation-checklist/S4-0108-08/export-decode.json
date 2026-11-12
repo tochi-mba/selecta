@@ -9,33 +9,33 @@
     {
       "song_id": 2,
       "title": "Slow Tide",
-      "seam": "rendering",
+      "seam": "ready",
       "key": "c9dbccae51a011224ec1"
     },
     {
       "song_id": 3,
       "title": "Paper Moon",
-      "seam": "queued",
-      "key": "947c53b0338e275a7d4a"
+      "seam": "ready",
+      "key": "2568f6cbfaf95da6432a"
     },
     {
       "song_id": 4,
       "title": "Neon Rain",
-      "seam": "queued",
-      "key": "64888040de407cc06b0a"
+      "seam": "ready",
+      "key": "c090d25a20d7df577ea6"
     }
   ],
   "job_start": {
-    "id": "48850aa573b34bb48009fc9670b505b1",
+    "id": "3f09be5678ac4a1cb45fd73c2d24ecbf",
     "state": "preparing",
-    "revision": "7cdcb73a0bca",
+    "revision": "8354dfd8485f",
     "scope": "current"
   },
   "job": {
-    "id": "48850aa573b34bb48009fc9670b505b1",
+    "id": "3f09be5678ac4a1cb45fd73c2d24ecbf",
     "state": "ready",
-    "revision": "7cdcb73a0bca",
-    "name": "selecta-mix-20261112-114209-48850a.flac",
+    "revision": "8354dfd8485f",
+    "name": "selecta-mix-20261112-135833-3f09be.flac",
     "seconds": 240.50936507936507,
     "checksum": "164f06c026a98be3ffb4b76c95e88a0a5d789863c9fe697bb4095790d5c54c4e",
     "error": null
@@ -48,8 +48,8 @@
   ],
   "job_seams": [
     "c9dbccae51a011224ec1",
-    "947c53b0338e275a7d4a",
-    "64888040de407cc06b0a"
+    "2568f6cbfaf95da6432a",
+    "c090d25a20d7df577ea6"
   ],
   "bytes": 7780107,
   "magic": "fLaC",
@@ -71,7 +71,10 @@
     }
   },
   "ffmpeg_decode_errors": "",
-  "ebur128": "Summary: Integrated loudness: I: -19.1 LUFS Threshold: -29.1 LUFS Loudness range: LRA: 2.0 LU Threshold: -39.1 LUFS LRA low: -20.0 LUFS LRA high: -18.1 LUFS True peak: Peak: -0.9 dBFS [out#0/null @ 000001fb10cd1d00] video:0KiB audio:41431KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: unknown size=N/A time=00:04:00.50 bitrate=N/A speed=50.9x elapsed=0:00:04.72",
+  "ffmpeg_pcm_sha256": "164f06c026a98be3ffb4b76c95e88a0a5d789863c9fe697bb4095790d5c54c4e",
+  "pcm_matches_job_checksum": true,
+  "ffmpeg_pcm_frames": 10606463,
+  "ebur128": "Summary: Integrated loudness: I: -19.1 LUFS Threshold: -29.1 LUFS Loudness range: LRA: 2.0 LU Threshold: -39.1 LUFS LRA low: -20.0 LUFS LRA high: -18.1 LUFS True peak: Peak: -0.9 dBFS [out#0/null @ 00000180348d32c0] video:0KiB audio:41431KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: unknown size=N/A time=00:04:00.50 bitrate=N/A speed=84.8x elapsed=0:00:02.83",
   "astats": [
     "Overall",
     "Peak level dB: -1.099798",

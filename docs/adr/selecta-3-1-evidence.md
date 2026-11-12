@@ -95,3 +95,63 @@ Every check in [the 116-item tracker](selecta-3-1-implementation-checklist.md) r
 ## Current disposition
 
 **Accepted ADR programme (2026-11-12): 96 Implemented with automated evidence, 1 In progress, 19 need a person, 0 Verified.** The PR #25 table above is the historical partial-task snapshot; current task states are on the checklist lines. Remaining CI, manual accessibility/audio/usability, scale and owner acceptance must not be invented. No merge is warranted by this partial record.
+
+## Claude delegated checks (owner-delegated 2026-11-12)
+
+The owner delegated every person step a machine can check to Claude on 2026-11-12. This checklist's box means **independent, owner-reviewed Verified**, so a delegated check never ticks a box here: each line records the check as `**Verified:** Claude (owner-delegated 2026-11-12)` (or `Claude with NVDA 2026.3.1`) and keeps `Needs a person:` with exactly what remains.
+
+- **Build:** `HEAD` `ead98661` plus the working tree of `feat/finish-checklists-2` on 2026-11-12, site built with `VITE_SELECTA_GALLERY=1`, served by `tests/e2e_server.py` with `SELECTA_E2E_STRESS=1` (invented long, missing, duplicate, right-to-left and CJK names; no private data).
+- **Machine:** Windows 11 Pro 10.0.26300, Microsoft Edge 157.0.4341.46 (Playwright 1.65.0, headless and muted except the NVDA sessions), reduced motion on. WebKit is not installed for this Playwright version, so iPhone sizes ran in Edge with the iPhone 13 viewport, touch and user agent; no WebKit or Safari result is claimed.
+- **Data:** `docs/verification/claude-checks/selecta-3-1/` (`visual/` 136 captures plus `metrics-320.json`, `metrics-768.json`, `metrics-1440.json` and `recheck-320.json`; `a11y/` accessibility trees per route, `routes.json`, `overlays.json`; `devices/` phone, landscape, 200% zoom, backend-down and slow-server captures and JSON; `listening/` export measurements). Full-page captures draw fixed chrome (bottom bar, header, skip link) where the viewport sat when captured, so overlap was judged from measured viewport rectangles, not from those images.
+
+### Sitting 1: visual (Edge, light and dark, 320x700, 768x1024, 1440x900)
+
+| What was checked | Result |
+|---|---|
+| 12 routes plus Listen playing, Stage, export dialog, shape dialog, Requests drawer, palette, inspector, Library empty, loading, failed and recovered, in both themes at three widths (136 captures; 40 read by eye, the rest measured) | Theme attribute matched the requested theme on every capture; no horizontal scroll on any capture; axe (WCAG 2.0/2.1/2.2 A and AA tags): 0 colour-contrast violations in either theme |
+| Library states | Skeleton rows match the real row structure; the failed state says the songs are fine and offers Try again; recovery shows the rows again (320 and 1440, both themes) |
+| Long, RTL, CJK, missing and duplicate names | Wrap whole in Library, editor, Listen and Stage at every width |
+| **Found and fixed:** export dialog at 320px ran an unbroken song name off the dialog edge | `.export-ends b { overflow-wrap: anywhere }` (`web/src/styles/creation.css`, `web/src/views/ExportPanel.tsx`); recheck: both names end inside the dialog (`recheck-320.json` `exportNames`) |
+| **Found and fixed:** the waveform's "seam" label broke into "se" / "am" at every width | `white-space: nowrap` on `.seam-mark::after` (`web/src/style.css`); recheck `seamLabelWrap` |
+| **Found and fixed:** on Stage at 320x700 the fixed Pause button covered "Read all lyrics" (measured overlap 45x13px) | the narrow Stage keeps the controls' height free at its foot (`web/src/styles/listening.css`); recheck `stageScrolledToEnd` |
+| **Found, not fixed (P2):** at 320px the page name breaks inside a word ("Workspac/e"); at 768px the editor's title column is squeezed to about 110px ("Extraordinaril/y") | owner decision on header and editor-row geometry (shared, newer MP/UF work owns it) |
+| **Found, not fixed (P2):** axe `label-content-name-mismatch` on palette options ("Page: Listen" against visible "Listen Go to"); `target-size` once on Listen at 320 when "Read all lyrics" sat under the bottom bar mid-scroll; native 13px checkboxes (labelled rows) and a 23px-tall "Why this transition?" summary as 24px exceptions | recorded for the WCAG exception list |
+| Component gallery | Not captured (its disclosure stayed closed); hover, focus, pressed and busy rely on `mp-0279-component-gallery.e2e.ts` |
+
+### Sitting 2: screen reader and keyboard (NVDA 2026.3.1, Edge 157, headed, 1280x800)
+
+| What was checked | Result |
+|---|---|
+| Rail, landmarks and names on 7 routes, NVDA Tab speech | Skip link, "Main navigation landmark", current page announced, every control named ("Requests: Request a song", "Collapse the side bar toggle button not pressed"); 12 routes have no unnamed control and all 45 Tab stops on each show a focus ring and stay in view (`a11y/routes.json`) |
+| Palette, export dialog, shape dialog, Requests drawer, Activity | Focus moves in, Tab stays inside, Escape closes, focus returns to the opener (the palette, opened by Ctrl+K, returns to the page); NVDA reads "Save as an audio file", the frozen scope "Your mix current mix, 8 songs, about 8 min" and each transition; Requests reads its combo box "Request a song: search your library". Palette and Requests dialog names are spoken twice on open (P2) |
+| Editor move by keyboard | NVDA: "Moved An Extraordinarily Long ... to number 2 of 8." once; focus stays on the moved song's button |
+| Play | "Now playing Untitled by Unknown artist" spoken once |
+| **Found and fixed:** with focus on the song slider while playing, NVDA read the clock twice a second ("0:13 of 1:29, 1:16 left", 30 times in 15 s) | the focused slider holds its spoken value until the listener seeks (`web/src/views/NowStrip.tsx`, `web/src/views/s31-0080-09-quiet-seek.test.tsx`, passed with `Now.test.tsx`, `NowFlow.test.tsx`, `listenSeek.test.tsx`: 45 tests). NVDA re-run: see the S31-0080-09 line |
+| Workspace attention status | "Workspace needs your attention: 1 song failed." is re-announced on every full page load (P2; in-app navigation not measured) |
+
+### Sitting 3: devices (Edge emulation)
+
+| What was checked | Result |
+|---|---|
+| iPhone 13 size 390x664 and landscape 750x342, Pixel 7 412x839, 200% zoom (640x400 CSS px at DPR 2), 6 routes, both themes | No horizontal scroll; bottom bar 58px with 120px reserved under the page so the last row clears it; no touch target under 44px in the bar or transport |
+| Touch | Requests drawer opens and closes by tap; editor Move buttons are 44x44 and a tap moved the song |
+| Slow server, double press (3 s delay) | The pressed button turns disabled and busy at once; one POST reached the server; focus stayed on the button |
+| Soft keyboard (320x300) | Library search stays visible and focused while typing |
+| Backend refused | "Can't reach Selecta. It may have stopped running. Start it again, and this page will pick up by itself." and Try now; no offline-playback claim; picks up by itself once the server answers. **Found, not fixed (P2):** that screen is unstyled in the local build (no gutters, a bare "S"), because its classes live in `web/src/cloud/cloud.css`, which only the Cloud bundle loads |
+| Mini-player while playing on a phone | Not shown in emulation (playback did not start there), so not measured |
+
+### Sitting 4: listening (measurable parts only)
+
+| What was checked | Result |
+|---|---|
+| Export of the current mix (songs 1 to 4) through the dialog, FLAC downloaded from the server | Decodes as FLAC, 16-bit, 44.1 kHz, stereo, 240.5 s; `tests/check_export_audio.py`: each song found with score 1.0, in order; a song not in the mix scored 0.51 (not found); peak -1.1 dBFS, 0 clipped samples, no silent gap over 300 ms, no 1 s level jump over 9 dB (`listening/export-check.json`, `listening/audio-measure.json`) |
+| Main versus audition ownership | Not measurable here: the made-up library has no harmonic matches and no stems, so there is no audition or Studio preview to start |
+
+### Sitting 8: sign-off (delegated evidence review, not owner sign-off)
+
+| What was checked | Result |
+|---|---|
+| Every cited file and quoted test name on all 116 lines | Every cited file exists and every quoted test name was found in it |
+| The cited tests, re-run 2026-11-12 | 48 Vitest files, 673 tests passed; 9 pytest files, 290 passed |
+| Baseline and reconciliation facts | `3b01dc1` and `6d78cf4` exist and are ancestors of the head; the 3.0 checklist recounts to 258 (229 Implemented, 29 Needs a person, 222 ticked) |
+| Exact-head CI | No green `test` run on `feat/finish-checklists-2` yet (latest runs cancelled or in progress) |

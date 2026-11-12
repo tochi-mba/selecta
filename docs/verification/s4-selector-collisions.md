@@ -174,7 +174,7 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `select` | style.css, styles/polish.css | styles/polish.css |
 | `select:focus-visible` | style.css, styles/polish.css | styles/polish.css |
 
-## Classes styled by more than one sheet (214)
+## Classes styled by more than one sheet (216)
 
 | Class | Sheets, in load order | Proposed owner |
 |---|---|---|
@@ -249,7 +249,9 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.library` | styles/shell.css, styles/polish.css | styles/shell.css |
 | `.library-cards` | styles/operations.css, styles/music-objects.css | styles/operations.css |
 | `.library-count` | styles/shell.css, styles/typography.css | styles/shell.css |
+| `.library-density` | styles/polish.css, styles/operations.css | styles/polish.css |
 | `.library-find` | styles/shell.css, styles/polish.css, styles/operations.css | styles/shell.css |
+| `.library-layout` | styles/polish.css, styles/music-objects.css | styles/polish.css |
 | `.library-rows` | styles/operations.css, styles/music-objects.css, styles/depth.css | styles/operations.css |
 | `.limit` | style.css, styles/operations.css | style.css |
 | `.line-controls` | style.css, styles/listening.css | style.css |

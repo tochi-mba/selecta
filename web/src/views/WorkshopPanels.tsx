@@ -369,6 +369,10 @@ export function relinkReferenceWords(references: NonNullable<RelinkPreview['refe
   return `Kept as they are: ${said.join(', ')}. Song IDs don’t change, so all of it keeps working.`;
 }
 
+/** The Windows example path as one JS string. JSX text and attribute strings don't read escapes,
+ * so writing two backslashes there showed both on the page. */
+export const WINDOWS_EXAMPLE_FOLDER = 'C:\\Users\\you\\Music';
+
 export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 'status' | 'refreshStatus' | 'notify'>) {
   const [folder, setFolder] = useState('');
   const [problem, setProblem] = useState('');
@@ -546,7 +550,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
       </div>
       <h3>Add another folder</h3>
       <p className="hint">{words().sourcesHelp}</p>
-      <p className="hint">Example folder paths: Windows <code>C:\\Users\\you\\Music</code>; macOS <code>/Users/you/Music</code>; Linux <code>/home/you/Music</code>. Use a path on the computer running SelectaDJ, not a website address.</p>
+      <p className="hint">Example folder paths: Windows <code>{WINDOWS_EXAMPLE_FOLDER}</code>; macOS <code>/Users/you/Music</code>; Linux <code>/home/you/Music</code>. Use a path on the computer running SelectaDJ, not a website address.</p>
       <form className="row wrap sources-add" onSubmit={(event) => void scan(event)}>
         <Field label="Music folder" error={problem}>
           {(field) => (
@@ -554,7 +558,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
               {...field}
               value={folder}
               onChange={(event) => { setFolder(event.target.value); setProblem(''); }}
-              placeholder="C:\\Users\\you\\Music"
+              placeholder={WINDOWS_EXAMPLE_FOLDER}
             />
           )}
         </Field>

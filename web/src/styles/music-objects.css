@@ -159,9 +159,9 @@
 /* Library cards are a reversible presentation of the same list and actions;
    all search, cursor pagination and keyboard order stay unchanged. */
 .library-layout button { min-height: var(--control-height); padding-inline: var(--space-3); font-size: var(--text-sm); }
-/* The tinted fill replaces the base pressed fill, so the text has to follow it: the base pressed
-   colour is the page background, which can't be read on this tint in either theme. */
-.library-layout button[aria-pressed='true'] { border-color: var(--selected); background: var(--surface-selected); color: var(--text); }
+/* EX-0130-01: the pressed view uses the same ink fill as the Comfortable/Compact pair beside it. The
+   old accent tint was within 1.1:1 of the unpressed button in the light theme; the ink fill is well
+   over 3:1 against both the unpressed button and the page, and polish.css adds the shape cue. */
 .library-rows.library-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));

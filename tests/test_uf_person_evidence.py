@@ -178,9 +178,13 @@ def test_visual_signoff_covers_every_documented_fixture() -> None:
     assert {"listen", "editor", "library", "analysis", "export-dialog"} <= set(fixtures)
 
 
-def test_shipped_logs_are_empty_so_no_person_evidence_is_claimed() -> None:
+def test_shipped_logs_claim_no_independent_person_evidence() -> None:
+    # The owner delegated machine-checkable reviews to Claude (2026-11-12); such rows must say so,
+    # and no row may claim an independent or named human reviewer.
     for name in logs.LOG_SPECS:
-        assert logs.load(ROOT, name)["entries"] == [], name
+        for entry in logs.load(ROOT, name)["entries"]:
+            who = entry.get("reviewer") or entry.get("listener") or ""
+            assert str(who).startswith("Claude (owner-delegated"), (name, who)
     assert all(problems for problems in logs.all_status(ROOT).values())
 
 
