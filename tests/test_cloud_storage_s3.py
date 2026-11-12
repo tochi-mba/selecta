@@ -138,3 +138,14 @@ def test_an_aborted_multipart_upload_leaves_nothing(storage):
     with pytest.raises(R2NotFound):
         client.head_object(bucket, key)
     assert list(client.list_objects_v2(bucket, prefix="s/multi/")) == []
+
+
+def test_a_part_url_takes_only_its_signed_length(storage):
+    """SEC-ST-1 (rc-sst): a part URL signs its Content-Length, so a bigger part is refused."""
+    client, bucket = storage
+    key = "s/multi/sized"
+    upload_id = client.create_multipart_upload(bucket, key)
+    url = client.presign_upload_part(bucket, key, upload_id, 1, ttl=300, content_length=10)
+    assert httpx.put(url, content=b"x" * 11, timeout=30.0).status_code == 403
+    assert httpx.put(url, content=b"x" * 10, timeout=30.0).status_code == 200
+    client.abort_multipart_upload(bucket, key, upload_id)

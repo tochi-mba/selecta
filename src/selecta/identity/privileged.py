@@ -180,8 +180,14 @@ def actor_for(
     user_id: str,
     *,
     request_id: str | None = None,
+    token_sid: str | None = None,
 ) -> Actor:
-    """The `Actor` for this live admin session of this user, built from the stored row only."""
+    """The `Actor` for this live admin session of this user, built from the stored row only.
+
+    `token_sid` is the AuthKit session id (`sid`) of the request's token. When given, it must be
+    the session the admin session was started from, so the admin session id can't be carried to
+    the same person's other (possibly non-MFA) sign-ins. Admin requests always pass it.
+    """
     row = (
         conn.execute(sa.select(privileged_sessions).where(privileged_sessions.c.id == session_id))
         .mappings()
@@ -190,6 +196,8 @@ def actor_for(
     if row is None or row["user_id"] != user_id:
         raise PrivilegedSessionEnded("no such admin session")
     session = PrivilegedSession.from_row(row)
+    if token_sid is not None and token_sid != session.workos_sid:
+        raise PrivilegedSessionEnded("this admin session belongs to another sign-in")
     now = db_now(conn)
     if session.revoked_at is not None:
         raise PrivilegedSessionEnded("this admin session was ended")

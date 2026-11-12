@@ -172,7 +172,7 @@ export function App() {
         // MI-0162-05: nor while draft moves are on their way, which this read may predate. Only moves
         // already on screen in this draft count: one not shown yet has none, and another draft's moves
         // must not leave it on its loading skeleton.
-        const movesShown = draftMovesWaiting() && draftDataRef.current?.draft?.id === asked;
+        const movesShown = draftMovesWaiting(asked) && draftDataRef.current?.draft?.id === asked;
         if (draftRef.current !== asked || seen !== draftChanges.current || movesShown) return;
         setDraftMix(keepUnchangedMix(draftDataRef.current?.draft?.id === asked ? draftDataRef.current : null, next));
         setDraftGone(false);

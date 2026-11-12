@@ -39,7 +39,7 @@ from selecta.authz.roles import (
 )
 from selecta.authz.schema import access_grants, role_assignments
 from selecta.authz.scopes import PLATFORM_RESOURCE, ResourceRef, Scope
-from selecta.identity.schema import session_revocations, users
+from selecta.identity.schema import session_revocations, users, workspace_members
 from selecta.persistence import db_now
 
 STAFF_SESSION_SECONDS = 3600
@@ -58,6 +58,7 @@ __all__ = [
     "active_grant",
     "authorize",
     "ensure_not_last_owner",
+    "ensure_not_own_workspace",
     "ensure_not_self_approval",
     "find_assignment",
     "platform_owners",
@@ -269,6 +270,35 @@ def ensure_not_last_owner(
 def ensure_not_self_approval(proposer_id: str, approver_id: str) -> None:
     if proposer_id == approver_id:
         raise SelfApproval("the proposer can't also be the approver")
+
+
+def ensure_not_own_workspace(
+    conn: Connection,
+    actor: Actor,
+    permission: str,
+    workspace_ids: Iterable[str],
+) -> None:
+    """Raise `SelfApproval` (audited durably) if the actor is a member of any of these
+    workspaces: staff can't give their own customer workspace a plan or lift its restriction."""
+    wanted = sorted(set(workspace_ids))
+    if not wanted:
+        return
+    own = conn.execute(
+        sa.select(workspace_members.c.workspace_id).where(
+            workspace_members.c.user_id == actor.user_id,
+            workspace_members.c.workspace_id.in_(wanted),
+        )
+    ).first()
+    if own is None:
+        return
+    audit.record_durably(
+        conn,
+        **_audit_fields(actor, permission, ResourceRef("workspace", own[0], own[0])),
+        result=audit.AuditResult.DENY,
+        reason="acting on the actor's own workspace",
+        metadata={"staff_session_id": actor.staff_session_id},
+    )
+    raise SelfApproval("staff can't do this to a workspace they belong to")
 
 
 def require_workspace_action(role: WorkspaceRole | str, action: WorkspaceAction | str) -> None:

@@ -223,7 +223,14 @@ class FakeS3:
         return upload_id
 
     def presign_upload_part(
-        self, bucket: str, key: str, upload_id: str, part_number: int, ttl: int
+        self,
+        bucket: str,
+        key: str,
+        upload_id: str,
+        part_number: int,
+        ttl: int,
+        *,
+        content_length: int | None = None,
     ) -> str:
         self._enter("presign_upload_part", bucket, key, upload_id, str(part_number))
         extra = f"partNumber={part_number}&uploadId={upload_id}&"

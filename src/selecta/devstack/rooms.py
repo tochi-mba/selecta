@@ -14,7 +14,7 @@ import threading
 from collections.abc import Collection, Mapping
 
 import sqlalchemy as sa
-from sqlalchemy.engine import Connection, Engine
+from sqlalchemy.engine import Engine
 
 from selecta.persistence import transaction
 from selecta.rooms.ports import SongSummary
@@ -22,22 +22,36 @@ from selecta.storage.schema import assets, upload_sessions
 
 
 class LibraryCatalog:
+    """The workspace's uploads as songs.
+
+    Rooms asks it inside its own write transaction. On SQLite that transaction holds the write
+    lock (`BEGIN IMMEDIATE`), so the catalogue reads through a separate plain connection, which
+    WAL lets read alongside the writer, instead of opening a second write transaction that would
+    wait on the first for ever. On PostgreSQL it reads in its own workspace-scoped transaction so
+    row-level security applies as everywhere else.
+    """
+
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
+        self._reader: Engine | None = None
+        if engine.url.get_backend_name() == "sqlite":
+            self._reader = sa.create_engine(
+                engine.url, connect_args={"check_same_thread": False, "timeout": 30}
+            )
 
-    def _songs(self, workspace_id: str, conn: Connection | None = None) -> dict[int, SongSummary]:
-        """Use the owning Rooms transaction when available, never a nested SQLite write lock."""
+    def _songs(self, workspace_id: str) -> dict[int, SongSummary]:
         query = (
             sa.select(assets.c.id, assets.c.duration_s, upload_sessions.c.display_name)
             .select_from(assets.outerjoin(upload_sessions, upload_sessions.c.id == assets.c.id))
             .where(assets.c.workspace_id == workspace_id, assets.c.deleted_at.is_(None))
             .order_by(assets.c.created_at, assets.c.id)
         )
-        if conn is None:
-            with transaction(self.engine, workspace_id) as own:
-                rows = own.execute(query).all()
+        if self._reader is not None:
+            with self._reader.connect() as conn:
+                rows = conn.execute(query).all()
         else:
-            rows = conn.execute(query).all()
+            with transaction(self.engine, workspace_id) as conn:
+                rows = conn.execute(query).all()
         songs = {}
         for number, row in enumerate(rows, start=1):
             name = (row.display_name or f"Song {number}").rsplit(".", 1)[0]
@@ -52,12 +66,6 @@ class LibraryCatalog:
 
     def is_requestable(self, workspace_id: str, song_id: int) -> bool:
         return song_id in self._songs(workspace_id)
-
-    def is_requestable_in_transaction(
-        self, conn: Connection, workspace_id: str, song_id: int
-    ) -> bool:
-        """Read the catalogue using the calling transaction rather than opening another."""
-        return song_id in self._songs(workspace_id, conn)
 
     def search(
         self, workspace_id: str, query: str, crate: frozenset[int] | None, limit: int

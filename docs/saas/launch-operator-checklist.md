@@ -1,6 +1,6 @@
-# Selecta Cloud — SaaS setup and launch checklist (WIP)
+# SelectaDJ cloud: SaaS setup and launch checklist (WIP)
 
-> **Work in progress, 12 November 2026.** Practical operator checklist for the accepted Selecta Cloud design. This does **not** mean the accounts are configured or the product is deployment-ready. Source of truth: [Cloud implementation checklist](../adr/selecta-cloud-implementation-checklist.md), [hosting plan](13-hosting-and-cost.md), [architecture](03-architecture.md), [authentication](07a-authentication.md), [billing](08-billing.md), [operations](14-operations.md), and [licence register](licence-register.md). Verify current vendor requirements and costs before paying. **Set up staging before production.** Local mode remains unchanged.
+> **Work in progress, cross-checked against the code on 12 November 2026.** Practical operator checklist for the accepted cloud design (internally "Selecta Cloud"; customers see **SelectaDJ**, a **REX Technologies** product). This does **not** mean the accounts are configured or the product is deployment-ready. Source of truth: [Cloud implementation checklist](../adr/selecta-cloud-implementation-checklist.md), [hosting plan](13-hosting-and-cost.md), [architecture](03-architecture.md), [authentication](07a-authentication.md), [billing](08-billing.md), [operations](14-operations.md), and [licence register](licence-register.md). Verify current vendor requirements and costs before paying. **Set up staging before production.** Local mode remains unchanged.
 
 ## 1. Accounts and services to create
 
@@ -8,13 +8,13 @@
 |---|---|---|---|
 | [ ] | Business-owned email and password manager | Provider owner/recovery identity, support@/privacy@/billing@/security@ inboxes; MFA and offline recovery codes | First |
 | [ ] | Domain registrar | Buy/verify the *real* domain, configure renewal/registrar lock | First |
-| [ ] | [GitHub](https://github.com) — existing repo | Source, CI, GitHub Container Registry (GHCR), deployment approvals | Existing; verify access |
+| [ ] | [GitHub](https://github.com), existing repo | Source, CI, GitHub Container Registry (GHCR), deployment approvals | Existing; verify access |
 | [ ] | [Cloudflare](https://dash.cloudflare.com) primary account | DNS/TLS/WAF, Pages site, private EU-jurisdiction R2 audio buckets | First |
 | [ ] | **Second Cloudflare account** | Separate, independently secured backup account for originals, database dumps and infrastructure state | Before real data |
 | [ ] | [Render](https://dashboard.render.com) | Frankfurt PostgreSQL, API, worker gateway, maintenance services | First |
 | [ ] | [Modal](https://modal.com) | EU CPU analysis/render jobs, optional GPU stem separation | Before end-to-end staging |
 | [ ] | [WorkOS AuthKit](https://dashboard.workos.com) | Customer signup, Google login, sessions, staff MFA | First |
-| [ ] | [Google Cloud](https://console.cloud.google.com) | Selecta-branded Google OAuth credentials for WorkOS | Before live sign-in |
+| [ ] | [Google Cloud](https://console.cloud.google.com) | SelectaDJ-branded Google OAuth credentials for WorkOS | Before live sign-in |
 | [ ] | [Stripe](https://dashboard.stripe.com) | GBP subscriptions, Checkout, customer portal, Stripe Tax, webhooks | Test mode first |
 | [ ] | [Anthropic Console](https://console.anthropic.com) | Lucy's server-owned AI models and budget | Before Lucy staging |
 | [ ] | [Sentry](https://sentry.io) | Frontend/backend error reporting | Before beta |
@@ -29,7 +29,8 @@
 
 ## 2. Decide and secure the basics
 
-- [ ] Choose an **actually owned** domain. The deployment files' `selecta.app` is explicitly a **placeholder**, not proof of ownership.
+- [ ] Choose an **actually owned** domain that fits the product name **SelectaDJ**. The deployment files' `selecta.app` (tfvars, `VITE_WORKOS_API_HOSTNAME` example) is explicitly a **placeholder**, not proof of ownership.
+- [ ] Use one public name everywhere customers look: **SelectaDJ** (capital D and J, no space) as the WorkOS/AuthKit application name, the Google OAuth consent-screen app name, the Stripe public business name, the Stripe products **SelectaDJ Standard** and **SelectaDJ Premium**, the card statement descriptor (for example `SELECTADJ`; Stripe allows 5 to 22 characters), the email sender display name (`SelectaDJ <support@YOUR-DOMAIN>`) and the status page. The legal entity in Stripe, WorkOS, the Terms and the Privacy Notice is **REX Technologies**. Resource names in code and infra (`selecta-*` buckets, services, Modal apps) stay as they are; customers never see them.
 - [ ] Adopt consistent addresses, for example `app.YOUR-DOMAIN`, `api.YOUR-DOMAIN`, `gateway.YOUR-DOMAIN`, `auth.YOUR-DOMAIN`, plus corresponding staging hosts.
 - [ ] Set DNS, end-to-end HTTPS/TLS, mail SPF/DKIM/DMARC, support/security/privacy inboxes, ownership/recovery and MFA on every vendor.
 - [ ] Decide company/sole-trader structure and UK billing scope with professional advice. Ensure the sale country boundary is actually enforced; Stripe Checkout collecting a billing address is **not** country blocking.
@@ -44,8 +45,9 @@ Repository: [Cloudflare OpenTofu](../../infra/cloudflare/main.tf), [env variable
 - [ ] Create separately owned **backup Cloudflare account**, record its account ID and **different** restricted keys.
 - [ ] Bootstrap the `selecta-tofu-state` bucket in the backup account **before** running `tofu init` (see `infra/cloudflare/env/{staging,production}.backend.hcl`); protect state and separate environments.
 - [ ] Use actual account/zone IDs, DNS hostnames and Render DNS targets with `infra/cloudflare/env/{staging,production}.tfvars`. Never commit API tokens/keys.
-- [ ] Provision **private EU-jurisdiction** R2 buckets for each environment: `selecta-ENV-originals`, `-derived`, `-exports`, `-staging`, `-deletion-ledger`; separate backup account buckets for originals backup and DB dumps.
-- [ ] Configure role-scoped R2 keys, exact website-origin CORS for signed multipart `PUT` and playback `GET`, required ETag/Range headers, multipart cleanup, staged upload cleanup and plan-specific export expiry.
+- [ ] Provision **private EU-jurisdiction** R2 buckets for each environment (OpenTofu names them `selecta-ENV-originals`, `-derived`, `-exports`, `-staging`, `-deletion-ledger`); the backup account holds `selecta-ENV-originals-backup` and `selecta-ENV-db-dumps` (35-day lifecycle).
+- [ ] Set `SELECTA_R2_BUCKET_ORIGINALS`, `SELECTA_R2_BUCKET_DERIVED`, `SELECTA_R2_BUCKET_EXPORTS`, `SELECTA_R2_BUCKET_STAGING` and `SELECTA_R2_BUCKET_DELETION_LEDGER` to those names. The code's defaults are `sel-originals`, `sel-derived`, `sel-exports`, `sel-staging` (no default for the ledger), which do **not** match the OpenTofu names, and the Render Blueprint does not set them.
+- [ ] Configure role-scoped R2 keys and exact website-origin CORS for signed multipart `PUT` and playback `GET` with the ETag/Range headers. **CORS is not in OpenTofu**; set it by hand per bucket and record it. Staged-upload cleanup is the `staging` bucket lifecycle in OpenTofu; plan-specific export expiry is the maintenance `export_expiry` task, not a bucket rule.
 - [ ] Deploy Cloudflare Pages React site; verify SPA reloads, TLS, API origin, signed URLs and Cloudflare WAF/rate limiting. Do **not** expose user files publicly.
 
 ## 4. Render and PostgreSQL
@@ -57,16 +59,18 @@ Repository: [Render Blueprint](../../infra/render/render.yaml), [Cloud engineeri
 - [ ] Deploy separate `selecta-api-ENV`, `selecta-gateway-ENV`, and `selecta-maintain-ENV` (two maintenance instances, one fenced leader); never route bulky audio through Render.
 - [ ] Give API requests pooled DB connections; use direct DB connections for PostgreSQL `LISTEN` and leader locks. Use separate privileged maintenance/migration credentials.
 - [ ] Configure Render secret groups (`selecta-staging-api`, `-gateway`, `-maintenance`, and production equivalents). Every `sync: false` value is operator-supplied; see Section 11.
-- [ ] Set `SELECTA_MODE=cloud`, exact host/origin allowlists and R2/WorkOS/Stripe settings. The AI registry uses `ANTHROPIC_API_KEY`; this is **not declared** in the current Render Blueprint, so add it safely before enabling Lucy.
+- [ ] Set `SELECTA_MODE=cloud`, exact host/origin allowlists and R2/WorkOS/Stripe settings (full list in Section 11). Several values the code reads are **not declared** in the current Render Blueprint; add them before go-live (Section 11, "Known repo gaps").
 - [ ] Run `selecta db upgrade`; check `/api/ready` on both API and gateway and migrations. Prove cross-tenant isolation and multiple-instance operation.
+- [ ] `selecta maintain` logs every task it left out and the setting it needs (Stripe, WorkOS, deletion-ledger bucket, room pepper, backup bucket, Modal token). Read that start-up log on both instances; an empty "disabled" list is the goal.
 
 ## 5. Modal audio workers
 
 Repository: [Modal app](../../infra/modal/selecta_workers.py), [worker pools](../../infra/workers/pools.json).
 
 - [ ] Create staging and production Modal environments, budgets, alerting and access policies.
-- [ ] Create Modal secrets `selecta-staging-workers` and `selecta-production-workers` containing `SELECTA_WORKER_GATEWAY_URL`, `SELECTA_WORKER_BOOTSTRAP_TOKEN`, `SELECTA_WORKER_STORAGE_HOSTS`, and optional OpenTelemetry endpoint/headers.
-- [ ] Deploy/test `cpu_light`, `cpu_heavy`, and later `gpu_stems`. Require EU residency, bounded concurrency, no DB credentials in workers, fenced job results and signed R2 access.
+- [ ] Create Modal secrets `selecta-staging-workers` and `selecta-production-workers` containing `SELECTA_WORKER_GATEWAY_URL`, `SELECTA_WORKER_BOOTSTRAP_TOKEN`, `SELECTA_WORKER_STORAGE_HOSTS` (comma-separated R2 hosts the worker may fetch from, for example `ACCOUNT.eu.r2.cloudflarestorage.com`), and optional `OTEL_EXPORTER_OTLP_ENDPOINT`/`OTEL_EXPORTER_OTLP_HEADERS`. The app itself sets `SELECTA_MODE=cloud`, `SELECTA_ENVIRONMENT` and `SELECTA_WORKER_POOL`.
+- [ ] Deploy (`modal deploy infra/modal/selecta_workers.py --env ENV`, run by `infra/deploy/release.sh`) the apps `selecta-workers-staging` / `selecta-workers-production` and test the functions `cpu_light`, `cpu_heavy`, and later `gpu_stems` (EU region).
+- [ ] For maintenance-led autoscaling, give the maintenance service `SELECTA_MODAL_APP` (the app name above), `SELECTA_MODAL_TOKEN_ID` and `SELECTA_MODAL_TOKEN_SECRET`; without them the `autoscale` task is not registered. See "Known repo gaps" for the function-name mismatch. Require EU residency, bounded concurrency, no DB credentials in workers, fenced job results and signed R2 access.
 - [ ] Validate pinned model weights, FFmpeg builds, scratch quotas, crashes/retries, cold starts and measured egress. **GPU stems remain blocked** pending commercial-use review of Demucs weights.
 - [ ] Prove real upload → validation → analysis → seamless rendering → cloud playback → export. Fake-backend unit tests are not deployment proof.
 
@@ -75,11 +79,13 @@ Repository: [Modal app](../../infra/modal/selecta_workers.py), [worker pools](..
 Repository: [AuthKit setup](07a-authentication.md), [frontend configuration](../../web/src/cloud/authConfig.ts).
 
 - [ ] Create WorkOS staging and production environments with distinct client IDs, API keys, signing keys/issuer/audience and webhooks.
-- [ ] Configure precise callback/logout origins and production custom auth domain `auth.YOUR-DOMAIN`. The production website must have `VITE_WORKOS_API_HOSTNAME`; do not bypass it with `devMode`.
+- [ ] Set the WorkOS application name to **SelectaDJ** and brand the hosted AuthKit pages (logo, colours, support link) as SelectaDJ; the legal entity is REX Technologies.
+- [ ] Redirect URI: exactly the site origin, `https://app.YOUR-DOMAIN` (and the staging origin). The React app passes no `redirectUri`, so AuthKit returns to the page origin; the `returnTo` path travels in `state`. Sign-out (`signOut({ returnTo: window.location.origin })`) also returns to the site origin, so allow the same origin as the logout redirect. Set the custom auth domain `auth.YOUR-DOMAIN`; the production website must have `VITE_WORKOS_API_HOSTNAME`; do not bypass it with `devMode`.
+- [ ] Copy the client ID to `SELECTA_WORKOS_CLIENT_ID` and `VITE_WORKOS_CLIENT_ID`, and set `SELECTA_AUTH_ISSUER` and `SELECTA_AUTH_AUDIENCE` from the environment's JWT settings (the API refuses to start without all three).
 - [ ] Enable email/password, verified email, password reset, optional Magic Auth, Google login and bot protection.
-- [ ] In Google Cloud, create branded OAuth consent screen/web client; use **WorkOS-provided redirect URI**, not a guessed path.
-- [ ] Create a Selecta Staff organisation with required MFA/privileged-session checks.
-- [ ] Configure `POST /api/webhooks/workos` for each environment and verify event signing/retries.
+- [ ] In Google Cloud, create a consent screen named **SelectaDJ** and a web client; use the **WorkOS-provided redirect URI**, not a guessed path.
+- [ ] Create a staff organisation with required MFA/privileged-session checks and put its ID in `SELECTA_STAFF_ORGANIZATION_ID` (empty means nobody passes the staff check).
+- [ ] Configure the webhook `POST https://api.YOUR-DOMAIN/api/webhooks/workos` for each environment with its secret in `SELECTA_WORKOS_WEBHOOK_SECRET`. Events the code acts on: `user.updated`, `user.deleted`, `session.revoked`, `email_verification.succeeded`, `password_reset.succeeded` (and the older `user.password_reset_succeeded`); others are stored and ignored. Verify signing and retries.
 - [ ] Test actual hosted signup, email verification, Google identity linking, password reset, two-device sessions, logout-everywhere and staff login against the **real staging provider**.
 
 ## 7. Stripe test mode → live billing
@@ -87,13 +93,14 @@ Repository: [AuthKit setup](07a-authentication.md), [frontend configuration](../
 Repository: [Stripe design and current implementation](08-billing.md), [price-map parser](../../src/selecta/billing/stripe_sync.py).
 
 - [ ] Verify Stripe UK seller/business, payout bank, support identity and tax settings.
-- [ ] Create **Selecta Standard** and **Selecta Premium** products with GBP monthly and annual recurring prices in **test mode**. Free does not need a Stripe subscription.
+- [ ] Set the Stripe public business name to **SelectaDJ**, the statement descriptor to `SELECTADJ` (or similar), and the legal entity to REX Technologies.
+- [ ] Create **SelectaDJ Standard** and **SelectaDJ Premium** products with GBP monthly and annual recurring prices in **test mode**. Free does not need a Stripe subscription. (Checkout shows the Stripe product name, not text from the code.)
 - [ ] Copy the actual test price IDs into `SELECTA_STRIPE_PRICES` JSON mapping each `price_...` to `{"plan":"standard"|"premium","version":1,"interval":"month"|"year"}`. Use a **different live map**.
 - [ ] Configure Checkout, Customer Portal, upgrades/downgrades, cancellations, invoices, failed-payment Smart Retries and tax registrations/product codes.
 - [ ] Set `SELECTA_CHECKOUT_CONSENT_VERSION` and matching frontend `VITE_CHECKOUT_CONSENT_VERSION`, after reviewing consent and cancellation wording with counsel.
-- [ ] Create test/live webhook URLs `/api/webhooks/stripe`, relevant subscription/checkout/invoice/refund/dispute events, and distinct signing secrets in `SELECTA_STRIPE_WEBHOOK_SECRETS`.
-- [ ] Set `SELECTA_STRIPE_SECRET_KEY` and price map **only on the server**. Set a UK-only paid sales boundary; Stripe automatic tax does **not** register/file VAT.
-- [ ] Schedule `selecta billing-maintenance` plus periodic `--reconcile`. Test successful payment, duplicates, out-of-order events, failed renewal, refunds, disputes, cancellations and outages using Stripe **test mode**.
+- [ ] Create test and live webhook endpoints `POST https://api.YOUR-DOMAIN/api/webhooks/stripe` subscribed to exactly the events the code handles: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.subscription.paused`, `customer.subscription.resumed`, `invoice.paid`, `invoice.payment_failed`, `invoice.payment_action_required`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`. Put the signing secrets, comma-separated (so a rotation can overlap), in `SELECTA_STRIPE_WEBHOOK_SECRETS`.
+- [ ] Set `SELECTA_STRIPE_SECRET_KEY` and price map **only on the server** (API and maintenance; the maintenance `stripe_events`/`stripe_reconcile` tasks need both). Optionally pin `SELECTA_STRIPE_API_VERSION`. Set `SELECTA_IP_HASH_KEY` (consent records hash the buyer's IP). Set a UK-only paid sales boundary; Stripe automatic tax does **not** register/file VAT.
+- [ ] `selecta maintain` already runs the Stripe event and nightly reconcile tasks; `selecta billing-maintenance [--reconcile]` is the manual equivalent. Replay the recorded fixture events with `tests/load/stripe_fixture_replay.py` against staging. Test successful payment, duplicates, out-of-order events, failed renewal, refunds, disputes, cancellations and outages using Stripe **test mode**.
 - [ ] Only move to live mode after legal/payment readiness and a controlled live purchase/refund/reconciliation test.
 
 ## 8. Anthropic / Lucy
@@ -103,20 +110,22 @@ Repository: [Lucy server-owned model routing](09-lucy-ai-gateway.md), [AI deploy
 - [ ] Create Anthropic API account, verify available models and current pricing/terms, create **server-side** `ANTHROPIC_API_KEY` and separate staging/production budgets or projects.
 - [ ] Configure model deployments by plan: inexpensive default for Free; stronger models for paid capabilities; fallback to built-in planner. Do not promise specific model IDs until tested against current provider availability.
 - [ ] Enforce per-turn, per-account, per-plan and daily/monthly ceilings; set provider budget alarms, concurrency limits and failure fallbacks.
-- [ ] Run `src/selecta/ai/eval_set.json` against real staging deployments; do not allow an unevaluated model to become a tier default.
+- [ ] Set optional platform AI ceilings `SELECTA_AI_DAILY_CAP_USD`, `SELECTA_AI_MONTHLY_CAP_USD` and `SELECTA_AI_ALERT_PERCENTS` on the API (code defaults apply when unset).
+- [ ] Run the evaluation set against real staging deployments with `python -m selecta.ops.lucy_eval eval --tiers --report eval-report.md`, then stage rollouts with `python -m selecta.ops.lucy_eval rollout ...` (5%, 25%, 100%); do not allow an unevaluated model to become a tier default.
 
 ## 9. Monitoring, backups, email and status page
 
-- [ ] Configure Sentry front/backend environments, error scrubbing and alert routes. Never send raw audio, access tokens, customer emails or provider secrets into logs.
-- [ ] Configure Grafana Cloud OTLP endpoint/headers, dashboards and alert contact points from [`infra/observability/`](../../infra/observability/). Verify one trace from API through gateway/worker to R2.
-- [ ] Choose **Resend or Postmark**; verify sender domain and customer email journeys. WorkOS may separately own auth emails; verify actual responsibility and templates.
+- [ ] Configure Sentry front/backend environments, error scrubbing and alert routes. Never send raw audio, access tokens, customer emails or provider secrets into logs. **No Sentry SDK or DSN setting is wired in the code yet** (see "Known repo gaps").
+- [ ] Configure Grafana Cloud: set `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` on the API, gateway, maintenance service and Modal worker secret (traces and metrics both read the endpoint; nothing is exported when it is empty). Load dashboards and alert rules from [`infra/observability/`](../../infra/observability/). Verify one trace from API through gateway/worker to R2.
+- [ ] Choose **Resend or Postmark**; verify sender domain, `SelectaDJ <...@YOUR-DOMAIN>` sender name and customer email journeys. **The code sends no email itself today**: WorkOS sends the auth emails (brand them SelectaDJ in WorkOS); billing mail comes from Stripe's own customer emails if you enable them.
 - [ ] Create status page on external infrastructure; publish status, incident communications and support address.
-- [ ] Schedule [nightly DB dump](../../infra/backup/nightly_db_dump.sh) and [originals copy](../../infra/backup/copy_originals.sh) to the **backup account**, not the source account. Ensure the real scheduler, restricted credentials, monitoring and retention are operational.
+- [ ] Schedule [nightly DB dump](../../infra/backup/nightly_db_dump.sh) and [originals copy](../../infra/backup/copy_originals.sh) to the **backup account**, not the source account. No scheduler for them is in the repo (Render Blueprint has no cron job); choose one, give it restricted credentials and monitor it. Give the maintenance service read-only `SELECTA_BACKUP_S3_ENDPOINT`, `SELECTA_BACKUP_BUCKET`, `SELECTA_BACKUP_ACCESS_KEY_ID` and `SELECTA_BACKUP_SECRET_ACCESS_KEY` so its `backup_freshness` alert can see the newest dump.
 - [ ] Run a **staging restore drill** with [runbook](../operations/backup-and-restore.md): replay deletion ledger, reconcile storage and Stripe, expire stale leases before reopening traffic. Document actual recovery time/RPO.
-- [ ] Schedule account deletion and storage deletion maintenance, including a privileged role and R2 deletion ledger. Perform a deletion/restore and expired-export retention test.
+- [ ] Account deletion, storage deletion and export expiry run inside `selecta maintain` once `SELECTA_STRIPE_SECRET_KEY`, `SELECTA_WORKOS_API_KEY`, the R2 credentials and `SELECTA_R2_BUCKET_DELETION_LEDGER` are set; after a restore run `selecta replay-deletions-after-restore`. Perform a deletion/restore and expired-export retention test.
+- [ ] Set `SELECTA_DMCA_AGENT_REGISTERED_ON` (ISO date of the last DMCA agent registration) on the maintenance service so the renewal alert works; optionally `SELECTA_REPEAT_INFRINGER_NOTICES` (default 3) on the API.
 - [ ] Test phone alerts for API outage, old interactive jobs, quarantined jobs, spend ceiling, audit failure, reconciliation drift and backup failure.
 
-## 10. Legal and release blockers — cannot be fixed just by opening accounts
+## 10. Legal and release blockers (cannot be fixed just by opening accounts)
 
 From [Cloud checklist](../adr/selecta-cloud-implementation-checklist.md) and [licence register](licence-register.md):
 
@@ -124,7 +133,7 @@ From [Cloud checklist](../adr/selecta-cloud-implementation-checklist.md) and [li
 - [ ] **Demucs weights are marked Review**; obtain written commercial-use advice before enabling GPU stem separation for paying customers. Review the other flagged dependency/model weights and the actual FFmpeg worker build.
 - [ ] Clarify **LRCLIB/lyric use and display rights** in writing. Disable Cloud lyric lookup/display if licensing cannot be secured; do not assume public API access permits commercial republication.
 - [ ] Obtain UK music/IP lawyer's advice on private lockers, uploaded works, derived stems/transitions, takedown/repeat-infringer workflow and potential international obligations.
-- [ ] Publish real Terms, Privacy Notice, cancellation/refund rules, processor list, retention schedule, data subject rights channel and takedown contact.
+- [ ] Publish real Terms, Privacy Notice (draft text in `web/src/cloud/privacyNoticeDraftText.ts` already names SelectaDJ and REX Technologies; fill its placeholders), cancellation/refund rules, processor list, retention schedule, data subject rights channel and takedown contact.
 - [ ] Complete UK GDPR/ICO assessment, vendor DPAs, international transfer safeguards, DPIA as appropriate, age/children's privacy assessment and security controls. Check current UK consumer subscription and VAT rules with qualified advisers.
 - [ ] **Live staging integrations are not independently verified** in the current checklist: WorkOS real AuthKit flows, Stripe test-mode webhooks, worker images, real GPU/CPU audio, real cloud playback/audio alignment, multi-instance correctness, backup restore, migrations and operational alerts.
 - [ ] **Deployment pipeline external dependency:** [`infra/deploy/oidc_credentials.sh`](../../infra/deploy/oidc_credentials.sh) expects a **hosted OIDC credential broker**, passed in GitHub variable `SELECTA_CREDENTIAL_BROKER_URL`. The repository includes a **broker client script**, not evidence that the broker service exists. Implement/deploy/audit it and verify it checks GitHub token audience, repository, branch, workflow and staging/production environment; issues restricted **under-one-hour** credentials. Without it, [the deploy workflow](../../.github/workflows/deploy.yml) cannot complete as written.
@@ -132,40 +141,56 @@ From [Cloud checklist](../adr/selecta-cloud-implementation-checklist.md) and [li
 
 ## 11. Environment variables / credentials inventory
 
-Values below are *names*, **not** instructions to publish secrets. Confirm complete deployment-specific requirements from source before provisioning.
+Values below are *names*, **not** instructions to publish secrets. Cross-checked against the code on 12 November 2026; `tests/test_launch_operator_checklist.py` fails when a `SELECTA_*` variable the code reads is missing here, or when this page names one the code no longer reads. "Blueprint" means [`infra/render/render.yaml`](../../infra/render/render.yaml) already declares it.
 
-| Component | Configuration to supply |
-|---|---|
-| Cloud API on Render | `SELECTA_MODE=cloud`, `SELECTA_ENV`, `SELECTA_DATABASE_URL`, `SELECTA_ALLOWED_HOSTS`, `SELECTA_ALLOWED_ORIGINS`, `SELECTA_AUTH_ISSUER`, `SELECTA_AUTH_AUDIENCE`, `SELECTA_WORKOS_CLIENT_ID`, `SELECTA_WORKOS_API_KEY`, `SELECTA_WORKOS_WEBHOOK_SECRET`, `SELECTA_STRIPE_SECRET_KEY`, `SELECTA_STRIPE_WEBHOOK_SECRETS`, `SELECTA_STRIPE_PRICES`, `SELECTA_CHECKOUT_CONSENT_VERSION`, `SELECTA_R2_ACCOUNT_ID`, `SELECTA_R2_ACCESS_KEY_ID`, `SELECTA_R2_SECRET_ACCESS_KEY`, `SELECTA_R2_JURISDICTION=eu`, required R2 bucket variables, `SELECTA_IP_HASH_KEY`, `SELECTA_ROOMS_PEPPER`, **`ANTHROPIC_API_KEY`** |
-| Worker gateway on Render | `SELECTA_MODE=cloud`, `SELECTA_GATEWAY_DATABASE_URL`, `SELECTA_GATEWAY_ALLOWED_HOSTS`, `SELECTA_WORKER_TOKEN_SECRET`, `SELECTA_WORKER_BOOTSTRAP_TOKEN`, same environment's R2 signer credentials |
-| Maintenance service | `SELECTA_MODE=cloud`, privileged maintenance DB URL, WorkOS/Stripe/R2 credentials, deletion-ledger bucket and scheduler-specific variables |
-| React Cloudflare Pages build (public) | `VITE_SELECTA_API_ORIGIN`, `VITE_WORKOS_CLIENT_ID`, `VITE_WORKOS_API_HOSTNAME`, `VITE_CHECKOUT_CONSENT_VERSION` |
-| Modal workers | `SELECTA_WORKER_GATEWAY_URL`, `SELECTA_WORKER_BOOTSTRAP_TOKEN`, `SELECTA_WORKER_STORAGE_HOSTS` |
-| OpenTelemetry (where enabled) | `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS` |
-| OpenTofu / Cloudflare | `TF_VAR_cloudflare_api_token`, `TF_VAR_backup_api_token`, `TF_VAR_account_id`, `TF_VAR_backup_account_id`, `TF_VAR_zone_id`, actual hosts/Render targets, state bucket restricted credentials |
-| GitHub Actions | `SELECTA_CREDENTIAL_BROKER_URL`, `SELECTA_STAGING_API_URL`, `SELECTA_STAGING_GATEWAY_URL`, `SELECTA_PRODUCTION_API_URL`, `SELECTA_PRODUCTION_GATEWAY_URL`; protected `staging` and `production` environments |
-| OIDC broker's short-lived deploy response | Restrained Render credentials, Modal credentials, Cloudflare primary/backup tokens, migration DB connection, state bucket credentials and environment-specific service IDs; see [release script](../../infra/deploy/release.sh) |
-| Backup scheduler | Direct `DATABASE_URL`, `BACKUP_S3_ENDPOINT`, `BACKUP_BUCKET`, scoped `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`; originals-copy source/backup R2 credentials |
+| Component | Required | Optional (code default) |
+|---|---|---|
+| Cloud API on Render (`selecta web`) | `SELECTA_MODE=cloud` (Blueprint), `SELECTA_ENV=staging\|production` (Blueprint; default `production`), `SELECTA_DATABASE_URL` (Blueprint, pooled), `SELECTA_ALLOWED_HOSTS`, `SELECTA_ALLOWED_ORIGINS` (HTTPS, no wildcard), `SELECTA_WORKOS_CLIENT_ID`, `SELECTA_AUTH_ISSUER`, `SELECTA_AUTH_AUDIENCE`, `SELECTA_WORKOS_API_KEY`, `SELECTA_WORKOS_WEBHOOK_SECRET`, `SELECTA_R2_ACCOUNT_ID`, `SELECTA_R2_ACCESS_KEY_ID`, `SELECTA_R2_SECRET_ACCESS_KEY`, `SELECTA_R2_BUCKET_ORIGINALS`, `SELECTA_R2_BUCKET_DERIVED`, `SELECTA_R2_BUCKET_EXPORTS`, `SELECTA_R2_BUCKET_STAGING` (**not in Blueprint**; defaults `sel-*` are wrong for OpenTofu), `SELECTA_ROOMS_PEPPER`, `SELECTA_STRIPE_SECRET_KEY`, `SELECTA_STRIPE_WEBHOOK_SECRETS`, `SELECTA_STRIPE_PRICES`, `SELECTA_CHECKOUT_CONSENT_VERSION` (**not in Blueprint**), `SELECTA_IP_HASH_KEY`, `ANTHROPIC_API_KEY` (**not in Blueprint**), `SELECTA_STAFF_ORGANIZATION_ID` (**not in Blueprint**; staff console) | `SELECTA_R2_JURISDICTION` (`eu`), `SELECTA_STRIPE_API_VERSION` (Stripe account default), `SELECTA_WORKOS_API_BASE` (`https://api.workos.com`; leave unset), `SELECTA_CLIENT_IP_HEADER` (unset uses the socket peer; behind Cloudflare set `cf-connecting-ip`), `SELECTA_BIND_HOST` (`0.0.0.0`), `SELECTA_AI_DAILY_CAP_USD`, `SELECTA_AI_MONTHLY_CAP_USD`, `SELECTA_AI_ALERT_PERCENTS`, `SELECTA_LRCLIB_RATE_PER_S` (`1.0`), `SELECTA_LRCLIB_BURST` (`1`), `SELECTA_REPEAT_INFRINGER_NOTICES` (`3`), `SELECTA_FLAGS` (operator override, for example `+name` to enable a licence-gated flag), `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS` |
+| Worker gateway on Render (`selecta gateway`) | `SELECTA_MODE=cloud`, `SELECTA_GATEWAY_DATABASE_URL` (Blueprint; falls back to `SELECTA_DATABASE_URL`), `SELECTA_GATEWAY_ALLOWED_HOSTS`, `SELECTA_WORKER_TOKEN_SECRET`, `SELECTA_WORKER_BOOTSTRAP_TOKEN`, the same R2 credentials and bucket names as the API | `SELECTA_GATEWAY_BIND_HOST` (`0.0.0.0`), `SELECTA_R2_JURISDICTION`, `OTEL_*` |
+| Maintenance service (`selecta maintain`, two instances) | `SELECTA_MODE=cloud`, `SELECTA_MAINTENANCE_DATABASE_URL` (Blueprint; direct, not pooled; falls back to `SELECTA_DATABASE_URL`), `SELECTA_STRIPE_SECRET_KEY` and `SELECTA_STRIPE_PRICES` (**prices not in Blueprint**), `SELECTA_WORKOS_API_KEY`, the R2 credentials and bucket names, `SELECTA_R2_BUCKET_DELETION_LEDGER`, `SELECTA_ROOMS_PEPPER`, `SELECTA_BACKUP_S3_ENDPOINT`, `SELECTA_BACKUP_BUCKET`, `SELECTA_BACKUP_ACCESS_KEY_ID`, `SELECTA_BACKUP_SECRET_ACCESS_KEY`, `SELECTA_MODAL_APP`, `SELECTA_MODAL_TOKEN_ID`, `SELECTA_MODAL_TOKEN_SECRET`, `SELECTA_DMCA_AGENT_REGISTERED_ON` (**the bucket names and everything from the ledger bucket on are not in Blueprint**) | `SELECTA_WORKER_POOLS` (`infra/workers/pools.json`), `SELECTA_STRIPE_API_VERSION`, `SELECTA_WORKOS_API_BASE`, `OTEL_*` |
+| React Cloudflare Pages build (public) | `VITE_SELECTA_API_ORIGIN`, `VITE_WORKOS_CLIENT_ID`, `VITE_WORKOS_API_HOSTNAME`, `VITE_CHECKOUT_CONSENT_VERSION` | none (`VITE_SELECTA_GALLERY` is a test-build switch; never set it in production) |
+| Modal workers (secret `selecta-ENV-workers`) | `SELECTA_WORKER_GATEWAY_URL`, `SELECTA_WORKER_BOOTSTRAP_TOKEN`, `SELECTA_WORKER_STORAGE_HOSTS`; the app sets `SELECTA_MODE`, `SELECTA_ENVIRONMENT`, `SELECTA_WORKER_POOL` | `SELECTA_WORKER_ENGINE_VERSION` (`1`), `SELECTA_WORKER_SCRATCH_MB` (`4096`), `SELECTA_WORKER_SCRATCH_ROOT` (temp dir), `SELECTA_FFMPEG` (`ffmpeg` on PATH), `OTEL_*` |
+| Operator tools (`selecta db upgrade`, `selecta.ops.lucy_eval`, `reconcile_check`, `restore_drill`, `infra/staging/run.py`) | `SELECTA_DATABASE_URL` (direct), plus each tool's own inputs: deployment keys such as `ANTHROPIC_API_KEY`; `SELECTA_R2_BUCKET_DELETION_LEDGER` and `SELECTA_STRIPE_SECRET_KEY` for the restore drill; `python infra/staging/run.py --list` prints every staging task's inputs | |
+| OpenTofu / Cloudflare | `TF_VAR_cloudflare_api_token`, `TF_VAR_backup_api_token`, `TF_VAR_account_id`, `TF_VAR_backup_account_id`, `TF_VAR_zone_id`, hostnames and Render targets in `env/ENV.tfvars`, state bucket credentials as `AWS_*` | |
+| GitHub Actions | Variables `SELECTA_CREDENTIAL_BROKER_URL`, `SELECTA_STAGING_API_URL`, `SELECTA_STAGING_GATEWAY_URL`, `SELECTA_PRODUCTION_API_URL`, `SELECTA_PRODUCTION_GATEWAY_URL`; the workflow sets `SELECTA_ENVIRONMENT`; protected `staging` and `production` environments | |
+| OIDC broker's short-lived deploy response | `RENDER_API_KEY`, `RENDER_SERVICE_IDS`, `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_ZONE_ID`, `BACKUP_API_TOKEN`, `BACKUP_ACCOUNT_ID`, `DATABASE_URL` (migrations), `TOFU_STATE_ENDPOINT`, `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (state bucket); see [release script](../../infra/deploy/release.sh) | |
+| Backup scheduler | DB dump: direct `DATABASE_URL`, `BACKUP_S3_ENDPOINT`, `BACKUP_BUCKET`, write-only `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`. Originals copy: `SOURCE_BUCKET`, `BACKUP_BUCKET` and an `RCLONE_CONFIG` with `source` (read-only) and `backup` (write-only) remotes | |
 
-**Important:** The checked-in Render Blueprint omits at least the registry-required `ANTHROPIC_API_KEY` and some optional settings; the table does **not** mean every environment variable is already wired. Run an explicit config audit before deployment. Keep staging and production credentials separate and rotate after any leak.
+Keep staging and production credentials separate and rotate after any leak.
+
+### Known repo gaps (checked 12 November 2026)
+
+Closed since the first draft, so no longer gaps: worker engine handlers (`selecta/workers/engine_handlers.py`, registered per pool by `workers/cloud.py`); plan-specific export expiry (`storage/export_expiry.py`, the `export_expiry` maintenance task); metrics (`observability/metrics.py`, leader metrics including backup freshness); the autoscale leader (`work/autoscale_leader.py`); sign-out-everywhere device revocation (`POST /api/account/sign-out-everywhere`); the Stripe replay tool (`tests/load/stripe_fixture_replay.py`); the staging runner (`infra/staging/run.py`); the Lucy evaluation and staged rollout (`selecta.ops.lucy_eval`).
+
+Still open:
+
+- [ ] **Render Blueprint is incomplete.** It omits `ANTHROPIC_API_KEY`, `SELECTA_CHECKOUT_CONSENT_VERSION`, `SELECTA_STAFF_ORGANIZATION_ID`, the four `SELECTA_R2_BUCKET_*` names (API, gateway and maintenance) and, on maintenance, `SELECTA_STRIPE_PRICES`, `SELECTA_R2_BUCKET_DELETION_LEDGER`, `SELECTA_ROOMS_PEPPER`, the `SELECTA_BACKUP_*` set, the `SELECTA_MODAL_*` set, `SELECTA_DMCA_AGENT_REGISTERED_ON` and `OTEL_*`. Add them in the dashboard (or the Blueprint) before go-live.
+- [ ] **R2 bucket defaults differ from OpenTofu:** `storage/api.py` defaults to `sel-originals` etc.; OpenTofu creates `selecta-ENV-originals` etc. Always set the bucket variables.
+- [ ] **Autoscale function names differ from the Modal app:** `ModalLauncher` scales functions named `worker-{pool}` (for example `worker-cpu-light`), but `infra/modal/selecta_workers.py` deploys `cpu_light`, `cpu_heavy` and `gpu_stems`. Until one side is renamed, the autoscale task cannot find the functions.
+- [ ] **R2 CORS is not in OpenTofu;** it is a manual, unrecorded step.
+- [ ] **No Sentry wiring** (no SDK, no DSN variable) in the API, gateway, workers or site.
+- [ ] **No transactional email sender in the code;** WorkOS and Stripe send the only customer emails.
+- [ ] **No scheduler for the backup scripts** in the repo.
+- [ ] **OIDC credential broker** does not exist yet (Section 10).
+- [ ] `services/worker/Dockerfile` sets `SELECTA_MODEL_LOCK` and `SELECTA_MODEL_ROOT`, which no code reads.
 
 ## 12. Safe launch sequence and sign-off
 
-### Stage A — accounts only (no customers)
+### Stage A: accounts only (no customers)
 
 - [ ] Secure domain, business mailbox, GitHub, primary and backup Cloudflare, Render, Modal, WorkOS, Google Cloud, Stripe test mode, Anthropic, monitoring and transactional email.
 - [ ] Record **where** every credential is stored. Never paste secret values into this issue/PR.
 - [ ] Create exact DNS/origin/environment plan; choose private beta invite policy, prices and hard spending caps.
 
-### Stage B — real synthetic staging
+### Stage B: real synthetic staging
 
 - [ ] Provision state bucket → R2/DNS/Pages → PostgreSQL → API/gateway/maintenance → WorkOS/Stripe test configuration → Modal workers, with migrations before services.
-- [ ] Deploy staging; ensure GitHub's OIDC credential broker actually exists or document the blocked deploy gate.
+- [ ] Deploy staging; ensure GitHub's OIDC credential broker actually exists or document the blocked deploy gate. Run each staging proof with `python infra/staging/run.py <task>` (`--list` shows tasks and inputs) and file its report.
 - [ ] Verify actual signup, upload, hosted analysis and render, playback, export, billing, cancellation, deletion, backups, logs, cost protection and admin access with **synthetic** data.
 - [ ] Prove cross-workspace isolation, idempotent payments, lease/fencing/crash recovery and actual audio quality. Test Chrome, Edge, Firefox and Safari audio alignment.
 - [ ] Run stress tests and a restore drill; record reproducible outputs/evidence in the canonical implementation checklist.
 
-### Stage C — protected production + invited UK beta
+### Stage C: protected production + invited UK beta
 
 - [ ] Set legal policies and commercial model licences; complete security and privacy reviews. No open "Blocked" or "Review" licence rows relevant to features enabled for beta.
 - [ ] Create production resources with distinct keys and protected deployment approvals; never point them at staging DB or data buckets.

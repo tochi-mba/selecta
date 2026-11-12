@@ -33,6 +33,9 @@ GUEST_WRITE_PER_IP = Window(120, 60.0)  # a party shares one IP
 GUEST_WRITE_PER_ROOM = Window(600, 60.0)
 DISPLAY_PAIRING_PER_IP = Window(10, 60.0)
 DISPLAY_READ_PER_IP = Window(120, 60.0)
+# Pairing codes a host types for a big screen. A six-character code is about 29 bits, so an
+# account trying codes as fast as it can could claim someone else's waiting screen.
+DISPLAY_CONFIRM_PER_WORKSPACE = Window(10, 60.0)
 # Guest routes reached without a valid token for the room (made-up or stale cookies). Past the
 # limit the address is turned away before the token lookup for the rest of the window.
 STRANGERS_PER_IP = Window(60, 60.0)

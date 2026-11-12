@@ -86,7 +86,8 @@ def stripe(monkeypatch) -> BillingStripe:
 @pytest.fixture
 def client(cloud_engine):
     owner = SimpleNamespace(workspace=SimpleNamespace(id="w1"),
-                            user=SimpleNamespace(id="u1", email="owner@example.com"))
+                            user=SimpleNamespace(id="u1", email="owner@example.com"),
+                            can=lambda action: True)
     app = FastAPI()
 
     def current_claims(request: Request) -> Claims:

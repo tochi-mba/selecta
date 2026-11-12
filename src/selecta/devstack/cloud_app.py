@@ -81,6 +81,7 @@ def application() -> FastAPI:
     app = create_cloud_app(cloud_settings(settings), engine=engine, room_ports=ports)
     store = objects.DiskObjects.in_folder(settings.objects, settings.site_url)
     objects.install_routes(app, store)
+    app.add_middleware(guard.LoopbackOnly)
     client = billing.install(app, engine, settings.data)
     if not test_mode:
         billing_api.HttpStripeClient = client  # type: ignore[assignment,misc]

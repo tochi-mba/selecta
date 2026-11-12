@@ -43,11 +43,19 @@ type Outcome =
   | { kind: 'refused'; error: unknown; restore: MixData }
   | { kind: 'dropped' };
 
-let waitingEverywhere = 0;
+// moves on their way, per draft id (null for a queue whose draft is unknown)
+const waitingByDraft = new Map<number | null, number>();
+const count = (draft: number | null, by: number) => {
+  const next = (waitingByDraft.get(draft) ?? 0) + by;
+  if (next > 0) waitingByDraft.set(draft, next);
+  else waitingByDraft.delete(draft);
+};
 
-/** Whether any draft move is still on its way. A draft read that answers meanwhile describes an order
- * from before the moves on screen, so the app leaves it unshown; the last move's answer is newer. */
-export const draftMovesWaiting = () => waitingEverywhere > 0;
+/** Whether a draft move is still on its way: in draft `id`, or in any draft when no id is given. A
+ * draft read that answers meanwhile describes an order from before the moves on screen, so the app
+ * leaves it unshown; the last move's answer is newer. Another draft's moves never hold a read back
+ * (rv2-e: a move that never answers in one draft froze the poll of the draft open now). */
+export const draftMovesWaiting = (id?: number) => (id === undefined ? waitingByDraft.size > 0 : waitingByDraft.has(id));
 
 /** MI-0162-05: a draft's moves go to the server one after another, each guarded by the order the server
  * itself confirmed last, so a key pressed while earlier moves are on their way is shown at once and
@@ -70,7 +78,8 @@ export class MoveQueue {
     // with nothing on its way, what is shown is exactly what the server has
     if (this.waiting === 0) this.confirmed = shown;
     this.waiting += 1;
-    waitingEverywhere += 1;
+    const draft = shown.draft?.id ?? null;
+    count(draft, 1);
     const index = ++this.added;
     const turn = this.chain.then(async (): Promise<Outcome> => {
       if (index <= this.dropUpTo) return { kind: 'dropped' };
@@ -85,7 +94,7 @@ export class MoveQueue {
       }
     }).then((result) => {
       this.waiting -= 1;
-      waitingEverywhere -= 1;
+      count(draft, -1);
       return { ...result, last: this.waiting === 0 };
     });
     this.chain = turn;

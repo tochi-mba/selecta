@@ -134,3 +134,34 @@ def test_the_library_page_uses_one_ranking_for_its_count_page_and_refresh(tmp_pa
     assert renamed["total"] == 74
     assert 4 not in {song["id"] for song in renamed["songs"]}
     assert calls == ["golden", "golden"]
+
+
+class _NamesReadBeforeAWrite:
+    """The route's connection, with its names read just before another connection's write lands
+    (the request is between its two reads when the write commits)."""
+
+    def __init__(self, conn, names):
+        self._conn, self._names = conn, names
+
+    def execute(self, sql, *args):
+        if sql == search_cache.NAMES and self._names is not None:
+            names, self._names = self._names, None  # only the first read is from before
+            return type("Row", (), {"fetchone": lambda _self: (names,)})()
+        return self._conn.execute(sql, *args)
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+
+def test_names_and_songs_read_either_side_of_a_write_are_never_kept_together(tmp_path, conn):
+    # rv2-a: a ranking must never be kept under names that differ from the songs it ranked.
+    # Here the names are read, a rename commits, then the songs are read: the ranking of the
+    # renamed songs was kept under the old names, so renaming back served the stale ranking.
+    searches = RankedSearches()
+    old_names = conn.execute(search_cache.NAMES).fetchone()[0]
+    conn.execute("UPDATE songs SET title='Golden Hour' WHERE id=1")
+    conn.commit()
+    searches.rank(_NamesReadBeforeAWrite(conn, old_names), "golden")
+    conn.execute("UPDATE songs SET title='Quiet 1' WHERE id=1")  # renamed back
+    conn.commit()
+    assert searches.rank(conn, "golden") == _expected(conn, "golden")

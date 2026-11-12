@@ -104,3 +104,20 @@ def test_the_template_scores_cleanly_and_the_tool_claims_nothing_by_itself(capsy
     assert report.rejected == [] and report.success == {"baseline-cards": [1, 1]}
     assert ex_study.main(["orders", "4", "baseline-cards", "new-cards"]) == 0
     assert "P04: new-cards -> baseline-cards" in capsys.readouterr().out
+
+
+def test_every_task_card_is_runnable_uncoached_preparation_with_codes_only(capsys):
+    entries = {card.entry for card in ex_study.TASK_CARDS}
+    assert len(entries) == len(ex_study.TASK_CARDS) == 11
+    for card in ex_study.TASK_CARDS:
+        assert card.route.startswith("/") and card.prompt and card.success and card.setup
+    assert "never your name" in ex_study.CONSENT_LINE
+    assert any("must be false" in field for field in ex_study.RECORD_FIELDS)
+    # the label test must not hand out the labels it is testing
+    labels = ("Listen", "Make a Mix", "My Mixes", "Library", "Workspace")
+    nav = next(card for card in ex_study.TASK_CARDS if card.entry == "EX-0115-01")
+    assert not any(label in nav.prompt for label in labels)
+    assert ex_study.main(["cards", "EX-0117-01"]) == 0
+    printed = capsys.readouterr().out
+    assert "EX-0117-01" in printed and "EX-0116-01" not in printed and "Consent" in printed
+    assert ex_study.main(["cards", "EX-9999-99"]) == 2

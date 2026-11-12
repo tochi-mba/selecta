@@ -186,6 +186,15 @@ def _age(path: Path, now: float) -> float:
         return 0.0
 
 
+def _within(root: Path, path: Path) -> bool:
+    """Whether `path` really lies inside `root`: a junction or link in a cache root is never
+    followed out of it (into the models folder, say). The root itself may be a link."""
+    try:
+        return Path(os.path.realpath(path)).is_relative_to(os.path.realpath(root))
+    except (OSError, ValueError):
+        return False
+
+
 def _remove(path: Path, reason: str, swept: Swept) -> None:
     size = _size(path)
     try:
@@ -212,12 +221,14 @@ def _crash_leftovers(settings: Settings, kept: _Kept, now: float, swept: Swept) 
     for root, pattern in patterns:
         if root.is_dir():
             for path in root.glob(pattern):
-                if path.is_file() and _age(path, now) > CRASH_GRACE_S:
+                if path.is_file() and _within(root, path) and _age(path, now) > CRASH_GRACE_S:
                     _remove(path, "crash leftover", swept)
     stems = settings.home / "stems"
     if stems.is_dir():
         for folder in stems.iterdir():
             if not folder.is_dir() or folder.name in kept or _age(folder, now) <= CRASH_GRACE_S:
+                continue
+            if not _within(stems, folder):
                 continue
             if not (folder / "window.json").exists():
                 _remove(folder, "unfinished stem window", swept)
@@ -230,6 +241,8 @@ def _crash_leftovers(settings: Settings, kept: _Kept, now: float, swept: Swept) 
     if seams.is_dir():
         for folder in seams.iterdir():
             if not folder.is_dir() or folder.name in kept or _age(folder, now) <= CRASH_GRACE_S:
+                continue
+            if not _within(seams, folder):
                 continue
             if not any((folder / name).exists() for name in ("seam.json", "session.json")):
                 _remove(folder, "unrecorded seam folder", swept)
@@ -335,6 +348,8 @@ def _link_duplicates(settings: Settings, swept: Swept) -> None:
     by_size: dict[int, list[Path]] = {}
     for name in DEDUPE_NAMES:
         for path in seams.glob(f"*/{name}"):
+            if not _within(seams, path):
+                continue
             try:
                 by_size.setdefault(path.stat().st_size, []).append(path)
             except OSError:
@@ -346,10 +361,11 @@ def _link_duplicates(settings: Settings, swept: Swept) -> None:
         for path in paths:
             try:
                 digest = _digest(path)
+                original = first_by_digest.setdefault(digest, path)
+                # either may have been pruned by another process since it was read
+                if original == path or os.path.samefile(original, path):
+                    continue
             except OSError:
-                continue
-            original = first_by_digest.setdefault(digest, path)
-            if original == path or os.path.samefile(original, path):
                 continue
             temporary = path.with_name(path.name + ".link.tmp")
             try:

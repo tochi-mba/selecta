@@ -6,7 +6,8 @@ Two kinds of signature are made here:
 - **Header signatures** for the server's own calls (`Authorization` header). The URL carries no
   secret, so it's safe for an HTTP library to log it.
 - **Presigned URLs** (query signatures) for browsers and workers. The payload is
-  `UNSIGNED-PAYLOAD`, and only the `host` header is signed, so the holder can send any body.
+  `UNSIGNED-PAYLOAD`. Only `host` is signed unless the caller names more headers: an upload
+  part URL also signs `content-length`, so its holder can send only the planned part size.
   A presigned URL is a bearer credential until it expires: never log one, put one in an error
   message, or send one to analytics. `redact()` strips the signature for anything that must
   mention a URL.
@@ -164,20 +165,24 @@ class Signer:
         expires: int,
         query: Iterable[tuple[str, str]] = (),
         now: datetime | None = None,
+        headers: Mapping[str, str] | None = None,
     ) -> str:
-        """A presigned URL valid for `expires` seconds (1 second to 7 days)."""
+        """A presigned URL valid for `expires` seconds (1 second to 7 days). `headers` (lower
+        case) are signed too, so the request must send exactly those values."""
         if not 1 <= int(expires) <= MAX_PRESIGN_SECONDS:
             raise ValueError(f"Presigned URLs last 1 to {MAX_PRESIGN_SECONDS} seconds.")
         amz_date, day = self._now(now)
+        signed_headers = {name.lower(): str(value) for name, value in (headers or {}).items()}
+        signed_headers["host"] = host
         params = list(query) + [
             ("X-Amz-Algorithm", ALGORITHM),
             ("X-Amz-Credential", f"{self.credentials.access_key_id}/{self._scope(day)}"),
             ("X-Amz-Date", amz_date),
             ("X-Amz-Expires", str(int(expires))),
-            ("X-Amz-SignedHeaders", "host"),
+            ("X-Amz-SignedHeaders", ";".join(sorted(signed_headers))),
         ]
         cq = canonical_query(params)
-        canonical, _ = canonical_request(method, path, cq, {"host": host}, UNSIGNED_PAYLOAD)
+        canonical, _ = canonical_request(method, path, cq, signed_headers, UNSIGNED_PAYLOAD)
         signature = self._signature(amz_date, day, canonical)
         return self._url(scheme, host, path, f"{cq}&X-Amz-Signature={signature}")
 

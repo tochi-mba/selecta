@@ -69,7 +69,7 @@ class MemoryObjects:
         self.parts[(bucket, key)] = [Part(1, "etag-one", 100)]
         return upload_id
 
-    def presign_upload_part(self, bucket, key, upload_id, part_number, ttl):
+    def presign_upload_part(self, bucket, key, upload_id, part_number, ttl, **_kwargs):
         return f"https://upload.invalid/{upload_id}/{part_number}?ttl={ttl}"
 
     def list_parts(self, bucket, key, upload_id):

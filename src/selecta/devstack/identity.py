@@ -305,6 +305,7 @@ def create_identity_app(config: IdentityConfig, *, host: str = "127.0.0.1") -> F
     guard.require_development(host=host)
     provider = LocalIdentity(config)
     app = FastAPI(title="SelectaDJ local identity (development only)", docs_url=None)
+    app.add_middleware(guard.LoopbackOnly)
     app.state.provider = provider
     store = provider.store
 

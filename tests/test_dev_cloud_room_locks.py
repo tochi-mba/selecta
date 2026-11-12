@@ -1,46 +1,51 @@
-"""Regression: a guest request must not nest a SQLite write transaction for a song lookup."""
+"""Regression: a guest request asks the local catalogue about a song while Rooms holds the SQLite
+write lock. The catalogue must read alongside it, never queue behind it (which used to hang for
+the 30 s busy timeout and then fail), and `rooms.requesting` stays exactly as production has it.
+"""
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-
-import pytest
+import inspect
+import time
 
 from selecta.devstack import rooms as dev_rooms
-from selecta.persistence import transaction
-from selecta.rooms.errors import Refusal, RoomError
-from selecta.rooms.requesting import _check_song
+from selecta.persistence import db_now, new_id, transaction
+from selecta.rooms import requesting
+from selecta.storage.keys import original_key
+from selecta.storage.schema import assets
 
 
-def test_guest_song_lookup_uses_the_existing_sqlite_transaction(cloud_engine, monkeypatch):
-    """Previously this nested a second BEGIN IMMEDIATE and waited 30s for itself."""
-    catalog = dev_rooms.LibraryCatalog(cloud_engine)
-    # A second transaction through LibraryCatalog must never start inside _check_song.
-    def forbid_new_transaction(*_args, **_kwargs):
-        raise AssertionError("nested library transaction would deadlock SQLite")
-
-    monkeypatch.setattr(dev_rooms, "transaction", forbid_new_transaction)
-    ctx = SimpleNamespace(catalog=catalog)
-    room = SimpleNamespace(
-        workspace_id="dev-workspace",
-        settings=SimpleNamespace(crate=None, replay_cooldown_minutes=0),
-    )
-    with transaction(cloud_engine, "dev-workspace") as conn:
-        with pytest.raises(RoomError) as caught:
-            _check_song(conn, ctx, room, song_id=1, now=0.0)
-    assert caught.value.refusal is Refusal.NOT_REQUESTABLE
+def _add_song(engine, workspace_id: str) -> None:
+    asset_id = new_id()
+    with transaction(engine, workspace_id) as conn:
+        conn.execute(
+            assets.insert().values(
+                id=asset_id, workspace_id=workspace_id,
+                original_key=original_key(workspace_id, asset_id), size=10, sha256="0" * 64,
+                format="wav", duration_s=4.0, sample_rate=44_100, channels=2,
+                created_at=db_now(conn),
+            )
+        )
 
 
-def test_guest_song_lookup_preserves_other_catalogue_implementations(cloud_engine):
-    """The normal cloud and fake catalogues retain their simple check interface."""
-    class FakeCatalog:
-        def is_requestable(self, _workspace_id, song_id):
-            return song_id == 1
+def test_catalogue_reads_while_the_rooms_transaction_holds_the_write_lock(sqlite_engine):
+    from selecta.identity import accounts
+    from selecta.identity.tokens import Claims
 
-    ctx = SimpleNamespace(catalog=FakeCatalog())
-    room = SimpleNamespace(
-        workspace_id="dev-workspace",
-        settings=SimpleNamespace(crate=None, replay_cooldown_minutes=0),
-    )
-    with transaction(cloud_engine, "dev-workspace") as conn:
-        _check_song(conn, ctx, room, song_id=1, now=0.0)
+    claims = Claims(subject="user_dev_rooms", issued_at=0, expires_at=4e9)
+    with transaction(sqlite_engine) as conn:
+        made = accounts.provision(conn, claims, age_confirmed=True)
+    workspace_id = made.workspace.id
+    _add_song(sqlite_engine, workspace_id)
+    catalog = dev_rooms.LibraryCatalog(sqlite_engine)
+    started = time.monotonic()
+    with transaction(sqlite_engine, workspace_id):  # BEGIN IMMEDIATE: the write lock is held
+        assert catalog.is_requestable(workspace_id, 1)
+        assert not catalog.is_requestable(workspace_id, 2)
+    assert time.monotonic() - started < 5
+
+
+def test_production_request_check_has_no_dev_only_hook():
+    source = inspect.getsource(requesting)
+    assert "is_requestable_in_transaction" not in source
+    assert "ctx.catalog.is_requestable(room.workspace_id, song_id)" in source

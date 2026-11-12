@@ -214,7 +214,10 @@ def install_routes(
         authorization: str | None = Header(default=None),
     ):
         scheme, _, supplied = (authorization or "").partition(" ")
-        if scheme.lower() != "bearer" or not hmac.compare_digest(supplied, bootstrap_token):
+        # Bytes, not str: compare_digest raises TypeError on non-ASCII str (a 500, not a 401).
+        if scheme.lower() != "bearer" or not hmac.compare_digest(
+            supplied.encode("utf-8", "surrogateescape"), bootstrap_token.encode()
+        ):
             raise HTTPException(status_code=401, detail={"code": "worker_enrollment_required"})
         if body.pool not in allowed_pools or body.slots > max_slots:
             raise HTTPException(status_code=400, detail={"code": "worker_capability_not_allowed"})

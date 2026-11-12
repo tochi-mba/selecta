@@ -155,6 +155,26 @@ describe('PF-21 the sound device opens before the first Play', () => {
     ready.mockRestore();
   });
 
+  it('a context the browser starts running (autoplay allowed) is put to sleep until Play', async () => {
+    class Autoplay extends FakeAudio {
+      constructor() {
+        super();
+        this.state = 'running';
+      }
+    }
+    vi.stubGlobal('AudioContext', Autoplay);
+    player = new SetPlayer(() => songs(), () => {});
+    player.prepare();
+    runIdle();
+    await Promise.resolve();
+    expect(FakeAudio.now.state).toBe('suspended');
+    expect(player.state.phase).toBe('idle');
+    await player.togglePause();
+    expect(FakeAudio.made).toBe(1);
+    expect(FakeAudio.now.state).toBe('running');
+    expect(player.state.phase).toBe('playing');
+  });
+
   it('does nothing where Web Audio is missing', () => {
     vi.stubGlobal('AudioContext', undefined);
     player = new SetPlayer(() => songs(), () => {});

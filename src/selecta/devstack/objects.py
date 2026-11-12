@@ -77,12 +77,18 @@ class DiskObjects:
     # -- paths --------------------------------------------------------------------------------
 
     def path(self, bucket: str, key: str) -> Path:
-        if not bucket or "/" in bucket or bucket.startswith("."):
+        # ":" would name another drive ("D:x") or an NTFS stream on Windows.
+        if not bucket or any(c in bucket for c in ("/", "\\", ":")) or bucket.startswith("."):
             raise R2Error("bad bucket", status=400, code="InvalidBucketName")
         parts = key.split("/")
-        if not key or any(part in ("", ".", "..") or "\\" in part for part in parts):
+        if not key or any(
+            part in ("", ".", "..") or "\\" in part or ":" in part for part in parts
+        ):
             raise R2Error("bad key", status=400, code="InvalidKey")
-        return self.root.joinpath(bucket, *parts)
+        target = self.root.joinpath(bucket, *parts)
+        if not target.resolve().is_relative_to(self.root.resolve()):
+            raise R2Error("bad key", status=400, code="InvalidKey")
+        return target
 
     @staticmethod
     def _meta_path(path: Path) -> Path:
@@ -250,11 +256,20 @@ class DiskObjects:
         return etag
 
     def presign_upload_part(
-        self, bucket: str, key: str, upload_id: str, part_number: int, ttl: int
+        self,
+        bucket: str,
+        key: str,
+        upload_id: str,
+        part_number: int,
+        ttl: int,
+        *,
+        content_length: int | None = None,
     ) -> str:
-        return self.sign(
-            "PUT", bucket, key, ttl, {"uploadId": upload_id, "partNumber": str(part_number)}
-        )
+        extra = {"uploadId": upload_id, "partNumber": str(part_number)}
+        if content_length is not None:
+            # Signed like R2's signed Content-Length: the PUT must send exactly this many bytes.
+            extra["contentLength"] = str(int(content_length))
+        return self.sign("PUT", bucket, key, ttl, extra)
 
     def list_parts(self, bucket: str, key: str, upload_id: str) -> list[Part]:
         folder = self._upload(bucket, key, upload_id)
@@ -356,6 +371,8 @@ def install_routes(app: FastAPI, objects: DiskObjects) -> None:
         if not objects.check("PUT", bucket, key, query):
             return Response("Request has expired or the signature is wrong", status_code=403)
         data = await request.body()
+        if "contentLength" in query and str(len(data)) != query["contentLength"]:
+            return Response("The body isn't the signed Content-Length", status_code=403)
         try:
             if "uploadId" in query:
                 etag = objects.write_part(

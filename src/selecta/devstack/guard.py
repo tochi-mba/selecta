@@ -17,7 +17,9 @@ from __future__ import annotations
 
 import ipaddress
 import os
+import socket
 from collections.abc import Mapping
+from urllib.parse import urlsplit
 
 DEVELOPMENT = "development"
 LOCAL_IDENTITY_ENV = "SELECTA_LOCAL_IDENTITY"
@@ -29,14 +31,30 @@ class DevOnlyError(RuntimeError):
     """The local Cloud stack was asked to run somewhere that isn't a developer's machine."""
 
 
+def _address(name: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
+    """The IP address `name` spells, including short IPv4 forms such as `127.1`."""
+    try:
+        return ipaddress.ip_address(name.strip("[]"))
+    except ValueError:
+        pass
+    try:
+        return ipaddress.IPv4Address(socket.inet_aton(name))
+    except (OSError, ValueError):
+        return None
+
+
 def is_loopback(host: str) -> bool:
-    name = (host or "").strip().lower()
+    name = (host or "").strip().lower().rstrip(".")
     if name in LOOPBACK_NAMES or name.endswith(".localhost"):
         return True
-    try:
-        return ipaddress.ip_address(name.strip("[]")).is_loopback
-    except ValueError:
-        return False
+    address = _address(name)
+    return bool(address and address.is_loopback)
+
+
+def _is_this_machine(host: str) -> bool:
+    """Loopback, or an address such as 0.0.0.0 that a client also sends to this machine."""
+    address = _address((host or "").strip().lower().rstrip("."))
+    return is_loopback(host) or bool(address and address.is_unspecified)
 
 
 def problems(environ: Mapping[str, str] | None = None, *, host: str = "127.0.0.1") -> list[str]:
@@ -89,15 +107,64 @@ def production_identity_problem(environ: Mapping[str, str] | None = None) -> str
         value = env.get(name, "").strip().lower()
         if not value:
             continue
-        host = value.split("://", 1)[-1].split("/", 1)[0].rsplit(":", 1)[0]
-        if value.startswith("http://") or is_loopback(host):
+        try:
+            host = urlsplit(value).hostname or ""
+        except ValueError:
+            host = ""
+        if not value.startswith("https://") or not host or _is_this_machine(host):
             return f"{name} points at {value!r}; production identity must be HTTPS and hosted."
     return None
+
+
+class LoopbackOnly:
+    """ASGI middleware: answer only this machine, whatever address the server was bound to.
+
+    `require_development` checks the address the launcher binds, but a factory run by hand
+    (`uvicorn ... --host 0.0.0.0`) never tells the app where it listens. This refuses any
+    request from another machine, and any request whose Host isn't a loopback name, so a
+    web page can't reach the stack through DNS rebinding either.
+    """
+
+    def __init__(self, app) -> None:
+        self.app = app
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope["type"] in ("http", "websocket") and not self._local(scope):
+            if scope["type"] == "websocket":
+                await send({"type": "websocket.close", "code": 1008})
+                return
+            await send(
+                {
+                    "type": "http.response.start",
+                    "status": 403,
+                    "headers": [(b"content-type", b"text/plain; charset=utf-8")],
+                }
+            )
+            await send(
+                {"type": "http.response.body", "body": b"The local SelectaDJ stack answers "
+                 b"this computer only."}
+            )
+            return
+        await self.app(scope, receive, send)
+
+    @staticmethod
+    def _local(scope) -> bool:
+        client = scope.get("client")
+        if not client or not is_loopback(str(client[0])):
+            return False
+        headers = dict(scope.get("headers") or [])
+        host = headers.get(b"host", b"").decode("latin-1")
+        try:
+            name = urlsplit(f"//{host}").hostname or ""
+        except ValueError:
+            return False
+        return is_loopback(name)
 
 
 __all__ = [
     "DEVELOPMENT",
     "DevOnlyError",
+    "LoopbackOnly",
     "LOCAL_IDENTITY_ENV",
     "LOCAL_WORKOS_KEY",
     "is_loopback",

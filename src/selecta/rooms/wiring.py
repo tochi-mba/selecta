@@ -85,6 +85,7 @@ def install(
         principal_for=principal_for,
         rules=rules,
         rooms=rooms,
+        limiter=limiter,
     )
     api_guest.install_routes(
         app, rooms=rooms, allowed_origins=allowed_origins, limiter=limiter, rules=rules

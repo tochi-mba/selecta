@@ -3,6 +3,7 @@
     python -m selecta.audit.ex_study orders 12 baseline-cards new-cards   # who sees what first
     python -m selecta.audit.ex_study template                           # a blank session file
     python -m selecta.audit.ex_study score sessions.json                # the report
+    python -m selecta.audit.ex_study cards [EX-0117-01 ...]             # per-task study cards
 
 This is the code half of a study: it never invents a participant or a result. `orders` hands out
 condition orders so every condition appears in every position equally often (a balanced Latin
@@ -177,6 +178,138 @@ def render(report: Report, baseline: str) -> str:
     return "\n".join(out)
 
 
+# Per-task study cards (EX-0114-01 to EX-0128-01). Preparation only: a card says how to run one
+# uncoached task on the made-up library of tests/e2e_server.py; it holds no participant or result.
+SERVER = "python tests/e2e_server.py <port> (made-up library, no real music, no real names)"
+CONSENT_LINE = (
+    "Before we start: I am testing SelectaDJ, not you. I record the time, what you click and what "
+    "you say, under a code like P01, never your name. You can stop at any time. Is that OK?"
+)
+HESITATION_RULE = (
+    "one hesitation = 10 seconds or more with no action, a return to a page already left, or a "
+    "question to the facilitator; the facilitator answers only 'what would you do?'"
+)
+RECORD_FIELDS = (
+    "participant (code only)", "sha", "consent", "coached (must be false)", "seconds_to_success",
+    "hesitations", "completed", "confident (1 to 5, asked after the task)", "notes (observed or "
+    "hypothesis)",
+)
+
+
+@dataclass(frozen=True)
+class TaskCard:
+    """One uncoached task: where it starts, the words read aloud, and how it is scored."""
+
+    entry: str
+    route: str
+    setup: str
+    prompt: str
+    success: str
+    condition: str = "current"
+
+
+TASK_CARDS: tuple[TaskCard, ...] = (
+    TaskCard(
+        "EX-0114-01", "/",
+        "fresh server, nothing playing",
+        "One task at a time: get some music playing; tell me what will play after this song; keep "
+        "a different mix for later without stopping this one; tell me who made one song.",
+        "each of the four counted on its own: sound starts; the next song is named; a draft exists "
+        "and playback never stopped; the right artist is named",
+    ),
+    TaskCard(
+        "EX-0115-01", "/",
+        "fresh server; the facilitator never says a page name",
+        "Before clicking, say where you would go to: see what is playing; start a new mix from an "
+        "idea; find a mix you kept earlier; check a song's details; see why a song is not ready. "
+        "Then go there.",
+        "per destination, the first click lands on it (Listen, Make a Mix, My Mixes, Library, "
+        "Workspace); a second click counts as a hesitation, not a success",
+    ),
+    TaskCard(
+        "EX-0116-01", "/listen",
+        "the facilitator starts the current mix, then hands over",
+        "Tell me what is playing and who it is by, pause it, then tell me what comes next.",
+        "song and artist named, playback paused, the next song named, all from Listen",
+    ),
+    TaskCard(
+        "EX-0117-01", "/mixes",
+        "nothing playing",
+        "Start a mix that suits a relaxed evening. You may change it first, but need not.",
+        "music from a mix idea starts within 2 minutes by either path; record which path was used",
+    ),
+    TaskCard(
+        "EX-0118-01", "/mixes",
+        "nothing playing; counterbalance with the EX-0118-05 `orders` command",
+        "Look at these mix ideas. Without pressing anything, pick one and tell me what each of its "
+        "buttons would do and what music it would draw from.",
+        "for the card chosen: one button replaces what plays, one opens the mix for changes first, "
+        "one keeps it without changing playback; one real fact from the card named",
+    ),
+    TaskCard(
+        "EX-0119-01", "/mixes/mine",
+        "current mix playing; one saved draft; one draft waiting in the render line",
+        "Show me the mix you are hearing now, a mix kept for later, and anything still being "
+        "prepared. For each one, would pressing it change what you hear?",
+        "all three pointed to correctly and the playback answer right for each",
+    ),
+    TaskCard(
+        "EX-0120-01", "/mix/current/edit",
+        "current mix of 2 songs; the 20 and 100-song runs need a larger made-up mix-ready fixture "
+        "(the server has 12 mix-ready songs) prepared before the sessions",
+        "Change how the music moves from the first song into the second without changing either "
+        "song. Then swap the second song for a different one.",
+        "the move changed through the transition, the song changed through the song row, and "
+        "neither action selected the other",
+    ),
+    TaskCard(
+        "EX-0122-02", "/mix/current/edit",
+        "server with SELECTA_E2E_STEMS=1, current mix of its first two songs",
+        "During the change between the first two songs, keep the first song's singing out and let "
+        "the second song's drums play all the way through. Then tell me what you changed.",
+        "the two parts set as asked, nothing else changed, and the explanation names voice and "
+        "drums correctly",
+    ),
+    TaskCard(
+        "EX-0124-02", "/listen",
+        "current mix playing; the facilitator requested two songs, one ready, one still waiting",
+        "Some songs have been asked for. Which would you expect to hear soon, which might never "
+        "play, and why?",
+        "ready and waiting told apart, and no play time or queue place claimed for either",
+    ),
+    TaskCard(
+        "EX-0126-01", "/",
+        "`selecta web` on a new empty SELECTA_HOME; the card names a song FILE in the made-up "
+        "music folder as 'your music'",
+        "Your music is at the address on this card. Add it to SelectaDJ.",
+        "after the file address is refused, the participant follows the advice and starts with the "
+        "folder that holds it",
+    ),
+    TaskCard(
+        "EX-0128-01", "/workshop",
+        "server with SELECTA_E2E_BULK=5, so analysis waits paused with songs to go",
+        "Something is stopping SelectaDJ from getting all your songs ready. Find out what it is "
+        "and what you would do about it.",
+        "the blocker named in the participant's words and its fix link followed",
+    ),
+)
+
+
+def card_text(card: TaskCard) -> str:
+    """A printable card for the facilitator."""
+    return "\n".join([
+        f"## {card.entry} (condition {card.condition})",
+        f"Server: {SERVER}",
+        f"Start at: {card.route}",
+        f"Setup: {card.setup}",
+        f"Consent, read first: {CONSENT_LINE}",
+        f"Prompt, read once, no hints: {card.prompt}",
+        f"Success: {card.success}",
+        f"Hesitation: {HESITATION_RULE}",
+        f"Record: {', '.join(RECORD_FIELDS)}",
+    ])
+
+
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if args[:1] == ["orders"] and len(args) >= 4:
@@ -186,6 +319,10 @@ def main(argv: list[str] | None = None) -> int:
     if args[:1] == ["template"]:
         print(json.dumps([TEMPLATE], indent=2))
         return 0
+    if args[:1] == ["cards"]:
+        chosen = [card for card in TASK_CARDS if len(args) < 2 or card.entry in args[1:]]
+        print("\n\n".join(card_text(card) for card in chosen))
+        return 0 if chosen else 2
     if args[:1] == ["score"] and len(args) >= 2:
         sessions = json.loads(Path(args[1]).read_text(encoding="utf-8"))
         baseline = args[2] if len(args) > 2 else "baseline-cards"

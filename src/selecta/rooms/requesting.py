@@ -125,15 +125,7 @@ def _check_song(conn: Connection, ctx: RoomContext, room: Room, song_id: int, no
     crate = room.settings.crate
     if crate is not None and song_id not in crate:
         raise RoomError(Refusal.NOT_REQUESTABLE)
-    # The local Cloud catalogue has a database-backed check. Read through this
-    # connection: nesting a second SQLite BEGIN IMMEDIATE self-deadlocks.
-    in_transaction = getattr(ctx.catalog, "is_requestable_in_transaction", None)
-    available = (
-        in_transaction(conn, room.workspace_id, song_id)
-        if in_transaction is not None
-        else ctx.catalog.is_requestable(room.workspace_id, song_id)
-    )
-    if not available:
+    if not ctx.catalog.is_requestable(room.workspace_id, song_id):
         raise RoomError(Refusal.NOT_REQUESTABLE)
     cooldown = room.settings.replay_cooldown_minutes * 60.0
     if cooldown <= 0:

@@ -178,7 +178,10 @@ export class SetPlayer {
       this.preparing = false;
       if (this.context) return;
       try {
-        this.audio();
+        const context = this.audio();
+        // A browser that allows autoplay starts it running. Nothing plays yet, so put it to sleep
+        // rather than keep the sound device busy; Play's resume() wakes it.
+        if (context.state === 'running' && this.state.phase === 'idle') void this.hold(context).catch(() => {});
       } catch {
         // the device refused for now; Play makes the context inside its own press instead
         this.context = null;

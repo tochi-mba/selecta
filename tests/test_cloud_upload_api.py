@@ -35,7 +35,7 @@ class FakeObjects:
         self.parts[key] = []
         return "multi-test"
 
-    def presign_upload_part(self, _bucket, key, _upload_id, part_number, _ttl):
+    def presign_upload_part(self, _bucket, key, _upload_id, part_number, _ttl, **_kwargs):
         return f"https://objects.test/{key}/{part_number}"
 
     def list_parts(self, _bucket, key, _upload_id):

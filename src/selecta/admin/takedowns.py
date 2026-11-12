@@ -31,7 +31,7 @@ from sqlalchemy.engine import Connection
 from selecta.admin import alerts
 from selecta.admin.schema import takedown_notices, upload_restrictions
 from selecta.authz import audit
-from selecta.authz.check import Actor, authorize
+from selecta.authz.check import Actor, authorize, ensure_not_own_workspace
 from selecta.authz.scopes import ResourceRef
 from selecta.persistence import db_now, new_id
 from selecta.storage import deletion
@@ -319,6 +319,7 @@ def lift_restriction(conn: Connection, actor: Actor, workspace_id: str, *, reaso
     if not reason or not reason.strip():
         raise ValueError("Say why the restriction is lifted.")
     authorize(conn, actor, "legal.takedowns.manage", _resource(workspace_id))
+    ensure_not_own_workspace(conn, actor, "legal.takedowns.manage", [workspace_id])
     changed = conn.execute(
         upload_restrictions.update()
         .where(

@@ -16,6 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.engine import Engine
 
 from selecta.admin import state as emergency_state
+from selecta.authz.roles import WorkspaceAction
 from selecta.billing import plans, stripe_sync
 from selecta.billing.schema import checkout_consents, stripe_customers
 from selecta.billing.stripe_sync import PricePlan, parse_price_map
@@ -81,6 +82,13 @@ def install_routes(
 ) -> None:
     """Install billing routes on the Cloud app. Price and consent policy remain server-owned."""
 
+    def billing_principal(claims: Claims, request: Request) -> Any:
+        """The caller, refused unless their workspace role may manage billing."""
+        principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
+        if not principal.can(WorkspaceAction.BILLING_MANAGE):
+            raise HTTPException(status_code=403, detail={"code": "billing_not_permitted"})
+        return principal
+
     def stripe() -> HttpStripeClient:
         key = os.environ.get("SELECTA_STRIPE_SECRET_KEY", "").strip()
         if not key:
@@ -110,7 +118,7 @@ def install_routes(
         )
         if origin is None:
             raise HTTPException(status_code=400, detail={"code": "untrusted_origin"})
-        principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
+        principal = billing_principal(claims, request)
         prices = _checkout_prices()
         price_id = next(
             (
@@ -196,7 +204,7 @@ def install_routes(
         idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=255),
         claims: Claims = Depends(current_claims),
     ):
-        principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
+        principal = billing_principal(claims, request)
         return_url = body.return_url or (
             request.headers.get("origin", "").rstrip("/") + "/account/billing"
         )

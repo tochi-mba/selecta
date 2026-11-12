@@ -54,9 +54,19 @@ class RankedSearches:
                 self._ranked.move_to_end(query)
                 return found
             if self._songs is None:
-                cursor = conn.cursor()
-                cursor.row_factory = None  # plain tuples: 20,000 named rows cost far more
-                self._songs = cursor.execute(SONGS).fetchall()
+                # rv2-a: the names this ranking is kept under are read again with the songs, in
+                # one snapshot, since a write may have landed after the names above were read
+                own = not conn.in_transaction
+                if own:
+                    conn.execute("BEGIN")
+                try:
+                    self._names = conn.execute(NAMES).fetchone()[0] or ""
+                    cursor = conn.cursor()
+                    cursor.row_factory = None  # plain tuples: 20,000 named rows cost far more
+                    self._songs = cursor.execute(SONGS).fetchall()
+                finally:
+                    if own:
+                        conn.commit()
             found = rank_songs(query, self._songs)
             self.ranked_afresh += 1
             self._ranked[query] = found
