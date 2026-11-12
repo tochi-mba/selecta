@@ -3,7 +3,8 @@
 The server half of T0265. The library is paged through the real /api/library handler three ways:
 idle; with every core held busy by busy processes while analysis keeps writing and a real seam
 render (selecta.render.engine.render of a bass-swap blend) runs over and over in its own process at
-the render worker's lowered priority; and the same again with the drive reporting almost no free
+normal priority (the app lowers its render worker; at normal priority the render competes harder
+with the library, the worst case); and the same again with the drive reporting almost no free
 space. Every song must stay reachable exactly once, no page may stall, every concurrent render must
 finish with real audio, and the stem cache must shrink to its floor rather than fill the drive (an
 export on a full drive refusing with its reason is tests/test_flow_export_jobs.py). The browser
@@ -33,19 +34,17 @@ from selecta.config import ANALYSIS_VERSION, Settings
 SONGS = 20_500
 TESTS = Path(__file__).parent
 # One real seam render after another until the stop file appears (always at least one); each
-# render's time goes to the out file. Its own process at lowered priority, as the app runs renders.
+# render's time goes to the out file. Its own process, as the app runs renders.
 RENDER_LOOP = """
 import json, sys, time
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
 from helpers import song_from_track
 from synth import make_track
-from selecta import jobs
 from selecta.analysis.song import Cue
 from selecta.render.engine import render
 from selecta.styles.blend import bass_swap_blend
 work, stop, out = Path(sys.argv[2]), Path(sys.argv[3]), Path(sys.argv[4])
-jobs.lower_priority()
 a = song_from_track(work, "a", make_track(bpm=120, bars=48, seed=1))
 b = song_from_track(work, "b", make_track(bpm=123, bars=48, seed=2))
 cue_a, cue_b = Cue(24, a.bar_time(24), "t", 0.8, 8), Cue(0, b.bar_time(0), "t", 0.8, 8)
@@ -174,7 +173,7 @@ class _Contention:
             burner.wait(timeout=10)
         self.worker.join(timeout=30)
         try:
-            self.render.wait(timeout=300)  # it finishes the render under way
+            self.render.wait(timeout=600)  # it finishes the render under way
         finally:
             self.render.kill()
         out = self.work / "renders.json"

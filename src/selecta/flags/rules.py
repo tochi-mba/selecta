@@ -54,6 +54,7 @@ FLAP_WINDOW = 10 * 60
 # Serialises version numbers on PostgreSQL. SQLite's BEGIN IMMEDIATE already does.
 _VERSION_LOCK = 0x53454C4543544146
 CHANNEL = "selecta_flag_rules"
+SCOPE_KEY = "selecta.flag_rules.pending"
 
 flag_rules = sa.Table(
     "flag_rules",
@@ -594,9 +595,39 @@ class RulesCache:
                 if held is not None and latest <= held.version:
                     self._checked_at = self._clock()
                     return False
-                self._snapshot = load_snapshot(connection)
+                # Read through the caller's transaction, which may hold its own uncommitted rule
+                # writes: this transaction decides with it, and the shared cache only takes it
+                # once the transaction has committed, never if it rolls back.
+                loaded = load_snapshot(connection)
+                scope = persistence.transaction_scope(connection)
+                if scope is not None:
+                    scope[(SCOPE_KEY, id(self))] = loaded
+                persistence.after_commit(connection, lambda: self._adopt(loaded))
+                return True
             self._checked_at = self._clock()
             return True
+
+    def _adopt(self, loaded: RuleSnapshot) -> None:
+        with self._lock:
+            held = self._snapshot
+            if held is None or loaded.version > held.version:
+                self._snapshot = loaded
+            self._checked_at = self._clock()
+
+    def snapshot_for(self, connection: Connection) -> RuleSnapshot:
+        """The snapshot to decide with inside `connection`'s transaction: one this transaction
+        loaded (`refresh_if_newer(connection=...)`), else the shared one. A cold cache is loaded
+        through `connection`, never a second connection."""
+        scope = persistence.transaction_scope(connection)
+        if scope is not None and (SCOPE_KEY, id(self)) in scope:
+            return scope[(SCOPE_KEY, id(self))]
+        if self._snapshot is None:
+            self.refresh_if_newer(connection=connection)
+            if scope is not None and (SCOPE_KEY, id(self)) in scope:
+                return scope[(SCOPE_KEY, id(self))]
+            if self._snapshot is None:  # outside `transaction()`: nowhere to keep it but here
+                return load_snapshot(connection)
+        return self._snapshot
 
     def listen(self, listener) -> None:
         """Reload whenever `listener` (a `persistence.listen.PgListener`) hears a rule change,

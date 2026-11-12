@@ -1,13 +1,14 @@
 import { flagOn } from '../flags';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
-import { ApiError, DraftList, get, Link, LinkList, MixData, post, SeamState } from '../api';
+import { ApiError, get, Link, LinkList, MixData, post, SeamState } from '../api';
 import { releaseAudio, takeAudio } from '../audio/focus';
 import { etaWords } from '../lib';
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
 import { exploreTabs } from '../shell/manifest';
 import { LinkIfThere } from '../shell/PageLink';
 import { operationId } from '../state/async';
+import { DraftNames, getDraftNames } from '../state/draftNames';
 import { orderOf } from '../state/readiness';
 import { AudioPreview } from '../ui/AudioPreview';
 import { Icon } from '../ui/Icon';
@@ -488,7 +489,7 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
   useVisiblePoll(load, 6000, tab === 'words');
 
   useEffect(() => {
-    if (flagOn('drafts')) get<DraftList>('/drafts').then((list) => setDrafts(list.drafts ?? [])).catch(() => {});
+    if (flagOn('drafts')) getDraftNames().then((list) => setDrafts(list.drafts)).catch(() => {});
   }, []);
 
   // Both songs and their transition must insert atomically. The mix-order

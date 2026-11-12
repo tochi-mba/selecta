@@ -57,6 +57,21 @@ test.beforeEach(async ({ request }) => resetMix(request));
 
 test('P0136 / SF-0235-02 lab INP stays at most 200 ms and CLS at most 0.1 on each surface, reported as lab data', async ({ page }, info) => {
   await installProbe(page);
+  // how long opening the sound device takes inside the first Play press (PF-21): the browser does it
+  // synchronously in `new AudioContext`, so it lands in that interaction's INP
+  await page.addInitScript(() => {
+    const Real = window.AudioContext;
+    const opened: number[] = [];
+    (window as unknown as { audioOpenMs: number[] }).audioOpenMs = opened;
+    window.AudioContext = class extends Real {
+      constructor(options?: AudioContextOptions) {
+        const begun = performance.now();
+        super(options);
+        opened.push(Math.round(performance.now() - begun));
+      }
+    };
+  });
+  const audioOpenMs: number[] = [];
   await page.setViewportSize({ width: 1440, height: 900 });
   const readings: Reading[] = [];
   for (const surface of SURFACES) {
@@ -72,6 +87,7 @@ test('P0136 / SF-0235-02 lab INP stays at most 200 ms and CLS at most 0.1 on eac
     // let the last interaction's entries arrive (Event Timing reports after the next paint)
     await page.waitForTimeout(400);
     readings.push(await vitalsSince(page, 0, surface.route));
+    audioOpenMs.push(...await page.evaluate(() => (window as unknown as { audioOpenMs: number[] }).audioOpenMs));
   }
   const report = {
     kind: LAB_KIND,
@@ -79,6 +95,7 @@ test('P0136 / SF-0235-02 lab INP stays at most 200 ms and CLS at most 0.1 on eac
     method: 'fresh load per surface at 1440x900; command palette, three Tab presses and the surface action; INP = slowest interaction (98th percentile rule over 50), CLS = largest session window, LCP = latest candidate; see docs/adr/completion/performance.md',
     machine: await browserLine(page),
     readings,
+    audio_context_open_ms: audioOpenMs,
   };
   writeFileSync(info.outputPath('p0136-lab-vitals.json'), JSON.stringify(report, null, 2));
   await info.attach('p0136-lab-vitals', { body: JSON.stringify(report, null, 2), contentType: 'application/json' });

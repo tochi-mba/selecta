@@ -4,7 +4,8 @@
   "baseline_main_sha": "da942863e9f57e45653cfc2fda35fe463477b8be",
   "as_of": "2026-11-08",
   "scope": "ADR-0340–0365; LX-0340-01 through LX-0365-08",
-  "document_only": true,
+  "document_only": false,
+  "document_only_note": "The 2026-11-08 planning PR was docs only; implementation has since landed (see implementation_summary and the checklist task lines, 2026-11-12).",
   "decision_summary": {
     "Proposed": 26,
     "Accepted": 0,

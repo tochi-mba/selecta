@@ -1,0 +1,33 @@
+{
+  "about": "S4-0094-10 route task scripts: each task opens a route, opens a menu when the action lives in one, and finds the control by role and name. No action may disappear because it moved into a menu. Run by web/e2e/s4-route-tasks.e2e.ts; web/src/shell/s4RouteTasks.test.ts keeps every <Menu> source covered.",
+  "tasks": [
+    { "route": "/mix/current/edit", "task": "lock a song in place", "menu": "^More for ", "role": "menuitem", "name": "^(Lock|Unlock)$" },
+    { "route": "/mix/current/edit", "task": "remove a song", "menu": "^More for ", "role": "menuitem", "name": "^Remove " },
+    { "route": "/mix/current/edit", "task": "move a song down", "role": "button", "name": "^Move .+ down$" },
+    { "route": "/mix/current/edit", "task": "save the mix as audio", "role": "button", "name": "^Download audio$" },
+    { "route": "/library", "task": "add a song to the current mix", "menu": "^More actions for ", "role": "menuitem", "name": "^(Add to current mix|Already in current mix)$" },
+    { "route": "/library", "task": "prioritize a song's analysis", "menu": "^More actions for ", "role": "menuitemcheckbox", "name": "^(Prioritize|Priority: on)$" },
+    { "route": "/library", "task": "keep a song out of mixes", "menu": "^More actions for ", "role": "menuitemcheckbox", "name": "^(Never play|Never: on)$" },
+    { "route": "/library", "task": "select a recording", "role": "checkbox", "name": "^Select recording" },
+    { "route": "/library", "task": "choose light or dark", "menu": "^Theme: ", "role": "menuitemradio", "name": "." },
+    { "route": "/mixes", "task": "shape the next mix", "role": "button", "name": "^Customize" },
+    { "route": "/mixes", "task": "search songs and commands", "role": "button", "name": "Search" },
+    { "route": "/mixes", "task": "see recent activity and undo", "role": "button", "name": "^Activity" },
+    { "route": "/mixes", "task": "request a song", "role": "button", "name": "^Requests" },
+    { "route": "/mixes", "task": "read the keyboard shortcuts", "role": "button", "name": "^Keyboard shortcuts$" },
+    { "route": "/workshop", "task": "reach analysis settings", "role": "link", "name": "Analysis" },
+    { "route": "/workshop", "task": "reach storage and backups", "role": "link", "name": "Storage" }
+  ],
+  "menusCoveredElsewhere": {
+    "views/Drafts.tsx": "needs a saved draft; Rename, Copy, Prioritize, Out of line and Delete are opened in src/views/Drafts.test.tsx and src/views/ufMyMixes.test.tsx",
+    "views/Links.tsx": "needs a discovery card; Add both to is opened in web/e2e/mp-0292-discovery.e2e.ts and web/e2e/gp-0260-back-state.e2e.ts",
+    "views/LucyHistory.tsx": "needs a Lucy conversation; Rename, Archive and Delete are opened in web/e2e/lx-lucy.e2e.ts and src/views/LucyLx.test.tsx",
+    "views/LucyProposal.tsx": "needs a revised Lucy proposal; the revision menu is opened in src/views/LucyLx.test.tsx",
+    "ui/ControlGallery.tsx": "the component gallery's own sample menu, not a product action"
+  },
+  "menuSources": {
+    "views/EditorRows.tsx": "^More for ",
+    "views/LibraryRow.tsx": "^More actions for ",
+    "ui/ThemeChoice.tsx": "^Theme: "
+  }
+}

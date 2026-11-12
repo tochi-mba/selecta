@@ -1,7 +1,8 @@
 import { ReactNode, useEffect, useState } from 'react';
-import { DraftList, get, MixEta, MixItem } from '../api';
+import { MixEta, MixItem } from '../api';
 import { flagOn, useFlag } from '../flags';
 import { etaRangeWords, length, nth } from '../lib';
+import { DraftNames, getDraftNames } from '../state/draftNames';
 import { MixReadiness, orderOf } from '../state/readiness';
 import { Status, StatusKind } from '../ui/controls';
 
@@ -28,10 +29,10 @@ function readinessWords(state: MixReadiness): { kind: StatusKind; words: string 
 
 /** Which mix is being edited, for as soon as there's more than one. */
 export function MixSwitcher({ draftId, openDraft, closeDraft }: { draftId: number | null; openDraft?: (id: number) => void; closeDraft: () => void }) {
-  const [list, setList] = useState<DraftList | null>(null);
+  const [list, setList] = useState<DraftNames | null>(null);
   const drafts = useFlag('drafts');
   useEffect(() => {
-    if (drafts) get<DraftList>('/drafts').then(setList).catch(() => {});
+    if (drafts) getDraftNames().then(setList).catch(() => {});
   }, [draftId, drafts]);
   if (!drafts || !list || !list.drafts.length) return null;
   return (

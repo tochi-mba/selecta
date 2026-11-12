@@ -1,7 +1,7 @@
 # ADR-0159 - Dialogs, drawers, toasts, Activity and recoverable mistakes
 
 - **Decision:** Accepted by the repository owner on 2026-11-07; implementation and independent verification remain separately evidenced.
-- **Implementation:** 7/8 Implemented, 0/8 In progress, 1 Not started (source-level, PR #31).
+- **Implementation:** 7/8 Implemented, 1/8 In progress, 0 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P0 / Shared feedback.

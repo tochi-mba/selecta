@@ -4,7 +4,7 @@
 
 **Status:** 26 Proposed ADRs (0340–0365); 0 LX tasks Not started; 29 In progress; 179 Implemented; 0 independently Verified (recounted from the task lines 2026-11-12). Owner unassigned. Baseline `main` `da942863e9f57e45653cfc2fda35fe463477b8be` (2026-11-08). Implementation candidate; independently unverified.
 
-**Semantics:** `[ ]` means **not independently accepted**. `Implementation` separately records Not started/In progress/Implemented; `Independently Verified` separately records No/Yes. A future candidate may have source code and still remain unchecked until item-specific acceptance evidence exists. This docs PR creates no implementation.
+**Semantics:** `[ ]` means **not independently accepted**. `Implementation` separately records Not started/In progress/Implemented; `Independently Verified` separately records No/Yes. A future candidate may have source code and still remain unchecked until item-specific acceptance evidence exists. The planning PR was docs only; implementation has since landed on the feat/finish-checklists branches, and each task line records its own Implementation state and evidence (2026-11-12).
 
 ## [ADR-0340](adr-0340-library-experience-charter-and-information-architecture.md) (P0; Library foundation)
 

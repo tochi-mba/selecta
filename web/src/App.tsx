@@ -1,5 +1,6 @@
 import { lazy, startTransition, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { ApiError, DraftList, get, MixData, MixItem, OFFLINE_WORDS, post, problemKind, Status } from './api';
+import { ApiError, get, MixData, MixItem, OFFLINE_WORDS, post, problemKind, Status } from './api';
+import { getDraftNames } from './state/draftNames';
 import { audioOwner, connectMainPlayer, mainPlayerTouched, stopPreviewsOnly } from './audio/focus';
 import { bindMediaSession, syncMediaSession } from './audio/mediaSession';
 import { setFlags, useFlags } from './flags';
@@ -564,7 +565,7 @@ export function App() {
   useEffect(() => {
     if (!commanding || !on('drafts')) return;
     let live = true;
-    get<DraftList>('/drafts').then((list) => { if (live) setCommandDrafts(list.drafts ?? []); }).catch(() => { if (live) setCommandDrafts([]); });
+    getDraftNames().then((list) => { if (live) setCommandDrafts(list.drafts); }).catch(() => { if (live) setCommandDrafts([]); });
     return () => { live = false; };
   }, [commanding]);
 
