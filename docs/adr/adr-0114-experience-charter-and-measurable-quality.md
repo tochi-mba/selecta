@@ -1,7 +1,7 @@
 # ADR-0114 - Experience-first product charter and measurable quality
 
 - **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation:** In progress (2026-11-10: EX-0114-01, -03 and -04 Implemented, -02 In progress, -05 Not started; see the checklist for evidence); **Independent verification:** No (0/5; uncoached tasks, protocol review, map sign-off and release decision need a person).
+- **Implementation:** Implemented (2026-11-12: EX-0114-01 to -05 Implemented, -02 and -05 as their code part only; see the checklist for evidence); **Independent verification:** No (0/5; uncoached tasks, protocol review, map sign-off and release decision need a person).
 - **Date:** 2026-11-07. **Baseline:** `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` (merged PR #29).
 - **Related:** ADR-0089 and ADR-0113; these are neither automatically superseded nor retroactively completed.
 - **Sources:** `web/src/App.tsx`, `web/src/shell/manifest.ts`, `docs/adr/selecta-4-roadmap.md`.

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import sqlite3
 import time
 from dataclasses import dataclass
@@ -21,6 +20,7 @@ from selecta.analysis.features import (
     waveform_peaks,
 )
 from selecta.analysis.key import KeyDetector, KeyResult
+from selecta.cache_care import replace_when_free
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, Settings
 
 
@@ -166,21 +166,24 @@ def analyse_song(
     # truncated file behind an older analysis that still points at it
     target = features_path(settings, song["id"])
     partial = target.with_name(target.name + ".part")
-    with partial.open("wb") as stream:
-        np.savez_compressed(
-            stream,
-            beats=grid.beats,
-            bar_starts=grid.bar_starts.astype(np.int32),
-            raw_beats=grid.raw_beats.astype(np.float32),
-            raw_downbeats=grid.raw_downbeats.astype(np.float32),
-            chroma_bars=features.chroma_bars.astype(np.float16),
-            mfcc_bars=features.mfcc_bars.astype(np.float16),
-            energy_bars=features.energy_bars.astype(np.float16),
-            rms_db_bars=features.rms_db_bars.astype(np.float16),
-            low_share_bars=features.low_share_bars.astype(np.float16),
-            peaks=waveform_peaks(mono),
-        )
-    os.replace(partial, target)
+    try:
+        with partial.open("wb") as stream:
+            np.savez_compressed(
+                stream,
+                beats=grid.beats,
+                bar_starts=grid.bar_starts.astype(np.int32),
+                raw_beats=grid.raw_beats.astype(np.float32),
+                raw_downbeats=grid.raw_downbeats.astype(np.float32),
+                chroma_bars=features.chroma_bars.astype(np.float16),
+                mfcc_bars=features.mfcc_bars.astype(np.float16),
+                energy_bars=features.energy_bars.astype(np.float16),
+                rms_db_bars=features.rms_db_bars.astype(np.float16),
+                low_share_bars=features.low_share_bars.astype(np.float16),
+                peaks=waveform_peaks(mono),
+            )
+        replace_when_free(partial, target)
+    finally:
+        partial.unlink(missing_ok=True)
     result.timings["save"] = round(time.perf_counter() - save_started, 3)
     result.timings["total"] = round(time.perf_counter() - started, 3)
 

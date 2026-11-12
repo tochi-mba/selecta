@@ -8,13 +8,15 @@ import { foldText, GLOSSARY, searchGlossary } from './glossaryTerms';
  * meaning, one glossary entry that explains it, and the same word wherever the app shows it. The
  * copy audit and task study that confirm people read them that way are a person's. */
 
-const TERMS: Record<string, string> = {
-  ready: 'mix-ready',
-  analysed: 'analysis',
-  proposed: 'proposal',
-  queued: 'planned',
-  saved: 'draft',
-  playing: 'current-mix',
+/** Ready has two scoped meanings, each its own entry: a song that is mix-ready, and a transition
+ * that is rendered. Every other word has exactly one. */
+const TERMS: Record<string, string[]> = {
+  ready: ['rendered', 'mix-ready'],
+  analysed: ['analysis'],
+  proposed: ['proposal'],
+  queued: ['planned'],
+  saved: ['draft'],
+  playing: ['current-mix'],
 };
 
 const names = (id: string) => {
@@ -24,11 +26,11 @@ const names = (id: string) => {
 const wholeWord = (word: string, text: string) => new RegExp(`(^|[^a-z-])${word}($|[^a-z-])`).test(text);
 
 describe('UF-0388-05 lifecycle words', () => {
-  it('each word is named by exactly one glossary entry, the one that explains it', () => {
-    for (const [word, id] of Object.entries(TERMS)) {
+  it('each word is named only by the glossary entries that explain it', () => {
+    for (const [word, ids] of Object.entries(TERMS)) {
       const owners = GLOSSARY.filter((entry) => names(entry.id).some((name) => wholeWord(word, name)));
-      expect(owners.map((entry) => entry.id), word).toEqual([id]);
-      expect(searchGlossary(word, GLOSSARY)[0]?.id, `searching ${word}`).toBe(id);
+      expect(owners.map((entry) => entry.id), word).toEqual(ids);
+      expect(ids, `searching ${word}`).toContain(searchGlossary(word, GLOSSARY)[0]?.id);
     }
   });
 

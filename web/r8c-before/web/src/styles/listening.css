@@ -1,0 +1,497 @@
+/* Onboarding, Explore, Listen, My Mixes and Requests. */
+
+/* Setup */
+.setup .lede { max-width: 66ch; }
+/* Start and the folder field share the same height when alongside each other. */
+.start .field .row > input, .start .field .row > button { height: 44px; min-height: 44px; }
+.setup-scan { display: grid; gap: var(--space-2); justify-items: start; }
+.setup-scan p { margin: 0; overflow-wrap: anywhere; }
+.setup-explain { margin-block: var(--space-4); }
+.setup-explain > summary { cursor: pointer; color: var(--text-soft); min-height: var(--control-height); display: flex; align-items: center; }
+.setup-explain dl { margin: var(--space-2) 0 0; display: grid; gap: var(--space-3); }
+.setup-explain dt { font-weight: 600; }
+.setup-explain dd { margin: 0; color: var(--text-soft); }
+.setup .warn, .setup [role='status'] { overflow-wrap: anywhere; }
+
+/* Explore */
+.build-summary { color: var(--text); }
+.setup-group { font: var(--type-section); margin: var(--space-5) 0 var(--space-2); }
+.energy-arc-title { display: block; font-weight: 600; }
+/* MP-0283-06: length and song count sit with the energy shape, inside the one Shape dialog */
+.mix-length { display: grid; gap: var(--space-2); margin: 0 0 var(--space-4); }
+.mix-length .chips, .mix-length .hint { margin: 0; }
+/* MP-0283-01: the pick's facts share the title's left edge and sit between it and the description */
+.mix-quick-facts { margin: var(--space-2) 0 0; }
+.card-actions { gap: var(--space-2); }
+.card-actions .quiet { background: none; border-color: var(--border); }
+.hero .row { row-gap: var(--space-3); }
+.vibe-browser-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-6);
+  margin-top: var(--space-6);
+}
+.vibe-browser-head > div:first-child { flex: 1 1 360px; }
+.vibe-browser-head .section-title { margin-top: var(--space-1); }
+.vibe-browser-head .hint { max-width: 62ch; margin-bottom: 0; }
+.vibe-filters { flex: 1 1 460px; justify-content: flex-end; margin: 0; }
+.vibe-filters button { white-space: nowrap; }
+.vibe-group { margin-top: var(--space-6); }
+.vibe-group > .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.vibe-group > .eyebrow::after { content: ''; height: 1px; flex: 1; background: var(--border); }
+.vibe-group .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+.vibe-card {
+  position: relative;
+  /* MP-0274-04: a column whose last child is the actions (Mixes.tsx), with the free room above them,
+     so Play and Shape first sit on one line across a row of cards however long anything above wraps */
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  overflow: hidden;
+  border-color: var(--border);
+  background: linear-gradient(155deg, color-mix(in srgb, var(--surface-raised) 94%, var(--selected)), var(--surface-raised) 42%);
+  transition: border-color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease);
+}
+.vibe-card:hover, .vibe-card:focus-within { border-color: var(--border-strong); box-shadow: var(--shadow-raised); }
+/* MP-0283-02: the tempo badge sits on the title's first baseline */
+.vibe-card-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+.vibe-card-head h3 { flex: 1 1 170px; font-size: var(--text-xl); overflow-wrap: anywhere; }
+.vibe-scope { align-items: center; color: var(--text-soft); display: flex; font: var(--type-label); gap: var(--space-2); margin: calc(var(--space-2) * -1) 0 0; }
+.vibe-tempo {
+  flex: none;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-soft);
+  font: var(--type-counter);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+.vibe-card .artists { margin-top: auto; padding-top: var(--space-3); color: var(--text); }
+.vibe-card .artists span { display: block; margin-bottom: var(--space-hair); color: var(--text-soft); font: var(--type-label); }
+.vibe-card .how { min-height: 2.4em; color: var(--text-soft); }
+.vibe-card-facts { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); color: var(--text-soft); font-size: var(--text-sm); }
+.vibe-card-facts span + span::before { content: '·'; margin-right: var(--space-3); }
+.vibe-card > .vibe-card-detail { margin-top: auto; }
+.vibe-card .card-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: var(--space-2); margin-top: var(--space-1); }
+/* when one label wraps, both buttons take its height and keep their words centred: one top, one bottom */
+.vibe-card .card-actions > * { width: 100%; display: inline-flex; align-items: center; justify-content: center; }
+.vibe-card .card-actions .action-labels { min-width: 0; }
+.vibe-card .card-actions .action-labels > span { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+/* Play on its own, when there's no Shape first in this build, takes the whole row */
+.vibe-card .card-actions[data-count='1'] { grid-template-columns: minmax(0, 1fr); }
+.vibe-card .card-actions .save-draft { grid-column: 1 / -1; width: fit-content; padding-inline: 0; border-color: transparent; color: var(--text-soft); }
+.vibe-card .card-actions .save-draft:hover, .vibe-card .card-actions .save-draft:focus-visible { color: var(--text); text-decoration: underline; }
+@media (max-width: 1040px) {
+  .vibe-group .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vibe-filters { justify-content: flex-start; }
+}
+@media (max-width: 620px) {
+  .vibe-group .cards { grid-template-columns: 1fr; }
+  .vibe-card { min-height: 0; }
+}
+
+/* the mix that's yours right now */
+.carry-on { margin-bottom: var(--space-5); }
+.carry-on-words { flex: 1 1 260px; min-width: 0; overflow-wrap: anywhere; }
+.carry-on h2 { overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.carry-on .status { white-space: normal; }
+.carry-on.prominent { padding: var(--space-5); border-color: var(--border-strong); box-shadow: inset var(--marker) 0 0 var(--playing); }
+.carry-on.prominent h2 { font: var(--type-section); font-size: var(--text-xl); margin-block: var(--space-1); }
+
+/* Listen: who and what first, what's coming beside it */
+.now { outline: none; }
+.now:focus { outline: none; }
+.listen-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 380px); gap: var(--space-6); align-items: start; }
+.listen-main { min-width: 0; }
+.listen-side { min-width: 0; position: sticky; top: calc(var(--header-block) + var(--space-4)); }
+.listen-side .next-up { border-top: 0; margin-top: 0; padding-top: 0; }
+.now:not(.stage) .listen-side .handoff { margin-top: 0; grid-template-columns: minmax(0, 1fr); }
+/* The ordinary listening scene gives the countdown a compact supporting role.
+   Fullscreen Stage retains the large focus countdown. */
+.now:not(.stage) .handoff.countdown {
+  gap: var(--space-2);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.now:not(.stage) .countdown-number {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: var(--space-2);
+}
+.now:not(.stage) .countdown-number strong { font-size: clamp(1.5rem, 4cqi, 2.1rem); }
+.now:not(.stage) .countdown-track { height: 12px; }
+.now:not(.stage) .handoff-next { padding-top: var(--space-2); }
+
+.listen-identity .artist { margin-bottom: var(--space-4); }
+/* Track titles have their own measured role, distinct from mix headers and
+   Stage. The JS size fit is a progressive enhancement; never clip metadata. */
+.listen-identity .track-title {
+  font-size: clamp(1.4rem, 5cqi, 3.25rem);
+  line-height: 1.08;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  max-width: 100%;
+  margin-bottom: var(--space-2);
+}
+.listen-identity .artist {
+  font-size: clamp(1rem, 1.6cqi, 1.25rem);
+  line-height: 1.4;
+  max-width: 100%;
+}
+.listen-identity { container-type: inline-size; }
+.stage .listen-identity .track-title { font-size: clamp(1.35rem, 3cqi, 2.5rem); }
+
+/* A quiet editorial sleeve, not album art or a representation of measured audio.
+   During a real handoff the trim changes state without adding fake movement. */
+.now:not(.stage) .listen-identity {
+  position: relative;
+  min-width: 0;
+  padding: clamp(var(--space-4), 3vw, var(--space-6));
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 1.5);
+  background:
+    radial-gradient(ellipse at 100% 0%, color-mix(in srgb, var(--selected) 10%, transparent), transparent 62%),
+    linear-gradient(140deg, var(--surface-raised), var(--surface));
+  overflow-wrap: anywhere;
+}
+.now:not(.stage) .listen-identity::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block: 0;
+  width: 4px;
+  background: var(--status-planned);
+  border-radius: inherit;
+}
+.now.in-seam:not(.stage) .listen-identity::before { background: var(--playing); }
+@media (forced-colors: active) {
+  .now:not(.stage) .listen-identity { background: Canvas; border-color: CanvasText; }
+  .now:not(.stage) .listen-identity::before { background: Highlight; }
+}
+.listen-identity .request-tag { margin-bottom: var(--space-2); }
+.now .transport { margin-block: var(--space-2); }
+.now .transport .primary.big { min-width: 160px; }
+.now .transport-more { row-gap: var(--space-2); }
+.now .listen-view { margin-block: var(--space-4) var(--space-2); }
+.seek-note { min-height: 1.5em; margin: calc(var(--space-5) * -1 + var(--space-1)) 0 var(--space-3); }
+.strip.seek-blocked { cursor: not-allowed; }
+.strip.seek-blocked:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.transition-truth { margin: var(--space-3) 0; }
+.transition-truth p { margin: var(--space-1) 0 0; }
+.transition-truth .status { white-space: normal; }
+.next-song b, .next-song span { unicode-bidi: plaintext; }
+.next-song .next-edit-hint { margin-top: var(--space-2); color: var(--text-soft); font-size: var(--text-xs); font-weight: 700; }
+
+@media (max-width: 1040px) {
+  .listen-layout { grid-template-columns: minmax(0, 1fr); gap: var(--space-5); }
+  .listen-side { position: static; }
+}
+
+/* a phone keeps play and pause in reach however far down the page goes */
+@media (max-width: 760px) {
+  .listen-layout { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-3); }
+  .listen-main { display: contents; }
+  .listen-identity { order: 1; }
+  /* The disclosure owns the mobile flex order, not its nested fieldset. */
+  .now .view-options { order: 2; margin-block: 0; }
+  .now .listen-view { margin-block: 0; }
+  .strip { order: 3; }
+  .music-visualizer { order: 4; }
+  .seek-note { order: 5; }
+  .lyrics, .now .problem, .now .skeleton { order: 6; }
+  .now .notice { order: 7; }
+  .now .transport-more { order: 8; margin: 0; }
+  .listen-side { order: 9; }
+  .now .transport {
+    order: 10;
+    position: sticky;
+    bottom: var(--bottom-chrome);
+    z-index: var(--layer-sticky);
+    justify-content: center;
+    padding: var(--space-2) 0;
+    margin: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+  .now .transport .tooltip-anchor { flex: none; }
+  .now .transport .primary.big { flex: 1 1 auto; min-width: 0; }
+  /* moving focus with the keyboard scrolls things clear of the player as well as the bottom bar */
+  :root:has(.now:not(.stage) .transport) { scroll-padding-bottom: calc(var(--bottom-chrome) + 76px + var(--keyboard-inset) + var(--space-4)); }
+  /* The first screen is the song: what's playing, where it is, and the words. Everything else
+     starts below the bottom of the screen, so nothing you can press ends up half hidden behind the
+     player, at whatever height this phone happens to be. The space above the words is a floor, a
+     little under the real thing, because a longer title only pushes things further down. */
+  .now:not(.stage) { --above-lyrics: 432px; }
+  .now:not(.stage):has(.music-visualizer) { --above-lyrics: 540px; }
+  .now:not(.stage) .lyrics:not(.focus) { min-height: max(7.5em, calc(100svh - 36px - var(--above-lyrics))); }
+  /* The words are the first screen, so the button to read them all sits at the bottom of their space,
+     with everything else below the screen, instead of wherever the words happen to end. */
+  .now:not(.stage) .lyrics:not(.focus) { display: flex; flex-direction: column; }
+  .now:not(.stage) .lyrics:not(.focus) > .lyrics-browse { align-self: flex-start; margin: auto 0 0; }
+  .seek-note { margin-top: calc(var(--space-3) * -1); }
+}
+
+/* the Stage: nothing but the music, readable from across the room */
+.now.stage { max-width: none; width: 100%; outline: none; }
+.stage .listen-layout { display: flex; flex-direction: column; align-items: stretch; flex: 1 1 auto; justify-content: center; gap: 0; }
+.stage .listen-main, .stage .listen-side { display: contents; }
+.stage .listen-identity { order: 1; }
+.stage .music-visualizer { order: 2; }
+.stage .handoff { order: 3; }
+.stage .lyrics { order: 4; }
+/* MP-0285-04: the lyrics keep the most room even before the first line is sung. The box holds a
+   two-line current lyric and a neighbour either side at Stage sizes (style.css), plus the timing caption,
+   so it is never shorter than the visualiser or the countdown. */
+.now.stage .lyrics {
+  --stage-sung: clamp(2.4rem, 7vw, 6rem);
+  --stage-line: clamp(1.1rem, 2.6vw, 2rem);
+  min-height: calc(var(--stage-sung) * 1.12 * 2 + var(--stage-line) * 1.5 * 2 + 2rem);
+}
+.stage .problem, .stage .skeleton { order: 4; }
+.stage .artist { margin-bottom: var(--space-2); font-size: clamp(1rem, 2vw, 1.6rem); }
+.stage-controls { position: fixed; right: var(--space-4); bottom: calc(var(--space-4) + var(--safe-bottom)); display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--space-2); max-width: calc(100vw - 2 * var(--space-4)); z-index: var(--layer-sticky); }
+.stage-controls .exit-stage { position: static; opacity: 1; }
+.stage-controls button { background: var(--surface-control); }
+.stage-notice { margin: 0; flex-basis: 100%; text-align: right; }
+
+/* My Mixes */
+.my-mixes .carry-on { margin-bottom: var(--space-6); }
+.drafts-head { justify-content: space-between; align-items: center; gap: var(--space-3); }
+.drafts-head .section-title { margin: 0; }
+.drafts-head .section-title:focus { outline: none; }
+.draft-list.density { gap: var(--row-gap); }
+.draft-list .draft { padding: var(--row-pad) var(--space-4); }
+.draft-name { overflow-wrap: anywhere; }
+.draft-name b { unicode-bidi: plaintext; }
+.draft-name .warn { margin: var(--space-1) 0 0; }
+.draft-actions { flex: none; align-items: center; }
+.draft-actions .menu > button { display: inline-grid; place-items: center; min-width: var(--control-height); padding: var(--space-dense); }
+.draft-actions .menu-list button { display: flex; align-items: center; gap: var(--space-2); }
+.rename-draft input { flex: 1 1 200px; width: auto; }
+.rename-draft .warn { flex-basis: 100%; }
+.render-line { margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--border); }
+.render-line .section-title { margin-top: 0; }
+.line-list { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; gap: var(--space-2); }
+.line-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--row-pad) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.line-name { flex: 1 1 180px; min-width: 0; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.line-buttons { display: inline-flex; flex-wrap: wrap; gap: var(--space-1); }
+.line-place { font-variant-numeric: tabular-nums; }
+/* every place takes the room of the longest ("10th in line"), so the names share one column (MP-0286-05) */
+.line-place { flex: 0 0 9.5em; width: 9.5em; }
+@media (min-width: 768px) {
+  .line-controls { display: grid; grid-template-columns: 9.5em minmax(0, 1fr) auto; }
+  .line-name { min-width: 0; }
+  .line-buttons { justify-self: end; }
+}
+
+/* Requests */
+.request-cancel { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--control-height); padding: var(--space-1) var(--space-snug); font-size: var(--text-sm); }
+.request-approve { padding: var(--space-3); border: 1px solid var(--status-action); border-radius: var(--radius-sm); }
+.request-approve h3 { margin: 0; font-size: var(--text-md); overflow-wrap: anywhere; }
+.request-approve .hint { margin: 0; }
+.bridge-route { margin: 0; padding-left: 1.4em; display: grid; gap: var(--space-1); }
+.bridge-route li { overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.bridge-route li > span { display: block; }
+.bridge-route small { display: block; }
+.request-preview { flex-wrap: wrap; }
+.request-preview .pill { flex: none; }
+.request-pair { flex: 1 1 160px; white-space: normal; overflow-wrap: anywhere; }
+.request-preview button { min-height: var(--control-height); }
+.request-name b, .request-name span { white-space: normal; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+
+/* Seeking shows a proposed location without moving the real audio playhead.
+   Vertical touch scrolling still works; only the scrub strip owns horizontal drags. */
+.strip.can-seek { cursor: crosshair; touch-action: pan-y; user-select: none; }
+.strip .scrub-ghost {
+  position: absolute;
+  top: 0;
+  height: 68px;
+  width: 2px;
+  border-left: 2px dashed var(--focus);
+  pointer-events: none;
+}
+.strip:has(.scrub-ghost) .time { font-variant-numeric: tabular-nums; }
+/* MP-0274-03: the clock's box is as wide as its longest reading (Now.tsx), so the words hug its right edge */
+.strip .time { text-align: end; }
+@media (forced-colors: active) {
+  .strip .scrub-ghost { border-color: Highlight; }
+}
+
+/* The listener controls decorative intensity, never the audio engine. */
+.listen-intensity { display: grid; gap: var(--space-2); min-width: 0; }
+.music-visualizer.focused { height: 124px; }
+.stage .music-visualizer.focused { height: min(20svh, 180px); }
+/* Reading the complete lyric sheet is deliberate and static: playback may
+   continue, but it never scrolls this container out from under the listener. */
+.lyrics-browse { display: block; margin-bottom: var(--space-2); font-size: var(--text-sm); }
+.lyrics-scroll { max-height: min(52svh, 480px); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.lyrics-scroll p { unicode-bidi: plaintext; white-space: pre-wrap; overflow-wrap: anywhere; }
+.lyrics-scroll:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Bidirectional song and lyric identities never alter transport geometry. */
+.listen-identity .display, .listen-identity .artist, .lyrics p { unicode-bidi: plaintext; overflow-wrap: anywhere; }
+.listen-identity .display { min-width: 0; }
+
+/* The five arc stops have the same value whether touched, dragged, adjusted
+   by keyboard or typed numerically. Avoid forcing narrow inputs offscreen. */
+.energy-arc-stops input[type='number'] { max-width: 100%; font-variant-numeric: tabular-nums; }
+@media (max-width: 520px) {
+  .energy-arc-stops label { grid-template-columns: 65px minmax(0, 1fr) 72px; }
+}
+
+/* Frequency ribbon uses the entire available horizontal song area, including
+   Stage. These dimensions don't affect audio or cause layout changes per frame. */
+.music-visualizer { display: block; width: 100%; max-width: 100%; min-width: 0; height: clamp(96px, 11vw, 140px); }
+.stage .music-visualizer { height: min(20svh, 180px); }
+
+/* A single native selector scales to six width-first visualizers without six
+   competing buttons; all choices retain keyboard, zoom and touch access. */
+.spectrum-choice { display: grid; gap: var(--space-1); min-width: 0; max-width: 100%; }
+.spectrum-choice select { width: 100%; min-height: var(--control-height); }
+.spectrum-choice small { display: block; line-height: 1.5; max-width: 62ch; }
+.music-visualizer { border-radius: var(--radius-sm); }
+@media (forced-colors: active) {
+  .music-visualizer { outline: 1px solid CanvasText; }
+}
+
+/* Listen disclosure: one compact, predictable row for each real choice.
+   Native controls never stretch alongside an explanatory paragraph. */
+.now .dj-controls { min-width: 0; }
+.now .dj-controls > .hint { margin-bottom: var(--space-3); }
+.now .listen-request-action { display: flex; flex-wrap: wrap; margin-block: var(--space-3); }
+.now .listen-view {
+  display: grid;
+  align-items: start;
+  gap: var(--space-3);
+  min-width: 0;
+  margin-block: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+}
+.now .listen-view legend {
+  margin: 0;
+  padding-inline: var(--space-1);
+  color: var(--text);
+  font-weight: 700;
+}
+.listen-display-toggles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  min-width: 0;
+}
+.listen-display-toggles button {
+  min-width: 0;
+  min-height: 44px;
+  padding: var(--space-2);
+  white-space: normal;
+  text-align: center;
+  font-size: var(--text-sm);
+}
+/* one, two or three choices, depending on what this build has: an odd last one spans the row */
+.listen-display-toggles[data-count='1'] { grid-template-columns: minmax(0, 1fr); }
+.listen-display-toggles[data-count='3'] button:last-child { grid-column: 1 / -1; }
+.listen-display-note { margin: 0; line-height: 1.5; }
+.listen-spectrum-settings { display: grid; gap: var(--space-3); min-width: 0; }
+.listen-setting-label, .listen-spectrum-settings .spectrum-choice > span {
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+.listen-spectrum-settings .spectrum-choice { gap: var(--space-2); }
+.listen-spectrum-settings .spectrum-choice small {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-soft);
+  line-height: 1.45;
+}
+.listen-intensity-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+.listen-intensity-choices button {
+  min-width: 0;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-1);
+  white-space: normal;
+  font-size: var(--text-sm);
+}
+.listen-visualizer-help { min-width: 0; border-top: 1px solid var(--border); padding-top: var(--space-2); }
+.listen-visualizer-help summary {
+  display: list-item;
+  min-height: 44px;
+  padding: var(--space-2) 0;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--text-soft);
+}
+.listen-visualizer-help[open] .hint { margin: 0 0 var(--space-2); max-width: 48ch; }
+.listen-view-footer { display: flex; flex-wrap: wrap; min-width: 0; }
+.listen-view-footer button { min-height: 44px; }
+.listen-next-steering {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding-block: var(--space-4);
+  margin-block: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+.listen-next-steering h2 { margin: 0; font-size: var(--text-md); }
+.listen-next-steering .steer {
+  display: grid;
+  /* wide enough that each label (and its working label) stays on one line, so a steering button is
+     never taller than Play (MP-0284-06) */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+.listen-next-steering .steer button { min-width: 0; min-height: 44px; white-space: normal; }
+.listen-next-steering .steer-note { margin: 0; line-height: 1.5; }
+@media (max-width: 760px) {
+  .now .listen-view { margin-block: 0; }
+}
+@media (max-width: 420px) {
+  .now .listen-view { padding: var(--space-3); }
+}
+@media (forced-colors: active) {
+  .now .listen-view { border-color: CanvasText; }
+  .listen-visualizer-help { border-color: CanvasText; }
+}
+
+/* MP-0285-01: the lyric timing note is a caption, not a lyric line. Set as one (on Listen and on Stage,
+   where `.stage .lyrics p` would otherwise blow it up to lyric size) so it never pushes the current line
+   below the fold. */
+.now .lyrics p.lyric-confidence { font: 400 var(--text-xs) / 1.4 var(--body); letter-spacing: normal; color: var(--soft); margin: 0 0 var(--space-2); }
+/* Short Stage windows (a laptop at 1280x600, a phone held sideways, 320x568): the heading, visualiser and
+   countdown give up height so the current lyric still fits above the fold, with even gutters kept. */
+@media (max-height: 760px) {
+  .now.stage { padding-block: 2vh; }
+  .now.stage .music-visualizer, .now.stage .music-visualizer.focused { height: clamp(48px, 12svh, 110px); margin: 0.5vh 0 1vh; }
+  .now.stage .handoff { padding: var(--space-2) var(--space-4); margin: 0.5vh 0 1.5vh; }
+  .now.stage .countdown-track { height: clamp(16px, 4vh, 32px); }
+  .now.stage .countdown-number strong { font-size: clamp(1.8rem, 6vh, 3rem); }
+  /* the sung line sizes to the height too, so a two-line lyric still fits a 600px-tall window */
+  .now.stage .lyrics .sung { font-size: clamp(2.4rem, min(7vw, 9vh), 6rem); }
+  /* room for a one-line current lyric here, so the reserve itself doesn't push it below the fold */
+  .now.stage .lyrics { --stage-sung: clamp(2.4rem, min(7vw, 9vh), 6rem); min-height: calc(var(--stage-sung) * 1.12 + var(--stage-line) * 1.5 * 2 + 2rem); }
+}
+/* A phone-width Stage (MP-0285-04): the countdown is a compact line, not a second headline, so the lyrics
+   keep the most room under it */
+@media (max-width: 760px) {
+  .now.stage .handoff { padding: var(--space-2) var(--space-4); margin: 0.5vh 0 1.5vh; }
+  .now.stage .countdown-track { height: clamp(16px, 4vh, 32px); }
+  .now.stage .countdown-number strong { font-size: clamp(1.8rem, 6vh, 2.25rem); }
+}

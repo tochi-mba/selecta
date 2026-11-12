@@ -1,7 +1,7 @@
 # ADR-0134 - Web-first product boundary for a possible future SaaS
 
 - **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation:** 2/5 Implemented; 1 Not started; EX-0134-04 and -05 Superseded by ADR-0391 (2026-11-10).
+- **Implementation:** 3/5 Implemented; EX-0134-04 and -05 Superseded by ADR-0391 (2026-11-12; EX-0134-02 code part only).
 - **Verification:** No (0/5 tasks independently Verified).
 - **Programme/date/baseline:** Experience-first UI/UX; 2026-11-07; `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e`, after merged PR #29.
 - **Priority / phase:** P0 / Scope.

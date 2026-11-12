@@ -1,7 +1,7 @@
 # ADR-0132 - Responsive compositions, WCAG 2.2 AA and purposeful motion
 
 - **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation:** 4/5 Implemented; 1 Not started (2026-11-10).
+- **Implementation:** 5/5 Implemented (2026-11-12; EX-0132-05 code part only).
 - **Verification:** No (0/5 tasks independently Verified).
 - **Programme/date/baseline:** Experience-first UI/UX; 2026-11-07; `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e`, after merged PR #29.
 - **Priority / phase:** P0 / Quality.

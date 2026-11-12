@@ -131,15 +131,20 @@ def write_flac_atomically(path: Path, audio, sample_rate: int, subtype: str = "P
     partial = path.with_name(path.name + ".part")
     try:
         sf.write(partial, audio, sample_rate, subtype=subtype, format="FLAC")
-        for _ in range(49):
-            try:
-                os.replace(partial, path)
-                return
-            except PermissionError:
-                time.sleep(0.02)
-        os.replace(partial, path)
+        replace_when_free(partial, path)
     finally:
         partial.unlink(missing_ok=True)
+
+
+def replace_when_free(partial: Path, path: Path) -> None:
+    """`os.replace`, waiting up to a second for a reader on Windows to let go of the old file."""
+    for _ in range(49):
+        try:
+            os.replace(partial, path)
+            return
+        except PermissionError:
+            time.sleep(0.02)
+    os.replace(partial, path)
 
 
 def _kept(settings: Settings) -> set[str]:
@@ -344,9 +349,7 @@ def tidy_database(path: Path) -> dict:
         report = {"bytes_before": pages * page_size, "free_before": free * page_size}
         if mode == INCREMENTAL and free:
             conn.execute("PRAGMA incremental_vacuum")
-        elif (
-            free * page_size >= VACUUM_MIN_FREE_BYTES and free >= VACUUM_MIN_FREE_SHARE * pages
-        ):
+        elif free * page_size >= VACUUM_MIN_FREE_BYTES and free >= VACUUM_MIN_FREE_SHARE * pages:
             conn.execute(f"PRAGMA auto_vacuum={INCREMENTAL}")
             conn.execute("VACUUM")
             report["vacuumed"] = True

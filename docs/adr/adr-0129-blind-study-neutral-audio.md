@@ -1,7 +1,7 @@
 # ADR-0129 - Neutral blind A/B listening study with protocol integrity
 
 - **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation:** 4/5 Implemented; 1 Not started (2026-11-10).
+- **Implementation:** 5/5 Implemented (2026-11-12; EX-0129-05 code part only).
 - **Verified:** 2/5 (EX-0129-03 and -04, 2026-11-10/11).
 - **Proposed:** 2026-11-07. **Baseline:** `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` after merged PR #29.
 - **Priority / phase:** P1 / Operations.

@@ -171,6 +171,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | Flag | What it is | Needs |
 |---|---|---|
 | `workspace.storage` | **Storage.** Free and cached space, and the cache budget. |  |
+| `workspace.cache_care` | **Cache tidying.** When the seam worker is idle it removes crash leftovers, caches of removed or changed songs, seams from an older engine and stems unused for two weeks, shares identical clips, and compacts the library file. The current mix is never touched. |  |
 | `workspace.backup` | **Local backup.** Back up the library's data and restore it on the next start. |  |
 | `workspace.diagnostics` | **Diagnostics.** The raw details of what Selecta is doing, for when something goes wrong. |  |
 | `workspace.library_health` | **Library health.** Overview says whether the library can be mixed or what blocks it, and which one thing to do first. |  |

@@ -1,0 +1,237 @@
+/* Cross-scene musical objects: decorative identity, verified transition, asked-for energy
+   and real request path. No object generates audio or claims to have analysed a song. */
+.song-motif {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  margin-right: var(--space-dense);
+  vertical-align: middle;
+  color: var(--motif);
+}
+.song-motif.large { width: clamp(40px, 5vw, 68px); height: clamp(40px, 5vw, 68px); margin-inline-end: .3em; }
+.song-select { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; }
+.song-select b { overflow-wrap: anywhere; }
+.song-open { display: inline-flex; align-items: center; gap: var(--space-hair); max-width: 100%; text-align: start; }
+/* the title takes its own ink rather than inheriting the button's: a button's colour fades over
+   --motion-fast, so on a theme switch an inherited title would sit at the old theme's ink on the new
+   background for a moment, near 1:1 contrast (LX-0351-06) */
+.song-open b { min-width: 0; overflow-wrap: anywhere; color: var(--text); }
+.inspector-pair .song-motif, .studio-pair .song-motif { width: 25px; height: 25px; margin-right: var(--space-1); }
+.studio-pair .song-motif { vertical-align: middle; }
+.coming .song-name b .song-motif { width: 22px; height: 22px; }
+.now .display .song-motif { color: var(--playing); }
+
+/* The geometry identifies a move type, not its quality or its actual sound.
+   Planned is dashed, rendered is solid; failures always retain their label. */
+.music-seam-diagram {
+  display: grid;
+  gap: var(--grid-beat-gap);
+  padding: var(--space-2) var(--space-3);
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  background: var(--surface-raised);
+}
+.music-seam-diagram.compact { margin-block: var(--space-1); }
+.music-seam-diagram.is-plan { border-style: dashed; }
+.music-seam-diagram.is-made { border-inline-start: 3px solid var(--status-ready); }
+.music-seam-diagram[data-state='queued'] { border-inline-start: 3px dashed var(--status-planned); }
+.music-seam-diagram[data-state='rendering'] { border-inline-start: 3px dotted var(--status-working); }
+.music-seam-diagram[data-state='failed'] { border-inline-start: 3px solid var(--status-failed); }
+.music-seam-diagram[data-state='failed'] .music-seam-lines { opacity: .45; }
+.music-seam-label { color: var(--text-soft); font-size: var(--text-xs); overflow-wrap: anywhere; }
+.music-seam-lines {
+  position: relative;
+  width: 100%;
+  min-width: 70px;
+  max-width: 300px;
+  height: 29px;
+  overflow: hidden;
+}
+.music-seam-lines > i { display: block; position: absolute; }
+.music-seam-lines .outgoing { top: 4px; left: 0; width: 48%; height: 8px; border-radius: var(--radius-mark); background: var(--motif); }
+.music-seam-lines .incoming { bottom: 4px; right: 0; width: 48%; height: 8px; border-radius: var(--radius-mark); background: var(--status-request); }
+.music-seam-diagram.overlap .outgoing,
+.music-seam-diagram.words .outgoing,
+.music-seam-diagram.stems .outgoing { width: 70%; }
+.music-seam-diagram.overlap .incoming,
+.music-seam-diagram.words .incoming,
+.music-seam-diagram.stems .incoming { width: 70%; }
+.music-seam-diagram.overlap .outgoing { background: repeating-linear-gradient(90deg, var(--motif) 0 12px, transparent 12px 16px); }
+.music-seam-diagram.words .word-tie {
+  top: 10px; left: 35%; width: 30%; height: 10px; border-block: 2px solid var(--text);
+  border-radius: 40%;
+}
+.music-seam-diagram.stems .stem-tie {
+  top: 8px; left: 34%; width: 32%; height: 15px;
+  background: repeating-linear-gradient(0deg, var(--text) 0 2px, transparent 2px 5px);
+  opacity: .65;
+}
+.music-seam-diagram.effect .outgoing { width: 38%; }
+.music-seam-diagram.effect .effect-tail {
+  top: 4px; left: 37%; width: 25%; height: 8px;
+  background: radial-gradient(circle at 3px 50%, var(--selected) 2px, transparent 3px) left center / 12px 8px repeat-x;
+}
+.music-seam-diagram.cut .cut-line {
+  top: 1px; left: 49%; width: 2px; height: 26px; background: var(--text);
+}
+.music-seam-diagram.unknown .outgoing,
+.music-seam-diagram.unknown .incoming { width: 35%; opacity: .5; }
+.inspector > .music-seam-diagram { margin-block: var(--space-3); }
+
+/* Returned route only. A bridge is an extra step, never a playable ghost song. */
+.music-route { min-width: 0; margin-block: var(--space-2); padding: var(--space-2); border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); }
+.music-route-state { margin: 0 0 var(--space-2); color: var(--text-soft); font-size: var(--text-sm); font-weight: 600; }
+.music-route.preparing { border-style: dotted; }
+.music-route.ready { border-style: solid; }
+.music-route ol { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.music-route li { display: flex; align-items: center; gap: var(--space-1); flex: 1 1 155px; min-width: 0; max-width: 100%; padding: var(--space-1) var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.music-route li + li::before { content: '→'; font-weight: 700; color: var(--text-soft); }
+.music-route li.wanted { border-color: var(--selected); }
+.music-route li span { min-width: 0; overflow-wrap: anywhere; }
+.music-route li b, .music-route li small { display: block; unicode-bidi: plaintext; }
+.music-route li small { color: var(--text-soft); font-size: var(--text-xs); }
+.music-route .song-motif { width: 24px; height: 24px; margin: 0; }
+
+/* One source and scale per chart. Drawing is explicit; normal page scrolling is
+   untouched outside the drawing surface and numeric/keyboard controls remain available. */
+/* SF-0243-05: a vertical swipe over the arc scrolls the page (and puts back anything a stray touch
+   drew); a tap or a sideways sweep draws. The stops below set exact values without any gesture. */
+.energy-horizon.intention { touch-action: pan-y; cursor: crosshair; }
+/* SF-0243-02: while being drawn, the shape is a dashed sketch, not yet the saved one */
+.energy-horizon[data-provisional] polyline { stroke-dasharray: 3 2; }
+.energy-horizon[data-provisional] circle { fill: none; }
+.energy-horizon.measured { cursor: default; }
+/* CI-0169-01: the same five named stops under a measured horizon in the editor */
+.mix-horizon { margin: var(--space-3) 0; }
+.mix-horizon-stops { display: flex; justify-content: space-between; margin: 0; padding: 0; list-style: none; color: var(--text-soft); font-size: var(--text-xs); }
+@media (forced-colors: active) {
+  .song-motif { color: LinkText; }
+  .music-seam-diagram.is-made { border-inline-start-color: Highlight; }
+  .music-seam-diagram[data-state='failed'] { border-inline-start-color: Mark; }
+  .music-seam-diagram[data-state='queued'], .music-seam-diagram[data-state='rendering'] { border-inline-start-color: CanvasText; }
+  .music-seam-lines .outgoing { background: Highlight; }
+  .music-seam-lines .incoming { background: LinkText; }
+  .music-seam-diagram.overlap .outgoing,
+  .music-seam-diagram.effect .effect-tail { background: Highlight; }
+  .music-seam-diagram.words .word-tie, .music-seam-diagram.cut .cut-line { border-color: CanvasText; background: CanvasText; }
+  .music-route li.wanted { border-color: Highlight; }
+}
+
+/* Overview is navigation into an exact song row, not a new audio/editing control. */
+.energy-overview { margin-block: var(--space-4); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); min-width: 0; }
+.energy-overview-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-1) var(--space-3); margin-bottom: var(--space-2); }
+.energy-overview-head small { color: var(--text-soft); overflow-wrap: anywhere; }
+.energy-overview ol { display: flex; align-items: end; gap: var(--grid-bar-gap); margin: 0; padding: 0 0 var(--space-1); list-style: none; min-height: 74px; overflow-x: auto; scrollbar-gutter: stable; }
+.energy-overview li { flex: 1 0 22px; min-width: 22px; max-width: 52px; }
+.energy-overview button { display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 72px; min-height: 72px; padding: 3px; background: var(--surface-control); border: 1px solid var(--border); border-radius: var(--radius-hair); }
+/* A definite container height is essential: percentage-height data bars otherwise
+   collapse to their 3px minimum and falsely look identical in every mix. */
+.energy-overview button[aria-current='true'] { border: 2px solid var(--selected); background: var(--surface-selected); }
+.energy-overview button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.energy-overview-bar { display: block; width: 100%; min-height: 3px; background: var(--status-ready); border-radius: var(--radius-hair) var(--radius-hair) 0 0; }
+.energy-overview-unknown { color: var(--text-soft); align-self: center; }
+.studio-diff { padding: var(--space-2) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.studio-diff summary { cursor: pointer; min-height: 40px; font-weight: 600; }
+.studio-diff ol { max-height: 160px; overflow: auto; padding-left: 1.4em; margin: 0; }
+.studio-diff li { overflow-wrap: anywhere; }
+.studio-cell.ai-changed { box-shadow: inset 0 0 0 2px var(--status-warning); }
+.studio-playhead { font-variant-numeric: tabular-nums; color: var(--text-soft); font-size: var(--text-sm); }
+.handoff-pair { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
+.handoff-pair b { unicode-bidi: plaintext; overflow-wrap: anywhere; }
+.handoff-phrase { margin: 0; font-style: italic; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+@media (forced-colors: active) {
+  .energy-overview-bar { background: Highlight; }
+  .energy-overview button[aria-current='true'] { border-color: Highlight; }
+  .studio-cell.ai-changed { outline: 2px dashed Highlight; outline-offset: -2px; box-shadow: none; }
+}
+
+/* Compact routes reuse the already visible song rows and names. The visual itself
+   has one accessible name, without duplicating the ordered timeline as list items. */
+.music-route.compact .music-route-icons { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); }
+.music-route.compact .music-route-icons > span { display: inline-flex; align-items: center; gap: var(--space-1); border-radius: var(--radius-sm); }
+.music-route.compact .music-route-icons > span.wanted { outline: 1px solid var(--selected); outline-offset: 1px; }
+.music-route.compact .music-route-arrow { font-weight: 700; color: var(--text-soft); }
+.music-route.compact .song-motif { width: 22px; height: 22px; margin: 0; }
+
+/* Library cards are a reversible presentation of the same list and actions;
+   all search, cursor pagination and keyboard order stay unchanged. */
+.library-layout button { min-height: var(--control-height); padding-inline: var(--space-3); font-size: var(--text-sm); }
+/* The tinted fill replaces the base pressed fill, so the text has to follow it: the base pressed
+   colour is the page background, which can't be read on this tint in either theme. */
+.library-layout button[aria-pressed='true'] { border-color: var(--selected); background: var(--surface-selected); color: var(--text); }
+.library-rows.library-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  align-items: stretch;
+  gap: var(--space-3);
+}
+.library-rows.library-cards .song-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'name' 'facts' 'readiness' 'actions';
+  grid-template-rows: auto auto 1fr auto;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  /* the card estimates live with the list ones, in operations.css (--library-row-estimate); that is
+     the whole card, and contain-intrinsic-size sizes the content box, so padding and border come off */
+  contain-intrinsic-size: auto calc(var(--library-row-estimate) - 2 * var(--space-3) - 2px);
+}
+.library-rows .song-row.selected { background: var(--surface-selected); box-shadow: inset var(--marker) 0 0 var(--edge-selected); }
+.library-rows .song-row.selected:focus-within { outline: 2px solid var(--edge-focus); outline-offset: 2px; }
+.library-rows.library-cards .song-row.selected { border-color: var(--edge-selected); }
+.library-rows.library-cards .song-row:focus-within { content-visibility: visible; border-color: var(--selected); }
+.library-rows.library-cards .song-name { min-width: 0; }
+.library-rows.library-cards .song-actions { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: var(--space-1); }
+.library-rows.library-cards .song-why { display: block; }
+:root[data-density='compact'] .library-rows .song-why { display: block; }
+.library-rows.library-cards .song-columns { white-space: normal; }
+.vibe-card .vibe-motif { width: 100%; max-width: 210px; height: 74px; margin-bottom: var(--space-2); color: var(--motif); }
+.vibe-motif.sound { color: var(--status-request); }
+.vibe-motif.mood { color: var(--status-ready); }
+.vibe-motif.journey { color: var(--text-soft); }
+@media (forced-colors: active) {
+  .library-layout button[aria-pressed='true'], .library-rows.library-cards .song-row:focus-within { border-color: Highlight; }
+  .vibe-motif { color: CanvasText !important; }
+}
+
+/* Musical identity changes with the exact returned track sequence, including
+   reorder. It intentionally does not pretend to be a measured waveform. */
+.mix-identity { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); min-width: 0; }
+.mix-signature { display: block; width: clamp(130px, 25vw, 240px); max-width: 100%; height: 48px; color: var(--motif); }
+.mix-identity small { font-size: var(--text-xs); }
+/* SF-0206-04: the same sleeve, smaller, on each draft in My Mixes. */
+.mix-signature.compact { width: clamp(72px, 18vw, 120px); height: 28px; }
+@media (forced-colors: active) { .mix-signature { color: CanvasText; } }
+
+/* CI-0179-04: one segment per transition. Ready is solid, a failure is striped and waiting is hollow,
+   so the three read apart without colour, and forced colours keep the same shapes. */
+.draft-progress.draft-seams { display: flex; gap: 1px; height: 6px; background: none; }
+.draft-progress.draft-seams i { flex: 1 1 0; min-width: 1px; height: 100%; border-radius: var(--radius-hair); background: var(--surface-control); }
+.draft-progress.draft-seams i.ready { background: var(--ok); }
+.draft-progress.draft-seams i.failed { background: repeating-linear-gradient(135deg, var(--status-failed) 0 2px, transparent 2px 4px); box-shadow: inset 0 0 0 1px var(--status-failed); }
+.draft-progress.draft-seams i.waiting { background: none; box-shadow: inset 0 0 0 1px var(--status-working); }
+@media (forced-colors: active) {
+  .draft-progress.draft-seams i.ready { background: CanvasText; }
+  .draft-progress.draft-seams i.failed { background: repeating-linear-gradient(135deg, CanvasText 0 2px, Canvas 2px 4px); box-shadow: inset 0 0 0 1px CanvasText; }
+  .draft-progress.draft-seams i.waiting, .draft-progress.draft-seams i.other { background: Canvas; box-shadow: inset 0 0 0 1px CanvasText; }
+}
+
+/* CI-0169-05: how two songs overlap for each transition feel, as an illustration of the preference. */
+.feel-diagram { display: block; width: 96px; height: 38px; margin-top: var(--space-1); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.feel-diagram .feel-out { stroke: var(--motif); }
+.feel-diagram .feel-into { stroke: var(--text-soft); stroke-dasharray: 4 2; }
+/* CI-0168-04: the asked-for length as a share of the longest choice, never as minutes. */
+.length-scale { display: inline-block; align-self: center; width: 72px; height: 6px; border-radius: var(--radius-pill); background: var(--surface-control); overflow: hidden; }
+.length-scale i { display: block; height: 100%; background: var(--motif); transition: width var(--motion-fast) var(--motion-ease); }
+@media (forced-colors: active) {
+  .feel-diagram .feel-out, .feel-diagram .feel-into { stroke: CanvasText; }
+  .length-scale { border: 1px solid CanvasText; }
+  .length-scale i { background: CanvasText; }
+}

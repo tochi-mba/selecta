@@ -1,0 +1,603 @@
+/* The frame around every page: navigation, the mini-player, overlays and notifications. */
+
+.shell { min-height: 100vh; }
+.content:focus { outline: none; }
+
+.skip-link {
+  position: fixed;
+  left: var(--space-3);
+  top: -60px;
+  z-index: var(--layer-toast);
+  background: var(--primary-fill);
+  color: var(--primary-ink);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+}
+.skip-link:focus { top: var(--space-3); }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* a link that does what a button does */
+a.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: var(--space-2) var(--space-cozy);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-control);
+  color: var(--text);
+  text-decoration: none;
+}
+a.button.primary { background: var(--primary-fill); color: var(--primary-ink); border-color: var(--primary-edge); }
+a.button:hover { border-color: var(--text); }
+
+.nav {
+  position: fixed;
+  z-index: var(--layer-nav);
+  background: var(--surface-panel);
+  display: flex;
+}
+.nav ul { list-style: none; margin: 0; padding: 0; display: flex; }
+.nav a { color: var(--text-soft); text-decoration: none; }
+.nav a[aria-current='page'] { color: var(--text); background: var(--surface-control); }
+.nav a:hover { color: var(--text); }
+.nav .brand { font: 900 1.25rem var(--display); letter-spacing: -0.02em; color: var(--text); }
+.nav .brand-mark { display: none; }
+.nav-more-mobile { display: none; }
+.nav li a i { font-style: normal; width: 1.4em; text-align: center; flex: none; }
+.nav a[aria-current='true'] { color: var(--text); }
+.nav .count, .mini .count, .context-bar .count { color: var(--request); font: 700 0.85rem var(--mono); font-variant-numeric: tabular-nums; }
+
+/* One frame. Every bit of its shape is measured from the numbers in tokens.css, so there is exactly one
+   answer to how much room the bars take, whichever bars are showing. */
+.content {
+  margin-left: var(--rail-offset);
+  padding-bottom: calc(var(--bottom-chrome) + var(--space-5));
+  min-height: 100dvh;
+}
+
+/* wide: a rail down the side */
+@media (min-width: 761px) {
+  .nav {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: var(--rail-width);
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-3);
+    /* the 1px edge is part of the right inset, so the rows sit centred between the rail's two sides (MP-0280-01) */
+    padding-right: calc(var(--space-3) - 1px);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+  }
+  .nav .brand { padding: var(--space-1) var(--space-2); }
+  .nav ul { flex-direction: column; gap: var(--space-hair); flex: 1 1 auto; }
+  .nav li a { display: flex; gap: var(--icon-gap); align-items: center; padding: var(--control-pad-block) var(--space-2); border-radius: var(--radius-sm); min-height: var(--control-height); position: relative; }
+  .nav-context { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border); }
+  .nav-foot { display: flex; gap: var(--space-2); }
+  .nav-request { flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: var(--icon-gap); font-size: var(--text-sm); padding: var(--space-2); min-width: 0; }
+  .nav-collapse { flex: none; padding: var(--space-2); }
+
+  /* collapsed: icons only, and each one still has its name, for screen readers and on a resting pointer */
+  :root[data-rail='collapsed'] .nav { padding-inline: var(--space-2); align-items: stretch; }
+  :root[data-rail='collapsed'] .nav-label, :root[data-rail='collapsed'] .brand-word {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  :root[data-rail='collapsed'] .brand-mark { display: block; text-align: center; }
+  :root[data-rail='collapsed'] .nav li a { justify-content: center; }
+  :root[data-rail='collapsed'] .nav-foot { flex-direction: column; }
+  :root[data-rail='collapsed'] .nav { overflow: visible; }
+  :root[data-rail='collapsed'] .nav li a:hover::after, :root[data-rail='collapsed'] .nav li a:focus-visible::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: calc(100% + var(--space-2));
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: var(--layer-toast);
+    padding: var(--space-1) var(--space-2);
+    white-space: nowrap;
+    color: var(--text);
+    background: var(--surface-overlay);
+    border: 1px solid var(--edge-overlay);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-overlay);
+    font-size: var(--text-sm);
+  }
+}
+
+/* narrow: a bar along the bottom, with nothing hidden off to the side */
+@media (max-width: 760px) {
+  .nav {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--nav-bottom);
+    padding-bottom: var(--safe-bottom);
+    border-top: 1px solid var(--border);
+  }
+  .nav .brand, .nav-foot { display: none; }
+  /* At 320px and especially at 200–400% zoom, keep each destination
+     reachable instead of shrinking its icon and label below a usable width.
+     Only the navigation list scrolls, never the document horizontally. */
+  .nav ul {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-padding-inline: var(--space-2);
+  }
+  .nav li { flex: 1 0 64px; min-width: 64px; }
+  .nav li a {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-hair);
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .nav li a i { font-size: 1.05rem; line-height: 1; }
+  .nav-context { display: none; }
+  .nav-more-desktop { display: none !important; }
+  .nav-more-mobile {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-hair);
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-soft);
+    font-size: 0.75rem;
+  }
+  .nav-more-mobile[aria-current='page'] { color: var(--text); background: var(--surface-control); }
+  /* MP-0282-04: the Workspace warning arriving after the page has drawn would add a sixth button to the
+     top bar and rewrap the page's name, pushing the whole page down. On a phone it is a dot on More. */
+  .nav-more-mobile { position: relative; }
+  .nav-attention { position: absolute; top: var(--space-2); left: calc(50% + 8px); width: 8px; height: 8px; border-radius: 50%; background: var(--status-warning); }
+  .context-button.health-attention { display: none; }
+  /* MP-0274-05: each destination fills the scrolling tab list edge to edge, so its focus ring is drawn
+     inside the target; drawn outside, the list's own overflow would cut it off on every side */
+  .nav li a:focus-visible, .nav-more-mobile:focus-visible { outline-offset: -4px; }
+  .mini-volume { display: none; }
+  /* with a keyboard up, what's being typed gets the room */
+  :root[data-keyboard='open'] .nav, :root[data-keyboard='open'] .mini { display: none; }
+}
+/* the Stage takes the whole window: with the frame's player reservation at zero, the mini-player goes
+   too, visually only, whatever has marked the Stage on (FP-0270-05) */
+:root[data-stage='on'] .mini { display: none; }
+.more-nav ul { list-style: none; padding: 0; margin: var(--space-4) 0 0; display: grid; gap: var(--space-2); }
+.more-nav a { display: block; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); text-decoration: none; }
+.more-nav a[aria-current='page'] { border-color: var(--focus); background: var(--surface-selected); }
+.listen-empty {
+  min-height: calc(100dvh - var(--header-block) - var(--bottom-chrome));
+  display: grid;
+  align-content: center;
+  justify-items: start;
+}
+.listen-empty .display { max-width: 12ch; }
+.on-stage .content { padding-bottom: 0; }
+
+/* MP-0274-01: one page column. Each kind of page names its width once, here on .content, so the
+   breadcrumb bar above it starts and ends on the same edges as the title, filters, cards and lists. */
+.content { --page-max: var(--content-reading); }
+.content:has(> main.page.browse, > main.page.mixes, > main.page.library) { --page-max: var(--content-browse); }
+.content:has(> main.page.mix, > main.page.lucy, > main.page.now) { --page-max: var(--content-work); }
+.content:has(> main.page.listen-empty) { --page-max: 760px; }
+.content:has(> main.page.now.stage) { --page-max: 100%; }
+.content > main.page { max-width: var(--page-max); }
+
+/* the page's own bar: where you are, and what's reachable from anywhere */
+.context-bar {
+  position: sticky;
+  top: 0;
+  z-index: var(--layer-header);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--header-height);
+  padding: var(--space-1) var(--gutter);
+  /* the page column's own edges: the gutter, plus half of whatever the column leaves either side */
+  padding-inline: max(var(--gutter), calc((100% - var(--page-max)) / 2 + var(--gutter)));
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.crumbs { min-width: 0; font-size: var(--text-sm); color: var(--text-soft); }
+.crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-hair) var(--space-2); }
+.crumbs li { min-width: 0; overflow-wrap: anywhere; }
+.crumbs li + li::before { content: '/'; margin-right: var(--space-2); color: var(--border-strong); }
+.crumbs [aria-current='page'] { unicode-bidi: plaintext; }
+.crumbs a { color: var(--text-soft); }
+.crumbs [aria-current='page'] { color: var(--text); font-weight: 600; }
+.context-actions { display: flex; align-items: center; gap: var(--space-1); flex: none; min-width: 0; }
+.context-button { display: inline-flex; align-items: center; gap: var(--icon-gap); background: none; border-color: transparent; padding: var(--space-dense) var(--space-2); min-width: var(--control-height); justify-content: center; }
+.context-button:hover:not(:disabled) { border-color: var(--border); }
+.context-button.health-attention { color: var(--status-warning); text-decoration: none; border-color: var(--status-warning); }
+.palette-button { border-color: var(--border); color: var(--text-soft); }
+.context-request { display: none; }
+@media (max-width: 760px) {
+  .context-request { display: inline-flex; }
+  .context-label { display: none; }
+  /* Mobile has a full Search path and the keyboard shortcut. Avoid cutting
+     off critical Request, Activity, Theme and Help buttons at 320px. */
+  .palette-button { display: none; }
+  .context-bar { gap: var(--space-1); }
+  .context-actions { gap: 0; }
+  .crumbs { flex: 1 1 0; }
+  /* beside five actions, a whole trail broke letter by letter ("My Mixe/s") and the bar grew taller than
+     a 400% zoomed window can spare (MP-0275-07); the phone bar already reaches every section, so a
+     narrow bar keeps only where you are */
+  .crumbs li:not(:last-child) { display: none; }
+  .crumbs li + li::before { content: none; }
+  /* MP-0280-04 with MP-0277-05: a button that can carry a count keeps one width whether a count is there
+     or not, so a request or new activity arriving never takes width from the page's name (which then broke
+     one letter to a line and squeezed the editor at 320px). The icon stays centred in the target (MP-0274-02)
+     between two equal slots; the count sits in the one after it, centred on the icon, held for two tabular
+     digits even before one arrives (MP-0277-05) */
+  .context-actions .context-counted { position: relative; padding-inline: calc(var(--space-4) + var(--space-hair)); }
+  .context-actions .context-counted .count { position: absolute; top: 50%; translate: 0 -50%; inset-inline-start: calc(50% + var(--icon-size) / 2 + var(--icon-gap-dense)); font-size: var(--text-xs); }
+  /* and the name breaks between words wherever a word fits */
+  .crumbs li { overflow-wrap: break-word; }
+}
+
+.mini {
+  position: fixed;
+  left: var(--rail-offset);
+  right: 0;
+  bottom: var(--nav-bottom);
+  height: var(--player-height);
+  z-index: var(--layer-player);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  background: var(--surface-control);
+  border-top: 1px solid var(--border);
+}
+.mini-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1px;
+  height: 2px;
+  background: var(--playing);
+  transform-origin: left;
+}
+a.mini-song { flex: 1 1 auto; min-width: 0; display: grid; color: var(--text); text-decoration: none; }
+.mini-song b, .mini-song span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mini-song span { color: var(--text-soft); font-size: var(--text-sm); }
+.mini button { flex: none; }
+/* MP-0281-02: Play/Pause is the filled disc and outweighs Next, a bare glyph on the bar */
+.mini .round { width: 44px; height: 44px; border-radius: 50%; background: var(--primary-fill); color: var(--primary-ink); border-color: var(--primary-edge); }
+.mini-next { padding: var(--space-2) var(--space-snug); min-width: 44px; background: none; border-color: transparent; }
+.mini-next:hover:not(:disabled) { border-color: var(--border); }
+/* Reserve digits even at zero so arriving requests never shove transport or track identity. */
+.mini-requests .count { display: inline-block; min-width: 3ch; text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 420px) {
+  .mini-requests { padding: var(--space-2); font-size: var(--text-sm); }
+}
+
+.volume { display: flex; align-items: center; gap: var(--space-1); min-width: 0; }
+.volume input { width: 96px; min-height: 24px; }
+button.icon { padding: var(--space-dense) var(--space-2); min-width: 40px; }
+
+.connection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: color-mix(in srgb, var(--warn) 18%, var(--surface));
+  border-bottom: 1px solid var(--warn);
+}
+
+/* notifications sit above whatever else is along the bottom */
+.toasts {
+  position: fixed;
+  /* A consent dialog/drawer is the active task; notifications must stay behind it. */
+  z-index: var(--layer-sheet);
+  right: var(--space-4);
+  bottom: calc(var(--bottom-chrome) + var(--keyboard-inset) + var(--space-3));
+  display: grid;
+  gap: var(--space-2);
+  width: min(420px, calc(100vw - 2 * var(--space-4)));
+  pointer-events: none;
+}
+.toast-row {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--ink);
+  color: var(--bg);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  box-shadow: var(--shadow-overlay);
+  font-size: 0.94rem;
+}
+.toast-row.problem { background: var(--warn); color: var(--accent-ink); }
+.toast-row > span { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.toast-row button { background: none; color: inherit; border-color: currentColor; min-height: 34px; padding: var(--space-1) var(--space-3); flex: none; }
+.toast-row .toast-close { border: 0; padding: var(--space-1) var(--space-2); min-width: 34px; }
+/* Only visual chrome yields here: the audio owner and saved Undo activity do not change. */
+:root[data-keyboard='open'] .toasts, :root[data-stage='on'] .toasts {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* whatever sits on top of the page */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--layer-dialog);
+  background: var(--surface-scrim);
+  display: flex;
+  padding: 0 0 var(--keyboard-inset);
+}
+.overlay-panel {
+  background: var(--surface-overlay);
+  border: 1px solid var(--edge-overlay);
+  box-shadow: var(--shadow-overlay);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-height: 100%;
+}
+.overlay-panel:focus { outline: none; }
+.overlay-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); }
+.overlay-head h2 { margin: 0; font-size: var(--text-lg); overflow-wrap: anywhere; }
+.overlay-body { padding: var(--space-4); overflow-y: auto; flex: 1 1 auto; min-height: 0; scroll-padding-block: var(--space-3); }
+.overlay-body :is(input, select, textarea, button) { scroll-margin-block: var(--space-3); }
+.overlay-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); }
+.overlay-close { padding: var(--space-1) var(--space-snug); flex: none; }
+
+.overlay-dialog { align-items: center; justify-content: center; padding: var(--space-4); }
+.overlay-dialog .overlay-panel { width: min(480px, 100%); border-radius: var(--radius); }
+
+.overlay-drawer, .overlay-sheet { justify-content: flex-end; }
+.overlay-drawer .overlay-panel, .overlay-sheet .overlay-panel { width: min(520px, 100%); height: 100%; }
+@media (max-width: 760px) {
+  .overlay-drawer, .overlay-sheet { align-items: flex-end; }
+  .overlay-drawer .overlay-panel, .overlay-sheet .overlay-panel {
+    width: 100%;
+    height: auto;
+    max-height: 88dvh;
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding-bottom: var(--safe-bottom);
+  }
+}
+/* a side task beside the music (SF-0203-06): it stops at the rail, the tab bar and the mini-player,
+   which stay on screen and working; the bottom chrome already holds the safe area */
+.overlay-keeps-chrome { left: var(--rail-offset); bottom: var(--bottom-chrome); }
+.overlay-keeps-chrome .overlay-panel { padding-bottom: 0; }
+
+/* shared states */
+.status { display: inline-flex; align-items: center; gap: var(--icon-gap-dense); font-size: var(--text-sm); white-space: nowrap; }
+.status i { font-style: normal; }
+.status-planned, .status-unavailable, .status-queued { color: var(--status-planned); }
+.status-paused { color: var(--text-soft); }
+.status-working { color: var(--status-working); }
+.status-recovering { color: var(--status-recovering); }
+.status-ready { color: var(--status-ready); }
+.status-warning, .status-blocked, .status-failed { color: var(--status-failed); }
+.status-needs-action { color: var(--status-action); font-weight: 700; }
+
+.skeleton { display: grid; gap: var(--space-2); padding: var(--space-3) 0; }
+.skeleton i { display: block; height: 18px; border-radius: var(--radius-sm); background: var(--surface-control); animation: skeleton-breathe 1.4s ease-in-out infinite; }
+.skeleton i:nth-child(2n) { width: 72%; }
+@keyframes skeleton-breathe { 50% { opacity: 0.5; } }
+@media (prefers-reduced-motion: reduce) { .skeleton i { animation: none; } }
+
+.problem { padding: var(--space-4); border: 1px solid var(--warn); border-radius: var(--radius); }
+.problem p { margin: 0 0 var(--space-2); }
+
+button[data-working] { position: relative; overflow: hidden; cursor: progress; }
+button[data-working]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: currentColor;
+  transform-origin: left;
+  animation: button-working 0.9s ease-in-out infinite;
+}
+@keyframes button-working {
+  0% { transform: translateX(-100%) scaleX(0.4); }
+  100% { transform: translateX(100%) scaleX(0.4); }
+}
+@media (prefers-reduced-motion: reduce) {
+  button[data-working]::after { animation: none; opacity: 0.6; }
+}
+
+.menu { position: relative; display: inline-block; }
+.menu-list {
+  position: absolute;
+  right: 0;
+  z-index: var(--layer-sheet);
+  margin-top: var(--space-1);
+  min-width: 190px;
+  display: grid;
+  gap: var(--space-hair);
+  padding: var(--space-1);
+  background: var(--surface-overlay);
+  border: 1px solid var(--edge-overlay);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-overlay);
+}
+.menu-list button { width: 100%; text-align: left; background: none; border-color: transparent; }
+.menu-list button:hover:not(:disabled), .menu-list button:focus { background: var(--surface-control); }
+
+.tabs { display: flex; flex-wrap: wrap; gap: var(--space-1); margin: 0 0 var(--space-4); border-bottom: 1px solid var(--border); }
+.tabs a { padding: var(--space-2) var(--space-3); color: var(--text-soft); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs a[aria-current='page'] { color: var(--text); border-bottom-color: var(--selected); }
+.tabs a:hover { color: var(--text); }
+
+.overlay-workspace { padding: var(--space-4); align-items: stretch; justify-content: center; }
+.overlay-workspace .overlay-panel { width: min(1180px, 100%); height: 100%; border-radius: var(--radius); }
+@media (max-width: 760px) { .overlay-workspace { padding: 0; } .overlay-workspace .overlay-panel { border-radius: 0; } }
+
+/* the timeline, with whatever's selected beside it */
+.edit-layout.has-inspector { display: grid; grid-template-columns: minmax(420px, 1fr) var(--inspector-width, 380px); gap: var(--space-5); align-items: start; }
+.inspector-column { position: relative; min-width: 0; align-self: stretch; }
+.inspector-resize {
+  position: absolute;
+  z-index: 2;
+  inset: 20px auto 0 -18px;
+  width: 12px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.inspector-resize::after { content: ""; position: absolute; inset: 0 5px; border-radius: var(--radius-pill); background: var(--border); }
+.inspector-resize:hover::after, .inspector-resize:focus-visible::after { background: var(--focus); }
+.edit-inspector {
+  position: sticky;
+  top: var(--space-4);
+  max-height: calc(100vh - var(--space-6) - var(--player-height));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scroll-behavior: smooth;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-panel);
+  padding: var(--space-4);
+  margin-top: var(--space-loose);
+}
+@media (prefers-reduced-motion: reduce) { .edit-inspector { scroll-behavior: auto; } }
+.inspector-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.inspector-pair { overflow-wrap: anywhere; margin: var(--space-2) 0; }
+/* MP-0288-02: four equal tabs on one row at every width, so none drops to a second line in a phone's sheet */
+.inspector-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: var(--space-1); margin: var(--space-3) 0; border-bottom: 1px solid var(--border); }
+.inspector-tabs button { min-width: 0; background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; color: var(--text-soft); padding: var(--space-2) var(--space-1); overflow-wrap: anywhere; }
+.inspector-tabs button[aria-selected='true'] { color: var(--text); border-bottom-color: var(--selected); }
+.inspector .preview { width: 100%; }
+.inspector .status { white-space: normal; }
+.seam.open { outline: 2px solid var(--selected); outline-offset: 2px; border-radius: var(--radius-sm); }
+.export-left { list-style: none; margin: var(--space-2) 0; padding: 0; display: grid; gap: var(--space-1); max-height: 220px; overflow-y: auto; }
+.export-left .status { white-space: normal; }
+
+/* where a dragged song will land */
+.song.over { box-shadow: 0 -3px 0 0 var(--selected); }
+
+/* Library */
+.library-find { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; margin-bottom: var(--space-2); }
+.library-find input.wide { flex: 1 1 260px; margin: 0; width: auto; }
+.library-sort { display: flex; align-items: center; gap: var(--space-2); color: var(--text-soft); font-size: var(--text-sm); }
+.library-find label.library-sort { display: flex; }
+.library-sort select { margin: 0; }
+.library-sort select { width: auto; }
+.library-count { margin: var(--space-2) 0; }
+.library-more { display: block; margin: var(--space-4) auto; }
+button.song-open { color: var(--text); text-decoration: none; text-align: left; overflow-wrap: anywhere; min-height: 0; }
+button.song-open:hover { text-decoration: underline; }
+.song-readiness { font-size: var(--text-sm); }
+.song-detail-artist { color: var(--text-soft); margin: 0 0 var(--space-2); }
+.song-facts { display: grid; gap: var(--space-1); margin: var(--space-3) 0; }
+.song-facts div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-3); border-bottom: 1px solid var(--border); padding: var(--space-1) 0; }
+.song-facts dt { color: var(--text-soft); }
+.song-facts dd { margin: 0; text-align: right; }
+.correct-field { display: grid; gap: var(--field-gap); font-size: var(--text-sm); }
+.correct-field input { width: 140px; }
+.overlay-body h3 { margin: var(--space-4) 0 var(--space-1); }
+
+/* Workshop */
+.job-list, .job-failures, .folder-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.job-list li { display: grid; grid-template-columns: minmax(150px, 220px) 1fr; gap: var(--space-1) var(--space-3); align-items: baseline; }
+.job-list .status { white-space: normal; }
+@media (max-width: 560px) { .job-list li { grid-template-columns: 1fr; } }
+.folder-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--border); }
+.folder-list b { overflow-wrap: anywhere; }
+.folder-list .status { white-space: normal; }
+.diagnostics { font: 0.82rem var(--mono); background: var(--surface-control); border-radius: var(--radius-sm); padding: var(--space-3); overflow-x: auto; margin: 0; }
+
+.choice { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-dense) var(--space-snug); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; }
+.choice input { width: auto; min-height: 0; }
+.choice:has(input:checked) { border-color: var(--selected); }
+.choice:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
+
+/* nothing on a phone should be wider than the phone */
+.song-name, .seam-line, .seam-visual, .seam, .timeline, .song { min-width: 0; }
+button.song-open { display: block; max-width: 100%; white-space: normal; overflow-wrap: anywhere; padding: 0; }
+.song-name b, .song-name span { max-width: 100%; }
+.seam-visual { max-width: 100%; }
+.seam-visual-bars { min-width: 0; overflow: hidden; }
+.seam-visual-caption { flex-wrap: wrap; min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 560px) {
+  .seam { margin-left: var(--space-2); padding-left: var(--space-snug); }
+  .seam-visual { margin-left: 0; }
+}
+
+/* Listen: the things you reach for stay in reach */
+.transport-more { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
+.song-name { grid-template-columns: minmax(0, 1fr); }
+.song-name > * { min-width: 0; }
+button.song-open b { display: block; white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 560px) {
+  .seam-visual { grid-template-columns: minmax(0, 1fr); }
+  .seam-visual-caption { grid-column: 1; }
+}
+
+/* a few words about a control, on a resting pointer or on keyboard focus */
+.tooltip-anchor { position: relative; display: inline-flex; }
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: var(--layer-toast);
+  display: none;
+  width: max-content;
+  max-width: min(240px, 60vw);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--edge-overlay);
+  border-radius: var(--radius-sm);
+  background: var(--surface-overlay);
+  box-shadow: var(--shadow-overlay);
+  color: var(--text);
+  font-size: 0.82rem;
+}
+@media (hover: hover) {
+  .tooltip-anchor:hover .tooltip:not([hidden]),
+  .tooltip-anchor:focus-within .tooltip:not([hidden]) { display: block; }
+}
+
+/* a title in Hebrew or Arabic reads the right way round, whatever is next to it */
+.display, .artist, .song-name b, .song-name span, button.song-open, .mini-song, .request-list b {
+  unicode-bidi: plaintext;
+  /* Honor the resolved text direction for mixed-script track identities. */
+  text-align: start;
+}
+
+.seam-visual-label { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+
+/* Keep dialog controls reachable above a software keyboard and in short
+   landscape viewports. Only the body scrolls; the title and actions stay put. */
+@media (max-height: 520px) {
+  .overlay-dialog { align-items: flex-start; }
+  .overlay-dialog .overlay-panel { max-height: calc(100dvh - 2 * var(--space-2)); }
+}
+@media (max-width: 760px) {
+  :root[data-keyboard='open'] .overlay {
+    padding-bottom: max(var(--keyboard-inset), var(--safe-bottom));
+  }
+}

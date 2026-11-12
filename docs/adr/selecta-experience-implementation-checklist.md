@@ -8,7 +8,7 @@
 
 ## [ADR-114 - Experience-first product charter and measurable quality](adr-0114-experience-charter-and-measurable-quality.md)
 
-**Phase:** Baseline · **Priority:** P0 · **Decision:** Accepted · **Implementation:** In progress (2026-11-11: 3 Implemented, 1 In progress, 1 Not started) · **Verified:** 0/5.
+**Phase:** Baseline · **Priority:** P0 · **Decision:** Accepted · **Implementation:** Implemented (5/5, 2026-11-12; -02 and -05 code part only) · **Verified:** 0/5; all five need a person.
 
 - [ ] **EX-0114-01 - Inventory end-to-end user journeys.** **Implementation: Implemented (2026-11-10); Verified: No; PR/SHA: -; evidence: listener, creator, expert and operator journeys with first action, completion, error and recovery in `docs/adr/selecta-experience-acceptance.md` (Journeys and recovery), backed by route/control inspection in `docs/adr/mp-0272-surface-inventory.json` (guarded by `web/src/shell/mpSurfaceInventory.test.ts`, passed 2026-11-10); owner: Unassigned; Needs a person: uncoached baseline task sessions with named participants, numerator/denominator and exact SHA** Acceptance and required verification are specified in the linked ADR.
 - [ ] **EX-0114-02 - Reconcile current main against prior programmes.** **Implementation: Implemented (2026-11-12; code part); Verified: No; PR/SHA: -; evidence: every one of the 250 S4 task lines in `docs/adr/selecta-4-implementation-checklist.md` now carries its own Implementation status and evidence, separate from PR #29's claims; the per-ADR crosswalk table and both programme rows in `docs/adr/selecta-experience-status-reconciliation.md` are kept equal to a recount of the S4 and EX task lines by `tests/test_ex_0114_s4_crosswalk.py` (3/3 passed 2026-11-12); owner: Unassigned; Needs a person: owner review of the finished S4/EX crosswalk against one exact SHA** Acceptance and required verification are specified in the linked ADR.
@@ -48,7 +48,7 @@
 
 ## [ADR-118 - Recommendations: clear music-first cards and authentic previews](adr-0118-recommendation-cards-and-authentic-preview.md)
 
-**Phase:** Make a Mix · **Priority:** P1 · **Decision:** Accepted · **Implementation:** In progress (2026-11-11: 4 Implemented, 1 Not started) · **Verified:** 3/5 (automated, 2026-11-11); 2 need a person.
+**Phase:** Make a Mix · **Priority:** P1 · **Decision:** Accepted · **Implementation:** Implemented (5/5, 2026-11-12; -05 code part only) · **Verified:** 3/5 (automated, 2026-11-11); 2 need a person.
 
 - [ ] **EX-0118-01 - Create feature and category card variants.** **Implementation: Implemented (2026-11-10); Verified: No; PR/SHA: -; evidence: one dominant Play with Shape first and Save draft as quieter secondaries, real artist and tempo facts on each card in `web/src/views/Mixes.tsx`; `web/src/views/Mixes.test.tsx` 'keeps real comparison facts and all three consequences visible' passed 2026-11-10; owner: Unassigned; Needs a person: comprehension test with participants and a named visual review of both themes at phone and desktop widths** Acceptance and required verification are specified in the linked ADR.
 - [x] **EX-0118-02 - Check secondary action parity.** **Implementation: Implemented (2026-11-10); Verified: Yes (automated, 2026-11-11); PR/SHA: -; evidence: Play, Shape first and Save draft are native buttons inside each card (`web/src/views/Mixes.test.tsx` 'keeps real comparison facts and all three consequences visible', passed 2026-11-10); `web/e2e/uf-creation-entry.e2e.ts` 'UF-0376-08 Make a Mix cards keep their facts and 44px actions' at 320px and 375px touch phones and `web/e2e/mp-0283-make-a-mix.e2e.ts` MP-0283-03 (Edge, passed 2026-11-10/11); backend result covered by `web/src/views/ex-0117-consequences.test.tsx` (build vs as_draft request); note: `web/e2e/fp-live-theme.e2e.ts` FP-0268-07 reads an older Action label markup and reports 'no Play', owned by FP-0268; owner: Claude agent EX-114-120** Acceptance and required verification are specified in the linked ADR.
@@ -158,7 +158,7 @@
 
 ## [ADR-129 - Neutral blind A/B listening study with protocol integrity](adr-0129-blind-study-neutral-audio.md)
 
-**Phase:** Operations · **Priority:** P1 · **Decision:** Accepted · **Implementation:** 4/5 Implemented, 1 Not started (2026-11-10) · **Verified:** 2/5.
+**Phase:** Operations · **Priority:** P1 · **Decision:** Accepted · **Implementation:** 5/5 Implemented (2026-11-12; -05 code part only) · **Verified:** 2/5.
 
 - [ ] **EX-0129-01 - Audit all method leakage.** **Implementation: Implemented; Verified: No; PR/SHA: -; evidence: protocol/API audit `tests/test_ex_0129_study_integrity.py::test_public_study_api_names_no_method_renderer_pair_or_condition` (5 passed 2026-11-10); DOM audit `web/e2e/mp-0294-export-and-study.e2e.ts` MP-0294-07; owner: Unassigned.** Needs a person: the screen-reader pass that nothing announced names a method or renderer.
 - [ ] **EX-0129-02 - Design balanced A/B interface.** **Implementation: Implemented; Verified: No; PR/SHA: -; evidence: equal A/B weight and fixed order measured by `web/e2e/mp-0294-export-and-study.e2e.ts` MP-0294-05; owner: Unassigned.** Needs a person: a counterbalanced human pilot.
@@ -188,7 +188,7 @@
 
 ## [ADR-132 - Responsive compositions, WCAG 2.2 AA and purposeful motion](adr-0132-responsive-accessibility-and-purposeful-motion.md)
 
-**Phase:** Quality · **Priority:** P0 · **Decision:** Accepted · **Implementation:** 4/5 Implemented, 1 Not started (2026-11-10) · **Verified:** 1/5.
+**Phase:** Quality · **Priority:** P0 · **Decision:** Accepted · **Implementation:** 5/5 Implemented (2026-11-12; -05 code part only) · **Verified:** 1/5.
 
 - [ ] **EX-0132-01 - Review mobile/zoom layouts.** **Implementation: Implemented; Verified: No; PR/SHA: -; evidence: `web/e2e/mp-0298-responsive-and-a11y.e2e.ts` MP-0298-01 (320 to 3840px, short landscape) and -02 (200/400% zoom); software keyboard in `web/e2e/mp-0295-overlays-and-toasts.e2e.ts` MP-0295-07 and `web/e2e/overlay-arbitration.e2e.ts`; owner: Unassigned.** Open: MP-0298-02 and MP-0295-07 failed on the 2026-11-10 shared-laptop run; needs a green rerun.
 - [x] **EX-0132-02 - Ensure non-drag equivalents.** **Implementation: Implemented; Verified: Yes (WCAG 2.5.7 pointer/keyboard checks, 2026-11-10); PR/SHA: -; evidence: arrangement reorder by single-pointer 'Move Song 2 up' button in `web/src/views/Mix.test.tsx` 'sends every change to the draft' (59 passed); draft line reorder by 'Move ... up/down the line' buttons in `web/src/views/Drafts.test.tsx` (23 passed); Studio grid cells are single-press `aria-pressed` buttons reached by keyboard in `web/src/views/gp-0261-studio.test.tsx` (2 passed); all with `pnpm exec vitest run --pool=threads` on 2026-11-10; source `web/src/views/EditorRows.tsx`, `web/src/views/Drafts.tsx`, `web/src/views/Studio.tsx`; owner: Unassigned.**
@@ -208,7 +208,7 @@
 
 ## [ADR-134 - Web-first product boundary for a possible future SaaS](adr-0134-web-first-future-saas-boundary.md)
 
-**Phase:** Scope · **Priority:** P0 · **Decision:** Accepted · **Implementation:** 2/5 Implemented, 1 Not started, 2 Superseded by ADR-0391 (2026-11-10) · **Verified:** 2/5.
+**Phase:** Scope · **Priority:** P0 · **Decision:** Accepted · **Implementation:** 3/5 Implemented, 2 Superseded by ADR-0391 (2026-11-12; -02 code part only) · **Verified:** 2/5.
 
 - [x] **EX-0134-01 - Record current platform truth.** **Implementation: Implemented; Verified: Yes (crosscheck, 2026-11-10); PR/SHA: -; evidence: README/API/privacy crosscheck on 2026-11-10: `README.md` lines 10-12 say it describes local mode and link the separate Selecta Cloud guarantee table `docs/saas/README.md` 'Guarantees by runtime mode'; API modes split in `src/selecta/modes/` (ADR-0392); local privacy wording pinned by `web/src/localPrivacyCopy.test.ts` (5 passed with `pnpm exec vitest run` on 2026-11-10); the optional-SaaS half is now ADR-0391's accepted Cloud programme rather than a future possibility; owner: Unassigned.**
 - [ ] **EX-0134-02 - Review proposed UX for desktop coupling.** **Implementation: Implemented (2026-11-12; code part); Verified: No; PR/SHA: -; evidence: `tests/test_ex_0134_desktop_coupling.py` (3/3 passed 2026-11-12) fails when desktop-only wording (this PC, File Explorer, a C: path, a localhost address) appears outside the mode-keyed copy layer `web/src/copy.ts` (SC-0392-04), when one of the four recorded local-only surfaces gains more, or anywhere in the Cloud runtime `web/src/cloud/`; owner: Unassigned; Needs a person: a design review of proposed UX confirming no new desktop-only assumption (ADR-0392 requires each surface to work in both runtime modes)**

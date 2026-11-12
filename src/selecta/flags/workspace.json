@@ -7,6 +7,10 @@
       "routes": ["GET /api/storage", "POST /api/storage"],
       "surfaces": ["workshop.storage", "workshop"]
     },
+    "workspace.cache_care": {
+      "label": "Cache tidying",
+      "about": "When the seam worker is idle it removes crash leftovers, caches of removed or changed songs, seams from an older engine and stems unused for two weeks, shares identical clips, and compacts the library file. The current mix is never touched."
+    },
     "workspace.backup": {
       "label": "Local backup",
       "about": "Back up the library's data and restore it on the next start.",

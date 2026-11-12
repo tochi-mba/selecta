@@ -7,6 +7,7 @@ small enough to query freely.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from collections.abc import Iterable
 from pathlib import Path
@@ -182,11 +183,63 @@ def _saved_mixes_become_drafts(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
+# r8d: every request opens the library, and checking its whole schema each time took longer than
+# most of the queries it then ran. A file this process has already brought up to date, whose
+# schema SQLite says hasn't changed since (a dropped table or a new column changes it), only takes
+# the data steps, which use indexes and normally find nothing to do.
+_CHECKED: dict[tuple[str, int, int], int] = {}
+
+
+def _identity(path: Path | str) -> tuple[str, int, int] | None:
+    """This exact file: a restored or replaced library is a different one."""
+    try:
+        facts = os.stat(path)
+    except (OSError, ValueError):
+        return None
+    if not facts.st_ino:
+        return None  # a filesystem that can't tell files apart gets the full check every time
+    return (os.path.normcase(os.path.abspath(path)), facts.st_dev, facts.st_ino)
+
+
+def _schema_cookie(conn: sqlite3.Connection) -> int:
+    return int(conn.execute("PRAGMA schema_version").fetchone()[0])
+
+
+def _legacy_kinds_renamed(conn: sqlite3.Connection) -> None:
+    legacy = conn.execute(
+        "SELECT id,kind,payload FROM seam_book WHERE kind IN ('same_melody','harmonic_cousin')"
+    ).fetchall()
+    for row in legacy:
+        payload = {
+            "method": "legacy_whole_track_mean_chroma",
+            "legacy_kind": row["kind"],
+            "legacy_payload": row["payload"],
+            "reason": (
+                "Average pitch-profile resemblance; melody and chord order were not verified."
+            ),
+        }
+        conn.execute(
+            "UPDATE seam_book SET kind='tonal_profile_cousin',payload=? WHERE id=?",
+            (json.dumps(payload), row["id"]),
+        )
+    if legacy:
+        conn.commit()
+
+
 def connect(path: Path) -> sqlite3.Connection:
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    identity = _identity(path)
+    if (
+        identity is not None
+        and _CHECKED.get(identity) == _schema_cookie(conn)
+        and local_upgrade.schema_version(conn) >= local_upgrade.LOCAL_SCHEMA_VERSION
+    ):
+        _saved_mixes_become_drafts(conn)
+        _legacy_kinds_renamed(conn)
+        return conn
     # an older library is copied aside before any step below changes it (core.upgrade_backup)
     local_upgrade.backup_before_migrating(conn, path)
     conn.executescript(SCHEMA)
@@ -210,25 +263,11 @@ def connect(path: Path) -> sqlite3.Connection:
             if "duplicate column" not in str(problem):
                 raise
     _saved_mixes_become_drafts(conn)
-    legacy = conn.execute(
-        "SELECT id,kind,payload FROM seam_book WHERE kind IN ('same_melody','harmonic_cousin')"
-    ).fetchall()
-    for row in legacy:
-        payload = {
-            "method": "legacy_whole_track_mean_chroma",
-            "legacy_kind": row["kind"],
-            "legacy_payload": row["payload"],
-            "reason": (
-                "Average pitch-profile resemblance; melody and chord order were not verified."
-            ),
-        }
-        conn.execute(
-            "UPDATE seam_book SET kind='tonal_profile_cousin',payload=? WHERE id=?",
-            (json.dumps(payload), row["id"]),
-        )
-    if legacy:
-        conn.commit()
+    _legacy_kinds_renamed(conn)
     local_upgrade.mark_migrated(conn)
+    identity = identity or _identity(path)  # a new file only exists once it has been opened
+    if identity is not None:
+        _CHECKED[identity] = _schema_cookie(conn)
     return conn
 
 

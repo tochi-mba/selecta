@@ -55,7 +55,7 @@ Open tasks: 73. Script: [../owner-runbook.md](../owner-runbook.md).
 | EX-0125-02 | selecta-experience-implementation-checklist.md | Design four-stage harmonic audition | real-audio listening and uncoached comprehension of the comparison order and purpose. | 4 | Implemented; open |
 | EX-0127-04 | selecta-experience-implementation-checklist.md | Verify final FLAC identity | ffmpeg/real-media inspection of an export made from the owner's real library. | 4 | Implemented; open |
 | EX-0129-02 | selecta-experience-implementation-checklist.md | Design balanced A/B interface | a counterbalanced human pilot. | 4 | Implemented; open |
-| EX-0129-05 | selecta-experience-implementation-checklist.md | Verify with real blind sessions | a named listener and protocol reviewer running real blind sessions. | 4 | Not started; open |
+| EX-0129-05 | selecta-experience-implementation-checklist.md | Verify with real blind sessions | a named listener and protocol reviewer running real blind sessions | 4 | Implemented; open |
 | SF-0198-04 | selecta-flow-implementation-checklist.md | Set attention and interruption budgets | real listening observation to set and judge attention and interruption budgets; Verified: No; Owner: Unassigned; PR/SHA: -; Evidence: -. | 4 | Not started; open |
 | SF-0210-08 | selecta-flow-implementation-checklist.md | Assess immersive comfort | a comparative music study of listener preference; Verified: No; Owner: Unassigned; PR/SHA: -; Evidence: -. | 4 | Not started; open |
 | SF-0211-02 | selecta-flow-implementation-checklist.md | Design technique families | a DJ audio review of cut, blend, wordplay and stem treatments; Verified: No; Owner: Unassigned; PR/SHA: -; Evidence: -. | 4 | Not started; open |

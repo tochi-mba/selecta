@@ -1,7 +1,7 @@
 # ADR-0118 - Recommendations: clear music-first cards and authentic previews
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress (2026-11-11: EX-0118-01 to -04 Implemented, -05 Not started; evidence in the checklist). **Verified (automated):** EX-0118-02, -03 and -04 by 2026-11-11; -01 and -05 need a person.
+- **Implementation status:** Implemented (2026-11-12: EX-0118-01 to -05 Implemented, -05 as its code part only, the study tool; evidence in the checklist). **Verified (automated):** EX-0118-02, -03 and -04 by 2026-11-11; -01 and -05 need a person.
 - **Independent verification:** No (0/5).
 - **Programme/date:** Experience-first UI/UX; 2026-11-07; baseline `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` (merged PR #29).
 - **Priority / phase:** P1 / Make a Mix.

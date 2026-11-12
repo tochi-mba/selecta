@@ -1,0 +1,389 @@
+/* Shared finish: semantic tokens live only in tokens.css. Rules below refine legacy layouts
+   without redefining global values in a later cascade layer. */
+body { text-rendering: optimizeLegibility; }
+/* Feedback stays inside the control: hit targets and keyboard focus never move. */
+button:not(:disabled):not([aria-disabled='true']):active,
+a.button:active { box-shadow: inset 0 0 0 2px currentColor; }
+.chips button[aria-pressed='true'] { box-shadow: inset 0 -2px 0 currentColor; }
+:is(input, textarea, select) {
+  transition: border-color var(--motion-fast) var(--motion-ease), background-color var(--motion-fast) var(--motion-ease);
+}
+:is(.tabs a, .nav a, .menu-list button) {
+  transition: color var(--motion-fast) var(--motion-ease), background-color var(--motion-fast) var(--motion-ease);
+}
+/* One brief reveal per inserted group; no perpetual motion across every card. */
+.vibe-group { animation: feeling-reveal var(--motion-handoff) var(--motion-ease); }
+@keyframes feeling-reveal { from { opacity: .65; } to { opacity: 1; } }
+@media (hover: hover) and (pointer: fine) {
+  .vibe-card:hover .vibe-tempo { border-color: var(--border-strong); color: var(--text); }
+}
+.vibe-card:focus-within .vibe-tempo { border-color: var(--border-strong); color: var(--text); }
+.vibe-tempo { transition: color var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease); }
+
+/* Card scanning shows only comparable facts; full explanation is an intentional keyboard/touch disclosure. */
+.vibe-card-summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+.vibe-card-detail { min-width: 0; border-top: 1px solid var(--border); padding-top: var(--space-2); }
+.vibe-card-detail > summary { min-height: var(--control-height); display: list-item; cursor: pointer; color: var(--text); padding: var(--space-2); border-radius: var(--radius-sm); }
+.vibe-card-detail[open] { display: grid; gap: var(--space-2); }
+.vibe-card-detail p { overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.vibe-card-detail .artists { margin-top: 0; }
+.library-batch { margin-block: var(--space-3); }
+.library-batch-actions { display: grid; gap: var(--space-2); margin-top: var(--space-2); padding: var(--space-3); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface-raised); }
+.library-batch-actions .hint { margin: 0; }
+
+/* Stop decorative loading pulses after a few cycles; the status remains visible. */
+.skeleton i { animation-iteration-count: 3; }
+@media (prefers-reduced-motion: reduce) {
+  .vibe-group { animation: none; }
+}
+button, a.button, input:not([type='checkbox']):not([type='radio']), select { min-height: var(--control-height); }
+.choice { min-height: var(--control-height); align-items: center; }
+.choice input[type='radio'], .choice input[type='checkbox'] { min-height: 0; }
+button, a.button { transition: background-color var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease); }
+button:active:not(:disabled) { transform: none; }
+button[aria-disabled='true'] { cursor: progress; }
+.ui-icon { display: inline-block; flex: 0 0 auto; vertical-align: middle; }
+/* MP-0273-02: an icon sits --icon-gap (8px) from its own words. The control lays out as a row, so
+   the source space between <Icon /> and the label never decides the gap. :where() keeps this at
+   zero specificity: any control that sets its own display (hidden, grid, column) still wins. */
+:where(button:has(> .ui-icon), a.button:has(> .ui-icon)) { display: inline-flex; align-items: center; justify-content: center; gap: var(--icon-gap); }
+/* MP-0277-03: words that wrap beside an icon start at the same gap; centred lines would drift from it */
+:where(button:has(> .ui-icon), a.button:has(> .ui-icon)) { text-align: start; }
+:where(.menu-list button:has(> .ui-icon)) { justify-content: flex-start; }
+.action-labels { display: inline-grid; align-items: center; justify-items: center; }
+.action-labels > span { grid-area: 1 / 1; }
+.page { padding-inline: var(--page-gutter); }
+.page > .display.small { margin-bottom: var(--space-5); }
+.eyebrow { letter-spacing: .075em; }
+.time, .metrics strong, .count, .countdown-number, .facts, input[type='number'] { font-variant-numeric: tabular-nums; }
+.row.wrap { row-gap: var(--space-3); }
+.card h3, .song-name, .song-detail-artist, .inspector-pair, .mini-song, .next-song, .toast-row > span { overflow-wrap: anywhere; }
+.song-name b, .song-name > span, .mini-song b, .next-song b, .inspector-pair b { unicode-bidi: plaintext; }
+.hint { line-height: 1.55; }
+.tabs { margin-bottom: var(--space-5); }
+.tabs a, .inspector-tabs button { min-height: var(--control-height); }
+.inspector-tabs button[aria-selected='true'] { background: var(--surface-control); color: var(--text); border-bottom: 2px solid var(--selected); }
+.inspector [role='tabpanel']:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; }
+.overlay-panel { overscroll-behavior: contain; }
+.overlay-head { gap: var(--space-4); }
+/* MP-0290-01: a square 44px target at every width, whatever the icon's own size */
+.overlay-close { flex: none; display: grid; place-items: center; min-width: 44px; min-height: 44px; }
+.overlay-body { scrollbar-gutter: stable; }
+.menu-list { max-height: min(65dvh, 480px); overflow-y: auto; }
+.toasts { max-height: min(42dvh, 420px); overflow-y: auto; overscroll-behavior: contain; }
+.toast-row { align-items: center; }
+.toast-close { display: grid; place-items: center; min-width: 44px; }
+.problem { background: var(--surface-raised); margin-block: var(--space-4); }
+.empty-state { padding: var(--space-6) 0; max-width: 58ch; }
+.empty-state h2 { font-size: var(--text-xl); margin-bottom: var(--space-2); }
+.empty-state p { color: var(--text-soft); }
+.library-find { margin-bottom: var(--space-4); align-items: end; }
+.library-find label { display: grid; gap: var(--space-2); }
+.library-search { flex: 1; min-width: 0; }
+.library-search input { margin: 0; }
+.song-actions details { position: relative; }
+.song-actions summary { min-height: 44px; padding: var(--space-2) var(--space-cozy); cursor: pointer; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.song-actions details[open] { flex-basis: 100%; }
+.song-actions details > .row { margin-top: var(--space-3); }
+.song-readiness { max-width: 100%; }
+.song-readiness .status { white-space: normal; }
+.readiness-steps { list-style: none; padding: 0; display: grid; gap: var(--space-3); margin-block: var(--space-5); }
+.readiness-steps li { display: grid; grid-template-columns: 1fr auto; gap: var(--space-3); padding-block: var(--space-3); border-bottom: 1px solid var(--border); }
+.readiness-steps strong { font-variant-numeric: tabular-nums; }
+/* CI-0178-04 and CI-0178-05: the real connections found while preparing, and the first hand-off note */
+.scan-reveals ul { padding-inline-start: var(--space-5); margin-block: var(--space-2); }
+.first-handoff { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-3); }
+.first-handoff p { margin: 0; flex: 1 1 16rem; }
+.field-help { margin: 0; color: var(--text-soft); font-size: var(--text-sm); }
+.field > .warn { margin: 0; }
+.view-options { margin-block: var(--space-4); }
+.view-options > summary { cursor: pointer; color: var(--text-soft); padding-block: var(--space-2); min-height: 44px; }
+.now .transport { min-height: 60px; }
+.now .transport .primary { min-width: 140px; }
+.now .thumbs { min-height: 60px; }
+.studio-grid { overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-gutter: stable; }
+.studio-lane { min-width: 520px; }
+.studio-name { position: sticky; left: 0; z-index: 2; background: var(--surface-raised); }
+.studio-cell { min-height: 44px; }
+.studio-cell[aria-pressed='true'] { box-shadow: inset 0 -3px 0 currentColor; }
+.studio-cell:focus-visible { outline: 3px solid var(--focus); outline-offset: -4px; }
+.studio-cell.now { border-top: 3px solid var(--text); }
+.studio-save-state { border-left: 2px solid var(--border-strong); padding-left: var(--space-3); }
+.export-stages { padding-left: 1.4em; }
+.export-stages li { padding: var(--space-2); }
+.export-stages [aria-current='step'] { color: var(--text); font-weight: 600; }
+.export-stages li:not([aria-current]) { color: var(--text-soft); }
+.achieved-arc { margin: var(--space-5) 0; }
+.preview-region { width: 100%; min-width: 0; }
+.preview-region audio { width: 100%; }
+.destructive { color: var(--status-warning); }
+.mix-head { padding-bottom: var(--space-5); border-bottom: 1px solid var(--border); margin-bottom: var(--space-5); }
+.timeline .song { scroll-margin-block: var(--space-5); }
+.song.playing { border-left: var(--marker) solid var(--playing); }
+.inspector-pair { padding-bottom: var(--space-4); border-bottom: 1px solid var(--border); }
+.draft { padding-block: var(--space-4); }
+
+/* Placeholder layout mirrors the content without pretending to contain waveform data. */
+.skeleton { display: block; padding-block: var(--space-4); }
+.skeleton-content { display: grid; gap: var(--space-4); animation: skeleton-reveal var(--motion-reveal) var(--motion-ease) both; animation-delay: var(--motion-fast); }
+/* P0038: space reserved at once, bars shown only after REVEAL_AFTER_MS (Skeleton.tsx), in every motion setting */
+.skeleton[data-revealed='false'] .skeleton-content { visibility: hidden; }
+.skeleton-unit { display: grid; gap: var(--space-3); min-width: 0; }
+.skeleton i { width: 100%; height: 16px; border-radius: var(--radius-mark); margin: 0; background: var(--surface-control); }
+.skeleton i:nth-child(2n) { width: 100%; }
+.skeleton .skeleton-title { width: 62%; height: 22px; }
+.skeleton .skeleton-detail { width: 84%; }
+.skeleton .skeleton-meta { width: 38%; height: 12px; }
+.skeleton .skeleton-action { width: 120px; height: 44px; margin-top: var(--space-3); }
+.skeleton .skeleton-region { height: 88px; }
+.skeleton-cards .skeleton-content, .skeleton-pairs .skeleton-content { grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.skeleton-cards .skeleton-unit, .skeleton-pairs .skeleton-unit { border: 1px solid var(--border); padding: var(--space-5); border-radius: var(--radius); min-height: 240px; }
+.skeleton-vibes { padding-top: var(--space-5); }
+.skeleton-vibes::before { content: ''; display: block; width: min(560px, 100%); height: 40px; margin-bottom: var(--space-5); border-radius: var(--radius-pill); background: var(--surface-control); }
+.skeleton-vibes .skeleton-content { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.skeleton-vibes .skeleton-unit { border: 1px solid var(--border); padding: var(--space-5); border-radius: var(--radius); min-height: 286px; grid-template-rows: auto auto 1fr auto; }
+.skeleton-vibes .skeleton-action { width: 100%; height: 48px; }
+@media (max-width: 1040px) { .skeleton-vibes .skeleton-content { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .skeleton-vibes .skeleton-content { grid-template-columns: 1fr; } .skeleton-vibes .skeleton-unit:nth-child(n + 4) { display: none; } }
+/* P0033: the Library placeholder follows the loaded rows' own grid (operations.css .library-rows .song-row):
+   name, facts, readiness and actions side by side over 1024px, facts under the name below that, and each
+   unit stands at the same median row height (--library-row-estimate) in both densities. */
+.skeleton-library .skeleton-content { gap: var(--row-gap, var(--space-4)); }
+.skeleton-library .skeleton-unit {
+  box-sizing: border-box; min-height: var(--library-row-estimate, 126px); padding-block: var(--row-pad, var(--space-4)); border-bottom: 1px solid var(--border);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) var(--library-actions-width, 200px); align-content: start;
+}
+.skeleton-library .skeleton-detail { grid-row: 2; grid-column: 1; }
+.skeleton-library .skeleton-meta { grid-column: 2; grid-row: 1; width: 80%; }
+@media (max-width: 1024px) {
+  .skeleton-library .skeleton-unit { grid-template-columns: minmax(0, 1fr) auto; }
+  .skeleton-library .skeleton-meta { grid-column: 1; grid-row: 3; width: 38%; }
+}
+/* Library card view: the same tracks and gap as .library-rows.library-cards (music-objects.css) */
+.library .skeleton-cards .skeleton-content { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: var(--space-3); }
+.skeleton-listen .skeleton-unit { min-height: 260px; }
+.skeleton-listen .skeleton-region { height: 120px; }
+/* P0035: song rows and the transitions hanging between them, at the timeline's own row heights
+   (creation.css .timeline.long intrinsic sizes: 84px songs, 96px transitions). */
+.skeleton-timeline .skeleton-content { gap: 0; }
+.skeleton-timeline .skeleton-song { grid-template-columns: var(--control-height) minmax(0, 1fr) auto; column-gap: var(--space-3); row-gap: var(--space-2); align-items: center; min-height: 84px; padding: var(--row-pad) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.skeleton-timeline .skeleton-grip { grid-row: 1 / span 2; width: var(--control-height); height: var(--control-height); }
+.skeleton-timeline .skeleton-song .skeleton-title { grid-column: 2; grid-row: 1; }
+.skeleton-timeline .skeleton-song .skeleton-detail { grid-column: 2; grid-row: 2; width: 48%; }
+.skeleton-timeline .skeleton-song .skeleton-meta { grid-column: 3; grid-row: 1; width: 72px; }
+.skeleton-timeline .skeleton-seam { min-height: 96px; margin-left: var(--space-2); padding: var(--space-3) var(--space-snug); border-left: 2px solid var(--border); align-content: center; }
+.skeleton-timeline .skeleton-seam .skeleton-region { height: 24px; }
+.skeleton-timeline .skeleton-seam .skeleton-action { width: 96px; height: var(--control-height); margin-top: 0; }
+@media (max-width: 620px) {
+  /* The real phone row wraps its metadata and actions below the title. Reserve that geometry too. */
+  .skeleton-timeline .skeleton-song { min-height: 144px; }
+  /* At phone width a transition stacks its name, its wrapped actions and its compact diagram.
+     The real unrendered row measures 192px at 375px, so reserve that. */
+  .skeleton-timeline .skeleton-seam { min-height: 192px; }
+}
+.skeleton-inspector .skeleton-unit { min-height: 240px; }
+.skeleton-metrics .skeleton-content { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+.skeleton-metrics .skeleton-unit { min-height: 110px; padding: var(--space-4); }
+/* P0032: the Mix feeling cards' placeholder follows .vibe-group and .vibe-card (listening.css): a group
+   heading rule, then the same 3/2/1 tracks and gap, cards at the same padding and floor, the motif, name,
+   summary, facts and disclosure stacked, and the two-up actions with Save draft under them at the foot. */
+.skeleton-vibes { padding-top: var(--space-6); }
+.skeleton-vibes::before { width: 96px; height: 12px; margin-bottom: var(--space-3); border-radius: var(--radius-mark); }
+.skeleton-vibes .skeleton-content { gap: var(--space-3); }
+.skeleton-vibes .skeleton-vibe { display: flex; flex-direction: column; gap: var(--space-3); box-sizing: border-box; min-height: 320px; padding: var(--space-4); }
+.skeleton-vibe .skeleton-motif { width: min(210px, 100%); height: 74px; margin-bottom: var(--space-2); }
+.skeleton-vibe .skeleton-title { width: 70%; height: 28px; }
+.skeleton-vibe .skeleton-disclosure { width: 58%; height: 20px; margin-top: auto; }
+.skeleton-vibe .skeleton-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-1); }
+.skeleton-vibe .skeleton-action { width: 100%; height: var(--control-height); margin-top: 0; }
+.skeleton-vibe .skeleton-action-quiet { grid-column: 1 / -1; width: 96px; height: var(--control-height); background: none; }
+@media (max-width: 620px) { .skeleton-vibes .skeleton-vibe { min-height: 0; } }
+/* P0034: Listen. The waveform's place is one flat block at .strip's own height and margins (style.css),
+   in the strip's phone order; the words' place is .lyrics' own box: its margins and floor, the timing
+   note, and three lines with the sung one larger. */
+.skeleton-strip { height: 92px; margin: var(--space-2) 0 var(--space-5); border-radius: var(--radius-sm); background: var(--surface-control); }
+.skeleton-strip[data-revealed='false'] { visibility: hidden; }
+.now .skeleton-listen { padding-block: 0; margin: var(--space-2) 0 var(--space-5); min-height: 7.5em; }
+.skeleton-listen .skeleton-lyrics { min-height: 0; gap: var(--space-dense); }
+.skeleton-lyrics .skeleton-meta { width: min(320px, 70%); margin-bottom: var(--space-2); }
+.skeleton-lyrics .skeleton-detail { width: 54%; height: 18px; }
+.skeleton-lyrics .skeleton-title { width: 78%; height: clamp(1.4rem, 4.4vw, 2.5rem); }
+@media (max-width: 760px) {
+  .skeleton-strip { order: 3; }
+  .now:not(.stage) .skeleton-listen { min-height: max(7.5em, calc(100svh - 36px - var(--above-lyrics))); }
+}
+@media (forced-colors: active) { .skeleton-strip { background: GrayText; } }
+/* P0036: Discover. Word connections use .link-grid's tracks and gap and .link-card's padding (style.css);
+   a chord match is one full-width .discovery card under its real heading. */
+.skeleton-pairs .skeleton-content { grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); gap: var(--space-3); }
+.skeleton-pairs .skeleton-unit { padding: var(--space-4); min-height: 280px; }
+.discoveries > .skeleton-pairs { padding-block: var(--space-snug) 0; }
+.discoveries > .skeleton-pairs .skeleton-content { grid-template-columns: minmax(0, 1fr); }
+.discoveries > .skeleton-pairs .skeleton-unit { padding: var(--space-3); min-height: 200px; }
+/* P0036: Workshop lists. A row is a label and a status at .job-list's tracks (shell.css). */
+.skeleton-rows { padding-block: 0; }
+.skeleton-rows .skeleton-content { gap: var(--space-2); }
+.skeleton-rows .skeleton-row { grid-template-columns: minmax(150px, 220px) 1fr; gap: var(--space-1) var(--space-3); align-items: center; min-height: 28px; }
+.skeleton-row .skeleton-title { width: 70%; height: 16px; }
+.skeleton-row .skeleton-detail { width: min(320px, 100%); height: 24px; border-radius: var(--radius-pill); }
+@media (max-width: 560px) { .skeleton-rows .skeleton-row { grid-template-columns: 1fr; } }
+@keyframes skeleton-reveal { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 760px) {
+  .page { padding-top: var(--space-5); }
+  .panel, .card { padding: var(--space-4); }
+  .mini-song { min-width: 0; }
+  .nav li a { min-height: 44px; }
+  .studio-lane { min-width: 520px; }
+  .start .row { flex-wrap: wrap; }
+  .start .row input { flex-basis: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; }
+  .skeleton-content { animation: none; }
+  button, a.button { transition: none; }
+}
+@media (forced-colors: active) {
+  .skeleton i { background: GrayText; }
+  .studio-cell[aria-pressed='true'] { border: 3px solid Highlight; }
+  .status, .nav a[aria-current], .inspector-tabs button[aria-selected='true'] { forced-color-adjust: auto; }
+}
+
+/* Keyboard grip state, not just a colour change. A person who has picked up
+   a row can see that it is ready for arrow-key movement. */
+.timeline .grip[aria-pressed='true'] {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  background: var(--surface-selected);
+  border-radius: var(--radius-sm);
+}
+
+/* Make control boundaries, selection and errors survive Windows High Contrast
+   without relying on the theme's custom CSS colours. */
+@media (forced-colors: active) {
+  button.primary, a.button.primary, .primary[aria-pressed='true'] {
+    background: Highlight;
+    color: HighlightText;
+    border: 2px solid Highlight;
+  }
+  button[aria-pressed='true'], .nav a[aria-current='page'],
+  .inspector-tabs button[aria-selected='true'],
+  .menu-list button[aria-checked='true'], .timeline .grip[aria-pressed='true'] {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+  .status-warning, .status-blocked, .status-failed, .warn { color: Mark; }
+  .status-ready, .status-needs-action { color: CanvasText; }
+  button:focus-visible, a:focus-visible, input:focus-visible,
+  select:focus-visible, textarea:focus-visible, [role='button']:focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+  button:disabled, [aria-disabled='true'] { color: GrayText; border-color: GrayText; }
+  .request-row.attention { border-left: 3px solid Highlight; }
+}
+
+@media (forced-colors: active) {
+  /* Platform colours must remain legible even with author colours removed.
+     Focus, selection and disabled states each have a non-colour cue. */
+  :is(button, a, input, select, textarea, summary, [role='tab']):focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+  :is(.nav a[aria-current='page'], .tabs a[aria-current='page'],
+    .inspector-tabs button[aria-selected='true'], [role='option'][aria-selected='true'],
+    button[aria-pressed='true']) {
+    outline: 2px solid Highlight;
+    outline-offset: -3px;
+  }
+  /* SF-0201-06: keyboard focus on the selected item still reads as focus, the thicker ring outside it,
+     not the selected mark inside (the selected rule above is more specific than plain :focus-visible) */
+  :is(.nav a[aria-current='page'], .tabs a[aria-current='page'],
+    .inspector-tabs button[aria-selected='true'], [role='option'][aria-selected='true'],
+    button[aria-pressed='true']):focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+  .status {
+    border: 1px solid CanvasText;
+    border-radius: var(--radius-pill);
+    padding-inline: var(--space-1);
+    color: CanvasText;
+  }
+  .status-failed, .status-warning, .status-blocked, .status-needs-action {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  :is(button:disabled, button[aria-disabled='true'], .studio-lane.lost .studio-cell) {
+    border-color: GrayText;
+    color: GrayText;
+  }
+  .studio-cell[aria-pressed='true']::after { background: Highlight; }
+}
+
+/* Causal, short microinteractions. All state changes stay textual and immediate;
+   animation only decorates an already committed UI state. */
+.toast-row { animation: toast-appear var(--motion-reveal) var(--motion-ease) both; }
+.overlay-panel { animation: overlay-appear var(--motion-overlay) var(--motion-ease) both; }
+@keyframes toast-appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@keyframes overlay-appear { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  /* Existing feature-specific keyframes have a fully static equivalent. */
+  *, *::before, *::after { animation-duration: 0ms !important; animation-iteration-count: 1 !important; transition-duration: 0ms !important; }
+}
+@media (forced-colors: active) {
+  .toast-row { color: CanvasText; background: Canvas; border: 1px solid CanvasText; }
+  .toast-row.problem { color: CanvasText; background: Canvas; border-color: Mark; }
+}
+
+/* Entering a route reveals only its new content. Navigation and the player never
+   move, and focused controls keep their exact hit boxes during the transition. */
+.content > main.page { animation: route-reveal var(--motion-reveal) ease-out both; }
+.on-stage .content > main.page { animation: none; }
+@keyframes route-reveal { from { opacity: 0.9; } to { opacity: 1; } }
+/* SF-0208-07: the optional View Transitions cross-fade (Expressive only, see shell/sceneTransition.ts).
+   It runs for the same short reveal time, and never under reduced motion. */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: var(--motion-reveal); }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+}
+
+/* These small focus and target cues remain present with animation turned off. */
+.strip.can-seek:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  .content > main.page { animation: none; }
+}
+
+/* Make a Mix has two independently actionable paths. Never place the optional
+   assistant above, or in the way of, one-tap Quick Play. */
+.mixes .mix-paths {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
+  gap: var(--space-4);
+  align-items: stretch;
+  margin-block: var(--space-5);
+}
+.mixes .mix-paths > section {
+  min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+}
+.mixes .mix-quick.hero { margin: 0; }
+/* without Lucy in this build, Quick Play is the one path and takes the row */
+.mixes .mix-paths:not(:has(> .mix-create)) { grid-template-columns: minmax(0, 1fr); }
+.mixes .mix-paths:not(:has(> .mix-create)) .mix-quick .lede { max-width: 60ch; }
+.mixes .mix-path-label { font: var(--type-section); margin: 0 0 var(--space-2); }
+.mixes .mix-create { display: flex; flex-direction: column; align-items: start; gap: var(--space-3); }
+.mixes .mix-create h2 { margin: 0; font: var(--type-section); }
+.mixes .mix-create p { margin: 0; max-width: 48ch; }
+.mixes .mix-create .button { max-width: 100%; white-space: normal; text-align: center; }
+@media (max-width: 850px) {
+  .mixes .mix-paths { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 420px) {
+  .mixes .mix-paths > section { padding: var(--space-3); }
+}
+@media (forced-colors: active) {
+  .mixes .mix-paths > section { border: 1px solid CanvasText; }
+}

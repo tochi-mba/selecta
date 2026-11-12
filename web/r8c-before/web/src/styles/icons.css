@@ -1,0 +1,36 @@
+/* ADR-0277: icon sizes, badge baselines and icon-only control geometry. Loads after the page sheets
+   and before typography.css. Inventory: docs/engineering/icon-inventory.md. Proof:
+   web/e2e/mp-0277-icon-geometry.e2e.ts and web/src/styles/icon-geometry.test.ts. */
+
+/* MP-0277-02 and -04: four slots, each with its own box and stroke, set from tokens.css. The SVG's own
+   width, height and stroke-width attributes (ui/Icon.tsx) hold the same numbers before CSS arrives. */
+.ui-icon { width: var(--icon-size); height: var(--icon-size); stroke-width: var(--icon-stroke); }
+.ui-icon[data-size='compact'] { width: var(--icon-compact); height: var(--icon-compact); stroke-width: var(--icon-stroke-compact); }
+.ui-icon[data-size='toolbar'] { width: var(--icon-toolbar); height: var(--icon-toolbar); stroke-width: var(--icon-stroke-toolbar); }
+.ui-icon[data-size='hero'] { width: var(--icon-hero); height: var(--icon-hero); stroke-width: var(--icon-stroke-hero); }
+
+/* MP-0277-03: the icon-to-words gap is a token wherever an icon sits beside its words, never the width
+   of a source space. A busy Action keeps its idle label in place underneath, so the row it draws is the
+   same row; a mark inside small text, a request result or a quality check is a dense pair. */
+.action-labels > span:has(> .ui-icon) { display: inline-flex; align-items: center; justify-content: center; gap: var(--icon-gap); }
+.icon-words { display: inline-flex; align-items: center; gap: var(--icon-gap-dense); vertical-align: bottom; }
+.request-results small:has(> .ui-icon) { display: inline-flex; align-items: center; gap: var(--icon-gap-dense); }
+.report li:has(> .ui-icon) { display: flex; align-items: center; gap: var(--icon-gap-dense); }
+/* when the rail's "Request a song" wraps, its label box fills the button, so centred lines would drift
+   away from the icon; the lines start at the icon's gap instead */
+.nav-request .nav-label { text-align: start; }
+
+/* MP-0277-05: a counter badge reserves two tabular digits from its start edge, so 1 to 99 never moves the
+   icon, the first digit or the control's width, the digits stay --icon-gap from the icon, and they sit on
+   the icon's vertical centre. The mini-player's count already reserves three digits (shell.css). */
+.context-bar .count, .nav .count { display: inline-block; min-width: 2ch; line-height: 1; text-align: start; }
+
+/* MP-0277-07: icon-only controls are at least a full target square, and a link in the context bar is
+   as tall as the buttons beside it. */
+button.icon, .nav-collapse { min-width: var(--control-height); }
+a.context-button { min-height: var(--control-height); }
+/* The Listen mute button remains a full target beside the volume slider. */
+.now .volume button.icon { flex: 0 0 44px; min-width: 44px; min-height: 44px; }
+@media (pointer: coarse) {
+  .toast-row .toast-close { min-width: var(--control-height); min-height: var(--control-height); }
+}

@@ -1,0 +1,509 @@
+import { connectMainPlayer } from '../audio/focus';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fakeBackend, songs } from '../test/backend';
+import { Shape } from '../studio';
+import { Studio } from './Studio';
+
+const deck = vi.hoisted(() => ({
+  lost: undefined as string[] | undefined,
+  made: [] as { shape: unknown; setShape: ReturnType<typeof vi.fn>; play: ReturnType<typeof vi.fn>; stop: ReturnType<typeof vi.fn>; solo: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn>; load: ReturnType<typeof vi.fn>; onCell: (cell: number) => void }[],
+}));
+
+vi.mock('../studio', async (actual) => {
+  const real = await actual<typeof import('../studio')>();
+  return {
+    ...real,
+    StemDeck: class {
+      shape: unknown;
+      setShape = vi.fn();
+      play = vi.fn(async () => {});
+      stop = vi.fn();
+      solo = vi.fn();
+      close = vi.fn();
+      load = vi.fn(async () => deck.lost);
+      onCell: (cell: number) => void = () => {};
+      constructor(_seconds: number, _cells: number, shape: unknown) {
+        this.shape = shape;
+        deck.made.push(this);
+      }
+    },
+  };
+});
+
+const row = (value: number) => [value, value, value, value, value, value, value, value];
+const shape = (a: number, b: number): Shape => ({
+  a: { vocals: row(a), drums: row(a), bass: row(a), other: row(a) },
+  b: { vocals: row(b), drums: row(b), bass: row(b), other: row(b) },
+});
+const ready = {
+  status: 'ready',
+  key: 'abc',
+  bars: 16,
+  cells: 8,
+  seconds: 32,
+  start_shape: shape(1, 0),
+  shape: null,
+};
+
+function open(answer: unknown = ready, more: Record<string, unknown> = {}) {
+  const calls = fakeBackend({ 'POST /mix/1/studio': answer, ...more });
+  const [previous, item] = songs({ settings: {}, state: { status: 'none', key: 'x' } });
+  const onClose = vi.fn();
+  const onUsed = vi.fn();
+  const notify = vi.fn();
+  const onListen = vi.fn();
+  render(<Studio position={1} item={item} previous={previous} onClose={onClose} onUsed={onUsed} onListen={onListen} notify={notify} />);
+  return { calls, onClose, onUsed, notify, onListen };
+}
+
+// Bar-range names replace the old square numbers; keep checking the exact
+// corresponding button rather than weakening any interaction assertions.
+const square = async (name: string) => {
+  const [part, position] = name.split(', square ');
+  const matches = await screen.findAllByRole('button', {
+    name: new RegExp('^' + part + ', bars? [0-9]', 'i'),
+  });
+  return matches[Number(position) - 1];
+};
+
+describe('the seam studio', () => {
+  beforeEach(() => {
+    deck.made.length = 0;
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    window.localStorage.removeItem('selecta.studio.abc');
+  });
+
+  it('says how long the stems will take while they are split, and that the mix keeps playing', async () => {
+    open({ status: 'queued', key: 'abc', eta: { seconds: 280, low: 200, high: 400 } });
+    const message = await screen.findByRole('status');
+    expect(message).toHaveTextContent('about 5 minutes');
+    expect(message).toHaveTextContent('Your mix keeps playing');
+  });
+
+  it('keeps asking until the stems are ready, then shows the grid', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const answers = [{ status: 'rendering', key: 'abc', eta: { seconds: 20, low: 10, high: 30 } }, ready];
+    const calls = fakeBackend({ 'POST /mix/1/studio': () => answers.shift() ?? ready });
+    const [previous, item] = songs({ settings: {}, state: { status: 'none', key: 'x' } });
+    render(<Studio position={1} item={item} previous={previous} onClose={() => {}} onUsed={() => {}} notify={() => {}} />);
+    await screen.findByRole('status');
+    await act(async () => { await vi.advanceTimersByTimeAsync(2100); });
+    await square('Song 2 drums, square 1');
+    expect(calls.filter((call) => call.path === '/mix/1/studio')).toHaveLength(2);
+  });
+
+  it('is one tab stop, moves with the arrow keys, and Space turns a square on or off', async () => {
+    open();
+    const first = await square('Song 1 voice, square 1');
+    const inTabOrder = () => screen.getAllByRole('button').filter((button) => button.closest('[role="grid"]') && button.tabIndex === 0);
+    expect(inTabOrder()).toHaveLength(1);
+    first.focus();
+    fireEvent.keyDown(first, { key: 'ArrowRight' });
+    expect(await square('Song 1 voice, square 2')).toHaveFocus();
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' });
+    expect(await square('Song 1 drums, square 2')).toHaveFocus();
+    fireEvent.keyDown(document.activeElement!, { key: 'End' });
+    expect(await square('Song 1 drums, square 8')).toHaveFocus();
+    fireEvent.keyDown(document.activeElement!, { key: 'Home' });
+    expect(await square('Song 1 drums, square 1')).toHaveFocus();
+    fireEvent.keyDown(document.activeElement!, { key: 'End', ctrlKey: true });
+    expect(await square('Song 2 melody, square 8')).toHaveFocus();
+    fireEvent.keyDown(document.activeElement!, { key: 'Home', ctrlKey: true });
+    expect(await square('Song 1 voice, square 1')).toHaveFocus();
+    // left of the first square is the part's own button
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowLeft' });
+    expect(screen.getByRole('button', { name: 'Hear only Song 1 voice' })).toHaveFocus();
+    expect(inTabOrder()).toHaveLength(1);
+    // the edges stop it, rather than wrapping or leaving the grid
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowUp' });
+    expect(screen.getByRole('button', { name: 'Hear only Song 1 voice' })).toHaveFocus();
+  });
+
+  it('a mix that moved on refuses the shape, and it stays here to try again', async () => {
+    const onConflict = vi.fn();
+    const [previous, item] = songs({ settings: {}, state: { status: 'none', key: 'x' } });
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (String(url).includes('/studio/use')) {
+        expect(new Headers(init?.headers).get('x-mix-order')).toBe('1,2');
+        return new Response(JSON.stringify({ detail: 'The mix changed.', code: 'mix_changed' }), { status: 409 });
+      }
+      return new Response(JSON.stringify(ready), { status: 200 });
+    }));
+    render(<Studio position={1} item={item} previous={previous} onClose={vi.fn()} onUsed={vi.fn()} onListen={vi.fn()} notify={vi.fn()} onConflict={onConflict} guard={{ 'x-mix-order': '1,2' }} />);
+    const cell = await square('Song 1 voice, square 8');
+    fireEvent.click(cell);
+    fireEvent.click(await screen.findByRole('button', { name: /Apply to this transition/ }));
+    await waitFor(() => expect(onConflict).toHaveBeenCalled());
+    expect(await square('Song 1 voice, square 8')).toHaveAttribute('aria-pressed', 'false');
+    expect(window.localStorage.getItem('selecta.studio.abc')).not.toBeNull();
+  });
+
+  it('shows a square for every part of both songs, named for a screen reader', async () => {
+    open();
+    await square('Song 1 voice, square 1');
+    expect(await square('Song 2 melody, square 8')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^Song [12] (voice|drums|bass|melody), bars? [0-9]/ })).toHaveLength(64);
+  });
+
+  it('tapping a square is heard straight away and renders nothing', async () => {
+    const { calls } = open();
+    const cell = await square('Song 2 drums, square 3');
+    expect(cell).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(cell);
+    expect(cell).toHaveAttribute('aria-pressed', 'true');
+    expect(deck.made[0].setShape).toHaveBeenCalledTimes(1);
+    const sent = deck.made[0].setShape.mock.calls[0][0] as Shape;
+    expect(sent.b.drums[2]).toBe(1);
+    expect(sent.b.drums[1]).toBe(0);
+    expect(calls.filter((call) => call.path.endsWith('/use'))).toHaveLength(0);
+  });
+
+  it('tapping twice puts it back', async () => {
+    open();
+    const cell = await square('Song 1 bass, square 1');
+    fireEvent.click(cell);
+    fireEvent.click(cell);
+    expect(cell).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('play and stop, and it pauses the mix when it plays', async () => {
+    const pause = vi.fn();
+    connectMainPlayer({ isPlaying: () => true, pause, resume: vi.fn() });
+    open();
+    await square('Song 1 voice, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Play preview' }));
+    expect(await screen.findByRole('button', { name: 'Stop preview' })).toBeInTheDocument();
+    expect(deck.made[0].play).toHaveBeenCalled();
+    expect(pause).toHaveBeenCalled();
+    connectMainPlayer(null);
+    fireEvent.click(screen.getByRole('button', { name: 'Stop preview' }));
+    expect(deck.made[0].stop).toHaveBeenCalled();
+    expect(await screen.findByRole('button', { name: 'Play preview' })).toBeInTheDocument();
+  });
+
+  it('pressing a name plays only that part, and can go back to everything', async () => {
+    open();
+    await square('Song 1 voice, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Hear only Song 1 voice' }));
+    expect(deck.made[0].solo).toHaveBeenLastCalledWith('a_vocals');
+    expect(screen.getByRole('button', { name: 'Hear only Song 1 voice' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(await screen.findByRole('button', { name: 'Hear everything again' }));
+    expect(deck.made[0].solo).toHaveBeenLastCalledWith(null);
+  });
+
+  it('marks the square being played', async () => {
+    open();
+    const cell = await square('Song 1 drums, square 2');
+    act(() => deck.made[0].onCell(1));
+    expect(cell).toHaveClass('now');
+    expect(await square('Song 1 drums, square 3')).not.toHaveClass('now');
+  });
+
+  it('ignores a corrupted local grid and safely uses the server shape', async () => {
+    window.localStorage.setItem('selecta.studio.abc', JSON.stringify({ a: { vocals: [1] } }));
+    open();
+    expect(await square('Song 1 voice, square 1')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Nothing to recover')).toBeInTheDocument();
+    expect(deck.made[0].shape).toEqual(ready.start_shape);
+  });
+
+  it('recovers a valid uncommitted grid for the same transition', async () => {
+    const recovered = shape(0, 1);
+    window.localStorage.setItem('selecta.studio.abc', JSON.stringify(recovered));
+    open();
+    expect(await square('Song 2 bass, square 1')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Yes, your earlier work')).toBeInTheDocument();
+    expect(deck.made[0].shape).toEqual(recovered);
+  });
+
+  it('shows which numbered pair is being shaped', async () => {
+    open();
+    expect(await square('Song 1 voice, square 1')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Shape transition 1' })).toBeInTheDocument();
+  });
+
+  it('starts from the shape already chosen when coming back to a seam', async () => {
+    open({ ...ready, shape: shape(0, 1) });
+    expect(await square('Song 2 bass, square 1')).toHaveAttribute('aria-pressed', 'true');
+    expect(await square('Song 1 bass, square 1')).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('ready-made shapes change the grid, and it can start again', async () => {
+    open();
+    const cell = await square('Song 1 voice, square 8');
+    const shapes = within(screen.getByRole('group', { name: 'Ready-made shapes' }));
+    const before = deck.made[0].setShape.mock.calls.length;
+    fireEvent.click(shapes.getAllByRole('button')[0]);
+    expect(deck.made[0].setShape.mock.calls.length).toBe(before + 1);
+    fireEvent.click(cell);
+    fireEvent.click(screen.getByRole('button', { name: 'Start again' }));
+    expect(cell).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('switches between guided Shape and Detailed without changing the grid', async () => {
+    open();
+    const detailedCell = await square('Song 1 voice, square 1');
+    const before = deck.made[0].setShape.mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: 'Shape' }));
+    expect(screen.getByRole('region', { name: 'Guided shape controls' })).toBeInTheDocument();
+    expect(deck.made[0].setShape).toHaveBeenCalledTimes(before);
+    fireEvent.click(screen.getByRole('button', { name: 'Detailed grid' }));
+    expect(await square('Song 1 voice, square 1')).toHaveAttribute('aria-pressed', 'true');
+    expect(deck.made[0].setShape).toHaveBeenCalledTimes(before);
+  });
+
+  it('guided Shape edits the same exact lane shown by Detailed', async () => {
+    open();
+    await square('Song 2 bass, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Shape' }));
+    const guided = screen.getByRole('region', { name: 'Guided shape controls' });
+    const songTwo = within(guided).getByRole('region', { name: 'Song 2' });
+    const bass = within(songTwo).getByRole('group', { name: 'Bass' });
+    expect(within(bass).getByText('Left out')).toBeInTheDocument();
+    fireEvent.click(within(bass).getByRole('button', { name: 'Use throughout' }));
+    expect(within(bass).getByText('Used throughout')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Detailed grid' }));
+    for (let index = 1; index <= 8; index += 1) {
+      expect(await square(`Song 2 bass, square ${index}`)).toHaveAttribute('aria-pressed', 'true');
+    }
+  });
+
+  it('using it saves the shape, closes and says what happens next', async () => {
+    const data = { mix: songs(), name: 'Mix', can_undo: true };
+    const { calls, onClose, onUsed, notify } = open(ready, { 'POST /mix/1/studio/use': data });
+    const cell = await square('Song 2 voice, square 1');
+    fireEvent.click(cell);
+    fireEvent.click(screen.getByRole('button', { name: 'Apply to this transition' }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    const body = calls.find((call) => call.path.endsWith('/use'))?.body as { shape: Shape };
+    expect(body.shape.b.vocals[0]).toBe(1);
+    expect(onUsed).toHaveBeenCalledWith(data);
+    expect(notify).toHaveBeenCalledWith(expect.stringContaining('Rendering your version'));
+    expect(deck.made[0].stop).toHaveBeenCalled();
+  });
+
+  it('if using it fails, the shape is still there to try again', async () => {
+    const { onClose } = open();
+    const cell = await square('Song 2 voice, square 1');
+    fireEvent.click(cell);
+    fireEvent.click(screen.getByRole('button', { name: 'Apply to this transition' }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(await square('Song 2 voice, square 1')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('explains a failure in the words it was given', async () => {
+    open({ status: 'failed', key: 'abc', error: 'These two are 30% apart in tempo.' });
+    expect(await screen.findByRole('alert')).toHaveTextContent('30% apart');
+  });
+
+  it('closing lets go of the audio', async () => {
+    const { onClose } = open();
+    await square('Song 1 voice, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('lets Selecta arrange it, and what was there can be put back', async () => {
+    const made = shape(0, 1);
+    const { calls } = open(ready, { 'POST /mix/1/studio/tune': { shape: made, changes: [] } });
+    const cell = await square('Song 2 bass, square 1');
+    expect(cell).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'Let Selecta arrange it' }));
+    await waitFor(() => expect(cell).toHaveAttribute('aria-pressed', 'true'));
+    expect(calls.find((call) => call.path.endsWith('/tune'))?.body).toEqual({ shape: null });
+    expect(deck.made[0].setShape).toHaveBeenLastCalledWith(made);
+    expect(screen.getByText('Selecta arranged this from what’s in the stems.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Put it back' }));
+    expect(cell).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByRole('button', { name: 'Put it back' })).toBeNull();
+  });
+
+  it('fine tunes your own grid and says what it changed and why', async () => {
+    const tuned = shape(1, 1);
+    const { calls } = open(ready, {
+      'POST /mix/1/studio/tune': { shape: tuned, changes: ['Turned Song 2’s melody off in square 4, where it clashed with the other song.'] },
+    });
+    const cell = await square('Song 2 bass, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Fine tune mine' }));
+    await waitFor(() => expect(cell).toHaveAttribute('aria-pressed', 'true'));
+    expect((calls.find((call) => call.path.endsWith('/tune'))?.body as { shape: Shape }).shape.a.vocals[0]).toBe(1);
+    expect(screen.getByText(/where it clashed/)).toBeInTheDocument();
+  });
+
+  it('says so when fine tuning finds nothing to change', async () => {
+    open(ready, { 'POST /mix/1/studio/tune': { shape: shape(1, 0), changes: [] } });
+    await square('Song 2 bass, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Fine tune mine' }));
+    expect(await screen.findByText(/Nothing to change/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Put it back' })).toBeNull();
+  });
+
+  it('a change of your own clears what fine tuning said', async () => {
+    open(ready, { 'POST /mix/1/studio/tune': { shape: shape(1, 1), changes: ['Something.'] } });
+    const cell = await square('Song 2 bass, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Fine tune mine' }));
+    await screen.findByText('Something.');
+    fireEvent.click(cell);
+    expect(screen.queryByText('Something.')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Put it back' })).toBeNull();
+  });
+
+  it('a fine tune answer that comes back after a stroke keeps the stroke and says so', async () => {
+    open();
+    const backend = globalThis.fetch;
+    let release: () => void = () => {};
+    const held = new Promise<void>((done) => { release = done; });
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (!url.endsWith('/studio/tune')) return backend(url, init);
+      await held;
+      return new Response(JSON.stringify({ shape: shape(1, 1), changes: ['Brought every part in.'] }), { status: 200 });
+    }));
+    const cell = await square('Song 2 bass, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Fine tune mine' }));
+    await screen.findByRole('button', { name: 'Fine tuning…' });
+    fireEvent.click(cell);
+    expect(cell).toHaveAttribute('aria-pressed', 'true');
+    await act(async () => release());
+    expect(await screen.findByText('You changed the grid while Selecta was working, so your version stays.')).toBeInTheDocument();
+    expect(cell).toHaveAttribute('aria-pressed', 'true');
+    expect(await square('Song 2 bass, square 2')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByText('Brought every part in.')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Put it back' })).toBeNull();
+  });
+
+  it('explains when Selecta can’t arrange these two, and keeps the grid as it is', async () => {
+    open();
+    const cell = await square('Song 1 voice, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Let Selecta arrange it' }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(cell).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Let Selecta arrange it' })).toBeEnabled();
+  });
+
+  it('nothing it does is final until “Apply to this transition”', async () => {
+    const { calls } = open(ready, { 'POST /mix/1/studio/tune': { shape: shape(1, 1), changes: ['x'] } });
+    await square('Song 1 voice, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Fine tune mine' }));
+    await screen.findByText('x');
+    expect(calls.some((call) => call.path.endsWith('/use'))).toBe(false);
+  });
+});
+
+describe('Studio representation parity', () => {
+  it('keeps every stem square and its saved value when changing editor modes', async () => {
+    open();
+    const cell = await square('Song 1 voice, square 2');
+    fireEvent.click(cell);
+    expect(cell).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'Detailed list' }));
+    const boxes = screen.getAllByRole('checkbox');
+    expect(boxes).toHaveLength(64);
+    expect(boxes[1]).not.toBeChecked();
+    expect(boxes[1]).toHaveAttribute('data-cell', '0-1');
+    fireEvent.click(screen.getByRole('button', { name: 'Detailed grid' }));
+    expect(await square('Song 1 voice, square 2')).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('keeps every square, solo and mode the same through Light, Dark and System (FP-0266-07)', async () => {
+    const { setPrefs } = await import('../state/prefs');
+    open();
+    fireEvent.click(await square('Song 1 voice, square 2'));
+    fireEvent.click(await square('Song 2 drums, square 8'));
+    const cells = () => screen.getAllByRole('button', { name: /, bars? [0-9]/i }).map((cell) => `${cell.getAttribute('aria-label')}=${cell.getAttribute('aria-pressed')}`);
+    const before = cells();
+    expect(before).toHaveLength(64);
+    for (const theme of ['light', 'dark', 'system'] as const) {
+      act(() => setPrefs({ theme }));
+      expect(cells()).toEqual(before);
+      fireEvent.click(screen.getByRole('button', { name: 'Detailed list' }));
+      const boxes = screen.getAllByRole('checkbox');
+      expect(boxes).toHaveLength(64);
+      expect(boxes[1]).not.toBeChecked();
+      fireEvent.click(screen.getByRole('button', { name: 'Detailed grid' }));
+      expect(cells()).toEqual(before);
+    }
+    // the shape sent to the deck is the edited one, untouched by any theme change
+    expect(deck.made.at(-1)?.setShape).toHaveBeenCalled();
+  });
+});
+
+describe('Studio pointer painting', () => {
+  it('paints a consistent value over touched cells without re-toggling a revisited cell', async () => {
+    open();
+    const first = await square('Song 1 voice, square 1');
+    const second = await square('Song 1 voice, square 2');
+    const grid = screen.getByRole('grid');
+    const prior = document.elementFromPoint;
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => second });
+    try {
+      fireEvent.pointerDown(first, { pointerId: 23, pointerType: 'touch', isPrimary: true, button: 0, clientX: 20, clientY: 20 });
+      fireEvent.pointerMove(grid, { pointerId: 23, pointerType: 'touch', isPrimary: true, buttons: 1, clientX: 60, clientY: 20 });
+      fireEvent.pointerMove(grid, { pointerId: 23, pointerType: 'touch', isPrimary: true, buttons: 1, clientX: 60, clientY: 20 });
+      fireEvent.pointerUp(grid, { pointerId: 23, pointerType: 'touch', isPrimary: true, button: 0 });
+      expect(first).toHaveAttribute('aria-pressed', 'false');
+      expect(second).toHaveAttribute('aria-pressed', 'false');
+      expect(deck.made.at(-1)?.setShape).toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: prior });
+    }
+  });
+  it('lists the exact server-returned cell differences and lets the user restore the previous shape', async () => {
+    const suggested = shape(0, 1);
+    open(ready, { 'POST /mix/1/studio/tune': { shape: suggested, changes: ['A new arrangement.'] } });
+    const cell = await square('Song 2 bass, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Let Selecta arrange it' }));
+    await waitFor(() => expect(cell).toHaveAttribute('aria-pressed', 'true'));
+    expect(cell).toHaveClass('ai-changed');
+    expect(screen.getByText('64 exact cell changes from Selecta’s suggestion')).toBeInTheDocument();
+    expect(screen.getByText('Song 2 · Bass · square 1: Off → On')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Put it back' }));
+    expect(cell).not.toHaveClass('ai-changed');
+    expect(screen.queryByText('64 exact cell changes from Selecta’s suggestion')).toBeNull();
+  });
+
+  it('stops the owned Studio preview and its playhead when the tab becomes hidden', async () => {
+    open();
+    await square('Song 1 voice, square 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Play preview' }));
+    await screen.findByRole('button', { name: 'Stop preview' });
+    // Earlier tests also instantiate mocked decks; use this Studio's deck.
+    act(() => { deck.made.at(-1)!.onCell(3); });
+    expect(screen.getByText(/Preview at bar/)).toBeInTheDocument();
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+    try {
+      fireEvent(document, new Event('visibilitychange'));
+      expect(deck.made.at(-1)!.stop).toHaveBeenCalled();
+      expect(screen.queryByText(/Preview at bar/)).toBeNull();
+    } finally {
+      hidden.mockRestore();
+    }
+  });
+
+});
+
+// S3-0059-07: a stem that couldn't be loaded is named unavailable and can't be edited, while the rest still works
+describe('a studio with a stem missing', () => {
+  afterEach(() => {
+    deck.lost = undefined;
+    deck.made.length = 0;
+    window.localStorage.removeItem('selecta.studio.abc');
+  });
+
+  it('marks that lane unavailable, ignores presses on it, and leaves the other lanes working', async () => {
+    deck.lost = ['b_bass'];
+    open();
+    const [lost] = await screen.findAllByRole('button', { name: /^Song 2 bass, bars? 1\D.*unavailable$/i });
+    expect(lost).toHaveAttribute('aria-disabled', 'true');
+    const before = lost.getAttribute('aria-pressed');
+    fireEvent.click(lost);
+    expect(lost).toHaveAttribute('aria-pressed', before);
+    const voice = await square('Song 1 voice, square 1');
+    expect(voice).not.toHaveAttribute('aria-disabled');
+    fireEvent.click(voice);
+    expect(voice).toHaveAttribute('aria-pressed', 'false');
+  });
+});

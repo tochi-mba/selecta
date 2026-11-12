@@ -33,7 +33,7 @@ KINDS = [
 ]
 PY_TEST = re.compile(r"^\s*(?:async\s+)?def (test_\w+)\s*\(", re.MULTILINE)
 TS_TEST = re.compile(
-    r"\b(?:it|test)(?:\.(?:skip|only|fixme|fails))?\(\s*(['\"`])((?:\\.|(?!\1).)*)\1"
+    r"\b(?:it|test)(?:\.(?:skip|only|fixme|fails))?\(\s*(['\"`])((?:\\.|(?!\1)[^\\])*)\1"
 )
 
 
