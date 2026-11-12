@@ -1,3 +1,4 @@
+import { appendFileSync } from 'node:fs';
 import { act, render, screen } from '@testing-library/react';
 import { Profiler } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -51,11 +52,14 @@ describe('r8c Studio playhead', () => {
     ms = 0;
     const made = deck.made.at(-1)!;
     for (let cell = 0; cell < CELLS; cell += 1) act(() => made.onCell(cell));
-    console.info(`[r8c] studio, playhead over ${CELLS} cells x 8 lanes: ${commits} commits, ${ms.toFixed(1)} ms`);
+    const line = `[r8c] studio, playhead over ${CELLS} cells x 8 lanes: ${commits} commits, ${ms.toFixed(1)} ms`;
+    console.info(line);
+    if (process.env.R8C_METRICS) appendFileSync(process.env.R8C_METRICS, `${line}
+`);
     expect(commits).toBe(CELLS);
     const lit = [...document.querySelectorAll('.studio-cell.now')].map((cell) => cell.getAttribute('data-cell'));
     expect(lit).toHaveLength(8);
     expect(lit.every((cell) => cell?.endsWith(`-${CELLS - 1}`))).toBe(true);
-    expect(screen.getByRole('button', { name: /^Song 1 voice, bars 1/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /^Song 1 voice, bars 1\D/ })).toHaveAttribute('aria-pressed', 'true');
   });
 });

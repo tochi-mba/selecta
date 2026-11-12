@@ -1,3 +1,4 @@
+import { appendFileSync } from 'node:fs';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { Profiler, ProfilerOnRenderCallback, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -18,7 +19,11 @@ const tally = (): [Tally, ProfilerOnRenderCallback] => {
   return [seen, (_id, _phase, actual) => { seen.commits += 1; seen.ms += actual; }];
 };
 const report = (what: string, seen: Tally) => {
-  console.info(`[r8c] ${what}: ${seen.commits} commits, ${seen.ms.toFixed(1)} ms`);
+  const line = `[r8c] ${what}: ${seen.commits} commits, ${seen.ms.toFixed(1)} ms`;
+  console.info(line);
+  // R8C_METRICS names a file to collect the numbers in, since a passing test's console may be hidden
+  if (process.env.R8C_METRICS) appendFileSync(process.env.R8C_METRICS, `${line}
+`);
 };
 
 const longMix = (count: number): MixItem[] => songs(...Array.from({ length: count - 1 }, (_, index) => seam('ready', `s${index}`)));

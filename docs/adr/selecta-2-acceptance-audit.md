@@ -35,7 +35,7 @@
 | [ADR-0026](adr-0026-api-compatibility.md) | In progress | 9 of 9 | none | yes |
 | [ADR-0027](adr-0027-explanations-and-feedback.md) | In progress | 5 of 7 | T0134, T0135 | no |
 | [ADR-0028](adr-0028-recovery-and-multitab.md) | In progress | 6 of 7 | T0097 | no |
-| [ADR-0029](adr-0029-testing-and-quality.md) | In progress | 12 of 22 | T0014, T0017, T0259, T0260, T0261, T0262, T0264, T0265, T0266, T0267 | no |
+| [ADR-0029](adr-0029-testing-and-quality.md) | In progress | 13 of 22 | T0014, T0017, T0259, T0260, T0261, T0262, T0264, T0266, T0267 | no |
 | [ADR-0030](adr-0030-migration-and-release.md) | Implemented | 13 of 23 | T0018, T0019, T0253, T0258, T0274, T0275, T0276, T0277, T0278, T0279 | no |
 | [ADR-0031](adr-0031-pwa-and-browsers.md) | In progress | 2 of 6 | T0061, T0062, T0064, T0065 | no |
 | [ADR-0032](adr-0032-diagnostics-and-operations.md) | Implemented | 7 of 7 | none | yes |
@@ -538,7 +538,7 @@ Acceptance criteria:
 | T0262 | no | Needs a person | open |
 | T0263 | yes | Done | `web/e2e/t0263-keyboard-workflows.e2e.ts` walks each workflow start to finish in Edge with keys only (no click or focus() call; every control reached with Tab or the page's own shortcut): `T0263 request: ask for a song, cancel it and close, from the keyboard alone`, `T0263 Mixes: start a mix from the Mixes page with Tab and Enter`, `T0263 Edit: move a song down and back with its handle, focus staying on it`, `T0263 Studio: open a transition, reach the Studio, turn a square over and leave, by keyboard`, `T0263 Library: search with /, open a song’s menu and add it to the mix, by keyboard`, `T0263 export: open the save dialog from Edit, start saving, cancel it and close back to the button` (focus held in the dialog, then returned to Download audio), `T0263 study: open a study, grade a version and answer, by keyboard to the end` (both clips played with Space, then Prefer A with grade 4 posted). 7 passed 2026-11-12 (Playwright, Edge, dist-rb, slot-locked). No app change was needed. Whether the walk is comfortable is a person's judgement, tracked as P0126 in the polish checklist. |
 | T0264 | no | Needs a person | open |
-| T0265 | no | Partly | open |
+| T0265 | yes | Done | Profiled 2026-11-12 on the shared 4-core i7-10510U laptop (Windows 11, Edge 157). `tests/test_t0265_constrained_profile.py` (1 passed): 20,500 songs paged idle p95 105.7 ms; with every thread busy, analysis writing and a real seam render running, p95 356.1 / worst 437.5 ms; plus a nearly full drive, p95 482.0 / worst 551.3 ms; renders finished with real audio (38.3 s, 47.8 s) and the stem cache fell to its 512 MB floor. `web/e2e/t0265-constrained-profiles.e2e.ts` (2 passed, CPU throttled 4x during real server renders): 120-song Edit opened in 10.3 s, moves worst 352.9 ms, focus kept; 64-cell Studio worst 303.1 ms; no long task over the 500 ms budget. |
 | T0266 | no | Needs a person | open |
 | T0267 | no | Needs a person | open |
 | T0268 | yes | Done | `tests/test_api_contracts.py`, `web/e2e/pages.e2e.ts`. |

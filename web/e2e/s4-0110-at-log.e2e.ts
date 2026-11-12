@@ -47,7 +47,9 @@ test('S4-0110 automated accessibility log: axe and a keyboard walk on every page
         if (!element || element === document.body) return { role: 'body', name: '', visible: false };
         const labelledBy = element.getAttribute('aria-labelledby');
         const byId = labelledBy ? labelledBy.split(/\s+/).map((id) => document.getElementById(id)?.textContent ?? '').join(' ') : '';
-        const label = element.id ? document.querySelector(`label[for="${CSS.escape(element.id)}"]`)?.textContent ?? '' : '';
+        // explicit and wrapping labels both count, as they do for the accessibility tree
+        const labels = (element as HTMLInputElement).labels;
+        const label = labels?.length ? [...labels].map((one) => one.textContent ?? '').join(' ') : '';
         const name = (element.getAttribute('aria-label') ?? (byId || label || element.textContent || element.getAttribute('title') || element.getAttribute('placeholder') || '')).trim().replace(/\s+/g, ' ').slice(0, 60);
         const box = element.getBoundingClientRect();
         const style = getComputedStyle(element);
