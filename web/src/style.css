@@ -106,7 +106,7 @@ legend { padding: 0; margin-bottom: var(--space-2); font-weight: 600; }
 .playhead, .seam-mark { position: absolute; top: 0; height: 68px; width: 2px; }
 .playhead { background: var(--ink); }
 .seam-mark { background: var(--playing); width: 3px; }
-.seam-mark::after { content: 'seam'; position: absolute; top: -16px; left: -12px; font: 0.68rem var(--mono); color: var(--playing); }
+.seam-mark::after { content: 'seam'; position: absolute; top: -16px; left: -12px; font: 0.68rem var(--mono); color: var(--playing); white-space: nowrap; }
 .lyrics { min-height: 7.5em; margin: var(--space-2) 0 var(--space-5); }
 .lyrics p { margin: 0 0 var(--space-dense); transition: color var(--motion-reveal) var(--motion-ease); }
 .lyrics .sung { font: 800 clamp(1.4rem, 4.4vw, 2.5rem) / 1.12 var(--display); letter-spacing: -0.02em; }

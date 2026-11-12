@@ -76,12 +76,14 @@ export const LibraryRow = memo(function LibraryRow({
         {searched && song.match && <small className="hint" aria-label={`Search match: ${song.match}`}>{song.match}</small>}
       </div>
       <small className="facts song-columns">
-        <span>{song.bpm !== null ? `${Math.round(song.bpm)} BPM` : 'Not analysed'}</span>
+        {/* S4-0091-05: the spaces between facts are dropped by the flex layout but keep NVDA from
+            running them together ("120 BPM8A1:30Ready") when it reads the row as one line */}
+        <span>{song.bpm !== null ? `${Math.round(song.bpm)} BPM` : 'Not analysed'}</span>{' '}
         {/* LX-0344-03: an unknown key says so, rather than leaving a bare dash */}
-        <span>{song.camelot ?? (song.bpm !== null ? 'Key unknown' : 'No key yet')}</span>
-        <span>{clock(song.duration)}</span>
-        {lyricsFlag && song.lyric_status === 'synced' && <span>lyrics</span>}
-      </small>
+        <span>{song.camelot ?? (song.bpm !== null ? 'Key unknown' : 'No key yet')}</span>{' '}
+        <span>{clock(song.duration)}</span>{' '}
+        {lyricsFlag && song.lyric_status === 'synced' && <><span>lyrics</span>{' '}</>}
+      </small>{' '}
       <div className="song-readiness">
         <Status kind={facts.kind}>{facts.words}</Status>
         {facts.reason && !facts.canStartMix && <small className="hint song-why">{facts.reason}</small>}

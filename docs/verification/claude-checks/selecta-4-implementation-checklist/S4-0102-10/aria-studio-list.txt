@@ -1,0 +1,193 @@
+- region "Stem studio":
+  - heading "Shape transition 1" [level=3]
+  - paragraph: Morning Light into Slow Tide
+  - button "Play preview"
+  - button "Close"
+  - term: Working copy
+  - definition: Changed, not applied yet
+  - term: Recovered from this browser
+  - definition: Nothing to recover
+  - term: Applied to the mix
+  - definition: Your shape
+  - term: Rendered audio
+  - definition: Not rendered yet, about under a minute
+  - paragraph:
+    - text: "Two songs, four parts per song: voice, drums, bass and melody."
+    - button "What is studio lane?"
+    - text: Each square is 2 bars in that song.
+    - button "What is cell?"
+    - text: The Grid and List change the same exact cells. Tap one to turn that part on or off; press a name to hear only that part during a preview.
+    - button "What is solo?"
+  - paragraph: Previewing pauses the main mix. After stopping or closing Studio, use the main player to resume it.
+  - status: Unsaved changes - not applied to the mix. Your work is kept on this browser when you close Studio.
+  - button "Let Selecta arrange it"
+  - button "Fine tune mine"
+  - button "What is Selecta’s suggestion?"
+  - group "Ready-made shapes":
+    - button "Keep the first voice longer"
+    - button "Bring the new drums in early"
+    - button "Strip it back for the swap"
+    - button "Trade one at a time"
+  - group "Studio editor mode":
+    - button "Shape"
+    - button "Detailed grid"
+    - button "Detailed list" [pressed]
+  - region "Morning Light":
+    - heading "Morning Light" [level=4]
+    - group "Voice":
+      - text: Voice
+      - button "Hear only voice"
+      - checkbox "bars 1–2"
+      - text: bars 1–2
+      - checkbox "bars 3–4" [checked]
+      - text: bars 3–4
+      - checkbox "bars 5–6" [checked]
+      - text: bars 5–6
+      - checkbox "bars 7–8" [checked]
+      - text: bars 7–8
+      - checkbox "bars 9–10"
+      - text: bars 9–10
+      - checkbox "bars 11–12"
+      - text: bars 11–12
+      - checkbox "bars 13–14"
+      - text: bars 13–14
+      - checkbox "bars 15–16"
+      - text: bars 15–16
+    - group "Drums":
+      - text: Drums
+      - button "Hear only drums"
+      - checkbox "bars 1–2" [checked]
+      - text: bars 1–2
+      - checkbox "bars 3–4" [checked]
+      - text: bars 3–4
+      - checkbox "bars 5–6" [checked]
+      - text: bars 5–6
+      - checkbox "bars 7–8" [checked]
+      - text: bars 7–8
+      - checkbox "bars 9–10"
+      - text: bars 9–10
+      - checkbox "bars 11–12"
+      - text: bars 11–12
+      - checkbox "bars 13–14"
+      - text: bars 13–14
+      - checkbox "bars 15–16"
+      - text: bars 15–16
+    - group "Bass":
+      - text: Bass
+      - button "Hear only bass"
+      - checkbox "bars 1–2" [checked]
+      - text: bars 1–2
+      - checkbox "bars 3–4" [checked]
+      - text: bars 3–4
+      - checkbox "bars 5–6" [checked]
+      - text: bars 5–6
+      - checkbox "bars 7–8" [checked]
+      - text: bars 7–8
+      - checkbox "bars 9–10"
+      - text: bars 9–10
+      - checkbox "bars 11–12"
+      - text: bars 11–12
+      - checkbox "bars 13–14"
+      - text: bars 13–14
+      - checkbox "bars 15–16"
+      - text: bars 15–16
+    - group "Melody":
+      - text: Melody
+      - button "Hear only melody"
+      - checkbox "bars 1–2" [checked]
+      - text: bars 1–2
+      - checkbox "bars 3–4" [checked]
+      - text: bars 3–4
+      - checkbox "bars 5–6" [checked]
+      - text: bars 5–6
+      - checkbox "bars 7–8" [checked]
+      - text: bars 7–8
+      - checkbox "bars 9–10"
+      - text: bars 9–10
+      - checkbox "bars 11–12"
+      - text: bars 11–12
+      - checkbox "bars 13–14"
+      - text: bars 13–14
+      - checkbox "bars 15–16"
+      - text: bars 15–16
+  - region "Slow Tide":
+    - heading "Slow Tide" [level=4]
+    - group "Voice":
+      - text: Voice
+      - button "Hear only voice"
+      - checkbox "bars 1–2" [checked]
+      - text: bars 1–2
+      - checkbox "bars 3–4" [checked]
+      - text: bars 3–4
+      - checkbox "bars 5–6" [checked]
+      - text: bars 5–6
+      - checkbox "bars 7–8" [checked]
+      - text: bars 7–8
+      - checkbox "bars 9–10"
+      - text: bars 9–10
+      - checkbox "bars 11–12"
+      - text: bars 11–12
+      - checkbox "bars 13–14"
+      - text: bars 13–14
+      - checkbox "bars 15–16"
+      - text: bars 15–16
+    - group "Drums":
+      - text: Drums
+      - button "Hear only drums"
+      - checkbox "bars 1–2" [checked]
+      - text: bars 1–2
+      - checkbox "bars 3–4" [checked]
+      - text: bars 3–4
+      - checkbox "bars 5–6" [checked]
+      - text: bars 5–6
+      - checkbox "bars 7–8" [checked]
+      - text: bars 7–8
+      - checkbox "bars 9–10"
+      - text: bars 9–10
+      - checkbox "bars 11–12"
+      - text: bars 11–12
+      - checkbox "bars 13–14"
+      - text: bars 13–14
+      - checkbox "bars 15–16"
+      - text: bars 15–16
+    - group "Bass":
+      - text: Bass
+      - button "Hear only bass"
+      - checkbox "bars 1–2" [checked]
+      - text: bars 1–2
+      - checkbox "bars 3–4" [checked]
+      - text: bars 3–4
+      - checkbox "bars 5–6" [checked]
+      - text: bars 5–6
+      - checkbox "bars 7–8" [checked]
+      - text: bars 7–8
+      - checkbox "bars 9–10"
+      - text: bars 9–10
+      - checkbox "bars 11–12"
+      - text: bars 11–12
+      - checkbox "bars 13–14"
+      - text: bars 13–14
+      - checkbox "bars 15–16"
+      - text: bars 15–16
+    - group "Melody":
+      - text: Melody
+      - button "Hear only melody"
+      - checkbox "bars 1–2" [checked]
+      - text: bars 1–2
+      - checkbox "bars 3–4" [checked]
+      - text: bars 3–4
+      - checkbox "bars 5–6" [checked]
+      - text: bars 5–6
+      - checkbox "bars 7–8" [checked]
+      - text: bars 7–8
+      - checkbox "bars 9–10"
+      - text: bars 9–10
+      - checkbox "bars 11–12"
+      - text: bars 11–12
+      - checkbox "bars 13–14"
+      - text: bars 13–14
+      - checkbox "bars 15–16"
+      - text: bars 15–16
+  - button "Apply to this transition"
+  - button "What is applied?"
+  - button "Start again"
