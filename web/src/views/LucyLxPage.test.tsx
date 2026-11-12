@@ -151,11 +151,11 @@ describe('LX-0357-04 and LX-0363-04 unsent words belong to one conversation', ()
   });
 });
 
-describe('LX-0363-05 recovery when Selecta can’t be reached', () => {
+describe('LX-0363-05 recovery when SelectaDJ can’t be reached', () => {
   it('says what is shown may be out of date and keeps what is typed', async () => {
     fakeBackend({ 'GET /lucy/status': () => { throw new TypeError('Failed to fetch'); } });
     render(<Lucy conversation={null} setMixData={vi.fn()} player={player} />);
-    expect(await screen.findByText(/Can’t reach Selecta right now\. What’s shown may be out of date, and anything you type is kept\./)).toBeInTheDocument();
+    expect(await screen.findByText(/Can’t reach SelectaDJ right now\. What’s shown may be out of date, and anything you type is kept\./)).toBeInTheDocument();
     await userEvent.type(await box(), 'still here');
     expect(await box()).toHaveValue('still here');
     expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();

@@ -499,6 +499,19 @@
   /* room for a one-line current lyric here, so the reserve itself doesn't push it below the fold */
   .now.stage .lyrics { --stage-sung: clamp(2.4rem, min(7vw, 9vh), 6rem); min-height: calc(var(--stage-sung) * 1.12 + var(--stage-line) * 1.5 * 2 + 2rem); }
 }
+/* Laptop-height Stage (1280 to 1920 wide, 761 to 1050 tall, e.g. 1440x900): a three-line title, the
+   visualiser and the countdown left the current lyric starting at the bottom edge, under the floating
+   Pause and Exit buttons. Those buttons get their own room at the bottom, the visualiser and countdown
+   give up some height, and the sung line sizes to the height too, so the whole current line shows. */
+@media (min-width: 761px) and (min-height: 761px) and (max-height: 1050px) {
+  .now.stage { padding-block: 3vh calc(var(--control-height) + 2 * var(--space-4) + var(--safe-bottom)); }
+  .now.stage .music-visualizer, .now.stage .music-visualizer.focused { height: clamp(64px, 12svh, 130px); margin: 0.5vh 0 1vh; }
+  .now.stage .handoff { padding: var(--space-3) var(--space-4); margin: 0.5vh 0 1.5vh; }
+  .now.stage .countdown-track { height: clamp(20px, 4vh, 40px); }
+  .now.stage .countdown-number strong { font-size: clamp(2rem, 6vh, 3.5rem); }
+  .now.stage .lyrics .sung { font-size: clamp(2.4rem, min(6vw, 8.5vh), 6rem); }
+  .now.stage .lyrics { --stage-sung: clamp(2.4rem, min(6vw, 8.5vh), 6rem); }
+}
 /* A phone-width Stage (MP-0285-04): the countdown is a compact line, not a second headline, so the lyrics
    keep the most room under it */
 @media (max-width: 760px) {

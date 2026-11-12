@@ -165,7 +165,7 @@ describe('the song adder', () => {
 describe('the options for a seam', () => {
   const options = {
     moves: [
-      { name: 'auto', label: 'Let Selecta choose', description: '', available: true, reason: null, blends: false, rides: false, uses_cues: false, uses_phrase: false },
+      { name: 'auto', label: 'Let SelectaDJ choose', description: '', available: true, reason: null, blends: false, rides: false, uses_cues: false, uses_phrase: false },
       { name: 'vocal_ride', label: 'Vocal ride', description: '', available: true, reason: null, blends: true, rides: true, uses_cues: true, uses_phrase: false },
       { name: 'delay_throw', label: 'Delay throw', description: '', available: true, reason: null, blends: false, rides: false, uses_cues: true, uses_phrase: false },
     ],

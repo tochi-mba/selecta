@@ -178,11 +178,17 @@ export function Lucy({ conversation, setMixData, player }: LucyProps) {
   const lastMessage = view.messages[view.messages.length - 1];
   const settledCards = Object.values(view.cards).filter((card) => card.status !== 'queued' && card.status !== 'running').length;
   const contentKey = `${view.messages.length}:${lastMessage?.content.length ?? 0}:${lastMessage?.status}:${view.notes.length}:${view.planOrder.length}:${settledCards}:${pending?.state}:${view.permissions.length}`;
-  const sticky = useStickToBottom(contentKey, view.messages.length, split || tab === 'chat');
+  const sticky = useStickToBottom(contentKey, view.messages.length, split || tab === 'chat', conversation);
+  // still going: Lucy is working, or a reply is still arriving
+  const ongoing = running || (!!pending && pending.state !== 'failed') || lastMessage?.status === 'streaming';
+  const ongoingRef = useRef(ongoing);
+  ongoingRef.current = ongoing;
 
+  // A conversation opens at its top, heading first. Only one that is still going opens at the newest
+  // message, and its heading is still a scroll (or Home) away (LX, 2026-11-12).
   useEffect(() => {
     if (convo.load.state !== 'ready') return;
-    const frame = window.requestAnimationFrame(() => window.scrollTo({ top: document.documentElement.scrollHeight }));
+    const frame = window.requestAnimationFrame(() => window.scrollTo({ top: ongoingRef.current ? document.documentElement.scrollHeight : 0 }));
     return () => window.cancelAnimationFrame(frame);
   }, [conversation, convo.load.state]);
 

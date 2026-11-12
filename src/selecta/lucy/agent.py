@@ -65,8 +65,16 @@ class Runner:
         conn.execute(
             "INSERT INTO lucy_runs(id,turn_id,conversation_id,attempt,state,provider,limits,"
             "started_at) VALUES(?,?,?,?,?,?,?,?)",
-            (run, turn["id"], conversation, attempt, "queued", status["provider"]["kind"],
-             json.dumps(config["budgets"]), now_iso()),
+            (
+                run,
+                turn["id"],
+                conversation,
+                attempt,
+                "queued",
+                status["provider"]["kind"],
+                json.dumps(config["budgets"]),
+                now_iso(),
+            ),
         )
         conn.commit()
         with self.lock:
@@ -74,13 +82,21 @@ class Runner:
             if older is not None:
                 older.cancel.set()
                 older.abort.abort("superseded by a newer message")
-            active = Active(run, turn["id"], conversation, threading.Event(), AbortController(),
-                            attempt)
+            active = Active(
+                run, turn["id"], conversation, threading.Event(), AbortController(), attempt
+            )
             self.active[conversation] = active
-        events.append(conn, conversation, "run.state", {"state": "queued", "cycles": 0,
-                                                        "steps": 0}, turn=turn["id"], run=run)
-        thread = threading.Thread(target=self._thread, args=(app, active), daemon=True,
-                                  name=f"lucy-{run}")
+        events.append(
+            conn,
+            conversation,
+            "run.state",
+            {"state": "queued", "cycles": 0, "steps": 0},
+            turn=turn["id"],
+            run=run,
+        )
+        thread = threading.Thread(
+            target=self._thread, args=(app, active), daemon=True, name=f"lucy-{run}"
+        )
         self.threads = [t for t in self.threads if t.is_alive()] + [thread]
         thread.start()
         return run
@@ -119,18 +135,36 @@ def recover(conn) -> int:
     schema.ensure(conn)
     stuck = conn.execute(
         "SELECT id, conversation_id, turn_id FROM lucy_runs WHERE state NOT IN "
-        "('completed','failed','cancelled','interrupted','superseded')").fetchall()
+        "('completed','failed','cancelled','interrupted','superseded')"
+    ).fetchall()
     for row in stuck:
-        conn.execute("UPDATE lucy_runs SET state='interrupted', ended_at=? WHERE id=?",
-                     (now_iso(), row["id"]))
-        conn.execute("UPDATE lucy_messages SET status='interrupted' WHERE run_id=? AND "
-                     "status='streaming'", (row["id"],))
-        conn.execute("UPDATE lucy_turns SET status='interrupted' WHERE id=? AND status IN "
-                     "('queued','running')", (row["turn_id"],))
-        events.append(conn, row["conversation_id"], "run.state",
-                      {"state": "interrupted", "cycles": 0, "steps": 0,
-                       "error": "Selecta restarted while Lucy was working."},
-                      turn=row["turn_id"], run=row["id"], commit=False)
+        conn.execute(
+            "UPDATE lucy_runs SET state='interrupted', ended_at=? WHERE id=?",
+            (now_iso(), row["id"]),
+        )
+        conn.execute(
+            "UPDATE lucy_messages SET status='interrupted' WHERE run_id=? AND status='streaming'",
+            (row["id"],),
+        )
+        conn.execute(
+            "UPDATE lucy_turns SET status='interrupted' WHERE id=? AND status IN "
+            "('queued','running')",
+            (row["turn_id"],),
+        )
+        events.append(
+            conn,
+            row["conversation_id"],
+            "run.state",
+            {
+                "state": "interrupted",
+                "cycles": 0,
+                "steps": 0,
+                "error": "SelectaDJ restarted while Lucy was working.",
+            },
+            turn=row["turn_id"],
+            run=row["id"],
+            commit=False,
+        )
     conn.commit()
     return len(stuck)
 
@@ -175,8 +209,9 @@ class Writer:
         self.buffer = ""
         self.flushed_at = time.monotonic()
         if self.flushed_at - self.persisted_at >= PERSIST_SECONDS:
-            self.ctx.conn.execute("UPDATE lucy_messages SET content=? WHERE id=?",
-                                  (self.content, self.message))
+            self.ctx.conn.execute(
+                "UPDATE lucy_messages SET content=? WHERE id=?", (self.content, self.message)
+            )
             self.ctx.conn.commit()
             self.persisted_at = self.flushed_at
 
@@ -230,22 +265,39 @@ async def _run(app: Any, active: Active) -> None:
     turn = conversations.turn_by_id(conn, active.turn)
     has_proposal = bool(conversations.get(conn, active.conversation)["proposal_id"])
     ctx = tools.LucyCtx(
-        conn=conn, app=app, conversation=active.conversation, turn=active.turn, run=active.run,
-        turn_text=turn["text"], turn_kind=intent.classify(turn["text"], has_proposal),
-        selection=turn["selection"], expected=turn["expected_revision"], attempt=active.attempt,
+        conn=conn,
+        app=app,
+        conversation=active.conversation,
+        turn=active.turn,
+        run=active.run,
+        turn_text=turn["text"],
+        turn_kind=intent.classify(turn["text"], has_proposal),
+        selection=turn["selection"],
+        expected=turn["expected_revision"],
+        attempt=active.attempt,
     )
     if ctx.expected is None and has_proposal:
-        row = conn.execute("SELECT p.current_revision FROM lucy_proposals p JOIN "
-                           "lucy_conversations c ON c.proposal_id=p.id WHERE c.id=?",
-                           (active.conversation,)).fetchone()
+        row = conn.execute(
+            "SELECT p.current_revision FROM lucy_proposals p JOIN "
+            "lucy_conversations c ON c.proposal_id=p.id WHERE c.id=?",
+            (active.conversation,),
+        ).fetchone()
         ctx.expected = row[0] if row else None
     config = lucy_settings.get(conn)
     budgets = config["budgets"]
     deadline = time.monotonic() + budgets["max_seconds"]
-    message = conversations.add_message(conn, active.conversation, "assistant", "",
-                                        status="streaming", turn=active.turn, run=active.run)
-    ctx.emit("message.started", {"message": message["id"], "role": "assistant",
-                                 "seq": message["seq"]})
+    message = conversations.add_message(
+        conn,
+        active.conversation,
+        "assistant",
+        "",
+        status="streaming",
+        turn=active.turn,
+        run=active.run,
+    )
+    ctx.emit(
+        "message.started", {"message": message["id"], "role": "assistant", "seq": message["seq"]}
+    )
     conversations.set_turn_status(conn, active.turn, "running")
     cycles = 0
     final_state, error = "completed", None
@@ -267,34 +319,68 @@ async def _run(app: Any, active: Active) -> None:
     async def run_plan(plan_input: Any) -> dict:
         parsed = PlanSchema.safe_parse(plan_input)
         if not parsed.success:
-            text = format_invalid_plan([{"path": i.path, "message": i.message}
-                                        for i in parsed.issues])
+            text = format_invalid_plan(
+                [{"path": i.path, "message": i.message} for i in parsed.issues]
+            )
             return {"ok": False, "text": text, "steps": []}
         steps = parsed.data["steps"] if isinstance(parsed.data, dict) else []
         if ctx.steps_run + len(steps) > budgets["max_steps"]:
-            ctx.emit("run.limit", {"limit": "steps", "used": ctx.steps_run,
-                                   "max": budgets["max_steps"],
-                                   "text": "Lucy reached its step limit for this message."})
-            return {"ok": False, "steps": [], "text": f"Step limit reached ({budgets['max_steps']}"
-                    " per message). Answer with what you have."}
+            ctx.emit(
+                "run.limit",
+                {
+                    "limit": "steps",
+                    "used": ctx.steps_run,
+                    "max": budgets["max_steps"],
+                    "text": "Lucy reached its step limit for this message.",
+                },
+            )
+            return {
+                "ok": False,
+                "steps": [],
+                "text": f"Step limit reached ({budgets['max_steps']}"
+                " per message). Answer with what you have.",
+            }
         ctx.plan = new_id("plan")
-        listed = [{"id": s.get("id"), "op": s.get("op"), "family": tools.family_of(
-            str(s.get("op"))), "title": tools.title_of(str(s.get("op"))), "note": s.get("note")}
-            for s in steps if isinstance(s, dict)]
+        listed = [
+            {
+                "id": s.get("id"),
+                "op": s.get("op"),
+                "family": tools.family_of(str(s.get("op"))),
+                "title": tools.title_of(str(s.get("op"))),
+                "note": s.get("note"),
+            }
+            for s in steps
+            if isinstance(s, dict)
+        ]
         _set_state(ctx, "running_tools", cycles)
         ctx.emit("plan.started", {"steps": listed})
         waiting = "queued" if active.attempt == 1 else "retrying"
         for item in listed:
-            ctx.emit(f"step.{waiting}", {"op": item["op"], "family": item["family"],
-                                         "title": item["title"], "status": waiting,
-                                         "attempt": active.attempt, "note": item["note"],
-                                         "notices": [], "visual": {}},
-                     step=item["id"])
+            ctx.emit(
+                f"step.{waiting}",
+                {
+                    "op": item["op"],
+                    "family": item["family"],
+                    "title": item["title"],
+                    "status": waiting,
+                    "attempt": active.attempt,
+                    "note": item["note"],
+                    "notices": [],
+                    "visual": {},
+                },
+                step=item["id"],
+            )
         started = time.monotonic()
-        result = await runtime.execute(parsed.data, {
-            "ctx": ctx, "session": {"id": session}, "signal": active.abort.signal,
-            "allowWrites": True, "include": include,
-        })
+        result = await runtime.execute(
+            parsed.data,
+            {
+                "ctx": ctx,
+                "session": {"id": session},
+                "signal": active.abort.signal,
+                "allowWrites": True,
+                "include": include,
+            },
+        )
         for step in result["steps"]:
             if step["id"] not in ctx.finished_steps:
                 payload = tools.card_payload(None, step, active.attempt)
@@ -302,11 +388,22 @@ async def _run(app: Any, active: Active) -> None:
         reported = {step["id"] for step in result["steps"]}
         for item in listed:
             if item["id"] not in reported:
-                ctx.emit("step.failed", {**item, "status": "failed", "attempt": active.attempt,
-                                         "error": policy.clean_text(result["text"], 400),
-                                         "notices": [], "visual": {}}, step=item["id"])
-        ctx.emit("plan.completed", {"ok": result["ok"],
-                                    "duration_ms": int((time.monotonic() - started) * 1000)})
+                ctx.emit(
+                    "step.failed",
+                    {
+                        **item,
+                        "status": "failed",
+                        "attempt": active.attempt,
+                        "error": policy.clean_text(result["text"], 400),
+                        "notices": [],
+                        "visual": {},
+                    },
+                    step=item["id"],
+                )
+        ctx.emit(
+            "plan.completed",
+            {"ok": result["ok"], "duration_ms": int((time.monotonic() - started) * 1000)},
+        )
         ctx.finished_steps.clear()
         ctx.plan = None
         return result
@@ -322,52 +419,80 @@ async def _run(app: Any, active: Active) -> None:
                 await builtin.respond(ctx, writer.write, run_plan)
             else:
                 lib_count = len(ctx.lib().songs)
-                bound = bind_tool(runtime, {"name": TOOL_NAME, "include": include,
-                                            "allowWrites": True,
-                                            "dialect": "anthropic" if provider.name ==
-                                            "anthropic" else "loose", "strict": False},
-                                  {"ctx": ctx, "sessionId": session})
+                bound = bind_tool(
+                    runtime,
+                    {
+                        "name": TOOL_NAME,
+                        "include": include,
+                        "allowWrites": True,
+                        "dialect": "anthropic" if provider.name == "anthropic" else "loose",
+                        "strict": False,
+                    },
+                    {"ctx": ctx, "sessionId": session},
+                )
                 tool_list = [provider.tool(TOOL_NAME, bound["description"], bound["schema"])]
-                messages = [provider.user(m["content"]) if m["role"] == "user" else m
-                            for m in context.history(conn, active.conversation, active.turn)]
+                messages = [
+                    provider.user(m["content"]) if m["role"] == "user" else m
+                    for m in context.history(conn, active.conversation, active.turn)
+                ]
                 while True:
                     reason = stopped()
                     if reason:
                         final_state = reason
                         break
                     if cycles >= budgets["max_cycles"]:
-                        ctx.emit("run.limit", {"limit": "cycles", "used": cycles,
-                                               "max": budgets["max_cycles"],
-                                               "text": "Lucy reached its limit of work rounds."})
-                        await writer.write(f"\n\n(I stopped after {cycles} rounds of work, my "
-                                           "limit for one message. Say “continue” to keep going."
-                                           ")")
+                        ctx.emit(
+                            "run.limit",
+                            {
+                                "limit": "cycles",
+                                "used": cycles,
+                                "max": budgets["max_cycles"],
+                                "text": "Lucy reached its limit of work rounds.",
+                            },
+                        )
+                        await writer.write(
+                            f"\n\n(I stopped after {cycles} rounds of work, my "
+                            "limit for one message. Say “continue” to keep going."
+                            ")"
+                        )
                         break
                     remaining = deadline - time.monotonic()
                     if remaining <= 0:
-                        ctx.emit("run.limit", {"limit": "seconds", "used": budgets["max_seconds"],
-                                               "max": budgets["max_seconds"],
-                                               "text": "Lucy reached its time limit."})
-                        await writer.write("\n\n(I ran out of time for this message. Say "
-                                           "“continue” to pick up where I stopped.)")
+                        ctx.emit(
+                            "run.limit",
+                            {
+                                "limit": "seconds",
+                                "used": budgets["max_seconds"],
+                                "max": budgets["max_seconds"],
+                                "text": "Lucy reached its time limit.",
+                            },
+                        )
+                        await writer.write(
+                            "\n\n(I ran out of time for this message. Say "
+                            "“continue” to pick up where I stopped.)"
+                        )
                         break
                     cycles += 1
                     _set_state(ctx, "streaming", cycles)
-                    system = [context.INVARIANT, context.dynamic(conn, app, active.conversation,
-                                                                 ctx.selection, lib_count)]
+                    system = [
+                        context.INVARIANT,
+                        context.dynamic(conn, app, active.conversation, ctx.selection, lib_count),
+                    ]
                     # Count text still in the buffer too: whether it was flushed yet is timing.
                     written = writer.content + writer.buffer
                     if written and not written.endswith("\n"):
                         await writer.write("\n\n")
                     result = await asyncio.wait_for(
-                        provider.turn(system, messages, tool_list, writer.write), remaining)
+                        provider.turn(system, messages, tool_list, writer.write), remaining
+                    )
                     usage["tokens_in"] += result.tokens_in
                     usage["tokens_out"] += result.tokens_out
                     spent = cost_estimate(provider.model, usage["tokens_in"], usage["tokens_out"])
                     usage["cost_usd"] = spent
-                    conn.execute("UPDATE lucy_runs SET tokens_in=?, tokens_out=?, usage=? "
-                                 "WHERE id=?", (usage["tokens_in"], usage["tokens_out"],
-                                                json.dumps(usage), active.run))
+                    conn.execute(
+                        "UPDATE lucy_runs SET tokens_in=?, tokens_out=?, usage=? WHERE id=?",
+                        (usage["tokens_in"], usage["tokens_out"], json.dumps(usage), active.run),
+                    )
                     conn.commit()
                     ctx.emit("run.usage", dict(usage))
                     if result.stop == "refusal":
@@ -377,15 +502,27 @@ async def _run(app: Any, active: Active) -> None:
                         break
                     cap = budgets.get("spend_cap_usd")
                     if cap is not None and spent is not None and spent >= cap:
-                        ctx.emit("run.limit", {"limit": "spend", "used": spent, "max": cap,
-                                               "text": "Lucy reached the spending cap."})
+                        ctx.emit(
+                            "run.limit",
+                            {
+                                "limit": "spend",
+                                "used": spent,
+                                "max": cap,
+                                "text": "Lucy reached the spending cap.",
+                            },
+                        )
                         await writer.write("\n\n(I stopped at your spending cap for one message.)")
                         break
                     outputs = []
                     for call in result.calls:
                         if call.name != TOOL_NAME:
-                            outputs.append((call, f"Unknown tool '{call.name}'. Available tools: "
-                                            f"{TOOL_NAME}.", False))
+                            outputs.append(
+                                (
+                                    call,
+                                    f"Unknown tool '{call.name}'. Available tools: {TOOL_NAME}.",
+                                    False,
+                                )
+                            )
                         elif call.problem:
                             outputs.append((call, call.problem, False))
                         else:
@@ -401,11 +538,19 @@ async def _run(app: Any, active: Active) -> None:
     except ProviderError as problem:
         final_state = "failed"
         error = str(problem)
-        ctx.emit("error", {"code": problem.code, "message": str(problem),
-                           "recoverable": problem.recoverable})
-        await writer.write(("\n\n" if writer.content or writer.buffer else "") + str(problem)
-                           + (" Your mixes and music are unaffected; try again." if
-                              problem.recoverable else " Check Lucy’s settings."))
+        ctx.emit(
+            "error",
+            {"code": problem.code, "message": str(problem), "recoverable": problem.recoverable},
+        )
+        await writer.write(
+            ("\n\n" if writer.content or writer.buffer else "")
+            + str(problem)
+            + (
+                " Your mixes and music are unaffected; try again."
+                if problem.recoverable
+                else " Check Lucy’s settings."
+            )
+        )
     except TimeoutError:
         final_state, error = "interrupted", "Lucy ran out of time."
         await writer.write("\n\n(Lucy ran out of time for this message.)")
@@ -413,21 +558,43 @@ async def _run(app: Any, active: Active) -> None:
         final_state = "cancelled"
     except Exception as problem:  # noqa: BLE001 - a run must always end truthfully
         final_state, error = "failed", f"Something went wrong inside Lucy: {problem}"
-        ctx.emit("error", {"code": "internal", "message": "Something went wrong inside Lucy.",
-                           "recoverable": True})
-        await writer.write("\n\nSomething went wrong inside Lucy. Your mixes and music are safe; "
-                           "try again.")
+        ctx.emit(
+            "error",
+            {
+                "code": "internal",
+                "message": "Something went wrong inside Lucy.",
+                "recoverable": True,
+            },
+        )
+        await writer.write(
+            "\n\nSomething went wrong inside Lucy. Your mixes and music are safe; try again."
+        )
     finally:
         writer.flush()
-        status = {"completed": "complete", "cancelled": "cancelled", "superseded": "cancelled",
-                  "interrupted": "interrupted"}.get(final_state, "failed")
-        conversations.finish_message(conn, message["id"], writer.content, status,
-                                     revision=ctx.revisions[-1] if ctx.revisions else None)
-        ctx.emit("message.completed", {"message": message["id"], "status": status,
-                                       "content": writer.content})
+        status = {
+            "completed": "complete",
+            "cancelled": "cancelled",
+            "superseded": "cancelled",
+            "interrupted": "interrupted",
+        }.get(final_state, "failed")
+        conversations.finish_message(
+            conn,
+            message["id"],
+            writer.content,
+            status,
+            revision=ctx.revisions[-1] if ctx.revisions else None,
+        )
+        ctx.emit(
+            "message.completed",
+            {"message": message["id"], "status": status, "content": writer.content},
+        )
         _set_state(ctx, final_state, cycles, error)
-        turn_status = {"completed": "completed", "failed": "failed", "cancelled": "cancelled",
-                       "interrupted": "interrupted"}.get(final_state)
+        turn_status = {
+            "completed": "completed",
+            "failed": "failed",
+            "cancelled": "cancelled",
+            "interrupted": "interrupted",
+        }.get(final_state)
         if turn_status:
             conversations.set_turn_status(conn, active.turn, turn_status)
         events.prune(conn, active.conversation)

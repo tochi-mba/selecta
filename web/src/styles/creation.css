@@ -127,6 +127,8 @@
 .timeline .add-gap button:hover, .timeline .add-gap button:focus-visible { color: var(--text); border-color: var(--border-strong); }
 @media (pointer: coarse) {
   .timeline .add-gap button { min-height: 44px; }
+  /* S4-0094-02: a song's name is a 44px target on a touch screen; a mouse keeps the 30px line */
+  .timeline .song-select { min-height: 44px; display: flex; align-items: center; gap: var(--space-1); }
 }
 
 /* A long mix skips drawing what's far off screen. An open menu has to be able to leave its row, so that

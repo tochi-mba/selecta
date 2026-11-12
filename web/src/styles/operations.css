@@ -76,6 +76,12 @@
   .library-rows.library-cards { --library-row-estimate: 234px; }
   :root[data-density='compact'] .library-rows.library-cards { --library-row-estimate: 226px; }
 }
+/* Compact Library rows (finding 2026-11-12: compact was 118px against 126px, barely denser). The song's
+   motif sits beside its title instead of above it, a little smaller, so a one-line title takes one
+   line. Comfortable keeps the motif above the title. */
+:root[data-density='compact'] .library-rows:not(.library-cards) button.song-open { display: inline-flex; align-items: center; gap: var(--space-1); }
+:root[data-density='compact'] .library-rows:not(.library-cards) button.song-open .song-motif { width: 20px; height: 20px; margin: 0; }
+:root[data-density='compact'] .library-rows:not(.library-cards) button.song-open b { min-width: 0; }
 /* a row with its menu open is lifted over the rows after it: each row is its own stacking context
    (content-visibility, and the dimmed Never play row's opacity), so without this the next row paints over the menu */
 .library-rows .song-row:has([aria-expanded='true']) { content-visibility: visible; position: relative; z-index: 1; }

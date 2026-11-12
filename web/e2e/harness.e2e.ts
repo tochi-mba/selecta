@@ -23,12 +23,12 @@ test('a lost connection is noticed and recovered from on the fake clock, with no
   const restore = await failNetwork(page, 'offline');
   await expect(async () => {
     await page.clock.runFor(5_000);
-    await expect(page.getByText('Can’t reach Selecta.')).toBeVisible({ timeout: 500 });
+    await expect(page.getByText('Can’t reach SelectaDJ.')).toBeVisible({ timeout: 500 });
   }).toPass({ timeout: 20_000 });
   await restore();
   await expect(async () => {
     await page.clock.runFor(5_000);
-    await expect(page.getByText('Can’t reach Selecta.')).toHaveCount(0, { timeout: 500 });
+    await expect(page.getByText('Can’t reach SelectaDJ.')).toHaveCount(0, { timeout: 500 });
   }).toPass({ timeout: 20_000 });
 });
 
@@ -44,5 +44,5 @@ test('a server fault and a full disk reach the page as what they are', async ({ 
   await restore();
   await failNetwork(page, 'server', '**/api/library**');
   await page.goto('/library');
-  await expect(page.getByText(/Something went wrong inside Selecta/).first()).toBeVisible();
+  await expect(page.getByText(/Something went wrong inside SelectaDJ/).first()).toBeVisible();
 });

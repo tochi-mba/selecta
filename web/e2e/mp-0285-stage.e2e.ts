@@ -202,9 +202,9 @@ test('MP-0285-06 loading, instrumental, untimed and unavailable lyrics each say 
   await expect(page.locator('.stage .problem, .stage [role="alert"]').first()).toContainText(/Couldn’t load lyrics/);
 });
 
-for (const how of ['the computer asks', 'Still is chosen in Selecta'] as const) {
+for (const how of ['the computer asks', 'Still is chosen in SelectaDJ'] as const) {
   test(`MP-0285-07 when ${how}, Stage graphics hold still while the lyric and clock keep time`, async ({ page }) => {
-    if (how === 'Still is chosen in Selecta') {
+    if (how === 'Still is chosen in SelectaDJ') {
       await page.emulateMedia({ reducedMotion: 'no-preference' });
       await page.addInitScript(() => localStorage.setItem('selecta.prefs', JSON.stringify({ motion: 'still' })));
     }

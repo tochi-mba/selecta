@@ -9,7 +9,7 @@ import { Mixes } from './Mixes';
  * against the requested arc, and destination search tells no ready match apart from a failed search. */
 
 const pick: VibeCard = {
-  key: 'pick', name: 'Selecta’s pick', group: '', family: null, blurb: 'words', songs: 40, ready: true, needs: 0,
+  key: 'pick', name: 'SelectaDJ’s pick', group: '', family: null, blurb: 'words', songs: 40, ready: true, needs: 0,
   artists: ['Someone'], tempo: [100, 124], moves: 'Vocal rides', seconds: 3900,
 };
 

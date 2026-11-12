@@ -230,6 +230,14 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       }
     }
   }, [url, query, filter, sort]);
+  // The server came back after an outage: a library that failed to load tries again by itself,
+  // rather than waiting for Try again (2026-11-12 flow walk, server loss).
+  useEffect(() => {
+    if (!failed) return;
+    const back = () => void load();
+    window.addEventListener('selecta:back', back);
+    return () => window.removeEventListener('selecta:back', back);
+  }, [failed, load]);
   const loadNow = useRef(load);
   loadNow.current = load;
 

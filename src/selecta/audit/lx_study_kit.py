@@ -38,6 +38,14 @@ class Study:
     success: str
     timed: bool = False
     mobile: bool = False
+    hesitation: str = ""  # per-task study cards only: what counts as hesitating
+    setup: str = ""  # per-task study cards only: the state to put the fixture in first
+    pilot: str = ""  # per-task study cards only: the preparation walkthrough, never a result
+
+    @property
+    def card(self) -> bool:
+        """A per-task study card (WP3) also records confidence and hesitation on every outcome."""
+        return bool(self.hesitation)
 
 
 def _s(task, title, route, prompts, success, groups=("novice", "expert"), **kw) -> Study:
@@ -199,7 +207,235 @@ STUDIES: tuple[Study, ...] = (
         "Last proposal found and saved state stated correctly.",
     ),
 )
-BY_TASK = {study.task: study for study in STUDIES}
+
+# WP3 (triage 2026-11-12): one study card for each LX task whose last step is a short study with
+# people. Each card names the route on the made-up library, the state to set up, one neutral
+# uncoached prompt, what counts as success and as hesitation. Every outcome also records seconds
+# and a 1-5 confidence rating. The pilot line is Claude's walkthrough of the card at the stated SHA:
+# preparation that shows the task can be completed, never a participant or a result.
+HESITATE = "a pause over 10 s, a question to the facilitator, or "
+PILOT_SHA = "73298def"
+
+
+def _c(task, title, route, prompt, success, hesitation, setup="", groups=None) -> Study:
+    return Study(
+        task,
+        title,
+        route,
+        groups or ("novice", "expert"),
+        (prompt,),
+        success,
+        timed=True,
+        hesitation=HESITATE + hesitation,
+        setup=setup,
+        pilot=PILOTS.get(task, ""),
+    )
+
+
+PILOTS: dict[str, str] = {}
+CARDS: tuple[Study, ...] = (
+    _c(
+        "LX-0340-01",
+        "Collection-first journeys",
+        "/library",
+        "You want something to listen to from this collection. Show me how you would choose."
+        " Then find the song Same Name by Iris Vale.",
+        "Browses to a song and finds the exact recording without asking what a word means.",
+        "asking what any Library word means",
+    ),
+    _c(
+        "LX-0340-04",
+        "Browse versus manage",
+        "/library",
+        "Narrow the list to songs that need attention, then stop one song from ever playing.",
+        "Narrows with a visible control first, then finds Never play in the row's menu.",
+        "opening two or more menus before finding the record action",
+    ),
+    _c(
+        "LX-0341-03",
+        "Readiness meaning",
+        "/library",
+        "Looking only at the top of this page, how many songs could go into a mix right now?",
+        "Answers with the Ready count and does not confuse it with analysed songs or transitions.",
+        "reading a different count aloud first",
+        setup="Use the stress fixture (SELECTA_E2E_STRESS=1) so the counts differ.",
+    ),
+    _c(
+        "LX-0342-06",
+        "Zero-match recovery",
+        "/library",
+        "You searched and nothing came back. Get your songs back without losing the filter.",
+        "Clears only the search and the Needs attention filter stays on.",
+        "clearing everything and setting the filter again",
+        setup="Turn on Needs attention and search for zzqx before handing over.",
+    ),
+    _c(
+        "LX-0343-01",
+        "Frequent filters",
+        "/library",
+        "Show only the songs that are ready, then only the ones you have set aside.",
+        "Uses the Ready chip, then the Set aside chip, and says what each one shows.",
+        "hovering over three or more chips before choosing",
+    ),
+    _c(
+        "LX-0343-07",
+        "Empty and combined constraints",
+        "/library",
+        "Nothing shows. Say why, then bring back the song you were looking for.",
+        "Names both the search and the filter, then undoes one step and finds Episode 12.",
+        "clearing everything without first saying why the list is empty",
+        setup="Turn on Ready and search for Episode before handing over.",
+    ),
+    _c(
+        "LX-0344-04",
+        "Row action choice",
+        "/library",
+        "Add Last Call to the mix that is playing, then make it analyse sooner.",
+        "Finds both actions on the Last Call row, the second in its More menu.",
+        "opening a different row's menu first",
+    ),
+    _c(
+        "LX-0345-01",
+        "Cards versus list",
+        "/library (List view, then Card view)",
+        "Look at the list for 5 seconds, then at the cards for 5 seconds."
+        " Which would you use to pick something new, and why?",
+        "Names a reason tied to what the cards show (motif, title, artist, readiness).",
+        "asking what the two views are for",
+    ),
+    _c(
+        "LX-0346-02",
+        "Action priority",
+        "/library",
+        "On any row, show me the one thing you would most often do with a song.",
+        "Points to the row's one visible action and reaches the rest through More.",
+        "pointing at two different controls before deciding",
+    ),
+    _c(
+        "LX-0348-02",
+        "Facts before controls",
+        "/library?song=11",
+        "Without editing anything, tell me this song's tempo, key and length.",
+        "Reads tempo, key and length from the facts without opening an edit field.",
+        "opening a correction field to read a value",
+    ),
+    _c(
+        "LX-0348-06",
+        "Advanced facts",
+        "/library?song=11",
+        "Find where this song's file lives and when it was last analysed.",
+        "Opens the folded advanced section and reads the file and analysis facts.",
+        "scrolling past the advanced section twice",
+        groups=("expert",),
+    ),
+    _c(
+        "LX-0349-01",
+        "Correction form",
+        "/library?song=11",
+        "The tempo looks wrong. Before saving, tell me what a correction will change"
+        " and how you would undo it.",
+        "States the allowed format, the active value and what Reset does before pressing Save.",
+        "pressing Save before describing the effect",
+    ),
+    _c(
+        "LX-0349-04",
+        "Priority meaning",
+        "/library",
+        "Before pressing Prioritize on Last Call, tell me what it will change.",
+        "Says it moves the song up for analysis and keeps it cached, not that it plays sooner.",
+        "saying it changes play order and then correcting themself",
+    ),
+    _c(
+        "LX-0352-03",
+        "Empty versus no match",
+        "/library",
+        "For each of these two screens, say what is wrong and what you would do next.",
+        "Tells an empty filter from a search with no match and picks each screen's own action.",
+        "giving the same next step for both screens",
+        setup="Show Needs attention plus search zzqx, then Set aside with no search.",
+    ),
+    _c(
+        "LX-0353-01",
+        "Two creation paths",
+        "/mixes",
+        "Before you press anything: what would happen with each of the two ways to start?",
+        "Says Quick Play starts music now and Lucy plans first, before pressing either.",
+        "pressing a button to find out",
+    ),
+    _c(
+        "LX-0353-03",
+        "Lucy entry in 5 seconds",
+        "/mixes",
+        "Look at this page for 5 seconds. Where would you go to plan a mix with help?",
+        "Points to Create with Lucy within 5 seconds.",
+        "naming another control first",
+    ),
+    _c(
+        "LX-0354-01",
+        "Mood cards",
+        "/mixes",
+        "Pick one feeling card and tell me what it is, what it is based on and what its"
+        " button does.",
+        "Reads the name, the feeling and a real fact, and names the one action.",
+        "reading a different card's text as this card's",
+    ),
+    _c(
+        "LX-0354-03",
+        "Three action paths",
+        "/mixes",
+        "For one feeling, say what Play, Shape first and Save draft would each do."
+        " Do not press them.",
+        "Three different correct predictions; none says Save draft starts music.",
+        "giving two of them the same outcome",
+    ),
+    _c(
+        "LX-0357-01",
+        "First message",
+        "/mixes/lucy/<id> (new conversation)",
+        "Ask for a mix you would like, in your own words.",
+        "Types into the Message to Lucy box and sends a musical request unaided.",
+        "looking for a form or settings before typing",
+        setup="Turn Lucy on (built-in planner, no AI service); open a new conversation.",
+    ),
+    _c(
+        "LX-0359-01",
+        "Lifecycle words",
+        "/mixes/lucy/<id>",
+        "Is this mix only an idea, saved, or ready to play? How can you tell?",
+        "Names the stage shown and points to the words that say so.",
+        "asking what a stage word means",
+        setup="A conversation with one proposal from 'make me 6 songs'.",
+    ),
+    _c(
+        "LX-0361-04",
+        "Critique outcomes",
+        "/mixes/lucy/<id>",
+        "You asked Lucy to keep a song and make the mix calmer. Which of those did it do?",
+        "Reads each instruction's met, not met or unknown wording correctly.",
+        "scrolling the whole chat to work it out",
+        setup="Proposal, then the critique 'keep Morning Light and make it calmer'.",
+    ),
+    _c(
+        "LX-0362-01",
+        "Save draft versus Save and play",
+        "/mixes/lucy/<id> (Your mix)",
+        "Before pressing either, say what Save as draft and Save and play would each do.",
+        "Says only Save and play replaces what is playing; draft leaves the player alone.",
+        "pressing one to find out",
+        setup="A conversation with one proposal; open the Your mix tab.",
+    ),
+    _c(
+        "LX-0363-02",
+        "Archive versus delete",
+        "/mixes/lucy/<id> (Conversations)",
+        "You want this conversation out of the way but might want it back. What do you press,"
+        " and what would Delete do instead?",
+        "Chooses Archive and says Delete removes the chat but keeps drafts and music.",
+        "opening Delete's confirmation to read it",
+        setup="A conversation with one proposal; open the conversation list.",
+    ),
+)
+BY_TASK = {study.task: study for study in STUDIES + CARDS}
 
 
 def record_problems(record: dict) -> list[str]:
@@ -226,6 +462,13 @@ def record_problems(record: dict) -> list[str]:
             problems.append("every outcome needs success true or false")
         if study.timed and not isinstance(outcome.get("seconds"), (int, float)):
             problems.append("a timed study needs seconds on every outcome")
+        if study.card:
+            if outcome.get("confidence") not in (1, 2, 3, 4, 5):
+                problems.append("a study card needs confidence 1 to 5 on every outcome")
+            if not isinstance(outcome.get("hesitated"), bool):
+                problems.append("a study card needs hesitated true or false on every outcome")
+    if study.card and record.get("consent") is not True:
+        problems.append("a study card needs the consent line read and agreed")
     return problems
 
 
@@ -282,6 +525,37 @@ def render() -> str:
         ]
         lines += [f"- Prompt {n}: {p}" for n, p in enumerate(study.prompts, 1)]
         lines += [f"- Success: {study.success}", ""]
+    lines += [
+        "## Per-task study cards",
+        "",
+        "One card per LX task that closes with a short study (triage package WP3). Each is timed:",
+        "record `seconds`, `confidence` (1 to 5, asked after the task) and `hesitated` (true or",
+        'false, by the card\'s rule) on every outcome, plus `"consent": true` on the record.',
+        "",
+        f"Consent line, read before starting: {CONSENT}",
+        "",
+        "The pilot line on each card is Claude's own walkthrough on the made-up library, done to",
+        "check the task can be completed and the prompt is clear. It is preparation only: no",
+        "participant took part and it is not a study result.",
+        "",
+    ]
+    for card in CARDS:
+        lines += [
+            f"### {card.task} - {card.title}",
+            "",
+            f"- Route: {card.route}",
+            f"- Who: {' and '.join(card.groups)} (participant codes only)",
+        ]
+        if card.setup:
+            lines.append(f"- Set up first: {card.setup}")
+        lines += [
+            f"- Prompt (read as written, no coaching): {card.prompts[0]}",
+            f"- Success: {card.success}",
+            f"- Hesitation: {card.hesitation}.",
+            "- Record: seconds, confidence 1 to 5, hesitated, success",
+            f"- Pilot (preparation, not a result): {card.pilot or 'not piloted yet'}",
+            "",
+        ]
     return "\n".join(lines)
 
 

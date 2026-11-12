@@ -154,8 +154,16 @@ const nearBottom = () => window.innerHeight + window.scrollY >= document.documen
 
 /** Keeps the newest message in view only while someone is already reading at the bottom. Anyone who
  * has scrolled up to read stays where they are, and gets a count of what's new instead. */
-export function useStickToBottom(contentKey: string, messages: number, active: boolean) {
-  const atBottom = useRef(true);
+export function useStickToBottom(contentKey: string, messages: number, active: boolean, scope: string | null = null) {
+  // null until it's known: a conversation that has just opened is where the page put it (the top, or
+  // the newest message when it's still going), never pulled down just because it loaded (LX, 2026-11-12:
+  // a finished conversation opened about 360px down, under its own heading)
+  const atBottom = useRef<boolean | null>(null);
+  const opened = useRef(scope);
+  if (opened.current !== scope) {
+    opened.current = scope;
+    atBottom.current = null;
+  }
   const [fresh, setFresh] = useState(0);
   const seen = useRef(messages);
   useEffect(() => {
@@ -167,6 +175,7 @@ export function useStickToBottom(contentKey: string, messages: number, active: b
     return () => window.removeEventListener('scroll', scrolled);
   }, []);
   useLayoutEffect(() => {
+    if (atBottom.current === null) atBottom.current = nearBottom();
     if (active && atBottom.current) window.scrollTo({ top: document.documentElement.scrollHeight });
   }, [contentKey, active]);
   useEffect(() => {

@@ -161,7 +161,7 @@ test('P0036 Discover pair placeholders take the cards’ place, with the chord m
     await page.goto('/discover/harmonic');
     skeleton = await shapesOnly(page, 'Finding harmonic discoveries');
     await expect(page.locator('main .discoveries h2')).toHaveText('Songs that might share chords');
-    await expect(page.locator('main .discoveries > .hint').first()).toContainText('Selecta plays you the chords it heard');
+    await expect(page.locator('main .discoveries > .hint').first()).toContainText('SelectaDJ plays you the chords it heard');
     const head = (await boxes(page, 'main .discoveries h2'))[0];
     const pending = (await boxes(page, 'main .discoveries .skeleton-unit'))[0];
     await release();

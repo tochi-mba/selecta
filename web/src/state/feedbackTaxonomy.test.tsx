@@ -37,6 +37,6 @@ describe('the feedback taxonomy', () => {
     expect(problemKind(new ApiError('Broke', 500))).toBe('server');
     expect(problemKind(new ApiError('Off', 404, 'flag_off'))).toBe('off');
     expect(problemKind(new ApiError('Full', 507, 'storage_full'))).toBe('storage');
-    expect(problemKind(new Error('Can’t reach Selecta right now.'))).toBe('offline');
+    expect(problemKind(new Error('Can’t reach SelectaDJ right now.'))).toBe('offline');
   });
 });

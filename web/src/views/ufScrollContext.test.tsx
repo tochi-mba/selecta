@@ -33,6 +33,21 @@ describe('UF-0387-07 streaming and updates never take away your place', () => {
     expect(scrollTo).toHaveBeenCalledWith({ top: 2000 });
   });
 
+  it('a finished conversation opens at its top, under its heading, not pulled down to the newest message', () => {
+    pageAt(0, 3000);
+    const { rerender } = renderHook(({ text, count, scope }) => useStickToBottom(text, count, true, scope), {
+      initialProps: { text: '', count: 0, scope: 'c1' },
+    });
+    rerender({ text: 'twelve messages', count: 12, scope: 'c1' });
+    expect(scrollTo).not.toHaveBeenCalled();
+    // and opening another one from part way down the first starts it fresh too
+    pageAt(2200, 3000);
+    act(() => { window.dispatchEvent(new Event('scroll')); });
+    pageAt(0, 4000);
+    rerender({ text: 'another conversation', count: 20, scope: 'c2' });
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
   it('leaves you where you are once you scroll up, counts what is new, and takes you down only when asked', () => {
     const { result, rerender } = renderHook(({ text, count }) => useStickToBottom(text, count, true), {
       initialProps: { text: 'a', count: 1 },

@@ -30,7 +30,7 @@ describe('GP-0260-01/06 auditions and verdicts never change a mix', () => {
       'POST /discoveries/7/review': { ok: true },
     });
     render(<HarmonicDiscoveries />);
-    fireEvent.click(await screen.findByRole('button', { name: /Hear what Selecta heard/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Hear what SelectaDJ heard/ }));
     await screen.findByRole('list', { name: 'Four stages to hear' });
     fireEvent.click(screen.getByRole('button', { name: 'Yes' }));
     await waitFor(() => expect(calls.some((call) => call.path === '/discoveries/7/review')).toBe(true));

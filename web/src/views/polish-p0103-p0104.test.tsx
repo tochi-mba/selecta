@@ -67,7 +67,7 @@ describe('P0103 filter, query and focus survive details, a refused value, a fail
     const list = [row(1, 'Night One'), row(2, 'Night Two'), row(3, 'Night Three')];
     const calls = fakeBackend({
       'GET /library': { songs: list, total: list.length, next: null },
-      'POST /songs/2/correct': new Reply(500, { detail: 'Selecta had a problem saving that.' }),
+      'POST /songs/2/correct': new Reply(500, { detail: 'SelectaDJ had a problem saving that.' }),
     });
     show();
     const opener = await screen.findByRole('button', { name: 'Details for Night Two' });
@@ -98,7 +98,7 @@ describe('P0103 filter, query and focus survive details, a refused value, a fail
     await userEvent.clear(tempo);
     await userEvent.type(tempo, '128');
     await userEvent.click(within(details).getByRole('button', { name: 'Save correction' }));
-    const problem = await within(details).findByText('Selecta had a problem saving that.');
+    const problem = await within(details).findByText('SelectaDJ had a problem saving that.');
     await waitFor(() => expect(problem).toHaveFocus(), { timeout: 3000 });
     expect(tempo).toHaveValue(128);
 

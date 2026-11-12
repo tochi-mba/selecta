@@ -75,7 +75,7 @@ describe('SF-0230-05 storage maintenance', () => {
     expect(calls.some((call) => call.method === 'POST')).toBe(false);
     fireEvent.click(screen.getByRole('button', { name: 'Remove up to 1.5 GB' }));
     // the server kept priority stems, so less went than the preview's upper bound, and it says so
-    expect(await screen.findByText('Removed 1.3 GB. Selecta now keeps 1.2 GB it can make again.')).toBeInTheDocument();
+    expect(await screen.findByText('Removed 1.3 GB. SelectaDJ now keeps 1.2 GB it can make again.')).toBeInTheDocument();
     expect(calls.filter((call) => call.method === 'POST').map((call) => (call.body as { budget_gb: number }).budget_gb)).toEqual([1]);
   });
 

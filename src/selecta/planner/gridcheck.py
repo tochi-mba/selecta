@@ -152,10 +152,10 @@ def _row(index: int, clip: GridClip) -> str:
 _PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Selecta beat check</title>
+<title>SelectaDJ beat check</title>
 <style>{{style}}</style></head><body><main>
 <h1>Beat check</h1>
-<p class="lede">Clicks mark where Selecta thinks the beats are, with a higher click on each downbeat. In the last 8 seconds a soft drone plays the key it detected. Do the clicks sit in the pocket, and does the drone belong? <a href="index.html">Back to the transitions</a>.</p>
+<p class="lede">Clicks mark where SelectaDJ thinks the beats are, with a higher click on each downbeat. In the last 8 seconds a soft drone plays the key it detected. Do the clicks sit in the pocket, and does the drone belong? <a href="index.html">Back to the transitions</a>.</p>
 {{rows}}
 <footer>
 <button id="copy">Copy my answers</button><span id="status"></span>

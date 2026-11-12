@@ -49,9 +49,9 @@ describe('P0107 / P0111 storage controls reconcile to what the server confirmed'
   it('names budget, cache, free disk and untouched music separately', async () => {
     fakeBackend({ 'GET /storage': storage });
     show('storage');
-    expect(await screen.findByText('Made by Selecta, can be made again')).toBeInTheDocument();
+    expect(await screen.findByText('Made by SelectaDJ, can be made again')).toBeInTheDocument();
     expect(screen.getByText('1.0 GB of 3.0 GB allowed')).toBeInTheDocument();
-    expect(screen.getByText('Everything else Selecta keeps')).toBeInTheDocument();
+    expect(screen.getByText('Everything else SelectaDJ keeps')).toBeInTheDocument();
     expect(screen.getByText('Free on this drive')).toBeInTheDocument();
     expect(screen.getByText(/Your music files aren’t counted here/)).toBeInTheDocument();
   });

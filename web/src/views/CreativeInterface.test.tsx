@@ -88,7 +88,7 @@ describe('CI-0176-04 a machine suggestion is a candidate until someone rates it'
     });
     render(<HarmonicDiscoveries />);
     expect(await screen.findByRole('heading', { name: 'Songs that might share chords' })).toBeInTheDocument();
-    expect(screen.getByText(/Your answer only teaches Selecta what you hear\. It never adds anything to a mix\./)).toBeInTheDocument();
+    expect(screen.getByText(/Your answer only teaches SelectaDJ what you hear\. It never adds anything to a mix\./)).toBeInTheDocument();
   });
 });
 
@@ -106,7 +106,7 @@ describe('CI-0181-03/04 export outcomes', () => {
     const words = ['cancelled', 'expired', 'failed', 'interrupted'].map((state) => exportStage({ state: state as ExportJob['state'] }).words);
     expect(new Set(words).size).toBe(4);
     for (const said of words) expect(await screen.findByText(said)).toBeInTheDocument();
-    expect(screen.getByText(/isn’t in Selecta’s exports folder any more/)).toBeInTheDocument();
+    expect(screen.getByText(/isn’t in SelectaDJ’s exports folder any more/)).toBeInTheDocument();
     expect(screen.getByText('No room left on the drive.')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /download/ })).toBeNull();
     expect(exportStage({ state: 'nonsense' as ExportJob['state'] }).words).toBe('State unknown');
@@ -206,7 +206,7 @@ describe('CI-0172-04 a move that can’t be used says why', () => {
   it('greys out the move with its reason on hover and in a list the keyboard can reach', async () => {
     fakeBackend({
       'GET /mix/1/options': {
-        moves: [move('auto', 'Let Selecta choose', null), move('vocal_ride', 'Vocal ride', 'Needs a vocal cue that this song doesn’t have'),
+        moves: [move('auto', 'Let SelectaDJ choose', null), move('vocal_ride', 'Vocal ride', 'Needs a vocal cue that this song doesn’t have'),
           move('bass_swap_blend', 'Bass swap', 'These two are too far apart in tempo')],
         exits: [], entries: [], lengths: [], links: [], studio: { available: true, reason: null }, tempo_gap: 14, keys: ['8A', '3B'],
       },
@@ -265,7 +265,7 @@ describe('CI-0180-03/04 Workspace explains priority and keeps music apart from c
     expect(screen.queryByText(/stuck/i)).toBeNull();
   });
 
-  it('labels the cache as Selecta’s own and says the music files are never counted or touched', async () => {
+  it('labels the cache as SelectaDJ’s own and says the music files are never counted or touched', async () => {
     const GB = 1024 ** 3;
     fakeBackend({
       'GET /storage': {
@@ -274,8 +274,8 @@ describe('CI-0180-03/04 Workspace explains priority and keeps music apart from c
       },
     });
     render(<Workshop {...viewProps()} tab="storage" />);
-    expect(await screen.findByText('Made by Selecta, can be made again')).toBeInTheDocument();
-    expect(screen.getByText(/Your music files aren’t counted here, because Selecta doesn’t copy them, and nothing here ever touches them\./)).toBeInTheDocument();
+    expect(await screen.findByText('Made by SelectaDJ, can be made again')).toBeInTheDocument();
+    expect(screen.getByText(/Your music files aren’t counted here, because SelectaDJ doesn’t copy them, and nothing here ever touches them\./)).toBeInTheDocument();
     expect(screen.getByText(/Your music is never touched\./)).toBeInTheDocument();
   });
 });

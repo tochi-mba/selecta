@@ -467,7 +467,7 @@ def web(
     open_browser: bool = typer.Option(True, "--open/--no-open"),
     reload: bool = typer.Option(False, "--reload", help="Restart as the code changes."),
 ) -> None:
-    """Run Selecta in the selected mode (local app or Cloud API)."""
+    """Run SelectaDJ in the selected mode (local app or Cloud API)."""
     import webbrowser
 
     import uvicorn
@@ -486,7 +486,7 @@ def web(
         webbrowser.open(url)
     elif mode is Mode.CLOUD:
         console.print(
-            f"Starting Selecta Cloud API on port {port}; web assets are hosted separately."
+            f"Starting SelectaDJ Cloud API on port {port}; web assets are hosted separately."
         )
     uvicorn.run(
         "selecta.api:serve",
@@ -799,7 +799,7 @@ def listening_report(study: str) -> None:
 
 @app.command("gather-data")
 def gather_data() -> None:
-    """Bring data from every older Selecta folder on this PC into the one in use. Safe to repeat."""
+    """Bring data from every older SelectaDJ folder on this PC into the one in use. Safe to repeat."""
     from selecta.homes import gather
 
     settings = load_settings()

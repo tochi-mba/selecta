@@ -30,7 +30,7 @@ describe('Lucy settings in Cloud', () => {
     expect(screen.queryAllByRole('spinbutton')).toEqual([]);
     expect(screen.getByLabelText('Use Lucy')).toBeChecked();
     expect(screen.getByText('Share short lyric snippets')).toBeInTheDocument();
-    expect(screen.getByText(/text to Selecta’s AI provider/)).toBeInTheDocument();
+    expect(screen.getByText(/text to SelectaDJ’s AI provider/)).toBeInTheDocument();
   });
 
   it('saves only the person’s own choices', async () => {

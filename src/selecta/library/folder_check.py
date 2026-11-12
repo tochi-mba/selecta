@@ -118,7 +118,7 @@ def check_folder(conn: sqlite3.Connection, typed: str) -> dict:
             text,
         )
     except (OSError, RuntimeError, ValueError):
-        return _answer("no_access", "Selecta isn't allowed to read that folder on this PC.", text)
+        return _answer("no_access", "SelectaDJ isn't allowed to read that folder on this PC.", text)
     if not folder.is_dir():
         return _answer("not_a_folder", "That's a file, not a folder. Use the folder it's in.", text)
     # A shortcut or link counts as wherever it really leads; folder is already resolved.
@@ -128,7 +128,9 @@ def check_folder(conn: sqlite3.Connection, typed: str) -> dict:
         with os.scandir(resolved) as entries:
             next(entries, None)
     except OSError:
-        return _answer("no_access", "Selecta isn't allowed to read that folder on this PC.", shown)
+        return _answer(
+            "no_access", "SelectaDJ isn't allowed to read that folder on this PC.", shown
+        )
     for watched in library_folders(conn):
         real = watched.resolve()
         if real == resolved:
@@ -150,7 +152,7 @@ def check_folder(conn: sqlite3.Connection, typed: str) -> dict:
             0,
         )
     if audio is None:
-        reason = "That folder is very large, so Selecta will count its music as it reads it."
+        reason = "That folder is very large, so SelectaDJ will count its music as it reads it."
     elif audio >= MOST_AUDIO_COUNTED:
         reason = f"Found at least {audio} audio files."
     else:

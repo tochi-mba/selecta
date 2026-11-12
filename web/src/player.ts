@@ -97,6 +97,8 @@ export function audiblePosition(mix: Pick<MixItem, 'song_id'>[], songId: number,
 export class SetPlayer {
   private context: AudioContext | null = null;
   private preparing = false;
+  private visualTaps: { left: AnalyserNode; right: AnalyserNode } | null = null;
+  private visualSplit: { split: ChannelSplitterNode; context: AudioContext } | null = null;
   private master: GainNode | null = null;
   private output: GainNode | null = null;
   private analyser: AnalyserNode | null = null;
@@ -180,6 +182,8 @@ export class SetPlayer {
       } catch {
         // the device refused for now; Play makes the context inside its own press instead
         this.context = null;
+        this.master = null;
+        this.dropVisualTaps();
       }
     };
     const idle = (window as Window & { requestIdleCallback?: Window['requestIdleCallback'] }).requestIdleCallback;
@@ -189,6 +193,8 @@ export class SetPlayer {
 
   private audio(): AudioContext {
     if (!this.context) {
+      // taps made on an earlier context would read a dead graph
+      this.dropVisualTaps();
       this.context = new AudioContext({ sampleRate: 44100 });
       this.master = this.context.createGain();
       this.analyser = this.context.createAnalyser();
@@ -272,6 +278,36 @@ export class SetPlayer {
     if (!this.analyser || !this.spectrum) return null;
     this.analyser.getByteFrequencyData(this.spectrum);
     return this.spectrum;
+  }
+
+  /** Read-only side taps for the visualizer: unsmoothed left and right analysers on the mix. Never
+   * routed to the speakers. They belong to the context they were made on, so a new context gets new
+   * taps and the old splitter is disconnected. */
+  getVisualTaps(): { left: AnalyserNode; right: AnalyserNode } | null {
+    if (!this.context || !this.master) return null;
+    if (this.visualSplit && this.visualSplit.context !== this.context) this.dropVisualTaps();
+    if (!this.visualTaps) {
+      const split = this.context.createChannelSplitter(2);
+      const left = this.context.createAnalyser();
+      const right = this.context.createAnalyser();
+      for (const tap of [left, right]) { tap.fftSize = 1024; tap.smoothingTimeConstant = 0; }
+      this.master.connect(split);
+      split.connect(left, 0);
+      split.connect(right, 1);
+      this.visualTaps = { left, right };
+      this.visualSplit = { split, context: this.context };
+    }
+    return this.visualTaps;
+  }
+
+  private dropVisualTaps() {
+    try {
+      this.visualSplit?.split.disconnect();
+    } catch {
+      // already gone with its context
+    }
+    this.visualSplit = null;
+    this.visualTaps = null;
   }
 
   private update(changes: Partial<NowState>) {

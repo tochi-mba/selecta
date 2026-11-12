@@ -263,7 +263,7 @@ def ensure_not_last_owner(
     else:
         remaining = platform_owners(conn, now, excluding_assignment=assignment_id)
     if not remaining:
-        raise LastOwner("that would leave Selecta with no active Owner")
+        raise LastOwner("that would leave SelectaDJ with no active Owner")
 
 
 def ensure_not_self_approval(proposer_id: str, approver_id: str) -> None:

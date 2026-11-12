@@ -16,5 +16,5 @@ test('local Lucy settings still offer the provider, limits and the person’s ow
   await expect(drawer.getByLabel('Use Lucy')).toBeVisible();
   await expect(drawer.getByText('Share short lyric snippets')).toBeVisible();
   // Nothing from Cloud's version leaks into the local one.
-  await expect(drawer.getByText(/turns this month|Lucy Basic|Selecta’s AI provider/)).toHaveCount(0);
+  await expect(drawer.getByText(/turns this month|Lucy Basic|SelectaDJ’s AI provider/)).toHaveCount(0);
 });

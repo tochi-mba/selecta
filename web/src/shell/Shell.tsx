@@ -141,7 +141,9 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
  * what React doesn't render: the window, the theme menu, fonts. */
 function measureHeaderBlock(element: HTMLElement) {
   const root = document.documentElement;
-  const value = `${Math.ceil(element.getBoundingClientRect().height)}px`;
+  // EX-0115-04: in a very short window the bar scrolls away with the page, so nothing pins under it
+  const pinned = getComputedStyle(element).position === 'sticky';
+  const value = `${pinned ? Math.ceil(element.getBoundingClientRect().height) : 0}px`;
   if (root.style.getPropertyValue('--header-block') !== value) root.style.setProperty('--header-block', value);
 }
 
@@ -157,7 +159,10 @@ function useHeaderBlock(bar: { current: HTMLElement | null }) {
     measure();
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
     observer?.observe(element);
+    // zooming or a shorter window can unpin the bar without changing its size
+    window.addEventListener('resize', measure);
     return () => {
+      window.removeEventListener('resize', measure);
       observer?.disconnect();
       root.style.removeProperty('--header-block');
     };

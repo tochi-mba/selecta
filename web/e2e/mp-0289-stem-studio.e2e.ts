@@ -219,7 +219,7 @@ test('MP-0289-05 working copy, applied shape, suggestion and reset look differen
   expect(await border(working)).not.toBe(calm);
   expect(await border(applied)).toBe(calm);
   // a suggestion marks each square it changed, differently from on and off, and lists them
-  const arrange = page.getByRole('button', { name: 'Let Selecta arrange it' });
+  const arrange = page.getByRole('button', { name: 'Let SelectaDJ arrange it' });
   if (await arrange.count()) {
     await arrange.click();
     await expect(page.locator('.studio-cell.ai-changed').first()).toBeVisible();

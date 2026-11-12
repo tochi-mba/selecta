@@ -17,7 +17,7 @@ const discovery = (id: number, title_a: string, title_b: string, status = 'new')
 });
 
 const audition = { chords: ['C', 'F', 'G', 'Am'], bar_starts: [0, 2, 4, 6], seconds: 8, semitones: 2 };
-const hearButton = () => screen.findByRole('button', { name: /Hear what Selecta heard/ });
+const hearButton = () => screen.findByRole('button', { name: /Hear what SelectaDJ heard/ });
 
 describe('songs that might share chords', () => {
   beforeEach(() => {
@@ -332,7 +332,7 @@ describe('audition audio-truth state', () => {
     expect(await screen.findByText(/Loading stage 1; no audio confirmed yet/)).toBeInTheDocument();
     expect(screen.queryByText(/Now playing: The chords/)).toBeNull();
     fireEvent.playing(player);
-    expect(screen.getByText(/Now playing: The chords Selecta heard/)).toBeInTheDocument();
+    expect(screen.getByText(/Now playing: The chords SelectaDJ heard/)).toBeInTheDocument();
   });
 });
 

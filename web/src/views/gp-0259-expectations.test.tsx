@@ -43,7 +43,7 @@ describe('GP-0259 Explore expectations', () => {
 
   it('GP-0259-03 a sparse library says which ideas are unavailable, why, and what to do instead', async () => {
     fakeBackend({ 'GET /vibes': [
-      card('pick', 'Selecta’s pick', ''),
+      card('pick', 'SelectaDJ’s pick', ''),
       card('afro_heat', 'Afro heat', 'The sound', { songs: 6 }),
       card('rap_run', 'Rap run', 'The sound', { ready: false, needs: 6, songs: 0 }),
     ] });

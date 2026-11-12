@@ -237,14 +237,14 @@ def add_routes(app, ctx) -> None:
             data,
             media_type="application/zip",
             headers={
-                "Content-Disposition": 'attachment; filename="selecta-local-backup.zip"',
+                "Content-Disposition": 'attachment; filename="selectadj-local-backup.zip"',
                 "Cache-Control": "no-store",
             },
         )
 
     async def _read_backup(request: Request) -> bytes:
         if request.headers.get("content-type", "").split(";")[0] != "application/zip":
-            raise HTTPException(415, "Choose a Selecta ZIP backup.")
+            raise HTTPException(415, "Choose a SelectaDJ ZIP backup.")
         pieces = []
         total = 0
         async for part in request.stream():
@@ -307,7 +307,7 @@ def add_routes(app, ctx) -> None:
         if request.headers.get("sec-fetch-site") in {"cross-site", "same-site"} or (
             origin and urlsplit(origin).hostname not in LOCAL_HOSTS
         ):
-            raise HTTPException(403, "Selecta is local only")
+            raise HTTPException(403, "SelectaDJ is local only")
 
     @app.post("/api/folders/relink/preview")
     def preview_moved_folder(body: RelinkRequest, request: Request) -> dict:
@@ -338,7 +338,7 @@ def add_routes(app, ctx) -> None:
         if request.headers.get("sec-fetch-site") in {"cross-site", "same-site"} or (
             origin and urlsplit(origin).hostname not in LOCAL_HOSTS
         ):
-            raise HTTPException(403, "Selecta is local only")
+            raise HTTPException(403, "SelectaDJ is local only")
         with connect() as conn:
             return check_folder(conn, path)
 

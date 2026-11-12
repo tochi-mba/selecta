@@ -271,7 +271,7 @@ test('SF-0224-03 a stale Studio proposal cannot overwrite newer strokes', async 
   await last.click();
   await expect(last).toHaveAttribute('aria-pressed', 'true');
   release();
-  await expect(page.getByText('You changed the grid while Selecta was working, so your version stays.')).toBeVisible();
+  await expect(page.getByText('You changed the grid while SelectaDJ was working, so your version stays.')).toBeVisible();
   // the proposal turned every square on; the person's grid still has squares off, and their stroke stays
   await expect(last).toHaveAttribute('aria-pressed', 'true');
   await expect(squares.nth(cells - 2)).toHaveAttribute('aria-pressed', 'false');

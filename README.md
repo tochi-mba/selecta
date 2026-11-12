@@ -1,13 +1,15 @@
-# Selecta
+# SelectaDJ
 
-Selecta supports the browser's **Install app** action in Chrome and Edge through its web app manifest. Open `http://127.0.0.1:8733/` in your browser and use the install icon in the address bar, or the browser menu's install-app action. Installation creates a standalone browser app; the local Selecta server must be running to access the music library and render mixes.
+SelectaDJ is a REX Technologies product.
+
+SelectaDJ supports the browser's **Install app** action in Chrome and Edge through its web app manifest. Open `http://127.0.0.1:8733/` in your browser and use the install icon in the address bar, or the browser menu's install-app action. Installation creates a standalone browser app; the local SelectaDJ server must be running to access the music library and render mixes.
 
 
 An auto DJ for your own music folder. Point it at a folder and it plays a set in your browser, with transitions chosen and rendered like a really good DJ would, including wordplay cuts where a word in one song hands off to the same word in the next.
 
 It runs entirely on your PC. Your music never leaves your machine, and no audio is ever stored in this repo.
 
-This README describes **local mode**. The optional Selecta Cloud edition has a separate
+This README describes **local mode**. The optional SelectaDJ Cloud edition has a separate
 [mode-by-mode guarantee table](docs/saas/README.md#guarantees-by-runtime-mode); adding Cloud does
 not weaken local mode's privacy, storage, network, or user-control guarantees.
 
@@ -16,7 +18,7 @@ not weaken local mode's privacy, storage, network, or user-control guarantees.
 ## What makes it different
 
 - **It searches across your library.** Lyric links and ordered harmonic candidates can reveal connections to audition. Verified melody, sample and rhythm discovery remain unfinished.
-- **It gets more than one take.** A live DJ gets one shot. Selecta renders a transition, measures the result, and repairs what failed before you ever hear it.
+- **It gets more than one take.** A live DJ gets one shot. SelectaDJ renders a transition, measures the result, and repairs what failed before you ever hear it.
 - **It explains itself, but only when asked.** The plan stays visible and the machine stays quiet.
 
 ## Quick start (local development)
@@ -65,10 +67,10 @@ else, and you can change how any song hands over to the next on the Edit page.
 
 Drafts let you build another mix without touching what's playing. **Prioritize** one and it renders
 in the background once the current mix is done. On any seam, **Shape it yourself with stems** puts
-both songs' voice, drums, bass and melody on a grid you can hear instantly, and Selecta can arrange
+both songs' voice, drums, bass and melody on a grid you can hear instantly, and SelectaDJ can arrange
 it or fine tune yours. Rate what you make, and it learns from that.
 
-Requests let you ask for a song while a mix plays. Selecta finds a spot where it fits without
+Requests let you ask for a song while a mix plays. SelectaDJ finds a spot where it fits without
 forcing a bad transition, and shows it faded in Edit until its transitions are ready. Requests are
 planned together, so no song is used twice and each spot goes to one request at a time. If a song
 doesn't fit anywhere, **Find a bridge** goes through your whole library for the best way to reach
@@ -76,7 +78,7 @@ it, and you choose. A bridge joins all at once, when every transition in it is r
 in it can play before that.
 
 Songs you add to your music folder come in by themselves within about a minute, once they've
-finished copying, and go on to be analysed. With nothing else to do, Selecta tries out the best
+finished copying, and go on to be analysed. With nothing else to do, SelectaDJ tries out the best
 transitions across your library at the lowest priority, giving way to anything else straight away,
 and stops at 80% of its storage limit.
 

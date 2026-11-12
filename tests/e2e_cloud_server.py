@@ -98,7 +98,6 @@ PRICES = {
 }
 
 
-
 def same_server(url: str) -> str:
     """Only the path and query of a return URL, so the fake Stripe pages can only send the
     browser back to this server (the app gives https URLs; this server speaks http)."""
@@ -238,9 +237,7 @@ def build(port: int):
         now_playing=FakeNowPlaying(),
     )
     authkit = e2e_cloud_authkit.FakeAuthKit(f"http://localhost:{port}")
-    app = create_cloud_app(
-        settings, engine=engine, verifier=E2EVerifier(authkit), room_ports=ports
-    )
+    app = create_cloud_app(settings, engine=engine, verifier=E2EVerifier(authkit), room_ports=ports)
     with TestClient(app, base_url=base) as client:
         for token, premium in PEOPLE.items():
             made = client.post(
@@ -295,14 +292,22 @@ def build(port: int):
         if body.get("plan", "free") != "free":
             with transaction(engine) as conn:
                 stripe_sync.grant_override(
-                    conn, workspace_id=workspace_id, plan_id=str(body["plan"]),
-                    reason="browser tests", actor="e2e", expires_at=db_now(conn) + 86_400,
+                    conn,
+                    workspace_id=workspace_id,
+                    plan_id=str(body["plan"]),
+                    reason="browser tests",
+                    actor="e2e",
+                    expires_at=db_now(conn) + 86_400,
                 )
         ids = []
         for number in range(int(body.get("songs", 0))):
             audio = wav(float(body.get("seconds", 4.0)), tone=220.0 + 40 * number)
             asset_id = add_asset(
-                engine, objects, workspace_id, audio, name=f"Song {number + 1}.wav",
+                engine,
+                objects,
+                workspace_id,
+                audio,
+                name=f"Song {number + 1}.wav",
                 duration=float(body.get("seconds", 4.0)),
             )
             source_audio[asset_id] = audio
@@ -326,8 +331,9 @@ def build(port: int):
             usage = quota.set_limit(
                 conn, workspace_id, plan_for("free"), limit_bytes=int(body["limit_bytes"])
             )
-            outbox.emit(conn, "quota.changed", workspace_id, {"state": usage.state.value},
-                        db_now(conn))
+            outbox.emit(
+                conn, "quota.changed", workspace_id, {"state": usage.state.value}, db_now(conn)
+            )
         return {"state": usage.state.value, "over_by_bytes": usage.over_by_bytes}
 
     @app.post("/test/quota-silent")
@@ -347,7 +353,11 @@ def build(port: int):
         with transaction(engine, workspace_id) as conn:
             for kind, amount in body.get("amounts", {}).items():
                 taken = allowances.try_consume(
-                    conn, workspace_id, kind, float(amount), allowances.limit_for(plan, kind),
+                    conn,
+                    workspace_id,
+                    kind,
+                    float(amount),
+                    allowances.limit_for(plan, kind),
                     timezone=body.get("timezone", "Europe/London"),
                 )
                 assert taken.ok, kind
@@ -466,9 +476,9 @@ def build(port: int):
         return (
             "<!doctype html><html lang=en><meta charset=utf-8><title>Test checkout</title>"
             f"<main><h1>Test checkout: {escape(plan)}</h1>"
-            f"<form method=post action=\"/fake-stripe/checkout/{escape(session_id)}/pay\">"
+            f'<form method=post action="/fake-stripe/checkout/{escape(session_id)}/pay">'
             "<button>Pay</button></form>"
-            f"<a href=\"{escape(same_server(fields['cancel_url']))}\">Cancel</a></main>"
+            f'<a href="{escape(same_server(fields["cancel_url"]))}">Cancel</a></main>'
         )
 
     @app.post("/fake-stripe/checkout/{session_id}/pay")
@@ -480,9 +490,12 @@ def build(port: int):
         def webhook():
             with transaction(engine, workspace_id) as conn:
                 decision = stripe_sync.SnapshotDecision(
-                    plan_id=price["plan"], plan_version=price["version"],
-                    source=stripe_sync.SnapshotSource.STRIPE, reason="active",
-                    subscription_id=f"sub_{session_id}", valid_until=db_now(conn) + 30 * 86_400,
+                    plan_id=price["plan"],
+                    plan_version=price["version"],
+                    source=stripe_sync.SnapshotSource.STRIPE,
+                    reason="active",
+                    subscription_id=f"sub_{session_id}",
+                    valid_until=db_now(conn) + 30 * 86_400,
                 )
                 stripe_sync.write_snapshot(conn, workspace_id, decision, db_now(conn))
                 quota.set_limit(conn, workspace_id, plan_for(price["plan"]))
@@ -496,7 +509,7 @@ def build(port: int):
         return (
             "<!doctype html><html lang=en><meta charset=utf-8><title>Test portal</title>"
             "<main><h1>Test billing portal</h1>"
-            f"<a href=\"{escape(same_server(back))}\">Return to Selecta</a></main>"
+            f'<a href="{escape(same_server(back))}">Return to SelectaDJ</a></main>'
         )
 
     # -- Rooms audio and pages -----------------------------------------------------------------
@@ -529,7 +542,8 @@ def build(port: int):
         if dist not in built_cache:
             built_cache[dist] = {
                 file.relative_to(dist).as_posix(): file
-                for file in dist.rglob("*") if file.is_file()
+                for file in dist.rglob("*")
+                if file.is_file()
             }
         return built_cache[dist]
 
@@ -542,8 +556,9 @@ def build(port: int):
         # http://localhost:<port> is the site with the real AuthKit library (the sign-in test).
         dist = DIST_AUTHKIT if request.url.hostname == "localhost" else DIST
         if not (dist / "index.html").is_file():
-            return Response("Build the cloud test sites first: pnpm build:cloud-e2e",
-                            status_code=503)
+            return Response(
+                "Build the cloud test sites first: pnpm build:cloud-e2e", status_code=503
+            )
         # The request only ever picks from the files the build made; it never becomes a path.
         built = built_files(dist)
         if path in built:

@@ -193,6 +193,38 @@ def seed_studio_stems(conn, settings: Settings, a_id: int, b_id: int) -> list[Pa
     return folders
 
 
+# S4-0105-07: with SELECTA_E2E_BULK=<n>, n more made-up songs waiting for analysis, each a short
+# tone file of its own, so the Library has hundreds of pages. Analysis stays paused (the real
+# worker would fetch model weights); /api/test/analysed records results the way the worker does.
+BULK = int(os.environ.get("SELECTA_E2E_BULK", "0") or 0)
+
+
+def add_bulk_songs(conn, music: Path, count: int) -> None:
+    folder = music / "bulk"
+    folder.mkdir()
+    rate = 8000
+    tone = (0.2 * np.sin(2 * np.pi * 220 * np.arange(rate // 4) / rate)).astype(np.float32)
+    first = folder / "tone-00000.wav"
+    sf.write(first, tone, rate, subtype="PCM_16")
+    data = first.read_bytes()
+    rows = []
+    for number in range(count):
+        path = folder / f"tone-{number:05d}.wav"
+        if number:
+            path.write_bytes(data)
+        stat = path.stat()
+        title = f"Zz Tone {number:05d}"
+        rows.append(
+            (str(path), str(folder), stat.st_size, stat.st_mtime, 180.0, "Tone Maker", title)
+        )
+    conn.executemany(
+        "INSERT INTO songs(path,folder,size,mtime,duration,artist,title,is_music) "
+        "VALUES(?,?,?,?,?,?,?,1)",
+        rows,
+    )
+    db.set_preference(conn, "analysis_paused", True)
+
+
 def build(home: Path) -> Settings:
     settings = Settings(home)
     settings.ensure_dirs()
@@ -224,6 +256,8 @@ def build(home: Path) -> Settings:
     if STRESS:
         for number, song in enumerate(STRESS_SONGS, start=len(SONGS) + 2):
             _add_song(conn, settings, music, number, song)
+    if BULK:
+        add_bulk_songs(conn, music, BULK)
     # splitting stems needs the big model, which isn't what these tests are about
     steer(conn, "stems", "never")
     conn.commit()
@@ -249,6 +283,8 @@ def main() -> None:
     dist = ROOT / "web" / os.environ.get("SELECTA_E2E_DIST", "dist")
     app = create_app(settings, dist, prepare_links=False)
     add_flag_switch(app)
+    if BULK:
+        add_analysed_switch(app, settings)
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
 
 
@@ -266,6 +302,36 @@ def add_flag_switch(app) -> None:
     def switch(body: dict = Body(default={})) -> dict:  # noqa: B008
         flags.use(str(body.get("flags", "")))
         return flags.snapshot()
+
+    app.router.routes[:0] = router.routes
+
+
+def add_analysed_switch(app, settings: Settings) -> None:
+    """Test only, with SELECTA_E2E_BULK: record analysis results for the named songs as the
+    worker would when it finishes each one, so a drill can watch readiness change mid-session."""
+    from fastapi import APIRouter, Body
+
+    router = APIRouter()
+
+    @router.post("/api/test/analysed")
+    def analysed(body: dict = Body(default={})) -> dict:  # noqa: B008
+        ids = [int(song_id) for song_id in body.get("ids", [])]
+        conn = db.connect(settings.db_path)
+        try:
+            for song_id in ids:
+                db.save_analysis(
+                    conn,
+                    song_id,
+                    {"version": ANALYSIS_VERSION, "bpm": 120.0, "camelot": "8A", "energy": 0.5},
+                )
+                conn.execute(
+                    "INSERT OR REPLACE INTO lyrics(song_id,status) VALUES(?,?)",
+                    (song_id, "instrumental"),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+        return {"analysed": len(ids)}
 
     app.router.routes[:0] = router.routes
 

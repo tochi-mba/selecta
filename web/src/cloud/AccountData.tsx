@@ -5,7 +5,7 @@ import { apiOrigin, CloudError, messageOf } from './api';
 // settings.json and mixes.json. It is a download, so it keeps working while the account is over
 // quota or suspended.
 
-export const EXPORT_FILE = 'selecta-account-export.zip';
+export const EXPORT_FILE = 'selectadj-account-export.zip';
 
 export async function downloadExport(token: string, workspaceId: string, fetchImpl: typeof fetch = fetch) {
   const response = await fetchImpl(`${apiOrigin}/api/account/export`, {

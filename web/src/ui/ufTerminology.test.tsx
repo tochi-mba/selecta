@@ -34,7 +34,7 @@ describe('UF-0388-05 lifecycle words', () => {
     }
   });
 
-  it('a proposal and Selecta’s Studio suggestion are different things with different words', () => {
+  it('a proposal and SelectaDJ’s Studio suggestion are different things with different words', () => {
     expect(names('suggestion').some((name) => name.includes('propos'))).toBe(false);
     expect(GLOSSARY.find((entry) => entry.id === 'proposal')!.plain).toMatch(/nothing is built, rendered or played/);
   });

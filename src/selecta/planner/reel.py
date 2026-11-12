@@ -354,9 +354,9 @@ textarea{width:100%;height:120px;margin-top:12px;font:13px ui-monospace,monospac
 _PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Selecta reel</title>
+<title>SelectaDJ reel</title>
 <style>{{style}}</style></head><body><main>
-<h1>Selecta reel</h1>
+<h1>SelectaDJ reel</h1>
 <p class="lede">{{count}} transitions from your own songs. Each one starts about 16 seconds before the seam. Use Jump to get 8 seconds ahead of it, rate it, and note anything you heard.{{beat_check}}</p>
 {{rows}}
 <footer>

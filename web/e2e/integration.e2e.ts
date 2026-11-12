@@ -176,14 +176,14 @@ test.describe('P0138 integrated failure and recovery', () => {
     const restore = await failNetwork(page, 'offline');
     await expect(async () => {
       await page.clock.runFor(5_000);
-      await expect(page.getByText('Can’t reach Selecta.').first()).toBeVisible({ timeout: 500 });
+      await expect(page.getByText('Can’t reach SelectaDJ.').first()).toBeVisible({ timeout: 500 });
     }).toPass({ timeout: 30_000 });
     // what was loaded stays on screen while the server is away
     await expect(page.locator('.song .song-name b')).toHaveCount(4);
     await restore();
     await expect(async () => {
       await page.clock.runFor(5_000);
-      await expect(page.getByText('Can’t reach Selecta.')).toHaveCount(0, { timeout: 500 });
+      await expect(page.getByText('Can’t reach SelectaDJ.')).toHaveCount(0, { timeout: 500 });
     }).toPass({ timeout: 30_000 });
     await expect(page.locator('.song .song-name b').first()).toHaveText('Morning Light');
     expect(await currentMix(request)).toEqual([1, 2, 3, 4]);

@@ -458,7 +458,7 @@ describe('when there are no timed lyrics to follow', () => {
   it.each([
     ['instrumental', [], 'Instrumental'],
     [null, [], 'Lyrics haven’t been looked up yet.'],
-    ['failed', [], 'Looking up lyrics for this song didn’t work. Selecta will try again later.'],
+    ['failed', [], 'Looking up lyrics for this song didn’t work. SelectaDJ will try again later.'],
     ['missing', [], 'No lyrics found for this song.'],
   ])('says why for a %s song, and invents no timing', async (lyricStatus, lines, words) => {
     fakeBackend({ 'GET /songs/1': { ...detail, lines, lyric_status: lyricStatus } });

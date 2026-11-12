@@ -63,7 +63,7 @@ async function hostedForm(page: Page, address: string, button: string) {
 async function signInWithPassword(page: Page, address: string, path = '/') {
   await welcome(page, path);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByRole('heading', { name: 'Sign in to Selecta' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sign in to SelectaDJ' })).toBeVisible();
   const query = authorizeQuery(page);
   await hostedForm(page, address, 'Sign in');
   return query;
@@ -89,7 +89,7 @@ test('Create account goes to the hosted sign-up page and an unverified email get
   await welcome(page);
 
   await page.getByRole('button', { name: 'Create your account' }).click();
-  await expect(page.getByRole('heading', { name: 'Create your Selecta account' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Create your SelectaDJ account' })).toBeVisible();
   const query = authorizeQuery(page);
   expectOurClient(query);
   expect(query.provider).toBe('authkit');
@@ -138,7 +138,7 @@ test('Google sign-in goes through AuthKit with the Google provider and reaches t
 
   // The existing, already set-up account: no onboarding, straight to the workspace.
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Your music workspace');
-  await expect(page.getByRole('heading', { name: 'Set up your Selecta workspace' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Set up your SelectaDJ workspace' })).toHaveCount(0);
   await fresh.close();
 });
 

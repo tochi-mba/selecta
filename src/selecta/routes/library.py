@@ -352,7 +352,7 @@ def add_routes(app, ctx) -> None:
                 "reason": row["set_aside_reason"] or "Set aside as probably not music.",
             }
         if row["analysis_error"]:
-            return {"status": "needs_attention", "reason": "Selecta couldn’t analyse this file."}
+            return {"status": "needs_attention", "reason": "SelectaDJ couldn’t analyse this file."}
         if row["analysis_version"] != ANALYSIS_VERSION:
             if song in working:
                 return {"status": "processing", "reason": "Being analysed now."}
@@ -365,7 +365,7 @@ def add_routes(app, ctx) -> None:
             return {"status": "analysed_incomplete", "reason": "Still looking up its lyrics."}
         return {
             "status": "analysed_incomplete",
-            "reason": "No timed lyrics, so Selecta can’t tell where the singing is, "
+            "reason": "No timed lyrics, so SelectaDJ can’t tell where the singing is, "
             "and won’t risk cutting off a line.",
         }
 

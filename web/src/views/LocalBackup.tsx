@@ -52,7 +52,7 @@ export function LocalBackup() {
       try {
         const anchor = document.createElement('a');
         anchor.href = url;
-        anchor.download = 'selecta-local-backup.zip';
+        anchor.download = 'selectadj-local-backup.zip';
         document.body.appendChild(anchor);
         anchor.click();
         anchor.remove();

@@ -69,6 +69,6 @@ test('a paid plan changes or cancels in the portal', async ({ page, request }) =
   });
   await page.getByRole('button', { name: 'Change plan or cancel' }).click();
   await expect(page.getByRole('heading', { name: 'Test billing portal' })).toBeVisible();
-  await page.getByRole('link', { name: 'Return to Selecta' }).click();
+  await page.getByRole('link', { name: 'Return to SelectaDJ' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Plan & billing');
 });

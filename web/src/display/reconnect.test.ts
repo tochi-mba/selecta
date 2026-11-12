@@ -35,7 +35,7 @@ describe('the big-screen display', () => {
 
     // the network drops for one look, then comes back while the code is still waiting to be typed
     vi.advanceTimersByTime(3000);
-    calls.shift()!.reject(new ApiError(0, 'offline', "Can't reach Selecta."));
+    calls.shift()!.reject(new ApiError(0, 'offline', "Can't reach SelectaDJ."));
     await flush();
     vi.advanceTimersByTime(30_000);
     calls.shift()!.resolve(waiting);

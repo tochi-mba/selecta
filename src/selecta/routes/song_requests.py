@@ -316,7 +316,7 @@ def add_routes(app, ctx) -> None:
                 raise HTTPException(409, "That song is already in your mix.")
             songs, _traits = library_now(conn)
             if row["song_id"] not in {song.id for song in songs}:
-                raise HTTPException(409, "Selecta can’t tell where the singing is in it yet.")
+                raise HTTPException(409, "SelectaDJ can’t tell where the singing is in it yet.")
             playing = (
                 body.position is not None
                 and order == body.order

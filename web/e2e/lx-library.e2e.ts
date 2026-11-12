@@ -343,7 +343,7 @@ test('LX-0346-06 LX-0349-05 the More menu works by keyboard and touch, and Never
   await page.getByRole('button', { name: 'Details for Last Call' }).click();
   await expect(page.getByRole('dialog').getByText('Set aside', { exact: true }).first()).toBeVisible();
   await page.getByRole('button', { name: 'This is music' }).click();
-  await page.getByRole('button', { name: 'Let Selecta decide' }).click();
+  await page.getByRole('button', { name: 'Let SelectaDJ decide' }).click();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Everything' }).click();
   await expect(rows(page).filter({ hasText: 'Last Call' }).getByText('Ready for mixes')).toBeVisible();

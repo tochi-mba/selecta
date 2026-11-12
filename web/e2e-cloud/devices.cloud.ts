@@ -36,7 +36,7 @@ test('Play here moves playback with no double audio, and remotes steer it', asyn
   // The phone takes over: it asks first, says "Starting here...", and the two never overlap.
   await phone.getByRole('button', { name: 'Play here' }).click();
   await expect(phone.getByRole('alertdialog')).toContainText('Playing on Living-room laptop. Play here instead?');
-  await expect(phone.getByRole('note')).toHaveText('On iPhone, keep Selecta open with the screen on while it plays.');
+  await expect(phone.getByRole('note')).toHaveText('On iPhone, keep SelectaDJ open with the screen on while it plays.');
   await phone.getByRole('button', { name: 'Play here instead' }).click();
   await expect(phone.getByText('Starting here...')).toBeVisible();
   let most = 0;

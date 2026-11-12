@@ -30,7 +30,7 @@ test('over quota: the banner names the overage, uploads wait, listening and down
   await nav(page).getByRole('button', { name: 'Settings' }).click();
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download my data' }).click();
-  expect((await download).suggestedFilename()).toBe('selecta-account-export.zip');
+  expect((await download).suggestedFilename()).toBe('selectadj-account-export.zip');
 
   await nav(page).getByRole('button', { name: 'Plan & billing' }).click();
   await expect(page.getByRole('region', { name: 'Exports this month' })).toContainText('Paused while you are over your storage limit');
@@ -44,7 +44,7 @@ test('Download my data saves a ZIP with originals, settings.json and mixes.json'
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download my data' }).click();
   const saved = await download;
-  expect(saved.suggestedFilename()).toBe('selecta-account-export.zip');
+  expect(saved.suggestedFilename()).toBe('selectadj-account-export.zip');
   // A ZIP's central directory names every entry in plain bytes.
   const names = readFileSync(await saved.path()).toString('latin1');
   for (const entry of ['settings.json', 'mixes.json', 'manifest.json', 'assets.json', 'originals/']) expect(names).toContain(entry);

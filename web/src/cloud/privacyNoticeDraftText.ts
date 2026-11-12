@@ -12,7 +12,7 @@ export const PRIVACY_NOTICE_DRAFT: NoticeSection[] = [
   {
     heading: 'Who we are',
     paragraphs: [
-      'SelectaDJ Cloud is run by [legal name and address, to be confirmed]. We are the controller of the personal data described here. Contact: [privacy contact, to be confirmed].',
+      'SelectaDJ is a REX Technologies product, and SelectaDJ Cloud is run by REX Technologies [registered address, to be confirmed; company number, to be confirmed]. REX Technologies is the controller of the personal data described here. Contact: [privacy contact, to be confirmed].',
     ],
   },
   {

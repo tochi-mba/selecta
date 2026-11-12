@@ -11,7 +11,7 @@ import { Mix } from './Mix';
  * disabled with its reason, and lets the keyboard alone reach and choose any usable move.
  */
 const BEFORE_4: [string, string][] = [
-  ['auto', 'Let Selecta pick'], ['bass_swap_blend', 'Blend'], ['vocal_ride', 'Vocal ride'],
+  ['auto', 'Let SelectaDJ pick'], ['bass_swap_blend', 'Blend'], ['vocal_ride', 'Vocal ride'],
   ['stem_arrange', 'Strip and land'], ['stem_intertwine', 'Intertwined stems'], ['filter_sweep', 'Filter sweep'],
   ['tempo_ramp', 'Tempo ramp'], ['word_blend', 'Word blend'], ['word_exchange', 'Call and response'],
   ['phrase_roll', 'Phrase roll'], ['word_cut', 'Word cut'], ['cut_on_one', 'Cut'], ['echo_out', 'Echo out'],
@@ -59,7 +59,7 @@ describe('S4-0101-03 every move stays in the picker', () => {
 
   it('the keyboard alone reaches a move and chooses it, skipping the disabled ones', async () => {
     const { calls, group } = await openPicker();
-    group.getByRole('button', { name: 'Let Selecta pick' }).focus();
+    group.getByRole('button', { name: 'Let SelectaDJ pick' }).focus();
     const order: string[] = [];
     for (let step = 0; step < 15; step += 1) {
       await userEvent.tab();

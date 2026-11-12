@@ -21,12 +21,12 @@ RIDES_BEFORE_OTHERS = 0.35
 
 NEAR_MISS = {"beat alignment": 20.0, "level fall": 3.0, "entry level": 1.5}
 
-UNSURE_WORDS = "Selecta can’t tell exactly when these words are sung, so it won’t cut on them."
+UNSURE_WORDS = "SelectaDJ can’t tell exactly when these words are sung, so it won’t cut on them."
 
 PLACEMENTS_TO_TRY = 4
 
 MOVES: dict[str, tuple[str, str]] = {
-    "auto": ("Let Selecta pick", "The best move for these two songs that passes its checks."),
+    "auto": ("Let SelectaDJ pick", "The best move for these two songs that passes its checks."),
     "bass_swap_blend": ("Blend", "Both songs play in time, and they trade the bass halfway."),
     "vocal_ride": ("Vocal ride", "B's band comes in under A's voice, before B starts singing."),
     "stem_studio": ("Your stems", "You chose which stems play when, in the studio."),

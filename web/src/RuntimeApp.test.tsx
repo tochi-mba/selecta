@@ -20,10 +20,10 @@ describe('before the app knows what it is', () => {
     const fetch = answering(() => up);
     vi.stubGlobal('fetch', fetch);
     render(<RuntimeApp />);
-    expect(await screen.findByRole('heading', { name: 'Can’t reach Selecta.' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Can’t reach SelectaDJ.' })).toBeInTheDocument();
     await act(async () => { await vi.advanceTimersByTimeAsync(RETRY_MS + 100); });
     expect(fetch).toHaveBeenCalledTimes(2);
-    expect(screen.getByRole('heading', { name: 'Can’t reach Selecta.' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Can’t reach SelectaDJ.' })).toBeInTheDocument();
     up = true;
     await act(async () => { await vi.advanceTimersByTimeAsync(RETRY_MS + 100); });
     expect(await screen.findByText('The local app')).toBeInTheDocument();
@@ -36,7 +36,7 @@ describe('before the app knows what it is', () => {
     let up = false;
     vi.stubGlobal('fetch', answering(() => up));
     render(<RuntimeApp />);
-    expect(await screen.findByRole('heading', { name: 'Can’t reach Selecta.' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Can’t reach SelectaDJ.' })).toBeInTheDocument();
     up = true;
     fireEvent.click(screen.getByRole('button', { name: 'Try now' }));
     expect(await screen.findByText('The local app')).toBeInTheDocument();
@@ -46,7 +46,7 @@ describe('before the app knows what it is', () => {
   it('never claims offline playback while the local server is down', async () => {
     vi.stubGlobal('fetch', answering(() => false));
     render(<RuntimeApp />);
-    expect(await screen.findByRole('heading', { name: 'Can’t reach Selecta.' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Can’t reach SelectaDJ.' })).toBeInTheDocument();
     expect(screen.getByText(/stopped running\. Start it again/)).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/offline|keep(s)? playing|still play/i);
     expect(screen.queryByText('The local app')).toBeNull();

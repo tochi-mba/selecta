@@ -60,7 +60,7 @@ describe('SF-0227-01 core metadata and actions first, diagnostics behind a discl
     const before = (a: Node, b: Node) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
     expect(before(artist, facts)).toBe(true);
     expect(before(facts, advanced)).toBe(true);
-    const actions = screen.getByRole('heading', { name: 'How Selecta treats it' });
+    const actions = screen.getByRole('heading', { name: 'How SelectaDJ treats it' });
     expect(advanced.contains(actions)).toBe(false);
     expect(advanced.querySelectorAll('button')).toHaveLength(0);
   });

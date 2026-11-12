@@ -84,37 +84,37 @@ describe('CI-0178-05 first-seam earned-reward moment', () => {
   it('waits for a finished transition to be heard, then names the two songs without blocking anything', () => {
     const { rerender } = render(<FirstHandoff now={state()} mix={mix} />);
     // playing, but no transition has been heard yet: the plan alone earns nothing
-    expect(screen.queryByText(/first Selecta hand-off/)).toBeNull();
+    expect(screen.queryByText(/first SelectaDJ hand-off/)).toBeNull();
     rerender(<FirstHandoff now={state({ lastSeamKey: 'k1' })} mix={mix} />);
     const note = screen.getByRole('status', { name: 'Your first hand-off' });
-    expect(note).toHaveTextContent('That was your first Selecta hand-off: Song 1 into Song 2');
+    expect(note).toHaveTextContent('That was your first SelectaDJ hand-off: Song 1 into Song 2');
     expect(note.tagName).toBe('ASIDE');
     expect(document.querySelector('dialog, [role="dialog"], [aria-modal]')).toBeNull();
   });
 
   it('is not triggered while paused, or by a transition that is not finished or not in this mix', () => {
     const { rerender } = render(<FirstHandoff now={state({ phase: 'paused', lastSeamKey: 'k1' })} mix={mix} />);
-    expect(screen.queryByText(/first Selecta hand-off/)).toBeNull();
+    expect(screen.queryByText(/first SelectaDJ hand-off/)).toBeNull();
     rerender(<FirstHandoff now={state({ lastSeamKey: 'k2' })} mix={mix} />);
-    expect(screen.queryByText(/first Selecta hand-off/)).toBeNull();
+    expect(screen.queryByText(/first SelectaDJ hand-off/)).toBeNull();
     rerender(<FirstHandoff now={state({ lastSeamKey: 'someone-else' })} mix={mix} />);
-    expect(screen.queryByText(/first Selecta hand-off/)).toBeNull();
+    expect(screen.queryByText(/first SelectaDJ hand-off/)).toBeNull();
     expect(window.localStorage.getItem(FIRST_HANDOFF_KEY)).toBeNull();
     // the Pause came first; once it really plays through, it is earned
     rerender(<FirstHandoff now={state({ lastSeamKey: 'k1' })} mix={mix} />);
-    expect(screen.getByText(/first Selecta hand-off/)).toBeInTheDocument();
+    expect(screen.getByText(/first SelectaDJ hand-off/)).toBeInTheDocument();
   });
 
   it('a Pause after it was earned leaves the note in place, and Got it dismisses it for good', () => {
     const { rerender, unmount } = render(<FirstHandoff now={state({ lastSeamKey: 'k1' })} mix={mix} />);
     rerender(<FirstHandoff now={state({ phase: 'paused', lastSeamKey: 'k1' })} mix={mix} />);
-    expect(screen.getByText(/first Selecta hand-off/)).toBeInTheDocument();
+    expect(screen.getByText(/first SelectaDJ hand-off/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Got it' }));
-    expect(screen.queryByText(/first Selecta hand-off/)).toBeNull();
+    expect(screen.queryByText(/first SelectaDJ hand-off/)).toBeNull();
     unmount();
     // another visit, another transition: it stays dismissed
     render(<FirstHandoff now={state({ lastSeamKey: 'k1' })} mix={mix} />);
-    expect(screen.queryByText(/first Selecta hand-off/)).toBeNull();
+    expect(screen.queryByText(/first SelectaDJ hand-off/)).toBeNull();
     expect(window.localStorage.getItem(FIRST_HANDOFF_KEY)).toBe('1');
   });
 

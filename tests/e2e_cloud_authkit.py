@@ -214,7 +214,7 @@ def install(app: FastAPI, authkit: FakeAuthKit) -> None:
             | {"provider": GOOGLE}
         )
         sign_up = query.get("screen_hint") == "sign-up"
-        title = "Create your Selecta account" if sign_up else "Sign in to Selecta"
+        title = "Create your SelectaDJ account" if sign_up else "Sign in to SelectaDJ"
         action = "sign-up" if sign_up else "sign-in"
         return page(
             title,
@@ -241,7 +241,7 @@ def install(app: FastAPI, authkit: FakeAuthKit) -> None:
         if (expired := pending(request)) is not None:
             return expired
         if email in authkit.accounts:
-            return page("Create your Selecta account", "<p>Sign in instead.</p>", 400)
+            return page("Create your SelectaDJ account", "<p>Sign in instead.</p>", 400)
         account = authkit.account(email, verified=False, password=password)
         return RedirectResponse(authkit.code_for(request, account, "Password"), status_code=303)
 
@@ -253,7 +253,7 @@ def install(app: FastAPI, authkit: FakeAuthKit) -> None:
             return expired
         account = authkit.accounts.get(email)
         if account is None or account["password"] != password:
-            return page("Sign in to Selecta", "<p>Incorrect email or password.</p>", 400)
+            return page("Sign in to SelectaDJ", "<p>Incorrect email or password.</p>", 400)
         return RedirectResponse(authkit.code_for(request, account, "Password"), status_code=303)
 
     @app.post(base + "/hosted/google")

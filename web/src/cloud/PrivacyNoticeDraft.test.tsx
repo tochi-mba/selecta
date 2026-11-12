@@ -36,5 +36,8 @@ describe('the draft privacy notice', () => {
       expect(text).toContain(word);
     }
     expect(text).not.toContain('\u2014');
+    // the provider is named, but its registered details stay placeholders until confirmed
+    expect(text).toContain('run by REX Technologies [registered address, to be confirmed; company number, to be confirmed]');
+    expect(text).toContain('REX Technologies is the controller');
   });
 });

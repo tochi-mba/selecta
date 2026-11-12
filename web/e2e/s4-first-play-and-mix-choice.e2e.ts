@@ -32,7 +32,7 @@ test.beforeEach(async ({ page, request }) => {
   await spyOnAudio(page);
 });
 
-test('S4-0096-10 time from opening Selecta to the first valid play, with the quick pick', async ({ page }, info) => {
+test('S4-0096-10 time from opening SelectaDJ to the first valid play, with the quick pick', async ({ page }, info) => {
   test.setTimeout(180_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   const start = Date.now();

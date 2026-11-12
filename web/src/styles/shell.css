@@ -222,7 +222,11 @@ a.button:hover { border-color: var(--text); }
 }
 .crumbs { min-width: 0; font-size: var(--text-sm); color: var(--text-soft); }
 .crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-hair) var(--space-2); }
-.crumbs li { min-width: 0; overflow-wrap: anywhere; }
+/* EX-0115-04 and S4 (2026-11-12): the page's name breaks only between words, or at a hyphen the browser
+   adds ("Work-space"), never inside a word ("Workspac/e", "connectio/ns"). The trail is never narrower
+   than its longest word; when that and the actions don't fit side by side, the actions wrap instead. */
+.crumbs { min-width: min-content; }
+.crumbs li { min-width: 0; overflow-wrap: normal; word-break: normal; hyphens: auto; }
 .crumbs li + li::before { content: '/'; margin-right: var(--space-2); color: var(--border-strong); }
 .crumbs [aria-current='page'] { unicode-bidi: plaintext; }
 .crumbs a { color: var(--text-soft); }
@@ -254,8 +258,23 @@ a.button:hover { border-color: var(--text); }
      digits even before one arrives (MP-0277-05) */
   .context-actions .context-counted { position: relative; padding-inline: calc(var(--space-4) + var(--space-hair)); }
   .context-actions .context-counted .count { position: absolute; top: 50%; translate: 0 -50%; inset-inline-start: calc(50% + var(--icon-size) / 2 + var(--icon-gap-dense)); font-size: var(--text-xs); }
-  /* and the name breaks between words wherever a word fits */
-  .crumbs li { overflow-wrap: break-word; }
+  /* the name breaks between words; the actions move under it before a word is split */
+  .context-bar { flex-wrap: wrap; }
+  .crumbs { flex: 1 1 min-content; }
+  .context-actions { margin-inline-start: auto; }
+}
+/* EX-0115-04: at 400% zoom or in a very short window the fixed bars took two thirds of the height. There
+   the page's bar scrolls away with the page, and on a narrow screen so do the tab bar (it sits at the
+   top, where it is in the page's order) and the mini-player (at the end, after the page). Shell.tsx
+   reports the bar's sticky height as 0 here, so nothing pins under a bar that has gone. */
+@media (max-height: 450px) {
+  .context-bar { position: static; }
+}
+@media (max-height: 450px) and (max-width: 760px) {
+  :root { --bottom-chrome: 0px; }
+  /* the shell's scope outranks the bars' own fixed rules later in this file; relative, not static, so
+     the progress line stays inside the mini-player */
+  .shell .nav, .shell .mini { position: relative; inset: auto; }
 }
 /* SF-0207-05: at 320px the four actions leave the name about 80px, so a one-word name ("Workspace",
    "Diagnostics") still broke inside the word; the smaller step keeps every page name's words whole */

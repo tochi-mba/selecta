@@ -9,20 +9,20 @@ import { glossaryOn } from './ui/glossaryTerms';
 // the local app's privacy promise changes; a Cloud change must never need to touch this file.
 
 const PRE_CLOUD: Partial<Record<CopyKey, string>> = {
-  glossaryPrivacy: 'Your music, analysis, mixes, ratings and renders stay on this PC. There’s no account and no cloud. To find lyrics, Selecta sends each song’s artist, title, album and duration to LRCLIB, a public lyrics service. The audio itself never leaves this PC, and nothing else about your music is sent anywhere.',
-  glossaryArrange: 'In the Studio, Let Selecta arrange it and Fine tune mine ask Selecta to propose a set of cells. It works this out on this PC from what it measures in the stems and what you’ve rated. Nothing is sent online. It’s only a proposal: it changes your working copy, and lists each cell it changed.',
-  glossaryAnalysis: 'Selecta listening to a song on this PC to find its tempo, key, beats, bars, sections and energy, and, from its lyrics where they’re found, where the singing is. It never changes the audio file.',
+  glossaryPrivacy: 'Your music, analysis, mixes, ratings and renders stay on this PC. There’s no account and no cloud. To find lyrics, SelectaDJ sends each song’s artist, title, album and duration to LRCLIB, a public lyrics service. The audio itself never leaves this PC, and nothing else about your music is sent anywhere.',
+  glossaryArrange: 'In the Studio, Let SelectaDJ arrange it and Fine tune mine ask for a proposed set of cells. It works this out on this PC from what it measures in the stems and what you’ve rated. Nothing is sent online. It’s only a proposal: it changes your working copy, and lists each cell it changed.',
+  glossaryAnalysis: 'SelectaDJ listening to a song on this PC to find its tempo, key, beats, bars, sections and energy, and, from its lyrics where they’re found, where the singing is. It never changes the audio file.',
   lucyRunsOutside: 'which runs outside this computer.',
   lucyBuiltinStays: 'The built-in planner runs on this computer. No data leaves it.',
   lucyUsingBuiltin: 'Using the built-in planner on this computer. No data leaves it.',
   lucyMemoryNothingSent: 'Nothing. With the built-in planner, nothing leaves this computer.',
   lucyBuiltinLabel: 'Built-in (on this computer, no AI service)',
-  lucyBuiltinAbout: 'Plans with Selecta’s own rules. Nothing leaves this computer.',
+  lucyBuiltinAbout: 'Plans with SelectaDJ’s own rules. Nothing leaves this computer.',
   lucyKeySavedHere: 'Saved on this computer and never shown here again.',
   startAudioStays: 'Your audio stays on this PC.',
   startFolderHelp: 'In File Explorer, open your music folder, copy its address, and paste it here. Subfolders are included. Your original files are never moved or changed.',
   learningStaysHere: 'Rate transitions after you hear them. Your feedback stays on this PC.',
-  sourcesHelp: 'Copy a folder address from File Explorer. Your audio stays on this PC. For lyric lookup, Selecta sends each song’s artist, title, album and duration to LRCLIB. That request does not upload the audio file. Selecta also communicates with its local server.',
+  sourcesHelp: 'Copy a folder address from File Explorer. Your audio stays on this PC. For lyric lookup, SelectaDJ sends each song’s artist, title, album and duration to LRCLIB. That request does not upload the audio file. SelectaDJ also communicates with its local server.',
   diagnosticsStaysHere: 'No paths or song names, and nothing is sent anywhere. It only leaves this PC if you copy it somewhere yourself.',
 };
 
@@ -72,7 +72,7 @@ describe('local privacy wording (SC-0391-03)', () => {
     // The one local privacy sentence added since a22571d: the same promise without the lyric
     // lookup it no longer makes (feature-flag sweep, lyrics.lookup off).
     const withoutLookup = PRE_CLOUD.glossaryPrivacy!
-      .replace(' To find lyrics, Selecta sends each song’s artist, title, album and duration to LRCLIB, a public lyrics service.', '')
+      .replace(' To find lyrics, SelectaDJ sends each song’s artist, title, album and duration to LRCLIB, a public lyrics service.', '')
       .replace('nothing else about', 'nothing about');
     expect(copy.local.glossaryPrivacyNoLyrics).toBe(withoutLookup);
     setFlags({ ...allOn, 'lyrics.lookup': false });

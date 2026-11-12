@@ -81,7 +81,7 @@ def exchange(client: TestClient, code: str, verifier: str, client_id: str = CLIE
 def sign_up(client: TestClient, email: str, password: str = "correct horse") -> dict:
     verifier, challenge = pkce()
     page = authorize(client, challenge, screen_hint="sign-up")
-    assert "Create your Selecta account" in page.text
+    assert "Create your SelectaDJ account" in page.text
     posted = client.post(
         f"{BASE}/hosted/sign-up",
         data={"request": request_id(page.text), "email": email, "password": password},
@@ -96,7 +96,7 @@ def sign_in(client: TestClient, email: str, password: str, state: str | None = N
     verifier, challenge = pkce()
     extra = {"state": state} if state else {}
     page = authorize(client, challenge, **extra)
-    assert "Sign in to Selecta" in page.text
+    assert "Sign in to SelectaDJ" in page.text
     posted = client.post(
         f"{BASE}/hosted/sign-in",
         data={"request": request_id(page.text), "email": email, "password": password},

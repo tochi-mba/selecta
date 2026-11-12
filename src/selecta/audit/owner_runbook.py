@@ -1,10 +1,11 @@
 """Owner verification runbook: every open "Needs a person" checklist task, grouped into sittings.
 
-The checklists in docs/adr/*-implementation-checklist.md are the source of truth. This module reads
-every unticked task whose line says "Needs a person", files it into one sitting (a listening
-session, a screen-reader session, a phone session and so on), and writes the task lists of
-docs/verification/owner-runbook.md plus one tracker table per sitting under
-docs/verification/tracker/. The step-by-step scripts live in owner_runbook_sittings.py.
+The checklists in docs/adr/implementation-checklist.md and docs/adr/*-implementation-checklist.md
+are the source of truth. This module reads every unticked task whose line says "Needs a person",
+files it into one sitting (a listening session, a screen-reader session, a phone session and so
+on), and writes the task lists of docs/verification/owner-runbook.md plus one tracker table per
+sitting under docs/verification/tracker/. The step-by-step scripts live in
+owner_runbook_sittings.py.
 
     python -m selecta.audit.owner_runbook --write   # regenerate after checklists change
     python -m selecta.audit.owner_runbook --check   # exit 1 when the runbook is out of date
@@ -30,6 +31,7 @@ from selecta.audit.owner_runbook_sittings import (
 ADR_DIR = "docs/adr"
 OUT_DIR = "docs/verification"
 RUNBOOK = "owner-runbook.md"
+ORIGINAL_CHECKLIST = "implementation-checklist.md"
 TRACKER_DIR = "tracker"
 NEED = "Needs a person"
 ID = r"[A-Z][A-Z0-9]*-?\d{4}(?:-\d{2})?"
@@ -116,9 +118,17 @@ def parse_checklist(path: Path) -> list[Task]:
 def collect(root: Path) -> list[Task]:
     """All open person-only tasks across every implementation checklist, in file order."""
     tasks: list[Task] = []
-    for path in sorted((root / ADR_DIR).glob("*-implementation-checklist.md")):
+    for path in checklist_paths(root):
         tasks.extend(parse_checklist(path))
     return tasks
+
+
+def checklist_paths(root: Path) -> list[Path]:
+    """The Selecta 2.0 checklist (implementation-checklist.md, no prefix) first, then the rest."""
+    adr = root / ADR_DIR
+    paths = sorted(adr.glob("*-implementation-checklist.md"))
+    original = adr / ORIGINAL_CHECKLIST
+    return ([original] if original.is_file() else []) + paths
 
 
 def _by_sitting(tasks: list[Task]) -> dict[str, list[Task]]:

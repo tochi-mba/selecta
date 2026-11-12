@@ -54,7 +54,7 @@ describe('the storage slider', () => {
   it('explains what’s used in plain words', async () => {
     fakeBackend({ 'GET /storage': storage });
     show();
-    expect(await screen.findByText('Selecta is using 4.20 GB. Your drive has 13 GB free.')).toBeInTheDocument();
+    expect(await screen.findByText('SelectaDJ is using 4.20 GB. Your drive has 13 GB free.')).toBeInTheDocument();
   });
 
   it('explains when protected priority stems exceed the selected limit', async () => {
@@ -69,7 +69,7 @@ describe('the storage slider', () => {
 });
 
 describe('what happens in spare time', () => {
-  it('says what Selecta does with nothing else to do, and how far it has got', async () => {
+  it('says what SelectaDJ does with nothing else to do, and how far it has got', async () => {
     fakeBackend({ 'GET /storage': storage });
     show({ transitions_ready: 124 }, 'analysis');
     expect(await screen.findByText(/tries out the best transitions across your library.*124 have come out clean so far/)).toBeInTheDocument();
@@ -116,7 +116,7 @@ describe('the sections', () => {
   it('say when they can’t find out, rather than saying nothing’s happening', async () => {
     fakeBackend({});
     show({}, 'overview');
-    expect(await screen.findByText(/This running copy of Selecta can’t report background jobs/)).toBeInTheDocument();
+    expect(await screen.findByText(/This running copy of SelectaDJ can’t report background jobs/)).toBeInTheDocument();
   });
 
   it('show folders, and whether each can be found', async () => {

@@ -356,7 +356,7 @@ def test_downloading_a_backup_is_a_private_zip(client):
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/zip"
     assert response.headers["cache-control"] == "no-store"
-    assert "selecta-local-backup.zip" in response.headers["content-disposition"]
+    assert "selectadj-local-backup.zip" in response.headers["content-disposition"]
     validate_backup(response.content)
 
 

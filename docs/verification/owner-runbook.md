@@ -274,21 +274,22 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 
 <!-- owner-runbook:generated:begin -->
 
-**Open person-only tasks: 729.**
+**Open person-only tasks: 753.**
 
 | Sitting | Tasks | Tracker |
 |---|---|---|
-| 1. Visual review and baseline approval | 101 | [tracker/visual-review.md](tracker/visual-review.md) |
-| 2. Screen-reader and keyboard session | 82 | [tracker/screen-reader.md](tracker/screen-reader.md) |
-| 3. Phones, touch, zoom and hardware | 102 | [tracker/devices.md](tracker/devices.md) |
-| 4. Listening session | 80 | [tracker/listening.md](tracker/listening.md) |
-| 5. User-study sessions | 214 | [tracker/user-study.md](tracker/user-study.md) |
+| 1. Visual review and baseline approval | 104 | [tracker/visual-review.md](tracker/visual-review.md) |
+| 2. Screen-reader and keyboard session | 85 | [tracker/screen-reader.md](tracker/screen-reader.md) |
+| 3. Phones, touch, zoom and hardware | 107 | [tracker/devices.md](tracker/devices.md) |
+| 4. Listening session | 85 | [tracker/listening.md](tracker/listening.md) |
+| 5. User-study sessions | 215 | [tracker/user-study.md](tracker/user-study.md) |
 | 6. Staging, drills and rollback | 14 | [tracker/staging.md](tracker/staging.md) |
 | 7. Legal and business list | 9 | [tracker/legal-business.md](tracker/legal-business.md) |
-| 8. Sign-off pass | 127 | [tracker/sign-off.md](tracker/sign-off.md) |
+| 8. Sign-off pass | 134 | [tracker/sign-off.md](tracker/sign-off.md) |
 
 ### Task IDs closed by sitting 1: Visual review and baseline approval
 
+- `implementation-checklist.md` (3): T0029, T0060, T0262
 - `polish-implementation-checklist.md` (5): P0004, P0019, P0079, P0132, P0133
 - `selecta-3-1-implementation-checklist.md` (21): S31-0078-04, S31-0078-05, S31-0079-01, S31-0079-02, S31-0079-04, S31-0079-05, S31-0079-06, S31-0079-07, S31-0079-08, S31-0079-09, S31-0079-10, S31-0080-01, S31-0080-02, S31-0082-04, S31-0082-05, S31-0083-03, S31-0084-02, S31-0086-02, S31-0087-04, S31-0088-01, S31-0088-02
 - `selecta-3-implementation-checklist.md` (4): S3-0050-04, S3-0074-08, S3-0075-01, S3-0075-02
@@ -304,6 +305,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 
 ### Task IDs closed by sitting 2: Screen-reader and keyboard session
 
+- `implementation-checklist.md` (3): T0044, T0135, T0264
 - `polish-implementation-checklist.md` (3): P0031, P0126, P0128
 - `selecta-3-1-implementation-checklist.md` (8): S31-0080-05, S31-0080-09, S31-0082-03, S31-0082-09, S31-0083-06, S31-0084-03, S31-0087-02, S31-0087-03
 - `selecta-3-implementation-checklist.md` (5): S3-0049-08, S3-0066-08, S3-0067-08, S3-0075-05, S3-0077-06
@@ -319,6 +321,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 
 ### Task IDs closed by sitting 3: Phones, touch, zoom and hardware
 
+- `implementation-checklist.md` (5): T0059, T0061, T0062, T0065, T0274
 - `polish-implementation-checklist.md` (6): P0027, P0069, P0087, P0122, P0123, P0135
 - `selecta-3-1-implementation-checklist.md` (17): S31-0080-03, S31-0080-10, S31-0081-03, S31-0081-09, S31-0082-07, S31-0082-08, S31-0083-04, S31-0084-07, S31-0085-10, S31-0086-03, S31-0086-07, S31-0086-10, S31-0086-11, S31-0087-06, S31-0087-07, S31-0087-08, S31-0087-10
 - `selecta-3-implementation-checklist.md` (6): S3-0067-04, S3-0072-04, S3-0073-01, S3-0073-04, S3-0073-05, S3-0073-08
@@ -336,6 +339,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 
 ### Task IDs closed by sitting 4: Listening session
 
+- `implementation-checklist.md` (5): T0201, T0253, T0258, T0267, T0277
 - `polish-implementation-checklist.md` (2): P0088, P0137
 - `selecta-3-1-implementation-checklist.md` (10): S31-0082-01, S31-0082-10, S31-0083-12, S31-0084-04, S31-0084-08, S31-0085-07, S31-0085-08, S31-0086-09, S31-0087-09, S31-0088-06
 - `selecta-3-implementation-checklist.md` (3): S3-0059-09, S3-0065-08, S3-0074-05
@@ -352,6 +356,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 
 ### Task IDs closed by sitting 5: User-study sessions
 
+- `implementation-checklist.md` (1): T0266
 - `polish-implementation-checklist.md` (1): P0139
 - `selecta-3-1-implementation-checklist.md` (14): S31-0078-06, S31-0081-01, S31-0081-05, S31-0081-06, S31-0081-07, S31-0081-10, S31-0082-02, S31-0082-06, S31-0083-01, S31-0083-05, S31-0084-01, S31-0085-03, S31-0085-06, S31-0088-05
 - `selecta-3-implementation-checklist.md` (9): S3-0047-04, S3-0048-02, S3-0053-08, S3-0054-09, S3-0062-03, S3-0068-08, S3-0070-07, S3-0075-04, S3-0075-09
@@ -377,6 +382,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 
 ### Task IDs closed by sitting 8: Sign-off pass
 
+- `implementation-checklist.md` (7): T0005, T0017, T0018, T0038, T0275, T0276, T0279
 - `polish-implementation-checklist.md` (4): P0010, P0121, P0140, P0143
 - `selecta-3-1-implementation-checklist.md` (46): S31-0078-01, S31-0078-02, S31-0078-03, S31-0078-07, S31-0078-08, S31-0078-09, S31-0078-10, S31-0079-03, S31-0080-04, S31-0080-06, S31-0080-07, S31-0080-08, S31-0081-02, S31-0081-04, S31-0081-08, S31-0082-11, S31-0083-02, S31-0083-07, S31-0083-08, S31-0083-09, S31-0083-10, S31-0083-11, S31-0084-05, S31-0084-06, S31-0084-09, S31-0085-01, S31-0085-02, S31-0085-04, S31-0085-05, S31-0085-09, S31-0086-01, S31-0086-04, S31-0086-05, S31-0086-06, S31-0086-08, S31-0087-01, S31-0087-05, S31-0087-11, S31-0088-03, S31-0088-04, S31-0088-07, S31-0088-08, S31-0088-09, S31-0088-10, S31-0088-11, S31-0088-12
 - `selecta-3-implementation-checklist.md` (7): S3-0047-03, S3-0047-06, S3-0074-09, S3-0074-10, S3-0075-08, S3-0076-04, S3-0076-08

@@ -39,6 +39,28 @@ def test_only_open_person_tasks_are_collected(tmp_path):
     assert "**" not in first.need
 
 
+def test_the_unprefixed_selecta_2_checklist_is_read(tmp_path):
+    root = _repo(tmp_path, OPEN)
+    original = "- [ ] T0135 - Test the fallback notices. **Status:** Needs a person: an NVDA run."
+    (root / "docs/adr/implementation-checklist.md").write_text(original + "\n", encoding="utf-8")
+    (root / "docs/adr/implementation-checklist-audit.md").write_text(OPEN + "\n", encoding="utf-8")
+    ids = [task.task_id for task in runbook.collect(root)]
+    assert ids == ["T0135", "XX-0001-01"]
+    assert runbook.collect(root)[0].checklist == "implementation-checklist.md"
+
+
+def test_selecta_2_tasks_are_pinned_to_the_triage_sittings():
+    tasks = {task.task_id: task for task in runbook.collect(ROOT)}
+    original = "implementation-checklist.md"
+    two = {key: task for key, task in tasks.items() if task.checklist == original}
+    assert two, "the Selecta 2.0 checklist has open person tasks but none were collected"
+    for task_id, task in two.items():
+        assert OVERRIDES.get(task_id) == task.sitting, task_id
+    pins = {"T0060": "visual-review", "T0135": "screen-reader", "T0201": "listening"}
+    for task_id, slug in pins.items():
+        assert OVERRIDES[task_id] == slug
+
+
 def test_tasks_land_in_the_right_sitting(tmp_path):
     sittings = {task.task_id: task.sitting for task in runbook.collect(_repo(tmp_path, OPEN, NVDA))}
     assert sittings == {"XX-0001-01": "listening", "XX-0001-02": "screen-reader"}

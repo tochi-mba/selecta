@@ -49,7 +49,7 @@ function show(energyArc: number[] | null = null) {
 describe('distinct visual mix ideas', () => {
   it('uses different decorative motifs for different ideas even within the same group', async () => {
     fakeBackend({ 'GET /vibes': [
-      card('pick', 'Selecta’s pick', ''),
+      card('pick', 'SelectaDJ’s pick', ''),
       card('evening-drive', 'Evening drive', 'The moment'),
       card('quiet-morning', 'Quiet morning', 'The moment'),
     ] });
@@ -120,7 +120,7 @@ describe('Pick a feeling', () => {
 
   it('lets the listener choose the transition feel and saves it for future mixes', async () => {
     const calls = fakeBackend({
-      'GET /vibes': [card('pick', 'Selecta’s pick', '')],
+      'GET /vibes': [card('pick', 'SelectaDJ’s pick', '')],
       'POST /steer': { mix_language: 'seamless' },
     });
     show();
@@ -135,7 +135,7 @@ describe('Pick a feeling', () => {
     const sent: string[] = [];
     let finishFirst: () => void = () => {};
     vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
-      if (url.includes('/vibes')) return new Response(JSON.stringify([card('pick', 'Selecta’s pick', '')]), { status: 200 });
+      if (url.includes('/vibes')) return new Response(JSON.stringify([card('pick', 'SelectaDJ’s pick', '')]), { status: 200 });
       if (url.includes('/steer') && init?.method === 'POST') {
         const body = JSON.parse(String(init.body)) as { value: string };
         sent.push(body.value);
@@ -159,7 +159,7 @@ describe('Pick a feeling', () => {
 
   it('lets the listener set how often new mixes use stem-assisted moves', async () => {
     const calls = fakeBackend({
-      'GET /vibes': [card('pick', 'Selecta’s pick', '')],
+      'GET /vibes': [card('pick', 'SelectaDJ’s pick', '')],
       'POST /steer': { mix_language: 'balanced', stems: 'often', target: null },
     });
     show();
@@ -171,7 +171,7 @@ describe('Pick a feeling', () => {
 
   it('lets the listener shape and save a five-stop energy arc', async () => {
     const calls = fakeBackend({
-      'GET /vibes': [card('pick', 'Selecta’s pick', '')],
+      'GET /vibes': [card('pick', 'SelectaDJ’s pick', '')],
       'POST /steer': { energy_arc: [62, 72, 35, 85, 68] },
     });
     show();
@@ -214,7 +214,7 @@ describe('Pick a feeling', () => {
 
   it('clears a saved energy arc back to the mix-specific default', async () => {
     const calls = fakeBackend({
-      'GET /vibes': [card('pick', 'Selecta’s pick', '')],
+      'GET /vibes': [card('pick', 'SelectaDJ’s pick', '')],
       'POST /steer': { energy_arc: null },
     });
     show([20, 40, 80, 60, 30]);
@@ -235,7 +235,7 @@ describe('Pick a feeling', () => {
 
   it('does not claim an energy shape was saved when clearing the shape fails', async () => {
     vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
-      if (url.includes('/vibes')) return new Response(JSON.stringify([card('pick', 'Selecta’s pick', '')]), { status: 200 });
+      if (url.includes('/vibes')) return new Response(JSON.stringify([card('pick', 'SelectaDJ’s pick', '')]), { status: 200 });
       if (url.includes('/steer') && init?.method === 'POST') {
         return new Response(JSON.stringify({ detail: 'Could not save preferences' }), { status: 500 });
       }
@@ -251,7 +251,7 @@ describe('Pick a feeling', () => {
 
   it('lets the listener set a song as the destination for future mixes', async () => {
     const calls = fakeBackend({
-      'GET /vibes': [card('pick', 'Selecta’s pick', '')],
+      'GET /vibes': [card('pick', 'SelectaDJ’s pick', '')],
       'GET /songs': [
         { id: 7, artist: 'Example Artist', title: 'Midnight', genre: 'pop', duration: 200, bpm: 120, camelot: '8A', lyric_status: 'synced', never: false, priority: false },
         { id: 8, artist: 'Unready Artist', title: 'No Cues', genre: 'pop', duration: 200, bpm: 120, camelot: '8A', lyric_status: null, never: false, priority: false },
@@ -270,7 +270,7 @@ describe('Pick a feeling', () => {
   it('groups mixes by why you’d press them', async () => {
     fakeBackend({
       'GET /vibes': [
-        card('pick', 'Selecta’s pick', ''),
+        card('pick', 'SelectaDJ’s pick', ''),
         card('peak', 'Peak time', 'The moment'),
         card('feelings', 'In your feelings', 'The mood'),
         card('afro_heat', 'Afro heat', 'The sound'),
@@ -365,14 +365,14 @@ describe('a feeling kept as a draft', () => {
 
 describe('browsing and my mixes', () => {
   it('browsing says roughly how long, because that’s all it can promise', async () => {
-    fakeBackend({ 'GET /vibes': [card('pick', 'Selecta’s pick', '')] });
+    fakeBackend({ 'GET /vibes': [card('pick', 'SelectaDJ’s pick', '')] });
     show();
     expect(await screen.findByRole('button', { name: 'About 30 min' })).toBeInTheDocument();
     expect(screen.getByText(/How long it really runs depends/)).toBeInTheDocument();
   });
 
   it('how mixes get built stays out of the way until it’s wanted, and says it’s for new mixes', async () => {
-    fakeBackend({ 'GET /vibes': [card('pick', 'Selecta’s pick', '')] });
+    fakeBackend({ 'GET /vibes': [card('pick', 'SelectaDJ’s pick', '')] });
     show();
     await screen.findByRole('button', { name: /^Customize: Shape this mix/ });
     expect(screen.queryByLabelText('Transition feel')).toBeNull();
@@ -383,7 +383,7 @@ describe('browsing and my mixes', () => {
   });
 
   it('says why a preset can’t be played yet', async () => {
-    fakeBackend({ 'GET /vibes': [card('pick', 'Selecta’s pick', ''), { ...card('rap', 'Rap run', ''), ready: false, needs: 4, group: 'The sound' }] });
+    fakeBackend({ 'GET /vibes': [card('pick', 'SelectaDJ’s pick', ''), { ...card('rap', 'Rap run', ''), ready: false, needs: 4, group: 'The sound' }] });
     show();
     expect(await screen.findByText('needs 4 more')).toBeInTheDocument();
     expect(screen.getByText(/mix-ready songs/)).toBeInTheDocument();
@@ -460,19 +460,19 @@ describe('compact Explore comparison and optional detail', () => {
 
 describe('Quick Play and optional Lucy creation', () => {
   it('shows two distinct choices while keeping Quick Play independent of Lucy', async () => {
-    const calls = fakeBackend({ 'GET /vibes': [card('pick', 'Selecta’s pick', '')] });
+    const calls = fakeBackend({ 'GET /vibes': [card('pick', 'SelectaDJ’s pick', '')] });
     show();
     const quick = screen.getByRole('region', { name: 'Listen now, shape later' });
     const lucy = screen.getByRole('region', { name: 'Create with Lucy' });
     await waitFor(() => expect(within(quick).getByRole('button', { name: 'Play' })).toBeEnabled());
     expect(within(lucy).getByRole('link', { name: 'Plan a mix with Lucy' })).toHaveAttribute('href', '/mixes/lucy');
-    await screen.findByText('Selecta’s pick');
+    await screen.findByText('SelectaDJ’s pick');
     expect(calls.every((call) => call.method === 'GET')).toBe(true);
   });
 
   it('offers a feeling-specific, editable Lucy prompt without sending it', async () => {
     const calls = fakeBackend({ 'GET /vibes': [
-      card('pick', 'Selecta’s pick', ''),
+      card('pick', 'SelectaDJ’s pick', ''),
       card('peak', 'Peak time', 'The moment'),
     ] });
     show();
@@ -491,7 +491,7 @@ describe('Quick Play and optional Lucy creation', () => {
 describe('destination search', () => {
   it('ignores an older answer that arrives after the newer search, and can be cleared', async () => {
     const row = (id: number, title: string) => ({ id, artist: 'Example Artist', title, genre: 'pop', duration: 200, bpm: 120, camelot: '8A', lyric_status: 'synced', never: false, priority: false });
-    fakeBackend({ 'GET /vibes': [card('pick', 'Selecta’s pick', '')], 'POST /steer': { mix_language: 'balanced', target: null } });
+    fakeBackend({ 'GET /vibes': [card('pick', 'SelectaDJ’s pick', '')], 'POST /steer': { mix_language: 'balanced', target: null } });
     const stubbed = globalThis.fetch;
     let releaseOld: (() => void) | null = null;
     vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {

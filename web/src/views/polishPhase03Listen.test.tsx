@@ -69,12 +69,12 @@ describe('ADR-0042 discovery auditions', () => {
     const resume = vi.fn();
     connectMainPlayer({ isPlaying: () => true, pause: vi.fn(), resume });
     render(<HarmonicDiscoveries />);
-    fireEvent.click(await screen.findByRole('button', { name: /Hear what Selecta heard/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Hear what SelectaDJ heard/ }));
     expect(await screen.findByText('Couldn’t play this audition. Try the stage again.')).toBeInTheDocument();
     expect(screen.queryByText(/Now playing:/)).toBeNull();
     expect(audioOwner()?.id ?? null).not.toBe('harmonic-discoveries');
     play.mockImplementation(async () => {});
-    fireEvent.click(screen.getByRole('button', { name: /The chords Selecta heard/ }));
+    fireEvent.click(screen.getByRole('button', { name: /The chords SelectaDJ heard/ }));
     await waitFor(() => expect(play).toHaveBeenCalledTimes(2));
     connectMainPlayer(null);
   });

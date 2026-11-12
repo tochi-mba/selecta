@@ -41,10 +41,10 @@ describe('T0135 explanatory fallback', () => {
     expect(await screen.findByText(/If it isn’t ready in time, this song plays on and the next one fades in/)).toBeInTheDocument();
   });
 
-  it('a failed transition says Selecta falls back to its own pick, not that it is ready', async () => {
+  it('a failed transition says SelectaDJ falls back to its own pick, not that it is ready', async () => {
     fakeBackend({ 'GET /songs/1': detail });
     render(listen(mixWith({ status: 'failed', key: 'k1' })));
-    expect(await screen.findByText(/Selecta falls back to its own pick/)).toBeInTheDocument();
+    expect(await screen.findByText(/SelectaDJ falls back to its own pick/)).toBeInTheDocument();
     expect(screen.queryByText(/What was measured on the finished audio/)).toBeNull();
   });
 });

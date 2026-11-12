@@ -375,6 +375,8 @@ export function App() {
       wasAway.current = false;
       refreshMix();
       refreshDraft();
+      // a page showing "Couldn't load" tries again by itself (Library listens for this)
+      window.dispatchEvent(new Event('selecta:back'));
     }
   }, [problem, refreshMix, refreshDraft]);
 
