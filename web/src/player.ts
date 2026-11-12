@@ -187,8 +187,13 @@ export class SetPlayer {
       }
     };
     const idle = (window as Window & { requestIdleCallback?: Window['requestIdleCallback'] }).requestIdleCallback;
-    if (typeof idle === 'function') idle.call(window, open, { timeout: PREPARE_IDLE_MS });
-    else window.setTimeout(open, PREPARE_FALLBACK_MS);
+    const later = () => {
+      if (typeof idle === 'function') idle.call(window, open, { timeout: PREPARE_IDLE_MS });
+      else window.setTimeout(open, PREPARE_FALLBACK_MS);
+    };
+    // never while the page itself is still loading
+    if (document.readyState === 'complete') later();
+    else window.addEventListener('load', later, { once: true });
   }
 
   private audio(): AudioContext {

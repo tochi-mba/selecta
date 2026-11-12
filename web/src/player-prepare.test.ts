@@ -142,6 +142,19 @@ describe('PF-21 the sound device opens before the first Play', () => {
     expect(player.state.phase).toBe('playing');
   });
 
+  it('waits for the page to finish loading before asking for an idle moment', () => {
+    const ready = vi.spyOn(document, 'readyState', 'get').mockReturnValue('interactive');
+    player = new SetPlayer(() => songs(), () => {});
+    player.prepare();
+    expect(idle).toHaveLength(0);
+    ready.mockReturnValue('complete');
+    window.dispatchEvent(new Event('load'));
+    expect(idle).toHaveLength(1);
+    runIdle();
+    expect(FakeAudio.made).toBe(1);
+    ready.mockRestore();
+  });
+
   it('does nothing where Web Audio is missing', () => {
     vi.stubGlobal('AudioContext', undefined);
     player = new SetPlayer(() => songs(), () => {});

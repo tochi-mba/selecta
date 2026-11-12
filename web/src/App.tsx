@@ -247,9 +247,10 @@ export function App() {
     return () => connectMainPlayer(null);
   }, [player]);
   // PF-21: on the pages with a Play button, open the sound device while the browser is idle, so the
-  // first Play only resumes it. Pages that never play never open it. Not under unit tests, where a
-  // stray context would change what each test counts; the player tests cover prepare() itself.
-  const playsHere = route.page === 'listen' || route.page === 'edit';
+  // first Play only resumes it. Pages that never play never open it. It waits until the mix is on
+  // screen, so opening a slow device never holds back the page's first content. Not under unit
+  // tests, where a stray context would change what each test counts; player-prepare.test.ts covers it.
+  const playsHere = (route.page === 'listen' || route.page === 'edit') && mix.length > 0;
   useEffect(() => {
     if (playsHere && import.meta.env.MODE !== 'test') player.prepare();
   }, [player, playsHere]);
