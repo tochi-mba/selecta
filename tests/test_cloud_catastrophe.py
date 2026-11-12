@@ -432,6 +432,9 @@ def test_the_ai_provider_goes_down_while_people_keep_asking_lucy_and_comes_back(
     # planning falls back to Haiku; once released, Sonnet answers again.
     back = [_lucy_turn(engine, guard, provider, workspace) for workspace in people[1:4]]
     assert [(t.deployment.id, o) for t, o in back] == [("haiku-medium", Outcome.COMPLETED)] * 3
+    # The catastrophe jumps forward ten minutes; privileged MFA step-up has expired.
+    # The operators must reauthenticate before releasing an emergency control.
+    _fresh_staff_sessions(world, clock.now)
     _release(world, "lucy.deployment_disabled", "sonnet-medium")
     again = [_lucy_turn(engine, guard, provider, workspace) for workspace in people[1:4]]
     assert [(t.deployment.id, o) for t, o in again] == [("sonnet-medium", Outcome.COMPLETED)] * 3
@@ -561,7 +564,7 @@ def test_launch_day_signups_uploads_upgrades_and_mix_requests_all_at_once(world,
         applied = Counter(
             row.id
             for row in conn.execute(
-                sa.select(stripe_events.c.id).where(stripe_events.c.status == "processed")
+                sa.select(stripe_events.c.event_id).where(stripe_events.c.status == "processed")
             )
         )
     for name in people:

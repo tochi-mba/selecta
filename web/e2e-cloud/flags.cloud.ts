@@ -56,6 +56,7 @@ const NO_SURFACE: Partial<Record<FlagId, string>> = {
   'cloud.metrics': 'Server-side service telemetry consumed by SLOs and alerts, with no person-facing Cloud page.',
   'cloud.export_expiry': 'Server-side maintenance sweep for retained exports, with no person-facing Cloud page.',
   'cloud.autoscale': 'Server-side maintenance task that sizes worker pools, with no person-facing Cloud page.',
+  'cloud.dmca_renewal_reminder': 'Server-side maintenance alert for the owner, with no person-facing Cloud page.',
   'lucy.deep_plan': 'No control on the site: the server decides it for each Lucy turn.',
 };
 

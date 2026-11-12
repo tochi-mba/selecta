@@ -163,7 +163,8 @@
       "modes": ["cloud"],
       "default": false,
       "kind": "release",
-      "owner": "legal"
+      "owner": "legal",
+      "surfaces": ["cloud.settings"]
     },
     "cloud.device_check": {
       "label": "Device check",
@@ -171,7 +172,8 @@
       "modes": ["cloud"],
       "default": false,
       "kind": "release",
-      "owner": "playback"
+      "owner": "playback",
+      "surfaces": ["cloud.settings"]
     },
     "billing.webhooks": {
       "label": "Billing updates",

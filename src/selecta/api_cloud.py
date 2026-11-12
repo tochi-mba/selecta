@@ -502,7 +502,7 @@ def create_cloud_app(
                 if len(batch) >= 100:
                     await fanout.wait(waiter, 0)
                 else:
-                    await fanout.wait(waiter, fanout.poll_s())
+                    await fanout.wait(waiter, min(fanout.poll_s(), 2.0))  # check revoked sessions promptly even while PostgreSQL LISTEN is live
 
         return StreamingResponse(
             frames(),
