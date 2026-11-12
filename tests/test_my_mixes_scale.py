@@ -40,7 +40,8 @@ def home(tmp_path_factory):
 def client(home):
     path, _ids = home
     app = TestClient(create_app(Settings(path), path / "no-web"))
-    # the first look settles each draft's seams once, which writes; what's measured is every look after
+    # the first look settles each draft's seams once, which writes;
+    # what's measured comes after
     assert app.get("/api/drafts").status_code == 200
     return app
 
@@ -82,9 +83,7 @@ def test_the_list_walks_its_index_and_the_line_reads_only_drafts_in_it(home):
     conn.close()
 
 
-def test_the_list_never_reads_revisions_and_its_queries_do_not_grow_with_drafts(
-    client, statements
-):
+def test_the_list_never_reads_revisions_and_its_queries_do_not_grow_with_drafts(client, statements):
     started = time.perf_counter()
     answer = client.get("/api/drafts")
     took = time.perf_counter() - started
@@ -123,8 +122,10 @@ def test_the_list_and_opening_a_draft_are_quick(home, client):
         answer = client.get(f"/api/mix?draft={draft}")
         opens.append(time.perf_counter() - started)
         assert answer.status_code == 200 and len(answer.json()["mix"]) > 0
-    print(f"[r8a] list median {statistics.median(times) * 1000:.0f} ms, "
-          f"open median {statistics.median(opens) * 1000:.0f} ms")
+    print(
+        f"[r8a] list median {statistics.median(times) * 1000:.0f} ms, "
+        f"open median {statistics.median(opens) * 1000:.0f} ms"
+    )
     assert statistics.median(times) < LIST_BUDGET_S, times
     assert statistics.median(opens) < OPEN_BUDGET_S, opens
 
@@ -168,8 +169,20 @@ def test_the_lean_list_has_the_same_drafts_in_the_same_order(client, statements)
     assert not [sql for sql in statements if "items" in sql or "history" in sql], statements
     # the full list keeps its contract for everything that already reads it
     assert set(full["drafts"][0]) >= {
-        "id", "name", "songs", "seconds", "seams", "ready", "failed", "waiting", "rendering",
-        "place", "eta", "to_render", "missing", "song_ids",
+        "id",
+        "name",
+        "songs",
+        "seconds",
+        "seams",
+        "ready",
+        "failed",
+        "waiting",
+        "rendering",
+        "place",
+        "eta",
+        "to_render",
+        "missing",
+        "song_ids",
     }
 
 

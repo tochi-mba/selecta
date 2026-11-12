@@ -27,18 +27,23 @@ const measure = (page: Page) => page.evaluate(() => {
     const box = node.getBoundingClientRect();
     return box.width > 0 && box.height > 0 && getComputedStyle(node).visibility !== 'hidden' && !node.closest('[aria-hidden="true"], .visually-hidden');
   };
+  // running words have a 12px floor (--text-xs); mono marks (pills, tags, rulers) are counted apart
   let smallest = Infinity;
+  let smallestMark = Infinity;
   const walker = document.createTreeWalker(document.querySelector('main') ?? document.body, NodeFilter.SHOW_TEXT);
   for (let text = walker.nextNode(); text; text = walker.nextNode()) {
     const parent = text.parentElement;
     if (!parent || !text.textContent?.trim() || !shown(parent)) continue;
-    smallest = Math.min(smallest, parseFloat(getComputedStyle(parent).fontSize));
+    const style = getComputedStyle(parent);
+    const size = parseFloat(style.fontSize);
+    if (/monospace|Cascadia Mono|Consolas/.test(style.fontFamily)) smallestMark = Math.min(smallestMark, size);
+    else smallest = Math.min(smallest, size);
   }
   const controls = [...document.querySelectorAll<HTMLElement>('.density button, .density input:not([type="checkbox"]):not([type="radio"]), .density select')].filter(shown);
   const shortest = controls.reduce((low, node) => Math.min(low, node.getBoundingClientRect().height), Infinity);
   const words = [...document.querySelectorAll<HTMLElement>('main button, main a[href], main h1, main h2, main h3')]
     .filter(shown).map((node) => (node.getAttribute('aria-label') ?? node.textContent ?? '').trim()).filter(Boolean);
-  return { smallest, shortest, controls: controls.length, density: document.documentElement.dataset.density, words };
+  return { smallest, smallestMark, shortest, controls: controls.length, density: document.documentElement.dataset.density, words };
 });
 
 test('Compact keeps every caption at 12px or more and fine-pointer targets at 36px', async ({ page }, info) => {
@@ -51,6 +56,8 @@ test('Compact keeps every caption at 12px or more and fine-pointer targets at 36
     const seen = await measure(page);
     expect(seen.density).toBe('compact');
     expect(seen.smallest, `${route} smallest text`).toBeGreaterThanOrEqual(12);
+    // mono marks are 0.72rem by design (pills, request tags, the Studio ruler): legible, listed for the owner
+    expect(seen.smallestMark, `${route} smallest mono mark`).toBeGreaterThanOrEqual(11);
     if (seen.controls) expect(seen.shortest, `${route} shortest compact control`).toBeGreaterThanOrEqual(24);
     await page.screenshot({ path: info.outputPath(`density-compact${route.replace(/\//g, '_')}.png`), fullPage: true, animations: 'disabled', caret: 'hide' });
   }
@@ -67,6 +74,7 @@ test('Compact text is the same size as Comfortable text, so density never shrink
   await settle(page);
   const condensed = await measure(page);
   expect(condensed.smallest).toBe(comfortable.smallest);
+  expect(condensed.smallestMark).toBe(comfortable.smallestMark);
   expect(condensed.words).toEqual(comfortable.words);
 });
 

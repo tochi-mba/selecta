@@ -43,7 +43,7 @@ from selecta.eta import analysis_left, analysis_line_left
 from selecta.library.relink import RelinkError, commit_relink, preview_relink
 from selecta.seam_kinds import moves_on
 from selecta.session import get_steering, queue, steer
-from selecta.stems import MIN_CACHE_BYTES, cache_bytes, largest_cache_bytes, prune_cache
+from selecta.stems import MIN_CACHE_BYTES, cache_room, largest_cache_bytes, prune_cache
 
 
 class RelinkRequest(BaseModel):
@@ -180,8 +180,7 @@ def add_routes(app, ctx) -> None:
                     used += path.stat().st_size
             except FileNotFoundError:
                 continue  # cache pruning may remove a file during this snapshot
-        cache = cache_bytes(settings)
-        largest = largest_cache_bytes(settings)
+        cache, largest = cache_room(settings)  # r8d: one walk of the cache, not two
         return {
             "used_bytes": used,
             "cache_bytes": cache,
@@ -200,10 +199,11 @@ def add_routes(app, ctx) -> None:
             raise HTTPException(400, "The limit can't go below 0.5 GB.")
         # T0096: another window may have changed the limit since this page read it. Say so
         # rather than silently replacing the newer choice.
-        current = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
+        largest = largest_cache_bytes(settings)  # r8d: one walk of the cache for all three uses
+        current = min(settings.effective_cache_cap_bytes, largest)
         # T0094: a retry whose first try already landed (its reply lost, or the server restarted)
         # finds the limit it asked for, which is a success to repeat rather than a conflict.
-        already = current == min(wanted, largest_cache_bytes(settings))
+        already = current == min(wanted, largest)
         if (
             body.expected_budget_bytes is not None
             and body.expected_budget_bytes != current
@@ -219,7 +219,7 @@ def add_routes(app, ctx) -> None:
                 },
                 status_code=409,
             )
-        settings.set_storage_budget(min(wanted, largest_cache_bytes(settings)))
+        settings.set_storage_budget(min(wanted, largest))
         # a lower limit never costs the mix now playing its seams (render priority)
         with connect() as conn:
             playing = cache_care.current_mix_keys(conn, store)
@@ -368,8 +368,8 @@ def add_routes(app, ctx) -> None:
                 "ON s.id=a.song_id WHERE a.error IS NOT NULL ORDER BY a.analysed_at DESC LIMIT 5"
             ).fetchall()
             worker = store._worker
-            limit = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
-            full = cache_bytes(settings) >= limit
+            used, largest = cache_room(settings)  # r8d: one walk of the cache, not two
+            full = used >= min(settings.effective_cache_cap_bytes, largest)
             counts = _counts(conn)
             return {
                 "worker": {
@@ -413,7 +413,7 @@ def add_routes(app, ctx) -> None:
 
             missing = sum(not folder.is_dir() for folder in library_folders(conn))
         worker = store._worker
-        limit = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
+        used, largest = cache_room(settings)  # r8d: one walk of the cache, not two
         scan = background.scan if isinstance(background.scan, dict) else {}
         return {
             "api_version": API_VERSION,
@@ -433,7 +433,7 @@ def add_routes(app, ctx) -> None:
             "exports": self_service.export_outcomes(settings.home),
             "scan_failed": scan.get("status") == "failed",
             "folders_missing": missing,
-            "storage_full": cache_bytes(settings) >= limit,
+            "storage_full": used >= min(settings.effective_cache_cap_bytes, largest),
         }
 
     @app.post("/api/steer")

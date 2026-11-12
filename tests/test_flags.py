@@ -74,7 +74,12 @@ def test_the_catalog_in_docs_is_up_to_date():
 
 
 def test_nothing_set_means_every_flag_is_on():
-    assert all(state.on for state in flags.resolve("").values())
+    """Except a flag the registry marks off by default (`"default": false`), which stays off."""
+    registry = flags.registry()
+    states = flags.resolve("")
+    assert all(state.on for flag_id, state in states.items() if registry[flag_id].default)
+    off = [flag_id for flag_id, state in states.items() if not state.on]
+    assert all(states[flag_id].why == "off by default" for flag_id in off)
 
 
 def test_turning_one_off_turns_off_what_needs_it():

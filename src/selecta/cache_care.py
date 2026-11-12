@@ -1,8 +1,9 @@
 """Tidying the local caches on disk, without ever touching what the current mix needs.
 
 `stems.prune_cache` keeps the caches under the person's limit, least recently used first. This
-module does what a size limit alone can't, once each time the seam worker starts (feature flag
-`workspace.cache_care`; with it off, nothing here deletes anything):
+module does what a size limit alone can't, in a thread beside the seam worker the first time it
+is idle and every six hours after (feature flag `workspace.cache_care`; with it off, nothing here
+deletes anything):
 
 - Crash leftovers: half-written `.part` and `.tmp` files, a stem window whose separation never
   finished, and a seam folder with no record in it. Anything younger than `CRASH_GRACE_S` is left,
@@ -147,10 +148,23 @@ def replace_when_free(partial: Path, path: Path) -> None:
     os.replace(partial, path)
 
 
-def _kept(settings: Settings) -> set[str]:
-    from selecta.stems import _priority_window_names, held_windows
+class _Kept:
+    """What the tidy must leave. The windows this process holds are asked for at each look, since
+    the tidy runs beside the worker and a split may start while it runs."""
 
-    return protected_keys(settings) | held_windows() | _priority_window_names(settings)
+    def __init__(self, settings: Settings):
+        from selecta.stems import _priority_window_names
+
+        self.fixed = protected_keys(settings) | _priority_window_names(settings)
+
+    def __contains__(self, name: object) -> bool:
+        from selecta.stems import held_windows
+
+        return name in self.fixed or name in held_windows()
+
+
+def _kept(settings: Settings) -> _Kept:
+    return _Kept(settings)
 
 
 # --- the tidy -----------------------------------------------------------------------------------
@@ -184,7 +198,7 @@ def _remove(path: Path, reason: str, swept: Swept) -> None:
     swept.note(reason, size)
 
 
-def _crash_leftovers(settings: Settings, kept: set[str], now: float, swept: Swept) -> None:
+def _crash_leftovers(settings: Settings, kept: _Kept, now: float, swept: Swept) -> None:
     patterns = [
         (settings.home / "exports", "*.part"),
         (settings.features_dir, "*.part"),
@@ -224,7 +238,7 @@ def _song_ids(conn: sqlite3.Connection) -> set[int]:
 
 
 def _orphans(
-    settings: Settings, conn: sqlite3.Connection, kept: set[str], now: float, swept: Swept
+    settings: Settings, conn: sqlite3.Connection, kept: _Kept, now: float, swept: Swept
 ) -> None:
     from selecta.seams import SeamRequest
     from selecta.stems import _window_folder
@@ -279,7 +293,7 @@ def _orphans(
                 continue
 
 
-def _old_stems(settings: Settings, kept: set[str], now: float, swept: Swept) -> None:
+def _old_stems(settings: Settings, kept: _Kept, now: float, swept: Swept) -> None:
     stems = settings.home / "stems"
     if not stems.is_dir():
         return

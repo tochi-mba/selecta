@@ -165,8 +165,16 @@ def analyse(
         stop_when_app_stops()
     settings, conn = _open()
     if song:
-        rows = [db.song_by_id(conn, song_id) for song_id in song]
-        songs = [row for row in rows if row is not None]
+        rows = [db.song_by_id(conn, song_id) for song_id in dict.fromkeys(song)]
+        # r8d: a song asked for by name may have been analysed by the library's own run since it
+        # was asked for. Leaving it out here, before the models load, saves starting a gigabyte of
+        # models only to skip every song
+        songs = [
+            row
+            for row in rows
+            if row is not None
+            and (refresh or not db.is_analysed(conn, row["id"], ANALYSIS_VERSION))
+        ]
     else:
         songs = db.songs_needing_analysis(conn, ANALYSIS_VERSION, folder, refresh)
     if sample:

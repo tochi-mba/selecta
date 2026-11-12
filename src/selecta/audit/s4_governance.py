@@ -68,7 +68,10 @@ def api_rows(app, owners: dict[str, str]) -> list[ApiRow]:
     for route in app.router.routes:
         if not isinstance(route, APIRoute) or not route.path.startswith("/api/"):
             continue
-        body = getattr(getattr(route, "body_field", None), "type_", None)
+        body = ", ".join(
+            getattr(param.field_info.annotation, "__name__", "")
+            for param in route.dependant.body_params
+        )
         doc = (route.endpoint.__doc__ or "").strip().split("\n\n")[0]
         for method in sorted(route.methods or ()):
             if method == "HEAD" and "GET" in (route.methods or ()):
@@ -81,7 +84,7 @@ def api_rows(app, owners: dict[str, str]) -> list[ApiRow]:
                     effect="reads" if method in READS else "changes state",
                     flag=owners.get(key, "UNOWNED"),
                     module=route.endpoint.__module__.removeprefix("selecta."),
-                    body=getattr(body, "__name__", "") if body is not None else "",
+                    body=body.strip(", "),
                     does=" ".join(doc.split()),
                 )
             )
@@ -170,8 +173,9 @@ def boundary_rows(merge: str = PR28_MERGE, root: Path = ROOT) -> list[BoundaryRo
     paths = _git("diff", "--name-only", f"{merge}^1", merge, root=root).split()
     rows = []
     for path in sorted(paths):
-        log = _git("log", "--format=%h %s", f"{merge}^1..{merge}^2", "--", path, root=root)
-        rows.append(BoundaryRow(path, path_kind(path), tuple(log.strip().splitlines())))
+        log = _git("log", "--format=%H %s", f"{merge}^1..{merge}^2", "--", path, root=root)
+        commits = tuple(line[:7] + line[40:] for line in log.strip().splitlines())
+        rows.append(BoundaryRow(path, path_kind(path), commits))
     return rows
 
 

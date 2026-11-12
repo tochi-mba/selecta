@@ -54,10 +54,11 @@ for (const where of PAGES) {
 test('the mini-player names the title before the artist', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/listen');
-  const play = page.getByRole('button', { name: /^Play/ }).first();
-  if (await play.count() === 0) test.skip(true, 'nothing to play in this fixture');
+  await expect(page.locator('.lyrics')).toBeVisible();
+  const play = page.locator('.now .transport .primary');
   await play.click();
-  await page.goto('/library');
+  await expect(play).toHaveText('Pause', { timeout: 30_000 });
+  await page.getByRole('link', { name: 'Library' }).first().click();
   const mini = page.locator('.mini-song');
   await expect(mini).toBeVisible();
   const order = await mini.evaluate((node) => [...node.children].map((child) => child.tagName.toLowerCase()));

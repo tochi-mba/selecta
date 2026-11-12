@@ -50,6 +50,29 @@ def known_homes(current: Path) -> list[Path]:
     return [*homes, *old_homes(current)]
 
 
+# r8d: every seam record read before, by the file's modified time and size. The page reads them
+# all each time it opens, and almost none change between visits, so only new or changed ones are
+# parsed again. Bounded by how many records there are on this PC.
+_RECORDS: dict[Path, tuple[tuple[int, int], dict]] = {}
+
+
+def _record(meta: Path) -> dict | None:
+    try:
+        facts = meta.stat()
+        stamp = (facts.st_mtime_ns, facts.st_size)
+        known = _RECORDS.get(meta)
+        if known is not None and known[0] == stamp:
+            return known[1]
+        state = json.loads(meta.read_text("utf-8"))
+    except (OSError, ValueError):
+        _RECORDS.pop(meta, None)
+        return None
+    if not isinstance(state, dict):
+        return None
+    _RECORDS[meta] = (stamp, state)
+    return state
+
+
 def read_rated(home: Path) -> list[Rated]:
     """The rated seams in one data folder, including ones the render cache has since cleared."""
     conn = sqlite3.connect(f"file:{home / 'selecta.sqlite'}?mode=ro", uri=True)
@@ -67,11 +90,9 @@ def read_rated(home: Path) -> list[Rated]:
         *(home / "renders" / "seams").glob("*/seam.json"),
         *(home / "seam-history").glob("*.json"),
     ]:
-        try:
-            state = json.loads(meta.read_text("utf-8"))
-        except (OSError, ValueError):
-            continue
-        states.setdefault(state.get("key", str(meta)), state)
+        state = _record(meta)
+        if state is not None:
+            states.setdefault(state.get("key", str(meta)), state)
     found = []
     for state in states.values():
         if state.get("rating") not in {"good", "bad"}:

@@ -1,1 +1,0 @@
-{"extends":"./tsconfig.json","compilerOptions":{"types":["node"],"noEmit":true},"include":["e2e/sf-0235-studio-stems.e2e.ts"]}

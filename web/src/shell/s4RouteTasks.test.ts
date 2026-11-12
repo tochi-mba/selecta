@@ -14,7 +14,7 @@ const script = JSON.parse(fs.readFileSync(`${node.cwd()}/e2e/s4-route-tasks.json
   menuSources: Record<string, string>;
 };
 const menuFiles = fs.readdirSync(SOURCE, { recursive: true })
-  .map((file) => file.replace(/\/g, '/'))
+  .map((file) => file.replace(/\\/g, '/'))
   .filter((file) => file.endsWith('.tsx') && !file.includes('.test.'))
   .filter((file) => /<Menu\b/.test(fs.readFileSync(SOURCE + file, 'utf8')));
 

@@ -67,10 +67,20 @@ test('a selected Library row keeps a solid Highlight outline under forced colour
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('/library');
   await settle(page);
-  await page.getByRole('checkbox', { name: /^Select recording/ }).first().check();
+  const box = page.getByRole('checkbox', { name: /^Select recording/ }).first();
+  await box.check();
+  // while the row holds focus it shows the focus ring, outside the row, so focus and selection differ
+  const focused = await page.locator('.library-rows .song-row.selected').first().evaluate((node) => {
+    const style = getComputedStyle(node);
+    return { offset: parseFloat(style.outlineOffset), style: style.outlineStyle };
+  });
+  expect(focused.style).toBe('solid');
+  expect(focused.offset).toBeGreaterThan(0);
+  await box.evaluate((node) => (node as HTMLElement).blur());
   const row = await edge(page, '.library-rows .song-row.selected');
   expect(row.outline).toBe(true);
   expect(row.outlineColour).toBe(await system(page, 'Highlight'));
+  expect(await page.locator('.library-rows .song-row.selected').first().evaluate((node) => parseFloat(getComputedStyle(node).outlineOffset))).toBeLessThanOrEqual(0);
 });
 
 test('a pressed toggle draws a different edge from an unpressed one under forced colours', async ({ page }) => {

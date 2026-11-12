@@ -104,3 +104,8 @@ web/e2e/*.probe.ts
 *.orig
 *.rej
 .#*
+
+# agents' before/after copies of the tree for timing comparisons (web/r8c-before/ etc.)
+**/r[0-9]*-before/
+**/r[0-9]*-after/
+**/*-baseline-copy/

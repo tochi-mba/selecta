@@ -154,8 +154,15 @@ def cache_bytes(settings: Settings) -> int:
 
 def largest_cache_bytes(settings: Settings) -> int:
     """The most the cache may ever hold: what it holds now plus free space, less a safety margin."""
+    return cache_room(settings)[1]
+
+
+def cache_room(settings: Settings) -> tuple[int, int]:
+    """What the cache holds now, and the most it may ever hold, from one walk of it (r8d). Asking
+    `cache_bytes` and `largest_cache_bytes` one after the other walked every cached file twice."""
+    used = cache_bytes(settings)
     free = shutil.disk_usage(settings.home).free
-    return max(MIN_CACHE_BYTES, cache_bytes(settings) + free - FREE_SPACE_RESERVE)
+    return used, max(MIN_CACHE_BYTES, used + free - FREE_SPACE_RESERVE)
 
 
 def _priority_window_names(settings: Settings) -> set[str]:

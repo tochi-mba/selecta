@@ -92,6 +92,26 @@ describe('the wake lock', () => {
     expect(hold.held()).toBe(false);
   });
 
+  it('asks once while a request is on its way, so no lock is left unreleased', async () => {
+    const grants: ((s: { released: boolean; release: () => Promise<void> }) => void)[] = [];
+    const request = vi.fn(() => new Promise<{ released: boolean; release: () => Promise<void> }>((resolve) => { grants.push(resolve); }));
+    const doc = fakeDocument();
+    const hold = holdWakeLock({ wakeLock: { request } } as unknown as Navigator, doc as unknown as Document);
+    // the page is hidden and shown again twice before the browser answers
+    doc.fire();
+    doc.fire();
+    const made: { released: boolean; release: () => Promise<void> }[] = [];
+    for (const grant of grants) {
+      const lock = { released: false, release: async () => { lock.released = true; } };
+      made.push(lock);
+      grant(lock);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    hold.release();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(made.every((lock) => lock.released)).toBe(true);
+  });
+
   it('does nothing where the browser has no wake lock', () => {
     const doc = fakeDocument();
     const hold = holdWakeLock({} as Navigator, doc as unknown as Document);

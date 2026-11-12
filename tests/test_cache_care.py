@@ -299,6 +299,28 @@ def test_a_library_with_much_free_space_is_compacted_once(settings):
         assert check.execute("SELECT count(*) FROM songs").fetchone()[0] == 0
 
 
+def test_a_library_already_incremental_hands_back_every_free_page(settings):
+    """PRAGMA incremental_vacuum frees one page per step, so its result has to be read whole."""
+    conn = db.connect(settings.db_path)
+    conn.execute("CREATE TABLE filler(x BLOB)")
+    conn.executemany("INSERT INTO filler VALUES(?)", [(os.urandom(4000),) for _ in range(4000)])
+    conn.commit()
+    conn.execute("DELETE FROM filler")
+    conn.commit()
+    conn.close()
+    cache_care.tidy_database(settings.db_path)  # compacted once, now incremental
+    conn = sqlite3.connect(settings.db_path)
+    conn.executemany("INSERT INTO filler VALUES(?)", [(os.urandom(4000),) for _ in range(500)])
+    conn.commit()
+    conn.execute("DELETE FROM filler")
+    conn.commit()
+    assert conn.execute("PRAGMA freelist_count").fetchone()[0] > 100
+    conn.close()
+    cache_care.tidy_database(settings.db_path)
+    with sqlite3.connect(settings.db_path) as check:
+        assert check.execute("PRAGMA freelist_count").fetchone()[0] == 0
+
+
 # --- the flag -----------------------------------------------------------------------------------
 
 
