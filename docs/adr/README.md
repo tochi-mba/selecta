@@ -16,7 +16,7 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 | [Flow (SF)](selecta-flow-implementation-checklist.md) | 400 | 261 | 19 | 70 | 46 | 4 | 255 | 0 |
 | [Gap polish (GP)](selecta-gap-polish-implementation-checklist.md) | 128 | 111 | 0 | 17 | 0 | 0 | 111 | 0 |
 | [Final polish (FP)](selecta-final-polish-implementation-checklist.md) | 64 | 53 | 2 | 9 | 0 | 0 | 0 | 0 |
-| [Measured micro-polish (MP)](selecta-measured-micro-polish-implementation-checklist.md) | 224 | 193 | 11 | 20 | 0 | 0 | 193 | 0 |
+| [Measured micro-polish (MP)](selecta-measured-micro-polish-implementation-checklist.md) | 224 | 194 | 11 | 19 | 0 | 0 | 194 | 0 |
 | [Library + Lucy (LX)](selecta-library-lucy-experience-implementation-checklist.md) | 208 | 179 | 1 | 28 | 0 | 0 | 144 | 0 |
 | [Unified finish (UF)](selecta-unified-finish-implementation-checklist.md) | 192 | 169 | 6 | 17 | 0 | 0 | 108 | 0 |
 | [Selecta Cloud (SC)](selecta-cloud-implementation-checklist.md) | 136 | 91 | 35 | 10 | 0 | 0 | 91 | 0 |
