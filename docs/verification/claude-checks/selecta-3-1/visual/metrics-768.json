@@ -1,0 +1,428 @@
+{
+ "768-light-start": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-light-explore": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-light-my-mixes": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-light-listen": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [
+   "summary \"Why this transition?\" 495x23"
+  ],
+  "smallCount": 1,
+  "axe": []
+ },
+ "768-light-editor": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13"
+  ],
+  "smallCount": 3,
+  "axe": []
+ },
+ "768-light-library": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-light-discover-words": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-light-discover-harmonic": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-light-workspace": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13"
+  ],
+  "smallCount": 10,
+  "axe": []
+ },
+ "768-light-sources": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-light-diagnostics": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [
+   "input \"\" 13x13"
+  ],
+  "smallCount": 1,
+  "axe": []
+ },
+ "768-light-listening-study": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-light-listen-playing": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [
+   "summary \"Why this transition?\" 495x23"
+  ],
+  "smallCount": 1,
+  "axe": []
+ },
+ "768-light-stage": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-light-export-dialog": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-light-shape-dialog": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-light-requests-drawer": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-light-palette": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": [
+   {
+    "id": "label-content-name-mismatch",
+    "impact": "serious",
+    "count": 15,
+    "targets": [
+     "#_r_k_-option-0",
+     "#_r_k_-option-1",
+     "#_r_k_-option-2"
+    ],
+    "why": "Fix any of the following:\n  Text inside the element is not included in the accessible name"
+   }
+  ]
+ },
+ "768-light-inspector": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-light-library-empty": {
+  "theme": "light",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-dark-start": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-dark-explore": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-dark-my-mixes": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-dark-listen": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [
+   "summary \"Why this transition?\" 495x23"
+  ],
+  "smallCount": 1,
+  "axe": []
+ },
+ "768-dark-editor": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13"
+  ],
+  "smallCount": 3,
+  "axe": []
+ },
+ "768-dark-library": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-dark-discover-words": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-dark-discover-harmonic": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-dark-workspace": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13"
+  ],
+  "smallCount": 10,
+  "axe": []
+ },
+ "768-dark-sources": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-dark-diagnostics": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [
+   "input \"\" 13x13"
+  ],
+  "smallCount": 1,
+  "axe": []
+ },
+ "768-dark-listening-study": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-dark-listen-playing": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [
+   "summary \"Why this transition?\" 495x23"
+  ],
+  "smallCount": 1,
+  "axe": []
+ },
+ "768-dark-stage": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-dark-export-dialog": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-dark-shape-dialog": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-dark-requests-drawer": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-dark-palette": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": [
+   {
+    "id": "label-content-name-mismatch",
+    "impact": "serious",
+    "count": 15,
+    "targets": [
+     "#_r_k_-option-0",
+     "#_r_k_-option-1",
+     "#_r_k_-option-2"
+    ],
+    "why": "Fix any of the following:\n  Text inside the element is not included in the accessible name"
+   }
+  ]
+ },
+ "768-dark-inspector": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "768-dark-library-empty": {
+  "theme": "dark",
+  "scrollWidth": 753,
+  "room": 768,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ }
+}
