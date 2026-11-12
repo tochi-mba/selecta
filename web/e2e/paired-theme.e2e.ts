@@ -83,7 +83,9 @@ for (const viewport of VIEWPORTS) {
         // A page's own data placeholders are not its controls: Word connections waits out a 200ms
         // search pause before it asks, so a reading taken while its placeholder shows records the
         // loading state in one theme and the loaded page in the other. Read once the data is in.
-        await expect(main.locator('.skeleton')).toHaveCount(0);
+        // Diagnostics deliberately exhibits nine permanent loading examples in the component gallery.
+        // They are specimens, not an unfinished network request; real route placeholders must settle.
+        await expect(main.locator('.skeleton:not(.control-gallery .skeleton)')).toHaveCount(0);
         // Semantic controls must agree across light/dark. Poll for asynchronous
         // route data to settle, while preserving the strict equality assertion.
         await page.waitForTimeout(180);

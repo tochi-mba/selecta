@@ -59,7 +59,9 @@ test('the whole current lyric line shows on Stage from 1280 to 1920 wide, light 
         const words = [...range.getClientRects()].filter((rect) => rect.width > 0);
         return {
           top: box.top, bottom: box.bottom, left: box.left, right: box.right,
-          cut: sung.scrollWidth > sung.clientWidth + 1 || sung.scrollHeight > sung.clientHeight + 1,
+          // scrollWidth/scrollHeight include font ink and the highlighted word's decoration,
+          // even when none of the letters is clipped. Check rendered text rectangles instead.
+          cut: words.some((rect) => rect.left < box.left - 1 || rect.right > box.right + 1 || rect.top < box.top - 1 || rect.bottom > box.bottom + 1),
           title: document.querySelector('.stage .track-title')!.getBoundingClientRect().height,
           overlaps: words.some((rect) => controls.some((button) => rect.left < button.right && rect.right > button.left && rect.top < button.bottom && rect.bottom > button.top)),
         };
