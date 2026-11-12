@@ -1,0 +1,57 @@
+- link "Skip to the page":
+  - /url: "#content"
+- navigation "Main":
+  - link "Selecta, go to Make a Mix":
+    - /url: /mixes
+    - text: Selecta
+  - list:
+    - listitem:
+      - link "Listen":
+        - /url: /listen
+    - listitem:
+      - link "Make a Mix":
+        - /url: /mixes
+    - listitem:
+      - link "My Mixes":
+        - /url: /mixes/mine
+    - listitem:
+      - link "Library":
+        - /url: /library
+    - listitem:
+      - link "Workspace":
+        - /url: /workshop
+    - listitem:
+      - link "Edit":
+        - /url: /mix/current/edit
+  - 'button "Requests: Request a song"': Request a song
+  - button "Collapse the side bar"
+- banner:
+  - navigation "Breadcrumb":
+    - list:
+      - listitem: My Mixes
+  - button "Search Ctrl K"
+  - 'button "Theme: Match this computer"'
+  - button "Activity"
+  - link "Workspace, 1 item needs your attention":
+    - /url: /workshop
+    - text: "1"
+  - button "Keyboard shortcuts"
+- main:
+  - heading "My Mixes" [level=1]
+  - region "Current mix":
+    - paragraph: Current mix
+    - heading "Your mix" [level=2]
+    - text: Song-order identity · decorative, not an audio waveform
+    - paragraph: 8 songs, about 8 min
+    - paragraph: 0 of 7 transitions ready
+    - button "Play"
+    - button "Edit"
+  - region "Your drafts":
+    - heading "Your drafts" [level=2]
+    - button "New draft"
+    - button "Save current mix as a draft"
+    - paragraph: Build a mix without touching what’s playing. Everything saves as you go. Playing a draft makes it your current mix, and what was playing becomes a draft, so nothing is lost.
+    - heading "A place for your next mix" [level=3]
+    - paragraph: Create a draft, or save a copy of your current mix. Editing a draft leaves playback alone.
+    - button "Start your first draft"
+- status: "Workspace needs your attention: 1 song failed."

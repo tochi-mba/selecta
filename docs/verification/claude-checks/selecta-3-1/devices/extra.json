@@ -1,0 +1,30 @@
+{
+ "backendDown": {
+  "text": "S\nCan’t reach Selecta.\n\nIt may have stopped running. Start it again, and this page will pick up by itself.\n\nTry now",
+  "offlineClaim": false
+ },
+ "backendBack": {
+  "text": "Skip to the page\nSelecta\nListen\nMake a Mix\nMy Mixes\nLibrary\nWorkspace\nEdit\nRequest a song\nListen\nSearch\nCtrl K\nTheme: Match this computer\n1\n\nYOUR MIX\n\nAn Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix)\n\nAn Artist Whose Name Is Also Far Too Long To Fit On One Line\n\nPlay\nJump to the transition\nVerse\nBand\n0:00 / 1:27\n\nWord h"
+ },
+ "slowDouble": {
+  "label": "Move An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix) down",
+  "busy": {
+   "disabled": true,
+   "ariaBusy": 2
+  },
+  "sent": [
+   "POST /api/mix/move"
+  ],
+  "focus": "Move An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix) down"
+ },
+ "narrowKeyboard": {
+  "box": {
+   "x": 16,
+   "y": 193.5625,
+   "width": 273,
+   "height": 44
+  },
+  "visible": true,
+  "focused": true
+ }
+}

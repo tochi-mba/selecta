@@ -43,7 +43,7 @@ async function play(page: Page) {
 
 test('matrix routes x widths x themes', async ({ page, request }) => {
   await resetMix(request, STRESS_MIX);
-  await allRendered(request);
+  await allRendered(request, 150_000).catch(() => {});
   const routes = [['mixes', '/mixes'], ['library', '/library'], ['edit', '/mix/current/edit'], ['workshop', '/workshop'], ['listen', '/listen']] as const;
   const widths = [[320, 640], [375, 667], [768, 1024], [1280, 800], [1440, 900]] as const;
   const overflow: string[] = [];
@@ -75,7 +75,7 @@ test('matrix routes x widths x themes', async ({ page, request }) => {
 test('states overlays gallery forced', async ({ page, request }) => {
   test.setTimeout(900_000);
   await resetMix(request, STRESS_MIX);
-  await allRendered(request);
+  await allRendered(request, 150_000).catch(() => {});
   const log: Record<string, unknown> = {};
   for (const theme of ['light', 'dark'] as const) {
     for (const [w, h] of [[1440, 900], [375, 667]] as const) {

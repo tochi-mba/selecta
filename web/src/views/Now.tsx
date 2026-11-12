@@ -153,6 +153,10 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
   // anchored to the audio clock until the pointer is released and the player accepts it.
   const [seekPreview, setSeekPreview] = useState<number | null>(null);
   const dragging = useRef<number | null>(null);
+  // While the slider has focus, its spoken value holds still and moves only when the listener seeks:
+  // a value that ticks with the music makes a screen reader read the clock aloud twice a second.
+  const [heldAt, setHeldAt] = useState<number | null>(null);
+  const spokenTime = heldAt === null ? safeTime : Math.min(heldAt, duration);
   useEffect(() => {
     dragging.current = null;
     setSeekPreview(null);
@@ -211,7 +215,11 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
     event.preventDefault();
     event.stopPropagation();
     if (locked) announce(unavailable ? unavailableWords : CANT_SEEK);
-    else onSeek(Math.min(Math.max(moves[event.key], 0), duration));
+    else {
+      const target = Math.min(Math.max(moves[event.key], 0), duration);
+      setHeldAt(target);
+      onSeek(target);
+    }
   };
   return (
     <>
@@ -222,8 +230,8 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
       aria-label="Where in the song"
       aria-valuemin={0}
       aria-valuemax={Math.round(duration)}
-      aria-valuenow={Math.round(safeTime)}
-      aria-valuetext={unavailable ? 'Duration unknown' : `${transportClock(safeTime)} of ${transportClock(duration)}, ${transportClock(duration - safeTime)} left`}
+      aria-valuenow={Math.round(spokenTime)}
+      aria-valuetext={unavailable ? 'Duration unknown' : `${transportClock(spokenTime)} of ${transportClock(duration)}, ${transportClock(duration - spokenTime)} left`}
       aria-disabled={locked || undefined}
       aria-describedby={locked ? noteId : undefined}
       onPointerDown={beginSeek}
@@ -232,6 +240,8 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
       onPointerCancel={cancelSeek}
       onLostPointerCapture={cancelSeek}
       onKeyDown={keys}
+      onFocus={() => setHeldAt(safeTime)}
+      onBlur={() => setHeldAt(null)}
     >
       <svg className="peaks" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
         <defs>

@@ -1,0 +1,193 @@
+- link "Skip to the page":
+  - /url: "#content"
+- navigation "Main":
+  - link "Selecta, go to Make a Mix":
+    - /url: /mixes
+    - text: Selecta
+  - list:
+    - listitem:
+      - link "Listen":
+        - /url: /listen
+    - listitem:
+      - link "Make a Mix":
+        - /url: /mixes
+    - listitem:
+      - link "My Mixes":
+        - /url: /mixes/mine
+    - listitem:
+      - link "Library":
+        - /url: /library
+    - listitem:
+      - link "Workspace":
+        - /url: /workshop
+    - listitem:
+      - link "Edit":
+        - /url: /mix/current/edit
+  - 'button "Requests: Request a song"': Request a song
+  - button "Collapse the side bar"
+- banner:
+  - navigation "Breadcrumb":
+    - list:
+      - listitem:
+        - link "My Mixes":
+          - /url: /mixes/mine
+      - listitem: /Edit current mix
+  - button "Search Ctrl K"
+  - 'button "Theme: Match this computer"'
+  - button "Activity"
+  - link "Workspace, 1 item needs your attention":
+    - /url: /workshop
+    - text: "1"
+  - button "Keyboard shortcuts"
+- main:
+  - group "What you’re editing": Editing the current mix Changes here change what’s playing. Arrange view Revision f7fa 0 of 7 transitions made
+  - paragraph: Current mix
+  - heading "Your mix" [level=1]
+  - paragraph: 8 songs, about 8 min. 0 of 7 transitions are ready. The rest take about 5 minutes. Select a transition to hear or change it.
+  - button "Play from the top"
+  - button "Save a copy"
+  - button "Undo last change"
+  - button "Render every transition"
+  - button "Download audio"
+  - link "Ask Lucy about this mix":
+    - /url: /mixes/lucy?scope=current&from=%2Fmix%2Fcurrent%2Fedit
+  - button "New mix"
+  - button "Clear"
+  - group "View":
+    - text: View
+    - radio "Story"
+    - text: Story
+    - radio "Arrange" [checked]
+    - text: Arrange
+    - radio "Detail"
+    - text: Detail
+    - paragraph: Reorder, add and remove songs. Select a transition to hear or change it.
+  - region "Timeline":
+    - heading "Timeline" [level=2]
+    - button "Measured song energy"
+    - img "Measured energy rises and falls several times"
+    - list:
+      - listitem:
+        - button "Reorder An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix)"
+        - text: "1"
+        - button "An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix)"
+        - text: An Artist Whose Name Is Also Far Too Long To Fit On One Line 123 BPM 8A · 1:27
+        - button "Play from An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix)": Play
+        - button "Move An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix) up" [disabled]
+        - button "Move An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix) down"
+        - button "More for An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix)"
+      - listitem:
+        - button "Add a song after An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix); Add a song as number 2": Add a song
+      - listitem:
+        - button "Let Selecta pick Not rendered yet, under a minute"
+        - button "Render it"
+        - button "Change"
+        - img "Planned, not rendered. Let Selecta pick. from An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix) into Untitled": Planned, not rendered · Let Selecta pick
+      - listitem:
+        - button "Reorder Untitled"
+        - text: "2"
+        - button "Untitled"
+        - text: Unknown artist 120 BPM 8A · 1:30
+        - button "Play from Untitled": Play
+        - button "Move Untitled up"
+        - button "Move Untitled down"
+        - button "More for Untitled"
+      - listitem:
+        - button "Add a song after Untitled; Add a song as number 3": Add a song
+      - listitem:
+        - button "Let Selecta pick Not rendered yet, about a minute"
+        - button "Render it"
+        - button "Change"
+        - img "Planned, not rendered. Let Selecta pick. from Untitled into Remix של שלום (feat. ليلى) 2026": Planned, not rendered · Let Selecta pick
+      - listitem:
+        - button "Reorder Remix של שלום (feat. ليلى) 2026"
+        - text: "3"
+        - button "Remix של שלום (feat. ليلى) 2026"
+        - text: Mixed Bidi Ensemble 120 BPM 9A · 1:30
+        - button "Play from Remix של שלום (feat. ليلى) 2026": Play
+        - button "Move Remix של שלום (feat. ليلى) 2026 up"
+        - button "Move Remix של שלום (feat. ليلى) 2026 down"
+        - button "More for Remix של שלום (feat. ليلى) 2026"
+      - listitem:
+        - button "Add a song after Remix של שלום (feat. ليلى) 2026; Add a song as number 4": Add a song
+      - listitem:
+        - button "Let Selecta pick Not rendered yet, about 2 minutes"
+        - button "Render it"
+        - button "Change"
+        - img "Planned, not rendered. Let Selecta pick. from Remix של שלום (feat. ليلى) 2026 into 夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル": Planned, not rendered · Let Selecta pick
+      - listitem:
+        - button "Reorder 夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル"
+        - text: "4"
+        - button "夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル"
+        - text: 東京の夜の楽団と仲間たち 119 BPM 8A · 1:30
+        - button "Play from 夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル": Play
+        - button "Move 夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル up"
+        - button "Move 夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル down"
+        - button "More for 夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル"
+      - listitem:
+        - button "Add a song after 夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル; Add a song as number 5": Add a song
+      - listitem:
+        - button "Let Selecta pick Not rendered yet, about 3 minutes"
+        - button "Render it"
+        - button "Change"
+        - img "Planned, not rendered. Let Selecta pick. from 夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル into أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة": Planned, not rendered · Let Selecta pick
+      - listitem:
+        - button "Reorder أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة"
+        - text: "5"
+        - button "أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة"
+        - text: فرقة الليل الطويل 122 BPM 8A · 1:28
+        - button "Play from أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة": Play
+        - button "Move أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة up"
+        - button "Move أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة down"
+        - button "More for أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة"
+      - listitem:
+        - button "Add a song after أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة; Add a song as number 6": Add a song
+      - listitem:
+        - button "Let Selecta pick Not rendered yet, about 3 minutes"
+        - button "Render it"
+        - button "Change"
+        - img "Planned, not rendered. Let Selecta pick. from أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة into Same Name": Planned, not rendered · Let Selecta pick
+      - listitem:
+        - button "Reorder Same Name"
+        - text: "6"
+        - button "Same Name"
+        - text: Hal Greene 120 BPM 8A · 1:30
+        - button "Play from Same Name": Play
+        - button "Move Same Name up"
+        - button "Move Same Name down"
+        - button "More for Same Name"
+      - listitem:
+        - button "Add a song after Same Name; Add a song as number 7": Add a song
+      - listitem:
+        - button "Let Selecta pick Not rendered yet, about 4 minutes"
+        - button "Render it"
+        - button "Change"
+        - img "Planned, not rendered. Let Selecta pick. from Same Name into Same Name": Planned, not rendered · Let Selecta pick
+      - listitem:
+        - button "Reorder Same Name"
+        - text: "7"
+        - button "Same Name"
+        - text: Hal Greene 120 BPM 8A · 1:30
+        - button "Play from Same Name": Play
+        - button "Move Same Name up"
+        - button "Move Same Name down"
+        - button "More for Same Name"
+      - listitem:
+        - button "Add a song after Same Name; Add a song as number 8": Add a song
+      - listitem:
+        - button "Let Selecta pick Not rendered yet, about 5 minutes"
+        - button "Render it"
+        - button "Change"
+        - img "Planned, not rendered. Let Selecta pick. from Same Name into HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026": Planned, not rendered · Let Selecta pick
+      - listitem:
+        - button "Reorder HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026"
+        - text: "8"
+        - button "HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026"
+        - text: Nospacesartistnamethatalsorefusestowrap 121 BPM 8A · 1:29
+        - button "Play from HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026": Play
+        - button "Move HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026 up"
+        - button "Move HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026 down" [disabled]
+        - button "More for HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026"
+      - listitem:
+        - button "Add a song after HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026; Add a song as number 9": Add a song
+- status: "Workspace needs your attention: 1 song failed."

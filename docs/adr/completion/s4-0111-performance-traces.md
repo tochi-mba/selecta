@@ -28,6 +28,47 @@ rows within 3 s, JS heap under 200 MB after 1,000 Library rows, p95 frame at mos
 Input stays responsive and memory is far under budget; the waits are the server answering a 20,000-row
 search on a loaded machine, as MI-0162-04 also found (docs/adr/selecta-microinteraction-performance-results.md).
 
+### Re-run after the search and refresh fixes (2026-11-12, 1 run, passed all 7 budgets)
+
+Same bench, machine and scale server, build `web/dist-r13`. The bench now also prints where each
+slow result's time went (every API request after the last key or the reload: start, wait for the
+first byte, end) and times the search and the refresh on every frame (`waitForFunction` with
+`polling: 'raf'`). Playwright's `expect` polls at 100, 250, 500 and then every 1,000 ms, so the
+first run's 4,253 and 4,799 ms readings could each be up to a second late.
+
+A baseline of the unchanged code on the same afternoon (expect-polled, as before) read search
+1,116 ms and refresh 1,392 ms, both inside budget: the morning's misses were mostly a busier
+laptop plus that polling. Its split showed what still cost the time:
+
+- search: the request left 181 ms after the last key (a 200 ms typing pause, then a second 120 ms
+  wait in the Library), the server took 518 ms to its first byte, ranking all 20,000 names again
+  although the same search had been ranked moments before;
+- refresh: the Library's request waited for the local-or-Cloud status check (left at 469 ms), the
+  app then read `/api/status` a second time alongside it, and the search was ranked again, so its
+  first byte took 760 ms.
+
+Fixes: the server keeps the ranking of the last 16 searches while the library's names are exactly
+the same (`src/selecta/library/search_cache.py`, checked by one SQLite aggregate of every listed
+song's id, artist and title); a search typed in the Library is asked for as soon as the typing
+pauses (`web/src/views/Library.tsx`); a local build opened on `/library` asks for its first rows
+alongside the status check, and the app uses that status instead of reading it again
+(`web/src/RuntimeApp.tsx`, `web/src/startupStatus.ts`, `web/src/views/libraryPrefetch.ts`).
+
+| Reading | Before (first run / same-day baseline) | After | Budget |
+|---|---|---|---|
+| Search for "golden" settled after the last key | 4,253 / 1,116 ms | 509 ms (request left at 99 ms, first byte 301 ms, done 403 ms) | 1,500 ms |
+| Refresh at `/library?q=golden`, first rows | 4,799 / 1,392 ms | 919 ms (rows request left at 186 ms with the one status read) | 3,000 ms |
+| Slowest keystroke painted / Event Timing | 16.1 / 24 ms | 20.8 / 32 ms | 200 ms |
+| Ready filter press painted | 46.6 ms | 41 ms (result shown after 1,496 ms, expect-polled) | 200 ms |
+| Slowest Enter on Show more, 1,000 rows | 40.2 ms paint | 41.3 ms paint; long tasks 85 to 319 ms | 200 ms |
+| Scroll over 1,000 rows, p95 frame | 50 ms | 50 ms, no long task | 50 ms |
+| JS heap: opened / 1,000 rows / after refresh | 5.8 / 29.5 / 31.2 MB | 8.8 / 16.4 / 40.8 MB | 200 MB |
+
+Two Show more presses had a long task over 200 ms (319 and 212 ms) while their paint stayed at
+41 ms; the bench budgets the paint there, not long tasks, and the scroll p95 sits exactly on its
+50 ms budget (the baseline run read 50.1 ms). Still one shared, loaded laptop: not the hardware-
+and version-controlled trace a person records.
+
 ## S4-0111-06: 100-song Editor (1 run, passed)
 
 | Reading | Value | Budget |

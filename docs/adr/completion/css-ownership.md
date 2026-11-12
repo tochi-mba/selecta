@@ -83,6 +83,8 @@ wins, and the row says which.
 | `max-width: 1040px` | `styles/polish.css` | vibe skeleton follows the two-column vibe cards |
 | `max-width: 1024px` | `styles/operations.css` | Library columns fold into name/facts/readiness with actions beside; column head hidden (wins over `style.css` `.song-row` by specificity) |
 | `max-width: 1024px` | `styles/polish.css` | Library row skeleton folds with the loaded rows (P0033): facts drop under the name, actions stay beside; must stay the same number as `styles/operations.css` |
+| `max-width: 1024px` | `style.css` | timeline rows put their actions on a line under the song, so the title keeps its width beside the rail (2026-11-12 tablet review) |
+| `max-width: 1024px` | `styles/creation.css` | timeline grip column follows the stacked timeline row in `style.css` |
 | `max-width: 850px` | `styles/polish.css` | Make a Mix paths stack |
 | `min-width: 768px` | `styles/listening.css` | render queue names and move buttons use consistent columns once the list has room |
 | `min-width: 761px` | `styles/shell.css` | the side rail |

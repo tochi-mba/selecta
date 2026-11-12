@@ -180,7 +180,9 @@ legend { padding: 0; margin-bottom: var(--space-2); font-weight: 600; }
 .seam-visual-caption b { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); font-weight: 500; }
 .seam-visual-caption span { color: var(--motif); }
 .song-actions button { padding: var(--space-1) var(--space-snug); min-height: 34px; font-size: 0.86rem; }
-@media (max-width: 620px) {
+/* Up to tablet width the side rail leaves too little room for the title beside the actions, so the
+   actions take their own line under the song (found in the 2026-11-12 768px editor review). */
+@media (max-width: 1024px) {
   .song { grid-template-columns: auto auto minmax(0, 1fr); grid-template-areas: 'grip count name' 'grip count facts' 'actions actions actions'; }
   .song-actions { justify-content: flex-start; margin-top: var(--space-2); }
 }

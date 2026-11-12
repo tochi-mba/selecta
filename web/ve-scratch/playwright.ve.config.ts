@@ -23,7 +23,7 @@ export default defineConfig({
     { name: 'edge-pixel', use: { ...devices['Pixel 7'], channel: 'msedge' }, testMatch: '**/phone-*.ve.ts' },
   ],
   webServer: {
-    command: `../../.venv/Scripts/python.exe ../../tests/e2e_server.py ${port}`,
+    command: `"C:/Users/tochi/Documents/Code/selecta/.venv/Scripts/python.exe" "C:/Users/tochi/Documents/Code/selecta/tests/e2e_server.py" ${port}`,
     url: `http://127.0.0.1:${port}/api/status`,
     reuseExistingServer: false,
     timeout: 400_000,

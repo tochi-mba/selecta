@@ -1,0 +1,115 @@
+- link "Skip to the page":
+  - /url: "#content"
+- navigation "Main":
+  - link "Selecta, go to Make a Mix":
+    - /url: /mixes
+    - text: Selecta
+  - list:
+    - listitem:
+      - link "Listen":
+        - /url: /listen
+    - listitem:
+      - link "Make a Mix":
+        - /url: /mixes
+    - listitem:
+      - link "My Mixes":
+        - /url: /mixes/mine
+    - listitem:
+      - link "Library":
+        - /url: /library
+    - listitem:
+      - link "Workspace":
+        - /url: /workshop
+    - listitem:
+      - link "Edit":
+        - /url: /mix/current/edit
+  - 'button "Requests: Request a song"': Request a song
+  - button "Collapse the side bar"
+- banner:
+  - navigation "Breadcrumb":
+    - list:
+      - listitem: Workspace
+  - button "Search Ctrl K"
+  - 'button "Theme: Match this computer"'
+  - button "Activity"
+  - link "Workspace, 1 item needs your attention":
+    - /url: /workshop
+    - text: "1"
+  - button "Keyboard shortcuts"
+- main:
+  - heading "Workspace" [level=1]
+  - navigation "Workspace":
+    - link "Overview":
+      - /url: /workshop
+    - link "Analysis":
+      - /url: /workshop/analysis
+    - link "Sources":
+      - /url: /workshop/sources
+    - link "Storage":
+      - /url: /workshop/storage
+    - link "Learning":
+      - /url: /workshop/learning
+    - link "Diagnostics":
+      - /url: /workshop/diagnostics
+  - heading "What needs you" [level=2]
+  - paragraph: "Your library can be mixed: 18 songs ready"
+  - list:
+    - listitem:
+      - text: 1 song couldn’t be analysed.
+      - link "Look at those songs":
+        - /url: /library?show=attention
+  - strong: "18"
+  - text: ready for mixes
+  - strong: "18"
+  - text: audio analysed
+  - strong: "1"
+  - text: still to analyse
+  - strong: "2"
+  - text: with timed lyrics
+  - strong: "1"
+  - text: set aside as not music
+  - heading "What’s happening now" [level=2]
+  - list:
+    - listitem: Rendering Not started. It starts by itself when there’s something to do.
+    - listitem: Drafts in the render line None
+    - listitem: Analysis 1 waiting
+    - listitem: Spare time Trying out the best transitions across your library, once everything above is done
+  - heading "Songs that couldn’t be analysed" [level=3]
+  - list:
+    - listitem: Broken File
+  - link "See them in your library":
+    - /url: /library?show=attention
+  - paragraph: Times are estimates, from how long this PC has been taking.
+  - region "Exports":
+    - heading "Exports" [level=2]
+    - paragraph: Nothing yet. Choose Download audio while editing a mix to save it as a FLAC file.
+  - heading "Interface" [level=2]
+  - paragraph: These are kept in this browser. None of them change your music or your mixes.
+  - group "Theme":
+    - text: Theme
+    - radiogroup "Theme":
+      - radio "Match this computer" [checked]
+      - text: Match this computer
+      - radio "Light"
+      - text: Light
+      - radio "Dark"
+      - text: Dark
+  - group "Motion":
+    - text: Motion
+    - radiogroup "Motion":
+      - radio "Still"
+      - text: Still
+      - radio "Subtle" [checked]
+      - text: Subtle
+      - radio "Expressive"
+      - text: Expressive
+    - paragraph: Still stops decorative movement. Your computer’s reduced-motion setting always takes priority.
+  - checkbox "Compact rows in the Library, the timeline and drafts"
+  - text: Compact rows in the Library, the timeline and drafts
+  - checkbox "Use Ctrl K for search and commands" [checked]
+  - text: Use Ctrl K for search and commands
+  - checkbox "Single-key shortcuts such as N and M" [checked]
+  - text: Single-key shortcuts such as N and M
+  - 'checkbox "Use the older navigation: Mixes, Discover and Workshop"'
+  - text: "Use the older navigation: Mixes, Discover and Workshop"
+- status: "Workspace needs your attention: 1 song failed."

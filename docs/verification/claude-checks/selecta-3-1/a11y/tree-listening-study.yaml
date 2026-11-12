@@ -1,0 +1,70 @@
+- link "Skip to the page":
+  - /url: "#content"
+- navigation "Main":
+  - link "Selecta, go to Make a Mix":
+    - /url: /mixes
+    - text: Selecta
+  - list:
+    - listitem:
+      - link "Listen":
+        - /url: /listen
+    - listitem:
+      - link "Make a Mix":
+        - /url: /mixes
+    - listitem:
+      - link "My Mixes":
+        - /url: /mixes/mine
+    - listitem:
+      - link "Library":
+        - /url: /library
+    - listitem:
+      - link "Workspace":
+        - /url: /workshop
+    - listitem:
+      - link "Edit":
+        - /url: /mix/current/edit
+  - 'button "Requests: Request a song"': Request a song
+  - button "Collapse the side bar"
+- banner:
+  - navigation "Breadcrumb":
+    - list:
+      - listitem:
+        - link "Workspace":
+          - /url: /workshop
+      - listitem: /Listening study
+  - button "Search Ctrl K"
+  - 'button "Theme: Match this computer"'
+  - button "Activity"
+  - link "Workspace, 1 item needs your attention":
+    - /url: /workshop
+    - text: "1"
+  - button "Keyboard shortcuts"
+- main:
+  - heading "Listening study" [level=1]
+  - navigation "Workspace":
+    - link "Overview":
+      - /url: /workshop
+    - link "Analysis":
+      - /url: /workshop/analysis
+    - link "Sources":
+      - /url: /workshop/sources
+    - link "Storage":
+      - /url: /workshop/storage
+    - link "Learning":
+      - /url: /workshop/learning
+    - link "Diagnostics":
+      - /url: /workshop/diagnostics
+  - region "Blind listening study":
+    - heading "Blind listening study" [level=2]
+    - paragraph: Compare two versions without seeing how either was made. Listen to both, then choose your preference. A tie and “cannot judge” are both real answers. One person’s ear on one setup says something about that comparison, and doesn’t prove a version is better for everyone.
+    - text: Study code
+    - textbox "Study code"
+    - paragraph: The code you were given for this study.
+    - text: Listener nickname
+    - textbox "Listener nickname"
+    - paragraph: Any name you’ll use again, so your answers stay together.
+    - text: Listening setup
+    - textbox "Listening setup":
+      - /placeholder: For example, headphones in a quiet room
+    - button "Open study" [disabled]
+- status: "Workspace needs your attention: 1 song failed."

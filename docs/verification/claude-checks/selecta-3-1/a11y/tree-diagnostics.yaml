@@ -1,0 +1,77 @@
+- link "Skip to the page":
+  - /url: "#content"
+- navigation "Main":
+  - link "Selecta, go to Make a Mix":
+    - /url: /mixes
+    - text: Selecta
+  - list:
+    - listitem:
+      - link "Listen":
+        - /url: /listen
+    - listitem:
+      - link "Make a Mix":
+        - /url: /mixes
+    - listitem:
+      - link "My Mixes":
+        - /url: /mixes/mine
+    - listitem:
+      - link "Library":
+        - /url: /library
+    - listitem:
+      - link "Workspace":
+        - /url: /workshop
+    - listitem:
+      - link "Edit":
+        - /url: /mix/current/edit
+  - 'button "Requests: Request a song"': Request a song
+  - button "Collapse the side bar"
+- banner:
+  - navigation "Breadcrumb":
+    - list:
+      - listitem:
+        - link "Workspace":
+          - /url: /workshop
+      - listitem: /Diagnostics
+  - button "Search Ctrl K"
+  - 'button "Theme: Match this computer"'
+  - button "Activity"
+  - link "Workspace, 1 item needs your attention":
+    - /url: /workshop
+    - text: "1"
+  - button "Keyboard shortcuts"
+- main:
+  - heading "Workspace" [level=1]
+  - navigation "Workspace":
+    - link "Overview":
+      - /url: /workshop
+    - link "Analysis":
+      - /url: /workshop/analysis
+    - link "Sources":
+      - /url: /workshop/sources
+    - link "Storage":
+      - /url: /workshop/storage
+    - link "Learning":
+      - /url: /workshop/learning
+    - link "Diagnostics":
+      - /url: /workshop/diagnostics
+  - heading "Diagnostics" [level=2]
+  - region "What went wrong":
+    - heading "What went wrong" [level=3]
+    - list:
+      - listitem:
+        - text: "Background work: Analysing songs (1)"
+        - paragraph: "Possible cause, not confirmed: Some songs couldn’t be analysed. A damaged file or a format Selecta can’t read is likely, but not confirmed."
+        - paragraph: Look at those songs one at a time. Other songs are not affected.
+        - link "See those songs":
+          - /url: /library?show=attention
+  - list:
+    - listitem: The rendering worker isn’t running. It starts by itself when there’s something to do.
+    - listitem: 1 song couldn’t be analysed.
+    - listitem: Your current mix has 8 songs.
+    - listitem: 0 drafts are in the render line.
+  - paragraph: No paths or song names, and nothing is sent anywhere. It only leaves this PC if you copy it somewhere yourself.
+  - group: The raw details
+  - button "Copy"
+  - button "Check again"
+  - group: Development component gallery
+- status: "Workspace needs your attention: 1 song failed."

@@ -135,7 +135,7 @@
 .timeline.long > .song:has(.menu button[aria-expanded='true']), .timeline.long > .song:focus-within { content-visibility: visible; }
 .timeline .song:has(.menu button[aria-expanded='true']) { position: relative; z-index: calc(var(--layer-sticky) - 1); }
 
-@media (max-width: 620px) {
+@media (max-width: 1024px) {
   .timeline .song { grid-template-columns: var(--control-height) auto minmax(0, 1fr); }
 }
 

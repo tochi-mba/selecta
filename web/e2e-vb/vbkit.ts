@@ -2,8 +2,8 @@ import { mkdirSync, writeFileSync, appendFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import type { Locator, Page } from '@playwright/test';
 
-export const OUT = resolve(__dirname, '../../docs/verification/claude-checks/selecta-4-implementation-checklist');
-export const LOG = resolve(process.env.VB_LOG ?? join(__dirname, 'vb-log.jsonl'));
+export const OUT = resolve(process.cwd(), '../docs/verification/claude-checks/selecta-4-implementation-checklist');
+export const LOG = resolve(process.env.VB_LOG ?? join(process.cwd(), 'vb-log.jsonl'));
 
 export type Theme = 'light' | 'dark';
 export const THEMES: Theme[] = ['light', 'dark'];

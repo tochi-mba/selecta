@@ -22,7 +22,7 @@ export default defineConfig({
     { name: 'pixel', use: { ...devices['Pixel 7'] }, testMatch: /devices-.*\.vb\.ts/ },
   ],
   webServer: {
-    command: `${python} ../tests/e2e_server.py ${port}`,
+    command: `${python} ../../tests/e2e_server.py ${port}`,
     url: `http://127.0.0.1:${port}/api/status`,
     reuseExistingServer: false,
     timeout: 240_000,

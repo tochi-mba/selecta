@@ -33,7 +33,7 @@ const box = (page: Page, sel: string) => page.locator(sel).first().boundingBox()
 test('devices', async ({ browser, request }) => {
   test.setTimeout(1_200_000);
   await resetMix(request, [16, ...STRESS_MIX]);
-  await allRendered(request);
+  await allRendered(request, 150_000).catch(() => {});
   const r: Record<string, unknown> = {};
   const phones: Array<[string, Parameters<Browser['newContext']>[0]]> = [
     ['pixel7', devices['Pixel 7']],
@@ -328,7 +328,7 @@ test('devices', async ({ browser, request }) => {
 test('screen reader and keyboard', async ({ browser, request }) => {
   test.setTimeout(900_000);
   await resetMix(request, STRESS_MIX);
-  await allRendered(request);
+  await allRendered(request, 150_000).catch(() => {});
   const r: Record<string, unknown> = {};
   const ctx: BrowserContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();

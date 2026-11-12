@@ -17,14 +17,15 @@ export default defineConfig({
     launchOptions: { args: ['--mute-audio'] },
   },
   projects: [
-    { name: 'edge', testIgnore: '**/devices.vc.ts', use: { channel: 'msedge' } },
+    { name: 'nvda', testMatch: '**/nvda.vc.ts', use: { channel: 'msedge', headless: false, launchOptions: { args: [] } } },
+    { name: 'edge', testIgnore: ['**/devices.vc.ts', '**/nvda.vc.ts'], use: { channel: 'msedge' } },
     { name: 'iphone-webkit', testMatch: '**/devices.vc.ts', use: { ...devices['iPhone 13'] } },
     { name: 'iphone-webkit-landscape', testMatch: '**/devices.vc.ts', use: { ...devices['iPhone 13 landscape'] } },
     { name: 'pixel-edge', testMatch: '**/devices.vc.ts', use: { ...devices['Pixel 7'], channel: 'msedge' } },
     { name: 'zoom200-edge', testMatch: '**/devices.vc.ts', use: { channel: 'msedge', viewport: { width: 640, height: 400 }, deviceScaleFactor: 2 } },
   ],
   webServer: {
-    command: `${process.env.SELECTA_PYTHON ?? 'C:/Users/tochi/Documents/Code/selecta/.venv/Scripts/python.exe'} ../tests/e2e_server.py ${port}`,
+    command: `${process.env.SELECTA_PYTHON ?? 'C:/Users/tochi/Documents/Code/selecta/.venv/Scripts/python.exe'} C:/Users/tochi/Documents/Code/selecta/tests/e2e_server.py ${port}`,
     url: `http://127.0.0.1:${port}/api/status`,
     reuseExistingServer: false,
     timeout: 180_000,

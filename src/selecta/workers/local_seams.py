@@ -116,6 +116,13 @@ class LiveSeams:
             found[name] = (shown, [*(before[1] if before else []), int(rank)])
         return found
 
+    def waiting_ranks(self) -> set[int]:
+        """The ranks (base urgencies) of seam jobs waiting to be claimed."""
+        rows = self._rows(
+            "SELECT DISTINCT base_urgency FROM jobs WHERE type=? AND state='queued'", (SEAM_JOB,)
+        )
+        return {int(rank) for (rank,) in rows}
+
     def most_urgent_waiting(self, pool: str = local_host.SEAM_POOL) -> int | None:
         rows = self._rows(
             "SELECT MIN(urgency) FROM jobs WHERE pool=? AND type=? AND state='queued'",
@@ -386,10 +393,12 @@ class SeamWorker:
         """The next seam of the current mix, and of the render line, as the old worker pulled
         them, each into the store at its rank; and anything from a replaced mix out of the way."""
         store = self.store
-        request = store.next_mix_seam()
+        # one at a time, as before, so the mix always goes in its own order
+        waiting = store.live_jobs.waiting_ranks()
+        request = store.next_mix_seam() if MIX not in waiting else None
         if request is not None:
             store.enqueue(request, MIX)
-        in_line = store.next_line_seam()
+        in_line = store.next_line_seam() if LINE not in waiting else None
         if in_line is not None:
             draft, request = in_line
             store.enqueue(request, LINE, draft=draft)

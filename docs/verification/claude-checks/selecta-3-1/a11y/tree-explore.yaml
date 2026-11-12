@@ -1,0 +1,211 @@
+- link "Skip to the page":
+  - /url: "#content"
+- navigation "Main":
+  - link "Selecta, go to Make a Mix":
+    - /url: /mixes
+    - text: Selecta
+  - list:
+    - listitem:
+      - link "Listen":
+        - /url: /listen
+    - listitem:
+      - link "Make a Mix":
+        - /url: /mixes
+    - listitem:
+      - link "My Mixes":
+        - /url: /mixes/mine
+    - listitem:
+      - link "Library":
+        - /url: /library
+    - listitem:
+      - link "Workspace":
+        - /url: /workshop
+    - listitem:
+      - link "Edit":
+        - /url: /mix/current/edit
+  - 'button "Requests: Request a song"': Request a song
+  - button "Collapse the side bar"
+- banner:
+  - navigation "Breadcrumb":
+    - list:
+      - listitem: Make a Mix
+  - button "Search Ctrl K"
+  - 'button "Theme: Match this computer"'
+  - button "Activity"
+  - link "Workspace, 1 item needs your attention":
+    - /url: /workshop
+    - text: "1"
+  - button "Keyboard shortcuts"
+- main:
+  - heading "Make a Mix" [level=1]
+  - navigation "Make a Mix":
+    - link "Mix ideas":
+      - /url: /mixes
+    - link "Word connections":
+      - /url: /discover
+    - link "Harmonic matches":
+      - /url: /discover/harmonic
+  - region "Current mix":
+    - paragraph: Current mix
+    - heading "Your mix" [level=2]
+    - paragraph: 8 songs
+    - button "Play"
+    - button "Edit"
+  - group "Ways to make a mix":
+    - region "Listen now, shape later":
+      - paragraph: Quick Play · Tap and play
+      - heading "Listen now, shape later" [level=2]
+      - heading "Selecta’s pick" [level=3]
+      - paragraph: 18 matching songs ·About 17 min of matching source songs
+      - paragraph: The strongest run it can find through your whole library, with a word hand-off or two.
+      - button "Play"
+      - group "How long, roughly":
+        - button "About 30 min" [pressed]
+        - button "About 1 hour"
+        - button "About 2 hours"
+      - 'button "Customize: Shape this mix (optional)"': Shape this mix (optional)
+      - paragraph: "Shape · Next mix: Each mix chooses its feel · no part-by-part moves · each mix’s own energy · Selecta chooses the ending."
+      - paragraph: Commit · Play now, edit first, or save a draft. 12 songs. How long it really runs depends on where the transitions fall.
+    - region "Create with Lucy":
+      - paragraph: Create · Plan before listening
+      - heading "Create with Lucy" [level=2]
+      - paragraph: Describe the mood, songs or journey you have in mind. Lucy proposes an exact order and transitions for you to review.
+      - link "Plan a mix with Lucy":
+        - /url: /mixes/lucy
+      - paragraph: Optional. Nothing is sent, saved or played until you choose to do it. Quick Play does not use Lucy.
+  - paragraph: More ways into your library
+  - heading "Choose another feeling" [level=2]
+  - paragraph: 11 available ideas. These are planning preferences, not previews; Selecta builds a new actual mix after you choose.
+  - group "Filter mix feelings":
+    - button "All" [pressed]
+    - button "The moment"
+    - button "The mood"
+    - button "The sound"
+    - button "The journey"
+  - heading "The moment" [level=3]
+  - article:
+    - heading "House party" [level=3]
+    - text: 119–123 BPM
+    - paragraph: Songs people know at dance floor tempos, with long blends, and nothing lets up.
+    - text: 12 matching songs ·About 12 min of matching source songs
+    - group: Why House party? More details
+    - button "Play"
+    - button "Shape first"
+    - button "Save draft for House party"
+  - article:
+    - heading "Peak time" [level=3]
+    - text: 120–122 BPM
+    - paragraph: Your biggest songs, kept up high and locked to a tempo.
+    - text: 6 matching songs ·About 6 min of matching source songs
+    - group: Why Peak time? More details
+    - button "Play"
+    - button "Shape first"
+    - button "Save draft for Peak time"
+  - article:
+    - heading "Workout" [level=3]
+    - text: 120–122 BPM
+    - paragraph: Hard and steady, with no dips, so you can hold your pace.
+    - text: 6 matching songs ·About 6 min of matching source songs
+    - group: Why Workout? More details
+    - button "Play"
+    - button "Shape first"
+    - button "Save draft for Workout"
+  - article:
+    - heading "On the move" [level=3]
+    - text: 119–122 BPM
+    - paragraph: A bright, forward-moving run for the train, the car or the walk home.
+    - text: 10 matching songs ·About 10 min of matching source songs
+    - group: Why On the move? More details
+    - button "Play"
+    - button "Shape first"
+    - button "Save draft for On the move"
+  - heading "The mood" [level=3]
+  - article:
+    - heading "Quiet focus" [level=3]
+    - text: 119–120 BPM
+    - paragraph: Low-distraction songs that settle in and keep the energy even.
+    - text: 8 matching songs ·About 8 min of matching source songs
+    - group: Why Quiet focus? More details
+    - button "Play"
+    - button "Shape first"
+    - button "Save draft for Quiet focus"
+  - heading "The sound" [level=3]
+  - article:
+    - heading "Dance floor" [level=3]
+    - text: 120–122 BPM
+    - paragraph: Dance, house and Latin energy with clean momentum and room to blend.
+    - text: 9 matching songs ·About 9 min of matching source songs
+    - group: Why Dance floor? More details
+    - button "Play"
+    - button "Shape first"
+    - button "Save draft for Dance floor"
+  - heading "The journey" [level=3]
+  - article:
+    - heading "Dance & house · Slow burn" [level=3]
+    - text: 119–122 BPM
+    - paragraph: Stays within Dance & house
+    - paragraph: Starts low and climbs, with a second peak near the end. Drawn only from your dance & house songs.
+    - text: 18 matching songs ·About 17 min of matching source songs
+    - group: Why Dance & house · Slow burn? More details
+    - button "Play"
+    - button "Shape first"
+    - button "Save draft for Dance & house · Slow burn"
+  - article:
+    - heading "Dance & house · Lift off" [level=3]
+    - text: 119–122 BPM
+    - paragraph: Stays within Dance & house
+    - paragraph: Starts easy, keeps finding another gear and finishes at full height. Drawn only from your dance & house songs.
+    - text: 18 matching songs ·About 17 min of matching source songs
+    - group: Why Dance & house · Lift off? More details
+    - button "Play"
+    - button "Shape first"
+    - button "Save draft for Dance & house · Lift off"
+  - article:
+    - heading "Dance & house · Bring it home" [level=3]
+    - text: 119–122 BPM
+    - paragraph: Stays within Dance & house
+    - paragraph: Begins with energy, then lands somewhere warmer and more spacious. Drawn only from your dance & house songs.
+    - text: 18 matching songs ·About 17 min of matching source songs
+    - group: Why Dance & house · Bring it home? More details
+    - button "Play"
+    - button "Shape first"
+    - button "Save draft for Dance & house · Bring it home"
+  - article:
+    - heading "Dance & house · No dips" [level=3]
+    - text: 120–122 BPM
+    - paragraph: Stays within Dance & house
+    - paragraph: A high, steady run picked across your library when you want momentum over genre. Drawn only from your dance & house songs.
+    - text: 9 matching songs ·About 9 min of matching source songs
+    - group: Why Dance & house · No dips? More details
+    - button "Play"
+    - button "Shape first"
+    - button "Save draft for Dance & house · No dips"
+  - article:
+    - heading "Dance & house · Wordplay showcase" [level=3]
+    - text: 119–122 BPM
+    - paragraph: Stays within Dance & house
+    - paragraph: Runs through the phrases your songs share, one hand-off after another. Drawn only from your dance & house songs.
+    - text: 18 matching songs ·About 17 min of matching source songs
+    - group: Why Dance & house · Wordplay showcase? More details
+    - button "Play"
+    - button "Shape first"
+    - button "Save draft for Dance & house · Wordplay showcase"
+  - heading "Needs more mix-ready songs" [level=2]
+  - paragraph: These ideas do not have enough eligible recordings yet. You can try another available idea, or analyse more local songs. No new mix will be made from an unavailable idea.
+  - list:
+    - listitem: Getting ready needs 6 more
+    - listitem: Road trip needs 6 more
+    - listitem: Dinner with friends needs 6 more
+    - listitem: In your feelings needs 6 more
+    - listitem: Falling for you needs 4 more
+    - listitem: Late night needs 6 more
+    - listitem: Sunday morning needs 6 more
+    - listitem: Main character needs 5 more
+    - listitem: Afro heat needs 6 more
+    - listitem: Rap run needs 6 more
+    - listitem: R&B hours needs 6 more
+    - listitem: Throwbacks needs 6 more
+    - listitem: Guitars out needs 6 more
+  - paragraph: 18 of 19 songs have audio analysis; 18 are ready for mixes. The rest will mean more variety and word links. It takes under a minute in the background.
+  - button "Analyse the rest"
+- status: "Workspace needs your attention: 1 song failed."

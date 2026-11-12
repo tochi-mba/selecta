@@ -24,6 +24,8 @@
 .library-summary b { color: var(--text); font-variant-numeric: tabular-nums; }
 /* LX-0355-07: the set-aside count is a button, so it gets at least a 24px target like any other */
 .library-summary .library-summary-link { display: inline-flex; align-items: center; min-height: 24px; }
+/* a flex box drops the space after the count, so it read "1set aside" (owner-delegated visual check 2026-11-12) */
+.library-summary .library-summary-link b { margin-inline-end: var(--space-1); }
 .library-find { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
 .library-find .search-field { flex: 1 1 260px; }
 .library-density button { min-height: var(--control-height); padding-inline: var(--space-3); font-size: var(--text-sm); }

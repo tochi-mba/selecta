@@ -1,0 +1,100 @@
+{
+ "palette": {
+  "focusInside": true,
+  "tabStaysInside": true,
+  "escapeCloses": true,
+  "focusAfterClose": {
+   "tag": "div",
+   "role": null,
+   "name": "LibrarySearchCtrl KTheme: Match this computer1Library18 read",
+   "ring": "NONE",
+   "inView": true
+  },
+  "tree": "- dialog \"Search and commands\":\n  - banner:\n    - heading \"Search and commands\" [level=2]\n    - button \"Close Search and commands\"\n  - combobox \"Search for a page or a command\" [expanded]\n  - listbox \"Results\":\n    - group \"Go to\":\n      - text: Go to\n      - 'option \"Page: Listen\" [selected]': Listen Go to\n      - 'option \"Page: Make a Mix\"': Make a Mix Go to\n      - 'option \"Page: My Mixes\"': My Mixes Go to\n      - 'option \"Page: Library\"': Library Go to\n      - 'option \"Page: Workspace\"': Workspace Go to\n      - 'option \"Page: Word connections\"': Word connections Go to\n      - 'option \"Page: Harmonic matches\"': Harmonic matches Go to\n      - 'option \"Page: Workspace: Analysis\"': \"Workspace: Analysis Go to\"\n      - 'option \"Page: Workspace: Sources\"': \"Workspace: Sources Go to\"\n      - 'option \"Page: Workspace: Storage\"': \"Workspace: Storage Go to\"\n      - 'option \"Page: Workspace: Learning\"': \"Workspace: Learning Go to\"\n      - 'option \"Page: Workspace: Diagnostics\"': \"Workspace: Diagnostics Go to\"\n      - 'option \"Page: Make a mix with Lucy\"': Make a mix with Lucy Go to\n      - 'option \"Page: Listening study\"': Listening study Go to\n      - 'option \"Page: Edit current mix\"': Edit current mix Go to\n    - group \"Playback\":\n      - text: Playback\n      - 'option \"Playback: Play\"': Play Playback\n      - 'option \"Playback: Next song. Nothing is playing.\" [disabled]': Next song Nothing is playing.\n      - 'option \"Playback: Jump to the transition. Nothing is playing.\" [disabled]': Jump to the transition Nothing is playing.\n      - 'option \"Playback: Fullscreen lyrics\"': Fullscreen lyrics Playback\n    - group \"Do\":\n      - text: Do\n      - 'option \"Action: Request a song\"': Request a song Do\n      - 'option \"Action: Start a new mix\"': Start a new mix Do\n      - 'option \"Action: Undo the last change. Current mix: Your mix\"': \"Undo the last change Do · Current mix: Your mix\"\n      - 'option \"Action: Analyse the rest of my library\"': Analyse the rest of my library Do\n      - 'option \"Action: Activity and Undo\"': Activity and Undo Do\n      - 'option \"Action: Keyboard shortcuts\"': Keyboard shortcuts Do\n      - 'option \"Action: Music terms (glossary)\"': Music terms (glossary) Do\n      - 'option \"Action: Theme: light\"': \"Theme: light Do\"\n      - 'option \"Action: Theme: dark\"': \"Theme: dark Do\"\n      - 'option \"Action: Theme: match this computer. It’s already using that.\" [disabled]': \"Theme: match this computer It’s already using that.\"\n      - 'option \"Action: Motion: still. Local visual preference; reduced-motion setting takes priority\"': \"Motion: still Do · Local visual preference; reduced-motion setting takes priority\"\n      - 'option \"Action: Motion: subtle. It’s already using that.\" [disabled]': \"Motion: subtle It’s already using that.\"\n      - 'option \"Action: Motion: expressive. Local visual preference; reduced-motion setting takes priority\"': \"Motion: expressive Do · Local visual preference; reduced-motion setting takes priority\"\n  - paragraph: Arrow keys choose, Enter goes, Escape closes. This never deletes anything or replaces what’s playing. A song opens its details; it doesn’t play."
+ },
+ "export": {
+  "focusInside": true,
+  "tabStaysInside": true,
+  "escapeCloses": true,
+  "focusAfterClose": {
+   "tag": "button",
+   "role": null,
+   "name": "Download audio",
+   "ring": "outline 2px",
+   "inView": true
+  },
+  "tree": "- dialog \"Save as an audio file\":\n  - banner:\n    - heading \"Save as an audio file\" [level=2]\n    - button \"Close Save as an audio file\"\n  - paragraph: Your mix current mix, 8 songs, about 8 min. FLAC.\n  - paragraph: From An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix) to HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026. Save captures exactly the songs and transitions shown for this current mix at the moment you start. Later edits will not change the exported file.\n  - group: Review proposed order (8 songs)\n  - list \"Export progress\":\n    - listitem: Prepare transitions\n    - listitem: Create the FLAC file\n    - listitem: Download your mix\n  - paragraph: 0 of 7 transitions ready. The rest get rendered first.\n  - list:\n    - listitem: \"Into Untitled: Not rendered yet, about under a minute\"\n    - listitem: \"Into Remix של שלום (feat. ليلى) 2026: Not rendered yet, about a minute\"\n    - listitem: \"Into 夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル: Not rendered yet, about 2 minutes\"\n    - listitem: \"Into أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة: Not rendered yet, about 3 minutes\"\n    - listitem: \"Into Same Name: Not rendered yet, about 3 minutes\"\n    - listitem: \"Into Same Name: Not rendered yet, about 4 minutes\"\n    - listitem: \"Into HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026: Not rendered yet, about 5 minutes\"\n  - button \"Save it\"\n  - paragraph: Your original songs aren’t touched.\n  - paragraph:\n    - text: You can close this and it keeps going. Find it again under Activity, or in\n    - link \"Workspace\":\n      - /url: /workshop\n    - text: ."
+ },
+ "shape": {
+  "focusInside": true,
+  "tabStaysInside": true,
+  "escapeCloses": true,
+  "focusAfterClose": {
+   "tag": "button",
+   "role": null,
+   "name": "Customize: Shape this mix (optional)",
+   "ring": "outline 2px",
+   "inView": true
+  },
+  "tree": "- dialog \"Shape the next mix\":\n  - banner:\n    - heading \"Shape the next mix\" [level=2]\n    - button \"Close Shape the next mix\"\n  - paragraph: Optional shape\n  - paragraph: These stay as your defaults for every new mix you build. They don’t change a mix you’ve already got or anything playing now. You can change any transition song by song later.\n  - heading \"How transitions feel\" [level=3]\n  - region \"Mix controls\":\n    - text: Transition feel\n    - combobox \"Transition feel\":\n      - option \"Let each mix choose\" [selected]\n      - option \"Smooth blends\"\n      - option \"Punchy changes\"\n  - region \"Stem transition controls\":\n    - text: Stem-assisted moves\n    - combobox \"Stem-assisted moves\":\n      - option \"Never\" [selected]\n      - option \"Sometimes\"\n      - option \"Often\"\n    - paragraph: Vocal rides and word hand-offs. They’re only used where the pair fits and the render passes its checks.\n  - heading \"Where the mix goes\" [level=3]\n  - region \"How long\":\n    - text: How long\n    - group \"How long, roughly\":\n      - button \"About 30 min · 12 songs\" [pressed]\n      - button \"About 1 hour · 24 songs\"\n      - button \"About 2 hours · 48 songs\"\n    - paragraph: \"The song count is asked for, not promised: how long it really runs depends on where the transitions fall.\"\n  - region \"Energy arc controls\":\n    - text: Energy arc\n    - paragraph: Draw the shape you’d like, or set each stop below. Selecta aims for it as closely as your songs allow.\n    - button \"Use each mix’s arc\" [disabled]\n    - group \"Ready-made energy shapes\":\n      - button \"Build to a peak\"\n      - button \"Peak then settle\"\n      - button \"Even energy\"\n    - img \"Draw energy arc\"\n    - status: Each mix uses its own shape.\n    - text: Start\n    - slider \"Energy arc start\": \"62\"\n    - spinbutton \"Energy arc start numeric value\": \"62\"\n    - text: Early\n    - slider \"Energy arc early\": \"72\"\n    - spinbutton \"Energy arc early numeric value\": \"72\"\n    - text: Middle\n    - slider \"Energy arc middle\": \"100\"\n    - spinbutton \"Energy arc middle numeric value\": \"100\"\n    - text: Late\n    - slider \"Energy arc late\": \"85\"\n    - spinbutton \"Energy arc late numeric value\": \"85\"\n    - text: Finish\n    - slider \"Energy arc finish\": \"68\"\n    - spinbutton \"Energy arc finish numeric value\": \"68\"\n    - figure \"What your current mix measured\":\n      - text: What your current mix measured\n      - img \"Measured relative energy of the current mix, from start to finish\"\n      - paragraph: \"Current mix: relative energy from its quietest to its most energetic song. This uses this mix’s own range, so it is not a score against your requested arc.\"\n  - region \"Mix destination\":\n    - text: Take me to\n    - combobox \"Take me to\"\n    - paragraph: If there’s no good way there from the rest of the mix, it finishes as near as it can. Clear it to let each mix decide.\n  - contentinfo:\n    - button \"Done shaping\""
+ },
+ "requests": {
+  "focusInside": true,
+  "tabStaysInside": true,
+  "escapeCloses": true,
+  "focusAfterClose": {
+   "tag": "button",
+   "role": null,
+   "name": "Requests: Request a song",
+   "ring": "outline 2px",
+   "inView": true
+  },
+  "tree": "- dialog \"Requests\":\n  - banner:\n    - heading \"Requests\" [level=2]\n    - button \"Close Requests\"\n  - region \"Song requests\":\n    - heading \"Requests\" [level=2]\n    - text: Request a song\n    - combobox \"Request a song\"\n    - paragraph:\n      - text: Ask for a song any time. Selecta finds a spot where it fits, without interrupting the mix.\n      - button \"What is request?\""
+ },
+ "activity": {
+  "focusInside": true,
+  "tabStaysInside": true,
+  "escapeCloses": true,
+  "focusAfterClose": {
+   "tag": "button",
+   "role": null,
+   "name": "Activity",
+   "ring": "outline 2px",
+   "inView": true
+  },
+  "tree": "- dialog \"Activity\":\n  - banner:\n    - heading \"Activity\" [level=2]\n    - button \"Close Activity\"\n  - paragraph: Nothing yet. Changes you make show up here, with a way to undo them."
+ },
+ "playback": {
+  "before": "0:00 of 1:27, 1:27 left",
+  "after": "0:10 of 1:27, 1:16 left",
+  "disabledBefore": null,
+  "live": [
+   "Word highlights follow stored lyric alignment; timing may be approximate.Read all lyricsand everythi",
+   "Now playing An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width "
+  ],
+  "stageOpen": false,
+  "stageClosed": true,
+  "focusAfterStage": {
+   "tag": "div",
+   "role": "slider",
+   "name": "Where in the song",
+   "ring": "outline 3px",
+   "inView": true
+  },
+  "stageTree": ""
+ },
+ "editorMove": {
+  "pressed": "Move An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix) down",
+  "focusAfter": {
+   "tag": "button",
+   "role": null,
+   "name": "Move An Extraordinarily Long Song Title That Goes On And On ",
+   "ring": "outline 2px",
+   "inView": true
+  },
+  "live": [
+   "Moved An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extende",
+   "Moved An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extende"
+  ]
+ }
+}
