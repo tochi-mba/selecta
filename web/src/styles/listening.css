@@ -494,12 +494,13 @@
   .now.stage .handoff { padding: var(--space-2) var(--space-4); margin: 0.5vh 0 1.5vh; }
   .now.stage .countdown-track { height: clamp(16px, 4vh, 32px); }
   .now.stage .countdown-number strong { font-size: clamp(1.8rem, 6vh, 3rem); }
-  /* Short Stage lyrics can wrap onto two lines at 1280x720. Give the display font
-     enough line height for every inline word box and reserve those two lines. */
-  .now.stage .lyrics .sung { font-size: clamp(2.4rem, min(6vw, 7vh), 6rem); line-height: 1.25; }
+  /* Short Stage lyrics can wrap onto two lines at 1280x720. Keep reading
+     leading at 1.4 (SF-0202-07), sizing the glyphs to preserve the same
+     two-line height and room for the timing caption and neighbouring lines. */
+  .now.stage .lyrics .sung { font-size: clamp(2.4rem, min(6vw, 6.25vh), 6rem); line-height: 1.4; }
   .now.stage .lyrics {
-    --stage-sung: clamp(2.4rem, min(6vw, 7vh), 6rem);
-    min-height: calc(var(--stage-sung) * 1.25 * 2 + var(--stage-line) * 1.5 * 2 + 2rem);
+    --stage-sung: clamp(2.4rem, min(6vw, 6.25vh), 6rem);
+    min-height: calc(var(--stage-sung) * 1.4 * 2 + var(--stage-line) * 1.5 * 2 + 2rem);
   }
 }
 /* Laptop-height Stage (1280 to 1920 wide, 761 to 1050 tall, e.g. 1440x900): a three-line title, the
