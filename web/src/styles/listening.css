@@ -494,10 +494,13 @@
   .now.stage .handoff { padding: var(--space-2) var(--space-4); margin: 0.5vh 0 1.5vh; }
   .now.stage .countdown-track { height: clamp(16px, 4vh, 32px); }
   .now.stage .countdown-number strong { font-size: clamp(1.8rem, 6vh, 3rem); }
-  /* the sung line sizes to the height too, so a two-line lyric still fits a 600px-tall window */
-  .now.stage .lyrics .sung { font-size: clamp(2.4rem, min(7vw, 9vh), 6rem); }
-  /* room for a one-line current lyric here, so the reserve itself doesn't push it below the fold */
-  .now.stage .lyrics { --stage-sung: clamp(2.4rem, min(7vw, 9vh), 6rem); min-height: calc(var(--stage-sung) * 1.12 + var(--stage-line) * 1.5 * 2 + 2rem); }
+  /* Short Stage lyrics can wrap onto two lines at 1280x720. Give the display font
+     enough line height for every inline word box and reserve those two lines. */
+  .now.stage .lyrics .sung { font-size: clamp(2.4rem, min(6vw, 7vh), 6rem); line-height: 1.25; }
+  .now.stage .lyrics {
+    --stage-sung: clamp(2.4rem, min(6vw, 7vh), 6rem);
+    min-height: calc(var(--stage-sung) * 1.25 * 2 + var(--stage-line) * 1.5 * 2 + 2rem);
+  }
 }
 /* Laptop-height Stage (1280 to 1920 wide, 761 to 1050 tall, e.g. 1440x900): a three-line title, the
    visualiser and the countdown left the current lyric starting at the bottom edge, under the floating
