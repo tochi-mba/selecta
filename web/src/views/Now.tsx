@@ -178,7 +178,7 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
   };
   const beginSeek = (event: PointerEvent<HTMLDivElement>) => {
     // Real browsers expose isPrimary; tolerate older PointerEvent shims that omit it.
-    if (event.isPrimary === false || event.button !== 0) return;
+    if (event.isPrimary === false || (event.button !== undefined && event.button !== 0)) return;
     if (locked) {
       announce(unavailable ? unavailableWords : CANT_SEEK);
       return;

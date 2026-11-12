@@ -10,7 +10,7 @@
 | Polish ADR-0033–0046 | [143-item checklist](polish-implementation-checklist.md) | Older proposal, not proof of current implementation |
 | Selecta 3.0 ADR-0047–0077 | [258-item checklist](selecta-3-implementation-checklist.md) | Historical headings predate merged code |
 | Selecta 3.1 ADR-0078–0088 | [116-item checklist](selecta-3-1-implementation-checklist.md), [release report](selecta-3-1-release-readiness.md) | Some descriptions still say PR #25 open, though merged; unverified human gates remain |
-| Selecta 4.0 ADR-0089–0113 | [250-item checklist](selecta-4-implementation-checklist.md), [evidence](selecta-4-evidence.md) | Historically recorded 0 Implemented / 0 Verified on baseline `9b663f9`. **2026-11-12, from the task lines: 202 Implemented, 36 In progress, 12 Not started, 0 Verified; 250 unchecked** |
+| Selecta 4.0 ADR-0089–0113 | [250-item checklist](selecta-4-implementation-checklist.md), [evidence](selecta-4-evidence.md) | Historically recorded 0 Implemented / 0 Verified on baseline `9b663f9`. **2026-11-12, from the task lines: 206 Implemented, 34 In progress, 10 Not started, 0 Verified; 250 unchecked** |
 | Experience-first ADR-0114–0134 | [105-item checklist](selecta-experience-implementation-checklist.md), [ledger](selecta-experience-evidence.md) | 105 Not started, 0 Implemented, 0 Verified at creation. **2026-11-12, from the task lines: 91 Implemented, 4 In progress, 7 Not started, 3 Superseded, 51 Verified** |
 
 PR #29 modifies the frontend, routes, some API behavior and tests, including Now, Mix, Mixes, Library, Studio, Requests, Shell and UI controls. **It would be inaccurate to say nothing was implemented after PR #29; it is equally inaccurate to count every S4 task as done.** Determine S4 implementation per task by merged code, relevant tests and exact acceptance. Human audio, visual and AT verification are separate.
@@ -39,10 +39,10 @@ PR #29 modifies the frontend, routes, some API behavior and tests, including Now
 | 0106 | Song details | 10 unchecked | 10 Implemented (2026-11-12) | 0/10 |
 | 0107 | Workspace | 10 unchecked | 8 Implemented, 2 In progress (2026-11-12) | 0/10 |
 | 0108 | FLAC export | 10 unchecked | 9 Implemented, 1 In progress (2026-11-12) | 0/10 |
-| 0109 | Blind study | 10 unchecked | 8 Implemented, 1 In progress, 1 Not started (2026-11-12) | 0/10 |
-| 0110 | WCAG | 10 unchecked | 9 Implemented, 1 Not started (2026-11-12) | 0/10 |
-| 0111 | Frontend/performance | 10 unchecked | 7 Implemented, 3 In progress (2026-11-12) | 0/10 |
-| 0112 | Verification | 10 unchecked | 8 Implemented, 2 In progress (2026-11-12) | 0/10 |
+| 0109 | Blind study | 10 unchecked | 9 Implemented, 1 In progress (2026-11-12) | 0/10 |
+| 0110 | WCAG | 10 unchecked | 9 Implemented, 1 In progress (2026-11-12) | 0/10 |
+| 0111 | Frontend/performance | 10 unchecked | 8 Implemented, 2 In progress (2026-11-12) | 0/10 |
+| 0112 | Verification | 10 unchecked | 10 Implemented (2026-11-12) | 0/10 |
 | 0113 | Research/release | 10 unchecked | 2 Implemented, 5 In progress, 3 Not started (2026-11-12) | 0/10 |
 
 ## Independent proposed deltas vs source-observed current capability

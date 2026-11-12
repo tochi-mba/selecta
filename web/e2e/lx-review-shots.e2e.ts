@@ -84,6 +84,7 @@ test('LX review shots: Library and Lucy, both themes, 320 and 1440px, states, de
     }
   }
   const manifest = {
+    status: 'candidate-not-independently-verified',
     programme: 'LX', made: new Date().toISOString().slice(0, 10), fixture: 'tests/e2e_server.py',
     zoom_400: shots.some((shot) => shot.zoom === 4), shots,
     // filled in by people: screen-reader sessions and real-device screenshots

@@ -90,6 +90,7 @@ def add_routes(app, ctx) -> None:
         draft: int | None = None,
         rows: list | None = None,
         status: Callable[[str], dict] | None = None,
+        songs_by_id: dict | None = None,
     ) -> list[dict]:
         """A mix, with how many stems each unfinished seam still has to split, which is what most
         decides how long it will take. Songs that can't be looked at just get the usual estimate.
@@ -107,13 +108,14 @@ def add_routes(app, ctx) -> None:
         ]
         if not waiting:
             return items
-        try:
-            songs, _ = library_now(conn)
-        except (OSError, ValueError, KeyError, AttributeError, TypeError):
-            return items
-        by_id = {song.id: song for song in songs}
+        if songs_by_id is None:
+            try:
+                songs, _ = library_now(conn)
+            except (OSError, ValueError, KeyError, AttributeError, TypeError):
+                return items
+            songs_by_id = {song.id: song for song in songs}
         for before, item in waiting:
-            a, b = by_id.get(before["song_id"]), by_id.get(item["song_id"])
+            a, b = songs_by_id.get(before["song_id"]), songs_by_id.get(item["song_id"])
             if a is None or b is None:
                 continue
             request = request_from(before["song_id"], item["song_id"], item["seam"]["settings"])
@@ -213,13 +215,23 @@ def add_routes(app, ctx) -> None:
         rows = {row["id"]: row for row in mix.all_drafts(conn)}
         status = one_look()
         loaded = mix.rows_for_drafts(conn, {draft: row["items"] for draft, row in rows.items()})
-        items = {draft: read_with_windows(conn, draft, loaded[draft], status) for draft in rows}
+        # One library snapshot for the whole draft list. Re-reading it per draft used to
+        # execute thousands of SQLite queries for a 500-draft library.
+        try:
+            songs, _ = library_now(conn)
+        except (OSError, ValueError, KeyError, AttributeError, TypeError):
+            songs = []
+        songs_by_id = {song.id: song for song in songs}
+        items = {
+            draft: read_with_windows(conn, draft, loaded[draft], status, songs_by_id)
+            for draft in rows
+        }
         for draft in mix.line_order(conn):
             # a mix with nothing left to render has had its turn
             if not any(seam_unfinished(item) for item in items[draft]):
                 mix.leave_line(conn, draft)
         line = mix.line_order(conn)
-        current = read_with_windows(conn, status=status)
+        current = read_with_windows(conn, status=status, songs_by_id=songs_by_id)
         # each place adds one more mix to what is ahead of it, rather than adding them all up again
         ahead, seen = time_ahead([current], store.clock)
         places: dict[int, tuple[int, dict]] = {}

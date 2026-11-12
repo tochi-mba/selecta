@@ -103,5 +103,5 @@ def test_diagnostics_and_jobs_follow_a_worker_that_stops_and_restarts(app_and_st
 def test_jobs_say_when_the_storage_limit_blocks_work(app_and_store, monkeypatch):
     client, _, _ = app_and_store
     assert client.get("/api/jobs").json()["storage_full"] is False
-    monkeypatch.setattr("selecta.routes.system.cache_bytes", lambda _settings: 10**15)
+    monkeypatch.setattr("selecta.routes.system.cache_room", lambda _settings: (10**15, 10**15))
     assert client.get("/api/jobs").json()["storage_full"] is True

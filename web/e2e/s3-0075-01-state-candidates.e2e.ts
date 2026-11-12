@@ -56,7 +56,10 @@ function manifest(info: TestInfo, taken: Candidate[], part: string) {
 async function settle(page: Page) {
   await expect(page.getByRole('navigation', { name: 'Main' }).first()).toBeAttached();
   await expect(page.locator('main').first()).toBeVisible();
-  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0, { timeout: 30_000 });
+  // The fixed browser clock pauses async route loading; run enough time for
+  // delayed requests and reveals before photographing the offline state.
+  await page.clock.runFor(3_000);
+  await expect(page.locator('main [aria-busy="true"]:visible')).toHaveCount(0, { timeout: 30_000 });
   await page.evaluate(() => document.fonts.ready);
 }
 
