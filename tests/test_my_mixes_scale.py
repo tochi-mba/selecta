@@ -23,7 +23,9 @@ from selecta.seams import SeamStore
 # Whole requests on a loaded, shared 4-core laptop. Before r8a the list took about 52 s for 500
 # drafts (5,006 queries and a disk read per seam per draft) and opening one draft about 0.9 s; the
 # query-count and plan tests below are what catch a regression, the budgets only a gross one.
-LIST_BUDGET_S = 6.0
+# r11 took the list from about 4.6 s to about 1.6 s (seam keys and records worked out once, one
+# look at the job times per request, a cheaper cache walk), so the budget keeps 2x headroom.
+LIST_BUDGET_S = 3.5
 OPEN_BUDGET_S = 1.5
 # One query for the drafts, a couple for their songs, and the render line's own few: not per draft.
 LIST_MOST_QUERIES = 40
