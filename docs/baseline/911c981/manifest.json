@@ -25,5 +25,7 @@
   "screens/workshop-desktop.png",
   "screens/workshop-phone.png",
   "settings.json"
- ]
+ ],
+ "first_transition": "rendering",
+ "note": "The first transition was still rendering after 10 minutes: 911c981's seam worker freezes on its input pipe on Windows (docs/acceptance.md, Rendering, Helpers on Windows), so the trace holds the first song only."
 }

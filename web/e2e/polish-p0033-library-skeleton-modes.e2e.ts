@@ -80,9 +80,11 @@ for (const mode of MODES) {
         // facts beside the title when the loaded row puts them beside it, below when it stacks them
         const beside = row.factsLeft >= row.nameRight - 1;
         expect(unit.metaLeft >= unit.titleRight - 1, `${at}: facts column ${beside ? 'beside' : 'below'} the title`).toBe(beside);
-        // row height within a quarter of a real row, so the page does not jump by whole rows
-        expect(unit.height / row.height, `${at}: row height ${unit.height} vs ${row.height}`).toBeGreaterThan(0.75);
-        expect(unit.height / row.height, `${at}: row height ${unit.height} vs ${row.height}`).toBeLessThan(1.33);
+        // row height within a quarter of a typical (median) loaded row, so the page does not jump by whole rows
+        const heights = loaded.rows.map((item) => item.height).sort((a, b) => a - b);
+        const typical = heights[Math.floor(heights.length / 2)];
+        expect(unit.height / typical, `${at}: row height ${unit.height} vs ${typical}`).toBeGreaterThan(0.75);
+        expect(unit.height / typical, `${at}: row height ${unit.height} vs ${typical}`).toBeLessThan(1.33);
       }
 
       // P0043: the controls above the list never move when the songs arrive

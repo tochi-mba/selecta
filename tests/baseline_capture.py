@@ -152,6 +152,15 @@ def main(argv: list[str]) -> int:
                 "how": "tests/baseline_capture.py: the 911c981 checkout's own server and "
                 "built page, serving a made-up library from tests/e2e_server.py, in headless Edge",
                 "contracts": "tests/fixtures/api_contracts_baseline.json",
+                "first_transition": seam["status"],
+                "note": (
+                    "The first transition rendered, so the trace includes it."
+                    if seam["status"] == "ready"
+                    else f"The first transition was still {seam['status']} after 10 minutes: "
+                    "911c981's seam worker freezes on its input pipe on Windows "
+                    "(docs/acceptance.md, Rendering, Helpers on Windows), so the trace holds "
+                    "the first song only."
+                ),
                 "files": sorted(files),
             }
             (OUT / "manifest.json").write_text(json.dumps(manifest, indent=1), "utf-8")

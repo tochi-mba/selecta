@@ -62,3 +62,9 @@ def test_the_playback_trace_records_songs_starting_on_the_audio_clock():
     assert any(item["path"].endswith("/audio") for item in trace["audio_fetched"])
     for sound in trace["sounds_started"]:
         assert sound["length"] > 0 and sound["when"] >= 0
+
+
+def test_a_transition_missing_from_the_trace_is_explained():
+    if MANIFEST["first_transition"] != "ready":
+        assert "trace holds the first song only" in MANIFEST["note"]
+        assert "Helpers on Windows" in (ROOT / "docs" / "acceptance.md").read_text("utf-8")
