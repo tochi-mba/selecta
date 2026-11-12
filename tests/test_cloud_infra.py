@@ -197,6 +197,21 @@ def test_the_service_image_can_install_every_index_the_lock_uses():
         assert f"--extra-index-url {index['url']}" in dockerfile, index["name"]
 
 
+def test_the_service_image_copies_every_file_the_package_build_reads():
+    """Building the package needs the readme (and any licence file) pyproject names; the deploy on
+    main failed with 'Readme file does not exist: README.md' when the image left it out."""
+    import tomllib
+
+    dockerfile = (INFRA / "docker" / "service.Dockerfile").read_text("utf-8")
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text("utf-8"))["project"]
+    copied = " ".join(re.findall(r"^COPY (.+)$", dockerfile, re.M))
+    needed = [project["readme"]] if isinstance(project.get("readme"), str) else []
+    needed += project.get("license-files", [])
+    for name in needed:
+        assert re.search(rf"(^|\s){re.escape(name)}(\s|$)", copied), name
+        assert (ROOT / name).exists(), name
+
+
 # --- Smoke test -------------------------------------------------------------------------------
 
 

@@ -14,6 +14,8 @@ RUN uv export --frozen --no-dev --extra observability --no-emit-project -o /tmp/
         --extra-index-url https://download.pytorch.org/whl/cpu --index-strategy unsafe-best-match \
         -r /tmp/requirements.txt
 COPY src ./src
+# the build backend reads pyproject's readme, so the package can't build without it
+COPY README.md ./
 RUN uv pip install --system --no-cache --no-deps . \
     && useradd --create-home --uid 10001 selecta
 USER selecta
