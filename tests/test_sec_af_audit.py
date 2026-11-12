@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-
 from test_cloud_ai_routing import hosted
 from test_cloud_auth import world  # noqa: F401
 
