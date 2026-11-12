@@ -37,6 +37,20 @@ function Harness({ start, state = status(), notify = () => {}, refreshMix = () =
 }
 
 describe('rendering every seam', () => {
+  it('keeps song blocks distinct from seam links in the timeline', () => {
+    const { container } = render(<Harness start={songs(seam('ready', 'a'))} />);
+    const timeline = container.querySelector('ol.timeline');
+    expect(timeline).not.toBeNull();
+    const songRow = timeline?.querySelector('li.song');
+    const seamRow = timeline?.querySelector('li.seam');
+    expect(songRow).not.toBeNull();
+    expect(seamRow).not.toBeNull();
+    expect(songRow?.querySelector('.song-select')).not.toBeNull();
+    expect(songRow?.querySelector('.seam-line')).toBeNull();
+    expect(seamRow?.querySelector('.seam-line')).not.toBeNull();
+    expect(seamRow?.querySelector('.song-select')).toBeNull();
+  });
+
   it('does not present remembered failures as ongoing renders', () => {
     render(<Harness start={songs(seam('failed', 'a', { error: 'No safe vocal runway.' }))} />);
     expect(screen.getByRole('button', { name: 'Change failed transitions to continue' })).toBeDisabled();

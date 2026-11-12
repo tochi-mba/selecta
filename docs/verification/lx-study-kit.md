@@ -158,9 +158,9 @@ false, by the card's rule) on every outcome, plus `"consent": true` on the recor
 
 Consent line, read before starting: This session tests SelectaDJ, not you. It uses made-up songs only. You can stop at any time. We note the time, whether you paused and how sure you felt, under a code such as P01; no name, voice or screen recording is kept.
 
-The pilot line on each card is Claude's own walkthrough on the made-up library, done to
-check the task can be completed and the prompt is clear. It is preparation only: no
-participant took part and it is not a study result.
+The pilot line on each card is an unexecuted preparation walkthrough for the given
+reference SHA, not a completed browser pilot or human study. A facilitator must
+still rehearse the route and run the uncoached study to collect real evidence.
 
 ### LX-0340-01 - Collection-first journeys
 
@@ -170,7 +170,7 @@ participant took part and it is not a study result.
 - Success: Browses to a song and finds the exact recording without asking what a word means.
 - Hesitation: a pause over 10 s, a question to the facilitator, or asking what any Library word means.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Open Library, browse a collection song, then search Same Name and select Iris Vale by artist.
 
 ### LX-0340-04 - Browse versus manage
 
@@ -180,7 +180,7 @@ participant took part and it is not a study result.
 - Success: Narrows with a visible control first, then finds Never play in the row's menu.
 - Hesitation: a pause over 10 s, a question to the facilitator, or opening two or more menus before finding the record action.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Filter Needs attention, locate a matching row's More menu and find Never play without activating it.
 
 ### LX-0341-03 - Readiness meaning
 
@@ -191,7 +191,7 @@ participant took part and it is not a study result.
 - Success: Answers with the Ready count and does not confuse it with analysed songs or transitions.
 - Hesitation: a pause over 10 s, a question to the facilitator, or reading a different count aloud first.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Enable stress fixture, compare Ready with analysed and transition totals, and identify Ready as mix-eligible.
 
 ### LX-0342-06 - Zero-match recovery
 
@@ -202,7 +202,7 @@ participant took part and it is not a study result.
 - Success: Clears only the search and the Needs attention filter stays on.
 - Hesitation: a pause over 10 s, a question to the facilitator, or clearing everything and setting the filter again.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): With Needs attention selected and zzqx giving no matches, clear only the query and preserve the filter.
 
 ### LX-0343-01 - Frequent filters
 
@@ -212,7 +212,7 @@ participant took part and it is not a study result.
 - Success: Uses the Ready chip, then the Set aside chip, and says what each one shows.
 - Hesitation: a pause over 10 s, a question to the facilitator, or hovering over three or more chips before choosing.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Choose the Ready chip and then Set aside; inspect the distinct resulting lists.
 
 ### LX-0343-07 - Empty and combined constraints
 
@@ -223,7 +223,7 @@ participant took part and it is not a study result.
 - Success: Names both the search and the filter, then undoes one step and finds Episode 12.
 - Hesitation: a pause over 10 s, a question to the facilitator, or clearing everything without first saying why the list is empty.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): With Ready and Episode selected, inspect both constraints, undo one, and locate Episode 12.
 
 ### LX-0344-04 - Row action choice
 
@@ -233,7 +233,7 @@ participant took part and it is not a study result.
 - Success: Finds both actions on the Last Call row, the second in its More menu.
 - Hesitation: a pause over 10 s, a question to the facilitator, or opening a different row's menu first.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Find Last Call, identify Add to current mix, then open More to find analysis priority.
 
 ### LX-0345-01 - Cards versus list
 
@@ -243,7 +243,7 @@ participant took part and it is not a study result.
 - Success: Names a reason tied to what the cards show (motif, title, artist, readiness).
 - Hesitation: a pause over 10 s, a question to the facilitator, or asking what the two views are for.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Compare List and Card view for five seconds each, identifying motifs, song titles, artists and readiness.
 
 ### LX-0346-02 - Action priority
 
@@ -253,7 +253,7 @@ participant took part and it is not a study result.
 - Success: Points to the row's one visible action and reaches the rest through More.
 - Hesitation: a pause over 10 s, a question to the facilitator, or pointing at two different controls before deciding.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Inspect a row's primary action and its additional More actions without changing the song.
 
 ### LX-0348-02 - Facts before controls
 
@@ -263,7 +263,7 @@ participant took part and it is not a study result.
 - Success: Reads tempo, key and length from the facts without opening an edit field.
 - Hesitation: a pause over 10 s, a question to the facilitator, or opening a correction field to read a value.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Open song 11 and read tempo, key and duration without entering any editing field.
 
 ### LX-0348-06 - Advanced facts
 
@@ -273,7 +273,7 @@ participant took part and it is not a study result.
 - Success: Opens the folded advanced section and reads the file and analysis facts.
 - Hesitation: a pause over 10 s, a question to the facilitator, or scrolling past the advanced section twice.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Expand advanced details for song 11 and locate its file path and last analysis time.
 
 ### LX-0349-01 - Correction form
 
@@ -283,7 +283,7 @@ participant took part and it is not a study result.
 - Success: States the allowed format, the active value and what Reset does before pressing Save.
 - Hesitation: a pause over 10 s, a question to the facilitator, or pressing Save before describing the effect.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Inspect song 11's tempo correction form for allowed values, active value and Reset without saving.
 
 ### LX-0349-04 - Priority meaning
 
@@ -293,7 +293,7 @@ participant took part and it is not a study result.
 - Success: Says it moves the song up for analysis and keeps it cached, not that it plays sooner.
 - Hesitation: a pause over 10 s, a question to the facilitator, or saying it changes play order and then correcting themself.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Locate Prioritize on Last Call and distinguish its analysis-queue effect from playback order.
 
 ### LX-0352-03 - Empty versus no match
 
@@ -304,7 +304,7 @@ participant took part and it is not a study result.
 - Success: Tells an empty filter from a search with no match and picks each screen's own action.
 - Hesitation: a pause over 10 s, a question to the facilitator, or giving the same next step for both screens.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Prepare a filtered zero-match screen and an empty Set aside screen, then identify distinct recovery actions.
 
 ### LX-0353-01 - Two creation paths
 
@@ -314,7 +314,7 @@ participant took part and it is not a study result.
 - Success: Says Quick Play starts music now and Lucy plans first, before pressing either.
 - Hesitation: a pause over 10 s, a question to the facilitator, or pressing a button to find out.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): On Mixes, identify Quick Play as immediate playback and Create with Lucy as planning first.
 
 ### LX-0353-03 - Lucy entry in 5 seconds
 
@@ -324,7 +324,7 @@ participant took part and it is not a study result.
 - Success: Points to Create with Lucy within 5 seconds.
 - Hesitation: a pause over 10 s, a question to the facilitator, or naming another control first.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): From Mixes, locate Create with Lucy before starting the five-second timer.
 
 ### LX-0354-01 - Mood cards
 
@@ -334,7 +334,7 @@ participant took part and it is not a study result.
 - Success: Reads the name, the feeling and a real fact, and names the one action.
 - Hesitation: a pause over 10 s, a question to the facilitator, or reading a different card's text as this card's.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Inspect one feeling card and identify its title, mood, factual detail and button outcome.
 
 ### LX-0354-03 - Three action paths
 
@@ -344,7 +344,7 @@ participant took part and it is not a study result.
 - Success: Three different correct predictions; none says Save draft starts music.
 - Hesitation: a pause over 10 s, a question to the facilitator, or giving two of them the same outcome.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Identify Play, Shape first and Save draft as different actions on one feeling without pressing them.
 
 ### LX-0357-01 - First message
 
@@ -355,7 +355,7 @@ participant took part and it is not a study result.
 - Success: Types into the Message to Lucy box and sends a musical request unaided.
 - Hesitation: a pause over 10 s, a question to the facilitator, or looking for a form or settings before typing.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Use the built-in Lucy planner, open a new conversation, locate Message to Lucy and Send.
 
 ### LX-0359-01 - Lifecycle words
 
@@ -366,7 +366,7 @@ participant took part and it is not a study result.
 - Success: Names the stage shown and points to the words that say so.
 - Hesitation: a pause over 10 s, a question to the facilitator, or asking what a stage word means.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): With a six-song proposal, locate words distinguishing an idea from a saved draft and a playable mix.
 
 ### LX-0361-04 - Critique outcomes
 
@@ -377,7 +377,7 @@ participant took part and it is not a study result.
 - Success: Reads each instruction's met, not met or unknown wording correctly.
 - Hesitation: a pause over 10 s, a question to the facilitator, or scrolling the whole chat to work it out.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Prepare a Morning Light and calmer critique and locate each instruction's met, not met or unknown label.
 
 ### LX-0362-01 - Save draft versus Save and play
 
@@ -388,7 +388,7 @@ participant took part and it is not a study result.
 - Success: Says only Save and play replaces what is playing; draft leaves the player alone.
 - Hesitation: a pause over 10 s, a question to the facilitator, or pressing one to find out.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): On Your mix, distinguish Save as draft from Save and play and which changes current playback.
 
 ### LX-0363-02 - Archive versus delete
 
@@ -399,4 +399,4 @@ participant took part and it is not a study result.
 - Success: Chooses Archive and says Delete removes the chat but keeps drafts and music.
 - Hesitation: a pause over 10 s, a question to the facilitator, or opening Delete's confirmation to read it.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): not piloted yet
+- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): In Conversations, identify Archive as reversible and distinguish Delete from removing saved music.
