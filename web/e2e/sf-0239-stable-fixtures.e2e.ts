@@ -76,6 +76,9 @@ for (const size of SIZES) {
           await state.open(page);
           await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
           await page.evaluate(async () => { await document.fonts.ready; });
+          // let late answers (row details, artwork) land before the capture, so a loaded machine
+          // does not catch the page half drawn; the held load never settles, so it is not waited on
+          if (state.id !== 'library-loading') await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
           await page.waitForTimeout(250);
           shots.push(await page.screenshot({ fullPage: true, animations: 'disabled', caret: 'hide' }));
           await page.unrouteAll({ behavior: 'ignoreErrors' });
