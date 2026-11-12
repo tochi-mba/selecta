@@ -7,8 +7,7 @@ import sqlite3
 import time
 from pathlib import Path
 
-from fastapi import HTTPException
-from fastapi.responses import FileResponse
+from fastapi import HTTPException, Request, Response
 
 from selecta import mix
 from selecta.api_common import DiscoveryReview, ListeningResponse, StudioShape, TuneRequest
@@ -25,6 +24,7 @@ from selecta.arrange import (
 from selecta.discovery.hearing import STEPS, audition_folder, make_audition
 from selecta.discovery.search import spread_out
 from selecta.eta import combine, still_to_go
+from selecta.routes.files import audio_file
 from selecta.seams import STUDIO_SESSION
 from selecta.studio import LANES, SIDES, clean_shape, why_no_studio, windows_to_separate
 
@@ -86,11 +86,11 @@ def add_routes(app, ctx) -> None:
         return info
 
     @app.get("/api/discoveries/{discovery_id}/hear/{step}")
-    def discovery_step(discovery_id: int, step: str) -> FileResponse:
+    def discovery_step(discovery_id: int, step: str, request: Request) -> Response:
         path = audition_folder(settings, discovery_id) / f"{step}.flac"
         if step not in STEPS or not path.exists():
             raise HTTPException(404)
-        return FileResponse(path, media_type="audio/flac")
+        return audio_file(request, path)
 
     @app.post("/api/mix/{position}/studio")
     def open_studio(position: int, draft: int | None = None) -> dict:
@@ -147,11 +147,11 @@ def add_routes(app, ctx) -> None:
         return {"shape": after, "changes": what_changed(before, after, hearing, titles)}
 
     @app.get("/api/studio/{key}/{side}/{lane}")
-    def studio_stem(key: str, side: str, lane: str) -> FileResponse:
+    def studio_stem(key: str, side: str, lane: str, request: Request) -> Response:
         path = store.folder(Path(key).name) / f"{side}_{lane}.flac"
         if side not in SIDES or lane not in LANES or not path.exists():
             raise HTTPException(404)
-        return FileResponse(path, media_type="audio/flac")
+        return audio_file(request, path)
 
     @app.post("/api/mix/{position}/studio/use")
     def use_studio_shape(position: int, body: StudioShape, draft: int | None = None) -> dict:
@@ -196,7 +196,7 @@ def add_routes(app, ctx) -> None:
             return public_trials(conn, study)
 
     @app.get("/api/listening/{trial}/{option}/audio")
-    def listening_audio(trial: str, option: str) -> FileResponse:
+    def listening_audio(trial: str, option: str, request: Request) -> Response:
         from selecta.listening import initialise
 
         if option not in {"a", "b"}:
@@ -218,7 +218,7 @@ def add_routes(app, ctx) -> None:
             path = (root / f"{key}.flac").resolve()
         if not path.is_relative_to(root) or not path.is_file():
             raise HTTPException(404, "This trial's audio is unavailable")
-        return FileResponse(path, media_type="audio/flac", filename=f"{option}.flac")
+        return audio_file(request, path, filename=f"{option}.flac")
 
     @app.post("/api/listening/{trial}/response")
     def listening_response(trial: str, body: ListeningResponse) -> dict:

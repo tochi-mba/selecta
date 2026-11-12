@@ -81,7 +81,7 @@ def test_eviction_goes_oldest_first_but_never_takes_the_current_mix(settings, mo
     _age(older, 2 * DAY)
     _age(newer, 1 * DAY)
     cache_care.remember_protected(settings, {playing.name})
-    _cap(monkeypatch, settings, 1500)
+    _cap(monkeypatch, settings, 2600)  # room for two of the three
     stems.prune_cache(settings)  # as the storage page does, naming nothing to keep
     assert playing.is_dir()
     assert not older.exists()

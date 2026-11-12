@@ -8,8 +8,7 @@ import time
 from collections import Counter
 from pathlib import Path
 
-from fastapi import HTTPException
-from fastapi.responses import FileResponse
+from fastapi import HTTPException, Request, Response
 
 from selecta import db, flags, mix
 from selecta.api_common import (
@@ -26,6 +25,7 @@ from selecta.api_common import (
     SeamSettings,
 )
 from selecta.flags.guard import refusal
+from selecta.routes.files import audio_file
 from selecta.seam_kinds import MOVE_FLAGS, move_on
 from selecta.seams import MOVES, STEM_MOVES, CannotRender, SeamRequest, request_from, seam_options
 from selecta.stems import mark_used
@@ -359,11 +359,11 @@ def add_routes(app, ctx) -> None:
         return exported_mix
 
     @app.get("/api/exports/{name}")
-    def exported(name: str) -> FileResponse:
+    def exported(name: str, request: Request) -> Response:
         path = settings.home / "exports" / Path(name).name
         if not path.exists():
             raise HTTPException(404)
-        return FileResponse(path, filename=path.name, media_type="audio/flac")
+        return audio_file(request, path, filename=path.name)
 
     @app.post("/api/seams")
     def audition(body: PairRequest) -> dict:
@@ -378,20 +378,20 @@ def add_routes(app, ctx) -> None:
     def seam_state(key: str) -> dict:
         return store.status(key)
 
-    def seam_file(key: str, name: str) -> FileResponse:
+    def seam_file(key: str, name: str, request: Request) -> Response:
         path = store.folder(Path(key).name) / name
         if not path.exists():
             raise HTTPException(404, "That seam hasn't been rendered.")
         mark_used(path)  # heard just now, so the cache keeps it over ones nobody plays
-        return FileResponse(path, media_type="audio/flac")
+        return audio_file(request, path)
 
     @app.get("/api/seams/{key}/clip")
-    def seam_clip(key: str) -> FileResponse:
-        return seam_file(key, "clip.flac")
+    def seam_clip(key: str, request: Request) -> Response:
+        return seam_file(key, "clip.flac", request)
 
     @app.get("/api/seams/{key}/preview")
-    def seam_preview(key: str) -> FileResponse:
-        return seam_file(key, "preview.flac")
+    def seam_preview(key: str, request: Request) -> Response:
+        return seam_file(key, "preview.flac", request)
 
     @app.post("/api/seams/{key}/rate")
     def rate_seam(key: str, body: RateRequest) -> dict:

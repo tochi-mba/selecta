@@ -104,7 +104,7 @@ describe('r8c Discover word links', () => {
   });
   const sixty = { links: Array.from({ length: 60 }, (_, index) => link(index)), prepared: 0, preparing: 0 };
 
-  it('a poll that brings back the same 60 links redraws nothing, and typing redraws no card', async () => {
+  it('a poll that brings back the same 60 links redraws nothing, nor does the clock', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const calls = fakeBackend({ 'GET /links': sixty, 'GET /drafts': { drafts: [] } });
     const [seen, onRender] = tally();
@@ -132,7 +132,19 @@ describe('r8c Discover word links', () => {
     }
     report('discover, 5 clock ticks', seen);
     expect(seen.commits).toBe(0);
+  });
 
+  it('typing in the search redraws no card', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    fakeBackend({ 'GET /links': sixty, 'GET /drafts': { drafts: [] } });
+    const [seen, onRender] = tally();
+    render(
+      <Profiler id="links" onRender={onRender}>
+        <Links status={appStatus()} mix={[]} mixName="" canUndo={false} player={player} now={player.state} stage={false} tab="words" {...stable} />
+      </Profiler>,
+    );
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    expect(await screen.findAllByRole('article')).toHaveLength(60);
     seen.commits = 0;
     seen.ms = 0;
     const search = screen.getByRole('searchbox', { name: 'Search shared words' });
