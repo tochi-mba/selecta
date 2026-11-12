@@ -474,7 +474,7 @@ test('the mini-player and bottom bar never overlap, and the last row can always 
       const nav = document.querySelector('.nav')!.getBoundingClientRect();
       const rows = document.querySelectorAll('.library-rows .song-row');
       const last = rows[rows.length - 1].getBoundingClientRect();
-      return { mini: [mini.top, mini.bottom], nav: [nav.top, nav.bottom, nav.left, nav.right], last: last.bottom, height: window.innerHeight, navAtBottom: nav.width > window.innerWidth / 2 };
+      return { mini: [mini.top, mini.bottom], nav: [nav.top, nav.bottom, nav.left, nav.right], last: last.bottom, height: window.innerHeight, navAtBottom: nav.width > window.innerWidth / 2 && getComputedStyle(document.querySelector('.nav')!).position === 'fixed' };
     });
     const place = `${width}x${height}`;
     if (geometry.navAtBottom && geometry.mini[1] > geometry.nav[0] + 1) found.push(`${place}: the player runs into the bottom bar`);
