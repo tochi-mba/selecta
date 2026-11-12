@@ -21,6 +21,7 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import cached_property
 
 import httpx
 
@@ -125,8 +126,10 @@ class Line:
     end: float
     text: str
 
-    @property
+    @cached_property
     def words(self) -> list[str]:
+        """Found once per line (r8d): planning and the library's traits ask for them again and
+        again. Callers only read the list."""
         return _WORD.findall(self.text.lower())
 
 

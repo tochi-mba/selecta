@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sqlite3
 import time
 from dataclasses import dataclass
@@ -161,19 +162,25 @@ def analyse_song(
     save_started = time.perf_counter()
     mono = audio.to_mono(stereo)
     grid, features = result.grid, result.features
-    np.savez_compressed(
-        features_path(settings, song["id"]),
-        beats=grid.beats,
-        bar_starts=grid.bar_starts.astype(np.int32),
-        raw_beats=grid.raw_beats.astype(np.float32),
-        raw_downbeats=grid.raw_downbeats.astype(np.float32),
-        chroma_bars=features.chroma_bars.astype(np.float16),
-        mfcc_bars=features.mfcc_bars.astype(np.float16),
-        energy_bars=features.energy_bars.astype(np.float16),
-        rms_db_bars=features.rms_db_bars.astype(np.float16),
-        low_share_bars=features.low_share_bars.astype(np.float16),
-        peaks=waveform_peaks(mono),
-    )
+    # written beside its real name and swapped in whole, so a crash mid-save can't leave a
+    # truncated file behind an older analysis that still points at it
+    target = features_path(settings, song["id"])
+    partial = target.with_name(target.name + ".part")
+    with partial.open("wb") as stream:
+        np.savez_compressed(
+            stream,
+            beats=grid.beats,
+            bar_starts=grid.bar_starts.astype(np.int32),
+            raw_beats=grid.raw_beats.astype(np.float32),
+            raw_downbeats=grid.raw_downbeats.astype(np.float32),
+            chroma_bars=features.chroma_bars.astype(np.float16),
+            mfcc_bars=features.mfcc_bars.astype(np.float16),
+            energy_bars=features.energy_bars.astype(np.float16),
+            rms_db_bars=features.rms_db_bars.astype(np.float16),
+            low_share_bars=features.low_share_bars.astype(np.float16),
+            peaks=waveform_peaks(mono),
+        )
+    os.replace(partial, target)
     result.timings["save"] = round(time.perf_counter() - save_started, 3)
     result.timings["total"] = round(time.perf_counter() - started, 3)
 
@@ -201,6 +208,11 @@ def analyse_song(
     return result
 
 
-def load_features(settings: Settings, song_id: int) -> dict[str, np.ndarray]:
+def load_features(
+    settings: Settings, song_id: int, names: tuple[str, ...] | None = None
+) -> dict[str, np.ndarray]:
+    """A song's arrays. `names` reads only those (r8d): each member of the file is decompressed
+    on its own, so planning skips the raw beats and the waveform it never looks at."""
     with np.load(features_path(settings, song_id)) as data:
-        return {name: data[name] for name in data.files}
+        wanted = data.files if names is None else [name for name in names if name in data.files]
+        return {name: data[name] for name in wanted}

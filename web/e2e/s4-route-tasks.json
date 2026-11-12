@@ -21,7 +21,7 @@
   "menusCoveredElsewhere": {
     "views/Drafts.tsx": "needs a saved draft; Rename, Copy, Prioritize, Out of line and Delete are opened in src/views/Drafts.test.tsx and src/views/ufMyMixes.test.tsx",
     "views/Links.tsx": "needs a discovery card; Add both to is opened in web/e2e/mp-0292-discovery.e2e.ts and web/e2e/gp-0260-back-state.e2e.ts",
-    "views/LucyHistory.tsx": "needs a Lucy conversation; Rename, Archive and Delete are opened in web/e2e/lx-lucy.e2e.ts and src/views/LucyLx.test.tsx",
+    "views/LucyHistory.tsx": "needs a Lucy conversation; Rename, Archive and Delete are opened in src/views/LucyLx.test.tsx",
     "views/LucyProposal.tsx": "needs a revised Lucy proposal; the revision menu is opened in src/views/LucyLx.test.tsx",
     "ui/ControlGallery.tsx": "the component gallery's own sample menu, not a product action"
   },

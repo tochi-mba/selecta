@@ -1,0 +1,1 @@
+{"extends":"./tsconfig.json","compilerOptions":{"noEmit":true,"incremental":false},"include":["e2e/s4-perf-visualiser-polling.e2e.ts","e2e/s4-first-play-and-mix-choice.e2e.ts","e2e/s4-0098-lyrics-capture.e2e.ts","e2e/s4-mix-actions-and-health.e2e.ts","e2e/finishing.e2e.ts"]}

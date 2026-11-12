@@ -51,8 +51,8 @@ def test_a_missing_input_stops_the_task_before_anything_runs(name, capsys):
     ran = []
     code = staging.main([name], env={}, run=ran.append)
     assert code == 2 and ran == []
-    assert all(f"set {variable}" in capsys.readouterr().out
-               for variable in staging.TASKS[name].needs)
+    out = capsys.readouterr().out
+    assert all(f"set {variable}" in out for variable in staging.TASKS[name].needs)
 
 
 def test_a_production_url_is_refused():

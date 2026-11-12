@@ -8,7 +8,7 @@ import { setQuery as setAddressQuery, useQueryParam } from '../router';
 import { exploreTabs } from '../shell/manifest';
 import { LinkIfThere } from '../shell/PageLink';
 import { operationId } from '../state/async';
-import { DraftNames, getDraftNames } from '../state/draftNames';
+import { getDraftNames } from '../state/draftNames';
 import { orderOf } from '../state/readiness';
 import { AudioPreview } from '../ui/AudioPreview';
 import { Icon } from '../ui/Icon';

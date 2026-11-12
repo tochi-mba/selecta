@@ -3,7 +3,7 @@
 - **Baseline:** `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7`, 2026-11-07.
 - **30 ADR decisions:** Proposed (not owner-accepted).
 - **New 240 MI tasks:** 0 Not started, 27 In progress, 213 Implemented, 0 independently Verified.
-- **Evidence boundary:** [PR #31](https://github.com/tochi-mba/selecta/pull/31) now changes runtime code and adds targeted tests, with 213 source-level items implemented. Another 3 are only partially supported or require task-specific acceptance evidence; 24 are not started. Green CI is automation evidence, **not** independent visual, actual-audio, assistive-technology, performance, owner or musical-quality approval.
+- **Evidence boundary:** [PR #31](https://github.com/tochi-mba/selecta/pull/31) now changes runtime code and adds targeted tests, with 213 source-level items implemented. Another 27 are In progress: 3 (MI-0162-04, -05, -08) wait on a benchmark rerun and a person, and 24 have their code part (`src/selecta/audit/mi_study_kit.py`) built on 2026-11-12 while their study, listening session, review or sign-off waits on people; none are not started. Green CI is automation evidence, **not** independent visual, actual-audio, assistive-technology, performance, owner or musical-quality approval.
 
 | MI task | Proposed work | Implementation | Verified | Implementing PR/SHA | Automated/API | Visual/theme | Human/AT/audio/performance | Owner |
 |---|---|---|---|---|---|---|---|---|

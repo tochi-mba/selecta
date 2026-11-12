@@ -242,7 +242,7 @@ def shown(command: list[str]) -> str:
     """The command as printed: a token passed on the command line is masked."""
     masked = [
         "***" if before == "--synthetic-token" else part
-        for before, part in zip(["", *command], command, strict=True)
+        for before, part in zip(["", *command[:-1]], command, strict=True)
     ]
     return shlex.join(masked)
 

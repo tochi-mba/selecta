@@ -34,7 +34,7 @@ Do not change randomization, normalization, study data model or reports through 
 2. **EX-0129-02 - Design balanced A/B interface**. **Acceptance:** Equal control treatment and order clarity. **Verification:** Counterbalanced human pilot. **Implementation: Implemented; Verified: No. Needs a person: counterbalanced human pilot.**
 3. **EX-0129-03 - Separate listening, grading and save**. **Acceptance:** Missing ratings and submissions explained. **Verification:** Study form validation E2E. **Implementation: Implemented; Verified: Yes (2026-11-11).** Evidence: MP-0294-05 to -08 (14 passed), `web/src/views/Listening.test.tsx`, `ListeningStudyFlow.test.tsx`.
 4. **EX-0129-04 - Preserve once-only identity**. **Acceptance:** Retry/race cannot double-submit or misattribute answer. **Verification:** API and delayed response tests. **Implementation: Implemented; Verified: Yes (2026-11-10).** Evidence: `tests/test_ex_0129_study_integrity.py` (5 passed).
-5. **EX-0129-05 - Verify with real blind sessions**. **Acceptance:** Method remains hidden and ratings recorded accurately. **Verification:** Named listener/protocol reviewer. **Implementation: Not started; Verified: No. Needs a person: named listener and protocol reviewer.**
+5. **EX-0129-05 - Verify with real blind sessions**. **Acceptance:** Method remains hidden and ratings recorded accurately. **Verification:** Named listener/protocol reviewer. **Implementation: Implemented (2026-11-12; code part); Verified: No. Evidence: method hiding and accurate rating storage proven by `tests/test_ex_0129_study_integrity.py` (5/5 passed 2026-11-12). Needs a person: a named listener and protocol reviewer running real blind sessions**
 
 ## Independent verification
 
