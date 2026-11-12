@@ -6,7 +6,8 @@ button:not(:disabled):not([aria-disabled='true']):active,
 a.button:active { box-shadow: inset 0 0 0 2px currentColor; }
 /* Pressed segmented toggles carry a bar along the bottom as well as the fill, so the state is never
    colour alone (EX-0130-01). */
-:is(.chips, .library-density, .library-layout) button[aria-pressed='true'] { box-shadow: inset 0 -3px 0 currentColor; }
+.chips button[aria-pressed='true'],
+:is(.library-density, .library-layout) button[aria-pressed='true'] { box-shadow: inset 0 -3px 0 currentColor; }
 :is(input, textarea, select) {
   transition: border-color var(--motion-fast) var(--motion-ease), background-color var(--motion-fast) var(--motion-ease);
 }
