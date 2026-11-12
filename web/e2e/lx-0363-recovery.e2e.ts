@@ -37,6 +37,15 @@ async function turn(request: APIRequestContext, id: string, text: string): Promi
 
 const composer = (page: Page) => page.getByRole('textbox', { name: 'Message to Lucy' });
 
+// A narrower content column puts the proposal behind the "Your mix" tab.
+// Check the real revision there, then return to Chat to check the unsent draft.
+async function showRevision(page: Page, number: number) {
+  const mixTab = page.getByRole('tab', { name: 'Your mix' });
+  if (await mixTab.count()) await mixTab.click();
+  await expect(page.getByRole('button', { name: `Revision ${number}` })).toBeVisible({ timeout: 30_000 });
+  if (await mixTab.count()) await page.getByRole('tab', { name: 'Chat' }).click();
+}
+
 async function open(context: BrowserContext, id: string): Promise<Page> {
   const page = await context.newPage();
   await page.setViewportSize({ width: 1280, height: 850 });
@@ -66,7 +75,7 @@ test('LX-0363-04 two tabs share the latest proposal pointer but never leak anoth
 
   const current = await turn(request, first, 'make it shorter');
   for (const tab of [page, peer]) {
-    await expect(tab.getByRole('button', { name: `Revision ${current}` })).toBeVisible({ timeout: 30_000 });
+    await showRevision(tab, current);
     await expect(composer(tab)).toHaveValue('Half-written words for the first conversation');
   }
 });
@@ -85,7 +94,7 @@ test('LX-0363-05 network loss keeps typed words and catches up to work completed
 
   const current = await turn(request, id, 'make it shorter');
   await page.unroute(events);
-  await expect(page.getByRole('button', { name: `Revision ${current}` })).toBeVisible({ timeout: 30_000 });
+  await showRevision(page, current);
   await expect(composer(page)).toHaveValue('Keep these words while the network is gone');
 });
 
@@ -101,5 +110,5 @@ test('LX-0363-05 a page opened while the server is unavailable offers retry and 
   await page.unroute(snapshot);
   await page.getByRole('button', { name: 'Try again' }).click();
   await expect(composer(page)).toHaveValue('Still here after the server comes back');
-  await expect(page.getByRole('button', { name: 'Revision 1' })).toBeVisible();
+  await showRevision(page, 1);
 });
