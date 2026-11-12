@@ -110,6 +110,7 @@ wins, and the row says which.
 | `max-width: 420px` | `styles/lucy.css` | Lucy song actions wrap |
 | `max-width: 420px` | `styles/polish.css` | Make a Mix path padding |
 | `max-width: 420px` | `styles/shell.css` | mini-player Request button tightens |
+| `max-width: 360px` | `styles/shell.css` | context-bar breadcrumb text shrinks at 320px so single-word page names remain intact (SF-0207-05) |
 | `max-height: 760px` | `styles/listening.css` | short Stage windows: visualiser and countdown give up height so the current lyric stays above the fold (MP-0285-01) |
 | `max-height: 520px` | `styles/shell.css` | short landscape: dialogs scroll inside, title and actions stay |
 | `max-height: 420px` | `styles/typography.css` | 400% zoom: the editor scope bar stops sticking |
