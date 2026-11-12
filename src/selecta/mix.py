@@ -265,9 +265,12 @@ def move_song(conn: sqlite3.Connection, source: int, target: int, draft: int | N
         return
     moving = items.pop(source)
     items.insert(target, (moving[0], None, moving[2]))
-    if source < len(items):
-        song, _, locked = items[source]
-        items[source] = (song, None, locked)
+    # When moved upward, the old successor shifts to source + 1; when moved
+    # downward, it shifts to source. Only the changed incoming pair resets.
+    old_successor = source if source < target else source + 1
+    if old_successor < len(items):
+        song, _, locked = items[old_successor]
+        items[old_successor] = (song, None, locked)
     if target + 1 < len(items):
         song, _, locked = items[target + 1]
         items[target + 1] = (song, None, locked)

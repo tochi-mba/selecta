@@ -72,7 +72,7 @@ function bleed({ names, inside }: { names: string[]; inside: string | null }) {
 async function open(page: Page, route: string, width = 1280) {
   await page.setViewportSize({ width, height: 900 });
   await page.goto(route);
-  await expect(page.locator('main#main')).toBeVisible();
+  await expect(page.locator('main#main:visible:not([aria-busy="true"])')).toHaveCount(1);
 }
 
 test.beforeEach(async ({ page, request }) => {
@@ -141,7 +141,7 @@ test('MP-0278-07 audio, API, data, routing and stored preferences are what they 
   for (const route of PAGES) {
     // within the app, as a listener moves, so the music carries on
     await page.evaluate((path) => { window.history.pushState({}, '', path); window.dispatchEvent(new PopStateEvent('popstate')); }, route);
-    await expect(page.locator('main#main')).toBeVisible();
+    await expect(page.locator('main#main:visible:not([aria-busy="true"])')).toHaveCount(1);
     await expect(page.locator('.crumbs [aria-current="page"]'), `${route} is a real page`).not.toHaveText('Not found');
   }
   expect(await page.evaluate(() => window.audioSpy.contexts.length), 'one audio owner').toBe(contexts);

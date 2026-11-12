@@ -19,7 +19,7 @@ import threading
 from datetime import UTC, datetime
 from pathlib import Path
 
-LOCAL_SCHEMA_VERSION = 1
+LOCAL_SCHEMA_VERSION = 2
 FOLDER = "upgrade-backups"
 KEEP = 5
 

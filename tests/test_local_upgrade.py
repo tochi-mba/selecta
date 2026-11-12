@@ -66,7 +66,10 @@ SAVED_MIXES = [{"name": "Friday", "items": [{"song_id": 1}, {"song_id": 2}]}]
 
 # The shape a fresh library file has on LOCAL_SCHEMA_VERSION. If this test fails, the local
 # schema changed: bump local_upgrade.LOCAL_SCHEMA_VERSION and record the new fingerprint here.
-FINGERPRINTS = {1: "dadd35e2317a12632dfb0a20fa06f1828af888b549c436badb6ea013343b3511"}
+FINGERPRINTS = {
+    1: "dadd35e2317a12632dfb0a20fa06f1828af888b549c436badb6ea013343b3511",
+    2: "925fd708411764e33a60cbbed5eec13a4eb7273c83a8f4dfbfe24cb7ebef0c72",
+}
 
 
 def old_library(path: Path) -> Path:

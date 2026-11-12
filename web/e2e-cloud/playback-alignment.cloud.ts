@@ -17,7 +17,8 @@ test('the lossless playback proxy begins on the source sample in every browser e
   });
   await page.getByRole('button', { name: 'Listen to Song 1.wav' }).click();
   const audio = page.locator('audio');
-  await expect.poll(() => audio.getAttribute('src')).toMatch(/^blob:/);
+  // Direct signed FLAC URLs and object URLs must decode to the same PCM below.
+  await expect.poll(() => audio.getAttribute('src')).toMatch(/^(blob:|https?:\/\/.*\/proxy\.flac(?:\?|$))/);
   const proxyUrl = await audio.getAttribute('src');
   expect(proxyUrl).toBeTruthy();
 

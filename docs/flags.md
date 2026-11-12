@@ -162,6 +162,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `ratings` | **Ratings.** Rate a transition Good or Bad, and the planner learns from it. |  |
 | `learning.memory` | **What it's learned.** The Learning tab's summary of what ratings have taught the planner. | `ratings` |
 | `listening_study` | **Blind listening study.** Compare two renders without knowing which is which, and grade them. |  |
+| `listening_study.skip_and_stop` | **Skip and stop in the listening study.** Skip a comparison without answering, or stop for now and pick up later, with the skipped ones counted as unanswered. | `listening_study` |
 
 ## Workspace
 
