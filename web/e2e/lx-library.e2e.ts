@@ -404,7 +404,7 @@ test('LX-0348-05 LX-0348-07 the song sheet corrects with focus on errors, and cl
     return parts.every((part, index) => index === 0 || (parts[index - 1].compareDocumentPosition(part) & Node.DOCUMENT_POSITION_FOLLOWING));
   });
   expect(order).toBe(true);
-  const tempo = sheet.getByRole('spinbutton', { name: /Tempo/ });
+  const tempo = sheet.getByRole('textbox', { name: /^Tempo/ });
   await tempo.fill('999');
   await sheet.getByRole('button', { name: 'Save correction' }).click();
   await expect(sheet.getByText('Tempo has to be between 40 and 240.')).toBeVisible();

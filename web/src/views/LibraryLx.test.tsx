@@ -336,7 +336,7 @@ describe('LX-0349-06 a failed save keeps what was typed and points at the proble
       : Promise.resolve(new Response(JSON.stringify(page(row(1, 'Song', { bpm: 120, detected_bpm: 120 }))), { status: 200 })))));
     const { notify } = show();
     await userEvent.click(await screen.findByRole('button', { name: 'Details for Song' }));
-    const tempo = screen.getByRole('spinbutton', { name: /Tempo/ });
+    const tempo = screen.getByRole('textbox', { name: /^Tempo/ });
     await userEvent.type(tempo, '128');
     await userEvent.click(screen.getByRole('button', { name: 'Save correction' }));
     const alert = await screen.findByRole('alert');

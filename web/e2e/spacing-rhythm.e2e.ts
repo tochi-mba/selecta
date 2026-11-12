@@ -165,7 +165,7 @@ test('MP-0273-03 label, control, help and error stay adjacent without overlap', 
     await page.getByRole('button', { name: /^Details for / }).first().click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
-    const tempo = dialog.getByRole('spinbutton', { name: /^Tempo/ });
+    const tempo = dialog.getByRole('textbox', { name: /^Tempo/ });
     await tempo.fill('999');
     await dialog.getByRole('button', { name: 'Save correction' }).click();
     const field = dialog.locator('.correct-field:has(input[type="number"])');

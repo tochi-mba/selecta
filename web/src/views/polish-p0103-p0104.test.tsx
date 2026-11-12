@@ -77,7 +77,7 @@ describe('P0103 filter, query and focus survive details, a refused value, a fail
     expect(asked).toContain('state=ready');
     await userEvent.click(opener);
     const details = screen.getByRole('dialog');
-    const tempo = within(details).getByRole('spinbutton', { name: /^Tempo/ });
+    const tempo = within(details).getByRole('textbox', { name: /^Tempo/ });
 
     // a value Selecta refuses: the message belongs to its own field, focus goes there, nothing is sent
     await userEvent.clear(tempo);

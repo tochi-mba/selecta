@@ -58,7 +58,7 @@ for (const how of ['the close button', 'Escape'] as const) {
 
     await opener.click();
     const details = page.getByRole('dialog').last();
-    const tempo = details.getByRole('spinbutton', { name: /^Tempo/ });
+    const tempo = details.getByRole('textbox', { name: /^Tempo/ });
     await tempo.fill('400');
     await details.getByRole('button', { name: 'Save correction' }).click();
     await expect(tempo).toHaveAttribute('aria-invalid', 'true');
