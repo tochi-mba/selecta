@@ -241,7 +241,9 @@ export class SetPlayer {
    * never answering, so this stops waiting and reports whether it got it. */
   private async wake(context: AudioContext): Promise<boolean> {
     const isRunning = () => context.state === 'running';
-    if (isRunning()) return true;
+    // Idle preparation may still be suspending an autoplay-enabled context. Queue the
+    // resume within this Play gesture even if the context still reports "running".
+    if (isRunning() && !this.holdingSound) return true;
     let wait: number | undefined;
     try {
       await Promise.race([

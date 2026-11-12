@@ -4,7 +4,8 @@ import { DEFAULT_PREFS, setPrefs } from '../state/prefs';
 import { MusicVisualizer } from './Now';
 
 /** GP-0257-05: how much drawing the visualizer asks for. Hidden or Still costs no frames at all, and
- * playing is held to about 15 drawn frames a second however fast the screen refreshes. */
+ * normal playback can draw about 30 frames a second for music responsiveness; slow devices
+ * back off to 15 without spending frames when hidden or under Still. */
 
 let queued: FrameRequestCallback[] = [];
 let drawn = 0;
@@ -80,14 +81,14 @@ describe('GP-0257-05 the visualizer only spends frames when someone can see it m
     expect(drawn).toBe(0);
   });
 
-  it('draws about 15 frames a second while playing on a 60 Hz screen, not 60', () => {
+  it('draws about 30 frames a second while playing on a 60 Hz screen, not 60', () => {
     setPrefs({ ...DEFAULT_PREFS, motion: 'expressive' });
     show();
     const first = drawn;
     pump(60);
     const perSecond = drawn - first;
-    expect(perSecond).toBeGreaterThanOrEqual(12);
-    expect(perSecond).toBeLessThanOrEqual(16);
+    expect(perSecond).toBeGreaterThanOrEqual(27);
+    expect(perSecond).toBeLessThanOrEqual(32);
   });
 });
 
