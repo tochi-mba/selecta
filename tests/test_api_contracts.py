@@ -101,7 +101,9 @@ def client(settings, conn, tmp_path, monkeypatch):
     monkeypatch.setattr("selecta.analysis.song.load_song", load_song)
     monkeypatch.setattr(
         "selecta.analysis.pipeline.load_features",
-        lambda _settings, _song_id: {"peaks": np.array([0, 128, 255], dtype=np.uint8)},
+        lambda _settings, _song_id, _features=None: {
+            "peaks": np.array([0, 128, 255], dtype=np.uint8)
+        },
     )
     monkeypatch.setattr("selecta.planner.reel.load_library", lambda _conn, _settings: [])
     monkeypatch.setattr(
