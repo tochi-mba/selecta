@@ -45,4 +45,17 @@ describe('export job stages', () => {
     expect(within(expired).getByText(/can’t be downloaded/)).toBeInTheDocument();
     expect(within(expired).getByText('Open this mix to export it again')).toBeInTheDocument();
   });
+
+  it('one job in a state the site does not know reads "State unknown" on its own row, and the list stays', async () => {
+    fakeBackend({
+      'GET /exports/jobs': { jobs: [job('a', 'ready', { seconds: 400, seams_ready: 1 }), job('b', 'from-a-newer-server' as ExportJobState)] },
+    });
+    render(<ExportJobs always />);
+    const rows = await screen.findAllByRole('listitem').then((items) => items.filter((item) => item.classList.contains('export-job')));
+    expect(rows).toHaveLength(2);
+    expect(within(rows[1]).getByText('State unknown')).toBeInTheDocument();
+    expect(within(rows[0]).queryByText('State unknown')).toBeNull();
+    expect(screen.queryByText(/Couldn’t check on your exports/)).toBeNull();
+    expect(screen.queryByText(/Can’t check on these right now/)).toBeNull();
+  });
 });

@@ -97,5 +97,5 @@ def test_local_only_list_is_still_true() -> None:
 
 def test_checklist_has_no_em_dash_and_fits() -> None:
     text = DOC.read_text(encoding="utf-8")
-    assert "—" not in text
+    assert chr(0x2014) not in text
     assert len(text.splitlines()) < 1000

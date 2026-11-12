@@ -34,6 +34,8 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.device.<workspace>` | local | `web/src/devices/usePlaybackDevice.ts`, `web/src/devices/DevicesPanel.tsx` | This browser's playback device id (Cloud) | Cloud playback |
 | `selecta.cloud.last-event-id` | session | `web/src/cloud/events.ts` | The last Cloud event seen, to resume the stream (Cloud) | Cloud |
 | `selecta.guest.room.<code>` | local | `web/src/guest/main.ts` (through `store` in `web/src/rooms/dom.ts`) | The guest's room id for a party code (Cloud) | Requests (guest rooms) |
+| `selecta-cloud-dev:refresh` | local | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The local identity service's refresh token, so a reload signs back in; removed on sign-out or a failed refresh | Cloud (local dev stack) |
+| `selecta-cloud-dev:login` | session | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The PKCE verifier, CSRF state and return path of a sign-in in flight; removed when the code comes back | Cloud (local dev stack) |
 
 ## API side effects
 

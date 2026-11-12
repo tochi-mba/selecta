@@ -1,0 +1,21 @@
+# PostgreSQL for `dev.cmd cloud --docker` only: a throwaway development database on this machine.
+# The password is a made-up local value; the port is bound to 127.0.0.1 so nothing else can reach it.
+name: selectadj-dev
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: selecta
+      POSTGRES_PASSWORD: selecta-local-dev
+      POSTGRES_DB: selecta_dev
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - selectadj-dev-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U selecta -d selecta_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+volumes:
+  selectadj-dev-postgres:

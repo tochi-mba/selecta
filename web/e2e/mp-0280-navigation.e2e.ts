@@ -181,16 +181,20 @@ test('MP-0280-04 deep crumbs and a long draft name stay whole and readable at na
             item.style.overflowWrap = before;
             return split;
           };
-          const items = [...crumbs.querySelectorAll<HTMLElement>('li')].filter((item) => item.getClientRects().length > 0).map((item) => ({ text: item.textContent, clipped: item.scrollWidth > item.clientWidth + 1, splitsWord: splitsWord(item), right: item.getBoundingClientRect().right, size: parseFloat(getComputedStyle(item).fontSize) }));
+          const items = [...crumbs.querySelectorAll<HTMLElement>('li')].filter((item) => item.getClientRects().length > 0).map((item) => ({ text: item.textContent, clipped: item.scrollWidth > item.clientWidth + 1, splitsWord: splitsWord(item), right: item.getBoundingClientRect().right, top: item.getBoundingClientRect().top, bottom: item.getBoundingClientRect().bottom, size: parseFloat(getComputedStyle(item).fontSize) }));
           const heading = document.querySelector<HTMLElement>('main#main h1');
-          return { items, actionsLeft: actions.left, overflow: document.documentElement.scrollWidth - window.innerWidth, heading: heading ? { text: heading.textContent, clipped: heading.scrollWidth > heading.clientWidth + 1 || heading.scrollHeight > heading.clientHeight + 1 } : null };
+          return { items, actionsLeft: actions.left, actionsTop: actions.top, actionsBottom: actions.bottom, overflow: document.documentElement.scrollWidth - window.innerWidth, heading: heading ? { text: heading.textContent, clipped: heading.scrollWidth > heading.clientWidth + 1 || heading.scrollHeight > heading.clientHeight + 1 } : null };
         });
         expect(found.overflow, `${where}: scrolls sideways`).toBeLessThanOrEqual(0);
         expect(found.items.length, `${where}: crumbs`).toBeGreaterThanOrEqual(1);
         for (const item of found.items) {
           expect(item.clipped, `${where}: crumb “${item.text}” is clipped`).toBe(false);
           expect(item.splitsWord, `${where}: crumb “${item.text}” breaks inside a word`).toBe(false);
-          expect(item.right, `${where}: crumb “${item.text}” runs under the actions`).toBeLessThanOrEqual(found.actionsLeft + 0.5);
+          // shell.css: when the longest word and the actions don't fit side by side, the actions wrap onto
+          // their own row under the trail; beside them, a crumb must end before they begin
+          const sharesRow = item.bottom > found.actionsTop + 0.5 && item.top < found.actionsBottom - 0.5;
+          if (sharesRow) expect(item.right, `${where}: crumb “${item.text}” runs under the actions`).toBeLessThanOrEqual(found.actionsLeft + 0.5);
+          else expect(found.actionsTop, `${where}: actions wrapped above crumb “${item.text}”`).toBeGreaterThanOrEqual(item.bottom - 0.5);
           expect(item.size, `${where}: crumb text too small`).toBeGreaterThanOrEqual(12);
         }
         if (route.includes('/drafts/')) {

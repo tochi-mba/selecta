@@ -164,6 +164,10 @@ envVarGroups:
         sync: false
       - key: SELECTA_ROOMS_PEPPER
         sync: false
+      # The visitor's address for Rooms' per-IP limits and code-guessing lockouts. Without it
+      # every guest shares Render's proxy address, so one guesser locks every party out.
+      - key: SELECTA_CLIENT_IP_HEADER
+        value: cf-connecting-ip
       - key: OTEL_EXPORTER_OTLP_ENDPOINT
         sync: false
       - key: OTEL_EXPORTER_OTLP_HEADERS

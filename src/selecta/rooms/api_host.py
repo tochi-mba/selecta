@@ -21,7 +21,8 @@ from selecta.flags import cloud_gate
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
 from selecta.persistence import transaction
-from selecta.rooms.api_common import item_json, join_path, refusal
+from selecta.rooms import limits
+from selecta.rooms.api_common import item_json, join_path, refusal, too_many
 from selecta.rooms.errors import RoomError
 from selecta.rooms.service import Rooms
 from selecta.rooms.settings import RoomSettings
@@ -107,7 +108,10 @@ def install_routes(
     principal_for: Callable[..., Any],
     rules: RulesCache,
     rooms: Callable[[], Rooms],
+    limiter: limits.Limiter | None = None,
 ) -> None:
+    limiter = limiter or limits.Limiter()
+
     def workspace(request: Request, claims: Claims, gate: str | None = None) -> str:
         found = principal_for(engine, claims, request.headers.get("x-workspace-id"))
         if gate is not None:
@@ -258,6 +262,10 @@ def install_routes(
         claims: Claims = Depends(current_claims),  # noqa: B008
     ):
         workspace_id = workspace(request, claims, "rooms.display")
+        try:
+            limiter.hit("display-confirm", workspace_id, limits.DISPLAY_CONFIRM_PER_WORKSPACE)
+        except limits.Limited as error:
+            raise too_many(error) from error
         try:
             rooms().confirm_pairing(workspace_id, room_id, body.pairing_code)
         except RoomError as error:

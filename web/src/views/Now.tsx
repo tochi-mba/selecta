@@ -16,10 +16,9 @@ import { useReducedMotion } from '../ui/useReducedMotion';
 import { seamFacts } from '../ui/seam';
 import { seamFamily, SongMotif } from '../ui/MusicObjects';
 import { RequestsContext, RequestTag, waitingRequestCount } from './Requests';
-import { createVisualState, migrateSpectrumShape, paintVisualFrame, SPECTRUM_MODES, type SpectrumShape } from './spectrumVisuals';
+import { clearVisualState, createVisualState, migrateSpectrumShape, paintVisualFrame, SPECTRUM_MODES, type SpectrumShape } from './spectrumVisuals';
 import { createFeatureTracker } from './visualizer/features';
 import { createFrameSource, gridOf } from './visualizer/source';
-import { clearVisualState } from './visualizer/kit';
 import { ViewProps } from './shared';
 import { FirstHandoff } from './FirstHandoff';
 import { Strip, StripPlaceholder } from './NowStrip';
@@ -251,6 +250,14 @@ function TransitionCountdown({
 const SILENT_LEVEL = 0.02;
 const STILL_RETRY_MS = 250;
 const MAX_STILL_RETRIES = 40;
+/** Owner feedback 2026-11-12 ("I can't actually see the visualizer reacting to the music well
+ * enough") raised the cap from 15 to 30 frames a second, so a kick shows within one 33 ms frame.
+ * A device whose measured script cost per frame passes FRAME_BUDGET_MS drops back to 15. */
+const FRAME_MS = 1000 / 30;
+const SLOW_FRAME_MS = 1000 / 15;
+const FRAME_BUDGET_MS = 4;
+/** Styles drawn from hits alone hold a calm spectrum as their still frame under reduced motion. */
+const EVENT_ONLY: SpectrumShape[] = ['sparkle', 'bursts', 'lanes', 'shock', 'grid'];
 
 /** Exported only so its frame use can be measured (GP-0257-05). */
 export function MusicVisualizer({ player, active, stage, intensity, spectrumShape, detail }: { player: ViewProps['player']; active: boolean; stage: boolean; intensity: ListenView['intensity']; spectrumShape: ListenView['spectrumShape']; detail?: SongDetail | null }) {
@@ -259,6 +266,10 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
   // Its colours come from the page; theme and forced-colour changes repaint real analyser data.
   const theme = useShownTheme();
   const [paletteRevision, setPaletteRevision] = useState(0);
+  // the song's analysed beat grid and sections, read each frame without restarting the loop
+  const songGrid = useMemo(() => gridOf(detail), [detail]);
+  const grid = useRef(songGrid);
+  grid.current = songGrid;
   useEffect(() => {
     const contrast = window.matchMedia?.('(forced-colors: active)');
     const changed = () => setPaletteRevision((revision) => revision + 1);
@@ -280,21 +291,27 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
     const forced = window.matchMedia?.('(forced-colors: active)').matches ?? false;
     const accent = forced ? fallback : style.getPropertyValue('--accent').trim() || fallback;
     const soft = forced ? 'Highlight' : style.getPropertyValue('--ok').trim() || fallback;
+    const cool = forced ? 'Highlight' : style.getPropertyValue('--request').trim() || soft;
+    const warm = forced ? fallback : style.getPropertyValue('--warn').trim() || accent;
     let gradient: CanvasGradient | null = null;
     let gradientHeight = 0;
-    const visualState = createVisualState();
-    const tracker = createFeatureTracker();
     const source = createFrameSource(player);
-    const grid = gridOf(detail);
+    const tracker = createFeatureTracker();
+    const state = createVisualState(spectrumShape);
+    const shape: SpectrumShape = reduceMotion && EVENT_ONLY.includes(spectrumShape) ? 'bars' : spectrumShape;
     let lastDraw = -Infinity;
+    let interval = FRAME_MS;
+    let cost = 0;
+    let costFrames = 0;
     let drewReducedFrame = false;
     delete node.dataset.frozen;
     let reducedRetries = 0;
     let retry = 0;
+    const forget = () => { tracker.reset(); clearVisualState(state); };
     const draw = (timestamp = 0) => {
       // nothing to look at while the tab is hidden, and the music mustn't pay for it
       if (document.hidden || !visible) {
-        clearVisualState(visualState); tracker.reset();
+        forget();
         frame = 0;
         return;
       }
@@ -307,11 +324,12 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
         frame = 0;
         return;
       }
-      if (active && !reduceMotion && timestamp - lastDraw < 1000 / 15) {
+      if (active && !reduceMotion && timestamp - lastDraw < interval - 1) {
         frame = window.requestAnimationFrame(draw);
         return;
       }
       lastDraw = timestamp;
+      const started = performance.now();
       const rect = node.getBoundingClientRect();
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
       const width = Math.max(1, Math.round(rect.width * ratio));
@@ -327,12 +345,13 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
         gradient.addColorStop(0, accent);
         gradient.addColorStop(1, soft);
       }
-      const sample = active ? source.read(timestamp || performance.now(), grid) : null;
-      if (!sample) {
-        clearVisualState(visualState);
-        tracker.reset();
-        // No analyser data means no music measurements. Keep the surface empty,
-        // but check again while playing so a late-starting audio context can recover.
+      const input = active ? source.read(started, grid.current) : null;
+      if (!input) {
+        forget();
+        // No analyzer bins means there are no measurements. Keep the surface
+        // still; do not draw decorative "frequency levels" in their place.
+        // Continue the visibility-limited sampling loop so a late-starting
+        // audio context can begin drawing as soon as real data is available.
         if (active && !reduceMotion) frame = window.requestAnimationFrame(draw);
         else if (active && reduceMotion && reducedRetries < MAX_STILL_RETRIES) {
           reducedRetries += 1;
@@ -340,15 +359,23 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
         }
         return;
       }
-      const features = tracker.update(sample);
-      paintVisualFrame(context, width, height, features, spectrumShape, { accent, soft, gradient }, visualState);
-      // Reduced motion holds the first audible frame instead of capturing silence
-      // before the sound graph has emitted meaningful levels.
-      if (reduceMotion && !features.silent && features.levels.some((level) => level > SILENT_LEVEL)) {
+      const features = tracker.update(input);
+      paintVisualFrame(context, width, height, features, shape, { accent, soft, cool, warm, gradient }, state);
+      // the measured script cost of this frame; a device that can't afford 30 fps gets 15
+      cost = cost * 0.9 + (performance.now() - started) * 0.1;
+      costFrames += 1;
+      if (costFrames % 30 === 0) {
+        interval = cost > FRAME_BUDGET_MS ? SLOW_FRAME_MS : FRAME_MS;
+        node.dataset.frameMs = cost.toFixed(2);
+      }
+      // SF-0212-07: a still visualizer keeps one frame with sound in it. Play starts on silence, so a frame
+      // taken then was blank and stayed blank for the whole song (2026-11-12 reduced-motion review); until
+      // real levels arrive it looks again a few times a second, then holds that frame as before.
+      const heard = !features.silent && features.levels.some((level) => level > SILENT_LEVEL);
+      if (reduceMotion && heard) {
         drewReducedFrame = true;
         node.dataset.frozen = 'true';
-      }
-      else if (reduceMotion && reducedRetries < MAX_STILL_RETRIES) {
+      } else if (reduceMotion && reducedRetries < MAX_STILL_RETRIES) {
         reducedRetries += 1;
         retry = window.setTimeout(() => { retry = 0; wake(); }, STILL_RETRY_MS);
       }
@@ -361,7 +388,7 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
       visible = entry?.isIntersecting ?? false;
       if (!visible) {
         window.cancelAnimationFrame(frame);
-        clearVisualState(visualState); tracker.reset();
+        forget();
         frame = 0;
       } else wake();
     });
@@ -380,9 +407,9 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
       intersection?.disconnect();
       window.cancelAnimationFrame(frame);
       window.clearTimeout(retry);
-      clearVisualState(visualState); tracker.reset();
+      forget();
     };
-  }, [player, active, stage, reduceMotion, theme, paletteRevision, spectrumShape, detail]);
+  }, [player, active, stage, reduceMotion, theme, paletteRevision, spectrumShape]);
   return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''} ${intensity === 'focused' ? 'focused' : ''}`} role="img" aria-label={active ? `${SPECTRUM_MODES.find((mode) => mode.id === spectrumShape)?.label ?? 'Frequency'} - actual mixed-audio frequency levels` : 'Audio frequency visualizer paused'} />;
 }
 
@@ -813,7 +840,7 @@ export function Now(props: ViewProps) {
                 </div>
                 <details className="listen-visualizer-help">
                   <summary>About the visualizer</summary>
-                  <p className="hint">The visualizer follows the live mixed-audio analyser, not a simulated beat. Quiet visuals hide the spectrum without affecting playback.</p>
+                  <p className="hint">The visualizer follows the live mixed-audio analyser and this song’s analysed beats and sections, never a simulated beat. Each style reacts to something different: kicks, hi-hats, the bar, the stereo width or the waveform. Quiet visuals hide it without affecting playback.</p>
                 </details>
                 </>
                 )}

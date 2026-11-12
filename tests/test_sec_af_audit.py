@@ -4,8 +4,13 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
+from test_cloud_ai_routing import hosted
 from test_cloud_auth import world  # noqa: F401
 
+from selecta.ai import registry
+from selecta.ai.registry import Provider, RegistryError
 from selecta.identity.routes import MAX_WEBHOOK_BYTES
 
 
@@ -49,3 +54,26 @@ def test_sec_af_1_a_declared_oversized_workos_webhook_is_refused_up_front(
         headers={"WorkOS-Signature": "t=1,v1=00", "Content-Length": str(MAX_WEBHOOK_BYTES + 1)},
     )
     assert answer.status_code == 413
+
+
+@pytest.mark.parametrize("base_url", [
+    "http://llm.example/v1",            # the provider key would travel in clear text
+    "http://169.254.169.254/latest",    # cloud metadata over plain HTTP
+    "https://user:pass@llm.example/v1",  # credentials embedded in the URL end up in logs
+    "ftp://llm.example/v1",
+    "https:///v1",
+])
+def test_sec_af_2_a_hosted_model_base_url_must_be_https_or_loopback(base_url):
+    deployment = hosted("open", provider=Provider.OPENAI, base_url=base_url,
+                        secret_ref="env:TEST_KEY")
+    with pytest.raises(RegistryError, match="base URL"):
+        registry.validate_deployment(deployment)
+
+
+@pytest.mark.parametrize("base_url", [
+    "https://llm.example/v1", "http://localhost:11434/v1", "http://127.0.0.1:8080/v1",
+])
+def test_sec_af_2_https_and_loopback_model_hosts_are_still_accepted(base_url):
+    registry.validate_deployment(
+        hosted("open", provider=Provider.OPENAI, base_url=base_url, secret_ref="env:TEST_KEY")
+    )

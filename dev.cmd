@@ -56,8 +56,15 @@ class StartupError(RuntimeError):
 
 def say(kind: str, message: str) -> None:
     """Keep service output and startup milestones legible in one console."""
+    line = f"{time.strftime('%H:%M:%S')} [{kind:<7}] {message}"
     with _PRINT_LOCK:
-        print(f"{time.strftime('%H:%M:%S')} [{kind:<7}] {message}", flush=True)
+        try:
+            print(line, flush=True)
+        except UnicodeEncodeError:
+            # A console or redirected log in a legacy code page (cp1252) can't show every
+            # character a child prints (Vite's arrow, for one); never let that stop the stack.
+            encoding = getattr(sys.stdout, "encoding", None) or "ascii"
+            print(line.encode(encoding, "replace").decode(encoding), flush=True)
 
 
 def phase(number: int, total: int, message: str) -> None:

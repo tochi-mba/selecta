@@ -68,8 +68,9 @@ const FAILED_READS: FailureCase[] = [
   },
   {
     address: '/discover/harmonic',
-    api: '**/api/discoveries/harmonic*',
-    message: /Couldn’t load harmonic discoveries/,
+    // Links.tsx reads /api/discoveries; its failure copy is pinned by mp-0292-discovery.e2e.ts
+    api: '**/api/discoveries',
+    message: /Couldn’t load these\. Try again in a moment\./,
     retry: /Try again/,
     tasks: 'CI-0176 CI-0182',
   },

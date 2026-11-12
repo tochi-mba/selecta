@@ -15,6 +15,7 @@ matrix (or be named as public or as acting only on the caller) before it can shi
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import time
 
@@ -453,6 +454,12 @@ def test_lists_show_only_your_own_things(world):
 
 
 def test_the_event_stream_carries_only_your_own_events(world):
+    # Start the brief token's clock now: the fixture can take longer than its life on a busy
+    # machine, and an already expired stream ends before sending anything.
+    people = world["client"].app.state.token_verifier
+    people.claims[BOB_BRIEF] = dataclasses.replace(
+        people.claims[BOB_BRIEF], expires_at=time.time() + 1.5
+    )
     answer = world["client"].get("/api/events", headers=_auth(BOB_BRIEF))
     assert answer.status_code == 200
     assert "bob.own" in answer.text

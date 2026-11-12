@@ -150,7 +150,7 @@ resource "cloudflare_ruleset" "rate_limits" {
     },
     {
       description = "Room joins: brute-force protection"
-      expression  = "(http.host eq \"${var.api_hostname}\" and starts_with(http.request.uri.path, \"/api/rooms/join\"))"
+      expression  = "(http.host eq \"${var.api_hostname}\" and http.request.uri.path eq \"/api/guest/join\")"
       action      = "block"
       enabled     = true
       ratelimit = {
