@@ -19,13 +19,22 @@ async function throttle(page: Page) {
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: SLOWDOWN });
 }
 
-const lastSeam = async (page: Page) => {
+// how many of the mix's transitions are in each state, e.g. { rendering: 1, queued: 40, ready: 3 }
+const seams = async (page: Page) => {
   const { mix } = await (await page.request.get('/api/mix')).json();
-  return (mix as { seam: { state: { status: string } } | null }[]).at(-1)?.seam?.state.status ?? 'none';
+  const counts: Record<string, number> = {};
+  for (const item of mix as { seam: { state: { status: string } } | null }[]) {
+    const status = item.seam?.state.status;
+    if (status) counts[status] = (counts[status] ?? 0) + 1;
+  }
+  return counts;
 };
 
+// queue every transition that isn't made, and wait until the server is really rendering one
 async function startARender(page: Page) {
   await page.request.post('/api/mix/render');
+  await expect.poll(async () => (await seams(page)).rendering ?? 0, { timeout: 120_000, message: 'a render is under way' }).toBeGreaterThan(0);
+  return seams(page);
 }
 
 test.beforeEach(async ({ request }) => {
@@ -47,8 +56,7 @@ test('T0265 a 120-song Edit on a slowed CPU during a render: moves stay under 50
   await page.goto('/mix/current/edit');
   await expect(page.locator('.timeline > .song')).toHaveCount(EDIT_SONGS, { timeout: 60_000 });
   const openMs = Date.now() - began;
-  await startARender(page);
-  const renderAtStart = await lastSeam(page);
+  const renderAtStart = await startARender(page);
 
   const grip = page.locator('.timeline > .song').nth(60).locator('.grip');
   await grip.scrollIntoViewIfNeeded();
@@ -58,6 +66,8 @@ test('T0265 a 120-song Edit on a slowed CPU during a render: moves stay under 50
   for (let step = 0; step < 5; step += 1) {
     await page.keyboard.press('ArrowUp');
     await expect(page.locator('.timeline > .song').nth(59 - step).locator('.grip')).toHaveAttribute('aria-label', name);
+    // a move pressed while the last one is still saving is refused out loud, by design, so wait
+    await expect(page.locator('.timeline > .song[aria-busy="true"]')).toHaveCount(0);
   }
   const moves = await interactionsSince(page, from);
   const reading = {
@@ -66,7 +76,7 @@ test('T0265 a 120-song Edit on a slowed CPU during a render: moves stay under 50
     songs: EDIT_SONGS,
     open_ms: openMs,
     render_at_start: renderAtStart,
-    render_at_end: await lastSeam(page),
+    render_at_end: await seams(page),
     moves: moves.count,
     move_next_paint_p50_ms: moves.nextPaintP50Ms,
     move_next_paint_worst_ms: moves.nextPaintWorstMs,
@@ -82,7 +92,8 @@ test('T0265 a 120-song Edit on a slowed CPU during a render: moves stay under 50
 test('T0265 the 64-cell Studio on a slowed CPU during a render answers under 500 ms', async ({ page, request }) => {
   test.setTimeout(400_000);
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await resetMix(request, [1, 2, 3]);
+  // 3 to 5 is a transition no other test makes, so there is always a real render to run
+  await resetMix(request, [1, 2, 3, 5]);
   await installProbe(page);
   const cells = 64;
   const row = Array.from({ length: cells }, (_, index) => (index < cells / 2 ? 1 : 0));
@@ -101,8 +112,7 @@ test('T0265 the 64-cell Studio on a slowed CPU during a render answers under 500
   await page.getByRole('tab', { name: 'Studio' }).click();
   await page.getByRole('button', { name: 'Open the Studio' }).click();
   await expect(page.locator('.studio-cell').first()).toBeVisible({ timeout: 90_000 });
-  await startARender(page);
-  const renderAtStart = await lastSeam(page);
+  const renderAtStart = await startARender(page);
 
   await page.locator('.studio-cell').first().focus();
   const from = await mark(page);
@@ -116,7 +126,7 @@ test('T0265 the 64-cell Studio on a slowed CPU during a render answers under 500
     slowdown: SLOWDOWN,
     cells: await page.locator('.studio-cell').count(),
     render_at_start: renderAtStart,
-    render_at_end: await lastSeam(page),
+    render_at_end: await seams(page),
     interactions: load.count,
     next_paint_p50_ms: load.nextPaintP50Ms,
     next_paint_worst_ms: load.nextPaintWorstMs,

@@ -44,6 +44,7 @@ from selecta.flags import guard as flag_guard
 from selecta.flags import rules as flag_rules
 from selecta.flags.matching import Context
 from selecta.flags.rules import RulesCache
+from selecta.identity import accounts as identity_accounts
 from selecta.identity import routes as identity_routes
 from selecta.identity.tokens import (
     Claims,
@@ -444,15 +445,39 @@ def create_cloud_app(
             # The rules version too, so the stream can say when this page's flags may have changed.
             return batch, rule_snapshot().version
 
+        def still_signed_in() -> bool:
+            """Re-run the per-request check on every wake-up, so an open stream ends as soon as
+            its session is revoked ("sign out everywhere", a password reset, a WorkOS revocation),
+            the account starts deleting, or the person leaves the workspace (SC-0400-08)."""
+            with transaction(engine) as connection:
+                try:
+                    identity_accounts.resolve_principal(
+                        connection, claims, workspace_id, allow_suspended=True
+                    )
+                except identity_accounts.IdentityError:
+                    return False
+            return True
+
         async def frames():
             cursor = after
             heartbeat_at = time.monotonic()
             deadline = time.monotonic() + 600
             rules_seen: int | None = None
+            checked = False  # the request itself was just checked
             while time.monotonic() < deadline and time.time() < claims.expires_at:
                 if await request.is_disconnected():
                     break
                 waiter = fanout.arm()
+                if checked and not await asyncio.to_thread(still_signed_in):
+                    # No id, so the replay cursor stays put; the page asks /api/account, hears
+                    # `session_revoked` and shows "You were signed out".
+                    ended = {"topic": "session.revoked", "payload": {}}
+                    yield f"event: selecta
+data: {json.dumps(ended, separators=(',', ':'))}
+
+"
+                    break
+                checked = True
                 batch, rules_version = await asyncio.to_thread(fetch, cursor)
                 if rules_seen is not None and rules_version != rules_seen:
                     # The flag rules changed: the page asks /api/account for its own decisions.

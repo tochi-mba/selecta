@@ -97,7 +97,9 @@ export function CloudApp() {
   const onEvent = useCallback((event: CloudEvent) => {
     // `flags.changed`: the rules moved, so this account's decisions may have; the page closes up
     // around anything now off (ADR-0414), or opens up around anything back on.
-    if (event.topic.startsWith('entitlement.') || event.topic.startsWith('quota.') || event.topic.startsWith('account.') || event.topic.startsWith('flags.')) void refreshAccount();
+    // `session.revoked`: the server ended this stream because the sign-in was revoked; asking
+    // for the account hears `session_revoked` and shows "You were signed out" (SC-0400-08).
+    if (event.topic.startsWith('entitlement.') || event.topic.startsWith('quota.') || event.topic.startsWith('account.') || event.topic.startsWith('flags.') || event.topic.startsWith('session.')) void refreshAccount();
     if (event.topic.startsWith('upload.') || event.topic.startsWith('asset.')) { void refreshAccount(); setLibraryVersion((value) => value + 1); }
   }, [refreshAccount]);
   const refreshAll = useCallback(async () => { await refreshAccount(); }, [refreshAccount]);

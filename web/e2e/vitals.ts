@@ -59,7 +59,10 @@ export function clsOf(shifts: ShiftEntry[]): number {
   return Math.round(best * 1000) / 1000;
 }
 
-export type Reading = { surface: string; inpMs: number; interactions: number; worst: string; cls: number; lcpMs: number };
+/** `interactions` counts those Event Timing reported (16 ms or more; faster ones are inside budget by
+ * definition); `inputs` counts every click and key press the page saw, so a reading of 0 ms INP
+ * can be told apart from a surface nobody touched. */
+export type Reading = { surface: string; inpMs: number; interactions: number; inputs: number; worst: string; cls: number; lcpMs: number };
 
 /** Which budgets a reading misses, in words; empty when it is inside all of them. */
 export function overBudget(reading: Reading): string[] {

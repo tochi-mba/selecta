@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import { ApiError, get, post } from '../api';
 import { operationId } from '../state/async';
 import { mainPlayerTouched, releaseAudio, takeAudio } from '../audio/focus';
+import { useFlag } from '../flags';
 import { Action } from '../ui/controls';
 import { Field } from '../ui/primitives';
 
@@ -10,10 +11,20 @@ const GRADES: [number, string][] = [[1, '1 · Bad'], [2, '2'], [3, '3'], [4, '4'
 const CHOICES: [string, string][] = [['a', 'Prefer A'], ['b', 'Prefer B'], ['tie', 'No preference'], ['cannot_judge', 'Cannot judge']];
 const VERSIONS = ['a', 'b'] as const;
 
+/** S4-0109-08: where to go after answering or skipping. The next comparison after `from` that has no
+ * saved answer, so a second pass over skipped ones visits only those, and the end is `trials.length`. */
+export function nextUnanswered(ids: string[], from: number, answered: string[]) {
+  for (let at = from + 1; at < ids.length; at += 1) if (!answered.includes(ids[at])) return at;
+  return ids.length;
+}
+
+const strings = (value: unknown) => (Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []);
+
 /** A blind comparison. Neither clip says what it is, one plays at a time, and an answer that fails to
  * save stays on screen with everything still filled in, ready to send again. Nothing on this page, in
  * its words or its names for things, says how either version was made. */
 export function Listening() {
+  const skipAndStop = useFlag('listening_study.skip_and_stop');
   const [study, setStudy] = useState('');
   const [listener, setListener] = useState('');
   const [setup, setSetup] = useState('');
@@ -37,12 +48,16 @@ export function Listening() {
   const [heard, setHeard] = useState<string[]>([]);
   const [playing, setPlaying] = useState<'a' | 'b' | null>(null);
   const [quality, setQuality] = useState<Record<string, { grade: number; tags: string[] }>>({});
+  // S4-0109-08: what was saved and what was skipped, so the end never claims more than was answered
+  const [answered, setAnswered] = useState<string[]>([]);
+  const [skipped, setSkipped] = useState<string[]>([]);
+  const [stopped, setStopped] = useState(false);
   const players = { a: useRef<HTMLAudioElement>(null), b: useRef<HTMLAudioElement>(null) };
   const trial = trials?.[index];
   useEffect(() => {
     if (!progressKey || !trials) return;
-    try { sessionStorage.setItem(progressKey, JSON.stringify({ ids: trials.map((row) => row.id), index, quality, heard })); } catch { /* current answers remain in memory */ }
-  }, [progressKey, trials, index, quality, heard]);
+    try { sessionStorage.setItem(progressKey, JSON.stringify({ ids: trials.map((row) => row.id), index, quality, heard, answered, skipped })); } catch { /* current answers remain in memory */ }
+  }, [progressKey, trials, index, quality, heard, answered, skipped]);
   useEffect(() => () => {
     // A stale event from the previous trial cannot release the new trial's
     // audio owner. Closing the study also cannot resume the main mix implicitly.
@@ -70,7 +85,7 @@ export function Listening() {
       const rows = await get<{ id: string }[]>(`/listening?study=${encodeURIComponent(study)}`);
       quiet();
       const key = `selecta.study.${JSON.stringify([study, listener, setup])}`;
-      let restored: { ids: string[]; index: number; quality: typeof quality; heard: string[] } | null = null;
+      let restored: { ids: string[]; index: number; quality: typeof quality; heard: string[]; answered?: unknown; skipped?: unknown } | null = null;
       try { restored = JSON.parse(sessionStorage.getItem(key) ?? 'null'); } catch { /* invalid cached progress is ignored */ }
       const valid = restored && JSON.stringify(restored.ids) === JSON.stringify(rows.map((row) => row.id)) && Number.isInteger(restored.index) && restored.index >= 0 && restored.index <= rows.length;
       if (pendingResponse.current?.trial !== rows[index]?.id
@@ -84,6 +99,9 @@ export function Listening() {
       setIndex(valid ? restored!.index : 0);
       setHeard(valid && Array.isArray(restored!.heard) ? restored!.heard : []);
       setQuality(valid && restored!.quality && typeof restored!.quality === 'object' ? restored!.quality : {});
+      setAnswered(valid ? strings(restored!.answered) : []);
+      setSkipped(valid ? strings(restored!.skipped) : []);
+      setStopped(false);
     } catch (failure) {
       // Invalid codes are tied to their field. A server outage belongs after the Open study action.
       const words = 'Could not load this listening study. Check the study code and try again.';
@@ -114,7 +132,11 @@ export function Listening() {
       }, { 'x-operation-id': submitted.id });
       pendingResponse.current = null;
       setRetryChoice(null);
-      setIndex((current) => current + 1);
+      const ids = trials!.map((row) => row.id);
+      const nowAnswered = answered.includes(submitted.trial) ? answered : [...answered, submitted.trial];
+      setAnswered(nowAnswered);
+      setSkipped((current) => current.filter((id) => id !== submitted.trial));
+      setIndex((current) => nextUnanswered(ids, current, nowAnswered));
       setHeard([]);
       setQuality({});
     } catch (error) {
@@ -132,6 +154,28 @@ export function Listening() {
     } finally { operation.current = false; setSaving(false); }
   };
 
+  // Skipping saves nothing: the comparison stays unanswered on the server and is counted as skipped here.
+  const skip = () => {
+    if (!trial || operation.current || retryChoice !== null) return;
+    quiet();
+    setSkipped((current) => (current.includes(trial.id) ? current : [...current, trial.id]));
+    setIndex((current) => nextUnanswered(trials!.map((row) => row.id), current, answered));
+    setHeard([]);
+    setQuality({});
+  };
+
+  const stop = () => {
+    if (operation.current) return;
+    quiet();
+    setStopped(true);
+  };
+
+  const revisitSkipped = () => {
+    if (!trials) return;
+    const first = trials.findIndex((row) => skipped.includes(row.id));
+    if (first >= 0) setIndex(first);
+  };
+
   const toggleTag = (option: string, tag: string) => {
     if (retryChoice !== null) return;
     setQuality((current) => {
@@ -143,7 +187,8 @@ export function Listening() {
     });
   };
 
-  const allDone = !!trials?.length && index === trials.length;
+  const allDone = !!trials?.length && index === trials.length && !stopped;
+  const skippedCount = trials ? skipped.filter((id) => trials.some((row) => row.id === id)).length : 0;
   return (
     <section className="panel stack study" aria-labelledby="study-title">
       <h2 id="study-title">Blind listening study</h2>
@@ -167,7 +212,13 @@ export function Listening() {
         </button>
       </form>
       {error && <p className="warn" role="alert">{error}</p>}
-      {trial && (
+      {stopped && trials && (
+        <div className="study-stopped" role="status">
+          <p><b>Stopped for now.</b> {answered.length} of {trials.length} comparison{trials.length === 1 ? '' : 's'} answered and saved{skippedCount ? `, ${skippedCount} skipped` : ''}.</p>
+          <p className="hint">Nothing else was sent. Open the study again with the same code, nickname and setup to carry on from comparison {Math.min(index + 1, trials.length)}.</p>
+        </div>
+      )}
+      {trial && !stopped && (
         <div key={trial.id} className="stack study-trial">
           <p className="study-progress">Comparison {index + 1} of {trials!.length}</p>
           {retryChoice !== null && <p className="hint" role="status">Your last answer may already be on the server. The original version and ratings are held for an exact retry.</p>}
@@ -257,6 +308,12 @@ export function Listening() {
               </Action>
             ))}
           </div>
+          {skipAndStop && (
+            <div className="chips study-leave" role="group" aria-label="Leave this comparison">
+              <button type="button" disabled={saving || loading || retryChoice !== null} onClick={skip}>Skip this comparison</button>
+              <button type="button" disabled={saving || loading} onClick={stop}>Stop for now</button>
+            </div>
+          )}
           {heard.length < 2 && <p className="hint">Listen to both to choose between them.</p>}
           {heard.length < 2 && <p className="hint">If a clip won’t play, “Cannot judge” is still available.</p>}
         </div>
@@ -264,8 +321,18 @@ export function Listening() {
       {trials?.length === 0 && <p>No trials are registered for this study code.</p>}
       {allDone && (
         <div className="study-done" role="status">
-          <p><b>All responses saved. Thank you for listening.</b></p>
-          <p className="hint">You answered {trials!.length} comparison{trials!.length === 1 ? '' : 's'}.</p>
+          {skippedCount === 0 ? (
+            <>
+              <p><b>All responses saved. Thank you for listening.</b></p>
+              <p className="hint">You answered {trials!.length} comparison{trials!.length === 1 ? '' : 's'}.</p>
+            </>
+          ) : (
+            <>
+              <p><b>You reached the end, with {skippedCount} skipped.</b></p>
+              <p className="hint">{trials!.length - skippedCount} of {trials!.length} comparisons answered and saved. Skipped ones have no answer.</p>
+              <button type="button" onClick={revisitSkipped}>Answer the skipped {skippedCount === 1 ? 'one' : 'ones'}</button>
+            </>
+          )}
         </div>
       )}
     </section>

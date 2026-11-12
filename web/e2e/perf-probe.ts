@@ -189,6 +189,7 @@ export async function vitalsSince(page: Page, from: number, surface: string): Pr
   const raw = await page.evaluate((from) => ({
     events: window.mi0162.events.filter((event) => event.start >= from),
     shifts: window.mi0162.shifts.filter((shift) => shift.start >= from),
+    inputs: window.mi0162.paints.filter((paint) => paint.start >= from).length,
     lcp: window.mi0162.lcp,
   }), from);
   const inp = inpOf(raw.events.map((event) => ({ id: event.id ?? 0, duration: event.duration, name: event.name, target: event.target })));
@@ -196,6 +197,7 @@ export async function vitalsSince(page: Page, from: number, surface: string): Pr
     surface,
     inpMs: inp.inpMs,
     interactions: inp.interactions,
+    inputs: raw.inputs,
     worst: inp.worst ? `${inp.worst.name} on ${inp.worst.target}` : 'none at 16 ms or more',
     cls: clsOf(raw.shifts),
     lcpMs: Math.round(raw.lcp),

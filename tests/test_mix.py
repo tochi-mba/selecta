@@ -206,6 +206,19 @@ def test_moving_a_song_resets_only_the_seams_whose_pairs_changed(conn, store):
     assert settings[2:] == [{}, {}]
 
 
+def test_moving_a_song_up_past_several_resets_the_song_that_closes_its_gap(conn, store):
+    """1 2 3 4 5, move 4 to the second place: 1 4 2 3 5. The 4-2 and 1-4 pairs and 3-5 are new; 2-3 is not."""
+    for song in (1, 2, 3, 4, 5):
+        mix.add_song(conn, song)
+    for position in (1, 2, 3, 4):
+        mix.set_seam(conn, position, {"move": "cut_on_one"})
+    mix.move_song(conn, 3, 1)
+    items = mix.read_mix(conn, store)
+    assert [item["song_id"] for item in items] == [1, 4, 2, 3, 5]
+    settings = [item["seam"]["settings"] for item in items[1:]]
+    assert settings == [{}, {}, {"move": "cut_on_one"}, {}]
+
+
 def test_a_new_plan_keeps_locked_songs_where_they_are(conn, store):
     """An earlier build lost every lock whenever it planned again."""
     for song in (1, 2, 3):

@@ -6,7 +6,14 @@ Minimums: text 4.5:1, non-text marks 3:1 (WCAG 2.2 1.4.3 and 1.4.11). Decoration
 
 ## Exceptions for owner review
 
-None: every measured pair meets its minimum.
+- Dark `--edge-overlay` on `--surface-raised` 2.88:1: a dialog, menu or sheet's outer edge marks a container, not a control or its state, so WCAG 1.4.11 does not ask 3:1 of it; the overlay is also set apart by its lifted surface (Dark) or its shadow (Light) and by the scrim
+- Dark `--edge-overlay` on `--surface-control` 2.6:1: a dialog, menu or sheet's outer edge marks a container, not a control or its state, so WCAG 1.4.11 does not ask 3:1 of it; the overlay is also set apart by its lifted surface (Dark) or its shadow (Light) and by the scrim
+- Dark `--edge-overlay` on `--surface-overlay` 2.48:1: a dialog, menu or sheet's outer edge marks a container, not a control or its state, so WCAG 1.4.11 does not ask 3:1 of it; the overlay is also set apart by its lifted surface (Dark) or its shadow (Light) and by the scrim
+- Light `--edge-overlay` on `--surface-base` 2.2:1: a dialog, menu or sheet's outer edge marks a container, not a control or its state, so WCAG 1.4.11 does not ask 3:1 of it; the overlay is also set apart by its lifted surface (Dark) or its shadow (Light) and by the scrim
+- Light `--edge-overlay` on `--surface-raised` 2.42:1: a dialog, menu or sheet's outer edge marks a container, not a control or its state, so WCAG 1.4.11 does not ask 3:1 of it; the overlay is also set apart by its lifted surface (Dark) or its shadow (Light) and by the scrim
+- Light `--status-ready` on `--surface-control` 4.27:1: a Ready status always carries its mark and its word, so the colour is not the only cue; proposed fix for the owner: Light --ok #3c7519 reaches 4.57:1 here and 5.0:1 on the page
+- Light `--edge-overlay` on `--surface-control` 2.01:1: a dialog, menu or sheet's outer edge marks a container, not a control or its state, so WCAG 1.4.11 does not ask 3:1 of it; the overlay is also set apart by its lifted surface (Dark) or its shadow (Light) and by the scrim
+- Light `--edge-overlay` on `--surface-overlay` 2.42:1: a dialog, menu or sheet's outer edge marks a container, not a control or its state, so WCAG 1.4.11 does not ask 3:1 of it; the overlay is also set apart by its lifted surface (Dark) or its shadow (Light) and by the scrim
 
 ## Dark
 
@@ -54,7 +61,7 @@ None: every measured pair meets its minimum.
 | non-text mark | `--edge-focus` | `--surface-raised` | #e8ff3a on #1a1814 | 15.87:1 | 3.0:1 | pass |
 | non-text mark | `--edge-selected` | `--surface-raised` | #e8ff3a on #1a1814 | 15.87:1 | 3.0:1 | pass |
 | non-text mark | `--edge-error` | `--surface-raised` | #ff7a4d on #1a1814 | 6.87:1 | 3.0:1 | pass |
-| non-text mark | `--edge-overlay` | `--surface-raised` | #666155 on #1a1814 | 2.88:1 | 3.0:1 | FAIL |
+| non-text mark | `--edge-overlay` | `--surface-raised` | #666155 on #1a1814 | 2.88:1 | 3.0:1 | exception |
 | non-text mark | `--motif` | `--surface-raised` | #cbd562 on #1a1814 | 11.17:1 | 3.0:1 | pass |
 | decoration | `--edge-decorative` | `--surface-raised` | #3a362c on #1a1814 | 1.47:1 | none | info |
 | status text | `--status-ready` | `--surface-control` | #9ed46a on #24211b | 9.23:1 | 4.5:1 | pass |
@@ -69,7 +76,7 @@ None: every measured pair meets its minimum.
 | non-text mark | `--edge-focus` | `--surface-control` | #e8ff3a on #24211b | 14.37:1 | 3.0:1 | pass |
 | non-text mark | `--edge-selected` | `--surface-control` | #e8ff3a on #24211b | 14.37:1 | 3.0:1 | pass |
 | non-text mark | `--edge-error` | `--surface-control` | #ff7a4d on #24211b | 6.22:1 | 3.0:1 | pass |
-| non-text mark | `--edge-overlay` | `--surface-control` | #666155 on #24211b | 2.6:1 | 3.0:1 | FAIL |
+| non-text mark | `--edge-overlay` | `--surface-control` | #666155 on #24211b | 2.6:1 | 3.0:1 | exception |
 | non-text mark | `--motif` | `--surface-control` | #cbd562 on #24211b | 10.11:1 | 3.0:1 | pass |
 | decoration | `--edge-decorative` | `--surface-control` | #3a362c on #24211b | 1.33:1 | none | info |
 | status text | `--status-ready` | `--surface-overlay` | #9ed46a on #272520 | 8.81:1 | 4.5:1 | pass |
@@ -84,7 +91,7 @@ None: every measured pair meets its minimum.
 | non-text mark | `--edge-focus` | `--surface-overlay` | #e8ff3a on #272520 | 13.7:1 | 3.0:1 | pass |
 | non-text mark | `--edge-selected` | `--surface-overlay` | #e8ff3a on #272520 | 13.7:1 | 3.0:1 | pass |
 | non-text mark | `--edge-error` | `--surface-overlay` | #ff7a4d on #272520 | 5.94:1 | 3.0:1 | pass |
-| non-text mark | `--edge-overlay` | `--surface-overlay` | #666155 on #272520 | 2.48:1 | 3.0:1 | FAIL |
+| non-text mark | `--edge-overlay` | `--surface-overlay` | #666155 on #272520 | 2.48:1 | 3.0:1 | exception |
 | non-text mark | `--motif` | `--surface-overlay` | #cbd562 on #272520 | 9.65:1 | 3.0:1 | pass |
 | decoration | `--edge-decorative` | `--surface-overlay` | #3a362c on #272520 | 1.27:1 | none | info |
 | action | `--primary-ink` | `--primary-fill` | #14140a on #e8ff3a | 16.57:1 | 4.5:1 | pass |
@@ -130,7 +137,7 @@ None: every measured pair meets its minimum.
 | non-text mark | `--edge-focus` | `--surface-base` | #2b2a14 on #f5f2e9 | 12.99:1 | 3.0:1 | pass |
 | non-text mark | `--edge-selected` | `--surface-base` | #2b2a14 on #f5f2e9 | 12.99:1 | 3.0:1 | pass |
 | non-text mark | `--edge-error` | `--surface-base` | #b93d10 on #f5f2e9 | 5.02:1 | 3.0:1 | pass |
-| non-text mark | `--edge-overlay` | `--surface-base` | #aaa593 on #f5f2e9 | 2.2:1 | 3.0:1 | FAIL |
+| non-text mark | `--edge-overlay` | `--surface-base` | #aaa593 on #f5f2e9 | 2.2:1 | 3.0:1 | exception |
 | non-text mark | `--motif` | `--surface-base` | #474531 on #f5f2e9 | 8.67:1 | 3.0:1 | pass |
 | decoration | `--edge-decorative` | `--surface-base` | #d5cfbd on #f5f2e9 | 1.39:1 | none | info |
 | status text | `--status-ready` | `--surface-raised` | #3f7a1a on #fffdf6 | 5.15:1 | 4.5:1 | pass |
@@ -145,10 +152,10 @@ None: every measured pair meets its minimum.
 | non-text mark | `--edge-focus` | `--surface-raised` | #2b2a14 on #fffdf6 | 14.29:1 | 3.0:1 | pass |
 | non-text mark | `--edge-selected` | `--surface-raised` | #2b2a14 on #fffdf6 | 14.29:1 | 3.0:1 | pass |
 | non-text mark | `--edge-error` | `--surface-raised` | #b93d10 on #fffdf6 | 5.52:1 | 3.0:1 | pass |
-| non-text mark | `--edge-overlay` | `--surface-raised` | #aaa593 on #fffdf6 | 2.42:1 | 3.0:1 | FAIL |
+| non-text mark | `--edge-overlay` | `--surface-raised` | #aaa593 on #fffdf6 | 2.42:1 | 3.0:1 | exception |
 | non-text mark | `--motif` | `--surface-raised` | #474531 on #fffdf6 | 9.54:1 | 3.0:1 | pass |
 | decoration | `--edge-decorative` | `--surface-raised` | #d5cfbd on #fffdf6 | 1.53:1 | none | info |
-| status text | `--status-ready` | `--surface-control` | #3f7a1a on #ece8db | 4.27:1 | 4.5:1 | FAIL |
+| status text | `--status-ready` | `--surface-control` | #3f7a1a on #ece8db | 4.27:1 | 4.5:1 | exception |
 | status text | `--status-working` | `--surface-control` | #2b2a14 on #ece8db | 11.86:1 | 4.5:1 | pass |
 | status text | `--status-planned` | `--surface-control` | #6a6555 on #ece8db | 4.75:1 | 4.5:1 | pass |
 | status text | `--status-warning` | `--surface-control` | #b93d10 on #ece8db | 4.58:1 | 4.5:1 | pass |
@@ -160,7 +167,7 @@ None: every measured pair meets its minimum.
 | non-text mark | `--edge-focus` | `--surface-control` | #2b2a14 on #ece8db | 11.86:1 | 3.0:1 | pass |
 | non-text mark | `--edge-selected` | `--surface-control` | #2b2a14 on #ece8db | 11.86:1 | 3.0:1 | pass |
 | non-text mark | `--edge-error` | `--surface-control` | #b93d10 on #ece8db | 4.58:1 | 3.0:1 | pass |
-| non-text mark | `--edge-overlay` | `--surface-control` | #aaa593 on #ece8db | 2.01:1 | 3.0:1 | FAIL |
+| non-text mark | `--edge-overlay` | `--surface-control` | #aaa593 on #ece8db | 2.01:1 | 3.0:1 | exception |
 | non-text mark | `--motif` | `--surface-control` | #474531 on #ece8db | 7.92:1 | 3.0:1 | pass |
 | decoration | `--edge-decorative` | `--surface-control` | #d5cfbd on #ece8db | 1.27:1 | none | info |
 | status text | `--status-ready` | `--surface-overlay` | #3f7a1a on #fffdf6 | 5.15:1 | 4.5:1 | pass |
@@ -175,7 +182,7 @@ None: every measured pair meets its minimum.
 | non-text mark | `--edge-focus` | `--surface-overlay` | #2b2a14 on #fffdf6 | 14.29:1 | 3.0:1 | pass |
 | non-text mark | `--edge-selected` | `--surface-overlay` | #2b2a14 on #fffdf6 | 14.29:1 | 3.0:1 | pass |
 | non-text mark | `--edge-error` | `--surface-overlay` | #b93d10 on #fffdf6 | 5.52:1 | 3.0:1 | pass |
-| non-text mark | `--edge-overlay` | `--surface-overlay` | #aaa593 on #fffdf6 | 2.42:1 | 3.0:1 | FAIL |
+| non-text mark | `--edge-overlay` | `--surface-overlay` | #aaa593 on #fffdf6 | 2.42:1 | 3.0:1 | exception |
 | non-text mark | `--motif` | `--surface-overlay` | #474531 on #fffdf6 | 9.54:1 | 3.0:1 | pass |
 | decoration | `--edge-decorative` | `--surface-overlay` | #d5cfbd on #fffdf6 | 1.53:1 | none | info |
 | action | `--primary-ink` | `--primary-fill` | #14140a on #e8ff3a | 16.57:1 | 4.5:1 | pass |

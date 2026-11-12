@@ -220,9 +220,16 @@ def install_routes(
                     user_id=principal.user.id,
                     reason=sessions.REASON_SIGN_OUT,
                 )
+        # What outlives a session: playback leases on every device. Their sign-out events also
+        # wake this person's open event streams, which re-check the token and close.
+        devices_signed_out, playback_stopped = sessions.sign_out_devices(
+            engine, principal.user.id
+        )
         answer = {
             "revoked_before": result.revoked_before,
             "sessions_revoked": len(result.revoked),
+            "devices_signed_out": devices_signed_out,
+            "playback_stopped": playback_stopped > 0,
             "message": "Every device is signed out.",
         }
         if result.complete or (workos is None and not require_workos):

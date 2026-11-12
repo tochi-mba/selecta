@@ -85,3 +85,28 @@ export function blockedCode(code: string | undefined): BlockedCode | null {
 export function refusalMessage(code: string | undefined): string | null {
   return code && Object.hasOwn(REFUSAL_MESSAGES, code) ? REFUSAL_MESSAGES[code] : null;
 }
+
+// When AuthKit sends the person back without signing them in (Google sign-in cancelled, a reset
+// or verification link that expired, the hosted page refusing the request), the address carries
+// `error`. The welcome screen says what happened in our own words, never the address's text, and
+// the parameters are taken off the address so a refresh starts clean.
+const CALLBACK_PROBLEMS: Record<string, string> = {
+  access_denied: 'Sign-in was cancelled. Choose Sign in to try again.',
+  expired: 'That link has expired. Sign in again, or choose Forgot password? to get a new one.',
+};
+const CALLBACK_PROBLEM = 'Sign-in didn’t finish. Choose Sign in to try again.';
+
+export function callbackProblem(search: string): string | null {
+  const error = new URLSearchParams(search).get('error');
+  if (!error) return null;
+  if (Object.hasOwn(CALLBACK_PROBLEMS, error)) return CALLBACK_PROBLEMS[error];
+  return /expired/i.test(error) ? CALLBACK_PROBLEMS.expired : CALLBACK_PROBLEM;
+}
+
+/** The address without AuthKit's callback error parameters. */
+export function withoutCallbackError(path: string, search: string, hash = ''): string {
+  const query = new URLSearchParams(search);
+  for (const name of ['error', 'error_description', 'error_uri', 'state']) query.delete(name);
+  const rest = query.toString();
+  return `${path}${rest ? `?${rest}` : ''}${hash}`;
+}

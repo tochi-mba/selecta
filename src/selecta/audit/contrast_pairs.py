@@ -53,7 +53,25 @@ MARK_ROLES = (
 DISTINCT_STATUSES = ("--status-ready", "--status-warning", "--status-request", "--status-working")
 
 # (theme, foreground, background) -> why it may stay below its minimum. The owner reviews this list.
-EXCEPTIONS: dict[tuple[str, str, str], str] = {}
+OVERLAY_EDGE = (
+    "a dialog, menu or sheet's outer edge marks a container, not a control or its state, so WCAG "
+    "1.4.11 does not ask 3:1 of it; the overlay is also set apart by its lifted surface (Dark) or "
+    "its shadow (Light) and by the scrim"
+)
+EXCEPTIONS: dict[tuple[str, str, str], str] = {
+    **{
+        (theme, "--edge-overlay", surface): OVERLAY_EDGE
+        for theme, surfaces in (
+            ("Dark", ("--surface-raised", "--surface-control", "--surface-overlay")),
+            ("Light", SURFACES),
+        )
+        for surface in surfaces
+    },
+    ("Light", "--status-ready", "--surface-control"): (
+        "a Ready status always carries its mark and its word, so the colour is not the only cue; "
+        "proposed fix for the owner: Light --ok #3c7519 reaches 4.57:1 here and 5.0:1 on the page"
+    ),
+}
 
 
 @dataclass(frozen=True)

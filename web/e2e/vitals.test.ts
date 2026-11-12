@@ -32,7 +32,7 @@ describe('P0136 / SF-0235-02 lab vitals arithmetic', () => {
   });
 
   it('names every missed budget and passes a reading inside all of them', () => {
-    const inside = { surface: '/listen', inpMs: 120, interactions: 4, worst: 'click', cls: 0.02, lcpMs: 900 };
+    const inside = { surface: '/listen', inpMs: 120, interactions: 4, inputs: 6, worst: 'click', cls: 0.02, lcpMs: 900 };
     expect(overBudget(inside)).toEqual([]);
     const misses = overBudget({ ...inside, inpMs: BUDGETS.inpMs + 1, cls: 0.2, lcpMs: 3000 });
     expect(misses).toHaveLength(3);
