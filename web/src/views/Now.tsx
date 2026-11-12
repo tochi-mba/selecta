@@ -16,7 +16,10 @@ import { useReducedMotion } from '../ui/useReducedMotion';
 import { seamFacts } from '../ui/seam';
 import { seamFamily, SongMotif } from '../ui/MusicObjects';
 import { RequestsContext, RequestTag, waitingRequestCount } from './Requests';
-import { frequencyLevels, paintFrequencyFrame, SPECTRUM_MODES, spectrumLevelCount, type SpectrumShape } from './spectrumVisuals';
+import { createVisualState, migrateSpectrumShape, paintVisualFrame, SPECTRUM_MODES, type SpectrumShape } from './spectrumVisuals';
+import { createFeatureTracker } from './visualizer/features';
+import { createFrameSource, gridOf } from './visualizer/source';
+import { clearVisualState } from './visualizer/kit';
 import { ViewProps } from './shared';
 import { FirstHandoff } from './FirstHandoff';
 import { Strip, StripPlaceholder } from './NowStrip';
@@ -86,7 +89,7 @@ function savedView(): ListenView {
   const defaults: ListenView = { lyrics: false, spectrum: true, timing: true, intensity: 'standard', spectrumShape: 'bars' };
   try {
     const saved = JSON.parse(window.localStorage.getItem(VIEW_KEY) ?? '{}') as Partial<ListenView>;
-    return { ...defaults, ...saved, intensity: ['quiet', 'standard', 'focused'].includes(saved.intensity ?? '') ? saved.intensity! : 'standard', spectrumShape: SPECTRUM_MODES.some((mode) => mode.id === saved.spectrumShape) ? saved.spectrumShape! : (saved.spectrumShape as string) === 'radial' ? 'ribbon' : 'bars' };
+    return { ...defaults, ...saved, intensity: ['quiet', 'standard', 'focused'].includes(saved.intensity ?? '') ? saved.intensity! : 'standard', spectrumShape: migrateSpectrumShape(saved.spectrumShape) };
   } catch {
     return defaults;
   }
@@ -250,7 +253,7 @@ const STILL_RETRY_MS = 250;
 const MAX_STILL_RETRIES = 40;
 
 /** Exported only so its frame use can be measured (GP-0257-05). */
-export function MusicVisualizer({ player, active, stage, intensity, spectrumShape }: { player: ViewProps['player']; active: boolean; stage: boolean; intensity: ListenView['intensity']; spectrumShape: ListenView['spectrumShape'] }) {
+export function MusicVisualizer({ player, active, stage, intensity, spectrumShape, detail }: { player: ViewProps['player']; active: boolean; stage: boolean; intensity: ListenView['intensity']; spectrumShape: ListenView['spectrumShape']; detail?: SongDetail | null }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const reduceMotion = useReducedMotion();
   // Its colours come from the page; theme and forced-colour changes repaint real analyser data.
@@ -279,7 +282,10 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
     const soft = forced ? 'Highlight' : style.getPropertyValue('--ok').trim() || fallback;
     let gradient: CanvasGradient | null = null;
     let gradientHeight = 0;
-    const history: number[][] = [];
+    const visualState = createVisualState();
+    const tracker = createFeatureTracker();
+    const source = createFrameSource(player);
+    const grid = gridOf(detail);
     let lastDraw = -Infinity;
     let drewReducedFrame = false;
     let reducedRetries = 0;
@@ -287,7 +293,7 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
     const draw = (timestamp = 0) => {
       // nothing to look at while the tab is hidden, and the music mustn't pay for it
       if (document.hidden || !visible) {
-        history.length = 0;
+        clearVisualState(visualState); tracker.reset();
         frame = 0;
         return;
       }
@@ -320,13 +326,12 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
         gradient.addColorStop(0, accent);
         gradient.addColorStop(1, soft);
       }
-      const spectrum = active ? player.getSpectrum() : null;
-      if (!spectrum || spectrum.length === 0) {
-        history.length = 0;
-        // No analyzer bins means there are no measurements. Keep the surface
-        // still; do not draw decorative "frequency levels" in their place.
-        // Continue the visibility-limited sampling loop so a late-starting
-        // audio context can begin drawing as soon as real data is available.
+      const sample = active ? source.read(timestamp || performance.now(), grid) : null;
+      if (!sample) {
+        clearVisualState(visualState);
+        tracker.reset();
+        // No analyser data means no music measurements. Keep the surface empty,
+        // but check again while playing so a late-starting audio context can recover.
         if (active && !reduceMotion) frame = window.requestAnimationFrame(draw);
         else if (active && reduceMotion && reducedRetries < MAX_STILL_RETRIES) {
           reducedRetries += 1;
@@ -334,13 +339,11 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
         }
         return;
       }
-      if (!active) history.length = 0;
-      const levels = frequencyLevels(spectrum, spectrumLevelCount(width, ratio, spectrumShape));
-      paintFrequencyFrame(context, width, height, levels, spectrumShape, { accent, soft, gradient }, history);
-      // SF-0212-07: a still visualizer keeps one frame with sound in it. Play starts on silence, so a frame
-      // taken then was blank and stayed blank for the whole song (2026-11-12 reduced-motion review); until
-      // real levels arrive it looks again a few times a second, then holds that frame as before.
-      if (reduceMotion && (!active || levels.some((level) => level > SILENT_LEVEL))) drewReducedFrame = true;
+      const features = tracker.update(sample);
+      paintVisualFrame(context, width, height, features, spectrumShape, { accent, soft, gradient }, visualState);
+      // Reduced motion holds the first audible frame instead of capturing silence
+      // before the sound graph has emitted meaningful levels.
+      if (reduceMotion && !features.silent && features.levels.some((level) => level > SILENT_LEVEL)) drewReducedFrame = true;
       else if (reduceMotion && reducedRetries < MAX_STILL_RETRIES) {
         reducedRetries += 1;
         retry = window.setTimeout(() => { retry = 0; wake(); }, STILL_RETRY_MS);
@@ -354,7 +357,7 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
       visible = entry?.isIntersecting ?? false;
       if (!visible) {
         window.cancelAnimationFrame(frame);
-        history.length = 0;
+        clearVisualState(visualState); tracker.reset();
         frame = 0;
       } else wake();
     });
@@ -373,9 +376,9 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
       intersection?.disconnect();
       window.cancelAnimationFrame(frame);
       window.clearTimeout(retry);
-      history.length = 0;
+      clearVisualState(visualState); tracker.reset();
     };
-  }, [player, active, stage, reduceMotion, theme, paletteRevision, spectrumShape]);
+  }, [player, active, stage, reduceMotion, theme, paletteRevision, spectrumShape, detail]);
   return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''} ${intensity === 'focused' ? 'focused' : ''}`} role="img" aria-label={active ? `${SPECTRUM_MODES.find((mode) => mode.id === spectrumShape)?.label ?? 'Frequency'} - actual mixed-audio frequency levels` : 'Audio frequency visualizer paused'} />;
 }
 
@@ -699,7 +702,7 @@ export function Now(props: ViewProps) {
 
           {shown && !stage && <Strip detail={shown} time={now.songTime} seamAt={now.seamAt} seekBlocked={now.inSeam} onSeek={(seconds) => void player.seek(seconds)} />}
           {!shown && item && !detailFailed && !stage && <StripPlaceholder />}
-          {(on('listen.visualizers') && view.intensity !== 'quiet' && (stage || (spectrum && !lyricFocus))) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} intensity={view.intensity} spectrumShape={view.spectrumShape} />}
+          {(on('listen.visualizers') && view.intensity !== 'quiet' && (stage || (spectrum && !lyricFocus))) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} intensity={view.intensity} spectrumShape={view.spectrumShape} detail={shown} />}
           {detailFailed && !shown && <Problem retry={() => setDetailAttempt((attempt) => attempt + 1)}>{hasLyrics ? 'Couldn’t load lyrics and song details.' : 'Couldn’t load this song’s details.'} Playback controls are still available.</Problem>}
           {hasLyrics && (shown ? <Lyrics detail={shown} time={now.songTime} focus={lyricFocus && !stage} canBrowse /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" retry={() => setDetailAttempt((attempt) => attempt + 1)} />)}
         </div>
