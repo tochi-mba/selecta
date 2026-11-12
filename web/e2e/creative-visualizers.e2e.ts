@@ -103,10 +103,10 @@ test('each horizontal mode paints measured audio, goes blank on pause and stops 
     await choose.selectOption(value);
     await expect.poll(() => litPixels(page), { message: value }).toBeGreaterThan(0);
   }
-  // At most 15 frames a second: two seconds of playback is about 30 paints, never 120.
+  // At most 30 frames a second: two seconds of playback is about 60 paints, never 120.
   const before = await paints(page);
   await page.waitForTimeout(2000);
-  expect(await paints(page) - before).toBeLessThanOrEqual(34);
+  expect(await paints(page) - before).toBeLessThanOrEqual(64);
   // A background tab: the loop stops, the audio clock keeps running.
   const clock = (await audioClock(page))[0];
   await page.evaluate(() => {

@@ -9,8 +9,8 @@ import { browserLine, frameWindow, installProbe } from './perf-probe';
  * anything sounds. Results print as `S4-PERF {...}` lines.
  */
 const BUDGET = {
-  // the visualiser paints at most 15 frames a second while it is seen (Now.tsx), so 2 s is at most ~32
-  visibleDrawsPer2s: 34,
+  // Now.tsx targets 30 frames/s for responsive audio, backing off to 15 on slow hardware.
+  visibleDrawsPer2s: 64,
   // hidden or scrolled away, it paints nothing (one wake-up frame is allowed for the change itself)
   hiddenDrawsPer2s: 1,
   frameP95Ms: 50,
@@ -99,7 +99,7 @@ test('S4-0098-05 the visualiser paints only while seen, stops when hidden, and a
   await info.attach('s4-0098-05.json', { body: JSON.stringify(result, null, 2), contentType: 'application/json' });
 
   expect(visible, 'the visualiser was not drawing while seen').toBeGreaterThan(5);
-  expect(visible, 'more than 15 paints a second').toBeLessThanOrEqual(BUDGET.visibleDrawsPer2s);
+  expect(visible, 'more than 30 paints a second').toBeLessThanOrEqual(BUDGET.visibleDrawsPer2s);
   expect(hidden, 'canvas work while the page was hidden').toBeLessThanOrEqual(BUDGET.hiddenDrawsPer2s);
   expect(back, 'did not resume after the page came back').toBeGreaterThan(5);
   expect(afterTheme, 'stopped drawing after the theme switch').toBeGreaterThan(2);

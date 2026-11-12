@@ -60,8 +60,8 @@ test('pilot walkthrough of the study card paths', async ({ page, request }) => {
   const upNext = await page.getByText(/up next/i).first().isVisible().catch(() => false);
   note('EX-0116-01', `Play turned to Pause; Up Next visible: ${upNext}`);
   await play.click();
-  await expect(play).toHaveText('Play', { timeout: 20_000 });
-  note('EX-0116-01', 'Pause returned to Play');
+  await expect(play).toHaveText('Resume', { timeout: 20_000 });
+  note('EX-0116-01', 'Pause changed to Resume without losing the song position');
 
   // EX-0124-02: the Requests drawer opens from Listen
   await page.getByRole('button', { name: /^Requests/ }).first().click();

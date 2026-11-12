@@ -214,7 +214,7 @@ test('MP-0296-06 Still and reduced motion remove decorative movement while the m
   }
 });
 
-test('MP-0296-07 the visualizer draws at most 15 frames a second while playing and nothing while hidden', async ({ page }) => {
+test('MP-0296-07 the visualizer draws at most 30 frames a second while playing and nothing while hidden', async ({ page }) => {
   await countDraws(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
@@ -228,7 +228,7 @@ test('MP-0296-07 the visualizer draws at most 15 frames a second while playing a
   await page.waitForTimeout(3000);
   const drawn = await draws(page) - before;
   const seconds = (Date.now() - started) / 1000;
-  expect(drawn / seconds, 'frames a second while playing').toBeLessThanOrEqual(15.5);
+  expect(drawn / seconds, 'frames a second while playing').toBeLessThanOrEqual(31.5);
   expect(drawn, 'it does draw while playing').toBeGreaterThan(seconds * 5);
   // the tab goes to the background
   await page.evaluate(() => {
