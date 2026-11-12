@@ -617,7 +617,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       )}
       {/* LX-0342-01: the count comes straight after the filters, ahead of the selection tools, so on a
           phone it is still on screen beside the search that changed it */}
-      {committedRows !== null && <p className="hint library-count" role="status">{committedRows.length < total ? `Showing ${committedRows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>}
+      {/* The status stays mounted while a new search or filter loads, so a screen reader hears the new
+          count: a live region that is removed and added again is never announced (NVDA, 2026-11-12). */}
+      <p className="hint library-count" role="status">{committedRows === null ? '' : committedRows.length < total ? `Showing ${committedRows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>
       {batch && committedRows !== null && committedRows.length > 0 && filter !== 'set_aside' && (
         <section className="library-batch" aria-label="Select Library recordings">
           <div className="row wrap">

@@ -323,6 +323,15 @@ export const GLOSSARY: GlossaryTerm[] = [
     related: ['analysis', 'stems'],
   },
   {
+    id: 'rating',
+    term: 'Good and Bad',
+    aka: ['rating', 'rate', 'rated', 'thumbs up', 'thumbs down', 'feedback'],
+    plain: 'Your own verdict on a transition or link you heard. It is separate from Planned, Rendered and Heard, which only say what was made and played: a rating says whether it sounded right to you.',
+    effect: 'Selecta leans toward hand-overs like the ones you rated Good when it plans later mixes. Rating changes nothing in the mix that is playing.',
+    reversible: 'Press the same button again to clear your rating.',
+    related: ['heard', 'transition'],
+  },
+  {
     id: 'undo',
     term: 'Undo and Activity',
     aka: ['undo', 'activity', 'history', 'take back'],

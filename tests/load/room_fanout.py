@@ -33,6 +33,7 @@ import asyncio
 import json
 import math
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -105,12 +106,20 @@ def summarise(
                 out_of_order += 1
             latencies.append((at - sent_at) * 1000)
     return Result(
-        rooms=len(sent), listeners=listeners, actions_sent=sum(map(len, sent.values())),
-        action_errors=action_errors, expected=expected, received=received,
-        dropped=expected - received, out_of_order=out_of_order,
-        p50_ms=round(percentile(latencies, 50), 1), p95_ms=round(percentile(latencies, 95), 1),
-        p99_ms=round(percentile(latencies, 99), 1), max_ms=round(max(latencies, default=0), 1),
-        latency_budget_ms=budget_ms, seconds=round(seconds, 1),
+        rooms=len(sent),
+        listeners=listeners,
+        actions_sent=sum(map(len, sent.values())),
+        action_errors=action_errors,
+        expected=expected,
+        received=received,
+        dropped=expected - received,
+        out_of_order=out_of_order,
+        p50_ms=round(percentile(latencies, 50), 1),
+        p95_ms=round(percentile(latencies, 95), 1),
+        p99_ms=round(percentile(latencies, 99), 1),
+        max_ms=round(max(latencies, default=0), 1),
+        latency_budget_ms=budget_ms,
+        seconds=round(seconds, 1),
     )
 
 
@@ -137,7 +146,10 @@ def refuse_production(url: str) -> None:
 
 
 async def listen(
-    client: httpx.AsyncClient, token: str, room_id: str, events: list[tuple[float, str]],
+    client: httpx.AsyncClient,
+    token: str,
+    room_id: str,
+    events: list[tuple[float, str]],
     connected: asyncio.Event,
 ) -> None:
     """Hold one stream open (until cancelled) and note each lock or unlock of this room."""
@@ -150,8 +162,11 @@ async def listen(
                 continue
             frame = json.loads(line[5:])
             payload = frame.get("payload") or {}
-            if (frame.get("topic") == "room.updated" and payload.get("room_id") == room_id
-                    and "status" in payload):
+            if (
+                frame.get("topic") == "room.updated"
+                and payload.get("room_id") == room_id
+                and "status" in payload
+            ):
                 events.append((time.perf_counter(), payload["status"]))
 
 
@@ -169,8 +184,13 @@ async def open_room(client: httpx.AsyncClient, token: str, index: int) -> str:
 
 
 async def drive(
-    client: httpx.AsyncClient, token: str, room_id: str, actions: int, interval: float,
-    sent: list[tuple[float, str]], errors: list[int],
+    client: httpx.AsyncClient,
+    token: str,
+    room_id: str,
+    actions: int,
+    interval: float,
+    sent: list[tuple[float, str]],
+    errors: list[int],
 ) -> None:
     """Lock, unlock, lock... one change every `interval` seconds, waiting for each answer."""
     auth = {"Authorization": f"Bearer {token}"}
@@ -186,14 +206,21 @@ async def drive(
 
 
 async def run(
-    base_url: str, tokens: Sequence[str], listeners: int, actions: int, rate: float,
-    budget_ms: float = LATENCY_TARGET_MS, drain_s: float = 5.0, origin: str | None = None,
+    base_url: str,
+    tokens: Sequence[str],
+    listeners: int,
+    actions: int,
+    rate: float,
+    budget_ms: float = LATENCY_TARGET_MS,
+    drain_s: float = 5.0,
+    origin: str | None = None,
 ) -> Result:
     """One room per token, `listeners` streams each, `rate` host changes a second in all."""
     limits = httpx.Limits(max_connections=None, max_keepalive_connections=None)
     headers = {"Origin": origin or base_url}
-    async with httpx.AsyncClient(base_url=base_url, limits=limits, headers=headers,
-                                 timeout=30) as client:
+    async with httpx.AsyncClient(
+        base_url=base_url, limits=limits, headers=headers, timeout=30
+    ) as client:
         room_ids = await asyncio.gather(
             *(open_room(client, token, n) for n, token in enumerate(tokens))
         )
@@ -203,9 +230,11 @@ async def run(
             for slot in range(listeners):
                 heard[(room, slot)] = []
                 ready.append(asyncio.Event())
-                streams.append(asyncio.create_task(
-                    listen(client, token, room_id, heard[(room, slot)], ready[-1])
-                ))
+                streams.append(
+                    asyncio.create_task(
+                        listen(client, token, room_id, heard[(room, slot)], ready[-1])
+                    )
+                )
         connect_by = time.perf_counter() + 120
         while not all(event.is_set() for event in ready):
             failed = next((task for task in streams if task.done()), None)
@@ -222,8 +251,7 @@ async def run(
 
         async def staggered(room: int) -> None:
             await asyncio.sleep(interval * room / len(tokens))
-            await drive(client, tokens[room], room_ids[room], actions, interval,
-                        sent[room], errors)
+            await drive(client, tokens[room], room_ids[room], actions, interval, sent[room], errors)
 
         await asyncio.gather(*(staggered(room) for room in range(len(tokens))))
         deadline = time.perf_counter() + drain_s
@@ -236,8 +264,9 @@ async def run(
             stream.cancel()
         await asyncio.gather(*streams, return_exceptions=True)
         for token, room_id in zip(tokens, room_ids, strict=True):
-            await client.post(f"/api/rooms/{room_id}/end",
-                              headers={"Authorization": f"Bearer {token}"})
+            await client.post(
+                f"/api/rooms/{room_id}/end", headers={"Authorization": f"Bearer {token}"}
+            )
     return summarise(sent, heard, listeners, len(errors), budget_ms, seconds)
 
 
@@ -247,8 +276,9 @@ def seed_hosts(base_url: str, rooms: int) -> list[str]:
     stamp = time.time_ns() % 10**8
     for index in range(rooms):
         user = f"fanout-{stamp}-{index}"
-        made = httpx.post(f"{base_url}/test/seed", json={"user": user, "plan": "premium"},
-                          timeout=60)
+        made = httpx.post(
+            f"{base_url}/test/seed", json={"user": user, "plan": "premium"}, timeout=60
+        )
         made.raise_for_status()
         tokens.append(f"e2e:{user}")
     return tokens
@@ -262,9 +292,11 @@ def serve(port: int) -> None:
     sys.path.insert(0, str(ROOT / "tests"))
     import e2e_cloud_server
 
-    server = uvicorn.Server(uvicorn.Config(
-        e2e_cloud_server.build(port), host="127.0.0.1", port=port, log_level="warning"
-    ))
+    server = uvicorn.Server(
+        uvicorn.Config(
+            e2e_cloud_server.build(port), host="127.0.0.1", port=port, log_level="warning"
+        )
+    )
 
     def watch() -> None:
         sys.stdin.read()
@@ -278,15 +310,29 @@ def start_server(port: int) -> subprocess.Popen:
     if port not in SMOKE_PORTS:
         raise SystemExit(f"Smoke ports are {SMOKE_PORTS.start}-{SMOKE_PORTS.stop - 1}")
     log = tempfile.TemporaryFile()
+    # The server's own clean-up can't delete its SQLite file on Windows while the engine holds
+    # it, so it makes its temporary folders in one of ours, removed once it has exited.
+    scratch = tempfile.mkdtemp(prefix="room-fanout-")
     process = subprocess.Popen(
         [sys.executable, __file__, "serve", "--port", str(port)],
-        cwd=ROOT, stdin=subprocess.PIPE, stdout=log, stderr=log,
-        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+        cwd=ROOT,
+        stdin=subprocess.PIPE,
+        stdout=log,
+        stderr=log,
+        env={
+            **os.environ,
+            "PYTHONIOENCODING": "utf-8",
+            "TMP": scratch,
+            "TEMP": scratch,
+            "TMPDIR": scratch,
+        },
     )
+    process.scratch = scratch  # type: ignore[attr-defined]
     deadline = time.monotonic() + 90
     while time.monotonic() < deadline:
         if process.poll() is not None:
             log.seek(0)
+            stop_server(process)
             raise SystemExit(f"Test server stopped:\n{log.read().decode(errors='replace')}")
         try:
             if httpx.get(f"http://127.0.0.1:{port}/api/ready", timeout=2).status_code == 200:
@@ -306,16 +352,27 @@ def stop_server(process: subprocess.Popen) -> None:
     except subprocess.TimeoutExpired:
         process.kill()
         process.wait()
+    shutil.rmtree(getattr(process, "scratch", ""), ignore_errors=True)
 
 
-def smoke(base_url: str | None, port: int, rooms: int, listeners: int, actions: int,
-          rate: float) -> Result:
+def smoke(
+    base_url: str | None, port: int, rooms: int, listeners: int, actions: int, rate: float
+) -> Result:
     process = None if base_url else start_server(port)
     base_url = base_url or f"http://127.0.0.1:{port}"
     try:
         tokens = seed_hosts(base_url, rooms)
-        return asyncio.run(run(base_url, tokens, listeners, actions, rate,
-                               budget_ms=SMOKE_LATENCY_MS, drain_s=SMOKE_LATENCY_MS / 1000 + 2))
+        return asyncio.run(
+            run(
+                base_url,
+                tokens,
+                listeners,
+                actions,
+                rate,
+                budget_ms=SMOKE_LATENCY_MS,
+                drain_s=SMOKE_LATENCY_MS / 1000 + 2,
+            )
+        )
     finally:
         if process is not None:
             stop_server(process)
@@ -361,16 +418,26 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.mode == "smoke":
         if args.base_url:
             refuse_production(args.base_url)
-        result = smoke(args.base_url, args.port, args.rooms, args.listeners, args.actions,
-                       args.rate)
+        result = smoke(
+            args.base_url, args.port, args.rooms, args.listeners, args.actions, args.rate
+        )
         return report(result, args.out)
     refuse_production(args.base_url)
-    tokens = [line.strip() for line in Path(args.tokens).read_text("utf-8").splitlines()
-              if line.strip()]
+    tokens = [
+        line.strip() for line in Path(args.tokens).read_text("utf-8").splitlines() if line.strip()
+    ]
     if len(tokens) < args.rooms:
         raise SystemExit(f"{args.rooms} rooms need {args.rooms} host tokens; got {len(tokens)}")
-    result = asyncio.run(run(args.base_url, tokens[: args.rooms], args.listeners, args.actions,
-                             args.rate, origin=args.origin))
+    result = asyncio.run(
+        run(
+            args.base_url,
+            tokens[: args.rooms],
+            args.listeners,
+            args.actions,
+            args.rate,
+            origin=args.origin,
+        )
+    )
     return report(result, args.out)
 
 

@@ -9,7 +9,7 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 | [UI/UX polish (P)](polish-implementation-checklist.md) | 143 | 120 | 1 | 1 | 20 | 1 | 114 | 0 |
 | [Selecta 3.0 (S3)](selecta-3-implementation-checklist.md) | 258 | 229 | 0 | 0 | 29 | 0 | 222 | 0 |
 | [Selecta 3.1 (S31)](selecta-3-1-implementation-checklist.md) | 116 | 96 | 1 | 0 | 19 | 0 | 0 | 0 |
-| [Selecta 4.0 (S4)](selecta-4-implementation-checklist.md) | 250 | 221 | 24 | 5 | 0 | 0 | 0 | 0 |
+| [Selecta 4.0 (S4)](selecta-4-implementation-checklist.md) | 250 | 221 | 24 | 5 | 0 | 0 | 43 | 0 |
 | [Experience-first (EX)](selecta-experience-implementation-checklist.md) | 105 | 102 | 0 | 0 | 0 | 3 | 51 | 51 |
 | [Microinteraction (MI)](selecta-microinteraction-implementation-checklist.md) | 240 | 213 | 27 | 0 | 0 | 0 | 213 | 0 |
 | [Creative interface (CI)](selecta-creative-interface-implementation-checklist.md) | 140 | 106 | 1 | 0 | 33 | 0 | 106 | 0 |

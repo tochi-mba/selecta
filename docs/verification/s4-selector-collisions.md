@@ -161,7 +161,7 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `button[aria-pressed='true']` | style.css, styles/polish.css | styles/polish.css |
 | `input:focus-visible` | style.css, styles/polish.css | styles/polish.css |
 | `media (forced-colors: active)` | styles/polish.css, styles/listening.css, styles/creation.css, styles/operations.css, styles/music-objects.css, styles/glossary.css, styles/palette.css, styles/depth.css | styles/depth.css |
-| `media (max-width: 1024px)` | styles/polish.css, styles/operations.css | styles/operations.css |
+| `media (max-width: 1024px)` | style.css, styles/polish.css, styles/creation.css, styles/operations.css | styles/operations.css |
 | `media (max-width: 1040px)` | styles/polish.css, styles/listening.css | styles/listening.css |
 | `media (max-width: 420px)` | styles/shell.css, styles/polish.css, styles/listening.css | styles/listening.css |
 | `media (max-width: 520px)` | style.css, styles/foundation.css, styles/listening.css | styles/listening.css |
