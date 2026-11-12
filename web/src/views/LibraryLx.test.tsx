@@ -344,7 +344,7 @@ describe('LX-0349-06 a failed save keeps what was typed and points at the proble
     // default second to get there, and the requirement (the problem gets focus) is unchanged
     await waitFor(() => expect(alert).toHaveFocus(), { timeout: 3000 });
     expect(alert.textContent).not.toBe('');
-    expect(tempo).toHaveValue(128);
+    expect(tempo).toHaveValue('128');
     expect(notify).not.toHaveBeenCalled();
   });
 });
