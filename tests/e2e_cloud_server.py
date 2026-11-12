@@ -441,7 +441,9 @@ def build(port: int):
             objects.log.append({**entry, "status": 404})
             return Response(status_code=404)
         data = found.bytes()
-        content_type = "audio/flac" if key.endswith(".flac") and data[:4] == b"fLaC" else "audio/wav"
+        content_type = (
+            "audio/flac" if key.endswith(".flac") and data[:4] == b"fLaC" else "audio/wav"
+        )
         headers = {"Accept-Ranges": "bytes", "Content-Type": content_type}
         wanted = request.headers.get("range", "")
         if wanted.startswith("bytes="):
