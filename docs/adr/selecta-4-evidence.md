@@ -1,7 +1,7 @@
 # Selecta 4.0 - implementation and independent verification evidence ledger
 
 - **Baseline:** `main` `9b663f9f10212619f27ce67ce82f602347065cbd`, 2026-11-07.
-- **Programme:** Original 25-ADR/250-task planning ledger. PR #29 later merged as `6638ec2313ce53843adfaf363306f8e79c4c8c7e`. **Status 2026-11-12 (the [checklist](selecta-4-implementation-checklist.md) task lines): 202 Implemented, 36 In progress, 12 Not started, 0 Verified.** The rows below still read 189 Implemented, 49 In progress, 12 Not started: 13 rows (S4-0092-07, S4-0095-01, S4-0095-10, S4-0096-08, S4-0097-02, S4-0097-06, S4-0098-07, S4-0098-08, S4-0099-05, S4-0099-08, S4-0101-03, S4-0101-04, S4-0101-08) say In progress where the checklist says Implemented. All independent verification remains open.
+- **Programme:** Original 25-ADR/250-task planning ledger. PR #29 later merged as `6638ec2313ce53843adfaf363306f8e79c4c8c7e`. **Status 2026-11-12 (the [checklist](selecta-4-implementation-checklist.md) task lines): 202 Implemented, 36 In progress, 12 Not started, 0 Verified.** The rows below were synced to the checklist task lines on 2026-11-12 (13 rows, S4-0092-07, S4-0095-01, S4-0095-10, S4-0096-08, S4-0097-02, S4-0097-06, S4-0098-07, S4-0098-08, S4-0099-05, S4-0099-08, S4-0101-03, S4-0101-04, S4-0101-08, moved from In progress to Implemented). All independent verification remains open.
 - **Scope:** Documentation only. Neither source, tests, CI nor user interface have been changed.
 - **Historical note:** PRs #25 and #26 have merged. Older 3.1 status headings may be stale and do not authorize retroactive completion of S3/S31 tasks.
 

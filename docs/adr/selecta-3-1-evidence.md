@@ -24,7 +24,7 @@
 | [ADR-0088](adr-0088-research-visual-regression-and-release.md) | Accepted | 5 Implemented, 1 In progress, 6 need a person (2026-11-12) | 0/12 | Require observable user, visual and product acceptance before release |
 | **Total** | 11 Accepted | 96 Implemented, 1 In progress, 19 need a person (2026-11-12) | **0/116** | |
 
-## Implementation on PR #25 - 29 partial tasks, none Verified
+## Implementation on PR #25 - 29 tasks partial then, none Verified (Status synced to the checklist 2026-11-12)
 
 | Task | Status | Source or automated evidence | Still required before Verified |
 |---|---|---|---|

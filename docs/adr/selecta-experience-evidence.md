@@ -1,7 +1,7 @@
 # Selecta - experience-first implementation and independent verification ledger
 
 - **Baseline:** `6638ec2313ce53843adfaf363306f8e79c4c8c7e` (merged PR #29), 2026-11-07.
-- **Programme history:** PR #30 merged as `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7`; **status 2026-11-12, from the [checklist](selecta-experience-implementation-checklist.md) task lines: 91 Implemented, 4 In progress, 7 Not started, 3 Superseded; 51 independently Verified.** The rows below lag the checklist: they read 27 Implemented, 3 In progress, 73 Not started, 2 Superseded, 12 Verified, and 64 rows (most of EX-0114 to EX-0127) still say Not started / No where the checklist line records Implemented or Verified. The checklist lines are current.
+- **Programme history:** PR #30 merged as `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7`; **status 2026-11-12, from the [checklist](selecta-experience-implementation-checklist.md) task lines: 91 Implemented, 4 In progress, 7 Not started, 3 Superseded; 51 independently Verified.** The rows below were synced to the checklist task lines on 2026-11-12 (66 rows brought forward, most of EX-0114 to EX-0127). The checklist lines are current.
 - **Evidence boundary:** Documentation only; all owners unassigned. Existing source/UI/merged tests can establish a baseline but not that a newly proposed design or user-outcome requirement was met.
 - **Old trackers:** S4 has 250 unchecked tasks from an older baseline; that is **not** a code-status assertion after PR #29. See [reconciliation](selecta-experience-status-reconciliation.md).
 

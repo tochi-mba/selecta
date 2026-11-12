@@ -87,3 +87,29 @@ describe('S4-0090-01 colour consumers', () => {
     expect(found).toEqual([]);
   });
 });
+
+describe('S4-0090-03 no view overrides a core brand meaning', () => {
+  const ROLES = /(?:^|[;{\s])(--(?:bg|panel|panel-2|line|ink|soft|accent|accent-ink|warn|ok|request|surface(?:-[a-z]+)?|text|text-soft|focus|selected|playing|danger|status-[a-z]+|primary-[a-z]+|word-[a-z]+|link|motif|border|border-strong|edge-[a-z]+))\s*:/g;
+
+  it('only tokens.css (and the two feature pages that load without it) set a palette or role token', () => {
+    const found: string[] = [];
+    for (const sheet of ALL.filter((file) => file.endsWith('.css') && file !== 'styles/tokens.css' && !OWN_TOKEN_BLOCKS.has(file))) {
+      for (const [, token] of strip(fs.readFileSync(SOURCE + sheet, 'utf8')).matchAll(ROLES)) found.push(`${sheet} sets ${token}`);
+    }
+    expect(found).toEqual([]);
+  });
+
+  it('no script writes a palette or role token at run time', () => {
+    const found: string[] = [];
+    for (const file of ALL.filter((name) => /\.(?:ts|tsx)$/.test(name) && !name.includes('.test.'))) {
+      const text = fs.readFileSync(SOURCE + file, 'utf8');
+      for (const [whole] of text.matchAll(/(?:setProperty\(\s*|['"])--(?:bg|panel|line|ink|soft|accent|warn|ok|request|surface[a-z-]*|text|text-soft|focus|selected|playing|danger|status-[a-z]+|primary-[a-z]+|word-[a-z]+|link|motif|border|edge-[a-z]+)['"]\s*:/g)) {
+        found.push(`${file}: ${whole}`);
+      }
+      for (const [whole] of text.matchAll(/setProperty\(\s*['"]--(?:bg|panel|line|ink|soft|accent|warn|ok|request|surface[a-z-]*|text|focus|selected|playing|danger|status-[a-z]+|primary-[a-z]+|link|motif|border|edge-[a-z]+)['"]/g)) {
+        found.push(`${file}: ${whole}`);
+      }
+    }
+    expect(found).toEqual([]);
+  });
+});

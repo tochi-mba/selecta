@@ -1,7 +1,7 @@
 # ADR-0089: Selecta 4.0 charter, baseline and full feature-preservation governance
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** 1/10 Implemented, 6 In progress, 3 Not started (per-task source and test reconciliation 2026-11-10)
+- **Implementation status:** 3/10 Implemented, 6 In progress, 1 Not started (governance inventories generated 2026-11-12)
 - **Verification status:** Not verified (0/10)
 - **Documentation status:** Drafted, documentation-only Selecta 4.0 proposal
 - **Proposed:** 2026-11-07
@@ -70,6 +70,7 @@ An owner must separately **Accept** this decision before it becomes policy. Each
 | 2026-11-07 | Proposed | Not started | Not verified | Documentation-only specification; no runtime, test or UI changes |
 | 2026-11-08 | Accepted | Not started | Not verified | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 | 2026-11-10 | Accepted | 1/10 Implemented, 6 In progress, 3 Not started | Not verified | Per-task source and test reconciliation; each task names the automated checks run on 2026-11-10 and any check that needs a person |
+| 2026-11-12 | Accepted | 3/10 Implemented, 6 In progress, 1 Not started | Not verified | `src/selecta/audit/s4_governance.py` generates the API inventory, the PR #28 changed-path audit and the exact-head release report; `tests/test_s4_governance.py` guards them |
 
 ## Related documents
 

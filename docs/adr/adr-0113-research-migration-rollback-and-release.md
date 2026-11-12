@@ -1,7 +1,7 @@
 # ADR-0113: User research, phased migration, evidence ledger, rollback and explicit go/no-go
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress (2/10 implemented, 5 in progress; source reconciliation 2026-11-10, branch feat/finish-checklists)
+- **Implementation status:** In progress (2/10 implemented, 7 in progress, 1 not started; release report scaffold and rollback run 2026-11-12, branch feat/finish-checklists-2)
 - **Verification status:** Not verified (0/10)
 - **Documentation status:** Drafted, documentation-only Selecta 4.0 proposal
 - **Proposed:** 2026-11-07
@@ -70,6 +70,7 @@ An owner must separately **Accept** this decision before it becomes policy. Each
 | 2026-11-07 | Proposed | Not started | Not verified | Documentation-only specification; no runtime, test or UI changes |
 | 2026-11-08 | Accepted | Not started | Not verified | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 | 2026-11-10 | Accepted | In progress (2/10) | Not verified | Source reconciliation against current code with focused tests run 2026-11-10; every task still needs independent verification |
+| 2026-11-12 | Accepted | In progress (2/10) | Not verified | Exact-head release report, defect register and dependency review scaffolds from `src/selecta/audit/s4_governance.py`; rollback run against baseline `9b663f9` |
 
 ## Related documents
 

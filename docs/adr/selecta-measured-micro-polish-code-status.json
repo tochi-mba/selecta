@@ -5,7 +5,7 @@
   "as_of": "2026-11-12",
   "scope": "MP-0272-01 through MP-0299-08",
   "decision_summary": "28 Proposed",
-  "implementation_status": "194 Implemented; 29 In progress; 1 Not started (2026-11-12, recounted from the checklist task lines; the per-group lists below were synced to those lines the same day; Needs a person tasks are also listed in not_started)",
+  "implementation_status": "194 Implemented; 29 In progress; 1 Not started (2026-11-12, recounted from the checklist task lines; the per-group lists below were synced to those lines the same day; needs_a_person lists every open task whose line names a person-only step, alongside its main list)",
   "independent_verification": "0 Verified",
   "groups": {
     "272": {

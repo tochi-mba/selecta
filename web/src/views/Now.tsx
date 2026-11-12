@@ -63,11 +63,14 @@ function TrackTitle({ title, songId, stage }: { title: string; songId?: number; 
       }
     };
     fit();
+    // r8c: each fit is about twenty forced layouts, so a resize runs it once: the observer already
+    // sees the container change, and the window listener is only for browsers without one
     const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null;
     observer?.observe(container);
-    window.addEventListener('resize', fit);
-    document.fonts?.ready.then(fit).catch(() => {});
-    return () => { observer?.disconnect(); window.removeEventListener('resize', fit); };
+    if (!observer) window.addEventListener('resize', fit);
+    let live = true;
+    document.fonts?.ready.then(() => { if (live) fit(); }).catch(() => {});
+    return () => { live = false; observer?.disconnect(); window.removeEventListener('resize', fit); };
   }, [title, stage]);
   return <h1 ref={heading} className="display track-title" dir="auto">
     {songId !== undefined && <SongMotif songId={songId} large />}{title}

@@ -8,6 +8,7 @@ When the app stops, the input closes and this stops too, so nothing is left runn
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sys
 import threading
@@ -15,13 +16,14 @@ import time
 from collections import Counter
 from typing import TextIO
 
-from selecta import db, flags, mix
+from selecta import cache_care, db, flags, mix
 from selecta.config import load_settings
 from selecta.jobs import kill_tree_of_children, set_render_priority, take_app_input
 from selecta.seams import SeamRequest, SeamStore, request_from
 from selecta.stems import cache_bytes, largest_cache_bytes
 
 RELOAD_EVERY_SECONDS = 600.0
+TIDY_EVERY_SECONDS = 6 * 60 * 60.0
 
 
 def _mix_seams(store: SeamStore, settings):
@@ -205,9 +207,15 @@ def _tidier(settings):
         if time.monotonic() - state["at"] < TIDY_EVERY_SECONDS:
             return
         state["at"] = time.monotonic()
-        swept = cache_care.tidy(settings)
+        try:
+            swept = cache_care.tidy(settings)
+        except Exception:  # noqa: BLE001 - tidying must never stop the worker rendering
+            logging.getLogger(__name__).exception("Tidying the caches failed")
+            return
         if swept.removed or swept.linked:
-            print(f"Tidied the caches: {swept.removed}, {swept.linked} clips shared", flush=True)
+            logging.getLogger(__name__).info(
+                "Tidied the caches: %s, %d clips shared", swept.removed, swept.linked
+            )
 
     return tidy
 

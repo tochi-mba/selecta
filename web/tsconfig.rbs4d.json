@@ -1,0 +1,1 @@
+{"extends":"./tsconfig.json","include":["e2e/s4-0110-at-log.e2e.ts","e2e/s4-0112-golden.e2e.ts","bench/s4-0111-scale.bench.ts"]}

@@ -122,10 +122,7 @@ describe('the Cloud app', () => {
   });
 
   it('shows "You were signed out" when the event stream says the sign-in was revoked', async () => {
-    events = 'event: selecta
-data: {"topic":"session.revoked","payload":{}}
-
-';
+    events = 'event: selecta\ndata: {"topic":"session.revoked","payload":{}}\n\n';
     revokedFromCall = 2;
     render(<CloudApp />);
     expect(await screen.findByRole('heading', { name: 'You were signed out' }, { timeout: 5000 })).toBeInTheDocument();

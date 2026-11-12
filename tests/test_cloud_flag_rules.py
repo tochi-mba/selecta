@@ -536,3 +536,30 @@ def test_writers_at_once_get_distinct_consecutive_versions(cloud_engine):
         versions = sorted(v.version for v in store.history(conn, limit=100))
         assert versions == list(range(1, 21))
         assert {v.flag_id for v in store.history(conn, limit=100)} == set(flag_ids)
+
+
+class _RolledBack(Exception):
+    pass
+
+
+def test_a_rule_write_that_rolls_back_never_reaches_the_shared_cache(cloud_engine):
+    """A request that writes a rule and then reads the cache through its own transaction sees
+    its own write, but the cache only takes a snapshot once that transaction commits."""
+    with transaction(cloud_engine) as conn:
+        save(conn, "plain", [KILL])
+    cache = store.RulesCache(cloud_engine, max_age=0)
+    held = cache.snapshot
+    assert held.version == 1
+    with pytest.raises(_RolledBack):
+        with transaction(cloud_engine) as conn:
+            save(conn, "plain", [])
+            assert cache.refresh_if_stale(conn) is True
+            assert cache.snapshot_for(conn).for_flag("plain") == ()  # its own write
+            raise _RolledBack
+    assert cache.snapshot is held and cache.version == 1
+    assert cache.refresh_if_newer() is False  # and the phantom version 2 blocks nothing
+    with transaction(cloud_engine) as conn:
+        save(conn, "plain", [])
+        assert cache.refresh_if_stale(conn) is True
+        assert cache.snapshot is held  # not yet: the write hasn't committed
+    assert cache.version == 2 and cache.snapshot.for_flag("plain") == ()

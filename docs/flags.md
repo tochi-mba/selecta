@@ -25,6 +25,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 |---|---|---|
 | `core.local_server` | **Local server.** The server on this computer: its status, the local-only checks and the one data folder. **Core:** Everything else talks to it. |  |
 | `core.upgrade_backup` | **Backup before upgrade.** The first time a newer Selecta opens a library, it keeps a copy of the library's database before changing its tables. **Core:** An upgrade must never be the thing that loses a library. |  |
+| `core.durable_local_jobs` | **Durable local jobs.** Local background work through the durable job store in the library home (work.sqlite), so it survives restarts and crashes. Off by default while the local audio jobs move onto it. |  |
 | `core.library` | **Library.** Reading a music folder, setting aside what isn't music, and the Library page with search, filters and sorting. **Core:** Without songs there is nothing to play. |  |
 | `core.analysis` | **Analysis.** Beats, downbeats, key, tempo and energy for every song, in the background. **Core:** A mix can only be planned from analysed songs. |  |
 | `core.playback` | **Playback.** The Listen page, the player, gapless audio, what's coming up, and rendering the transitions it plays. **Core:** Selecta is for listening. |  |
@@ -80,6 +81,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 |---|---|---|
 | `drafts` | **Drafts.** Mixes you build and edit without touching what's playing. |  |
 | `render_line` | **Render line.** Prioritized drafts render in the background after the current mix, in an order you choose. | `drafts` |
+| `mymixes.lean_list` | **Lean draft list.** Pickers and shortcuts fetch only each draft's name, not its songs and readiness. | `drafts` |
 | `mymixes.continue_working` | **Continue working.** A shortcut back to the draft you last edited. | `drafts` |
 
 ## Editor

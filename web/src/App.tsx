@@ -187,6 +187,10 @@ export function App() {
     refreshDraft();
   }, [draftId, refreshDraft]);
   const openDraft = useCallback((id: number) => navigate(`/mixes/drafts/${id}/edit`), []);
+  // r8c: pages are memoised, so what they're handed keeps its identity from one render to the next
+  const refreshStatusQuietly = useCallback(() => void refreshStatus(), [refreshStatus]);
+  const openRequests = useCallback(() => setRequesting(true), []);
+  const renamedDraft = useCallback((name: string) => setDraftData((before) => (before ? { ...before, name } : before)), []);
   const closeDraft = useCallback(() => {
     if (draftRef.current !== null) navigate('/mix/current/edit');
   }, []);
@@ -588,7 +592,7 @@ export function App() {
     mixEta: data.eta,
     refreshMix,
     setMixData,
-    refreshStatus: () => void refreshStatus(),
+    refreshStatus: refreshStatusQuietly,
     player,
     now,
     setView: goTo,
@@ -599,7 +603,7 @@ export function App() {
     openDraft,
     closeDraft,
     playDraft,
-    openRequests: () => setRequesting(true),
+    openRequests,
     undo: undoNewest,
   };
   const nothingToHear = route.page === 'listen' && !mix.length;
@@ -695,7 +699,7 @@ export function App() {
                 draftPlace={draftData.draft?.place ?? null}
                 refreshMix={refreshDraft}
                 setMixData={setDraftMix}
-                renamedDraft={(name) => setDraftData((before) => (before ? { ...before, name } : before))}
+                renamedDraft={renamedDraft}
               />
             </MixScope.Provider>
           )}

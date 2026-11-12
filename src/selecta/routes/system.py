@@ -16,7 +16,7 @@ from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from selecta import db, flags, jobs, mix, self_service
+from selecta import cache_care, db, flags, jobs, mix, self_service
 from selecta.api_common import (
     API_FEATURES,
     API_VERSION,
@@ -219,7 +219,10 @@ def add_routes(app, ctx) -> None:
                 status_code=409,
             )
         settings.set_storage_budget(min(wanted, largest_cache_bytes(settings)))
-        prune_cache(settings)
+        # a lower limit never costs the mix now playing its seams (render priority)
+        with connect() as conn:
+            playing = cache_care.current_mix_keys(conn, store)
+        prune_cache(settings, playing)
         return storage()
 
     @app.get("/api/backup")

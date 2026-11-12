@@ -1,0 +1,1 @@
+{"extends":"./tsconfig.json","compilerOptions":{"types":["node"],"noEmit":true},"include":["e2e/s3-0075-01-state-candidates.e2e.ts","e2e/mp-baseline.mp.ts"]}

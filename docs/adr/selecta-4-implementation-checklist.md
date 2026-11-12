@@ -18,7 +18,7 @@
 
 ### [ADR-0089 - Selecta 4.0 charter, baseline and full feature-preservation governance](adr-0089-charter-baseline-parity-and-governance.md)
 
-**Phase:** 0 Baseline. **Decision:** Accepted. **Implementation:** 1/10 Implemented, 6 In progress, 3 Not started (2026-11-10). **Verified:** 0/10.
+**Phase:** 0 Baseline. **Decision:** Accepted. **Implementation:** 3/10 Implemented, 6 In progress, 1 Not started (2026-11-12). **Verified:** 0/10.
 
 - [ ] **S4-0089-01 - Pin and document baseline SHA, supported Windows/Edge/server version and outstanding previous PR history.** Acceptance: Signed inventory identifies actual merged main head; old plans are called historical rather than verified. Required verification: Check exact commit and previous ADR index at implementation start. **Implementation: In progress (2026-11-10). Evidence: baseline `9b663f9` pinned in `docs/adr/selecta-4-roadmap.md` and this checklist header; PR #29 merge `6638ec2` and later PR history recorded in `docs/adr/implementation-checklist-audit.md`. Verified: No. Needs a person: owner signs the baseline inventory and names the supported Windows/Edge/server versions.**
 - [ ] **S4-0089-02 - Inventory routes, overlays, controls, settings, schemas, API side effects and every state.** Acceptance: All capabilities have traceable owners including obscure menus and error branches. Required verification: Source-to-capability crosscheck against router, views, state and API. **Implementation: In progress (2026-11-10). Evidence: `docs/adr/mp-0272-surface-inventory.json` guarded by `web/src/shell/mpSurfaceInventory.test.ts` (covers every router page and tab, nav destination, overlay and flagged surface); API side effects and schemas are not yet in one inventory. Verified: No. Needs a person: owner review of the crosscheck.**
@@ -426,7 +426,7 @@
 
 ### [ADR-0113 - User research, phased migration, evidence ledger, rollback and explicit go/no-go](adr-0113-research-migration-rollback-and-release.md)
 
-**Phase:** 0–13 Governance/release. **Decision:** Accepted. **Implementation:** In progress, 2/10 implemented, 5 in progress (2026-11-10). **Verified:** 0/10.
+**Phase:** 0–13 Governance/release. **Decision:** Accepted. **Implementation:** In progress, 2/10 implemented, 7 in progress, 1 not started (2026-11-12). **Verified:** 0/10.
 
 - [ ] **S4-0113-01 - Approve baseline, explicit feature parity and release-owner responsibilities.** Acceptance: Every invariant/test has named owner and no inherited status guesses. Required verification: Recorded baseline signature and task mapping. **Implementation: In progress (2026-11-10, source-reconciled).** Evidence: docs/adr/completion/baseline.md. Needs a person: owner approval of baseline and release-owner responsibilities.
 - [ ] **S4-0113-02 - Conduct initial qualitative listener/creator/expert tasks.** Acceptance: Observed findings logged with no fabricated usability success. Required verification: Participant tasks and reproducible notes. **Implementation: Not started (2026-11-10).** Evidence: not a code task. Needs a person: participant listener/creator/expert sessions.

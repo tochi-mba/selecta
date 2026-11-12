@@ -565,6 +565,9 @@ test('a saved file has the songs of the mix at the moment it was saved, in that 
     expect(new Set(places).size).toBe(places.length);
     // and a song that isn't in the mix isn't, which shows the check can tell them apart
     for (const song of measured.absent) expect(song.score).toBeLessThan(0.6);
+    // S4-0108-10: a file that decodes in order is not a listening acceptance; that verdict is a person's
+    expect(measured.listening.verdict).toBe('not reviewed');
+    expect(measured.listening.transitions_to_hear).toHaveLength(songs.length - 1);
   } finally {
     rmSync(folder, { recursive: true, force: true });
   }

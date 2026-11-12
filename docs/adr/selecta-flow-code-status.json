@@ -1243,4 +1243,9 @@
       "owner": null,
       "implementation_pr": null,
       "implementation_sha": null,
-      "needs_
+      "needs_a_person": [
+        "08"
+      ]
+    }
+  }
+}

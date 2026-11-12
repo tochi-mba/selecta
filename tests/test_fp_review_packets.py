@@ -271,5 +271,5 @@ def test_cli_build_and_check_round_trip(tmp_path, capsys):
 
 def test_index_doc_is_current_and_has_no_em_dash():
     text = fp.render_index()
-    assert "\\u2014" not in text
+    assert "\u2014" not in text
     assert (fp.ROOT / fp.INDEX_DOC).read_text("utf-8") == text

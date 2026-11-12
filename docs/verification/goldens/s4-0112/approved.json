@@ -1,0 +1,4 @@
+{
+  "about": "S4-0112-06 approved golden screenshots. Written only by `python -m selecta.audit.golden_promote` when a named person approves a candidate; web/e2e/s4-0112-golden.e2e.ts compares against these and never writes here.",
+  "approvals": []
+}
