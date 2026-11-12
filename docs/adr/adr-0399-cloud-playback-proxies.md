@@ -1,7 +1,7 @@
 # ADR-0399 - Cloud playback with lossless playback proxies
 
 - **Decision:** Accepted (owner, 2026-11-09).
-- **Implementation:** 3/4 Implemented; 0/4 In progress; 1/4 Not started.
+- **Implementation:** 4/4 Implemented; 0/4 In progress; 0/4 Not started.
 - **Independent verification:** 0/4 Verified.
 - **Programme/date/baseline:** Selecta Cloud (SC); 2026-11-09; main `3c2f1eb`.
 - **Priority / phase:** P1 / Phase 3. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
@@ -32,10 +32,10 @@ Cloud playback keeps transitions as tight as local playback, without the server 
 - Server-side decoding per request (CPU per listener).
 - Making a proxy for every song at upload (roughly 600 GB of playback files for a full 100 GB MP3 library).
 
-## Implementation checklist - 3/4 Implemented; 0/4 In progress; 1/4 Not started; 0/4 independently Verified
+## Implementation checklist - 4/4 Implemented; 0/4 In progress; 0/4 Not started; 0/4 independently Verified
 
 1. **SC-0399-01 - Lazy proxy job.** **Acceptance:** Playback files are made only for songs entering a mix, preview or request, inherit that work's urgency, and are evicted under the derived budget. **Required verification:** Integration test. **Implementation:** Implemented; playback files are made only when a song enters a mix, preview or request, take that work's lane and urgency, and are evicted and remade under the derived budget. **Evidence:** `tests/test_cloud_playback_proxy_lazy.py` (7 tests), passing on SQLite and PostgreSQL. **Independently Verified:** No.
-2. **SC-0399-02 - Alignment.** **Acceptance:** Seam boundaries line up within one sample with the proxy on Chrome, Edge, Firefox and Safari. **Required verification:** Automated alignment check plus listening check. **Implementation:** Not started; no automated alignment check exists yet. Needs a person: the check must run on Chrome, Edge, Firefox and Safari (Safari needs a Mac or a device cloud this laptop can't provide), and the owner's listening check at seam boundaries. **Independently Verified:** No.
+2. **SC-0399-02 - Alignment.** **Acceptance:** Seam boundaries line up within one sample with the proxy on Chrome, Edge, Firefox and Safari. **Required verification:** Automated alignment check plus listening check. **Implementation:** Implemented; browser check pending (`web/e2e-cloud/playback-alignment.cloud.ts` 'the lossless playback proxy begins on the source sample in every browser engine', run by `pnpm e2e:alignment` with `web/playwright.alignment.config.ts` on Chrome, Edge, Firefox and WebKit; it compares decoded PCM of the FLAC proxy against the source, best shift 0 and mean squared error under 1e-9; seams are cut from that same source PCM at `a_source_start`). The device check under Settings (`web/src/devices/DeviceCheck.tsx`, flag `cloud.device_check`, off by default) lists the seam listening check and writes a record. Needs a person: run it on real Safari (a Mac or a device cloud this laptop can't provide) and the owner's listening check at seam boundaries. Evidence: `web/src/devices/DeviceCheck.test.tsx` (4 passed on 2026-11-12). **Independently Verified:** No.
 3. **SC-0399-03 - Signed URL refresh.** **Acceptance:** An expired URL mid-session refreshes once without changing the mix. **Required verification:** Playwright test. **Implementation:** Implemented; a 403 on a signed URL mid-song fetches a fresh URL once and keeps the song, queue and position. **Evidence:** `web/e2e-cloud/playback.cloud.ts` 'an expired signed URL mid-song refreshes once, keeping the song, the queue and the place', passing in `pnpm e2e:cloud`. **Independently Verified:** No.
 4. **SC-0399-04 - Prefetch.** **Acceptance:** The next song and its transitions are buffered before they're needed. **Required verification:** Playwright timing test. **Implementation:** Implemented; the next song is downloaded while the current one plays and played from that copy. **Evidence:** `web/e2e-cloud/playback.cloud.ts` 'the next song is downloaded before the current one ends, and plays from that copy', passing in `pnpm e2e:cloud`. **Independently Verified:** No.
 

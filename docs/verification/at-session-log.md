@@ -21,6 +21,12 @@ VoiceOver on a Mac or iPhone if one is available, and with TalkBack for the phon
 pnpm exec playwright test e2e/s4-0110-at-log.e2e.ts
 ```
 
+## Latest automated reading
+
+2026-11-12, commit `8ddde74`, Edge 157.0.4341.46 on Windows 11 (headless), axe 4.14.0, 1280x900,
+reduced motion: 14 pages, 0 axe WCAG 2.2 A/AA violations, 25 Tab stops per page with 0 unnamed and
+0 hidden. This is the machine reading only; it is not a session and not a compliance claim.
+
 ## Template
 
 ```

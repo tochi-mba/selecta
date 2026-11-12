@@ -19,7 +19,7 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 | [Measured micro-polish (MP)](selecta-measured-micro-polish-implementation-checklist.md) | 224 | 194 | 29 | 1 | 0 | 0 | 194 | 0 |
 | [Library + Lucy (LX)](selecta-library-lucy-experience-implementation-checklist.md) | 208 | 179 | 29 | 0 | 0 | 0 | 144 | 0 |
 | [Unified finish (UF)](selecta-unified-finish-implementation-checklist.md) | 192 | 192 | 0 | 0 | 0 | 0 | 108 | 0 |
-| [Selecta Cloud (SC)](selecta-cloud-implementation-checklist.md) | 136 | 92 | 34 | 10 | 0 | 0 | 91 | 0 |
+| [Selecta Cloud (SC)](selecta-cloud-implementation-checklist.md) | 136 | 93 | 37 | 6 | 0 | 0 | 91 | 0 |
 <!-- checklist-summary:end -->
 
 ---
