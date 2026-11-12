@@ -1,5 +1,5 @@
 import { Icon } from '../ui/Icon';
-import { FormEvent, useCallback, useEffect, useId, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { del, DraftInfo, DraftList, get, post } from '../api';
 import { useFlags } from '../flags';
 import { etaRangeWords, length, nth } from '../lib';
@@ -97,6 +97,19 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
   const readVersion = useRef(0);
   const pendingWrites = useRef(0);
   const writeQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const focusAfterMove = useRef<{ id: number; step: number } | null>(null);
+  // The server's reordered list must be committed to the DOM before focus
+  // moves to the draft's surviving enabled control.
+  useLayoutEffect(() => {
+    const pending = focusAfterMove.current;
+    if (!pending) return;
+    const same = document.querySelector<HTMLButtonElement>(`[data-line-move="${pending.id}:${pending.step}"]`);
+    const other = document.querySelector<HTMLButtonElement>(`[data-line-move="${pending.id}:${-pending.step}"]`);
+    const target = same && !same.disabled ? same : other && !other.disabled ? other : null;
+    if (!target) return;
+    focusAfterMove.current = null;
+    target.focus({ preventScroll: true });
+  }, [list]);
 
   const refresh = useCallback(() => {
     const version = ++readVersion.current;
@@ -151,12 +164,14 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
       return false;
     }
   };
-  const act = async (send: () => Promise<DraftList>) => {
+  const act = async (send: () => Promise<DraftList>): Promise<boolean> => {
     try {
       setList(await write(send));
       setProblem('');
+      return true;
     } catch (error) {
       setProblem((error as Error).message);
+      return false;
     }
   };
   const startNew = async () => {
@@ -368,15 +383,12 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
         <RenderLine
           inLine={inLine}
           current={current}
-          onMove={(draft, step) => void act(() => post<DraftList>(`/drafts/${draft.id}/line/move`, { step })).then(() => {
-            // S4-0099-08: keep the keyboard on the draft that moved. Its button may now be at an end of
-            // the line and disabled, so fall back to its other direction rather than the top of the page.
-            window.requestAnimationFrame(() => {
-              const same = document.querySelector<HTMLButtonElement>(`[data-line-move="${draft.id}:${step}"]`);
-              const other = document.querySelector<HTMLButtonElement>(`[data-line-move="${draft.id}:${-step}"]`);
-              (same && !same.disabled ? same : other && !other.disabled ? other : null)?.focus({ preventScroll: true });
+          onMove={(draft, step) => {
+            focusAfterMove.current = { id: draft.id, step };
+            void act(() => post<DraftList>(`/drafts/${draft.id}/line/move`, { step })).then((succeeded) => {
+              if (!succeeded) focusAfterMove.current = null;
             });
-          })}
+          }}
           onLeave={(draft) => void act(() => del<DraftList>(`/drafts/${draft.id}/line`))}
         />
       )}
