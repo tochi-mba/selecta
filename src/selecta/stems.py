@@ -81,6 +81,8 @@ def _file_stats(folder: Path) -> tuple[list[os.stat_result], os.stat_result | No
         with os.scandir(place) as entries:
             for entry in entries:
                 own_marker = place == top and entry.name == "window.json"
+                if entry.is_symlink() or (hasattr(entry, "is_junction") and entry.is_junction()):
+                    continue
                 if entry.is_file():
                     stats.append(os.stat(entry.path))
                     if own_marker:
@@ -101,7 +103,11 @@ def _window_dirs(root: Path) -> list[tuple[Path, int, float]]:
     """
     found = []
     with os.scandir(root) as entries:
-        folders = [Path(entry.path) for entry in entries if entry.is_dir()]
+        folders = [
+            Path(entry.path) for entry in entries
+            if entry.is_dir() and not entry.is_symlink()
+            and not (hasattr(entry, "is_junction") and entry.is_junction())
+        ]
     for folder in folders:
         try:
             # r11: one walk with scandir, whose entries already know what's a file, and one stat
