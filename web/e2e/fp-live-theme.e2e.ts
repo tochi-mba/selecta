@@ -70,7 +70,7 @@ test('a theme change while playing repaints the spectrum and leaves music, style
   const dj = page.locator('details.view-options');
   if (!await dj.evaluate((element) => (element as HTMLDetailsElement).open)) await dj.locator(':scope > summary').click();
   const style = page.getByRole('combobox', { name: 'Audio visualizer style' });
-  await style.selectOption('skyline');
+  await style.selectOption('bars');
   const started = await soundsRestarted(page);
   const title = await page.locator('.now h1, .now .display').first().innerText();
 
@@ -81,7 +81,7 @@ test('a theme change while playing repaints the spectrum and leaves music, style
     // (Playwright's poll has no toSatisfy, so poll the verdict)
     await expect.poll(async () => { const value = await paintLuminance(page); return value >= 0 && (bright ? value > 0.55 : value < 0.45); }, { message: `${pick} spectrum palette` })
       .toBe(true);
-    await expect(style).toHaveValue('skyline');
+    await expect(style).toHaveValue('bars');
     await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
     expect(await soundsRestarted(page)).toBe(started);
     await expect.poll(async () => (await audioClock(page))[0]).toBeGreaterThan(clock);
