@@ -1,6 +1,6 @@
 # Selecta 2.0: the implementation and its checklist
 
-**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 279 tasks: 250 Implemented, 0 In progress, 4 Not started, 24 Needs a person, 1 Superseded. 24 name a person-only step. 247 ticked. 0 independently Verified.
+**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 279 tasks: 251 Implemented, 0 In progress, 3 Not started, 24 Needs a person, 1 Superseded. 24 name a person-only step. 248 ticked. 0 independently Verified.
 
 > **One PR for everything:** the implementation now lands on this branch too, instead of in separate PRs, as the owner asked. A ticked box means the code is on this branch and [implementation-evidence.md](https://github.com/tochi-mba/selecta/blob/main/docs/adr/implementation-evidence.md) says how we know. This description holds the live checkbox state, and the committed `docs/adr/implementation-checklist.md` is the first snapshot of the scope.
 
