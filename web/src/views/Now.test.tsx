@@ -292,7 +292,13 @@ describe('pointer seeking', () => {
         toggleStage={() => {}}
       />,
     );
-    const slider = await screen.findByRole('slider', { name: 'Where in the song' });
+    await screen.findByRole('slider', { name: 'Where in the song' });
+    // Let the view's follow-up fetches and effects settle, then take the slider that is actually
+    // mounted: on a slow CI runner a late re-render could swap the element under a stale reference.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const slider = screen.getByRole('slider', { name: 'Where in the song' });
     vi.spyOn(slider, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 200 } as DOMRect);
     fireEvent.pointerDown(slider, { pointerId: 3, isPrimary: true, button: 0, clientX: 100 });
     expect(slider.querySelector('.scrub-ghost')).toBeInTheDocument();
