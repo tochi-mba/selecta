@@ -1,7 +1,7 @@
 # ADR-0074: Full test architecture, invariants and concurrent edge-case matrix
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress: 6 of 10 tasks implemented with automated evidence on 2026-11-11; 3 need a person; 1 still open (1 built with a browser check pending)
+- **Implementation status:** In progress: 6 of 10 tasks implemented with automated evidence on 2026-11-12; 4 need a person; 0 still open
 - **Documentation status:** Drafted in the Selecta 3.0 documentation-only proposal
 - **Proposed:** 2026-11-07
 - **Programme:** Selecta 3.0 complete experience overhaul
