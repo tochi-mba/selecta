@@ -80,7 +80,12 @@ test('S4-0097-10 choosing a first mix from the idea cards: steps, keyboard reach
     await page.keyboard.press('Tab');
     reached = await page.evaluate(() => {
       const focused = document.activeElement;
-      return !!focused?.closest('article.vibe-card') && /^Play\b/.test((focused?.textContent ?? '').trim());
+      if (!focused?.closest('article.vibe-card')) return false;
+      // the label a person hears: Action keeps its "Building…" label in the button, hidden, to hold
+      // the width, so the raw textContent reads "PlayBuilding…"
+      const heard = focused.cloneNode(true) as Element;
+      heard.querySelectorAll('[aria-hidden="true"]').forEach((node) => node.remove());
+      return /^Play\b/.test((heard.textContent ?? '').trim());
     });
   }
   const chooseStart = Date.now();

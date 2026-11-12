@@ -120,6 +120,29 @@ test('T0263 Library: search with /, open a song’s menu and add it to the mix, 
 test('T0263 export: open the save dialog from Edit, start saving, cancel it and close back to the button', async ({ page }) => {
   // A previous test may have exported the default mix on this shared server.
   await resetMix(page.request, [1, 2, 3, 5]);
+  // The export job is held on this page's side. On the real server a job can only be cancelled while
+  // it waits on transitions, and once every transition of this mix has been rendered (the server
+  // renders the current mix by itself) that wait lasts a few milliseconds, so a keyboard walk to
+  // Cancel export loses the race and the server answers 409. Holding the job in "preparing" until
+  // the cancel arrives keeps this a keyboard question, not a render-speed one.
+  const mix = (await (await page.request.get('/api/mix')).json()).mix as { song_id: number; title: string; artist: string; seam?: { state: { key: string } } }[];
+  let held: Record<string, unknown> | null = null;
+  const job = (state: string) => ({
+    id: 'job-t0263', state, scope: 'current', draft: null, mix_name: 'Keyboard walk', revision: 'rev-t0263',
+    songs: mix.map((item) => ({ song_id: item.song_id, title: item.title, artist: item.artist })),
+    seams: mix.slice(1).map((item, index) => ({ key: item.seam?.state.key ?? `seam-${index}`, from: mix[index].title, to: item.title })),
+    seams_total: mix.length - 1, seams_ready: 1, seconds_estimate: 240, name: 'keyboard-walk.flac', seconds: null,
+    error: null, created_at: 1_794_000_000, can_cancel: state === 'preparing', quiet_seconds: 0,
+  });
+  await page.route('**/api/exports/jobs', (route) => {
+    if (route.request().method() === 'POST') held = job('preparing');
+    return route.fulfill({ json: route.request().method() === 'POST' ? held : { jobs: held ? [held] : [] } });
+  });
+  await page.route('**/api/exports/jobs/job-t0263', (route) => {
+    if (route.request().method() !== 'DELETE') return route.fallback();
+    held = job('cancelled');
+    return route.fulfill({ json: { ...job('cancelling'), can_cancel: false } });
+  });
   await page.goto('/mix/current/edit');
   const download = page.getByRole('button', { name: 'Download audio' });
   await tabTo(page, download);
@@ -131,7 +154,7 @@ test('T0263 export: open the save dialog from Edit, start saving, cancel it and 
     await page.keyboard.press('Tab');
     expect(await dialog.evaluate((node) => node.contains(document.activeElement))).toBe(true);
   }
-  // the server is fresh for this run, so nothing of this mix is saved yet and Save it is offered
+  // no export of this mix exists yet, so Save it is offered
   const save = dialog.getByRole('button', { name: 'Save it', exact: true });
   await expect(save).toBeEnabled();
   await tabTo(page, save, 20);

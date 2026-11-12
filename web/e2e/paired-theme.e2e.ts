@@ -65,6 +65,12 @@ for (const viewport of VIEWPORTS) {
 
     for (const theme of ['light', 'dark'] as const) {
       await resetMix(request);
+      // The server renders the reset mix's transitions in the background. Capture both themes with
+      // every transition made, or the editor reads "Rendering 2 of 3" in one theme and not the other.
+      await expect.poll(async () => {
+        const mix = (await (await request.get('/api/mix')).json()).mix as { seam?: { state?: { status?: string } } }[];
+        return mix.slice(1).every((item) => item.seam?.state?.status === 'ready');
+      }, { timeout: 120_000, message: 'the reset mix has every transition rendered' }).toBe(true);
       await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
       await page.goto('/mixes');
       await page.evaluate((chosen) => {
@@ -77,6 +83,10 @@ for (const viewport of VIEWPORTS) {
         const main = page.locator('main#main:not([aria-busy="true"])');
         await expect(main.locator('h1, h2').first()).toBeVisible();
         await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+        // A page's own data placeholders are not its controls: Word connections waits out a 200ms
+        // search pause before it asks, so a reading taken while its placeholder shows records the
+        // loading state in one theme and the loaded page in the other. Read once the data is in.
+        await expect(main.locator('.skeleton')).toHaveCount(0);
         // Semantic controls must agree across light/dark. Poll for asynchronous
         // route data to settle, while preserving the strict equality assertion.
         await page.waitForTimeout(180);

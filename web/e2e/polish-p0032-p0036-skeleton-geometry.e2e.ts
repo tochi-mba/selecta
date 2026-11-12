@@ -13,13 +13,20 @@ const ready = { status: 'ready', key: 'p0036', label: 'Word blend', style: 'word
 const link = (a: number, b: number) => ({ phrase: 'all night', kind: 'end-start', a, b, artist_a: 'Ada Reyes', title_a: `Song ${a}`, artist_b: 'Bo Lindqvist', title_b: `Song ${b}`, line_a: 'we danced all night', line_b: 'all night we sang', moves: ['word_blend', 'word_cut'], move: 'word_blend', state: { ...ready, key: `p0036-${a}-${b}` }, worked: true });
 const pair = { id: 7, song_a: 3, song_b: 4, title_a: 'Paper Moon', title_b: 'Glass Harbour', artist_a: 'Ada Reyes', artist_b: 'Bo Lindqvist', status: 'new', payload: { a_at: 10, b_at: 20, bars: 4, transpose: 0 } };
 
-/** Holds matching requests until released; a fixture answers them on release when given. */
+/** Holds matching requests until released; a fixture answers them on release when given. Release waits
+ * for the request to have been made: a page can show its placeholder before it asks (Word connections
+ * waits out its search pause first), and a release that came first would let the real answer through. */
 async function hold(page: Page, pattern: string | RegExp, json?: unknown) {
   const held: Route[] = [];
   let open = false;
+  let caught = 0;
   const answer = (route: Route) => (json === undefined ? route.fallback() : route.fulfill({ json }));
-  await page.route(pattern, (route) => (open ? answer(route) : void held.push(route)));
-  return async () => { open = true; for (const route of held.splice(0)) await answer(route); };
+  await page.route(pattern, (route) => { caught += 1; return open ? answer(route) : void held.push(route); });
+  return async () => {
+    await expect.poll(() => caught, { message: `a request for ${pattern} was made` }).toBeGreaterThan(0);
+    open = true;
+    for (const route of held.splice(0)) await answer(route);
+  };
 }
 
 const boxes = (page: Page, selector: string) => page.evaluate((sel) => [...document.querySelectorAll<HTMLElement>(sel)]

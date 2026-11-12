@@ -14,7 +14,9 @@ const ROUTES = ['/mixes', '/library', '/mixes/mine', '/workshop', '/discover', '
 async function open(page: Page, route: string, width: number, height = 900) {
   await page.setViewportSize({ width, height });
   await page.goto(route);
-  await expect(page.locator('main#main')).toBeVisible();
+  // the editor, My Mixes, Discover and Workspace load as their own chunks (routeChunks.ts); until one
+  // arrives, App's Suspense fallback is a busy main#main with only a title, so wait for the page itself
+  await expect(page.locator('main#main:not([aria-busy="true"])')).toBeVisible();
   // the route reveal and any late data both settle before a pixel is read
   await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
 }
