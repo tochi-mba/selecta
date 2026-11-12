@@ -209,6 +209,8 @@ for (const how of ['the computer asks', 'Still is chosen in SelectaDJ'] as const
       await page.addInitScript(() => localStorage.setItem('selecta.prefs', JSON.stringify({ motion: 'still' })));
     }
     await stage(page, 1280, 720);
+    // Wait for the first measured audio frame; the held bitmap must then remain unchanged.
+    await expect(page.locator('.stage canvas.music-visualizer')).toHaveAttribute('data-frozen', 'true', { timeout: 15_000 });
     const still = await page.evaluate(async () => {
       const canvas = document.querySelector('.stage canvas.music-visualizer') as HTMLCanvasElement | null;
       const first = canvas?.toDataURL() ?? '';
