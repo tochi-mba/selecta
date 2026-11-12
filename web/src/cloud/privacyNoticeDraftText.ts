@@ -40,7 +40,7 @@ export const PRIVACY_NOTICE_DRAFT: NoticeSection[] = [
     heading: 'Who processes it for us',
     paragraphs: [
       'Cloudflare (storage and delivery), Render (servers and database), Modal (audio processing), Anthropic (Lucy), Stripe (payments), WorkOS (sign-in), Sentry and Grafana (errors and monitoring) and our email provider [to be confirmed], each under a data processing agreement.',
-      'Lyrics lookup: when lyrics are on, the artist, title and length of a song are sent to LRCLIB, a public lyrics database, to find its synced lyrics. Nothing else about you or your files is sent [to be confirmed once LRCLIB's operators reply].',
+      'Lyrics lookup: when lyrics are on, the artist, title and length of a song are sent to LRCLIB, a public lyrics database, to find its synced lyrics. Nothing else about you or your files is sent [to be confirmed once LRCLIB’s operators reply].',
       'Some are in the United States. Transfers rely on the UK Extension to the EU-US Data Privacy Framework where the provider is certified, otherwise the UK International Data Transfer Agreement or Addendum. We choose EU regions where offered.',
     ],
   },
