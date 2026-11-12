@@ -49,7 +49,7 @@ const PAINTERS: Record<SpectrumShape, Painter> = {
 };
 
 export type { Brush, VisualState };
-export { createVisualState } from './visualizer/kit';
+export { clearVisualState, createVisualState } from './visualizer/kit';
 
 /** Paint one frame of `mode` from measured features. Returns false (drawing nothing, and forgetting
  * the style's memory) when there is no signal, so silence is a still, empty canvas. */

@@ -22,7 +22,9 @@ test('measured energy bars use real varied heights rather than collapsing to ide
   await expect(selected).toHaveAttribute('aria-current', 'true');
 });
 
-test('all additional horizontal visualizers are selectable without restarting real audio', async ({ page }) => {
+test('all fourteen additional horizontal visualizers are selectable without restarting real audio', async ({ page }) => {
+  // fifteen styles in all (UF-0375-01): none may disappear without this journey changing too
+  expect(SPECTRUM_MODES.filter((mode) => mode.id !== 'bars')).toHaveLength(14);
   await spyOnAudio(page);
   await page.goto('/listen');
   await page.getByRole('button', { name: /^(Play|Resume from)/ }).click();

@@ -12,7 +12,9 @@ async function still(page: Page, theme: 'light' | 'dark') {
   await page.addInitScript((chosen) => localStorage.setItem('selecta.prefs', JSON.stringify({ theme: chosen, motion: 'still' })), theme);
 }
 
-test.afterAll(() => writeFileSync(OUT, JSON.stringify(out, null, 2)));
+// the notes and the screenshots they name are candidates until a person signs them (SF-0239-06)
+test.afterAll(() => writeFileSync(OUT, JSON.stringify(
+  { status: 'candidate-not-independently-verified', ...out }, null, 2)));
 
 test('EX-0118-01 cards in both themes at phone and desktop widths', async ({ browser }) => {
   for (const theme of ['light', 'dark'] as const) {

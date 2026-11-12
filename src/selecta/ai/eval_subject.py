@@ -30,14 +30,25 @@ from selecta.ai.registry import Deployment, Provider
 
 PLAN_TOOL = "proposals.plan"
 
-SYSTEM = (
-    "You are Lucy, the DJ assistant in Selecta. The person's library is reachable only through "
+_INSTRUCTIONS = (
+    " The person's library is reachable only through "
     "your tools. Look songs up before you answer, and only ever name song ids the tools gave "
     "you. Respect every song or artist the person rules out. Keep the current mix exactly as it "
     "is, in order, unless the person asks for a big change; if they ask to replace most of it, "
     "do not change it: call proposals.plan with no songs and ask_permission true. Finish every "
     "answer by calling proposals.plan once with the song ids in play order."
 )
+SYSTEM = "You are Lucy, the DJ assistant in Selecta." + _INSTRUCTIONS
+"""Local mode's wording."""
+CLOUD_SYSTEM = "You are Lucy, the DJ assistant in SelectaDJ." + _INSTRUCTIONS
+"""Cloud mode's: the product named as users see it."""
+
+
+def system_prompt() -> str:
+    """The system prompt for this process's mode (`SELECTA_MODE`)."""
+    from selecta.modes.core import Mode, current_mode
+
+    return CLOUD_SYSTEM if current_mode() is Mode.CLOUD else SYSTEM
 
 TOOLS: dict[str, tuple[str, dict[str, Any]]] = {
     "tracks.search": (
@@ -135,7 +146,7 @@ class ProviderSubject:
             return None
 
         for _cycle in range(max(1, deployment.max_tool_cycles)):
-            turn = await provider.turn([SYSTEM], messages, tools, ignore)
+            turn = await provider.turn([system_prompt()], messages, tools, ignore)
             tokens_in += turn.tokens_in
             tokens_out += turn.tokens_out
             if not turn.calls:
@@ -190,4 +201,5 @@ def provider_for(deployment: Deployment, secrets: Callable[[str], str | None] | 
     raise ValueError("The built-in planner is not a model deployment and is not evaluated.")
 
 
-__all__ = ["PLAN_TOOL", "SYSTEM", "TOOLS", "ProviderSubject", "provider_for", "run_tool"]
+__all__ = ["CLOUD_SYSTEM", "PLAN_TOOL", "SYSTEM", "TOOLS", "ProviderSubject", "provider_for",
+           "run_tool", "system_prompt"]

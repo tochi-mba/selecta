@@ -158,9 +158,9 @@ false, by the card's rule) on every outcome, plus `"consent": true` on the recor
 
 Consent line, read before starting: This session tests SelectaDJ, not you. It uses made-up songs only. You can stop at any time. We note the time, whether you paused and how sure you felt, under a code such as P01; no name, voice or screen recording is kept.
 
-The pilot line on each card is an unexecuted preparation walkthrough for the given
-reference SHA, not a completed browser pilot or human study. A facilitator must
-still rehearse the route and run the uncoached study to collect real evidence.
+The pilot line on each card is Claude's own walkthrough in a real browser on the made-up
+library, done to check the task can be completed and the prompt is clear. It is
+preparation only: no participant took part and it is not a study result.
 
 ### LX-0340-01 - Collection-first journeys
 
@@ -170,7 +170,7 @@ still rehearse the route and run the uncoached study to collect real evidence.
 - Success: Browses to a song and finds the exact recording without asking what a word means.
 - Hesitation: a pause over 10 s, a question to the facilitator, or asking what any Library word means.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Open Library, browse a collection song, then search Same Name and select Iris Vale by artist.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; searching Same Name leaves two rows told apart by artist (Hal Greene, Iris Vale), so the prompt has one right answer.
 
 ### LX-0340-04 - Browse versus manage
 
@@ -180,18 +180,18 @@ still rehearse the route and run the uncoached study to collect real evidence.
 - Success: Narrows with a visible control first, then finds Never play in the row's menu.
 - Hesitation: a pause over 10 s, a question to the facilitator, or opening two or more menus before finding the record action.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Filter Needs attention, locate a matching row's More menu and find Never play without activating it.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; Needs attention leaves Broken File, and its More actions menu holds Prioritize and Never play.
 
 ### LX-0341-03 - Readiness meaning
 
 - Route: /library
 - Who: novice and expert (participant codes only)
-- Set up first: Use the stress fixture (SELECTA_E2E_STRESS=1) so the counts differ.
+- Set up first: Prepare a state where Ready and analysed differ; neither made-up fixture does.
 - Prompt (read as written, no coaching): Looking only at the top of this page, how many songs could go into a mix right now?
 - Success: Answers with the Ready count and does not confuse it with analysed songs or transitions.
 - Hesitation: a pause over 10 s, a question to the facilitator, or reading a different count aloud first.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Enable stress fixture, compare Ready with analysed and transition totals, and identify Ready as mix-eligible.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): prompt is clear, but no made-up fixture separates the counts (12 ready, 12 analysed, 13 songs; 18, 18 and 19 with SELECTA_E2E_STRESS=1), so a misleading-value state still has to be prepared before any session.
 
 ### LX-0342-06 - Zero-match recovery
 
@@ -202,7 +202,7 @@ still rehearse the route and run the uncoached study to collect real evidence.
 - Success: Clears only the search and the Needs attention filter stays on.
 - Hesitation: a pause over 10 s, a question to the facilitator, or clearing everything and setting the filter again.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): With Needs attention selected and zzqx giving no matches, clear only the query and preserve the filter.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; the empty result says Looking in: Needs attention, searching for zzqx, and Clear search brings Broken File back with the filter still on.
 
 ### LX-0343-01 - Frequent filters
 
@@ -212,7 +212,7 @@ still rehearse the route and run the uncoached study to collect real evidence.
 - Success: Uses the Ready chip, then the Set aside chip, and says what each one shows.
 - Hesitation: a pause over 10 s, a question to the facilitator, or hovering over three or more chips before choosing.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Choose the Ready chip and then Set aside; inspect the distinct resulting lists.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; Ready shows 12 songs and Set aside shows Episode 12 (Long and talky).
 
 ### LX-0343-07 - Empty and combined constraints
 
@@ -220,20 +220,20 @@ still rehearse the route and run the uncoached study to collect real evidence.
 - Who: novice and expert (participant codes only)
 - Set up first: Turn on Ready and search for Episode before handing over.
 - Prompt (read as written, no coaching): Nothing shows. Say why, then bring back the song you were looking for.
-- Success: Names both the search and the filter, then undoes one step and finds Episode 12.
+- Success: Names both the search and the filter, then drops only the filter and finds Episode 12.
 - Hesitation: a pause over 10 s, a question to the facilitator, or clearing everything without first saying why the list is empty.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): With Ready and Episode selected, inspect both constraints, undo one, and locate Episode 12.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; the empty result says Looking in: Ready, searching for Episode. Clear search alone does not bring Episode 12 back (it is set aside, not ready); Show all songs drops only the filter, so the success line now says so.
 
 ### LX-0344-04 - Row action choice
 
 - Route: /library
 - Who: novice and expert (participant codes only)
 - Prompt (read as written, no coaching): Add Last Call to the mix that is playing, then make it analyse sooner.
-- Success: Finds both actions on the Last Call row, the second in its More menu.
+- Success: Finds Add to current mix and Prioritize in the Last Call row's More menu.
 - Hesitation: a pause over 10 s, a question to the facilitator, or opening a different row's menu first.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Find Last Call, identify Add to current mix, then open More to find analysis priority.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable with nothing playing; Last Call's visible action is Start a mix and its More menu holds Add to current mix, Prioritize and Never play, so the success line now says both actions are in More.
 
 ### LX-0345-01 - Cards versus list
 
@@ -243,7 +243,7 @@ still rehearse the route and run the uncoached study to collect real evidence.
 - Success: Names a reason tied to what the cards show (motif, title, artist, readiness).
 - Hesitation: a pause over 10 s, a question to the facilitator, or asking what the two views are for.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Compare List and Card view for five seconds each, identifying motifs, song titles, artists and readiness.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; Card view shows title, artist, tempo, key, length and readiness per song and List view switches back. Motif artwork was not judged.
 
 ### LX-0346-02 - Action priority
 
@@ -253,7 +253,7 @@ still rehearse the route and run the uncoached study to collect real evidence.
 - Success: Points to the row's one visible action and reaches the rest through More.
 - Hesitation: a pause over 10 s, a question to the facilitator, or pointing at two different controls before deciding.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Inspect a row's primary action and its additional More actions without changing the song.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; every row shows one visible action (Start a mix, or Try analysing again on Broken File) and a More actions menu.
 
 ### LX-0348-02 - Facts before controls
 
@@ -263,27 +263,27 @@ still rehearse the route and run the uncoached study to collect real evidence.
 - Success: Reads tempo, key and length from the facts without opening an edit field.
 - Hesitation: a pause over 10 s, a question to the facilitator, or opening a correction field to read a value.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Open song 11 and read tempo, key and duration without entering any editing field.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; song 11's sheet lists Length 1:27, Tempo in use 124 BPM and Key in use 8A above the Correct it form.
 
 ### LX-0348-06 - Advanced facts
 
 - Route: /library?song=11
 - Who: expert (participant codes only)
-- Prompt (read as written, no coaching): Find where this song's file lives and when it was last analysed.
-- Success: Opens the folded advanced section and reads the file and analysis facts.
+- Prompt (read as written, no coaching): Find how sure SelectaDJ is about this song's beat grid, and its measured energy.
+- Success: Opens the folded Advanced section and reads the beat grid confidence and energy.
 - Hesitation: a pause over 10 s, a question to the facilitator, or scrolling past the advanced section twice.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Expand advanced details for song 11 and locate its file path and last analysis time.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): the first prompt (file location, last analysed) was not completable: Advanced holds beat grid confidence, measured energy, genre tag, readiness and song number. Prompt rewritten to what Advanced shows; note Advanced prints the raw readiness code mix_ready.
 
 ### LX-0349-01 - Correction form
 
 - Route: /library?song=11
 - Who: novice and expert (participant codes only)
 - Prompt (read as written, no coaching): The tempo looks wrong. Before saving, tell me what a correction will change and how you would undo it.
-- Success: States the allowed format, the active value and what Reset does before pressing Save.
+- Success: States the allowed range, the measured value and that it can be put back, before Save.
 - Hesitation: a pause over 10 s, a question to the facilitator, or pressing Save before describing the effect.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Inspect song 11's tempo correction form for allowed values, active value and Reset without saving.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; the form shows Tempo (measured 124), Between 40 and 240 BPM and says the measured value is kept so it can be put back; an empty Save correction is refused. There is no Reset button, so the success line now names what is shown.
 
 ### LX-0349-04 - Priority meaning
 
@@ -293,18 +293,18 @@ still rehearse the route and run the uncoached study to collect real evidence.
 - Success: Says it moves the song up for analysis and keeps it cached, not that it plays sooner.
 - Hesitation: a pause over 10 s, a question to the facilitator, or saying it changes play order and then correcting themself.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Locate Prioritize on Last Call and distinguish its analysis-queue effect from playback order.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; Prioritize is in Last Call's More menu and the song sheet says these actions never move or delete the file. Whether the word conveys analysis order is the study question.
 
 ### LX-0352-03 - Empty versus no match
 
 - Route: /library
 - Who: novice and expert (participant codes only)
-- Set up first: Show Needs attention plus search zzqx, then Set aside with no search.
+- Set up first: Show Needs attention plus search zzqx, then a filter that is empty, no search.
 - Prompt (read as written, no coaching): For each of these two screens, say what is wrong and what you would do next.
 - Success: Tells an empty filter from a search with no match and picks each screen's own action.
 - Hesitation: a pause over 10 s, a question to the facilitator, or giving the same next step for both screens.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Prepare a filtered zero-match screen and an empty Set aside screen, then identify distinct recovery actions.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): the zero-match screen works (Nothing matches zzqx, with Clear search and Show all songs), but Set aside is not empty in this fixture (Episode 12), so the set-up now asks for a filter that is empty.
 
 ### LX-0353-01 - Two creation paths
 
@@ -314,7 +314,7 @@ still rehearse the route and run the uncoached study to collect real evidence.
 - Success: Says Quick Play starts music now and Lucy plans first, before pressing either.
 - Hesitation: a pause over 10 s, a question to the facilitator, or pressing a button to find out.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): On Mixes, identify Quick Play as immediate playback and Create with Lucy as planning first.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; Make a Mix shows Listen now, shape later (Quick Play) and Create with Lucy, which says Quick Play does not use Lucy.
 
 ### LX-0353-03 - Lucy entry in 5 seconds
 
@@ -324,17 +324,17 @@ still rehearse the route and run the uncoached study to collect real evidence.
 - Success: Points to Create with Lucy within 5 seconds.
 - Hesitation: a pause over 10 s, a question to the facilitator, or naming another control first.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): From Mixes, locate Create with Lucy before starting the five-second timer.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; Create with Lucy and Plan a mix with Lucy sit above Choose another feeling at 1280 by 900.
 
 ### LX-0354-01 - Mood cards
 
 - Route: /mixes
 - Who: novice and expert (participant codes only)
 - Prompt (read as written, no coaching): Pick one feeling card and tell me what it is, what it is based on and what its button does.
-- Success: Reads the name, the feeling and a real fact, and names the one action.
+- Success: Reads the name, the feeling and a real fact, and says what Play does.
 - Hesitation: a pause over 10 s, a question to the facilitator, or reading a different card's text as this card's.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Inspect one feeling card and identify its title, mood, factual detail and button outcome.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; the first card reads House party, 120-123 BPM, its feeling line, 8 matching songs, then Play, Shape first and Save draft, so the success line now asks what Play does.
 
 ### LX-0354-03 - Three action paths
 
@@ -344,7 +344,7 @@ still rehearse the route and run the uncoached study to collect real evidence.
 - Success: Three different correct predictions; none says Save draft starts music.
 - Hesitation: a pause over 10 s, a question to the facilitator, or giving two of them the same outcome.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Identify Play, Shape first and Save draft as different actions on one feeling without pressing them.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; Play, Shape first and Save draft are three separate buttons on the House party card. Nothing was pressed.
 
 ### LX-0357-01 - First message
 
@@ -355,7 +355,7 @@ still rehearse the route and run the uncoached study to collect real evidence.
 - Success: Types into the Message to Lucy box and sends a musical request unaided.
 - Hesitation: a pause over 10 s, a question to the facilitator, or looking for a form or settings before typing.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Use the built-in Lucy planner, open a new conversation, locate Message to Lucy and Send.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; a new conversation with the built-in planner shows the Message to Lucy box, Send and three example requests.
 
 ### LX-0359-01 - Lifecycle words
 
@@ -366,18 +366,18 @@ still rehearse the route and run the uncoached study to collect real evidence.
 - Success: Names the stage shown and points to the words that say so.
 - Hesitation: a pause over 10 s, a question to the facilitator, or asking what a stage word means.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): With a six-song proposal, locate words distinguishing an idea from a saved draft and a playable mix.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; after make me 6 songs the reply says it is proposed, not built, and Your mix shows PROPOSED - NOT BUILT.
 
 ### LX-0361-04 - Critique outcomes
 
 - Route: /mixes/lucy/<id>
 - Who: novice and expert (participant codes only)
-- Set up first: Proposal, then the critique 'keep Morning Light and make it calmer'.
+- Set up first: Proposal, then 'keep <a song in it> and make it calmer'; see the pilot line.
 - Prompt (read as written, no coaching): You asked Lucy to keep a song and make the mix calmer. Which of those did it do?
 - Success: Reads each instruction's met, not met or unknown wording correctly.
 - Hesitation: a pause over 10 s, a question to the facilitator, or scrolling the whole chat to work it out.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): Prepare a Morning Light and calmer critique and locate each instruction's met, not met or unknown label.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): NOT completable as written: Morning Light is not in the proposal (Lucy says it cannot find it), and keep Last Call and make it calmer locked a different song (Same Name; Paper Moon with the stress fixture), dropped Last Call and showed no met, not met or unknown wording, only PREFER Keep it calm. Reported for a product fix; rerun the pilot after it.
 
 ### LX-0362-01 - Save draft versus Save and play
 
@@ -388,7 +388,7 @@ still rehearse the route and run the uncoached study to collect real evidence.
 - Success: Says only Save and play replaces what is playing; draft leaves the player alone.
 - Hesitation: a pause over 10 s, a question to the facilitator, or pressing one to find out.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): On Your mix, distinguish Save as draft from Save and play and which changes current playback.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; Your mix shows Save as draft and Save and play and says Save and play also replaces what is playing, after you confirm.
 
 ### LX-0363-02 - Archive versus delete
 
@@ -399,4 +399,4 @@ still rehearse the route and run the uncoached study to collect real evidence.
 - Success: Chooses Archive and says Delete removes the chat but keeps drafts and music.
 - Hesitation: a pause over 10 s, a question to the facilitator, or opening Delete's confirmation to read it.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): 73298def preparation walkthrough (instructions, not executed): In Conversations, identify Archive as reversible and distinguish Delete from removing saved music.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; the conversation's More menu holds Rename, Archive and Delete, and the Delete dialog says saved drafts are kept and music is never touched. Delete was not confirmed.

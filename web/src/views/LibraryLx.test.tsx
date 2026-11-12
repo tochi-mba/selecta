@@ -385,6 +385,21 @@ describe('LX-0340-07, LX-0352-03 first run, nothing ready and no match each say 
     await userEvent.click(screen.getByRole('button', { name: 'Clear search' }));
     // clearing the search keeps the filter that was chosen
     await waitFor(() => expect(window.location.search).toBe('?show=attention'));
+    // an empty filter with no search says what the view holds, not to try another spelling
+    expect(await screen.findByRole('heading', { name: 'No songs in this view' })).toBeInTheDocument();
+    expect(screen.getByText('No song is in Needs attention right now. Show all songs to see the rest of your library.')).toBeInTheDocument();
+    expect(screen.queryByText(/Try a different title/)).toBeNull();
+  });
+
+  it('a search with no match says set-aside songs are searched only under Set aside', async () => {
+    fakeBackend({ 'GET /library': page() });
+    show({ state: status({ counts: { total: 13, music: 12, set_aside: 1, analysed: 12, ready: 12, lyrics: 0 } }) });
+    act(() => {
+      window.history.pushState({}, '', '/library?q=Episode');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(await screen.findByRole('heading', { name: 'Nothing matches “Episode”.' })).toBeInTheDocument();
+    expect(screen.getByText('Set-aside songs are only searched under Set aside.')).toBeInTheDocument();
   });
 });
 

@@ -138,7 +138,7 @@ Unknown event types are stored and ignored. Events can arrive late, twice or out
 
 1. In WorkOS, create staging and production environments; set the redirect URIs to exactly the app origins.
 2. Set the custom auth domain (`auth.selecta.app`) for production, with DNS from WorkOS.
-3. Enable email and password, Magic Auth and Google. Production uses Selecta's own Google OAuth client, so Google's consent screen says "Selecta"; staging may use WorkOS's demo credentials.
+3. Enable email and password, Magic Auth and Google. Production uses our own Google OAuth client, so Google's consent screen says "SelectaDJ"; staging may use WorkOS's demo credentials.
 4. Keep email verification required (the default) and turn on bot protection.
 5. Create the "Selecta Staff" organization with MFA required.
 6. Add the webhook endpoint for the events in §7A.4, and store its secret in the hosting secret store.

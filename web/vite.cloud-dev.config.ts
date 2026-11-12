@@ -8,7 +8,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { roomPages } from './rooms.vite.ts';
 
-const localAuth = fileURLToPath(new URL('./src/devcloud/authkit.tsx', import.meta.url));
+const localAuth = fileURLToPath(new URL('./src/cloud/devAuthKit.tsx', import.meta.url));
 const api = process.env.SELECTA_DEV_API_URL ?? 'http://127.0.0.1:8733';
 const identity = process.env.SELECTA_DEV_IDENTITY_URL ?? 'http://127.0.0.1:8742';
 

@@ -212,10 +212,11 @@ STUDIES: tuple[Study, ...] = (
 # WP3 (triage 2026-11-12): one study card for each LX task whose last step is a short study with
 # people. Each card names the route on the made-up library, the state to set up, one neutral
 # uncoached prompt, what counts as success and as hesitation. Every outcome also records seconds
-# and a 1-5 confidence rating. Pilot notes are unexecuted preparation instructions
-# for the snapshot SHA, not browser runs, participant records, or study results.
+# and a 1-5 confidence rating. The pilot line is Claude's own walkthrough of the card in a real
+# browser at PILOT_SHA: preparation showing whether the task can be completed and the prompt
+# is clear, never a participant, a finding or a study result.
 HESITATE = "a pause over 10 s, a question to the facilitator, or "
-PILOT_SHA = "73298def"
+PILOT_SHA = "eb9e6eab"
 CONSENT = (
     "This session tests SelectaDJ, not you. It uses made-up songs only. You can stop at any time."
     " We note the time, whether you paused and how sure you felt, under a code such as P01;"
@@ -240,118 +241,133 @@ def _c(task, title, route, prompt, success, hesitation, setup="", groups=None) -
 
 PILOTS: dict[str, str] = {
     "LX-0340-01": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "Open Library, browse a collection song, then search Same Name and select "
-        "Iris Vale by artist."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "completable; searching Same Name leaves two rows told apart by artist (Hal "
+        "Greene, Iris Vale), so the prompt has one right answer."
     ),
     "LX-0340-04": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "Filter Needs attention, locate a matching row's More menu and find Never "
-        "play without activating it."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "completable; Needs attention leaves Broken File, and its More actions menu "
+        "holds Prioritize and Never play."
     ),
     "LX-0341-03": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "Enable stress fixture, compare Ready with analysed and transition totals, "
-        "and identify Ready as mix-eligible."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "prompt is clear, but no made-up fixture separates the counts (12 ready, 12 "
+        "analysed, 13 songs; 18, 18 and 19 with SELECTA_E2E_STRESS=1), so a "
+        "misleading-value state still has to be prepared before any session."
     ),
     "LX-0342-06": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "With Needs attention selected and zzqx giving no matches, clear only the "
-        "query and preserve the filter."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "completable; the empty result says Looking in: Needs attention, searching for "
+        "zzqx, and Clear search brings Broken File back with the filter still on."
     ),
     "LX-0343-01": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "Choose the Ready chip and then Set aside; inspect the distinct resulting "
-        "lists."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "completable; Ready shows 12 songs and Set aside shows Episode 12 (Long and "
+        "talky)."
     ),
     "LX-0343-07": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "With Ready and Episode selected, inspect both constraints, undo one, and "
-        "locate Episode 12."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "completable; the empty result says Looking in: Ready, searching for Episode. "
+        "Clear search alone does not bring Episode 12 back (it is set aside, not "
+        "ready); Show all songs drops only the filter, so the success line now says so."
     ),
     "LX-0344-04": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "Find Last Call, identify Add to current mix, then open More to find "
-        "analysis priority."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "completable with nothing playing; Last Call's visible action is Start a mix "
+        "and its More menu holds Add to current mix, Prioritize and Never play, so the "
+        "success line now says both actions are in More."
     ),
     "LX-0345-01": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "Compare List and Card view for five seconds each, identifying motifs, song "
-        "titles, artists and readiness."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "completable; Card view shows title, artist, tempo, key, length and readiness "
+        "per song and List view switches back. Motif artwork was not judged."
     ),
     "LX-0346-02": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "Inspect a row's primary action and its additional More actions without "
-        "changing the song."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "completable; every row shows one visible action (Start a mix, or Try analysing "
+        "again on Broken File) and a More actions menu."
     ),
     "LX-0348-02": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "Open song 11 and read tempo, key and duration without entering any editing "
-        "field."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "completable; song 11's sheet lists Length 1:27, Tempo in use 124 BPM and Key "
+        "in use 8A above the Correct it form."
     ),
     "LX-0348-06": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "Expand advanced details for song 11 and locate its file path and last "
-        "analysis time."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "the first prompt (file location, last analysed) was not completable: Advanced "
+        "holds beat grid confidence, measured energy, genre tag, readiness and song "
+        "number. Prompt rewritten to what Advanced shows; note Advanced prints the raw "
+        "readiness code mix_ready."
     ),
     "LX-0349-01": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "Inspect song 11's tempo correction form for allowed values, active value "
-        "and Reset without saving."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "completable; the form shows Tempo (measured 124), Between 40 and 240 BPM and "
+        "says the measured value is kept so it can be put back; an empty Save "
+        "correction is refused. There is no Reset button, so the success line now names "
+        "what is shown."
     ),
     "LX-0349-04": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "Locate Prioritize on Last Call and distinguish its analysis-queue effect "
-        "from playback order."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "completable; Prioritize is in Last Call's More menu and the song sheet says "
+        "these actions never move or delete the file. Whether the word conveys analysis "
+        "order is the study question."
     ),
     "LX-0352-03": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "Prepare a filtered zero-match screen and an empty Set aside screen, then "
-        "identify distinct recovery actions."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "the zero-match screen works (Nothing matches zzqx, with Clear search and Show "
+        "all songs), but Set aside is not empty in this fixture (Episode 12), so the "
+        "set-up now asks for a filter that is empty."
     ),
     "LX-0353-01": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "On Mixes, identify Quick Play as immediate playback and Create with Lucy "
-        "as planning first."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "completable; Make a Mix shows Listen now, shape later (Quick Play) and Create "
+        "with Lucy, which says Quick Play does not use Lucy."
     ),
     "LX-0353-03": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "From Mixes, locate Create with Lucy before starting the five-second timer."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "completable; Create with Lucy and Plan a mix with Lucy sit above Choose "
+        "another feeling at 1280 by 900."
     ),
     "LX-0354-01": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "Inspect one feeling card and identify its title, mood, factual detail and "
-        "button outcome."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "completable; the first card reads House party, 120-123 BPM, its feeling line, "
+        "8 matching songs, then Play, Shape first and Save draft, so the success line "
+        "now asks what Play does."
     ),
     "LX-0354-03": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "Identify Play, Shape first and Save draft as different actions on one "
-        "feeling without pressing them."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "completable; Play, Shape first and Save draft are three separate buttons on "
+        "the House party card. Nothing was pressed."
     ),
     "LX-0357-01": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "Use the built-in Lucy planner, open a new conversation, locate Message to "
-        "Lucy and Send."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "completable; a new conversation with the built-in planner shows the Message to "
+        "Lucy box, Send and three example requests."
     ),
     "LX-0359-01": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "With a six-song proposal, locate words distinguishing an idea from a saved "
-        "draft and a playable mix."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "completable; after make me 6 songs the reply says it is proposed, not built, "
+        "and Your mix shows PROPOSED - NOT BUILT."
     ),
     "LX-0361-04": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "Prepare a Morning Light and calmer critique and locate each instruction's "
-        "met, not met or unknown label."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "NOT completable as written: Morning Light is not in the proposal (Lucy says it "
+        "cannot find it), and keep Last Call and make it calmer locked a different song "
+        "(Same Name; Paper Moon with the stress fixture), dropped Last Call and showed "
+        "no met, not met or unknown wording, only PREFER Keep it calm. Reported for a "
+        "product fix; rerun the pilot after it."
     ),
     "LX-0362-01": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "On Your mix, distinguish Save as draft from Save and play and which "
-        "changes current playback."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "completable; Your mix shows Save as draft and Save and play and says Save and "
+        "play also replaces what is playing, after you confirm."
     ),
     "LX-0363-02": (
-        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
-        "In Conversations, identify Archive as reversible and distinguish Delete "
-        "from removing saved music."
+        f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
+        "completable; the conversation's More menu holds Rename, Archive and Delete, "
+        "and the Delete dialog says saved drafts are kept and music is never touched. "
+        "Delete was not confirmed."
     ),
 }
 CARDS: tuple[Study, ...] = (
@@ -379,7 +395,7 @@ CARDS: tuple[Study, ...] = (
         "Looking only at the top of this page, how many songs could go into a mix right now?",
         "Answers with the Ready count and does not confuse it with analysed songs or transitions.",
         "reading a different count aloud first",
-        setup="Use the stress fixture (SELECTA_E2E_STRESS=1) so the counts differ.",
+        setup="Prepare a state where Ready and analysed differ; neither made-up fixture does.",
     ),
     _c(
         "LX-0342-06",
@@ -403,7 +419,7 @@ CARDS: tuple[Study, ...] = (
         "Empty and combined constraints",
         "/library",
         "Nothing shows. Say why, then bring back the song you were looking for.",
-        "Names both the search and the filter, then undoes one step and finds Episode 12.",
+        "Names both the search and the filter, then drops only the filter and finds Episode 12.",
         "clearing everything without first saying why the list is empty",
         setup="Turn on Ready and search for Episode before handing over.",
     ),
@@ -412,7 +428,7 @@ CARDS: tuple[Study, ...] = (
         "Row action choice",
         "/library",
         "Add Last Call to the mix that is playing, then make it analyse sooner.",
-        "Finds both actions on the Last Call row, the second in its More menu.",
+        "Finds Add to current mix and Prioritize in the Last Call row's More menu.",
         "opening a different row's menu first",
     ),
     _c(
@@ -444,8 +460,8 @@ CARDS: tuple[Study, ...] = (
         "LX-0348-06",
         "Advanced facts",
         "/library?song=11",
-        "Find where this song's file lives and when it was last analysed.",
-        "Opens the folded advanced section and reads the file and analysis facts.",
+        "Find how sure SelectaDJ is about this song's beat grid, and its measured energy.",
+        "Opens the folded Advanced section and reads the beat grid confidence and energy.",
         "scrolling past the advanced section twice",
         groups=("expert",),
     ),
@@ -455,7 +471,7 @@ CARDS: tuple[Study, ...] = (
         "/library?song=11",
         "The tempo looks wrong. Before saving, tell me what a correction will change"
         " and how you would undo it.",
-        "States the allowed format, the active value and what Reset does before pressing Save.",
+        "States the allowed range, the measured value and that it can be put back, before Save.",
         "pressing Save before describing the effect",
     ),
     _c(
@@ -473,7 +489,7 @@ CARDS: tuple[Study, ...] = (
         "For each of these two screens, say what is wrong and what you would do next.",
         "Tells an empty filter from a search with no match and picks each screen's own action.",
         "giving the same next step for both screens",
-        setup="Show Needs attention plus search zzqx, then Set aside with no search.",
+        setup="Show Needs attention plus search zzqx, then a filter that is empty, no search.",
     ),
     _c(
         "LX-0353-01",
@@ -497,7 +513,7 @@ CARDS: tuple[Study, ...] = (
         "/mixes",
         "Pick one feeling card and tell me what it is, what it is based on and what its"
         " button does.",
-        "Reads the name, the feeling and a real fact, and names the one action.",
+        "Reads the name, the feeling and a real fact, and says what Play does.",
         "reading a different card's text as this card's",
     ),
     _c(
@@ -534,7 +550,7 @@ CARDS: tuple[Study, ...] = (
         "You asked Lucy to keep a song and make the mix calmer. Which of those did it do?",
         "Reads each instruction's met, not met or unknown wording correctly.",
         "scrolling the whole chat to work it out",
-        setup="Proposal, then the critique 'keep Morning Light and make it calmer'.",
+        setup="Proposal, then 'keep <a song in it> and make it calmer'; see the pilot line.",
     ),
     _c(
         "LX-0362-01",
@@ -655,9 +671,9 @@ def render() -> str:
         "",
         f"Consent line, read before starting: {CONSENT}",
         "",
-        "The pilot line on each card is an unexecuted preparation walkthrough for the given",
-        "reference SHA, not a completed browser pilot or human study. A facilitator must",
-        "still rehearse the route and run the uncoached study to collect real evidence.",
+        "The pilot line on each card is Claude's own walkthrough in a real browser on the made-up",
+        "library, done to check the task can be completed and the prompt is clear. It is",
+        "preparation only: no participant took part and it is not a study result.",
         "",
     ]
     for card in CARDS:

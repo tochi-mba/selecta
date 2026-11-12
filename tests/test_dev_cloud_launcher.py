@@ -146,15 +146,15 @@ def test_cloud_site_config_is_dev_only_and_proxies_workos_and_objects():
     for name in ("'/api'", "'/dev-stripe'", "'/dev-objects'",
                  "'/user_management'", "'/dev/mail'"):
         assert name in config
-    assert "src/devcloud/authkit.tsx" in config
+    assert "src/cloud/devAuthKit.tsx" in config
     assert "@workos-inc/authkit-react" in config
     production = (root / "web/vite.config.ts").read_text(encoding="utf-8")
-    assert "devcloud/authkit.tsx" not in production
+    assert "cloud/devAuthKit.tsx" not in production
 
 
 def test_dev_cloud_auth_requires_matching_callback_state():
     root = Path(__file__).resolve().parents[1]
-    adapter = (root / "web/src/devcloud/authkit.tsx").read_text(encoding="utf-8")
+    adapter = (root / "web/src/cloud/devAuthKit.tsx").read_text(encoding="utf-8")
     assert "flow.state !== returnedState" in adapter
     assert "code_challenge_method: 'S256'" in adapter
     assert "grant_type: 'authorization_code'" in adapter

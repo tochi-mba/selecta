@@ -76,6 +76,7 @@ function Overview({ status }: { status: ViewProps['status'] }) {
   const { counts } = status;
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
   const { jobs, stale, unsupported } = useJobsStatus();
+  const unreachable = !jobs && stale && !unsupported;
   const [folders, setFolders] = useState<Folders | null>(null);
   useEffect(() => {
     let live = true;
@@ -90,6 +91,8 @@ function Overview({ status }: { status: ViewProps['status'] }) {
       {jobs
         ? <NeedsYou jobs={jobs} readySongs={counts.ready ?? 0} folders={folders} />
         : !stale && !unsupported && <section className="panel stack needs-you"><h2>What needs you</h2><Skeleton variant="rows" lines={2} label="Checking what needs you" retry={refreshJobs} /></section>}
+      {/* S4 (2026-11-12): when the status can't be reached, saying so comes first, before the counts */}
+      {unreachable && <JobsPanel status={status} />}
       <div className="metrics">
         <div><strong>{counts.ready ?? 0}</strong><span>ready for mixes</span></div>
         <div><strong>{counts.analysed}</strong><span>audio analysed</span></div>
@@ -97,7 +100,7 @@ function Overview({ status }: { status: ViewProps['status'] }) {
         {flagOn('lyrics.lookup') && <div><strong>{counts.lyrics}</strong><span>with timed lyrics</span></div>}
         <div><strong>{counts.set_aside}</strong><span>set aside as not music</span></div>
       </div>
-      <JobsPanel status={status} />
+      {!unreachable && <JobsPanel status={status} />}
       {flagOn('export') && <ExportJobs always />}
       <InterfaceChoices />
       <section className="panel stack about-app" aria-labelledby="about-app-title">

@@ -21,6 +21,7 @@ import time
 
 from selecta import db
 from selecta.config import Settings
+from selecta.work.model import JobState
 from selecta.workers import local_host
 from selecta.workers.local_analysis import DurableBackground
 from selecta.workers.local_exports import EXPORT_JOB, DurableExports
@@ -45,6 +46,20 @@ def lyrics_handler(settings: Settings):
             conn.close()
 
     return fetch
+
+
+LYRICS_KEYS = ("library", "library-next")
+UNDER_WAY = {JobState.LEASED, JobState.RUNNING, JobState.VALIDATING, JobState.CANCEL_REQUESTED}
+
+
+def ask_for_lyrics(work: local_host.LocalWork):
+    """Look up lyrics for every song without them. A lookup already under way may have read the
+    song list before the songs that prompted this ask arrived, so one more run is queued behind
+    it (at most one), as the old path ran `selecta lyrics` again after the last one finished."""
+    made = work.enqueue("lyrics.fetch", input_ref={}, idempotency_key=LYRICS_KEYS[0])
+    if made.created or JobState(made.job.state) not in UNDER_WAY:
+        return made
+    return work.enqueue("lyrics.fetch", input_ref={}, idempotency_key=LYRICS_KEYS[1])
 
 
 def build(settings: Settings):

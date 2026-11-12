@@ -38,3 +38,21 @@
 ---
 
 [← 18-test-plan.md](18-test-plan.md) · [Contents](README.md#chapters)
+
+### SelectaDJ for Business sources (2026-11-12)
+
+Used by [19-business-venues.md](19-business-venues.md). Most competitor prices are third-party or vendor marketing; re-check before deciding.
+
+- Soundtrack pricing (per zone, region-specific; third-party summaries): https://legismusic.com/music-streaming-services-for-business · https://www.guideflow.com/blog/business-music-software · https://cloudcovermusic.com/compare/pandora-cloudcover-vs-soundtrack · official page: https://www.soundtrack.io/pricing
+- Rockbot pricing (about $25 per zone annual, $29.95 monthly, request add-on, player hardware): https://us.fitgap.com/products/rockbot · https://www.capterra.ie/software/1033075/rockbot · https://www.softwaresuggest.com/rockbot/pricing · https://cloudcovermusic.com/compare/pandora-cloudcover-vs-rockbot
+- Pandora CloudCover plans ($16.95 to $29.95 per location, extra zone $12.95, licensing included): https://cloudcovermusic.com/pricing · https://cloudcovermusic.com/select-a-plan
+- Soundsuit pricing (from 29 and 39 per zone billed yearly): https://www.soundsuit.fm/pricing/ · https://www.soundsuit.fm/spotify-for-business-alternative
+- Mood Media and Vibenomics (quote only; subscription per location or area): https://us.moodmedia.com/shop/solutions/audio/music-for-business-fundamentals · https://www.g2.com/products/vibenomics/pricing · https://us.moodmedia.com/company/news/mood-media-expands-in-store-solutions-with-acquisition-of-vibenomics
+- TheMusicLicence cost and tariffs (2026 small-workplace tariff): https://pplprs.co.uk/how-is-the-cost-calculated/ · https://pplprs.co.uk/wp-content/uploads/PPLPP225-Small-workplaces-March-26.pdf · https://pplprs.co.uk/faqs · https://www.foximusic.com/blog/business-music-licence-cost-guide/
+- PPL dubbing licences and PRS ProDub (copying music for business music services): https://www.ppluk.com/licensing/music-services-and-dubbing/ · https://prsformusic.com/licences/live-performances/dj-mixes · https://prsformusic.com/-/media/files/prs-for-music/licensing/terms-and-conditions/mcps-pro-dub-terms · https://www.reedsmith.com/articles/tomorrows-hospitality-a-z/licensing-of-music-in-the-uk-hospitality-industry/
+- US performing rights licences for venues (ASCAP, BMI, SESAC, GMR): https://justia.com/intellectual-property/copyright/playing-music-in-stores-or-restaurants · https://www.soundsuit.fm/bmi-and-ascap-music-licensing-for-businesses/ · https://www.ibj.com/articles/restaurants-bars-say-theyre-getting-squeezed-by-rising-music-licensing-costs
+- EU public performance (national societies, GEMA and GVL, SACEM): https://gema.de/en/musicusers/music-use-in-public · https://gvl.de/en/rechtenutzerinnen/rights-users/frequently-asked-questions · https://moodmedia.com/en/blog/music-licensing-for-businesses-in-europe/
+- Stripe per-seat (quantity) pricing and prorations: https://docs.stripe.com/subscriptions/pricing-models/per-seat-pricing · https://stripe.com/docs/billing/subscriptions/prorations
+- Stripe invoice custom fields (PO numbers) and net terms (`send_invoice`, `days_until_due`): https://docs.stripe.com/invoicing/customize · https://docs.stripe.com/api/invoices/create
+- Stripe UK dispute fees (about £20, plus a fee to counter; to confirm): https://stripe.com/gb/pricing · https://www.wearefounders.uk/stripe-fees-uk-2026/
+- B2B VAT reverse charge and place of supply (UK supplier to EU business; VIES validation at time of sale): https://www.gov.uk/guidance/vat-place-of-supply-of-services-notice-741a · https://stripe.com/resources/more/hmrc-reverse-charges · https://stripe.com/resources/more/how-to-check-a-vat-number · https://stripe.dev/blog/tax-id-validation-at-checkout

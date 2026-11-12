@@ -290,10 +290,16 @@ def test_r2_settings_build_an_eu_client_unless_told_otherwise(monkeypatch):
     client.close()
 
 
-def test_bucket_names_come_from_settings_with_production_defaults(monkeypatch):
+def test_bucket_names_come_from_settings_with_opentofu_defaults(monkeypatch):
     for name in ("ORIGINALS", "DERIVED", "EXPORTS", "STAGING"):
         monkeypatch.delenv(f"SELECTA_R2_BUCKET_{name}", raising=False)
-    assert upload_api.buckets().staging == "sel-staging"
+    monkeypatch.delenv("SELECTA_ENV", raising=False)
+    assert upload_api.buckets().staging == "sel-staging"  # the development stack's names
+    monkeypatch.setenv("SELECTA_ENV", "staging")
+    assert upload_api.buckets().originals == "selecta-staging-originals"
+    monkeypatch.setenv("SELECTA_ENV", "Production")
+    assert upload_api.buckets().exports == "selecta-production-exports"
+    monkeypatch.delenv("SELECTA_ENV")
     monkeypatch.setenv("SELECTA_R2_BUCKET_STAGING", "test-staging")
     monkeypatch.setenv("SELECTA_R2_BUCKET_ORIGINALS", "test-originals")
     names = upload_api.buckets()

@@ -475,7 +475,7 @@ async def _run(app: Any, active: Active) -> None:
                     cycles += 1
                     _set_state(ctx, "streaming", cycles)
                     system = [
-                        context.INVARIANT,
+                        context.invariant(),
                         context.dynamic(conn, app, active.conversation, ctx.selection, lib_count),
                     ]
                     # Count text still in the buffer too: whether it was flushed yet is timing.

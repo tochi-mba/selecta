@@ -3,7 +3,7 @@
 A fake launcher stands in for Modal: the tick reads the queue, live workers and listeners from the
 database, decides with `autoscale.decide`, records alerts and scales. `ModalLauncher` is checked
 with a fake Modal lookup: it does nothing unless an app and token are configured, scales
-`worker-{pool}`, and moves a GPU pool to its CPU fallback when the provider refuses GPUs.
+the function `MODAL_FUNCTIONS` names, and moves a GPU pool to its CPU fallback when the provider refuses GPUs.
 Runs on SQLite and PostgreSQL.
 """
 
@@ -180,14 +180,22 @@ def test_modal_scales_the_pool_function_and_stops_the_other_launch():
     launcher.scale("cpu-heavy", 3, CPU, fallback=False)
     launcher.scale("gpu", 2, SLOW_CPU, fallback=True)
     assert fake.calls == [
-        ("selecta", "worker-cpu-heavy", 3),
-        ("selecta", "worker-gpu-fallback", 2),
-        ("selecta", "worker-gpu", 0),
+        ("selecta", "cpu_heavy", 3),
+        ("selecta", "gpu_stems_fallback", 2),
+        ("selecta", "gpu_stems", 0),
     ]
 
 
+def test_a_pool_without_a_modal_function_fails_loudly():
+    launcher = autoscale_leader.ModalLauncher("selecta", "id", "secret", lookup=FakeModal())
+    with pytest.raises(RuntimeError, match="No Modal function"):
+        launcher.scale("cpu-heavy", 1, CPU, fallback=True)
+    with pytest.raises(RuntimeError, match="No Modal function"):
+        launcher.scale("nowhere", 1, CPU, fallback=False)
+
+
 def test_a_refused_gpu_scale_up_reports_no_capacity_until_one_succeeds():
-    fake = FakeModal(refuse={"worker-gpu"})
+    fake = FakeModal(refuse={"gpu_stems"})
     launcher = autoscale_leader.ModalLauncher("selecta", "id", "secret", lookup=fake)
     assert launcher.has_capacity("gpu", T4)
     with pytest.raises(RuntimeError, match="refused"):

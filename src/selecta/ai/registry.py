@@ -18,6 +18,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import asdict, dataclass, field, replace
 from enum import StrEnum
 from typing import Any
+from urllib.parse import urlsplit
 
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection
@@ -341,6 +342,23 @@ def _from_row(row: Mapping[str, Any]) -> Deployment:
     )
 
 
+def _safe_base_url(url: str) -> bool:
+    """The provider key is sent to this URL, so it must be TLS unless it stays on this host
+    (SEC-AF-2), and it may not carry credentials that would end up in logs."""
+    try:
+        parts = urlsplit(url)
+        host = parts.hostname
+    except ValueError:
+        return False
+    loopback = host in {"localhost", "127.0.0.1", "::1"}
+    return (
+        bool(host)
+        and (parts.scheme == "https" or (parts.scheme == "http" and loopback))
+        and parts.username is None
+        and parts.password is None
+    )
+
+
 def validate_deployment(deployment: Deployment) -> None:
     if not deployment.id or len(deployment.id) > 36:
         raise RegistryError("A deployment needs an alias of 1 to 36 characters.")
@@ -354,6 +372,9 @@ def validate_deployment(deployment: Deployment) -> None:
         return
     if deployment.provider is Provider.OPENAI and not deployment.base_url:
         raise RegistryError("An OpenAI-compatible deployment needs a base URL.")
+    if deployment.base_url and not _safe_base_url(deployment.base_url):
+        raise RegistryError("A model base URL must be https (or http on loopback), with a host "
+                            "and no credentials in it.")
     if not deployment.secret_ref and deployment.provider is Provider.ANTHROPIC:
         raise RegistryError("A hosted deployment needs a secret reference, never a key.")
     if deployment.prices.input_usd_per_mtok <= 0 or deployment.prices.output_usd_per_mtok <= 0:

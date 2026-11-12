@@ -175,6 +175,38 @@ describe('PF-21 the sound device opens before the first Play', () => {
     expect(player.state.phase).toBe('playing');
   });
 
+  it('rv2-f: Play pressed while the autoplay context is still going to sleep still ends with sound', async () => {
+    let asleep!: () => void;
+    class SlowSleep extends FakeAudio {
+      pending: Promise<void> | null = null;
+      constructor() {
+        super();
+        this.state = 'running';
+      }
+      async suspend() {
+        // the device takes a moment to go to sleep; until then it still says it is running
+        this.pending = new Promise<void>((done) => { asleep = () => { this.state = 'suspended'; done(); }; });
+        await this.pending;
+      }
+      async resume() {
+        // like a real context, a resume asked for after a suspend is carried out after it
+        if (this.pending) await this.pending;
+        this.resumes += 1;
+        this.state = 'running';
+      }
+    }
+    vi.stubGlobal('AudioContext', SlowSleep);
+    player = new SetPlayer(() => songs(), () => {});
+    player.prepare();
+    runIdle();
+    const playing = player.togglePause();
+    asleep();
+    await playing;
+    await new Promise((done) => setTimeout(done, 0));
+    expect(player.state.phase).toBe('playing');
+    expect(FakeAudio.now.state).toBe('running');
+  });
+
   it('does nothing where Web Audio is missing', () => {
     vi.stubGlobal('AudioContext', undefined);
     player = new SetPlayer(() => songs(), () => {});

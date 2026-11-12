@@ -107,6 +107,7 @@ Only these modules may open outbound connections:
 | Cloud-only: `src/selecta/billing/webhooks.py`, `src/selecta/identity/tokens.py`, `src/selecta/identity/workos.py`, `src/selecta/identity/deletion_effects.py`, `src/selecta/storage/r2.py`, `src/selecta/workers/remote.py` | Cloud services | Cloud mode only (ADR-0391, ADR-0392) | Never in local mode |
 | Cloud image build only: `src/selecta/workers/model_lock.py` | The pinned model URLs in `services/worker/models.lock.json` | Nothing but the download request; each file is checked against its SHA-256 | Only when the Cloud worker image is built (ADR-0396); never at run time or in local mode |
 | Dev-only: `src/selecta/devstack/identity.py` | The locally configured Cloud API webhook endpoint | Signed identity events; no external identity provider is contacted | Only in the guarded local development identity service; never in production |
+| Dev-only: `src/selecta/devstack/launcher.py` | `127.0.0.1` only: the services `dev.cmd cloud` itself started | Health and readiness requests; nothing about the developer | Only while `dev.cmd cloud` starts and watches its own loopback services |
 
 Local files: original music is only read; analysis, stems, renders and exports go under the Selecta
 home (`SELECTA_HOME`, default `~/.selecta`). No module changes file permissions.
@@ -140,7 +141,7 @@ every capability is listed and every test named exists in its file.
 | All navigation/scene routes | `web/e2e/pages.e2e.ts` "Back and Forward go where they should" |
 | Player and manual Pause | `web/e2e/listen.e2e.ts` "Pause stops the clock, and Resume carries on from the same place" |
 | Listen and current song identity | `web/e2e/listen.e2e.ts` "moving around the app leaves the music alone, and the mini-player follows" |
-| Fifteen spectrum styles | `web/e2e/creative-visualizers.e2e.ts` "all thirteen additional horizontal visualizers are selectable without restarting real audio" |
+| Fifteen spectrum styles | `web/e2e/creative-visualizers.e2e.ts` "all fourteen additional horizontal visualizers are selectable without restarting real audio" |
 | Mix idea selection | `web/e2e/mp-0283-make-a-mix.e2e.ts` "MP-0283-07 saving, building and a failure keep each card its size, and what is playing keeps playing" |
 | Energy shaping | `web/e2e/mp-0283-make-a-mix.e2e.ts` "MP-0283-06 Shape groups energy, length and song count, with Done and Escape to leave" |
 | Track and seam editor | `web/e2e/flows.e2e.ts` "editing: move with the buttons, undo it, and remove a song" |

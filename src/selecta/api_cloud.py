@@ -289,7 +289,7 @@ def create_cloud_app(
         if owns_engine:
             engine.dispose()
 
-    app = FastAPI(title="Selecta Cloud API", docs_url="/api/docs", lifespan=lifespan)
+    app = FastAPI(title="SelectaDJ API", docs_url="/api/docs", lifespan=lifespan)
     app.state.runtime_mode = "cloud"
     app.state.database_engine = engine
     app.state.token_verifier = verifier

@@ -669,7 +669,11 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       {committedRows?.length === 0 && !failed && (
         <section className="empty-state">
           <h2>{query ? `Nothing matches “${query}”.` : counts.music === 0 && filter === 'all' ? 'Your library is empty' : filter === 'ready' ? 'No songs are ready for mixes yet' : 'No songs in this view'}</h2>
-          <p>{counts.music === 0 && !query && filter === 'all' ? 'Add a folder with local music to begin. The original audio stays in place while SelectaDJ scans and analyses it.' : filter === 'ready' && !query ? 'A song becomes ready for mixes once SelectaDJ has analysed it. Show all songs to see how far each one has got.' : 'Try a different title, artist, recording ID or spelling, or show all songs to check their progress. Approximate matches must be checked before selecting a recording.'}</p>
+          <p>{counts.music === 0 && !query && filter === 'all' ? 'Add a folder with local music to begin. The original audio stays in place while SelectaDJ scans and analyses it.' : filter === 'ready' && !query ? 'A song becomes ready for mixes once SelectaDJ has analysed it. Show all songs to see how far each one has got.' : !query && filter !== 'all' ? `No song is in ${FILTERS.find((option) => option.name === filter)?.label ?? filter} right now. Show all songs to see the rest of your library.` : 'Try a different title, artist, recording ID or spelling, or show all songs to check their progress. Approximate matches must be checked before selecting a recording.'}</p>
+          {/* WP3 pilot: set-aside songs never appear under Everything, so a search there can miss them */}
+          {query && filter !== 'set_aside' && counts.set_aside > 0 && (
+            <p className="hint">Set-aside songs are only searched under Set aside.</p>
+          )}
           {/* LX-0343-07: say which constraints are hiding songs, so clearing them is a known step */}
           {(query || filter !== 'all') && (
             <p className="hint library-active-constraints">

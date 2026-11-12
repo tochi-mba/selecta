@@ -276,8 +276,9 @@ def test_a_lyric_lookup_cut_off_by_a_crash_runs_again(tmp_path, monkeypatch, clo
     )
     host.start()
     try:
-        assert wait_for(lambda: calls == [1])
-        twice = host.enqueue("lyrics.fetch", idempotency_key="library")
+        assert wait_for(lambda: calls == [1]), "the job cut off by the crash ran again"
+        # asked again while that run may still be finishing: it runs once more, not zero times
+        twice = local_app.ask_for_lyrics(host)
         assert wait_for(lambda: host.store.job(twice.job.id).state == JobState.SUCCEEDED)
     finally:
         assert host.stop(timeout=WAIT)

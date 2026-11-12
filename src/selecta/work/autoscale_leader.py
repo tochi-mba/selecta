@@ -7,8 +7,9 @@ and tells the launcher the new size. The day's spend is estimated from the sizes
 (`SpendMeter`); it restarts at zero when leadership moves, so the provider's own spend limit stays
 the hard stop.
 
-`Launcher` is the interface. `ModalLauncher` scales one deployed Modal function per pool
-(`worker-{pool}`, and `worker-{pool}-fallback` for a pool's fallback launch) with
+`Launcher` is the interface. `ModalLauncher` scales one deployed Modal function per pool, named
+in `MODAL_FUNCTIONS` (the functions `infra/modal/selecta_workers.py` deploys, checked by
+`tests/test_cloud_infra.py`), plus a second function for a pool's fallback launch, with
 `Function.update_autoscaler`. It does nothing unless configured: without `SELECTA_MODAL_APP`,
 `SELECTA_MODAL_TOKEN_ID` and `SELECTA_MODAL_TOKEN_SECRET` the task isn't registered and
 `selecta maintain` logs why. The `cloud.autoscale` flag turns the tick off at run time.
@@ -48,6 +49,14 @@ LIVE_WORKER_S = 60.0
 LISTENING_S = 120.0
 POOLS_FILE = Path(__file__).resolve().parents[3] / "infra" / "workers" / "pools.json"
 MODAL_ENV = ("SELECTA_MODAL_APP", "SELECTA_MODAL_TOKEN_ID", "SELECTA_MODAL_TOKEN_SECRET")
+MODAL_FUNCTIONS: Mapping[str, tuple[str, str | None]] = {
+    "cpu-light": ("cpu_light", None),
+    "cpu-heavy": ("cpu_heavy", None),
+    "gpu": ("gpu_stems", "gpu_stems_fallback"),
+    "export": ("export", None),
+}
+"""Pool -> (its Modal function, the function for its fallback launch). The one place the
+autoscaler and the Modal app agree on names; `tests/test_cloud_infra.py` parses the app file."""
 
 log = logging.getLogger(__name__)
 
@@ -102,7 +111,11 @@ class ModalLauncher:
     def scale(self, pool: str, workers: int, launch: Launch, *, fallback: bool) -> None:
         if not self.configured:
             return
-        name = f"worker-{pool}-fallback" if fallback else f"worker-{pool}"
+        primary, spare = MODAL_FUNCTIONS.get(pool, (None, None))
+        name, other = (spare, primary) if fallback else (primary, spare)
+        if name is None:
+            raise RuntimeError(f"No Modal function deploys the {pool} pool"
+                               f"{' fallback' if fallback else ''}; see MODAL_FUNCTIONS.")
         try:
             self._function(name).update_autoscaler(
                 min_containers=workers, max_containers=max(workers, 1)
@@ -113,11 +126,10 @@ class ModalLauncher:
             raise RuntimeError(f"Modal refused to scale {name} to {workers}: {error}") from error
         if not fallback:
             self.no_capacity.discard(pool)
-        other = f"worker-{pool}" if fallback else f"worker-{pool}-fallback"
-        if fallback or launch.gpu:
+        if other is not None and (fallback or launch.gpu):
             try:  # Only one launch of a pool runs at a time.
                 self._function(other).update_autoscaler(min_containers=0, max_containers=0)
-            except Exception:  # noqa: BLE001 - a pool with no fallback app has nothing to stop
+            except Exception:  # noqa: BLE001 - a missing function has nothing to stop
                 log.debug("No %s to stop", other)
 
 

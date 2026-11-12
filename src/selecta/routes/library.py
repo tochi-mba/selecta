@@ -109,7 +109,9 @@ def add_routes(app, ctx) -> None:
             return
         work = getattr(ctx, "work", None)
         if work is not None:  # core.durable_local_jobs: a job on the app's own thread
-            work.enqueue("lyrics.fetch", input_ref={}, idempotency_key="library")
+            from selecta.workers.local_app import ask_for_lyrics
+
+            ask_for_lyrics(work)
             return
         subprocess.run(
             [sys.executable, "-m", "selecta.cli", "lyrics"],

@@ -123,6 +123,52 @@ def wait_cloud_ready(
     )
 
 
+DOCKER_COMPOSE = Path("infra") / "dev" / "compose.yaml"
+DOCKER_DATABASE_URL = "postgresql+psycopg://selecta:selecta-local-dev@127.0.0.1:55432/selecta_dev"
+
+
+def database_url(options, data: Path, ops) -> str:
+    """SQLite in the data folder by default; the developer's PostgreSQL URL when set; or the
+    throwaway PostgreSQL container of `infra/dev/compose.yaml` with `--docker`."""
+    given = os.environ.get("SELECTA_DEV_DATABASE_URL", "").strip()
+    if getattr(options, "docker", False):
+        if given:
+            raise ops.StartupError("Use either --docker or SELECTA_DEV_DATABASE_URL, not both.")
+        docker = ops.shutil.which("docker")
+        if docker is None:
+            raise ops.StartupError(
+                "--docker needs Docker Desktop (or Docker Engine) running. Omit --docker to use "
+                "SQLite, which needs nothing extra."
+            )
+        ops.say("DOCKER", "Starting PostgreSQL 16 from infra/dev/compose.yaml...")
+        started = subprocess.run(
+            [docker, "compose", "-f", str(ops.ROOT / DOCKER_COMPOSE), "up", "-d", "--wait"],
+            cwd=ops.ROOT, check=False,
+        )
+        if started.returncode:
+            raise ops.StartupError(
+                "docker compose could not start PostgreSQL. Is Docker running? Try "
+                "`docker compose -f infra/dev/compose.yaml up -d` to see why, or omit --docker."
+            )
+        return DOCKER_DATABASE_URL
+    if given:
+        if not given.startswith(("postgresql://", "postgresql+psycopg://", "sqlite:///")):
+            raise ops.StartupError(
+                "SELECTA_DEV_DATABASE_URL must be a postgresql+psycopg:// or sqlite:/// URL."
+            )
+        if given.startswith("postgresql://"):
+            given = "postgresql+psycopg://" + given.removeprefix("postgresql://")
+        return given
+    return f"sqlite:///{(data / 'cloud.sqlite').as_posix()}"
+
+
+def describe_database(url: str) -> str:
+    """The database without its password, for the console."""
+    if url.startswith("sqlite"):
+        return f"SQLite ({url.removeprefix('sqlite:///')})"
+    return f"PostgreSQL ({url.split('@', 1)[-1]})"
+
+
 def _seed(settings: DevSettings, env: dict[str, str], ops) -> None:
     code = (
         "from selecta.devstack.seed import seed; "
@@ -158,7 +204,10 @@ def run_cloud(options, ops) -> int:
         ops.phase(1, 4, "Checking Cloud development prerequisites and safe configuration")
         pnpm = ops.require_pnpm()
         if not ops.shutil.which("ffmpeg"):
-            raise ops.StartupError("Cloud worker requires ffmpeg on PATH: https://ffmpeg.org/")
+            raise ops.StartupError(
+                "The Cloud worker needs ffmpeg: install ffmpeg and put it on PATH "
+                "(see the developer README)."
+            )
         data = (
             Path(options.data_dir).expanduser().resolve()
             if options.data_dir
@@ -173,8 +222,7 @@ def run_cloud(options, ops) -> int:
         site_port = _port(options.site_port, taken, ops)
         settings = DevSettings(
             data=data,
-            database_url=os.environ.get("SELECTA_DEV_DATABASE_URL")
-            or f"sqlite:///{(data / 'cloud.sqlite').as_posix()}",
+            database_url=database_url(options, data, ops),
             site_url=f"http://127.0.0.1:{site_port}",
             api_url=f"http://127.0.0.1:{api_port}",
             identity_url=f"http://127.0.0.1:{identity_port}",
@@ -191,6 +239,7 @@ def run_cloud(options, ops) -> int:
         settings.secret("workos-webhook")
         settings.secret("rooms-pepper")
         ops.say("INFO", f"Cloud development data: {data}")
+        ops.say("INFO", f"Database: {describe_database(settings.database_url)}")
         ops.say("INFO", "Identity, disk objects and billing are local; no real payments.")
         ops.phase(2, 4, "Installing Cloud website dependencies")
         ops.install_site_tools(pnpm)
@@ -240,6 +289,9 @@ def run_cloud(options, ops) -> int:
         ops.say("READY", f"Cloud API:     {settings.api_url}/api/status")
         ops.say("READY", f"Local inbox:   {settings.site_url}/dev/mail")
         ops.say("READY", f"Stack details: {settings.site_url}/dev/stack")
+        ops.say("READY", f"Guest page:    {settings.site_url}/r/<room code> (open a room)")
+        ops.say("READY", f"Display:       {settings.site_url}/display")
+        ops.say("READY", f"Database:      {describe_database(settings.database_url)}")
         if options.seed:
             ops.say("SEED", "Sign in as dev@selectadj.test / selectadj-dev (development only).")
         if options.check:
@@ -280,4 +332,41 @@ def run_cloud(options, ops) -> int:
             ops.say("STOP", "Cloud launcher-owned processes stopped.")
 
 
-__all__ = ["run_cloud", "wait_cloud_ready"]
+def doctor_cloud(ops, ports: tuple[int, ...] = (8733, 8742, 5173)) -> bool:
+    """`dev.cmd doctor`'s Cloud part: free ports, the optional Docker, unsafe keys. True when
+    nothing blocks `dev.cmd cloud` (Docker being absent never blocks it)."""
+    fine = True
+    for port in ports:
+        if ops.port_is_free(port):
+            ops.say("OK", f"Port {port} is free.")
+        else:
+            ops.say("PORT", f"Port {port} is busy; dev.cmd cloud picks the next free one, or "
+                            "pass --api-port / --identity-port / --site-port.")
+    docker = ops.shutil.which("docker")
+    if docker is None:
+        ops.say("INFO", "Docker: not found. Optional; only `dev.cmd cloud --docker` needs it.")
+    else:
+        try:
+            running = subprocess.run(
+                [docker, "info", "--format", "{{.ServerVersion}}"],
+                capture_output=True, text=True, check=False, timeout=20,
+            )
+            version = running.stdout.strip() if running.returncode == 0 else ""
+        except (OSError, subprocess.TimeoutExpired):
+            version = ""
+        if version:
+            ops.say("OK", f"Docker {version} is running (for --docker).")
+        else:
+            ops.say("INFO", "Docker is installed but not running. Start it to use --docker; "
+                            "plain `dev.cmd cloud` uses SQLite and doesn't need it.")
+    url = os.environ.get("SELECTA_DEV_DATABASE_URL", "").strip()
+    if url and not url.startswith(("postgresql://", "postgresql+psycopg://", "sqlite:///")):
+        fine = False
+        ops.say("ERROR", "SELECTA_DEV_DATABASE_URL must be a postgresql+psycopg:// URL.")
+    for problem in guard.problems({**os.environ, "SELECTA_ENV": "development"}):
+        fine = False
+        ops.say("ERROR", f"Cloud: {problem}")
+    return fine
+
+
+__all__ = ["database_url", "doctor_cloud", "run_cloud", "wait_cloud_ready"]

@@ -9,6 +9,7 @@ macOS/Linux: uv run python -x dev.cmd
   dev.cmd cloud           Start Cloud locally (identity, Cloud API, worker, site)
   dev.cmd cloud --seed    Create demo account with synthetic music
   dev.cmd cloud --check   Check Cloud readiness, then stop
+  dev.cmd cloud --docker  Cloud on PostgreSQL in Docker instead of SQLite
   dev.cmd --check         Start, verify the whole local stack, then stop
   dev.cmd doctor          Check prerequisites and show what is missing
   dev.cmd test            Run the local lint, unit, build and browser test sequence
@@ -130,6 +131,15 @@ def doctor() -> int:
         say("ERROR", "This launcher is local only; unset SELECTA_MODE or set it to local.")
     say("CHECK", f"Site package: {WEB / 'package.json'}")
     say("CHECK", "The launcher starts the local API and Vite and verifies their proxy.")
+    say("CHECK", "SelectaDJ Cloud (dev.cmd cloud): ports, optional Docker, unsafe keys")
+    try:
+        from selecta.devstack.launcher import doctor_cloud
+
+        if not doctor_cloud(sys.modules[__name__]):
+            missing = True
+    except ImportError as problem:
+        say("MISSING", f"Python packages for Cloud ({problem}). Run: uv sync")
+        missing = True
     if missing:
         say("ERROR", "Install the missing tools above, then rerun dev.cmd.")
         return 1
@@ -598,7 +608,9 @@ def main() -> int:
         prog="dev.cmd",
         description="Start the complete Selecta local stack, with live logs and health checks.",
     )
-    parser.add_argument("what", nargs="?", choices=["run", "cloud", "test", "doctor"], default="run")
+    parser.add_argument(
+        "what", nargs="?", choices=["run", "cloud", "test", "doctor"], default="run"
+    )
     parser.add_argument("--no-browser", action="store_true", help="do not open the website")
     parser.add_argument("--check", action="store_true", help="smoke-test the full stack and exit")
     parser.add_argument(
@@ -608,7 +620,13 @@ def main() -> int:
     parser.add_argument("--site-port", type=int, default=SITE_PORT)
     parser.add_argument("--identity-port", type=int, default=8742, help="Cloud dev identity port")
     parser.add_argument("--data-dir", help="Cloud dev data folder (default: .cache/selecta-cloud)")
-    parser.add_argument("--seed", action="store_true", help="Cloud only: prepare demo music and account")
+    parser.add_argument(
+        "--seed", action="store_true", help="Cloud only: prepare demo music and account"
+    )
+    parser.add_argument(
+        "--docker", action="store_true",
+        help="Cloud only: use PostgreSQL from infra/dev/compose.yaml instead of SQLite",
+    )
     parser.add_argument(
         "--startup-timeout", type=float, default=STARTING_SECONDS,
         help="maximum seconds to wait for all API/site/proxy/data health checks",
@@ -621,8 +639,8 @@ def main() -> int:
     options = parser.parse_args()
     if options.startup_timeout <= 0:
         parser.error("--startup-timeout must be positive")
-    if options.what != "cloud" and (options.seed or options.data_dir):
-        parser.error("--seed and --data-dir require dev.cmd cloud")
+    if options.what != "cloud" and (options.seed or options.data_dir or options.docker):
+        parser.error("--seed, --docker and --data-dir require dev.cmd cloud")
     if options.what == "cloud":
         from selecta.devstack.launcher import run_cloud
 

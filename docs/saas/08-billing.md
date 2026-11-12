@@ -4,7 +4,7 @@
 
 ### 8.1 Stripe setup
 
-- Products: Selecta Standard, Selecta Premium. Prices: monthly and annual in GBP (beta), USD and EUR later.
+- Products: SelectaDJ Standard, SelectaDJ Premium. Prices: monthly and annual in GBP (beta), USD and EUR later.
 - **Stripe Checkout** for purchase, **Customer Portal** for upgrades, downgrades, payment methods, invoices and cancellation, **Stripe Tax** for VAT calculation, **Smart Retries** for failed renewals.
 - A server-side plan catalogue maps Stripe price IDs → `plan_id` and version; the client never sends a plan name that is trusted.
 
