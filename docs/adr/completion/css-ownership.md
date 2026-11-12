@@ -97,6 +97,7 @@ wins, and the row says which.
 | `max-width: 620px` | `styles/listening.css` | vibe cards one column |
 | `max-width: 620px` | `styles/operations.css` | Library rows stack actions under readiness |
 | `max-width: 620px` | `styles/polish.css` | vibe skeleton one column |
+| `min-width: 621px` | `styles/polish.css` | vibe skeleton in the two-column band (621 to 1040px) stands as tall as the real cards, whose words wrap more there (P0032); pairs with the 620px rule above |
 | `max-width: 560px` | `style.css` | Listen handoff countdown stacks |
 | `max-width: 560px` | `styles/polish.css` | skeleton rows stack their name and details at phone widths |
 | `max-width: 560px` | `styles/shell.css` | job list one column, phone seam indent |
