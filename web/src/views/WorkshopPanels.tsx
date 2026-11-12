@@ -521,9 +521,14 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
                     <input
                       type="checkbox"
                       checked={sameRecording.includes(item.id)}
-                      onChange={(event) => setSameRecording((current) => event.target.checked
-                        ? [...current, item.id]
-                        : current.filter((song) => song !== item.id))}
+                      onChange={(event) => {
+                        setSameRecording((current) => event.target.checked
+                          ? [...current, item.id]
+                          : current.filter((song) => song !== item.id));
+                        // The preview token binds the exact answers; any changed answer
+                        // must revoke confirmation until the server issues a new token.
+                        setRelocation((current) => current ? { ...current, token: null } : null);
+                      }}
                     />
                     {' '}Same recording: {item.title ?? 'Untitled'} (ID {item.id}). {item.why}.
                   </label>

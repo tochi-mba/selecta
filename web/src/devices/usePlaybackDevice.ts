@@ -27,6 +27,8 @@ export interface Speaker {
   resume(): void;
   position(): Position | null;
   active(): boolean;
+  /** Release listeners and locally cached audio when the device UI unmounts. */
+  dispose?(): void;
 }
 
 /** Fired on window once this browser has registered, so the devices list can mark it. */
@@ -183,7 +185,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     return () => window.clearInterval(beat);
   }, [api, becomeRemote, deviceId, poll, speaker, workspaceId]);
 
-  useEffect(() => () => { speaker?.stop(0); wake.current?.release(); }, [speaker]);
+  useEffect(() => () => { speaker?.stop(0); speaker?.dispose?.(); wake.current?.release(); }, [speaker]);
 
   const playHere = useCallback(async () => {
     if (!deviceId || !speaker) return;

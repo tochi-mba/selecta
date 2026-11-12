@@ -13,6 +13,7 @@ export function audioSpeaker(audio: HTMLAudioElement, source: (index: number) =>
   let index = -1;
   let fade = 0;
   let generation = 0;
+  let disposed = false;
   const copies = new Map<number, Promise<string | null>>();
 
   const copy = (songIndex: number): Promise<string | null> => {
@@ -20,10 +21,14 @@ export function audioSpeaker(audio: HTMLAudioElement, source: (index: number) =>
     if (!made) {
       made = (async () => {
         const url = await source(songIndex);
+        if (disposed) return null;
         if (!url || typeof fetch !== 'function' || typeof URL.createObjectURL !== 'function') return url;
         try {
           const answer = await fetch(url);
-          return answer.ok ? URL.createObjectURL(await answer.blob()) : url;
+          if (!answer.ok) return url;
+          const blob = await answer.blob();
+          if (disposed) return null;
+          return URL.createObjectURL(blob);
         } catch {
           return url;
         }
@@ -47,16 +52,18 @@ export function audioSpeaker(audio: HTMLAudioElement, source: (index: number) =>
 
   const clearFade = () => { window.clearInterval(fade); fade = 0; audio.volume = 1; };
 
-  audio.addEventListener('ended', () => {
-    if (index >= 0) void speaker.start(index + 1, 0, true);
-  });
+  const onEnded = () => {
+    if (!disposed && index >= 0) void speaker.start(index + 1, 0, true);
+  };
+  audio.addEventListener('ended', onEnded);
 
   const speaker: Speaker = {
     async start(songIndex, offsetMs, playing) {
+      if (disposed) return;
       const mine = ++generation;
       clearFade();
       const url = await copy(songIndex);
-      if (mine !== generation) return;
+      if (disposed || mine !== generation) return;
       keepAround(songIndex);
       if (!url) { audio.pause(); index = -1; return; }
       index = songIndex;
@@ -66,7 +73,7 @@ export function audioSpeaker(audio: HTMLAudioElement, source: (index: number) =>
         audio.addEventListener('loadedmetadata', () => resolve(), { once: true });
         audio.addEventListener('error', () => resolve(), { once: true });
       });
-      if (mine !== generation) return;
+      if (disposed || mine !== generation) return;
       try { audio.currentTime = Math.max(0, offsetMs / 1000); } catch { /* not seekable yet */ }
       if (playing) await audio.play().catch(() => undefined);
       else audio.pause();
@@ -92,7 +99,22 @@ export function audioSpeaker(audio: HTMLAudioElement, source: (index: number) =>
       if (index < 0) return null;
       return { song_index: index, offset_ms: Math.round(audio.currentTime * 1000), state: audio.paused ? 'paused' : 'playing' };
     },
-    active() { return index >= 0 && !audio.paused; },
+    active() { return !disposed && index >= 0 && !audio.paused; },
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      generation++;
+      index = -1;
+      window.clearInterval(fade);
+      fade = 0;
+      audio.pause();
+      audio.removeEventListener('ended', onEnded);
+      for (const made of copies.values()) {
+        void made.then((url) => { if (url?.startsWith('blob:')) URL.revokeObjectURL(url); });
+      }
+      copies.clear();
+      audio.removeAttribute('src');
+    },
   };
   return speaker;
 }

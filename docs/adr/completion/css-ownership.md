@@ -98,6 +98,7 @@ wins, and the row says which.
 | `max-width: 620px` | `styles/operations.css` | Library rows stack actions under readiness |
 | `max-width: 620px` | `styles/polish.css` | vibe skeleton one column |
 | `max-width: 560px` | `style.css` | Listen handoff countdown stacks |
+| `max-width: 560px` | `styles/polish.css` | skeleton rows stack their name and details at phone widths |
 | `max-width: 560px` | `styles/shell.css` | job list one column, phone seam indent |
 | `max-width: 520px` | `style.css` | steering, destination and energy-arc stops one column; request rows |
 | `max-width: 520px` | `styles/foundation.css` | setup steps: a finished step shows only its tick, so the steps take one line (MP-0282-07) |
