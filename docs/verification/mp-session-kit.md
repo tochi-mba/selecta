@@ -174,7 +174,7 @@ Tasks: 28. Signed: 0.
 - **Pass:** No transition is noted where motion overwhelmed the audible transition; notes timed and kept apart from test results.
 - **Run first (automated part):**
   - `web/e2e/mp-0296-motion.e2e.ts` :: MP-0296-06 Still and reduced motion remove decorative movement while the music data keeps updating
-  - `web/e2e/mp-0296-motion.e2e.ts` :: MP-0296-07 the visualizer draws at most 15 frames a second while playing and nothing while hidden
+  - `web/e2e/mp-0296-motion.e2e.ts` :: MP-0296-07 the visualizer draws at most 30 frames a second while playing and nothing while hidden
 - **Signed:** not yet
 
 ### MP-0299-06
