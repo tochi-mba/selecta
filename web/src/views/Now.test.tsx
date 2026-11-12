@@ -365,7 +365,7 @@ describe('creative Listen states grounded in audio and known timing', () => {
     await screen.findByText('Hello');
     fireEvent.change(screen.getByRole('combobox', { name: 'Audio visualizer style' }), { target: { value: 'ribbon' } });
     expect(JSON.parse(localStorage.getItem('selecta.listen') ?? '{}').spectrumShape).toBe('ribbon');
-    expect(screen.getByRole('img', { name: 'Frequency ribbon - actual mixed-audio frequency levels' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Bar ribbon - actual mixed-audio frequency levels' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Radial spectrum' })).toBeNull();
     expect(player.state.phase).toBe('idle');
     fireEvent.change(screen.getByRole('combobox', { name: 'Audio visualizer style' }), { target: { value: 'bars' } });
@@ -390,19 +390,19 @@ describe('creative Listen states grounded in audio and known timing', () => {
   });
 
   it.each([
-    ['aurora', 'Aurora contours'],
-    ['lanes', 'Spectral lanes'],
-    ['constellation', 'Frequency constellation'],
-    ['waterfall', 'Recent spectrum'],
-    ['skyline', 'Spectrum skyline'],
-    ['threads', 'Glass threads'],
-    ['pins', 'Signal pins'],
-    ['matrix', 'Spectrum mosaic'],
-    ['trails', 'Afterglow trails'],
-    ['dunes', 'Spectral dunes'],
-    ['candles', 'Signal ranges'],
-    ['mesh', 'Frequency mesh'],
-    ['split', 'Split flow'],
+    ['pulse', 'Kick pulse field'],
+    ['lanes', 'Drum lanes'],
+    ['horizon', 'Bass horizon'],
+    ['sparkle', 'Hi-hat sparkle'],
+    ['scope', 'Oscilloscope'],
+    ['stereo', 'Stereo field'],
+    ['waterfall', 'Scrolling spectrogram'],
+    ['bursts', 'Onset bursts'],
+    ['wash', 'Section wash'],
+    ['river', 'Energy streams'],
+    ['grid', 'Beat grid'],
+    ['shock', 'Snare shockwave'],
+    ['tracer', 'Brightness tracer'],
   ])('chooses and remembers %s without creating or starting audio', async (id, label) => {
     window.localStorage.removeItem('selecta.listen');
     fakeBackend({ 'GET /songs/1': detail });
