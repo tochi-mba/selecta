@@ -4,8 +4,8 @@ import { WORK_WORDS } from '../state/workState';
 import { LifecyclePill, type Lifecycle } from '../views/LucyProposal';
 import { foldText, GLOSSARY, searchGlossary } from './glossaryTerms';
 
-/** UF-0388-05 (code half): ready, analysed, proposed, queued, saved and playing each have one
- * meaning, one glossary entry that explains it, and the same word wherever the app shows it. The
+/** UF-0388-05 (code half): ready, analysed, proposed, queued, saved and playing each have a
+ * glossary entry that explains them, and the same word wherever the app shows them. The
  * copy audit and task study that confirm people read them that way are a person's. */
 
 /** Ready has two scoped meanings, each its own entry: a song that is mix-ready, and a transition

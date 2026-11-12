@@ -200,7 +200,7 @@ def add_routes(app, ctx) -> None:
             current = proposals.current(conn, convo["proposal_id"])
             if current is not None:
                 current["ledger"] = readiness.ledger(conn, ctx.store, current["snapshot"],
-                                                     catalog.load(conn, ctx).songs)
+                                                     ctx.library_now(conn)[0])
             proposal = {"id": convo["proposal_id"], "current": current,
                         "history": proposals.history(conn, convo["proposal_id"])}
         run = conn.execute("SELECT * FROM lucy_runs WHERE conversation_id=? ORDER BY started_at "
@@ -345,11 +345,20 @@ def add_routes(app, ctx) -> None:
     @app.get("/api/lucy/conversations/{conversation}/events")
     async def events_stream(conversation: str, request: Request, after: int = 0):
         """Server-sent events, resumable by Last-Event-ID or ?after= (LU-303-03)."""
+
+        def events_after(cursor: int, limit: int = 500) -> dict:
+            # r8d: opening the library and reading it happen off the event loop, so one open
+            # stream can't hold up every other request while SQLite waits on a writer
+            conn = connect()
+            try:
+                return events.since(conn, conversation, cursor, limit=limit)
+            finally:
+                conn.close()
+
         header = request.headers.get("last-event-id")
         cursor = int(header) if header and header.isdigit() else after
-        with connect() as conn:
-            if events.since(conn, conversation, cursor, limit=1)["missing"]:
-                fail(404, "That conversation isn't there any more.", "missing")
+        if (await asyncio.to_thread(events_after, cursor, 1))["missing"]:
+            fail(404, "That conversation isn't there any more.", "missing")
 
         async def frames():
             nonlocal cursor
@@ -357,11 +366,7 @@ def add_routes(app, ctx) -> None:
             while True:
                 if await request.is_disconnected():
                     return
-                conn = connect()
-                try:
-                    found = events.since(conn, conversation, cursor)
-                finally:
-                    conn.close()
+                found = await asyncio.to_thread(events_after, cursor)
                 if found["missing"]:
                     return
                 if found["gap"]:
@@ -384,8 +389,10 @@ def add_routes(app, ctx) -> None:
 
     def revision_with_ledger(conn, revision_id: str) -> dict:
         revision = proposals.get_revision(conn, revision_id)
+        # r8d: the ledger needs only the songs. catalog.load also gathers every word link, the
+        # whole transition memory and listening history, which a page reading a revision never uses
         revision["ledger"] = readiness.ledger(conn, ctx.store, revision["snapshot"],
-                                              catalog.load(conn, ctx).songs)
+                                              ctx.library_now(conn)[0])
         return revision
 
     @app.get("/api/lucy/revisions/{revision}")

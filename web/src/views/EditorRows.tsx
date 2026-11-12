@@ -356,8 +356,10 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
   && before.item.locked === after.item.locked
   && JSON.stringify(before.item.from_request) === JSON.stringify(after.item.from_request));
 
-/** A real target between two songs, saying where a new song would land. */
-export function AddGap({ title, landsAt, onAdd }: { title: string; landsAt: number; onAdd: () => void }) {
+/** A real target between two songs, saying where a new song would land. Memoised (r8c): the editor
+ * hands it a fresh onAdd each render, but that only ever opens the adder at this same row, whose key
+ * is the row's own React key, so a title and place that haven't changed mean nothing to redraw. */
+export const AddGap = memo(function AddGap({ title, landsAt, onAdd }: { title: string; landsAt: number; onAdd: () => void }) {
   return (
     <li className="add-gap">
       <button onClick={onAdd} aria-label={`Add a song after ${title}; Add a song as number ${landsAt}`} title={`Add a song here, as number ${landsAt}`}>
@@ -365,7 +367,7 @@ export function AddGap({ title, landsAt, onAdd }: { title: string; landsAt: numb
       </button>
     </li>
   );
-}
+}, (before, after) => before.title === after.title && before.landsAt === after.landsAt);
 
 /** One song selected in the timeline: what's known about it, and what can be done from here. */
 export function SongInspector(props: {

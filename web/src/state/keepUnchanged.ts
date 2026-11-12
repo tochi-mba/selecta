@@ -1,4 +1,4 @@
-import type { MixData } from '../api';
+import type { DraftList, MixData } from '../api';
 
 /** r8c: a poll answer that says exactly what is already shown keeps the object already shown, so
  * React bails out instead of redrawing every page that reads it. */
@@ -23,4 +23,32 @@ export function keepUnchangedMix(before: MixData | null, next: MixData): MixData
   const { mix: _nextMix, ...nextRest } = next;
   if (!changed && JSON.stringify(beforeRest) === JSON.stringify(nextRest)) return before;
   return { ...next, mix: changed ? mix : before.mix };
+}
+
+/** r8a: a drafts answer keeps every draft object that hasn't changed, so My Mixes' memoised rows only
+ * redraw the drafts that really changed. When nothing at all changed, the very same list comes back. */
+export function keepUnchangedDrafts(before: DraftList | null, next: DraftList): DraftList {
+  if (!before) return next;
+  const was = new Map(before.drafts.map((draft) => [draft.id, draft]));
+  let changed = before.drafts.length !== next.drafts.length;
+  const drafts = next.drafts.map((draft, index) => {
+    const old = was.get(draft.id);
+    if (old && JSON.stringify(old) === JSON.stringify(draft)) {
+      if (before.drafts[index] !== old) changed = true;
+      return old;
+    }
+    changed = true;
+    return draft;
+  });
+  const { drafts: _beforeDrafts, ...beforeRest } = before;
+  const { drafts: _nextDrafts, ...nextRest } = next;
+  if (!changed && JSON.stringify(beforeRest) === JSON.stringify(nextRest)) return before;
+  return { ...next, drafts: changed ? drafts : before.drafts };
+}
+
+/** A list answer keeps each entry that is exactly as it was (matched by content, wherever it now
+ * sits), so memoised rows for those entries don't redraw. */
+export function keepUnchangedItems<T>(before: readonly T[], next: T[]): T[] {
+  const old = new Map(before.map((item) => [JSON.stringify(item), item]));
+  return next.map((item) => old.get(JSON.stringify(item)) ?? item);
 }

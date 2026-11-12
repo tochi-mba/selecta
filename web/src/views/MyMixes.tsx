@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import { DraftList, get, MixData, MixItem } from '../api';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { get, MixData, MixItem } from '../api';
 import { useFlags } from '../flags';
+import { getDraftNames } from '../state/draftNames';
 import { occurrenceKeys, orderOf } from '../state/readiness';
 import { CurrentMix, NoCurrentMix } from './CurrentMix';
 import { Drafts } from './Drafts';
@@ -8,6 +9,9 @@ import { selectInEditor } from './Mix';
 import { ViewProps } from './shared';
 
 const RECENT_DRAFT_KEY = 'selecta.recentDraft';
+// r8a: My Mixes redraws with the music clock (the current mix says Playing or Paused), and its list of
+// drafts mustn't redraw with it. Memoised, and handed functions that never change.
+const StableDrafts = memo(Drafts);
 /** GP-0255-01: what can be returned to, and where its authority lives. The draft is known by its ID and
  * exact song order, the only things this browser keeps. Each song by its occurrence in that order, and
  * each transition by the two occurrences it joins, are worked out fresh from the server's copy, never
@@ -53,7 +57,8 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
     } catch { /* disabled storage or obsolete format */ }
     if (saved === null) return;
     const target = saved;
-    void Promise.all([get<DraftList>('/drafts'), get<MixData>(`/mix?draft=${target.id}`)])
+    // only the names are needed here; Drafts below reads the whole list for itself
+    void Promise.all([getDraftNames(), get<MixData>(`/mix?draft=${target.id}`)])
       .then(([list, detail]) => {
         if (!active) return;
         const draft = list.drafts.find((item) => item.id === target.id);
@@ -93,6 +98,13 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
     try { window.localStorage.removeItem(RECENT_DRAFT_KEY); } catch { /* storage disabled */ }
   };
 
+  const latest = useRef({ notify, openDraft, playDraft, setView });
+  latest.current = { notify, openDraft, playDraft, setView };
+  const stableNotify = useCallback<ViewProps['notify']>((...args) => latest.current.notify(...args), []);
+  const stableOpen = useCallback((id: number) => latest.current.openDraft?.(id), []);
+  const stablePlay = useCallback((id: number) => latest.current.playDraft?.(id) ?? Promise.resolve(), []);
+  const stableSetView = useCallback<ViewProps['setView']>((...args) => latest.current.setView(...args), []);
+
   const on = useFlags();
   // SF-0204-02: one primary action. Continue editing leads when offered, then the drafts (first Edit or
   // Start your first draft), and the current mix only when drafts are off.
@@ -131,7 +143,7 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
       {mix.length > 0
         ? <CurrentMix prominent lead={!continuing && !on('drafts')} mix={mix} mixName={mixName} now={now} player={player} setView={setView} />
         : <NoCurrentMix lead={!continuing && !on('drafts')} />}
-      {on('drafts') && <Drafts lead={!continuing} notify={notify} openDraft={openDraft} playDraft={playDraft} setView={setView} />}
+      {on('drafts') && <StableDrafts lead={!continuing} notify={stableNotify} openDraft={stableOpen} playDraft={stablePlay} setView={stableSetView} />}
     </main>
   );
 }

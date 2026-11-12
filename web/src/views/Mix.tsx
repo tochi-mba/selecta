@@ -1,5 +1,5 @@
 import { flagOn } from '../flags';
-import { DragEvent, FormEvent, KeyboardEvent, PointerEvent, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { DragEvent, FormEvent, KeyboardEvent, memo, PointerEvent, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, del, DraftList, MixData, MixItem, post, Suggestion } from '../api';
 import { etaRangeWords, runningTime } from '../lib';
 import { mixReadiness, occurrenceKeys, orderOf } from '../state/readiness';
@@ -19,6 +19,7 @@ import { MixScope, useMixPath } from './mixScope';
 import { ComingSongs } from './Requests';
 import { InspectorTab, SeamInspector } from './SeamInspector';
 import { draftShown, movedLocally, MoveQueue } from './optimisticMove';
+import { sameApartFromClock } from './clockMemo';
 import { ViewProps } from './shared';
 
 /** A transition is known by the two songs it's between, and a song by which time it appears in the mix,
@@ -86,7 +87,7 @@ function FragmentRow({ children }: { children: React.ReactNode }) {
 
 const seamKeyOf = (a: string, b: string) => `${a}>${b}`;
 
-export function Mix(props: ViewProps) {
+function MixView(props: ViewProps) {
   const { mix, mixName, refreshMix, setMixData, player, now, setView, notify, status, refreshStatus, mixEta, draftPlace, openDraft, closeDraft, playDraft, renamedDraft, canUndo, undo, currentMixName } = props;
   const draftId = useContext(MixScope);
   const inDraft = draftId !== null;
@@ -210,7 +211,7 @@ export function Mix(props: ViewProps) {
   };
 
   const readiness = useMemo(() => mixReadiness(mix), [mix]);
-  const total = runningTime(mix);
+  const total = useMemo(() => runningTime(mix), [mix]);
   const { ready, waiting, rendering, seams } = readiness;
 
   const selectedIndex = selected?.kind === 'seam' ? keys.findIndex((key, index) => index > 0 && key === selected.b && keys[index - 1] === selected.a) : -1;
@@ -710,7 +711,8 @@ export function Mix(props: ViewProps) {
       autoPlay={hearNow}
       onClose={() => setSelected(null)}
       onListen={() => {
-        if (now.phase === 'playing') void player.togglePause();
+        // read live: the editor isn't redrawn for every tick of the clock (r8c)
+        if (player.state.phase === 'playing') void player.togglePause();
       }}
     />
   );
@@ -913,3 +915,7 @@ export function Mix(props: ViewProps) {
     </main>
   );
 }
+
+/** r8c: the editor shows which song is playing, never the time, so a tick of the music clock doesn't
+ * redraw a mix of a hundred songs. Only a change of song, or starting and stopping, does. */
+export const Mix = memo(MixView, sameApartFromClock<ViewProps>((now) => (now.phase === 'idle' ? -1 : now.position)));

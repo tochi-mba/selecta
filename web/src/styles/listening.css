@@ -276,6 +276,8 @@
 .draft-name b { unicode-bidi: plaintext; }
 .draft-name .warn { margin: var(--space-1) 0 0; }
 .draft-actions { flex: none; align-items: center; }
+/* only the first draft's Edit is filled (SF-0204-02), but every Edit keeps its weight, so the rows keep one width */
+.draft-actions .draft-edit { font-weight: 700; }
 .draft-actions .menu > button { display: inline-grid; place-items: center; min-width: var(--control-height); padding: var(--space-dense); }
 .draft-actions .menu-list button { display: flex; align-items: center; gap: var(--space-2); }
 .rename-draft input { flex: 1 1 200px; width: auto; }

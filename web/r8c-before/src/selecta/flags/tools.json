@@ -1,0 +1,32 @@
+{
+  "area": "Tools",
+  "flags": {
+    "tools.reels": {
+      "label": "Listening reels",
+      "about": "Render one transition or a reel of them, check beats by ear, and play reels in a browser.",
+      "cli": ["mix", "reel", "beat-check", "listen"]
+    },
+    "tools.key_benchmark": {
+      "label": "Key method benchmark",
+      "about": "Score a replacement key method against S-KEY's stored keys on this library, read-only, for choosing S-KEY's Cloud replacement.",
+      "cli": ["key-benchmark"]
+    },
+    "tools.set_mix": {
+      "label": "Whole-set render",
+      "about": "Render a planned set straight to one file from the command line.",
+      "cli": ["set-mix"]
+    },
+    "tools.stem_preview": {
+      "label": "Stem preview",
+      "about": "Hear two songs' stems side by side from the command line.",
+      "requires": ["stems"],
+      "cli": ["stem-preview"]
+    },
+    "tools.old_planner": {
+      "label": "Rolling set planner",
+      "about": "The original rolling set plan, before mix ideas.",
+      "routes": ["POST /api/plan"],
+      "cli": ["plan"]
+    }
+  }
+}

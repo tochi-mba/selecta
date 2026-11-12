@@ -242,6 +242,29 @@ describe('freshness and tables', () => {
 });
 
 describe('admin pages that change under a request', () => {
+  it("never shows one job's command result on another job", async () => {
+    const base = answer;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit = {}) => {
+      const path = url.replace(/^https?:\/\/[^/]+/, '');
+      const method = init.method ?? 'GET';
+      calls.push({ method, path, body: init.body ? JSON.parse(String(init.body)) : undefined, headers: new Headers(init.headers) });
+      let [status, body] = base(method, path.replace('job-2', 'job-1'));
+      if (path.startsWith('/api/admin/jobs?') || path === '/api/admin/jobs') {
+        const jobs = (body as { jobs: Record<string, unknown>[] }).jobs;
+        body = { jobs: [...jobs, { ...jobs[0], id: 'job-2' }] };
+      }
+      return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+    }));
+    const nav = await enter();
+    await userEvent.click(nav.getByRole('button', { name: 'Jobs & workers' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Open job job-1' }));
+    await command('Quarantine', 'bad output');
+    expect(await screen.findByText(/the job is now blocked/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Open job job-2' }));
+    expect(await screen.findByText('Job job-2')).toBeInTheDocument();
+    expect(screen.queryByText(/the job is now blocked/)).toBeNull();
+  });
+
   it('drops a flag impact preview when another flag is opened', async () => {
     const base = answer;
     vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit = {}) => {

@@ -1,6 +1,6 @@
 import { flagOn, useFlags } from '../flags';
 import { listed } from '../shell/manifest';
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { Folders, get, post } from '../api';
 import { refreshJobs, useJobsStatus } from '../state/jobs';
 import { analysisWords, estimateWords, etaRangeWords } from '../lib';
@@ -16,6 +16,7 @@ import { LinkTabs } from '../ui/primitives';
 import { ExportJobs } from './ExportJobs';
 import { Listening } from './Listening';
 import { LocalBackup } from './LocalBackup';
+import { sameApartFromClock } from './clockMemo';
 import { ViewProps } from './shared';
 import { Diagnostics, FoldersPanel, JobsPanel, MemoryPanel, NeedsYou, StoragePanel } from './WorkshopPanels';
 import { words } from '../copy';
@@ -103,7 +104,7 @@ function Overview({ status }: { status: ViewProps['status'] }) {
   );
 }
 
-export function Workshop({ status, refreshStatus, notify, tab = 'overview' }: ViewProps & { tab?: WorkshopTab }) {
+function WorkshopView({ status, refreshStatus, notify, tab = 'overview' }: ViewProps & { tab?: WorkshopTab }) {
   const { counts } = status;
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
   const route = useRoute();
@@ -174,3 +175,6 @@ export function Workshop({ status, refreshStatus, notify, tab = 'overview' }: Vi
     </main>
   );
 }
+
+/** r8c: the Workspace never shows the music clock, so a tick of it doesn't redraw the page. */
+export const Workshop = memo(WorkshopView, sameApartFromClock<ViewProps & { tab?: WorkshopTab }>());

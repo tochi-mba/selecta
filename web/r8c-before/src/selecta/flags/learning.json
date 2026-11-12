@@ -1,0 +1,39 @@
+{
+  "area": "Learning",
+  "flags": {
+    "ratings": {
+      "label": "Ratings",
+      "about": "Rate a transition Good or Bad, and the planner learns from it.",
+      "routes": ["POST /api/seams/{key}/rate"],
+      "surfaces": ["listen", "edit", "overlay.inspector", "discover.words"],
+      "cli": ["ratings"]
+    },
+    "learning.memory": {
+      "label": "What it's learned",
+      "about": "The Learning tab's summary of what ratings have taught the planner.",
+      "requires": ["ratings"],
+      "routes": ["GET /api/memory", "GET /api/memory/ratings"],
+      "surfaces": ["workshop.learning"],
+      "words": ["What it’s learned"]
+    },
+    "listening_study": {
+      "label": "Blind listening study",
+      "about": "Compare two renders without knowing which is which, and grade them.",
+      "routes": [
+        "GET /api/listening",
+        "GET /api/listening/{trial}/{option}/audio",
+        "POST /api/listening/{trial}/response"
+      ],
+      "surfaces": ["listening", "workshop.learning", "overlay.palette"],
+      "words": ["Blind listening study", "Listening study"],
+      "cli": ["listening-import", "listening-report"]
+    },
+    "listening_study.skip_and_stop": {
+      "label": "Skip and stop in the listening study",
+      "about": "Skip a comparison without answering, or stop for now and pick up later, with the skipped ones counted as unanswered.",
+      "requires": ["listening_study"],
+      "surfaces": ["listening"],
+      "words": ["Skip this comparison", "Stop for now"]
+    }
+  }
+}

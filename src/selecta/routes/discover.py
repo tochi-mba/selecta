@@ -255,11 +255,14 @@ def add_routes(app, ctx) -> None:
             }
         shown = []
         prepared = 0
+        # r8d: one look at what's been rendered, rather than asking the disk about every move of
+        # every link, almost none of which have ever been tried
+        status = store.status_reader()
         for rank, link in enumerate(unique):
             moves = modes_for(library[link.song_a], library[link.song_b], space)
             if not moves:
                 continue
-            move, state = link_state(link, moves, store.status)
+            move, state = link_state(link, moves, status)
             done = state["status"] == "ready" and state.get("passed", False)
             prepared += 1 if done else 0
             if text and text not in link.phrase:

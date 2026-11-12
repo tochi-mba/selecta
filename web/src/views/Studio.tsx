@@ -1,4 +1,4 @@
-import { KeyboardEvent, PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { KeyboardEvent, memo, PointerEvent, RefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, Eta, MixData, MixItem, post } from '../api';
 import { flagOn } from '../flags';
 import { mainPlayerTouched, releaseAudio, takeAudio } from '../audio/focus';
@@ -66,6 +66,43 @@ function keepShape(key: string, shape: Shape | null) {
     return false;
   }
 }
+
+type CellActions = { focus: (row: number, column: number) => void; toggle: (side: Side, lane: Lane, index: number) => void };
+
+/** One square of the grid. Memoised (r8c): the playhead moving on redraws only the square it leaves
+ * and the one it reaches, not all of them, and the handlers come through a ref so they never count
+ * as a change. */
+const StudioCell = memo(function StudioCell({ side, lane, row, index, value, now, changed, lost, saving, focusable, label, title, actions }: {
+  side: Side;
+  lane: Lane;
+  row: number;
+  index: number;
+  value: number;
+  now: boolean;
+  changed: boolean;
+  lost: boolean;
+  saving: boolean;
+  focusable: boolean;
+  label: string;
+  title: string;
+  actions: RefObject<CellActions>;
+}) {
+  return (
+    <span role="gridcell" className="studio-gridcell">
+      <button
+        data-cell={`${row}-${index}`}
+        tabIndex={focusable ? 0 : -1}
+        className={`studio-cell ${now ? 'now' : ''} ${changed ? 'ai-changed' : ''}`}
+        aria-pressed={Boolean(value)}
+        aria-disabled={lost || saving || undefined}
+        aria-label={label}
+        title={title}
+        onFocus={() => actions.current.focus(row, index)}
+        onClick={(event) => { if (event.detail === 0) actions.current.toggle(side, lane, index); }}
+      />
+    </span>
+  );
+});
 
 function StudioListEditor({ shape, titles, missing, barsPerCell, soloed, disabled, onToggle, onSolo }: {
   shape: Shape;
@@ -478,7 +515,10 @@ export function Studio(props: {
   const barsPerCell = session?.bars && session.cells ? session.bars / session.cells : 2;
   const columns = session?.cells ?? 8;
   const committed = session?.shape ?? session?.start_shape;
-  const dirty = !!shape && JSON.stringify(shape) !== JSON.stringify(committed);
+  // r8c: worked out once per change of the grid, not on every move of the playhead
+  const dirty = useMemo(() => !!shape && JSON.stringify(shape) !== JSON.stringify(committed), [shape, committed]);
+  const cellActions = useRef<CellActions>({ focus: () => {}, toggle: () => {} });
+  cellActions.current = { focus: (row, column) => setFocusCell({ row, column }), toggle };
   // Only the actual returned eight-lane cells count as an AI change. Freeform explanation
   // text never drives the visual diff, and editing after a proposal clears this comparison.
   const aiDiffs = useMemo(() => {
@@ -652,19 +692,22 @@ export function Studio(props: {
                         </button>
                       </span>
                       {shape[side][lane].map((value, index) => (
-                        <span role="gridcell" className="studio-gridcell" key={index}>
-                          <button
-                            data-cell={`${row}-${index}`}
-                            tabIndex={focusCell.row === row && focusCell.column === index ? 0 : -1}
-                            className={`studio-cell ${index === cell ? 'now' : ''} ${changedCells.has(side + '_' + lane + ':' + index) ? 'ai-changed' : ''}`}
-                            aria-pressed={Boolean(value)}
-                            aria-disabled={lost || saving || undefined}
-                            aria-label={`${titles[side]} ${LANE_WORDS[lane].toLowerCase()}, ${barRange(index, barsPerCell)}, ${value ? 'on' : 'off'}${lost ? ', unavailable' : ''}`}
-                            title={lost ? 'This part couldn’t be loaded' : barRange(index, barsPerCell)}
-                            onFocus={() => setFocusCell({ row, column: index })}
-                            onClick={(event) => { if (event.detail === 0) toggle(side, lane, index); }}
-                          />
-                        </span>
+                        <StudioCell
+                          key={index}
+                          side={side}
+                          lane={lane}
+                          row={row}
+                          index={index}
+                          value={value}
+                          now={index === cell}
+                          changed={changedCells.has(side + '_' + lane + ':' + index)}
+                          lost={lost}
+                          saving={saving}
+                          focusable={focusCell.row === row && focusCell.column === index}
+                          label={`${titles[side]} ${LANE_WORDS[lane].toLowerCase()}, ${barRange(index, barsPerCell)}, ${value ? 'on' : 'off'}${lost ? ', unavailable' : ''}`}
+                          title={lost ? 'This part couldn’t be loaded' : barRange(index, barsPerCell)}
+                          actions={cellActions}
+                        />
                       ))}
                     </div>
                   );

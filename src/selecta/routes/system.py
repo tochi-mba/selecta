@@ -13,6 +13,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from fastapi import HTTPException, Request, Response
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -135,16 +136,19 @@ def add_routes(app, ctx) -> None:
                 mark("Reading the cached transition count without filesystem scans")
                 transitions_ready, transitions_indexing = store.remembered_count()
                 mark("Assembling queue, background jobs and estimates")
+                # r8d: each asked once. The asked-for line is a query per song, and the render
+                # sign and the analysis process are looked at again by nothing below
+                analysing = bool(background.analysis and background.analysis.poll() is None)
+                mix_rendering = jobs.mix_is_rendering(settings.home)
+                asked = songs_in_line(conn)
                 result = {
                     "counts": counts,
                     "steering": steering,
                     "queue": queue(conn),
                     "moves": {name: label for name, (label, _) in moves_on().items()},
-                    "analysis_running": bool(
-                        background.analysis and background.analysis.poll() is None
-                    ),
-                    "analysing": songs_in_line(conn),
-                    "mix_rendering": jobs.mix_is_rendering(settings.home),
+                    "analysis_running": analysing,
+                    "analysing": asked,
+                    "mix_rendering": mix_rendering,
                     "mixes_in_line": len(mix.line_order(conn)),
                     "transitions_ready": transitions_ready,
                     "transitions_indexing": transitions_indexing,
@@ -152,12 +156,9 @@ def add_routes(app, ctx) -> None:
                     "flags": flags.snapshot(),
                     "eta": {
                         "analysis": analysis_left(
-                            conn,
-                            bool(background.analysis and background.analysis.poll() is None),
-                            jobs.mix_is_rendering(settings.home),
-                            rendering_ahead(conn),
+                            conn, analysing, mix_rendering, rendering_ahead(conn)
                         ),
-                        "line": analysis_line_left(conn, songs_in_line(conn)),
+                        "line": analysis_line_left(conn, asked),
                         "jobs": store.clock.recent(),
                         "accuracy": store.clock.accuracy(),
                     },
@@ -257,11 +258,13 @@ def add_routes(app, ctx) -> None:
     async def preview_local_backup(request: Request) -> dict:
         data = await _read_backup(request)
         try:
-            manifest, _, counts = validate_backup(data)
+            # r8d: unpacking and checking a whole library archive is slow work; off the event
+            # loop, every other request keeps being answered while it runs
+            manifest, _, counts = await run_in_threadpool(validate_backup, data)
         except BackupError as problem:
             raise HTTPException(400, str(problem)) from problem
         return {
-            "token": hashlib.sha256(data).hexdigest(),
+            "token": await run_in_threadpool(lambda: hashlib.sha256(data).hexdigest()),
             "created_utc": manifest["created_utc"],
             "counts": counts,
             "replaces": "Local song database, drafts, ratings and preferences at next restart",
@@ -271,8 +274,9 @@ def add_routes(app, ctx) -> None:
     @app.post("/api/backup/stage")
     async def stage_local_backup(request: Request) -> dict:
         data = await _read_backup(request)
+        token = request.headers.get("x-backup-token", "")
         try:
-            return stage_restore(settings, data, request.headers.get("x-backup-token", ""))
+            return await run_in_threadpool(stage_restore, settings, data, token)
         except BackupError as problem:
             raise HTTPException(409, str(problem)) from problem
 

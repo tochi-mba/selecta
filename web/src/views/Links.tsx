@@ -1,5 +1,5 @@
 import { flagOn } from '../flags';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { ApiError, get, Link, LinkList, MixData, post, SeamState } from '../api';
 import { releaseAudio, takeAudio } from '../audio/focus';
@@ -9,6 +9,7 @@ import { exploreTabs } from '../shell/manifest';
 import { LinkIfThere } from '../shell/PageLink';
 import { operationId } from '../state/async';
 import { getDraftNames } from '../state/draftNames';
+import { keepIfSame, keepUnchangedItems } from '../state/keepUnchanged';
 import { orderOf } from '../state/readiness';
 import { AudioPreview } from '../ui/AudioPreview';
 import { Icon } from '../ui/Icon';
@@ -17,6 +18,7 @@ import { TermHint } from '../ui/Glossary';
 import { LinkTabs, SearchField } from '../ui/primitives';
 import { seamFacts } from '../ui/seam';
 import { RelationshipMap } from './RelationshipMap';
+import { sameApartFromClock } from './clockMemo';
 import { ViewProps } from './shared';
 
 const HARMONIC_OWNER = 'harmonic-discoveries';
@@ -318,7 +320,8 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   );
 }
 
-function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: (link: Link, move: string, draft: number | null) => Promise<void>; names: Record<string, string>; onRated: () => void; drafts: { id: number; name: string }[] }) {
+/** Memoised (r8c): typing in the search or a poll that brings back the same link redraws no card. */
+const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: (link: Link, move: string, draft: number | null) => Promise<void>; names: Record<string, string>; onRated: () => void; drafts: { id: number; name: string }[] }) {
   const [move, setMove] = useState(link.move);
   const [cardError, setCardError] = useState('');
   const [rendering, setRendering] = useState(false);
@@ -334,20 +337,21 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
   const nameB = sameName ? `${link.title_b} (song ${link.b})` : link.title_b;
   const addId = `link-add-${link.a}-${link.b}-${link.phrase.replace(/\W+/g, '-')}`;
 
-  useEffect(() => {
-    if (!override || !['queued', 'rendering'].includes(override.status)) return;
-    const key = override.key;
-    const currentRequest = renderRequest.current;
-    let live = true;
-    const timer = window.setInterval(() => {
-      get<SeamState>(`/seams/${key}`).then((next) => {
-        if (!live || currentRequest !== renderRequest.current) return;
-        // A response for an older render key cannot replace the new result.
-        setOverride((current) => current?.key === key ? next : current);
-      }).catch(() => {});
-    }, 1500);
-    return () => { live = false; window.clearInterval(timer); };
-  }, [override?.key, override?.status]);
+  // r8c: a render on its way is followed only while the tab is visible, and a failed check waits
+  // longer each time instead of asking every 1.5 s
+  const following = override && ['queued', 'rendering'].includes(override.status) ? override.key : null;
+  const followFrom = useRef(0);
+  useEffect(() => { followFrom.current = renderRequest.current; }, [following, override?.status]);
+  useVisiblePoll(() => {
+    const key = following;
+    const currentRequest = followFrom.current;
+    if (!key) return;
+    return get<SeamState>(`/seams/${key}`).then((next) => {
+      if (currentRequest !== renderRequest.current) return;
+      // A response for an older render key cannot replace the new result.
+      setOverride((current) => current?.key === key && ['queued', 'rendering'].includes(current.status) ? next : current);
+    });
+  }, 1500, following !== null, { backoff: true });
 
   const render = async (name: string) => {
     const request = ++renderRequest.current;
@@ -442,9 +446,9 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
       )}
     </article>
   );
-}
+});
 
-export function Links({ mix, setMixData, setView, notify, status, tab = 'words' }: ViewProps & { tab?: 'words' | 'harmonic' }) {
+function LinksView({ mix, setMixData, setView, notify, status, tab = 'words' }: ViewProps & { tab?: 'words' | 'harmonic' }) {
   // it's in the address, so a search survives a reload, a shared link and coming Back
   const addressQuery = useQueryParam('q') ?? '';
   const [query, setQuery] = useState(addressQuery);
@@ -469,7 +473,8 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
           setFailed(true);
           return;
         }
-        setData(next);
+        // r8c: the same answer keeps what's shown, and unchanged links keep their objects
+        setData((before) => (before ? keepIfSame(before, { ...next, links: keepUnchangedItems(before.links, next.links) }) : next));
         setFailed(false);
       })
       .catch(() => { if (mine === asked.current) setFailed(true); });
@@ -528,6 +533,12 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
     }
   };
 
+  // r8c: the cards are memoised, so they're handed callbacks that keep their identity
+  const latest = useRef({ add, load });
+  latest.current = { add, load };
+  const onAdd = useCallback((link: Link, move: string, draft: number | null) => latest.current.add(link, move, draft), []);
+  const onRated = useCallback(() => void latest.current.load(), []);
+
   const worked = data?.links.filter((link) => link.worked) ?? [];
   const didnt = data?.links.filter((link) => !link.worked) ?? [];
   const card = (link: Link) => (
@@ -536,8 +547,8 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
       link={link}
       names={status.moves}
       drafts={drafts}
-      onAdd={add}
-      onRated={() => void load()}
+      onAdd={onAdd}
+      onRated={onRated}
     />
   );
 
@@ -589,3 +600,6 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
     </main>
   );
 }
+
+/** r8c: Discover never shows the music clock, so a tick of it doesn't redraw sixty cards. */
+export const Links = memo(LinksView, sameApartFromClock<ViewProps & { tab?: 'words' | 'harmonic' }>());
