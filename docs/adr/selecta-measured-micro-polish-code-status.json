@@ -5,7 +5,7 @@
   "as_of": "2026-11-08",
   "scope": "MP-0272-01 through MP-0299-08",
   "decision_summary": "28 Proposed",
-  "implementation_status": "20 Not started; 11 In Progress; 193 Implemented (recounted from the checklist task lines 2026-11-12; the per-ADR groups below were last synced 2026-11-08 and lag the checklist)",
+  "implementation_status": "19 Not started; 11 In Progress; 194 Implemented (recounted from the checklist task lines 2026-11-12; the per-ADR groups below were last synced 2026-11-08 and lag the checklist)",
   "independent_verification": "0 Verified",
   "groups": {
     "272": {

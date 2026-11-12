@@ -1,7 +1,7 @@
 # ADR-0035: Complete shared control states, overlays and recoverable feedback
 
 - **Decision status:** Accepted (owner requested implementation in PR #23)
-- **Implementation status:** In progress: 8/11 tasks Implemented with evidence on 2026-11-10 (P0021, P0023-P0026, P0028-P0030); P0022 measurement not green; P0027 and P0031 need a person. See [the polish evidence ledger](polish-implementation-evidence.md).
+- **Implementation status:** In progress: 9/11 tasks Implemented with evidence (P0021, P0023-P0026, P0028-P0030 on 2026-11-10); P0022 ticked 2026-11-12 after `web/e2e/polish-p0022-state-themes.e2e.ts` (both themes, long labels) passed, with a light-theme primary hover added; P0027 and P0031 need a person. See [the polish evidence ledger](polish-implementation-evidence.md).
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
 - **Delivery phase:** 2 - Shared components and loading
@@ -56,6 +56,7 @@ The owner accepted proceeding with implementation in PR #23. Implementation prog
 | 2026-11-06 | Proposed | Not started | Original documentation-only proposal |
 | 2026-11-06 | Accepted | In progress | Owner requested full implementation and merge after green CI in PR #23; verification pending |
 | 2026-11-10 | Accepted | In progress (8/11) | Reconciled against current code; P0021, P0023-P0026, P0028-P0030 ticked with tests run that day; independent verification still pending |
+| 2026-11-12 | Accepted | In progress (9/11) | P0022 ticked: `polish-p0022-state-themes.e2e.ts` 4/4 and MP-0279-01..07 passed in Edge; light-theme primary hover added in `foundation.css` |
 
 ## References
 

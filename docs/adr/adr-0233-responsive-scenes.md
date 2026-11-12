@@ -1,7 +1,7 @@
 # ADR-0233 - Responsive cinematic-to-precision layouts from 320px to wide screens
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** In progress (4/8 Implemented, 3/8 In progress, 1/8 Not started or needing a person; updated 2026-11-11).
+- **Implementation:** In progress (6/8 Implemented, 1/8 In progress, 1/8 Not started or needing a person; updated 2026-11-12).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P0 / Cross-cutting.
@@ -28,7 +28,7 @@ Use content-aware responsive compositions, not merely scaled desktop cards, with
 
 No offscreen focus, trapped horizontal scrolling on basic tasks, tap targets lost in compact mode or mobile player overlay. Do not add accounts, SaaS subscriptions, cloud uploads, telemetry, hardware launchers or new audio sources through this design proposal.
 
-## Implementation checklist - 4/8 Implemented, 0/8 Verified
+## Implementation checklist - 6/8 Implemented, 0/8 Verified
 
 1. **SF-0233-01 - Specify breakpoint behavior.** **Acceptance:** Every major scene has explicit spatial transformations. **Required verification:** Layout matrix. **Implementation:** Implemented; each scene's spatial change at 1040, 760 and 620px and at short heights is written down with its owning stylesheet, and the media queries it relies on are checked to exist; **Verified:** No; **Owner:** Flow checklist agent (Claude); **PR/SHA:** feat/finish-checklists, 2026-11-10; **Evidence:** `docs/engineering/flow-cross-cutting.md` Breakpoint behaviour per scene; `tests/test_flow_cross_cutting.py` 'test_the_breakpoint_matrix_names_real_media_queries' (passed 2026-11-11); `web/e2e/mp-0298-responsive-and-a11y.e2e.ts` 'MP-0298-01 every page holds from 320 to 3840px, at both sides of 620 and 760, and in short landscape' (passed 2026-11-11).
 2. **SF-0233-02 - Design mobile player and navigation.** **Acceptance:** Safe area and keyboard inset correct. **Required verification:** 320–430 touch E2E. **Implementation:** In progress; Needs a person: safe-area insets on a real notched phone (Chromium cannot emulate them). Automated part passed 2026-11-11: `web/e2e/flow-narrow.e2e.ts` (2 tests, 320px touch), `web/e2e/overlay-arbitration.e2e.ts` 'software keyboard makes notification chrome yield without removing notices or the mini-player', `web/e2e/mi-0141-first-screen-zoom.e2e.ts` MI-0141-07 (320x568 and 375x667 touch phones), `web/e2e/mp-0295-overlays-and-toasts.e2e.ts` 'MP-0295-07 an open software keyboard leaves the dialog action reachable and pushes chrome aside'; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.

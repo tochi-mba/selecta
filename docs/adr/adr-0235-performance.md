@@ -1,7 +1,7 @@
 # ADR-0235 - Audio-first performance and power-aware artistic rendering
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** In progress (1/8 Implemented, 6/8 In progress, 1/8 Not started or needing a person; updated 2026-11-11).
+- **Implementation:** In progress (3/8 Implemented, 4/8 In progress, 1/8 Not started or needing a person; updated 2026-11-12).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P0 / Quality.
@@ -28,7 +28,7 @@ Audio decoding, playback and seamless transitions take priority over canvas effe
 
 No power-draining hidden effects, work on the audio thread, uncontrolled canvas allocations or unmeasured performance claims. A new artistic effect is rejected if it reduces musical accuracy, accessibility, local privacy, performance or intelligible recovery. No production code or SaaS capability is authorized by a documentation-only ADR.
 
-## Implementation checklist - 1/8 Implemented, 0/8 Verified
+## Implementation checklist - 3/8 Implemented, 0/8 Verified
 
 1. **SF-0235-01 - Baseline real devices.** **Acceptance:** Record OS, browser, cores, memory and real media. **Required verification:** Reproducible trace register. **Implementation:** Not started; Needs a person: a real-device baseline (OS, browser, cores, memory, real media) recorded as a reproducible trace register; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.
 2. **SF-0235-02 - Define input and layout budgets.** **Acceptance:** Target p75 INP at most 200ms and low CLS where applicable. **Required verification:** Web vitals capture. **Implementation:** In progress; `web/e2e/mp-0298-responsive-and-a11y.e2e.ts` 'MP-0298-06 (lab part) layout shift, largest paint and interaction delay stay inside budget' FAILED on 2026-11-11 on the overloaded shared laptop (about 25 agents running); needs a rerun on a quiet machine before it can count; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.

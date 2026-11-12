@@ -2,7 +2,7 @@
 
 **Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 224 tasks: 194 Implemented, 11 In progress, 19 Not started, 0 Needs a person, 0 Superseded. 28 name a person-only step. 194 ticked. 0 independently Verified.
 
-**Status:** 28 Proposed ADRs (0272–0299); 20 acceptance tasks Not started; 11 In progress; 193 Implemented; 0 Independently Verified (recounted from the task lines 2026-11-12). Owner unassigned. Planning baseline main `100df40463d05b3d6a4cba8f5d06cbe193a1b0c4` (2026-11-08). Implementation candidate; independently unverified.
+**Status:** 28 Proposed ADRs (0272–0299); 19 acceptance tasks Not started; 11 In progress; 194 Implemented; 0 Independently Verified (recounted from the task lines 2026-11-12). Owner unassigned. Planning baseline main `100df40463d05b3d6a4cba8f5d06cbe193a1b0c4` (2026-11-08). Implementation candidate; independently unverified.
 
 Unchecked MP tasks are **new acceptance criteria**, not claims of missing code. Each source-present feature must be credited after exact old-ADR/source comparison.
 

@@ -1,7 +1,7 @@
 # ADR-0234 - Accessibility as an artistic constraint, WCAG 2.2 AA and semantic parity
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** In progress (4/8 Implemented, 2/8 In progress, 2/8 Not started or needing a person; updated 2026-11-11).
+- **Implementation:** In progress (5/8 Implemented, 1/8 In progress, 2/8 Not started or needing a person; updated 2026-11-12).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P0 / Quality.
@@ -28,7 +28,7 @@ The expressive redesign must retain keyboard-only access and complete screen-rea
 
 No focus trap, unlabeled transport, auto-playing animated lyric chatter or essential information inside canvas only. A new artistic effect is rejected if it reduces musical accuracy, accessibility, local privacy, performance or intelligible recovery. No production code or SaaS capability is authorized by a documentation-only ADR.
 
-## Implementation checklist - 4/8 Implemented, 0/8 Verified
+## Implementation checklist - 5/8 Implemented, 0/8 Verified
 
 1. **SF-0234-01 - Map focus and reading order.** **Acceptance:** Each scene has correct semantic structure. **Required verification:** Keyboard and DOM audit. **Implementation:** Implemented; the scene-by-scene map is `docs/engineering/flow-cross-cutting.md` Focus and reading order (SF-0234-01), checked by `tests/test_flow_cross_cutting.py` (13 passed 2026-11-11); **Verified:** No; **Owner:** Claude agent r4a; **PR/SHA:** feat/finish-checklists, 2026-11-11; **Evidence:** `web/e2e/sf-0234-reading-order.e2e.ts` 'SF-0234-01 <page> has one main, one page heading, headings in order and a skip link first' for all 14 pages and 'SF-0234-01 inside the page, Tab goes down the page in the order things are drawn' (15/15 passed 2026-11-12, Edge, web/dist-r6e, slot-lock run); `docs/engineering/flow-cross-cutting.md`.
 2. **SF-0234-02 - Validate all core journeys by AT.** **Acceptance:** Listen, Explore, Create, Studio, Requests and Export operable. **Required verification:** NVDA/Edge session. **Implementation:** Not started; Needs a person: an NVDA with Edge session through Listen, Explore, Create, Studio, Requests and Export; **Verified:** No; **Owner:** Unassigned; **PR/SHA:** -; **Evidence:** -.

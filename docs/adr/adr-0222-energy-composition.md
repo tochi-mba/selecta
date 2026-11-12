@@ -1,7 +1,7 @@
 # ADR-0222 - Intended versus achieved Energy Horizon composition
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** In progress (5/8 Implemented, 1/8 In progress, 2/8 Not started or needing a person; updated 2026-11-11).
+- **Implementation:** In progress (6/8 Implemented, 0/8 In progress, 2/8 Not started or needing a person; updated 2026-11-12).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P1 / Create.
@@ -28,7 +28,7 @@ Make five-point energy shaping tactile and precise, while separating user-reques
 
 No promise that a requested arc will be exactly heard and no incomparable scales overlaid. Reject ungrounded decoration, forced transitions and high-fidelity effects that starve the player. This ADR does not authorize SaaS, remote upload, telemetry or new backend logic without its own decision and tests.
 
-## Implementation checklist - 5/8 Implemented, 0/8 Verified
+## Implementation checklist - 6/8 Implemented, 0/8 Verified
 
 1. **SF-0222-01 - Document energy provenance.** **Acceptance:** Intent, measured and absent data typed. **Required verification:** Schema audit. **Implementation:** Implemented; **Verified:** No; **Owner:** Claude agent flb; **PR/SHA:** feat/finish-checklists (uncommitted; coordinator commits); **Evidence:** `web/src/ui/MusicObjects.test.tsx` 'keeps requested and measured energy explicitly separate, with no invented measurement', 'keeps unknown song energy as an unknown gap' (2026-11-10).
 2. **SF-0222-02 - Redesign five-stop gesture.** **Acceptance:** Pointer/touch updates precise repeatable stops. **Required verification:** Value tests. **Implementation:** Implemented; **Verified:** No; **Owner:** Claude agent flb; **PR/SHA:** feat/finish-checklists (uncommitted; coordinator commits); **Evidence:** `web/src/views/MixSetup.test.tsx` 'keeps numeric input, slider and drawn stops on the same exact preference values', 'cancels an interrupted pointer stroke' (2026-11-10).

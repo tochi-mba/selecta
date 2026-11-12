@@ -53,7 +53,9 @@ export function extrapolate(session: SessionState, serverNow: number): number {
   return session.offset_ms + Math.max(0, Math.round((serverNow - session.anchor_at) * 1000));
 }
 
-export function usePlaybackDevice({ api, workspaceId, speaker }: { api: Api; workspaceId: string; speaker: Speaker | null }) {
+/** `remoteControl` false (`devices.remote_control` off): the speaker keeps playing as it is and
+ * applies no command from another device, even one that reached the session before the switch. */
+export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = true }: { api: Api; workspaceId: string; speaker: Speaker | null; remoteControl?: boolean }) {
   const [device, setDevice] = useState<Device | null>(null);
   const [notice, setNotice] = useState('');
   const [view, setView] = useState<SessionView | null>(null);
@@ -111,13 +113,14 @@ export function usePlaybackDevice({ api, workspaceId, speaker }: { api: Api; wor
   const follow = useCallback(async (session: SessionState) => {
     if (!speaker || session.seq <= appliedSeq.current) return;
     appliedSeq.current = session.seq;
+    if (!remoteControl) return;
     const here = speaker.position();
     const target = extrapolate(session, serverNow());
     const moved = !here || here.song_index !== session.song_index || Math.abs(here.offset_ms - target) > 2500;
     if (moved) await speaker.start(session.song_index, target, session.state === 'playing');
     else if (session.state === 'paused' && speaker.active()) speaker.pause();
     else if (session.state === 'playing' && !speaker.active()) speaker.resume();
-  }, [speaker]);
+  }, [speaker, remoteControl]);
 
   const poll = useCallback(async () => {
     if (!deviceId) return;

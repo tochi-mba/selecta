@@ -1,7 +1,7 @@
 # ADR-0239 - Automated regression strategy and visual-evidence governance
 
 - **Decision:** Accepted (owner approval recorded 2026-11-08).
-- **Implementation:** In progress (5/8 Implemented, 2/8 In progress, 1/8 Not started or needing a person; updated 2026-11-11).
+- **Implementation:** In progress (7/8 Implemented, 0/8 In progress, 1/8 Not started or needing a person; updated 2026-11-12).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta / Flow artistic UI/UX; 2026-11-08; main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`.
 - **Priority / phase:** P0 / Verification.
@@ -28,7 +28,7 @@ Expand source-level unit, interaction E2E and screenshot candidates to cover new
 
 No snapshot update that masks a real functional break, no CI-only audio quality claims and no doctored baselines. A new artistic effect is rejected if it reduces musical accuracy, accessibility, local privacy, performance or intelligible recovery. No production code or SaaS capability is authorized by a documentation-only ADR.
 
-## Implementation checklist - 5/8 Implemented, 0/8 Verified
+## Implementation checklist - 7/8 Implemented, 0/8 Verified
 
 1. **SF-0239-01 - Map existing tests to new tasks.** **Acceptance:** Every task has relevant automated and independent evidence gap. **Required verification:** Test crosswalk. **Implementation:** Implemented; `tests/test_flow_test_crosswalk.py` holds the Flow checklist and its evidence ledger to the crosswalk: all 400 tasks once in the checklist, the ledger and their ADR, every ticked task citing files that exist, a separate Verified field (the independent gap) on every task, and every open task naming what it waits on; **Verified:** No; **Owner:** Flow checklist agent (Claude); **PR/SHA:** feat/finish-checklists, 2026-11-11; **Evidence:** `tests/test_flow_test_crosswalk.py` 'test_the_checklist_has_all_four_hundred_flow_tasks', 'test_every_task_has_one_ledger_row_and_one_adr_line', 'test_every_ticked_task_names_files_that_prove_it_and_they_exist', 'test_every_task_keeps_the_independent_gap_apart', 'test_every_open_task_says_what_it_is_waiting_on' (5 passed 2026-11-11); `docs/adr/selecta-flow-implementation-evidence.md`.
 2. **SF-0239-02 - Build stable visual fixtures.** **Acceptance:** Light/dark, no-data, errors, loading and sizes captured. **Required verification:** Deterministic screenshot runs. **Implementation:** Implemented; a fixed clock, still motion and the synthetic fixture capture a library with songs, an empty mix, a library error and a held library load in light and dark, each twice from a fresh load, compared byte for byte and written as candidates; on 2026-11-12 the spec was made to wait for the network to settle before each capture (except the held load), after one library capture in each size differed on a loaded laptop; **Verified:** No; **Owner:** Flow checklist agent (Claude); **PR/SHA:** -; **Evidence:** `web/e2e/sf-0239-stable-fixtures.e2e.ts` 'SF-0239-02 light, dark, songs, no data, error and loading capture identically twice at 320x640' and '... at 1280x800' passed (CI run 43119473767, Edge E2E (shard 2/2) job 130857753267, head f851f2b, recorded 2026-11-12) and, after the settle wait, 4/4 locally 2026-11-12 with --repeat-each=2 under the slot lock (Edge, web/dist-r6e); earlier fixtures `web/e2e/visual.e2e.ts`, `web/e2e/paired-theme.e2e.ts`.

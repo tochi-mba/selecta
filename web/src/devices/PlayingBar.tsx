@@ -22,7 +22,7 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
   const audio = useRef<HTMLAudioElement>(null);
   const [speaker, setSpeaker] = useState<Speaker | null>(null);
   useEffect(() => { if (audio.current) setSpeaker(audioSpeaker(audio.current, source)); }, [source]);
-  const pb = usePlaybackDevice({ api, workspaceId, speaker });
+  const pb = usePlaybackDevice({ api, workspaceId, speaker, remoteControl });
   const [asking, setAsking] = useState(false);
   const [, tick] = useState(0);
   useEffect(() => { const t = window.setInterval(() => tick((n) => n + 1), 1000); return () => window.clearInterval(t); }, []);
