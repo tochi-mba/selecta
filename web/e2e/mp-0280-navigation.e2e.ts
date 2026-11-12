@@ -12,7 +12,7 @@ const nav = (page: Page) => page.getByRole('navigation', { name: 'Main' });
 async function open(page: Page, route: string, width: number, height = 900) {
   await page.setViewportSize({ width, height });
   await page.goto(route);
-  await expect(page.locator('main#main')).toBeVisible();
+  await expect(page.locator('main#main:not([aria-busy="true"])')).toHaveCount(1);
   await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
 }
 
@@ -164,6 +164,7 @@ test('MP-0280-04 deep crumbs and a long draft name stay whole and readable at na
   // drafts keep names to 60 characters (NAME_LIMIT in src/selecta/mix.py), so the longest a name can be
   const long = 'Saturday sunrise set for the long drive home along the coast';
   const made = await (await request.post('/api/drafts', { data: { name: long } })).json();
+  for (const song of [5, 6]) await request.post(`/api/mix/songs?draft=${made.id}`, { data: { song_id: song } });
   try {
     for (const width of [320, 375, 768]) {
       for (const route of [`/mixes/drafts/${made.id}/edit`, '/workshop/diagnostics', '/discover/harmonic', '/workshop', '/discover', '/mix/current/edit']) {
