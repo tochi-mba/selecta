@@ -38,7 +38,7 @@
 | [EX-0119-04](adr-0119-my-mixes-drafts-and-render-line.md) | Clarify render readiness and storage | Not started | No | - | - | - | - | Unassigned |
 | [EX-0119-05](adr-0119-my-mixes-drafts-and-render-line.md) | Validate navigation and recovery | Not started | No | - | - | - | - | Unassigned |
 | [EX-0120-01](adr-0120-song-transition-editor-workstation.md) | Prototype distinct song/seam selection | Not started | No | - | - | - | - | Unassigned |
-| [EX-0120-02](adr-0120-song-transition-editor-workstation.md) | Specify responsive inspector behavior | Not started | No | - | - | - | - | Unassigned |
+| [EX-0120-02](adr-0120-song-transition-editor-workstation.md) | Specify responsive inspector behavior | Implemented | Yes (automated, 2026-11-12) | - | `web/e2e/mp-0288-seam-inspector.e2e.ts` MP-0288-06 (CI run 43119473767, Edge E2E (shard 2/2) job 130857753267, head f851f2b, recorded 2026-11-12) | - | - | Unassigned |
 | [EX-0120-03](adr-0120-song-transition-editor-workstation.md) | Maintain all existing editor commands | Not started | No | - | - | - | - | Unassigned |
 | [EX-0120-04](adr-0120-song-transition-editor-workstation.md) | Guard identity and concurrency | Not started | No | - | - | - | - | Unassigned |
 | [EX-0120-05](adr-0120-song-transition-editor-workstation.md) | Verify scale and non-drag alternatives | Not started | No | - | - | - | - | Unassigned |
@@ -65,7 +65,7 @@
 | [EX-0125-01](adr-0125-musical-discovery-audition-workflows.md) | Redesign word pair context | Not started | No | - | - | - | - | Unassigned |
 | [EX-0125-02](adr-0125-musical-discovery-audition-workflows.md) | Design four-stage harmonic audition | Not started | No | - | - | - | - | Unassigned |
 | [EX-0125-03](adr-0125-musical-discovery-audition-workflows.md) | Maintain preview focus | Not started | No | - | - | - | - | Unassigned |
-| [EX-0125-04](adr-0125-musical-discovery-audition-workflows.md) | Guard feedback binding | Not started | No | - | - | - | - | Unassigned |
+| [EX-0125-04](adr-0125-musical-discovery-audition-workflows.md) | Guard feedback binding | Implemented | Yes (automated, 2026-11-12) | - | `web/e2e/ex-0125-feedback-binding.e2e.ts` 2/2 (CI run 43119473767, Edge E2E (shard 1/2) job 130857753346, head f851f2b, recorded 2026-11-12) | - | - | Unassigned |
 | [EX-0125-05](adr-0125-musical-discovery-audition-workflows.md) | Verify safe add-to-mix flow | Not started | No | - | - | - | - | Unassigned |
 | [EX-0126-01](adr-0126-browser-first-onboarding-and-readiness.md) | Improve local path guidance | Not started | No | - | - | - | - | Unassigned |
 | [EX-0126-02](adr-0126-browser-first-onboarding-and-readiness.md) | Clarify readiness and first mix | Not started | No | - | - | - | - | Unassigned |
@@ -81,7 +81,7 @@
 | [EX-0128-02](adr-0128-calm-workspace-and-operations.md) | Preserve all job/source/storage operations | Implemented | Yes (automated, 2026-11-10) | - | `tests/test_ex_0128_operations_parity.py` (2 passed), `s3-0064-workspace.test.tsx`, `Workshop.test.tsx` | - | - | Unassigned |
 | [EX-0128-03](adr-0128-calm-workspace-and-operations.md) | Audit truth of job state labels | Implemented | Yes (automated, 2026-11-10) | - | `web/src/views/ex-0128-job-truth.test.tsx`, `web/src/views/Workshop.test.tsx` (15 passed) | - | - | Unassigned |
 | [EX-0128-04](adr-0128-calm-workspace-and-operations.md) | Specify privacy-safe diagnostics | Implemented | No | - | `web/src/views/Workshop.test.tsx` diagnostics case | - | Needs a person: manual privacy and network review | Unassigned |
-| [EX-0128-05](adr-0128-calm-workspace-and-operations.md) | Verify accessible layout | Implemented | No | - | `web/e2e/mp-0293-workspace-operations.e2e.ts` (not green on 2026-11-10) | - | Needs a person: both themes, 400% zoom, NVDA | Unassigned |
+| [EX-0128-05](adr-0128-calm-workspace-and-operations.md) | Verify accessible layout | Implemented | No | - | `web/e2e/mp-0293-workspace-operations.e2e.ts` (8/8, CI run 43119473767, Edge E2E (shard 2/2) job 130857753267, head f851f2b, recorded 2026-11-12) | - | Needs a person: both themes, 400% zoom, NVDA | Unassigned |
 | [EX-0129-01](adr-0129-blind-study-neutral-audio.md) | Audit all method leakage | Implemented | No | - | `tests/test_ex_0129_study_integrity.py`; MP-0294-07 | - | Needs a person: screen reader | Unassigned |
 | [EX-0129-02](adr-0129-blind-study-neutral-audio.md) | Design balanced A/B interface | Implemented | No | - | MP-0294-05 | - | Needs a person: counterbalanced pilot | Unassigned |
 | [EX-0129-03](adr-0129-blind-study-neutral-audio.md) | Separate listening, grading and save | Implemented | Yes (automated, 2026-11-11) | - | MP-0294-05 to -08 (14 passed with MP-0282); Listening unit tests | - | - | Unassigned |
@@ -94,8 +94,8 @@
 | [EX-0130-05](adr-0130-brand-tokens-and-css-ownership.md) | Test real-content resilience | Implemented | No | - | MP-0298-01/02, MP-0279-06 (not green 2026-11-10) | - | Needs a person: RTL/system-font screenshots | Unassigned |
 | [EX-0131-01](adr-0131-component-states-and-scoped-recovery.md) | Write interaction state matrix | Implemented | No | - | MP-0279 (not green 2026-11-10) | - | Needs a person: manual check | Unassigned |
 | [EX-0131-02](adr-0131-component-states-and-scoped-recovery.md) | Validate overlay and focus behavior | Implemented | No | - | `web/src/ui/controls.test.tsx` | - | Needs a person: APG and NVDA | Unassigned |
-| [EX-0131-03](adr-0131-component-states-and-scoped-recovery.md) | Protect async consistency | Implemented | No | - | unit only; race/two-tab/slow-network E2E missing | - | - | Unassigned |
-| [EX-0131-04](adr-0131-component-states-and-scoped-recovery.md) | Improve loading/empty/error feedback | Implemented | No | - | `web/src/state/workState.test.ts`, `skeletonHonesty.test.tsx`; MP-0297 not run | - | - | Unassigned |
+| [EX-0131-03](adr-0131-component-states-and-scoped-recovery.md) | Protect async consistency | Implemented | Yes (automated, 2026-11-12) | - | `web/e2e/ex-0131-async-consistency.e2e.ts` 3/3 (CI run 43119473767, Edge E2E (shard 1/2) job 130857753346, head f851f2b, recorded 2026-11-12) | - | - | Unassigned |
+| [EX-0131-04](adr-0131-component-states-and-scoped-recovery.md) | Improve loading/empty/error feedback | Implemented | Yes (automated, 2026-11-12) | - | `web/src/state/workState.test.ts`, `skeletonHonesty.test.tsx`; `web/e2e/mp-0297-loading-and-recovery.e2e.ts` 5/5 (CI run 43119473767, Edge E2E (shard 2/2) job 130857753267, head f851f2b, recorded 2026-11-12) | - | - | Unassigned |
 | [EX-0131-05](adr-0131-component-states-and-scoped-recovery.md) | Preserve scoped Undo and recovery | Implemented | Yes (automated, 2026-11-10) | - | toastPriority, toastsCoalesce, polish-components, controls, Mix tests (113 passed) | - | - | Unassigned |
 | [EX-0132-01](adr-0132-responsive-accessibility-and-purposeful-motion.md) | Review mobile/zoom layouts | Implemented | No | - | MP-0298-01/02, MP-0295-07 (not green 2026-11-10) | - | - | Unassigned |
 | [EX-0132-02](adr-0132-responsive-accessibility-and-purposeful-motion.md) | Ensure non-drag equivalents | Implemented | Yes (automated, 2026-11-10) | - | `Mix.test.tsx`, `Drafts.test.tsx`, `gp-0261-studio.test.tsx` | - | - | Unassigned |
