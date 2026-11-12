@@ -45,7 +45,11 @@ describe('music graphics inventory (FP-0266-01)', () => {
   it('reads the spectrum colours from the live theme, and repaints on a theme change', () => {
     const now = fs.readFileSync(`${SOURCE}views/Now.tsx`, 'utf8');
     expect(now).toContain("getPropertyValue('--accent')");
-    expect(now).toMatch(/\[player, active, stage, reduceMotion, theme, paletteRevision, spectrumShape, detail\]/);
+    // The current beat grid is updated through a ref; changing song detail must not restart
+    // the canvas loop or its cached gradient, but a theme change must repaint it.
+    expect(now).toContain('const songGrid = useMemo(() => gridOf(detail), [detail]);');
+    expect(now).toContain('grid.current = songGrid;');
+    expect(now).toMatch(/\[player, active, stage, reduceMotion, theme, paletteRevision, spectrumShape\]/);
     const modes = fs.readFileSync(`${SOURCE}views/spectrumVisuals.ts`, 'utf8');
     expect(modes).toContain('SPECTRUM_MODES');
   });

@@ -80,7 +80,9 @@ def counts(home: Path) -> dict:
         report["requests"] = len(client.get("/api/requests").json()["requests"])
     conn = sqlite3.connect(f"{(home / 'selecta.sqlite').as_uri()}?mode=ro", uri=True)
     try:
-        tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        tables = {
+            row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        }
         report["corrections"] = (
             conn.execute("SELECT COUNT(*) FROM song_overrides").fetchone()[0]
             if "song_overrides" in tables

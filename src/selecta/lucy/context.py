@@ -21,10 +21,14 @@ CONTEXT_CHARS = 7000
 HISTORY_MESSAGES = 24
 MESSAGE_CHARS = 2400
 
-_LOCAL_OPENING = ("You are Lucy, the mix-making helper inside Selecta, a local auto-DJ for "
-                  "one person's")
-_CLOUD_OPENING = ("You are Lucy, the mix-making helper inside SelectaDJ, an auto-DJ for "
-                  "each person's")
+_LOCAL_OPENING = (
+    "You are Lucy, the mix-making helper inside Selecta, a local auto-DJ "
+    "for one person's"
+)
+_CLOUD_OPENING = (
+    "You are Lucy, the mix-making helper inside SelectaDJ, an auto-DJ "
+    "for each person's"
+)
 
 _RULES = """ own music library. You help them describe a mix, look into their library, propose a \
 song order, and revise it from their notes.

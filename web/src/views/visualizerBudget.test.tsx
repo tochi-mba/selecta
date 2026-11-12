@@ -7,7 +7,8 @@ import { Now } from './Now';
 
 /**
  * SF-0205-07 and SF-0212-06: the Listen spectrum's render budget. The loop stops while the tab is
- * hidden, draws at most about 15 frames a second, caps the backing store at twice the CSS size and
+ * hidden, draws up to about 30 frames a second (backing off to 15 under load), caps the
+ * backing store at twice the CSS size and
  * reuses its gradient, so a busy laptop never pays for pictures nobody can see. Real CPU/GPU and
  * power profiles are a person's job; this proves the code keeps to the budget.
  */
@@ -71,15 +72,15 @@ function playing() {
 }
 
 describe('SF-0205-07 / SF-0212-06 the spectrum keeps to its render budget', () => {
-  it('draws at most about 15 frames a second however fast the display refreshes', () => {
+  it('draws at most about 30 frames a second however fast the display refreshes', () => {
     const { player, spectrum } = playing();
     render(view(player));
     expect(document.querySelector('canvas.music-visualizer')).not.toBeNull();
     spectrum.mockClear();
     // one second of a 60 Hz display
     for (let time = 1000; time <= 2000; time += 1000 / 60) runFrames(time);
-    expect(spectrum.mock.calls.length).toBeGreaterThan(10);
-    expect(spectrum.mock.calls.length).toBeLessThanOrEqual(16);
+    expect(spectrum.mock.calls.length).toBeGreaterThan(26);
+    expect(spectrum.mock.calls.length).toBeLessThanOrEqual(32);
   });
 
   it('stops its loop while the tab is hidden and starts again when it comes back', () => {

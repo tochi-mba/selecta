@@ -72,8 +72,9 @@ def create_gateway_app(*, engine: Engine | None = None) -> FastAPI:
         if owns_engine:
             engine.dispose()
 
-    app = FastAPI(title="SelectaDJ Worker Gateway", docs_url=None, redoc_url=None,
-                  lifespan=lifespan)
+    app = FastAPI(
+        title="SelectaDJ Worker Gateway", docs_url=None, redoc_url=None, lifespan=lifespan
+    )
     app.state.database_engine = engine
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(allowed_hosts))
     tracing.install(app, "gateway")
