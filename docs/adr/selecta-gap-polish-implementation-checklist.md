@@ -1,5 +1,7 @@
 # Selecta - gap-polish 128-task implementation checklist
 
+**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 128 tasks: 111 Implemented, 0 In progress, 17 Not started, 0 Needs a person, 0 Superseded. 17 name a person-only step. 111 ticked. 0 independently Verified.
+
 **16 Accepted ADRs (0248–0263), 128 GP tasks: 17 Not started, 0 In progress, 111 Implemented and 0 independently Verified (2026-11-11).** Planning baseline main `2956bc47fd735339e7216e03d27817fb3a31e92b` on 2026-11-08. Owner accepted all 16 ADRs on 2026-11-08. Implementation is recorded per task below with its evidence; ticks mean Implemented, never independently Verified, and historical SF/CI/MI or earlier statuses are unchanged.
 
 **ID range:** GP-0248-01 to GP-0263-08. An unchecked new GP task does **not** establish that a similar existing feature is missing; reconcile source and older programme evidence first. Code implementation requires exact implementing PR/SHA; independently Verified Yes requires separately recorded reviewer/media/device proof.

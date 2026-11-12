@@ -1,5 +1,7 @@
 # Selecta - creative-interface implementation checklist: 140 individually tracked CI tasks
 
+**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 140 tasks: 106 Implemented, 1 In progress, 0 Not started, 33 Needs a person, 0 Superseded. 50 name a person-only step. 106 ticked. 0 independently Verified.
+
 **Documentation-only proposal, 2026-11-08. Decision: 20 Accepted (owner approved 2026-11-08). Implementation: 106 Implemented, 1 In progress, 33 Need a person, 0 Not started (2026-11-11). Independent verification: 0 Verified.** Checked boxes carry their evidence on the line; independent verification is still 0. Previous MI code/status does not automatically complete a new CI requirement.
 
 **Tracking rule:** A checked box eventually means merged implementation and its tests, not independent verification. Every item separately tracks the owner, implementing PR/SHA and real-world evidence in the [CI evidence ledger](selecta-creative-interface-implementation-evidence.md).

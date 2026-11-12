@@ -37,6 +37,11 @@ CREATE TABLE IF NOT EXISTS songs (
     ,processing_priority INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS songs_is_music ON songs(is_music);
+-- SF-0235-05: Library pages walk these in sort order and stop after one page, and counts read
+-- songs_listed alone, so a 20,000-song library pages without sorting every song each time.
+CREATE INDEX IF NOT EXISTS songs_title_order ON songs(lower(coalesce(title,'')), id);
+CREATE INDEX IF NOT EXISTS songs_artist_order ON songs(lower(coalesce(artist,'')), id);
+CREATE INDEX IF NOT EXISTS songs_listed ON songs(is_music, duplicate_of);
 
 CREATE TABLE IF NOT EXISTS analysis (
     song_id INTEGER PRIMARY KEY REFERENCES songs(id) ON DELETE CASCADE,

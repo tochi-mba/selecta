@@ -126,6 +126,11 @@ def main(argv: list[str]) -> int:
             }
             # every seam rendered first, so the trace includes a transition being played
             _post(base, "/api/mix/render")
+            for _ in range(300):
+                seam = _get(base, "/api/mix")["mix"][1]["seam"]["state"]  # type: ignore[index]
+                if seam["status"] in ("ready", "failed"):
+                    break
+                time.sleep(2)
             browser = subprocess.run(
                 ["node", "e2e/baseline-capture.mjs", base, str(OUT)],
                 cwd=ROOT / "web",
@@ -144,8 +149,8 @@ def main(argv: list[str]) -> int:
                 "task": "T0001",
                 "commit": BASELINE,
                 "captured": time.strftime("%Y-%m-%d"),
-                "how": "tests/baseline_capture.py: the 911c981 checkout's own server and built page, "
-                "serving a made-up library from tests/e2e_server.py, in headless Edge",
+                "how": "tests/baseline_capture.py: the 911c981 checkout's own server and "
+                "built page, serving a made-up library from tests/e2e_server.py, in headless Edge",
                 "contracts": "tests/fixtures/api_contracts_baseline.json",
                 "files": sorted(files),
             }

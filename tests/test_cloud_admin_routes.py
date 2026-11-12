@@ -241,16 +241,27 @@ COMMANDS = {
     "/api/admin/jobs/{job_id}/{command}": ("retry", "cancel", "quarantine", "release"),
     "/api/admin/workers/{worker_id}/{command}": ("drain", "pause", "resume"),
     "/api/admin/accounts/{user_id}/{command}": ("suspend", "restore"),
-    "/api/admin/actions/{action_id}/{command}": ("approve", "cancel"),
+    "/api/admin/actions/{action_id}/{command}": ("approve", "cancel", "execute"),
     "/api/admin/emergency/{control}/{command}": ("engage", "release"),
     "/api/admin/takedowns/{notice_id}/{command}": ("act", "reject"),
 }
 # One body that satisfies every admin request model, so validation never answers first.
 EVERY_FIELD = {
-    "reason": "permission sweep", "workspace_id": "w-none", "workspace_ids": ["w-1", "w-2"],
-    "plan_id": "standard", "expires_at": time.time() + 3600, "user_id": "u-none",
-    "role": "support", "version": 1, "on": True, "action": "kill_switch", "params": {},
-    "asset_id": "a-none", "complainant": "A label", "work": "A song", "payload_hash": "0" * 64,
+    "reason": "permission sweep",
+    "workspace_id": "w-none",
+    "workspace_ids": ["w-1", "w-2"],
+    "plan_id": "standard",
+    "expires_at": time.time() + 3600,
+    "user_id": "u-none",
+    "role": "support",
+    "version": 1,
+    "on": True,
+    "action": "kill_switch",
+    "params": {},
+    "asset_id": "a-none",
+    "complainant": "A label",
+    "work": "A song",
+    "payload_hash": "0" * 64,
 }
 # Routes any signed-in staff member may call: starting the admin session and reading who you are.
 SELF_ONLY = {"POST /api/admin/session", "GET /api/admin/me"}
@@ -289,7 +300,10 @@ def test_every_admin_route_and_command_checks_a_registered_permission_first(admi
                 path = path.replace("{control}", "uploads.paused").replace("{flag_id}", "requests")
                 path = re.sub(r"\{\w+\}", "id-that-does-not-exist", path)
                 answer = admin_world.http.request(
-                    method, path, headers=headers, json=EVERY_FIELD,
+                    method,
+                    path,
+                    headers=headers,
+                    json=EVERY_FIELD,
                     params={"reason": "permission sweep"},
                 )
                 detail = answer.json().get("detail", {})

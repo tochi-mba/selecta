@@ -14,7 +14,12 @@ export function holdWakeLock(nav: Navigator = navigator, doc: Document = documen
   let wanted = true;
   const ask = async () => {
     if (!api || !wanted || doc.visibilityState !== 'visible') return;
-    try { sentinel = await api.request('screen'); } catch { sentinel = null; }
+    try {
+      const granted = await api.request('screen');
+      // Released while the browser was still deciding: let the late lock go at once.
+      if (!wanted) { void granted.release().catch(() => undefined); return; }
+      sentinel = granted;
+    } catch { sentinel = null; }
   };
   const onVisible = () => { if (doc.visibilityState === 'visible' && (!sentinel || sentinel.released)) void ask(); };
   doc.addEventListener('visibilitychange', onVisible);

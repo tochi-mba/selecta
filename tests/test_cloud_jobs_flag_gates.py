@@ -36,6 +36,7 @@ def store(cloud_engine, gate):
 def stops(monkeypatch):
     """Make the test flag a `when_off: stop` flag."""
     real = flag_gates.when_off
+
     def when_off(flag_id):
         return flag_gates.STOP if flag_id == FLAG else real(flag_id)
 
@@ -125,6 +126,30 @@ def test_the_resume_check_runs_at_most_every_flag_resume_s(store, gate):
     assert store.claim("cpu-heavy", worker()) is None, "not due yet"
     store._flag_resume_at.clear()
     assert store.claim("cpu-heavy", worker()).job.id == job.id
+
+
+def test_resuming_takes_the_lane_clocks_before_any_head(store, gate, monkeypatch):
+    # Lock order (`work/heads.py`): clocks first, then jobs and heads. A claim that put a job back
+    # in line before taking its clocks could deadlock with an enqueue on PostgreSQL.
+    from selecta.work import heads
+
+    store.enqueue(JobSpec("w1", "analyse.song"))
+    gate.off.add(("w1", FLAG))
+    assert store.claim("cpu-heavy", worker()) is None
+    gate.off.remove(("w1", FLAG))
+    calls: list[str] = []
+    for name in ("lock_lanes", "lock_all_lanes", "job_queued"):
+        real = getattr(heads, name)
+
+        def spy(*args, _real=real, _name=name, **kwargs):
+            calls.append(_name)
+            return _real(*args, **kwargs)
+
+        monkeypatch.setattr(heads, name, spy)
+    assert store.claim("cpu-heavy", worker()) is not None
+    assert calls.index("job_queued") > min(
+        calls.index(name) for name in ("lock_lanes", "lock_all_lanes") if name in calls
+    )
 
 
 def test_an_unknown_flag_drains_rather_than_stops():

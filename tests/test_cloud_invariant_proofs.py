@@ -72,15 +72,22 @@ REGISTRY = {
 
 
 def test_only_a_run_that_collects_every_cloud_module_is_gated():
-    assert covers_cloud_set(["tests/test_cloud_a.py::x", "tests/test_cloud_b.py::y[sqlite]"], CLOUD)
-    assert not covers_cloud_set(["tests/test_cloud_a.py::x", "tests/test_lucy.py::y"], CLOUD)
-    assert not covers_cloud_set(["tests/test_cloud_a.py::x"], set())
+    assert covers_cloud_set(["tests/test_cloud_a.py", "tests/test_cloud_b.py"], CLOUD)
+    assert not covers_cloud_set(["tests/test_cloud_a.py", "tests/test_lucy.py"], CLOUD)
+    assert not covers_cloud_set(["tests/test_cloud_a.py"], set())
+
+
+def test_the_gate_reads_every_cloud_module_even_one_with_no_tests():
+    gate = InvariantGate()
+    for nodeid in ("tests/test_cloud_kit.py", "tests/test_cloud_a.py::test_x", "tests"):
+        gate.pytest_collectreport(SimpleNamespace(nodeid=nodeid))
+    assert gate.modules == {"tests/test_cloud_kit.py"}
 
 
 def test_a_registered_test_counts_when_its_module_was_collected_and_its_shard_is_this_one():
-    collected = ["tests/test_cloud_a.py::test_proof", "tests/test_cloud_b.py::other"]
+    collected = ["tests/test_cloud_a.py", "tests/test_cloud_b.py"]
     assert required(REGISTRY, collected, None) == {"tests/test_cloud_a.py::test_proof": 8}
-    with_lucy = [*collected, "tests/test_lucy.py::anything"]
+    with_lucy = [*collected, "tests/test_lucy.py"]
     assert required(REGISTRY, with_lucy, None) == REGISTRY
     by_shard = [required(REGISTRY, with_lucy, (number, 2)) for number in (1, 2)]
     assert by_shard[0].keys().isdisjoint(by_shard[1].keys())

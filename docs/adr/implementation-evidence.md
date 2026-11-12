@@ -2,7 +2,7 @@
 
 Each of the 279 tasks in [#22](https://github.com/tochi-mba/selecta/pull/22), and what's true of it today. Done rows are the ones ticked on the PR.
 
-**213 done, 43 partly, 3 not done, and 20 that need a person** (approvals, screen readers, listening, installing it).
+**247 done, 6 partly, 0 not done, 25 that need a person** (approvals, screen readers, listening, installing it) **and 1 superseded** (counted from the rows below, 2026-11-12).
 
 Passing these checks doesn't mean it sounds good. That's for people to judge, using [the listening procedure](../listening-procedure.md).
 

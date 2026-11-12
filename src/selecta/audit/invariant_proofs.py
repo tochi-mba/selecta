@@ -86,7 +86,8 @@ SITE: dict[int, tuple[tuple[str, str], ...]] = {
         ),
         (
             "src/views/LibraryLx.test.tsx",
-            "a batch confirmation pressed twice sends one request and reports only after the answer",
+            "a batch confirmation pressed twice sends one request "
+            "and reports only after the answer",
         ),
         (
             "src/views/sfFlowWorkspace.test.tsx",

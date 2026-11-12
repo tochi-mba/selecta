@@ -37,6 +37,17 @@ export type QueuedMove =
   | { kind: 'refused'; error: unknown; restore: MixData; last: boolean }
   | { kind: 'dropped'; last: boolean };
 
+type Outcome =
+  | { kind: 'saved'; answer: MixData }
+  | { kind: 'refused'; error: unknown; restore: MixData }
+  | { kind: 'dropped' };
+
+let waitingEverywhere = 0;
+
+/** Whether any draft move is still on its way. A draft read that answers meanwhile describes an order
+ * from before the moves on screen, so the app leaves it unshown; the last move's answer is newer. */
+export const draftMovesWaiting = () => waitingEverywhere > 0;
+
 /** MI-0162-05: a draft's moves go to the server one after another, each guarded by the order the server
  * itself confirmed last, so a key pressed while earlier moves are on their way is shown at once and
  * queued rather than refused. The server still checks every move against its own revision: a refusal
@@ -58,8 +69,9 @@ export class MoveQueue {
     // with nothing on its way, what is shown is exactly what the server has
     if (this.waiting === 0) this.confirmed = shown;
     this.waiting += 1;
+    waitingEverywhere += 1;
     const index = ++this.added;
-    const turn = this.chain.then(async (): Promise<Omit<QueuedMove, 'last'> & { kind: QueuedMove['kind'] }> => {
+    const turn = this.chain.then(async (): Promise<Outcome> => {
       if (index <= this.dropUpTo) return { kind: 'dropped' };
       const known = this.confirmed ?? shown;
       try {
@@ -72,7 +84,8 @@ export class MoveQueue {
       }
     }).then((result) => {
       this.waiting -= 1;
-      return { ...result, last: this.waiting === 0 } as QueuedMove;
+      waitingEverywhere -= 1;
+      return { ...result, last: this.waiting === 0 };
     });
     this.chain = turn;
     return turn;

@@ -46,6 +46,7 @@ export function SecurityPage({ api, can, me }: { api: AdminFetch; can: (permissi
   const [query, setQuery] = useState('');
   const events = useLoad(() => api<{ events: AuditEvent[] }>(`/admin/audit?limit=100${query}`), [api, query]);
   const [notice, setNotice] = useState('');
+  const [refused, setRefused] = useState('');
   const search = (event: FormEvent) => {
     event.preventDefault();
     const params = new URLSearchParams(Object.entries(filter).filter(([, v]) => v.trim()));
@@ -56,16 +57,21 @@ export function SecurityPage({ api, can, me }: { api: AdminFetch; can: (permissi
     setNotice(`${command}: ${result.ok === false ? 'it did not run' : 'done'}.`);
     await actions.reload();
   };
+  // The plain buttons have no form of their own to show a refusal, so the page says it.
+  const press = (id: string, command: string, body: unknown) => {
+    setRefused('');
+    act(id, command, body).catch((problem: Error) => { setNotice(''); setRefused(problem.message); });
+  };
   return (
     <div className="admin-page">
       {notice && <p role="status">{notice}</p>}
       <Panel title="Waiting dangerous actions">
-        <Failure error={actions.error} />
+        <Failure error={actions.error || refused} />
         <DataTable caption="Dangerous actions" rows={actions.data?.actions ?? []} rowKey={(a) => a.id} empty="Nothing is waiting."
           columns={[{ key: 'description', label: 'Action' }, { key: 'reason', label: 'Reason' }, { key: 'execute_after', label: 'Runs after', render: (a) => when(a.execute_after) },
             { key: 'commands', label: 'Commands', render: (a) => <span className="admin-actions">
-              {a.proposer_id !== me && <button onClick={() => void act(a.id, 'approve', { payload_hash: a.payload_hash })}>Approve</button>}
-              <button onClick={() => void act(a.id, 'execute', {})}>Run now if due</button>
+              {a.proposer_id !== me && <button onClick={() => press(a.id, 'approve', { payload_hash: a.payload_hash })}>Approve</button>}
+              <button onClick={() => press(a.id, 'execute', {})}>Run now if due</button>
               <Command danger label="Cancel" run={(reason) => act(a.id, 'cancel', { reason })} />
             </span> }]} />
       </Panel>

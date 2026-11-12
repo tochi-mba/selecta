@@ -1,7 +1,7 @@
 # ADR-0043: Scannable Library, actionable Workshop and polished export/study flows
 
 - **Decision status:** Accepted (owner requested implementation in PR #23)
-- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23)); 2026-11-10 reconciliation: 10 of 12 tasks ticked (P0100-P0102, P0105-P0111); P0103 and P0104 implemented but their browser checks failed. See the [evidence ledger](polish-implementation-evidence.md).
+- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23)); 2026-11-10 reconciliation: 12 of 12 tasks ticked (P0100-P0111); P0103 and P0104 ticked 2026-11-12 after `polish-p0103-scroll.e2e.ts`, MP-0291-06 and MP-0291-07 passed in CI run 43123598913. See the [evidence ledger](polish-implementation-evidence.md).
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
 - **Delivery phase:** 5 - Library, discovery and operations

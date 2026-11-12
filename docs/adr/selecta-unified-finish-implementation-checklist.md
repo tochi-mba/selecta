@@ -1,5 +1,7 @@
 # Selecta - UF implementation checklist (192 individually tracked acceptance items)
 
+**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 192 tasks: 169 Implemented, 6 In progress, 17 Not started, 0 Needs a person, 0 Superseded. 83 name a person-only step. 108 ticked. 0 independently Verified.
+
 **Status:** 24 Accepted ADRs (0366–0389); 17 UF tasks Not started; 6 In progress; 169 Implemented; 0 independently Verified. Decision acceptance recorded at requester instruction 2026-11-08; implementation owners and independent reviewers unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08); PR #41 now includes app code and regression tests.
 
 **Semantics:** `[ ]` = not independently accepted. These are future design/integration/evidence requirements. A source-present capability may satisfy one after exact-SHA reconciliation; docs-only creation does not change implementation status.

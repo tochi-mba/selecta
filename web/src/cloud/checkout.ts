@@ -50,7 +50,8 @@ export function useCheckoutReturn(account: Account | null, refresh: () => Promis
   latest.current = refresh;
 
   useEffect(() => {
-    if (phase !== 'confirming' || !account) return;
+    // 'slow' too: the page promised to show the new plan as soon as it's confirmed.
+    if ((phase !== 'confirming' && phase !== 'slow') || !account) return;
     if (account.entitlement.plan !== 'free') {
       setPhase('confirmed');
       // Leave the address clean, so a reload doesn't start confirming again.

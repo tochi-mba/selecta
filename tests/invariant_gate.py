@@ -26,17 +26,17 @@ def cloud_files(tests: Path = TESTS) -> set[str]:
     return {path.name for path in tests.glob("test_cloud_*.py")}
 
 
-def covers_cloud_set(collected: Iterable[str], files: set[str]) -> bool:
-    """Whether the collected node IDs reach every cloud test module."""
-    seen = {Path(node.split("::", 1)[0]).name for node in collected}
+def covers_cloud_set(modules: Iterable[str], files: set[str]) -> bool:
+    """Whether the run collected every cloud test module (helper modules with no tests too)."""
+    seen = {Path(module).name for module in modules}
     return bool(files) and files <= seen
 
 
 def required(
-    registry: Mapping[str, int], collected: Iterable[str], shard: tuple[int, int] | None
+    registry: Mapping[str, int], modules: Iterable[str], shard: tuple[int, int] | None
 ) -> dict[str, int]:
     """The registered tests this run must pass: in a collected module and in this shard."""
-    modules = {node.split("::", 1)[0] for node in collected}
+    modules = set(modules)
     return {
         node: number
         for node, number in registry.items()
@@ -71,15 +71,19 @@ def shard_spec() -> tuple[int, int] | None:
 class InvariantGate:
     def __init__(self) -> None:
         self.needed: dict[str, int] = {}
+        self.modules: set[str] = set()
         self.selected: set[str] = set()
         self.outcomes: dict[str, str] = {}
 
+    def pytest_collectreport(self, report: pytest.CollectReport) -> None:
+        if "::" not in report.nodeid and report.nodeid.endswith(".py"):
+            self.modules.add(report.nodeid)
+
     @pytest.hookimpl(tryfirst=True)
-    def pytest_collection_modifyitems(self, items: list[pytest.Item]) -> None:
-        # Runs before sharding and -k/-m, so it sees everything the run collected.
-        collected = [item.nodeid for item in items]
-        if covers_cloud_set(collected, cloud_files()):
-            self.needed = required(invariant_proofs.python_ids(), collected, shard_spec())
+    def pytest_collection_modifyitems(self) -> None:
+        # Runs before sharding and -k/-m deselect anything; reads the modules collected.
+        if covers_cloud_set(self.modules, cloud_files()):
+            self.needed = required(invariant_proofs.python_ids(), self.modules, shard_spec())
 
     def pytest_collection_finish(self, session: pytest.Session) -> None:
         self.selected = {item.nodeid for item in session.items}

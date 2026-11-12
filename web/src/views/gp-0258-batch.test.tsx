@@ -96,4 +96,30 @@ describe('GP-0258 exact-scope batch actions', () => {
     await waitFor(() => expect(notify).toHaveBeenCalled());
     expect(notify.mock.calls.at(-1)![1]).toBeUndefined();
   });
+
+  it('GP-0258-07 Undo pressed after a new search reloads the search on screen, not the one the batch was made in', async () => {
+    fakeBackend({
+      'GET /library': (_body: unknown, url: string) => (new URLSearchParams(url.split('?')[1]).get('q') === 'zed'
+        ? page(row(9, 'Zed'))
+        : page(row(1, 'A'), row(2, 'B'))),
+      'POST /library/batch': { updated: 1 },
+    });
+    const notify = vi.fn();
+    show(notify);
+    await screen.findByText('B');
+    const user = userEvent.setup();
+    await user.click(box('A'));
+    await user.click(screen.getByRole('button', { name: /Never play selected|Exclude selected/ }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirm 1 recordings' }));
+    await waitFor(() => expect(notify).toHaveBeenCalled());
+    const undo = notify.mock.calls.at(-1)![1] as () => Promise<void>;
+    // a new search is on screen before Undo is pressed
+    await user.type(screen.getByRole('searchbox', { name: 'Search your library' }), 'zed');
+    await screen.findByText('Zed', {}, { timeout: 3000 });
+    await waitFor(() => expect(screen.queryByText('A')).toBeNull());
+    await undo();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.getByText('Zed')).toBeInTheDocument();
+    expect(screen.queryByText('A')).toBeNull();
+  });
 });

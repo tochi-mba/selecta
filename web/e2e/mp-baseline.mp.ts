@@ -321,7 +321,8 @@ test("'fx.toast' over the playing mini-player", async ({ page, request }) => {
 
 test("dialogs 'fx.overlay.delete_mix' and 'fx.overlay.delete_draft'", async ({ page, request }) => {
   await resetMix(request, STRESS_MIX);
-  const name = 'A draft to delete, named long enough to wrap twice on a phone';
+  // within the 60 characters a draft name keeps (a longer one is cut, and the dialog title with it)
+  const name = 'A draft to delete, named long enough to wrap on a phone';
   const made = await request.post('/api/drafts', { data: { name, copy_current: true } });
   expect(made.ok()).toBe(true);
   const id = (await made.json()).id as number;

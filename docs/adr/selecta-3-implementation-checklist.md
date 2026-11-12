@@ -1,5 +1,7 @@
 # Selecta 3.0 - complete implementation task checklist
 
+**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 258 tasks: 227 Implemented, 2 In progress, 0 Not started, 29 Needs a person, 0 Superseded. 35 name a person-only step. 216 ticked. 0 independently Verified.
+
 - **Decision status:** Accepted.
 - **Implementation status:** PR #24 merged as `3b01dc1336aab0f1cb0a4d85be5eba359de81831`; items below still await evidence-based reconciliation.
 - **Date:** 2026-11-07.

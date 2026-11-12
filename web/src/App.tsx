@@ -35,6 +35,7 @@ import { Start } from './views/Start';
 import { Workshop } from './views/Workshop';
 import { MixScope } from './views/mixScope';
 import { prefetchLibrary } from './views/libraryPrefetch';
+import { draftMovesWaiting } from './views/optimisticMove';
 import type { Undo, View } from './views/shared';
 
 // Lucy is optional and only loaded when someone opens it, so it costs Make a Mix nothing.
@@ -160,7 +161,8 @@ export function App() {
     const seen = draftChanges.current;
     get<MixData>(`/mix?draft=${asked}`)
       .then((next) => {
-        if (draftRef.current !== asked || seen !== draftChanges.current) return;
+        // MI-0162-05: nor while draft moves are on their way, which this read may predate
+        if (draftRef.current !== asked || seen !== draftChanges.current || draftMovesWaiting()) return;
         setDraftMix(next);
         setDraftGone(false);
       })

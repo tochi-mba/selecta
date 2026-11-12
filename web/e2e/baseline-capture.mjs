@@ -1,6 +1,7 @@
 // T0001: the browser half of tests/baseline_capture.py. Opens the pre-redesign (911c981) page that
 // the script is serving, saves a screenshot of each main view at desktop and phone width, then plays
-// the mix and records every sound the page starts and every audio file it fetches.
+// the mix, skips to its first transition and records every sound the page starts and every audio
+// file it fetches.
 //
 //     node e2e/baseline-capture.mjs http://127.0.0.1:8931 ../docs/baseline/911c981
 //
@@ -61,11 +62,14 @@ try {
   await page.getByRole('button', { name: 'Now', exact: true }).first().click();
   const mix = await (await page.request.get(`${base}/api/mix`)).json();
   await page.getByRole('button', { name: 'Play', exact: true }).first().click();
+  // N skips to the first transition, so the trace holds a seam being played, not only a song
+  await page.waitForTimeout(4000);
+  await page.keyboard.press('n');
   await page.waitForTimeout(PLAY_MS);
   const trace = await page.evaluate(() => window.baselineTrace);
   writeFileSync(join(out, 'playback-trace.json'), JSON.stringify({
     played_ms: PLAY_MS,
-    mix: mix.mix.map((item) => ({ song_id: item.song_id, title: item.title, seam: item.seam ? { key: item.seam.key, move: item.seam.move ?? item.seam.style ?? null, status: item.seam.status ?? null } : null })),
+    mix: mix.mix.map((item) => ({ song_id: item.song_id, title: item.title, seam: item.seam ? { key: item.seam.state?.key ?? null, status: item.seam.state?.status ?? null, settings: item.seam.settings ?? {} } : null })),
     audio_context: trace.states,
     sounds_started: trace.started,
     audio_fetched: fetched,

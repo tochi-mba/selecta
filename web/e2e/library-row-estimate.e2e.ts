@@ -53,19 +53,25 @@ test('the row estimate matches a drawn row in every layout, density and breakpoi
     for (const width of WIDTHS) {
       await open(page, layout, density, width);
       const reading = await page.evaluate(() => {
-        const rows = [...document.querySelectorAll<HTMLElement>('.library-rows .song-row')];
-        const estimate = parseFloat(getComputedStyle(rows[0]).getPropertyValue('--library-row-estimate'));
+        const list = document.querySelector('.library-rows')!;
+        const rows = [...list.querySelectorAll<HTMLElement>('.song-row')];
+        // a copy of a row that has never been drawn stands in at the estimate, padding and border included
+        const stand = rows[0].cloneNode(true) as HTMLElement;
+        stand.style.contentVisibility = 'hidden';
+        list.append(stand);
+        const estimate = stand.getBoundingClientRect().height;
+        stand.remove();
         // draw every row to read its real height, then hand the rows back to the browser
         for (const row of rows) row.style.contentVisibility = 'visible';
         const heights = rows.map((row) => row.getBoundingClientRect().height).sort((a, b) => a - b);
         for (const row of rows) row.style.contentVisibility = '';
         return { estimate, median: heights[Math.floor(heights.length / 2)], rows: rows.length };
       });
-      report.push(`${layout} ${density} ${width}px: estimate ${reading.estimate}, median ${reading.median.toFixed(1)} over ${reading.rows} rows`);
-      expect(Math.abs(reading.estimate - reading.median), `${layout} ${density} ${width}px: estimate ${reading.estimate} for a ${reading.median}px row`).toBeLessThanOrEqual(4);
+      report.push(`${layout} ${density} ${width}px: undrawn ${reading.estimate.toFixed(1)}, drawn median ${reading.median.toFixed(1)} over ${reading.rows} rows`);
+      expect(Math.abs(reading.estimate - reading.median), `${layout} ${density} ${width}px: an undrawn row stands in at ${reading.estimate}px for a ${reading.median}px row`).toBeLessThanOrEqual(4);
     }
   }
-  test.info().annotations.push({ type: 'heights', description: report.join('; ') });
+  console.log(report.join(' | '));
 });
 
 test.describe('a long library', () => {

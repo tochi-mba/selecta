@@ -1,5 +1,7 @@
 # Selecta 3.1 - 116-item UI/UX finishing implementation checklist
 
+**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 116 tasks: 96 Implemented, 1 In progress, 0 Not started, 19 Needs a person, 0 Superseded. 116 name a person-only step. 0 ticked. 0 independently Verified.
+
 - **Decision:** Accepted (11 ADRs, ADR-0078–0088).
 - **Implementation:** PR #25 merged as `6d78cf420c55817e967fc3b8db45749c9817926e` with 29 historically mapped partial tasks; this ledger still records **0/116 independently Verified**.
 - **Baseline:** `main` at `3b01dc1` (merged Selecta 3.0).

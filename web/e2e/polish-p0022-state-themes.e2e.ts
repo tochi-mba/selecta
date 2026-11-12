@@ -30,6 +30,9 @@ async function open(page: Page, theme: 'light' | 'dark', width: number) {
   await expect(gallery, 'build the site with VITE_SELECTA_GALLERY=1 for this spec').toHaveCount(1);
   await gallery.evaluate((details) => { (details as HTMLDetailsElement).open = true; });
   await expect(gallery.getByRole('heading', { name: 'Actions and feedback' })).toBeVisible();
+  // the Diagnostics panels above the gallery load their own data; measure once they have settled
+  await expect(page.locator('[aria-busy="true"]:not(.control-gallery *)')).toHaveCount(0, { timeout: 30_000 });
+  await page.evaluate(() => document.fonts.ready);
   return gallery;
 }
 

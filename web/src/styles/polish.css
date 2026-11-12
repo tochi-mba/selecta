@@ -145,9 +145,22 @@ button[aria-disabled='true'] { cursor: progress; }
 .skeleton-vibes .skeleton-action { width: 100%; height: 48px; }
 @media (max-width: 1040px) { .skeleton-vibes .skeleton-content { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 620px) { .skeleton-vibes .skeleton-content { grid-template-columns: 1fr; } .skeleton-vibes .skeleton-unit:nth-child(n + 4) { display: none; } }
-.skeleton-library .skeleton-unit { min-height: 108px; padding-block: var(--space-4); border-bottom: 1px solid var(--border); grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
-.skeleton-library .skeleton-detail { grid-row: 2; }
+/* P0033: the Library placeholder follows the loaded rows' own grid (operations.css .library-rows .song-row):
+   name, facts, readiness and actions side by side over 1024px, facts under the name below that, and each
+   unit stands at the same median row height (--library-row-estimate) in both densities. */
+.skeleton-library .skeleton-content { gap: var(--row-gap, var(--space-4)); }
+.skeleton-library .skeleton-unit {
+  box-sizing: border-box; min-height: var(--library-row-estimate, 126px); padding-block: var(--row-pad, var(--space-4)); border-bottom: 1px solid var(--border);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) var(--library-actions-width, 200px); align-content: start;
+}
+.skeleton-library .skeleton-detail { grid-row: 2; grid-column: 1; }
 .skeleton-library .skeleton-meta { grid-column: 2; grid-row: 1; width: 80%; }
+@media (max-width: 1024px) {
+  .skeleton-library .skeleton-unit { grid-template-columns: minmax(0, 1fr) auto; }
+  .skeleton-library .skeleton-meta { grid-column: 1; grid-row: 3; width: 38%; }
+}
+/* Library card view: the same tracks and gap as .library-rows.library-cards (music-objects.css) */
+.library .skeleton-cards .skeleton-content { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: var(--space-3); }
 .skeleton-listen .skeleton-unit { min-height: 260px; }
 .skeleton-listen .skeleton-region { height: 120px; }
 /* P0035: song rows and the transitions hanging between them, at the timeline's own row heights

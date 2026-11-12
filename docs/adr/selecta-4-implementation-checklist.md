@@ -1,5 +1,7 @@
 # Selecta 4.0 - 250-item UI/UX implementation checklist
 
+**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 250 tasks: 202 Implemented, 36 In progress, 12 Not started, 0 Needs a person, 0 Superseded. 182 name a person-only step. 0 ticked. 0 independently Verified.
+
 - **Historical register status:** Created with 25 Proposed decisions and 250 Not started tasks. Runtime implementation PR #29 later merged as `6638ec2313ce53843adfaf363306f8e79c4c8c7e`; task-specific implementation/verification remains unreconciled in this ledger.
 - **Date:** 2026-11-07.
 - **Base:** `main` `9b663f9f10212619f27ce67ce82f602347065cbd` (after PR #25 and #26 merge).

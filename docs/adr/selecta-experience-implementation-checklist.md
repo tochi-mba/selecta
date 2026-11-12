@@ -1,5 +1,7 @@
 # Selecta - experience-first implementation checklist (105 EX tasks)
 
+**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 105 tasks: 91 Implemented, 4 In progress, 7 Not started, 0 Needs a person, 3 Superseded. 49 name a person-only step. 47 ticked. 47 independently Verified.
+
 **Historical baseline:** Created 2026-11-07 at `6638ec2313ce53843adfaf363306f8e79c4c8c7e` as a docs-only proposal. Implementation PR #30 later merged as `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7`; the task-by-task reconciliation of 2026-11-10/11 records **38/105 Verified** (checked, each with its proving test and date); the other 67 stay open, each naming the rerun it needs, the person it needs, or the later ADR that superseded it. A checked box means independently **Verified**, never only coded.
 
 **Lifecycle:** Not started → In progress (named PR) → Implemented (merged code/tests); Verified No → Yes after applicable human, visual, keyboard/AT, real audio, performance and data/revision evidence.

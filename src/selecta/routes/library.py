@@ -412,15 +412,25 @@ def add_routes(app, ctx) -> None:
                 conditions += ["s.is_music=1", "s.processing_priority=100"]
             else:
                 conditions.append("s.is_music=1")
+            search_join = joins
             joins = (
                 f"FROM songs s {joins}LEFT JOIN analysis a ON a.song_id=s.id "
                 "LEFT JOIN lyrics l ON l.song_id=s.id "
                 "LEFT JOIN song_overrides o ON o.song_id=s.id "
             )
             where = " AND ".join(conditions)
-            total = conn.execute(f"SELECT COUNT(*) {joins} WHERE {where}", params).fetchone()[0]  # noqa: S608
+            # SF-0235-05: only the analysis filters read the joined tables, so every other count
+            # is answered from the songs_listed index alone.
+            counted = (
+                joins
+                if state in {"ready", "not_yet", "attention"}
+                else (f"FROM songs s {search_join}")
+            )
+            total = conn.execute(f"SELECT COUNT(*) {counted} WHERE {where}", params).fetchone()[0]  # noqa: S608
             page_params = list(params)
-            page_where = where
+            # Nearly every song is music, so the is_music index narrows nothing; the unary plus
+            # keeps SQLite walking the sort-order index and stopping after one page instead.
+            page_where = where.replace("s.is_music=1", "+s.is_music=1")
             if after:
                 # Cursor values are made by this endpoint: [sort value, stable song ID].
                 # Reject malformed or wrong-sort markers instead of allowing a 500, a
@@ -444,8 +454,10 @@ def add_routes(app, ctx) -> None:
                     or (isinstance(value, float) and not math.isfinite(value))
                 ):
                     raise HTTPException(400, "That page marker isn't valid.")
-                page_where += f" AND ({order}, s.id) > (?, ?)"
-                page_params += [value, last]
+                # The same as ({order}, s.id) > (value, last), written so SQLite can seek the
+                # sort-order index to the marker instead of scanning every earlier song.
+                page_where += f" AND {order} >= ? AND ({order} > ? OR s.id > ?)"
+                page_params += [value, value, last]
             rows = conn.execute(
                 "SELECT s.id,s.artist,s.title,s.genre,s.duration,s.is_music,s.set_aside_reason,"  # noqa: S608
                 "s.path,s.processing_priority,s.music_override,"

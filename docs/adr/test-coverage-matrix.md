@@ -61,7 +61,7 @@ Widths 320, 375, 390, 430, 768, 1024, 1280, 1440, 1920 and Stage large-screen. Z
 
 Keep Windows CI Ruff, pytest (coverage ≥70%), pnpm tests and build; extend in later implementation PRs. Link screenshots, traces, real-audio assertions, accessibility findings, manual listening notes, migration and rollback evidence to ADRs and release gates. A passing mocked test is not proof that the music sounds good.
 
-**All proposed test additions: Not started.**
+**Proposed test additions (2026-11-12): built for most rows; see "Added with the implementation" below. The test tasks still open (for example T0014, T0261, T0263, T0265 and the person-run checks) are listed in [implementation-evidence.md](implementation-evidence.md).**
 
 ## Added with the implementation
 

@@ -326,7 +326,8 @@ def entitlements(connection: Connection) -> list[Violation]:
             found.append(
                 Violation(
                     7,
-                    f"{row.workspace_id} may store {row.limit_bytes} bytes; its plan gives {allowed}",
+                    f"{row.workspace_id} may store {row.limit_bytes} bytes; "
+                    f"its plan gives {allowed}",
                 )
             )
         plan = plan_catalogue.plan_for(row.plan_id, row.plan_version)

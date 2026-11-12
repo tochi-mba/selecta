@@ -4,7 +4,7 @@
 - **Date:** 2026-11-06
 - **Tasks completed:** 94 / 143
 - **Runtime verification:** none claimed by this planning PR.
-- **Implementing PR and commits:** PR #23 (`84b8b5c`) for the original work; the 2026-11-10/11 reconciliation and new work are on branch `feat/finish-checklists` (WIP commits from `a31bc2e`, coordinator-committed), and each section below names its own tests and runs. The final PR link is added at P0142. Inherited T work: [completion/t-to-p-map.md](completion/t-to-p-map.md) (P0005).
+- **Implementing PR and commits:** PR #23 (`84b8b5c`) for the original work; the 2026-11-10/11 reconciliation and new work merged as PR [#55](https://github.com/tochi-mba/selecta/pull/55) (`fcf745f`, all-green CI run [43123598913](https://github.com/tochi-mba/selecta/actions/runs/43123598913)); the 2026-11-12 work is on branch `feat/finish-checklists-2`, PR [#56](https://github.com/tochi-mba/selecta/pull/56). Each section below names its own tests and runs. Inherited T work: [completion/t-to-p-map.md](completion/t-to-p-map.md) (P0005).
 
 ## Evidence boundary
 
@@ -196,7 +196,7 @@ P0141 is ticked (rollback check with ratings, 2026-11-11); every other task need
 |---|---|---|---|---|
 | P0132 | Implemented; browser check pending | `web/e2e/polish-p0132-baselines.e2e.ts`: `toHaveScreenshot` for every PAGES route and Library loading/empty/failed/recovered, light and dark, 375 and 1440px; fixed clock, reduced motion, documented masks | not run (BUILD FIRST) | Generate with `--update-snapshots`, commit, then P0133 review |
 | P0133 | Open (Needs a person) | - | - | Named reviewer compares differences |
-| P0134 | Open | Focused runs only (agents may not run full suites); focused Playwright 31/59 passed | 8-spec Playwright run, port 9050 | Full CI on the candidate SHA |
+| P0134 | Verified (automated) | Full frontend, backend, browser, flag-sweep and file-length checks green without weakened assertions | CI run 43123598913 on main `fcf745f` (PR #55 merge), 15 jobs green, Edge E2E 539 passed, 2026-11-12 | - |
 | P0135 | Open (Needs a person) | - | - | Traces on recorded hardware |
 | P0136 | Open | Lab spec MP-0298-06 failed | `mp-0298-responsive-and-a11y.e2e.ts` | Fix and report labelled lab results |
 | P0137 | Open (Needs a person) | - | - | Actual audio evidence |
@@ -204,7 +204,7 @@ P0141 is ticked (rollback check with ratings, 2026-11-11); every other task need
 | P0139 | Open (Needs a person) | - | - | Unguided participant tasks |
 | P0140 | Open (Needs a person) | - | - | Owner blocker review |
 | P0141 | Implemented | Rollback to `main` (`405cf7f`) and forward again: "nothing lost"; songs, steering, mix, seam settings, drafts, corrected tempo, export record, requests, ratings (liked 1, disliked 1) and rated seams identical | `.venv\Scripts\python tests/rollback_check.py <git archive main src>` under the slot lock, exit 0, 2026-11-11 | - |
-| P0142 | Open | Section entries updated 2026-11-10/11; every task has an entry (P0009); inherited mapping in `completion/t-to-p-map.md` | - | PR and verification links at final reconciliation |
+| P0142 | Open | Section entries updated; every task has an entry (P0009); inherited mapping in `completion/t-to-p-map.md`; header links PR #23, merged PR #55 (`fcf745f`, CI run 43123598913) and open PR #56 | - | PR #56 merge and its CI run link |
 | P0143 | Open (Needs a person) | - | - | Release-candidate review and owner disposition |
 
 ## ADR-0039 task evidence (reconciled 2026-11-10/11, uncommitted working tree)
@@ -246,8 +246,8 @@ Implementing history: PR #23 (`84b8b5c`) plus Library/Lucy (LX), Selecta 3.0 Lib
 | P0100 | Verified (automated) | Title, artist, readiness and the relevant action lead; secondary actions sit in a keyboard menu | `LibraryLx.test.tsx` readiness decides actions; `Library.test.tsx` layouts keep actions; `controls.test.tsx` menu; MP-0291-02 | MP-0291-03 target check failing |
 | P0101 | Verified (automated) | One search/filter/sort/count bar; empty library, empty filter and no-match differ; Clear search keeps the filter | `LibraryLx.test.tsx`; MP-0291-01 | - |
 | P0102 | Verified (automated) | Analysed vs mix-ready, measured vs corrected, Never play vs Set aside, priority vs readiness stay distinct | new `web/src/state/polishReadinessDistinct.test.ts`; `Library.test.tsx`; `LibraryLx.test.tsx`; MP-0291-04 | - |
-| P0103 | Implemented | Query, page depth, typed values and search focus survive | `Library.test.tsx`; `LibraryLx.test.tsx` | MP-0291-06 (the way back) failed |
-| P0104 | Implemented | 20,000-song library renders one page as a real list | `LibraryLx.test.tsx` LX-0345-07 | MP-0291-07 failed; hardware timing is P0135 |
+| P0103 | Verified (automated) | Query, filter, page depth, scroll position, typed values and opener focus survive details, a refused value, a failed save and the way back | `polish-p0103-scroll.e2e.ts` (2 tests) and MP-0291-06 passed in CI run 43123598913 (job 130871012003); `polish-p0103-p0104.test.tsx`, `Library.test.tsx`, `LibraryLx.test.tsx` (vitest) passed 2026-11-12 | - |
+| P0104 | Verified (automated) | 20,000-song library pages 100 rows at a time without remounting shown rows; search keeps focus; no jump | MP-0291-07 passed in CI run 43123598913 (job 130871012003); `polish-p0103-p0104.test.tsx` and `LibraryLx.test.tsx` LX-0345-07 (vitest) passed 2026-11-12 | Hardware timing is P0135 |
 | P0105 | Verified (automated) | Overview leads with repairs; sections share one rhythm; keyboard repair path | `Workshop.test.tsx`; MP-0293-01/02/05/07/08 | MP-0293-03/04/06 layout checks failing |
 | P0106 | Verified (automated) | Control gallery only in development (or VITE_SELECTA_GALLERY=1) builds, folded under Diagnostics | new `web/src/views/polishWorkshopShowcase.test.tsx` P0106 (2); production bundle `dist-saas-p3/assets/*.js` has 0 `control-gallery` | - |
 | P0107 | Verified (automated) | Budget, cache, free disk and untouched music named apart; refused save shows the confirmed limit and Retry; older save never overrides a newer choice | `polishWorkshopShowcase.test.tsx` P0107/P0111 (3); `Workshop.test.tsx` protected stems, really-saved value | MP-0293-04 geometry failing |
@@ -266,7 +266,7 @@ All runs are Edge (Chromium) on the shared Windows laptop and are simulated, not
 | P0122 | Open (Needs a person) | 320 to 3840px, both sides of 620/760 and short landscape hold | MP-0298-01 passed | Safe areas and virtual keyboards on real devices |
 | P0123 | Open (Needs a person) | Emulated zoom spec failed | MP-0298-02 failed | Real 200%/400% browser zoom and text resizing |
 | P0124 | Verified (automated) | Every target is at least 24px or a documented WCAG exception; primary touch targets reach 44px | MP-0298-03 passed | - |
-| P0125 | Implemented | Text 4.5:1, large 3:1, field edges 3:1 in both themes | MP-0298-05 passed | Forced-colour focus/selection checks failed |
+| P0125 | Verified (automated) | Text 4.5:1, large 3:1, field edges 3:1 in both themes; status has words and a drawn mark; forced-colour focus ring stays apart from selection | MP-0298-05, both `flow-forced-colors.e2e.ts` tests and MP-0287-04 passed 2026-11-12 (Edge, port 8961); forced colours also green in CI run 43123598913; `polish-p0125-nontext.test.tsx` (vitest) passed | - |
 | P0126 | Open (Needs a person) | Automated keyboard parts pass | `ListeningStudyFlow.test.tsx`, `gp-0261-studio.test.tsx`, MP-0293-08 | Full manual keyboard-only journeys |
 | P0127 | Verified (automated) | Sliders, seek, energy arc, tabs, grid and resize separator follow their keyboard and value patterns | `listenSeek.test.tsx`, `Mixes.test.tsx`, `ufSeamInspector.test.tsx`, `polish-components.test.tsx`, `Studio.test.tsx`, `gp-0261-studio.test.tsx`, `inspectorResize.test.tsx`, `Workshop.test.tsx` (vitest, passed) | - |
 | P0128 | Open (Needs a person) | - | - | NVDA and VoiceOver journeys |
@@ -281,15 +281,15 @@ Classifies every failure or gap recorded above, plus the copy findings in [compl
 | ID | Severity | Surface / location | Finding | Impact | Acceptance check | Status | Tasks |
 |---|---|---|---|---|---|---|---|
 | PF-01 | P0 | Edit inspector sheet at 320px, `web/src/views/Mix.tsx` | MP-0288-06 failed: the narrow sheet or resized rail may cover the call to action or focus | Keyboard users could lose sight of focus (WCAG 2.4.11) | `web/e2e/mp-0288-seam-inspector.e2e.ts` MP-0288-06 | Open, unconfirmed (2026-11-10) | P0074, P0129 |
-| PF-02 | P0 | Forced colours, `web/src/styles/polish.css` | Both forced-colour tests failed on 2026-11-11 | Focus or selection could vanish in high contrast | `web/e2e/flow-forced-colors.e2e.ts` | Open, unconfirmed (2026-11-11) | P0125, P0130 |
+| PF-02 | P0 | Forced colours, `web/src/styles/polish.css` | Both forced-colour tests failed on 2026-11-11 | Focus or selection could vanish in high contrast | `web/e2e/flow-forced-colors.e2e.ts` | Closed: both passed locally 2026-11-12 (port 8961) and in CI run 43123598913 | P0125, P0130 |
 | PF-03 | P0 | Browser zoom, app-wide | Emulated 200%/400% zoom MP-0298-02 failed | Content could be cut off when zoomed | `web/e2e/mp-0298-responsive-and-a11y.e2e.ts` MP-0298-02 | Open, unconfirmed (2026-11-10) | P0123 |
 | PF-04 | P0 | Edit undo scope, `web/src/views/Mix.tsx` | Draft-while-current-plays Undo test timed out | If real, Undo could act on the wrong mix | `web/e2e/integration.e2e.ts` Undo scope test; `web/src/views/Mix.test.tsx` scope tests pass | Open, unconfirmed (timeout) | P0073, P0078, P0138 |
 | PF-05 | P0 | Rollback, `tests/rollback_check.py` | Ratings were not proven to survive a rollback | Good/Bad ratings could be lost unnoticed | `tests/rollback_check.py` against `main` | Resolved 2026-11-11: "nothing lost", ratings and rated seams identical | P0141 |
 | PF-06 | P1 | Edit pinned bar, `web/src/views/Mix.tsx` | MP-0287-07 failed: name, current/draft and view may scroll away | People may lose which mix they edit | `web/e2e/mp-0287-editor-rows.e2e.ts` MP-0287-07 | Open, unconfirmed | P0070 |
 | PF-07 | P1 | Edit reorder at 320px, `web/src/views/EditorRows.tsx` | MP-0287-03 failed: keyboard and drag move at 320px | Reordering may be hard on a phone | `web/e2e/mp-0287-editor-rows.e2e.ts` MP-0287-03 | Open, unconfirmed | P0073 |
 | PF-08 | P1 | Stem Studio grid, `web/src/views/Studio.tsx` | MP-0289-01 to -07 failed: `.studio-cell` never appeared in 60 s | Labels, states and narrow width unmeasured | `web/e2e/mp-0289-stem-studio.e2e.ts` MP-0289-01 to -07 | Open, unconfirmed | P0080, P0081, P0084, P0087 |
-| PF-09 | P1 | Library correction, `web/src/views/Library.tsx` | MP-0291-06 failed: correction, error and the way back | Query or focus may be lost after an error | `web/e2e/mp-0291-library.e2e.ts` MP-0291-06 | Open, unconfirmed | P0103 |
-| PF-10 | P1 | Library at 20,000 songs, `web/src/views/Library.tsx` | MP-0291-07 failed | Large libraries may jump | `web/e2e/mp-0291-library.e2e.ts` MP-0291-07 | Open, unconfirmed | P0104 |
+| PF-09 | P1 | Library correction, `web/src/views/Library.tsx` | MP-0291-06 failed: correction, error and the way back | Query or focus may be lost after an error | `web/e2e/mp-0291-library.e2e.ts` MP-0291-06 | Closed: passed in CI run 43123598913 (2026-11-12) | P0103 |
+| PF-10 | P1 | Library at 20,000 songs, `web/src/views/Library.tsx` | MP-0291-07 failed | Large libraries may jump | `web/e2e/mp-0291-library.e2e.ts` MP-0291-07 | Closed: passed in CI run 43123598913 (2026-11-12) | P0104 |
 | PF-11 | P1 | Background refresh, `web/src/state/async.ts` | MP-0297-03 failed: selection, focus, playback through a refresh | A refresh could move focus | `web/e2e/mp-0297-loading-and-recovery.e2e.ts` MP-0297-03 | Open, unconfirmed | P0037, P0043 |
 | PF-12 | P1 | Integrated recovery, `web/e2e/integration.e2e.ts` | Two draft/current scenarios timed out | Recovery not proven end to end | `web/e2e/integration.e2e.ts` | Open, unconfirmed | P0138 |
 | PF-13 | P2 | Placeholders, `web/src/ui/Skeleton.tsx` | MP-0297-01 failed: placeholder vs loaded geometry | Content may shift on arrival | `web/e2e/mp-0297-loading-and-recovery.e2e.ts` MP-0297-01 | Open, unconfirmed | P0032, P0033, P0034, P0036, P0043 |

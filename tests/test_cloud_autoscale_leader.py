@@ -127,6 +127,14 @@ def test_the_spend_meter_charges_what_was_running_and_resets_each_day():
     assert meter.charge("gpu", next_day) == pytest.approx(0.1)
 
 
+def test_the_spend_meter_never_charges_the_same_time_twice():
+    # A failed scale skips `set`, so the next charge must still start where the last one ended.
+    meter = autoscale_leader.SpendMeter()
+    meter.set("gpu", NOW, 3, T4)
+    assert meter.charge("gpu", NOW + 1_800) == pytest.approx(3.0)
+    assert meter.charge("gpu", NOW + 3_600) == pytest.approx(6.0)
+
+
 def test_one_pool_failing_to_scale_does_not_stop_the_others(cloud_engine, caplog):
     class Flaky(FakeLauncher):
         def scale(self, pool, workers, launch, *, fallback):

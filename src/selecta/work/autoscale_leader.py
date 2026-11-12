@@ -136,6 +136,7 @@ class SpendMeter:
             self.day, self.spent = today, {}
         since, per_hour = self.last.get(pool, (now, 0.0))
         self.spent[pool] = self.spent.get(pool, 0.0) + per_hour * max(now - since, 0.0) / 3_600
+        self.last[pool] = (max(now, since), per_hour)  # charged up to now; a failed scale skips set
         return self.spent[pool]
 
     def set(self, pool: str, now: float, workers: int, launch: Launch) -> None:

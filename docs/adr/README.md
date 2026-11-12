@@ -1,3 +1,29 @@
+# Current task status of every programme
+
+Recounted from each checklist's own task lines by `src/selecta/audit/checklist_summary.py`; `tests/test_checklist_summary.py` fails when this table is stale. Status lines further down are dated snapshots.
+
+<!-- checklist-summary:start (written by checklist_summary.py --write) -->
+| Programme | Tasks | Implemented | In progress | Not started | Needs a person | Superseded | Ticked | Independently Verified |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| [Selecta 2.0 (T)](implementation-checklist.md) | 279 | 250 | 0 | 4 | 24 | 1 | 247 | 0 |
+| [UI/UX polish (P)](polish-implementation-checklist.md) | 143 | 111 | 4 | 7 | 20 | 1 | 105 | 0 |
+| [Selecta 3.0 (S3)](selecta-3-implementation-checklist.md) | 258 | 227 | 2 | 0 | 29 | 0 | 216 | 0 |
+| [Selecta 3.1 (S31)](selecta-3-1-implementation-checklist.md) | 116 | 96 | 1 | 0 | 19 | 0 | 0 | 0 |
+| [Selecta 4.0 (S4)](selecta-4-implementation-checklist.md) | 250 | 202 | 36 | 12 | 0 | 0 | 0 | 0 |
+| [Experience-first (EX)](selecta-experience-implementation-checklist.md) | 105 | 91 | 4 | 7 | 0 | 3 | 47 | 47 |
+| [Microinteraction (MI)](selecta-microinteraction-implementation-checklist.md) | 240 | 213 | 3 | 24 | 0 | 0 | 213 | 0 |
+| [Creative interface (CI)](selecta-creative-interface-implementation-checklist.md) | 140 | 106 | 1 | 0 | 33 | 0 | 106 | 0 |
+| [Flow (SF)](selecta-flow-implementation-checklist.md) | 400 | 261 | 19 | 70 | 46 | 4 | 255 | 0 |
+| [Gap polish (GP)](selecta-gap-polish-implementation-checklist.md) | 128 | 111 | 0 | 17 | 0 | 0 | 111 | 0 |
+| [Final polish (FP)](selecta-final-polish-implementation-checklist.md) | 64 | 53 | 2 | 9 | 0 | 0 | 0 | 0 |
+| [Measured micro-polish (MP)](selecta-measured-micro-polish-implementation-checklist.md) | 224 | 193 | 11 | 20 | 0 | 0 | 193 | 0 |
+| [Library + Lucy (LX)](selecta-library-lucy-experience-implementation-checklist.md) | 208 | 179 | 1 | 28 | 0 | 0 | 144 | 0 |
+| [Unified finish (UF)](selecta-unified-finish-implementation-checklist.md) | 192 | 169 | 6 | 17 | 0 | 0 | 108 | 0 |
+| [Selecta Cloud (SC)](selecta-cloud-implementation-checklist.md) | 136 | 91 | 35 | 10 | 0 | 0 | 91 | 0 |
+<!-- checklist-summary:end -->
+
+---
+
 # Selecta - Selecta Cloud (SaaS) proposal (2026-11-09)
 
 **26 accepted ADRs, [ADR-0391](adr-0391-selecta-cloud-goal-and-local-guarantees.md) to [ADR-0416](adr-0416-rooms-guest-requests.md):** a subscription cloud edition beside the local app, from one codebase. Free, Standard and Premium plans (10, 50 and 100 GB); a durable job queue in Postgres with per-account fair shares by tier, leases and fencing; workers that scale by adding containers; R2 storage with server-completed uploads; Stripe billing; Lucy routed to hosted models per tier; staff roles and an admin console; one playing device per account; Premium Rooms with QR-code guest requests; and layered feature-flag targeting on top of [ADR-0390](adr-0390-feature-flags.md). All 26 Accepted by the owner on 2026-11-09; implementation tracked in the [checklist](selecta-cloud-implementation-checklist.md); 0 independently Verified. Baseline main `3c2f1eb`.

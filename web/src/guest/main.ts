@@ -78,12 +78,17 @@ function schedule(): void {
 
 async function refresh(): Promise<void> {
   if (!roomId) { joinScreen(); return; }
+  const asked = roomId;
   try {
-    view = await call<View>(base());
+    const fresh = await call<View>(base());
+    // the guest left (or rejoined elsewhere) while this read was on its way: it no longer applies
+    if (roomId !== asked) return;
+    view = fresh;
     failures = 0;
     draw();
     if (view.room_status !== 'ended') schedule();
   } catch (error) {
+    if (roomId !== asked) return;
     const problem = error as ApiError;
     if (problem.code === 'flag_off') { screen('Rooms are off', problem.message); return; }
     if (problem.status === 401) { store(roomKey, null); roomId = null; joinScreen(); return; }

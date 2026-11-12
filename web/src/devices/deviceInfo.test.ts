@@ -80,6 +80,18 @@ describe('the wake lock', () => {
     expect(sentinels[1].released).toBe(true);
   });
 
+  it('lets go of a lock that is granted only after it was released', async () => {
+    let grant: (s: { released: boolean; release: () => Promise<void> }) => void = () => {};
+    const request = vi.fn(() => new Promise<{ released: boolean; release: () => Promise<void> }>((resolve) => { grant = resolve; }));
+    const hold = holdWakeLock({ wakeLock: { request } } as unknown as Navigator, fakeDocument() as unknown as Document);
+    hold.release();
+    const late = { released: false, release: async () => { late.released = true; } };
+    grant(late);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(late.released).toBe(true);
+    expect(hold.held()).toBe(false);
+  });
+
   it('does nothing where the browser has no wake lock', () => {
     const doc = fakeDocument();
     const hold = holdWakeLock({} as Navigator, doc as unknown as Document);

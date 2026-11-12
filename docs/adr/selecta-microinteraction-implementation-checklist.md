@@ -1,5 +1,7 @@
 # Selecta - 240-task immersive experience implementation checklist
 
+**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 240 tasks: 213 Implemented, 3 In progress, 24 Not started, 0 Needs a person, 0 Superseded. 32 name a person-only step. 213 ticked. 0 independently Verified.
+
 **Baseline:** main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` on 2026-11-07. **30 Accepted decisions; 213 source-level Implemented, 3 In progress, 24 Not started; 0 independently Verified.** Historical T/P/S3/S31/S4/EX tasks keep their own ledgers. An existing code capability is not proof that a new microinteraction acceptance criterion has been implemented.
 
 **Status discipline:** The checkbox tracks **source-level implementation**: `[x]` means code work for that task is implemented, not independently verified or release-approved. `Verified: No` remains explicit on every task until a named reviewer records actual visual, assistive-technology, audio, device or performance evidence as required. This separates implementable code work from independent acceptance. All 30 ADR decisions were accepted by the repository owner on 2026-11-07. [Machine-readable implementation status](selecta-microinteraction-code-status.json) is the audit key for all 240 items.
