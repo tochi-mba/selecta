@@ -60,6 +60,9 @@ def pytest_configure(config: pytest.Config) -> None:
         "invariants_off(reason): the test breaks a §15.2 invariant on purpose, so the cloud "
         "engine fixtures don't check them after it (tests/cloud_db.py)",
     )
+    from invariant_gate import InvariantGate
+
+    config.pluginmanager.register(InvariantGate(), "selecta-invariant-gate")
 
 
 @pytest.hookimpl(hookwrapper=True)

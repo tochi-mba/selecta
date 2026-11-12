@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Selecta</title>
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#100f0c" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f2e9" />
+    <!-- before the first paint, so a chosen theme never flashes the other one. Same key as state/prefs.ts -->
+    <script>
+      try {
+        var theme = JSON.parse(localStorage.getItem('selecta.prefs') || '{}').theme;
+        if (theme === 'light' || theme === 'dark') {
+          document.documentElement.dataset.theme = theme;
+          // Match the selected palette in supported browser/PWA chrome before first paint.
+          var chrome = theme === 'light' ? '#f5f2e9' : '#100f0c';
+          document.querySelectorAll('meta[name="theme-color"]').forEach(function (meta) {
+            meta.content = chrome;
+          });
+        }
+      } catch (error) {}
+    </script>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/selecta-192.png" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23e8ff3a'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23100f0c'/%3E%3C/svg%3E" />
+    <script type="module" crossorigin src="/assets/main-egFEC3G4.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-P2Xu9kJm.js">
+    <link rel="modulepreload" crossorigin href="/assets/controls-DP2gL7uE.js">
+    <link rel="stylesheet" crossorigin href="/assets/main-ClUB6j66.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

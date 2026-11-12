@@ -1,7 +1,7 @@
 # ADR-0041: Readable Stem Studio grid, audition ownership and explicit commit state
 
 - **Decision status:** Accepted (owner requested implementation in PR #23)
-- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23)); 2026-11-10 reconciliation: 4 of 9 tasks ticked (P0082, P0083, P0085, P0086), 3 implemented but not verified in the browser, P0087 and P0088 need a person. See the [evidence ledger](polish-implementation-evidence.md).
+- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23)); 2026-11-12: 7 of 9 tasks ticked (P0080-P0086); P0080, P0081 and P0084 ticked after `web/e2e/mp-0289-stem-studio.e2e.ts` MP-0289-01 to -08 passed in Edge on 2026-11-12 and in CI run 43119473767; P0087 and P0088 need a person. See the [evidence ledger](polish-implementation-evidence.md).
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
 - **Delivery phase:** 4 - Editing and Stem Studio
@@ -53,6 +53,7 @@ The owner accepted proceeding with implementation in PR #23. Implementation prog
 |---|---|---|---|
 | 2026-11-06 | Proposed | Not started | Original documentation-only proposal |
 | 2026-11-06 | Accepted | In progress | Owner requested full implementation and merge after green CI in PR #23; verification pending |
+| 2026-11-12 | Accepted | In progress (7/9) | P0080, P0081, P0084 ticked: `mp-0289-stem-studio.e2e.ts` passed in Edge (local run and CI run 43119473767) |
 
 ## References
 
