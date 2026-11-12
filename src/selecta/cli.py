@@ -799,7 +799,7 @@ def listening_report(study: str) -> None:
 
 @app.command("gather-data")
 def gather_data() -> None:
-    """Bring data from every older SelectaDJ folder on this PC into the one in use. Safe to repeat."""
+    """Bring older SelectaDJ data folders into the active folder. Safe to repeat."""
     from selecta.homes import gather
 
     settings = load_settings()

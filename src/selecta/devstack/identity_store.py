@@ -441,7 +441,9 @@ class IdentityStore:
                     (to.strip(), limit),
                 ).fetchall()
             else:
-                rows = db.execute("SELECT * FROM mail ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+                rows = db.execute(
+                    "SELECT * FROM mail ORDER BY id DESC LIMIT ?", (limit,)
+                ).fetchall()
         return [dict(row) for row in rows]
 
     def clear_mail(self) -> None:
