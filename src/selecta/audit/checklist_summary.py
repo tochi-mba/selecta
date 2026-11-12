@@ -257,7 +257,10 @@ def write(root: Path) -> list[Path]:
         else:
             title = next(i for i, ln in enumerate(lines) if ln.startswith("# "))
             lines[title + 1 : title + 1] = ["", expected]
-        path.write_text("\n".join(lines) + ("\n" if text.endswith("\n") else ""), "utf-8")
+        # newline="" keeps LF on Windows; text mode would turn every line into CRLF
+        path.write_text(
+            "\n".join(lines) + ("\n" if text.endswith("\n") else ""), "utf-8", newline=""
+        )
         changed.append(path)
     readme = root / README
     if readme.is_file():
@@ -282,7 +285,9 @@ def write(root: Path) -> list[Path]:
             lines[span[0] : span[1] + 1] = table
         else:
             return changed
-        readme.write_text("\n".join(lines) + ("\n" if text.endswith("\n") else ""), "utf-8")
+        readme.write_text(
+            "\n".join(lines) + ("\n" if text.endswith("\n") else ""), "utf-8", newline=""
+        )
         changed.append(readme)
     return changed
 
