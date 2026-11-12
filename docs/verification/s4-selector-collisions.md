@@ -173,7 +173,7 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `select` | style.css, styles/polish.css | styles/polish.css |
 | `select:focus-visible` | style.css, styles/polish.css | styles/polish.css |
 
-## Classes styled by more than one sheet (212)
+## Classes styled by more than one sheet (213)
 
 | Class | Sheets, in load order | Proposed owner |
 |---|---|---|
@@ -342,6 +342,7 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.song-row` | style.css, styles/operations.css, styles/music-objects.css, styles/depth.css | style.css |
 | `.song-select` | styles/creation.css, styles/music-objects.css | styles/creation.css |
 | `.song-why` | styles/operations.css, styles/music-objects.css | styles/operations.css |
+| `.stack` | style.css, styles/polish.css | style.css |
 | `.stage` | style.css, styles/shell.css, styles/polish.css, styles/listening.css | style.css |
 | `.start` | style.css, styles/polish.css, styles/listening.css | style.css |
 | `.status` | style.css, styles/shell.css, styles/polish.css, styles/foundation.css, styles/listening.css, styles/creation.css, styles/operations.css, styles/typography.css | styles/shell.css |
