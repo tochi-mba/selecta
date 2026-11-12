@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { resetMix } from './helpers';
+import { allRendered, resetMix } from './helpers';
 import { assertNoPersonalData, provenance } from './pairedEvidence';
 
 /**
@@ -65,12 +65,9 @@ for (const viewport of VIEWPORTS) {
 
     for (const theme of ['light', 'dark'] as const) {
       await resetMix(request);
-      // The server renders the reset mix's transitions in the background. Capture both themes with
-      // every transition made, or the editor reads "Rendering 2 of 3" in one theme and not the other.
-      await expect.poll(async () => {
-        const mix = (await (await request.get('/api/mix')).json()).mix as { seam?: { state?: { status?: string } } }[];
-        return mix.slice(1).every((item) => item.seam?.state?.status === 'ready');
-      }, { timeout: 120_000, message: 'the reset mix has every transition rendered' }).toBe(true);
+      // Capture both themes with every transition of the reset mix made, or the editor reads
+      // "Rendering 2 of 3" in one theme and "3 of 3 ready" in the other.
+      await allRendered(request);
       await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
       await page.goto('/mixes');
       await page.evaluate((chosen) => {
