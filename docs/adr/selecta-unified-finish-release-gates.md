@@ -1,6 +1,6 @@
 # Selecta - UF accepted independent release NO-GO gates
 
-**Status:** 24 Accepted ADRs (0366–0389); 184 UF tasks Not started; 8 In progress; 0 Implemented; 0 independently Verified. Acceptance approved by requester on 2026-11-08; implementation owners and independent reviewers remain unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08); PR #41 now includes app source and regression tests.
+**Status:** 24 Accepted ADRs (0366–0389); 17 UF tasks Not started; 6 In progress; 169 Implemented; 0 independently Verified (recounted from the checklist task lines 2026-11-12). Acceptance approved by requester on 2026-11-08; implementation owners and independent reviewers remain unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08); PR #41 now includes app source and regression tests.
 
 Applies to **implementation of the accepted finishing programme only**, not existing Selecta release fitness. Accepted decisions and code WIP do not imply independent GO.
 
@@ -8,7 +8,7 @@ Applies to **implementation of the accepted finishing programme only**, not exis
 |---|---|---|
 | Design authority | All 24 ADRs accepted/rejected/superseded by owner/date/rationale | Accepted by requester, 2026-11-08 |
 | Historic source parity | All 192 items reconciled to code/earlier owners, with explicit true delta | Pending |
-| Implementation | Matching app/test PR+SHA, rollback and per-item status updates | 8 In progress; 0 Implemented |
+| Implementation | Matching app/test PR+SHA, rollback and per-item status updates | 169 Implemented; 6 In progress; 17 Not started (2026-11-12) |
 | Visual quality | Approved paired same-state screenshots and token/component galleries | Unverified |
 | Accessibility | WCAG 2.2 AA; 320px/400%/forced colour; physical keyboard and screen reader tasks | Unverified |
 | Audio behaviour | Single owner; deliberate Pause; real handoff; safe preview and player continuity | Unverified |

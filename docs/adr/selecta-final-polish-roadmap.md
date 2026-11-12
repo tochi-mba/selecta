@@ -2,6 +2,8 @@
 
 **2026-11-08 docs-only planning baseline:** main `5347e7309c5ff8b2e2965c2194bf2089b6ad2721`. **8 Proposed ADRs** (0264–0271), **64 task acceptances Not started**, 0 In progress, 0 Implemented, **0 independently Verified**. Owner decisions/implementing PRs are not supplied. Existing prior programme ledgers are not changed.
 
+**2026-11-12 status (recounted from the task lines of the [checklist](selecta-final-polish-implementation-checklist.md)):** 8 Accepted ADRs (0264-0271); 64 task acceptances: 53 Implemented, 2 In progress, 9 Not started (each names a person-only step); **0 independently Verified**. The line above is the historical 2026-11-08 baseline.
+
 ## Why these eight, and not another broad redesign?
 
 The repository already has accepted SF ADR-0198–0247 (400 new acceptance tasks at their historical baseline), proposed GP ADR-0248–0263 (128 added acceptance tasks at their historical baseline), and substantially functional music UI. New decisions only describe **testable, previously under-specified deltas**; they do not declare the features absent. Before implementation, reconcile each exact FP requirement against source, SF/GP owners and existing tests. No changes to audio/backend/frontend are authorized by this documentation PR.
