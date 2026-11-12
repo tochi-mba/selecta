@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 /**
  * Library rows skip layout while far off screen (content-visibility: auto) and stand in at an
  * estimated height, --library-row-estimate in web/src/styles/operations.css. The estimate used to be
- * 72px while a real row is 118 to 234px, so every row coming into view grew, the rows under it jumped,
+ * 72px while a real row is 88 to 234px, so every row coming into view grew, the rows under it jumped,
  * and the scroll specs (MP-0291-07, P0103) were flaky on a loaded runner.
  * 1. The estimate matches the real row height in both layouts, both densities and every breakpoint.
  * 2. Jumping down a long library, the rows on screen don't move once the browser draws them.
@@ -70,6 +70,27 @@ test('the row estimate matches a drawn row in every layout, density and breakpoi
       report.push(`${layout} ${density} ${width}px: undrawn ${reading.estimate.toFixed(1)}, drawn median ${reading.median.toFixed(1)} over ${reading.rows} rows`);
       expect(Math.abs(reading.estimate - reading.median), `${layout} ${density} ${width}px: an undrawn row stands in at ${reading.estimate}px for a ${reading.median}px row`).toBeLessThanOrEqual(4);
     }
+  }
+  console.log(report.join(' | '));
+});
+
+test('compact list rows are clearly denser than comfortable ones, 20% or more shorter at every breakpoint', async ({ page }) => {
+  const report: string[] = [];
+  for (const width of WIDTHS) {
+    const median: Record<string, number> = {};
+    for (const density of ['comfortable', 'compact']) {
+      await open(page, 'list', density, width);
+      median[density] = await page.evaluate(() => {
+        const rows = [...document.querySelectorAll<HTMLElement>('.library-rows .song-row')];
+        for (const row of rows) row.style.contentVisibility = 'visible';
+        const heights = rows.map((row) => row.getBoundingClientRect().height).sort((a, b) => a - b);
+        for (const row of rows) row.style.contentVisibility = '';
+        return heights[Math.floor(heights.length / 2)];
+      });
+    }
+    const shorter = 1 - median.compact / median.comfortable;
+    report.push(`${width}px: comfortable ${median.comfortable.toFixed(1)}, compact ${median.compact.toFixed(1)}, ${(shorter * 100).toFixed(0)}% shorter`);
+    expect(shorter, `${width}px: compact is only ${(shorter * 100).toFixed(0)}% shorter`).toBeGreaterThanOrEqual(0.2);
   }
   console.log(report.join(' | '));
 });

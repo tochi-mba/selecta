@@ -32,7 +32,7 @@ describe('the draft privacy notice', () => {
     const headings = PRIVACY_NOTICE_DRAFT.map((section) => section.heading);
     expect(headings).toEqual(['Who we are', 'What we hold and why', 'How long we keep it', 'Who processes it for us', 'Cookies', 'Your rights']);
     const text = PRIVACY_NOTICE_DRAFT.flatMap((section) => section.paragraphs).join(' ');
-    for (const word of ['(contract)', 'legitimate interests', '12 months', '2 years', '30 days', 'Stripe', 'WorkOS', 'Anthropic', 'International Data Transfer Agreement', 'strictly necessary', 'one month', "Information Commissioner's Office"]) {
+    for (const word of ['(contract)', 'legitimate interests', '12 months', '2 years', '30 days', 'Stripe', 'WorkOS', 'Anthropic', 'International Data Transfer Agreement', 'strictly necessary', 'one month', "Information Commissioner's Office", 'LRCLIB', 'Rooms guest data: 30 days', 'within 60 days', 'hashed IP address']) {
       expect(text).toContain(word);
     }
     expect(text).not.toContain('\u2014');

@@ -111,8 +111,8 @@ def install(app: FastAPI, engine: Engine, folder: Path) -> type:
     def price_text(price_id: str) -> tuple[str, str]:
         price = PRICES[price_id]
         plan = plan_catalogue.plan_for(price["plan"])
-        name = getattr(plan, "name", None) or price["plan"].title()
-        return str(name), "per month" if price["interval"] == "month" else "per year"
+        name = plan.label
+        return name, "per month" if price["interval"] == "month" else "per year"
 
     @app.get(PREFIX + "/checkout/{session_id}", include_in_schema=False)
     def checkout(session_id: str):

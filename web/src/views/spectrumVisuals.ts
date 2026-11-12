@@ -1,424 +1,78 @@
-/** Display-only renderers for the actual analyser output. No audio, clock or
- * server writes happen here. All optional modes are horizontal by design. */
-export type SpectrumShape = 'bars' | 'ribbon' | 'aurora' | 'lanes' | 'constellation' | 'waterfall'
-  | 'skyline' | 'threads' | 'pins' | 'matrix' | 'trails'
-  | 'dunes' | 'candles' | 'mesh' | 'split';
+/** Display-only renderers for the Listen visualizer. No audio, clock or server writes happen here.
+ * Every style is horizontal and full-width, and every style is driven by the shared feature layer
+ * (visualizer/features.ts): measured band envelopes, onsets, kicks, snares, hi-hats, loudness with
+ * auto-gain, the song's analysed beat grid and sections, stereo width and the waveform. Motion comes
+ * only from those real events; when the analyser hears nothing, nothing is drawn.
+ * Design note: docs/engineering/visualizer-design.md. */
+import type { Features } from './visualizer/features';
+import { clearVisualState, type Brush, type Painter, type VisualState } from './visualizer/kit';
+import { bars, horizon, pulse, ribbon, scope, sparkle, stereo, waterfall } from './visualizer/stylesSpectrum';
+import { bursts, grid, lanes, river, shock, tracer, wash } from './visualizer/stylesEvents';
 
+export type SpectrumShape = 'bars' | 'ribbon' | 'waterfall' | 'lanes' | 'pulse' | 'horizon' | 'sparkle'
+  | 'scope' | 'stereo' | 'bursts' | 'wash' | 'river' | 'grid' | 'shock' | 'tracer';
+
+/** What each style reacts to, in the listener's words. */
 export const SPECTRUM_MODES: { id: SpectrumShape; label: string; description: string }[] = [
-  { id: 'bars', label: 'Frequency bars', description: 'Measured frequencies, centred bars' },
-  { id: 'ribbon', label: 'Frequency ribbon', description: 'Continuous, mirrored spectrum across the width' },
-  { id: 'aurora', label: 'Aurora contours', description: 'Three measured-frequency contour layers' },
-  { id: 'lanes', label: 'Spectral lanes', description: 'Bass, low mids, high mids and treble on separate rails' },
-  { id: 'constellation', label: 'Frequency constellation', description: 'Measured points connected across the width' },
-  { id: 'waterfall', label: 'Recent spectrum', description: 'A short history of real frequency measurements' },
-  { id: 'skyline', label: 'Spectrum skyline', description: 'An angular frequency silhouette spanning the full width' },
-  { id: 'threads', label: 'Glass threads', description: 'Five fine, parallel measured-frequency contours' },
-  { id: 'pins', label: 'Signal pins', description: 'Thin mirrored frequency needles with measured tips' },
-  { id: 'matrix', label: 'Spectrum mosaic', description: 'A wide grid of magnitude-coded frequency tiles' },
-  { id: 'trails', label: 'Afterglow trails', description: 'Fading outlines of recent real spectrum samples' },
-  { id: 'dunes', label: 'Spectral dunes', description: 'Four broad measured-frequency landscapes along the width' },
-  { id: 'candles', label: 'Signal ranges', description: 'Thin frequency spread wicks with measured mean markers' },
-  { id: 'mesh', label: 'Frequency mesh', description: 'An airy lattice woven between adjacent real spectrum bins' },
-  { id: 'split', label: 'Split flow', description: 'Lower and upper frequencies occupy separate horizontal channels' },
+  { id: 'bars', label: 'Frequency bars', description: 'The whole spectrum low to high, with falling peaks; kicks flash the centre line' },
+  { id: 'pulse', label: 'Kick pulse field', description: 'A field of dots that swells together on every kick drum' },
+  { id: 'lanes', label: 'Drum lanes', description: 'Kick, snare and hi-hat hits scroll past on three rails over the beat grid' },
+  { id: 'ribbon', label: 'Bar ribbon', description: 'A spectrum ribbon that breathes with each bar and swells on kicks' },
+  { id: 'horizon', label: 'Bass horizon', description: 'A bass wave that travels with the beat, with a sun that rises on kicks' },
+  { id: 'sparkle', label: 'Hi-hat sparkle', description: 'Sparks scatter on every hi-hat and snare; the cymbal air shimmers' },
+  { id: 'scope', label: 'Oscilloscope', description: 'The actual waveform of the mix, thickening on every kick' },
+  { id: 'stereo', label: 'Stereo field', description: 'Each band spreads wider as the mix gets wider in stereo' },
+  { id: 'waterfall', label: 'Scrolling spectrogram', description: 'The song draws its own score from right to left; kicks stamp the floor' },
+  { id: 'bursts', label: 'Onset bursts', description: 'Particles burst from where each new sound lands, bass left, cymbals right' },
+  { id: 'wash', label: 'Section wash', description: 'Colour fields that change at each new section and brighten on builds' },
+  { id: 'river', label: 'Energy streams', description: 'Low, mid and high energy flowing past as stacked streams' },
+  { id: 'grid', label: 'Beat grid', description: 'The beats of the bar fill in turn, with each hit marked where it landed' },
+  { id: 'shock', label: 'Snare shockwave', description: 'Each snare sends waves out to both edges; kicks bloom in the centre' },
+  { id: 'tracer', label: 'Brightness tracer', description: 'A comet that moves right as the sound gets brighter and up as it gets louder' },
 ];
 
-/** A stable low-to-high frequency axis, using peak magnitude in each actual
- * analyser bin range. Neither the geometry nor smoothing invents signal. */
-export function frequencyLevels(data: Uint8Array, count: number): number[] {
-  if (!data.length || count <= 0 || !Number.isFinite(count)) return [];
-  const length = Math.min(256, Math.floor(count));
-  return Array.from({ length }, (_, index) => {
-    const first = Math.floor((index / length) ** 2 * data.length);
-    const last = Math.min(data.length, Math.max(first + 1, Math.floor(((index + 1) / length) ** 2 * data.length)));
-    let maximum = 0;
-    for (let bin = first; bin < last; bin += 1) maximum = Math.max(maximum, data[bin]);
-    return (maximum / 255) ** 0.8;
-  });
+/** Styles retired on 2026-11-12 (owner feedback: too alike) map to the nearest new idea. */
+export const RETIRED_SPECTRUM_SHAPES: Record<string, SpectrumShape> = {
+  radial: 'ribbon', aurora: 'ribbon', constellation: 'tracer', skyline: 'bars', threads: 'scope',
+  pins: 'bars', matrix: 'waterfall', trails: 'river', dunes: 'horizon', candles: 'grid', mesh: 'stereo', split: 'lanes',
+};
+
+/** The saved style if it still exists, else its nearest new style, else the default. */
+export function migrateSpectrumShape(saved: unknown): SpectrumShape {
+  if (typeof saved !== 'string') return 'bars';
+  if (SPECTRUM_MODES.some((mode) => mode.id === saved)) return saved as SpectrumShape;
+  return RETIRED_SPECTRUM_SHAPES[saved] ?? 'bars';
 }
 
-export function spectrumLevelCount(width: number, ratio: number, mode: SpectrumShape): number {
-  const density = mode === 'bars' || mode === 'lanes' ? 7 : 8;
-  const cap = mode === 'bars' ? 72 : 128;
-  return Math.min(cap, Math.max(24, Math.floor(width / (Math.max(1, ratio) * density))));
-}
+const PAINTERS: Record<SpectrumShape, Painter> = {
+  bars, ribbon, waterfall, lanes, pulse, horizon, sparkle, scope, stereo, bursts, wash, river, grid, shock, tracer,
+};
 
-type Brush = { accent: string; soft: string; gradient: CanvasGradient | string };
-export type SpectrumHistory = number[][];
-export const MAX_SPECTRUM_HISTORY = 24;
-export const MAX_TRAIL_HISTORY = 7;
+export type { Brush, VisualState };
+export { createVisualState } from './visualizer/kit';
 
-function contour(context: CanvasRenderingContext2D, levels: number[], width: number, base: number, scale: number, downward = false) {
-  const n = levels.length;
-  if (!n) return;
-  const y = (index: number) => base + (downward ? 1 : -1) * levels[index] * scale;
-  context.moveTo(0, y(0));
-  for (let index = 1; index < n; index += 1) {
-    const x = width * index / (n - 1);
-    const previousX = width * (index - 1) / (n - 1);
-    context.quadraticCurveTo(previousX, y(index - 1), (previousX + x) / 2, (y(index - 1) + y(index)) / 2);
-  }
-  context.lineTo(width, y(n - 1));
-}
-
-function mirror(context: CanvasRenderingContext2D, levels: number[], width: number, height: number) {
-  const centre = height / 2;
-  const scale = height * 0.44;
-  const smooth = levels.map((value, index) =>
-    (2 * value + (levels[index - 1] ?? value) + (levels[index + 1] ?? value)) / 4);
-  context.beginPath();
-  contour(context, smooth, width, centre, scale);
-  context.lineTo(width, centre + smooth[smooth.length - 1] * scale);
-  for (let index = smooth.length - 2; index >= 0; index -= 1) {
-    context.lineTo(width * index / (smooth.length - 1), centre + smooth[index] * scale);
-  }
-  context.closePath();
-  context.fill();
-}
-
-/** Return false when no analyser signal is available. Do not manufacture
- * non-zero samples, rhythmic movement, quality or tempo from audio metadata. */
-export function paintFrequencyFrame(
+/** Paint one frame of `mode` from measured features. Returns false (drawing nothing, and forgetting
+ * the style's memory) when there is no signal, so silence is a still, empty canvas. */
+export function paintVisualFrame(
   context: CanvasRenderingContext2D,
   width: number,
   height: number,
-  levels: number[],
+  features: Features,
   mode: SpectrumShape,
   brush: Brush,
-  history: SpectrumHistory,
+  state: VisualState,
 ): boolean {
-  if (!levels.length) {
-    // The analyser no longer has samples. No previous song's history survives
-    // the loss, even if the caller later sees valid audio again.
-    history.length = 0;
+  if (state.mode !== mode) {
+    state.mode = mode;
+    clearVisualState(state);
+  }
+  if (features.silent) {
+    clearVisualState(state);
     return false;
   }
-  if (!levels.some((level) => level > 0)) {
-    // A real silence frame still advances history for history-based modes;
-    // otherwise an old sound could reappear as a ghost on the next note.
-    if (mode === 'waterfall' || mode === 'trails') {
-      history.push([...levels]);
-      const limit = mode === 'waterfall' ? MAX_SPECTRUM_HISTORY : MAX_TRAIL_HISTORY;
-      if (history.length > limit) history.shift();
-    }
-    return false;
-  }
-
   context.globalAlpha = 1;
   context.lineCap = 'round';
-  if (mode === 'ribbon') {
-    context.fillStyle = brush.gradient;
-    mirror(context, levels, width, height);
-  } else if (mode === 'bars') {
-    context.fillStyle = brush.gradient;
-    const gap = 2;
-    const column = Math.max(1, (width - gap * (levels.length - 1)) / levels.length);
-    levels.forEach((level, index) => {
-      if (!level) return;
-      const size = Math.max(1, level * height * 0.92);
-      context.fillRect(index * (column + gap), (height - size) / 2, column, size);
-    });
-  } else if (mode === 'aurora') {
-    // Three offset spectral slices; every point is a measured bin. Different
-    // line weights and overlapping contours create the layered effect.
-    const groups = [0, 1, 2];
-    groups.forEach((row) => {
-      const slice = levels.map((value, index) => {
-        const at = Math.min(levels.length - 1, Math.floor(index * (0.62 + row * 0.19)));
-        return (value + levels[at]) / 2;
-      });
-      const base = height * (0.68 - row * 0.1);
-      context.beginPath();
-      context.moveTo(0, base);
-      contour(context, slice, width, base, height * (0.22 + row * 0.09));
-      context.lineTo(width, base);
-      context.closePath();
-      context.globalAlpha = 0.28 + row * 0.2;
-      context.fillStyle = row === 1 ? brush.soft : brush.accent;
-      context.fill();
-      context.globalAlpha = 0.45 + row * 0.16;
-      context.strokeStyle = row === 1 ? brush.accent : brush.soft;
-      context.lineWidth = row === 2 ? 2 : 1;
-      context.beginPath();
-      contour(context, slice, width, base, height * (0.22 + row * 0.09));
-      context.stroke();
-    });
-  } else if (mode === 'lanes') {
-    // Four labelled frequency regions are separated spatially, unlike a
-    // single decorative amplitude bar. Filled lengths are aggregate measures.
-    const names = 4;
-    const space = height / names;
-    for (let band = 0; band < names; band += 1) {
-      const first = Math.floor(band * levels.length / names);
-      const last = Math.max(first + 1, Math.floor((band + 1) * levels.length / names));
-      const samples = levels.slice(first, last);
-      const peak = Math.max(0, ...samples);
-      const mean = samples.reduce((sum, value) => sum + value, 0) / samples.length;
-      const y = space * band + space * 0.33;
-      context.globalAlpha = 0.2;
-      context.fillStyle = brush.soft;
-      context.fillRect(0, y, width, space * 0.34);
-      context.globalAlpha = 0.7 + peak * 0.3;
-      context.fillStyle = band % 2 ? brush.soft : brush.accent;
-      if (mean > 0) context.fillRect(0, y, width * mean, space * 0.34);
-      if (peak > 0) {
-        context.strokeStyle = brush.accent;
-        context.lineWidth = Math.max(1, space * 0.045);
-        context.beginPath();
-        context.moveTo(width * mean, y - 1);
-        context.lineTo(width * peak, y - 1);
-        context.stroke();
-      }
-    }
-  } else if (mode === 'constellation') {
-    context.strokeStyle = brush.accent;
-    context.lineWidth = 1.5;
-    context.globalAlpha = 0.62;
-    context.beginPath();
-    const stride = Math.max(1, Math.ceil(levels.length / 42));
-    const points: { x: number; y: number; level: number }[] = [];
-    for (let index = 0; index < levels.length; index += stride) {
-      const level = levels[index];
-      if (level <= 0) continue;
-      points.push({
-        x: index * width / (levels.length - 1),
-        y: height * (0.85 - level * 0.7),
-        level,
-      });
-    }
-    points.forEach((point, index) => {
-      if (index === 0) context.moveTo(point.x, point.y);
-      else context.lineTo(point.x, point.y);
-    });
-    if (points.length > 1) context.stroke();
-    context.fillStyle = brush.soft;
-    context.globalAlpha = 0.9;
-    points.forEach(({ x, y, level }) => {
-      const radius = 1.5 + level * 3.2;
-      context.beginPath();
-      context.arc(x, y, radius, 0, Math.PI * 2);
-      context.fill();
-    });
-  } else if (mode === 'waterfall') {
-    // History is *actual* sampled analyser output only. The newest band is
-    // below the older bands, with no scrolling CSS or invented pre-roll.
-    history.push([...levels]);
-    if (history.length > MAX_SPECTRUM_HISTORY) history.shift();
-    const row = height / MAX_SPECTRUM_HISTORY;
-    const col = width / levels.length;
-    history.forEach((frame, historyIndex) => {
-      const y = height - (history.length - historyIndex) * row;
-      frame.forEach((level, index) => {
-        if (!level) return;
-        context.globalAlpha = Math.min(1, level * 0.95);
-        context.fillStyle = historyIndex % 2 ? brush.accent : brush.soft;
-        context.fillRect(index * col, y, Math.max(1, col - 0.5), row * 0.85);
-      });
-    });
-  } else if (mode === 'skyline') {
-    // One angular, data-derived skyline. A step occupies the actual horizontal
-    // frequency interval, so there are no interpolated or decorative peaks.
-    const baseline = height * 0.93;
-    const step = width / levels.length;
-    context.beginPath();
-    context.moveTo(0, baseline);
-    levels.forEach((level, index) => {
-      const y = baseline - level * height * 0.83;
-      context.lineTo(index * step, y);
-      context.lineTo((index + 1) * step, y);
-    });
-    context.lineTo(width, baseline);
-    context.closePath();
-    context.fillStyle = brush.gradient;
-    context.globalAlpha = 0.76;
-    context.fill();
-    context.globalAlpha = 0.94;
-    context.strokeStyle = brush.soft;
-    context.lineWidth = Math.max(1, height * 0.011);
-    context.stroke();
-  } else if (mode === 'threads') {
-    // Five horizontal melodic-looking threads, each showing a different
-    // contiguous measured frequency window. They are NOT musical stems.
-    for (let lane = 0; lane < 5; lane += 1) {
-      const start = Math.floor(lane * levels.length / 5);
-      const end = Math.max(start + 1, Math.floor((lane + 1) * levels.length / 5));
-      const samples = levels.slice(start, end);
-      const base = height * (0.18 + lane * 0.16);
-      context.beginPath();
-      contour(context, samples, width, base, height * 0.14);
-      context.strokeStyle = lane % 2 === 0 ? brush.accent : brush.soft;
-      context.lineWidth = Math.max(1, height * (lane === 2 ? 0.023 : 0.012));
-      context.globalAlpha = 0.55 + lane * 0.09;
-      context.stroke();
-    }
-  } else if (mode === 'pins') {
-    // One mirrored pin per measured frequency sample, not a beat counter.
-    const stride = Math.max(1, Math.ceil(levels.length / 80));
-    context.strokeStyle = brush.accent;
-    context.fillStyle = brush.soft;
-    context.lineWidth = Math.max(1, width / levels.length * 0.19);
-    for (let index = 0; index < levels.length; index += stride) {
-      const level = levels[index];
-      if (!level) continue;
-      const x = width * (index + 0.5) / levels.length;
-      const extent = level * height * 0.43;
-      context.globalAlpha = 0.38 + level * 0.59;
-      context.beginPath();
-      context.moveTo(x, height / 2 - extent);
-      context.lineTo(x, height / 2 + extent);
-      context.stroke();
-      context.beginPath();
-      context.arc(x, height / 2 - extent, Math.max(1, height * 0.018), 0, Math.PI * 2);
-      context.arc(x, height / 2 + extent, Math.max(1, height * 0.018), 0, Math.PI * 2);
-      context.fill();
-    }
-  } else if (mode === 'matrix') {
-    // Six value thresholds at each *current measured frequency*. This
-    // resembles a wide mosaic but is not history or a synthesized spectrogram.
-    const rows = 6;
-    const cellWidth = width / levels.length;
-    const rowHeight = height / rows;
-    for (let index = 0; index < levels.length; index += 1) {
-      const magnitude = levels[index];
-      const lit = Math.min(rows, Math.ceil(magnitude * rows));
-      for (let row = 0; row < lit; row += 1) {
-        context.globalAlpha = 0.30 + magnitude * 0.65;
-        context.fillStyle = (index + row) % 3 === 0 ? brush.soft : brush.accent;
-        context.fillRect(
-          index * cellWidth + 0.75,
-          height - (row + 1) * rowHeight + 0.75,
-          Math.max(0.6, cellWidth - 1.5),
-          Math.max(0.6, rowHeight - 1.5),
-        );
-      }
-    }
-  } else if (mode === 'trails') {
-    // A short bounded sample history, never filled or synthesized at startup.
-    // Older measured frames fade behind the newest measured contour. Canvas
-    // is cleared by the parent on every frame and stopped with playback.
-    history.push([...levels]);
-    if (history.length > MAX_TRAIL_HISTORY) history.shift();
-    history.forEach((sample, index) => {
-      if (!sample.some((level) => level > 0)) return;
-      context.beginPath();
-      contour(context, sample, width, height * (0.9 - index * 0.012), height * 0.72);
-      context.strokeStyle = index === history.length - 1 ? brush.soft : brush.accent;
-      context.lineWidth = index === history.length - 1 ? 2.5 : 1.2;
-      context.globalAlpha = (index + 1) / history.length * 0.82;
-      context.stroke();
-    });
-  } else if (mode === 'dunes') {
-    // Four individually analysed frequency windows form separate filled ridges,
-    // not a repeating generated landscape or a tempo-driven animation.
-    for (let band = 0; band < 4; band += 1) {
-      const start = Math.floor(band * levels.length / 4);
-      const end = Math.max(start + 1, Math.floor((band + 1) * levels.length / 4));
-      const samples = levels.slice(start, end);
-      const baseline = height * (0.235 + band * 0.25);
-      const rise = height * 0.19;
-      context.beginPath();
-      context.moveTo(0, baseline);
-      contour(context, samples, width, baseline, rise);
-      context.lineTo(width, baseline);
-      context.closePath();
-      context.fillStyle = band % 2 ? brush.soft : brush.accent;
-      context.globalAlpha = 0.23 + band * 0.11;
-      context.fill();
-      context.beginPath();
-      contour(context, samples, width, baseline, rise);
-      context.strokeStyle = band % 2 ? brush.accent : brush.soft;
-      context.lineWidth = band === 0 ? 2 : 1.5;
-      context.globalAlpha = 0.68 + band * 0.08;
-      context.stroke();
-    }
-  } else if (mode === 'candles') {
-    // A frequency-span glyph: each wick is the measured min/max within its
-    // contiguous group; each horizontal block marks that group's actual mean.
-    // These are not financial candles, beat onsets or dynamic-range estimates.
-    const groups = Math.min(42, Math.max(1, Math.floor(levels.length / 3)));
-    const interval = width / groups;
-    const floor = height * 0.93;
-    const rise = height * 0.82;
-    for (let group = 0; group < groups; group += 1) {
-      const first = Math.floor(group * levels.length / groups);
-      const last = Math.max(first + 1, Math.floor((group + 1) * levels.length / groups));
-      const samples = levels.slice(first, last);
-      const highest = Math.max(...samples);
-      if (highest <= 0) continue;
-      const lowest = Math.min(...samples);
-      const mean = samples.reduce((sum, value) => sum + value, 0) / samples.length;
-      const x = (group + 0.5) * interval;
-      context.strokeStyle = brush.soft;
-      context.lineWidth = Math.max(1, interval * 0.07);
-      context.globalAlpha = 0.75;
-      context.beginPath();
-      context.moveTo(x, floor - lowest * rise);
-      context.lineTo(x, floor - highest * rise);
-      context.stroke();
-      context.fillStyle = brush.accent;
-      context.globalAlpha = 0.9;
-      context.fillRect(
-        x - interval * 0.27,
-        floor - mean * rise - Math.max(1, height * 0.022),
-        interval * 0.54,
-        Math.max(2, height * 0.044),
-      );
-    }
-  } else if (mode === 'mesh') {
-    // The lattice is entirely determined by adjacent measured bins. No
-    // arbitrary vertices, drifting nodes, and no representation of stereo.
-    const stride = Math.max(1, Math.ceil(levels.length / 64));
-    const sampled = levels.filter((_, index) => index % stride === 0);
-    const centre = height / 2;
-    const scale = height * 0.42;
-    const step = width / Math.max(sampled.length - 1, 1);
-    context.beginPath();
-    sampled.forEach((level, index) => {
-      if (level <= 0) return;
-      const x = index * step;
-      const top = centre - level * scale;
-      const bottom = centre + level * scale;
-      context.moveTo(x, top);
-      context.lineTo(x, bottom);
-      if (index === 0 || sampled[index - 1] <= 0) return;
-      const previous = sampled[index - 1];
-      const beforeX = (index - 1) * step;
-      context.moveTo(beforeX, centre - previous * scale);
-      context.lineTo(x, bottom);
-      context.moveTo(beforeX, centre + previous * scale);
-      context.lineTo(x, top);
-    });
-    context.strokeStyle = brush.accent;
-    context.lineWidth = Math.max(1, width / 1100);
-    context.globalAlpha = 0.72;
-    context.stroke();
-  } else if (mode === 'split') {
-    // The upper and lower paths use DIFFERENT halves of the measured
-    // frequency range. They are not mirrored duplicates of one audio band.
-    const middle = Math.max(1, Math.ceil(levels.length / 2));
-    const lower = levels.slice(0, middle);
-    const upper = levels.slice(middle);
-    const partitions = [
-      { samples: lower, baseline: height * 0.47, direction: false, color: brush.accent },
-      { samples: upper, baseline: height * 0.53, direction: true, color: brush.soft },
-    ];
-    partitions.forEach(({ samples, baseline, direction, color }) => {
-      if (!samples.length || !samples.some((value) => value > 0)) return;
-      context.beginPath();
-      context.moveTo(0, baseline);
-      contour(context, samples, width, baseline, height * 0.4, direction);
-      context.lineTo(width, baseline);
-      context.closePath();
-      context.fillStyle = color;
-      context.globalAlpha = 0.54;
-      context.fill();
-      context.beginPath();
-      contour(context, samples, width, baseline, height * 0.4, direction);
-      context.strokeStyle = color;
-      context.lineWidth = 2;
-      context.globalAlpha = 0.95;
-      context.stroke();
-    });
-  }
+  (PAINTERS[mode] ?? bars)(context, width, height, features, brush, state);
   context.globalAlpha = 1;
   return true;
 }
