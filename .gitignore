@@ -117,3 +117,9 @@ web/v[a-z]-scratch/
 web/*-scratch/
 web/e2e/v[a-z]-*.e2e.ts
 web/e2e/*-claude-checks*.ts
+
+# agents' probes, check harnesses and temp files, whatever their tag (web/r15probe/, web/wp6-checks/, .tmp-gql.json)
+web/*probe*/
+web/*-checks/
+web/*-scratch/
+.tmp-*
