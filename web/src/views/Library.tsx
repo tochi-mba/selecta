@@ -156,7 +156,11 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     });
     setConfirmBatch(null);
     setBatchSelection({ identity: selectionIdentity, ids: [] });
-    window.requestAnimationFrame(() => selectionEntryRef.current?.focus());
+    window.requestAnimationFrame(() => {
+      // The dialog button has gone away. Restore focus only if the user hasn't
+      // moved it elsewhere while this frame was pending (for example, to search).
+      if (document.activeElement === document.body) selectionEntryRef.current?.focus();
+    });
     // GP-0258-07: Undo is offered only for songs this batch really changed, and puts back exactly
     // those. The server refuses it whole if any of them has changed again since.
     const priority = wanted.action === 'prioritize' || wanted.action === 'deprioritize';
