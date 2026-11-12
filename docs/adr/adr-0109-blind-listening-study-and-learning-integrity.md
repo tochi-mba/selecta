@@ -70,6 +70,7 @@ An owner must separately **Accept** this decision before it becomes policy. Each
 | 2026-11-07 | Proposed | Not started | Not verified | Documentation-only specification; no runtime, test or UI changes |
 | 2026-11-08 | Accepted | Not started | Not verified | Owner accepted all proposed ADRs ([#37](https://github.com/tochi-mba/selecta/pull/37)) |
 | 2026-11-10 | Accepted | In progress (8/10) | Not verified | Source reconciliation against current code with focused tests run 2026-11-10; every task still needs independent verification |
+| 2026-11-12 | Accepted | In progress (9/10) | Not verified | Automatable parts of the person-step tasks built and run 2026-11-12; every task still needs a person or independent verification |
 
 ## Related documents
 

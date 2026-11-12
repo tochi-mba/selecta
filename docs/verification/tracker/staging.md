@@ -8,7 +8,7 @@ Open tasks: 14. Script: [../owner-runbook.md](../owner-runbook.md).
 
 | Task ID | Checklist | Task | What the person does | Sitting | Status |
 |---|---|---|---|---|---|
-| S4-0089-09 | selecta-4-implementation-checklist.md | Define compatibility and rollback requirements before UI replacement | run tests/rollback_check.py against the pre-4.0 checkout. | 6 | In progress; open |
+| S4-0089-09 | selecta-4-implementation-checklist.md | Define compatibility and rollback requirements before UI replacement | owner repeats python tests/rollback_check.py <pre-4.0 checkout> on a copy of a real home (never the live one) and confirms drafts, preferences, corrections, ratings and export jobs are usable after the round trip; a pass is the printed '... | 6 | In progress; open |
 | S4-0096-02 | selecta-4-implementation-checklist.md | Specify path parsing/quoting/normalization and validation copy | UNC network-share check. | 6 | Implemented; open |
 | S4-0102-09 | selecta-4-implementation-checklist.md | Harden Apply against stale pair, draft and revision | two-tab draft switch against a real server. | 6 | Implemented; open |
 | S4-0103-08 | selecta-4-implementation-checklist.md | Guarantee atomic insertion and operation idempotency | two-tab duplicate check on a real server. | 6 | Implemented; open |
@@ -17,7 +17,7 @@ Open tasks: 14. Script: [../owner-runbook.md](../owner-runbook.md).
 | S4-0108-07 | selecta-4-implementation-checklist.md | Make correct download discoverable and failure recoverable | storage-full and unauthorised route check. | 6 | Implemented; open |
 | S4-0111-09 | selecta-4-implementation-checklist.md | Preserve browser preference and local recovery migration | rollback exercise. | 6 | Implemented; open |
 | S4-0113-05 | selecta-4-implementation-checklist.md | Define operational migration for preferences and local working copies | old to new to old exercise on a real home. | 6 | Implemented; open |
-| S4-0113-10 | selecta-4-implementation-checklist.md | Prepare exact-head release report and demonstrate rollback | release report and rollback exercise. | 6 | In progress; open |
+| S4-0113-10 | selecta-4-implementation-checklist.md | Prepare exact-head release report and demonstrate rollback | owner regenerates the report for the release head with --ci and --rollback-log, then writes GO or NO-GO in its Owner verdict table; a pass is a signed verdict linked to green CI for that head and a 'nothing lost' rollback. | 6 | In progress; open |
 | SC-0405-01 | selecta-cloud-implementation-checklist.md | Register complete | compare the register against a built worker image (pip list, ffmpeg -buildconf) and record the GPU image's CUDA build. Needs staging: a built image to compare. Evidence: tests/test_cloud_licence_register.py (31 passed together with tests... | 6 | In progress; open |
 | SC-0409-03 | selecta-cloud-implementation-checklist.md | Deploy pipeline | the credential broker that accepts the GitHub OIDC token, required reviewers on the production environment, and the repository variables. Needs staging: a pipeline run Evidence: .github/workflows/deploy.yml; infra/deploy/release.sh; test... | 6 | In progress; open |
 | SC-0410-04 | selecta-cloud-implementation-checklist.md | Emergency controls | the game-day drill itself in staging with an operator and an observer, and its record filed Evidence: src/selecta/admin/emergency.py; tests/test_cloud_admin_backend.py; docs/operations/game-day.md. Independently verified: No. | 6 | In progress; open |
