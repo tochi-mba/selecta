@@ -18,12 +18,12 @@ type Surface = { route: string; ready: (page: Page) => Promise<unknown>; act?: (
 const SURFACES: Surface[] = [
   {
     route: '/listen',
-    ready: (page) => expect(page.getByRole('button', { name: /^(Play|Resume from)/ })).toBeVisible(),
+    ready: (page) => expect(page.getByRole('button', { name: /^(Play|Resume)/ })).toBeVisible(),
     act: async (page) => {
-      await page.getByRole('button', { name: /^(Play|Resume from)/ }).click();
+      await page.getByRole('button', { name: /^(Play|Resume)/ }).click();
       await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible({ timeout: 30_000 });
       await page.getByRole('button', { name: 'Pause', exact: true }).click();
-      await expect(page.getByRole('button', { name: /^(Play|Resume from)/ })).toBeVisible();
+      await expect(page.getByRole('button', { name: /^(Play|Resume)/ })).toBeVisible();
     },
   },
   {

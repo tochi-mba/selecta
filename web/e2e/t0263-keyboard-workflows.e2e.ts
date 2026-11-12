@@ -118,6 +118,8 @@ test('T0263 Library: search with /, open a song’s menu and add it to the mix, 
 });
 
 test('T0263 export: open the save dialog from Edit, save the file, download it and close back to the button', async ({ page }) => {
+  // A previous test may have exported the default mix on this shared server.
+  await resetMix(page.request, [1, 2, 3, 5]);
   await page.goto('/mix/current/edit');
   const download = page.getByRole('button', { name: 'Download audio' });
   await tabTo(page, download);
@@ -172,6 +174,8 @@ test('T0263 study: open a study, grade a version and answer, by keyboard to the 
     await tabTo(page, study.getByLabel(`Version ${version}`, { exact: true }));
     await page.keyboard.press('Space');
     await expect(now).toHaveText(`Now playing: Version ${version}`);
+    // The preference is intentionally gated until actual audio crosses 0.5s.
+    await expect.poll(() => study.getByLabel(`Version ${version}`, { exact: true }).evaluate((node) => (node as HTMLAudioElement).currentTime), { timeout: 20_000 }).toBeGreaterThan(0.65);
   }
   const prefer = study.getByRole('button', { name: 'Prefer A' });
   await expect(prefer).toBeEnabled({ timeout: 30_000 });

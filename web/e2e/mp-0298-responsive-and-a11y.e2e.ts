@@ -11,7 +11,8 @@ import { PAGES, resetMix, rewriteJson } from './helpers';
 async function open(page: Page, route: string, width: number, height: number) {
   await page.setViewportSize({ width, height });
   await page.goto(route);
-  await expect(page.locator('main#main')).toBeVisible();
+  // Suspense's visible shell is not yet an actual page. Wait for the real heading.
+  await expect(page.locator('main#main:not([aria-busy="true"])').locator('h1, h2').first()).toBeVisible();
   await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
 }
 

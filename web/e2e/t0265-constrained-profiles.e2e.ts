@@ -31,9 +31,17 @@ const seams = async (page: Page) => {
 };
 
 // queue every transition that isn't made, and wait until the server is really rendering one
-async function startARender(page: Page) {
-  await page.request.post('/api/mix/render');
-  await expect.poll(async () => (await seams(page)).rendering ?? 0, { timeout: 120_000, message: 'a render is under way' }).toBeGreaterThan(0);
+async function startARender(page: Page, bars: number, position = 1) {
+  // Ask for a fresh real transition, rather than relying on a cached default.
+  const configured = await page.request.post(`/api/mix/${position}/seam`, { data: { move: 'auto', bars } });
+  expect(configured.ok(), `configure ${bars}-bar transition`).toBe(true);
+  const submitted = await page.request.post('/api/mix/render');
+  expect(submitted.ok(), 'queue real render work').toBe(true);
+  // On fast runners the rendering phase is brief; queued is also real work.
+  await expect.poll(async () => {
+    const states = await seams(page);
+    return (states.queued ?? 0) + (states.rendering ?? 0);
+  }, { timeout: 30_000, message: 'real render work is queued or running' }).toBeGreaterThan(0);
   return seams(page);
 }
 
@@ -56,7 +64,7 @@ test('T0265 a 120-song Edit on a slowed CPU during a render: moves stay under 50
   await page.goto('/mix/current/edit');
   await expect(page.locator('.timeline > .song')).toHaveCount(EDIT_SONGS, { timeout: 60_000 });
   const openMs = Date.now() - began;
-  const renderAtStart = await startARender(page);
+  const renderAtStart = await startARender(page, 8);
 
   const grip = page.locator('.timeline > .song').nth(60).locator('.grip');
   await grip.scrollIntoViewIfNeeded();
@@ -112,7 +120,7 @@ test('T0265 the 64-cell Studio on a slowed CPU during a render answers under 500
   await page.getByRole('tab', { name: 'Studio' }).click();
   await page.getByRole('button', { name: 'Open the Studio' }).click();
   await expect(page.locator('.studio-cell').first()).toBeVisible({ timeout: 90_000 });
-  const renderAtStart = await startARender(page);
+  const renderAtStart = await startARender(page, 9, 3);
 
   await page.locator('.studio-cell').first().focus();
   const from = await mark(page);

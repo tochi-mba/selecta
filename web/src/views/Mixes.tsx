@@ -241,7 +241,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         <p className="eyebrow">Create · Plan before listening</p>
         <h2 id="mix-create-title">Create with Lucy</h2>
         <p>Describe the mood, songs or journey you have in mind. Lucy proposes an exact order and transitions for you to review.</p>
-        <PageLink to="/mixes/lucy" className="button primary">Plan a mix with Lucy</PageLink>
+        <PageLink to="/mixes/lucy" className="button">Plan a mix with Lucy</PageLink>
         <p className="hint">Optional. Nothing is sent, saved or played until you choose to do it. Quick Play does not use Lucy.</p>
       </section>
       )}

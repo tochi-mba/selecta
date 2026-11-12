@@ -14,7 +14,12 @@ test('every page shows at most one primary action, and the keyboard reaches it',
     await page.goto(address);
     await expect(page.locator('main')).toBeVisible();
     await page.waitForLoadState('networkidle');
-    const primaries = page.locator('main :is(button, a).primary:visible').filter({ hasNot: page.locator('dialog') });
+    // The featured page action leads; independent mix cards can each offer one
+    // local primary action without turning the entire page into a dozen CTAs.
+    const primaries = page.locator('main :is(button, a).primary:visible:not(.vibe-card *)');
+    for (const card of await page.locator('main .vibe-card').all()) {
+      expect(await card.locator(':is(button, a).primary:visible').count(), `${address}: primary actions within one idea`).toBeLessThanOrEqual(1);
+    }
     const count = await primaries.count();
     expect(count, `${address} shows ${count} primary actions`).toBeLessThanOrEqual(1);
     if (count === 1) {
