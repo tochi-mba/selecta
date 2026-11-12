@@ -441,6 +441,7 @@ test('MP-0275-06 artist and readiness labels are quieter than titles but keep 4.
       await page.setViewportSize({ width, height: 900 });
       for (const [route, primary, secondary] of SECONDARY) {
         await open(page, route);
+        await expect(page.locator(primary).first()).toBeVisible();
         const [title] = await contrast(page, primary);
         expect(title, `${primary} on ${route}`).toBeDefined();
         const titleWeight = title.weight;
