@@ -54,7 +54,7 @@ const FAILED_READS: FailureCase[] = [
   },
   {
     address: '/library',
-    api: '**/api/songs*',
+    api: '**/api/library*',
     message: /Couldn’t load your library/,
     retry: /Try again/,
     tasks: 'CI-0177 CI-0182',
@@ -101,6 +101,6 @@ test('failed creative reads never look empty or successful and every recovery re
 test('missing creative routes never strand the listener or invent a page', async ({ page }) => {
   await page.goto('/this-creative-route-does-not-exist');
   await expect(page.getByRole('heading', { name: 'There’s nothing at this address.' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Go to Make a Mix' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Go to Make a Mix', exact: true })).toBeVisible();
   await expect(page.getByText(/ready|saved|played/i)).toHaveCount(0);
 });
