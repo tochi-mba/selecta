@@ -92,3 +92,15 @@ web/dist*/
 tests/*_probe_test.py
 web/e2e/*-probe.e2e.ts
 web/e2e/*.probe.ts
+
+# editor and tool scratch: atomic-write temp files (name.py.tmp.1234.abcd), swap, backup and merge leftovers
+*.tmp
+*.tmp.*
+*.temp
+*~
+*.swp
+*.swo
+*.bak
+*.orig
+*.rej
+.#*
