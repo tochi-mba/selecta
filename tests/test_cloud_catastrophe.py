@@ -562,7 +562,7 @@ def test_launch_day_signups_uploads_upgrades_and_mix_requests_all_at_once(world,
             )
         )
         applied = Counter(
-            row.id
+            row.event_id
             for row in conn.execute(
                 sa.select(stripe_events.c.event_id).where(stripe_events.c.status == "processed")
             )
