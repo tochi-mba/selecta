@@ -70,6 +70,12 @@ test('EX-0131-03 race: a look at the mix that started before an edit cannot undo
     })();
     await held;
   });
+  // Route changes cause the app to check the current mix. Trigger this check
+  // explicitly rather than waiting for a poll that only runs while seams are busy.
+  const nav = page.getByRole('navigation', { name: 'Main' });
+  await nav.getByRole('link', { name: 'Library', exact: true }).click();
+  await nav.getByRole('link', { name: 'Edit', exact: true }).click();
+  await expect(firstRow(page)).toHaveText('Morning Light');
   await old;
   await page.getByRole('button', { name: 'Move Slow Tide up' }).click();
   await expect(firstRow(page)).toHaveText('Slow Tide');
