@@ -25,6 +25,7 @@ const TIMER = /window\.setInterval\(|\buseVisiblePoll\(|\bevery:\s*[\w\d]/;
 // probe), plus audio players handed a ready-made URL: none of them is a page of the local app.
 const OWN_CLIENTS = [
   'RuntimeApp.tsx', 'admin/adminApi.ts', 'api.ts', 'cloud/CloudApp.tsx',
+  'devcloud/authkit.tsx',
   'devices/audioSpeaker.ts', 'harness/main.tsx', 'rooms/dom.ts', 'studio.ts',
 ];
 
