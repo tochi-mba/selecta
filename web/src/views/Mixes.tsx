@@ -270,7 +270,11 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
               unpressable and without counts, until there is something to filter */}
           {!cards && !cardsFailed && (
             <div className="chips vibe-filters vibe-filters-pending" aria-hidden="true">
-              {['All', ...GROUPS].map((group) => <button key={group} type="button" disabled tabIndex={-1}>{group}</button>)}
+              {['All', ...GROUPS].map((group) => (
+                <button key={group} type="button" disabled tabIndex={-1}>
+                  {group}<span aria-hidden="true" style={{ visibility: 'hidden' }}> · {group === 'All' ? '00' : '0'}</span>
+                </button>
+              ))}
             </div>
           )}
           {!!ready.length && (
