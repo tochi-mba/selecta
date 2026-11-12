@@ -39,6 +39,7 @@ from selecta.admin import routes_controls as admin_control_routes
 from selecta.admin.state import EmergencyCache
 from selecta.billing import api as billing_api
 from selecta.billing import plans, stripe_sync
+from selecta.devstack import guard as dev_guard
 from selecta.flags import cloud_gate, targeting
 from selecta.flags import guard as flag_guard
 from selecta.flags import rules as flag_rules
@@ -99,6 +100,10 @@ class CloudSettings:
     @classmethod
     def from_environment(cls) -> CloudSettings:
         """Load production configuration and refuse to boot with a local or incomplete setup."""
+        # The local identity provider of `dev.cmd cloud` can never sign anyone in to a deployment.
+        identity_problem = dev_guard.production_identity_problem()
+        if identity_problem:
+            raise CloudConfigurationError(identity_problem)
         url = os.environ.get("SELECTA_DATABASE_URL", "").strip()
         if not url.startswith(("postgresql://", "postgresql+psycopg://")):
             raise CloudConfigurationError(

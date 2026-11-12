@@ -1,0 +1,533 @@
+{
+ "browser": "157.0.4341.46",
+ "shots": [
+  {
+   "file": "wp5-specimen-explore-phone-light.png",
+   "scene": "explore",
+   "route": "/mixes",
+   "size": "phone",
+   "viewport": "390x844",
+   "h1": "Make a Mix",
+   "h1Top": 77,
+   "controlsInView": 8,
+   "primaryInView": [
+    "PlayBuilding…"
+   ],
+   "largestControls": [
+    {
+     "name": "PlayBuilding…",
+     "area": 7934,
+     "top": 770,
+     "primary": true
+    },
+    {
+     "name": "Harmonic matches",
+     "area": 6859,
+     "top": 185,
+     "primary": false
+    },
+    {
+     "name": "Word connections",
+     "area": 6698,
+     "top": 138,
+     "primary": false
+    },
+    {
+     "name": "About 30 min",
+     "area": 5558,
+     "top": 835,
+     "primary": false
+    },
+    {
+     "name": "About 1 hour",
+     "area": 5457,
+     "top": 835,
+     "primary": false
+    }
+   ],
+   "hscroll": false
+  },
+  {
+   "file": "wp5-specimen-create-phone-light.png",
+   "scene": "create",
+   "route": "/mix/current/edit",
+   "size": "phone",
+   "viewport": "390x844",
+   "h1": "Your mix",
+   "h1Top": 194,
+   "controlsInView": 9,
+   "primaryInView": [
+    "Play from the top"
+   ],
+   "largestControls": [
+    {
+     "name": "An Extraordinarily Long Song Title That Goes On And On Witho",
+     "area": 35276,
+     "top": 805,
+     "primary": false
+    },
+    {
+     "name": "Play from the top",
+     "area": 15752,
+     "top": 320,
+     "primary": true
+    },
+    {
+     "name": "Save a copy",
+     "area": 11550,
+     "top": 376,
+     "primary": false
+    },
+    {
+     "name": "Render every transition",
+     "area": 11550,
+     "top": 376,
+     "primary": false
+    },
+    {
+     "name": "Download audio",
+     "area": 11550,
+     "top": 454,
+     "primary": false
+    }
+   ],
+   "hscroll": false
+  },
+  {
+   "file": "wp5-specimen-listen-phone-light.png",
+   "scene": "listen",
+   "route": "/listen",
+   "size": "phone",
+   "viewport": "390x844",
+   "h1": "An Extraordinarily Long Song Title That Goes On And On Without Any Regard For Th",
+   "h1Top": 114,
+   "controlsInView": 3,
+   "primaryInView": [
+    "Play"
+   ],
+   "largestControls": [
+    {
+     "name": "Play",
+     "area": 12679,
+     "top": 726,
+     "primary": true
+    },
+    {
+     "name": "Previous song",
+     "area": 2200,
+     "top": 730,
+     "primary": false
+    },
+    {
+     "name": "Next song",
+     "area": 2200,
+     "top": 730,
+     "primary": false
+    }
+   ],
+   "hscroll": false
+  },
+  {
+   "file": "wp5-specimen-explore-phone-dark.png",
+   "scene": "explore",
+   "route": "/mixes",
+   "size": "phone",
+   "viewport": "390x844",
+   "h1": "Make a Mix",
+   "h1Top": 77,
+   "controlsInView": 8,
+   "primaryInView": [
+    "PlayBuilding…"
+   ],
+   "largestControls": [
+    {
+     "name": "PlayBuilding…",
+     "area": 7934,
+     "top": 770,
+     "primary": true
+    },
+    {
+     "name": "Harmonic matches",
+     "area": 6859,
+     "top": 185,
+     "primary": false
+    },
+    {
+     "name": "Word connections",
+     "area": 6698,
+     "top": 138,
+     "primary": false
+    },
+    {
+     "name": "About 30 min",
+     "area": 5558,
+     "top": 835,
+     "primary": false
+    },
+    {
+     "name": "About 1 hour",
+     "area": 5457,
+     "top": 835,
+     "primary": false
+    }
+   ],
+   "hscroll": false
+  },
+  {
+   "file": "wp5-specimen-create-phone-dark.png",
+   "scene": "create",
+   "route": "/mix/current/edit",
+   "size": "phone",
+   "viewport": "390x844",
+   "h1": "Your mix",
+   "h1Top": 194,
+   "controlsInView": 9,
+   "primaryInView": [
+    "Play from the top"
+   ],
+   "largestControls": [
+    {
+     "name": "An Extraordinarily Long Song Title That Goes On And On Witho",
+     "area": 35276,
+     "top": 805,
+     "primary": false
+    },
+    {
+     "name": "Play from the top",
+     "area": 15752,
+     "top": 320,
+     "primary": true
+    },
+    {
+     "name": "Save a copy",
+     "area": 11550,
+     "top": 376,
+     "primary": false
+    },
+    {
+     "name": "Render every transition",
+     "area": 11550,
+     "top": 376,
+     "primary": false
+    },
+    {
+     "name": "Download audio",
+     "area": 11550,
+     "top": 454,
+     "primary": false
+    }
+   ],
+   "hscroll": false
+  },
+  {
+   "file": "wp5-specimen-listen-phone-dark.png",
+   "scene": "listen",
+   "route": "/listen",
+   "size": "phone",
+   "viewport": "390x844",
+   "h1": "An Extraordinarily Long Song Title That Goes On And On Without Any Regard For Th",
+   "h1Top": 114,
+   "controlsInView": 3,
+   "primaryInView": [
+    "Play"
+   ],
+   "largestControls": [
+    {
+     "name": "Play",
+     "area": 12679,
+     "top": 726,
+     "primary": true
+    },
+    {
+     "name": "Previous song",
+     "area": 2200,
+     "top": 730,
+     "primary": false
+    },
+    {
+     "name": "Next song",
+     "area": 2200,
+     "top": 730,
+     "primary": false
+    }
+   ],
+   "hscroll": false
+  },
+  {
+   "file": "wp5-specimen-explore-desktop-light.png",
+   "scene": "explore",
+   "route": "/mixes",
+   "size": "desktop",
+   "viewport": "1440x900",
+   "h1": "Make a Mix",
+   "h1Top": 88,
+   "controlsInView": 11,
+   "primaryInView": [
+    "PlayBuilding…"
+   ],
+   "largestControls": [
+    {
+     "name": "Customize: Shape this mix (optional)",
+     "area": 9018,
+     "top": 867,
+     "primary": false
+    },
+    {
+     "name": "PlayBuilding…",
+     "area": 7934,
+     "top": 803,
+     "primary": true
+    },
+    {
+     "name": "Plan a mix with Lucy",
+     "area": 7583,
+     "top": 582,
+     "primary": false
+    },
+    {
+     "name": "Harmonic matches",
+     "area": 6859,
+     "top": 169,
+     "primary": false
+    },
+    {
+     "name": "Word connections",
+     "area": 6698,
+     "top": 169,
+     "primary": false
+    }
+   ],
+   "hscroll": false
+  },
+  {
+   "file": "wp5-specimen-create-desktop-light.png",
+   "scene": "create",
+   "route": "/mix/current/edit",
+   "size": "desktop",
+   "viewport": "1440x900",
+   "h1": "Your mix",
+   "h1Top": 147,
+   "controlsInView": 23,
+   "primaryInView": [
+    "Play from the top"
+   ],
+   "largestControls": [
+    {
+     "name": "An Extraordinarily Long Song Title That Goes On And On Witho",
+     "area": 37885,
+     "top": 517,
+     "primary": false
+    },
+    {
+     "name": "Untitled",
+     "area": 23678,
+     "top": 807,
+     "primary": false
+    },
+    {
+     "name": "Let SelectaDJ pickNot rendered yet, under a minute",
+     "area": 16599,
+     "top": 664,
+     "primary": false
+    },
+    {
+     "name": "Measured song energy",
+     "area": 9504,
+     "top": 440,
+     "primary": false
+    },
+    {
+     "name": "Ask Lucy about this mix",
+     "area": 8618,
+     "top": 267,
+     "primary": false
+    }
+   ],
+   "hscroll": false
+  },
+  {
+   "file": "wp5-specimen-listen-desktop-light.png",
+   "scene": "listen",
+   "route": "/listen",
+   "size": "desktop",
+   "viewport": "1440x900",
+   "h1": "An Extraordinarily Long Song Title That Goes On And On Without Any Regard For Th",
+   "h1Top": 141,
+   "controlsInView": 14,
+   "primaryInView": [
+    "Play"
+   ],
+   "largestControls": [
+    {
+     "name": "UntitledUnknown artistEdit upcoming song and transition",
+     "area": 42863,
+     "top": 269,
+     "primary": false
+    },
+    {
+     "name": "Beat countdown",
+     "area": 15224,
+     "top": 855,
+     "primary": false
+    },
+    {
+     "name": "Play",
+     "area": 8383,
+     "top": 356,
+     "primary": true
+    },
+    {
+     "name": "Jump to the transition",
+     "area": 8154,
+     "top": 423,
+     "primary": false
+    },
+    {
+     "name": "Change the next song",
+     "area": 8130,
+     "top": 537,
+     "primary": false
+    }
+   ],
+   "hscroll": false
+  },
+  {
+   "file": "wp5-specimen-explore-desktop-dark.png",
+   "scene": "explore",
+   "route": "/mixes",
+   "size": "desktop",
+   "viewport": "1440x900",
+   "h1": "Make a Mix",
+   "h1Top": 88,
+   "controlsInView": 11,
+   "primaryInView": [
+    "PlayBuilding…"
+   ],
+   "largestControls": [
+    {
+     "name": "Customize: Shape this mix (optional)",
+     "area": 9018,
+     "top": 867,
+     "primary": false
+    },
+    {
+     "name": "PlayBuilding…",
+     "area": 7934,
+     "top": 803,
+     "primary": true
+    },
+    {
+     "name": "Plan a mix with Lucy",
+     "area": 7583,
+     "top": 582,
+     "primary": false
+    },
+    {
+     "name": "Harmonic matches",
+     "area": 6859,
+     "top": 169,
+     "primary": false
+    },
+    {
+     "name": "Word connections",
+     "area": 6698,
+     "top": 169,
+     "primary": false
+    }
+   ],
+   "hscroll": false
+  },
+  {
+   "file": "wp5-specimen-create-desktop-dark.png",
+   "scene": "create",
+   "route": "/mix/current/edit",
+   "size": "desktop",
+   "viewport": "1440x900",
+   "h1": "Your mix",
+   "h1Top": 147,
+   "controlsInView": 23,
+   "primaryInView": [
+    "Play from the top"
+   ],
+   "largestControls": [
+    {
+     "name": "An Extraordinarily Long Song Title That Goes On And On Witho",
+     "area": 37885,
+     "top": 517,
+     "primary": false
+    },
+    {
+     "name": "Untitled",
+     "area": 23678,
+     "top": 807,
+     "primary": false
+    },
+    {
+     "name": "Let SelectaDJ pickNot rendered yet, under a minute",
+     "area": 16599,
+     "top": 664,
+     "primary": false
+    },
+    {
+     "name": "Measured song energy",
+     "area": 9504,
+     "top": 440,
+     "primary": false
+    },
+    {
+     "name": "Ask Lucy about this mix",
+     "area": 8618,
+     "top": 267,
+     "primary": false
+    }
+   ],
+   "hscroll": false
+  },
+  {
+   "file": "wp5-specimen-listen-desktop-dark.png",
+   "scene": "listen",
+   "route": "/listen",
+   "size": "desktop",
+   "viewport": "1440x900",
+   "h1": "An Extraordinarily Long Song Title That Goes On And On Without Any Regard For Th",
+   "h1Top": 141,
+   "controlsInView": 14,
+   "primaryInView": [
+    "Play"
+   ],
+   "largestControls": [
+    {
+     "name": "UntitledUnknown artistEdit upcoming song and transition",
+     "area": 42863,
+     "top": 269,
+     "primary": false
+    },
+    {
+     "name": "Beat countdown",
+     "area": 15224,
+     "top": 855,
+     "primary": false
+    },
+    {
+     "name": "Play",
+     "area": 8383,
+     "top": 356,
+     "primary": true
+    },
+    {
+     "name": "Jump to the transition",
+     "area": 8154,
+     "top": 423,
+     "primary": false
+    },
+    {
+     "name": "Change the next song",
+     "area": 8130,
+     "top": 537,
+     "primary": false
+    }
+   ],
+   "hscroll": false
+  }
+ ]
+}

@@ -85,8 +85,8 @@ describe('P0107 / P0111 storage controls reconcile to what the server confirmed'
     fireEvent.change(slider, { target: { value: '7' } });
     release(undefined);
     await waitFor(() => expect(posts).toBe(2), { timeout: 3000 });
-    expect(await screen.findByText('Saved: 7.0 GB.', {}, { timeout: 3000 })).toBeInTheDocument();
-    expect(screen.queryByText('Saved: 5.0 GB.')).toBeNull();
+    expect(await screen.findByText('Limit saved: 7.0 GB.', {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.queryByText('Limit saved: 5.0 GB.')).toBeNull();
   });
 });
 

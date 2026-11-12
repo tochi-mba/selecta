@@ -11,6 +11,8 @@
 .room-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .room-panel button, .room-panel select, .room-panel input:not([type="checkbox"]) { min-height: 44px; }
 .room-check { display: inline-flex; gap: 6px; align-items: center; }
+/* the checkbox keeps its own size beside its words (a full-width 44px box stood apart from "and remove everyone", 2026-11-12 flow walk) */
+.room-check input[type="checkbox"] { width: auto; min-height: 0; flex: none; margin: 0; }
 .room-settings { display: grid; gap: 8px; border: 1px solid var(--line, #3a362c); border-radius: 10px; padding: 12px; }
 .room-settings label { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .room-list { list-style: none; margin: 6px 0; padding: 0; }

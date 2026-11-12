@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { allRendered, resetMix } from './helpers';
+import { resetMix } from './helpers';
 
 /**
  * Flow SF-0213-06, found in the 2026-11-12 400% zoom review: a phone-width window at 400% zoom is about
@@ -11,8 +11,8 @@ const SIZES = [[320, 200, '1280x800 at 400%'], [320, 256, '1280x1024 at 400%']] 
 
 test.beforeEach(async ({ page, request }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  // the words and the player are what is measured, so the transitions need not be rendered first
   await resetMix(request);
-  await allRendered(request);
 });
 
 for (const [width, height, zoom] of SIZES) {

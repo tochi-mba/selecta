@@ -1,6 +1,7 @@
 """Library + Lucy (LX) study kit: the scripts and scoring for the LX user studies.
 
-Nineteen LX tasks close only after a study with real people (LX-0341-08, -0343-08 ... -0363-08).
+Nineteen LX tasks close only after a study with real people (LX-0341-08, -0343-08 ... -0363-08),
+and 23 more end with a short per-task study (the CARDS, triage package WP3).
 This module is the code half: one protocol per task (route, made-up library from
 tests/e2e_server.py, who takes part, the uncoached prompts and what counts as success), a checker
 for the session records a facilitator writes, and a scorer that compares timed tasks with the
@@ -215,6 +216,11 @@ STUDIES: tuple[Study, ...] = (
 # preparation that shows the task can be completed, never a participant or a result.
 HESITATE = "a pause over 10 s, a question to the facilitator, or "
 PILOT_SHA = "73298def"
+CONSENT = (
+    "This session tests SelectaDJ, not you. It uses made-up songs only. You can stop at any time."
+    " We note the time, whether you paused and how sure you felt, under a code such as P01;"
+    " no name, voice or screen recording is kept."
+)
 
 
 def _c(task, title, route, prompt, success, hesitation, setup="", groups=None) -> Study:

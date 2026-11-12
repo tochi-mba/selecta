@@ -61,7 +61,12 @@ toggle button, pressed". Study form: "Study code, edit, required, The code you w
 study." and the same for nickname and setup. Findings: typing a Library search spoke no result count
 (NVS-1, see session 2), and the workspace attention status is spoken again after every full page load.
 
-Session 2: see the addendum at the end of this file.
+The /listen load, the Tab walk through the rail and the Ctrl+K palette ran before NVDA's capture
+began (speech is kept only once it announces the Edge window), and the Requests drawer step spoke
+nothing after "Loading complete", so those three are not evidenced by speech. A second session for
+them waited about an hour behind other agents' NVDA sessions and was cancelled; they remain for a
+person or a later session. NVS-1 (the missing search count) should be rechecked with a longer pause
+before it is filed as a defect.
 
 ## 4. Device emulation, zoom, forced colours, Stage, scale
 

@@ -278,3 +278,40 @@ def test_scoring_ignores_bad_records_and_compares_with_the_baseline():
 
 def test_the_study_kit_page_is_current():
     assert (ROOT / kit.OUT).read_text(encoding="utf-8") == kit.render()
+
+
+WP3_CARDS = (
+    "LX-0340-01 LX-0340-04 LX-0341-03 LX-0342-06 LX-0343-01 LX-0343-07 LX-0344-04 LX-0345-01 "
+    "LX-0346-02 LX-0348-02 LX-0348-06 LX-0349-01 LX-0349-04 LX-0352-03 LX-0353-01 LX-0353-03 "
+    "LX-0354-01 LX-0354-03 LX-0357-01 LX-0359-01 LX-0361-04 LX-0362-01 LX-0363-02"
+).split()
+
+
+def test_every_wp3_task_has_one_complete_study_card_with_a_preparation_pilot():
+    assert sorted(card.task for card in kit.CARDS) == sorted(WP3_CARDS)
+    for card in kit.CARDS:
+        assert card.card and card.timed and len(card.prompts) == 1, card.task
+        assert card.route.startswith("/") and card.success and card.hesitation, card.task
+        assert kit.PILOT_SHA in card.pilot, f"{card.task} has no pilot walkthrough"
+        # a pilot is preparation: it never names a participant or claims a study result
+        assert not re.search(r"\bP\d{2}\b|participants? (said|found)", card.pilot), card.task
+        line = next(row for row in CHECKLIST.splitlines() if f"**{card.task} " in row)
+        assert line.startswith("- [ ]") and "Claude part done:" in line, card.task
+        assert "Needs a person:" in line, card.task
+    assert "SelectaDJ" in kit.CONSENT and "P01" in kit.CONSENT
+    assert "—" not in kit.render()
+
+
+def test_a_study_card_record_needs_consent_confidence_and_hesitation():
+    task = "LX-0353-03"
+    good = session(task=task, seconds=(4,), consent=True)
+    good["outcomes"][0].update(confidence=4, hesitated=False)
+    assert kit.record_problems(good) == []
+    for key, bad in (("confidence", 7), ("hesitated", "maybe")):
+        record = session(task=task, seconds=(4,), consent=True)
+        record["outcomes"][0].update(confidence=4, hesitated=False, **{key: bad})
+        assert any(key in p for p in kit.record_problems(record))
+    unconsented = session(task=task, seconds=(4,))
+    unconsented["outcomes"][0].update(confidence=4, hesitated=False)
+    assert any("consent" in p for p in kit.record_problems(unconsented))
+    assert kit.score(task, [unconsented])["sessions"] == 0

@@ -198,7 +198,7 @@ export function StoragePanel() {
         </div>
       )}
       {!saved && !problem && <p className="hint" role="status">Saving…</p>}
-      {saved && !problem && pending === null && <p className="hint" role="status">{reclaimed || `Saved: ${limit.toFixed(1)} GB.`}</p>}
+      {saved && !problem && pending === null && <p className="hint" role="status">{reclaimed || `Limit saved: ${limit.toFixed(1)} GB.`}</p>}
       {problem && <p className="warn" role="alert" id={problemId}>{problem} The limit is still {limit.toFixed(1)} GB.</p>}
       {wanted !== null && <Action run={() => move(wanted)}>Retry saving budget</Action>}
       <p className="hint">
