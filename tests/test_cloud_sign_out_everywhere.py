@@ -61,16 +61,15 @@ def test_sign_out_everywhere_signs_out_every_device_and_stops_the_speaker(world)
     assert answer.json()["playback_stopped"] is True
 
     with world.engine.connect() as conn:
-        signed_out = dict(
-            conn.execute(sa.select(devices.c.id, devices.c.signed_out_at)).tuples().all()
-        )
+        rows = conn.execute(sa.select(devices.c.id, devices.c.signed_out_at))
+        signed_out = {row[0]: row[1] for row in rows}
         topics = list(
             conn.execute(
                 sa.select(outbox_events.c.topic, outbox_events.c.payload).where(
                     outbox_events.c.workspace_id == workspace,
                     outbox_events.c.topic == "device.signed_out",
                 )
-            ).tuples()
+            )
         )
     assert all(signed_out[device] is not None for device in (laptop, phone))
     payloads = [

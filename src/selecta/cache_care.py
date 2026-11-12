@@ -362,7 +362,8 @@ def tidy_database(path: Path) -> dict:
         mode = conn.execute("PRAGMA auto_vacuum").fetchone()[0]
         report = {"bytes_before": pages * page_size, "free_before": free * page_size}
         if mode == INCREMENTAL and free:
-            conn.execute("PRAGMA incremental_vacuum")
+            # it frees one page per step, so the steps have to be read to the end
+            conn.execute("PRAGMA incremental_vacuum").fetchall()
         elif free * page_size >= VACUUM_MIN_FREE_BYTES and free >= VACUUM_MIN_FREE_SHARE * pages:
             conn.execute(f"PRAGMA auto_vacuum={INCREMENTAL}")
             conn.execute("VACUUM")

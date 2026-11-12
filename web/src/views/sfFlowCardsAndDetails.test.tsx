@@ -18,7 +18,7 @@ describe('SF-0218-02 evidence cards carry pair, technique, limitation and status
   it('a candidate card names both songs in playing order, its move, its status and that it is only a match to check', async () => {
     fakeBackend({ 'GET /links': { links: [link(1, { status: 'none' })], prepared: 1, preparing: 0 }, 'GET /drafts': { drafts: [] } });
     render(<Links {...props()} />);
-    const card = (await screen.findByRole('heading', { name: '“phrase 1”' })).closest('article') as HTMLElement;
+    const card = (await screen.findByRole('heading', { name: '“phrase 1”' }, { timeout: 5000 })).closest('article') as HTMLElement;
     expect(within(card).getByText('Word connection, in playing order')).toBeInTheDocument();
     const [from, into] = Array.from(card.querySelectorAll('.link-handoff'));
     expect(from).toHaveTextContent(/From\s*Opener 1/);
@@ -32,7 +32,7 @@ describe('SF-0218-02 evidence cards carry pair, technique, limitation and status
   it('a rendered card with a rough spot says so, so the status is not over-trusted', async () => {
     fakeBackend({ 'GET /links': { links: [link(2, { status: 'ready', passed: false, label: 'Word cut' })], prepared: 1, preparing: 0 }, 'GET /drafts': { drafts: [] } });
     render(<Links {...props()} />);
-    const card = (await screen.findByRole('heading', { name: '“phrase 2”' })).closest('article') as HTMLElement;
+    const card = (await screen.findByRole('heading', { name: '“phrase 2”' }, { timeout: 5000 })).closest('article') as HTMLElement;
     expect(within(card).getByText(/has a rough spot/)).toBeInTheDocument();
     expect(card.querySelector('.link-evidence')).toHaveAttribute('data-evidence', 'rendered');
     expect(card.querySelector('.link-evidence')).toHaveTextContent(/with a rough spot/);

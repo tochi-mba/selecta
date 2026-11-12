@@ -138,7 +138,8 @@ const CANT_SEEK = 'You can’t move around during a transition, because it plays
  * reader; the lyric placeholder below carries the one "Loading this song" announcement. */
 function StripPlaceholder() {
   const revealed = useRevealed();
-  return <div className="skeleton-strip" aria-hidden="true" data-revealed={revealed} />;
+  // the empty note under the real strip keeps its line too, so nothing below moves when the song arrives
+  return <><div className="skeleton-strip" aria-hidden="true" data-revealed={revealed} /><p className="hint seek-note" aria-hidden="true">{' '}</p></>;
 }
 
 function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDetail; time: number; seamAt: number | null; onSeek: (seconds: number) => void; seekBlocked?: boolean }) {

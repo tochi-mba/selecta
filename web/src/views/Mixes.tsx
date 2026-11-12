@@ -258,9 +258,19 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
             <p className="hint">
               {ready.length
                 ? `${ready.length} available ideas. These are planning preferences, not previews; Selecta builds a new actual mix after you choose.`
-                : 'Every mix is rebuilt from your own songs when you press play.'}
+                : !cards && !cardsFailed
+                  // P0032: while the ideas load, the same words in the same space, without a count it doesn't have yet
+                  ? 'Finding the ideas your songs support. These are planning preferences, not previews; Selecta builds a new actual mix after you choose.'
+                  : 'Every mix is rebuilt from your own songs when you press play.'}
             </p>
           </div>
+          {/* P0032: the filter names are known before the ideas arrive, so they hold the filters' place,
+              unpressable and without counts, until there is something to filter */}
+          {!cards && !cardsFailed && (
+            <div className="chips vibe-filters vibe-filters-pending" aria-hidden="true">
+              {['All', ...GROUPS].map((group) => <button key={group} type="button" disabled tabIndex={-1}>{group}</button>)}
+            </div>
+          )}
           {!!ready.length && (
             <div className="chips vibe-filters" role="group" aria-label="Filter mix feelings">
               {['All', ...GROUPS].map((group) => {

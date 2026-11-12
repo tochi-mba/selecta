@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { MixItem, SongDetail } from '../api';
 import { SetPlayer } from '../player';
@@ -41,7 +41,7 @@ describe('S4-0098-04 lyric typography, active line and steady rows', () => {
   it('every line sets its own direction, so Arabic, Hebrew, mixed and CJK lines read whole', async () => {
     fakeBackend({ 'GET /songs/1': detail() });
     render(view(7));
-    expect(await screen.findByText('שלום לך עולם')).toBeInTheDocument();
+    expect(await screen.findByText(LONG)).toBeInTheDocument();
     for (const row of rows()) expect(row).toHaveAttribute('dir', 'auto');
     const sung = block().querySelector('p.sung') as HTMLElement;
     expect(sung).toHaveTextContent('שלום לך עולם');
@@ -65,9 +65,9 @@ describe('S4-0098-04 lyric typography, active line and steady rows', () => {
   it('a long line is the active line in full, never cut short', async () => {
     fakeBackend({ 'GET /songs/1': detail() });
     render(view(11));
-    const sung = await within(document.body).findByText(LONG);
-    expect(sung.closest('p')).toHaveClass('sung');
-    expect(sung.closest('p')).toHaveTextContent(LONG);
+    await screen.findByText('Mixed English و عربي together');
+    const sung = block().querySelector('p.sung') as HTMLElement;
+    expect(sung.textContent).toBe(LONG);
   });
 
   it('untimed right-to-left lyrics are labelled untimed and invent no active line', async () => {

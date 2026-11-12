@@ -312,7 +312,7 @@ legend { padding: 0; margin-bottom: var(--space-2); font-weight: 600; }
 .destination-results button { width: 100%; text-align: left; }
 .destination-selected { justify-content: space-between; align-items: center; }
 @media (max-width: 520px) { .mix-steering, .destination-control { grid-template-columns: 1fr; } .mix-steering .hint, .destination-control > .hint, .destination-selected, .destination-results { grid-column: auto; } .energy-arc-stops { grid-template-columns: 1fr; gap: var(--space-dense); } .energy-arc-stops label { grid-template-columns: 56px 1fr; align-items: center; } }
-.waiting > .hint { max-width: 62ch; } /* UF-0387-06: a bounded measure on wide screens */
+section > p.hint { max-width: 100ch; } /* UF-0387-06: explanations keep a readable measure on wide screens */
 .waiting ul { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-dense) var(--space-4); font-size: 0.92rem; }
 .nudge {
   margin-top: var(--space-6);

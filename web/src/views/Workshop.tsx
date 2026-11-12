@@ -89,7 +89,7 @@ function Overview({ status }: { status: ViewProps['status'] }) {
           place until the jobs answer arrives, so the metrics don't jump down under the reader. */}
       {jobs
         ? <NeedsYou jobs={jobs} readySongs={counts.ready ?? 0} folders={folders} />
-        : !stale && !unsupported && <section className="panel stack needs-you"><h2>What needs you</h2><Skeleton variant="metrics" lines={1} label="Checking what needs you" retry={refreshJobs} /></section>}
+        : !stale && !unsupported && <section className="panel stack needs-you"><h2>What needs you</h2><Skeleton variant="rows" lines={2} label="Checking what needs you" retry={refreshJobs} /></section>}
       <div className="metrics">
         <div><strong>{counts.ready ?? 0}</strong><span>ready for mixes</span></div>
         <div><strong>{counts.analysed}</strong><span>audio analysed</span></div>

@@ -117,7 +117,7 @@ test('UF-0387-06 at 3840px, reading text keeps a bounded measure instead of stre
       return { mainWidth: Math.round(main.width), widest: long.sort((a, b) => b.ems - a.ems).slice(0, 3) };
     });
     // about 80 characters of body text is near 45em; anything past 60em is a stretched paragraph
-    for (const line of reading.widest) expect(line.ems, `${route}: "${line.text}" runs ${line.ems}em wide`).toBeLessThanOrEqual(60);
+    for (const line of reading.widest) expect.soft(line.ems, `${route}: "${line.text}" runs ${line.ems}em wide`).toBeLessThanOrEqual(60);
     readings.push({ route, ...reading });
   }
   writeFileSync(info.outputPath('uf-0387-06-wide.json'), JSON.stringify({ status: 'candidate-not-independently-verified', width: 3840, readings }, null, 2));

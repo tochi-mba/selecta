@@ -124,8 +124,9 @@ test('P0036 Discover pair placeholders take the cards’ place, with the chord m
   for (const width of [375, 1440]) {
     const at = `${width}px`;
     await page.setViewportSize({ width, height: 900 });
-    // word connections: the search and its words are real, the cards are placeholders on .link-grid's tracks
-    let release = await hold(page, '**/api/links?**', { links: [link(1, 2), link(3, 4), link(5, 6)], prepared: 3, preparing: 3 });
+    // word connections: the search and its words are real, the cards are placeholders on .link-grid's tracks.
+    // Nothing is being prepared, so no progress line (which only an answer can know about) opens above the search.
+    let release = await hold(page, '**/api/links?**', { links: [link(1, 2), link(3, 4), link(5, 6)], prepared: 0, preparing: 0 });
     await page.goto('/discover');
     let skeleton = await shapesOnly(page, 'Searching your lyrics');
     const search = (await boxes(page, 'main input[type="search"]'))[0];

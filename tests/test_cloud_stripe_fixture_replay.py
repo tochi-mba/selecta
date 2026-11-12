@@ -38,7 +38,8 @@ URL = "/api/webhooks/stripe"
 
 def stored(engine) -> dict[str, str]:
     with transaction(engine) as conn:
-        return dict(conn.execute(sa.select(stripe_events.c.id, stripe_events.c.status)).tuples())
+        rows = conn.execute(sa.select(stripe_events.c.id, stripe_events.c.status))
+        return {row[0]: row[1] for row in rows}
 
 
 def plan_id(engine) -> str:

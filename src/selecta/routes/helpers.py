@@ -5,14 +5,13 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
-import time
 from collections.abc import Callable
 
 from fastapi import HTTPException
 
 from selecta import db, jobs, mix
 from selecta import requests as song_requests
-from selecta.api_common import LINKS_KEEP_SECONDS, _counts
+from selecta.api_common import _counts
 from selecta.config import ANALYSIS_VERSION
 from selecta.eta import combine, mix_time_left, time_ahead
 from selecta.seams import STUDIO_SESSION, SeamRequest, request_from
@@ -24,7 +23,7 @@ def add_routes(app, ctx) -> None:
     settings = ctx.settings
     store = ctx.store
 
-    links_cache: dict = {"at": 0.0, "links": []}
+    links_cache: dict = {"stamp": None, "links": []}
 
     library_cache: dict = {}
 
@@ -45,11 +44,22 @@ def add_routes(app, ctx) -> None:
         return set(db.preference(conn, "never_play", []))
 
     def all_links(conn: sqlite3.Connection):
+        """Word links across the library. r8d: found again only when the timed lyrics they come
+        from have changed. They were found again every ten minutes, and on every call while a
+        library had none, and finding them parses every song's lyrics (seconds on a laptop)."""
         from selecta.discovery.search import lyric_links
 
-        if time.monotonic() - links_cache["at"] > LINKS_KEEP_SECONDS or not links_cache["links"]:
+        stamp = tuple(
+            conn.execute(
+                "SELECT COUNT(*), MAX(l.fetched_at), TOTAL(l.song_id), TOTAL(s.mtime), "
+                "MAX(s.id) FROM lyrics l JOIN songs s ON s.id=l.song_id "
+                "WHERE l.status='synced' AND l.synced IS NOT NULL "
+                "AND s.is_music=1 AND s.duplicate_of IS NULL"
+            ).fetchone()
+        )
+        if links_cache["stamp"] != stamp:
             links_cache["links"] = lyric_links(conn)
-            links_cache["at"] = time.monotonic()
+            links_cache["stamp"] = stamp
         return links_cache["links"]
 
     def songs_in_line(conn: sqlite3.Connection) -> list[int]:
