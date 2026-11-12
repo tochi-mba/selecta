@@ -23,7 +23,8 @@
 
 ### Product contract and parity - [ADR-0001](https://github.com/tochi-mba/selecta/blob/main/docs/adr/adr-0001-product-contract-and-parity.md)
 
-- [ ] T0001 - Pin the pre-redesign main SHA and archive representative screenshots, API responses, settings and playback traces.
+- [x] T0001 - Pin the pre-redesign main SHA and archive representative screenshots, API responses, settings and playback traces.
+ **Evidence (2026-11-12):** Pinned at main `911c98106795e9ce0154afc8d9a53a886a8643ef`. `docs/baseline/911c981/` was captured 2026-11-12 by `tests/baseline_capture.py` and `web/e2e/baseline-capture.mjs` from that commit running its own server and built page on a made-up library in Edge: 12 screenshots (six views, desktop and phone), its API answers, `settings.json` (Settings defaults, steering, storage, browser storage) and `playback-trace.json` (audio clock starts and fetched audio; the first transition never rendered because 911c981 seam worker freezes on Windows, as `manifest.json` says). Route and response shapes are in `tests/fixtures/api_contracts_baseline.json`. `tests/test_baseline_archive.py` (6 tests) and `tests/test_api_contract_fixtures.py` passed 2026-11-12.
 - [x] T0002 - Inventory every existing feature and expose each in the new Listen/Mixes/Library/Discover/Workshop structure.
 - [x] T0003 - Record current user journeys for casual listening, live requesting, mix creation and expert seam editing.
  **Evidence (2026-11-11):** `docs/user-journeys.md` records the four journeys step by step, each step naming its `web/e2e` test; `tests/test_user_journeys.py` (`test_every_journey_is_recorded`, `test_every_step_names_a_test_that_exists`) passed 2026-11-11 (2 passed).
