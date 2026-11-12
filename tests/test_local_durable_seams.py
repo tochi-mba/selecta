@@ -326,8 +326,6 @@ def test_status_comes_from_the_store_not_from_the_worker_process(tmp_path):
 def test_the_real_seam_worker_process_takes_its_work_from_the_store(tmp_path):
     """No pipe: the worker process is started with nothing on its input, finds the job in the
     store, and publishes a record (a failed one here, as the songs don't exist)."""
-    import subprocess
-
     from selecta.jobs import kill_tree
 
     store = make_store(tmp_path)
@@ -335,15 +333,17 @@ def test_the_real_seam_worker_process_takes_its_work_from_the_store(tmp_path):
     store.submit(request, urgent=True)
     process = local_host.spawn_worker(tmp_path, "selecta.seam_worker", "--durable")
     try:
-        for _ in range(900):
-            if store.status(request.key)["status"] == "failed" or process.poll() is not None:
+        # it starts at the lowest priority, so on a busy machine this can take minutes
+        for _ in range(3_000):
+            done = [row[0] for row in jobs_of(store, request.key)] == ["succeeded"]
+            if done or process.poll() is not None:
                 break
             time.sleep(0.1)
         assert process.poll() is None, "the worker is still running, waiting for more"
-        assert store.status(request.key)["status"] == "failed"
-        store.refresh()
         assert [row[0] for row in jobs_of(store, request.key)] == ["succeeded"]
+        store.refresh()
+        assert store.status(request.key)["status"] == "failed"
     finally:
         kill_tree(process.pid)
         process.wait(timeout=30)
-    assert process.returncode is not None and subprocess.DEVNULL
+    assert process.returncode is not None

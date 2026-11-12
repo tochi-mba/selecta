@@ -274,12 +274,12 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 
 <!-- owner-runbook:generated:begin -->
 
-**Open person-only tasks: 772.**
+**Open person-only tasks: 769.**
 
 | Sitting | Tasks | Tracker |
 |---|---|---|
 | 1. Visual review and baseline approval | 120 | [tracker/visual-review.md](tracker/visual-review.md) |
-| 2. Screen-reader and keyboard session | 95 | [tracker/screen-reader.md](tracker/screen-reader.md) |
+| 2. Screen-reader and keyboard session | 92 | [tracker/screen-reader.md](tracker/screen-reader.md) |
 | 3. Phones, touch, zoom and hardware | 107 | [tracker/devices.md](tracker/devices.md) |
 | 4. Listening session | 80 | [tracker/listening.md](tracker/listening.md) |
 | 5. User-study sessions | 215 | [tracker/user-study.md](tracker/user-study.md) |
@@ -307,7 +307,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 - `polish-implementation-checklist.md` (3): P0031, P0126, P0128
 - `selecta-3-1-implementation-checklist.md` (8): S31-0080-05, S31-0080-09, S31-0082-03, S31-0082-09, S31-0083-06, S31-0084-03, S31-0087-02, S31-0087-03
 - `selecta-3-implementation-checklist.md` (5): S3-0049-08, S3-0066-08, S3-0067-08, S3-0075-05, S3-0077-06
-- `selecta-4-implementation-checklist.md` (22): S4-0091-05, S4-0092-02, S4-0092-09, S4-0094-04, S4-0094-09, S4-0100-06, S4-0100-07, S4-0101-09, S4-0102-01, S4-0102-10, S4-0103-01, S4-0103-03, S4-0104-06, S4-0106-01, S4-0106-07, S4-0107-08, S4-0110-01, S4-0110-03, S4-0110-05, S4-0110-10, S4-0112-07, S4-0113-08
+- `selecta-4-implementation-checklist.md` (19): S4-0091-05, S4-0092-02, S4-0092-09, S4-0094-04, S4-0094-09, S4-0100-06, S4-0100-07, S4-0101-09, S4-0102-01, S4-0103-03, S4-0104-06, S4-0106-07, S4-0107-08, S4-0110-01, S4-0110-03, S4-0110-05, S4-0110-10, S4-0112-07, S4-0113-08
 - `selecta-creative-interface-implementation-checklist.md` (5): CI-0167-04, CI-0173-07, CI-0177-07, CI-0183-02, CI-0183-07
 - `selecta-experience-implementation-checklist.md` (8): EX-0115-04, EX-0127-05, EX-0128-05, EX-0129-01, EX-0131-02, EX-0132-03, EX-0132-05, EX-0133-04
 - `selecta-final-polish-implementation-checklist.md` (1): FP-0264-06
