@@ -14,7 +14,8 @@ export default defineConfig({
   projects: [
     { name: 'Chrome', use: { ...devices['Desktop Chrome'], channel: 'chrome' } },
     { name: 'Edge', use: { ...devices['Desktop Edge'], channel: 'msedge' } },
-    { name: 'Firefox', use: { ...devices['Desktop Firefox'] } },
-    { name: 'WebKit (Safari engine)', use: { ...devices['Desktop Safari'] } },
+    // Chromium launch flags from the Cloud suite are not understood by other engines.
+    { name: 'Firefox', use: { ...devices['Desktop Firefox'], launchOptions: { args: [] } } },
+    { name: 'WebKit (Safari engine)', use: { ...devices['Desktop Safari'], launchOptions: { args: [] } } },
   ],
 });
