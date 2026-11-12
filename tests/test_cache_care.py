@@ -227,6 +227,37 @@ def test_crash_leftovers_go_once_nothing_can_still_be_writing_them(settings):
     assert swept.removed["unfinished stem window"] == 1
 
 
+def test_a_stray_link_temporary_goes_once_nothing_can_still_be_writing_it(settings):
+    folder = settings.renders_dir / "seams" / "abc"
+    folder.mkdir(parents=True)
+    stray = folder / "clip.flac.link.tmp"
+    stray.write_bytes(b"x")
+    fresh = folder / "preview.flac.link.tmp"
+    fresh.write_bytes(b"x")
+    _age(stray, 2 * cache_care.CRASH_GRACE_S)
+    cache_care.tidy(settings)
+    assert not stray.exists()
+    assert fresh.exists()
+
+
+def test_a_failed_link_swap_leaves_no_temporary(settings, monkeypatch):
+    clips = []
+    for key in ("one", "two"):
+        folder = settings.renders_dir / "seams" / key
+        folder.mkdir(parents=True)
+        (folder / "clip.flac").write_bytes(b"same audio")
+        clips.append(folder / "clip.flac")
+
+    def refuse(*_args):
+        raise PermissionError("held open")
+
+    monkeypatch.setattr(cache_care.os, "replace", refuse)
+    swept = cache_care.Swept()
+    cache_care._link_duplicates(settings, swept)
+    assert swept.linked == 0
+    assert not list((settings.renders_dir / "seams").glob("*/*.link.tmp"))
+
+
 def test_a_finished_window_keeps_its_stems_and_loses_the_spent_excerpt(settings, tmp_path):
     source = tmp_path / "song.flac"
     source.write_bytes(b"audio")

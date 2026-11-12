@@ -34,6 +34,7 @@ import { RequestsContext, RequestsPanel, waitingRequestCount, useRequests } from
 import { Start } from './views/Start';
 import { MixScope } from './views/mixScope';
 import { prefetchLibrary } from './views/libraryPrefetch';
+import { takeStartupStatus } from './startupStatus';
 import { draftMovesWaiting } from './views/optimisticMove';
 import type { Undo, View } from './views/shared';
 
@@ -321,7 +322,12 @@ export function App() {
   useEffect(() => {
     // MI-0162-04: opened on the Library, its first rows are asked for now, not after status and the mix
     if (window.location.pathname === '/library') prefetchLibrary(window.location.search);
-    void refreshStatus();
+    // S4-0111-05: the status read just before the app started is used, not asked for a second time
+    const handed = takeStartupStatus<Status>();
+    if (handed) {
+      setFlags(handed.flags);
+      setStatus(handed);
+    } else void refreshStatus();
     const seen = mixChanges.current;
     get<MixData>('/mix')
       .then((next) => {

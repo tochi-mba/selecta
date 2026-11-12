@@ -60,6 +60,16 @@ async function apiSplit(page: Page, from: number) {
     })), from);
 }
 
+/** Resolves on the first frame the page shows `text` in `selector`. expect() polls at 100, 250, 500
+ * and then every 1,000 ms, so a reading taken with it can be up to a second late; this checks every
+ * frame, so the reading is when the page really showed it. */
+async function shows(page: Page, selector: string, text: string | null, timeout = 30_000) {
+  await page.waitForFunction(({ selector, text }) => {
+    const found = document.querySelector<HTMLElement>(selector);
+    return !!found && found.offsetParent !== null && (text === null || (found.textContent ?? '').includes(text));
+  }, { selector, text }, { polling: 'raf', timeout });
+}
+
 async function total(request: APIRequestContext, query: string) {
   return (await (await request.get(`/api/library?${query}&limit=1`)).json()).total as number;
 }
@@ -82,7 +92,7 @@ test('S4-0111-05 a 20,000-song Library: search, filter, deep paging and a refres
   const typingFrom = await mark(page);
   await box.pressSequentially('golden', { delay: 120 });
   const lastKey = await mark(page);
-  const searchSettleMs = await timed(async () => undefined, () => expect(shown).toContainText(`of ${golden} songs`, { timeout: 30_000 }));
+  const searchSettleMs = await timed(async () => undefined, () => shows(page, '.library-count', `of ${golden} songs`));
   const searchApi = await apiSplit(page, lastKey);
   await expect(box).toBeFocused();
   const typing = await interactionsSince(page, typingFrom);
@@ -113,7 +123,7 @@ test('S4-0111-05 a 20,000-song Library: search, filter, deep paging and a refres
   await box.fill('golden');
   await expect(shown).toContainText(`of ${golden} songs`, { timeout: 30_000 });
   const address = page.url();
-  const refreshMs = await timed(() => page.reload(), () => expect(rows.first()).toBeVisible({ timeout: 60_000 }));
+  const refreshMs = await timed(() => page.reload(), () => shows(page, '.library-rows .song-row', null, 60_000));
   const refreshApi = await apiSplit(page, 0);
   const refreshNav = await navigationTimes(page);
   const refreshRowsAt = await mark(page);

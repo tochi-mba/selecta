@@ -31,16 +31,29 @@ def add_asset(world, who: str = "customer") -> str:
     asset_id = new_id()
     workspace_id = world.workspaces[who]
     with transaction(world.engine, workspace_id) as conn:
-        conn.execute(assets.insert().values(
-            id=asset_id, workspace_id=workspace_id, original_key=f"originals/{asset_id}",
-            size=1000, sha256="0" * 64, format="flac", created_at=db_now(conn)))
+        conn.execute(
+            assets.insert().values(
+                id=asset_id,
+                workspace_id=workspace_id,
+                original_key=f"originals/{asset_id}",
+                size=1000,
+                sha256="0" * 64,
+                format="flac",
+                created_at=db_now(conn),
+            )
+        )
     return asset_id
 
 
 def log(world, asset_id: str, who: str = "owner", workspace: str = "customer"):
-    return world.post("/api/admin/takedowns", who, workspace_id=world.workspaces[workspace],
-                      asset_id=asset_id, complainant="Rights Holder Ltd",
-                      work="Song Title by Artist")
+    return world.post(
+        "/api/admin/takedowns",
+        who,
+        workspace_id=world.workspaces[workspace],
+        asset_id=asset_id,
+        complainant="Rights Holder Ltd",
+        work="Song Title by Artist",
+    )
 
 
 @pytest.mark.invariants_off("its asset rows use test keys outside w/{workspace}/")
@@ -69,8 +82,9 @@ def test_acting_hides_the_asset_and_starts_its_deletion(world):
     with world.engine.connect() as conn:
         hidden = conn.execute(sa.select(assets.c.deleted_at).where(assets.c.id == asset_id))
         assert hidden.scalar_one() is not None
-        ledger = conn.execute(sa.select(deletions.c.id, deletions.c.kind).where(
-            deletions.c.ref == asset_id)).one()
+        ledger = conn.execute(
+            sa.select(deletions.c.id, deletions.c.kind).where(deletions.c.ref == asset_id)
+        ).one()
     assert ledger.kind == "song" and body["notice"]["deletion_id"] == ledger.id
     actioned = audit_actions(world.engine, action="legal.takedown.actioned")
     assert actioned[0]["metadata"]["within_target"] is True
@@ -85,8 +99,10 @@ def test_a_rejected_notice_leaves_the_asset_alone(world):
     rejected = world.post(f"/api/admin/takedowns/{notice['id']}/reject", reason="no rights shown")
     assert rejected.json()["notice"]["status"] == "rejected"
     with world.engine.connect() as conn:
-        assert conn.execute(sa.select(assets.c.deleted_at).where(
-            assets.c.id == asset_id)).scalar_one() is None
+        assert (
+            conn.execute(sa.select(assets.c.deleted_at).where(assets.c.id == asset_id)).scalar_one()
+            is None
+        )
     assert audit_actions(world.engine, action="legal.takedown.rejected")
 
 
@@ -108,8 +124,10 @@ def test_repeated_valid_notices_suspend_uploads_until_lifted(world):
     account = world.get(f"/api/admin/accounts/{world.users['customer']}").json()
     assert account["uploads_restricted"] is True and account["valid_takedown_notices"] == 2
 
-    lifted = world.post(f"/api/admin/upload-restrictions/{world.workspaces['customer']}/lift",
-                        reason="counter-notice accepted")
+    lifted = world.post(
+        f"/api/admin/upload-restrictions/{world.workspaces['customer']}/lift",
+        reason="counter-notice accepted",
+    )
     assert lifted.json()["lifted"] is True
     plan = world.post("/api/uploads/plan", "customer", files=[{"name": "a.flac", "size": 10}])
     assert plan.json().get("detail", {}).get("code") != "uploads_restricted"
@@ -130,3 +148,25 @@ def test_a_notice_must_name_an_asset_in_that_workspace(world):
     asset_id = add_asset(world, "customer2")
     answer = log(world, asset_id)
     assert answer.status_code == 404
+
+
+@pytest.mark.invariants_off("its asset rows use test keys outside w/{workspace}/")
+@pytest.mark.parametrize("command", ["act", "reject"])
+def test_deciding_a_notice_runs_as_the_notice_workspace(world, monkeypatch, command):
+    """Acting on or rejecting a notice writes that workspace's rows, so its transaction names the
+    workspace and PostgreSQL's row-level security applies, as other workspace writes do."""
+    from selecta.admin import http as admin_http
+
+    asset_id = add_asset(world)
+    notice = log(world, asset_id).json()["notice"]
+    real = admin_http.transaction
+    named: list[str | None] = []
+
+    def recording(engine, workspace_id=None):
+        named.append(workspace_id)
+        return real(engine, workspace_id)
+
+    monkeypatch.setattr(admin_http, "transaction", recording)
+    answer = world.post(f"/api/admin/takedowns/{notice['id']}/{command}", reason="decided")
+    assert answer.status_code == 200, answer.text
+    assert world.workspaces["customer"] in named

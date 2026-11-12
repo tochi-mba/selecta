@@ -108,6 +108,9 @@ function subscribe(listener: () => void) {
   };
 }
 
+/** Told whenever a preference changes, for work outside React. Returns a way to stop being told. */
+export const onPrefsChange = subscribe;
+
 function storageChanged(event: StorageEvent) {
   if (event.key !== KEY && event.key !== null) return;
   current = read();

@@ -245,7 +245,9 @@ function Overlay({
       onClose();
       return;
     }
-    if (event.key !== 'Tab' || !panel.current) return;
+    // A sheet that keeps the chrome (SF-0203-06) leaves the tab bar and mini-player reachable, so Tab
+    // may leave it for them; only the rest of the page is inert.
+    if (event.key !== 'Tab' || !panel.current || keepsChrome) return;
     const items = [...panel.current.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((node) => canFocusInOverlay(node, panel.current));
     if (!items.length) {
       event.preventDefault();

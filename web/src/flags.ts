@@ -84,6 +84,9 @@ function subscribe(listener: () => void) {
   };
 }
 
+/** Told whenever the flags change, for work outside React. Returns a way to stop being told. */
+export const onFlagsChange = subscribe;
+
 const snapshot = () => current;
 
 /** Re-renders when the flags change, which only happens when the server restarts with others. */

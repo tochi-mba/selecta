@@ -205,6 +205,7 @@ def _crash_leftovers(settings: Settings, kept: _Kept, now: float, swept: Swept) 
         (settings.home / "seam-history", "*.tmp"),
         (settings.renders_dir, "*.tmp"),
         (settings.renders_dir / "seams", "*/*.part"),
+        (settings.renders_dir / "seams", "*/*.link.tmp"),
         (settings.home / "stems", "*/*.part"),
         (settings.renders_dir / "songs", "*/*.part"),
     ]
@@ -356,7 +357,9 @@ def _link_duplicates(settings: Settings, swept: Swept) -> None:
                 os.link(original, temporary)
                 os.replace(temporary, path)
             except OSError:
-                temporary.unlink(missing_ok=True)
+                # a temporary that can't go now either is left to the crash sweep
+                with contextlib.suppress(OSError):
+                    temporary.unlink(missing_ok=True)
                 continue
             swept.linked += 1
             swept.freed_bytes += size

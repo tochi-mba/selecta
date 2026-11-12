@@ -600,8 +600,10 @@ export class SetPlayer {
       .catch(() => { /* Retry while the original song continues playing. */ })
       .finally(() => {
         window.clearTimeout(timeout);
-        if (this.stateRead === controller) this.stateRead = null;
-        if (this.seamPollKey !== seam.key) return;
+        // a read stopAll let go of (playback stopped or restarted) is not one of the current backoff's
+        const current = this.stateRead === controller;
+        if (current) this.stateRead = null;
+        if (!current || this.seamPollKey !== seam.key) return;
         this.seamPollReads += 1;
         this.seamPollDone = performance.now();
       });

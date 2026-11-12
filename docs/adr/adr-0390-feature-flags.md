@@ -26,6 +26,11 @@ from them.
 - **Developers only.** Defaults are the committed files; `SELECTA_FLAGS` changes them for one run
   and is inherited by every child process. There is no switch page in the app.
 - **Core is locked on.** Core flags are listed with the reason they can't be turned off.
+- **On by default, except what isn't ready to show.** A flag defaults on unless its feature is
+  unfinished or not in force: a draft legal text, a job system not yet started, an owner-only
+  checklist. Those default off and say why in their description (owner decision 2026-11-12:
+  `core.durable_local_jobs`, `cloud.privacy_notice_draft`, `cloud.device_check`).
+  `tests/test_flags.py` allows only that.
 - **Off means gone.** Routes answer 403 `flag_off` (never 404, which means an older server);
   background work stops at its source; CLI commands say so and exit 2; the site shows nothing about
   the feature, and every page closes up around it.

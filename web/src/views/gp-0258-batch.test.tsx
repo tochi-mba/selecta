@@ -122,4 +122,27 @@ describe('GP-0258 exact-scope batch actions', () => {
     expect(screen.getByText('Zed')).toBeInTheDocument();
     expect(screen.queryByText('A')).toBeNull();
   });
+
+  it('GP-0258-07 Undo of a priority batch puts back each song’s own earlier priority, as the server reported it', async () => {
+    const calls = fakeBackend({
+      'GET /library': page(row(1, 'A'), row(2, 'B')),
+      'POST /library/batch': (body: unknown) => ((body as { action: string }).action === 'prioritize'
+        ? { updated: 2, action: 'prioritize', ids: [1, 2], previous: [{ id: 1, priority: 50 }, { id: 2, priority: 0 }] }
+        : { updated: 2 }),
+    });
+    const notify = vi.fn();
+    show(notify);
+    await screen.findByText('B');
+    const user = userEvent.setup();
+    await user.click(box('A'));
+    await user.click(box('B'));
+    await user.click(screen.getByRole('button', { name: 'Prioritize selected' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirm 2 recordings' }));
+    await waitFor(() => expect(notify).toHaveBeenCalled());
+    await (notify.mock.calls.at(-1)![1] as () => Promise<void>)();
+    expect(calls.filter((call) => call.path === '/library/batch').at(-1)!.body).toEqual({
+      action: 'restore_priority',
+      entries: [{ id: 1, expected: true, priority: 50 }, { id: 2, expected: true, priority: 0 }],
+    });
+  });
 });

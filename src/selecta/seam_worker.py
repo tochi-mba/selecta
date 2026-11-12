@@ -253,17 +253,30 @@ def _read_requests(store: SeamStore, app_input: TextIO) -> None:
 def main() -> None:
     set_render_priority(False)
     settings = load_settings()
-    store = SeamStore(settings)
+    # with `core.durable_local_jobs` the app starts this with --durable: no input pipe, the
+    # work comes from the job store in the home, and it stops when the app's process does
+    durable = "--durable" in sys.argv
+    if durable:
+        from selecta.workers import local_host, local_seams
+
+        local_host.stop_with_parent()
+        store = local_seams.DurableSeamStore(settings, local_host.open_store(settings.home))
+    else:
+        store = SeamStore(settings)
     store.forget_unfinished()
     if "--prepare" in sys.argv and flags.on("render.spare_time"):
         store.next_idle_job = _preparer(store, settings)
-    app_input = take_app_input()
-    threading.Thread(target=_read_requests, args=(store, app_input), daemon=True).start()
+    if not durable:
+        app_input = take_app_input()
+        threading.Thread(target=_read_requests, args=(store, app_input), daemon=True).start()
     store.next_mix_seam, mix_keys, store.mix_moves = _mix_seams(store, settings)
     store.next_line_seam, line_keys, store.draft_moves = _line_seams(store, settings)
     pinned = _pinned_ready_seams(settings)
     store.keep_for_now = _protecting(settings, lambda: mix_keys() | line_keys() | pinned())
     store.when_idle = _tidier(settings)
+    if durable:
+        local_seams.serve_worker(store)
+        return
     store.run_forever()
 
 

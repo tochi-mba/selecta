@@ -70,6 +70,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   // Ignore the echo of our own debounced URL update: a slow render can otherwise
   // replace newer keystrokes with a shorter query while the user is still typing.
   const ownSearchEcho = useRef<string | null>(null);
+  // S4-0111-05: a search typed here has already waited for the typing to pause, so it is asked for at once
+  const typedSearch = useRef<string | null>(null);
   useEffect(() => {
     if (ownSearchEcho.current === query) {
       ownSearchEcho.current = null;
@@ -150,7 +152,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       setConfirmBatch(null);
       return;
     }
-    await post('/library/batch', {
+    const done = await post<{ previous?: { id: number; priority: number }[] }>('/library/batch', {
       action: wanted.action,
       entries: wanted.songs.map((song) => ({
         id: song.id,
@@ -170,8 +172,14 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     const target = wanted.action === 'prioritize' || wanted.action === 'never';
     const changedSongs = wanted.songs.filter((song) => (priority ? song.priority : song.never) !== target);
     const inverse = { prioritize: 'deprioritize', deprioritize: 'prioritize', never: 'allow', allow: 'never' }[wanted.action];
+    // A priority batch puts back each song's own earlier priority, as the server reported it, so a
+    // value other than 0 or 100 isn't flattened to 0. A server that doesn't report it gets the inverse.
+    const before = new Map((done?.previous ?? []).map((entry) => [entry.id, entry.priority]));
+    const restore = priority && changedSongs.every((song) => before.has(song.id));
     notify(`Updated ${wanted.songs.length} precisely selected recordings.`, changedSongs.length ? async () => {
-      await post('/library/batch', { action: inverse, entries: changedSongs.map((song) => ({ id: song.id, expected: target })) });
+      await post('/library/batch', restore
+        ? { action: 'restore_priority', entries: changedSongs.map((song) => ({ id: song.id, expected: target, priority: before.get(song.id) })) }
+        : { action: inverse, entries: changedSongs.map((song) => ({ id: song.id, expected: target })) });
       // the search on screen when Undo is pressed, which may be newer than the one the batch ran in
       await loadNow.current();
     } : undefined);
@@ -325,7 +333,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     pagesJustAppended.current = null;
     pageCursors.current = [null];
     setSearching(true);
-    const wait = window.setTimeout(() => void load(), hasEarlyLibrary(url()) ? 0 : 120);
+    const typedNow = typedSearch.current === query;
+    typedSearch.current = null;
+    const wait = window.setTimeout(() => void load(), hasEarlyLibrary(url()) || typedNow ? 0 : 120);
     return () => { asked.current += 1; window.clearTimeout(wait); };
   }, [load, pagesAsked]);
 
@@ -337,6 +347,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     if (typed === query) return;
     const wait = window.setTimeout(() => {
       ownSearchEcho.current = typed;
+      typedSearch.current = typed;
       setAddressQuery({ q: typed || null, pages: null });
     }, 200);
     return () => window.clearTimeout(wait);

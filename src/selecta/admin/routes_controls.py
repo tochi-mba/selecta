@@ -19,7 +19,7 @@ from selecta.authz.check import Actor
 from selecta.flags.matching import Rule
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
-from selecta.persistence import db_now
+from selecta.persistence import db_now, transaction
 
 
 class ControlRequest(BaseModel):
@@ -214,6 +214,12 @@ def install_routes(
     def admin_notice_command(
         notice_id: str, command: str, body: Decision, request: Request, claims: SignedIn
     ):
+        if command not in {"act", "reject"}:
+            raise HTTPException(404, detail={"code": "unknown_command"})
+        # The decision writes that workspace's rows, so it runs as that workspace (row-level
+        # security), the way job commands do.
+        with transaction(engine) as conn:
+            workspace_id = takedowns.notice_workspace(conn, notice_id)
         if command == "act":
             return run(
                 request,
@@ -221,15 +227,14 @@ def install_routes(
                 lambda conn, actor: takedowns.act_on_notice(
                     conn, actor, notice_id, reason=body.reason
                 ),
+                workspace_id=workspace_id,
             )
-        if command == "reject":
 
-            def reject(conn: Connection, actor: Actor) -> dict:
-                notice = takedowns.reject_notice(conn, actor, notice_id, reason=body.reason)
-                return {"notice": notice.to_dict(db_now(conn))}
+        def reject(conn: Connection, actor: Actor) -> dict:
+            notice = takedowns.reject_notice(conn, actor, notice_id, reason=body.reason)
+            return {"notice": notice.to_dict(db_now(conn))}
 
-            return run(request, claims, reject)
-        raise HTTPException(404, detail={"code": "unknown_command"})
+        return run(request, claims, reject, workspace_id=workspace_id)
 
     @app.post("/api/admin/upload-restrictions/{workspace_id}/lift")
     def admin_lift_restriction(

@@ -131,6 +131,10 @@ def add_routes(app, ctx) -> None:
         return bool(operation) and any(job.get("operation") == operation for job in every_job())
 
     ctx.has_export_operation = has_export_operation
+    # core.durable_local_jobs: the job store holds exports instead of these records (SC-0394-04)
+    durable = getattr(ctx, "durable_exports", None)
+    if durable is not None:
+        ctx.has_export_operation = durable.has_operation
 
     def forget_old_records() -> None:
         """The records, that is. The files they made are left alone."""
@@ -290,6 +294,15 @@ def add_routes(app, ctx) -> None:
         the original export already finished, failed, or was interrupted.
         """
         operation = request.headers.get("x-operation-id")
+        if durable is not None:
+            previous = durable.by_operation(operation or "")
+            if previous is not None and previous.input_ref.get("draft") != draft:
+                raise HTTPException(409, "That export operation belongs to a different mix.")
+            if previous is not None:
+                return durable.record(previous)
+            with connect() as conn:
+                snapshot = snapshot_of(conn, draft)
+            return durable.start(snapshot, operation)
         with lock:
             if operation:
                 previous = next(
@@ -332,6 +345,8 @@ def add_routes(app, ctx) -> None:
 
     @app.get("/api/exports/jobs")
     def list_exports() -> dict:
+        if durable is not None:
+            return {"jobs": [durable.record(job) for job in durable.every()]}
         return {"jobs": [as_shown(job) for job in every_job()]}
 
     def job_or_404(job_id: str) -> dict:
@@ -340,13 +355,26 @@ def add_routes(app, ctx) -> None:
             raise HTTPException(404, "There's no export like that.")
         return job
 
+    def durable_or_404(job_id: str):
+        job = durable.find(job_id) if JOB_ID.match(job_id) else None
+        if job is None:
+            raise HTTPException(404, "There's no export like that.")
+        return job
+
     @app.get("/api/exports/jobs/{job_id}")
     def one_export(job_id: str) -> dict:
+        if durable is not None:
+            return durable.record(durable_or_404(job_id))
         return as_shown(job_or_404(job_id))
 
     @app.delete("/api/exports/jobs/{job_id}")
     def cancel_export(job_id: str) -> dict:
         """Stop while it's waiting on transitions. Once the file is being written, it finishes."""
+        if durable is not None:
+            found = durable_or_404(job_id)
+            if durable.record(found)["state"] != "preparing":
+                raise HTTPException(409, "It's past the point where it can be cancelled.")
+            return durable.cancel(found)
         job = job_or_404(job_id)
         shown = as_shown(job)
         if shown["state"] != "preparing":

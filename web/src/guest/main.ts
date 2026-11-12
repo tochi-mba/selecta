@@ -26,6 +26,16 @@ let timer = 0;
 let failures = 0;
 let notice = '';
 let searchSeq = 0;
+// Every read of the room (a poll, a vote, a request) takes a ticket when it goes out. An answer older
+// than the one on screen is dropped, so a slow poll can't undo a vote that was answered after it left.
+let reads = 0;
+let shownRead = 0;
+
+function newer(ticket: number): boolean {
+  if (ticket < shownRead) return false;
+  shownRead = ticket;
+  return true;
+}
 
 const shown = (text: string) => (text.length === 8 ? `${text.slice(0, 4)}-${text.slice(4)}` : text);
 const base = () => `/api/guest/rooms/${encodeURIComponent(roomId ?? '')}`;
@@ -79,12 +89,14 @@ function schedule(): void {
 async function refresh(): Promise<void> {
   if (!roomId) { joinScreen(); return; }
   const asked = roomId;
+  const ticket = ++reads;
   try {
     const fresh = await call<View>(base());
     // the guest left (or rejoined elsewhere) while this read was on its way: it no longer applies
     if (roomId !== asked) return;
-    view = fresh;
     failures = 0;
+    if (!newer(ticket)) { schedule(); return; }
+    view = fresh;
     draw();
     if (view.room_status !== 'ended') schedule();
   } catch (error) {
@@ -118,10 +130,13 @@ function voteButton(item: Item): HTMLElement | null {
 }
 
 async function act(path: string, method: string, body?: unknown, success = ''): Promise<void> {
+  const ticket = ++reads;
   try {
     const answer = await call<View | { room: View }>(path, { method, body: body ? JSON.stringify(body) : undefined });
-    view = 'room' in answer ? answer.room : (answer as View);
-    draw();
+    if (newer(ticket)) {
+      view = 'room' in answer ? answer.room : (answer as View);
+      draw();
+    }
     say(success);
   } catch (error) {
     say((error as Error).message);
@@ -217,10 +232,13 @@ async function search(query: string, results: HTMLElement): Promise<void> {
 }
 
 async function request(song: Song): Promise<void> {
+  const ticket = ++reads;
   try {
     const sent = await call<{ became_vote: boolean; already_queued: boolean; room: View }>(`${base()}/requests`, { method: 'POST', body: JSON.stringify({ song_id: song.song_id }) });
-    view = sent.room;
-    draw();
+    if (newer(ticket)) {
+      view = sent.room;
+      draw();
+    }
     say(sent.became_vote ? 'Someone already asked for that, so it counts as your vote.' : sent.already_queued ? "That one's already coming up." : `Sent: ${song.title}.`);
   } catch (error) {
     say((error as Error).message);

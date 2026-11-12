@@ -128,4 +128,29 @@ describe('MI-0162-05: the imminent unrendered seam is read with a backoff', () =
     expect(posts.some((url) => url.endsWith('/mix/1/seam'))).toBe(true);
     expect(reads.length - before).toBeLessThanOrEqual(2);
   });
+
+  it('a read left over from before a restart does not count toward the new backoff', async () => {
+    const mix = songs(seam('rendering', 'k'));
+    const plain = fetch;
+    let late: (() => void) | null = null;
+    // the first read answers only after the player has stopped and started the same seam again
+    vi.stubGlobal('fetch', vi.fn((url: string, init?: RequestInit) => {
+      if (late === null && /\/seams\/k$/.test(url)) {
+        reads.push({ key: 'k', at: clock });
+        return new Promise<Response>((done) => { late = () => done(new Response(JSON.stringify({ status: 'rendering', key: 'k' }))); });
+      }
+      return plain(url, init);
+    }));
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(0);
+    await run(player, 0.2);
+    expect(reads).toHaveLength(1);
+    await player.playFrom(0);
+    await run(player, 0.2);
+    expect(reads).toHaveLength(2);
+    (late as unknown as () => void)();
+    await run(player, 4);
+    // one read since the restart, so the next waits 1 s, not the 1.6 s a second read would set
+    expect(reads[2].at - reads[1].at).toBeLessThanOrEqual(1100);
+  });
 });

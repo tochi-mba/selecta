@@ -1,6 +1,8 @@
 import { lazy, ReactNode, Suspense, useEffect, useState } from 'react';
 import { App } from './App';
 import { setCopyMode } from './copy';
+import { handOnStartupStatus } from './startupStatus';
+import { prefetchLibrary } from './views/libraryPrefetch';
 
 const CloudRoot = lazy(() => import('./cloud/CloudRoot').then((module) => ({ default: module.CloudRoot })));
 
@@ -8,6 +10,8 @@ type Mode = 'loading' | 'local' | 'cloud' | 'unavailable';
 const apiOrigin = (import.meta.env.VITE_SELECTA_API_ORIGIN ?? '').replace(/\/$/, '');
 /** The same pace the app itself checks the server at once it's running. */
 export const RETRY_MS = 4000;
+// a build with a Cloud sign-in may turn out to be Cloud, whose Library is read differently
+const cloudBuild = !!import.meta.env.VITE_WORKOS_CLIENT_ID;
 
 export function RuntimeApp() {
   const [mode, setMode] = useState<Mode>('loading');
@@ -15,6 +19,9 @@ export function RuntimeApp() {
 
   useEffect(() => {
     let current = true;
+    // S4-0111-05: a build that can only be local opened on the Library asks for its first rows now,
+    // alongside this check, rather than once the check has answered and the app has started
+    if (!cloudBuild && !apiOrigin && window.location.pathname === '/library') prefetchLibrary(window.location.search);
     fetch(`${apiOrigin}/api/status`)
       .then(async (response) => {
         if (!response.ok) throw new Error('Selecta API is unavailable.');
@@ -23,6 +30,7 @@ export function RuntimeApp() {
         const next = status.mode === 'cloud' ? 'cloud' : 'local';
         // Words like "this PC" follow the server's mode before anything is drawn (src/copy.ts).
         setCopyMode(next);
+        if (next === 'local') handOnStartupStatus(status);
         setMode(next);
       })
       .catch(() => { if (current) setMode('unavailable'); });

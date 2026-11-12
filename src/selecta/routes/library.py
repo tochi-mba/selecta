@@ -29,14 +29,17 @@ from selecta.api_common import (
 )
 from selecta.config import ANALYSIS_VERSION
 from selecta.eta import analysis_line_left
-from selecta.library.relevance import match_label, rank_songs
+from selecta.library.relevance import match_label
 from selecta.library.scan import ScanStopped
+from selecta.library.search_cache import RankedSearches
 
 
 class BatchEntry(BaseModel):
     id: int
     # Snapshot visible when the action was offered; prevents stale edits.
     expected: bool
+    # restore_priority only: the processing priority this song had before the batch it undoes
+    priority: int | None = Field(default=None, ge=0, le=100)
 
 
 class BatchRequest(BaseModel):
@@ -52,6 +55,8 @@ def add_routes(app, ctx) -> None:
     settings = ctx.settings
     songs_in_line = ctx.songs_in_line
     store = ctx.store
+    # S4-0111-05: the same search over unchanged names is ranked once, not on every page or refresh
+    searches = RankedSearches()
 
     @app.post("/api/scan")
     def scan(body: ScanRequest) -> dict:
@@ -101,6 +106,10 @@ def add_routes(app, ctx) -> None:
         """Lyrics for every song that has none yet, unless lyric lookup is turned off, in which
         case nothing is sent anywhere."""
         if not flags.on("lyrics.lookup"):
+            return
+        work = getattr(ctx, "work", None)
+        if work is not None:  # core.durable_local_jobs: a job on the app's own thread
+            work.enqueue("lyrics.fetch", input_ref={}, idempotency_key="library")
             return
         subprocess.run(
             [sys.executable, "-m", "selecta.cli", "lyrics"],
@@ -226,12 +235,17 @@ def add_routes(app, ctx) -> None:
         All IDs and previously displayed values must still match. A concurrent
         scan, another tab or stale filtered list aborts the entire batch.
         """
-        if body.action not in {"prioritize", "deprioritize", "never", "allow"}:
+        actions = {"prioritize", "deprioritize", "restore_priority", "never", "allow"}
+        if body.action not in actions:
             raise HTTPException(400, "Unsupported batch action.")
         ids = [entry.id for entry in body.entries]
         if len(set(ids)) != len(ids) or any(song_id <= 0 for song_id in ids):
             raise HTTPException(400, "Select distinct valid song IDs.")
-        is_priority = body.action in {"prioritize", "deprioritize"}
+        # GP-0258-07: an Undo of a priority batch puts back each song's own earlier value
+        restoring = body.action == "restore_priority"
+        if restoring and any(entry.priority is None for entry in body.entries):
+            raise HTTPException(400, "Say which priority to put back for every song.")
+        is_priority = body.action in {"prioritize", "deprioritize", "restore_priority"}
         with connect() as conn:
             try:
                 conn.execute("BEGIN IMMEDIATE")
@@ -257,7 +271,16 @@ def add_routes(app, ctx) -> None:
                         raise HTTPException(
                             409, "A song changed since selection. Refresh and try again."
                         )
-                if is_priority:
+                previous = [
+                    {"id": song_id, "priority": by_id[song_id]["processing_priority"]}
+                    for song_id in ids
+                ]
+                if restoring:
+                    conn.executemany(
+                        "UPDATE songs SET processing_priority=? WHERE id=?",
+                        [(entry.priority, entry.id) for entry in body.entries],
+                    )
+                elif is_priority:
                     wanted = 100 if body.action == "prioritize" else 0
                     conn.executemany(
                         "UPDATE songs SET processing_priority=? WHERE id=?",
@@ -275,7 +298,10 @@ def add_routes(app, ctx) -> None:
                         (json.dumps(sorted(current_never)),),
                     )
                 conn.commit()
-                return {"updated": len(ids), "action": body.action, "ids": ids}
+                answer = {"updated": len(ids), "action": body.action, "ids": ids}
+                if is_priority:
+                    answer["previous"] = previous
+                return answer
             except Exception:
                 conn.rollback()
                 raise
@@ -370,11 +396,8 @@ def add_routes(app, ctx) -> None:
                 # GP-0251-08: the count and page share one score per song. MI-0162-04: every
                 # song is ranked in one pass and only the matches go to a table of this
                 # connection's own, so SQLite joins them instead of calling back per row.
-                names = conn.cursor()
-                names.row_factory = None  # plain tuples: 20,000 named rows cost far more
-                scores = rank_songs(
-                    q, names.execute("SELECT id,artist,title FROM songs WHERE duplicate_of IS NULL")
-                )
+                # S4-0111-05: a ranking is kept while the library's names are exactly the same.
+                scores = searches.rank(conn, q)
                 conn.execute(
                     "CREATE TEMP TABLE IF NOT EXISTS search_hits("
                     "song_id INTEGER PRIMARY KEY, rank INTEGER NOT NULL)"

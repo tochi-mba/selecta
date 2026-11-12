@@ -85,42 +85,94 @@ def _resource(workspace_id: str, notice_id: str | None = None) -> ResourceRef:
 
 
 def _get(conn: Connection, notice_id: str) -> Notice:
-    row = conn.execute(
-        sa.select(takedown_notices).where(takedown_notices.c.id == notice_id)
-    ).mappings().first()
+    row = (
+        conn.execute(sa.select(takedown_notices).where(takedown_notices.c.id == notice_id))
+        .mappings()
+        .first()
+    )
     if row is None:
         raise LookupError(f"There's no notice {notice_id!r}.")
     return Notice(**dict(row))
 
 
-def _audit(conn: Connection, actor_id: str, action: str, workspace_id: str, notice_id: str | None,
-           reason: str | None, request_id: str | None = None, **metadata: Any) -> None:
-    audit.record(conn, actor_id=actor_id, action=action, result=audit.AuditResult.SUCCESS,
-                 resource_type="takedown_notice", resource_id=notice_id,
-                 workspace_id=workspace_id, reason=reason, request_id=request_id,
-                 metadata=metadata or None)
+def notice_workspace(conn: Connection, notice_id: str) -> str | None:
+    """Which workspace a notice belongs to, so deciding it runs as that workspace; None when
+    there's no such notice (the decision then refuses it as usual)."""
+    return conn.execute(
+        sa.select(takedown_notices.c.workspace_id).where(takedown_notices.c.id == notice_id)
+    ).scalar()
 
 
-def log_notice(conn: Connection, actor: Actor, *, workspace_id: str, asset_id: str,
-               complainant: str, work: str, received_at: float | None = None) -> Notice:
+def _audit(
+    conn: Connection,
+    actor_id: str,
+    action: str,
+    workspace_id: str,
+    notice_id: str | None,
+    reason: str | None,
+    request_id: str | None = None,
+    **metadata: Any,
+) -> None:
+    audit.record(
+        conn,
+        actor_id=actor_id,
+        action=action,
+        result=audit.AuditResult.SUCCESS,
+        resource_type="takedown_notice",
+        resource_id=notice_id,
+        workspace_id=workspace_id,
+        reason=reason,
+        request_id=request_id,
+        metadata=metadata or None,
+    )
+
+
+def log_notice(
+    conn: Connection,
+    actor: Actor,
+    *,
+    workspace_id: str,
+    asset_id: str,
+    complainant: str,
+    work: str,
+    received_at: float | None = None,
+) -> Notice:
     """Record a notice as it arrived. `received_at` defaults to now and can't be in the future."""
     if not complainant.strip() or not work.strip():
         raise ValueError("A notice needs the complainant and the work it concerns.")
     authorize(conn, actor, "legal.takedowns.manage", _resource(workspace_id))
-    found = conn.execute(sa.select(assets.c.id).where(
-        assets.c.id == asset_id, assets.c.workspace_id == workspace_id)).first()
+    found = conn.execute(
+        sa.select(assets.c.id).where(assets.c.id == asset_id, assets.c.workspace_id == workspace_id)
+    ).first()
     if found is None:
         raise LookupError("There's no such asset in that workspace.")
     now = db_now(conn)
     received = now if received_at is None else min(float(received_at), now)
     notice_id = new_id()
-    conn.execute(takedown_notices.insert().values(
-        id=notice_id, workspace_id=workspace_id, asset_id=asset_id, received_at=received,
-        due_by=received + RESPONSE_HOURS * 3600, complainant=audit.scrub_text(complainant.strip()),
-        work=audit.scrub_text(work.strip()), logged_by=actor.user_id, status="received",
-    ))
-    _audit(conn, actor.user_id, "legal.takedown.logged", workspace_id, notice_id, None,
-           actor.request_id, asset_id=asset_id, received_at=received)
+    conn.execute(
+        takedown_notices.insert().values(
+            id=notice_id,
+            workspace_id=workspace_id,
+            asset_id=asset_id,
+            received_at=received,
+            due_by=received + RESPONSE_HOURS * 3600,
+            complainant=audit.scrub_text(complainant.strip()),
+            work=audit.scrub_text(work.strip()),
+            logged_by=actor.user_id,
+            status="received",
+        )
+    )
+    _audit(
+        conn,
+        actor.user_id,
+        "legal.takedown.logged",
+        workspace_id,
+        notice_id,
+        None,
+        actor.request_id,
+        asset_id=asset_id,
+        received_at=received,
+    )
     return _get(conn, notice_id)
 
 
@@ -138,51 +190,105 @@ def _pending(conn: Connection, actor: Actor, notice_id: str) -> Notice:
 
 
 def valid_count(conn: Connection, workspace_id: str) -> int:
-    return int(conn.execute(sa.select(sa.func.count()).where(
-        takedown_notices.c.workspace_id == workspace_id,
-        takedown_notices.c.status == "actioned")).scalar_one())
+    return int(
+        conn.execute(
+            sa.select(sa.func.count()).where(
+                takedown_notices.c.workspace_id == workspace_id,
+                takedown_notices.c.status == "actioned",
+            )
+        ).scalar_one()
+    )
 
 
-def act_on_notice(conn: Connection, actor: Actor, notice_id: str, *,
-                  reason: str) -> dict[str, Any]:
+def act_on_notice(conn: Connection, actor: Actor, notice_id: str, *, reason: str) -> dict[str, Any]:
     """Accept a notice: hide the asset, start its deletion, and apply the repeat policy."""
     if not reason or not reason.strip():
         raise ValueError("Say why the notice is valid.")
     notice = _pending(conn, actor, notice_id)
-    tomb = deletion.tombstone(conn, notice.workspace_id, deletion.DeletionKind.SONG,
-                              notice.asset_id, quota=_QuotaRelease())
+    tomb = deletion.tombstone(
+        conn,
+        notice.workspace_id,
+        deletion.DeletionKind.SONG,
+        notice.asset_id,
+        quota=_QuotaRelease(),
+    )
     now = db_now(conn)
-    conn.execute(takedown_notices.update().where(takedown_notices.c.id == notice.id).values(
-        status="actioned", decided_at=now, decided_by=actor.user_id,
-        decision_reason=reason.strip(), deletion_id=tomb.deletion.id))
-    _audit(conn, actor.user_id, "legal.takedown.actioned", notice.workspace_id, notice.id,
-           reason, actor.request_id, asset_id=notice.asset_id, deletion_id=tomb.deletion.id,
-           within_target=now <= notice.due_by, response_s=now - notice.received_at)
+    conn.execute(
+        takedown_notices.update()
+        .where(takedown_notices.c.id == notice.id)
+        .values(
+            status="actioned",
+            decided_at=now,
+            decided_by=actor.user_id,
+            decision_reason=reason.strip(),
+            deletion_id=tomb.deletion.id,
+        )
+    )
+    _audit(
+        conn,
+        actor.user_id,
+        "legal.takedown.actioned",
+        notice.workspace_id,
+        notice.id,
+        reason,
+        actor.request_id,
+        asset_id=notice.asset_id,
+        deletion_id=tomb.deletion.id,
+        within_target=now <= notice.due_by,
+        response_s=now - notice.received_at,
+    )
     count = valid_count(conn, notice.workspace_id)
     restricted = False
     if count >= repeat_threshold():
-        restricted = restrict_uploads(conn, actor.user_id, notice.workspace_id,
-                                      reason=f"repeat infringer: {count} valid notices")
-    return {"notice": _get(conn, notice.id).to_dict(now), "valid_notices": count,
-            "uploads_restricted": restricted or is_restricted(conn, notice.workspace_id)}
+        restricted = restrict_uploads(
+            conn,
+            actor.user_id,
+            notice.workspace_id,
+            reason=f"repeat infringer: {count} valid notices",
+        )
+    return {
+        "notice": _get(conn, notice.id).to_dict(now),
+        "valid_notices": count,
+        "uploads_restricted": restricted or is_restricted(conn, notice.workspace_id),
+    }
 
 
 def reject_notice(conn: Connection, actor: Actor, notice_id: str, *, reason: str) -> Notice:
     if not reason or not reason.strip():
         raise ValueError("Say why the notice isn't valid.")
     notice = _pending(conn, actor, notice_id)
-    conn.execute(takedown_notices.update().where(takedown_notices.c.id == notice.id).values(
-        status="rejected", decided_at=db_now(conn), decided_by=actor.user_id,
-        decision_reason=reason.strip()))
-    _audit(conn, actor.user_id, "legal.takedown.rejected", notice.workspace_id, notice.id,
-           reason, actor.request_id)
+    conn.execute(
+        takedown_notices.update()
+        .where(takedown_notices.c.id == notice.id)
+        .values(
+            status="rejected",
+            decided_at=db_now(conn),
+            decided_by=actor.user_id,
+            decision_reason=reason.strip(),
+        )
+    )
+    _audit(
+        conn,
+        actor.user_id,
+        "legal.takedown.rejected",
+        notice.workspace_id,
+        notice.id,
+        reason,
+        actor.request_id,
+    )
     return _get(conn, notice.id)
 
 
 def is_restricted(conn: Connection, workspace_id: str) -> bool:
-    return conn.execute(sa.select(upload_restrictions.c.workspace_id).where(
-        upload_restrictions.c.workspace_id == workspace_id,
-        upload_restrictions.c.lifted_at.is_(None))).first() is not None
+    return (
+        conn.execute(
+            sa.select(upload_restrictions.c.workspace_id).where(
+                upload_restrictions.c.workspace_id == workspace_id,
+                upload_restrictions.c.lifted_at.is_(None),
+            )
+        ).first()
+        is not None
+    )
 
 
 def restrict_uploads(conn: Connection, actor_id: str, workspace_id: str, *, reason: str) -> bool:
@@ -190,14 +296,22 @@ def restrict_uploads(conn: Connection, actor_id: str, workspace_id: str, *, reas
     if is_restricted(conn, workspace_id):
         return False
     now = db_now(conn)
-    conn.execute(upload_restrictions.delete().where(
-        upload_restrictions.c.workspace_id == workspace_id))
-    conn.execute(upload_restrictions.insert().values(
-        workspace_id=workspace_id, reason=reason, restricted_at=now, restricted_by=actor_id))
+    conn.execute(
+        upload_restrictions.delete().where(upload_restrictions.c.workspace_id == workspace_id)
+    )
+    conn.execute(
+        upload_restrictions.insert().values(
+            workspace_id=workspace_id, reason=reason, restricted_at=now, restricted_by=actor_id
+        )
+    )
     _audit(conn, actor_id, "legal.uploads.restricted", workspace_id, None, reason)
-    alerts.raise_alert(conn, alerts.REPEAT_INFRINGER,
-                       f"Uploads suspended for workspace {workspace_id}: {reason}",
-                       actor_id=actor_id, metadata={"workspace_id": workspace_id})
+    alerts.raise_alert(
+        conn,
+        alerts.REPEAT_INFRINGER,
+        f"Uploads suspended for workspace {workspace_id}: {reason}",
+        actor_id=actor_id,
+        metadata={"workspace_id": workspace_id},
+    )
     return True
 
 
@@ -205,17 +319,30 @@ def lift_restriction(conn: Connection, actor: Actor, workspace_id: str, *, reaso
     if not reason or not reason.strip():
         raise ValueError("Say why the restriction is lifted.")
     authorize(conn, actor, "legal.takedowns.manage", _resource(workspace_id))
-    changed = conn.execute(upload_restrictions.update().where(
-        upload_restrictions.c.workspace_id == workspace_id,
-        upload_restrictions.c.lifted_at.is_(None)).values(
-        lifted_at=db_now(conn), lifted_by=actor.user_id)).rowcount
-    _audit(conn, actor.user_id, "legal.uploads.restriction_lifted", workspace_id, None, reason,
-           actor.request_id, changed=bool(changed))
+    changed = conn.execute(
+        upload_restrictions.update()
+        .where(
+            upload_restrictions.c.workspace_id == workspace_id,
+            upload_restrictions.c.lifted_at.is_(None),
+        )
+        .values(lifted_at=db_now(conn), lifted_by=actor.user_id)
+    ).rowcount
+    _audit(
+        conn,
+        actor.user_id,
+        "legal.uploads.restriction_lifted",
+        workspace_id,
+        None,
+        reason,
+        actor.request_id,
+        changed=bool(changed),
+    )
     return bool(changed)
 
 
-def listing(conn: Connection, actor: Actor, *, status: str | None = None,
-            limit: int = 100) -> list[dict[str, Any]]:
+def listing(
+    conn: Connection, actor: Actor, *, status: str | None = None, limit: int = 100
+) -> list[dict[str, Any]]:
     authorize(conn, actor, "legal.takedowns.read")
     query = sa.select(takedown_notices).order_by(takedown_notices.c.received_at.desc())
     if status:

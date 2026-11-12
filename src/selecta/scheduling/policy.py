@@ -134,6 +134,10 @@ class PolicyConfig:
     overload_drain_s: float = 1_800.0
     max_defer_s: float = 3_600.0
     max_result_bytes: int = 1_000_000
+    strict_lanes: bool = False
+    """Interactive always before standard, never shared by virtual time. Only the local app sets
+    it: one person, one machine, and the seam about to be heard must never wait behind the rest
+    of the mix (the local seam worker's order, SC-0394-04)."""
 
     def __post_init__(self) -> None:
         found = self.problems()
@@ -294,16 +298,21 @@ def speculative_allowed(slots: int, busy: int, config: PolicyConfig) -> bool:
 
 
 def choose_lanes(
-    lane_vtimes: Mapping[str, float], backlogged: Collection[str], speculative_ok: bool
+    lane_vtimes: Mapping[str, float],
+    backlogged: Collection[str],
+    speculative_ok: bool,
+    strict: bool = False,
 ) -> list[Lane]:
     """The lanes a claim should try, in order.
 
     Interactive and standard compete by lane virtual time (ties go to interactive). Speculative
     comes last and only when headroom allows; the claim moves on to the next lane when one has no
     eligible work, so speculative runs only when the others have nothing it could take instead.
+    With `strict` (the local app) interactive always comes before standard.
     """
     competing = [lane for lane in COMPETING_LANES if lane in backlogged]
-    competing.sort(key=lambda lane: (lane_vtimes.get(lane, 0.0), lane_rank(lane)))
+    if not strict:
+        competing.sort(key=lambda lane: (lane_vtimes.get(lane, 0.0), lane_rank(lane)))
     if speculative_ok and Lane.SPECULATIVE in backlogged:
         competing.append(Lane.SPECULATIVE)
     return competing
