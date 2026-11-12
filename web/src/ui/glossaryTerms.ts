@@ -23,7 +23,7 @@ export const GLOSSARY: GlossaryTerm[] = [
   {
     id: 'current-mix',
     term: 'Current mix',
-    aka: ['the mix', 'playing mix', 'what’s playing'],
+    aka: ['the mix', 'playing mix', 'playing', 'what’s playing'],
     plain: 'The one mix Selecta plays from. Listen, the player and requests always follow it, and there is only ever one.',
     effect: 'Adding, removing, swapping or reordering songs in it changes what plays next.',
     reversible: 'Most changes can be undone, newest first, from the message that appears or from Activity.',
@@ -32,7 +32,7 @@ export const GLOSSARY: GlossaryTerm[] = [
   {
     id: 'draft',
     term: 'Draft',
-    aka: ['saved mix', 'my mixes'],
+    aka: ['saved mix', 'saved draft', 'saved', 'my mixes'],
     plain: 'A mix kept in My Mixes that isn’t playing. You can edit it without touching what’s playing.',
     effect: 'Playing a draft replaces the current mix. If something is playing, Selecta asks first, and what was playing is kept in your drafts.',
     reversible: 'Switching to a draft can be undone. Each draft has its own Undo, separate from the current mix.',
@@ -73,7 +73,7 @@ export const GLOSSARY: GlossaryTerm[] = [
   {
     id: 'planned',
     term: 'Planned',
-    aka: ['not rendered yet', 'in line', 'plan'],
+    aka: ['not rendered yet', 'in line', 'queued', 'waiting in line', 'plan'],
     plain: 'Part of the mix’s order and settings, but not made into audio yet. You’ll see “Not rendered yet” or “In line”. What plays can still change.',
     related: ['requested', 'rendered', 'render'],
   },
@@ -159,11 +159,20 @@ export const GLOSSARY: GlossaryTerm[] = [
   {
     id: 'suggestion',
     term: 'Selecta’s suggestion',
-    aka: ['AI suggestion', 'proposal', 'proposed', 'Let Selecta arrange it', 'Fine tune mine', 'arrange'],
+    aka: ['AI suggestion', 'Let Selecta arrange it', 'Fine tune mine', 'arrange'],
     get plain() { return words().glossaryArrange; },
     effect: 'Nothing reaches the mix until you choose Apply.',
     reversible: 'Put it back restores the working copy you had before.',
     related: ['applied', 'studio-cell'],
+  },
+  {
+    id: 'proposal',
+    term: 'Proposal',
+    aka: ['proposed', 'Lucy’s proposal', 'approved'],
+    plain: 'A mix Lucy suggests in a conversation. It is only words and a song list until you save it: nothing is built, rendered or played yet.',
+    effect: 'Save as draft keeps it in My Mixes; Save and play makes it the current mix, asking first if something is playing.',
+    reversible: 'A proposal you leave changes nothing. Once saved, the draft or the switch can be undone like any other.',
+    related: ['draft', 'current-mix'],
   },
   {
     id: 'applied',
@@ -343,6 +352,7 @@ const TERM_FLAGS: Record<string, Gate> = {
   'studio-cell': { flag: 'stem_studio' },
   solo: { flag: 'stem_studio' },
   suggestion: { flag: 'stem_studio.auto_arrange' },
+  proposal: { flag: 'lucy' },
   applied: { flag: 'stem_studio' },
   request: { flag: 'requests' },
   bridge: { flag: 'requests.bridges' },

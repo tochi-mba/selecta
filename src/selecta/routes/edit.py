@@ -28,6 +28,7 @@ from selecta.api_common import (
 from selecta.flags.guard import refusal
 from selecta.seam_kinds import MOVE_FLAGS, move_on
 from selecta.seams import MOVES, STEM_MOVES, CannotRender, SeamRequest, request_from, seam_options
+from selecta.stems import mark_used
 
 # the longest overlap anyone can ask for: twice the longest the planner itself would try
 MOST_OVERLAP_BARS = 64
@@ -381,6 +382,7 @@ def add_routes(app, ctx) -> None:
         path = store.folder(Path(key).name) / name
         if not path.exists():
             raise HTTPException(404, "That seam hasn't been rendered.")
+        mark_used(path)  # heard just now, so the cache keeps it over ones nobody plays
         return FileResponse(path, media_type="audio/flac")
 
     @app.get("/api/seams/{key}/clip")

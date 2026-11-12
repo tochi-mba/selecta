@@ -2,7 +2,7 @@
 
     python -m selecta.audit.visual_approvals inventory
     python -m selecta.audit.visual_approvals check <captures-dir> [approvals.json]
-    python -m selecta.audit.visual_approvals approve <captures-dir> --reviewer "Name" [--browser edge]
+    python -m selecta.audit.visual_approvals approve <dir> --reviewer "Name" [--browser edge]
 
 `web/e2e/visual.e2e.ts` saves review candidates (`candidate-<width>-<scheme>-<state>.png`), never
 self-blessed baselines. `inventory` lists every key state at every display and theme that spec

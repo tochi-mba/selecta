@@ -19,7 +19,8 @@ import threading
 from datetime import UTC, datetime
 from pathlib import Path
 
-LOCAL_SCHEMA_VERSION = 2
+# 3: the Library sort-order indexes and the My Mixes drafts_listed / drafts_in_line indexes
+LOCAL_SCHEMA_VERSION = 3
 FOLDER = "upgrade-backups"
 KEEP = 5
 

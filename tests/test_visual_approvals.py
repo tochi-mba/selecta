@@ -1,4 +1,4 @@
-"""EX-0133-02: visual captures count as approved only when a named reviewer signed that exact image."""
+"""EX-0133-02: a capture counts as approved only when a named reviewer signed that exact image."""
 
 import json
 

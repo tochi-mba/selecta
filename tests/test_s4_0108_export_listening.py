@@ -24,10 +24,14 @@ RATE = 44100
 
 def _song(seed: int, seconds: float = 20.0) -> np.ndarray:
     rng = np.random.default_rng(seed)
-    # noise shaped by a slow random envelope: each song is its own and easy to tell apart
-    noise = rng.normal(scale=0.2, size=int(seconds * RATE))
-    envelope = np.interp(np.arange(noise.size), np.linspace(0, noise.size, 40), rng.random(40))
-    mono = (noise * envelope).astype(np.float32)
+    # a few low tones under a slow random envelope: each song is its own and easy to tell apart,
+    # and nothing in it is fine enough to be lost when the check averages it down to 4 kHz
+    times = np.arange(int(seconds * RATE)) / RATE
+    tones = sum(
+        np.sin(2 * np.pi * rng.uniform(60, 400) * times + rng.uniform(0, 6)) for _ in range(6)
+    )
+    envelope = np.interp(times, np.linspace(0, seconds, 40), rng.random(40))
+    mono = (0.1 * tones * envelope).astype(np.float32)
     return np.stack([mono, mono], axis=1)
 
 

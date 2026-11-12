@@ -69,6 +69,7 @@ SAVED_MIXES = [{"name": "Friday", "items": [{"song_id": 1}, {"song_id": 2}]}]
 FINGERPRINTS = {
     1: "dadd35e2317a12632dfb0a20fa06f1828af888b549c436badb6ea013343b3511",
     2: "925fd708411764e33a60cbbed5eec13a4eb7273c83a8f4dfbfe24cb7ebef0c72",
+    3: "f5cced751093f8f3882ce8182f4a59b526a0dc7ba30b9488e80798c43ace197e",
 }
 
 

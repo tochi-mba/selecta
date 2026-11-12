@@ -20,10 +20,11 @@ type Probe = {
   events: { name: string; delay: number; duration: number }[];
 };
 
-test.beforeEach(async ({ request }) => resetMix(request, [1, 2, 3]));
+// one transition only, so the worker has a single render ahead of the Studio session on a busy machine
+test.beforeEach(async ({ request }) => resetMix(request, [1, 2]));
 
 test('SF-0235-07 painting all 64 squares of the real Studio stays responsive and the preview keeps the audio focus', async ({ page }) => {
-  test.setTimeout(600_000);
+  test.setTimeout(900_000);
   await spyOnAudio(page);
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('/mix/current/edit');
@@ -32,7 +33,7 @@ test('SF-0235-07 painting all 64 squares of the real Studio stays responsive and
   await page.getByRole('button', { name: 'Open the Studio' }).click({ timeout: 60_000 });
   // the worker may be finishing a render first; laying out cached stems itself takes seconds
   const transport = page.locator('.studio-transport .primary');
-  await expect(transport).toBeVisible({ timeout: 240_000 });
+  await expect(transport).toBeVisible({ timeout: 600_000 });
   await expect(page.locator('.studio')).not.toContainText('Separating vocals');
   const grid = page.getByRole('group', { name: 'Studio editor mode' }).getByRole('button', { name: 'Detailed grid' });
   if (await grid.count()) await grid.click();

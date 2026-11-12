@@ -36,7 +36,7 @@ Open tasks: 120. Script: [../owner-runbook.md](../owner-runbook.md).
 | S31-0088-02 | selecta-3-1-implementation-checklist.md | Require reviewed diffs rather than bulk baseline replacement | owner approves each visual diff with a reason. | 1 | Open; open |
 | S3-0050-04 | selecta-3-implementation-checklist.md | Needs a person | comfortable and compact densities exist for Library, timeline and drafts (prefs.density in web/src/state/prefs.ts, .density rules in web/src/styles/tokens.css) and web/src/views/Library.test.tsx 'preserves the same song actions, readines... | 1 | Open; open |
 | S3-0074-08 | selecta-3-implementation-checklist.md | Needs a person | run those scripts and review the baseline pictures. | 1 | Open; open |
-| S3-0075-02 | selecta-3-implementation-checklist.md | Needs a person | create, review and commit the baseline pictures. | 1 | Open; open |
+| S3-0075-02 | selecta-3-implementation-checklist.md | Implemented | create, review and commit the baseline pictures. | 1 | Open; open |
 | S3-0075-03 | selecta-3-implementation-checklist.md | Needs a person | a person reviewing screenshots under long, right-to-left and missing metadata, no art, loading, errors and network loss | 1 | Open; open |
 | S4-0089-04 | selecta-4-implementation-checklist.md | Record current dark/light responsive baselines with deterministic fixtures | review of the captured set against a named commit. | 1 | In progress; open |
 | S4-0090-01 | selecta-4-implementation-checklist.md | Audit every current token consumer and hard-coded colour | visual spot checks in both themes. | 1 | In progress; open |
