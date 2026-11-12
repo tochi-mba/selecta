@@ -339,7 +339,9 @@ def create_identity_app(config: IdentityConfig, *, host: str = "127.0.0.1") -> F
         if query.get("provider", "authkit") not in ("authkit", GOOGLE):
             problems.append("unknown provider")
         if problems:
-            return page("Sign-in request refused", f"<p>{escape('; '.join(problems))}</p>", status=400)
+            return page(
+                "Sign-in request refused", f"<p>{escape('; '.join(problems))}</p>", status=400
+            )
         request_id = store.remember_request(query)
         if query.get("provider") == GOOGLE:
             return RedirectResponse(f"{BASE}/hosted/google?request={request_id}", status_code=303)

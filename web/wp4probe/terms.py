@@ -1,4 +1,7 @@
-import json, re, sys, collections
+import collections
+import json
+import re
+
 d = json.load(open('wp4probe/sweep.json', encoding='utf-8'))
 TERMS = {
  'ready': r'\bready\b|\bnot ready\b',
@@ -11,7 +14,9 @@ TERMS = {
 }
 hits = collections.defaultdict(lambda: collections.defaultdict(set))
 for route, v in d['routes'].items():
-    lines = [l.strip() for l in v['text'].split('\n') if l.strip()] + [a.strip() for a in v['attrs']]
+    lines = [
+        line.strip() for line in v['text'].split('\n') if line.strip()
+    ] + [attribute.strip() for attribute in v['attrs']]
     for line in lines:
         for term, rx in TERMS.items():
             if re.search(rx, line, re.I):

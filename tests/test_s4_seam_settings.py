@@ -17,8 +17,8 @@ from synth import make_track
 from test_api_contracts import (  # noqa: F401 - pytest fixtures shared with the contract tests
     _fill,
     _somewhere_for_files,
-    client,
-    conn,
+    client,  # noqa: F811 - pytest fixtures used by test function parameters
+    conn,  # noqa: F811 - pytest fixtures used by test function parameters
     settings,
 )
 
