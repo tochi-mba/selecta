@@ -589,6 +589,12 @@ export class SetPlayer {
           this.watchedState = fresh;
           void this.plan(current, next, fresh);
           this.refreshMix();
+        } else if (fresh.status === 'failed') {
+          // A failed seam is terminal: use the fresh state to request a fallback
+          // now, rather than waiting for the slower whole-mix refresh.
+          this.watchedState = fresh;
+          this.requestSeam(next, fresh);
+          this.refreshMix();
         }
       })
       .catch(() => { /* Retry while the original song continues playing. */ })
