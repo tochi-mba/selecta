@@ -142,7 +142,7 @@ test('the Library: search, song details, a correction that can be put back', asy
   await page.getByRole('button', { name: /^Details for Paper Moon/ }).click();
   const sheet = page.getByRole('dialog', { name: 'Paper Moon' });
   await expect(sheet).toBeVisible();
-  await sheet.getByRole('spinbutton').fill('238');
+  await sheet.getByRole('textbox', { name: /Tempo/ }).fill('238');
   await sheet.getByRole('button', { name: 'Save correction' }).click();
   await expect(sheet.getByText(/238/).first()).toBeVisible();
   await sheet.getByRole('button', { name: 'Use what was measured' }).click();
