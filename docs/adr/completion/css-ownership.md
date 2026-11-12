@@ -87,6 +87,7 @@ wins, and the row says which.
 | `max-width: 1024px` | `styles/creation.css` | timeline grip column follows the stacked timeline row in `style.css` |
 | `max-width: 850px` | `styles/polish.css` | Make a Mix paths stack |
 | `min-width: 768px` | `styles/listening.css` | render queue names and move buttons use consistent columns once the list has room |
+| `min-width: 761px` | `styles/listening.css` | Stage visualizer and lyrics fit shorter desktop windows without hiding controls |
 | `min-width: 761px` | `styles/shell.css` | the side rail |
 | `max-width: 760px` | `styles/tokens.css` | shell geometry: no rail offset, bottom bar and smaller header |
 | `max-width: 760px` | `styles/shell.css` | bottom bar, More drawer, context actions, overlays become sheets, keyboard yield |
@@ -112,6 +113,7 @@ wins, and the row says which.
 | `max-width: 420px` | `styles/shell.css` | mini-player Request button tightens |
 | `max-width: 360px` | `styles/shell.css` | context-bar breadcrumb text shrinks at 320px so single-word page names remain intact (SF-0207-05) |
 | `max-height: 760px` | `styles/listening.css` | short Stage windows: visualiser and countdown give up height so the current lyric stays above the fold (MP-0285-01) |
+| `max-height: 450px` | `styles/shell.css` | very short windows: context bar enters normal flow and phone navigation stops covering content |
 | `max-height: 520px` | `styles/shell.css` | short landscape: dialogs scroll inside, title and actions stay |
 | `max-height: 420px` | `styles/typography.css` | 400% zoom: the editor scope bar stops sticking |
 
