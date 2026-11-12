@@ -63,7 +63,7 @@ export function isPoorSpeaker(kind: DeviceKind, caps: Capabilities): boolean {
   return !caps.can_play_audio || caps.ios_home_screen || (caps.ios && kind === 'phone');
 }
 
-export const IOS_WARNING = 'On iPhone, keep Selecta open with the screen on while it plays.';
+export const IOS_WARNING = 'On iPhone, keep SelectaDJ open with the screen on while it plays.';
 
 /** The plain warning to show before or while this device is the speaker, if any. */
 export function speakerWarning(kind: DeviceKind, caps: Capabilities): string | null {

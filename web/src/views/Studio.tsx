@@ -335,7 +335,7 @@ export function Studio(props: {
       const answer = await post<{ shape: Shape; changes: string[] }>(at(`/mix/${position}/studio/tune`), { shape: mine ? shape : null });
       if (request !== tuneAttempt.current) return;
       if (latestShape.current !== sent) {
-        setChanges(['You changed the grid while Selecta was working, so your version stays.']);
+        setChanges(['You changed the grid while SelectaDJ was working, so your version stays.']);
         return;
       }
       const same = JSON.stringify(answer.shape) === JSON.stringify(shape);
@@ -344,7 +344,7 @@ export function Studio(props: {
       setShape(answer.shape);
       deck.current?.setShape(answer.shape);
       if (session?.key) setRetained(keepShape(session.key, answer.shape));
-      setChanges(same ? [mine ? 'Nothing to change. This is as good as Selecta can make it.' : 'This is already what Selecta would make.'] : mine ? answer.changes : ['Selecta arranged this from what’s in the stems.']);
+      setChanges(same ? [mine ? 'Nothing to change. This is as good as SelectaDJ can make it.' : 'This is already what SelectaDJ would make.'] : mine ? answer.changes : ['SelectaDJ arranged this from what’s in the stems.']);
     } catch (error) {
       if (request === tuneAttempt.current && latestShape.current === sent) setProblem((error as Error).message);
     } finally {
@@ -579,7 +579,7 @@ export function Studio(props: {
           <dl className="studio-states" aria-label="Where this shape has got to">
             <div className={dirty ? 'on' : undefined}><dt>Working copy</dt><dd>{dirty ? 'Changed, not applied yet' : 'Same as what’s applied'}</dd></div>
             <div className={restored ? 'on' : undefined}><dt>Recovered from this browser</dt><dd>{restored ? 'Yes, your earlier work' : 'Nothing to recover'}</dd></div>
-            <div><dt>Applied to the mix</dt><dd>{session?.shape ? 'Your shape' : 'Selecta’s starting shape'}</dd></div>
+            <div><dt>Applied to the mix</dt><dd>{session?.shape ? 'Your shape' : 'SelectaDJ’s starting shape'}</dd></div>
             <div><dt>Rendered audio</dt><dd>{rendered.words}</dd></div>
           </dl>
           <p className="hint">
@@ -596,7 +596,7 @@ export function Studio(props: {
           {flagOn('stem_studio.auto_arrange') && (
             <div className="row wrap">
               <button disabled={saving || !!asking} aria-busy={asking === 'arrange'} onClick={() => void askSelecta(false)}>
-                {asking === 'arrange' ? 'Arranging…' : 'Let Selecta arrange it'}
+                {asking === 'arrange' ? 'Arranging…' : 'Let SelectaDJ arrange it'}
               </button>
               <button disabled={saving || !!asking} aria-busy={asking === 'tune'} onClick={() => void askSelecta(true)}>
                 {asking === 'tune' ? 'Fine tuning…' : 'Fine tune mine'}
@@ -611,7 +611,7 @@ export function Studio(props: {
             </ul>
           )}
           {before && <details className="studio-diff" open>
-            <summary>{aiDiffs.length} exact cell {aiDiffs.length === 1 ? 'change' : 'changes'} from Selecta’s suggestion</summary>
+            <summary>{aiDiffs.length} exact cell {aiDiffs.length === 1 ? 'change' : 'changes'} from SelectaDJ’s suggestion</summary>
             <p className="hint">Only the returned arrangement is compared with your previous working copy. Put it back to undo the whole suggestion.</p>
             <ol>
               {aiDiffs.map((diff) => (

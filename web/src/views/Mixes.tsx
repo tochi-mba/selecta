@@ -166,7 +166,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       <main className="page" id="main">
         <h1 className="display">Checking your song readiness.</h1>
         <p className="lede">
-          This running Selecta server hasn’t reported how many songs have the cues needed for mixes.
+          This running SelectaDJ server hasn’t reported how many songs have the cues needed for mixes.
           {' '}{words().mixesRestartToRefresh} Audio analysis is complete for {counts.analysed};
           {left > 0 ? ` ${left} still to analyse.` : ' there are no more songs waiting for audio analysis.'}
         </p>
@@ -192,7 +192,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         {/* MP-0282-07: on the first run the notice under Play already says the library is ready */}
         {!firstMix && <p className="eyebrow">Quick Play · Tap and play</p>}
         <h2 id="mix-quick-title" className="mix-path-label">Listen now, shape later</h2>
-        <h3 className="display">{hero?.name ?? 'Selecta’s pick'}</h3>
+        <h3 className="display">{hero?.name ?? 'SelectaDJ’s pick'}</h3>
         {/* MP-0283-01: what the pick can draw on sits between its name and its description, on the same edge as Play */}
         {/* P0032: until the pick's facts arrive their line is held by a bar, so the rest of the card stays put */}
         {!cards && !cardsFailed && <p className="vibe-card-facts mix-quick-facts skeleton-facts" aria-hidden="true"><i /><i /></p>}
@@ -259,10 +259,10 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
             <h2 className="section-title">Choose another feeling</h2>
             <p className="hint">
               {ready.length
-                ? `${ready.length} available ideas. These are planning preferences, not previews; Selecta builds a new actual mix after you choose.`
+                ? `${ready.length} available ideas. These are planning preferences, not previews; SelectaDJ builds a new actual mix after you choose.`
                 : !cards && !cardsFailed
                   // P0032: while the ideas load, the same words in the same space, without a count it doesn't have yet
-                  ? 'Finding the ideas your songs support. These are planning preferences, not previews; Selecta builds a new actual mix after you choose.'
+                  ? 'Finding the ideas your songs support. These are planning preferences, not previews; SelectaDJ builds a new actual mix after you choose.'
                   : 'Every mix is rebuilt from your own songs when you press play.'}
             </p>
           </div>
@@ -291,7 +291,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
             </div>
           )}
         </div>
-        {cardsFailed && <Problem retry={() => setCardsAttempt((value) => value + 1)}>Couldn’t load mix suggestions. Try again when Selecta is available.</Problem>}
+        {cardsFailed && <Problem retry={() => setCardsAttempt((value) => value + 1)}>Couldn’t load mix suggestions. Try again when SelectaDJ is available.</Problem>}
         {!cards && !cardsFailed && <Skeleton variant="vibes" lines={6} label="Finding compatible mix candidates" retry={() => setCardsAttempt((value) => value + 1)} />}
         {visibleGroups.map((group) => {
           const inGroup = ready.filter((card) => card.group === group);

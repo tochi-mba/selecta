@@ -31,7 +31,7 @@ export function MemoryPanel() {
     <section className="panel stack">
       <h2>What it’s learned</h2>
       <p>
-        Selecta remembers {memory.tried} hand-over{memory.tried === 1 ? '' : 's'} it has tried: {memory.clean} came out clean,{' '}
+        SelectaDJ remembers {memory.tried} hand-over{memory.tried === 1 ? '' : 's'} it has tried: {memory.clean} came out clean,{' '}
         {memory.warned} with a warning, and {memory.failed} that can’t work.
         {rated > 0 && ` You’ve rated ${rated}.`} Mixes and suggestions use all of this, and it stays even when old seams are cleared to save space.
       </p>
@@ -113,7 +113,7 @@ export function StoragePanel() {
         .then((answer) => {
           if (confirmedRemoval) {
             const gone = Math.max(before - answer.cache_bytes, 0);
-            setReclaimed(gone ? `Removed ${gb(gone)}. Selecta now keeps ${gb(answer.cache_bytes)} it can make again.` : 'Nothing could be removed: what’s left belongs to priority songs.');
+            setReclaimed(gone ? `Removed ${gb(gone)}. SelectaDJ now keeps ${gb(answer.cache_bytes)} it can make again.` : 'Nothing could be removed: what’s left belongs to priority songs.');
           }
           // All successful responses update the confirmed server value; only
           // the latest choice updates the visible setting. If that choice
@@ -164,11 +164,11 @@ export function StoragePanel() {
       </div>
       <p className="hint">{words.detail}</p>
       <dl className="song-facts">
-        <div><dt>Made by Selecta, can be made again</dt><dd>{gb(storage.cache_bytes)} of {gb(storage.budget_bytes)} allowed</dd></div>
-        <div><dt>Everything else Selecta keeps</dt><dd>{gb(storage.kept_bytes)}</dd></div>
+        <div><dt>Made by SelectaDJ, can be made again</dt><dd>{gb(storage.cache_bytes)} of {gb(storage.budget_bytes)} allowed</dd></div>
+        <div><dt>Everything else SelectaDJ keeps</dt><dd>{gb(storage.kept_bytes)}</dd></div>
         <div><dt>Free on this drive</dt><dd>{gb(storage.free_bytes)}</dd></div>
       </dl>
-      <p className="hint">Your music files aren’t counted here, because Selecta doesn’t copy them, and nothing here ever touches them.</p>
+      <p className="hint">Your music files aren’t counted here, because SelectaDJ doesn’t copy them, and nothing here ever touches them.</p>
       <label className="limit">
         <span>
           Keep up to <b>{limit.toFixed(1)} GB</b> of vocals and seams
@@ -204,7 +204,7 @@ export function StoragePanel() {
       <p className="hint">
         {overBudget
           ? 'Priority-song stem windows are protected, so they can temporarily put the cache over its limit. Lower a song’s priority to make its windows eligible for removal.'
-          : 'When it’s full, Selecta removes the oldest cache items that are not protected by song priority. It makes them again if needed.'}{' '}
+          : 'When it’s full, SelectaDJ removes the oldest cache items that are not protected by song priority. It makes them again if needed.'}{' '}
         It always leaves at least 2 GB free. Your music is never touched. The most it can use right now is {gb(storage.largest_budget_bytes)}.
       </p>
     </section>
@@ -217,7 +217,7 @@ export function NeedsYou({ jobs, readySongs, folders }: { jobs: Jobs; readySongs
   const missing = folders?.folders.filter((folder) => !folder.available) ?? [];
   const items: { key: string; words: string; to: string; action: string }[] = [];
   if (jobs.storage_full) items.push({ key: 'storage', words: 'Rendering is waiting until there’s more room for it.', to: '/workshop/storage', action: 'Make more room' });
-  if (readySongs < 6) items.push({ key: 'ready', words: `Selecta needs 6 mix-ready songs to build a mix, and has ${readySongs}.`, to: '/library?show=attention', action: 'See what’s holding them back' });
+  if (readySongs < 6) items.push({ key: 'ready', words: `SelectaDJ needs 6 mix-ready songs to build a mix, and has ${readySongs}.`, to: '/library?show=attention', action: 'See what’s holding them back' });
   if (jobs.failed_seams.length) items.push({ key: 'seams', words: `${jobs.failed_seams.length} transition${jobs.failed_seams.length === 1 ? '' : 's'} in your current mix couldn’t be made.`, to: '/mix/current/edit', action: 'Choose another move' });
   if (jobs.failed_songs.length) items.push({ key: 'songs', words: `${jobs.failed_songs.length} song${jobs.failed_songs.length === 1 ? '' : 's'} couldn’t be analysed.`, to: '/library?show=attention', action: 'Look at those songs' });
   if (jobs.analysis.paused && jobs.analysis.left) items.push({ key: 'paused', words: `Analysis is paused, with ${jobs.analysis.left} to go.`, to: '/workshop/analysis', action: 'Carry on' });
@@ -541,12 +541,12 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
         </Dialog>
       )}
       <div className="row wrap">
-        <span className="hint">New songs added to these show up by themselves within a minute or so. Selecta never changes or deletes your files.</span>
+        <span className="hint">New songs added to these show up by themselves within a minute or so. SelectaDJ never changes or deletes your files.</span>
         <Action working="Checking…" run={checkNow}>Check now</Action>
       </div>
       <h3>Add another folder</h3>
       <p className="hint">{words().sourcesHelp}</p>
-      <p className="hint">Example folder paths: Windows <code>C:\\Users\\you\\Music</code>; macOS <code>/Users/you/Music</code>; Linux <code>/home/you/Music</code>. Use a path on the computer running Selecta, not a website address.</p>
+      <p className="hint">Example folder paths: Windows <code>C:\\Users\\you\\Music</code>; macOS <code>/Users/you/Music</code>; Linux <code>/home/you/Music</code>. Use a path on the computer running SelectaDJ, not a website address.</p>
       <form className="row wrap sources-add" onSubmit={(event) => void scan(event)}>
         <Field label="Music folder" error={problem}>
           {(field) => (
@@ -665,7 +665,7 @@ export function Diagnostics() {
   useEffect(() => {
     void load();
   }, [load]);
-  if (failed) return <Problem retry={load}>The server isn’t answering, which is the first thing to look at. Is Selecta still running?</Problem>;
+  if (failed) return <Problem retry={load}>The server isn’t answering, which is the first thing to look at. Is SelectaDJ still running?</Problem>;
   if (!info) return <section className="panel stack"><h2>Diagnostics</h2><Skeleton variant="rows" lines={6} label="Gathering details" retry={() => void load()} /></section>;
   const text = JSON.stringify(safeDiagnostics(info), null, 2);
   const canCopy = typeof navigator.clipboard?.writeText === 'function';

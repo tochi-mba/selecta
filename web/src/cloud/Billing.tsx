@@ -40,7 +40,7 @@ export function ConsentForm({ consent, onChange, version }: { consent: Consent; 
   return (
     <fieldset className="cloud-legal" aria-describedby={`${id}-about`}>
       <legend><h2>Before subscribing</h2></legend>
-      <p id={`${id}-about`}>UK law gives you 14 days to cancel a digital subscription. If you ask us to start now, you can use Selecta Cloud straight away, and you may lose that right once the service has been fully provided. Tick each box to agree.</p>
+      <p id={`${id}-about`}>UK law gives you 14 days to cancel a digital subscription. If you ask us to start now, you can use SelectaDJ Cloud straight away, and you may lose that right once the service has been fully provided. Tick each box to agree.</p>
       <label><input type="checkbox" checked={consent.terms} onChange={tick('terms')} /> I agree to the subscription terms.</label>
       <label><input type="checkbox" checked={consent.immediate} onChange={tick('immediate')} /> I ask for access to start immediately.</label>
       <label><input type="checkbox" checked={consent.cancellation} onChange={tick('cancellation')} /> I understand my 14-day cancellation right and when I may lose it.</label>

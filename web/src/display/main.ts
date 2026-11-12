@@ -43,7 +43,7 @@ function drawPairing(): void {
     h('section', { className: 'd-pair' },
       h('p', { className: 'd-eyebrow' }, 'SELECTA DISPLAY'),
       h('h1', {}, 'Pair this screen'),
-      h('p', {}, 'In Selecta, open your room on Listen, choose Big screen, and type this code:'),
+      h('p', {}, 'In SelectaDJ, open your room on Listen, choose Big screen, and type this code:'),
       h('p', { className: 'd-code', id: 'd-pairing', 'aria-label': `Pairing code ${pairingCode.split('').join(' ')}` }, pairingCode),
       h('p', { className: 'd-muted' }, 'The code works once and lasts ten minutes.')));
 }

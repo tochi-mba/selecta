@@ -238,6 +238,90 @@ describe('things on top of the page', () => {
     expect(opener).toHaveFocus();
   });
 
+  it('EX-0131-02: one opened by a shortcut gives focus to the page heading, never the content container', () => {
+    const content = document.createElement('div');
+    content.id = 'content';
+    content.tabIndex = -1;
+    content.innerHTML = '<h1>Library</h1><p>Lots of songs</p>';
+    document.body.append(content);
+    try {
+      // R or Ctrl K pressed straight after a route change: the content container had focus
+      content.focus();
+      const first = render(<Dialog title="Requests" onClose={() => {}}><button>Only</button></Dialog>);
+      first.unmount();
+      const heading = content.querySelector('h1')!;
+      expect(heading).toHaveFocus();
+      expect(heading).toHaveAttribute('tabindex', '-1');
+      // and pressed with nothing focused at all
+      heading.blur();
+      expect(document.activeElement).toBe(document.body);
+      const second = render(<Dialog title="Search and commands" onClose={() => {}}><button>Only</button></Dialog>);
+      second.unmount();
+      expect(heading).toHaveFocus();
+      // a page without a heading still gets its content container, not nothing
+      heading.remove();
+      content.focus();
+      const third = render(<Dialog title="Requests" onClose={() => {}}><button>Only</button></Dialog>);
+      third.unmount();
+      expect(content).toHaveFocus();
+    } finally {
+      content.remove();
+    }
+  });
+
+  it('EX-0131-02: focus is back on the opener before the overlay leaves the page, so it never rests on the body', () => {
+    const opener = document.createElement('button');
+    document.body.append(opener);
+    opener.focus();
+    const seen: (Element | null)[] = [];
+    const remove = document.body.removeChild.bind(document.body);
+    const spy = vi.spyOn(document.body, 'removeChild').mockImplementation(<T extends Node>(child: T): T => {
+      if (child instanceof HTMLElement && child.classList.contains('overlay')) seen.push(document.activeElement);
+      return remove(child) as T;
+    });
+    try {
+      const { unmount } = render(<Dialog title="Hello" onClose={() => {}}><button>Only</button></Dialog>);
+      expect(screen.getByRole('dialog')).toHaveFocus();
+      unmount();
+      expect(seen).toEqual([opener]);
+      expect(document.getElementById('root')?.hasAttribute('inert') ?? false).toBe(false);
+    } finally {
+      spy.mockRestore();
+      opener.remove();
+    }
+  });
+
+  it('EX-0131-02: three overlays stack, only the top is live, and each close gives focus back in order', () => {
+    function Stack() {
+      const [second, setSecond] = useState(false);
+      const [third, setThird] = useState(false);
+      return <Dialog title="Keyboard shortcuts" onClose={() => {}}>
+        <button onClick={() => setSecond(true)}>Music terms</button>
+        {second && <Dialog title="Music terms" onClose={() => setSecond(false)}>
+          <button onClick={() => setThird(true)}>More</button>
+          {third && <Dialog title="Seam" onClose={() => setThird(false)}><button>Seam action</button></Dialog>}
+        </Dialog>}
+      </Dialog>;
+    }
+    render(<Stack />);
+    const one = screen.getByRole('button', { name: 'Music terms' });
+    one.focus();
+    fireEvent.click(one);
+    const two = screen.getByRole('button', { name: 'More' });
+    two.focus();
+    fireEvent.click(two);
+    const layers = ['Keyboard shortcuts', 'Music terms', 'Seam'].map((name) => screen.getByRole('dialog', { name }).closest('.overlay')!);
+    expect(layers.map((layer) => layer.hasAttribute('inert'))).toEqual([true, true, false]);
+    expect(screen.getByRole('dialog', { name: 'Seam' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Seam' }), { key: 'Escape' });
+    expect(two).toHaveFocus();
+    expect(layers[1]).not.toHaveAttribute('inert');
+    expect(layers[0]).toHaveAttribute('inert');
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Music terms' }), { key: 'Escape' });
+    expect(one).toHaveFocus();
+    expect(layers[0]).not.toHaveAttribute('inert');
+  });
+
   it('treats a disclosure summary as the last Tab stop and skips collapsed contents', () => {
     render(<Dialog title="Options" onClose={() => {}}>
       <button>Visible action</button>

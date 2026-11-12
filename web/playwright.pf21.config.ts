@@ -10,8 +10,9 @@ export default defineConfig({
   use: { ...base.use, channel: undefined },
   projects: [
     { name: 'Edge', use: { ...devices['Desktop Edge'], channel: 'msedge', launchOptions: { args: ['--mute-audio'] } } },
-    // Chromium launch flags are not understood by other engines.
-    { name: 'Firefox', use: { ...devices['Desktop Firefox'], launchOptions: { args: [] } } },
-    { name: 'WebKit (Safari engine)', use: { ...devices['Desktop Safari'], launchOptions: { args: [] } } },
+    // Chromium launch flags are not understood by other engines. PF21_FIREFOX / PF21_WEBKIT may
+    // point at an already installed engine build when the pinned one is not downloaded.
+    { name: 'Firefox', use: { ...devices['Desktop Firefox'], launchOptions: { args: [], executablePath: process.env.PF21_FIREFOX } } },
+    { name: 'WebKit (Safari engine)', use: { ...devices['Desktop Safari'], launchOptions: { args: [], executablePath: process.env.PF21_WEBKIT } } },
   ],
 });

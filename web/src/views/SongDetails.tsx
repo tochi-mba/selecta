@@ -31,7 +31,7 @@ export function keyProblem(text: string): string {
 export function nextStep(status: string | undefined): string {
   switch (status) {
     case 'needs_attention': return 'Try analysing it again from its row in the Library. If it fails again the file may be damaged; replacing it with a good copy can help.';
-    case 'missing': return 'Put the file back where it was, or check your music folders in Workshop. Selecta never moves or deletes your files.';
+    case 'missing': return 'Put the file back where it was, or check your music folders in Workshop. SelectaDJ never moves or deletes your files.';
     case 'queued': return 'Nothing to do: it’s in line and will be analysed in the background.';
     case 'processing': return 'Nothing to do: it’s being analysed now.';
     case 'excluded': return 'Turn off Never play to let mixes pick it again.';
@@ -149,7 +149,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
       {flagOn('library.corrections') && (
       <section className="stack">
         <h3>Correct it</h3>
-        <p className="hint">If Selecta got something wrong. What it measured is kept, so this can be put back, and analysing the song again won’t lose it. Transitions with this song may be made again, using what you enter here.</p>
+        <p className="hint">If SelectaDJ got something wrong. What it measured is kept, so this can be put back, and analysing the song again won’t lose it. Transitions with this song may be made again, using what you enter here.</p>
         <div className="correct-row">
           <Field label={`Tempo${detectedTempo ? ` (measured ${detectedTempo})` : ''}`} error={bpmError} help="Between 40 and 240 BPM" className="correct-field">
             {(field) => (
@@ -192,7 +192,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
           </Action>
           {(song.override_bpm || song.override_camelot) && (
             <Action run={async () => {
-              if (await send({ clear: ['bpm', 'camelot'] }, 'Back to what Selecta measured.')) {
+              if (await send({ clear: ['bpm', 'camelot'] }, 'Back to what SelectaDJ measured.')) {
                 setBpm('');
                 setCamelot('');
               }
@@ -205,8 +205,8 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
       )}
       {!facts.setAside && (flagOn('library.priority') || flagOn('library.never_play')) && (
       <section className="stack">
-        <h3>How Selecta treats it</h3>
-        <p className="hint">None of these move or delete your file. They only change what Selecta does with this song.</p>
+        <h3>How SelectaDJ treats it</h3>
+        <p className="hint">None of these move or delete your file. They only change what SelectaDJ does with this song.</p>
         <div className="row wrap">
           {flagOn('library.priority') && (
             <Action aria-pressed={song.priority} run={() => onPriority(song)} title="Prioritized songs are analysed first and their stem windows are protected from cache cleanup">
@@ -214,7 +214,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
             </Action>
           )}
           {flagOn('library.never_play') && (
-            <Action aria-pressed={song.never} run={() => onNever(song)} title="Selecta won’t pick this when it builds a mix">
+            <Action aria-pressed={song.never} run={() => onNever(song)} title="SelectaDJ won’t pick this when it builds a mix">
               {song.never ? 'Never: on' : 'Never play'}
             </Action>
           )}
@@ -231,7 +231,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
           ) : (
             <Action run={() => send({ is_music: false }, 'Set aside.')}>This isn’t music</Action>
           )}
-          {song.music_override != null && <Action run={() => send({ clear: ['is_music'] }, 'Selecta will decide again next time it reads your folder.')}>Let Selecta decide</Action>}
+          {song.music_override != null && <Action run={() => send({ clear: ['is_music'] }, 'SelectaDJ will decide again next time it reads your folder.')}>Let SelectaDJ decide</Action>}
         </div>
       </section>
       )}

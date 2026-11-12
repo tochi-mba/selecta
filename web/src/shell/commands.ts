@@ -71,7 +71,7 @@ export function buildCommands(context: CommandContext): Command[] {
   ];
   const actions: Command[] = [
     { id: 'request', label: 'Request a song', group: 'Do', flag: 'requests', run: context.openRequests },
-    { id: 'new-mix', label: 'Start a new mix', group: 'Do', keywords: 'preset vibe', unavailable: context.readySongs >= 6 ? undefined : `Selecta needs 6 mix-ready songs, and has ${context.readySongs}.`, run: () => navigate('/mixes') },
+    { id: 'new-mix', label: 'Start a new mix', group: 'Do', keywords: 'preset vibe', unavailable: context.readySongs >= 6 ? undefined : `SelectaDJ needs 6 mix-ready songs, and has ${context.readySongs}.`, run: () => navigate('/mixes') },
     { id: 'undo', label: 'Undo the last change', group: 'Do', detail: context.undoScope, unavailable: context.undoUnavailable ?? (context.canUndo ? undefined : 'There’s nothing to undo.'), run: context.undo },
     { id: 'analyse', label: 'Analyse the rest of my library', group: 'Do', unavailable: context.analysing ? 'Analysis is already running.' : context.songsLeftToAnalyse ? undefined : 'Every song has been analysed.', run: context.startAnalysis },
     { id: 'activity', label: 'Activity and Undo', group: 'Do', keywords: 'history recent', flag: 'app.activity', run: context.openActivity },

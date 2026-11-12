@@ -11,7 +11,7 @@ export function WhatWentWrong({ info }: { info: Record<string, unknown> }) {
     <section className="stack what-went-wrong" aria-labelledby="what-went-wrong">
       <h3 id="what-went-wrong">What went wrong</h3>
       {faults.length === 0
-        ? <p><Status kind="ready">Nothing Selecta checks for is wrong right now.</Status></p>
+        ? <p><Status kind="ready">Nothing SelectaDJ checks for is wrong right now.</Status></p>
         : (
           <ul className="needs-you-list">
             {faults.map((fault) => (

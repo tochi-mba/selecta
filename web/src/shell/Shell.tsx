@@ -291,7 +291,7 @@ export function Shell({
       {!stage && <a className="skip-link" href="#content">Skip to the page</a>}
       {!stage && (
         <nav className="nav" aria-label="Main">
-          <PageLink to="/mixes" className="brand" aria-label="Selecta, go to Make a Mix"><span className="brand-word">Selecta</span><span className="brand-mark" aria-hidden="true">S</span></PageLink>
+          <PageLink to="/mixes" className="brand" aria-label="SelectaDJ, go to Make a Mix"><span className="brand-word">SelectaDJ</span><span className="brand-mark" aria-hidden="true">S</span></PageLink>
           <ul>
             {classic
               ? classicDestinations().map((item) => (

@@ -655,13 +655,13 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         </section>
       )}
       {searching && committedRows !== null && <p className="hint" role="status">Updating results…</p>}
-      {failed && committedRows === null && <Problem retry={load}><span>Couldn’t load your library. Your songs are fine.</span>{serverFault && <span className="library-fault"> Something went wrong inside Selecta, not your connection.</span>}</Problem>}
+      {failed && committedRows === null && <Problem retry={load}><span>Couldn’t load your library. Your songs are fine.</span>{serverFault && <span className="library-fault"> Something went wrong inside SelectaDJ, not your connection.</span>}</Problem>}
       {failed && committedRows !== null && <div className="row wrap" role="status"><span className="warn">Can’t check on your library right now, so what’s shown may be out of date.</span><Action working="Retrying…" run={load}>Retry loading</Action></div>}
       {committedRows === null && !failed && <Skeleton variant={cardLayout ? 'cards' : 'library'} lines={6} label="Loading your songs" retry={() => void load()} />}
       {committedRows?.length === 0 && !failed && (
         <section className="empty-state">
           <h2>{query ? `Nothing matches “${query}”.` : counts.music === 0 && filter === 'all' ? 'Your library is empty' : filter === 'ready' ? 'No songs are ready for mixes yet' : 'No songs in this view'}</h2>
-          <p>{counts.music === 0 && !query && filter === 'all' ? 'Add a folder with local music to begin. The original audio stays in place while Selecta scans and analyses it.' : filter === 'ready' && !query ? 'A song becomes ready for mixes once Selecta has analysed it. Show all songs to see how far each one has got.' : 'Try a different title, artist, recording ID or spelling, or show all songs to check their progress. Approximate matches must be checked before selecting a recording.'}</p>
+          <p>{counts.music === 0 && !query && filter === 'all' ? 'Add a folder with local music to begin. The original audio stays in place while SelectaDJ scans and analyses it.' : filter === 'ready' && !query ? 'A song becomes ready for mixes once SelectaDJ has analysed it. Show all songs to see how far each one has got.' : 'Try a different title, artist, recording ID or spelling, or show all songs to check their progress. Approximate matches must be checked before selecting a recording.'}</p>
           {/* LX-0343-07: say which constraints are hiding songs, so clearing them is a known step */}
           {(query || filter !== 'all') && (
             <p className="hint library-active-constraints">
@@ -701,7 +701,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       )}
       {songWanted !== null && linkProblem && (
         <p role="status" className="hint">
-          {linkProblem === 'missing' ? 'That exact recording is no longer available in your Library.' : 'Couldn’t open that recording. Check your connection to Selecta.'}
+          {linkProblem === 'missing' ? 'That exact recording is no longer available in your Library.' : 'Couldn’t open that recording. Check your connection to SelectaDJ.'}
           {' '}<button type="button" onClick={() => setLinkRetry((attempt) => attempt + 1)}>Try again</button>
           {' '}<button type="button" onClick={closeDetails}>Dismiss</button>
         </p>

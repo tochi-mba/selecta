@@ -109,7 +109,7 @@ export function LocalBackup() {
     {status?.problem && <p className="warn" role="alert">Restore was not applied: {status.problem}. Your current database has been kept.</p>}
     <h3>Restore a backup</h3>
     <p className="hint">Restoring replaces the current local database at the next restart. It cannot reconstruct music files that have moved or vanished.</p>
-    <label>Choose a Selecta backup ZIP
+    <label>Choose a SelectaDJ backup ZIP
       <input type="file" accept=".zip,application/zip" onChange={selectFile} disabled={working} />
     </label>
     {/* MP-0293-06: `waiting`, not `disabled`, so the button keeps focus while it checks and the

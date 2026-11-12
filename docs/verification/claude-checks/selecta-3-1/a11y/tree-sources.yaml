@@ -57,7 +57,7 @@
   - heading "Your music folders" [level=2]
   - list:
     - listitem:
-      - text: C:\Users\tochi\AppData\Local\Temp\selecta-e2e-05zppp_z\music 20 songs Watching
+      - text: <test library> 20 songs Watching
       - button "Stop watching"
   - text: New songs added to these show up by themselves within a minute or so. Selecta never changes or deletes your files.
   - button "Check now"

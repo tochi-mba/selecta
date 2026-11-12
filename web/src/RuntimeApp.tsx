@@ -24,7 +24,7 @@ export function RuntimeApp() {
     if (!cloudBuild && !apiOrigin && window.location.pathname === '/library') prefetchLibrary(window.location.search);
     fetch(`${apiOrigin}/api/status`)
       .then(async (response) => {
-        if (!response.ok) throw new Error('Selecta API is unavailable.');
+        if (!response.ok) throw new Error('SelectaDJ API is unavailable.');
         const status = await response.json() as { mode?: string };
         if (!current) return;
         const next = status.mode === 'cloud' ? 'cloud' : 'local';
@@ -45,10 +45,10 @@ export function RuntimeApp() {
     return () => window.clearTimeout(wait);
   }, [mode, attempt]);
 
-  if (mode === 'loading') return <RuntimeMessage title="Starting Selecta" detail="Connecting to your Selecta service…" />;
+  if (mode === 'loading') return <RuntimeMessage title="Starting SelectaDJ" detail="Connecting to your SelectaDJ service…" />;
   if (mode === 'unavailable') {
     return (
-      <RuntimeMessage title="Can’t reach Selecta." detail="It may have stopped running. Start it again, and this page will pick up by itself.">
+      <RuntimeMessage title="Can’t reach SelectaDJ." detail="It may have stopped running. Start it again, and this page will pick up by itself.">
         <button className="primary" onClick={() => setAttempt((count) => count + 1)}>Try now</button>
       </RuntimeMessage>
     );
@@ -59,7 +59,7 @@ export function RuntimeApp() {
   if (!clientId) {
     return <RuntimeMessage title="Cloud sign-in needs configuration" detail="Set VITE_WORKOS_CLIENT_ID for this Cloud web build." />;
   }
-  return <Suspense fallback={<RuntimeMessage title="Starting Selecta Cloud" detail="Preparing your workspace…" />}><CloudRoot clientId={clientId} /></Suspense>;
+  return <Suspense fallback={<RuntimeMessage title="Starting SelectaDJ Cloud" detail="Preparing your workspace…" />}><CloudRoot clientId={clientId} /></Suspense>;
 }
 
 function RuntimeMessage({ title, detail, children }: { title: string; detail: string; children?: ReactNode }) {

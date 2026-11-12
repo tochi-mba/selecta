@@ -384,7 +384,7 @@ function noLyricsWords(status: string | null | undefined): string {
   switch (status) {
     case 'instrumental': return 'Instrumental';
     case 'plain': return 'Lyrics for this song aren’t timed, so they can’t follow along.';
-    case 'failed': return 'Looking up lyrics for this song didn’t work. Selecta will try again later.';
+    case 'failed': return 'Looking up lyrics for this song didn’t work. SelectaDJ will try again later.';
     case 'synced': return 'The timed lyrics for this song couldn’t be read.';
     case null:
     case undefined: return 'Lyrics haven’t been looked up yet.';
@@ -497,9 +497,9 @@ function TransitionTruth({ seam, ready, names }: { seam: ViewProps['mix'][number
     <div className="transition-truth">
       <p><Status kind={facts.kind}>{facts.words}</Status><TermHint term="transition" /></p>
       {rendered && facts.asked && state?.label && facts.asked !== state.label && <p className="hint">You asked for {facts.asked}. What will play is {state.label}.</p>}
-      {!rendered && state?.status !== 'failed' && <p className="hint">Planned: {facts.asked ?? 'Selecta’s choice'}. It hasn’t been made yet, so what plays can still change.<TermHint term="planned" /></p>}
+      {!rendered && state?.status !== 'failed' && <p className="hint">Planned: {facts.asked ?? 'SelectaDJ’s choice'}. It hasn’t been made yet, so what plays can still change.<TermHint term="planned" /></p>}
       {!ready && !rendered && <p className="hint">If it isn’t ready in time, this song plays on and the next one fades in, so the music doesn’t stop.</p>}
-      {state?.status === 'failed' && <p className="hint">If it can’t be made, Selecta falls back to its own pick. You can choose another in Edit.</p>}
+      {state?.status === 'failed' && <p className="hint">If it can’t be made, SelectaDJ falls back to its own pick. You can choose another in Edit.</p>}
     </div>
   );
 }

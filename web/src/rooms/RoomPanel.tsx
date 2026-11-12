@@ -59,7 +59,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
     return (
       <section className="room-panel room-locked" aria-labelledby="room-title">
         <h2 id="room-title">Rooms <span className="room-plan">{locked[0]?.toUpperCase()}{locked.slice(1)}</span></h2>
-        <p>Share a QR code at a party and let guests request songs from your library. Selecta fits them into the mix. Rooms are part of {locked[0]?.toUpperCase()}{locked.slice(1)}.</p>
+        <p>Share a QR code at a party and let guests request songs from your library. SelectaDJ fits them into the mix. Rooms are part of {locked[0]?.toUpperCase()}{locked.slice(1)}.</p>
       </section>
     );
   }

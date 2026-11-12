@@ -397,7 +397,7 @@ export function App() {
 
   const pageTitle = describeRoute(route).title;
   useEffect(() => {
-    document.title = active && playing ? `${playing.title} · Selecta` : `${pageTitle} · Selecta`;
+    document.title = active && playing ? `${playing.title} · SelectaDJ` : `${pageTitle} · SelectaDJ`;
   }, [active, playing?.title, pageTitle]);
 
   // a library that exists means this person is set up, even if the server is away next time
@@ -587,7 +587,7 @@ export function App() {
   if (problem && !status) {
     return (
       <main className="page" id="main">
-        <h1 className="display">Can’t reach Selecta.</h1>
+        <h1 className="display">Can’t reach SelectaDJ.</h1>
         <p className="lede">
           {problem === OFFLINE_WORDS ? '' : `${problem}. `}It may have stopped running. Start it again, and this page will pick up by itself.
           {hasBeenSetUp() ? ' Your library, mixes and ratings are safe, and you won’t have to set anything up again.' : ''}
@@ -682,7 +682,7 @@ export function App() {
         onActivity={() => setActivityOpen(true)}
         banner={problem ? (
           <div className="connection" role="alert">
-            <span><b>Can’t reach Selecta.</b> What’s on screen may be out of date, and anything already loaded keeps playing. Trying again every few seconds.</span>
+            <span><b>Can’t reach SelectaDJ.</b> What’s on screen may be out of date, and anything already loaded keeps playing. Trying again every few seconds.</span>
             <Action run={refreshStatus} working="Trying…">Try now</Action>
           </div>
         ) : undefined}

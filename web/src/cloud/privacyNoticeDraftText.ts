@@ -12,14 +12,14 @@ export const PRIVACY_NOTICE_DRAFT: NoticeSection[] = [
   {
     heading: 'Who we are',
     paragraphs: [
-      'Selecta Cloud is run by [legal name and address, to be confirmed]. We are the controller of the personal data described here. Contact: [privacy contact, to be confirmed].',
+      'SelectaDJ Cloud is run by [legal name and address, to be confirmed]. We are the controller of the personal data described here. Contact: [privacy contact, to be confirmed].',
     ],
   },
   {
     heading: 'What we hold and why',
     paragraphs: [
       'Your account: email address, sign-in sessions and the devices you have signed in on, to run your account (contract).',
-      'Your music: the files you upload and what Selecta works out from them (tempo, key, sections, playback files and transitions), to provide the service you asked for (contract). Your files are private to your workspace and are never shared.',
+      'Your music: the files you upload and what SelectaDJ works out from them (tempo, key, sections, playback files and transitions), to provide the service you asked for (contract). Your files are private to your workspace and are never shared.',
       'Billing: your plan and payment status; card details are held by Stripe, not by us (contract and legal obligation).',
       'Lucy: the messages you send, and the song titles and artists Lucy needs to answer; lyric snippets and a listening summary only if you turn them on (contract, and consent for the optional parts). They are not used to train models.',
       'Security records: an audit log of sign-ins and changes that holds random ids, never names, emails or content (legitimate interests: keeping accounts safe).',

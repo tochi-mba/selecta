@@ -136,13 +136,13 @@ function WorkshopView({ status, refreshStatus, notify, tab = 'overview' }: ViewP
                 : `Working through your songs at low priority, so you can keep using your PC. ${left} to go${estimates ? `, done in ${etaRangeWords(status.eta?.analysis)}` : ''}.`
               : left
                 ? `${left} song${left === 1 ? '' : 's'} left. ${analysisWords(status.eta?.analysis)}`
-                : `Audio analysis is complete. ${counts.ready ?? 0} songs currently have the cues Selecta needs to mix them.`}
+                : `Audio analysis is complete. ${counts.ready ?? 0} songs currently have the cues SelectaDJ needs to mix them.`}
           </p>
           {estimates && estimateWords(status.eta?.accuracy) && <p className="hint">{estimateWords(status.eta?.accuracy)}</p>}
           {estimates && <p className="hint">{words().workshopEstimates}</p>}
           {flagOn('render.spare_time') && (
             <p className="hint">
-              With nothing else to do, Selecta tries out the best transitions across your library, so they’re ready when you want them.
+              With nothing else to do, SelectaDJ tries out the best transitions across your library, so they’re ready when you want them.
               {status.transitions_ready ? ` ${status.transitions_ready} have come out clean so far.` : ''}
             </p>
           )}

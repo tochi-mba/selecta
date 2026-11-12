@@ -92,7 +92,7 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
         </fieldset>
         <fieldset>
           <legend>Privacy</legend>
-          <p className="hint">These choices send text to Selecta’s AI provider when Lucy works on a request. Audio is never sent.</p>
+          <p className="hint">These choices send text to SelectaDJ’s AI provider when Lucy works on a request. Audio is never sent.</p>
           <label className="choice lucy-setting-line">
             <input type="checkbox" checked={privacy.share_lyrics} onChange={(event) => setPrivacy({ ...privacy, share_lyrics: event.target.checked })} />
             <span><b>Share short lyric snippets</b> <span className="soft">when it helps match words between songs.</span></span>

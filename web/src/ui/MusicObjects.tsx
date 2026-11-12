@@ -108,7 +108,7 @@ export function SeamDiagram({ seam, from, into, names = {}, compact = false }: {
   const made = state.status === 'ready';
   const move = made ? state.style : seam.settings.move;
   const family = seamFamily(move);
-  const chosenName = names[seam.settings.move ?? 'auto'] ?? (seam.settings.move === 'auto' || !seam.settings.move ? 'Selecta’s choice' : seam.settings.move.replaceAll('_', ' '));
+  const chosenName = names[seam.settings.move ?? 'auto'] ?? (seam.settings.move === 'auto' || !seam.settings.move ? 'SelectaDJ’s choice' : seam.settings.move.replaceAll('_', ' '));
   const displayName = made ? state.label ?? (move ? names[move] ?? move.replaceAll('_', ' ') : 'Transition') : chosenName;
   const status = made ? (seam.too_soon ? 'Rendered; would be missed' : 'Rendered transition') : state.status === 'failed' ? 'Render failed' : state.status === 'rendering' ? 'Rendering' : state.status === 'queued' ? 'Queued to render' : 'Planned, not rendered';
   const fallback = made && (state.fell_back || (seam.settings.move && seam.settings.move !== 'auto' && state.style && state.style !== seam.settings.move));

@@ -21,7 +21,7 @@ export function seamLayers(seam: MixItem['seam'] | undefined, names: Record<stri
   if (!seam) return { requested: 'No transition', inProgress: null, rendered: null, heard: 'Nothing, because this is the first song.', version: null, fellBack: false };
   const { settings, state } = seam;
   const chosen = settings.move && settings.move !== 'auto' ? settings.move : undefined;
-  const move = chosen ? names[chosen] ?? chosen.replaceAll('_', ' ') : 'Selecta’s choice';
+  const move = chosen ? names[chosen] ?? chosen.replaceAll('_', ' ') : 'SelectaDJ’s choice';
   const requested = [
     move,
     settings.bars ? `${settings.bars} bars` : '',

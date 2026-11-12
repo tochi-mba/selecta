@@ -103,7 +103,7 @@ export const LibraryRow = memo(function LibraryRow({
             {!facts.setAside && priorityFlag && <Action role="menuitemcheckbox" aria-checked={song.priority} run={() => actions.priority(song)} title="Prioritized songs are analysed first and their stem windows are protected from cache cleanup">
               {song.priority ? 'Priority: on' : 'Prioritize'}
             </Action>}
-            {!facts.setAside && neverFlag && <Action role="menuitemcheckbox" aria-checked={song.never} run={() => actions.never(song)} title="Selecta won’t pick this when it builds a mix">
+            {!facts.setAside && neverFlag && <Action role="menuitemcheckbox" aria-checked={song.never} run={() => actions.never(song)} title="SelectaDJ won’t pick this when it builds a mix">
               {song.never ? 'Never: on' : 'Never play'}
             </Action>}
           </Menu>

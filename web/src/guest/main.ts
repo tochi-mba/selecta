@@ -62,7 +62,7 @@ function joinScreen(error = ''): void {
     `You're joining room ${shown(code)}. You'll see what's playing and can ask for songs. Nothing plays on your phone.`,
     error ? h('p', { className: 'g-error', role: 'alert' }, error) : null,
     button,
-    h('p', { className: 'g-small' }, 'Selecta keeps a random guest id, a scrambled form of your network address, your nickname and your requests, and deletes them 30 days after the room closes. No tracking, no account.'),
+    h('p', { className: 'g-small' }, 'SelectaDJ keeps a random guest id, a scrambled form of your network address, your nickname and your requests, and deletes them 30 days after the room closes. No tracking, no account.'),
   );
   (button as HTMLButtonElement).focus();
 }

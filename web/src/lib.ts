@@ -54,9 +54,9 @@ export function storageWords(storage: Storage): { summary: string; detail: strin
   // add up to a different displayed total.
   const cache = Math.max(used - kept, 0);
   return {
-    summary: `Selecta is using ${preciseGb(used)}. Your drive has ${gb(storage.free_bytes)} free.`,
+    summary: `SelectaDJ is using ${preciseGb(used)}. Your drive has ${gb(storage.free_bytes)} free.`,
     detail:
-      `${preciseGb(cache)} of that is separated vocals and finished seams, which Selecta can make again. ` +
+      `${preciseGb(cache)} of that is separated vocals and finished seams, which SelectaDJ can make again. ` +
       `The other ${preciseGb(kept)} is saved data and models, including analysis, transition history, backups and listening studies.`,
   };
 }

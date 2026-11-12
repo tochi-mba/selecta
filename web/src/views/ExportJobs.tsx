@@ -67,7 +67,7 @@ function Row({ job }: { job: ExportJob }) {
       </details>
       {/* MP-0294-02/04: why the file has gone sits with its recovery, under the contents, so the
           contents summary holds the same place in every state */}
-      {job.state === 'expired' && <p className="hint">The file isn’t in Selecta’s exports folder any more, so it can’t be downloaded.</p>}
+      {job.state === 'expired' && <p className="hint">The file isn’t in SelectaDJ’s exports folder any more, so it can’t be downloaded.</p>}
       <div className="row wrap export-job-actions">
         {job.state === 'ready' && <a href={`/api/exports/${encodeURIComponent(job.name)}`} download>download {job.name}</a>}
         {job.state === 'ready' && job.seconds != null && <small className="soft">{length(job.seconds)} long</small>}

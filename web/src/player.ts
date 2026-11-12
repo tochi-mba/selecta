@@ -585,7 +585,7 @@ export class SetPlayer {
         .then(() => post(`/mix/${item.position}/render`))
         .then(() => this.refreshMix())
         .catch(() => {});
-      this.update({ notice: `That move couldn’t work into ${item.title}, so Selecta picked another.` });
+      this.update({ notice: `That move couldn’t work into ${item.title}, so SelectaDJ picked another.` });
       return;
     }
     if ((seam.status === 'none' || seam.status === 'queued') && !this.requested.has(seam.key)) {
@@ -731,7 +731,7 @@ export class SetPlayer {
     post<{ moved: boolean }>(`/mix/${nextItem.position}/leave-later`, { after: time })
       .then(({ moved }) => {
         if (!moved) return;
-        this.update({ notice: 'That transition has gone by, so Selecta is making another further on.' });
+        this.update({ notice: 'That transition has gone by, so SelectaDJ is making another further on.' });
         this.refreshMix();
       })
       .catch(() => {});

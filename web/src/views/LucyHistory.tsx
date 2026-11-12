@@ -39,7 +39,7 @@ export function LucyHistory({ currentId, refreshKey, onPicked }: { currentId: st
         setProblem('');
       })
       .catch((error: Error) => {
-        if (live) setProblem(problemKind(error) === 'offline' ? 'Can’t reach Selecta right now.' : error.message);
+        if (live) setProblem(problemKind(error) === 'offline' ? 'Can’t reach SelectaDJ right now.' : error.message);
       });
     return () => { live = false; };
   }, [asked, archived, refreshKey, attempt]);

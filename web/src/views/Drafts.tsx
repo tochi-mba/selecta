@@ -61,7 +61,7 @@ function RenderLine({ inLine, current, onMove, onLeave }: {
     <section className="render-line" aria-label="Render line">
       <h2 className="section-title">Render line</h2>
       <p className="hint">
-        The order Selecta prepares audio in, in the background. It doesn’t change what’s playing or the order of songs in any mix.
+        The order SelectaDJ prepares audio in, in the background. It doesn’t change what’s playing or the order of songs in any mix.
       </p>
       <p className="hint" role="status">
         {current.left > 0

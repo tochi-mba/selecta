@@ -96,12 +96,12 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
 
   return (
     <section className="cloud-upload-panel">
-      <div className="cloud-upload-intro"><p className="cloud-eyebrow">PRIVATE LIBRARY</p><h2>Add your tracks</h2><p>Files transfer directly to private object storage. Selecta checks the actual audio format, file size and duration before accepting an upload.</p></div>
+      <div className="cloud-upload-intro"><p className="cloud-eyebrow">PRIVATE LIBRARY</p><h2>Add your tracks</h2><p>Files transfer directly to private object storage. SelectaDJ checks the actual audio format, file size and duration before accepting an upload.</p></div>
       {blocked && <p className="cloud-inline-error" role="status">{blocked}</p>}
       {unfinished.length > 0 && (
         <section className="cloud-unfinished" aria-label="Unfinished uploads">
           <h3>Unfinished uploads</h3>
-          <p>Choose the same file again and Selecta carries on from where it stopped.</p>
+          <p>Choose the same file again and SelectaDJ carries on from where it stopped.</p>
           <ul>{unfinished.map((session) => <li key={session.id}><span>{session.name}</span><small>{session.part_count} {session.part_count === 1 ? 'part' : 'parts'}</small></li>)}</ul>
         </section>
       )}

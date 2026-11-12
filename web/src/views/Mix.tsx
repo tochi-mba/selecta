@@ -685,7 +685,7 @@ function MixView(props: ViewProps) {
     return (
       <main className="page" id="main">
         <h1 className="display small">Nothing here yet</h1>
-        <p className="lede">Start from one of Selecta’s mixes, or add songs yourself.</p>
+        <p className="lede">Start from one of SelectaDJ’s mixes, or add songs yourself.</p>
         <div className="row wrap">
           <button className="primary" onClick={() => setView('Mixes')}>See the mixes</button>
           <button onClick={() => setAdding('start')}>Add a song</button>

@@ -145,7 +145,7 @@ export function LucySettings({ status, onSaved }: { status: LucyStatus; onSaved:
               </div>
               <div className="lucy-consent">
                 <p><b>What would be sent to this service</b></p>
-                {sent.length ? <ul>{sent.map((item) => <li key={item.id}>{item.label}</li>)}</ul> : <p className="hint">Selecta hasn’t said yet. Save to see the list.</p>}
+                {sent.length ? <ul>{sent.map((item) => <li key={item.id}>{item.label}</li>)}</ul> : <p className="hint">SelectaDJ hasn’t said yet. Save to see the list.</p>}
                 {kept.length > 0 && <p className="hint">Never sent: {kept.map((item) => item.label).join(', ')}.</p>}
                 <label className="choice">
                   <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />

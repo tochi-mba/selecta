@@ -19,7 +19,7 @@ export function gateOf(status: LucyStatus | null, missing: boolean): Gate {
 
 /** Why nothing can be sent, or an empty string when it can. */
 export function blockedWords(gate: Gate, status: LucyStatus | null, offline: boolean): string {
-  if (!status) return offline ? 'Can’t reach Selecta right now. Anything you type is kept.' : 'Couldn’t check whether Lucy is on. Try again in a moment.';
+  if (!status) return offline ? 'Can’t reach SelectaDJ right now. Anything you type is kept.' : 'Couldn’t check whether Lucy is on. Try again in a moment.';
   if (gate === 'consent') return `Lucy needs your OK before it sends anything to ${status.provider.label}.`;
   if (gate === 'unavailable') return `${status.provider.label} isn’t available right now.`;
   if (!status.phases.chat) return 'Chat is turned off in Lucy’s settings.';
@@ -30,7 +30,7 @@ export function LucyClosed({ gate, onTurnOn, onSettings }: { gate: 'old' | 'off'
   if (gate === 'old') {
     return (
       <section className="lucy-gate">
-        <h2>Lucy isn’t part of this version of Selecta</h2>
+        <h2>Lucy isn’t part of this version of SelectaDJ</h2>
         <p>Everything else works as usual. Make a Mix has every way to start a mix.</p>
         <PageLink to="/mixes" className="button primary">Go to Make a Mix</PageLink>
       </section>

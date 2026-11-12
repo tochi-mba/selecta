@@ -25,7 +25,7 @@ export function buildSummary(steering: Status['steering']): string {
     flagOn('mixes.shaping.feel') && (FEEL_WORDS[steering.mix_language] ?? steering.mix_language),
     flagOn('mixes.shaping.stem_moves') && (STEM_WORDS[steering.stems] ?? steering.stems),
     flagOn('mixes.shaping.energy_arc') && (steering.energy_arc ? 'your energy shape' : 'each mix’s own energy'),
-    flagOn('mixes.shaping.destination') && (steering.target ? `ending on ${steering.target_label ?? 'your chosen song'}` : 'Selecta chooses the ending'),
+    flagOn('mixes.shaping.destination') && (steering.target ? `ending on ${steering.target_label ?? 'your chosen song'}` : 'SelectaDJ chooses the ending'),
   ];
   return parts.filter(Boolean).join(' · ');
 }
@@ -216,7 +216,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
         setDestinationQuery('');
         setDestinationResults([]);
         refreshStatus();
-        notify(next ? `Future mixes will try to land on ${next.label}.` : 'Selecta will choose the ending again.');
+        notify(next ? `Future mixes will try to land on ${next.label}.` : 'SelectaDJ will choose the ending again.');
       }
     } catch (error) {
       if (mine === destinationVersion.current) {
@@ -306,7 +306,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
         <div className="energy-arc-heading">
           <div>
             <span className="energy-arc-title">Energy arc</span>
-            <p className="hint">Draw the shape you’d like, or set each stop below. Selecta aims for it as closely as your songs allow.</p>
+            <p className="hint">Draw the shape you’d like, or set each stop below. SelectaDJ aims for it as closely as your songs allow.</p>
           </div>
           <button type="button" onClick={() => setEnergyArc(null)} disabled={energyArc === null}>Use each mix’s arc</button>
         </div>

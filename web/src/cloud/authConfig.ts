@@ -60,7 +60,7 @@ export const BLOCKED_MESSAGES: Record<BlockedCode, { title: string; detail: stri
   },
   account_deleting: {
     title: 'This account is being deleted',
-    detail: 'It will be erased when the 30-day recovery window ends. To keep it, contact Selecta support before then.',
+    detail: 'It will be erased when the 30-day recovery window ends. To keep it, contact SelectaDJ support before then.',
   },
   session_revoked: {
     title: 'You were signed out',

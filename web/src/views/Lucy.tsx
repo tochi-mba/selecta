@@ -239,7 +239,7 @@ export function Lucy({ conversation, setMixData, player }: LucyProps) {
         void readStatus();
       } else if (kind === 'offline' || kind === 'server' || (error instanceof ApiError && error.status === 408)) {
         // Sending again uses the same name, so the server won't take it twice if it did arrive.
-        message = 'Selecta didn’t answer, so it may not have arrived. Press Send to try again.';
+        message = 'SelectaDJ didn’t answer, so it may not have arrived. Press Send to try again.';
       } else {
         message = (error as Error).message;
         attempt.current = null;
@@ -404,7 +404,7 @@ export function Lucy({ conversation, setMixData, player }: LucyProps) {
         <Approve
           revision={shown}
           isCurrent={isCurrent}
-          blocked={status && !status.phases.commit ? 'Saving is turned off in Lucy’s settings.' : !status ? 'Can’t reach Selecta right now.' : ''}
+          blocked={status && !status.phases.commit ? 'Saving is turned off in Lucy’s settings.' : !status ? 'Can’t reach SelectaDJ right now.' : ''}
           seen={view.commits}
           onStale={convo.reload}
           startPlaying={startPlaying}
@@ -417,7 +417,7 @@ export function Lucy({ conversation, setMixData, player }: LucyProps) {
     <main className={`page lucy ${split ? 'is-split' : 'is-stacked'}`} id="main" ref={page}>
       {header}
       {(offline || convo.stream === 'reconnecting') && (
-        <p className="lucy-banner" role="status">Can’t reach Selecta right now. What’s shown may be out of date, and anything you type is kept.</p>
+        <p className="lucy-banner" role="status">Can’t reach SelectaDJ right now. What’s shown may be out of date, and anything you type is kept.</p>
       )}
       {statusProblem && !offline && statusProblem.kind !== 'old' && !status && (
         <Problem retry={readStatus}>Couldn’t check Lucy’s settings: {statusProblem.message}</Problem>

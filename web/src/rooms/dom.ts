@@ -52,7 +52,7 @@ export async function call<T>(path: string, init: RequestInit = {}): Promise<T> 
       headers: init.body ? { 'Content-Type': 'application/json' } : undefined,
     });
   } catch {
-    throw new ApiError(0, 'offline', "Can't reach Selecta. Check your signal.");
+    throw new ApiError(0, 'offline', "Can't reach SelectaDJ. Check your signal.");
   }
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {

@@ -88,7 +88,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
 
   const steps = item
     ? [
-        { key: 'chords', label: 'The chords Selecta heard' },
+        { key: 'chords', label: 'The chords SelectaDJ heard' },
         { key: 'a', label: `${item.title_a}, with those chords` },
         { key: 'b', label: `${item.title_b}, moved to the same key and speed` },
         { key: 'both', label: 'Both at once' },
@@ -198,7 +198,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   // only the pair itself is a placeholder, in a pair card's place
   const harmonicIntro = (
     <p className="hint">
-      Selecta plays you the chords it heard, then each song with them underneath. If they fit both, you’ve got a connection. Your answer only teaches Selecta what you hear. It never adds anything to a mix.<TermHint term="harmonic-match" />
+      SelectaDJ plays you the chords it heard, then each song with them underneath. If they fit both, you’ve got a connection. Your answer only teaches SelectaDJ what you hear. It never adds anything to a mix.<TermHint term="harmonic-match" />
     </p>
   );
   if (!loaded && !error) {
@@ -264,7 +264,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
           </h3>
           <p className="hint">{item.artist_a} · {item.artist_b}</p>
           <button className="primary" disabled={getting} onClick={() => (listening ? (keepGoing.current = false, stop()) : void hear(item))}>
-            {getting ? `Getting it ready, ${etaWords(secondsToPrepare ?? 15)}` : listening ? <><Icon name="stop" /> Stop</> : <><Icon name="play" /> Hear what Selecta heard</>}
+            {getting ? `Getting it ready, ${etaWords(secondsToPrepare ?? 15)}` : listening ? <><Icon name="stop" /> Stop</> : <><Icon name="play" /> Hear what SelectaDJ heard</>}
           </button>
           <p className="discovery-now" role="status">{step !== null ? `Now playing: ${steps[step].label}` : requestedStep !== null ? `Loading stage ${requestedStep + 1}; no audio confirmed yet` : 'Nothing is playing'}</p>
           {audition && (
@@ -278,7 +278,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
                   </li>
                 ))}
               </ol>
-              <div className="chord-strip" role="img" aria-label={`The chords Selecta heard: ${audition.chords.join(', ')}`}>
+              <div className="chord-strip" role="img" aria-label={`The chords SelectaDJ heard: ${audition.chords.join(', ')}`}>
                 {audition.chords.map((chord, index) => (
                   <span key={index} className={index === bar ? 'now' : ''} aria-current={index === bar ? 'step' : undefined}>
                     <span className="visually-hidden">Bar {index + 1}: </span>{chord}
@@ -437,7 +437,7 @@ const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts }:
             ? state.passed === false ? 'The transition is rendered, with a rough spot.' : 'The transition is rendered and is what you’d hear.'
             : state.status === 'failed'
               ? 'This transition didn’t render, so for now the shared words are only a match to check.'
-              : 'The transition isn’t rendered yet: the shared words are a match to check, and Selecta renders it after they go in.'}
+              : 'The transition isn’t rendered yet: the shared words are a match to check, and SelectaDJ renders it after they go in.'}
         </span>
       </p>
       {state.status === 'ready' && playing && (
@@ -560,7 +560,7 @@ function LinksView({ mix, setMixData, setView, notify, status, tab = 'words' }: 
       {tab === 'words' && (
         <>
           <p className="lede">
-            One song ends a line on these words, another opens a line with them, and the music fits too. Selecta prepares the
+            One song ends a line on these words, another opens a line with them, and the music fits too. SelectaDJ prepares the
             best ones in the background, so they’re ready to play.<TermHint term="word-link" />
           </p>
           {data && data.preparing > 0 && (
