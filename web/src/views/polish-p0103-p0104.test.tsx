@@ -91,7 +91,7 @@ describe('P0103 filter, query and focus survive details, a refused value, a fail
     // the error follows its own field's control, inside the same field, not elsewhere in the sheet
     expect(tempo.compareDocumentPosition(fieldError) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(tempo).toHaveFocus();
-    expect(tempo).toHaveValue(400);
+    expect(tempo).toHaveValue('400');
     expect(calls.some((call) => call.method === 'POST')).toBe(false);
 
     // a value it accepts, but the server fails: what was typed stays, and the problem takes focus
@@ -100,7 +100,7 @@ describe('P0103 filter, query and focus survive details, a refused value, a fail
     await userEvent.click(within(details).getByRole('button', { name: 'Save correction' }));
     const problem = await within(details).findByText('SelectaDJ had a problem saving that.');
     await waitFor(() => expect(problem).toHaveFocus(), { timeout: 3000 });
-    expect(tempo).toHaveValue(128);
+    expect(tempo).toHaveValue('128');
 
     // the way back: the sheet closes, focus returns to the song that opened it, and the search,
     // the filter and the address are exactly as they were
