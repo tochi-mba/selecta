@@ -42,11 +42,18 @@ def _rephrase(asked: str, count: int | None = None, relax: bool = False) -> str 
         if not changed:
             return None
     if relax:
-        text, changed = re.subn(r"[,;]?\s*(?:" + intent.READY_ONLY.pattern + r")[^,.;!?]*", "",
+        # The rule's clause ends at punctuation or at "and"/"then"/"but", so a rule written
+        # after it in the same sentence ("... and make 10 songs") stays.
+        text, changed = re.subn(r"[,;]?\s*(?:" + intent.READY_ONLY.pattern
+                                + r")[^,.;!?]*?(?=\s+(?:and|then|but)\b|[,.;!?]|$)", "",
                                 text, count=1, flags=re.I)
         if not changed:
             return None
-        text = text.strip(" ,;") + ", you can render new ones"
+        text = re.sub(r"^(?:and|then|but)\b|\b(?:and|then|but)$", "", text.strip(" ,;"),
+                      flags=re.I).strip(" ,;")
+        if not text:
+            return None
+        text += ", you can render new ones"
     return text
 
 

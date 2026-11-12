@@ -36,7 +36,7 @@
 | [ADR-0027](adr-0027-explanations-and-feedback.md) | In progress | 5 of 7 | T0134, T0135 | no |
 | [ADR-0028](adr-0028-recovery-and-multitab.md) | In progress | 6 of 7 | T0097 | no |
 | [ADR-0029](adr-0029-testing-and-quality.md) | In progress | 11 of 22 | T0014, T0017, T0259, T0260, T0261, T0262, T0263, T0264, T0265, T0266, T0267 | no |
-| [ADR-0030](adr-0030-migration-and-release.md) | Implemented | 12 of 23 | T0018, T0019, T0251, T0253, T0258, T0274, T0275, T0276, T0277, T0278, T0279 | no |
+| [ADR-0030](adr-0030-migration-and-release.md) | Implemented | 13 of 23 | T0018, T0019, T0253, T0258, T0274, T0275, T0276, T0277, T0278, T0279 | no |
 | [ADR-0031](adr-0031-pwa-and-browsers.md) | In progress | 2 of 6 | T0061, T0062, T0064, T0065 | no |
 | [ADR-0032](adr-0032-diagnostics-and-operations.md) | Implemented | 7 of 7 | none | yes |
 
@@ -559,7 +559,7 @@ Acceptance criteria:
 | T0021 | yes | Done | The protocol (decision status separate from not-started/in-progress/implemented/verified) is ADR-0030's governance rule and `docs/adr/README.md`; the owner accepted ADR-0030 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`). Re-checked 2026-11-10. |
 | T0022 | yes | Done | The owner accepted ADR-0030 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header. The data invariant (source music, drafts, ratings and preferences survive) is ADR-0030's own compatibility rule. |
 | T0250 | yes | Done | `web/e2e/integration.e2e.ts`. |
-| T0251 | no | Partly | open |
+| T0251 | yes | Done | `web/e2e/t0251-request-race.e2e.ts` ("T0251 two requests race for one spot, one bridge is approved and a late answer cannot revive the cancelled one") runs the whole scenario against the real server in Edge: simultaneous requests (one sent twice) land once each, a click on Add both reaches the real `/api/requests/{id}/bridge`, which records the choice and route for that request only, and a cancel made while a late answer is in flight stays cancelled. Passed 2026-11-12 with `web/e2e/integration.e2e.ts` ("two requests at once", "a cancelled request that is answered late") (3 passed). |
 | T0252 | yes | Done | Server: `tests/test_cue_change_during_render.py` (2 passed 2026-11-11). `test_a_cue_moved_while_the_old_render_finishes_never_plays_the_old_one`: a seam renders, the person moves its exit cue mid-render, the mix reports the new choice not ready (so the fallback plays), the old render finishing stays the old choice's and is never offered as the new one, and when the new one renders with a substitute move the settings (asked: echo out) and state (made: blend) stay side by side. `test_moving_the_cue_back_picks_the_old_render_up_again` covers going back. Page: `web/src/ui/seamCueChange.test.ts` (3 passed) checks `seamFacts` says planned/queued/rendering until then and "Blend will play, because Echo out wouldn't work here" after. Fallback playing in a real browser: `a transition that isn't ready doesn't stop the music` in `web/e2e/listen.e2e.ts`, passed in Edge 2026-11-11. |
 | T0253 | no | Needs a person | open |
 | T0254 | yes | Done | `web/e2e/integration.e2e.ts`. |

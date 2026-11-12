@@ -155,7 +155,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     const inverse = { prioritize: 'deprioritize', deprioritize: 'prioritize', never: 'allow', allow: 'never' }[wanted.action];
     notify(`Updated ${wanted.songs.length} precisely selected recordings.`, changedSongs.length ? async () => {
       await post('/library/batch', { action: inverse, entries: changedSongs.map((song) => ({ id: song.id, expected: target })) });
-      await load();
+      // the search on screen when Undo is pressed, which may be newer than the one the batch ran in
+      await loadNow.current();
     } : undefined);
     await load();
   };
@@ -204,6 +205,8 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       }
     }
   }, [url, query, filter, sort]);
+  const loadNow = useRef(load);
+  loadNow.current = load;
 
   const more = async () => {
     const mine = asked.current;

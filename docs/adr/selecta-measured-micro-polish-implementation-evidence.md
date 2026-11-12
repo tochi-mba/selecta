@@ -1,6 +1,6 @@
 # Selecta - MP per-task implementation and independent evidence
 
-**Status:** 28 Proposed ADRs (0272–0299); 213 acceptance tasks Not started; 7 In progress; 4 Implemented; 0 Independently Verified. Owner unassigned. Planning baseline main `100df40463d05b3d6a4cba8f5d06cbe193a1b0c4` (2026-11-08). Implementation candidate; independently unverified.
+**Status:** 28 Proposed ADRs (0272–0299); 20 acceptance tasks Not started; 11 In progress; 193 Implemented; 0 Independently Verified, recounted from the checklist task lines 2026-11-12 (the per-task rows below were last synced 2026-11-08 and still show 213 Not started, 7 In progress, 4 Implemented; the checklist and ADR files are current). Owner unassigned. Planning baseline main `100df40463d05b3d6a4cba8f5d06cbe193a1b0c4` (2026-11-08). Implementation candidate; independently unverified.
 
 Source-backed items and active candidates are tracked below. Machine tests are written but not yet executed; all independent proof fields remain empty.
 
