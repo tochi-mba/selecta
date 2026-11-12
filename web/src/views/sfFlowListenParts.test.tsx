@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MixItem, SongDetail } from '../api';
 import { SetPlayer } from '../player';
 import { setPrefs } from '../state/prefs';
@@ -126,5 +126,26 @@ describe('SF-0213-08 reduced motion keeps what the moving lyrics mean', () => {
     expect(within(sheet).getByText('First line here')).toBeInTheDocument();
     expect(within(sheet).getByText('Third line here')).toBeInTheDocument();
     expect(within(sheet).getByText('Second line here')).toHaveClass('sung');
+  });
+});
+
+describe('SF-0214-07/08 a rapid scrub previews and commits one seek', () => {
+  it('many moves during one drag move only the preview; the sound is asked to seek once, on release', async () => {
+    fakeBackend({ 'GET /songs/1': detail });
+    const { player } = show([song(1)], { songTime: 2 });
+    const seek = vi.spyOn(player, 'seek').mockResolvedValue(undefined);
+    const slider = await screen.findByRole('slider', { name: 'Where in the song' });
+    vi.spyOn(slider, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 200 } as DOMRect);
+    const at = { pointerId: 7, isPrimary: true, button: 0 };
+    fireEvent.pointerDown(slider, { ...at, clientX: 20 });
+    for (let x = 20; x <= 180; x += 4) fireEvent.pointerMove(slider, { ...at, clientX: x });
+    // preview versus commit: the ghost shows where it will go while the playhead stays put
+    expect(slider.querySelector('.scrub-ghost')).toBeInTheDocument();
+    expect(slider).toHaveAttribute('aria-valuenow', '2');
+    expect(seek).not.toHaveBeenCalled();
+    fireEvent.pointerUp(slider, { ...at, clientX: 180 });
+    expect(seek).toHaveBeenCalledOnce();
+    expect(seek).toHaveBeenCalledWith(18);
+    expect(slider.querySelector('.scrub-ghost')).toBeNull();
   });
 });
