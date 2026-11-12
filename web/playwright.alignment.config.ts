@@ -8,6 +8,9 @@ export default defineConfig({
   ...cloud,
   testMatch: '**/playback-alignment.cloud.ts',
   outputDir: './test-results/alignment',
+  // The cloud config pins channel 'msedge' for its Edge-only suite; Firefox and WebKit reject
+  // any channel, so only the Chromium projects below name one.
+  use: { ...cloud.use, channel: undefined },
   projects: [
     { name: 'Chrome', use: { ...devices['Desktop Chrome'], channel: 'chrome' } },
     { name: 'Edge', use: { ...devices['Desktop Edge'], channel: 'msedge' } },
