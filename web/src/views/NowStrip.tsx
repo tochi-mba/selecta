@@ -105,7 +105,11 @@ export function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: S
     dragging.current = null;
     const target = pointAt(event);
     setSeekPreview(null);
-    if (!locked && target !== null) onSeek(target);
+    if (!locked && target !== null) {
+      // Focus freezes the spoken slider value; update that snapshot on pointer seek too.
+      setHeldAt(target);
+      onSeek(target);
+    }
   };
   const cancelSeek = () => {
     dragging.current = null;
