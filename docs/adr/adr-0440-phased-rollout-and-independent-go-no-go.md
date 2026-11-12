@@ -1,4 +1,4 @@
-# ADR-440 - Phased rollout and independent GO NO-GO
+# ADR-0440 - Phased rollout and independent GO NO-GO
 
 - **Decision:** Proposed (2026-11-12; owner acceptance pending).
 - **Implementation:** 0/5 Implemented; 5/5 Not started.
@@ -28,11 +28,11 @@ An additive integration creates more compatibility work than replacing existing 
 
 ## Implementation checklist
 
-- [ ] **AV-440-01 - Approve dependency order.** Acceptance: Approve dependency order; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-440-02 - Keep honest task status.** Acceptance: keep honest task status; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-440-03 - Test flag-off rollback.** Acceptance: test flag-off rollback; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-440-04 - Enforce P0 no-go gates.** Acceptance: enforce P0 no-go gates; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-440-05 - Obtain signed release decision.** Acceptance: obtain signed release decision; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0440-01 - Approve dependency order.** Acceptance: Approve dependency order; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0440-02 - Keep honest task status.** Acceptance: keep honest task status; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0440-03 - Test flag-off rollback.** Acceptance: test flag-off rollback; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0440-04 - Enforce P0 no-go gates.** Acceptance: enforce P0 no-go gates; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0440-05 - Obtain signed release decision.** Acceptance: obtain signed release decision; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
 
 ## Governance
 

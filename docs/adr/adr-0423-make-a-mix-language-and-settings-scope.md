@@ -1,4 +1,4 @@
-# ADR-423 - Make a Mix language and settings scope
+# ADR-0423 - Make a Mix language and settings scope
 
 - **Decision:** Proposed (2026-11-12; owner acceptance pending).
 - **Implementation:** 0/5 Implemented; 5/5 Not started.
@@ -28,11 +28,11 @@ An additive integration creates more compatibility work than replacing existing 
 
 ## Implementation checklist
 
-- [ ] **AV-423-01 - Study terminology.** Acceptance: Study terminology; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-423-02 - Separate primary intents.** Acceptance: separate primary intents; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-423-03 - Declare persistence and scope.** Acceptance: declare persistence and scope; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-423-04 - Clarify queue and priority.** Acceptance: clarify queue and priority; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-423-05 - Prove all expert routes remain reachable.** Acceptance: prove all expert routes remain reachable; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0423-01 - Study terminology.** Acceptance: Study terminology; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0423-02 - Separate primary intents.** Acceptance: separate primary intents; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0423-03 - Declare persistence and scope.** Acceptance: declare persistence and scope; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0423-04 - Clarify queue and priority.** Acceptance: clarify queue and priority; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0423-05 - Prove all expert routes remain reachable.** Acceptance: prove all expert routes remain reachable; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
 
 ## Governance
 

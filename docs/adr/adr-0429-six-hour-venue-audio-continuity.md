@@ -1,4 +1,4 @@
-# ADR-429 - Six-hour venue audio continuity
+# ADR-0429 - Six-hour venue audio continuity
 
 - **Decision:** Proposed (2026-11-12; owner acceptance pending).
 - **Implementation:** 0/5 Implemented; 5/5 Not started.
@@ -28,11 +28,11 @@ An additive integration creates more compatibility work than replacing existing 
 
 ## Implementation checklist
 
-- [ ] **AV-429-01 - Define gap and duplicate SLOs.** Acceptance: Define gap and duplicate SLOs; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-429-02 - Prefetch playable fallbacks.** Acceptance: prefetch playable fallbacks; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-429-03 - Enforce speaker leases.** Acceptance: enforce speaker leases; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-429-04 - Inject network/model/render faults.** Acceptance: inject network/model/render faults; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-429-05 - Run named-hardware six-hour soak.** Acceptance: run named-hardware six-hour soak; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0429-01 - Define gap and duplicate SLOs.** Acceptance: Define gap and duplicate SLOs; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0429-02 - Prefetch playable fallbacks.** Acceptance: prefetch playable fallbacks; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0429-03 - Enforce speaker leases.** Acceptance: enforce speaker leases; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0429-04 - Inject network/model/render faults.** Acceptance: inject network/model/render faults; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0429-05 - Run named-hardware six-hour soak.** Acceptance: run named-hardware six-hour soak; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
 
 ## Governance
 

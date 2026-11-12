@@ -1,4 +1,4 @@
-# ADR-428 - Bounded AI DJ director
+# ADR-0428 - Bounded AI DJ director
 
 - **Decision:** Proposed (2026-11-12; owner acceptance pending).
 - **Implementation:** 0/5 Implemented; 5/5 Not started.
@@ -28,11 +28,11 @@ An additive integration creates more compatibility work than replacing existing 
 
 ## Implementation checklist
 
-- [ ] **AV-428-01 - Define typed intent schema.** Acceptance: Define typed intent schema; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-428-02 - Separate realtime audio boundary.** Acceptance: separate realtime audio boundary; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-428-03 - Enforce RBAC and rights.** Acceptance: enforce RBAC and rights; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-428-04 - Test timeout fallback.** Acceptance: test timeout fallback; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-428-05 - Provide inspectable undoable overrides.** Acceptance: provide inspectable undoable overrides; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0428-01 - Define typed intent schema.** Acceptance: Define typed intent schema; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0428-02 - Separate realtime audio boundary.** Acceptance: separate realtime audio boundary; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0428-03 - Enforce RBAC and rights.** Acceptance: enforce RBAC and rights; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0428-04 - Test timeout fallback.** Acceptance: test timeout fallback; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0428-05 - Provide inspectable undoable overrides.** Acceptance: provide inspectable undoable overrides; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
 
 ## Governance
 

@@ -1,4 +1,4 @@
-# ADR-430 - One-glance staff dashboard
+# ADR-0430 - One-glance staff dashboard
 
 - **Decision:** Proposed (2026-11-12; owner acceptance pending).
 - **Implementation:** 0/5 Implemented; 5/5 Not started.
@@ -28,11 +28,11 @@ An additive integration creates more compatibility work than replacing existing 
 
 ## Implementation checklist
 
-- [ ] **AV-430-01 - Design states and navigation.** Acceptance: Design states and navigation; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-430-02 - Add typed steering commands.** Acceptance: add typed steering commands; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-430-03 - Confirm pending versus applied.** Acceptance: confirm pending versus applied; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-430-04 - Rehearse emergency stop.** Acceptance: rehearse emergency stop; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
-- [ ] **AV-430-05 - Verify expert controls remain.** Acceptance: verify expert controls remain; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0430-01 - Design states and navigation.** Acceptance: Design states and navigation; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0430-02 - Add typed steering commands.** Acceptance: add typed steering commands; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0430-03 - Confirm pending versus applied.** Acceptance: confirm pending versus applied; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0430-04 - Rehearse emergency stop.** Acceptance: rehearse emergency stop; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
+- [ ] **AV-0430-05 - Verify expert controls remain.** Acceptance: verify expert controls remain; existing features and media identities in scope remain intact. Required verification: focused source tests, relevant real-audio/browser/device or human checks and rollback evidence. Implementation: Not started. Independently verified: No. Owner: Unassigned. Implementing PR/SHA: None. Evidence: None.
 
 ## Governance
 
