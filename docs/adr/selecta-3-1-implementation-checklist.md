@@ -5,7 +5,7 @@
 - **Decision:** Accepted (11 ADRs, ADR-0078–0088).
 - **Implementation:** PR #25 merged as `6d78cf420c55817e967fc3b8db45749c9817926e` with 29 historically mapped partial tasks; this ledger still records **0/116 independently Verified**.
 - **Baseline:** `main` at `3b01dc1` (merged Selecta 3.0).
-- **Checklist discipline:** Every checkbox intentionally remains unchecked. PR #25 now includes a small amount of implementation, but no task yet has independent Verified evidence.
+- **Checklist discipline:** Every checkbox intentionally remains unchecked. On 2026-11-12 the task lines record 96 Implemented with automated evidence, 1 In progress and 19 that need a person, but no task yet has independent Verified evidence.
 - **Identity:** `S31-XXXX-NN` is unique to this finishing programme; historical T, P and S3 IDs remain unchanged.
 
 ## How to use
@@ -22,7 +22,7 @@ Each checkbox identifies the exact deliverable and acceptance evidence from its 
 | Verified | Implemented plus all applicable manual screen reader, audible, visual, performance and unassisted task acceptance, with owner review |
 | N/A | Named owner rationale that the state/test cannot apply; not silently omitted |
 
-## Task register - all 116 open
+## Task register - all 116 unchecked (none independently Verified)
 
 ### [ADR-0078 - Reconcile the shipped 3.0 baseline and govern finishing work](adr-0078-baseline-evidence-and-governance.md)
 

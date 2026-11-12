@@ -1,6 +1,6 @@
 # Selecta / Flow - artistic system and screen-by-screen design contracts
 
-**Status: owner-accepted design programme (2026-11-08), not implemented or independently verified. Individual visual specimens still need review.** Consult [ADR-0198–0247](selecta-flow-roadmap.md) for individual decisions and [400-task checklist](selecta-flow-implementation-checklist.md) for acceptance tasks. The existing app and all older designs can be reconsidered, subject to preservation and approval.
+**Status: owner-accepted design programme (2026-11-08); as of 2026-11-12 263 of its 400 tasks are Implemented and none is independently verified (see the checklist). Individual visual specimens still need review.** Consult [ADR-0198–0247](selecta-flow-roadmap.md) for individual decisions and [400-task checklist](selecta-flow-implementation-checklist.md) for acceptance tasks. The existing app and all older designs can be reconsidered, subject to preservation and approval.
 
 ## 1. Creative direction
 

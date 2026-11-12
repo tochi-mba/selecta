@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from selecta.audit import owner_runbook as runbook
-from selecta.audit.owner_runbook_sittings import OVERRIDES, SITTINGS
+from selecta.audit.owner_runbook_sittings import CLASSIFY_ORDER, OVERRIDES, SITTINGS
 
 ROOT = Path(__file__).resolve().parents[1]
 OPEN = (
@@ -51,6 +51,7 @@ def test_overrides_point_at_real_sittings():
     assert set(OVERRIDES.values()) <= slugs
     assert [sitting.number for sitting in SITTINGS] == list(range(1, len(SITTINGS) + 1))
     assert SITTINGS[-1].slug == "sign-off"
+    assert sorted(CLASSIFY_ORDER) == sorted(slugs) and CLASSIFY_ORDER[-1] == "sign-off"
 
 
 def test_every_sitting_has_a_script():
@@ -92,4 +93,4 @@ def test_generated_runbook_is_current():
 
 def test_no_generated_file_has_an_em_dash():
     for text in runbook.expected_files(ROOT).values():
-        assert "—" not in text
+        assert chr(0x2014) not in text

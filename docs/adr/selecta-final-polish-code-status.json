@@ -4,8 +4,8 @@
   "baseline_main_sha": "5347e7309c5ff8b2e2965c2194bf2089b6ad2721",
   "as_of": "2026-11-08",
   "scope": "FP-0264-01 through FP-0271-08",
-  "decision_summary": "8 Proposed; owner decisions pending",
-  "implementation_status": "52 Implemented; 3 In progress; 9 Not started (2026-11-11)",
+  "decision_summary": "8 Accepted",
+  "implementation_status": "53 Implemented; 2 In progress; 9 Not started (2026-11-12, recounted from the checklist task lines; group 0268 below still lists 06 as in progress)",
   "independent_verification": "0 Verified",
   "scope_note": "New acceptance deltas only; old SF/GP tasks and working source features are not missing claims.",
   "groups": {

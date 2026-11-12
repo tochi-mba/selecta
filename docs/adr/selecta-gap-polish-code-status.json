@@ -4,8 +4,8 @@
   "baseline_main_sha": "2956bc47fd735339e7216e03d27817fb3a31e92b",
   "as_of": "2026-11-10",
   "scope": "GP-0248-01 through GP-0263-08",
-  "decision": "16 Proposed; owner acceptance pending",
-  "implementation_status": "41 Not started; 4 In progress; 83 Implemented",
+  "decision": "16 Accepted (owner 2026-11-08)",
+  "implementation_status": "17 Not started; 0 In progress; 111 Implemented (2026-11-12, recounted from the checklist task lines; the per-group lists below are as of 2026-11-10 and lag the checklist)",
   "independent_verification": "0 Verified",
   "status_scope_note": "New acceptance deltas, not missing source features. Earlier programmes unchanged.",
   "groups": {

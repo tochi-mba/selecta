@@ -1,28 +1,28 @@
 # Selecta 3.1 - finishing implementation and independent verification ledger
 
 - **Date:** 2026-11-07.
-- **Programme decisions:** 11 Proposed (ADR-0078–0088); none accepted as part of this proposal.
-- **Implementation:** PR #25 merged as `6d78cf420c55817e967fc3b8db45749c9817926e`; 29 selected S31 tasks had partial source mapping, while **0/116 are independently Verified** in this ledger.
+- **Programme decisions:** 11 Accepted (ADR-0078–0088); they were Proposed when this ledger was written on 2026-11-07.
+- **Implementation:** PR #25 merged as `6d78cf420c55817e967fc3b8db45749c9817926e`; 29 selected S31 tasks had partial source mapping then. **On 2026-11-12 the checklist records 96 Implemented with automated evidence, 1 In progress and 19 that need a person; 0/116 are independently Verified.**
 - **Scope:** PR #25 began as docs-only, now contains targeted frontend/unit/Edge changes and synthetic screenshot upload. No backend/schema/audio-engine/dependency changes. Baseline `main` is `3b01dc1336aab0f1cb0a4d85be5eba359de81831`.
-- **Important historical distinction:** PR #24 is **merged**. The earlier 3.0 ledger still records it as in progress/open and 0 merged; that is a stale planning snapshot requiring item-by-item reconciliation, **not** a basis for retroactively marking any S3 item complete.
+- **Important historical distinction:** PR #24 is **merged**. The earlier 3.0 ledger still records it as in progress/open and 0 merged; that was a stale planning snapshot, since reconciled item by item (2026-11-12: 221 of 258 ticked with automated evidence, 0 Verified), and **not** a basis for retroactively marking any S3 item complete.
 - **Evidence presently available:** source inspection, existing suites, new concurrency/identity/keyboard regressions and Web unit/build success on earlier PR heads. Final-head aggregate CI must be checked after the last commit. Synthetic screenshots are *review candidates only*: no approved images, human AT/usability, real audio audition or scale benchmarks are claimed.
 
 ## Individual ADR status
 
 | ADR | Decision | Implementation | Verified | Workstream |
 |---|---|---|---:|---|
-| [ADR-0078](adr-0078-baseline-evidence-and-governance.md) | Accepted | In progress (partial) | 0/10 | Reconcile the shipped 3.0 baseline and govern finishing work |
-| [ADR-0079](adr-0079-visual-system-and-css-ownership.md) | Accepted | In progress (partial) | 0/10 | Unify typography, themes, visual rhythm and CSS ownership |
-| [ADR-0080](adr-0080-interaction-state-recovery-and-undo.md) | Accepted | In progress (partial) | 0/10 | Make controls, asynchronous states, recovery and Undo dependable |
-| [ADR-0081](adr-0081-first-run-explore-and-mix-choice.md) | Accepted | In progress (partial) | 0/10 | Reduce friction from first music folder to a confident first mix |
-| [ADR-0082](adr-0082-listen-shell-stage-and-audio-trust.md) | Accepted | In progress (partial) | 0/11 | Polish Listen, navigation, mini-player and Stage without audio regressions |
-| [ADR-0083](adr-0083-mixes-editor-inspector-and-export.md) | Accepted | In progress (partial) | 0/12 | Make drafts, timeline editing, transition intent and export unambiguous |
-| [ADR-0084](adr-0084-stem-studio-workstation-polish.md) | Accepted | In progress (partial) | 0/9 | Refine Stem Studio's expert controls without reducing capability |
-| [ADR-0085](adr-0085-requests-and-music-discovery.md) | Accepted | In progress (partial) | 0/10 | Clarify Requests, consented bridges and discovery auditions |
-| [ADR-0086](adr-0086-library-workspace-study-and-operational-trust.md) | Accepted | In progress (partial) | 0/11 | Polish Library, Workspace, studies and operational status |
-| [ADR-0087](adr-0087-accessibility-responsive-and-performance-gates.md) | Accepted | In progress (partial) | 0/11 | Verify WCAG, device reflow, audio latency and scale |
-| [ADR-0088](adr-0088-research-visual-regression-and-release.md) | Accepted | In progress (partial) | 0/12 | Require observable user, visual and product acceptance before release |
-| **Total** | 11 proposed | 0 implemented | **0/116** | |
+| [ADR-0078](adr-0078-baseline-evidence-and-governance.md) | Accepted | 7 Implemented, 3 need a person (2026-11-12) | 0/10 | Reconcile the shipped 3.0 baseline and govern finishing work |
+| [ADR-0079](adr-0079-visual-system-and-css-ownership.md) | Accepted | 8 Implemented, 2 need a person (2026-11-12) | 0/10 | Unify typography, themes, visual rhythm and CSS ownership |
+| [ADR-0080](adr-0080-interaction-state-recovery-and-undo.md) | Accepted | 10 Implemented (2026-11-12) | 0/10 | Make controls, asynchronous states, recovery and Undo dependable |
+| [ADR-0081](adr-0081-first-run-explore-and-mix-choice.md) | Accepted | 9 Implemented, 1 need a person (2026-11-12) | 0/10 | Reduce friction from first music folder to a confident first mix |
+| [ADR-0082](adr-0082-listen-shell-stage-and-audio-trust.md) | Accepted | 11 Implemented (2026-11-12) | 0/11 | Polish Listen, navigation, mini-player and Stage without audio regressions |
+| [ADR-0083](adr-0083-mixes-editor-inspector-and-export.md) | Accepted | 12 Implemented (2026-11-12) | 0/12 | Make drafts, timeline editing, transition intent and export unambiguous |
+| [ADR-0084](adr-0084-stem-studio-workstation-polish.md) | Accepted | 9 Implemented (2026-11-12) | 0/9 | Refine Stem Studio's expert controls without reducing capability |
+| [ADR-0085](adr-0085-requests-and-music-discovery.md) | Accepted | 10 Implemented (2026-11-12) | 0/10 | Clarify Requests, consented bridges and discovery auditions |
+| [ADR-0086](adr-0086-library-workspace-study-and-operational-trust.md) | Accepted | 10 Implemented, 1 need a person (2026-11-12) | 0/11 | Polish Library, Workspace, studies and operational status |
+| [ADR-0087](adr-0087-accessibility-responsive-and-performance-gates.md) | Accepted | 5 Implemented, 6 need a person (2026-11-12) | 0/11 | Verify WCAG, device reflow, audio latency and scale |
+| [ADR-0088](adr-0088-research-visual-regression-and-release.md) | Accepted | 5 Implemented, 1 In progress, 6 need a person (2026-11-12) | 0/12 | Require observable user, visual and product acceptance before release |
+| **Total** | 11 Accepted | 96 Implemented, 1 In progress, 19 need a person (2026-11-12) | **0/116** | |
 
 ## Implementation on PR #25 - 29 partial tasks, none Verified
 
@@ -94,4 +94,4 @@ Every check in [the 116-item tracker](selecta-3-1-implementation-checklist.md) r
 
 ## Current disposition
 
-**Proposed ADR programme with limited source changes in progress, 0 Implemented and 0 Verified.** Remaining CI, manual accessibility/audio/usability, scale and owner acceptance must not be invented. No merge is warranted by this partial record.
+**Accepted ADR programme (2026-11-12): 96 Implemented with automated evidence, 1 In progress, 19 need a person, 0 Verified.** The PR #25 table above is the historical partial-task snapshot; current task states are on the checklist lines. Remaining CI, manual accessibility/audio/usability, scale and owner acceptance must not be invented. No merge is warranted by this partial record.

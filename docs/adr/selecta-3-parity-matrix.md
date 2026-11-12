@@ -1,6 +1,6 @@
 # Selecta 3.0 - feature parity ownership and old/new comparison
 
-- **Decision:** Accepted. **Implementation:** Not started.
+- **Decision:** Accepted. **Implementation (2026-11-12):** In progress; 221 of 258 S3 tasks ticked with automated evidence, 0 independently Verified (see [the checklist](selecta-3-implementation-checklist.md)).
 - **All rows:** Planned mappings, not verified behavior. Historical [feature-parity](feature-parity.md) remains authoritative for the existing product.
 - **Scope:** No source audio, data, algorithm, study protocol or behavior is allowed to disappear for visual simplicity.
 

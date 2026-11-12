@@ -128,7 +128,7 @@
 
 ## [ADR-126 - Browser-first onboarding and readiness, without desktop packaging](adr-0126-browser-first-onboarding-and-readiness.md)
 
-**Phase:** Listener · **Priority:** P1 · **Decision:** Accepted · **Implementation:** In progress (4/5) · **Verified:** 2/5.
+**Phase:** Listener · **Priority:** P1 · **Decision:** Accepted · **Implementation:** 4/5 Implemented, 1 Superseded (2026-11-12) · **Verified:** 2/5.
 
 - [ ] **EX-0126-01 - Improve local path guidance.** **Implementation: Implemented; Verified: No; PR/SHA: uncommitted on feat/finish-checklists; evidence: 2026-11-10 folder help and per-reason advice in `web/src/views/Start.tsx`, covered by `web/src/views/polishPhase03Start.test.tsx` P0044/P0045; owner: Unassigned.** Needs a person: first-use and invalid-path comprehension test with a new user.
 - [x] **EX-0126-02 - Clarify readiness and first mix.** **Implementation: Implemented; Verified: Yes (automated, 2026-11-11); PR/SHA: uncommitted on feat/finish-checklists; evidence: partial and complete readiness E2E `web/e2e/mp-0282-onboarding.e2e.ts` MP-0282-04, -05 and -07 passed in the Playwright batch 2026-11-11 under the slot lock (`SELECTA_E2E_DIST=dist-saas-e2 SELECTA_E2E_PORT=9058`, 20 passed; the 4 failures all timed out in `allRendered` waiting for renders on the loaded machine); `web/src/views/Setup.test.tsx` (first mix offered once enough songs are ready while analysis continues, never before the threshold) passed 2026-11-10; owner: Claude agent.** Acceptance and required verification are specified in the linked ADR.

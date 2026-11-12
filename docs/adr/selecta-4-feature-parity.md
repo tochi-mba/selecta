@@ -2,7 +2,7 @@
 
 - **Proposed:** 2026-11-07.
 - **Baseline:** `main` `9b663f9f10212619f27ce67ce82f602347065cbd` (PR #25 and PR #26 already merged at review).
-- **Status:** 25 decisions **Proposed**; 250 tasks **Not started**; **0 Implemented / 0 Verified**.
+- **Status (2026-11-12, recounted from the [checklist](selecta-4-implementation-checklist.md) task lines):** 25 decisions **Accepted**; 250 tasks: **202 Implemented, 36 In progress, 12 Not started; 0 Verified**. (Created 2026-11-07 with 25 Proposed decisions and 250 Not started tasks.)
 - **Change scope:** Documentation only; no frontend, backend, audio, database, test or CI changes.
 - **History:** ADR-0001–0088, T/P/S3/S31 identities and their historical evidence remain unchanged.
 

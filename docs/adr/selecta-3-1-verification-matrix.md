@@ -1,6 +1,7 @@
 # Selecta 3.1 - verification, research tasks and release matrix
 
-- **Status:** Proposed verification design. PR #25 adds unit/Edge regressions and non-blocking synthetic visual candidate capture; full aggregate CI, approved screenshots and human acceptance remain unverified.
+- **Status (2026-11-12):** 96 of 116 tasks Implemented with automated evidence, 1 In progress, 19 need a person, 0 Verified (see [the checklist](selecta-3-1-implementation-checklist.md)).
+- **Status (2026-11-07):** Proposed verification design. PR #25 adds unit/Edge regressions and non-blocking synthetic visual candidate capture; full aggregate CI, approved screenshots and human acceptance remain unverified.
 - **Scope:** S31-0078 through S31-0088 (116 tasks). Existing 3.0 and historical T/P tests/feature parity retain ownership.
 - **Baseline:** `main` merge `3b01dc1336aab0f1cb0a4d85be5eba359de81831`.
 - **Separation of evidence:** source inspected ≠ browser rendered ≠ automated assertion ≠ human assistive-technology test ≠ actual listening experience.

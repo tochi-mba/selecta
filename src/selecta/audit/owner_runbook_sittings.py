@@ -188,7 +188,7 @@ SITTINGS: tuple[Sitting, ...] = (
         ),
         prepare=(
             "Install NVDA; note the NVDA, Edge and Windows build numbers.",
-            "Scripts: `docs/adr/selecta-3-accessibility.md` \"Scripts for a person\" (first "
+            'Scripts: `docs/adr/selecta-3-accessibility.md` "Scripts for a person" (first '
             "run, playback, editing, requests, Studio, export, zoom), the six cards in "
             "`docs/research/uf-research-protocol.md`, and the journeys in "
             "`docs/user-journeys.md`.",
@@ -335,7 +335,7 @@ SITTINGS: tuple[Sitting, ...] = (
         ),
         steps=(
             "Transitions: build a mix from Selecta's pick, open `/listen`, press \"Jump to "
-            "the transition\" on at least ten different moves, rate each Good or Bad; read "
+            'the transition" on at least ten different moves, rate each Good or Bad; read '
             "them back with `uv run selecta ratings` (`--json` for raw). Judge cuts, blends, "
             "wordplay and stem treatments; note when the next song really takes over and "
             "whether the visual handoff matches.",
@@ -347,8 +347,8 @@ SITTINGS: tuple[Sitting, ...] = (
             "Studio with real stems: audition each cell and solo combination, leave mid "
             "audition, apply, and try a corrupt stem (the control is disabled, no noise). "
             "What you hear matches the technique the inspector shows.",
-            "Requests: request a song mid-mix; it joins with no overlap or gap. Try \"Play "
-            "it anyway\" on a rough transition.",
+            'Requests: request a song mid-mix; it joins with no overlap or gap. Try "Play '
+            'it anyway" on a rough transition.',
             "Sync: screen-record `/listen` with system audio and step through the countdown, "
             "lyrics and transition scene against the audible handoff.",
             "Export: Edit > Download audio, then play the FLAC against the live mix. Check "
@@ -401,7 +401,7 @@ SITTINGS: tuple[Sitting, ...] = (
             "Protocols: `docs/research/uf-research-protocol.md` (cohorts, cards U1 to U6, "
             "measures), `docs/research/flow-research-protocol.md` (listener cards L1 to L5, "
             "creator cards C1 to C6, five-second tests), "
-            "`docs/adr/selecta-3-baseline.md` \"Task scripts\", "
+            '`docs/adr/selecta-3-baseline.md` "Task scripts", '
             "`docs/adr/selecta-experience-acceptance.md`, and the MI-0164-04 list in "
             "`docs/adr/selecta-microinteraction-verification-protocols.md`.",
             "Recruit three cohorts (listeners, creators, expert DJs); dry-run the cards with "
@@ -426,7 +426,7 @@ SITTINGS: tuple[Sitting, ...] = (
             "server mid-edit (injected faults: see `web/e2e/mp-0297-loading-and-recovery."
             "e2e.ts`).",
             "Phone participants (where tasks say mobile): the same cards on a real phone.",
-            "Read the cards word for word; the only help allowed is \"What would you try?\".",
+            'Read the cards word for word; the only help allowed is "What would you try?".',
         ),
         passes=(
             "Raw counts per cohort (done unaided, stalled, gave up, wrong result) with "
@@ -466,8 +466,7 @@ SITTINGS: tuple[Sitting, ...] = (
             "Staging config: `infra/cloudflare/env/staging.tfvars` and "
             "`staging.backend.hcl`; topology in `docs/adr/adr-0409-hosting-topology-and-"
             "environments.md` and `docs/saas/13-hosting-and-cost.md`.",
-            "A copy of your Selecta home for the local drills, and an older checkout for "
-            "rollback.",
+            "A copy of your Selecta home for the local drills, and an older checkout for rollback.",
         ),
         steps=(
             "Deploy: set up the GitHub OIDC credential broker (`infra/deploy/"
@@ -530,7 +529,7 @@ SITTINGS: tuple[Sitting, ...] = (
             "`docs/saas/licence-register.md`.",
         ),
         steps=(
-            "Licences: give a lawyer every \"Review\" row in `docs/saas/licence-register.md` "
+            'Licences: give a lawyer every "Review" row in `docs/saas/licence-register.md` '
             "and `src/selecta/modes/licence_register.json`; get written advice before a "
             "paid launch.",
             "Key detection: decide the S-KEY replacement in `docs/adr/adr-0405-licence-"
@@ -556,7 +555,7 @@ SITTINGS: tuple[Sitting, ...] = (
         words=(r".",),
         summary=(
             "Reading and deciding: approve decisions, audit evidence documents and code "
-            "reviews, and give release dispositions. A task that says \"independent\" needs "
+            'reviews, and give release dispositions. A task that says "independent" needs '
             "a reviewer who did not build it; you can sign owner decisions yourself."
         ),
         prepare=(
@@ -584,8 +583,7 @@ SITTINGS: tuple[Sitting, ...] = (
             "the line names and confirm it behaves as its tests say.",
             "Privacy reviews: copy the diagnostics from `/workshop/diagnostics` and read the "
             "payload for paths and song names; watch the Edge Network panel during analysis.",
-            "Wording reviews: toasts, glossary (`web/src/ui/glossaryTerms.ts`) and consent "
-            "text.",
+            "Wording reviews: toasts, glossary (`web/src/ui/glossaryTerms.ts`) and consent text.",
             "Part B, last: release dispositions per programme at one SHA: zero P0, every P1 "
             "accepted or fixed, a rollback plan (`tests/rollback_check.py`), and a written "
             "GO or NO-GO from you and an independent reviewer.",

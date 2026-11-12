@@ -3,10 +3,10 @@
 **Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 258 tasks: 227 Implemented, 2 In progress, 0 Not started, 29 Needs a person, 0 Superseded. 35 name a person-only step. 221 ticked. 0 independently Verified.
 
 - **Decision status:** Accepted.
-- **Implementation status:** PR #24 merged as `3b01dc1336aab0f1cb0a4d85be5eba359de81831`; items below still await evidence-based reconciliation.
+- **Implementation status:** PR #24 merged as `3b01dc1336aab0f1cb0a4d85be5eba359de81831`. Reconciled item by item on 2026-11-10 to 2026-11-12: 221 of 258 ticked as implemented with automated evidence, 35 need a person, 2 in progress (S3-0073-06, S3-0075-01).
 - **Date:** 2026-11-07.
 - **Scope:** 31 ADRs and 258 stable S3 task IDs (252 original plus 6 in ADR-0077).
-- **Merged programme PR:** 1. **Independently verified tasks:** 0/258 in this historical ledger; full item-by-item reconciliation remains pending.
+- **Merged programme PR:** 1. **Independently verified tasks:** 0/258 (2026-11-12).
 - **History:** This checklist began as a documentation-only proposal. PR #24 now also contains code; do not infer item completion from code presence or a passing CI badge.
 
 ## Instructions

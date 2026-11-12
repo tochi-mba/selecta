@@ -4,7 +4,7 @@
 
 **2026-11-08 docs-only planning baseline:** main `5347e7309c5ff8b2e2965c2194bf2089b6ad2721`. **8 Proposed ADRs** (0264–0271), **64 task acceptances Not started**, 0 In progress, 0 Implemented, **0 independently Verified**. Owner decisions/implementing PRs are not supplied. Existing prior programme ledgers are not changed.
 
-**2026-11-11 status:** 53 Implemented, 2 In progress, 9 Not started (each of these needs a person), **0 independently Verified**; every box stays unchecked until independent verification, per the rules at the end of this file. Work is on branch `feat/finish-checklists`.
+**2026-11-12 status:** 8 Accepted ADRs; 53 Implemented, 2 In progress, 9 Not started (each of these needs a person), **0 independently Verified**; every box stays unchecked until independent verification, per the rules at the end of this file. Work is on branch `feat/finish-checklists-2`.
 
 **Counting convention:** Each `FP-XXXX-NN` identifies one *additional acceptance criterion*, not an assertion that an implementation is missing. Review the existing source and earlier SF/GP task before doing new work. A docs-only plan does not qualify as a source implementation PR.
 

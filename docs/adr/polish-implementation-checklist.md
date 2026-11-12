@@ -1,6 +1,6 @@
 # Selecta UI/UX polish - implementation checklist
 
-**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 143 tasks: 112 Implemented, 3 In progress, 7 Not started, 20 Needs a person, 1 Superseded. 21 name a person-only step. 107 ticked. 0 independently Verified.
+**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 143 tasks: 115 Implemented, 1 In progress, 6 Not started, 20 Needs a person, 1 Superseded. 21 name a person-only step. 110 ticked. 0 independently Verified.
 
 - **Decision status:** Accepted for implementation by the owner
 - **Implementation status:** PR [#23](https://github.com/tochi-mba/selecta/pull/23) merged as `84b8b5cbadf7204bf526e8932124b5c4890e2c44`; the original 0/143 task snapshot still requires item-by-item source and independent-evidence reconciliation.

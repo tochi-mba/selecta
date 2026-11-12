@@ -1,6 +1,6 @@
 # Selecta / Flow - comprehensive proposed microinteraction and music-truth matrix
 
-**50 Accepted ADRs; 400 SF tasks Not started; 0 independently Verified.** All durations are candidate design targets in milliseconds, *not measurements or implemented behavior*. Audio-clock effects obey actual player events and do not inherit UI-duration targets. Reconcile the [MI matrix](selecta-microinteraction-motion-matrix.md) and [CI matrix](selecta-creative-interface-interaction-matrix.md) before implementing.
+**50 Accepted ADRs; 400 SF tasks (2026-11-12, recounted from the [checklist](selecta-flow-implementation-checklist.md)): 263 Implemented, 17 In progress, 70 Not started, 46 Needs a person, 4 Superseded; 0 independently Verified.** All durations are candidate design targets in milliseconds, *not measurements or implemented behavior*. Audio-clock effects obey actual player events and do not inherit UI-duration targets. Reconcile the [MI matrix](selecta-microinteraction-motion-matrix.md) and [CI matrix](selecta-creative-interface-interaction-matrix.md) before implementing.
 
 | Interaction | Trigger | Authoritative meaning | Candidate feedback | Still/reduced-motion equivalent | Mandatory safety guard |
 |---|---|---|---|---|---|
