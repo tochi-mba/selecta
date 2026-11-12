@@ -8,8 +8,8 @@
 | ADR | Status | Proven | Still open | Every task proven |
 |---|---|---|---|---|
 | [ADR-0001](adr-0001-product-contract-and-parity.md) | In progress | 6 of 7 | T0005 | no |
-| [ADR-0002](adr-0002-routing-and-shell.md) | Implemented | 7 of 8 | T0049 | no |
-| [ADR-0003](adr-0003-design-tokens-and-brand.md) | In progress | 5 of 7 | T0027, T0029 | no |
+| [ADR-0002](adr-0002-routing-and-shell.md) | Implemented | 8 of 8 | none | yes |
+| [ADR-0003](adr-0003-design-tokens-and-brand.md) | In progress | 6 of 7 | T0029 | no |
 | [ADR-0004](adr-0004-interaction-primitives-and-notifications.md) | In progress | 8 of 8 | none | yes |
 | [ADR-0005](adr-0005-domain-state-mutations.md) | In progress | 8 of 8 | none | yes |
 | [ADR-0006](adr-0006-audio-transport-and-media.md) | In progress | 8 of 8 | none | yes |
@@ -20,24 +20,24 @@
 | [ADR-0011](adr-0011-steering-and-energy.md) | In progress | 8 of 8 | none | yes |
 | [ADR-0012](adr-0012-drafts-and-queue.md) | Implemented | 8 of 8 | none | yes |
 | [ADR-0013](adr-0013-edit-timeline.md) | In progress | 8 of 8 | none | yes |
-| [ADR-0014](adr-0014-seam-inspector.md) | In progress | 7 of 8 | T0173 | no |
+| [ADR-0014](adr-0014-seam-inspector.md) | In progress | 8 of 8 | none | yes |
 | [ADR-0015](adr-0015-requests-and-bridges.md) | In progress | 11 of 11 | none | yes |
 | [ADR-0016](adr-0016-stem-studio.md) | In progress | 8 of 9 | T0201 | no |
 | [ADR-0017](adr-0017-library-scale-and-readiness.md) | Implemented | 8 of 8 | none | yes |
 | [ADR-0018](adr-0018-library-corrections-and-folders.md) | In progress | 7 of 8 | T0216 | no |
 | [ADR-0019](adr-0019-discover-words-and-harmony.md) | In progress | 8 of 8 | none | yes |
 | [ADR-0020](adr-0020-workshop-and-storage.md) | In progress | 8 of 8 | none | yes |
-| [ADR-0021](adr-0021-blind-listening.md) | Implemented | 7 of 8 | T0240 | no |
+| [ADR-0021](adr-0021-blind-listening.md) | Implemented | 8 of 8 | none | yes |
 | [ADR-0022](adr-0022-flac-export.md) | In progress | 6 of 6 | none | yes |
-| [ADR-0023](adr-0023-accessibility.md) | In progress | 5 of 8 | T0038, T0040, T0044 | no |
+| [ADR-0023](adr-0023-accessibility.md) | In progress | 6 of 8 | T0038, T0044 | no |
 | [ADR-0024](adr-0024-responsive-workspaces.md) | In progress | 5 of 7 | T0059, T0060 | no |
 | [ADR-0025](adr-0025-local-privacy.md) | Implemented | 8 of 8 | none | yes |
 | [ADR-0026](adr-0026-api-compatibility.md) | In progress | 9 of 9 | none | yes |
-| [ADR-0027](adr-0027-explanations-and-feedback.md) | In progress | 5 of 7 | T0134, T0135 | no |
+| [ADR-0027](adr-0027-explanations-and-feedback.md) | In progress | 6 of 7 | T0135 | no |
 | [ADR-0028](adr-0028-recovery-and-multitab.md) | In progress | 6 of 7 | T0097 | no |
-| [ADR-0029](adr-0029-testing-and-quality.md) | In progress | 13 of 22 | T0014, T0017, T0259, T0260, T0261, T0262, T0264, T0266, T0267 | no |
-| [ADR-0030](adr-0030-migration-and-release.md) | Implemented | 13 of 23 | T0018, T0019, T0253, T0258, T0274, T0275, T0276, T0277, T0278, T0279 | no |
-| [ADR-0031](adr-0031-pwa-and-browsers.md) | In progress | 2 of 6 | T0061, T0062, T0064, T0065 | no |
+| [ADR-0029](adr-0029-testing-and-quality.md) | In progress | 15 of 22 | T0014, T0017, T0261, T0262, T0264, T0266, T0267 | no |
+| [ADR-0030](adr-0030-migration-and-release.md) | Implemented | 15 of 23 | T0018, T0253, T0258, T0274, T0275, T0276, T0277, T0279 | no |
+| [ADR-0031](adr-0031-pwa-and-browsers.md) | In progress | 3 of 6 | T0061, T0062, T0065 | no |
 | [ADR-0032](adr-0032-diagnostics-and-operations.md) | Implemented | 7 of 7 | none | yes |
 
 ## [ADR-0001](adr-0001-product-contract-and-parity.md)
@@ -68,7 +68,7 @@ Acceptance criteria:
 | T0046 | yes | Done | `web/src/router.ts`, `router.test.tsx`. |
 | T0047 | yes | Done | `web/src/shell/Shell.tsx`. |
 | T0048 | yes | Done | `web/e2e/pages.e2e.ts`: reload, Back, Forward, filters in the address. |
-| T0049 | yes | Done | none linked |
+| T0049 | yes | Done | Selection is by song ids, drafts by id in the address. Drafts by id in `web/src/router.ts` (`/mixes/drafts/:id/edit`, `web/src/router.test.tsx`); song and seam selection by row key and `seamKeyOf` in `web/src/views/Mix.tsx` (`web/src/views/Mix.test.tsx`: "plays the exact render, and the same stays selected when others move", "keeps each mix scope's exact selection separate"); requests keyed by `request.id` in `web/src/views/Requests.tsx` (`web/src/views/Requests.test.tsx`). Vitest passed 2026-11-12 (16 files, 254 tests, run with the files cited across these rows). |
 | T0050 | yes | Done | `web/e2e/flows.e2e.ts`: a deleted draft is explained, never swapped. |
 | T0051 | yes | Done | `tests/test_api_contracts.py`, `web/e2e/pages.e2e.ts`. |
 | T0052 | yes | Done | `web/e2e/listen.e2e.ts`: moving around starts no new sound and makes no second audio context. |
@@ -86,7 +86,7 @@ Acceptance criteria:
 | T0024 | yes | Done | `web/src/styles/tokens.css`, dark and light. |
 | T0025 | yes | Done | `web/src/styles/tokens.css`. |
 | T0026 | yes | Done | Feature styles are split into owned sheets loaded in a fixed order (`styles/listening.css`, `creation.css`, `operations.css`, `lucy.css`, documented in `docs/engineering/css-ownership.md`), scoped by page class. `web/src/styles/scope-collisions.test.ts` fails when a bare class is styled by two page sheets (only `.page` compounds and the `.draft-list.long` modifier are shared on purpose) or a page sheet restyles a bare element. Passed 2026-11-11 (vitest). Plain scoped stylesheets were chosen over CSS modules. |
-| T0027 | yes | Done | none linked |
+| T0027 | yes | Done | The control states panel under Workshop, Diagnostics. `web/src/ui/ControlGallery.tsx` (default, primary, disabled, working and busy, selected `aria-pressed`, warning and failed statuses, invalid field, `Problem` error, skeleton loading; hover and focus inspected live), mounted only under Diagnostics in development by `web/src/views/Workshop.tsx`. `web/src/ui/polish-components.test.tsx` ("P0021 development gallery inventory") and `web/src/views/polishWorkshopShowcase.test.tsx` ("P0106 the developer state showcase"). Vitest passed 2026-11-12 (16 files, 254 tests, run with the files cited across these rows). |
 | T0028 | yes | Done | Both themes, long text, reduced motion and contrast: `web/e2e/pages.e2e.ts` ("every page passes the automatic accessibility checks in dark", "... in light", "dialogs and drawers pass the automatic accessibility checks too") runs axe WCAG checks, including colour contrast, on every page with reduced motion, and was run with `SELECTA_E2E_STRESS=1` so the library has long, bidi, CJK and Arabic names (3 passed, 2026-11-11). Fallback fonts: `web/src/styles/flow-fonts.test.ts` checks no web font is loaded and every font token ends in a generic family (passed 2026-11-11, vitest). |
 | T0029 | no | Needs a person | open |
 
@@ -271,7 +271,7 @@ Acceptance criteria:
 | T0170 | yes | Done | `SeamEditor`, existing tests. |
 | T0171 | yes | Done | `option.reason` on each move, `tests/test_room_to_play.py`. |
 | T0172 | yes | Done | `seamFacts` in `web/src/ui/seam.ts`. |
-| T0173 | yes | Done | none linked |
+| T0173 | yes | Done | A seam's key is a hash of what it asks for, so old results can't apply. `SeamRequest.key` in `src/selecta/seam_kinds.py` hashes the request with analysis and render versions (`tests/test_mix.py::test_requests_are_the_same_only_when_the_choices_are`, `tests/test_studio.py::test_a_different_shape_is_a_different_seam`, `test_seams_from_before_the_studio_keep_their_keys`); the page binds audio and ratings to that key and refuses edits made against an old order (`web/src/views/ex0121SeamInspector.test.tsx` EX-0121-03 and EX-0121-05, `web/src/views/s4InspectorRating.test.tsx`). A slow build never replaces a changed mix (`tests/test_api_contracts.py::test_slow_build_never_replaces_a_mix_changed_during_planning`). Vitest passed 2026-11-12 (16 files, 254 tests, run with the files cited across these rows); the pytest tests named passed 2026-11-12 (139-test run: 138 passed; its one failure, `tests/test_flags.py::test_nothing_set_means_every_flag_is_on`, comes from three newer default-off flags, not this task). |
 | T0174 | yes | Done | Details tab in `SeamInspector.tsx`. |
 | T0175 | yes | Done | Fast style switching and malformed cues: `tests/test_s2_seam_inspector.py` (`test_fast_style_switching_ends_on_the_last_choice_and_its_own_render`, `test_an_unknown_style_is_refused_and_the_saved_one_stays`, `test_a_malformed_cue_never_breaks_the_mix_or_its_render_request`), 58 passed 2026-11-11. Late render and failed fallback: `web/src/player.test.ts` (`does not start a seam after its cue`, `loads a completed render without waiting for the whole mix to refresh`, `ignores a failed fallback download after the listener seeks elsewhere`), 38 passed 2026-11-11. Rating the correct seam: `web/src/views/Mix.test.tsx` (`posts to that seam alone, and shows the saved rating again after a remount`, `keeps the latest choice visible when an older server response refreshes the inspector`), 59 passed 2026-11-11; `web/src/views/LinksRating.test.tsx` 25 passed with Links. |
 | T0176 | yes | Done | The owner accepted ADR-0014 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header. |
@@ -395,7 +395,7 @@ Acceptance criteria:
 | T0237 | yes | Done | Checkboxes in `Listening.tsx`. |
 | T0238 | yes | Done | `usePreview`, and the page shows only A and B. |
 | T0239 | yes | Done | `x-operation-id` in `Listening.tsx`, `tests/test_listening.py`. |
-| T0240 | yes | Done | none linked |
+| T0240 | yes | Done | The study's questions and scoring weren't changed. The protocol is pinned in `src/selecta/listening.py` (grade an integer 1 to 5, the seven issue tags, choices a, b, tie, cannot_judge) and refused otherwise (`tests/test_ex_0129_study_integrity.py::test_an_unknown_trial_or_bad_answer_saves_nothing_and_says_why`, `tests/test_listening.py`); the page still sends the same grade and tags and still needs both clips heard before a preference (`web/src/views/Listening.test.tsx`: "what's saved is the same grade and tags as ever", "won't let you choose between two you haven't both heard"). Vitest passed 2026-11-12 (16 files, 254 tests, run with the files cited across these rows); the pytest tests named passed 2026-11-12 (139-test run: 138 passed; its one failure, `tests/test_flags.py::test_nothing_set_means_every_flag_is_on`, comes from three newer default-off flags, not this task). |
 | T0241 | yes | Done | `web/src/views/ListeningStudyFlow.test.tsx` (5 tests, blind listening study, start to finish): missing clip with cannot-judge, refresh part way restoring the same comparison, double submit stored once, keyboard alone to the end, finishing saves each once and says complete. Passed 2026-11-10 (vitest). |
 | T0242 | yes | Done | The owner accepted ADR-0021 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header. |
 
@@ -424,7 +424,7 @@ Acceptance criteria:
 |---|---|---|---|
 | T0038 | no | Needs a person | open |
 | T0039 | yes | Done | `web/src/shell/Shell.test.tsx`, `web/e2e/listen.e2e.ts`. |
-| T0040 | yes | Done | none linked |
+| T0040 | yes | Done | Move up and down on rows, arrow keys on the waveform and Studio grid. Row reorder: `web/src/views/EditorRows.tsx`, `web/src/views/ufEditorReorder.test.tsx`; waveform seeking: `web/src/views/Now.tsx`, `web/src/views/listenSeek.test.tsx`; Studio grid: `web/src/views/Studio.tsx`, `web/src/views/Studio.test.tsx` ("is one tab stop, moves with the arrow keys, and Space turns a square on or off"); inspector resize: `web/src/views/Mix.tsx`, `web/src/views/inspectorResize.test.tsx`; drawn energy arc has number fields: `web/src/views/MixSetup.tsx`, `web/src/views/ex-0117-energy.test.tsx`. Vitest passed 2026-11-12 (16 files, 254 tests, run with the files cited across these rows). |
 | T0041 | yes | Done | `LiveRegion` and `announce` in `web/src/ui/controls.tsx`. |
 | T0042 | yes | Done | `web/e2e/flows.e2e.ts`: focus never hidden behind the bottom bar. |
 | T0043 | yes | Done | Written page-by-page audit in `docs/engineering/form-validation-audit.md`: every form's validation, error copy, field wiring, non-colour state and reduced motion. Four gaps found and fixed: My Mixes rename (`views/Drafts.tsx`), Listening study code (`views/Listening.tsx`), Lucy limits and spending cap (`views/LucySettings.tsx`) and the storage limit slider (`views/WorkshopPanels.tsx`) were marked or shown invalid without the reason tied to the field. `web/src/views/formValidationAudit.test.tsx` (5 tests) covers each fix and fails on any `aria-invalid` without `aria-describedby`. Passed 2026-11-11 (vitest: 46 passed with the Drafts, study, Workshop and Lucy view tests; 27 more in Listening and Workshop tests). |
@@ -494,7 +494,7 @@ Acceptance criteria:
 | T0131 | yes | Done | `WhyThisTransition` in `Now.tsx`, from the render's own record. |
 | T0132 | yes | Done | Rating goes by seam key, `web/e2e/listen.e2e.ts`. |
 | T0133 | yes | Done | Requested versus achieved energy in `Mixes.tsx`, reasons on requests and moves. |
-| T0134 | yes | Done | none linked |
+| T0134 | yes | Done | Copy says what's measured, and estimates are labelled. Lyric timing says how precise it is (`web/src/views/Now.tsx`; `web/src/views/CreativeInterface.test.tsx` "says what kind of lyrics a %s song has, without claiming more precision"); chord matches are "a suggestion to check by ear" (`web/src/views/Links.tsx`) and audio checks "can't say how something sounds" (`web/src/views/WorkshopPanels.tsx`), both pinned by `web/src/ui/polish-components.test.tsx` ("P0117 explanations separate automated checks from human judgement"). Vitest passed 2026-11-12 (16 files, 254 tests, run with the files cited across these rows). |
 | T0135 | no | Needs a person | open |
 | T0136 | yes | Done | The owner accepted ADR-0027 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header. |
 
@@ -532,8 +532,8 @@ Acceptance criteria:
 | T0015 | yes | Done | `docs/listening-procedure.md`. |
 | T0016 | yes | Done | `docs/adr/test-coverage-matrix.md`. |
 | T0017 | no | Needs a person | open |
-| T0259 | yes | Done | none linked |
-| T0260 | yes | Done | none linked |
+| T0259 | yes | Done | Existing tests kept. Changes are listed in the PR description. Selector-change rule in `docs/adr/test-coverage-matrix.md` (keep the behavioural assertion when a selector or label changes); every pre-redesign test is mapped kept, moved or replaced in `docs/adr/test-parity-inventory.json` (`tests/test_parity_inventory.py`, 3 passed 2026-11-12); selector changes listed in [#22](https://github.com/tochi-mba/selecta/pull/22). The whole legacy pytest and vitest suites ran green in `test` run [43123598913](https://github.com/tochi-mba/selecta/actions/runs/43123598913) on main (merge of #55, 2026-11-11); checked with `gh run list` 2026-11-12. |
+| T0260 | yes | Done | Lint, file length, server, page and browser tests all run in CI on this PR, and on main once merged. `.github/workflows/test.yml` runs on `pull_request` and on push to `main`: ruff and file length, pytest shards with coverage (API contracts in `tests/test_api_contracts.py`), Cloud PostgreSQL, `pnpm test` and `pnpm build`, Edge E2E and the feature-flag sweep. Green on a PR: run [43119473767](https://github.com/tochi-mba/selecta/actions/runs/43119473767) (#55); green on main: run [43123598913](https://github.com/tochi-mba/selecta/actions/runs/43123598913) (2026-11-11); checked with `gh run list` 2026-11-12. |
 | T0261 | no | Partly | open |
 | T0262 | no | Needs a person | open |
 | T0263 | yes | Done | `web/e2e/t0263-keyboard-workflows.e2e.ts` walks each workflow start to finish in Edge with keys only (no click or focus() call; every control reached with Tab or the page's own shortcut): `T0263 request: ask for a song, cancel it and close, from the keyboard alone`, `T0263 Mixes: start a mix from the Mixes page with Tab and Enter`, `T0263 Edit: move a song down and back with its handle, focus staying on it`, `T0263 Studio: open a transition, reach the Studio, turn a square over and leave, by keyboard`, `T0263 Library: search with /, open a song’s menu and add it to the mix, by keyboard`, `T0263 export: open the save dialog from Edit, start saving, cancel it and close back to the button` (focus held in the dialog, then returned to Download audio), `T0263 study: open a study, grade a version and answer, by keyboard to the end` (both clips played with Space, then Prefer A with grade 4 posted). 7 passed 2026-11-12 (Playwright, Edge, dist-rb, slot-locked). No app change was needed. Whether the walk is comfortable is a person's judgement, tracked as P0126 in the polish checklist. |
@@ -554,7 +554,7 @@ Acceptance criteria:
 | Task | Ticked | Ledger status | Proof |
 |---|---|---|---|
 | T0018 | no | Needs a person | open |
-| T0019 | yes | Done | none linked |
+| T0019 | yes | Done | Shipped as one change. The older routes still answer, and a revert restores the previous page. Fallbacks in code: older addresses keep their meaning through `ALIASES` in `web/src/router.ts` (`web/src/router.test.tsx`, unknown addresses say so); the server gives any page address the app but never answers an API path with it (`FreshFiles` in `src/selecta/api_common.py`; `tests/test_api_contracts.py::test_reloading_any_page_gets_the_app`, `test_an_api_route_that_does_not_exist_is_not_the_app`); a feature that can't land whole ships behind its `SELECTA_FLAGS` flag in `src/selecta/flags/` and the page reflows when it is off (`tests/test_flags.py::test_turning_one_off_turns_off_what_needs_it`, `web/src/flags.test.tsx`). Vitest passed 2026-11-12 (16 files, 254 tests, run with the files cited across these rows); the pytest tests named passed 2026-11-12 (139-test run: 138 passed; its one failure, `tests/test_flags.py::test_nothing_set_means_every_flag_is_on`, comes from three newer default-off flags, not this task). |
 | T0020 | yes | Done | Backend additions only add routes, fields and one table. `status.api.features` advertises them. |
 | T0021 | yes | Done | The protocol (decision status separate from not-started/in-progress/implemented/verified) is ADR-0030's governance rule and `docs/adr/README.md`; the owner accepted ADR-0030 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`). Re-checked 2026-11-10. |
 | T0022 | yes | Done | The owner accepted ADR-0030 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header. The data invariant (source music, drafts, ratings and preferences survive) is ADR-0030's own compatibility rule. |
@@ -574,7 +574,7 @@ Acceptance criteria:
 | T0275 | no | Needs a person | open |
 | T0276 | no | Needs a person | open |
 | T0277 | no | Needs a person | open |
-| T0278 | no | Partly | open |
+| T0278 | yes | Done | `src/selecta/audit/t_task_evidence.py` checks every task has one row here naming #22, ticks and Done rows agree, cited files exist and no Done row is prose only (the ten prose-only rows were given file, test and CI-run citations 2026-11-12, so `PROSE_ONLY` is empty). `tests/test_t_task_evidence.py` (4 passed) and `src/selecta/audit/checklist_evidence.py` passed 2026-11-12. |
 | T0279 | no | Needs a person | open |
 
 ## [ADR-0031](adr-0031-pwa-and-browsers.md)
@@ -588,7 +588,7 @@ Acceptance criteria:
 | T0061 | no | Needs a person | open |
 | T0062 | no | Needs a person | open |
 | T0063 | yes | Done | `App.tsx` checks Media Session and fullscreen. `state/tabs.ts` checks BroadcastChannel. |
-| T0064 | yes | Done | none linked |
+| T0064 | yes | Done | There's no service worker, so nothing private can be cached by one. `web/src/RuntimeApp.test.tsx` ("never claims offline playback while the local server is down") fails if `main.tsx`, `RuntimeApp.tsx` or `index.html` registers a service worker; static files are served `no-cache` and an API miss is a real 404, never the app (`src/selecta/api_common.py`; `tests/test_api_contracts.py::test_real_files_are_still_served_and_always_checked`, `test_an_api_route_that_does_not_exist_is_not_the_app`, `test_anything_else_is_really_not_found`); audio still range-seeks (`tests/test_reel.py::test_a_reel_page_is_never_reused_without_asking_and_audio_can_still_seek`). Vitest passed 2026-11-12 (16 files, 254 tests, run with the files cited across these rows); the pytest tests named passed 2026-11-12 (139-test run: 138 passed; its one failure, `tests/test_flags.py::test_nothing_set_means_every_flag_is_on`, comes from three newer default-off flags, not this task). |
 | T0065 | no | Needs a person | open |
 | T0066 | yes | Done | The owner accepted ADR-0031 on 2026-11-08 in [#37](https://github.com/tochi-mba/selecta/pull/37) (merge `100df40`); its **Decision status** line reads Accepted. Re-checked 2026-11-10 with `git show 100df40` and the ADR header. |
 

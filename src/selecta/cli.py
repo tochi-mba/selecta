@@ -828,9 +828,12 @@ def ratings(
         console.print(f"  {home}", highlight=False, soft_wrap=True)
     for item in sorted(rated, key=lambda r: (r.move, not r.good)):
         word = "GOOD" if item.good else "BAD "
+        apart = "tempo unknown" if item.gap is None else f"{item.gap:5.1%} apart"
         console.print(
-            f"{word} {item.move:16} {item.bars:2} bars, {item.gap:5.1%} apart, keys {item.keys}, "
-            f"{item.a[:30]} > {item.b[:30]}" + (f" ({item.note})" if item.note else ""),
+            f"{word} {item.move:16} {item.bars:2} bars, {apart}, "
+            + ("key unknown, " if item.keys is None else f"keys {item.keys}, ")
+            + f"{item.a[:30]} > {item.b[:30]}"
+            + (f" ({item.note})" if item.note else ""),
             highlight=False,
             soft_wrap=True,
         )

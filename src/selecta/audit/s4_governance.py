@@ -307,7 +307,10 @@ def parse_rollback_log(text: str, older: str) -> dict:
     )
     passed = any(line.strip() == "nothing lost" for line in lines) and exit_code in (0, None)
     notes = [
-        line for line in lines if line.startswith(("the older checkout", "this checkout again"))
+        line
+        for line in lines
+        if line.startswith(("the older checkout", "this checkout again"))
+        and "code from" not in line  # a local folder path, kept out of committed reports
     ]
     return {"older": older, "passed": passed, "exit": exit_code, "notes": notes}
 

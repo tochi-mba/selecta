@@ -165,7 +165,9 @@ def create_app(
             )
         )
         fingerprint = hashlib.sha256(identity).hexdigest()
-        if operation in running_operations:
+        # A loop, not an if: when a try fails, every waiting retry wakes, and only the first may
+        # run it again; the rest wait for that rerun instead of doing the change once each.
+        while operation in running_operations:
             if active_fingerprints.get(operation) != fingerprint:
                 return JSONResponse(
                     {"detail": "That operation ID already belongs to a different action."},

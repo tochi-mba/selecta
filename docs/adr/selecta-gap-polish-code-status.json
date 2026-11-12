@@ -5,7 +5,7 @@
   "as_of": "2026-11-12",
   "scope": "GP-0248-01 through GP-0263-08",
   "decision": "16 Accepted (owner 2026-11-08)",
-  "implementation_status": "111 Implemented; 17 Not started (2026-11-12, recounted from the checklist task lines; the per-group lists below were synced to those lines the same day; needs_a_person lists every open task whose line names a person-only step, alongside its main list)",
+  "implementation_status": "111 Implemented; 0 Not started; 17 Needs a person (2026-11-12, recounted from the checklist task lines; the per-group lists below were synced to those lines the same day; needs_a_person lists every open task whose line names a person-only step; the 17 tasks whose state is Needs a person, with their code part built, appear only there)",
   "independent_verification": "0 Verified",
   "status_scope_note": "New acceptance deltas, not missing source features. Earlier programmes unchanged.",
   "groups": {
@@ -21,9 +21,7 @@
         "07"
       ],
       "in_progress": [],
-      "not_started": [
-        "08"
-      ],
+      "not_started": [],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
@@ -44,9 +42,7 @@
         "07"
       ],
       "in_progress": [],
-      "not_started": [
-        "08"
-      ],
+      "not_started": [],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
@@ -67,9 +63,7 @@
         "07"
       ],
       "in_progress": [],
-      "not_started": [
-        "08"
-      ],
+      "not_started": [],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
@@ -95,7 +89,8 @@
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
-      "implementation_sha": null
+      "implementation_sha": null,
+      "needs_a_person": []
     },
     "0252": {
       "decision": "Accepted",
@@ -109,9 +104,7 @@
         "07"
       ],
       "in_progress": [],
-      "not_started": [
-        "08"
-      ],
+      "not_started": [],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
@@ -132,9 +125,7 @@
         "07"
       ],
       "in_progress": [],
-      "not_started": [
-        "08"
-      ],
+      "not_started": [],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
@@ -154,10 +145,7 @@
         "07"
       ],
       "in_progress": [],
-      "not_started": [
-        "05",
-        "08"
-      ],
+      "not_started": [],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
@@ -179,9 +167,7 @@
         "07"
       ],
       "in_progress": [],
-      "not_started": [
-        "08"
-      ],
+      "not_started": [],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
@@ -202,9 +188,7 @@
         "07"
       ],
       "in_progress": [],
-      "not_started": [
-        "08"
-      ],
+      "not_started": [],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
@@ -224,10 +208,7 @@
         "07"
       ],
       "in_progress": [],
-      "not_started": [
-        "04",
-        "08"
-      ],
+      "not_started": [],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
@@ -249,9 +230,7 @@
         "08"
       ],
       "in_progress": [],
-      "not_started": [
-        "01"
-      ],
+      "not_started": [],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
@@ -272,9 +251,7 @@
         "07"
       ],
       "in_progress": [],
-      "not_started": [
-        "08"
-      ],
+      "not_started": [],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
@@ -295,9 +272,7 @@
         "07"
       ],
       "in_progress": [],
-      "not_started": [
-        "08"
-      ],
+      "not_started": [],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
@@ -318,9 +293,7 @@
         "07"
       ],
       "in_progress": [],
-      "not_started": [
-        "08"
-      ],
+      "not_started": [],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
@@ -341,9 +314,7 @@
         "07"
       ],
       "in_progress": [],
-      "not_started": [
-        "08"
-      ],
+      "not_started": [],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,
@@ -364,9 +335,7 @@
         "07"
       ],
       "in_progress": [],
-      "not_started": [
-        "08"
-      ],
+      "not_started": [],
       "independently_verified": [],
       "owner": null,
       "implementation_pr": null,

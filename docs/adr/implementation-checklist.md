@@ -1,6 +1,6 @@
 # Selecta 2.0: the implementation and its checklist
 
-**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 279 tasks: 253 Implemented, 0 In progress, 1 Not started, 24 Needs a person, 1 Superseded. 24 name a person-only step. 250 ticked. 0 independently Verified.
+**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 279 tasks: 253 Implemented, 0 In progress, 1 Not started, 24 Needs a person, 1 Superseded. 24 name a person-only step. 251 ticked. 0 independently Verified.
 
 > **One PR for everything:** the implementation now lands on this branch too, instead of in separate PRs, as the owner asked. A ticked box means the code is on this branch and [implementation-evidence.md](https://github.com/tochi-mba/selecta/blob/main/docs/adr/implementation-evidence.md) says how we know. This description holds the live checkbox state, and the committed `docs/adr/implementation-checklist.md` is the first snapshot of the scope.
 
@@ -15,7 +15,7 @@
 
 **Invariants:** Preserve the whole current app and warm colour identity. No lost source music or drafts, no wrong current/draft mutation, no unintended audio silence/late seam, no unapproved/partial bridge joins, no inaccessible essential action, no invalid exported audio, no unsafe localhost access.
 
-**Initial task count:** 279 tasks across 14 delivery phases, covering all 32 ADRs. **Completed so far (ticked, 2026-11-12): 250.** The recount under the title has the full status split.
+**Initial task count:** 279 tasks across 14 delivery phases, covering all 32 ADRs. **Completed so far (ticked, 2026-11-12): 251.** The recount under the title has the full status split.
 
 **Related docs:** [ADR index](https://github.com/tochi-mba/selecta/tree/main/docs/adr) · [feature parity](https://github.com/tochi-mba/selecta/blob/main/docs/adr/feature-parity.md) · [test matrix](https://github.com/tochi-mba/selecta/blob/main/docs/adr/test-coverage-matrix.md) · [acceptance ledger](https://github.com/tochi-mba/selecta/blob/main/docs/acceptance.md)
 
@@ -453,5 +453,5 @@
 - [ ] T0275 - Resolve all critical data-integrity, audio continuity, bridge atomicity, accessibility, export and privacy blockers. **Needs a person:** the screen-reader, listening and installed-app gates must run first; none known in code (checked 2026-11-11).
 - [ ] T0276 - Run Windows CI plus browser/audio/a11y gates on release candidate commit. **Needs a person:** choose the release candidate commit and run the gates on it, with people for screen readers and listening (checked 2026-11-11).
 - [ ] T0277 - Record final human listening evidence and explicitly accepted remaining noncritical limitations. **Needs a person:** the owner's own listening evidence and sign-off on remaining noncritical limitations (checked 2026-11-10).
-- [ ] T0278 - Verify every checklist item has a linked implementing PR and evidence; do not infer completion from docs. **Implementation:** Implemented; the check runs (`src/selecta/audit/t_task_evidence.py`; `tests/test_t_task_evidence.py`, 4 passed 2026-11-12): every task has one ledger row naming PR #22, ticks and Done rows agree both ways, cited files exist. Open because 10 Done rows still cite prose only (T0019, T0027, T0040, T0049, T0064, T0134, T0173, T0240, T0259, T0260); each needs a file, test, PR or CI run added to its own row by that task's owner.
+- [x] T0278 - Verify every checklist item has a linked implementing PR and evidence; do not infer completion from docs. **Evidence (2026-11-12):** `src/selecta/audit/t_task_evidence.py` checks that every task has one ledger row in `docs/adr/implementation-evidence.md` naming PR #22, ticks and Done rows agree both ways, every cited file exists, and no Done row cites prose only (`PROSE_ONLY` is now empty: T0019, T0027, T0040, T0049, T0064, T0134, T0173, T0240, T0259 and T0260 each cite files, tests or CI runs). `tests/test_t_task_evidence.py` (4 passed, with `tests/test_adr_acceptance_audit.py`: 7 passed) and `python src/selecta/audit/checklist_evidence.py` passed 2026-11-12.
 - [ ] T0279 - Merge/close this tracking PR only after the programme's delivery is actually complete; keep it open otherwise. **Needs a person:** the owner merges or closes the tracking PR once delivery is complete (checked 2026-11-10).

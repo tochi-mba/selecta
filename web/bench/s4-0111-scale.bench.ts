@@ -1,6 +1,6 @@
 import { APIRequestContext, expect, Page, test } from '@playwright/test';
 import { rewriteJson } from '../e2e/helpers';
-import { browserLine, frameWindow, installProbe, interactionsSince, mark, timed } from '../e2e/perf-probe';
+import { browserLine, frameWindow, installProbe, interactionsSince, mark, navigationTimes, timed } from '../e2e/perf-probe';
 
 /**
  * S4-0111-05, -06 and -07: lab traces of a 20,000-song Library (search, filter, deep paging and a
@@ -46,12 +46,28 @@ async function go(page: Page, path: string) {
   }, path);
 }
 
+/** Where a slow result's time went: each API request after `from` (ms after `from`), its wait for the
+ * first byte (the server's work plus queueing) and the whole response, so a miss splits into waiting,
+ * server and rendering time. */
+async function apiSplit(page: Page, from: number) {
+  return page.evaluate((from) => (performance.getEntriesByType('resource') as PerformanceResourceTiming[])
+    .filter((entry) => entry.name.includes('/api/') && entry.startTime >= from)
+    .map((entry) => ({
+      url: entry.name.replace(location.origin, '').slice(0, 70),
+      start: Math.round(entry.startTime - from),
+      first_byte_ms: Math.round(entry.responseStart - entry.requestStart),
+      end: Math.round(entry.responseEnd - from),
+    })), from);
+}
+
 async function total(request: APIRequestContext, query: string) {
   return (await (await request.get(`/api/library?${query}&limit=1`)).json()).total as number;
 }
 
 test('S4-0111-05 a 20,000-song Library: search, filter, deep paging and a refresh at depth, with memory', async ({ page, request }) => {
   await installProbe(page);
+  // room for every request's timing, so the split below never runs out of entries
+  await page.addInitScript(() => performance.setResourceTimingBufferSize(10_000));
   const everything = await total(request, 'state=all');
   expect(everything, 'the synthetic library is not 20,000 songs').toBeGreaterThanOrEqual(20_000);
   const shown = page.locator('.library-count');
@@ -65,7 +81,9 @@ test('S4-0111-05 a 20,000-song Library: search, filter, deep paging and a refres
   await box.click();
   const typingFrom = await mark(page);
   await box.pressSequentially('golden', { delay: 120 });
+  const lastKey = await mark(page);
   const searchSettleMs = await timed(async () => undefined, () => expect(shown).toContainText(`of ${golden} songs`, { timeout: 30_000 }));
+  const searchApi = await apiSplit(page, lastKey);
   await expect(box).toBeFocused();
   const typing = await interactionsSince(page, typingFrom);
 
@@ -96,17 +114,20 @@ test('S4-0111-05 a 20,000-song Library: search, filter, deep paging and a refres
   await expect(shown).toContainText(`of ${golden} songs`, { timeout: 30_000 });
   const address = page.url();
   const refreshMs = await timed(() => page.reload(), () => expect(rows.first()).toBeVisible({ timeout: 60_000 }));
+  const refreshApi = await apiSplit(page, 0);
+  const refreshNav = await navigationTimes(page);
+  const refreshRowsAt = await mark(page);
   await expect(shown).toContainText(`of ${golden} songs`, { timeout: 30_000 });
   const afterRefresh = await memory(page);
 
   const reading = {
     songs: everything,
     memory: { opened, after_1000_rows: deep, after_refresh: afterRefresh },
-    search: { matches: golden, settle_ms: searchSettleMs, slowest_key_paint_ms: typing.nextPaintWorstMs, slowest_event_timing_ms: typing.eventTimingWorstMs, long_tasks_ms: typing.longTasks },
+    search: { matches: golden, settle_ms: searchSettleMs, api_after_last_key: searchApi, slowest_key_paint_ms: typing.nextPaintWorstMs, slowest_event_timing_ms: typing.eventTimingWorstMs, long_tasks_ms: typing.longTasks },
     filter: { matches: ready, ms: filterMs, slowest_paint_ms: filtering.nextPaintWorstMs, long_tasks_ms: filtering.longTasks },
     paging: { rows: 1000, slowest_key_paint_ms: paging.nextPaintWorstMs, slowest_event_timing_ms: paging.eventTimingWorstMs, long_tasks_ms: paging.longTasks },
     scroll: { frame_p95_ms: scrolling.frameP95, long_tasks_ms: scrolling.longTasks },
-    refresh: { address: address.replace(/^https?:\/\/[^/]+/, ''), first_rows_ms: refreshMs },
+    refresh: { address: address.replace(/^https?:\/\/[^/]+/, ''), first_rows_ms: refreshMs, rows_seen_at_ms: Math.round(refreshRowsAt), navigation: refreshNav, api: refreshApi },
   };
   console.log(`S4-0111 ${JSON.stringify({ test: 'S4-0111-05', machine: await browserLine(page), budget: BUDGET, reading })}`);
   expect.soft(searchSettleMs, 'search settled').toBeLessThanOrEqual(BUDGET.searchSettleMs);

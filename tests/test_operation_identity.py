@@ -55,18 +55,20 @@ def test_retries_waiting_on_a_failed_operation_rerun_it_only_once(tmp_path):
     async def scenario():
         transport = httpx.ASGITransport(app=app)
         headers = {"x-operation-id": "test-flaky-1"}
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
 
             def send():
                 return client.post("/api/test-flaky-operation", json={}, headers=headers)
 
             first = asyncio.create_task(send())
-            await started.wait()
+            await asyncio.wait_for(started.wait(), 10)
             retries = [asyncio.create_task(send()), asyncio.create_task(send())]
             for _ in range(50):  # let both retries reach the wait for the running try
                 await asyncio.sleep(0)
             release.set()
-            return await first, await asyncio.gather(*retries)
+            together = asyncio.gather(first, *retries)
+            first_answer, *retry_answers = await asyncio.wait_for(together, 20)
+            return first_answer, retry_answers
 
     first, retries = asyncio.run(scenario())
     assert first.status_code == 500

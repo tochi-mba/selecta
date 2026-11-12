@@ -34,8 +34,8 @@ class Rated:
     move: str
     asked: str
     good: bool
-    gap: float
-    keys: int
+    gap: float | None  # None when either song has no measured tempo
+    keys: int | None  # None when either song has no detected key
     bars: int
     seconds: float
     passed: bool
@@ -108,8 +108,13 @@ def read_rated(home: Path) -> list[Rated]:
                 move=state.get("style") or "?",
                 asked=request.get("move") or "?",
                 good=state["rating"] == "good",
-                gap=abs(a["bpm"] / b["bpm"] - 1.0),
-                keys=camelot_distance(a["camelot"], b["camelot"]),
+                # a song with no measured tempo (or 0) has no gap to report, rather than a crash
+                gap=abs(a["bpm"] / b["bpm"] - 1.0) if a["bpm"] and b["bpm"] else None,
+                keys=(
+                    camelot_distance(a["camelot"], b["camelot"])
+                    if a["camelot"] and b["camelot"]
+                    else None
+                ),
                 bars=int(state.get("bars") or 0),
                 seconds=float(state.get("duration") or 0.0),
                 passed=bool(state.get("passed")),
@@ -144,8 +149,14 @@ def patterns(rated: list[Rated]) -> dict[str, dict[str, tuple[int, int]]]:
     # This preserves older clients' key/row shapes without inventing observations.
     for category, buckets in {
         "move": (
-            "bass_swap_blend", "delay_throw", "echo_out", "phrase_roll",
-            "tempo_ramp", "vocal_ride", "word_blend", "word_cut",
+            "bass_swap_blend",
+            "delay_throw",
+            "echo_out",
+            "phrase_roll",
+            "tempo_ramp",
+            "vocal_ride",
+            "word_blend",
+            "word_cut",
         ),
         "key distance": ("5 or more", "under 5"),
         "beat grid": ("below 0.8", "0.8 or above"),
@@ -162,13 +173,15 @@ def patterns(rated: list[Rated]) -> dict[str, dict[str, tuple[int, int]]]:
 
     for item in rated:
         note("move", item.move, item)
-        note("key distance", "5 or more" if item.keys >= 5 else "under 5", item)
+        if item.keys is not None:
+            note("key distance", "5 or more" if item.keys >= 5 else "under 5", item)
         note("beat grid", "below 0.8" if item.grid < 0.8 else "0.8 or above", item)
         note("audit", "clean" if item.passed else "warned", item)
         if item.move in OVERLAPPING:
             note("overlap length", f"{item.bars} bars", item)
-            note("overlap tempo gap", _bucket_gap(item.gap), item)
-        if item.move == "phrase_roll":
+            if item.gap is not None:
+                note("overlap tempo gap", _bucket_gap(item.gap), item)
+        if item.move == "phrase_roll" and item.gap is not None:
             note("phrase roll tempo gap", "within 10%" if item.gap <= 0.1 else "over 10%", item)
     return {
         table: {row: (counts[0], counts[1]) for row, counts in sorted(rows.items())}

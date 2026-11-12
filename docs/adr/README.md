@@ -5,21 +5,21 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 <!-- checklist-summary:start (written by checklist_summary.py --write) -->
 | Programme | Tasks | Implemented | In progress | Not started | Needs a person | Superseded | Ticked | Independently Verified |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| [Selecta 2.0 (T)](implementation-checklist.md) | 279 | 253 | 0 | 1 | 24 | 1 | 250 | 0 |
+| [Selecta 2.0 (T)](implementation-checklist.md) | 279 | 253 | 0 | 1 | 24 | 1 | 251 | 0 |
 | [UI/UX polish (P)](polish-implementation-checklist.md) | 143 | 120 | 1 | 1 | 20 | 1 | 114 | 0 |
 | [Selecta 3.0 (S3)](selecta-3-implementation-checklist.md) | 258 | 229 | 0 | 0 | 29 | 0 | 222 | 0 |
 | [Selecta 3.1 (S31)](selecta-3-1-implementation-checklist.md) | 116 | 96 | 1 | 0 | 19 | 0 | 0 | 0 |
 | [Selecta 4.0 (S4)](selecta-4-implementation-checklist.md) | 250 | 221 | 24 | 5 | 0 | 0 | 0 | 0 |
-| [Experience-first (EX)](selecta-experience-implementation-checklist.md) | 105 | 100 | 2 | 0 | 0 | 3 | 51 | 51 |
+| [Experience-first (EX)](selecta-experience-implementation-checklist.md) | 105 | 102 | 0 | 0 | 0 | 3 | 51 | 51 |
 | [Microinteraction (MI)](selecta-microinteraction-implementation-checklist.md) | 240 | 213 | 27 | 0 | 0 | 0 | 213 | 0 |
 | [Creative interface (CI)](selecta-creative-interface-implementation-checklist.md) | 140 | 106 | 1 | 0 | 33 | 0 | 106 | 0 |
 | [Flow (SF)](selecta-flow-implementation-checklist.md) | 400 | 266 | 15 | 69 | 46 | 4 | 263 | 0 |
-| [Gap polish (GP)](selecta-gap-polish-implementation-checklist.md) | 128 | 111 | 0 | 17 | 0 | 0 | 111 | 0 |
+| [Gap polish (GP)](selecta-gap-polish-implementation-checklist.md) | 128 | 111 | 0 | 0 | 17 | 0 | 111 | 0 |
 | [Final polish (FP)](selecta-final-polish-implementation-checklist.md) | 64 | 53 | 11 | 0 | 0 | 0 | 0 | 0 |
 | [Measured micro-polish (MP)](selecta-measured-micro-polish-implementation-checklist.md) | 224 | 194 | 29 | 1 | 0 | 0 | 194 | 0 |
 | [Library + Lucy (LX)](selecta-library-lucy-experience-implementation-checklist.md) | 208 | 179 | 29 | 0 | 0 | 0 | 144 | 0 |
 | [Unified finish (UF)](selecta-unified-finish-implementation-checklist.md) | 192 | 192 | 0 | 0 | 0 | 0 | 108 | 0 |
-| [Selecta Cloud (SC)](selecta-cloud-implementation-checklist.md) | 136 | 93 | 37 | 6 | 0 | 0 | 91 | 0 |
+| [Selecta Cloud (SC)](selecta-cloud-implementation-checklist.md) | 136 | 93 | 38 | 5 | 0 | 0 | 91 | 0 |
 <!-- checklist-summary:end -->
 
 ---
