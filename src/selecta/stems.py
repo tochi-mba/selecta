@@ -69,6 +69,29 @@ def band_of(stems: StemWindow) -> Path:
     return path
 
 
+def _file_stats(folder: Path) -> tuple[list[os.stat_result], os.stat_result | None]:
+    """Every file under `folder` (not following linked folders, as rglob doesn't), and its own
+    window.json, if there is one."""
+    top = os.fspath(folder)
+    stats: list[os.stat_result] = []
+    marker = None
+    pending = [top]
+    while pending:
+        place = pending.pop()
+        with os.scandir(place) as entries:
+            for entry in entries:
+                own_marker = place == top and entry.name == "window.json"
+                if entry.is_file():
+                    stats.append(os.stat(entry.path))
+                    if own_marker:
+                        marker = stats[-1]
+                elif entry.is_dir(follow_symlinks=False):
+                    pending.append(entry.path)
+                    if own_marker:
+                        marker = os.stat(entry.path)
+    return stats, marker
+
+
 def _window_dirs(root: Path) -> list[tuple[Path, int, float]]:
     """Each cached folder with its size and when it was last used.
 
@@ -77,17 +100,18 @@ def _window_dirs(root: Path) -> list[tuple[Path, int, float]]:
     pruning at the same moment, so a folder that vanishes mid-look is simply left out.
     """
     found = []
-    for folder in root.iterdir():
+    with os.scandir(root) as entries:
+        folders = [Path(entry.path) for entry in entries if entry.is_dir()]
+    for folder in folders:
         try:
-            if not folder.is_dir():
-                continue
-            stats = [p.stat() for p in folder.rglob("*") if p.is_file()]
+            # r11: one walk with scandir, whose entries already know what's a file, and one stat
+            # per file (for its links); rglob asked the disk twice per file
+            stats, marker = _file_stats(folder)
             if not stats:
                 continue
             size = sum(stat.st_size // max(stat.st_nlink, 1) for stat in stats)
-            marker = folder / "window.json"
-            if marker.exists():
-                touched = marker.stat().st_mtime
+            if marker is not None:
+                touched = marker.st_mtime
             else:
                 # last read (see `mark_used`) or last written, whichever is later
                 touched = max(max(stat.st_atime, stat.st_mtime) for stat in stats)

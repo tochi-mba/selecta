@@ -85,6 +85,7 @@ from selecta.seam_making import (
     tighten_beats,
     windows_for,
 )
+from selecta.seam_records import read_seam_record
 from selecta.stems import prune_cache, seconds_separating, window_is_ready
 from selecta.studio import LANES, SIDES, windows_to_separate
 
@@ -339,15 +340,13 @@ class SeamStore:
         return lambda key: self.status(key) if key in known else {"status": "none", "key": key}
 
     def _last_known(self, key: str) -> dict:
-        meta = self.folder(key) / "seam.json"
-        if meta.exists():
-            try:
-                state = json.loads(meta.read_text("utf-8"))
-                if _swapped_by_old_fallback(state):
-                    return {"status": "none", "key": key}
-                return state
-            except (OSError, ValueError):
-                pass  # mid-write: what we last knew will do for this moment
+        # r11: parsed again only once the file changes; missing or mid-write reads as None, and
+        # then what we last knew will do for this moment
+        state = read_seam_record(self.folder(key) / "seam.json")
+        if state is not None:
+            if _swapped_by_old_fallback(state):
+                return {"status": "none", "key": key}
+            return state
         with self._lock:
             state = self._states.get(key)
         if state is None:
@@ -507,9 +506,8 @@ class SeamStore:
             with self._memory_refresh_lock:
                 thread = self._memory_refresh
                 if (
-                    (thread is None or not thread.is_alive())
-                    and now - self._memory_refresh_started >= STATUS_MEMORY_SECONDS
-                ):
+                    thread is None or not thread.is_alive()
+                ) and now - self._memory_refresh_started >= STATUS_MEMORY_SECONDS:
                     self._memory_refresh_started = now
                     thread = threading.Thread(
                         target=self._refresh_memory, name="selecta-transition-memory", daemon=True
@@ -533,7 +531,9 @@ class SeamStore:
         snapshot = self._remembered
         now = time.monotonic()
         if (
-            not fresh and snapshot and now - snapshot[0] < MEMORY_SECONDS
+            not fresh
+            and snapshot
+            and now - snapshot[0] < MEMORY_SECONDS
             and self._history_stamp == self._current_history_stamp()
         ):
             return snapshot[1]
@@ -541,7 +541,9 @@ class SeamStore:
             snapshot = self._remembered
             now = time.monotonic()
             if (
-                not fresh and snapshot and now - snapshot[0] < MEMORY_SECONDS
+                not fresh
+                and snapshot
+                and now - snapshot[0] < MEMORY_SECONDS
                 and self._history_stamp == self._current_history_stamp()
             ):
                 return snapshot[1]

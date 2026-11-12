@@ -210,6 +210,11 @@ def add_routes(app, ctx) -> None:
         }
 
     def drafts_payload(conn: sqlite3.Connection) -> dict:
+        # r11: thousands of seam estimates, and one look at the job times file for all of them
+        with store.clock.held():
+            return _drafts_payload(conn)
+
+    def _drafts_payload(conn: sqlite3.Connection) -> dict:
         # One query for the drafts (without their revisions), one for all of their songs, and one
         # look at the seams on disk, rather than several queries and a disk read per seam per draft.
         rows = {row["id"]: row for row in mix.all_drafts(conn)}

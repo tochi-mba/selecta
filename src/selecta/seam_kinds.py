@@ -6,7 +6,7 @@ import hashlib
 import json
 from collections import Counter
 from collections.abc import Iterable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 
 from selecta import flags
 from selecta.audit.checks import AuditReport, Check
@@ -92,6 +92,7 @@ def moves_on() -> dict[str, tuple[str, str]]:
     """The moves this build can make, with their names and descriptions."""
     return {name: words for name, words in MOVES.items() if move_on(name)}
 
+
 NOT_IN_THE_CHOOSER = {"stem_studio"}
 
 SESSION_MOVES = {"stem_studio", "stem_arrange", STUDIO_SESSION}
@@ -115,6 +116,28 @@ class SeamRequest:
 
     @property
     def key(self) -> str:
+        # r11: the request is frozen, so its key never changes. It is kept on the instance
+        # (outside the fields, so equality, hashing and asdict() don't see it), and requests
+        # rebuilt with the same fields share one worked out before. The text is unchanged.
+        cached = self.__dict__.get("_key")
+        if cached is None:
+            # each value with its type, and floats by their text, so 1 and 1.0, True and 1,
+            # or 0.0 and -0.0 (which json writes differently) never share a key
+            values = tuple(map(self.__dict__.__getitem__, _REQUEST_FIELDS))
+            same = (
+                tuple(map(type, values)),
+                tuple(repr(value) if type(value) is float else value for value in values),
+            )
+            cached = _KEYS.get(same)
+            if cached is None:
+                cached = self._compute_key()
+                if len(_KEYS) >= _KEYS_KEPT:
+                    _KEYS.clear()
+                _KEYS[same] = cached
+            object.__setattr__(self, "_key", cached)
+        return cached
+
+    def _compute_key(self) -> str:
         fields = asdict(self)
         # seams from before these existed keep their keys, and their audio
         for name in ("shape", "leave_after"):
@@ -122,6 +145,13 @@ class SeamRequest:
                 del fields[name]
         text = json.dumps([fields, ANALYSIS_VERSION, RENDER_VERSION], sort_keys=True)
         return hashlib.sha256(text.encode()).hexdigest()[:20]
+
+
+_REQUEST_FIELDS = tuple(field.name for field in fields(SeamRequest))
+# r11: keys already worked out, by their request's fields. A library's seams number in the
+# thousands; past this many the memo starts again rather than grow without end.
+_KEYS: dict[tuple, str] = {}
+_KEYS_KEPT = 50_000
 
 
 class CannotRender(ValueError):
