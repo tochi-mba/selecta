@@ -1,0 +1,26 @@
+- dialog "More":
+  - banner:
+    - heading "More" [level=2]
+    - button "Close More"
+  - navigation "Workspace":
+    - paragraph: Workspace
+    - paragraph: Analysis, folders, storage, learning and diagnostics.
+    - list:
+      - listitem:
+        - link "Overview":
+          - /url: /workshop
+      - listitem:
+        - link "Analysis":
+          - /url: /workshop/analysis
+      - listitem:
+        - link "Sources":
+          - /url: /workshop/sources
+      - listitem:
+        - link "Storage":
+          - /url: /workshop/storage
+      - listitem:
+        - link "Learning":
+          - /url: /workshop/learning
+      - listitem:
+        - link "Diagnostics":
+          - /url: /workshop/diagnostics

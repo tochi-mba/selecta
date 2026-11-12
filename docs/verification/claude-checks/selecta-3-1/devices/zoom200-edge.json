@@ -1,0 +1,370 @@
+{
+ "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
+ "light-listen": {
+  "vw": 640,
+  "vh": 400,
+  "scrollWidth": 625,
+  "nav": {
+   "top": 342,
+   "bottom": 400,
+   "left": 0,
+   "right": 625,
+   "h": 58
+  },
+  "mini": null,
+  "main": {
+   "top": 53,
+   "bottom": 1472,
+   "left": 0,
+   "right": 625,
+   "h": 1419
+  },
+  "mainPadBottom": "120px",
+  "fixedBottoms": [
+   "nav.nav top=342"
+  ],
+  "touchSmall": [],
+  "touchSmallCount": 0,
+  "safeArea": "0px"
+ },
+ "light-explore": {
+  "vw": 640,
+  "vh": 400,
+  "scrollWidth": 625,
+  "nav": {
+   "top": 342,
+   "bottom": 400,
+   "left": 0,
+   "right": 625,
+   "h": 58
+  },
+  "mini": null,
+  "main": {
+   "top": 53,
+   "bottom": 6113,
+   "left": 0,
+   "right": 625,
+   "h": 6060
+  },
+  "mainPadBottom": "120px",
+  "fixedBottoms": [
+   "nav.nav top=342"
+  ],
+  "touchSmall": [],
+  "touchSmallCount": 0,
+  "safeArea": "0px"
+ },
+ "light-editor": {
+  "vw": 640,
+  "vh": 400,
+  "scrollWidth": 625,
+  "nav": {
+   "top": 342,
+   "bottom": 400,
+   "left": 0,
+   "right": 625,
+   "h": 58
+  },
+  "mini": null,
+  "main": {
+   "top": 53,
+   "bottom": 3111,
+   "left": 0,
+   "right": 625,
+   "h": 3058
+  },
+  "mainPadBottom": "120px",
+  "fixedBottoms": [
+   "nav.nav top=342"
+  ],
+  "touchSmall": [],
+  "touchSmallCount": 0,
+  "safeArea": "0px"
+ },
+ "light-library": {
+  "vw": 640,
+  "vh": 400,
+  "scrollWidth": 625,
+  "nav": {
+   "top": 342,
+   "bottom": 400,
+   "left": 0,
+   "right": 625,
+   "h": 58
+  },
+  "mini": null,
+  "main": {
+   "top": 53,
+   "bottom": 4099,
+   "left": 0,
+   "right": 625,
+   "h": 4046
+  },
+  "mainPadBottom": "120px",
+  "fixedBottoms": [
+   "nav.nav top=342"
+  ],
+  "touchSmall": [],
+  "touchSmallCount": 0,
+  "safeArea": "0px"
+ },
+ "light-sources": {
+  "vw": 640,
+  "vh": 400,
+  "scrollWidth": 625,
+  "nav": {
+   "top": 342,
+   "bottom": 400,
+   "left": 0,
+   "right": 625,
+   "h": 58
+  },
+  "mini": null,
+  "main": {
+   "top": 53,
+   "bottom": 946,
+   "left": 0,
+   "right": 625,
+   "h": 893
+  },
+  "mainPadBottom": "120px",
+  "fixedBottoms": [
+   "nav.nav top=342"
+  ],
+  "touchSmall": [],
+  "touchSmallCount": 0,
+  "safeArea": "0px"
+ },
+ "light-harmonic": {
+  "vw": 640,
+  "vh": 400,
+  "scrollWidth": 625,
+  "nav": {
+   "top": 342,
+   "bottom": 400,
+   "left": 0,
+   "right": 625,
+   "h": 58
+  },
+  "mini": null,
+  "main": {
+   "top": 53,
+   "bottom": 398,
+   "left": 0,
+   "right": 625,
+   "h": 345
+  },
+  "mainPadBottom": "120px",
+  "fixedBottoms": [
+   "nav.nav top=342"
+  ],
+  "touchSmall": [],
+  "touchSmallCount": 0,
+  "safeArea": "0px"
+ },
+ "dark-listen": {
+  "vw": 640,
+  "vh": 400,
+  "scrollWidth": 625,
+  "nav": {
+   "top": 342,
+   "bottom": 400,
+   "left": 0,
+   "right": 625,
+   "h": 58
+  },
+  "mini": null,
+  "main": {
+   "top": 53,
+   "bottom": 1472,
+   "left": 0,
+   "right": 625,
+   "h": 1419
+  },
+  "mainPadBottom": "120px",
+  "fixedBottoms": [
+   "nav.nav top=342"
+  ],
+  "touchSmall": [],
+  "touchSmallCount": 0,
+  "safeArea": "0px"
+ },
+ "dark-explore": {
+  "vw": 640,
+  "vh": 400,
+  "scrollWidth": 625,
+  "nav": {
+   "top": 342,
+   "bottom": 400,
+   "left": 0,
+   "right": 625,
+   "h": 58
+  },
+  "mini": null,
+  "main": {
+   "top": 53,
+   "bottom": 6113,
+   "left": 0,
+   "right": 625,
+   "h": 6060
+  },
+  "mainPadBottom": "120px",
+  "fixedBottoms": [
+   "nav.nav top=342"
+  ],
+  "touchSmall": [],
+  "touchSmallCount": 0,
+  "safeArea": "0px"
+ },
+ "dark-editor": {
+  "vw": 640,
+  "vh": 400,
+  "scrollWidth": 625,
+  "nav": {
+   "top": 342,
+   "bottom": 400,
+   "left": 0,
+   "right": 625,
+   "h": 58
+  },
+  "mini": null,
+  "main": {
+   "top": 53,
+   "bottom": 3111,
+   "left": 0,
+   "right": 625,
+   "h": 3058
+  },
+  "mainPadBottom": "120px",
+  "fixedBottoms": [
+   "nav.nav top=342"
+  ],
+  "touchSmall": [],
+  "touchSmallCount": 0,
+  "safeArea": "0px"
+ },
+ "dark-library": {
+  "vw": 640,
+  "vh": 400,
+  "scrollWidth": 625,
+  "nav": {
+   "top": 342,
+   "bottom": 400,
+   "left": 0,
+   "right": 625,
+   "h": 58
+  },
+  "mini": null,
+  "main": {
+   "top": 53,
+   "bottom": 4099,
+   "left": 0,
+   "right": 625,
+   "h": 4046
+  },
+  "mainPadBottom": "120px",
+  "fixedBottoms": [
+   "nav.nav top=342"
+  ],
+  "touchSmall": [],
+  "touchSmallCount": 0,
+  "safeArea": "0px"
+ },
+ "dark-sources": {
+  "vw": 640,
+  "vh": 400,
+  "scrollWidth": 625,
+  "nav": {
+   "top": 342,
+   "bottom": 400,
+   "left": 0,
+   "right": 625,
+   "h": 58
+  },
+  "mini": null,
+  "main": {
+   "top": 53,
+   "bottom": 946,
+   "left": 0,
+   "right": 625,
+   "h": 893
+  },
+  "mainPadBottom": "120px",
+  "fixedBottoms": [
+   "nav.nav top=342"
+  ],
+  "touchSmall": [],
+  "touchSmallCount": 0,
+  "safeArea": "0px"
+ },
+ "dark-harmonic": {
+  "vw": 640,
+  "vh": 400,
+  "scrollWidth": 625,
+  "nav": {
+   "top": 342,
+   "bottom": 400,
+   "left": 0,
+   "right": 625,
+   "h": 58
+  },
+  "mini": null,
+  "main": {
+   "top": 53,
+   "bottom": 398,
+   "left": 0,
+   "right": 625,
+   "h": 345
+  },
+  "mainPadBottom": "120px",
+  "fixedBottoms": [
+   "nav.nav top=342"
+  ],
+  "touchSmall": [],
+  "touchSmallCount": 0,
+  "safeArea": "0px"
+ },
+ "requestsTouch": {
+  "opened": true,
+  "searchVisible": false,
+  "closed": true
+ },
+ "reorder": {
+  "buttons": 16,
+  "firstBox": {
+   "x": 500.8125,
+   "y": 689.5625,
+   "width": 44,
+   "height": 44
+  },
+  "pressed": "Move An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix) down",
+  "after": "Move Untitled down"
+ },
+ "playingLibrary": {
+  "vw": 640,
+  "vh": 400,
+  "scrollWidth": 625,
+  "nav": {
+   "top": 342,
+   "bottom": 400,
+   "left": 0,
+   "right": 625,
+   "h": 58
+  },
+  "mini": null,
+  "main": {
+   "top": 53,
+   "bottom": 4099,
+   "left": 0,
+   "right": 625,
+   "h": 4046
+  },
+  "mainPadBottom": "120px",
+  "fixedBottoms": [
+   "nav.nav top=342"
+  ],
+  "touchSmall": [],
+  "touchSmallCount": 0,
+  "safeArea": "0px"
+ }
+}

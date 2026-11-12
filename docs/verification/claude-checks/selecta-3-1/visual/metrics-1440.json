@@ -1,0 +1,512 @@
+{
+ "1440-light-start": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-light-explore": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-light-my-mixes": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-light-listen": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [
+   "summary \"Why this transition?\" 380x23"
+  ],
+  "smallCount": 1,
+  "axe": []
+ },
+ "1440-light-editor": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13"
+  ],
+  "smallCount": 3,
+  "axe": []
+ },
+ "1440-light-library": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-light-discover-words": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-light-discover-harmonic": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-light-workspace": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13"
+  ],
+  "smallCount": 10,
+  "axe": []
+ },
+ "1440-light-sources": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-light-diagnostics": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [
+   "input \"\" 13x13"
+  ],
+  "smallCount": 1,
+  "axe": []
+ },
+ "1440-light-listening-study": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-light-listen-playing": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [
+   "summary \"Why this transition?\" 380x23"
+  ],
+  "smallCount": 1,
+  "axe": []
+ },
+ "1440-light-stage": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-light-export-dialog": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-light-shape-dialog": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-light-requests-drawer": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-light-palette": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": [
+   {
+    "id": "label-content-name-mismatch",
+    "impact": "serious",
+    "count": 14,
+    "targets": [
+     "#_r_k_-option-0",
+     "#_r_k_-option-1",
+     "#_r_k_-option-2"
+    ],
+    "why": "Fix any of the following:\n  Text inside the element is not included in the accessible name"
+   }
+  ]
+ },
+ "1440-light-inspector": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13"
+  ],
+  "smallCount": 3,
+  "axe": []
+ },
+ "1440-light-library-empty": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-light-library-loading": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-light-library-failed": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-light-library-recovered": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-light-gallery": {
+  "theme": "light",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [
+   "input \"\" 13x13"
+  ],
+  "smallCount": 1,
+  "axe": []
+ },
+ "1440-dark-start": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-dark-explore": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-dark-my-mixes": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-dark-listen": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [
+   "summary \"Why this transition?\" 380x23"
+  ],
+  "smallCount": 1,
+  "axe": []
+ },
+ "1440-dark-editor": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13"
+  ],
+  "smallCount": 3,
+  "axe": []
+ },
+ "1440-dark-library": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-dark-discover-words": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-dark-discover-harmonic": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-dark-workspace": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13"
+  ],
+  "smallCount": 10,
+  "axe": []
+ },
+ "1440-dark-sources": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-dark-diagnostics": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [
+   "input \"\" 13x13"
+  ],
+  "smallCount": 1,
+  "axe": []
+ },
+ "1440-dark-listening-study": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-dark-listen-playing": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [
+   "summary \"Why this transition?\" 380x23"
+  ],
+  "smallCount": 1,
+  "axe": []
+ },
+ "1440-dark-stage": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-dark-export-dialog": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-dark-shape-dialog": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-dark-requests-drawer": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-dark-palette": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": [
+   {
+    "id": "label-content-name-mismatch",
+    "impact": "serious",
+    "count": 14,
+    "targets": [
+     "#_r_k_-option-0",
+     "#_r_k_-option-1",
+     "#_r_k_-option-2"
+    ],
+    "why": "Fix any of the following:\n  Text inside the element is not included in the accessible name"
+   }
+  ]
+ },
+ "1440-dark-inspector": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [
+   "input \"\" 13x13",
+   "input \"\" 13x13",
+   "input \"\" 13x13"
+  ],
+  "smallCount": 3,
+  "axe": []
+ },
+ "1440-dark-library-empty": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-dark-library-loading": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-dark-library-failed": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-dark-library-recovered": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [],
+  "smallCount": 0,
+  "axe": []
+ },
+ "1440-dark-gallery": {
+  "theme": "dark",
+  "scrollWidth": 1425,
+  "room": 1440,
+  "sticking": [],
+  "smallTargets": [
+   "input \"\" 13x13"
+  ],
+  "smallCount": 1,
+  "axe": []
+ }
+}

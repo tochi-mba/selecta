@@ -1,0 +1,50 @@
+- dialog "Same Name":
+  - banner:
+    - heading "Same Name" [level=2]
+    - button "Close Same Name"
+  - paragraph: Iris Vale
+  - paragraph: Recording ID 11
+  - paragraph: Ready for mixes
+  - term: Play
+  - definition: The file is here and can play
+  - term: Mixes
+  - definition: Ready for mixes
+  - term: Stems
+  - definition: Split when a transition needs them
+  - term: Lyrics
+  - definition: Instrumental, so none are needed
+  - term: Length
+  - definition: 1:27
+  - term: Tempo in use
+  - definition: 124 BPM
+  - term: Tempo measured
+  - definition: 124 BPM
+  - term: Key in use
+  - definition: 8A
+  - term: Key measured
+  - definition: 8A
+  - term: Lyrics
+  - definition: Instrumental
+  - region "Connected songs":
+    - heading "Connected songs" [level=3]
+    - paragraph: Connections show once this song’s lyrics are timed. None are known yet.
+  - heading "Correct it" [level=3]
+  - paragraph: If Selecta got something wrong. What it measured is kept, so this can be put back, and analysing the song again won’t lose it. Transitions with this song may be made again, using what you enter here.
+  - text: Tempo (measured 124)
+  - spinbutton "Tempo (measured 124)"
+  - paragraph: Between 40 and 240 BPM
+  - button "Double measured tempo to 248 BPM": Double measured
+  - button "Half measured - set tempo to 62 BPM": Half measured
+  - text: Key (measured 8A)
+  - textbox "Key (measured 8A)":
+    - /placeholder: 8A
+  - paragraph: Like 8A or 11B
+  - button "Save correction" [disabled]
+  - heading "How Selecta treats it" [level=3]
+  - paragraph: None of these move or delete your file. They only change what Selecta does with this song.
+  - button "Prioritize"
+  - button "Never play"
+  - heading "Is it music?" [level=3]
+  - paragraph: Something set aside never gets analysed or mixed. Your file isn’t touched either way.
+  - button "This isn’t music"
+  - group: Advanced
