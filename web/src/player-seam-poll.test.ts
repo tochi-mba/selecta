@@ -25,6 +25,8 @@ class FakeAudio {
 
 let clock = 0;
 let ready = new Set<string>();
+let failed = new Set<string>();
+const posts: string[] = [];
 const reads: { key: string; at: number }[] = [];
 const tick = (player: SetPlayer) => (player as unknown as { tick(): void }).tick();
 const flush = () => new Promise((done) => setTimeout(done, 0));
@@ -41,14 +43,18 @@ let player: SetPlayer;
 beforeEach(() => {
   clock = 0;
   ready = new Set();
+  failed = new Set();
+  posts.length = 0;
   reads.length = 0;
   vi.stubGlobal('AudioContext', FakeAudio);
   vi.spyOn(performance, 'now').mockImplementation(() => clock);
-  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    if (init?.method === 'POST') posts.push(url);
     const read = /^\/api\/seams\/([^/]+)$/.exec(url);
     if (read) {
       reads.push({ key: read[1], at: clock });
       const done = ready.has(read[1]);
+      if (failed.has(read[1])) return new Response(JSON.stringify({ status: 'failed', key: read[1] }));
       return new Response(JSON.stringify(done
         ? { status: 'ready', key: read[1], a_source_start: 80, b_source_end: 20, switch_at: 10 }
         : { status: 'rendering', key: read[1] }));
@@ -106,5 +112,18 @@ describe('MI-0162-05: the imminent unrendered seam is read with a backoff', () =
     await run(player, 1.2);
     expect(reads.at(-1)).toMatchObject({ key: 'k' });
     expect(player.state.nextReady).toBe(true);
+  });
+
+  it('acts on a read that says the seam failed, without waiting for the mix to be read again', async () => {
+    const mix = songs(seam('rendering', 'k'));
+    player = new SetPlayer(() => mix, () => {});
+    await player.playFrom(0);
+    await run(player, 2);
+    failed.add('k');
+    const before = reads.length;
+    await run(player, 12);
+    // the chosen move can't work, so Selecta asks for its own pick, and stops reading a failed seam
+    expect(posts.some((url) => url.endsWith('/mix/1/seam'))).toBe(true);
+    expect(reads.length - before).toBeLessThanOrEqual(2);
   });
 });

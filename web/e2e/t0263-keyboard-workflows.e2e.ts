@@ -117,7 +117,7 @@ test('T0263 Library: search with /, open a song’s menu and add it to the mix, 
   await expect.poll(() => order(page)).toContain('Last Call');
 });
 
-test('T0263 export: open the save dialog from Edit, reach Save, and close back to the button', async ({ page }) => {
+test('T0263 export: open the save dialog from Edit, save the file, download it and close back to the button', async ({ page }) => {
   await page.goto('/mix/current/edit');
   const download = page.getByRole('button', { name: 'Download audio' });
   await tabTo(page, download);
@@ -129,8 +129,17 @@ test('T0263 export: open the save dialog from Edit, reach Save, and close back t
     await page.keyboard.press('Tab');
     expect(await dialog.evaluate((node) => node.contains(document.activeElement))).toBe(true);
   }
+  // the server is fresh for this run, so nothing of this mix is saved yet and Save it is offered
   const save = dialog.getByRole('button', { name: 'Save it', exact: true });
-  if (await save.count()) await tabTo(page, save, 20);
+  await expect(save).toBeEnabled();
+  await tabTo(page, save, 20);
+  await page.keyboard.press('Enter');
+  const file = dialog.locator('a[href^="/api/exports/"]');
+  await expect(file).toBeVisible({ timeout: 170_000 });
+  await tabTo(page, file, 20);
+  const saved = page.waitForEvent('download');
+  await page.keyboard.press('Enter');
+  expect((await saved).suggestedFilename()).toMatch(/\.flac$/);
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
   await expect(download).toBeFocused();
@@ -157,8 +166,18 @@ test('T0263 study: open a study, grade a version and answer, by keyboard to the 
   // a radio group takes its choice with the arrows
   for (let step = 0; step < 6 && !(await grade.isChecked()); step += 1) await page.keyboard.press('ArrowRight');
   await expect(grade).toBeChecked();
-  await tabTo(page, study.getByRole('button', { name: 'Cannot judge' }));
+  // a preference needs both versions heard: each player is reached with Tab and played with Space
+  const now = study.locator('.study-now');
+  for (const version of ['A', 'B']) {
+    await tabTo(page, study.getByLabel(`Version ${version}`, { exact: true }));
+    await page.keyboard.press('Space');
+    await expect(now).toHaveText(`Now playing: Version ${version}`);
+  }
+  const prefer = study.getByRole('button', { name: 'Prefer A' });
+  await expect(prefer).toBeEnabled({ timeout: 30_000 });
+  await tabTo(page, prefer);
   await page.keyboard.press('Enter');
   await expect(study.getByText('All responses saved. Thank you for listening.')).toBeVisible();
   expect(posted).toHaveLength(1);
+  expect(posted[0]).toMatchObject({ choice: 'a', quality: { a: { grade: 4 } } });
 });
