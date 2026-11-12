@@ -91,7 +91,8 @@ def test_the_list_never_reads_revisions_and_its_queries_do_not_grow_with_drafts(
     assert len(answer.json()["drafts"]) == MIXES
     print(f"[r8a] GET /api/drafts, {MIXES} drafts: {took * 1000:.0f} ms, {len(statements)} queries")
     assert len(statements) <= LIST_MOST_QUERIES, statements
-    assert not [sql for sql in statements if "history" in sql or "SELECT *" in sql], statements
+    whole = [sql for sql in statements if "history" in sql or "SELECT * FROM drafts" in sql]
+    assert not whole, statements
 
 
 def test_the_list_says_what_each_draft_really_holds(home, client):

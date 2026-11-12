@@ -197,8 +197,17 @@ button[aria-disabled='true'] { cursor: progress; }
 .skeleton-vibe .skeleton-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-1); }
 .skeleton-vibe .skeleton-action { width: 100%; height: var(--control-height); margin-top: 0; }
 .skeleton-vibe .skeleton-action-quiet { grid-column: 1 / -1; width: 96px; height: var(--control-height); background: none; }
+/* two columns are narrower than three, so the real cards' words wrap more and they stand taller */
+@media (min-width: 621px) and (max-width: 1040px) {
+  .skeleton-vibes .skeleton-vibe { min-height: 536px; }
+  /* at this width the real Play and Shape first labels wrap to two lines, so the buttons are taller */
+  .skeleton-vibe .skeleton-action { height: 66px; }
+}
 /* the Quick Play pick's facts line, held at one line of its text until the facts arrive */
-.skeleton-facts i { display: block; width: min(320px, 80%); height: 1lh; border-radius: var(--radius-mark); background: var(--surface-control); }
+.skeleton-facts i { display: block; max-width: 100%; height: 1lh; border-radius: var(--radius-mark); background: var(--surface-control); }
+/* the song count, then the length of source audio: two pieces that wrap where the real pair wraps */
+.skeleton-facts i:first-child { width: 8em; }
+.skeleton-facts i:last-child { width: 17em; }
 /* the filter names stand in the filters' place, dimmed, until there's something to filter */
 .vibe-filters-pending button:disabled { opacity: 0.6; }
 /* P0034: Listen. The waveform's place is one flat block at .strip's own height and margins (style.css),
@@ -207,6 +216,8 @@ button[aria-disabled='true'] { cursor: progress; }
 .skeleton-strip { height: 92px; margin: var(--space-2) 0 var(--space-5); border-radius: var(--radius-sm); background: var(--surface-control); }
 .skeleton-strip[data-revealed='false'] { visibility: hidden; }
 .now .skeleton-listen { padding-block: 0; margin: var(--space-2) 0 var(--space-5); min-height: 7.5em; }
+/* the desktop words keep an 18rem floor (listening.css), so their placeholder does too */
+.now:not(.stage) .skeleton-listen { min-height: 18rem; }
 .skeleton-listen .skeleton-lyrics { min-height: 0; gap: var(--space-dense); }
 .skeleton-lyrics .skeleton-meta { width: min(320px, 70%); margin-bottom: var(--space-2); }
 .skeleton-lyrics .skeleton-detail { width: 54%; height: 18px; }

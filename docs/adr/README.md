@@ -6,8 +6,8 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 | Programme | Tasks | Implemented | In progress | Not started | Needs a person | Superseded | Ticked | Independently Verified |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | [Selecta 2.0 (T)](implementation-checklist.md) | 279 | 253 | 0 | 1 | 24 | 1 | 250 | 0 |
-| [UI/UX polish (P)](polish-implementation-checklist.md) | 143 | 117 | 1 | 4 | 20 | 1 | 110 | 0 |
-| [Selecta 3.0 (S3)](selecta-3-implementation-checklist.md) | 258 | 227 | 2 | 0 | 29 | 0 | 221 | 0 |
+| [UI/UX polish (P)](polish-implementation-checklist.md) | 143 | 120 | 1 | 1 | 20 | 1 | 114 | 0 |
+| [Selecta 3.0 (S3)](selecta-3-implementation-checklist.md) | 258 | 229 | 0 | 0 | 29 | 0 | 222 | 0 |
 | [Selecta 3.1 (S31)](selecta-3-1-implementation-checklist.md) | 116 | 96 | 1 | 0 | 19 | 0 | 0 | 0 |
 | [Selecta 4.0 (S4)](selecta-4-implementation-checklist.md) | 250 | 206 | 34 | 10 | 0 | 0 | 0 | 0 |
 | [Experience-first (EX)](selecta-experience-implementation-checklist.md) | 105 | 100 | 2 | 0 | 0 | 3 | 51 | 51 |

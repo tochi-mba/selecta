@@ -12,11 +12,9 @@ import threading
 import time
 from pathlib import Path
 
-import numpy as np
-from fastapi import HTTPException, Response
+from fastapi import HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
-from selecta import audio as audio_io
 from selecta import db, flags
 from selecta.api_common import (
     CAMELOT,
@@ -28,7 +26,6 @@ from selecta.api_common import (
     ScanRequest,
     SongCorrection,
     _counts,
-    _wav,
 )
 from selecta.config import ANALYSIS_VERSION
 from selecta.eta import analysis_line_left
@@ -568,7 +565,7 @@ def add_routes(app, ctx) -> None:
         with connect() as conn:
             song = analysed_or_404(conn, song_id)
             lyric = conn.execute("SELECT status FROM lyrics WHERE song_id=?", (song_id,)).fetchone()
-        peaks = load_features(settings, song_id)["peaks"].astype(float)
+        peaks = load_features(settings, song_id, ("peaks",))["peaks"].astype(float)
         bars = song.bar_times
         return {
             "id": song.id,
@@ -604,12 +601,37 @@ def add_routes(app, ctx) -> None:
         }
 
     @app.get("/api/songs/{song_id}/audio")
-    def song_audio(song_id: int) -> Response:
-        """The whole song, from the one decode path, at the level it plays at in a mix."""
+    def song_audio(song_id: int, request: Request) -> Response:
+        """The whole song, from the one decode path, at the level it plays at in a mix. Tagged by
+        its source file (r10), so a browser holding it gets a 304, and decoded once into the
+        render cache, so a repeat or a Range request is a file read (see `song_audio`)."""
+        from selecta import song_audio as cache
+        from selecta.routes.files import REVALIDATE, _matches, audio_file
+        from selecta.stems import mark_used
+
         with connect() as conn:
             song = analysed_or_404(conn, song_id)
-        audio = audio_io.decode(song.path) * float(10.0 ** (song.gain_db / 20.0))
-        return Response(_wav(np.clip(audio, -1.0, 1.0)), media_type="audio/wav")
+        try:
+            key = cache.song_key(song_id, song.path, song.gain_db)
+        except OSError as problem:
+            raise HTTPException(404, "That song's file can't be found.") from problem
+        etag = cache.etag_for(key)
+        if _matches(request.headers.get("if-none-match"), etag):
+            return Response(status_code=304, headers={"ETag": etag, "Cache-Control": REVALIDATE})
+        cached, data = cache.cached_file(settings, song_id, song.path, song.gain_db, key)
+        if cached is not None and (data is None or request.headers.get("range")):
+            try:
+                response = audio_file(request, cached, "audio/wav", etag=etag)
+                mark_used(cached)  # heard just now, so the cache keeps it over ones nobody plays
+                return response
+            except OSError:
+                pass  # pruned by another process a moment ago: decode it here instead
+        if data is None:
+            data = cache.wav_bytes(song.path, song.gain_db)
+        headers = {"ETag": etag, "Cache-Control": REVALIDATE}
+        if cached is not None:
+            headers["Accept-Ranges"] = "bytes"
+        return Response(data, media_type="audio/wav", headers=headers)
 
     @app.post("/api/songs/{song_id}/analyse")
     def analyse_one(song_id: int) -> dict:

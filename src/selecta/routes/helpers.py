@@ -15,7 +15,7 @@ from selecta.api_common import _counts
 from selecta.config import ANALYSIS_VERSION
 from selecta.eta import combine, mix_time_left, time_ahead
 from selecta.seams import STUDIO_SESSION, SeamRequest, request_from
-from selecta.stems import cache_bytes, largest_cache_bytes
+from selecta.stems import cache_room
 
 
 def add_routes(app, ctx) -> None:
@@ -245,7 +245,11 @@ def add_routes(app, ctx) -> None:
             own = combine(time_ahead([items[draft]], store.clock)[0]).seconds
             summaries.append(draft_summary(rows[draft], items[draft], place, eta, own))
         left, _ = time_ahead([current], store.clock)
-        limit = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
+        # r8a: only a line can be held up by a full cache, and one walk of it says both numbers
+        out_of_room = False
+        if line:
+            used, largest = cache_room(settings)
+            out_of_room = used >= min(settings.effective_cache_cap_bytes, largest)
         return {
             "drafts": summaries,
             "current": {
@@ -254,7 +258,7 @@ def add_routes(app, ctx) -> None:
                 "left": len(left),
                 "eta": combine(left).as_dict(),
             },
-            "out_of_room": bool(line) and cache_bytes(settings) >= limit,
+            "out_of_room": out_of_room,
         }
 
     def seam_unfinished(item: dict) -> bool:

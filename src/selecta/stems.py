@@ -135,11 +135,13 @@ def _prune(
 
 
 def cache_roots(settings: Settings) -> list[Path]:
-    """Everything Selecta can make again: separated stems and finished seams."""
+    """Everything Selecta can make again: separated stems, finished seams and (r10) whole songs
+    decoded for the song audio route."""
     return [
         settings.home / "stems",
         settings.renders_dir / "seams",
         settings.renders_dir / "auditions",
+        settings.renders_dir / "songs",
     ]
 
 

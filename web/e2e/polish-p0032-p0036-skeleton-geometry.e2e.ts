@@ -56,7 +56,7 @@ test('P0032 the Mix feeling cards placeholder matches the loaded cards’ tracks
     await page.goto('/mixes');
     const skeleton = await shapesOnly(page, 'Finding compatible mix candidates');
     const heading = page.locator('.vibe-browser-head .section-title');
-    const before = { heading: (await boxes(page, '.vibe-browser-head .section-title'))[0], columns: await tracks(page, 'main .skeleton-vibes .skeleton-content') };
+    const before = { heading: (await boxes(page, '.vibe-browser-head .section-title'))[0], head: (await boxes(page, '.vibe-browser-head'))[0], columns: await tracks(page, 'main .skeleton-vibes .skeleton-content') };
     const unit = (await boxes(page, 'main .skeleton-vibes .skeleton-vibe'))[0];
     const actions = await boxes(page, 'main .skeleton-vibes .skeleton-vibe:first-child .skeleton-action');
     const motif = (await boxes(page, 'main .skeleton-vibes .skeleton-vibe:first-child .skeleton-motif'))[0];
@@ -72,7 +72,10 @@ test('P0032 the Mix feeling cards placeholder matches the loaded cards’ tracks
     expect(before.columns, `${at}: card columns`).toBe(await tracks(page, '.vibe-group .cards'));
     near(unit.left, card.left, 2, `${at}: card left`);
     near(unit.width, card.width, 2, `${at}: card width`);
-    near(unit.top, card.top, 16, `${at}: card top`);
+    // under the filters: the filter names are known, but which groups turn out to have ideas (so how many
+    // filter rows wrap on a phone) is not, so the cards are measured from the foot of the heading block
+    const head = (await boxes(page, '.vibe-browser-head'))[0];
+    near(unit.top - before.head.bottom, card.top - head.bottom, 16, `${at}: card top under the heading block`);
     ratio(unit.height, card.height, width <= 620 ? 0.7 : 0.9, width <= 620 ? 1.43 : 1.11, `${at}: card height`);
     near(motif.height, realMotif.height, 2, `${at}: motif height`);
     // reserved action geometry: two side by side, the real buttons' height, at the same distance from the foot

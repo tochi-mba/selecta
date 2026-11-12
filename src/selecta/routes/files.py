@@ -32,16 +32,21 @@ def audio_file(
     path: Path,
     media_type: str = "audio/flac",
     filename: str | None = None,
+    etag: str | None = None,
 ) -> Response:
     """The file, or a 304 when the browser's copy is still this exact file. One stat serves both
-    the tag and the response, rather than one each."""
+    the tag and the response, rather than one each. A caller whose file is made from another one
+    (r10: a decoded song) passes `etag` to tag it by its source instead of by the copy."""
     facts = path.stat()
+    headers = {"Cache-Control": REVALIDATE}
+    if etag is not None:
+        headers["ETag"] = etag
     response = FileResponse(
         path,
         media_type=media_type,
         filename=filename,
         stat_result=facts,
-        headers={"Cache-Control": REVALIDATE},
+        headers=headers,
     )
     etag = response.headers["etag"]
     if request is not None and _matches(request.headers.get("if-none-match"), etag):

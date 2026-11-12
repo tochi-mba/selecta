@@ -195,7 +195,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         <h3 className="display">{hero?.name ?? 'Selecta’s pick'}</h3>
         {/* MP-0283-01: what the pick can draw on sits between its name and its description, on the same edge as Play */}
         {/* P0032: until the pick's facts arrive their line is held by a bar, so the rest of the card stays put */}
-        {!cards && !cardsFailed && <p className="vibe-card-facts mix-quick-facts skeleton-facts" aria-hidden="true"><i /></p>}
+        {!cards && !cardsFailed && <p className="vibe-card-facts mix-quick-facts skeleton-facts" aria-hidden="true"><i /><i /></p>}
         {hero && hero.songs > 0 && (
           <p className="vibe-card-facts mix-quick-facts">
             <span>{hero.songs} matching songs</span>

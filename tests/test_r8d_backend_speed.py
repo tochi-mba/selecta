@@ -287,6 +287,9 @@ def test_word_links_are_not_found_again_while_the_lyrics_stay_the_same(client, c
     conn.execute(
         "UPDATE lyrics SET status='synced', synced='[00:01.00] a new line' WHERE song_id=1"
     )
+    # the page's ranked links are kept with the library, so the library has to change too for
+    # /api/links to ask for them again; the word links then see new lyrics and search again
+    conn.execute("DELETE FROM lyrics WHERE song_id=2")
     conn.commit()
     client.get("/api/links")
     assert len(calls) == 2
@@ -427,3 +430,69 @@ def test_a_full_cache_still_holds_the_mix_back(settings, conn, monkeypatch):
         mix.add_song(conn, song_id)
     next_seam, _keep, _moves = seam_worker._mix_seams(SeamStore(settings), settings)
     assert next_seam() is None
+
+
+# ---- connecting: the schema runs once per process for each library file
+
+
+def _count_scripts(monkeypatch) -> list[str]:
+    import sqlite3
+
+    scripts: list[str] = []
+
+    class Counting(sqlite3.Connection):
+        def executescript(self, script):
+            scripts.append(script)
+            return super().executescript(script)
+
+    real = sqlite3.connect
+    monkeypatch.setattr(db.sqlite3, "connect", lambda path, **kw: real(path, factory=Counting))
+    return scripts
+
+
+def test_the_schema_runs_once_over_many_connects(tmp_path, monkeypatch):
+    scripts = _count_scripts(monkeypatch)
+    path = tmp_path / "library.sqlite"
+    for _ in range(5):
+        db.connect(path).close()
+    assert scripts.count(db.SCHEMA) == 1
+
+
+def test_a_changed_schema_is_checked_again(tmp_path, monkeypatch):
+    scripts = _count_scripts(monkeypatch)
+    path = tmp_path / "library.sqlite"
+    conn = db.connect(path)
+    conn.execute("DROP TABLE song_overrides")
+    conn.commit()
+    conn.close()
+    conn = db.connect(path)
+    assert scripts.count(db.SCHEMA) == 2
+    assert (
+        conn.execute("SELECT 1 FROM sqlite_master WHERE name='song_overrides'").fetchone()
+        is not None
+    )
+    conn.close()
+
+
+def test_data_steps_still_run_on_the_quick_path(tmp_path):
+    path = tmp_path / "library.sqlite"
+    conn = db.connect(path)
+    conn.execute("INSERT INTO songs(id,path,folder,size,mtime,duration) VALUES(1,'a','f',1,1,1)")
+    conn.execute("INSERT INTO songs(id,path,folder,size,mtime,duration) VALUES(2,'b','f',1,1,1)")
+    conn.execute(
+        "INSERT INTO seam_book(song_a,song_b,kind,payload,score) VALUES(1,2,'same_melody','{}',1)"
+    )
+    conn.commit()
+    conn.close()
+    conn = db.connect(path)
+    assert conn.execute("SELECT kind FROM seam_book").fetchone()[0] == "tonal_profile_cousin"
+    conn.close()
+
+
+def test_every_connection_limits_the_journal(tmp_path):
+    path = tmp_path / "library.sqlite"
+    for _ in range(2):
+        conn = db.connect(path)
+        limit = conn.execute("PRAGMA journal_size_limit").fetchone()[0]
+        assert limit == db.JOURNAL_SIZE_LIMIT
+        conn.close()

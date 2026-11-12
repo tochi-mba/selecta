@@ -206,6 +206,7 @@ def _crash_leftovers(settings: Settings, kept: _Kept, now: float, swept: Swept) 
         (settings.renders_dir, "*.tmp"),
         (settings.renders_dir / "seams", "*/*.part"),
         (settings.home / "stems", "*/*.part"),
+        (settings.renders_dir / "songs", "*/*.part"),
     ]
     for root, pattern in patterns:
         if root.is_dir():
@@ -271,6 +272,7 @@ def _orphans(
             if current != folder.name:
                 # rendered by an older engine or analysis: no request can reach this key again
                 _remove(folder, "seam from an older engine", swept)
+    _song_orphans(settings, songs, swept)
     stems = settings.home / "stems"
     if stems.is_dir():
         for marker in stems.glob("*/window.json"):
@@ -291,6 +293,19 @@ def _orphans(
                     _remove(folder, "stems of a changed file", swept)
             except OSError:
                 continue
+
+
+def _song_orphans(settings: Settings, songs: set[int], swept: Swept) -> None:
+    """Whole songs decoded for the song audio route (r10) whose song has gone or whose file has
+    changed: no request can reach their key again."""
+    from selecta.song_audio import cache_root, stale_reason
+
+    root = cache_root(settings)
+    if not root.is_dir():
+        return
+    for folder in root.iterdir():
+        if folder.is_dir() and (reason := stale_reason(folder, songs)):
+            _remove(folder, reason, swept)
 
 
 def _old_stems(settings: Settings, kept: _Kept, now: float, swept: Swept) -> None:

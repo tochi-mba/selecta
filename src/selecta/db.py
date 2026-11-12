@@ -7,7 +7,9 @@ small enough to query freely.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
+import threading
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -182,11 +184,77 @@ def _saved_mixes_become_drafts(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
+# r8d: every request opens the library. The schema script and the column checks run once per
+# process for each library file; after that a connect only takes the data steps below, which use
+# indexes and normally find nothing. SQLite's schema cookie changes whenever the file's schema does
+# (a dropped table, a column another process added), and a restored or replaced file is a different
+# file, so either brings the full check back.
+_CHECKED: dict[tuple[str, int, int], int] = {}
+_checked_lock = threading.Lock()
+JOURNAL_SIZE_LIMIT = 64 * 1024 * 1024
+
+
+def _identity(path: Path | str) -> tuple[str, int, int] | None:
+    """This exact file. Anything that can't be told apart from another gets the full check."""
+    try:
+        facts = os.stat(path)
+    except (OSError, ValueError):
+        return None
+    if not facts.st_ino:
+        return None
+    return (os.path.normcase(os.path.abspath(path)), facts.st_dev, facts.st_ino)
+
+
+def _schema_cookie(conn: sqlite3.Connection) -> int:
+    return int(conn.execute("PRAGMA schema_version").fetchone()[0])
+
+
+def _already_checked(conn: sqlite3.Connection, identity: tuple[str, int, int] | None) -> bool:
+    if identity is None:
+        return False
+    with _checked_lock:
+        cookie = _CHECKED.get(identity)
+    return (
+        cookie is not None
+        and cookie == _schema_cookie(conn)
+        and local_upgrade.schema_version(conn) >= local_upgrade.LOCAL_SCHEMA_VERSION
+    )
+
+
+def _legacy_kinds_renamed(conn: sqlite3.Connection) -> None:
+    legacy = conn.execute(
+        "SELECT id,kind,payload FROM seam_book WHERE kind IN ('same_melody','harmonic_cousin')"
+    ).fetchall()
+    for row in legacy:
+        payload = {
+            "method": "legacy_whole_track_mean_chroma",
+            "legacy_kind": row["kind"],
+            "legacy_payload": row["payload"],
+            "reason": (
+                "Average pitch-profile resemblance; melody and chord order were not verified."
+            ),
+        }
+        conn.execute(
+            "UPDATE seam_book SET kind='tonal_profile_cousin',payload=? WHERE id=?",
+            (json.dumps(payload), row["id"]),
+        )
+    if legacy:
+        conn.commit()
+
+
 def connect(path: Path) -> sqlite3.Connection:
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    # r8d: not kept in the file, so every connection sets it; a long render can't grow the WAL
+    # without bound between checkpoints
+    conn.execute(f"PRAGMA journal_size_limit={JOURNAL_SIZE_LIMIT}")
+    identity = _identity(path)
+    if _already_checked(conn, identity):
+        _saved_mixes_become_drafts(conn)
+        _legacy_kinds_renamed(conn)
+        return conn
     # an older library is copied aside before any step below changes it (core.upgrade_backup)
     local_upgrade.backup_before_migrating(conn, path)
     conn.executescript(SCHEMA)
@@ -210,25 +278,12 @@ def connect(path: Path) -> sqlite3.Connection:
             if "duplicate column" not in str(problem):
                 raise
     _saved_mixes_become_drafts(conn)
-    legacy = conn.execute(
-        "SELECT id,kind,payload FROM seam_book WHERE kind IN ('same_melody','harmonic_cousin')"
-    ).fetchall()
-    for row in legacy:
-        payload = {
-            "method": "legacy_whole_track_mean_chroma",
-            "legacy_kind": row["kind"],
-            "legacy_payload": row["payload"],
-            "reason": (
-                "Average pitch-profile resemblance; melody and chord order were not verified."
-            ),
-        }
-        conn.execute(
-            "UPDATE seam_book SET kind='tonal_profile_cousin',payload=? WHERE id=?",
-            (json.dumps(payload), row["id"]),
-        )
-    if legacy:
-        conn.commit()
+    _legacy_kinds_renamed(conn)
     local_upgrade.mark_migrated(conn)
+    identity = identity or _identity(path)  # a new file exists only once it has been opened
+    if identity is not None:
+        with _checked_lock:
+            _CHECKED[identity] = _schema_cookie(conn)
     return conn
 
 

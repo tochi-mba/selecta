@@ -1,7 +1,7 @@
 # ADR-0046: Visual regression, performance, listening and polish release gates
 
 - **Decision status:** Accepted (owner requested implementation in PR #23)
-- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23)); 2 of 12 tasks ticked (P0134, all-green CI run 43123598913 on main `fcf745f`, 2026-11-12; P0141, rollback check including ratings, 2026-11-11); P0142 waits for PR #56's merge link; P0132 implemented as deterministic candidate captures plus manifests (8/8 passed 2026-11-12), awaiting a person to approve and commit the baseline set; P0133, P0135, P0137, P0139, P0140 and P0143 need a person. See the [evidence ledger](polish-implementation-evidence.md).
+- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23)); 3 of 12 tasks ticked (P0138, six integrated failure and recovery scenarios passing together, 2026-11-12; P0134, all-green CI run 43123598913 on main `fcf745f`, 2026-11-12; P0141, rollback check including ratings, 2026-11-11); P0142 waits for PR #56's merge link; P0132 implemented as deterministic candidate captures plus manifests (8/8 passed 2026-11-12), awaiting a person to approve and commit the baseline set; P0133, P0135, P0137, P0139, P0140 and P0143 need a person. See the [evidence ledger](polish-implementation-evidence.md).
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
 - **Delivery phase:** 7 - Integrated verification and release

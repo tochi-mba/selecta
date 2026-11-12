@@ -879,9 +879,14 @@ def test_only_a_mix_with_seams_can_be_prioritized(client):
 def test_a_finished_mix_leaves_the_line_by_itself(client, tmp_path, monkeypatch):
     draft = _new(client, 1, 2)
     client.post(f"/api/drafts/{draft}/line")
-    monkeypatch.setattr(
-        SeamStore, "status", lambda self, key: {"status": "ready", "key": key, "passed": True}
-    )
+
+    def ready(_self, key):
+        return {"status": "ready", "key": key, "passed": True}
+
+    monkeypatch.setattr(SeamStore, "status", ready)
+    # r8a: the draft list looks at every seam through one look at the disk, which skips seams with
+    # no file there; these are finished only in this fake, so that look is faked too
+    monkeypatch.setattr(SeamStore, "status_reader", lambda self: lambda key: ready(self, key))
     listing = client.get("/api/drafts").json()
     assert listing["drafts"][0]["place"] is None
     assert listing["drafts"][0]["ready"] == 1

@@ -2,7 +2,7 @@
 
 - **Programme decision:** Accepted (proposed 2026-11-07). **Implementation:** PR #24 merged as `3b01dc1336aab0f1cb0a4d85be5eba359de81831`; task-level reconciliation and independent verification remain open.
 - **Date:** 2026-11-07.
-- **ADR count:** 31; **individual task count:** 258; **programme PR merged / independently Verified tasks:** yes / 0. **Task state (2026-11-12, from the checklist):** 221 ticked as implemented with automated evidence, 35 need a person, 2 in progress (S3-0073-06, S3-0075-01).
+- **ADR count:** 31; **individual task count:** 258; **programme PR merged / independently Verified tasks:** yes / 0. **Task state (2026-11-12, from the checklist):** 222 ticked as implemented with automated evidence, 36 need a person, 0 in progress.
 - **Scope:** Began as a documentation-only plan. PR #24 now also contains implementation changes; no complete manual audio, screen-reader or user-testing verification is claimed.
 - **Baseline:** main `84b8b5cbadf7204bf526e8932124b5c4890e2c44`; PR #23 had merged.
 
@@ -60,4 +60,4 @@ This proposal includes source-observed constraints, reasoned design choices and 
 
 **Historical (2026-11-07): 31 Proposed decisions, 258 tracked items. PR #24 contains in-progress code, but not all work is reconciled, merged or verified. No item is claimed Verified.**
 
-**Current (2026-11-12): 31 Accepted decisions, 258 tracked items: 221 ticked as implemented with automated evidence, 35 need a person, 2 in progress. No item is independently Verified.**
+**Current (2026-11-12): 31 Accepted decisions, 258 tracked items: 222 ticked as implemented with automated evidence, 36 need a person, 0 in progress. No item is independently Verified.**
