@@ -11,9 +11,9 @@ const playing: SessionState = {
 };
 const paused: SessionState = { ...playing, state: 'paused', anchor_at: null, seq: 4 };
 
-function speaker(): Speaker & { pause: ReturnType<typeof vi.fn> } {
+function speaker(): Speaker & { pause: ReturnType<typeof vi.fn<() => void>> } {
   return {
-    start: vi.fn(async () => undefined), stop: vi.fn(), pause: vi.fn(), resume: vi.fn(),
+    start: vi.fn(async () => undefined), stop: vi.fn(), pause: vi.fn<() => void>(), resume: vi.fn(),
     position: () => ({ song_index: 0, offset_ms: 0, state: 'playing' }), active: () => true,
   };
 }
