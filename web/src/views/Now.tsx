@@ -288,6 +288,7 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
     const grid = gridOf(detail);
     let lastDraw = -Infinity;
     let drewReducedFrame = false;
+    delete node.dataset.frozen;
     let reducedRetries = 0;
     let retry = 0;
     const draw = (timestamp = 0) => {
@@ -343,7 +344,10 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
       paintVisualFrame(context, width, height, features, spectrumShape, { accent, soft, gradient }, visualState);
       // Reduced motion holds the first audible frame instead of capturing silence
       // before the sound graph has emitted meaningful levels.
-      if (reduceMotion && !features.silent && features.levels.some((level) => level > SILENT_LEVEL)) drewReducedFrame = true;
+      if (reduceMotion && !features.silent && features.levels.some((level) => level > SILENT_LEVEL)) {
+        drewReducedFrame = true;
+        node.dataset.frozen = 'true';
+      }
       else if (reduceMotion && reducedRetries < MAX_STILL_RETRIES) {
         reducedRetries += 1;
         retry = window.setTimeout(() => { retry = 0; wake(); }, STILL_RETRY_MS);
