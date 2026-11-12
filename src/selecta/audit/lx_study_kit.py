@@ -239,29 +239,120 @@ def _c(task, title, route, prompt, success, hesitation, setup="", groups=None) -
 
 
 PILOTS: dict[str, str] = {
-    "LX-0340-01": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): Open Library, browse a collection song, then search Same Name and select Iris Vale by artist.",
-    "LX-0340-04": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): Filter Needs attention, locate a matching row's More menu and find Never play without activating it.",
-    "LX-0341-03": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): Enable stress fixture, compare Ready with analysed and transition totals, and identify Ready as mix-eligible.",
-    "LX-0342-06": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): With Needs attention selected and zzqx giving no matches, clear only the query and preserve the filter.",
-    "LX-0343-01": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): Choose the Ready chip and then Set aside; inspect the distinct resulting lists.",
-    "LX-0343-07": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): With Ready and Episode selected, inspect both constraints, undo one, and locate Episode 12.",
-    "LX-0344-04": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): Find Last Call, identify Add to current mix, then open More to find analysis priority.",
-    "LX-0345-01": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): Compare List and Card view for five seconds each, identifying motifs, song titles, artists and readiness.",
-    "LX-0346-02": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): Inspect a row's primary action and its additional More actions without changing the song.",
-    "LX-0348-02": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): Open song 11 and read tempo, key and duration without entering any editing field.",
-    "LX-0348-06": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): Expand advanced details for song 11 and locate its file path and last analysis time.",
-    "LX-0349-01": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): Inspect song 11's tempo correction form for allowed values, active value and Reset without saving.",
-    "LX-0349-04": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): Locate Prioritize on Last Call and distinguish its analysis-queue effect from playback order.",
-    "LX-0352-03": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): Prepare a filtered zero-match screen and an empty Set aside screen, then identify distinct recovery actions.",
-    "LX-0353-01": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): On Mixes, identify Quick Play as immediate playback and Create with Lucy as planning first.",
-    "LX-0353-03": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): From Mixes, locate Create with Lucy before starting the five-second timer.",
-    "LX-0354-01": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): Inspect one feeling card and identify its title, mood, factual detail and button outcome.",
-    "LX-0354-03": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): Identify Play, Shape first and Save draft as different actions on one feeling without pressing them.",
-    "LX-0357-01": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): Use the built-in Lucy planner, open a new conversation, locate Message to Lucy and Send.",
-    "LX-0359-01": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): With a six-song proposal, locate words distinguishing an idea from a saved draft and a playable mix.",
-    "LX-0361-04": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): Prepare a Morning Light and calmer critique and locate each instruction's met, not met or unknown label.",
-    "LX-0362-01": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): On Your mix, distinguish Save as draft from Save and play and which changes current playback.",
-    "LX-0363-02": f"{PILOT_SHA} preparation walkthrough (instructions, not executed): In Conversations, identify Archive as reversible and distinguish Delete from removing saved music.",
+    "LX-0340-01": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "Open Library, browse a collection song, then search Same Name and select "
+        "Iris Vale by artist."
+    ),
+    "LX-0340-04": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "Filter Needs attention, locate a matching row's More menu and find Never "
+        "play without activating it."
+    ),
+    "LX-0341-03": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "Enable stress fixture, compare Ready with analysed and transition totals, "
+        "and identify Ready as mix-eligible."
+    ),
+    "LX-0342-06": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "With Needs attention selected and zzqx giving no matches, clear only the "
+        "query and preserve the filter."
+    ),
+    "LX-0343-01": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "Choose the Ready chip and then Set aside; inspect the distinct resulting "
+        "lists."
+    ),
+    "LX-0343-07": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "With Ready and Episode selected, inspect both constraints, undo one, and "
+        "locate Episode 12."
+    ),
+    "LX-0344-04": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "Find Last Call, identify Add to current mix, then open More to find "
+        "analysis priority."
+    ),
+    "LX-0345-01": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "Compare List and Card view for five seconds each, identifying motifs, song "
+        "titles, artists and readiness."
+    ),
+    "LX-0346-02": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "Inspect a row's primary action and its additional More actions without "
+        "changing the song."
+    ),
+    "LX-0348-02": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "Open song 11 and read tempo, key and duration without entering any editing "
+        "field."
+    ),
+    "LX-0348-06": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "Expand advanced details for song 11 and locate its file path and last "
+        "analysis time."
+    ),
+    "LX-0349-01": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "Inspect song 11's tempo correction form for allowed values, active value "
+        "and Reset without saving."
+    ),
+    "LX-0349-04": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "Locate Prioritize on Last Call and distinguish its analysis-queue effect "
+        "from playback order."
+    ),
+    "LX-0352-03": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "Prepare a filtered zero-match screen and an empty Set aside screen, then "
+        "identify distinct recovery actions."
+    ),
+    "LX-0353-01": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "On Mixes, identify Quick Play as immediate playback and Create with Lucy "
+        "as planning first."
+    ),
+    "LX-0353-03": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "From Mixes, locate Create with Lucy before starting the five-second timer."
+    ),
+    "LX-0354-01": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "Inspect one feeling card and identify its title, mood, factual detail and "
+        "button outcome."
+    ),
+    "LX-0354-03": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "Identify Play, Shape first and Save draft as different actions on one "
+        "feeling without pressing them."
+    ),
+    "LX-0357-01": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "Use the built-in Lucy planner, open a new conversation, locate Message to "
+        "Lucy and Send."
+    ),
+    "LX-0359-01": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "With a six-song proposal, locate words distinguishing an idea from a saved "
+        "draft and a playable mix."
+    ),
+    "LX-0361-04": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "Prepare a Morning Light and calmer critique and locate each instruction's "
+        "met, not met or unknown label."
+    ),
+    "LX-0362-01": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "On Your mix, distinguish Save as draft from Save and play and which "
+        "changes current playback."
+    ),
+    "LX-0363-02": (
+        f"{PILOT_SHA} preparation walkthrough (instructions, not executed): "
+        "In Conversations, identify Archive as reversible and distinguish Delete "
+        "from removing saved music."
+    ),
 }
 CARDS: tuple[Study, ...] = (
     _c(
