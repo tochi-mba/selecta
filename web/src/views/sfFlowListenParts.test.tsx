@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { MixItem, SongDetail } from '../api';
 import { SetPlayer } from '../player';
@@ -97,7 +97,7 @@ describe('SF-0213-06 RTL and long lyric lines keep their direction and every wor
     for (const stage of [false, true]) {
       fakeBackend({ 'GET /songs/1': { ...detail, lines } });
       const { unmount, container } = show([song(1)], { songTime: 4 }, stage);
-      await screen.findByText('مرحبا بالعالم هذه أغنية');
+      await waitFor(() => expect(container.querySelector('.lyrics p.sung')).toHaveTextContent('مرحبا بالعالم هذه أغنية'));
       const shown = [...container.querySelectorAll('.lyrics p:not(.lyric-confidence)')].filter((p) => p.textContent?.trim());
       expect(shown.length).toBeGreaterThanOrEqual(3);
       for (const line of shown) expect(line).toHaveAttribute('dir', 'auto');
@@ -119,8 +119,7 @@ describe('SF-0213-08 reduced motion keeps what the moving lyrics mean', () => {
     ];
     fakeBackend({ 'GET /songs/1': { ...detail, lines, lyric_status: 'synced' } });
     const { container } = show([song(1)], { songTime: 4 });
-    await screen.findByText('Second line here');
-    expect(container.querySelector('.lyrics p.sung')).toHaveTextContent('Second line here');
+    await waitFor(() => expect(container.querySelector('.lyrics p.sung')).toHaveTextContent('Second line here'));
     expect(screen.getByText(/Line-timed lyrics|Word highlights follow/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Read all lyrics' }));
     const sheet = screen.getByRole('region', { name: 'All timed lyrics, scroll manually' });

@@ -2,7 +2,7 @@
 
 **Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 136 tasks: 93 Implemented, 37 In progress, 6 Not started, 0 Needs a person, 0 Superseded. 20 name a person-only step. 91 ticked. 0 independently Verified.
 
-**Status:** 136 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 92 Implemented, 34 In progress, 10 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
+**Status:** 136 tasks across 26 ADRs, all accepted by the owner on 2026-11-09. 93 Implemented, 37 In progress, 6 Not started, 0 independently Verified. Proposal: [docs/saas](../saas/README.md).
 
 **How to tick a box.** Tick `[x]` only when the task's acceptance is met and its required verification has run. The ticked line must end with `Evidence:` naming the files, tests or run that prove it; `python src/selecta/audit/checklist_evidence.py` (a CI job) rejects a tick without evidence. Ticking means *Implemented*; *Independently verified* stays `No` until someone other than the implementer checks it. Keep each ADR's own checklist line in step with this file.
 

@@ -197,6 +197,8 @@ button[aria-disabled='true'] { cursor: progress; }
 .skeleton-vibe .skeleton-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-1); }
 .skeleton-vibe .skeleton-action { width: 100%; height: var(--control-height); margin-top: 0; }
 .skeleton-vibe .skeleton-action-quiet { grid-column: 1 / -1; width: 96px; height: var(--control-height); background: none; }
+/* the Quick Play pick's facts line, held at one line of its text until the facts arrive */
+.skeleton-facts i { display: block; width: min(320px, 80%); height: 1lh; border-radius: var(--radius-mark); background: var(--surface-control); }
 /* the filter names stand in the filters' place, dimmed, until there's something to filter */
 .vibe-filters-pending button:disabled { opacity: 0.6; }
 /* P0034: Listen. The waveform's place is one flat block at .strip's own height and margins (style.css),
