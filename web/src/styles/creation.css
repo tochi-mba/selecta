@@ -26,6 +26,8 @@
 .editor-scope.is-draft { box-shadow: inset var(--marker) 0 0 var(--status-request); }
 .scope-badge { font-weight: 700; }
 .scope-words { color: var(--text-soft); overflow-wrap: anywhere; }
+/* S31-0083-09: a song name with no spaces wraps inside the export dialog instead of running off its edge */
+.export-ends b { overflow-wrap: anywhere; }
 .scope-revision { font: var(--type-counter); color: var(--text-soft); }
 /* MP-0287-07: Story, Arrange or Detail, named in the pinned bar beside current or draft */
 .scope-view { font-weight: 600; color: var(--text); }

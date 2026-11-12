@@ -82,8 +82,8 @@ export function ExportPanel(props: {
   return (
     <Dialog title="Save as an audio file" onClose={onClose}>
       <p><b>{mixName}</b> <span className="soft">{inDraft ? 'draft' : 'current mix'}, {mix.length} songs, about {length(runningTime(mix))}. FLAC.</span></p>
-      <p className="hint">
-        {mix.length ? <>From <b>{mix[0].title}</b> to <b>{mix[mix.length - 1].title}</b>. </> : ''}
+      <p className="hint export-ends">
+        {mix.length ? <>From <b dir="auto">{mix[0].title}</b> to <b dir="auto">{mix[mix.length - 1].title}</b>. </> : ''}
         Save captures exactly the songs and transitions shown for this {inDraft ? 'draft' : 'current mix'} at the moment you start. Later edits will not change the exported file.
       </p>
       {mine?.revision && <p className="hint">Frozen revision <code>{mine.revision}</code>. Use this ID to distinguish this file from later exports of the same mix.</p>}
