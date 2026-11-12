@@ -2,7 +2,7 @@
 
 - **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation:** Implemented 5/5 new tasks (2026-11-10, uncommitted on `feat/finish-checklists`).
-- **Verified:** Automated verification 3/5 on 2026-11-10; open items name a person or a pending run in the checklist.
+- **Verified:** Automated verification 4/5 (3 on 2026-11-10, EX-0125-04 on 2026-11-12); open items name a person or a pending run in the checklist.
 - **Proposed:** 2026-11-07. **Baseline:** `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` after merged PR #29.
 - **Priority / phase:** P1 / Collection.
 - **Related:** ADR-0104, ADR-0061, not automatically superseded or verified.

@@ -1,6 +1,6 @@
 # Selecta / Flow - complete artistic UI/UX implementation checklist: 400 SF tasks
 
-**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 400 tasks: 262 Implemented, 18 In progress, 70 Not started, 46 Needs a person, 4 Superseded. 134 name a person-only step. 259 ticked. 0 independently Verified.
+**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 400 tasks: 263 Implemented, 17 In progress, 70 Not started, 46 Needs a person, 4 Superseded. 134 name a person-only step. 261 ticked. 0 independently Verified.
 
 **Documentation-only programme (2026-11-08).** **Decision:** 50 Accepted ADRs (owner approval recorded 2026-11-08). **Implementation:** 400 Not started, 0 In progress, 0 Implemented. **Independent verification:** 0 Verified. **Baseline:** main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15`. No product source, assets, tests, or existing implementation ledgers are changed by this new ADR programme.
 

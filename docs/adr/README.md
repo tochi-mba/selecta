@@ -10,10 +10,10 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 | [Selecta 3.0 (S3)](selecta-3-implementation-checklist.md) | 258 | 227 | 2 | 0 | 29 | 0 | 221 | 0 |
 | [Selecta 3.1 (S31)](selecta-3-1-implementation-checklist.md) | 116 | 96 | 1 | 0 | 19 | 0 | 0 | 0 |
 | [Selecta 4.0 (S4)](selecta-4-implementation-checklist.md) | 250 | 202 | 36 | 12 | 0 | 0 | 0 | 0 |
-| [Experience-first (EX)](selecta-experience-implementation-checklist.md) | 105 | 91 | 4 | 7 | 0 | 3 | 47 | 47 |
+| [Experience-first (EX)](selecta-experience-implementation-checklist.md) | 105 | 91 | 4 | 7 | 0 | 3 | 51 | 51 |
 | [Microinteraction (MI)](selecta-microinteraction-implementation-checklist.md) | 240 | 213 | 3 | 24 | 0 | 0 | 213 | 0 |
 | [Creative interface (CI)](selecta-creative-interface-implementation-checklist.md) | 140 | 106 | 1 | 0 | 33 | 0 | 106 | 0 |
-| [Flow (SF)](selecta-flow-implementation-checklist.md) | 400 | 262 | 18 | 70 | 46 | 4 | 259 | 0 |
+| [Flow (SF)](selecta-flow-implementation-checklist.md) | 400 | 263 | 17 | 70 | 46 | 4 | 261 | 0 |
 | [Gap polish (GP)](selecta-gap-polish-implementation-checklist.md) | 128 | 111 | 0 | 17 | 0 | 0 | 111 | 0 |
 | [Final polish (FP)](selecta-final-polish-implementation-checklist.md) | 64 | 53 | 2 | 9 | 0 | 0 | 0 | 0 |
 | [Measured micro-polish (MP)](selecta-measured-micro-polish-implementation-checklist.md) | 224 | 194 | 11 | 19 | 0 | 0 | 194 | 0 |

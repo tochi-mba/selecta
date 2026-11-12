@@ -53,7 +53,7 @@ Implementing history: PR #23 (`84b8b5c`) plus later programmes (Microinteraction
 | Task | Status | Acceptance and result | Automated check run 2026-11-10 | Remaining |
 |---|---|---|---|---|
 | P0021 | Implemented | Dev-only gallery `web/src/ui/ControlGallery.tsx` holds every listed family; links, chips, badges, rows and cards added in this pass | `pnpm exec vitest run src/ui/polish-components.test.tsx`: 8/8 passed | Named visual review |
-| P0022 | Open (measurement not green) | State contract in `completion/components.md` and the gallery | MP-0279-01 and -05 passed; MP-0279-02/03/04/06/07 failed (addendum below) | Green state measurement (findings PF-16) |
+| P0022 | Implemented | Every state reads differently without moving, in light and dark, and long labels fit at 320px; light-theme primary hover added (`foundation.css`) | `polish-p0022-state-themes.e2e.ts` 4/4 and MP-0279-01..07 7/7 passed in Edge 2026-11-12 | Independent review |
 | P0023 | Implemented | `Action` reserves both labels, `aria-busy`/`aria-disabled`, one run per press | `polish-components.test.tsx` P0023; `controls.test.tsx` (passed in an 11-file run) | - |
 | P0024 | Implemented | `Field` label/help/error wiring; form table in `completion/copy-audit.md` | `polish-components.test.tsx` P0024 | Screen-reader listen-through |
 | P0025 | Implemented | `Tabs` ARIA pattern with roving focus; route subpages are `LinkTabs` links | `polish-components.test.tsx` P0025 (2); `ufSeamInspector.test.tsx` arrow keys | Screen-reader listen-through |
@@ -148,7 +148,8 @@ Playwright: `slot.py browser -- pnpm exec playwright test e2e/mp-0279-component-
 
 | Task | Status | Acceptance and result | Automated check run 2026-11-10 | Remaining |
 |---|---|---|---|---|
-| P0032-P0034, P0036 | Open (built, not proven) | Content-shaped variants exist and are used | MP-0297-01 failed | Green geometry measurement |
+| P0032, P0034, P0036 | Open (built, not proven) | Content-shaped variants exist and are used | MP-0297-01 failed (2026-11-10) | Green geometry measurement |
+| P0033 | Implemented | Library placeholder matches loaded columns, row height and card columns in list comfortable, list compact and cards at 320/768/1440px (`polish.css`, `operations.css`) | `polish-p0033-library-skeleton-modes.e2e.ts` 3/3, MP-0297-01, MP-0291-01..07 passed in Edge 2026-11-12; vitest 75/75 | Independent review |
 | P0035 | Implemented | Timeline placeholder is song rows with transitions between them at the timeline's 84px/96px heights; inspector keeps its panel | `polish-p0035-timeline-skeleton.e2e.ts` passed in Edge 2026-11-12 and CI run 43119473767; `polishTimelineSkeleton.test.tsx` 4/4 2026-11-11 | Independent review |
 | P0037 | Implemented | First load vs background refresh: refresh keeps list, selection, focus, scroll and the music; failed refresh keeps the last good answer | MP-0297-03 passed in Edge 2026-11-12 and CI run 43119473767; `async.test.tsx` 2026-11-10 | Independent review |
 | P0038 | Implemented | Bars revealed only after 120ms (`REVEAL_AFTER_MS`, `--motion-fast`) in every motion setting, space reserved at once, content never held back; fake-clock table: 0-120ms answers show no placeholder, 200/500/2000ms show it for 80/380/1880ms | `polish-p0038-reveal.e2e.ts` both motion settings passed in Edge 2026-11-12 and CI run 43119473767; `polishReveal.test.tsx` 2/2 2026-11-11 | Independent review |
@@ -156,7 +157,7 @@ Playwright: `slot.py browser -- pnpm exec playwright test e2e/mp-0279-component-
 | P0040 | Implemented | Real stages and honest wait words, no fabricated percentages | `workState.test.ts`, `jobs.test.ts`, `lib.test.ts` | - |
 | P0041 | Implemented | Slow and failed retrieval are honest with Retry, incl. Listen details and inspector checks | `pnpm exec vitest run src/views/polish-loading.test.tsx`: 3/3 | - |
 | P0042 | Implemented | Immediate, delayed, partial, failed/retried, stale and out-of-order answers recorded frame by frame: no placeholder after content, no older answer shown, one placeholder per wait, one announcement | `pnpm exec vitest run src/ui/polishReveal.test.tsx src/ui/polishTimelineSkeleton.test.tsx src/ui/skeletonHonesty.test.tsx` (slot lock, 1 worker): 15/15 passed 2026-11-11; `async.test.tsx`, `gp-0257-comfort.test.tsx` 2026-11-10 | - |
-| P0043 | Open | Layout stability not measured green | MP-0297-01/03 failed | Green measurement |
+| P0043 | Implemented | Controls above the list never move and the placeholder holds the list's place; focus, scroll and selection survive refresh; busy labels keep button width | `polish-p0033-library-skeleton-modes.e2e.ts` 3/3 and MP-0297-01..05 passed in Edge 2026-11-12; MP-0297 in CI run 43119473767 | Independent review |
 
 ## ADR-0038 task evidence (reconciled 2026-11-10, uncommitted working tree)
 

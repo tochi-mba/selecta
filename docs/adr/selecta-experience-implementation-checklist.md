@@ -1,8 +1,8 @@
 # Selecta - experience-first implementation checklist (105 EX tasks)
 
-**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 105 tasks: 91 Implemented, 4 In progress, 7 Not started, 0 Needs a person, 3 Superseded. 49 name a person-only step. 47 ticked. 47 independently Verified.
+**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 105 tasks: 91 Implemented, 4 In progress, 7 Not started, 0 Needs a person, 3 Superseded. 49 name a person-only step. 51 ticked. 51 independently Verified.
 
-**Historical baseline:** Created 2026-11-07 at `6638ec2313ce53843adfaf363306f8e79c4c8c7e` as a docs-only proposal. Implementation PR #30 later merged as `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7`; the task-by-task reconciliation of 2026-11-10/11 records **38/105 Verified** (checked, each with its proving test and date); the other 67 stay open, each naming the rerun it needs, the person it needs, or the later ADR that superseded it. A checked box means independently **Verified**, never only coded.
+**Historical baseline:** Created 2026-11-07 at `6638ec2313ce53843adfaf363306f8e79c4c8c7e` as a docs-only proposal. Implementation PR #30 later merged as `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7`; the task-by-task reconciliation of 2026-11-10/11 records **51/105 Verified** (checked, each with its proving test and date; 2026-11-12 count); the other 54 stay open, each naming the rerun it needs, the person it needs, or the later ADR that superseded it. A checked box means independently **Verified**, never only coded.
 
 **Lifecycle:** Not started → In progress (named PR) → Implemented (merged code/tests); Verified No → Yes after applicable human, visual, keyboard/AT, real audio, performance and data/revision evidence.
 
@@ -68,7 +68,7 @@
 
 ## [ADR-120 - Arrangement editor: distinct song and transition objects](adr-0120-song-transition-editor-workstation.md)
 
-**Phase:** Creator · **Priority:** P0 · **Decision:** Accepted · **Implementation:** Implemented (5/5, 2026-11-10) · **Verified:** 2/5 (automated, 2026-11-11); 1 blocked by a failing browser check, 2 need a person.
+**Phase:** Creator · **Priority:** P0 · **Decision:** Accepted · **Implementation:** Implemented (5/5, 2026-11-10) · **Verified:** 3/5 (automated, 2026-11-12); 2 need a person.
 
 - [ ] **EX-0120-01 - Prototype distinct song/seam selection.** **Implementation: Implemented (2026-11-10); Verified: No; PR/SHA: -; evidence: song rows and transition connectors selected separately (`web/src/views/gp-0250-selection.test.tsx` 'a selected song and a selected transition never share the highlight', passed 2026-11-10); owner: Unassigned; Needs a person: creator task tests on 2, 20 and 100-song mixes without coaching** Acceptance and required verification are specified in the linked ADR.
 - [x] **EX-0120-02 - Specify responsive inspector behavior.** **Implementation: Implemented; Verified: Yes (automated, 2026-11-12); PR/SHA: uncommitted on feat/finish-checklists; evidence: `web/e2e/mp-0288-seam-inspector.e2e.ts` 'MP-0288-06 the 320px sheet and the resized rail never cover the call to action or the focus' passed (CI run 43119473767, Edge E2E (shard 2/2) job 130857753267, head f851f2b, recorded 2026-11-12); `web/src/views/inspectorResize.test.tsx` (5), `web/src/views/gp-0250-selection.test.tsx` 'GP-0250-05 resizing the inspector brings the selected row back into view without moving focus', `web/src/views/ufSeamInspector.test.tsx` (arrow keys, focus returns to the transition) passed 2026-11-10; `web/e2e/finishing.e2e.ts` 'a transition's tabs work from the keyboard' (Edge, passed 2026-11-11); the 320px off-screen focus (MP-0288-06) came from the whole Change tabpanel being a tab stop taller than the sheet: `Tabs` in `web/src/ui/primitives.tsx` now makes the panel a stop only when nothing inside it can take focus, proven by `web/src/ui/mp-0288-tabpanel-stop.test.tsx` (3/3 passed 2026-11-11); owner: Claude agent EX-114-120** Acceptance and required verification are specified in the linked ADR.
@@ -118,7 +118,7 @@
 
 ## [ADR-125 - Musical discovery as clear word and harmonic audition flows](adr-0125-musical-discovery-audition-workflows.md)
 
-**Phase:** Collection · **Priority:** P1 · **Decision:** Accepted · **Implementation:** Implemented (5/5) · **Verified:** 3/5.
+**Phase:** Collection · **Priority:** P1 · **Decision:** Accepted · **Implementation:** Implemented (5/5) · **Verified:** 4/5 (2026-11-12).
 
 - [x] **EX-0125-01 - Redesign word pair context.** **Implementation: Implemented; Verified: Yes (automated, 2026-11-11); PR/SHA: uncommitted on feat/finish-checklists; evidence: duplicate titles `web/e2e/mp-0292-discovery.e2e.ts` MP-0292-06 (told apart by exact ordered IDs) passed in the Playwright batch 2026-11-11 under the slot lock (`SELECTA_E2E_DIST=dist-saas-e2 SELECTA_E2E_PORT=9058`, 20 passed; the 4 failures all timed out in `allRendered` waiting for renders on the loaded machine); untimed lyrics `tests/test_ex0125_discovery.py` (plain lyrics never reach the word-link search) passed 2026-11-10; RTL/CJK phrases whole in `web/src/views/Links.test.tsx` passed 2026-11-10; owner: Claude agent.** Acceptance and required verification are specified in the linked ADR.
 - [ ] **EX-0125-02 - Design four-stage harmonic audition.** **Implementation: Implemented; Verified: No; PR/SHA: uncommitted on feat/finish-checklists; evidence: 2026-11-10 chords, song A, song B, then both, in `web/src/views/Links.tsx`, covered by `web/src/views/Links.test.tsx` "plays what it detected in one press" and `web/e2e/mp-0292-discovery.e2e.ts` MP-0292-03; owner: Unassigned.** Needs a person: real-audio listening and uncoached comprehension of the comparison order and purpose.
@@ -178,7 +178,7 @@
 
 ## [ADR-131 - Shared component contracts, honest async states and scoped recovery](adr-0131-component-states-and-scoped-recovery.md)
 
-**Phase:** Foundation · **Priority:** P0 · **Decision:** Accepted · **Implementation:** 5/5 Implemented (2026-11-10) · **Verified:** 1/5.
+**Phase:** Foundation · **Priority:** P0 · **Decision:** Accepted · **Implementation:** 5/5 Implemented (2026-11-10) · **Verified:** 3/5 (2026-11-12).
 
 - [ ] **EX-0131-01 - Write interaction state matrix.** **Implementation: Implemented; Verified: No; PR/SHA: -; evidence: role, keyboard and state matrix for every shared component in `docs/adr/completion/components.md`, rendered by `web/src/ui/ControlGallery.tsx` and measured by `web/e2e/mp-0279-component-gallery.e2e.ts`; owner: Unassigned.** Open: MP-0279-02 to -07 failed on the 2026-11-10 shared-laptop run, so the automated gallery check is not green today; the ADR's manual check also needs a person.
 - [ ] **EX-0131-02 - Validate overlay and focus behavior.** **Implementation: Implemented; Verified: No; PR/SHA: -; evidence: `Dialog`/`Drawer`/`Sheet` trap, Escape-top-only and focus return per `docs/adr/completion/components.md`; `web/src/ui/controls.test.tsx` focus-restore cases; owner: Unassigned.** Needs a person: APG keyboard pass and NVDA session on nested overlays.

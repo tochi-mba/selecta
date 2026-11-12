@@ -1,7 +1,7 @@
 # ADR-0120 - Arrangement editor: distinct song and transition objects
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** Implemented (5/5 on 2026-11-10; evidence in the checklist). **Verified (automated):** EX-0120-03 and -04 by 2026-11-11; -02 open while MP-0288-06 fails (320px sheet focus off screen); -01 and -05 need a person (-05 also waits on MP-0287-08).
+- **Implementation status:** Implemented (5/5 on 2026-11-10; evidence in the checklist). **Verified (automated):** EX-0120-03 and -04 by 2026-11-11, -02 on 2026-11-12; formerly -02 open while MP-0288-06 fails (320px sheet focus off screen); -01 and -05 need a person (-05 also waits on MP-0287-08).
 - **Independent verification:** Not verified (0/5).
 - **Programme/date/baseline:** Experience-first UI/UX; 2026-11-07; `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` after merged PR #29.
 - **Priority / phase:** P0 / Creator.

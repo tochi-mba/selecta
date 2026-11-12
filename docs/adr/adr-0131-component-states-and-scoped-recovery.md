@@ -2,7 +2,7 @@
 
 - **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation:** 5/5 Implemented (2026-11-10).
-- **Verification:** No (0/5 tasks independently Verified).
+- **Verification:** 3/5 Verified by automated runs (EX-0131-03 and EX-0131-04 by browser runs on 2026-11-12); no independent human verification.
 - **Programme/date/baseline:** Experience-first UI/UX; 2026-11-07; `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e`, after merged PR #29.
 - **Priority / phase:** P0 / Foundation.
 - **Related earlier ADRs:** ADR-0094, ADR-0095, ADR-0080. Historical decisions are preserved, not automatically superseded.
