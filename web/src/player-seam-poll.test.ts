@@ -29,7 +29,9 @@ let failed = new Set<string>();
 const posts: string[] = [];
 const reads: { key: string; at: number }[] = [];
 const tick = (player: SetPlayer) => (player as unknown as { tick(): void }).tick();
-const flush = () => new Promise((done) => setTimeout(done, 0));
+// Settles the stubbed fetch and its body read between ticks without a real timer, so a simulated minute
+// of 100 ms ticks runs in milliseconds on a loaded machine instead of 600 macrotask waits.
+const flush = async () => { for (let turn = 0; turn < 50; turn += 1) await Promise.resolve(); };
 
 async function run(player: SetPlayer, seconds: number) {
   for (let step = 0; step < seconds * 10; step += 1) {

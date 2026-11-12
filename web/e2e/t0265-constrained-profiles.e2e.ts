@@ -3,11 +3,10 @@ import { resetMix, rewriteJson } from './helpers';
 import { browserLine, installProbe, interactionsSince, mark } from './perf-probe';
 
 /**
- * T0265, the browser half: a 120-song Edit (more than 100) and the 64-cell Studio profiled with the CPU slowed
- * four times (Chromium's own throttling, as a low-end machine) while a real render runs on the
- * server. The server half, a 20,500-song library paged during a real render on full CPU and a
- * nearly full drive, is
- * tests/test_t0265_constrained_profile.py. Unthrottled, the same journeys are held to web.dev's
+ * T0265, the browser half: a 120-song Edit (more than 100) and the 64-cell Studio profiled with
+ * the CPU slowed four times (Chromium's own throttling, as a low-end machine) while a real render
+ * runs on the server. The server half, a 20,500-song library paged during a real render on full
+ * CPU and a nearly full drive, is tests/test_t0265_constrained_profile.py. Unthrottled, the same journeys are held to web.dev's
  * "good" 200 ms in web/e2e/s3-profiles.e2e.ts; slowed four times they are held to the 500 ms line
  * web.dev calls poor, so a slow machine is slower but never stuck. Each prints one T0265-PROFILE line.
  */

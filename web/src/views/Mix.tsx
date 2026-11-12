@@ -393,7 +393,11 @@ export function Mix(props: ViewProps) {
   draftNow.current = draftId;
   // The app opens each draft in a new editor (keyed by draft), so a closed editor's ref would still
   // match its own draft. Once it is gone, its late answers must not reach the app's draft setter.
-  useEffect(() => () => { draftNow.current = undefined; }, []);
+  // Set again on mount, because StrictMode unmounts and remounts once without rendering in between.
+  useEffect(() => {
+    draftNow.current = draftId;
+    return () => { draftNow.current = undefined; };
+  }, [draftId]);
   const moveInDraft = async (from: number, to: number, how: MoveHow, moved: MixItem, words: string, scope: number) => {
     const rowKey = keys[from];
     const shown = draftShown(mix, mixName, canUndo, scope, draftPlace, mixEta);

@@ -55,9 +55,7 @@ class SignOutResult:
         return self.listed and not self.failed
 
 
-def record_revoked(
-    conn: Connection, sid: str, *, user_id: str | None, reason: str
-) -> bool:
+def record_revoked(conn: Connection, sid: str, *, user_id: str | None, reason: str) -> bool:
     """Refuse this session's tokens from now on, and end any staff session started from it.
     Returns whether the id is new. Safe to call any number of times."""
     if not sid:
@@ -100,9 +98,7 @@ def end_privileged(
 
 
 def _newest_since(sessions: list[WorkOSSession], since: float) -> str | None:
-    fresh = [
-        s for s in sessions if s.active and s.created_at is not None and s.created_at >= since
-    ]
+    fresh = [s for s in sessions if s.active and s.created_at is not None and s.created_at >= since]
     if not fresh:
         return None
     return max(fresh, key=lambda s: (s.created_at or 0.0, s.id)).id
@@ -190,6 +186,36 @@ def sign_out_everywhere(
         revoked_before=revoked_before,
         error=error,
     )
+
+
+def sign_out_devices(engine: Engine, user_id: str, events=None) -> tuple[int, int]:
+    """Sign out every playback device the person has, in every workspace they belong to.
+
+    Signing out everywhere ends sessions; this ends what outlives a session: each device's
+    playback lease. A device that was the speaker stops on the server now and hears on its next
+    heartbeat. Each signed-out device writes a `device.signed_out` outbox event, which also wakes
+    every open event stream of that workspace so it re-checks its token and closes (api_cloud).
+    Returns (devices signed out, workspaces whose playback was stopped).
+    """
+    from selecta.identity.schema import workspace_members
+    from selecta.playback import session as playback_session
+    from selecta.rooms.cloud_ports import OutboxPlaybackEvents
+
+    with transaction(engine) as conn:
+        workspace_ids = sorted(
+            conn.execute(
+                sa.select(workspace_members.c.workspace_id).where(
+                    workspace_members.c.user_id == user_id
+                )
+            ).scalars()
+        )
+    publish = events if events is not None else OutboxPlaybackEvents()
+    devices = stopped = 0
+    for workspace_id in workspace_ids:
+        result = playback_session.revoke_user(engine, workspace_id, user_id, events=publish)
+        devices += len(result.signed_out_device_ids)
+        stopped += int(result.playback_stopped)
+    return devices, stopped
 
 
 def revoked_session_count(conn: Connection, user_id: str) -> int:
