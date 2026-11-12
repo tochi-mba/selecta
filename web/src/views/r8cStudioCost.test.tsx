@@ -54,8 +54,7 @@ describe('r8c Studio playhead', () => {
     for (let cell = 0; cell < CELLS; cell += 1) act(() => made.onCell(cell));
     const line = `[r8c] studio, playhead over ${CELLS} cells x 8 lanes: ${commits} commits, ${ms.toFixed(1)} ms`;
     console.info(line);
-    if (process.env.R8C_METRICS) appendFileSync(process.env.R8C_METRICS, `${line}
-`);
+    if (process.env.R8C_METRICS) appendFileSync(process.env.R8C_METRICS, line + '\n');
     expect(commits).toBe(CELLS);
     const lit = [...document.querySelectorAll('.studio-cell.now')].map((cell) => cell.getAttribute('data-cell'));
     expect(lit).toHaveLength(8);

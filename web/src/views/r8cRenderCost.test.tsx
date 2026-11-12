@@ -22,8 +22,7 @@ const report = (what: string, seen: Tally) => {
   const line = `[r8c] ${what}: ${seen.commits} commits, ${seen.ms.toFixed(1)} ms`;
   console.info(line);
   // R8C_METRICS names a file to collect the numbers in, since a passing test's console may be hidden
-  if (process.env.R8C_METRICS) appendFileSync(process.env.R8C_METRICS, `${line}
-`);
+  if (process.env.R8C_METRICS) appendFileSync(process.env.R8C_METRICS, line + '\n');
 };
 
 const longMix = (count: number): MixItem[] => songs(...Array.from({ length: count - 1 }, (_, index) => seam('ready', `s${index}`)));
