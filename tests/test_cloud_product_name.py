@@ -8,6 +8,7 @@ publish their OpenAPI titles as SelectaDJ.
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 from selecta.ai import eval_subject
 from selecta.lucy import context
@@ -44,4 +45,4 @@ def test_cloud_services_title_themselves_selectadj():
     api = (ROOT / "src" / "selecta" / "api_cloud.py").read_text("utf-8")
     gateway = (ROOT / "src" / "selecta" / "gateway_cloud.py").read_text("utf-8")
     assert 'FastAPI(title="SelectaDJ API"' in api
-    assert 'FastAPI(title="SelectaDJ Worker Gateway"' in gateway
+    assert re.search(r'FastAPI\(\s*title="SelectaDJ Worker Gateway"', gateway)
