@@ -90,3 +90,39 @@ describe('GP-0257-05 the visualizer only spends frames when someone can see it m
     expect(perSecond).toBeLessThanOrEqual(16);
   });
 });
+
+describe('SF-0212-07 a still visualizer never holds the silent first frame', () => {
+  it('looks again until there is sound, then holds that one frame without asking for animation frames', () => {
+    vi.useFakeTimers();
+    try {
+      setPrefs({ ...DEFAULT_PREFS, motion: 'still' });
+      let level = 0;
+      const quietThenLoud = { getSpectrum: () => new Uint8Array(64).fill(level) } as never;
+      render(<MusicVisualizer player={quietThenLoud} active stage={false} intensity="standard" spectrumShape="bars" />);
+      expect(drawn).toBe(1);
+      vi.advanceTimersByTime(250);
+      expect(drawn).toBe(2);
+      level = 120;
+      vi.advanceTimersByTime(250);
+      expect(drawn).toBe(3);
+      vi.advanceTimersByTime(5000);
+      expect(drawn).toBe(3);
+      expect(window.requestAnimationFrame).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('gives up after a few seconds of silence rather than polling for ever', () => {
+    vi.useFakeTimers();
+    try {
+      setPrefs({ ...DEFAULT_PREFS, motion: 'still' });
+      const silent = { getSpectrum: () => new Uint8Array(64) } as never;
+      render(<MusicVisualizer player={silent} active stage={false} intensity="standard" spectrumShape="bars" />);
+      vi.advanceTimersByTime(60_000);
+      expect(drawn).toBe(41);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

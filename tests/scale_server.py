@@ -10,17 +10,16 @@ the server and the page, which is what a big library costs. Nothing here is real
 
 from __future__ import annotations
 
-import atexit
 import os
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path(__file__).parent))
 
 import uvicorn  # noqa: E402
+from e2e_home import make_home  # noqa: E402
 from e2e_server import build  # noqa: E402
 
 from selecta import db, mix  # noqa: E402
@@ -83,8 +82,7 @@ def main() -> None:
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8821
     songs = int(sys.argv[2]) if len(sys.argv) > 2 else 20000
     in_mix = int(sys.argv[3]) if len(sys.argv) > 3 else 100
-    home = Path(tempfile.mkdtemp(prefix="selecta-scale-"))
-    atexit.register(shutil.rmtree, home, ignore_errors=True)
+    home = make_home("selecta-scale-")
     os.environ["SELECTA_HOME"] = str(home)
     settings = build(home)
     grow(settings, songs, in_mix)

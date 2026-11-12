@@ -6,12 +6,10 @@ the synthesis used, because the pages don't need the models to be tested. Render
 
 from __future__ import annotations
 
-import atexit
 import json
 import os
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -20,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
 import uvicorn  # noqa: E402
+from e2e_home import make_home  # noqa: E402
 from synth import SR, make_track  # noqa: E402
 
 from selecta import db, mix  # noqa: E402
@@ -241,8 +240,8 @@ def build(home: Path) -> Settings:
 def main() -> None:
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8799
     # its own folder every time, so a copy that's still shutting down can't get in the way
-    home = Path(tempfile.mkdtemp(prefix="selecta-e2e-"))
-    atexit.register(shutil.rmtree, home, ignore_errors=True)
+    # a neutral folder outside the user profile (see e2e_home), so no capture shows an account name
+    home = make_home("selecta-e2e-")
     os.environ["SELECTA_HOME"] = str(home)
     settings = build(home)
     # SELECTA_E2E_DIST names another build folder under web/, so runs side by side can each

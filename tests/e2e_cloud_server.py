@@ -40,9 +40,7 @@ import io
 import itertools
 import json
 import os
-import shutil
 import sys
-import tempfile
 import threading
 import time
 from html import escape
@@ -61,6 +59,7 @@ import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
 import uvicorn  # noqa: E402
 from cloud_world import CloudObjects, add_asset, add_playback_file  # noqa: E402
+from e2e_home import make_home  # noqa: E402
 from fastapi import Body, Request  # noqa: E402
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -181,8 +180,7 @@ class E2EObjects(CloudObjects):
 
 def build(port: int):
     base = f"http://127.0.0.1:{port}"
-    home = Path(tempfile.mkdtemp(prefix="selecta-cloud-e2e-"))
-    atexit.register(shutil.rmtree, home, ignore_errors=True)
+    home = make_home("selecta-cloud-e2e-")
     server = cloud_db.postgres_url()
     if server:
         # A fresh schema and non-superuser role on the test PostgreSQL, so row-level security

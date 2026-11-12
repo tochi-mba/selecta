@@ -243,6 +243,12 @@ function TransitionCountdown({
   );
 }
 
+/** SF-0212-07: below this every level counts as silence, so a still visualizer looks again (up to
+ * MAX_STILL_RETRIES times, STILL_RETRY_MS apart) for a frame with sound in it before holding one. */
+const SILENT_LEVEL = 0.02;
+const STILL_RETRY_MS = 250;
+const MAX_STILL_RETRIES = 40;
+
 /** Exported only so its frame use can be measured (GP-0257-05). */
 export function MusicVisualizer({ player, active, stage, intensity, spectrumShape }: { player: ViewProps['player']; active: boolean; stage: boolean; intensity: ListenView['intensity']; spectrumShape: ListenView['spectrumShape'] }) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -276,6 +282,8 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
     const history: number[][] = [];
     let lastDraw = -Infinity;
     let drewReducedFrame = false;
+    let reducedRetries = 0;
+    let retry = 0;
     const draw = (timestamp = 0) => {
       // nothing to look at while the tab is hidden, and the music mustn't pay for it
       if (document.hidden || !visible) {
@@ -320,12 +328,23 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
         // Continue the visibility-limited sampling loop so a late-starting
         // audio context can begin drawing as soon as real data is available.
         if (active && !reduceMotion) frame = window.requestAnimationFrame(draw);
+        else if (active && reduceMotion && reducedRetries < MAX_STILL_RETRIES) {
+          reducedRetries += 1;
+          retry = window.setTimeout(() => { retry = 0; wake(); }, STILL_RETRY_MS);
+        }
         return;
       }
       if (!active) history.length = 0;
       const levels = frequencyLevels(spectrum, spectrumLevelCount(width, ratio, spectrumShape));
       paintFrequencyFrame(context, width, height, levels, spectrumShape, { accent, soft, gradient }, history);
-      if (reduceMotion) drewReducedFrame = true;
+      // SF-0212-07: a still visualizer keeps one frame with sound in it. Play starts on silence, so a frame
+      // taken then was blank and stayed blank for the whole song (2026-11-12 reduced-motion review); until
+      // real levels arrive it looks again a few times a second, then holds that frame as before.
+      if (reduceMotion && (!active || levels.some((level) => level > SILENT_LEVEL))) drewReducedFrame = true;
+      else if (reduceMotion && reducedRetries < MAX_STILL_RETRIES) {
+        reducedRetries += 1;
+        retry = window.setTimeout(() => { retry = 0; wake(); }, STILL_RETRY_MS);
+      }
       if (active && !reduceMotion) frame = window.requestAnimationFrame(draw);
     };
     const wake = () => {
@@ -353,6 +372,7 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
       observer?.disconnect();
       intersection?.disconnect();
       window.cancelAnimationFrame(frame);
+      window.clearTimeout(retry);
       history.length = 0;
     };
   }, [player, active, stage, reduceMotion, theme, paletteRevision, spectrumShape]);
