@@ -67,3 +67,28 @@ Thumbs.db
 # Temporary Git merge objects created by restricted-workspace tooling
 _gitmerge*
 
+
+# Test and tool output that must never be committed (any per-agent or per-run suffix)
+**/test-results*/
+**/playwright-report*/
+**/blob-report*/
+**/mp-results*/
+**/mp-data*/
+**/.playwright-artifacts*/
+*.trace
+*.trace.zip
+trace.zip
+*.network
+*.log
+.last-run.json
+web/dist*/
+!web/dist-cloud-e2e/.gitkeep
+
+# Scratch and debugging files from agents: zz-* names, *-dbg / *_dbg specs and probe tests
+**/zz-*
+**/zz_*
+**/*-dbg.*
+**/*_dbg.*
+tests/*_probe_test.py
+web/e2e/*-probe.e2e.ts
+web/e2e/*.probe.ts
