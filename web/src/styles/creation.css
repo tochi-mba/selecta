@@ -227,6 +227,8 @@
 .studio-ruler { position: sticky; top: 0; z-index: 3; background: var(--surface-raised); padding-block: var(--space-hair); }
 .studio-lane.studio-ruler .studio-name { position: sticky; left: 0; z-index: 4; display: block; min-height: 0; padding: var(--space-hair); background: var(--surface-raised); }
 .studio-ruler span.now { color: var(--text); font-weight: 700; text-decoration: underline; }
+/* S4-0102-03: the song group is as wide as its lanes, so its pinned name can follow the whole scroll */
+.studio-side { width: max-content; min-width: 100%; }
 .studio-side-name { position: sticky; left: 0; width: fit-content; max-width: min(100%, 70vw); }
 .studio-side-name h4 { white-space: normal; overflow-wrap: anywhere; margin: var(--space-2) 0 var(--space-1); unicode-bidi: plaintext; position: static; }
 .studio-side-name [role='gridcell'] { display: block; }

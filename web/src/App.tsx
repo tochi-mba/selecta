@@ -246,6 +246,13 @@ export function App() {
     });
     return () => connectMainPlayer(null);
   }, [player]);
+  // PF-21: on the pages with a Play button, open the sound device while the browser is idle, so the
+  // first Play only resumes it. Pages that never play never open it. Not under unit tests, where a
+  // stray context would change what each test counts; the player tests cover prepare() itself.
+  const playsHere = route.page === 'listen' || route.page === 'edit';
+  useEffect(() => {
+    if (playsHere && import.meta.env.MODE !== 'test') player.prepare();
+  }, [player, playsHere]);
   const [confirmDraft, setConfirmDraft] = useState<{ id: number; from: number; order: string; replacing: string } | null>(null);
   const activatingDraft = useRef(false);
   const activateDraft = useCallback(async (id: number, from: number, expectedOrder: string) => {

@@ -274,31 +274,31 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 
 <!-- owner-runbook:generated:begin -->
 
-**Open person-only tasks: 767.**
+**Open person-only tasks: 754.**
 
 | Sitting | Tasks | Tracker |
 |---|---|---|
-| 1. Visual review and baseline approval | 119 | [tracker/visual-review.md](tracker/visual-review.md) |
-| 2. Screen-reader and keyboard session | 91 | [tracker/screen-reader.md](tracker/screen-reader.md) |
-| 3. Phones, touch, zoom and hardware | 107 | [tracker/devices.md](tracker/devices.md) |
+| 1. Visual review and baseline approval | 111 | [tracker/visual-review.md](tracker/visual-review.md) |
+| 2. Screen-reader and keyboard session | 90 | [tracker/screen-reader.md](tracker/screen-reader.md) |
+| 3. Phones, touch, zoom and hardware | 108 | [tracker/devices.md](tracker/devices.md) |
 | 4. Listening session | 81 | [tracker/listening.md](tracker/listening.md) |
 | 5. User-study sessions | 214 | [tracker/user-study.md](tracker/user-study.md) |
 | 6. Staging, drills and rollback | 14 | [tracker/staging.md](tracker/staging.md) |
 | 7. Legal and business list | 9 | [tracker/legal-business.md](tracker/legal-business.md) |
-| 8. Sign-off pass | 132 | [tracker/sign-off.md](tracker/sign-off.md) |
+| 8. Sign-off pass | 127 | [tracker/sign-off.md](tracker/sign-off.md) |
 
 ### Task IDs closed by sitting 1: Visual review and baseline approval
 
 - `polish-implementation-checklist.md` (5): P0004, P0019, P0079, P0132, P0133
 - `selecta-3-1-implementation-checklist.md` (21): S31-0078-04, S31-0078-05, S31-0079-01, S31-0079-02, S31-0079-04, S31-0079-05, S31-0079-06, S31-0079-07, S31-0079-08, S31-0079-09, S31-0079-10, S31-0080-01, S31-0080-02, S31-0082-04, S31-0082-05, S31-0083-03, S31-0084-02, S31-0086-02, S31-0087-04, S31-0088-01, S31-0088-02
-- `selecta-3-implementation-checklist.md` (5): S3-0050-04, S3-0074-08, S3-0075-01, S3-0075-02, S3-0075-03
-- `selecta-4-implementation-checklist.md` (25): S4-0089-04, S4-0090-01, S4-0090-02, S4-0090-03, S4-0090-04, S4-0090-08, S4-0090-09, S4-0090-10, S4-0091-03, S4-0091-04, S4-0091-06, S4-0091-09, S4-0091-10, S4-0094-01, S4-0097-01, S4-0098-04, S4-0099-01, S4-0100-02, S4-0102-06, S4-0104-01, S4-0107-01, S4-0108-04, S4-0110-07, S4-0111-04, S4-0112-06
+- `selecta-3-implementation-checklist.md` (4): S3-0050-04, S3-0074-08, S3-0075-01, S3-0075-02
+- `selecta-4-implementation-checklist.md` (24): S4-0089-04, S4-0090-01, S4-0090-02, S4-0090-03, S4-0090-04, S4-0090-08, S4-0090-09, S4-0090-10, S4-0091-03, S4-0091-04, S4-0091-06, S4-0091-09, S4-0091-10, S4-0094-01, S4-0097-01, S4-0099-01, S4-0100-02, S4-0102-06, S4-0104-01, S4-0107-01, S4-0108-04, S4-0110-07, S4-0111-04, S4-0112-06
 - `selecta-creative-interface-implementation-checklist.md` (1): CI-0171-02
-- `selecta-experience-implementation-checklist.md` (8): EX-0123-01, EX-0130-01, EX-0130-02, EX-0130-03, EX-0130-04, EX-0130-05, EX-0133-02, EX-0134-02
+- `selecta-experience-implementation-checklist.md` (5): EX-0130-01, EX-0130-03, EX-0130-04, EX-0133-02, EX-0134-02
 - `selecta-final-polish-implementation-checklist.md` (4): FP-0264-08, FP-0265-02, FP-0265-08, FP-0266-08
 - `selecta-flow-implementation-checklist.md` (28): SF-0200-01, SF-0200-03, SF-0200-05, SF-0200-06, SF-0200-07, SF-0201-02, SF-0201-03, SF-0201-08, SF-0202-08, SF-0203-04, SF-0204-08, SF-0206-05, SF-0206-07, SF-0207-05, SF-0209-02, SF-0210-01, SF-0210-06, SF-0212-02, SF-0213-06, SF-0218-02, SF-0227-01, SF-0227-07, SF-0245-01, SF-0245-02, SF-0245-03, SF-0245-05, SF-0245-07, SF-0245-08
 - `selecta-gap-polish-implementation-checklist.md` (1): GP-0257-04
-- `selecta-library-lucy-experience-implementation-checklist.md` (7): LX-0340-08, LX-0341-01, LX-0352-08, LX-0355-02, LX-0358-03, LX-0364-02, LX-0364-08
+- `selecta-library-lucy-experience-implementation-checklist.md` (4): LX-0340-08, LX-0352-08, LX-0358-03, LX-0364-08
 - `selecta-measured-micro-polish-implementation-checklist.md` (3): MP-0279-08, MP-0295-08, MP-0299-02
 - `selecta-unified-finish-implementation-checklist.md` (11): UF-0368-03, UF-0368-08, UF-0369-04, UF-0369-08, UF-0370-02, UF-0370-08, UF-0375-06, UF-0382-03, UF-0387-06, UF-0388-04, UF-0389-01
 
@@ -309,7 +309,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 - `selecta-3-implementation-checklist.md` (5): S3-0049-08, S3-0066-08, S3-0067-08, S3-0075-05, S3-0077-06
 - `selecta-4-implementation-checklist.md` (19): S4-0091-05, S4-0092-02, S4-0092-09, S4-0094-04, S4-0094-09, S4-0100-06, S4-0100-07, S4-0101-09, S4-0102-01, S4-0103-03, S4-0104-06, S4-0106-07, S4-0107-08, S4-0110-01, S4-0110-03, S4-0110-05, S4-0110-10, S4-0112-07, S4-0113-08
 - `selecta-creative-interface-implementation-checklist.md` (4): CI-0173-07, CI-0177-07, CI-0183-02, CI-0183-07
-- `selecta-experience-implementation-checklist.md` (8): EX-0115-04, EX-0127-05, EX-0128-05, EX-0129-01, EX-0131-02, EX-0132-03, EX-0132-05, EX-0133-04
+- `selecta-experience-implementation-checklist.md` (7): EX-0127-05, EX-0128-05, EX-0129-01, EX-0131-02, EX-0132-03, EX-0132-05, EX-0133-04
 - `selecta-final-polish-implementation-checklist.md` (1): FP-0264-06
 - `selecta-flow-implementation-checklist.md` (20): SF-0202-05, SF-0204-03, SF-0207-04, SF-0208-06, SF-0211-07, SF-0212-07, SF-0215-07, SF-0218-07, SF-0220-04, SF-0221-04, SF-0222-03, SF-0223-04, SF-0225-07, SF-0232-06, SF-0233-08, SF-0234-02, SF-0234-05, SF-0237-06, SF-0243-04, SF-0244-06
 - `selecta-library-lucy-experience-implementation-checklist.md` (5): LX-0351-05, LX-0351-07, LX-0356-07, LX-0357-08, LX-0365-06
@@ -322,7 +322,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 - `polish-implementation-checklist.md` (6): P0027, P0069, P0087, P0122, P0123, P0135
 - `selecta-3-1-implementation-checklist.md` (17): S31-0080-03, S31-0080-10, S31-0081-03, S31-0081-09, S31-0082-07, S31-0082-08, S31-0083-04, S31-0084-07, S31-0085-10, S31-0086-03, S31-0086-07, S31-0086-10, S31-0086-11, S31-0087-06, S31-0087-07, S31-0087-08, S31-0087-10
 - `selecta-3-implementation-checklist.md` (6): S3-0067-04, S3-0072-04, S3-0073-01, S3-0073-04, S3-0073-05, S3-0073-08
-- `selecta-4-implementation-checklist.md` (31): S4-0091-07, S4-0091-08, S4-0092-03, S4-0092-05, S4-0092-06, S4-0092-10, S4-0093-03, S4-0093-06, S4-0093-10, S4-0094-02, S4-0094-06, S4-0098-05, S4-0098-09, S4-0100-03, S4-0100-09, S4-0102-02, S4-0102-03, S4-0105-01, S4-0105-08, S4-0106-08, S4-0107-03, S4-0107-10, S4-0110-04, S4-0110-06, S4-0110-09, S4-0111-05, S4-0111-06, S4-0111-07, S4-0111-08, S4-0112-08, S4-0113-03
+- `selecta-4-implementation-checklist.md` (32): S4-0091-07, S4-0091-08, S4-0092-03, S4-0092-05, S4-0092-06, S4-0092-10, S4-0093-03, S4-0093-06, S4-0093-10, S4-0094-02, S4-0094-06, S4-0098-04, S4-0098-05, S4-0098-09, S4-0100-03, S4-0100-09, S4-0102-02, S4-0102-03, S4-0105-01, S4-0105-08, S4-0106-08, S4-0107-03, S4-0107-10, S4-0110-04, S4-0110-06, S4-0110-09, S4-0111-05, S4-0111-06, S4-0111-07, S4-0111-08, S4-0112-08, S4-0113-03
 - `selecta-cloud-implementation-checklist.md` (5): SC-0399-02, SC-0415-03, SC-0415-04, SC-0415-05, SC-0416-02
 - `selecta-creative-interface-implementation-checklist.md` (4): CI-0170-06, CI-0171-03, CI-0174-07, CI-0183-05
 - `selecta-experience-implementation-checklist.md` (3): EX-0120-05, EX-0123-05, EX-0133-03
@@ -379,10 +379,10 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 
 - `polish-implementation-checklist.md` (4): P0010, P0121, P0140, P0143
 - `selecta-3-1-implementation-checklist.md` (46): S31-0078-01, S31-0078-02, S31-0078-03, S31-0078-07, S31-0078-08, S31-0078-09, S31-0078-10, S31-0079-03, S31-0080-04, S31-0080-06, S31-0080-07, S31-0080-08, S31-0081-02, S31-0081-04, S31-0081-08, S31-0082-11, S31-0083-02, S31-0083-07, S31-0083-08, S31-0083-09, S31-0083-10, S31-0083-11, S31-0084-05, S31-0084-06, S31-0084-09, S31-0085-01, S31-0085-02, S31-0085-04, S31-0085-05, S31-0085-09, S31-0086-01, S31-0086-04, S31-0086-05, S31-0086-06, S31-0086-08, S31-0087-01, S31-0087-05, S31-0087-11, S31-0088-03, S31-0088-04, S31-0088-07, S31-0088-08, S31-0088-09, S31-0088-10, S31-0088-11, S31-0088-12
-- `selecta-3-implementation-checklist.md` (8): S3-0047-03, S3-0047-06, S3-0071-04, S3-0074-09, S3-0074-10, S3-0075-08, S3-0076-04, S3-0076-08
+- `selecta-3-implementation-checklist.md` (7): S3-0047-03, S3-0047-06, S3-0074-09, S3-0074-10, S3-0075-08, S3-0076-04, S3-0076-08
 - `selecta-4-implementation-checklist.md` (23): S4-0089-01, S4-0089-02, S4-0089-03, S4-0089-06, S4-0089-07, S4-0089-08, S4-0089-10, S4-0103-02, S4-0104-02, S4-0105-05, S4-0105-10, S4-0106-03, S4-0107-07, S4-0108-02, S4-0108-05, S4-0109-01, S4-0109-02, S4-0112-01, S4-0112-05, S4-0112-10, S4-0113-01, S4-0113-06, S4-0113-09
 - `selecta-creative-interface-implementation-checklist.md` (5): CI-0172-05, CI-0182-05, CI-0184-02, CI-0184-03, CI-0184-07
-- `selecta-experience-implementation-checklist.md` (7): EX-0114-02, EX-0114-03, EX-0114-04, EX-0114-05, EX-0126-04, EX-0128-04, EX-0133-05
+- `selecta-experience-implementation-checklist.md` (3): EX-0114-05, EX-0126-04, EX-0133-05
 - `selecta-final-polish-implementation-checklist.md` (2): FP-0269-08, FP-0271-08
 - `selecta-flow-implementation-checklist.md` (8): SF-0198-07, SF-0200-08, SF-0229-03, SF-0230-06, SF-0234-08, SF-0240-08, SF-0241-08, SF-0247-08
 - `selecta-gap-polish-implementation-checklist.md` (1): GP-0253-08

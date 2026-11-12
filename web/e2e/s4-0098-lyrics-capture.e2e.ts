@@ -1,3 +1,5 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { resetMix, rewriteJson } from './helpers';
 
@@ -75,13 +77,19 @@ for (const width of [375, 1440] as const) {
       if (reading.sung && /^[a-z夜]/i.test(reading.sung)) expect(reading.direction, `"${reading.sung}"`).toBe('ltr');
     }
 
-    // captures for the visual review, both themes, while a right-to-left line is sung
+    // captures for the visual review, both themes, paused where the fixture has got to
     await page.getByRole('button', { name: 'Pause', exact: true }).first().click();
     for (const scheme of ['dark', 'light'] as const) {
       await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: scheme });
       await page.waitForTimeout(200);
       const shot = await page.locator('.lyrics').first().screenshot();
       await info.attach(`s4-0098-04-lyrics-${width}-${scheme}.png`, { body: shot, contentType: 'image/png' });
+      // S4_CAPTURE_DIR keeps the captures for review outside test-results, which is thrown away
+      const keep = process.env.S4_CAPTURE_DIR;
+      if (keep) {
+        mkdirSync(keep, { recursive: true });
+        writeFileSync(join(keep, `s4-0098-04-lyrics-${width}-${scheme}.png`), shot);
+      }
     }
   });
 }

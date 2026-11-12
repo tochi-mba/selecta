@@ -56,4 +56,11 @@ describe('SF-0245-05 shared primitives keep one hover, focus and active language
     const pressed = rules.find((rule) => rule.file === 'style.css' && rule.selector === "button[aria-pressed='true']");
     expect(pressed?.body).toMatch(/background:\s*var\(--ink\)/);
   });
+
+  it('gives a bordered checkbox or radio choice the same hover edge as a button, never when disabled', () => {
+    // found in the 2026-11-12 state-grid review: the gallery checkbox was the one primitive with no hover cue
+    const hover = rules.find((rule) => /^\.choice:hover/.test(rule.selector));
+    expect(hover?.body).toMatch(/border-color:\s*var\(--ink\)/);
+    expect(hover?.selector).toMatch(/:not\(:disabled\)/);
+  });
 });

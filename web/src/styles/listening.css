@@ -4,6 +4,10 @@
 .setup .lede { max-width: 66ch; }
 /* Start and the folder field share the same height when alongside each other. */
 .start .field .row > input, .start .field .row > button { height: 44px; min-height: 44px; }
+/* SF-0201-08: the field takes the room and Start keeps its word whole; at 1440px the full-width field
+   squeezed Start until it read "Star" with the "t" below the button (2026-11-12 first-run review) */
+.start .field .row > input { flex: 1 1 auto; min-width: 0; }
+.start .field .row > button { flex: none; white-space: nowrap; }
 .setup-scan { display: grid; gap: var(--space-2); justify-items: start; }
 .setup-scan p { margin: 0; overflow-wrap: anywhere; }
 .setup-explain { margin-block: var(--space-4); }
@@ -501,4 +505,19 @@
   .now.stage .handoff { padding: var(--space-2) var(--space-4); margin: 0.5vh 0 1.5vh; }
   .now.stage .countdown-track { height: clamp(16px, 4vh, 32px); }
   .now.stage .countdown-number strong { font-size: clamp(1.8rem, 6vh, 2.25rem); }
+}
+
+/* SF-0213-06: at 400% zoom a phone-width window is about 200px tall, and the header, the pinned player
+   and the phone bar left one clipped lyric line between them (2026-11-12 zoom review). In a window that
+   short the player stays in the page's flow instead, so the words have the screen; it is still reached
+   by scrolling, and the phone bar keeps Listen one press away. */
+@media (max-width: 760px) and (max-height: 360px) {
+  .now .transport { position: static; border-top: 0; }
+}
+
+/* S31-0082-09: on a narrow Stage the fixed Pause and Exit fullscreen buttons sat over "Read all lyrics"
+   (320x700, found 2026-11-12); the page keeps their height free at its foot so the last control can
+   always be scrolled clear of them. */
+@media (max-width: 760px) {
+  .now.stage { padding-bottom: calc(var(--space-4) * 2 + var(--space-7) + var(--safe-bottom)); }
 }

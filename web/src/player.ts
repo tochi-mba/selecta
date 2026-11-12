@@ -20,6 +20,9 @@ export type NowState = {
   songTime: number;
   duration: number;
   inSeam: boolean;
+  /** UF-0374-04: in a transition's tail, after the switch point: the song now current is the one
+   * still entering, so the handoff names it, not the song after it. */
+  seamTail?: boolean;
   seamAt: number | null;
   notice: string;
   nextReady: boolean;
@@ -40,6 +43,10 @@ const WAKE_WAIT_MS = 3000;
 const SEAM_POLL_FIRST = 1000;
 const SEAM_POLL_MOST = 5000;
 const SEAM_POLL_NEAR_END = 30;
+/** PF-21: the longest the sound device waits for an idle moment before it is opened anyway. */
+export const PREPARE_IDLE_MS = 1000;
+/** PF-21: where requestIdleCallback is missing (Safari), open it this long after asking. */
+export const PREPARE_FALLBACK_MS = 300;
 
 function savedSound(): { volume: number; muted: boolean } {
   try {
@@ -89,6 +96,7 @@ export function audiblePosition(mix: Pick<MixItem, 'song_id'>[], songId: number,
 
 export class SetPlayer {
   private context: AudioContext | null = null;
+  private preparing = false;
   private master: GainNode | null = null;
   private output: GainNode | null = null;
   private analyser: AnalyserNode | null = null;
@@ -151,6 +159,32 @@ export class SetPlayer {
         this.update({ phase: 'paused', notice: 'The sound stopped while this page was away. Press play to continue.' });
       }
     });
+  }
+
+  /** PF-21: open the sound device ahead of the first Play, while the browser is idle.
+   *
+   * `new AudioContext` opens the output device synchronously and can take 0.3 to 2 s on a slow
+   * machine; inside the Play press that froze the page before "Loading song" showed. Made here,
+   * outside any gesture, the context starts "suspended" (every browser allows that), so the Play
+   * press only has to call resume(), which is cheap, async and still counts as the user gesture that
+   * Safari and Chrome need to unlock sound. Asking twice, or after the context exists, does nothing;
+   * where Web Audio is missing it does nothing and Play makes the context as before. */
+  prepare(): void {
+    if (this.context || this.preparing || typeof AudioContext === 'undefined') return;
+    this.preparing = true;
+    const open = () => {
+      this.preparing = false;
+      if (this.context) return;
+      try {
+        this.audio();
+      } catch {
+        // the device refused for now; Play makes the context inside its own press instead
+        this.context = null;
+      }
+    };
+    const idle = (window as Window & { requestIdleCallback?: Window['requestIdleCallback'] }).requestIdleCallback;
+    if (typeof idle === 'function') idle.call(window, open, { timeout: PREPARE_IDLE_MS });
+    else window.setTimeout(open, PREPARE_FALLBACK_MS);
   }
 
   private audio(): AudioContext {
@@ -653,6 +687,7 @@ export class SetPlayer {
       position: current.position,
       songTime: time,
       inSeam,
+      seamTail: this.seamTailEnd !== null && !(this.planned && now >= this.planned.whenA),
       seamAt: seam?.status === 'ready' ? (seam.a_source_start ?? null) : null,
       nextReady: seam?.status === 'ready',
     });

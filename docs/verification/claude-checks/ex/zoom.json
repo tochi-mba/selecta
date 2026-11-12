@@ -1,0 +1,112 @@
+[
+  {
+    "theme": "light",
+    "name": "listen",
+    "overflow": {
+      "scrollWidth": 305,
+      "clientWidth": 320,
+      "wide": []
+    },
+    "focusHiddenOrCovered": 0,
+    "hiddenNames": []
+  },
+  {
+    "theme": "light",
+    "name": "library",
+    "overflow": {
+      "scrollWidth": 305,
+      "clientWidth": 320,
+      "wide": []
+    },
+    "focusHiddenOrCovered": 0,
+    "hiddenNames": []
+  },
+  {
+    "theme": "light",
+    "name": "workshop",
+    "overflow": {
+      "scrollWidth": 305,
+      "clientWidth": 320,
+      "wide": []
+    },
+    "focusHiddenOrCovered": 0,
+    "hiddenNames": []
+  },
+  {
+    "theme": "light",
+    "name": "editor",
+    "overflow": {
+      "scrollWidth": 305,
+      "clientWidth": 320,
+      "wide": []
+    },
+    "focusHiddenOrCovered": 0,
+    "hiddenNames": []
+  },
+  {
+    "theme": "light",
+    "name": "mixes",
+    "overflow": {
+      "scrollWidth": 305,
+      "clientWidth": 320,
+      "wide": []
+    },
+    "focusHiddenOrCovered": 0,
+    "hiddenNames": []
+  },
+  {
+    "theme": "dark",
+    "name": "listen",
+    "overflow": {
+      "scrollWidth": 305,
+      "clientWidth": 320,
+      "wide": []
+    },
+    "focusHiddenOrCovered": 0,
+    "hiddenNames": []
+  },
+  {
+    "theme": "dark",
+    "name": "library",
+    "overflow": {
+      "scrollWidth": 305,
+      "clientWidth": 320,
+      "wide": []
+    },
+    "focusHiddenOrCovered": 0,
+    "hiddenNames": []
+  },
+  {
+    "theme": "dark",
+    "name": "workshop",
+    "overflow": {
+      "scrollWidth": 305,
+      "clientWidth": 320,
+      "wide": []
+    },
+    "focusHiddenOrCovered": 0,
+    "hiddenNames": []
+  },
+  {
+    "theme": "dark",
+    "name": "editor",
+    "overflow": {
+      "scrollWidth": 305,
+      "clientWidth": 320,
+      "wide": []
+    },
+    "focusHiddenOrCovered": 0,
+    "hiddenNames": []
+  },
+  {
+    "theme": "dark",
+    "name": "mixes",
+    "overflow": {
+      "scrollWidth": 305,
+      "clientWidth": 320,
+      "wide": []
+    },
+    "focusHiddenOrCovered": 0,
+    "hiddenNames": []
+  }
+]

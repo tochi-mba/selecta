@@ -489,6 +489,10 @@ export function Now(props: ViewProps) {
   const requests = useContext(RequestsContext);
   const item = mix[now.position];
   const next = mix[now.position + 1];
+  // UF-0374-04: after the switch point the transition into the current song is still playing
+  const tail = now.inSeam && !!now.seamTail;
+  const entering = tail ? item : next;
+  const leaving = tail ? mix[now.position - 1] : item;
   const [detail, setDetail] = useState<SongDetail | null>(null);
   const [detailFailed, setDetailFailed] = useState(false);
   const [detailAttempt, setDetailAttempt] = useState(0);
@@ -611,7 +615,7 @@ export function Now(props: ViewProps) {
     now.phase === 'loading'
       ? 'Loading'
       : now.inSeam
-        ? `${SEAM_LABEL}, mixing into ${next?.title ?? 'the next song'}`
+        ? `${SEAM_LABEL}, mixing into ${entering?.title ?? 'the next song'}`
         : now.phase === 'paused'
           ? `Paused · ${mixName}`
           : mixName;
@@ -686,12 +690,12 @@ export function Now(props: ViewProps) {
               detail={shown}
               time={now.songTime}
               seamAt={now.seamAt}
-              nextTitle={next?.title}
-              currentTitle={item?.title}
+              nextTitle={entering?.title}
+              currentTitle={leaving?.title}
               ready={now.nextReady}
               inSeam={now.inSeam}
-              switchAt={seam?.switch_at}
-              phrase={on('listen.handoff_phrase') ? provenPhrase : undefined}
+              switchAt={tail ? undefined : seam?.switch_at}
+              phrase={on('listen.handoff_phrase') && !tail ? provenPhrase : undefined}
             />
           )}
 

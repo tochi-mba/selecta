@@ -336,7 +336,9 @@ button[aria-disabled='true'] { cursor: progress; }
     border-color: GrayText;
     color: GrayText;
   }
-  .studio-cell[aria-pressed='true']::after { background: Highlight; }
+  /* forced-color-adjust: without it the browser drops this mark's background, and an on square
+     differs from an off one only by its border colour (owner-delegated check UF-0382-03, 2026-11-12) */
+  .studio-cell[aria-pressed='true']::after { background: Highlight; forced-color-adjust: none; }
 }
 
 /* Causal, short microinteractions. All state changes stay textual and immediate;

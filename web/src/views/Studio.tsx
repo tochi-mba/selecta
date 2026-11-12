@@ -586,7 +586,7 @@ export function Studio(props: {
             Two songs, four parts per song: voice, drums, bass and melody.<TermHint term="studio-lane" /> Each square is {barsPerCell} bar{barsPerCell === 1 ? '' : 's'} in that song.<TermHint term="studio-cell" /> The Grid and List change the same exact cells. Tap one to turn that part on or off; press a name to hear only that part during a preview.<TermHint term="solo" />
           </p>
           <p className="hint">Previewing pauses the main mix. After stopping or closing Studio, use the main player to resume it.</p>
-          <p className="studio-save-state" role="status">{saving ? 'Applying your transition…' : dirty ? 'Unsaved changes - not applied to the mix' : 'Showing the saved transition'}{dirty && retained ? '. Your work is kept on this browser when you close Studio.' : ''}</p>
+          <p className="studio-save-state" role="status">{saving ? 'Applying your transition…' : dirty ? 'Unsaved changes - not applied to the mix' : 'Showing the saved transition'}{dirty && retained ? `${saving ? ' ' : '. '}Your work is kept on this browser when you close Studio.` : ''}</p>
           {!retained && <p className="warn" role="alert">This browser could not keep a local copy. Apply your changes before closing Studio to keep them.</p>}
           {missing.length > 0 && (
             <p className="warn" role="alert">

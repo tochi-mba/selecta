@@ -1,0 +1,192 @@
+'Selecta - Personal - Microsoft\u200b Edge', 'window', 
+'Library Â· Selecta', 
+'clickable', 'same page', 'link', 'Skip to the page', 
+'Workspace needs your attention: 1 song failed. '
+'Main', 'navigation landmark', 'link', 'Selecta, go to Make a Mix', 
+'list', 'with 6 items', 'link', 'Listen', 
+'link', 'Make a Mix', 
+'link', 'My Mixes', 
+'same page', 'link', 'current page', 'Library', 
+'link', 'Workspace', 
+'link', 'Edit', 'out of list'
+'button', 'Requests: Request a song', 
+'toggle button', 'not pressed', 'Collapse the side bar'
+'Marker two library headings and filters '
+'main landmark', 
+'Search your library', 'edit', 'Search titles, artists, remixes, credits or recording ID', 'blank'
+'Filter Library recordings', 'grouping', 'Needs attention', 'toggle button', 'not pressed'
+'pressed'
+'Priority list', 'toggle button', 'not pressed'
+'Set aside', 'toggle button', 'not pressed'
+'Clear all filters', 'button'
+'Marker two b search status '
+'Everything', 'toggle button', 'pressed'
+'Search your library', 'edit', 'mo'
+'Marker two c song menu '
+'list', 'with 19 items', 'More actions for Untitled', 'menu button', 'collapsed', 'subMenu'
+'Prioritize', 'not checked', 'Prioritized songs are analysed first and their stem windows are protected from cache cleanup', '2 of 3', 
+'menu', 
+'Never play', 'not checked', 'Selecta wonâ€™t pick this when it builds a mix', '3 of 3', 
+'Prioritize', 'not checked', 'Prioritized songs are analysed first and their stem windows are protected from cache cleanup', '2 of 3', 
+'More actions for Untitled', 'menu button', 'collapsed', 'subMenu'
+'Loading page'
+'Loading complete'
+'Edit current mix Â· Selecta', 
+'clickable', 'same page', 'link', 'Skip to the page', 
+'Main', 'navigation landmark', 'link', 'Selecta, go to Make a Mix', 
+'list', 'with 5 items', 'link', 'Listen', 
+'link', 'Make a Mix', 
+'link', 'current', 'My Mixes', 
+'link', 'Library', 
+'link', 'Workspace', 'out of list'
+'button', 'Requests: Request a song', 'button', 'song', 
+'toggle button', 'not pressed', 'Collapse the side bar'
+'Workspace needs your attention: 1 song failed. '
+'Marker three export dialog '
+'clickable', 'main landmark', 'Download audio', 'button'
+'Save as an audio file', 
+'banner landmark', 'heading', 'level 2', 'Save as an audio file', 
+'button', 'Close Save as an audio file', 
+'Your mix current mix, 8 songs, about 8 min. '
+'banner landmark', 'Close Save as an audio file', 'button'
+'Review proposed order (8 songs)', 'button', 'collapsed'
+'list', 'with 7 items', 'Into Untitled: Not rendered yet, about under a minute', 'Into Remix ×©×œ ×©×œ×•× (feat. Ù„ÙŠÙ„Ù‰) 2026: Not rendered yet, about a minute', 'Into å¤œæ˜Žã‘ã®è¡—ã‚’æ­©ããªãŒã‚‰å›ã®ã“ã¨ã‚’è€ƒãˆã¦ã„ãŸé•·ã„é•·ã„æ­Œã®ã‚¿ã‚¤ãƒˆãƒ«: Not rendered yet, about 2 minutes', 'Into Ø£ØºÙ†ÙŠØ© Ø·ÙˆÙŠÙ„Ø© Ø¬Ø¯Ø§ Ø¹Ù† Ø§Ù„Ù„ÙŠÙ„ ÙˆØ§Ù„Ù†Ù‡Ø§Ø± ÙˆØ§Ù„Ø¨Ø­Ø± ÙˆØ§Ù„Ø³Ù…Ø§Ø¡ ÙˆØ§Ù„Ù†Ø¬ÙˆÙ… Ø§Ù„Ø¨Ø¹ÙŠØ¯Ø©: Not rendered yet, about 3 minutes', 'Into Same Name: Not rendered yet, about 3 minutes', 'Into Same Name: Not rendered yet, about 4 minutes', 'Into HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026: Not rendered yet, about 5 minutes'
+'Save it', 'button'
+'Workspace', 'link'
+'clickable', 'Main', 'navigation landmark', 'button', 'Requests: Request a song'
+'main landmark', 'Download audio', 'button'
+'Loading page'
+'Loading complete'
+'Workspace Â· Selecta', 
+'clickable', 'same page', 'link', 'Skip to the page', 
+'Main', 'navigation landmark', 'link', 'Selecta, go to Make a Mix', 
+'list', 'with 5 items', 'link', 'Listen', 
+'link', 'Make a Mix', 
+'link', 'My Mixes', 
+'link', 'Library', 
+'same page', 'link', 'current page', 'Workspace', 
+'link', 'Edit', 'out of list'
+'button', 'Requests: Request a song', 
+'toggle button', 'not pressed', 'Collapse the side bar'
+'Marker three b workspace exports '
+'clickable', 'main landmark', 'Exports', 'region', 'Exports', 'heading', 'level 2', 'Nothing yet. Choose Download audio while editing a mix to save it as a FLAC file.'
+'Loading page'
+'Loading complete'
+'Selecta', 
+
+'Marker four view radio group '
+'main landmark', 
+'View', 'grouping', 'Reorder, add and remove songs. Select a transition to hear or change it.', 
+'Arrange', 'radio button', 'checked', '2 of 3', 
+'Detail', 'radio button', 'checked', '3 of 3', 
+'Arrange', 'radio button', 'checked', '2 of 3', 
+'Marker four b inspector tabs '
+'Timeline', 'region', 'list', 'with 23 items', 'clickable', 'Close', 'button'
+'This transition', 'complementary landmark', 
+'This transition', 'tab control', 
+'Listen', 'tab', '1 of 4', 
+'Change', 'tab', 'selected', '2 of 4', 
+'Studio', 'tab', 'selected', '3 of 4', 
+'Studio', 'tab', 'selected', '3 of 4', 
+'Listen', 'tab', 'selected', '1 of 4', 
+'Listen', 'tab', 'selected', '1 of 4', 
+'Marker four c move a song '
+'list', 'with 23 items', 'clickable', 'Untitled', 'button', 'Song occurrence 2 of 8'
+'Move Untitled up', 'button'
+'unavailable', 'busy'
+'Reorder Untitled', 'toggle button', 'not pressed', 'Song occurrence 1 of 8', 'Space ArrowUp ArrowDown'
+'Moved Untitled to number 1 of 8. '
+'Loading page'
+'Loading complete'
+'Selecta', 
+'clickable', 'main landmark', 'S', 'heading', 'level 1', 'Starting Selecta', 
+'Connecting to your Selecta serviceâ€¦'
+
+'Workspace needs your attention: 1 song failed. '
+'Marker five requests drawer '
+'Requests', 'dialog', 
+'Song requests', 'region', 
+'Requests', 'dialog', 
+'Song requests', 'region', 
+'Request a song', 'combo box', 'collapsed', 'has auto complete', 'editable', 'Request a song: search your library', 'blank'
+'What is request?', 'button', 'collapsed'
+'banner landmark', 'Close Requests', 'button'
+'clickable', 'Workspace needs your attention: 1 song failed.'
+'clickable', 'banner landmark', 'Breadcrumb', 'navigation landmark', 'list', 'with 1 item', 'current page', 'Listen', 'out of list', 'Search', 'Ctrl K', 'button', 'Search and commands (Ctrl K)', 'Theme: Match this computer', 'menu button', 'collapsed', 'subMenu', 'Activity', 'button', 'Activity and Undo', 'Workspace, 1 item needs your attention', 'link', 'Workspace needs your attention', 'Keyboard shortcuts', 'button', 'Keyboard shortcuts (?)', 'main landmark', 'YOUR MIX', 'An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix)', 'heading', 'level 1', 'An Artist Whose Name Is Also Far Too Long To Fit On One Line', 'Previous song', 'button', 'unavailable', 'Previous song (P)', 'Play', 'button', 'Next song', 'button', 'unavailable', 'Go straight to the next song (Shift+N)', 'Shift+', CharacterModeCommand(True), 'N', CharacterModeCommand(False), 'Jump to the transition', 'button', 'unavailable', 'Shortcut: N', CharacterModeCommand(True), 'N', CharacterModeCommand(False), 'Mute', 'toggle button', 'not pressed', '100 percent', 'Volume', 'slider', '0:00 of 1:27, 1:27 left', 'Where in the song', 'slider', 'Audio frequency visualizer paused', 'graphic', 'Word highlights follow stored lyric alignment; timing may be approximate.', 'Read all lyrics', 'toggle button', 'not pressed', 'the morning light comes through', 'Coming up', 'complementary landmark', 'NEXT TRANSITION', 'Preparing the hand-off', 'Untitled', 'UP NEXT', 'Untitled', 'Unknown artist', 'Edit upcoming song and transition', 'button', 'Not rendered yet, about under a minute', 'What is transition?', 'button', 'collapsed', 'Planned: Selectaâ€™s choice. It hasnâ€™t been made yet, so what plays can still change.', 'What is planned?', 'button', 'collapsed', 'If it isnâ€™t ready in time, this song plays on and the next one fades in, so the music doesnâ€™t stop.', 'Change the next song', 'button', 'Opens DJ controls at Bigger, Calmer and Something else', 'Opens DJ controls at Bigger, Calmer and Something else', 'DJ controls'
+'Marker five b command palette '
+'Search and commands', 'dialog', 
+'Results', 'list', 
+'GO TO', 'grouping', 
+'Search and commands', 'dialog', 
+'Results', 'list', 
+'GO TO', 'grouping', 
+'Page: Listen', '1 of 32', 
+'Page: Library', '1 of 3', 
+'DO', 'grouping', 
+'Action: Analyse the rest of my library', '2 of 3', 
+'Search: Search your library for â€œlibâ€', '3 of 3', 
+'clickable', 'Main', 'navigation landmark', 'button', 'Requests: Request a song'
+'banner landmark', 'Breadcrumb', 'navigation landmark', 'list', 'with 1 item', 'current page', 'Listen', 'out of list', 'Search', 'Ctrl K', 'button', 'Search and commands (Ctrl K)', 'Theme: Match this computer', 'menu button', 'collapsed', 'subMenu', 'Activity', 'button', 'Activity and Undo', 'Workspace, 1 item needs your attention', 'link', 'Workspace needs your attention', 'Keyboard shortcuts', 'button', 'Keyboard shortcuts (?)', 'main landmark', 'YOUR MIX', 'An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix)', 'heading', 'level 1', 'An Artist Whose Name Is Also Far Too Long To Fit On One Line', 'Previous song', 'button', 'unavailable', 'Previous song (P)', 'Play', 'button', 'Next song', 'button', 'unavailable', 'Go straight to the next song (Shift+N)', 'Shift+', CharacterModeCommand(True), 'N', CharacterModeCommand(False), 'Jump to the transition', 'button', 'unavailable', 'Shortcut: N', CharacterModeCommand(True), 'N', CharacterModeCommand(False), 'Mute', 'toggle button', 'not pressed', '100 percent', 'Volume', 'slider', '0:00 of 1:27, 1:27 left', 'Where in the song', 'slider', 'Audio frequency visualizer paused', 'graphic', 'Word highlights follow stored lyric alignment; timing may be approximate.', 'Read all lyrics', 'toggle button', 'not pressed', 'the morning light comes through', 'Coming up', 'complementary landmark', 'NEXT TRANSITION', 'Preparing the hand-off', 'Untitled', 'UP NEXT', 'Untitled', 'Unknown artist', 'Edit upcoming song and transition', 'button', 'Not rendered yet, about under a minute', 'What is transition?', 'button', 'collapsed', 'Planned: Selectaâ€™s choice. It hasnâ€™t been made yet, so what plays can still change.', 'What is planned?', 'button', 'collapsed', 'If it isnâ€™t ready in time, this song plays on and the next one fades in, so the music doesnâ€™t stop.', 'Change the next song', 'button', 'Opens DJ controls at Bigger, Calmer and Something else', 'Opens DJ controls at Bigger, Calmer and Something else', 'DJ controls'
+'Marker five c song details '
+'Loading page'
+'Loading complete'
+'Selecta', 
+
+'Workspace needs your attention: 1 song failed. '
+'clickable', 'main landmark', 'list', 'with 19 items', 'Details for Untitled', 'button'
+'Untitled', 
+'banner landmark', 'heading', 'level 2', 'Untitled', 
+'button', 'Close Untitled', 
+'Unknown artist', 
+'Recording ID 15', 
+'Ready for mixes', 
+'What itâ€™s ready for', 'list', 'with 8 items', 'Play', 
+'The file is here and can play', 
+'Mixes', 
+'Ready for mixes', 
+'Stems'
+'out of list', 'clickable', 'Main', 'navigation landmark', 'list', 'with 6 items', 'link', 'Make a Mix'
+'main landmark', 'list', 'with 19 items', 'Details for Untitled', 'button'
+'Loading page'
+'Loading complete'
+'Listening study Â· Selecta', 
+'clickable', 'same page', 'link', 'Skip to the page', 
+'Workspace needs your attention: 1 song failed. '
+'Main', 'navigation landmark', 'link', 'Selecta, go to Make a Mix', 
+'list', 'with 6 items', 'link', 'Listen', 
+'link', 'Make a Mix', 
+'link', 'My Mixes', 
+'link', 'Library', 
+'link', 'current page', 'Workspace', 
+'link', 'Edit', 'out of list'
+'button', 'Requests: Request a song', 
+'toggle button', 'not pressed', 'Collapse the side bar'
+'Marker six listening study '
+'clickable', 'main landmark', 'Listening study', 'heading', 'level 1', 'Workspace', 'navigation landmark', 'Overview', 'link', 'Analysis', 'link', 'Sources', 'link', 'Storage', 'link', 'Learning', 'link', 'current page', 'Diagnostics', 'link', 'region', 'Blind listening study', 'heading', 'level 2', 'Compare two versions without seeing how either was made. Listen to both, then choose your preference. A tie and â€œcannot judgeâ€ are both real answers. One personâ€™s ear on one setup says something about that comparison, and doesnâ€™t prove a version is better for everyone.', 'section', 'Study code', 'Study code', 'edit', 'required', 'The code you were given for this study.', ' ', 'The code you were given for this study.', 'Listener nickname', 'Listener nickname', 'edit', 'required', 'Any name youâ€™ll use again, so your answers stay together.', ' ', 'Any name youâ€™ll use again, so your answers stay together.', 'Listening setup', 'Listening setup', 'edit', 'required', 'For example, headphones in a quiet room', ' ', 'Open study'
+'Loading page'
+'Loading complete'
+'Lucy Â· Selecta', 
+'clickable', 'same page', 'link', 'Skip to the page', 
+'Main', 'navigation landmark', 'link', 'Selecta, go to Make a Mix', 
+'list', 'with 5 items', 'link', 'Listen', 
+'link', 'current page', 'Make a Mix', 
+'Workspace needs your attention: 1 song failed. '
+'link', 'My Mixes', 
+'link', 'Library', 
+'link', 'Workspace', 
+'link', 'Edit', 'out of list'
+'button', 'Requests: Request a song', 
+'toggle button', 'not pressed', 'Collapse the side bar'
+'Marker seven lucy send '
+'main landmark', 
+'Chat', 'property page', 
+'form landmark', 
+'Message to Lucy', 'edit', 'multi line', 'Enter sends Â· Shift+Enter for a new line', 'Describe a mix, or ask Lucy to change this one', 'blank'
+'Lucy page '
+'Lucy is replying. '
+'Lucy is working. Sending now replaces what itâ€™s doing.'
+'New proposal: revision 1. '
+'Enter sends Â· Shift+Enter for a new line'
+'1 step finished. Lucy finished replying. '
+'Marker seven b lucy end '
+'Marker end '

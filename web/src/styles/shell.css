@@ -541,6 +541,9 @@ button.song-open:hover { text-decoration: underline; }
 .choice { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-dense) var(--space-snug); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; }
 .choice input { width: auto; min-height: 0; }
 .choice:has(input:checked) { border-color: var(--selected); }
+/* SF-0245-05: a choice answers the pointer as a button does (style.css button:hover), so the state grid is
+   the same for every shared primitive; a checked or disabled one keeps its own edge */
+.choice:hover:has(input:not(:checked):not(:disabled)) { border-color: var(--ink); }
 .choice:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 
 /* nothing on a phone should be wider than the phone */
@@ -606,5 +609,10 @@ button.song-open b { display: block; white-space: normal; overflow-wrap: anywher
 @media (max-width: 760px) {
   :root[data-keyboard='open'] .overlay {
     padding-bottom: max(var(--keyboard-inset), var(--safe-bottom));
+  }
+  /* UF-0383-08: a sheet lifted above the keyboard is capped to the space left, so its title and
+     Close stay on screen and only its body scrolls (owner-delegated check, 2026-11-12) */
+  :root[data-keyboard='open'] :is(.overlay-drawer, .overlay-sheet) .overlay-panel {
+    max-height: calc(100dvh - max(var(--keyboard-inset), var(--safe-bottom)) - var(--space-2));
   }
 }
