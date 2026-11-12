@@ -55,12 +55,14 @@ def test_every_checklist_is_counted_and_has_tasks():
             "Not started",
         ),
         (
-            "**S3-0047-03 - Needs a person.** Publish a contract. **Status:** Needs a person: owner",
+            "**S3-0047-03 - Needs a person.** Publish a contract. "
+            "**Status:** Needs a person: owner",
             False,
             "Needs a person",
         ),
         (
-            "**S31-0078-06 - X.** **Status (2026-11-10):** Not Verified. **Needs a person:** run it",
+            "**S31-0078-06 - X.** **Status (2026-11-10):** Not Verified. "
+            "**Needs a person:** run it",
             False,
             "Needs a person",
         ),

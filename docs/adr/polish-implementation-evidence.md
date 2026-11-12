@@ -2,7 +2,7 @@
 
 - **Programme implementation status:** PR #23 merged (`84b8b5cbadf7204bf526e8932124b5c4890e2c44`); original per-task evidence remains unreconciled and independently unverified.
 - **Date:** 2026-11-06
-- **Tasks completed:** 94 / 143
+- **Tasks completed (2026-11-12):** 105 / 143 ticked. The entries below record 111 Implemented (24 of them "Verified (automated)", which is not independent verification), 31 Open and 1 Superseded.
 - **Runtime verification:** none claimed by this planning PR.
 - **Implementing PR and commits:** PR #23 (`84b8b5c`) for the original work; the 2026-11-10/11 reconciliation and new work merged as PR [#55](https://github.com/tochi-mba/selecta/pull/55) (`fcf745f`, all-green CI run [43123598913](https://github.com/tochi-mba/selecta/actions/runs/43123598913)); the 2026-11-12 work is on branch `feat/finish-checklists-2`, PR [#56](https://github.com/tochi-mba/selecta/pull/56). Each section below names its own tests and runs. Inherited T work: [completion/t-to-p-map.md](completion/t-to-p-map.md) (P0005).
 
@@ -16,20 +16,20 @@ Documentation/link/file-length checks on this PR validate the plan's structure o
 
 | ADR | Task range | Implementation | Evidence |
 |---|---|---|---|
-| [ADR-0033](adr-0033-polish-baseline-and-governance.md) | P0001–P0010 | In progress (8/10) | Per-task entries below, checks run 2026-11-10; independent verification pending |
-| [ADR-0034](adr-0034-polish-visual-system.md) | P0011–P0020 | In progress (9/10) | Per-task entries below, checks run 2026-11-10; independent verification pending |
-| [ADR-0035](adr-0035-polish-components-and-feedback.md) | P0021–P0031 | In progress (8/11) | Per-task entries below, checks run 2026-11-10; independent verification pending |
-| [ADR-0036](adr-0036-polish-loading-and-skeletons.md) | P0032–P0043 | In progress (4/12) | Per-task entries below, checks run 2026-11-10; independent verification pending |
-| [ADR-0037](adr-0037-polish-onboarding-and-readiness.md) | P0044–P0051 | Not started | No implementation or runtime verification |
-| [ADR-0038](adr-0038-polish-mixes-and-drafts.md) | P0052–P0060 | Not started | No implementation or runtime verification |
-| [ADR-0039](adr-0039-polish-listen-and-shell.md) | P0061–P0069 | Not started | No implementation or runtime verification |
-| [ADR-0040](adr-0040-polish-editor-and-inspector.md) | P0070–P0079 | In progress: 4/10 ticked (P0072, P0075-P0077) | Per-task entries below (2026-11-10/11) |
-| [ADR-0041](adr-0041-polish-stem-studio.md) | P0080–P0088 | In progress: 4/9 ticked (P0082, P0083, P0085, P0086) | Per-task entries below (2026-11-10/11) |
-| [ADR-0042](adr-0042-polish-requests-and-discovery.md) | P0089–P0099 | Not started | No implementation or runtime verification |
-| [ADR-0043](adr-0043-polish-library-and-workshop.md) | P0100–P0111 | In progress: 10/12 ticked (P0100-P0102, P0105-P0111) | Per-task entries below (2026-11-10/11) |
+| [ADR-0033](adr-0033-polish-baseline-and-governance.md) | P0001–P0010 | In progress: 8/10 ticked (P0004, P0010 need a person) | Per-task entries below, checks run 2026-11-10; independent verification pending |
+| [ADR-0034](adr-0034-polish-visual-system.md) | P0011–P0020 | In progress: 9/10 ticked (P0019 needs a person) | Per-task entries below, checks run 2026-11-10; independent verification pending |
+| [ADR-0035](adr-0035-polish-components-and-feedback.md) | P0021–P0031 | In progress: 8/11 ticked (open: P0022, P0027, P0031) | Per-task entries below, checks run 2026-11-10; independent verification pending |
+| [ADR-0036](adr-0036-polish-loading-and-skeletons.md) | P0032–P0043 | In progress: 6/12 ticked (open: P0032-P0034, P0036, P0037, P0043) | Per-task entries below, checks run 2026-11-10; independent verification pending |
+| [ADR-0037](adr-0037-polish-onboarding-and-readiness.md) | P0044–P0051 | Implemented: 7/8 ticked (P0050 superseded) | Per-task entries below (2026-11-10/12); independent verification pending |
+| [ADR-0038](adr-0038-polish-mixes-and-drafts.md) | P0052–P0060 | Implemented (9/9) | Per-task entries below (2026-11-10/12); independent verification pending |
+| [ADR-0039](adr-0039-polish-listen-and-shell.md) | P0061–P0069 | In progress: 8/9 ticked (P0069 needs a person) | Per-task entries below (2026-11-10/12); independent verification pending |
+| [ADR-0040](adr-0040-polish-editor-and-inspector.md) | P0070–P0079 | In progress: 6/10 ticked (open: P0071, P0073, P0078, P0079) | Per-task entries below (2026-11-10/11) |
+| [ADR-0041](adr-0041-polish-stem-studio.md) | P0080–P0088 | In progress: 7/9 ticked (P0087, P0088 need a person) | Per-task entries below (2026-11-10/11) |
+| [ADR-0042](adr-0042-polish-requests-and-discovery.md) | P0089–P0099 | Implemented (11/11) | Per-task entries below (2026-11-10/12); independent verification pending |
+| [ADR-0043](adr-0043-polish-library-and-workshop.md) | P0100–P0111 | Implemented (12/12) | Per-task entries below (2026-11-10/11) |
 | [ADR-0044](adr-0044-polish-language-and-motion.md) | P0112–P0120 | Implemented (9/9) | Per-task entries below, checks run 2026-11-10; independent verification pending |
-| [ADR-0045](adr-0045-polish-responsive-accessibility.md) | P0121–P0131 | In progress: 2/11 ticked (P0124, P0127) | Per-task entries below (2026-11-10/11) |
-| [ADR-0046](adr-0046-polish-verification-and-release.md) | P0132–P0143 | In progress: 1/12 ticked (P0141) | Per-task entries below (2026-11-10/11) |
+| [ADR-0045](adr-0045-polish-responsive-accessibility.md) | P0121–P0131 | In progress: 3/11 ticked (open: P0121-P0123, P0126, P0128-P0131) | Per-task entries below (2026-11-10/11) |
+| [ADR-0046](adr-0046-polish-verification-and-release.md) | P0132–P0143 | In progress: 2/12 ticked (open: P0132, P0133, P0135-P0140, P0142, P0143) | Per-task entries below (2026-11-10/11) |
 
 ## Required per-task evidence when implementation begins
 

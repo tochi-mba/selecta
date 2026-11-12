@@ -389,8 +389,11 @@ export function Mix(props: ViewProps) {
   // back as the server has it. The current mix waits for the server, because the player schedules its
   // seams from it. One queue per draft, so a move never travels with another draft's order.
   const draftMoves = useMemo(() => new MoveQueue(), [draftId]);
-  const draftNow = useRef(draftId);
+  const draftNow = useRef<number | null | undefined>(draftId);
   draftNow.current = draftId;
+  // The app opens each draft in a new editor (keyed by draft), so a closed editor's ref would still
+  // match its own draft. Once it is gone, its late answers must not reach the app's draft setter.
+  useEffect(() => () => { draftNow.current = undefined; }, []);
   const moveInDraft = async (from: number, to: number, how: MoveHow, moved: MixItem, words: string, scope: number) => {
     const rowKey = keys[from];
     const shown = draftShown(mix, mixName, canUndo, scope, draftPlace, mixEta);

@@ -166,10 +166,25 @@ def main(argv: list[str] | None = None) -> int:
     bucket = os.environ.get("SELECTA_R2_BUCKET_DELETION_LEDGER", "").strip()
     if not bucket:
         raise SystemExit("Set SELECTA_R2_BUCKET_DELETION_LEDGER.")
+    # Stripe reconciliation runs whenever the Stripe settings are present; without them the
+    # step reports itself skipped.
+    from selecta.billing.stripe_sync import load_price_map
+    from selecta.billing.webhooks import HttpStripeClient
+
+    stripe_key = os.environ.get("SELECTA_STRIPE_SECRET_KEY", "").strip()
+    prices = load_price_map()
+    stripe = (
+        HttpStripeClient(stripe_key, api_version=os.environ.get("SELECTA_STRIPE_API_VERSION"))
+        if stripe_key and prices
+        else None
+    )
     engine = make_engine(os.environ["SELECTA_DATABASE_URL"])
     client = storage_api.r2_client()
     try:
-        report = after_restore(engine, client, bucket, restore_started=args.restore_started)
+        report = after_restore(
+            engine, client, bucket, restore_started=args.restore_started,
+            stripe=stripe, price_map=prices if stripe is not None else None,
+        )
     finally:
         client.close()
         engine.dispose()

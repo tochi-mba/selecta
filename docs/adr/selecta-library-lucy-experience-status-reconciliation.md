@@ -1,6 +1,6 @@
 # Selecta - LX historical status and source reconciliation
 
-**Status:** 26 Proposed ADRs (0340–0365); 208 LX tasks Not started; 0 In progress; 0 Implemented; 0 independently Verified. Owner unassigned. Baseline `main` `da942863e9f57e45653cfc2fda35fe463477b8be` (2026-11-08). Documentation only.
+**Status:** 26 Proposed ADRs (0340–0365); 28 LX tasks Not started; 1 In progress; 179 Implemented; 0 independently Verified (recounted from the checklist task lines 2026-11-12). Owner unassigned. Baseline `main` `da942863e9f57e45653cfc2fda35fe463477b8be` (2026-11-08). Implementation candidate; independently unverified.
 
 The historical Library and UI decisions (including SF/CI/MI/GP/FP/MP) and Lucy ADR-0300–0339 retain their own decision, implementation and independent verification histories. This new LX programme does not overwrite those trackers, change accepted decisions, or label preexisting code as missing. PR #39 merged Lucy app files on main; its ADR checklists and source implementation have distinct provenance and must be reconciled item by item, not bulk-promoted.
 

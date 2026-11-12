@@ -1,8 +1,8 @@
 # Selecta - LX per-task implementation and independent evidence ledger
 
-**Status:** 26 Proposed ADRs (0340–0365); 28 LX tasks Not started; 54 In progress; 126 Implemented; 0 independently Verified. Owner unassigned. Baseline `main` `da942863e9f57e45653cfc2fda35fe463477b8be` (2026-11-08). Documentation only.
+**Status:** 26 Proposed ADRs (0340–0365); 28 LX tasks Not started; 1 In progress; 179 Implemented; 0 independently Verified (recounted from the checklist task lines 2026-11-12). Owner unassigned. Baseline `main` `da942863e9f57e45653cfc2fda35fe463477b8be` (2026-11-08). Implementation candidate; independently unverified.
 
-All evidence cells deliberately blank. No screenshots, browser runs, listening tests, source changes or independent reviews have been performed by this documentation PR. Recording a plausible test plan is not evidence.
+Evidence cells cite the implementing tests and runs recorded in the checklist. No independent reviews have been performed; every reviewer cell stays empty until a named person checks the task. Recording a plausible test plan is not evidence.
 
 | Task | ADR | Decision | Implementation | Independently Verified | Owner | Implementing PR/SHA | Source/test/visual/audio evidence | Independent reviewer/date/device/environment |
 |---|---|---|---|---|---|---|---|---|

@@ -2,7 +2,7 @@
 
 **Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 208 tasks: 179 Implemented, 1 In progress, 28 Not started, 0 Needs a person, 0 Superseded. 61 name a person-only step. 144 ticked. 0 independently Verified.
 
-**Status:** 26 Proposed ADRs (0340–0365); 28 LX tasks Not started; 54 In progress; 126 Implemented; 0 independently Verified. Owner unassigned. Baseline `main` `da942863e9f57e45653cfc2fda35fe463477b8be` (2026-11-08). Documentation only.
+**Status:** 26 Proposed ADRs (0340–0365); 28 LX tasks Not started; 1 In progress; 179 Implemented; 0 independently Verified (recounted from the task lines 2026-11-12). Owner unassigned. Baseline `main` `da942863e9f57e45653cfc2fda35fe463477b8be` (2026-11-08). Implementation candidate; independently unverified.
 
 **Semantics:** `[ ]` means **not independently accepted**. `Implementation` separately records Not started/In progress/Implemented; `Independently Verified` separately records No/Yes. A future candidate may have source code and still remain unchecked until item-specific acceptance evidence exists. This docs PR creates no implementation.
 
