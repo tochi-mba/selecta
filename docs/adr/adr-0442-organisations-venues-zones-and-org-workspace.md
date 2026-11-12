@@ -42,7 +42,7 @@ This ADR records a proposed decision. Nothing in it is implemented or measured y
 
 ### Pilot organisations and selling switched off
 
-- With `business.signups` off (ADR-0441), the only way an organisation is created is ADR-0452's staff pilot flow. That flow calls the same `orgs.create` and `venues.create` functions as self-serve sign-up will, so a pilot exercises exactly the code a paying venue would.
+- With `business.signups` off (ADR-0441), the only way an organisation is created is ADR-0452's staff pilot flow (flag `business.pilots`, permission `business.pilots.create`). That flow calls the same `orgs.create` and `venues.create` functions as self-serve sign-up will, so a pilot exercises exactly the code a paying venue would.
 - `workspaces.pilot_until` (nullable) marks a pilot organisation; entitlements come from ADR-0448's pilot allowance, not Stripe. Nothing in venues, zones, schedules, kiosks or offline playback branches on `pilot`; only billing, the HQ "Pilot" label (ADR-0453) and the end-of-pilot stop (ADR-0452) read it.
 - Everything here is testable with the cloud test server (`tests/e2e_cloud_server.py`) seeded with a made-up organisation, two venues in different time zones and three zones. No paying venue and no Stripe account are needed.
 

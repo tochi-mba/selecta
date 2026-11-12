@@ -3,7 +3,8 @@
 A fake launcher stands in for Modal: the tick reads the queue, live workers and listeners from the
 database, decides with `autoscale.decide`, records alerts and scales. `ModalLauncher` is checked
 with a fake Modal lookup: it does nothing unless an app and token are configured, scales
-the function `MODAL_FUNCTIONS` names, and moves a GPU pool to its CPU fallback when the provider refuses GPUs.
+the function `MODAL_FUNCTIONS` names, and moves a GPU pool to its CPU fallback when the
+provider refuses GPUs.
 Runs on SQLite and PostgreSQL.
 """
 
