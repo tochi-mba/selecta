@@ -138,6 +138,10 @@ describe('fifteen feature-driven real-audio visualizations', () => {
     const feature = { ...sound(), kick: 0, width: 0.0, balance: 0 };
     const narrow = paint('stereo', feature).context;
     const wide = paint('stereo', { ...feature, width: 1 }).context;
-    expect(calls(wide, 'fillRect')[0][2]).toBeGreaterThan(calls(narrow, 'fillRect')[0][2]);
+    const wideWidth = calls(wide, 'fillRect')[0]?.[2];
+    const narrowWidth = calls(narrow, 'fillRect')[0]?.[2];
+    expect(wideWidth).toBeTypeOf('number');
+    expect(narrowWidth).toBeTypeOf('number');
+    expect(wideWidth!).toBeGreaterThan(narrowWidth!);
   });
 });
