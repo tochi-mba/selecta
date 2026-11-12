@@ -129,7 +129,7 @@
       "setup": "A copy of the owner's home with real music; motion setting on the default, then Still for the last 10 minutes.",
       "steps": ["Listen across at least five transitions with the visualiser on.", "At each transition note whether motion drew attention away from the sound.", "Repeat one transition with Still and compare."],
       "pass": "No transition is noted where motion overwhelmed the audible transition; notes timed and kept apart from test results.",
-      "prechecks": [["web/e2e/mp-0296-motion.e2e.ts", "MP-0296-06 Still and reduced motion remove decorative movement while the music data keeps updating"], ["web/e2e/mp-0296-motion.e2e.ts", "MP-0296-07 the visualizer draws at most 15 frames a second while playing and nothing while hidden"]]
+      "prechecks": [["web/e2e/mp-0296-motion.e2e.ts", "MP-0296-06 Still and reduced motion remove decorative movement while the music data keeps updating"], ["web/e2e/mp-0296-motion.e2e.ts", "MP-0296-07 the visualizer draws at most 30 frames a second while playing and nothing while hidden"]]
     },
     {
       "id": "MP-0297-08", "sitting": "study", "who": "three or more participants",
