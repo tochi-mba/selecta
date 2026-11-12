@@ -336,6 +336,8 @@ button.icon { padding: var(--space-dense) var(--space-2); min-width: 40px; }
 }
 .toast-row.problem { background: var(--warn); color: var(--accent-ink); }
 .toast-row > span { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+/* UF-0380-07: which mix the change was in, beside the message it qualifies */
+.toast-row > .toast-where { flex: 0 1 auto; min-width: 0; max-width: 40%; overflow-wrap: anywhere; }
 .toast-row button { background: none; color: inherit; border-color: currentColor; min-height: 34px; padding: var(--space-1) var(--space-3); flex: none; }
 .toast-row .toast-close { border: 0; padding: var(--space-1) var(--space-2); min-width: 34px; }
 /* Only visual chrome yields here: the audio owner and saved Undo activity do not change. */

@@ -167,7 +167,8 @@ function ToastRow({ toast }: { toast: Toast }) {
       onFocus={hold}
       onBlur={start}
     >
-      <span>{toast.message}{toast.where && <small className="toast-where"> In {toast.where}.</small>}</span>
+      <span>{toast.message}</span>
+      {toast.where && <small className="toast-where">In {toast.where}.</small>}
       {toast.undo && (
         <button
           onClick={() => void undo()}

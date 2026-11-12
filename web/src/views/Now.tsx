@@ -161,6 +161,8 @@ function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDeta
     dragging.current = null;
     setSeekPreview(null);
   }, [detail.id, seekBlocked]);
+  // A new song starts from its beginning, even for a slider that kept focus across the change.
+  useEffect(() => setHeldAt((held) => (held === null ? null : 0)), [detail.id]);
   const percent = (seconds: number) =>
     100 * Math.min(Math.max(Number.isFinite(seconds) ? seconds : 0, 0), duration) / Math.max(duration, 1);
   const shape = useMemo(() => {

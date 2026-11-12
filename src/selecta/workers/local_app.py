@@ -87,7 +87,7 @@ def start(app, work: local_host.LocalWork) -> None:
     work.start()
 
     def stop() -> None:
-        if not work.stop(timeout=STOP_SECONDS):
+        if not work.stop(timeout=STOP_SECONDS, release=True):
             log.info("Local work still running at shutdown resumes on the next start")
 
     app.router.on_shutdown.append(stop)

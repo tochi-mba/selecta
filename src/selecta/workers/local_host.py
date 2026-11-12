@@ -130,10 +130,16 @@ class LocalWork:
     def enqueue(self, job_type: str, **values) -> Enqueued:
         return self.store.enqueue(JobSpec(LOCAL_WORKSPACE, job_type, **values))
 
-    def stop(self, timeout: float | None = 30.0) -> bool:
-        """Let running handlers finish and publish; claim nothing new. Work a handler hadn't
-        finished by `timeout` resumes on the next start, once its lease lapses."""
+    def stop(self, timeout: float | None = 30.0, release: bool = False) -> bool:
+        """Claim nothing new. Running handlers finish and publish, or with `release` give way at
+        their next `check_in()` and go back in line, to carry on at the next start. Work a
+        handler hadn't finished by `timeout` resumes on the next start, once its lease lapses."""
         self._stop.set()
+        if release:
+            for runner in self.runners:
+                for worker in runner.runners:
+                    for signals in list(worker.live.values()):
+                        signals.stop_for(signals.cancel, "The app is stopping.")
         finished = all(runner.stop(timeout) for runner in self.runners)
         if self._upkeep is not None:
             self._upkeep.join(timeout)

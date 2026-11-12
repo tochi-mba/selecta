@@ -218,7 +218,9 @@ export function App() {
       // it undoes the mix this was said about, wherever you are when you press it
       const scope = draftRef.current;
       const order = orderOf(scope === null ? mixRef.current : draftMixRef.current);
-      showToast(message, { scope: scopeKey(scope), undo: () => undoIn(scope, order) });
+      // UF-0380-07: the toast itself names the mix that changed, not only Activity
+      const where = scope === null ? shownData.current.name : draftDataRef.current?.name;
+      showToast(message, { scope: scopeKey(scope), undo: () => undoIn(scope, order), where });
     } else {
       showToast(message);
     }

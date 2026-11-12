@@ -109,3 +109,11 @@ web/e2e/*.probe.ts
 **/r[0-9]*-before/
 **/r[0-9]*-after/
 **/*-baseline-copy/
+
+# verification agents' working folders and harness specs (they live in web/ for node resolution)
+web/e2e-v[a-z]/
+web/v[a-z]-checks/
+web/v[a-z]-scratch/
+web/*-scratch/
+web/e2e/v[a-z]-*.e2e.ts
+web/e2e/*-claude-checks*.ts

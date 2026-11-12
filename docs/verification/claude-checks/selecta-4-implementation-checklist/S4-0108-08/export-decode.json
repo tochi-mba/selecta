@@ -1,0 +1,91 @@
+{
+  "mix": [
+    {
+      "song_id": 1,
+      "title": "Morning Light",
+      "seam": null,
+      "key": null
+    },
+    {
+      "song_id": 2,
+      "title": "Slow Tide",
+      "seam": "rendering",
+      "key": "c9dbccae51a011224ec1"
+    },
+    {
+      "song_id": 3,
+      "title": "Paper Moon",
+      "seam": "queued",
+      "key": "947c53b0338e275a7d4a"
+    },
+    {
+      "song_id": 4,
+      "title": "Neon Rain",
+      "seam": "queued",
+      "key": "64888040de407cc06b0a"
+    }
+  ],
+  "job_start": {
+    "id": "48850aa573b34bb48009fc9670b505b1",
+    "state": "preparing",
+    "revision": "7cdcb73a0bca",
+    "scope": "current"
+  },
+  "job": {
+    "id": "48850aa573b34bb48009fc9670b505b1",
+    "state": "ready",
+    "revision": "7cdcb73a0bca",
+    "name": "selecta-mix-20261112-114209-48850a.flac",
+    "seconds": 240.50936507936507,
+    "checksum": "164f06c026a98be3ffb4b76c95e88a0a5d789863c9fe697bb4095790d5c54c4e",
+    "error": null
+  },
+  "job_songs": [
+    "Morning Light",
+    "Slow Tide",
+    "Paper Moon",
+    "Neon Rain"
+  ],
+  "job_seams": [
+    "c9dbccae51a011224ec1",
+    "947c53b0338e275a7d4a",
+    "64888040de407cc06b0a"
+  ],
+  "bytes": 7780107,
+  "magic": "fLaC",
+  "ffprobe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "codec_name": "flac",
+        "sample_rate": "44100",
+        "channels": 2,
+        "duration_ts": 10606463,
+        "duration": "240.509365",
+        "bits_per_raw_sample": "16"
+      }
+    ],
+    "format": {
+      "duration": "240.509365"
+    }
+  },
+  "ffmpeg_decode_errors": "",
+  "ebur128": "Summary: Integrated loudness: I: -19.1 LUFS Threshold: -29.1 LUFS Loudness range: LRA: 2.0 LU Threshold: -39.1 LUFS LRA low: -20.0 LUFS LRA high: -18.1 LUFS True peak: Peak: -0.9 dBFS [out#0/null @ 000001fb10cd1d00] video:0KiB audio:41431KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: unknown size=N/A time=00:04:00.50 bitrate=N/A speed=50.9x elapsed=0:00:04.72",
+  "astats": [
+    "Overall",
+    "Peak level dB: -1.099798",
+    "Flat factor: 0.000000",
+    "Peak count: 5.000000",
+    "Number of samples: 10606463"
+  ],
+  "silences": [
+    "silence_start: 0",
+    "silence_end: 0.5 | silence_duration: 0.5",
+    "silence_start: 239.509365",
+    "silence_end: 240.509365 | silence_duration: 1"
+  ],
+  "order_check_exit": 0,
+  "order_check": "",
+  "unchanged_after_edit": true
+}

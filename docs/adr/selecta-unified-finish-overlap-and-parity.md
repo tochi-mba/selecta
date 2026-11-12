@@ -1,6 +1,6 @@
 # Selecta - Unified Finish prior-owner, current-source and overlap reconciliation
 
-**Status:** 24 Accepted ADRs (0366–0389); 17 UF tasks Not started; 6 In progress; 169 Implemented; 0 independently Verified (recounted from the checklist task lines 2026-11-12). Acceptance approved by requester on 2026-11-08; implementation owners and independent reviewers remain unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08); PR #41 now includes app source and regression tests.
+**Status:** 24 Accepted ADRs (0366–0389); 0 UF tasks Not started; 0 In progress; 192 Implemented; 0 independently Verified (recounted from the checklist task lines 2026-11-12). Acceptance approved by requester on 2026-11-08; implementation owners and independent reviewers remain unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526` (2026-11-08); PR #41 now includes app source and regression tests.
 
 ## No fabricated missing work
 

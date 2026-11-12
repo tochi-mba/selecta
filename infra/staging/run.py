@@ -126,6 +126,24 @@ def _rooms(env: Env, out: str) -> list[list[str]]:
     ]
 
 
+def _room_fanout(env: Env, out: str) -> list[list[str]]:
+    command = [
+        _py(),
+        "tests/load/room_fanout.py",
+        "run",
+        "--base-url",
+        env["STAGING_BASE_URL"],
+        "--tokens",
+        env["HOST_TOKENS_TXT"],
+        "--out",
+        f"{out}/room-fanout.json",
+    ]
+    for name in ("ROOMS", "LISTENERS", "ACTIONS", "RATE"):
+        if env.get(name):
+            command += [f"--{name.lower()}", env[name]]
+    return [command]
+
+
 def _restore(env: Env, out: str) -> list[list[str]]:
     return [["bash", "infra/backup/restore_drill.sh"]]
 
@@ -201,6 +219,15 @@ TASKS = {
             ("STAGING_BASE_URL", "ROOM_CODE", "REQUEST_ID"),
             _rooms,
             ("K6",),
+            ("STAGING_BASE_URL",),
+        ),
+        Task(
+            "room-fanout",
+            ("SC-0407-04", "SC-0416-06"),
+            "500 rooms x 100 SSE listeners while hosts change rooms; fan-out p99 and drops.",
+            ("STAGING_BASE_URL", "HOST_TOKENS_TXT"),
+            _room_fanout,
+            ("ROOMS", "LISTENERS", "ACTIONS", "RATE"),
             ("STAGING_BASE_URL",),
         ),
         Task(
