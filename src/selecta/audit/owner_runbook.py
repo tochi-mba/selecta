@@ -20,7 +20,12 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from selecta.audit.owner_runbook_sittings import OVERRIDES, SITTINGS, Sitting
+from selecta.audit.owner_runbook_sittings import (
+    CLASSIFY_ORDER,
+    OVERRIDES,
+    SITTINGS,
+    Sitting,
+)
 
 ADR_DIR = "docs/adr"
 OUT_DIR = "docs/verification"
@@ -72,14 +77,15 @@ def _state(line: str) -> str:
 
 
 def classify(task_id: str, text: str) -> str:
-    """Pick the sitting for a task: an explicit override, else the first sitting whose words
-    match."""
+    """Pick the sitting for a task: an override, else the first sitting whose words match."""
     if task_id in OVERRIDES:
         return OVERRIDES[task_id]
-    for sitting in SITTINGS:
-        if any(re.search(rf"\b(?:{word})", text, re.IGNORECASE) for word in sitting.words):
-            return sitting.slug
-    return SITTINGS[-1].slug
+    by_slug = {sitting.slug: sitting for sitting in SITTINGS}
+    for slug in CLASSIFY_ORDER:
+        words = by_slug[slug].words
+        if any(re.search(rf"\b(?:{word})", text, re.IGNORECASE) for word in words):
+            return slug
+    return CLASSIFY_ORDER[-1]
 
 
 def parse_checklist(path: Path) -> list[Task]:
