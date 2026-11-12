@@ -32,7 +32,7 @@ from selecta.api_common import (
 )
 from selecta.config import ANALYSIS_VERSION
 from selecta.eta import analysis_line_left
-from selecta.library.relevance import match_label, relevance
+from selecta.library.relevance import match_label, rank_songs
 from selecta.library.scan import ScanStopped
 
 
@@ -367,18 +367,26 @@ def add_routes(app, ctx) -> None:
             # Search locally across exact recording IDs, titles, artist credits,
             # versions, accent variants and conservatively matched typos.
             # Keep explicit sort choices and cursor pagination intact.
-            ranking = "music_relevance(s.id,s.artist,s.title)"
+            ranking = "h.rank"
+            joins = ""
             if q:
-                # GP-0251-08: the count and page share one score per song.
-                scores: dict[int, int | None] = {}
-
-                def score(song_id: int, artist: str | None, title: str | None) -> int | None:
-                    if song_id not in scores:
-                        scores[song_id] = relevance(q, song_id, artist, title)
-                    return scores[song_id]
-
-                conn.create_function("music_relevance", 3, score, deterministic=True)
-                conditions = [f"{ranking} IS NOT NULL", "s.duplicate_of IS NULL"]
+                # GP-0251-08: the count and page share one score per song. MI-0162-04: every
+                # song is ranked in one pass and only the matches go to a table of this
+                # connection's own, so SQLite joins them instead of calling back per row.
+                scores = rank_songs(
+                    q,
+                    conn.execute(
+                        "SELECT id,artist,title FROM songs WHERE duplicate_of IS NULL"
+                    ).fetchall(),
+                )
+                conn.execute(
+                    "CREATE TEMP TABLE IF NOT EXISTS search_hits("
+                    "song_id INTEGER PRIMARY KEY, rank INTEGER NOT NULL)"
+                )
+                conn.execute("DELETE FROM temp.search_hits")
+                conn.executemany("INSERT INTO temp.search_hits VALUES(?,?)", scores.items())
+                joins = "JOIN temp.search_hits h ON h.song_id=s.id "
+                conditions = ["s.duplicate_of IS NULL"]
                 if sort == "title":
                     order = ranking
             else:
@@ -406,7 +414,7 @@ def add_routes(app, ctx) -> None:
             else:
                 conditions.append("s.is_music=1")
             joins = (
-                "FROM songs s LEFT JOIN analysis a ON a.song_id=s.id "
+                f"FROM songs s {joins}LEFT JOIN analysis a ON a.song_id=s.id "
                 "LEFT JOIN lyrics l ON l.song_id=s.id "
                 "LEFT JOIN song_overrides o ON o.song_id=s.id "
             )

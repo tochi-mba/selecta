@@ -1,6 +1,7 @@
 import { ChangeEvent, useEffect, useState } from 'react';
 import { Action, Dialog } from '../ui/controls';
 import { words } from '../copy';
+import { fetchBytes } from '../api';
 
 type Preview = {
   token: string;
@@ -12,7 +13,7 @@ type Preview = {
 type BackupStatus = { pending_restart: boolean; rollback_available: boolean; problem?: string | null };
 
 async function backupRequest(path: string, init?: RequestInit): Promise<Response> {
-  const response = await fetch('/api/backup' + path, init);
+  const response = await fetchBytes('/backup' + path, init);
   if (!response.ok) {
     let message = 'Could not work with this backup.';
     try {
