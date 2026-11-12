@@ -356,11 +356,14 @@ jobs:
           cache-dependency-path: web/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
         working-directory: web
-      - name: Install Edge for Playwright
-        run: pnpm exec playwright install --with-deps msedge
+      - name: Install cloud and alignment browsers for Playwright
+        run: pnpm exec playwright install --with-deps chrome msedge firefox webkit
         working-directory: web
       - name: Cloud browser tests, in Edge, muted
         run: pnpm e2e:cloud
+        working-directory: web
+      - name: Playback proxy sample alignment in Chrome, Edge, Firefox and WebKit
+        run: pnpm e2e:alignment
         working-directory: web
       - name: Keep failed cloud browser artifacts
         if: failure()

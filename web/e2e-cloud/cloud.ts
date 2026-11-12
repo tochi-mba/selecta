@@ -7,8 +7,13 @@ export function listener(name: string) {
 }
 
 /** Sign `user` up with `songs` ready songs, and open the site signed in as them. */
-export async function signedIn(page: Page, request: APIRequestContext, user: string, { songs = 0, seconds = 4, path = '/' } = {}) {
-  const seeded = await request.post('/test/seed', { data: { user, songs, seconds } });
+export async function signedIn(
+  page: Page,
+  request: APIRequestContext,
+  user: string,
+  { songs = 0, seconds = 4, path = '/', realProxy = false } = {},
+) {
+  const seeded = await request.post('/test/seed', { data: { user, songs, seconds, real_proxy: realProxy } });
   expect(seeded.ok(), await seeded.text()).toBeTruthy();
   await page.addInitScript((name) => localStorage.setItem('selecta-e2e-user', name), user);
   await page.goto(path);

@@ -118,6 +118,14 @@ def wav(seconds: float, *, tone: float = 220.0, rate: int = 44_100) -> bytes:
     return out.getvalue()
 
 
+def playback_flac(source: bytes) -> bytes:
+    """Encode the exact decoded source samples as the production 24-bit lossless proxy does."""
+    audio, rate = sf.read(io.BytesIO(source), dtype="float32", always_2d=True)
+    out = io.BytesIO()
+    sf.write(out, audio, rate, format="FLAC", subtype="PCM_24")
+    return out.getvalue()
+
+
 def quiet_song(index: int, seconds: float = 8.0, rate: int = 8000) -> bytes:
     """A soft mono tone, different per song, for the Rooms speaker; the tests run muted anyway."""
     t = np.arange(int(seconds * rate)) / rate
@@ -254,6 +262,7 @@ def build(port: int):
                         expires_at=db_now(conn) + 86_400,
                     )
     songs = {index: quiet_song(index) for index in range(6)}
+    source_audio: dict[str, bytes] = {}
 
     def account_of(user: str) -> dict:
         # Legacy Rooms harnesses use bare tokens (e.g. "bob"), while the cloud
@@ -298,9 +307,19 @@ def build(port: int):
                 engine, objects, workspace_id, audio, name=f"Song {number + 1}.wav",
                 duration=float(body.get("seconds", 4.0)),
             )
-            add_playback_file(engine, objects, workspace_id, asset_id, audio)
+            source_audio[asset_id] = audio
+            proxy = playback_flac(audio) if body.get("real_proxy") else audio
+            add_playback_file(engine, objects, workspace_id, asset_id, proxy)
             ids.append(asset_id)
         return {"workspace_id": workspace_id, "assets": ids}
+
+    @app.get("/test/original-audio/{asset_id}")
+    def original_audio(asset_id: str):
+        """The uploaded source for the browser alignment check; never installed in production."""
+        audio = source_audio.get(asset_id)
+        if audio is None:
+            return Response(status_code=404)
+        return Response(audio, media_type="audio/wav")
 
     @app.post("/test/quota")
     def set_quota(body: dict = Body(default={})):  # noqa: B008
@@ -422,7 +441,8 @@ def build(port: int):
             objects.log.append({**entry, "status": 404})
             return Response(status_code=404)
         data = found.bytes()
-        headers = {"Accept-Ranges": "bytes", "Content-Type": "audio/wav"}
+        content_type = "audio/flac" if key.endswith(".flac") and data[:4] == b"fLaC" else "audio/wav"
+        headers = {"Accept-Ranges": "bytes", "Content-Type": content_type}
         wanted = request.headers.get("range", "")
         if wanted.startswith("bytes="):
             first, _, last = wanted[6:].partition("-")
