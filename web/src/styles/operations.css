@@ -71,6 +71,8 @@
 @media (max-width: 1024px) {
   .library-rows, .skeleton-library { --library-row-estimate: 169px; }
   :root[data-density='compact'] :is(.library-rows, .skeleton-library) { --library-row-estimate: 131px; }
+  .library-rows.library-cards { --library-row-estimate: 238px; }
+  :root[data-density='compact'] .library-rows.library-cards { --library-row-estimate: 230px; }
 }
 @media (max-width: 620px) {
   .library-rows, .skeleton-library { --library-row-estimate: 221px; }
