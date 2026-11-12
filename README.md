@@ -82,6 +82,37 @@ finished copying, and go on to be analysed. With nothing else to do, SelectaDJ t
 transitions across your library at the lowest priority, giving way to anything else straight away,
 and stops at 80% of its storage limit.
 
+## Cloud development on your PC
+
+The explicit `dev.cmd cloud` command starts the real Cloud API, its migrations and
+background worker, together with a **local-only** identity provider (WorkOS-compatible),
+disk-backed object storage, pretend Stripe billing and a hot-reloading Cloud site. No
+paid account or hosted service is required. It uses a separate
+`.cache/selecta-cloud/` data folder, never your existing local music library.
+
+```cmd
+dev.cmd cloud --seed
+```
+
+On the first run, `--seed` creates a Premium demo workspace with eight synthetic audio
+files and the login **dev@selectadj.test / selectadj-dev**. Subsequent launches can
+omit `--seed`; its data and sign-in sessions persist. Open the website URL the launcher
+prints (normally http://127.0.0.1:5173), sign in, or create a different account.
+Verification/reset emails appear in the local inbox at `/dev/mail` on that site.
+The site and identity pages run on loopback only; pretend Stripe never charges a card.
+
+Use `dev.cmd cloud --check` to start all services, validate identity, API readiness,
+workers and Vite proxies, then stop them cleanly. `--no-browser`, `--verbose`,
+`--startup-timeout 300`, `--api-port`, `--site-port`, `--identity-port`,
+`--data-dir` and `--isolated` are supported. `--isolated` uses a separate
+`.cache/selecta-cloud-isolated/` folder. Cloud mode requires uv, Node.js 22.12+,
+pnpm and FFmpeg on your PATH. Use Ctrl+C to stop launcher-owned services. No
+production WorkOS key or live Stripe key is allowed; the launcher refuses them.
+
+This is **Cloud application development**, not hosted deployment. It does not start
+managed R2, production WorkOS/Stripe or a remote worker gateway. To test PostgreSQL
+instead of SQLite, set `SELECTA_DEV_DATABASE_URL` to a development database
+connection URL before launching. Normal `dev.cmd` continues running local mode.
 ## Working on Selecta
 
 **One command starts local development:** the Python API (auto-reloads when code changes) and the
@@ -142,8 +173,9 @@ For non-Windows systems, replace the `dev.cmd` prefix with `uv run python -x dev
 The `--check` option is useful after setup, and `doctor` is useful when the prerequisite
 check reports something missing. For a fast macOS/Linux doctor that skips project dependency
 installation, use `uv run --no-sync python -x dev.cmd doctor`; the Windows command does that
-automatically. `SELECTA_MODE=cloud` is deliberately rejected; Cloud's API,
-gateway, identity, storage and database require their separate deployment configuration.
+automatically. Setting `SELECTA_MODE=cloud` before a normal `dev.cmd` launch is rejected; use
+`dev.cmd cloud` for the explicit, isolated development stack. A hosted deployment
+still needs separate gateway, identity, storage and database configuration.
 
 **CI runs more than `dev.cmd test`.** In particular, GitHub Actions also runs PostgreSQL
 isolation tests, the feature-flag sweep, Cloud browser tests, coverage aggregation, and CodeQL.

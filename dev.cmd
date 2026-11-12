@@ -6,14 +6,17 @@ macOS/Linux: uv run python -x dev.cmd
 
   dev.cmd                 Start the local API and site, open the browser
   dev.cmd --no-browser    Start without opening a browser
+  dev.cmd cloud           Start Cloud locally (identity, Cloud API, worker, site)
+  dev.cmd cloud --seed    Create demo account with synthetic music
+  dev.cmd cloud --check   Check Cloud readiness, then stop
   dev.cmd --check         Start, verify the whole local stack, then stop
   dev.cmd doctor          Check prerequisites and show what is missing
   dev.cmd test            Run the local lint, unit, build and browser test sequence
   dev.cmd --reuse-server  Explicitly use the existing API at --api-port
 
-Dev mode is intentionally local only. Cloud deployment needs a separately configured
-PostgreSQL, identity service and worker gateway; this script must never silently
-launch those services or point the local UI at production.
+Regular dev mode never contacts Cloud services. The explicit cloud command
+starts only loopback development doubles for identity, storage and billing, alongside
+the real Cloud API and worker. It is not a production Cloud deployment.
 """
 
 from __future__ import annotations
@@ -588,7 +591,7 @@ def main() -> int:
         prog="dev.cmd",
         description="Start the complete Selecta local stack, with live logs and health checks.",
     )
-    parser.add_argument("what", nargs="?", choices=["run", "test", "doctor"], default="run")
+    parser.add_argument("what", nargs="?", choices=["run", "cloud", "test", "doctor"], default="run")
     parser.add_argument("--no-browser", action="store_true", help="do not open the website")
     parser.add_argument("--check", action="store_true", help="smoke-test the full stack and exit")
     parser.add_argument(
@@ -596,6 +599,9 @@ def main() -> int:
     )
     parser.add_argument("--api-port", type=int, default=SERVER_PORT)
     parser.add_argument("--site-port", type=int, default=SITE_PORT)
+    parser.add_argument("--identity-port", type=int, default=8742, help="Cloud dev identity port")
+    parser.add_argument("--data-dir", help="Cloud dev data folder (default: .cache/selecta-cloud)")
+    parser.add_argument("--seed", action="store_true", help="Cloud only: prepare demo music and account")
     parser.add_argument(
         "--startup-timeout", type=float, default=STARTING_SECONDS,
         help="maximum seconds to wait for all API/site/proxy/data health checks",
@@ -608,6 +614,12 @@ def main() -> int:
     options = parser.parse_args()
     if options.startup_timeout <= 0:
         parser.error("--startup-timeout must be positive")
+    if options.what != "cloud" and (options.seed or options.data_dir):
+        parser.error("--seed and --data-dir require dev.cmd cloud")
+    if options.what == "cloud":
+        from selecta.devstack.launcher import run_cloud
+
+        return run_cloud(options, sys.modules[__name__])
     if options.what == "doctor":
         return doctor()
     if options.what == "test":
