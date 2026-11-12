@@ -2,7 +2,7 @@ import { flagOn, useFlags } from '../flags';
 import { listed } from '../shell/manifest';
 import { useEffect, useState } from 'react';
 import { Folders, get, post } from '../api';
-import { useJobsStatus } from '../state/jobs';
+import { refreshJobs, useJobsStatus } from '../state/jobs';
 import { analysisWords, estimateWords, etaRangeWords } from '../lib';
 import { useRoute, type WorkshopTab } from '../router';
 import { workspaceTabs } from '../shell/manifest';
@@ -88,7 +88,7 @@ function Overview({ status }: { status: ViewProps['status'] }) {
           place until the jobs answer arrives, so the metrics don't jump down under the reader. */}
       {jobs
         ? <NeedsYou jobs={jobs} readySongs={counts.ready ?? 0} folders={folders} />
-        : !stale && !unsupported && <section className="panel stack needs-you"><h2>What needs you</h2><Skeleton variant="metrics" lines={1} label="Checking what needs you" /></section>}
+        : !stale && !unsupported && <section className="panel stack needs-you"><h2>What needs you</h2><Skeleton variant="metrics" lines={1} label="Checking what needs you" retry={refreshJobs} /></section>}
       <div className="metrics">
         <div><strong>{counts.ready ?? 0}</strong><span>ready for mixes</span></div>
         <div><strong>{counts.analysed}</strong><span>audio analysed</span></div>

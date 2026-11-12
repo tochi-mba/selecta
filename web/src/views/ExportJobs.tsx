@@ -90,7 +90,7 @@ export function ExportJobs({ always = false }: { always?: boolean }) {
   if (!jobs) {
     if (!always) return null;
     if (stale) return <section className="panel stack"><h2>Exports</h2><p className="warn">Couldn’t check on your exports.</p><Action run={refreshExports}>Try again</Action></section>;
-    return <section className="panel stack"><h2>Exports</h2><Skeleton variant="metrics" lines={1} label="Looking for your exports" /></section>;
+    return <section className="panel stack"><h2>Exports</h2><Skeleton variant="metrics" lines={1} label="Looking for your exports" retry={refreshExports} /></section>;
   }
   if (!jobs.length && !always) return null;
   const going = jobs.filter(isExportActive).length;

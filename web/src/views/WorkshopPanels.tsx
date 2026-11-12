@@ -24,7 +24,7 @@ export function MemoryPanel() {
   const load = useCallback(() => get<Memory>('/memory').then((value) => { setMemory(value); setFailed(false); }).catch(() => setFailed(true)), []);
   useEffect(() => { void load(); }, [load]);
   if (failed) return <Problem retry={load}>Couldn’t load learning history.</Problem>;
-  if (!memory) return <Skeleton variant="metrics" label="Loading learning history" />;
+  if (!memory) return <Skeleton variant="metrics" label="Loading learning history" retry={() => void load()} />;
   if (!memory.tried) return <section className="panel"><h2>Learning starts with listening</h2><p className="hint">{words().learningStaysHere}</p></section>;
   const rated = memory.liked + memory.disliked;
   return (
@@ -79,7 +79,7 @@ export function StoragePanel() {
   if ((!storage || limit === null) && loadFailed) return <Problem retry={refresh}>Couldn’t read storage information.</Problem>;
   // MP-0298-06: the placeholder is the panel itself, about as tall as the real one, so the backup
   // panel under it doesn't jump down when the numbers arrive
-  if (!storage || limit === null) return <section className="panel stack"><h2>Storage</h2><Skeleton variant="metrics" lines={9} label="Working out how much room there is" /></section>;
+  if (!storage || limit === null) return <section className="panel stack"><h2>Storage</h2><Skeleton variant="metrics" lines={9} label="Working out how much room there is" retry={() => void refresh()} /></section>;
   const words = storageWords(storage);
   const overBudget = storage.cache_bytes > storage.budget_bytes;
   const largest = Math.max(storage.largest_budget_bytes / GB, 0.5);
@@ -261,7 +261,7 @@ export function JobsPanel({ status, onJobs }: { status: ViewProps['status']; onJ
     if (jobs) onJobs?.(jobs);
   }, [jobs, onJobs]);
   if (unsupported) return <p className="hint">{words().jobsNeedRestart}</p>;
-  if (!jobs) return failed ? <Problem retry={refreshJobs}>Couldn’t find out what’s running.</Problem> : <Skeleton variant="metrics" label="Finding out what’s running" />;
+  if (!jobs) return failed ? <Problem retry={refreshJobs}>Couldn’t find out what’s running.</Problem> : <Skeleton variant="metrics" label="Finding out what’s running" retry={refreshJobs} />;
   const left = jobs.mix.queued + jobs.mix.rendering + jobs.mix.none;
   return (
     <section className="panel stack">
@@ -451,7 +451,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
     <section className="panel stack">
       <h2>Your music folders</h2>
       {loadFailed && <Problem retry={refresh}>Couldn’t read your watched folders.</Problem>}
-      {list === null && !loadFailed && <Skeleton variant="metrics" lines={1} label="Looking at your folders" />}
+      {list === null && !loadFailed && <Skeleton variant="metrics" lines={1} label="Looking at your folders" retry={() => void refresh()} />}
       {list?.folders.length === 0 && <p className="hint">No folders are being watched. Add one below and new songs in it will show up by themselves.</p>}
       {!!list?.folders.length && (
         <ul className="folder-list">
@@ -655,7 +655,7 @@ export function Diagnostics() {
     void load();
   }, [load]);
   if (failed) return <Problem retry={load}>The server isn’t answering, which is the first thing to look at. Is Selecta still running?</Problem>;
-  if (!info) return <Skeleton variant="metrics" label="Gathering details" />;
+  if (!info) return <Skeleton variant="metrics" label="Gathering details" retry={() => void load()} />;
   const text = JSON.stringify(safeDiagnostics(info), null, 2);
   const canCopy = typeof navigator.clipboard?.writeText === 'function';
   return (

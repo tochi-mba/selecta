@@ -832,7 +832,14 @@ export function RequestsPanel() {
         {text && <button onClick={finish}>Done</button>}
       </div>
       {searchError && <Problem retry={() => setSearchAttempt((value) => value + 1)}>{searchError}</Problem>}
-      {text && matches === null && !searchError && <Skeleton variant="library" lines={2} label="Searching your library" />}
+      {text && matches === null && !searchError && (
+        <Skeleton
+          variant="library"
+          lines={2}
+          label="Searching your library"
+          retry={() => setSearchAttempt((value) => value + 1)}
+        />
+      )}
       {text && matches && !searchError && matches.length === 0 && <p className="hint">Nothing in your library matches that.</p>}
       {text && !!matches?.length && (
         <ul id="request-results" className="request-results" role="listbox" aria-label="Matching songs">

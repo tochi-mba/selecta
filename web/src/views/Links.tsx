@@ -191,7 +191,16 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   };
   const skip = (target: HarmonicDiscovery) => setSkipped((ids) => [...ids.filter((id) => id !== target.id), target.id]);
 
-  if (!loaded && !error) return <Skeleton variant="pairs" lines={1} label="Finding harmonic discoveries" />;
+  if (!loaded && !error) {
+    return (
+      <Skeleton
+        variant="pairs"
+        lines={1}
+        label="Finding harmonic discoveries"
+        retry={() => setAttempt((value) => value + 1)}
+      />
+    );
+  }
   if (!loaded && error) return <Problem retry={() => setAttempt((value) => value + 1)}>{error}</Problem>;
   // UF-0384-06: nothing found yet points at what would find more, rather than a dead end
   if (!items.length && !error) return <p className="lede">No chord matches to hear yet. They turn up as more of your library is analysed. <LinkIfThere to="/workshop">See analysis progress</LinkIfThere></p>;
@@ -541,8 +550,15 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
           )}
           <SearchField label="Search shared words" value={query} onChange={setQuery} placeholder="Look for a word, like night or love" />
           {failed && data === null && <Problem retry={load}>Couldn’t search your lyrics. Nothing’s lost.</Problem>}
-          {failed && data !== null && <p className="warn" role="status">Can’t check for new ones right now, so what’s shown may be out of date.</p>}
-          {data === null && !failed && <Skeleton variant="pairs" lines={4} label="Searching your lyrics" />}
+          {failed && data !== null && (
+            <div className="row wrap" role="status">
+              <span className="warn">Can’t check for new ones right now, so what’s shown may be out of date.</span>
+              <Action working="Checking…" run={load}>Try again</Action>
+            </div>
+          )}
+          {data === null && !failed && (
+            <Skeleton variant="pairs" lines={4} label="Searching your lyrics" retry={() => void load()} />
+          )}
           {data?.links.length === 0 && (
             <p className="lede">
               {query ? `No links on “${query}” yet. ` : 'No links yet. Analysing more songs will find more. '}
