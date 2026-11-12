@@ -158,6 +158,241 @@ Listen (`/listen`), Make (`/mixes`) and Create (`/mix/current/edit`).
 |---|---|---|---|---|
 | SF-0222-08 rise, drop, uncertainty | `/mix/current/edit` | "Where in this mix does the energy rise most, and where does it drop? How sure is SelectaDJ about that?" | Points match the measured energy; says it is measured, not requested, and how certain | Completable; the energy picture has a text description |
 
+## Per-task study cards, ADR-0223 to ADR-0247
+
+These cards are **preparation**, not findings. They add the person-only SF tasks not covered by
+the earlier ADR-0198 to ADR-0222 cards. No task is marked Verified by this document and
+each session must be conducted and evaluated by an independent participant observer.
+
+**Shared fields and rules for these cards:**
+- **Consent line:** read the consent wording from the earlier card rules before recording anything.
+- **Participant codes:** use P01, P02, etc., never a person's real name.
+- **Timing:** record seconds to the first action and to outcome plus any stall above 10 seconds.
+- **Confidence:** ask the participant for a 1–5 rating after the task, not before.
+- **Outcome:** record Done unaided, Done with stall, Gave up or Wrong result with the actual action.
+- **Pilot:** preparation only; a developer walkthrough is never a participant result.
+- **Test environment:** use `python tests/e2e_server.py <port>` and the made-up library in
+  a fresh browser profile unless the card explicitly requires licensed real music.
+
+### ADR-0223
+
+**SF-0223-08 - uncoached study card**
+
+- **Route:** /mix/current/edit -> transition Studio. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Ask a beginner and a producer to point out the editable song parts and make one reversible change."
+- **Done means:** Each names the part changed, applies an edit and can identify the undo route..
+- **Hesitation:** Pause over 10 seconds, wrong edit or need for a hint. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+### ADR-0224
+
+**SF-0224-02 - uncoached study card**
+
+- **Route:** /mix/current/edit -> Studio before/after. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Without prompting, show what changed and what stayed the same after an editing suggestion."
+- **Done means:** Participant identifies changed and unchanged cells correctly..
+- **Hesitation:** Misidentifies an unchanged cell or does not find the comparison. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+**SF-0224-08 - uncoached study card**
+
+- **Route:** /mix/current/edit -> Studio suggestions. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Predict what accepting a suggested shape will do and how you would reverse it."
+- **Done means:** Prediction matches the applied proposal and participant can undo..
+- **Hesitation:** Uncertainty about the scope or an unintended edit. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+### ADR-0225
+
+**SF-0225-04 - uncoached study card**
+
+- **Route:** /listen -> Requests with a bridge proposed. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Decide whether to accept the additional songs needed to fulfil a request."
+- **Done means:** Participant names the extra tracks before consenting or declining..
+- **Hesitation:** Agrees without seeing the additional tracks or confuses consent with play. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+**SF-0225-08 - uncoached study card**
+
+- **Route:** /listen -> Requests, pending and ready. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Explain what will happen to this request and when it might play."
+- **Done means:** Participant correctly distinguishes requested, preparing and ready from guaranteed next playback..
+- **Hesitation:** An incorrect timing prediction or unprompted certainty. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+### ADR-0226
+
+**SF-0226-08 - uncoached study card**
+
+- **Route:** /library in normal and DJ retrieval modes. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Find a familiar track, then find one by key and tempo without coaching."
+- **Done means:** Both casual listener and DJ retrieve the specified recording; record each elapsed time..
+- **Hesitation:** Wrong song selected or hesitation longer than 10 seconds. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+### ADR-0228
+
+**SF-0228-01 - uncoached study card**
+
+- **Route:** /mixes/mine with current mix and a draft. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Point out which mix is playing now and which one is saved for later."
+- **Done means:** Correctly distinguishes current, audible playback from an inactive draft..
+- **Hesitation:** Draft misidentified as playing. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+**SF-0228-03 - uncoached study card**
+
+- **Route:** /mixes/mine with current and draft actions. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Keep a draft for later without replacing what is playing; then explain Edit versus Play."
+- **Done means:** No unintended playback; chosen action affects only the named mix..
+- **Hesitation:** Unexpected Play or confusion about edit scope. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+**SF-0228-06 - uncoached study card**
+
+- **Route:** /mixes/mine with render jobs and Up Next. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Identify which songs play next and which jobs are still rendering."
+- **Done means:** Participant distinguishes the render line from the audible Up Next sequence..
+- **Hesitation:** Names a render job as the next song. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+### ADR-0229
+
+**SF-0229-01 - uncoached study card**
+
+- **Route:** / first-run setup in a fresh profile. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Explain which computer folder the app will read and what the browser does."
+- **Done means:** Explains local folder and server relationship before selecting any files..
+- **Hesitation:** Expects a remote upload without evidence. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+**SF-0229-07 - uncoached study card**
+
+- **Route:** / first-run -> /mixes. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Start the first song and describe the sound or browser permission expected."
+- **Done means:** One safe action begins real audio in the test setup or correctly reports a browser block..
+- **Hesitation:** Repeated uncertain starts or unexpected autoplay. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+**SF-0229-08 - uncoached study card**
+
+- **Route:** /listen with own licensed real music and an audition-ready transition. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Listen to the first handoff, then describe whether it happened and how it sounded."
+- **Done means:** Participant actually auditions the transition and independently describes the handoff; audio quality remains human-assessed..
+- **Hesitation:** Mistakes a planned handoff for one heard. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+### ADR-0230
+
+**SF-0230-01 - uncoached study card**
+
+- **Route:** /workshop overview, source, analysis and storage. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Find the current system health, the source folder, analysis work and storage use."
+- **Done means:** All four destinations identified correctly without prompting..
+- **Hesitation:** Opens a wrong operational action or takes more than 10 seconds to choose. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+**SF-0230-08 - uncoached study card**
+
+- **Route:** /workshop/sources with a simulated stuck source. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Find the problem and restore progress without changing a healthy source."
+- **Done means:** Correct recovery action selected; healthy source left unchanged..
+- **Hesitation:** Attempts a destructive or unrelated action. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+### ADR-0232
+
+**SF-0232-08 - uncoached study card**
+
+- **Route:** /mix/current/edit or /workshop with a simulated failed save/job. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Recover an unfinished edit or failed job without losing already entered work."
+- **Done means:** Correct input retained and recovery works after failure injection..
+- **Hesitation:** Data loss, wrong retry target, or abandoning an available recovery. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+### ADR-0237
+
+**SF-0237-08 - uncoached study card**
+
+- **Route:** /listen, /mixes and Requests with distinct statuses. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Identify what is prepared, what is actually playing and what was requested."
+- **Done means:** Each of the three states classified without confusing readiness and playback..
+- **Hesitation:** Claims a prepared or requested song is currently sounding. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+### ADR-0242
+
+**SF-0242-04 - uncoached study card**
+
+- **Route:** /mix/current/edit and /mixes/mine. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Predict which mix changes when pressing Save, Play, Replace and Undo."
+- **Done means:** Each scope named accurately before performing a safe reversible action..
+- **Hesitation:** Unintended replacement, confusion about Undo scope. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+**SF-0242-08 - uncoached study card**
+
+- **Route:** /mix/current/edit after a reordering and save. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Describe what just changed and what will happen next."
+- **Done means:** Accurately names the updated order and the next action or pending work..
+- **Hesitation:** Believes an unsaved proposal is already playing. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+### ADR-0243
+
+**SF-0243-08 - uncoached study card**
+
+- **Route:** /mix/current/edit with several similar song rows. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Make the specified sequence edit quickly without touching other songs."
+- **Done means:** Exact requested change and no unintended edits; elapsed time recorded..
+- **Hesitation:** Wrong row moved or unrelated data changed. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+### ADR-0244
+
+**SF-0244-02 - uncoached study card**
+
+- **Route:** search and command palette with matching names across groups. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Find a song, a saved mix, a route and an action with similar wording."
+- **Done means:** Each result identified by its category before selection..
+- **Hesitation:** Picks a route instead of a song or confuses a command with a result. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+**SF-0244-08 - uncoached study card**
+
+- **Route:** search and command palette for novice and frequent operator. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Complete the same retrieval tasks by search and by navigation."
+- **Done means:** Per-task time and errors recorded for both cohorts; no advantage claimed before study..
+- **Hesitation:** Novice mis-selection or expert needs extra backtracking. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+### ADR-0246
+
+**SF-0246-03 - uncoached study card**
+
+- **Route:** /mix/current/edit from an unfamiliar mix. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Find the song that needs changing and inspect the transition into it."
+- **Done means:** Correct song and exact seam selected without modifying another pair..
+- **Hesitation:** Selects the wrong song or handoff. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+**SF-0246-05 - uncoached study card**
+
+- **Route:** /listen -> Requests requiring a bridge. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Make a song request and decide whether the proposed bridge is acceptable."
+- **Done means:** Participant names the route and added songs before granting or refusing consent..
+- **Hesitation:** Consents without understanding the bridge. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+**SF-0246-07 - uncoached study card**
+
+- **Route:** /listen -> /mixes -> /mix/current/edit -> /listen. Use the made-up library in `tests/e2e_server.py` unless real music is specified.
+- **Card:** "Leave and return, then identify the same song, current mix and intended change."
+- **Done means:** Song, mix and intent recognised after navigation; no unintended playback restart..
+- **Hesitation:** Loses track of the current mix or confuses draft and playback. Record the first wrong click and any pause longer than 10 seconds.
+- **Pilot:** preparation only; not run and never a participant result.
+
+
 ## Listener journey scripts (SF-0240-01)
 
 | Task | Card read to the participant | Done means |
