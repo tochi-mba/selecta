@@ -472,10 +472,8 @@ def create_cloud_app(
                     # No id, so the replay cursor stays put; the page asks /api/account, hears
                     # `session_revoked` and shows "You were signed out".
                     ended = {"topic": "session.revoked", "payload": {}}
-                    yield f"event: selecta
-data: {json.dumps(ended, separators=(',', ':'))}
-
-"
+                    data = json.dumps(ended, separators=(",", ":"))
+                    yield f"event: selecta\ndata: {data}\n\n"
                     break
                 checked = True
                 batch, rules_version = await asyncio.to_thread(fetch, cursor)

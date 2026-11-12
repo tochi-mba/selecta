@@ -5,8 +5,11 @@ WCAG 2.2 relative luminance. Text needs 4.5:1, non-text marks (control edges, fo
 artwork) need 3:1, and decoration and disabled controls are listed for information only. A pair
 below its minimum must appear in EXCEPTIONS with a reason, and the owner reviews that list.
 
-    python -m selecta.audit.contrast_pairs --write   # regenerate docs/verification/s4-contrast-pairs.md
-    python -m selecta.audit.contrast_pairs --check   # exit 1 when the table is out of date or failing
+    python -m selecta.audit.contrast_pairs --write
+    python -m selecta.audit.contrast_pairs --check
+
+The write command regenerates ``docs/verification/s4-contrast-pairs.md``; the check command exits
+with status 1 when the committed table is out of date or contains an unexcepted failing pair.
 
 Read-only apart from --write.
 """
@@ -131,7 +134,7 @@ def _hex(rgb: tuple[float, ...]) -> str:
 
 
 def resolve(theme: dict[str, str], value: str) -> str | None:
-    """A var() chain or `color-mix(in srgb, A N%, B)` as #rrggbb; None when it involves transparency."""
+    """Resolve a var or colour mix to hex; return None when transparency is involved."""
     v = value.strip()
     ref = re.fullmatch(r"var\((--[a-z0-9-]+)\)", v)
     if ref:
@@ -169,13 +172,23 @@ def pairs(css: str | None = None) -> list[Pair]:
     found: list[Pair] = []
     for name, theme in themes(css).items():
 
-        def add(kind: str, fg: str, bg: str, minimum: float | None, alpha: float = 1.0) -> None:
-            fg_hex, bg_hex = resolve(theme, f"var({fg})"), resolve(theme, f"var({bg})")
+        def add(
+            kind: str,
+            fg: str,
+            bg: str,
+            minimum: float | None,
+            alpha: float = 1.0,
+            *,
+            _theme: dict[str, str] = theme,
+            _name: str = name,
+        ) -> None:
+            fg_hex = resolve(_theme, f"var({fg})")
+            bg_hex = resolve(_theme, f"var({bg})")
             if fg_hex is None or bg_hex is None:
                 return
             shown = over(fg_hex, bg_hex, alpha) if alpha < 1 else fg_hex
             ratio = round(contrast(shown, bg_hex), 2)
-            found.append(Pair(name, kind, fg, bg, shown, bg_hex, ratio, minimum))
+            found.append(Pair(_name, kind, fg, bg, shown, bg_hex, ratio, minimum))
 
         for surface in (*SURFACES, "--surface-selected"):
             for role in TEXT_ROLES:

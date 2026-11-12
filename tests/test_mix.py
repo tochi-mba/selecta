@@ -207,7 +207,7 @@ def test_moving_a_song_resets_only_the_seams_whose_pairs_changed(conn, store):
 
 
 def test_moving_a_song_up_past_several_resets_the_song_that_closes_its_gap(conn, store):
-    """1 2 3 4 5, move 4 to the second place: 1 4 2 3 5. The 4-2 and 1-4 pairs and 3-5 are new; 2-3 is not."""
+    """Moving 4 second makes 1-4, 4-2 and 3-5 new while retaining the existing 2-3 pair."""
     for song in (1, 2, 3, 4, 5):
         mix.add_song(conn, song)
     for position in (1, 2, 3, 4):
