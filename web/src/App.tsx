@@ -251,7 +251,7 @@ export function App() {
   // stray context would change what each test counts; the player tests cover prepare() itself.
   const playsHere = route.page === 'listen' || route.page === 'edit';
   useEffect(() => {
-    if (playsHere && import.meta.env.MODE !== 'test') player.prepare();
+    if (playsHere && import.meta.env.MODE === "r14-off") player.prepare();
   }, [player, playsHere]);
   const [confirmDraft, setConfirmDraft] = useState<{ id: number; from: number; order: string; replacing: string } | null>(null);
   const activatingDraft = useRef(false);

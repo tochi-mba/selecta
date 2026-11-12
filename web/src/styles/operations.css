@@ -54,7 +54,9 @@
      estimate (style.css .song-row: 1px border-bottom) */
   contain-intrinsic-size: auto calc(var(--library-row-estimate) - 2 * var(--row-pad) - 1px);
 }
-/* The height a row not drawn yet stands in at, as a whole row (border box). Measured in Edge on
+/* The height a row not drawn yet stands in at, as a whole row (border box). Compact list rows were
+   re-measured after their motif moved beside the title (88/131/175px against 126/169/221px comfortable,
+   22 to 30% shorter). Measured in Edge on
    2026-11-12 (the median row of tests/e2e_server.py's library, e2e/library-row-estimate.e2e.ts) at each
    breakpoint the row's layout changes (four columns over 1024px, name and actions side by side to 621px,
    everything stacked at 620px and under), in both densities and both layouts. An estimate
@@ -63,16 +65,16 @@
    Specificity: the compact and card selectors outrank the plain one, and the narrower media blocks come
    later, so each pair below wins only where it should. */
 .library-rows, .skeleton-library { --library-row-estimate: 126px; }
-:root[data-density='compact'] :is(.library-rows, .skeleton-library) { --library-row-estimate: 118px; }
+:root[data-density='compact'] :is(.library-rows, .skeleton-library) { --library-row-estimate: 88px; }
 .library-rows.library-cards { --library-row-estimate: 230px; }
 :root[data-density='compact'] .library-rows.library-cards { --library-row-estimate: 222px; }
 @media (max-width: 1024px) {
   .library-rows, .skeleton-library { --library-row-estimate: 169px; }
-  :root[data-density='compact'] :is(.library-rows, .skeleton-library) { --library-row-estimate: 161px; }
+  :root[data-density='compact'] :is(.library-rows, .skeleton-library) { --library-row-estimate: 131px; }
 }
 @media (max-width: 620px) {
   .library-rows, .skeleton-library { --library-row-estimate: 221px; }
-  :root[data-density='compact'] :is(.library-rows, .skeleton-library) { --library-row-estimate: 205px; }
+  :root[data-density='compact'] :is(.library-rows, .skeleton-library) { --library-row-estimate: 175px; }
   .library-rows.library-cards { --library-row-estimate: 234px; }
   :root[data-density='compact'] .library-rows.library-cards { --library-row-estimate: 226px; }
 }
