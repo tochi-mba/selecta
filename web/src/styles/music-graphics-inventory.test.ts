@@ -45,7 +45,7 @@ describe('music graphics inventory (FP-0266-01)', () => {
   it('reads the spectrum colours from the live theme, and repaints on a theme change', () => {
     const now = fs.readFileSync(`${SOURCE}views/Now.tsx`, 'utf8');
     expect(now).toContain("getPropertyValue('--accent')");
-    expect(now).toMatch(/\[player, active, stage, reduceMotion, theme, paletteRevision, spectrumShape\]/);
+    expect(now).toMatch(/\[player, active, stage, reduceMotion, theme, paletteRevision, spectrumShape, detail\]/);
     const modes = fs.readFileSync(`${SOURCE}views/spectrumVisuals.ts`, 'utf8');
     expect(modes).toContain('SPECTRUM_MODES');
   });
