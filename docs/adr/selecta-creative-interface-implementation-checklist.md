@@ -249,6 +249,6 @@
 
 ## Totals, implementation and independent verification policy
 
-**96/140 implementation checkboxes checked (2026-11-10); 96 Implemented, 7 In progress, 33 Need a person, 4 Not started, 0 independently Verified; all 20 ADR decisions Accepted.** These counts apply only to the CI programme, not current Selecta capabilities.
+**106/140 implementation checkboxes checked (2026-11-12); 106 Implemented, 1 In progress, 33 Need a person, 0 Not started, 0 independently Verified; all 20 ADR decisions Accepted.** These counts apply only to the CI programme, not current Selecta capabilities.
 
 On a new task implementation, attach owner, actual code PR, exact SHA and source/tests; advance implementation only when merged. After independent human/real-audio/AT/device/performance review, set Verified Yes with named evidence. Update its ADR, this checklist, the evidence ledger, roadmap and release gates together. Older MI tasks and source-level checkmarks must be reconciled, never automatically inherited.

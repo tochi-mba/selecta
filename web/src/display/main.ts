@@ -33,6 +33,11 @@ function schedule(ms = POLL_MS): void {
 async function pair(): Promise<void> {
   const started = await call<{ pairing_code: string; expires_at: number }>('/api/display/pairings', { method: 'POST' });
   pairingCode = started.pairing_code;
+  drawPairing();
+}
+
+/** The pairing screen for the code we already hold; drawn again after a missed look replaced it. */
+function drawPairing(): void {
   shownCode = '';
   replace(root,
     h('section', { className: 'd-pair' },
@@ -79,6 +84,7 @@ async function tick(): Promise<void> {
     failures = 0;
     if (view.state === 'paired') { endedAt = 0; drawRoom(view); }
     else if (view.state === 'expired' || (view.state === 'waiting' && !pairingCode)) await pair();
+    else if (view.state === 'waiting' && !document.getElementById('d-pairing')) drawPairing();
     else if (view.state === 'ended') {
       if (!endedAt) {
         endedAt = Date.now();

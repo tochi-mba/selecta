@@ -5,7 +5,7 @@
   "baseline_main_sha": "c3715b14a70a0a9005e9fbc08d44576f3eac3c15",
   "as_of": "2026-11-08",
   "decision": "50 Accepted (owner approval 2026-11-08); approval is not implementation",
-  "implementation_status": "400 Not started; 0 In progress; 0 Implemented",
+  "implementation_status": "263 Implemented; 17 In progress; 70 Not started; 46 Needs a person; 4 Superseded (2026-11-12, recounted from the checklist task lines; 400 Not started at the 2026-11-08 baseline; the per-group lists below lag the checklist for 127 tasks)",
   "independent_verification": "0 Verified; no independent visual/real-audio/AT/performance acceptance claimed",
   "status_scope_note": "New artistic acceptance delta only; not a judgment that existing source features are absent. Historical programmes unchanged.",
   "groups": {

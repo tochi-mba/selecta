@@ -7,7 +7,7 @@
 
 | ADR | Status | Proven | Still open | Every task proven |
 |---|---|---|---|---|
-| [ADR-0001](adr-0001-product-contract-and-parity.md) | In progress | 5 of 7 | T0001, T0005 | no |
+| [ADR-0001](adr-0001-product-contract-and-parity.md) | In progress | 6 of 7 | T0005 | no |
 | [ADR-0002](adr-0002-routing-and-shell.md) | Implemented | 7 of 8 | T0049 | no |
 | [ADR-0003](adr-0003-design-tokens-and-brand.md) | In progress | 5 of 7 | T0027, T0029 | no |
 | [ADR-0004](adr-0004-interaction-primitives-and-notifications.md) | In progress | 8 of 8 | none | yes |
@@ -49,7 +49,7 @@ Acceptance criteria:
 
 | Task | Ticked | Ledger status | Proof |
 |---|---|---|---|
-| T0001 | no | Partly | open |
+| T0001 | yes | Done | Pinned at main `911c98106795e9ce0154afc8d9a53a886a8643ef`. `docs/baseline/911c981/` was captured 2026-11-12 by `tests/baseline_capture.py` and `web/e2e/baseline-capture.mjs` from that commit running its own server and built page on a made-up library in Edge: 12 screenshots (six views, desktop and phone), its API answers, `settings.json` (Settings defaults, steering, storage, browser storage) and `playback-trace.json` (audio clock starts and fetched audio; the first transition never rendered because 911c981 seam worker freezes on Windows, as `manifest.json` says). Route and response shapes are in `tests/fixtures/api_contracts_baseline.json`. `tests/test_baseline_archive.py` (6 tests) and `tests/test_api_contract_fixtures.py` passed 2026-11-12. |
 | T0002 | yes | Done | `docs/adr/feature-parity.md` lists every feature with where it now lives. `web/e2e/pages.e2e.ts` opens every page. |
 | T0003 | yes | Done | Written record in `docs/user-journeys.md`: casual listening, live requesting, mix creation and expert seam editing, 22 steps, each naming the browser test in `web/e2e/` (listen, flows, integration, mp-0283, mp-0288, mp-0290) that walks it. `tests/test_user_journeys.py` (2 tests) fails if a named test is renamed or removed. Passed 2026-11-11 (pytest, 2 passed). |
 | T0004 | yes | Done | `docs/acceptance.md` now says how it is checked: every code-decided number or rule is re-read from the code by `tests/test_acceptance_ledger.py` (11 claim tests, incl. `test_flagged_rows_say_what_changed`), and every real-library or listening measurement is flagged as a dated historical snapshot, not re-measured (`test_real_library_measurements_are_flagged_as_historical_snapshots`). Passed 2026-11-12 (12 passed). Re-measuring the owner library is not part of this task. |

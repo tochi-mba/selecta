@@ -180,3 +180,25 @@ def test_cookie_authenticated_writes_reject_a_cross_site_origin(party):
     assert answer.status_code == 403
     assert answer.json()["detail"]["code"] == "origin_not_allowed"
     assert ORIGIN != "https://attacker.example"
+
+
+def test_guest_votes_follow_the_hosts_own_flag_decision_not_the_build(party):
+    import sqlalchemy as sa
+
+    from selecta.billing.schema import entitlement_overrides
+    from selecta.persistence import transaction
+
+    opened = party.open_room(ALICE)
+    room_id, code = opened["room"]["id"], opened["code"]
+    guest, _ = join(party, code)
+    asked = guest.post(f"/api/guest/rooms/{room_id}/requests", json={"song_id": 5})
+    request_id = asked.json()["request_id"]
+    assert guest.get(f"/api/guest/rooms/{room_id}").json()["votes_on"] is True
+    # The host drops to Free: votes are on in the build but no longer on for the host.
+    with transaction(party.engine) as conn:
+        conn.execute(sa.update(entitlement_overrides)
+                     .where(entitlement_overrides.c.workspace_id == party.workspaces[ALICE])
+                     .values(expires_at=1.0))
+    assert guest.get(f"/api/guest/rooms/{room_id}").json()["votes_on"] is False
+    refused = guest.post(f"/api/guest/rooms/{room_id}/requests/{request_id}/vote")
+    assert refused.status_code == 403 and refused.json()["detail"]["code"] == "flag_off"

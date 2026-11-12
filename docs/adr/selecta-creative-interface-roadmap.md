@@ -1,6 +1,6 @@
 # Selecta - creative-interface synthesis roadmap: 20 original + 13 horizontal visualizer ADRs
 
-**Documentation-only proposal (2026-11-08).** Baseline: main 4c2f9f03b8b7e185a7a5021979f4b443e40299dd, after merged PR #32. **20 Accepted decisions (owner approved 2026-11-08); 140 Not started tasks, 0 In progress, 0 Implemented; 0 independently Verified.** No source code, tests or assets changed in the original submission.
+**Documentation-only proposal (2026-11-08).** Baseline: main 4c2f9f03b8b7e185a7a5021979f4b443e40299dd, after merged PR #32. **20 Accepted decisions (owner approved 2026-11-08).** Created with 140 tasks Not started; no source code, tests or assets changed in the original submission. **Status 2026-11-12 (recounted from the [checklist](selecta-creative-interface-implementation-checklist.md) task lines): 106 Implemented, 1 In progress, 33 Need a person, 0 Not started; 0 independently Verified.**
 
 ## Product direction and scope
 
