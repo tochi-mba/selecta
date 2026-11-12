@@ -28,7 +28,7 @@ await step('first-run', 'folder field and its help', async () => ({ aria: await 
 await step('first-run', 'type a folder that does not exist and start', async () => {
   const field = page.getByRole('textbox').first();
   await field.fill('C:\\no-such-folder-wp5');
-  await page.getByRole('button', { name: /^Start|Add|Use this folder/ }).first().click();
+  await page.getByRole('button', { name: /^(?:Start|Add|Use this folder)/ }).first().click();
   await page.waitForTimeout(2500); await shot('first-run-rejected');
   return { main: await text(page.locator('main')) };
 });

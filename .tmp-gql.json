@@ -1,0 +1,1 @@
+{"query": "query { repository(owner: \"tochi-mba\", name: \"selecta\") { pullRequest(number: 56) { reviewThreads(first: 50) { nodes { isResolved isOutdated path line comments(first: 10) { nodes { author { login } body } } } } } } }"}

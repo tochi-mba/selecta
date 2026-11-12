@@ -58,7 +58,7 @@ def environment() -> dict[str, str]:
 
 def same_site(url: str) -> str:
     """Only a same-site path from a return URL, so these pages can't send anyone elsewhere."""
-    parts = urlsplit(url)
+    parts = urlsplit(url.replace("\\", ""))
     return safe_path((parts.path or "/") + (f"?{parts.query}" if parts.query else ""))
 
 
@@ -152,7 +152,12 @@ card is asked for: this page stands in for Stripe Checkout on this computer.</p>
             )
             stripe_sync.write_snapshot(conn, workspace_id, decision, now)
             quota.set_limit(conn, workspace_id, plan_for(price["plan"]))
-        target = same_site(fields["success_url"].replace("{CHECKOUT_SESSION_ID}", session_id))
+        target = same_site(
+            fields["success_url"].replace("\\", "").replace("{CHECKOUT_SESSION_ID}", session_id)
+        ).replace("\\", "")
+        parsed = urlsplit(target)
+        if parsed.scheme or parsed.netloc:
+            return RedirectResponse("/", status_code=303)
         return RedirectResponse(target, status_code=303)
 
     @app.post(PREFIX + "/checkout/{session_id}/decline", include_in_schema=False)
@@ -203,7 +208,13 @@ card is asked for: this page stands in for Stripe Checkout on this computer.</p>
                 )
                 stripe_sync.write_snapshot(conn, workspace_id, free, db_now(conn))
                 quota.set_limit(conn, workspace_id, plan_for("free"))
-        return RedirectResponse(same_site(fields.get("back", "/account/billing")), 303)
+        target = same_site(str(fields.get("back", "/account/billing")).replace("\\", "")).replace(
+            "\\", ""
+        )
+        parsed = urlsplit(target)
+        if parsed.scheme or parsed.netloc:
+            return RedirectResponse("/account/billing", status_code=303)
+        return RedirectResponse(target, status_code=303)
 
     return DevStripe
 
