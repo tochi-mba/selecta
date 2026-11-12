@@ -42,7 +42,7 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 
 # Selecta - Unified Experience Finish ADR proposal (2026-11-08)
 
-**Unified experience finishing programme:** 24 **Accepted** ADRs (0366–0389); **192 UF acceptance items**: 184 Not started, 8 In progress, 0 Implemented and **0 independently Verified**. Requester accepted all UF decisions on 2026-11-08; PR #41 now contains app code and tests. Implementation owners and independent reviewers remain unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526`.
+**Unified experience finishing programme (status at creation, 2026-11-08; current counts are in the table at the top):** 24 **Accepted** ADRs (0366–0389); **192 UF acceptance items**: 184 Not started, 8 In progress, 0 Implemented and **0 independently Verified**. Requester accepted all UF decisions on 2026-11-08; PR #41 now contains app code and tests. Implementation owners and independent reviewers remain unassigned. Baseline main `f17944530d54203e49baebdabc08a57ee9f40526`.
 
 **Scope:** one source-verified finishing sequence, not a competing redesign: baseline research and parity → semantic CSS, primitives and async state → navigation and playback → Listen/visualisers → Make a Mix/Library/Lucy integration → drafts, Editor, Seam Inspector and Stem Studio → Requests, Discovery, Workspace and Export → responsive/accessibility → independent visual, human, performance and real-audio release gates. This PR changes **only `docs/adr/` markdown/JSON**, not application source/tests/audio or older ADR historical statuses.
 
@@ -54,7 +54,7 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 
 # Selecta - Library + Lucy experience redesign ADR proposal (2026-11-08)
 
-**New docs-only, scoped redesign programme:** 26 **Proposed** ADRs (0340–0365), 208 individually tracked **Not started** LX implementation tasks, 0 In progress, 0 Implemented and 0 independently Verified. All owners unassigned. Planning baseline `main` `da942863e9f57e45653cfc2fda35fe463477b8be`.
+**New docs-only, scoped redesign programme (status at creation, 2026-11-08; current counts are in the table at the top):** 26 **Proposed** ADRs (0340–0365), 208 individually tracked **Not started** LX implementation tasks, 0 In progress, 0 Implemented and 0 independently Verified. All owners unassigned. Planning baseline `main` `da942863e9f57e45653cfc2fda35fe463477b8be`.
 
 **Scope:** Full visual/interaction freedom **only** for Library / Song Details and the Make a Mix front door / Lucy conversation, proposals and approval. Existing application code, tests, audio engine, older ADR statuses and unrelated routes are unchanged. The proposed redesign is **not** claimed implemented or measured.
 
@@ -66,7 +66,7 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 
 **New documentation-only programme:** [28 ADR roadmap](selecta-measured-micro-polish-roadmap.md) · [224 implementation tasks](selecta-measured-micro-polish-implementation-checklist.md) · [per-task evidence](selecta-measured-micro-polish-implementation-evidence.md) · [status JSON](selecta-measured-micro-polish-code-status.json) · [overlap](selecta-measured-micro-polish-overlap-and-parity.md) · [geometry](selecta-measured-micro-polish-geometry-contract.md) · [verification](selecta-measured-micro-polish-verification-matrix.md) · [reconciliation](selecta-measured-micro-polish-status-reconciliation.md) · [release](selecta-measured-micro-polish-release-gates.md).
 
-**Status:** 28 Proposed decisions, 224 Not started acceptance items, 0 In progress, 0 Implemented, 0 independently Verified. All owners unassigned. Baseline `100df404` on 2026-11-08. No application source, tests, audio or older programme status changed.
+**Status at creation (2026-11-08; current counts are in the table at the top):** 28 Proposed decisions, 224 Not started acceptance items, 0 In progress, 0 Implemented, 0 independently Verified. All owners unassigned. Baseline `100df404` on 2026-11-08. No application source, tests, audio or older programme status changed.
 
 Scope: down-to-the-pixel polish of all routes, shared components, titles, margins, alignments, player, editor, Studio, Requests, Library, Discover, Workspace, Export, overlays, motion and responsive/AT/real-audio acceptance. Existing capabilities are credited and old ADR owners retain authority.
 
@@ -76,7 +76,7 @@ Scope: down-to-the-pixel polish of all routes, shared components, titles, margin
 
 **Documentation-only proposal:** [Roadmap](selecta-final-polish-roadmap.md) · [Checklist](selecta-final-polish-implementation-checklist.md) · [Evidence](selecta-final-polish-implementation-evidence.md) · [JSON](selecta-final-polish-code-status.json) · [Parity](selecta-final-polish-overlap-and-parity.md) · [Verification](selecta-final-polish-verification-matrix.md) · [Reconciliation](selecta-final-polish-status-reconciliation.md) · [Release](selecta-final-polish-release-gates.md)
 
-**Status:** 8 ADRs (0264–0271) Proposed / owner review pending; 64 FP tasks Not started, 0 In progress, 0 Implemented and 0 independently Verified. Baseline main `5347e7309c5ff8b2e2965c2194bf2089b6ad2721`. No app source, tests, previous programme ledger, media or other functionality is modified by this proposal.
+**Status at creation (2026-11-08; current counts are in the table at the top):** 8 ADRs (0264–0271) Proposed / owner review pending; 64 FP tasks Not started, 0 In progress, 0 Implemented and 0 independently Verified. Baseline main `5347e7309c5ff8b2e2965c2194bf2089b6ad2721`. No app source, tests, previous programme ledger, media or other functionality is modified by this proposal.
 
 **Scope:** additive acceptance for light-mode functional boundaries, manual theme/browser chrome, live music-graphics theme parity, contextual Library selection controls, Explore information density, route-state action tiering, stacked viewport/overlay occlusion and matched Light/Dark visual evidence. Already-source-present capabilities are **not** missing features; reconcile each FP item against SF and GP requirements before any implementation.
 
@@ -86,7 +86,7 @@ Scope: down-to-the-pixel polish of all routes, shared components, titles, margin
 
 **Docs-only proposal:** [16 ADR roadmap](selecta-gap-polish-roadmap.md) · [128 implementation tasks](selecta-gap-polish-implementation-checklist.md) · [per-task evidence ledger](selecta-gap-polish-implementation-evidence.md) · [machine-readable status](selecta-gap-polish-code-status.json) · [whole-product overlap/parity](selecta-gap-polish-overlap-and-parity.md) · [independent verification](selecta-gap-polish-verification-matrix.md) · [historic status reconciliation](selecta-gap-polish-status-reconciliation.md) · [NO-GO gates](selecta-gap-polish-release-gates.md).
 
-**Statuses:** 16 Proposed decisions (owner review pending); 128 tasks Not started; 0 In progress; 0 Implemented; 0 independently Verified. Baseline `2956bc47fd735339e7216e03d27817fb3a31e92b`. No source implementation, old programme ledger, audio file or production test is modified.
+**Statuses at creation (2026-11-08; current counts are in the table at the top):** 16 Proposed decisions (owner review pending); 128 tasks Not started; 0 In progress; 0 Implemented; 0 independently Verified. Baseline `2956bc47fd735339e7216e03d27817fb3a31e92b`. No source implementation, old programme ledger, audio file or production test is modified.
 
 The additions concern adaptive titles, Listen and Editor visual priority, music-aware search, re-linking, local backups, audio output interruptions, returning work, help, long-session fatigue, safe batch operations, mix-choice predictions, Discovery handoff, Studio comprehension, request uncertainty and Workspace troubleshooting. Existing SF ADR owners retain first-run, all fifteen visualizers, frozen-revision FLAC, baseline WCAG and audio/player safety.
 
@@ -94,7 +94,7 @@ The additions concern adaptive titles, Listen and Editor visual priority, music-
 
 # Selecta / Flow - owner-accepted artistic UI/UX programme (2026-11-08)
 
-**Owner-accepted design programme (2026-11-08):** **50 Accepted decisions, ADR-0198–0247; 400 SF implementation tasks Not started; 0 In progress, 0 Implemented and 0 independently Verified.** The new programme builds on the source as of main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15` and does **not** mark existing source capabilities missing, revise old implementation histories or change any application code.
+**Owner-accepted design programme (status at creation, 2026-11-08; current counts are in the table at the top):** **50 Accepted decisions, ADR-0198–0247; 400 SF implementation tasks Not started; 0 In progress, 0 Implemented and 0 independently Verified.** The new programme builds on the source as of main `c3715b14a70a0a9005e9fbc08d44576f3eac3c15` and does **not** mark existing source capabilities missing, revise old implementation histories or change any application code.
 
 **Start here:** [50-ADR roadmap](selecta-flow-roadmap.md) · [400-task checklist](selecta-flow-implementation-checklist.md) · [per-task status and independent evidence ledger](selecta-flow-implementation-evidence.md) · [machine-readable statuses](selecta-flow-code-status.json) · [art direction and screen contracts](selecta-flow-design-contracts.md) · [feature preservation](selecta-flow-feature-parity.md) · [motion and interaction matrix](selecta-flow-interaction-matrix.md) · [source map](selecta-flow-source-map.md) · [verification matrix](selecta-flow-verification-matrix.md) · [historical status reconciliation](selecta-flow-status-reconciliation.md) · [independent NO-GO gates](selecta-flow-release-gates.md).
 
@@ -108,7 +108,7 @@ The additions concern adaptive titles, Listen and Editor visual priority, music-
 
 **Owner-accepted creative-interface programme (all 20 decisions accepted 2026-11-08; originally submitted as documentation only):** [20 ADRs, ADR-0165–0184](selecta-creative-interface-roadmap.md) · [140-task implementation checklist](selecta-creative-interface-implementation-checklist.md) · [per-task implementation and verification evidence](selecta-creative-interface-implementation-evidence.md) · [feature-parity inventory](selecta-creative-interface-feature-parity.md) · [interaction and motion matrix](selecta-creative-interface-interaction-matrix.md) · [verification matrix](selecta-creative-interface-verification-matrix.md) · [historical status reconciliation](selecta-creative-interface-status-reconciliation.md) · [NO-GO release gates](selecta-creative-interface-release-gates.md).
 
-**New CI status:** 20 **Accepted** decisions (owner approved 2026-11-08); **140 Not started**, 0 In progress, 0 Implemented; **0 independently Verified**. Baseline: main 4c2f9f03b8b7e185a7a5021979f4b443e40299dd (2026-11-08). The original PR submission changed only ADR and planning documents; subsequent source implementation is recorded in the CI evidence ledger.
+**CI status at creation (2026-11-08; current counts are in the table at the top):** 20 **Accepted** decisions (owner approved 2026-11-08); **140 Not started**, 0 In progress, 0 Implemented; **0 independently Verified**. Baseline: main 4c2f9f03b8b7e185a7a5021979f4b443e40299dd (2026-11-08). The original PR submission changed only ADR and planning documents; subsequent source implementation is recorded in the CI evidence ledger.
 
 **Four additional accepted, width-first Listen visualizer ADRs:** [ADR-0185 Aurora Contours](adr-0185-aurora-contours.md), [ADR-0186 Spectral Lanes](adr-0186-spectral-lanes.md), [ADR-0187 Frequency Constellation](adr-0187-frequency-constellation.md), [ADR-0188 Recent Spectrum](adr-0188-recent-spectrum.md). Owner accepted 2026-11-08. Source and tests are being implemented on PR #33; independent accessibility, real-audio and measured performance sign-off remains open. Together with the original 20, this is **24 accepted decisions**. The existing 140-task checklist remains the original programme and is not automatically checked by adding these ADRs.
 
@@ -124,7 +124,7 @@ The additions concern adaptive titles, Listen and Editor visual priority, music-
 
 **Immersive programme (documentation + implementation on PR #31):** [30 new ADRs, ADR-0135–0164](selecta-microinteraction-roadmap.md); [240 individually tracked tasks](selecta-microinteraction-implementation-checklist.md); [per-task implementation/verification evidence](selecta-microinteraction-evidence.md); [full interaction/motion specification](selecta-microinteraction-motion-matrix.md); [feature preservation map](selecta-microinteraction-feature-parity.md); [verification matrix](selecta-microinteraction-verification-matrix.md); [historical status reconciliation](selecta-microinteraction-status-reconciliation.md); [NO-GO release gates](selecta-microinteraction-release-gates.md).
 
-**New programme status on [PR #31](https://github.com/tochi-mba/selecta/pull/31):** **30 Accepted decisions (owner acceptance recorded 2026-11-07); 208 source-level Implemented, 4 In progress, 28 Not started; 0 independently Verified.** [Code status map](selecta-microinteraction-code-status.json) and [240-task checklist](selecta-microinteraction-implementation-checklist.md) identify which implementation boxes are checked and what still needs task-specific acceptance. Source baseline was main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` after PR #30. Source changes and green tests are not visual approval, assistive-technology acceptance, independent real-audio/performance evidence or proof that a transition sounds good.
+**Programme status at creation on [PR #31](https://github.com/tochi-mba/selecta/pull/31) (2026-11-07; current counts are in the table at the top):** **30 Accepted decisions (owner acceptance recorded 2026-11-07); 208 source-level Implemented, 4 In progress, 28 Not started; 0 independently Verified.** [Code status map](selecta-microinteraction-code-status.json) and [240-task checklist](selecta-microinteraction-implementation-checklist.md) identify which implementation boxes are checked and what still needs task-specific acceptance. Source baseline was main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` after PR #30. Source changes and green tests are not visual approval, assistive-technology acceptance, independent real-audio/performance evidence or proof that a transition sounds good.
 
 **Vision:** Give Selecta an earned sense of musical anticipation and agency: song-first composition; tactile controls; real seam handoff; delightful but restrained discoveries; expressive energy and stem editing; truthful status; calm recovery. Every animation has a cause, an accessible reduced-motion equivalent and an audio/state truth contract. No fabricated artwork, beat alignment, quality scores or success states.
 
@@ -138,7 +138,7 @@ The additions concern adaptive titles, Listen and Editor visual priority, music-
 
 **New documentation-only proposal:** [21 independent new design decisions, ADR-0114–0134](selecta-experience-roadmap.md); [105-item implementation checklist](selecta-experience-implementation-checklist.md); [per-task implementation/verification ledger](selecta-experience-evidence.md); [feature-parity map](selecta-experience-feature-parity.md); [historical status reconciliation](selecta-experience-status-reconciliation.md); [NO-GO release gates](selecta-experience-release-gates.md).
 
-**New ADR status:** 21 **Proposed** (not owner-accepted). **New implementation:** 105 **Not started**, 0 Implemented. **New independent verification:** 0 Verified. **Reviewed source baseline:** `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` after merged [PR #29](https://github.com/tochi-mba/selecta/pull/29).
+**ADR status at creation (2026-11-07; current counts are in the table at the top):** 21 **Proposed** (not owner-accepted). **New implementation:** 105 **Not started**, 0 Implemented. **New independent verification:** 0 Verified. **Reviewed source baseline:** `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` after merged [PR #29](https://github.com/tochi-mba/selecta/pull/29).
 
 **Direction:** Listening effortless; mix creation expressive; expert editing precise; operations quiet. These decisions go beyond cosmetics and independently reconsider navigation, optional mix shaping, card action hierarchy, editor song/seam objects and an audition-first inspector. All are user-testable proposals, not claims of measured failure or approved implementation.
 
@@ -150,7 +150,7 @@ The additions concern adaptive titles, Listen and Editor visual priority, music-
 
 # Selecta 4.0 - complete UI/UX overhaul ADR programme (2026-11-07)
 
-**This is a documentation-only proposal: ADR-0089–0113, 25 Proposed decisions, 250 new S4 tasks Not started, 0 Implemented, 0 Verified.** Baseline: `main` `9b663f9f10212619f27ce67ce82f602347065cbd` after PR #25 and #26 merged. Keep the warm charcoal/cream/electric lime scheme, improve dark and light themes, and preserve all existing functionality, original audio, local-first security, requests, Studio, drafts and FLAC.
+**Status at creation (2026-11-07; current counts are in the table at the top): a documentation-only proposal: ADR-0089–0113, 25 Proposed decisions, 250 new S4 tasks Not started, 0 Implemented, 0 Verified.** Baseline: `main` `9b663f9f10212619f27ce67ce82f602347065cbd` after PR #25 and #26 merged. Keep the warm charcoal/cream/electric lime scheme, improve dark and light themes, and preserve all existing functionality, original audio, local-first security, requests, Studio, drafts and FLAC.
 
 **Start with:** [Selecta 4.0 roadmap and full ADR index](selecta-4-roadmap.md) · [250-item implementation checklist](selecta-4-implementation-checklist.md) · [per-task status/evidence ledger](selecta-4-evidence.md) · [feature-parity map](selecta-4-feature-parity.md) · [verification and edge-case matrix](selecta-4-verification-matrix.md) · [4.0 implementation release NO-GO](selecta-4-release-gates.md).
 
@@ -160,7 +160,7 @@ The additions concern adaptive titles, Listen and Editor visual priority, music-
 
 # Selecta 3.1 - verification-led UI/UX finishing proposal (2026-11-07)
 
-**Proposed decisions: ADR-0078–0088. Selected tasks now In progress on PR #25; 116 tasks: 0 Implemented / 0 Verified. Checkboxes remain open.** This programme follows merged PR #24 and focuses on evidence, visual consistency, listener/creator workflow polish and human acceptance-not another feature rewrite. PR #25 began as documentation-only and now includes multiple scoped frontend/test changes and review-only visual CI artifacts, without human verification.
+**Status at creation (2026-11-07; current counts are in the table at the top): Proposed decisions: ADR-0078–0088. Selected tasks now In progress on PR #25; 116 tasks: 0 Implemented / 0 Verified. Checkboxes remain open.** This programme follows merged PR #24 and focuses on evidence, visual consistency, listener/creator workflow polish and human acceptance-not another feature rewrite. PR #25 began as documentation-only and now includes multiple scoped frontend/test changes and review-only visual CI artifacts, without human verification.
 
 Start with the [3.1 roadmap and ADR index](selecta-3-1-roadmap.md), [116-item checklist](selecta-3-1-implementation-checklist.md), [verification matrix](selecta-3-1-verification-matrix.md), [evidence ledger](selecta-3-1-evidence.md), [unapproved visual-review candidates](selecta-3-1-visual-review.md), [source surface inventory](selecta-3-1-surface-inventory.md), [NO-GO release readiness](selecta-3-1-release-readiness.md) and [research notes](../research/selecta-3-1-polish.md). Prior ADR-0001–0077 and T/P/S3 trackers are preserved. **Historical 3.0 "PR #24 open" statements in older files are stale after the merge and must be reconciled against code/CI before any status is advanced.**
 
@@ -170,7 +170,7 @@ Start with the [3.1 roadmap and ADR index](selecta-3-1-roadmap.md), [116-item ch
 
 ## Selecta 3.0 - full experience overhaul proposal (2026-11-07)
 
-**Decision status: Proposed. Implementation status: In progress on PR #24; not Verified.** See the [new roadmap and ADR index](selecta-3-roadmap.md), ADR-0047–0077, [258 individually tracked work items](selecta-3-implementation-checklist.md), [feature preservation map](selecta-3-parity-matrix.md), [verification plan](selecta-3-verification-matrix.md), [evidence ledger](selecta-3-evidence.md) and [research notes](../research/selecta-3-overhaul.md).
+**Status at creation (2026-11-07; current counts are in the table at the top): Decision status Proposed. Implementation status In progress on PR #24; not Verified.** See the [new roadmap and ADR index](selecta-3-roadmap.md), ADR-0047–0077, [258 individually tracked work items](selecta-3-implementation-checklist.md), [feature preservation map](selecta-3-parity-matrix.md), [verification plan](selecta-3-verification-matrix.md), [evidence ledger](selecta-3-evidence.md) and [research notes](../research/selecta-3-overhaul.md).
 
 This programme began **documentation only**, but PR #24 now includes runtime, audio, API, frontend and test changes. Its historical roadmap/checklist status summaries are not complete implementation evidence. Retain the warm black/cream/lime identity and the complete functional preservation contract while proposing an extensive navigation and workspace overhaul. Merging this proposal does not itself approve any decision or mark an implementation task complete.
 
