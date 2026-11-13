@@ -4,6 +4,7 @@ import { INITIAL_LIBRARY, isBusy, libraryReducer, overviewOf, songWords } from '
 import { unfinishedUploads } from './uploadParts';
 import { useSharedLibraryPlayer } from './cloudTransport';
 import { useCloudPlayer } from './useCloudPlayer';
+import { DeviceLibrary } from './lf-personal/PersonalWorkspace';
 
 // The Cloud library: private originals, played from prepared playback files. Listening starts a
 // run from that song to the end of the list, with the next song buffered ahead (see
@@ -13,7 +14,23 @@ import { useCloudPlayer } from './useCloudPlayer';
 // (libraryState.ts), so a list that didn't load never says "Your library is empty", and an
 // overview above the list counts the songs, the storage they use and unfinished uploads.
 
-export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, reload, truthful = true, account }: {
+/** Historical cloud asset list remains available for pre-migration workspaces. */
+export function LibraryPanel(props: {
+  api: Api;
+  workspaceId: string;
+  setError: (value: string) => void;
+  refreshAccount: () => Promise<void>;
+  go: (page: Page) => void;
+  reload?: number;
+  truthful?: boolean;
+  account?: Account | null;
+  localFirst?: boolean;
+}) {
+  if (props.localFirst) return <DeviceLibrary api={props.api} workspaceId={props.workspaceId} go={props.go} revision={props.reload} />;
+  return <LegacyLibraryPanel {...props} />;
+}
+
+function LegacyLibraryPanel({ api, workspaceId, setError, refreshAccount, go, reload, truthful = true, account }: {
   api: Api;
   workspaceId: string;
   setError: (value: string) => void;
