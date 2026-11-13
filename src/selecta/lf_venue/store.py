@@ -271,8 +271,8 @@ class VenueStore:
             if kind == "started" and track:
                 db.execute(
                     "INSERT INTO played VALUES (?,?,?,?,?) "
-                "ON CONFLICT(workspace,venue,zone,track) "
-                "DO UPDATE SET played_at=excluded.played_at",
+                    "ON CONFLICT(workspace,venue,zone,track) "
+                    "DO UPDATE SET played_at=excluded.played_at",
                     (workspace, venue, zone, track, at),
                 )
             return True
