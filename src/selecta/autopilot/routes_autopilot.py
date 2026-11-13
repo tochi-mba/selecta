@@ -38,6 +38,9 @@ from selecta.autopilot.venue_policy import (
     select_candidates,
 )
 from selecta.autopilot.venue_setup import SetupError, SetupStore, to_policy_draft
+from selecta.business import venues
+from selecta.business.errors import NotFound
+from selecta.persistence import transaction
 
 VENUE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 MAX_CANDIDATES = 2000
@@ -62,7 +65,7 @@ def _bad(code: str, message: str, status: int = 400, **extra: Any) -> HTTPExcept
 
 
 def _venue(venue_id: str) -> str:
-    if not VENUE_ID.match(venue_id):
+    if not VENUE_ID.fullmatch(venue_id):
         raise _bad("bad_venue_id", "Venue ids are lower-case letters, digits and hyphens.")
     return venue_id
 
@@ -91,15 +94,40 @@ def install_routes(
 ) -> None:
     """Mount the routes. `scope` is a FastAPI dependency giving the caller's workspace id; by
     default it is built from `current_claims` and `principal_for` like the other Cloud routes."""
+    # A standalone app can inject a workspace dependency for its in-memory engine/tests.
+    # In Cloud, a workspace key by itself is NOT proof of venue ownership: both the
+    # organisation membership and the venue's owning workspace must be checked.
+    cloud_venues = scope is None
     if scope is None:
         if current_claims is None or principal_for is None:
             raise ValueError("install_routes needs scope, or current_claims and principal_for")
 
         def workspace_of(request: Request, claims=Depends(current_claims)) -> str:  # noqa: B008
             principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
+            # Autopilot is an organisation-only surface, even for its capability reports.
+            # principal_for has already proved the caller's membership of the chosen workspace.
+            if principal.workspace.kind != "business":
+                raise HTTPException(status_code=404, detail={"code": "not_found"})
+            role = str(getattr(principal.workspace_role, "value", principal.workspace_role))
+            if request.method not in {"GET", "HEAD"} and role not in {"owner", "editor"}:
+                raise HTTPException(status_code=403, detail={"code": "not_allowed"})
             return str(principal.workspace.id)
 
         scope = workspace_of
+
+    def accessible_venue(workspace: str, venue_id: str) -> str:
+        checked = _venue(venue_id)
+        if cloud_venues:
+            with transaction(engine, workspace) as conn:
+                try:
+                    venue = venues.get(conn, workspace, checked)
+                except NotFound as error:
+                    raise HTTPException(
+                        status_code=404, detail={"code": "not_found"}
+                    ) from error
+                if venue["status"] == "archived":
+                    raise HTTPException(status_code=404, detail={"code": "not_found"})
+        return checked
 
     sessions = SessionStore(clock)
     policies = PolicyStore()
@@ -132,7 +160,7 @@ def install_routes(
     @app.post("/api/autopilot/sessions", status_code=201)
     def create_session(body: dict = Body(...),  # noqa: B008
                        workspace: str = workspace_dep) -> dict[str, Any]:
-        venue_id = _venue(str(body.get("venue_id", "")))
+        venue_id = accessible_venue(workspace, str(body.get("venue_id", "")))
         try:
             level = maturity.MaturityLevel(int(body.get("level", 0)))
         except (TypeError, ValueError) as error:
@@ -183,13 +211,13 @@ def install_routes(
 
     @app.get("/api/autopilot/venues/{venue_id}/setup")
     def get_setup(venue_id: str, workspace: str = workspace_dep) -> dict[str, Any]:
-        return setups.get(workspace, _venue(venue_id)).to_dict()
+        return setups.get(workspace, accessible_venue(workspace, venue_id)).to_dict()
 
     @app.put("/api/autopilot/venues/{venue_id}/setup/{step}")
     def put_setup(venue_id: str, step: str, body: dict = Body(...),  # noqa: B008
                   workspace: str = workspace_dep) -> dict[str, Any]:
         try:
-            return setups.save(workspace, _venue(venue_id), step, body).to_dict()
+            return setups.save(workspace, accessible_venue(workspace, venue_id), step, body).to_dict()
         except SetupError as error:
             raise _bad("setup_invalid", str(error), 422, step=error.step,
                        errors=error.errors) from error
@@ -205,12 +233,12 @@ def install_routes(
 
     @app.get("/api/autopilot/venues/{venue_id}/policies")
     def get_policies(venue_id: str, workspace: str = workspace_dep) -> dict[str, Any]:
-        return _policies(workspace, _venue(venue_id))
+        return _policies(workspace, accessible_venue(workspace, venue_id))
 
     @app.post("/api/autopilot/venues/{venue_id}/policies", status_code=201)
     def publish_policy(venue_id: str, body: dict | None = Body(None),  # noqa: B008
                        workspace: str = workspace_dep) -> dict[str, Any]:
-        venue_id = _venue(venue_id)
+        venue_id = accessible_venue(workspace, venue_id)
         body = body or {}
         now = clock()
         try:
@@ -229,13 +257,13 @@ def install_routes(
     def get_overrides(venue_id: str, workspace: str = workspace_dep) -> dict[str, Any]:
         now = clock()
         return {"overrides": [o.to_dict(now) for o in
-                              policies.overrides(workspace, _venue(venue_id))],
+                              policies.overrides(workspace, accessible_venue(workspace, venue_id))],
                 "now": now.isoformat()}
 
     @app.post("/api/autopilot/venues/{venue_id}/overrides", status_code=201)
     def add_override(venue_id: str, body: dict = Body(...),  # noqa: B008
                      workspace: str = workspace_dep) -> dict[str, Any]:
-        venue_id = _venue(venue_id)
+        venue_id = accessible_venue(workspace, venue_id)
         now = clock()
         starts = _when(body.get("starts_at"), now, "Start")
         try:
@@ -261,7 +289,7 @@ def install_routes(
                      workspace: str = workspace_dep) -> dict[str, Any]:
         now = clock()
         try:
-            ended = policies.end_override(workspace, _venue(venue_id), override_id, now)
+            ended = policies.end_override(workspace, accessible_venue(workspace, venue_id), override_id, now)
         except PolicyError as error:
             raise _bad("override_not_found", str(error), 404) from error
         return ended.to_dict(now)
@@ -269,7 +297,7 @@ def install_routes(
     @app.post("/api/autopilot/venues/{venue_id}/candidates")
     def check_candidates(venue_id: str, body: dict = Body(...),  # noqa: B008
                          workspace: str = workspace_dep) -> dict[str, Any]:
-        venue_id = _venue(venue_id)
+        venue_id = accessible_venue(workspace, venue_id)
         now = _when(body.get("at"), clock(), "At")
         policy = policies.effective(workspace, venue_id, now)
         if policy is None:

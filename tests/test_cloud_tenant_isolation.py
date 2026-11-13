@@ -59,6 +59,7 @@ CAPABILITY_ONLY = {
     ("POST", "/api/guest/rooms/{room_id}/leave"),
     ("POST", "/api/display/pairings"),
     ("GET", "/api/display/view"),
+    ("DELETE", "/api/display/pairing"),
 }
 # Routes that act only on the signed-in person, whatever workspace a request names.
 SELF_ONLY = {
@@ -144,12 +145,35 @@ BUSINESS_SCOPED = {
     ("POST", "/api/business/zones/{zone_id}/commands"),
     ("PUT", "/api/business/zones/{zone_id}/cache-report"),
     ("GET", "/api/workspaces"),
+    # Autopilot requires membership in a Business workspace. Stateful routes also
+    # check that each named venue actually belongs to that organisation.
+    ("GET", "/api/autopilot/availability"),
+    ("GET", "/api/autopilot/maturity"),
+    ("POST", "/api/autopilot/sessions"),
+    ("GET", "/api/autopilot/sessions/{session_id}"),
+    ("POST", "/api/autopilot/sessions/{session_id}/controls/{control}"),
+    ("POST", "/api/autopilot/sessions/{session_id}/transitions"),
+    ("GET", "/api/autopilot/venues/{venue_id}/setup"),
+    ("PUT", "/api/autopilot/venues/{venue_id}/setup/{step}"),
+    ("GET", "/api/autopilot/venues/{venue_id}/policies"),
+    ("POST", "/api/autopilot/venues/{venue_id}/policies"),
+    ("GET", "/api/autopilot/venues/{venue_id}/overrides"),
+    ("POST", "/api/autopilot/venues/{venue_id}/overrides"),
+    ("DELETE", "/api/autopilot/venues/{venue_id}/overrides/{override_id}"),
+    ("POST", "/api/autopilot/venues/{venue_id}/candidates"),
 }
 
 # Every route that can reach a workspace's data, with a body valid enough to get past
 # validation, so the refusal we see comes from the workspace check and not from a 422.
 SCOPED: dict[tuple[str, str], dict | None] = {
     ("GET", "/api/events"): None,
+    ("GET", "/api/cloud-mixes"): None,
+    ("GET", "/api/cloud-mixes/capabilities"): None,
+    ("POST", "/api/cloud-mixes"): {"name": "Tenant check", "asset_ids": []},
+    ("GET", "/api/cloud-mixes/{mix_id}"): None,
+    ("POST", "/api/cloud-mixes/{mix_id}/revisions"): {
+        "base_revision": "0" * 64, "name": "Tenant check",
+    },
     ("GET", "/api/account"): None,
     ("GET", "/api/account/labs"): None,
     ("PUT", "/api/account/labs/{flag_id}"): {"enabled": False},
@@ -215,6 +239,7 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/rooms/{room_id}/guests/{guest_id}/ban"): None,
     ("POST", "/api/rooms/{room_id}/displays"): {"pairing_code": "ABC-123"},
     ("DELETE", "/api/rooms/{room_id}/displays"): None,
+    ("DELETE", "/api/rooms/{room_id}/displays/{display_id}"): None,
 }
 # The scoped routes that name one resource. In his own workspace, Bob asking for Alice's
 # resource must get the same answer as asking for one that doesn't exist.
@@ -356,6 +381,8 @@ def world(tmp_path, monkeypatch):
                 "flag_id": "lucy",
                 "device_id": new_id(),
                 "room_id": new_id(),
+                "mix_id": new_id(),
+                "display_id": new_id(),
                 "request_id": new_id(),
                 "guest_id": new_id(),
             },
