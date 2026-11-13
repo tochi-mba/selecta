@@ -30,7 +30,7 @@ export function scopedSettings(on: (id: FlagId) => boolean): ScopedSetting[] {
         : 'Used for the mix you make now. A new visit starts at 30 minutes again.',
     },
     shaping && on('mixes.shaping.feel') && { id: 'feel', name: 'Transition feel', scope: 'saved-default', detail: 'Kept by SelectaDJ for every new mix until you change it. A mix you already have keeps its transitions.' },
-    shaping && on('mixes.shaping.stem_moves') && { id: 'stems', name: 'Stem-assisted moves', scope: 'saved-default', detail: 'Kept for every new mix until you change it.' },
+    shaping && on('mixes.shaping.stem_moves') && { id: 'stems', name: 'Part-by-part moves', scope: 'saved-default', detail: 'Kept for every new mix until you change it.' },
     shaping && on('mixes.shaping.energy_arc') && { id: 'energy', name: 'Energy shape', scope: 'saved-default', detail: 'Kept for every new mix until you change it.' },
     shaping && on('mixes.shaping.destination') && { id: 'destination', name: 'Ending song', scope: 'saved-default', detail: 'Kept for every new mix until you clear it.' },
     on('mixes.ideas') && { id: 'filter', name: 'Feeling filter', scope: 'this-visit', detail: 'Only changes which ideas you see. Nothing is saved.' },

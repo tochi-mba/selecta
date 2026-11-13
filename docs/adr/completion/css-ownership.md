@@ -35,6 +35,15 @@ Feature-local sheets live beside the one component that imports them and style n
 | `display/display.css` | the display page | `display/main.ts` |
 | `guest/guest.css` | the guest request page | `guest/main.ts` |
 | `rooms/rooms.css` | the rooms panel | `rooms/RoomPanel.tsx` |
+| `autopilot/autopilot.css` | venue setup instructions and autopilot guide controls | `autopilot/VenueSetup.tsx` |
+| `business/console/console.css` | headquarters venue management, status grids and dashboards | `business/console/HqConsole.tsx` |
+| `business/forms/forms.css` | labelled business onboarding and management form controls | `business/forms/LicenceAttestationForm.tsx` |
+| `business/shell/shell.css` | business shell navigation, page layouts and headers | `business/shell/BusinessShell.tsx` |
+| `business/staff/staff.css` | venue staff playback controls and zone selection | `business/staff/StaffControlDeck.tsx` |
+| `business/switcher/switcher.css` | workspace switcher menu and context display band | `business/switcher/WorkspaceSwitcher.tsx` |
+| `cloud/makeCloudMix.css` | Cloud mix creation interface layout and controls | `cloud/MakeCloudMix.tsx` |
+| `venueops/staffDashboard.css` | unattended playback dashboard and staff controls | `venueops/StaffDashboard.tsx` |
+| `views/mixIntent.css` | mix intent and setting-scope explanatory surfaces | `views/MixIntent.tsx` |
 
 Load order (`web/src/main.tsx`): tokens, style.css, shell, polish, foundation, listening, creation,
 operations, music-objects, glossary, palette, icons, depth, typography. Later files refine earlier
