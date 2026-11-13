@@ -186,7 +186,10 @@ def main() -> None:
         _register_with_retry(runner)
     for runner in runners:
         runner.start()
-        print(f"[WORKER] {runner.pool}: {', '.join(sorted(runner.runners[0].handlers))}", flush=True)
+        print(
+            f"[WORKER] {runner.pool}: {', '.join(sorted(runner.runners[0].handlers))}",
+            flush=True,
+        )
     stop = threading.Event()
     signal.signal(signal.SIGINT, lambda *_: stop.set())
     signal.signal(signal.SIGTERM, lambda *_: stop.set())
