@@ -72,7 +72,7 @@ const scopeKey = (scope: number | null) => (scope === null ? 'current' : `draft:
 
 const nameOfControl = (control: HTMLElement) => (control.getAttribute('aria-label') ?? control.textContent ?? '').trim();
 
-export function App() {
+export function App({ initialMix = null }: { initialMix?: MixData | null } = {}) {
   // a page whose feature is off in this build is Not Found, as if it had never been built
   const on = useFlags();
   const route = shownRoute(useRoute());
@@ -85,7 +85,9 @@ export function App() {
   useEffect(() => warmRouteChunks(), []);
   const [status, setStatus] = useState<Status | null>(null);
   const [problem, setProblem] = useState('');
-  const [data, setData] = useState<MixData>({ mix: [], name: 'Your mix', can_undo: false });
+  // A fresh /mixes navigation can already have the authoritative mix from the parallel
+  // startup request. Never paint an empty mix as a first-run state while its GET is pending.
+  const [data, setData] = useState<MixData>(() => initialMix ?? { mix: [], name: 'Your mix', can_undo: false });
   const currentCanUndo = useRef(data.can_undo);
   currentCanUndo.current = data.can_undo;
   const [helping, setHelping] = useState(false);
