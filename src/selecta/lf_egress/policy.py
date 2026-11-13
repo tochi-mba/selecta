@@ -7,9 +7,9 @@ UTC-deadlined server configuration; standalone installs retain their existing be
 from __future__ import annotations
 
 import os
-from datetime import datetime, timedelta, timezone
+from collections.abc import Mapping
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
-from typing import Mapping
 
 
 class Phase(StrEnum):
@@ -54,7 +54,7 @@ def current_phase(
         deadline = datetime.fromisoformat(expires.replace("Z", "+00:00"))
         if deadline.tzinfo is None:
             return Phase.SEALED
-        current = datetime.now(timezone.utc) if now is None else now
+        current = datetime.now(UTC) if now is None else now
         if current.tzinfo is None:
             return Phase.SEALED
         if not current < deadline <= current + timedelta(days=30):

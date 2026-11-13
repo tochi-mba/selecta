@@ -11,8 +11,9 @@ import binascii
 import json
 import math
 import re
+from collections.abc import Mapping
 from enum import StrEnum
-from typing import Any, Mapping
+from typing import Any
 
 
 class PayloadKind(StrEnum):
@@ -289,7 +290,8 @@ def validate_envelope(
     if not isinstance(value, Mapping):
         raise PayloadRejected("invalid_metadata_envelope")
     try:
-        serialized_size = len(json.dumps(value, allow_nan=False, ensure_ascii=False).encode("utf-8"))
+        encoded = json.dumps(value, allow_nan=False, ensure_ascii=False).encode("utf-8")
+        serialized_size = len(encoded)
     except (TypeError, ValueError, OverflowError, RecursionError, UnicodeError) as error:
         raise PayloadRejected("invalid_metadata_json") from error
     if serialized_size > max_bytes:
@@ -318,7 +320,8 @@ def safe_audit_fields(code: str, kind: PayloadKind | str) -> dict[str, str]:
         "metadata_too_many_items", "metadata_too_many_fields", "metadata_too_deep",
         "invalid_metadata_json", "invalid_metadata_envelope", "unexpected_binary_payload",
         "encoded_media_forbidden", "forbidden_metadata", "metadata_duplicate_field",
-        "metadata_invalid_number", "metadata_wrong_type", "tenant_scope_mismatch", "invalid_tenant_scope",
+        "metadata_invalid_number", "metadata_wrong_type",
+        "tenant_scope_mismatch", "invalid_tenant_scope",
         "metadata_kind_not_allowed", "metadata_version_unsupported",
         "cloud_audio_disabled", "cloud_audio_storage_disabled",
         "cloud_audio_processing_disabled", "new_cloud_audio_uploads_disabled",

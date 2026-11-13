@@ -32,8 +32,8 @@ from pathlib import Path
 from typing import Protocol
 from urllib.parse import quote
 
-from selecta.storage.keys import Bucket, validate_key
 from selecta.lf_egress import require_media_write
+from selecta.storage.keys import Bucket, validate_key
 from selecta.storage.objects import ObjectClient, R2NotFound
 from selecta.storage.r2 import file_sha256
 

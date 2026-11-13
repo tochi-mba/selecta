@@ -40,8 +40,8 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
-from selecta.persistence import db_now, lock_rows, new_id
 from selecta.lf_egress import require_upload_action
+from selecta.persistence import db_now, lock_rows, new_id
 from selecta.storage.artifacts import DEFAULT_BUCKETS, MAX_URL_TTL, Buckets
 from selecta.storage.keys import original_key, staging_key
 from selecta.storage.names import DEFAULT_CONTENT_TYPE, content_type, display_name, sha256_hex

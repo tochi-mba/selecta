@@ -3,22 +3,29 @@ from __future__ import annotations
 
 import base64
 import json
-from datetime import datetime, timedelta, timezone
-from types import SimpleNamespace
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from selecta.lf_egress import (
-    AdmissionDenied, PayloadKind, PayloadRejected, Phase, current_phase,
-    legacy_retrieval_enabled, require_media_write, require_proxy_job,
-    require_upload_action, safe_audit_fields, validate_envelope,
+    AdmissionDenied,
+    PayloadKind,
+    PayloadRejected,
+    Phase,
+    current_phase,
+    legacy_retrieval_enabled,
+    require_media_write,
+    require_proxy_job,
+    require_upload_action,
+    safe_audit_fields,
+    validate_envelope,
 )
 from selecta.storage.artifacts import R2ArtifactStore
 from selecta.storage.keys import original_key, staging_key
 from selecta.storage.r2 import R2Client
 
 
-NOW = datetime(2026, 11, 13, 12, tzinfo=timezone.utc)
+NOW = datetime(2026, 11, 13, 12, tzinfo=UTC)
 
 
 def envelope(data=None, *, workspace="ws-a", kind="recipe"):
