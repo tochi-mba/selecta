@@ -209,7 +209,14 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     api<{ action: string; session: SessionState | null; message: string | null }>('/playback/reconnect', {
       method: 'POST', body: JSON.stringify({ device_id: deviceId }),
     }, workspaceId).then(async (answer) => {
-      if (current && answer.action === 'continue' && answer.session) await startSpeaking(answer.session);
+      if (current && answer.action === 'continue' && answer.session) {
+        // The device may have lost the lease while its reconnect response was in
+        // flight. Never resurrect audio from that earlier grant on a reloaded tab.
+        const verified = await poll(true);
+        if (current && verified?.speaker === 'here' && verified.session) {
+          await startSpeaking(verified.session);
+        }
+      }
     }).catch(() => undefined).finally(() => { if (current) void poll(); });
     return () => { current = false; };
   }, [api, deviceId, poll, speaker, startSpeaking, workspaceId]);
