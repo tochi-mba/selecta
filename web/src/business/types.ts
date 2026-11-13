@@ -108,6 +108,8 @@ export type ZonePlayState =
 export type Song = { id: string; title: string; artist: string; explicit?: boolean };
 
 export type Zone = {
+  /** Optional projection supplied by the local venue engine, not inferred in the browser. */
+  local_first?: import('./localFirst/readiness').LocalZoneReport | null;
   id: string;
   venue_id: string;
   name: string;
