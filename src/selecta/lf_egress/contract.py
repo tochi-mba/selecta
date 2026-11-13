@@ -104,7 +104,7 @@ _LOCAL_PATH = re.compile(
     re.IGNORECASE,
 )
 _DATA_URL = re.compile(r"data:[^\s;,]{0,64}[;,]", re.IGNORECASE)
-_BASE64_TOKEN = re.compile(r"(?<![A-Za-z0-9_+/-])[A-Za-z0-9+/_-]{24,}={0,2}(?![A-Za-z0-9_+/-])")
+_BASE64_TOKEN = re.compile(r"(?<![A-Za-z0-9_+/-])[A-Za-z0-9+/_-]{12,}={0,2}(?![A-Za-z0-9_+/-])")
 _HEX_TOKEN = re.compile(r"(?<![0-9a-fA-F])[0-9a-fA-F]{32,}(?![0-9a-fA-F])")
 _MAGIC = (b"ID3", b"fLaC", b"OggS", b"RIFF", b"FORM", b"\xff\xfb", b"\xff\xf3", b"\xff\xf2")
 
@@ -118,9 +118,15 @@ def _looks_like_audio(data: bytes) -> bool:
 
 
 def _check_text(value: str) -> None:
-    if len(value.encode("utf-8")) > _MAX_STRING:
+    try:
+        size = len(value.encode("utf-8"))
+    except UnicodeError as error:
+        raise PayloadRejected("invalid_metadata_json") from error
+    if size > _MAX_STRING:
         raise PayloadRejected("metadata_string_too_large")
-    if any(ord(char) < 32 for char in value) or _LOCAL_PATH.search(value) or _DATA_URL.search(value):
+    if (any(ord(char) < 32 for char in value) or _LOCAL_PATH.search(value)
+            or _DATA_URL.search(value)
+            or re.search(r"\b(?:https?|ftp|s3|r2)://|\bblob:", value, re.IGNORECASE)):
         raise PayloadRejected("forbidden_metadata")
     # Detect common encoded media; generic opaque encoding is not a permitted
     # metadata field either. This includes base64url, hex and JSON-wrapped audio.
@@ -142,10 +148,51 @@ def _check_text(value: str) -> None:
             raise PayloadRejected("encoded_media_forbidden")
 
 
-def _validate_value(value: Any, allowed: frozenset[str], depth: int) -> None:
+# Permit a short set of known scalar and structural field types. A field
+# allowlist without type constraints would let a client put PCM samples into
+# "title": [0, 32767, ...] or smuggle bytes through nested arrays.
+_TEXT_FIELDS = frozenset({
+    "recipe_id", "revision_id", "parent_revision_id", "occurrence_id",
+    "recording_ref", "transition_kind", "timebase", "key", "title",
+    "artist", "notes", "status", "source_revision", "intent", "operation_id",
+    "actor_id", "device_id", "zone_id", "recipe_revision_id",
+    "idempotency_key", "command", "state", "reason_code",
+    "target_device_id", "album", "genre", "availability", "engine_state",
+    "output_state", "schedule_id", "timezone", "day", "start_time",
+    "end_time", "event_id", "category", "connection_state", "version",
+    "action",
+})
+_NUMBER_FIELDS = frozenset({
+    "position", "cue_in_ms", "cue_out_ms", "transition_ms", "bpm",
+    "expected_duration_ms", "confidence", "generation",
+    "expected_generation", "volume", "position_ms", "sequence",
+    "duration_ms", "year", "total", "ready", "missing", "blocked",
+    "candidate", "count", "priority", "cpu_percent", "memory_pressure",
+    "queue_depth", "job_count", "uptime_seconds",
+})
+_TIMESTAMP_FIELDS = frozenset({
+    "expiry", "created_at", "updated_at", "issued_at", "applied_at",
+    "verified_at", "expires_at", "last_verified_at", "effective_at",
+    "started_at", "ended_at", "timestamp", "last_seen_at",
+})
+_BOOL_FIELDS = frozenset({"enabled", "explicit"})
+_LIST_OF_OBJECTS = frozenset({
+    "occurrences", "cues", "transitions", "recordings", "dayparts", "steps",
+})
+_OBJECT_FIELDS = frozenset({"parameters", "constraints", "policy"})
+# A revision may be a numeric generation or a stable opaque revision ID.
+_BOTH_FIELDS = frozenset({"revision"})
+
+
+def _validate_value(
+    value: Any, allowed: frozenset[str], depth: int, field: str | None = None,
+    *, list_item: bool = False,
+) -> None:
     if depth > _MAX_DEPTH:
         raise PayloadRejected("metadata_too_deep")
     if isinstance(value, Mapping):
+        if field is not None and field not in _OBJECT_FIELDS and not list_item:
+            raise PayloadRejected("metadata_wrong_type")
         if len(value) > _MAX_ENTRIES:
             raise PayloadRejected("metadata_too_many_fields")
         for key, item in value.items():
@@ -153,17 +200,29 @@ def _validate_value(value: Any, allowed: frozenset[str], depth: int) -> None:
                 raise PayloadRejected("metadata_invalid_field")
             if _FORBIDDEN_KEY.search(key) or key not in allowed:
                 raise PayloadRejected("metadata_field_not_allowed")
-            _validate_value(item, allowed, depth + 1)
+            _validate_value(item, allowed, depth + 1, key)
     elif isinstance(value, list):
+        if field not in _LIST_OF_OBJECTS:
+            raise PayloadRejected("metadata_wrong_type")
         if len(value) > _MAX_ENTRIES:
             raise PayloadRejected("metadata_too_many_items")
         for item in value:
-            _validate_value(item, allowed, depth + 1)
+            if not isinstance(item, Mapping):
+                raise PayloadRejected("metadata_wrong_type")
+            _validate_value(item, allowed, depth + 1, list_item=True)
     elif isinstance(value, str):
+        if field not in _TEXT_FIELDS | _TIMESTAMP_FIELDS | _BOTH_FIELDS:
+            raise PayloadRejected("metadata_wrong_type")
         _check_text(value)
-    elif value is None or isinstance(value, bool):
+    elif value is None:
+        # Explicit unknown/not-observed is not treated as a positive media state.
         return
+    elif isinstance(value, bool):
+        if field not in _BOOL_FIELDS:
+            raise PayloadRejected("metadata_wrong_type")
     elif isinstance(value, (int, float)):
+        if field not in _NUMBER_FIELDS | _TIMESTAMP_FIELDS | _BOTH_FIELDS:
+            raise PayloadRejected("metadata_wrong_type")
         if isinstance(value, float) and not math.isfinite(value):
             raise PayloadRejected("metadata_invalid_number")
         if abs(value) > 10**15:
@@ -201,7 +260,7 @@ def validate_envelope(
         raise PayloadRejected("invalid_tenant_scope")
     try:
         category = PayloadKind(kind)
-    except ValueError as error:
+    except (ValueError, TypeError) as error:
         raise PayloadRejected("metadata_kind_not_allowed") from error
     if isinstance(value, (bytes, str)):
         if isinstance(value, bytes):
@@ -215,7 +274,11 @@ def validate_envelope(
                 raise PayloadRejected("unexpected_binary_payload") from error
         else:
             raw = value
-            if len(raw.encode("utf-8")) > max_bytes:
+            try:
+                size = len(raw.encode("utf-8"))
+            except UnicodeError as error:
+                raise PayloadRejected("invalid_metadata_json") from error
+            if size > max_bytes:
                 raise PayloadRejected("metadata_too_large")
         try:
             value = json.loads(raw, object_pairs_hook=_pairs, parse_constant=_no_constant)
@@ -227,7 +290,7 @@ def validate_envelope(
         raise PayloadRejected("invalid_metadata_envelope")
     try:
         serialized_size = len(json.dumps(value, allow_nan=False, ensure_ascii=False).encode("utf-8"))
-    except (TypeError, ValueError, OverflowError, RecursionError) as error:
+    except (TypeError, ValueError, OverflowError, RecursionError, UnicodeError) as error:
         raise PayloadRejected("invalid_metadata_json") from error
     if serialized_size > max_bytes:
         raise PayloadRejected("metadata_too_large")
@@ -255,7 +318,7 @@ def safe_audit_fields(code: str, kind: PayloadKind | str) -> dict[str, str]:
         "metadata_too_many_items", "metadata_too_many_fields", "metadata_too_deep",
         "invalid_metadata_json", "invalid_metadata_envelope", "unexpected_binary_payload",
         "encoded_media_forbidden", "forbidden_metadata", "metadata_duplicate_field",
-        "metadata_invalid_number", "tenant_scope_mismatch", "invalid_tenant_scope",
+        "metadata_invalid_number", "metadata_wrong_type", "tenant_scope_mismatch", "invalid_tenant_scope",
         "metadata_kind_not_allowed", "metadata_version_unsupported",
         "cloud_audio_disabled", "cloud_audio_storage_disabled",
         "cloud_audio_processing_disabled", "new_cloud_audio_uploads_disabled",
