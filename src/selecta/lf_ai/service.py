@@ -91,7 +91,10 @@ def deterministic_plan(
     if not REF.fullmatch(workspace_id) or not REF.fullmatch(device_id):
         raise BoundaryError("invalid trusted workspace or device ID")
     query = safe_user_text(user_request).casefold()
-    tracks = sorted(catalogue, key=lambda t: (t.artist.casefold(), t.title.casefold(), t.recording_id))
+    tracks = sorted(
+        catalogue,
+        key=lambda t: (t.artist.casefold(), t.title.casefold(), t.recording_id),
+    )
     matches = [t for t in tracks if t.genre and t.genre.casefold() in query]
     if matches:
         tracks = matches + [t for t in tracks if t not in matches]
@@ -105,7 +108,10 @@ def deterministic_plan(
         selected.append(choice)
         remaining.remove(choice)
     refs = tuple(t.recording_id for t in selected)
-    steps = (Suggestion("suggest_order", refs, "blend", "Unverified musical ordering"),) if refs else ()
+    steps = (
+        (Suggestion("suggest_order", refs, "blend", "Unverified musical ordering"),)
+        if refs else ()
+    )
     summary = (
         f"Suggested {len(refs)} recordings from permitted metadata; "
         "the target device must verify all recordings and transitions."
@@ -187,7 +193,9 @@ class HostedLucyPlanner:
                 or tokens_out > b.max_output_tokens
                 or tokens_in + tokens_out > b.max_total_tokens
             ):
-                return fallback("token_limit", tokens_in, tokens_out, b.estimate(tokens_in, tokens_out))
+                return fallback(
+                    "token_limit", tokens_in, tokens_out, b.estimate(tokens_in, tokens_out)
+                )
             cost = b.estimate(tokens_in, tokens_out)
             if cost > b.max_cost_usd:
                 return fallback("spend_limit", tokens_in, tokens_out, cost)
