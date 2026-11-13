@@ -133,8 +133,9 @@ export function unknownReadiness(
 }
 
 export function isStale(readiness: DeviceMixReadiness, now = Date.now()): boolean {
-  return !readiness.localVerification || readiness.checkedAt === null ||
-    readiness.checkedAt > now + 5_000 || now - readiness.checkedAt > VERIFICATION_TTL_MS;
+  return !readiness.localVerification || !readiness.engineHealthy || !readiness.sourceConnected ||
+    readiness.checkedAt === null || readiness.checkedAt > now + 5_000 ||
+    now - readiness.checkedAt > VERIFICATION_TTL_MS;
 }
 
 /** Separate editability, file rendering, partial audition, and actual speaker
