@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09. Decision: [ADR-0405](../adr/adr-0405-licence-register-and-s-key-replacement.md).*
 
+> **Accepted local-first target (2026-11-13; implementation not started).** Keep the model/dependency register but review **distribution** of local binaries, bundled FFmpeg/codec/DSP libraries, S-KEY non-commercial status, Demucs weights, lyrics and territorial media rights. Local computation does not remove legal obligations. See ADR-0475. Historic architecture and evidence below remain part of the record. [Current direction](20-local-first-cloud-architecture.md) · [Migration](22-local-first-transition.md).
+
+
 # Licence register
 
 Every model and key dependency, its licence, and whether cloud mode may use it. This is a living table: add a row before a model or dependency ships in cloud mode, and keep the "Cloud mode" column honest. It is not legal advice; rows marked **Review** need a lawyer's view before paid launch.

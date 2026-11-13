@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Accepted local-first target (2026-11-13; not implemented).** Retire audio worker/pool/queue/storage operations after cutover; retain API, auth, billing and command availability. Add local-engine fleet, output audible health, source availability, clock, software versions, offline journal and device diagnostics without audio telemetry. See ADR-0479. The following historic hosted-media plan and implementation evidence are preserved for reference. [Current architecture](20-local-first-cloud-architecture.md) · [Transition](22-local-first-transition.md).
+
+
 ## 14. Observability and operations
 
 ### Maintenance entry points

@@ -1,5 +1,7 @@
 # ADR-0415 - Playback devices and one session per account
 
+> **Local-first supersession (2026-11-13):** Relevant hosted-audio assumptions in this historical ADR are superseded by ADR-0466, ADR-0469 and [the LF preservation map](selecta-local-first-overlap-and-parity.md). Historic statuses and completed evidence remain unchanged. New architecture is accepted, not implemented.
+
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 2/5 Implemented; 3/5 In progress; 0/5 Not started.
 - **Independent verification:** 0/5 Verified.

@@ -1,5 +1,7 @@
 # ADR-0394 - Durable jobs with leases and fencing
 
+> **Architecture supersession (2026-11-13):** Historical implementation and acceptance statuses below remain recorded, but any conflicting hosted-user-audio design is superseded for future work by LF ADR-0463, ADR-0469. See [LF preservation map](selecta-local-first-overlap-and-parity.md). The replacement is accepted as a design, **not implemented**.
+
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 5/6 Implemented; 1/6 In progress; 0/6 Not started.
 - **Independent verification:** 0/6 Verified.

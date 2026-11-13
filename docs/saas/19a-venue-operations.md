@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Proposed on 2026-11-12; awaiting the owner's decision.*
 
+> **Accepted local-first target (2026-11-13; implementation not started).** The four-hour cloud-downloaded audio horizon and remote render-ahead are superseded. Keep committed/prepared/planned programme stages but locally prepare seams and play files already on authorised venue player. Keep offline policy, IANA hours, journal and controlled speaker ownership. See ADR-0467 and ADR-0468. Historic architecture and evidence below remain part of the record. [Current direction](20-local-first-cloud-architecture.md) · [Migration](22-local-first-transition.md).
+
+
 ## 19A. SelectaDJ for Business: venue operations
 
 *Sub-chapter of [§19 SelectaDJ for Business](19-business-venues.md). The experience, content controls, Rooms for Business, roles and testing are in [§19B](19b-business-experience.md). Decisions: [ADR-0442](../adr/adr-0442-organisations-venues-zones-and-org-workspace.md), [ADR-0443](../adr/adr-0443-zone-playback-sessions.md), [ADR-0444](../adr/adr-0444-venue-hours-dayparts-and-unattended-scheduling.md), [ADR-0445](../adr/adr-0445-kiosk-player-devices.md), [ADR-0446](../adr/adr-0446-offline-first-venue-playback-and-resync.md).*

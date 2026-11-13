@@ -3,6 +3,7 @@
 // Names are invented; no real venue, person or library appears here.
 
 import type { Api } from '../cloud/api';
+import type { LocalZoneReport } from './localFirst/readiness';
 import type { Device, GuestRequest, Member, Org, Overview, Venue, WorkspaceSummary, Zone, ZoneSchedule } from './types';
 
 export const NOW = Date.UTC(2026, 10, 14, 14, 30) / 1000; // Sat 14 November 2026, 14:30 UTC
@@ -11,7 +12,7 @@ const DAY = 86_400;
 export type Scenario =
   | 'normal' | 'empty' | 'silent' | 'long_pause' | 'over_seats' | 'licence_expiring' | 'licence_expired'
   | 'grace' | 'grace_final' | 'grace_ended' | 'plan_locked' | 'pilot' | 'pilot_ending' | 'pilot_ended'
-  | 'degraded' | 'stress';
+  | 'degraded' | 'stress' | 'lf13_fleet';
 
 export function zone(venueId: string, id: string, name: string, extra: Partial<Zone> = {}): Zone {
   return {
@@ -55,6 +56,33 @@ export function org(extra: Partial<Org> = {}): Org {
   };
 }
 
+/** Synthetic, *verified* local playback evidence; never generated from a real user library. */
+export function localReport(extra: Partial<LocalZoneReport> = {}): LocalZoneReport {
+  return {
+    verified_at: NOW - 10,
+    engine: { state: 'ready', version: '1.0', update_required: false },
+    source: { state: 'connected' },
+    inventory: { verified: 12, required: 12 },
+    horizon: { committed_minutes: 20, prepared_minutes: 45, planned_minutes: 90, fallback_minutes: 60 },
+    output: { state: 'playing', physical_verified: true, device_name: 'Venue speaker', generation: 4 },
+    policy_approved: true, offline_rehearsed: true,
+    ...extra,
+  };
+}
+
+export function localFleet(): Overview {
+  const venues = Array.from({ length: 20 }, (_, index) => {
+    const id = 'lf13-v' + index;
+    const zones = [zone(id, id + '-main', 'Main', { local_first: localReport() }), zone(id, id + '-side', 'Side', { local_first: localReport() })];
+    if (index === 3) zones[0].local_first = localReport({ source: { state: 'disconnected' } });
+    if (index === 7) { zones[1].state = 'silent'; zones[1].local_first = localReport({ output: { state: 'failed', physical_verified: false, device_name: 'Side speaker' } }); }
+    if (index === 12) zones[0].local_first = localReport({ horizon: { committed_minutes: 10, prepared_minutes: 2, planned_minutes: 60, fallback_minutes: 0 } });
+    if (index === 14) zones[0].local_first = localReport({ engine: { state: 'offline_playing' }, output: { state: 'playing', physical_verified: true, device_name: 'Main speaker' } });
+    return venue(id, 'Demo venue ' + (index + 1), { zones });
+  });
+  return { org: org({ features: { ...org().features, 'business.local_first': true } }), venues, devices: [], activity: [] };
+}
+
 export function scenario(kind: Scenario): Overview {
   const base: Overview = {
     org: org(),
@@ -80,6 +108,7 @@ export function scenario(kind: Scenario): Overview {
     case 'pilot_ended': return { ...base, org: org({ pilot: { status: 'ended', ends_at: NOW - DAY, allowance: { venues: 3, zones: 6 } }, billing: { ...org().billing, plan: 'pilot' } }) };
     case 'degraded': v[2].health_at = NOW - 400; return base;
     case 'stress': return { ...base, venues: stressVenues(500) };
+    case 'lf13_fleet': return localFleet();
   }
 }
 

@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Proposed on 2026-11-12; awaiting the owner's decision.*
 
+> **Accepted local-first target (2026-11-13; implementation not started).** Business UI now needs per-venue music-source and transition readiness, local engine pairing/health, genuine output checks, offline fallback and missing-song remediation. Retain staff simplicity, customer-screen privacy and all content restrictions. See ADR-0478 and UX chapter 21. Historic architecture and evidence below remain part of the record. [Current direction](20-local-first-cloud-architecture.md) · [Migration](22-local-first-transition.md).
+
+
 ## 19B. SelectaDJ for Business: the experience, controls, people and testing
 
 *Sub-chapter of [§19 SelectaDJ for Business](19-business-venues.md). Venue operations (hours, zones, kiosks, offline playback) are in [§19A](19a-venue-operations.md). This part covers what people see and do, the rules that govern what plays, who can do what, and how the whole business plan is tested before pilots and before sale. Users see "SelectaDJ"; the company is REX Technologies.*

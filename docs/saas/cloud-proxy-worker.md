@@ -1,5 +1,8 @@
 # Cloud playback proxy worker
 
+> **Accepted local-first target (2026-11-13; implementation not started).** Remote cloud audio proxy worker and R2 presigned media delivery are retirement targets, not the new design. Keep local decoding/provenance via installed engine; do not reuse remote worker gateway for audio. See ADR-0464 and ADR-0481. Historic architecture and evidence below remain part of the record. [Current direction](20-local-first-cloud-architecture.md) · [Migration](22-local-first-transition.md).
+
+
 Run `python -m selecta.workers.cloud` in an environment with Selecta and ffmpeg installed.
 Set `SELECTA_WORKER_GATEWAY_URL` and `SELECTA_WORKER_BOOTSTRAP_TOKEN` for enrollment.
 The process enrolls in the CPU-light pool and claims only `play.proxy` jobs.

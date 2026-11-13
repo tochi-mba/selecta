@@ -136,6 +136,7 @@ class JobContext:
         artifact_publisher: Callable[..., ArtifactOutput] | None = None,
         artifact_store: ArtifactStore | None = None,
         clock: Callable[[], float] = time.monotonic,
+        resource_stop: Callable[[], bool] | None = None,
     ):
         self.job = job
         self.attempt_id = attempt_id
@@ -152,6 +153,7 @@ class JobContext:
         self.store = artifact_store
         """Where inputs are read and outputs stored; None for a worker behind the gateway."""
         self._clock = clock
+        self._resource_stop = resource_stop
         self.last_progress_at: float | None = None
         """When the handler last reported progress, on `clock` (the runner's, so its watchdog
         can compare); None until the handler reports any."""
@@ -284,7 +286,12 @@ class JobContext:
             log.warning("Couldn't record progress for %s", self.attempt_id, exc_info=True)
 
     def should_stop(self) -> bool:
-        return self.signals.should_stop()
+        if self.signals.should_stop():
+            return True
+        if self._resource_stop is not None and self._resource_stop():
+            self.signals.stop_for(self.signals.cancel, "The physical output needs local resources.")
+            return True
+        return False
 
     def check_in(self) -> None:
         """Between steps: stop here if the attempt was cancelled, preempted or lost."""

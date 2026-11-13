@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Local-first architecture supersession (accepted 2026-11-13; implementation not started).** Durable local job priorities, safety, cancellation, idempotency and provenance remain valuable. Cloud tier-weighted audio queues, hosted worker leases and CPU allowances are superseded by a device-local scheduler protecting real-time playback and hardware. Cloud still needs reliable command delivery but not DSP workers. See [ADR-0463](../adr/adr-0463-device-local-job-scheduler-and-resource-safety.md) and [ADR-0469](../adr/adr-0469-control-plane-commands-and-offline-synchronization-protocol.md). Historical plan details and past implementation evidence below are retained; this documentation PR does not change running software.
+
+
 ## 4A. The processing and queue system (the core)
 
 This is where most of the engineering care goes. The rules below are written so they can be implemented, simulated and tested exactly.

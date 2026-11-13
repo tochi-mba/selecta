@@ -22,7 +22,7 @@ type Restore = { time: number; wasPlaying: boolean };
 const PROXY_POLL_MS = 1500;
 const PROXY_DEADLINE_MS = 300_000;
 
-export function useCloudPlayer({ api, workspaceId, audio, setError, fetchImpl = fetch, skipOnFailure = false }: {
+export function useCloudPlayer({ api, workspaceId, audio, setError, fetchImpl = fetch, skipOnFailure = false, localFirstMode = false }: {
   api: Api;
   workspaceId: string;
   audio: RefObject<HTMLAudioElement | null>;
@@ -32,6 +32,8 @@ export function useCloudPlayer({ api, workspaceId, audio, setError, fetchImpl = 
    * after its one refresh, or a buffered copy that fails, moves on to the next song and says
    * which song was skipped. Off, the player stops there and asks for Listen again, as before. */
   skipOnFailure?: boolean;
+  /** When enabled, browser playback-proxy and buffer requests are forbidden. */
+  localFirstMode?: boolean;
 }) {
   const [queue, setQueue] = useState<Asset[]>([]);
   const [index, setIndex] = useState(-1);
@@ -55,9 +57,19 @@ export function useCloudPlayer({ api, workspaceId, audio, setError, fetchImpl = 
     setBufferedId(null);
   };
   useEffect(() => () => { generation.current += 1; dropBuffer(); }, [workspaceId]);
+  useEffect(() => {
+    if (!localFirstMode) return;
+    generation.current += 1;
+    dropBuffer();
+    audio.current?.pause();
+    setTrack(null);
+    setPreparing('');
+  }, [localFirstMode, audio]);
 
   /** A ready signed URL for one song's playback file, preparing it first if needed. */
   const readyUrl = useCallback(async (asset: Asset, mine: number) => {
+    // A local-first controller has no authorised browser audio source. Never fetch R2 proxies.
+    if (localFirstMode) return null;
     const path = `/assets/${encodeURIComponent(asset.id)}/playback-proxy`;
     type ProxyStatus = { status: string; url?: string };
     let result = await api<ProxyStatus>(path, { method: 'POST' }, workspaceId);
@@ -72,9 +84,16 @@ export function useCloudPlayer({ api, workspaceId, audio, setError, fetchImpl = 
     }
     if (!result.url) throw new Error('The prepared audio link is unavailable.');
     return result.url;
-  }, [api, workspaceId]);
+  }, [api, workspaceId, localFirstMode]);
 
   const start = useCallback(async (list: Asset[], at: number) => {
+    if (localFirstMode) {
+      generation.current += 1;
+      setTrack(null);
+      setQueue(list); setIndex(at);
+      setError('This recording must be verified on a local engine. Control that speaker or connect local music; cloud audio streaming is disabled.');
+      return;
+    }
     const asset = list[at];
     if (!asset) return;
     const mine = ++generation.current;
@@ -101,10 +120,11 @@ export function useCloudPlayer({ api, workspaceId, audio, setError, fetchImpl = 
     } finally {
       if (mine === generation.current) setPreparing('');
     }
-  }, [readyUrl, setError]);
+  }, [readyUrl, setError, localFirstMode]);
 
   /** Buffer the next song in the run, once, while this one plays. */
   const prefetchNext = useCallback(async () => {
+    if (localFirstMode) return;
     const next = queue[index + 1];
     if (!next || buffered.current?.id === next.id || prefetching.current === next.id) return;
     const mine = generation.current;
@@ -128,7 +148,7 @@ export function useCloudPlayer({ api, workspaceId, audio, setError, fetchImpl = 
       // Buffering is a head start, not a promise: the next song still plays, from the network.
       if (prefetching.current === next.id) prefetching.current = null;
     }
-  }, [queue, index, readyUrl, fetchImpl]);
+  }, [queue, index, readyUrl, fetchImpl, localFirstMode]);
 
   const advance = useCallback(() => {
     if (index + 1 < queue.length) {
@@ -151,6 +171,7 @@ export function useCloudPlayer({ api, workspaceId, audio, setError, fetchImpl = 
 
   /** The media element couldn't load: refresh this song's URL once, keeping place and queue. */
   const refreshUrl = useCallback(async () => {
+    if (localFirstMode) return;
     const current = track;
     const element = audio.current;
     if (!current) return;
@@ -181,7 +202,7 @@ export function useCloudPlayer({ api, workspaceId, audio, setError, fetchImpl = 
       if (skipOnFailure) { skipFailed(current); return; }
       setError((problem as Error).message || 'This playback link could not be refreshed.');
     }
-  }, [api, audio, setError, skipFailed, skipOnFailure, track, workspaceId]);
+  }, [api, audio, setError, skipFailed, skipOnFailure, track, workspaceId, localFirstMode]);
 
   /** The element's position and play state, as it plays. */
   const heard = useCallback(() => {
@@ -207,6 +228,6 @@ export function useCloudPlayer({ api, workspaceId, audio, setError, fetchImpl = 
     queue, index, track, preparing, bufferedId,
     upNext: queue[index + 1] ?? null,
     start, advance, refreshUrl, loaded, prefetchNext, heard,
-    autoplay: restore.current?.wasPlaying ?? true,
+    autoplay: !localFirstMode && (restore.current?.wasPlaying ?? true),
   };
 }

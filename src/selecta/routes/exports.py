@@ -29,6 +29,14 @@ from fastapi import HTTPException, Request
 from selecta import mix
 from selecta.config import SAMPLE_RATE
 from selecta.export_validation import verify_export
+from selecta.lf_artifacts.store import (
+    ArtifactCancelled,
+    ArtifactInvalid,
+    ArtifactSpec,
+    InsufficientSpace,
+    LocalArtifactStore,
+    sha256_file,
+)
 from selecta.seams import request_from
 
 CHECK_EVERY_SECONDS = 1.0
@@ -60,6 +68,8 @@ def _words_for(problem: Exception) -> str:
     """What went wrong, in words that say what to do. No paths."""
     if isinstance(problem, ValueError):
         return str(problem)
+    if isinstance(problem, InsufficientSpace):
+        return NO_ROOM
     if isinstance(problem, OSError) and problem.errno == errno.ENOSPC:
         return NO_ROOM
     if isinstance(problem, MemoryError):
@@ -72,6 +82,15 @@ def add_routes(app, ctx) -> None:
     settings = ctx.settings
     store = ctx.store
 
+    # Opt-in capability set by the local-engine runtime (Agent 01); existing
+    # standalone and durable-local-job routes keep their established behavior.
+    local_first = bool(
+        getattr(ctx, "local_first_artifacts", False)
+        or getattr(settings, "local_first_artifacts", False)
+        or os.environ.get("SELECTA_LOCAL_FIRST_ARTIFACTS") == "1"
+    )
+    artifacts = LocalArtifactStore(settings.home / "lf_artifacts")
+    artifacts.recover(settings.home / "exports")
     running: dict[str, threading.Event] = {}
     lock = threading.Lock()
 
@@ -110,7 +129,10 @@ def add_routes(app, ctx) -> None:
             name = shown.get("name") or ""
             if not (settings.home / "exports" / Path(name).name).exists():
                 shown["state"] = "expired"
-        shown["can_cancel"] = shown["state"] == "preparing"
+            artifact_id = shown.get("artifact_id")
+            if artifact_id and artifacts.state(artifact_id, verify_bytes=False) != "ready":
+                shown["state"] = "expired"
+        shown["can_cancel"] = shown["state"] in (ACTIVE if local_first else {"preparing"})
         shown["quiet_seconds"] = (
             round(time.time() - shown["last_progress_at"]) if shown["state"] in ACTIVE else 0
         )
@@ -233,14 +255,26 @@ def add_routes(app, ctx) -> None:
                     store.submit(request_from(seam["a"], seam["b"], seam["settings"]))
             time.sleep(CHECK_EVERY_SECONDS)
 
+    def source_revisions(conn: sqlite3.Connection, job: dict) -> dict[str, str]:
+        """Read actual bytes only on this engine; no source path enters job records or cloud."""
+        sources = {}
+        for index, song in enumerate(job["songs"]):
+            row = conn.execute("SELECT path FROM songs WHERE id=?", (song["song_id"],)).fetchone()
+            if row is None:
+                raise ArtifactInvalid("A frozen recording is no longer in the library.")
+            sources[f"song:{index}"] = sha256_file(Path(row["path"]))
+        for index, seam in enumerate(job["seams"]):
+            sources[f"seam:{index}"] = sha256_file(store.folder(seam["key"]) / "clip.flac")
+        return sources
+
     def run(job: dict, cancel: threading.Event) -> None:
         try:
             if not wait_for_seams(job, cancel):
                 return
-            needed = job["seconds_estimate"] * ROUGH_FLAC_BYTES_PER_SECOND
+            needed = max(0, int(job["seconds_estimate"] * ROUGH_FLAC_BYTES_PER_SECOND))
             exports = settings.home / "exports"
             exports.mkdir(parents=True, exist_ok=True)
-            if shutil.disk_usage(exports).free < needed:
+            if not local_first and shutil.disk_usage(exports).free < needed:
                 finish(job, "failed", error=NO_ROOM)
                 return
             job["last_progress_at"] = time.time()
@@ -248,28 +282,54 @@ def add_routes(app, ctx) -> None:
             started = time.monotonic()
             conn = connect()
             try:
-                made = mix.export_snapshot(
-                    conn,
-                    settings,
-                    store,
-                    exports / job["name"],
-                    [song["song_id"] for song in job["songs"]],
-                    [seam["key"] for seam in job["seams"]],
-                )
+                if not local_first:
+                    # Original standalone behavior, including the tested frozen
+                    # snapshot and PCM checksum contract.
+                    made = mix.export_snapshot(
+                        conn, settings, store, exports / job["name"],
+                        [song["song_id"] for song in job["songs"]],
+                        [seam["key"] for seam in job["seams"]],
+                    )
+                    try:
+                        checksum = verify_export(exports / job["name"], made["seconds"])
+                    except (OSError, ValueError):
+                        (exports / job["name"]).unlink(missing_ok=True)
+                        raise ValueError(
+                            "The saved audio could not be verified as a complete FLAC file. "
+                            "Check disk space and export again."
+                        ) from None
+                else:
+                    frozen_sources = source_revisions(conn, job)
+                    spec = ArtifactSpec(
+                        kind="export",
+                        source_revisions=frozen_sources,
+                        versions={"renderer": "selecta-mix-v1", "analysis": "legacy-seams-v1",
+                                  "encoder": "flac-pcm16-v1"},
+                        settings={"revision": job["revision"], "sample_rate": SAMPLE_RATE,
+                                  "format": "flac"},
+                    )
+
+                    def write(stage: Path) -> dict:
+                        made = mix.export_snapshot(
+                            conn, settings, store, stage,
+                            [song["song_id"] for song in job["songs"]],
+                            [seam["key"] for seam in job["seams"]],
+                        )
+                        if source_revisions(conn, job) != frozen_sources:
+                            raise ArtifactInvalid(
+                                "A recording changed during the export. Restore its original "
+                                "version or start a new export."
+                            )
+                        return made
+
+                    record, made = artifacts.publish(
+                        spec, write, destination=exports / job["name"],
+                        validate=lambda path, result: verify_export(path, result["seconds"]),
+                        estimated_bytes=needed, cancel=cancel,
+                    )
+                    checksum = record["validation_checksum"]
             finally:
                 conn.close()
-            # Encoding finishing does not prove the frozen file is playable. Decode
-            # every frame from the final path before it is ever reported as ready.
-            try:
-                # SF-0246-06: the decoded samples' checksum is kept with the frozen revision, so
-                # the file can be checked against exactly what this job froze
-                checksum = verify_export(exports / job["name"], made["seconds"])
-            except (OSError, ValueError):
-                (exports / job["name"]).unlink(missing_ok=True)
-                raise ValueError(
-                    "The saved audio could not be verified as a complete FLAC file. "
-                    "Check disk space and export again."
-                ) from None
             store.clock.record(
                 "export_per_song", (time.monotonic() - started) / max(len(job["songs"]), 1)
             )
@@ -278,9 +338,15 @@ def add_routes(app, ctx) -> None:
                 "ready",
                 seconds=made["seconds"],
                 checksum=checksum or None,
+                **({
+                    "artifact_id": record["id"],
+                    "device_id": str(getattr(ctx, "device_id", "local-engine")),
+                } if local_first else {}),
                 finished_at=time.time(),
             )
-        except Exception as problem:  # noqa: BLE001 - it becomes the job's reason, not a lost thread
+        except ArtifactCancelled:
+            finish(job, "cancelled", error=None)
+        except Exception as problem:  # noqa: BLE001 - convert thread errors to job state
             finish(job, "failed", error=_words_for(problem))
         finally:
             with lock:
@@ -343,6 +409,15 @@ def add_routes(app, ctx) -> None:
         threading.Thread(target=run, args=(job, cancel), daemon=True).start()
         return as_shown(job)
 
+    @app.get("/api/exports/local-artifacts/{artifact_id}")
+    def local_artifact_state(artifact_id: str) -> dict:
+        """Controller-safe local completion metadata, never an audio URL or filesystem path."""
+        if not re.fullmatch(r"[0-9a-f]{64}", artifact_id):
+            raise HTTPException(404, "There's no local artifact like that.")
+        return artifacts.public_state(
+            artifact_id, device_id=str(getattr(ctx, "device_id", "local-engine"))
+        )
+
     @app.get("/api/exports/jobs")
     def list_exports() -> dict:
         if durable is not None:
@@ -369,7 +444,7 @@ def add_routes(app, ctx) -> None:
 
     @app.delete("/api/exports/jobs/{job_id}")
     def cancel_export(job_id: str) -> dict:
-        """Stop while it's waiting on transitions. Once the file is being written, it finishes."""
+        """Stop waiting immediately; an active encoder discards staging before publication."""
         if durable is not None:
             found = durable_or_404(job_id)
             if durable.record(found)["state"] != "preparing":
@@ -377,7 +452,7 @@ def add_routes(app, ctx) -> None:
             return durable.cancel(found)
         job = job_or_404(job_id)
         shown = as_shown(job)
-        if shown["state"] != "preparing":
+        if shown["state"] not in (ACTIVE if local_first else {"preparing"}):
             raise HTTPException(409, "It's past the point where it can be cancelled.")
         with lock:
             cancel = running.get(job_id)

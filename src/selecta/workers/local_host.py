@@ -40,6 +40,7 @@ from pathlib import Path
 import psutil
 from sqlalchemy.engine import Engine
 
+from selecta.lf_jobs.governor import LocalResourceGovernor
 from selecta.persistence import make_engine, migrate
 from selecta.scheduling.policy import PolicyConfig
 from selecta.work.enqueue import Enqueued, JobSpec
@@ -70,6 +71,12 @@ def local_policy() -> PolicyConfig:
     no headroom free of spare-time work, because each local pool is one worker process that
     gives way at its next `check_in()` instead."""
     return PolicyConfig(
+        # Local CPU, audio and storage are device resources, not per-subscriber quotas.
+        tier_weights={"free": 1.0, "standard": 1.0, "premium": 1.0},
+        lane_caps={tier: {lane: 8 for lane in ("interactive", "standard", "speculative")}
+                   for tier in ("free", "standard", "premium")},
+        enforce_speculative_budget=False,
+        enforce_plan_backpressure=False,
         strict_lanes=True,
         speculative_headroom_slots=0,
         speculative_headroom_share=0.0,
@@ -98,6 +105,7 @@ class LocalWork:
     runners: list[LocalRunner]
     upkeep_s: float = 1.0
     watchers: list[Callable[[], None]] = field(default_factory=list)
+    child_stoppers: list[Callable[[], None]] = field(default_factory=list)
     """Run on every upkeep tick: they start worker processes that have work waiting."""
     _stop: threading.Event = field(default_factory=threading.Event)
     _upkeep: threading.Thread | None = None
@@ -112,6 +120,8 @@ class LocalWork:
     def tick(self) -> None:
         """Reap lapsed leases and promote due retries, as the maintenance leader does in Cloud,
         then let each watcher start what has work waiting."""
+        if self._stop.is_set():
+            return
         try:
             self.store.reap_expired()
             self.store.promote_due_retries()
@@ -140,7 +150,15 @@ class LocalWork:
                 for worker in runner.runners:
                     for signals in list(worker.live.values()):
                         signals.stop_for(signals.cancel, "The app is stopping.")
-        finished = all(runner.stop(timeout) for runner in self.runners)
+        # Workers in separate processes may have child decoders/models. Terminate
+        # their whole process trees instead of leaving an orphan after host shutdown.
+        for stop_child in self.child_stoppers:
+            try:
+                stop_child()
+            except Exception:  # noqa: BLE001 - still stop the other workers
+                log.exception("Stopping a local worker process failed")
+        stopped = [runner.stop(timeout) for runner in self.runners]
+        finished = all(stopped)
         if self._upkeep is not None:
             self._upkeep.join(timeout)
         if finished:
@@ -160,6 +178,7 @@ def open_local_work(
     """Build (not start) the host for `home`. `pools` maps each in-process pool to its thread
     count; pools served by worker processes are left out."""
     store = store or open_store(home)
+    runner_options.setdefault("resource_governor", LocalResourceGovernor(home))
     runners = [
         LocalRunner(store, pool, handlers, threads=threads, **runner_options)
         for pool, threads in (pools if pools is not None else {"cpu-heavy": 1}).items()
@@ -178,6 +197,8 @@ def spawn_worker(home: Path, module: str, *args: str) -> subprocess.Popen:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         close_fds=True,
+        start_new_session=os.name != "nt",
+        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0,
         env={**os.environ, "SELECTA_HOME": str(home), PARENT_ENV: str(os.getpid())},
     )
 
@@ -263,3 +284,8 @@ class Supervisor:
         with self._lock:
             if self.running():
                 kill_tree(self.process.pid)
+                try:
+                    self.process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    log.warning("Worker process did not exit after tree termination")
+            self.process = None

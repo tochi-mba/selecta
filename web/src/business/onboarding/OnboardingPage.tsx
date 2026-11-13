@@ -8,6 +8,8 @@ import { LicenceAttestationForm } from '../forms/LicenceAttestationForm';
 import { PairingCodeEntry } from '../forms/PairingCodeEntry';
 import { SETUP_COPY, STEP_COPY, SERVICE_COPY } from '../copy/onboarding';
 import type { SetupStepId, WeekHours, Holiday } from '../types';
+import { LocalSetupGuide, localFirstOn } from '../localFirst/ReadinessPanel';
+import { inspectVenue } from '../localFirst/readiness';
 
 const steps: SetupStepId[] = ['business', 'venue', 'hours', 'zones', 'licence', 'music', 'pair', 'service'];
 const emptyHours = (): WeekHours => ({ mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] });
@@ -22,6 +24,10 @@ export function OnboardingPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const disabled = readOnly ? SETUP_COPY.readOnly : offline ? SETUP_COPY.offline : null;
+  const localFirst = localFirstOn(org.features);
+  const activationReady = venue ? inspectVenue(venue, now, offline).activationReady : false;
+  const localGuide = (stage: 'music' | 'pair' | 'service') => venue ? <LocalSetupGuide venue={venue} now={now} offline={offline} stage={stage}
+    onOpenTab={(tab) => go(PATHS.venue(org.id, venue.id, tab))} onRefresh={refresh} /> : <p>Add the venue before connecting its music.</p>;
   const advance = async (done: boolean, venueId?: string) => {
     setError(''); setBusy(true);
     try {
@@ -62,18 +68,21 @@ export function OnboardingPage() {
       </>}
       {current === 'licence' && venue && <LicenceAttestationForm initial={venue.licence} now={now} disabled={disabled}
         onSave={async (licence) => { await client.saveLicence(org.id, venue.id, licence); await advance(true); }} />}
-      {current === 'music' && <><p>Add music to the organisation library before the first service.</p>
-        <button type="button" onClick={() => go(PATHS.section(org.id, 'library'))}>Open business library</button>
+      {current === 'music' && <><p>{localFirst ? 'Music remains on authorised local devices. Cloud storage is not a music source.' : 'Add music to the organisation library before the first service.'}</p>
+        {localFirst && localGuide('music')}
+        <button type="button" onClick={() => go(localFirst && venue ? PATHS.venue(org.id, venue.id, 'devices') : PATHS.section(org.id, 'library'))}>{localFirst ? 'Manage local music sources' : 'Open business library'}</button>
         <button type="button" disabled={!!disabled || busy} onClick={() => { void advance(true); }}>Continue</button>
       </>}
-      {current === 'pair' && venue && <><PairingCodeEntry zones={venue.zones} onPair={async (code, zone_id, name) => {
+      {current === 'pair' && venue && <>{localFirst && localGuide('pair')}<PairingCodeEntry zones={venue.zones} onPair={async (code, zone_id, name) => {
         const device = await client.pair({ code, zone_id, name }); await refresh(); return device;
       }} />
         <button type="button" disabled={!!disabled || busy} onClick={() => { void advance(true); }}>Continue</button>
       </>}
-      {current === 'service' && <><p>Review each zone's schedule before your first service.</p>
+      {current === 'service' && <><p>{localFirst ? 'Verify the engine, authorised recordings, real speaker, fallback and offline rehearsal in every zone before service.' : "Review each zone's schedule before your first service."}</p>
+        {localFirst && localGuide('service')}
+        {localFirst && !activationReady && <p role="alert">Activation is blocked until every zone has current verified local playback readiness. Refresh after the on-site checks.</p>}
         {venue && <button type="button" onClick={() => go(PATHS.venue(org.id, venue.id, 'schedule'))}>Open schedule</button>}
-        <button type="button" disabled={!!disabled || busy} onClick={() => { void advance(true); }}>{SERVICE_COPY.finish}</button>
+        <button type="button" disabled={!!disabled || busy || (localFirst && !activationReady)} onClick={() => { void advance(true); }}>{SERVICE_COPY.finish}</button>
       </>}
       {!venue && current !== 'business' && current !== 'venue' && <p>{SETUP_COPY.noVenueYet}</p>}
     </div>

@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Accepted local-first target (2026-11-13; not implemented).** The phased R2, worker gateway, Modal CPU/GPU and cloud audio data-plane roadmap below is superseded. New phases: preserve/inventory, package engine, canonical media/recipes, local workloads, device sync/takeover, personal UI/billing, business venues, legacy media sunset, independent release. See LF roadmap and chapter 22. The following historic hosted-media plan and implementation evidence are preserved for reference. [Current architecture](20-local-first-cloud-architecture.md) · [Transition](22-local-first-transition.md).
+
+
 ## 17. Roadmap
 
 Durations assume one developer working with AI agents and are ranges, not promises. Each phase ends with evidence (tests, measurements, a short demo) and an updated ADR status.

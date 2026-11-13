@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Accepted local-first target (2026-11-13; implementation not started).** Older sources support the historical cloud locker/worker proposal. Current local-first architecture is owner-accepted but not implemented; external copyright/licence/platform claims need a fresh dated source and specialist review before commercial use. See ADR-0475. Historic architecture and evidence below remain part of the record. [Current direction](20-local-first-cloud-architecture.md) · [Migration](22-local-first-transition.md).
+
+
 ## 22. Sources
 
 - Temporal Task Queue Priority and Fairness: https://docs.temporal.io/develop/task-queue-priority-fairness

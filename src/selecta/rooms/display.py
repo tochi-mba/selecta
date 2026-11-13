@@ -38,6 +38,7 @@ from selecta.rooms.views import (
     describe_songs,
     nickname_map,
     now_playing_for,
+    speaker_ready,
 )
 
 PAIRING_SECONDS = 600.0
@@ -268,8 +269,8 @@ def display_view(ctx: RoomContext, display_token: str, *, now: float | None = No
             )
         coming_up = queue_order(conn, room, now)
         names = nickname_map(conn, room)
-    songs = describe_songs(ctx, room, coming_up)
-    playing = now_playing_for(ctx, workspace_id)
+    songs = describe_songs(ctx, room, coming_up, now=now)
+    playing = now_playing_for(ctx, workspace_id, room=room, now=now)
     return DisplayView(
         DisplayState.PAIRED,
         room_name=room.name,
@@ -277,5 +278,5 @@ def display_view(ctx: RoomContext, display_token: str, *, now: float | None = No
         now_playing=playing.current,
         up_next=playing.up_next,
         upcoming=as_items(coming_up, songs, names, show_names=room.settings.names_shown),
-        music_paused=not ctx.speakers.speaker_online(workspace_id),
+        music_paused=not speaker_ready(ctx, room, now),
     )

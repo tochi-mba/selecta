@@ -14,6 +14,12 @@ const identity = process.env.SELECTA_DEV_IDENTITY_URL ?? 'http://127.0.0.1:8742'
 
 export default defineConfig({
   plugins: [react(), roomPages(import.meta.dirname)],
+  // Limit dev dependency discovery to real entrypoints. Otherwise Vite also scans
+  // generated dist-*/ HTML left behind by CI and local browser test runs.
+  optimizeDeps: {
+    entries: ['index.html', 'guest.html', 'display.html', 'kiosk.html',
+      'cloud-harness.html', 'business-harness.html'],
+  },
   resolve: { alias: { '@workos-inc/authkit-react': localAuth } },
   server: {
     host: '127.0.0.1',
@@ -21,6 +27,7 @@ export default defineConfig({
     proxy: {
       '/api': api,
       '/dev/stack': api,
+      '/dev/local-watches': api,
       '/dev-objects': api,
       '/dev-stripe': api,
       '/user_management': identity,

@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Local-first architecture supersession (accepted 2026-11-13; implementation not started).** This multipart R2 music locker, quota and signed playback URL design is no longer the accepted target. Audio is imported from authorised *local* sources, resolved on a specific device and played locally; saved cloud recipes do not include recordings. Legacy customer media requires a controlled retrieval/sunset, not immediate deletion. See [ADRs 0457-0460](../adr/selecta-local-first-overlap-and-parity.md), [migration](22-local-first-transition.md). Historical plan details and past implementation evidence below are retained; this documentation PR does not change running software.
+
+
 ## 5. Storage, uploads and playback
 
 ### 5.1 Buckets and keys (Cloudflare R2, EU jurisdiction)

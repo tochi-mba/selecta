@@ -21,6 +21,7 @@ import { venueTime } from '../time';
 import { arrangeVenues, DEFAULT_OPTIONS } from './consoleLogic';
 import { VenueHealthCard } from './VenueHealthCard';
 import { VenueHealthGrid } from './VenueHealthGrid';
+import { HqLocalReadiness, localFirstOn } from '../localFirst/ReadinessPanel';
 import './console.css';
 
 const viewerZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -123,6 +124,7 @@ export function HqConsole({ wall: wallProp = false }: { wall?: boolean }) {
     <SilentZoneAlert silent={silent} venues={venues} now={now} scope="hq" onOpenVenue={openVenue} />
     <StateBanners banners={banners} ctx={ctx} actions={actions} />
     {lines}
+    {localFirstOn(org.features) && <HqLocalReadiness venues={venues} now={now} offline={offline} onOpenVenue={openVenue} />}
     {phone ? <>
       {chip}
       {loading ? grid : <section aria-labelledby="hq-cards-title" className="hq-cards-section">

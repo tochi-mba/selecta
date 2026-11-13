@@ -1,5 +1,7 @@
 # ADR-0429 - Six-hour venue audio continuity
 
+> **Local-first architecture supersession (2026-11-13):** Future media ownership, plan/venue execution and UI contracts are governed by ADR-0467 and [the LF parity matrix](selecta-local-first-overlap-and-parity.md). This older decision remains a historical record; past status and evidence are not erased. LF implementation is not started.
+
 - **Decision:** Proposed (2026-11-12; owner acceptance pending).
 - **Implementation:** 5/5 Implemented (1 tooling only); 0/5 Not started; 5/5 need a person.
 - **Independent verification:** 0/5 Verified.

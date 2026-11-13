@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Accepted local-first target (2026-11-13; not implemented).** The new architecture requires per-device missing media, wrong master, unavailable source, stale availability, locally prepared seam, unsafe speaker takeover during network partition, offline venue/rights and cloud data retirement cases. See 65 named scenarios in LF edge catalogue and ADR-0482. The following historic hosted-media plan and implementation evidence are preserved for reference. [Current architecture](20-local-first-cloud-architecture.md) · [Transition](22-local-first-transition.md).
+
+
 ## 16. Edge cases: master checklist
 
 Grouped one-liners; each maps to a test or a documented policy. (The scenario catalogue in [§15.5](15-stress-testing.md#155-scenario-catalogue-each-becomes-a-named-automated-test) covers load and failure; these are product and correctness rules.)

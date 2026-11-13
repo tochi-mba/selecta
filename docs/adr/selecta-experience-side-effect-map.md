@@ -34,6 +34,7 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.workspace.<user>` | local | `web/src/business/workspace.ts` | Last chosen workspace for each signed-in account, restored only for that account | Cloud workspace switcher |
 | `selecta.workspace.tab` | session | `web/src/business/workspace.ts` | Workspace chosen in this tab, scoped to the signed-in account | Cloud workspace switcher |
 | `selecta.device.<workspace>` | local | `web/src/devices/usePlaybackDevice.ts`, `web/src/devices/DevicesPanel.tsx` | This browser's playback device id (Cloud) | Cloud playback |
+| `selecta:lf10:selected-device:<workspace>` | local | `web/src/cloud/lf-personal/state.ts` | Per-workspace selected authorised speaker or controller-only state; does not store local file paths or media | Connected local-first device selection |
 | `selecta.cloud.last-event-id` | session | `web/src/cloud/events.ts` | The last Cloud event seen, to resume the stream (Cloud) | Cloud |
 | `selecta.guest.room.<code>` | local | `web/src/guest/main.ts` (through `store` in `web/src/rooms/dom.ts`) | The guest's room id for a party code (Cloud) | Requests (guest rooms) |
 | `selecta-cloud-dev:refresh` | local | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The local identity service's refresh token, so a reload signs back in; removed on sign-out or a failed refresh | Cloud (local dev stack) |

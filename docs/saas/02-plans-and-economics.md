@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Local-first architecture supersession (accepted 2026-11-13; implementation not started).** The current 10/50/100 GB, uploads, daily analysis, CPU/render/stem/export budgets and cost estimates are not the future plan benefits. In new versioned plans, local work is unmetered by subscription but hardware-constrained; cloud AI, remote features, Rooms, venues, zones, seats and support remain potential entitlements. See [ADR-0470](../adr/adr-0470-personal-plans-without-hosted-audio-and-compute-quotas.md), [ADR-0471](../adr/adr-0471-business-billing-zones-seats-and-locally-provisioned-media.md). Historical plan details and past implementation evidence below are retained; this documentation PR does not change running software.
+
+
 ## 3. Product: plans, entitlements and economics
 
 ### 3.1 Plan catalogue (starting values, all admin-tunable and versioned)

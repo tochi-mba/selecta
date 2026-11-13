@@ -114,7 +114,16 @@ def free_slot(
 ) -> None:
     """Release the attempt's place in its head and correct V by what it really cost."""
     config = store.config
-    tier = store.entitlements.standing(attempt.workspace_id).tier
+    # Completion, failure, cancellation and release run inside a write transaction.
+    # Cloud entitlements must reuse that connection: opening a second SQLite
+    # BEGIN IMMEDIATE here would wait for a lock held by this very transaction.
+    standing_in_tx = getattr(store.entitlements, "standing_in_tx", None)
+    standing = (
+        standing_in_tx(connection, attempt.workspace_id)
+        if standing_in_tx is not None
+        else store.entitlements.standing(attempt.workspace_id)
+    )
+    tier = standing.tier
     heads.job_finished(
         connection,
         attempt.pool,

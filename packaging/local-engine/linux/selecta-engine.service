@@ -1,0 +1,17 @@
+[Unit]
+Description=Selecta local audio engine (user-owned, no hosted audio)
+After=network.target sound.target
+
+[Service]
+Type=simple
+# Set ExecStart to the real installed venv executable for venue deployments.
+ExecStart=%h/.local/bin/selecta engine run
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+Environment=SELECTA_MODE=local
+NoNewPrivileges=yes
+UMask=0077
+
+[Install]
+WantedBy=default.target

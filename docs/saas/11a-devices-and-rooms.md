@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Accepted local-first target (2026-11-13; not implemented).** Device/Rooms concepts remain. A Play Here action now checks exact local media and output before transfer; an offline old speaker cannot be assumed silent from a cloud lease. Guest requestable songs are filtered by actual target-zone availability. See ADR-0466 and ADR-0473. The following historic hosted-media plan and implementation evidence are preserved for reference. [Current architecture](20-local-first-cloud-architecture.md) · [Transition](22-local-first-transition.md).
+
+
 ## 11A. Playback devices and Rooms
 
 These two belong together: a Room needs one device that is *the speaker*, and a signed-in account can be on many devices at once.

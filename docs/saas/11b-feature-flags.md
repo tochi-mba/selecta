@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Accepted local-first target (2026-11-13; not implemented).** Feature flags remain, but cloud.uploads and hosted audio-worker surfaces are retirement candidates. Distinguish feature entitlement, actor authorisation, local hardware capability and per-device media readiness; a flag-on feature is not proof of available audio. See ADR-0483. The following historic hosted-media plan and implementation evidence are preserved for reference. [Current architecture](20-local-first-cloud-architecture.md) · [Transition](22-local-first-transition.md).
+
+
 ## 11B. Feature flags and targeting
 
 ### 11B.1 What exists now (merged in PR #42 and #43, ADR-0390)

@@ -76,6 +76,18 @@ are additive and are tracked by ADR-0391–0416; they do not relax the local con
 
 ---
 
+## Current accepted target (local-first, not implemented)
+
+The earlier chapters 01–19 remain a historical record of the hosted-audio Cloud programme; the owner accepted a local-first replacement on 2026-11-13. Read the following chapters first for new implementation work:
+
+| Chapter | Purpose |
+|---|---|
+| [20 - Local-first architecture](20-local-first-cloud-architecture.md) | Local engine, portable recipes, safety, cloud control plane and plan benefits |
+| [21 - Device-first UI/UX](21-local-first-ux.md) | Onboarding, local library, missing-media repair, editor, playback, business and kiosk |
+| [22 - Migration and service retirement](22-local-first-transition.md) | Legacy customer data, quotas, Modal/R2/gateway decommission and legal gates |
+
+[30 accepted LF ADRs](../adr/selecta-local-first-roadmap.md) · [120-task checklist](../adr/selecta-local-first-implementation-checklist.md). No app code or production service changes are made by the architecture proposal.
+
 ## Chapters
 
 | Chapter | What it covers |

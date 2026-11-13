@@ -40,6 +40,7 @@ from typing import Any, Protocol
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
+from selecta.billing import plans as plan_catalogue
 from selecta.billing.schema import (
     checkout_consents,
     entitlement_overrides,
@@ -109,7 +110,18 @@ def parse_price_map(data: Mapping[str, Any]) -> dict[str, PricePlan]:
         interval = entry.get("interval", "month")
         if interval not in INTERVALS:
             raise ValueError(f"Price {price_id} has interval {interval!r}.")
-        version = int(entry.get("version", entry.get("plan_version", 1)))
+        raw_version = entry.get("version", entry.get("plan_version", 1))
+        if isinstance(raw_version, bool):
+            raise ValueError(f"Price {price_id} has an invalid plan version.")
+        try:
+            version = int(raw_version)
+            if version < 1 or str(raw_version) != str(version):
+                raise ValueError
+            plan_catalogue.plan_for(plan_id, version)
+        except (ValueError, TypeError, plan_catalogue.UnknownPlan) as error:
+            raise ValueError(
+                f"Price {price_id} references an unsupported plan version {raw_version!r}."
+            ) from error
         plans[str(price_id)] = PricePlan(plan_id, version, interval)
     return plans
 

@@ -23,6 +23,7 @@ from sqlalchemy.engine import Connection, Engine
 from selecta.persistence import db_now, transaction
 from selecta.rooms import codes
 from selecta.rooms.errors import Refusal, RoomError
+from selecta.rooms.local_first import LocalRoomsBridge
 from selecta.rooms.ports import (
     NoRoomEvents,
     NothingPlaying,
@@ -81,6 +82,7 @@ class RoomContext:
     # When this app instance came up. A guest or screen counts as here only after checking in
     # since then, so the first look after a server restart never shows stale connections.
     started_at: float | None = None
+    local_first: LocalRoomsBridge | None = None
 
     def __post_init__(self) -> None:
         codes.check_pepper(self.pepper)

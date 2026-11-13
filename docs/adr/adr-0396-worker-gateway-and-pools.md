@@ -1,5 +1,7 @@
 # ADR-0396 - Worker gateway and worker pools
 
+> **Architecture supersession (2026-11-13):** Historical implementation and acceptance statuses below remain recorded, but any conflicting hosted-user-audio design is superseded for future work by LF ADR-0461, ADR-0463, ADR-0481. See [LF preservation map](selecta-local-first-overlap-and-parity.md). The replacement is accepted as a design, **not implemented**.
+
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 1/7 Implemented; 6/7 In progress; 0/7 Not started.
 - **Independent verification:** 0/7 Verified.

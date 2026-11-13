@@ -6,6 +6,8 @@ import { catalogueSource } from './cloudCatalogue';
 import { claimFocus, clearNotice, releaseFocus, shareLibraryPlayer, useTransport } from './cloudTransport';
 import { recoveringSpeaker } from './recoveringSpeaker';
 import { useCloudPlayer } from './useCloudPlayer';
+import { LocalFirstPlayer } from './lf-device-control/LocalFirstPlayer';
+import { LOCAL_FIRST_PLAYER_FLAG } from './lf-device-control/contracts';
 
 // The one Cloud player (ADR-0419, flag `cloud.single_audio_owner`). CloudApp mounts this dock
 // above the pages, so the Library's song player and this browser as the session's speaker keep
@@ -21,13 +23,14 @@ export function singleAudioOwner(account: Pick<Account, 'features'> | null) {
 
 export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Api; account: Account; page: Page; reload?: number }) {
   const workspaceId = account.workspace.id;
+  const localFirst = account.features[LOCAL_FIRST_PLAYER_FLAG] === true;
   const audioRef = useRef<HTMLAudioElement>(null);
   const deviceBox = useRef<HTMLDivElement>(null);
   const deviceSpeaker = useRef<Speaker | null>(null);
   const [error, setError] = useState('');
   const [deviceProblem, setDeviceProblem] = useState('');
   const [armed, setArmed] = useState(page === 'listen');
-  const player = useCloudPlayer({ api, workspaceId, audio: audioRef, setError, skipOnFailure: true });
+  const player = useCloudPlayer({ api, workspaceId, audio: audioRef, setError, skipOnFailure: true, localFirstMode: localFirst });
   const transport = useTransport();
 
   useEffect(() => { if (page === 'listen') setArmed(true); }, [page]);
@@ -41,7 +44,7 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
   }, [workspaceId]);
 
   const library = useMemo(() => catalogueSource(api, workspaceId), [api, workspaceId]);
-  useEffect(() => { if (reload) library.catalogue.refresh(); }, [library, reload]);
+  useEffect(() => { if (reload && !localFirst) library.catalogue.refresh(); }, [library, reload, localFirst]);
   const speakerFor = useCallback((audio: HTMLAudioElement, source: (index: number) => Promise<string | null>): Speaker => {
     const made = recoveringSpeaker(audio, source, { onProblem: setDeviceProblem, songName: library.name });
     deviceSpeaker.current = made;
@@ -84,6 +87,10 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
     if (!player.upNext) releaseFocus('library');
     player.advance();
   };
+
+  // Local-first renders no browser media element and never invokes R2 playback proxies.
+  // The legacy path is retained only for workspaces not yet migrated to the new protocol.
+  if (localFirst) return <LocalFirstPlayer api={api} workspaceId={workspaceId} actorId={account.user.id} />;
 
   const track = player.track;
   const devices = featureOn(account, 'devices');

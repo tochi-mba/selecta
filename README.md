@@ -1,5 +1,7 @@
 # SelectaDJ
 
+> **Accepted Cloud direction (2026-11-13; not implemented):** Keep user music, decoding, stems, mixing and exports on a local engine. Cloud will coordinate accounts, saved mix instructions, devices, venues, Rooms and billing without storing/streaming audio. The historical hosted-music implementation is subject to staged migration, not immediate removal. See [local-first architecture](docs/saas/20-local-first-cloud-architecture.md), [UX](docs/saas/21-local-first-ux.md) and [migration plan](docs/saas/22-local-first-transition.md).
+
 SelectaDJ is a REX Technologies product.
 
 SelectaDJ supports the browser's **Install app** action in Chrome and Edge through its web app manifest. Open `http://127.0.0.1:8733/` in your browser and use the install icon in the address bar, or the browser menu's install-app action. Installation creates a standalone browser app; the local SelectaDJ server must be running to access the music library and render mixes.

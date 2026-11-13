@@ -17,11 +17,14 @@ import os
 import re
 import shutil
 import signal
+import sqlite3
 import threading
 import time
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
+
+from sqlalchemy.exc import OperationalError
 
 from selecta.admin.state import DbWorkControls
 from selecta.devstack import guard
@@ -101,6 +104,41 @@ def handlers(ffmpeg: str) -> dict:
     return {**audio_handlers(ffmpeg=ffmpeg), **engine_handlers(ffmpeg=ffmpeg)}
 
 
+def _register_with_retry(
+    runner: LocalRunner, *, timeout_s: float = 120.0, retry_s: float = 0.75
+) -> None:
+    """Wait for transient SQLite writer contention, never hide other SQL errors.
+
+    Registration happens before any of this process's claim loops run. The API
+    and seed process may still briefly hold the single SQLite writer slot.
+    """
+    deadline = time.monotonic() + timeout_s
+    attempts = 0
+    while True:
+        try:
+            runner.register()
+            return
+        except OperationalError as problem:
+            if not isinstance(problem.orig, sqlite3.OperationalError):
+                raise
+            if "locked" not in str(problem.orig).lower():
+                raise
+            attempts += 1
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise RuntimeError(
+                    f"SQLite stayed locked while registering the {runner.pool} worker pool. "
+                    "Stop other Selecta development processes using the same data folder, "
+                    "then restart the stack; no database files should be deleted."
+                ) from problem
+            print(
+                f"[WORKER] SQLite busy registering {runner.pool} (attempt {attempts}); "
+                f"retrying for up to {remaining:.0f}s.",
+                flush=True,
+            )
+            time.sleep(min(retry_s, remaining))
+
+
 def main() -> None:
     guard.require_development()
     settings = DevSettings.from_environment()
@@ -141,9 +179,17 @@ def main() -> None:
             scratch_root=settings.data / "scratch",
             idle_s=0.5,
         )
-        runner.start()
         runners.append(runner)
-        print(f"[WORKER] {pool}: {', '.join(sorted(mine))}", flush=True)
+    # Register every pool before starting any claim/heartbeat threads. With SQLite,
+    # the previous interleaving let the first pool contend with later registrations.
+    for runner in runners:
+        _register_with_retry(runner)
+    for runner in runners:
+        runner.start()
+        print(
+            f"[WORKER] {runner.pool}: {', '.join(sorted(runner.runners[0].handlers))}",
+            flush=True,
+        )
     stop = threading.Event()
     signal.signal(signal.SIGINT, lambda *_: stop.set())
     signal.signal(signal.SIGTERM, lambda *_: stop.set())

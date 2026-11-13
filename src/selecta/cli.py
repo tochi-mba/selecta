@@ -15,11 +15,15 @@ from rich.table import Table
 
 from selecta import db
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, load_settings
+from selecta.local_engine.cli import engine_app
 from selecta.persistence import make_engine
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 database_app = typer.Typer(no_args_is_help=True, add_completion=False)
 app.add_typer(database_app, name="db", help="Cloud database schema operations.")
+
+app.add_typer(engine_app, name="engine", help="Installable local audio engine controls.")
+
 console = Console()
 DEFAULT_MIX_OUTPUT = Path("out/mix.flac")
 DEFAULT_REEL_OUTPUT = Path("reels/reel-1")

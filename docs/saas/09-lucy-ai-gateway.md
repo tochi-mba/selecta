@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Local-first architecture supersession (accepted 2026-11-13; implementation not started).** Hosted Lucy may still plan using bounded, consented catalogue metadata and text; audio, stems, PCM, raw local paths, fingerprints and unlicensed lyrics are prohibited from model requests and diagnostics. Actual audio tools execute on the authorised local agent after policy checks. Hosted AI allowances still apply. See [ADR-0472](../adr/adr-0472-lucy-cloud-planning-with-device-local-tool-execution.md). Historical plan details and past implementation evidence below are retained; this documentation PR does not change running software.
+
+
 ## 9. Lucy and the AI gateway (hosted APIs, server-owned routing)
 
 ### 9.1 Routing model

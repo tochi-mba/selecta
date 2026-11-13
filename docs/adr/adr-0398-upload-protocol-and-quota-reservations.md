@@ -1,5 +1,7 @@
 # ADR-0398 - Upload protocol with server-side completion and quota reservations
 
+> **Architecture supersession (2026-11-13):** Historical implementation and acceptance statuses below remain recorded, but any conflicting hosted-user-audio design is superseded for future work by LF ADR-0457, ADR-0476, ADR-0480. See [LF preservation map](selecta-local-first-overlap-and-parity.md). The replacement is accepted as a design, **not implemented**.
+
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 4/5 Implemented; 0/5 In progress; 1/5 Not started.
 - **Independent verification:** 0/5 Verified.

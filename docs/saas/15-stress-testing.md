@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Accepted local-first target (2026-11-13; not implemented).** Preserve rigorous tenant, fault and scalability testing but split hosted control-plane/device reconnect load from real local DSP/venue six-hour playback reliability. Do not waive old checks without a verified successor. See ADR-0482. The following historic hosted-media plan and implementation evidence are preserved for reference. [Current architecture](20-local-first-cloud-architecture.md) · [Transition](22-local-first-transition.md).
+
+
 ## 15. Stress testing and verification
 
 This chapter covers load, chaos and release gates. Module-by-module correctness and security tests, with every edge case, are in [§18](18-test-plan.md#18-test-plan-every-edge-case-every-layer).

@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Proposed on 2026-11-12; awaiting the owner's decision.*
 
+> **Accepted local-first target (2026-11-13; implementation not started).** Business still manages organisations, venues, zones, hours, staff, requests, content and licences, but no longer hosts organisation audio or measures pooled GB/CPU render-ahead. HQ shares metadata programmes; each venue proves rights, files and player readiness locally. Revisit price, support and distribution assumptions; see ADR-0471 and ADR-0474. Historic architecture and evidence below remain part of the record. [Current direction](20-local-first-cloud-architecture.md) · [Migration](22-local-first-transition.md).
+
+
 ## 19. SelectaDJ for Business: venues paying per venue per month
 
 *Prepared 12 November 2026. Users see "SelectaDJ"; the company is REX Technologies; code identifiers stay `selecta`. Prices are from public pages and third-party summaries as of November 2026 ([sources](sources.md#selectadj-for-business-sources-2026-11-12)) and must be re-checked before any spend or pricing decision. Nothing here changes Free, Standard or Premium.*

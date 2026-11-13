@@ -23,7 +23,7 @@ from fastapi import FastAPI
 
 from selecta.api_cloud import CloudSettings, create_cloud_app
 from selecta.billing import api as billing_api
-from selecta.devstack import billing, guard, objects
+from selecta.devstack import billing, guard, local_watches, objects
 from selecta.devstack.rooms import LibraryCatalog, QueuePlanner
 from selecta.devstack.settings import CLIENT_ID, DevSettings
 from selecta.persistence import make_engine, migrate
@@ -81,6 +81,9 @@ def application() -> FastAPI:
     app = create_cloud_app(cloud_settings(settings), engine=engine, room_ports=ports)
     store = objects.DiskObjects.in_folder(settings.objects, settings.site_url)
     objects.install_routes(app, store)
+    # Only the loopback development companion manages local filesystem watches.
+    # Hosted Cloud does not import or expose these paths or audio contents.
+    local_watches.install_routes(app, settings)
     app.add_middleware(guard.LoopbackOnly)
     client = billing.install(app, engine, settings.data)
     if not test_mode:

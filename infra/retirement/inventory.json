@@ -1,0 +1,412 @@
+{
+  "schema_version": 1,
+  "description": "Source-code inventory only; does not establish what live resources or customer media exist.",
+  "assets": [
+    {
+      "id": "modal-cpu-gpu-export",
+      "classification": "audio",
+      "stage": "workers",
+      "source_paths": [
+        "infra/modal/selecta_workers.py"
+      ],
+      "markers": [
+        "modal.App",
+        "cpu_light",
+        "cpu_heavy",
+        "gpu_stems",
+        "export"
+      ]
+    },
+    {
+      "id": "worker-container",
+      "classification": "audio",
+      "stage": "workers",
+      "source_paths": [
+        "services/worker/Dockerfile"
+      ],
+      "markers": [
+        "selecta.workers"
+      ]
+    },
+    {
+      "id": "worker-model-lock",
+      "classification": "audio",
+      "stage": "workers",
+      "source_paths": [
+        "services/worker/models.lock.json"
+      ],
+      "markers": [
+        "beat_this.small0",
+        "sha256"
+      ]
+    },
+    {
+      "id": "worker-pool-scaling",
+      "classification": "audio",
+      "stage": "workers",
+      "source_paths": [
+        "infra/workers/pools.json"
+      ],
+      "markers": [
+        "cpu-light",
+        "cpu-heavy",
+        "gpu",
+        "export"
+      ]
+    },
+    {
+      "id": "worker-r2-egress-cost",
+      "classification": "audio",
+      "stage": "workers",
+      "source_paths": [
+        "infra/workers/egress_model.json"
+      ],
+      "markers": [
+        "bytes_per_job",
+        "stems.window"
+      ]
+    },
+    {
+      "id": "gateway-transport",
+      "classification": "audio",
+      "stage": "gateway",
+      "source_paths": [
+        "src/selecta/gateway_cloud.py"
+      ],
+      "markers": [
+        "gateway"
+      ]
+    },
+    {
+      "id": "gateway-autoscale",
+      "classification": "audio",
+      "stage": "workers",
+      "source_paths": [
+        "src/selecta/work/autoscale_leader.py"
+      ],
+      "markers": [
+        "MODAL_FUNCTIONS"
+      ]
+    },
+    {
+      "id": "hosted-worker-runner",
+      "classification": "audio",
+      "stage": "workers",
+      "source_paths": [
+        "src/selecta/workers/cloud.py"
+      ],
+      "markers": [
+        "worker"
+      ]
+    },
+    {
+      "id": "r2-bucket-lifecycle",
+      "classification": "audio",
+      "stage": "storage",
+      "source_paths": [
+        "infra/r2/lifecycle.tf.json"
+      ],
+      "markers": [
+        "bucket_originals",
+        "bucket_derived",
+        "bucket_exports",
+        "bucket_staging"
+      ]
+    },
+    {
+      "id": "r2-originals-derived-exports-staging",
+      "classification": "mixed",
+      "stage": "review",
+      "source_paths": [
+        "infra/cloudflare/main.tf"
+      ],
+      "markers": [
+        "cloudflare_r2_bucket",
+        "originals",
+        "derived",
+        "exports",
+        "staging",
+        "deletion-ledger"
+      ]
+    },
+    {
+      "id": "r2-originals-backup",
+      "classification": "audio",
+      "stage": "storage",
+      "source_paths": [
+        "infra/backup/copy_originals.sh"
+      ],
+      "markers": [
+        "rclone copy",
+        "SOURCE_BUCKET",
+        "BACKUP_BUCKET"
+      ]
+    },
+    {
+      "id": "originals-backup-cron",
+      "classification": "mixed",
+      "stage": "review",
+      "source_paths": [
+        "infra/backup/render-cron.yaml"
+      ],
+      "markers": [
+        "selecta-backup-originals",
+        "selecta-backup-db"
+      ]
+    },
+    {
+      "id": "signed-audio-access",
+      "classification": "audio",
+      "stage": "gateway",
+      "source_paths": [
+        "src/selecta/routes/cloud_proxy.py"
+      ],
+      "markers": [
+        "cloud"
+      ]
+    },
+    {
+      "id": "cloud-asset-legacy",
+      "classification": "mixed",
+      "stage": "review",
+      "source_paths": [
+        "src/selecta/routes/cloud_assets.py"
+      ],
+      "markers": [
+        "upload_sessions",
+        "tombstone"
+      ]
+    },
+    {
+      "id": "r2-legacy-export",
+      "classification": "mixed",
+      "stage": "review",
+      "source_paths": [
+        "src/selecta/routes/cloud_export.py"
+      ],
+      "markers": [
+        "export"
+      ]
+    },
+    {
+      "id": "cloud-cdn-and-audio-cors",
+      "classification": "mixed",
+      "stage": "review",
+      "source_paths": [
+        "infra/cloudflare/main.tf"
+      ],
+      "markers": [
+        "cloudflare_pages_project",
+        "cloudflare_r2_bucket_cors"
+      ]
+    },
+    {
+      "id": "render-control-api-and-gateway",
+      "classification": "mixed",
+      "stage": "review",
+      "source_paths": [
+        "infra/render/render.yaml"
+      ],
+      "markers": [
+        "selecta-api-production",
+        "selecta-gateway-production",
+        "selecta-maintain-production"
+      ]
+    },
+    {
+      "id": "render-media-credentials",
+      "classification": "mixed",
+      "stage": "review",
+      "source_paths": [
+        "infra/render/render.yaml"
+      ],
+      "markers": [
+        "SELECTA_R2_SECRET_ACCESS_KEY",
+        "SELECTA_WORKER_BOOTSTRAP_TOKEN",
+        "SELECTA_MODAL_TOKEN_SECRET"
+      ]
+    },
+    {
+      "id": "release-modal-and-tofu",
+      "classification": "mixed",
+      "stage": "review",
+      "source_paths": [
+        "infra/deploy/release.sh"
+      ],
+      "markers": [
+        "modal deploy",
+        "tofu apply",
+        "RENDER_SERVICE_IDS"
+      ]
+    },
+    {
+      "id": "deployment-workflow",
+      "classification": "mixed",
+      "stage": "review",
+      "source_paths": [
+        ".github/workflows/deploy.yml"
+      ],
+      "markers": [
+        "infra/deploy/release.sh",
+        "staging",
+        "production"
+      ]
+    },
+    {
+      "id": "legacy-worker-alerts",
+      "classification": "mixed",
+      "stage": "review",
+      "source_paths": [
+        "infra/observability/alerts.yaml"
+      ],
+      "markers": [
+        "SelectaOldestInteractiveJobOld",
+        "SelectaSpendCeilingHit",
+        "SelectaBackupFailed"
+      ]
+    },
+    {
+      "id": "legacy-seam-slo",
+      "classification": "mixed",
+      "stage": "review",
+      "source_paths": [
+        "infra/observability/slos.yaml"
+      ],
+      "markers": [
+        "seam_start_latency",
+        "api_availability"
+      ]
+    },
+    {
+      "id": "control-postgres",
+      "classification": "retain",
+      "stage": "retain",
+      "source_paths": [
+        "infra/render/render.yaml"
+      ],
+      "markers": [
+        "selecta-db-staging",
+        "selecta-db-production"
+      ]
+    },
+    {
+      "id": "control-workos-stripe-ai",
+      "classification": "retain",
+      "stage": "retain",
+      "source_paths": [
+        "infra/render/render.yaml"
+      ],
+      "markers": [
+        "SELECTA_WORKOS_API_KEY",
+        "SELECTA_STRIPE_SECRET_KEY",
+        "ANTHROPIC_API_KEY"
+      ]
+    },
+    {
+      "id": "control-api-service",
+      "classification": "retain",
+      "stage": "retain",
+      "source_paths": [
+        "infra/render/render.yaml"
+      ],
+      "markers": [
+        "selecta-api-staging",
+        "selecta-api-production"
+      ]
+    },
+    {
+      "id": "control-cloudflare-pages-waf",
+      "classification": "retain",
+      "stage": "retain",
+      "source_paths": [
+        "infra/cloudflare/main.tf"
+      ],
+      "markers": [
+        "cloudflare_pages_project",
+        "cloudflare_ruleset"
+      ]
+    },
+    {
+      "id": "control-db-backup",
+      "classification": "retain",
+      "stage": "retain",
+      "source_paths": [
+        "infra/backup/nightly_db_dump.sh"
+      ],
+      "markers": [
+        "pg_dump",
+        "BACKUP_BUCKET"
+      ]
+    },
+    {
+      "id": "control-db-backup-restoration",
+      "classification": "retain",
+      "stage": "retain",
+      "source_paths": [
+        "infra/backup/restore_drill.sh"
+      ],
+      "markers": [
+        "pg_restore",
+        "DRILL_DATABASE_URL"
+      ]
+    },
+    {
+      "id": "control-db-backup-bucket",
+      "classification": "retain",
+      "stage": "retain",
+      "source_paths": [
+        "infra/cloudflare/main.tf"
+      ],
+      "markers": [
+        "cloudflare_r2_bucket",
+        "db_dumps"
+      ]
+    },
+    {
+      "id": "control-observability-audit",
+      "classification": "retain",
+      "stage": "retain",
+      "source_paths": [
+        "infra/observability/alerts.yaml"
+      ],
+      "markers": [
+        "SelectaAuditWritesStopped",
+        "SelectaApiDown"
+      ]
+    },
+    {
+      "id": "control-identity-billing-workflow",
+      "classification": "retain",
+      "stage": "retain",
+      "source_paths": [
+        ".github/workflows/test.yml"
+      ],
+      "markers": [
+        "pytest",
+        "ruff check"
+      ]
+    }
+  ],
+  "operational_checks": [
+    {
+      "id": "modal-application",
+      "note": "Compare both Modal environments, functions, GPU fallback and actual workload before termination"
+    },
+    {
+      "id": "r2-object-counts",
+      "note": "Query live originals, derived, exports, staging, backups, historical versions and retention holds"
+    },
+    {
+      "id": "signed-credentials",
+      "note": "Inventory Render, Modal, Cloudflare, OIDC broker, worker bootstrap and legacy signing keys without revealing values"
+    },
+    {
+      "id": "scheduled-work",
+      "note": "Check Render original backup cron, autoscale leader, media GC, export sweeps and obsolete metrics"
+    },
+    {
+      "id": "control-plane",
+      "note": "Prove Render API, Postgres, WorkOS, Stripe, AI gateway, email, Pages/WAF, db backup and audit remain healthy"
+    }
+  ]
+}

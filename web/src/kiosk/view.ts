@@ -62,8 +62,14 @@ const ALIASES: Record<string, (typeof VIEW_FIELDS)[number]> = {
 };
 
 const MAX_TEXT = 200;
-const text = (value: unknown): string | undefined =>
-  typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, MAX_TEXT) : undefined;
+const text = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') return undefined;
+  const cleaned = value.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, MAX_TEXT);
+  // A server mistake must not expose local media locations or diagnostic traces to guests.
+  if (/(?:^|\s)(?:[A-Za-z]:[\\/]|file:\/\/|\\\\|\/(?:home|Users|media|mnt|Volumes|var|tmp|srv)\/)/i.test(cleaned)
+    || /(?:Traceback \(most recent call last\)|Exception:|stack trace)/i.test(cleaned)) return undefined;
+  return cleaned;
+};
 const bool = (value: unknown): boolean | undefined => (typeof value === 'boolean' ? value : undefined);
 const num = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
 

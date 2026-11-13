@@ -4,6 +4,8 @@ import { INITIAL_LIBRARY, isBusy, libraryReducer, overviewOf, songWords } from '
 import { unfinishedUploads } from './uploadParts';
 import { useSharedLibraryPlayer } from './cloudTransport';
 import { useCloudPlayer } from './useCloudPlayer';
+import { DeviceLibrary } from './lf-personal/PersonalWorkspace';
+import { LegacyFolderWatchEntry } from './lf-personal/FolderWatches';
 
 // The Cloud library: private originals, played from prepared playback files. Listening starts a
 // run from that song to the end of the list, with the next song buffered ahead (see
@@ -13,7 +15,23 @@ import { useCloudPlayer } from './useCloudPlayer';
 // (libraryState.ts), so a list that didn't load never says "Your library is empty", and an
 // overview above the list counts the songs, the storage they use and unfinished uploads.
 
-export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, reload, truthful = true, account }: {
+/** Historical cloud asset list remains available for pre-migration workspaces. */
+export function LibraryPanel(props: {
+  api: Api;
+  workspaceId: string;
+  setError: (value: string) => void;
+  refreshAccount: () => Promise<void>;
+  go: (page: Page) => void;
+  reload?: number;
+  truthful?: boolean;
+  account?: Account | null;
+  localFirst?: boolean;
+}) {
+  if (props.localFirst) return <DeviceLibrary api={props.api} workspaceId={props.workspaceId} go={props.go} revision={props.reload} />;
+  return <LegacyLibraryPanel {...props} />;
+}
+
+function LegacyLibraryPanel({ api, workspaceId, setError, refreshAccount, go, reload, truthful = true, account }: {
   api: Api;
   workspaceId: string;
   setError: (value: string) => void;
@@ -108,6 +126,7 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
     : <>{state.stale && <p className="cloud-feedback" role="status">This list may be out of date: {state.stale} <button onClick={() => void load()}>Try again</button></p>}{list}</>;
   return (
     <section className="cloud-library">
+      <LegacyFolderWatchEntry />
       <div className="cloud-library-heading">
         <div><p className="cloud-eyebrow">PRIVATE TO THIS WORKSPACE</p><p>Listen from any song and the rest of the list follows, with the next song loaded ahead. Removing songs frees space at once.</p></div>
         <div><button onClick={() => void load()} disabled={busy}>Refresh</button><button className="primary" onClick={() => go('uploads')}>Upload tracks</button></div>

@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Accepted local-first target (2026-11-13; implementation not started).** Future test ownership includes local agent harness, two diverging synthetic libraries, cloud no-audio-egress, physical output/partition tests, old recipe migration and accessible missing-media UX. Existing tests need replacement parity, not skips. See ADR-0482 and LF verification matrix. Historic architecture and evidence below remain part of the record. [Current direction](20-local-first-cloud-architecture.md) · [Migration](22-local-first-transition.md).
+
+
 ## 18. Test plan: every edge case, every layer
 
 This chapter is the specification for the Selecta Cloud test suite. [§15](15-stress-testing.md#15-stress-testing-and-verification) covers load, chaos and the release ladder; this chapter covers correctness and security of the code itself, module by module. Each case names the checklist task it proves (`SC-xxxx-nn` in the [implementation checklist](../adr/selecta-cloud-implementation-checklist.md)). A checklist box is ticked only when the tests listed for it exist and pass in CI.

@@ -1,0 +1,65 @@
+.lf-personal {
+  display: grid;
+  gap: clamp(12px, 2vw, 22px);
+  min-width: 0;
+  width: 100%;
+  max-width: 1100px;
+  overflow-wrap: anywhere;
+}
+
+.lf-personal .lf-hero,
+.lf-personal .lf-panel {
+  min-width: 0;
+  border: 1px solid var(--border, rgba(125,125,125,.28));
+  border-radius: 16px;
+  background: var(--surface, var(--card-bg, transparent));
+  padding: clamp(14px, 2.2vw, 24px);
+}
+
+.lf-personal .lf-placeholder { min-height: 160px; }
+.lf-personal .lf-hero {
+  background: var(--surface-raised, var(--surface, transparent));
+}
+
+.lf-personal h2 { margin: 0 0 .7rem; line-height: 1.2; }
+.lf-personal h3 { margin: .8rem 0 .4rem; }
+.lf-personal p { max-width: 70ch; }
+.lf-personal .lf-muted { opacity: .8; font-size: .92rem; }
+.lf-personal .lf-grid,
+.lf-personal .lf-source-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 12px; }
+.lf-personal .lf-source-grid,
+.lf-personal .lf-items { list-style: none; margin: 0; padding: 0; }
+.lf-personal .lf-items { display: grid; gap: 12px; }
+.lf-personal .lf-items li { display: grid; gap: 4px; border-top: 1px solid var(--border, rgba(125,125,125,.28)); padding-top: 12px; }
+.lf-personal .lf-items li:first-child { border-top: 0; }
+.lf-personal .lf-items span, .lf-personal .lf-items small { display: block; }
+.lf-personal .lf-choices { display: grid; gap: 12px; border: 0; padding: 0; margin: 12px 0; min-width: 0; }
+.lf-personal .lf-choices label { display: flex; align-items: center; gap: 10px; cursor: pointer; min-height: 44px; }
+.lf-personal .lf-choices input { flex: none; }
+.lf-personal .lf-field { display: grid; gap: 7px; min-width: 0; font-weight: 600; }
+.lf-personal .lf-field select, .lf-personal .lf-field input { width: 100%; max-width: 460px; min-width: 0; padding: 10px 12px; min-height: 44px; border-radius: 8px; font: inherit; color: inherit; background: var(--surface, transparent); border: 1px solid var(--border, #777); }
+.lf-personal .lf-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.lf-personal .lf-next { padding: 10px 0; }
+.lf-personal .lf-next ol { margin: 8px 0; padding-left: 1.4em; }
+.lf-personal .lf-next li { padding: 6px 0; }
+.lf-personal .lf-read { min-height: 50px; }
+.lf-personal .lf-read p { margin: 0 0 8px; }
+.lf-personal .lf-feedback { font-weight: 600; }
+.lf-personal .lf-state { font-weight: 650; }
+.lf-personal .lf-state[data-ready="yes"] { color: var(--text, inherit); }
+.lf-personal button, .lf-personal a { touch-action: manipulation; }
+.lf-personal button:focus-visible, .lf-personal a:focus-visible,
+.lf-personal input:focus-visible, .lf-personal select:focus-visible {
+  outline: 3px solid var(--accent, #357bd5);
+  outline-offset: 3px;
+}
+@media (max-width: 480px) {
+  .lf-personal .lf-grid, .lf-personal .lf-source-grid { grid-template-columns: minmax(0, 1fr); }
+  .lf-personal .lf-actions > button, .lf-personal .lf-actions > a { max-width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lf-personal *, .lf-personal *::before, .lf-personal *::after { animation: none !important; transition: none !important; }
+}
+@media (forced-colors: active) {
+  .lf-personal .lf-hero, .lf-personal .lf-panel { border: 1px solid CanvasText; }
+}

@@ -9,6 +9,7 @@ import { ScheduleTab, TodayTab } from './ScheduleTabs';
 import { useVenueView } from './useVenue';
 import { PeoplePage } from './PeoplePage';
 import { RequestsPage } from './RequestsPage';
+import { VenueLocalReadiness, localFirstOn } from '../localFirst/ReadinessPanel';
 
 export function VenueManager({ venueId, tab }: { venueId: string; tab?: string }) {
   const { ctx, venue, disabled } = useVenueView(venueId);
@@ -23,6 +24,7 @@ export function VenueManager({ venueId, tab }: { venueId: string; tab?: string }
     <nav className="biz-row" aria-label="Venue sections">
       {(Object.keys(VENUE_TABS) as VenueTab[]).map((key) => <button key={key} type="button" aria-current={key === chosen ? 'page' : undefined} onClick={() => ctx.go(PATHS.venue(ctx.org.id, venue.id, key))}>{VENUE_TABS[key]}</button>)}
     </nav>
+    {localFirstOn(ctx.org.features) && (chosen === 'now' || chosen === 'devices') && <VenueLocalReadiness venue={venue} now={ctx.now} offline={ctx.offline} onOpenTab={(target) => ctx.go(PATHS.venue(ctx.org.id, venue.id, target))} onRefresh={ctx.refresh} />}
     {chosen === 'now' && <NowTab venue={venue} disabled={disabled} />}
     {chosen === 'today' && <TodayTab venue={venue} />}
     {chosen === 'schedule' && <ScheduleTab venue={venue} disabled={disabled} />}

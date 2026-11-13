@@ -1,4 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { DeviceMixRepair, ReadinessBadge } from './lf-mix-repair/DeviceMixRepair';
+import { acceptReadiness, referencesOf, type DeviceMixReadiness, type DeviceTarget, type RepairVariation } from './lf-mix-repair/readiness';
 import { CloudError, featureOn, type Account, type Api, type Asset } from './api';
 import './makeCloudMix.css';
 
@@ -11,7 +13,7 @@ import './makeCloudMix.css';
 export const MIX_CREATE_FLAG = 'cloud.mix_create';
 
 type Facts = { bpm: number | null; camelot: string | null; energy: number | null };
-export type MixSong = { source: string; id: string; title: string; artist: string | null; duration: number | null; facts: Facts; available?: boolean };
+export type MixSong = { source: string; id: string; title: string; artist: string | null; duration: number | null; facts: Facts; available?: boolean; occurrence_id?: string; explicit?: boolean | null; version?: string | null };
 export type MixSeam = { into: number; method: string; bars: number; basis: string; intelligent: boolean; reason: string };
 export type CloudMix = { mix_id: string; name: string; number: number; parent: string | null; revision: string; songs: MixSong[]; seams: MixSeam[]; intelligent_seams: number };
 export type MixSummary = { mix_id: string; name: string; revision: string; number: number; songs: number; intelligent_seams: number; updated_at: number };
@@ -29,10 +31,10 @@ function seamWords(seam: MixSeam) {
 
 export function MakeCloudMix({ api, account }: { api: Api; account: Pick<Account, 'features' | 'workspace'> }) {
   if (!featureOn(account, MIX_CREATE_FLAG)) return null;
-  return <MixMaker api={api} workspaceId={account.workspace.id} />;
+  return <MixMaker api={api} workspaceId={account.workspace.id} localFirstEnabled={account.features['local_first.mix_readiness'] === true} />;
 }
 
-function MixMaker({ api, workspaceId }: { api: Api; workspaceId: string }) {
+function MixMaker({ api, workspaceId, localFirstEnabled }: { api: Api; workspaceId: string; localFirstEnabled: boolean }) {
   const [mixes, setMixes] = useState<MixSummary[] | null>(null);
   const [library, setLibrary] = useState<Asset[]>([]);
   const [picked, setPicked] = useState<string[]>([]);
@@ -42,6 +44,81 @@ function MixMaker({ api, workspaceId }: { api: Api; workspaceId: string }) {
   const [draftName, setDraftName] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [devices, setDevices] = useState<DeviceTarget[]>([]);
+  const [deviceId, setDeviceId] = useState('');
+  const [deviceMessage, setDeviceMessage] = useState('');
+  const [online, setOnline] = useState(() => typeof navigator !== 'undefined' && navigator.onLine);
+  const [availability, setAvailability] = useState<Record<string, DeviceMixReadiness>>({});
+  const [undoStack, setUndoStack] = useState<Array<{ ids: string[]; name: string }>>([]);
+  const [redoStack, setRedoStack] = useState<Array<{ ids: string[]; name: string }>>([]);
+
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); };
+  }, []);
+
+  // Only the explicit LF device contract may provide local verification. A
+  // historical cloud asset's "available" flag is not proof of local audio.
+  useEffect(() => {
+    if (!localFirstEnabled) {
+      setDevices([]);
+      setDeviceId('');
+      return;
+    }
+    let active = true;
+    void api<{ devices: DeviceTarget[] }>('/local-first/devices', {}, workspaceId)
+      .then(result => {
+        if (!active) return;
+        const valid = Array.isArray(result.devices) ? result.devices.filter(
+          device => device && typeof device.id === 'string' && typeof device.name === 'string',
+        ) : [];
+        setDevices(valid);
+        setDeviceId(old => valid.some(device => device.id === old) ? old : valid[0]?.id ?? '');
+        setDeviceMessage(valid.length ? '' : 'No local engine has reported device readiness.');
+      }).catch(() => {
+        if (!active) return;
+        setDevices([]);
+        setDeviceId('');
+        setDeviceMessage('The local-engine registry is not available; recording readiness is unknown.');
+      });
+    return () => { active = false; };
+  }, [api, workspaceId, localFirstEnabled]);
+
+  const availabilityKey = (mixId: string, revision: string) => `${deviceId}:${mixId}:${revision}`;
+  useEffect(() => {
+    if (!localFirstEnabled || !deviceId || !mixes?.length) return;
+    let active = true;
+    // Detailed recipe IDs are necessary to validate repeated occurrences. A
+    // summary count is never accepted as verification evidence by itself.
+    for (const summary of mixes) {
+      void (async () => {
+        try {
+          const found = await api<{ mix: CloudMix }>(
+            `/cloud-mixes/${encodeURIComponent(summary.mix_id)}`, {}, workspaceId,
+          );
+          if (!active || found.mix.revision !== summary.revision) return;
+          const expected = {
+            deviceId, mixId: summary.mix_id, revision: summary.revision,
+            tracks: referencesOf(found.mix.songs),
+          };
+          const result = await api<unknown>(
+            `/local-first/devices/${encodeURIComponent(deviceId)}/mixes/${encodeURIComponent(summary.mix_id)}/availability?revision=${encodeURIComponent(summary.revision)}`,
+            {}, workspaceId,
+          );
+          if (!active) return;
+          const accepted = acceptReadiness(result, expected);
+          if (accepted) {
+            setAvailability(previous => ({ ...previous, [`${deviceId}:${summary.mix_id}:${summary.revision}`]: accepted }));
+          }
+        } catch {
+          // A missing, offline, or incompatible verifier cannot make a mix ready.
+        }
+      })();
+    }
+    return () => { active = false; };
+  }, [api, workspaceId, mixes, deviceId, localFirstEnabled]);
 
   const load = useCallback(async () => {
     try {
@@ -63,6 +140,8 @@ function MixMaker({ api, workspaceId }: { api: Api; workspaceId: string }) {
     setOpen({ mix, history });
     setDraft(mix.songs.map((song) => song.id));
     setDraftName(mix.name);
+    setUndoStack([]);
+    setRedoStack([]);
   };
 
   const openMix = async (mixId: string) => {
@@ -105,13 +184,44 @@ function MixMaker({ api, workspaceId }: { api: Api; workspaceId: string }) {
     }
   };
 
-  const move = (at: number, by: number) => setDraft((ids) => {
-    const next = ids.slice();
+  const editDraft = (ids: string[], nextName = draftName) => {
+    if (ids.join('\u0000') === draft.join('\u0000') && nextName === draftName) return;
+    setUndoStack(previous => [...previous, { ids: draft.slice(), name: draftName }].slice(-30));
+    setRedoStack([]);
+    setDraft(ids);
+    setDraftName(nextName);
+  };
+  const move = (at: number, by: number) => {
+    const next = draft.slice();
     const to = at + by;
-    if (to < 0 || to >= next.length) return ids;
+    if (to < 0 || to >= next.length) return;
     [next[at], next[to]] = [next[to], next[at]];
-    return next;
-  });
+    editDraft(next);
+  };
+  const undo = () => {
+    const previous = undoStack.at(-1);
+    if (!previous) return;
+    setRedoStack(stack => [...stack, { ids: draft.slice(), name: draftName }]);
+    setUndoStack(stack => stack.slice(0, -1));
+    setDraft(previous.ids);
+    setDraftName(previous.name);
+  };
+  const redo = () => {
+    const next = redoStack.at(-1);
+    if (!next) return;
+    setUndoStack(stack => [...stack, { ids: draft.slice(), name: draftName }]);
+    setRedoStack(stack => stack.slice(0, -1));
+    setDraft(next.ids);
+    setDraftName(next.name);
+  };
+  const applyVariation = (variation: RepairVariation) => {
+    if (!open || variation.fromMixId !== open.mix.mix_id || variation.originalRevision !== open.mix.revision) return;
+    const ids = referencesOf(open.mix.songs);
+    const original = new Map(ids.map((track, index) => [track.occurrenceId, open.mix.songs[index].id]));
+    const selected = variation.orderedOccurrenceIds.map(occurrence => original.get(occurrence));
+    if (selected.some(id => !id)) return;
+    editDraft(selected as string[]);
+  };
 
   const nameOf = (id: string) => library.find((song) => song.id === id)?.name ?? open?.mix.songs.find((song) => song.id === id)?.title ?? 'Unknown song';
   const toggle = (id: string) => setPicked((ids) => (ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id]));
@@ -137,12 +247,17 @@ function MixMaker({ api, workspaceId }: { api: Api; workspaceId: string }) {
         <button className="primary" type="submit" disabled={busy || picked.length < 2}>Make mix</button>
       </form>
 
+      {!online && <p role="status">This controller is offline. Local verification is unknown; saved arrangements remain editable.</p>}
+      {deviceMessage && <p role="status">{deviceMessage}</p>}
+      {!localFirstEnabled && <p className="lf11-muted">Local device verification is not yet enabled for this workspace. Saved mixes remain editable, but cloud asset availability does not prove they can play on a device.</p>}
+
       {mixes !== null && mixes.length > 0 && (
         <ul className="cloud-mix-list" aria-label="Your Cloud mixes">
           {mixes.map((mix) => (
             <li key={mix.mix_id}>
               <button onClick={() => void openMix(mix.mix_id)}>{mix.name}</button>
               <span>{mix.songs} songs · version {mix.number} · {mix.intelligent_seams} planned changes</span>
+              <ReadinessBadge readiness={online && devices.find(device => device.id === deviceId)?.connected ? availability[availabilityKey(mix.mix_id, mix.revision)] ?? null : null} total={mix.songs} />
             </li>
           ))}
         </ul>
@@ -150,7 +265,19 @@ function MixMaker({ api, workspaceId }: { api: Api; workspaceId: string }) {
 
       {open && (
         <div className="cloud-mix-editor" aria-label={`Edit ${open.mix.name}`} role="group">
-          <label>Name <input value={draftName} maxLength={60} onChange={(event) => setDraftName(event.target.value)} /></label>
+          <label>Name <input value={draftName} maxLength={60} onChange={(event) => editDraft(draft, event.target.value)} /></label>
+          <DeviceMixRepair
+            mixId={open.mix.mix_id}
+            revision={open.mix.revision}
+            tracks={referencesOf(open.mix.songs)}
+            devices={devices}
+            deviceId={deviceId}
+            onDeviceChange={setDeviceId}
+            readiness={online && devices.find(device => device.id === deviceId)?.connected ? availability[availabilityKey(open.mix.mix_id, open.mix.revision)] ?? null : null}
+            currentDraftChanged={changed}
+            onApplyVariation={applyVariation}
+          />
+          <p className="lf11-muted">This editor preserves the saved arrangement even without playable audio. No waveform or preview is fabricated for unavailable recordings.</p>
           <ol className="cloud-mix-songs">
             {draft.map((id, at) => {
               const seam = at > 0 && draft.join() === open.mix.songs.map((song) => song.id).join() ? open.mix.seams[at - 1] : undefined;
@@ -161,16 +288,21 @@ function MixMaker({ api, workspaceId }: { api: Api; workspaceId: string }) {
                   <span>{nameOf(id)}{gone ? ' (removed from your library)' : ''}</span>
                   <button aria-label={`Move ${nameOf(id)} earlier`} disabled={at === 0} onClick={() => move(at, -1)}>Up</button>
                   <button aria-label={`Move ${nameOf(id)} later`} disabled={at === draft.length - 1} onClick={() => move(at, 1)}>Down</button>
-                  <button aria-label={`Remove ${nameOf(id)}`} onClick={() => setDraft((ids) => ids.filter((_, index) => index !== at))}>Remove</button>
+                  <button aria-label={`Remove ${nameOf(id)}`} onClick={() => editDraft(draft.filter((_, index) => index !== at))}>Remove</button>
                 </li>
               );
             })}
           </ol>
-          <label>Add a song <select value="" onChange={(event) => { const id = event.target.value; if (id) setDraft((ids) => [...ids, id]); }}>
+          <label>Add a song <select value="" onChange={(event) => { const id = event.target.value; if (id) editDraft([...draft, id]); }}>
             <option value="">Choose a song</option>
             {library.map((song) => <option key={song.id} value={song.id}>{song.name}</option>)}
           </select></label>
+          <div className="lf11-actions">
+            <button disabled={busy || undoStack.length === 0} onClick={undo}>Undo edit</button>
+            <button disabled={busy || redoStack.length === 0} onClick={redo}>Redo edit</button>
+          </div>
           <button className="primary" disabled={busy || !changed || draft.length < 2} onClick={() => void save({ asset_ids: draft, name: draftName.trim() })}>Save as a new version</button>
+          <p className="lf11-muted">Saving creates a new immutable recipe revision with conflict detection. The original is retained; local source substitutions are never silently saved.</p>
           {open.history.length > 1 && (
             <ul className="cloud-mix-history" aria-label="Earlier versions">
               {open.history.slice(1).map((entry) => (

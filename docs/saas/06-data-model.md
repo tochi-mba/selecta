@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Local-first architecture supersession (accepted 2026-11-13; implementation not started).** Keep PostgreSQL tenant isolation, subscriptions, audit and immutable metadata; replace hosted asset/object references with workspace-scoped canonical track IDs and device-private file bindings. Existing schema is historical and must be migrated, not erased without backfill. See [ADR-0458](../adr/adr-0458-canonical-recording-identity-and-local-media-bindings.md) and [migration model](../adr/selecta-local-first-data-migration.md). Historical plan details and past implementation evidence below are retained; this documentation PR does not change running software.
+
+
 ## 6. Data model
 
 ### 6.1 Approach

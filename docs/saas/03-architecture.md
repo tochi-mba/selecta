@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Local-first architecture supersession (accepted 2026-11-13; implementation not started).** The R2 originals/derived/exports/staging, remote worker gateway and hosted CPU/GPU audio diagram below describe the superseded plan. Future cloud runs identity, subscriptions, recipes, schedules and commands; an installed local engine performs media operations. See [architecture chapter 20](20-local-first-cloud-architecture.md), [ADR-0456](../adr/adr-0456-runtime-topology-and-device-capability-model.md), [service retirement](../adr/selecta-local-first-service-retirement.md). Historical plan details and past implementation evidence below are retained; this documentation PR does not change running software.
+
+
 ## 4. Target architecture
 
 ### 4.1 Runtime modes: one codebase

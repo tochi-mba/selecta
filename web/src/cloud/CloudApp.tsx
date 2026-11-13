@@ -22,6 +22,8 @@ import { MakeCloudMix } from './MakeCloudMix';
 import { StorageMeter } from './Meters';
 import { blockedByQuota, OverQuotaBanner } from './OverQuota';
 import { UploadsPanel } from './Uploads';
+import { personalEnabled, LOCAL_ENGINE_URL } from './lf-personal/contract';
+import { DeviceHome } from './lf-personal/PersonalWorkspace';
 import './cloud.css';
 // Shared business styles are scoped to .biz and loaded by the Cloud shell.
 import '../business/business.css';
@@ -52,6 +54,7 @@ const TITLES: Record<Page, string> = { home: 'Your music workspace', listen: 'Li
 export function CloudApp() {
   const { isLoading, user, getAccessToken, signIn, signUp, signOut } = useAuth();
   const [account, setAccount] = useState<Account | null>(null);
+  const localFirst = personalEnabled(account);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [blocked, setBlocked] = useState<BlockedCode | null>(null);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
@@ -203,13 +206,14 @@ export function CloudApp() {
     setPath(PATHS[next]);
     moved.current = true;
   };
+  const visiblePage = (target: Page) => localFirst && (target === 'library' || target === 'uploads') ? true : pageShown(account, target);
   const exact = featureOn(account, ACCOUNT_STATES_FLAG);
   const route = resolveRoute(path);
   // With exact routes, an address whose page is switched off shows the overview and says so in
   // the address too, never a page that doesn't match it.
   const routedPage = route.kind === 'page' ? route.page : null;
   useEffect(() => {
-    if (!exact || !account || !routedPage || pageShown(account, routedPage)) return;
+    if (!exact || !account || !routedPage || visiblePage(routedPage)) return;
     window.history.replaceState({}, '', `/${window.location.search}${window.location.hash}`);
     setPath('/');
   }, [exact, account, routedPage]);
@@ -230,10 +234,10 @@ export function CloudApp() {
   const lucyRequest = useCallback(<T,>(path: string, init?: RequestInit) => api<T>(path, init, account?.workspace.id), [api, account?.workspace.id]);
 
   if (isLoading) return <main className="cloud-runtime-message"><span className="cloud-mark">S</span><p>Checking your sign-in…</p></main>;
-  if (!user) return <main className="cloud-welcome"><span className="cloud-mark">S</span><p className="cloud-eyebrow cloud-caps">SelectaDJ Cloud</p><h1>Your music, ready to move.</h1><p>Build your library, shape the set and keep the transitions ready on every device.</p>{signInProblem && <p className="cloud-feedback error" role="alert">{signInProblem}</p>}<div className="cloud-actions"><button className="primary" onClick={() => void signUp()}>Create your account</button><button onClick={startSignIn}>Sign in</button></div><small>Your music stays private to your workspace.</small><footer className="cloud-footer"><CloudCredit /></footer></main>;
+  if (!user) return <main className="cloud-welcome"><span className="cloud-mark">S</span><p className="cloud-eyebrow cloud-caps">SelectaDJ Cloud</p><h1>Music and mixes, wherever you create.</h1><p>Discover music, shape mixes and control your listening workspace.</p>{signInProblem && <p className="cloud-feedback error" role="alert">{signInProblem}</p>}<div className="cloud-actions"><button className="primary" onClick={() => void signUp()}>Create your account</button><button onClick={startSignIn}>Sign in</button></div><small>Your workspace keeps your account and creative settings together.</small><footer className="cloud-footer"><CloudCredit /></footer></main>;
   if (blocked) return <BlockedAccount code={blocked} distinct={exact} onSignOut={() => signOut({ returnTo: window.location.origin })} />;
   if (!user.emailVerified) return <main className="cloud-runtime-message"><span className="cloud-mark">S</span><h1>Verify your email</h1><p>Open the verification email for {user.email}, then refresh this page.</p><button onClick={() => window.location.reload()}>I’ve verified my email</button><button onClick={() => signOut({ returnTo: window.location.origin })}>Sign out</button></main>;
-  if (needsOnboarding) return <main className="cloud-onboarding"><span className="cloud-mark">S</span><p className="cloud-eyebrow">ONE QUICK CHECK</p><h1>Set up your SelectaDJ workspace</h1><p>Your personal space starts with 10 GB of private music storage.</p><form onSubmit={(event) => void completeOnboarding(event)}><label className="cloud-check"><input type="checkbox" checked={ageConfirmed} onChange={(event) => setAgeConfirmed(event.target.checked)} /> I confirm that I’m at least 13 years old.</label><button className="primary" disabled={!ageConfirmed || busy}>Create workspace</button></form><Feedback error={error} notice="" /></main>;
+  if (needsOnboarding) return <main className="cloud-onboarding"><span className="cloud-mark">S</span><p className="cloud-eyebrow">ONE QUICK CHECK</p><h1>Set up your SelectaDJ workspace</h1><p>Create a workspace for your music recipes, device control and account preferences.</p><form onSubmit={(event) => void completeOnboarding(event)}><label className="cloud-check"><input type="checkbox" checked={ageConfirmed} onChange={(event) => setAgeConfirmed(event.target.checked)} /> I confirm that I’m at least 13 years old.</label><button className="primary" disabled={!ageConfirmed || busy}>Create workspace</button></form><Feedback error={error} notice="" /></main>;
 
   // No account could be read at all: say why, instead of an empty workspace (AV-0420-03).
   if (exact && !account && problem) return <AccountProblemPage kind={problem.kind} retrying={retrying} onRetry={() => void retryAccount()} onSignOut={() => signOut({ returnTo: window.location.origin })} />;
@@ -246,7 +250,7 @@ export function CloudApp() {
   const quotaBlock = blockedByQuota(account);
   // A page whose feature is off isn't there: its address shows the overview instead.
   const wanted: Page = exact ? routedPage ?? 'home' : page;
-  const shown: Page = pageShown(account, wanted) ? wanted : 'home';
+  const shown: Page = visiblePage(wanted) ? wanted : 'home';
   // An address no page answers (or the console, for anyone not staff) is said to be not found
   // once the account is known; before that the page simply waits for it.
   const notFound = exact && account !== null && (route.kind === 'not-found' || (route.kind === 'admin' && !showsAdmin(account)));
@@ -257,8 +261,8 @@ export function CloudApp() {
       <aside className="cloud-rail">
         <button className="cloud-brand" title="Return to Cloud home" onClick={() => choosePage('home')}><span className="cloud-mark" aria-hidden="true">S</span><span>SelectaDJ{' '}<span className="cloud-brand-sub">REX Technologies</span></span></button>
         <nav aria-label="Cloud workspace">
-          {(Object.keys(LABELS) as Page[]).filter((target) => pageShown(account, target)).map((target) => (
-            <button key={target} aria-current={view === target ? 'page' : undefined} onClick={() => choosePage(target)}>{LABELS[target]}</button>
+          {(Object.keys(LABELS) as Page[]).filter((target) => visiblePage(target)).map((target) => (
+            <button key={target} aria-current={view === target ? 'page' : undefined} onClick={() => choosePage(target)}>{localFirst && target === 'uploads' ? 'Connect local music' : localFirst && target === 'listen' ? 'Explore / Studio' : LABELS[target]}</button>
           ))}
         </nav>
         <div className="cloud-rail-bottom">{showsAdmin(account) && <button onClick={() => { setInAdmin(true); window.history.pushState({}, '', '/admin'); setPath('/admin'); }}>Staff console</button>}<span>{user.email}</span>{exact && <button onClick={signOutHere}>Sign out</button>}
@@ -266,22 +270,23 @@ export function CloudApp() {
           <button className="cloud-delete-account" onClick={() => void deleteAccount()} disabled={busy}>Delete account</button></div>
       </aside>
       <main className="cloud-main">
-        <header className="cloud-top"><div><p className="cloud-eyebrow">{account?.workspace.name ?? 'YOUR WORKSPACE'}</p><h1 ref={titleRef} tabIndex={exact ? -1 : undefined}>{notFound ? 'Page not found' : TITLES[shown]}</h1></div><span className="cloud-plan-chip">{account ? planName(account) : 'Free'} plan</span></header>
+        <header className="cloud-top"><div><p className="cloud-eyebrow">{account?.workspace.name ?? 'YOUR WORKSPACE'}</p><h1 ref={titleRef} tabIndex={exact ? -1 : undefined}>{notFound ? 'Page not found' : localFirst && shown === 'uploads' ? 'Connect local music' : TITLES[shown]}</h1></div><span className="cloud-plan-chip">{account ? planName(account) : 'Free'} plan</span></header>
         {account?.user.suspended && (exact ? <SuspendedPanel go={choosePage} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>)}
         {exact && account && problem && <AccountProblemNote kind={problem.kind} onRetry={() => void retryAccount()} />}
-        <OverQuotaBanner account={account} go={choosePage} />
+        {!localFirst && <OverQuotaBanner account={account} go={choosePage} />}
         {stream === 'polling' && <p className="cloud-stream-note" role="status">Live updates are paused on this network, so this page checks for changes every few seconds.</p>}
         <Feedback error={exact && problem && error === problem.message ? '' : error} notice={notice} />
         {notFound && <NotFound path={path} go={choosePage} />}
-        {account && singleAudioOwner(account) && <CloudTransportDock api={api} account={account} page={shown} reload={libraryVersion} />}
-        {view === 'home' && account && <Overview account={account} go={choosePage} />}
-        {view === 'listen' && account && <CloudListen api={api} account={account} />}
-        {view === 'listen' && account && <MakeCloudMix api={api} account={account} />}
-        {view === 'library' && account && <LibraryPanel api={api} workspaceId={account.workspace.id} setError={setError} refreshAccount={refreshAccount} go={choosePage} reload={libraryVersion} truthful={featureOn(account, LIBRARY_STATES_FLAG)} account={account} />}
-        {view === 'uploads' && account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} perFile={featureOn(account, LIBRARY_STATES_FLAG)} />}
+        {account && !localFirst && singleAudioOwner(account) && <CloudTransportDock api={api} account={account} page={shown} reload={libraryVersion} />}
+        {view === 'home' && account && <Overview account={account} api={api} localFirst={localFirst} go={choosePage} />}
+        {view === 'listen' && account && !localFirst && <CloudListen api={api} account={account} />}
+        {view === 'listen' && account && !localFirst && <MakeCloudMix api={api} account={account} />}
+        {view === 'listen' && account && localFirst && <section className="lf-personal" aria-label="Local-first listening"><div className="lf-panel"><h2>Explore and Studio on your local engine</h2><p>Saved recipes and editing do not require cloud-hosted audio. Until the new local playback/Studio bridge is connected, this web workspace will not request hosted audio or claim that another speaker is ready.</p><a href={LOCAL_ENGINE_URL} target="_blank" rel="noopener noreferrer">Open the local Selecta engine on this device</a><p>Pair another speaker from Devices and settings to control it when its capability has been verified.</p></div></section>}
+        {view === 'library' && account && <LibraryPanel api={api} workspaceId={account.workspace.id} setError={setError} refreshAccount={refreshAccount} go={choosePage} reload={libraryVersion} truthful={featureOn(account, LIBRARY_STATES_FLAG)} account={account} localFirst={localFirst} />}
+        {view === 'uploads' && account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} perFile={featureOn(account, LIBRARY_STATES_FLAG)} localFirst={localFirst} go={choosePage} />}
         {view === 'billing' && account && <Billing account={account} busy={busy} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} />}
         {view === 'settings' && account && <div className="cloud-settings"><AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} />{featureOn(account, 'devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{featureOn(account, 'lucy') && featureOn(account, 'account.lucy_settings') && <LucyCloudSettings request={lucyRequest} features={account.features} />}{showsDeviceCheck(account.features) && <DeviceCheck />}{showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />}{featureOn(account, 'autopilot.venue_mode') && featureOn(account, 'autopilot.venue_policy') && <VenueSetup api={api} workspaceId={account.workspace.id} />}{exact && <AccountDanger busy={busy} onSignOutEverywhere={() => void signOutEverywhere()} onDelete={() => void deleteAccount(true)} />}</div>}
-        <footer className="cloud-footer">SelectaDJ Cloud · Your originals remain private to your workspace.<CloudCredit /></footer>
+        <footer className="cloud-footer">{localFirst ? 'SelectaDJ Cloud · Recipes sync; recordings stay on authorised local devices.' : 'SelectaDJ Cloud · Your originals remain private to your workspace.'}<CloudCredit /></footer>
       </main>
     </div>
   );
@@ -305,7 +310,8 @@ function Feedback({ error, notice }: { error: string; notice: string }) {
   return <div className={error ? 'cloud-feedback error' : 'cloud-feedback'} role={error ? 'alert' : 'status'}>{error || notice}</div>;
 }
 
-function Overview({ account, go }: { account: Account; go: (page: Page) => void }) {
+function Overview({ account, go, api, localFirst }: { account: Account; go: (page: Page) => void; api: Api; localFirst: boolean }) {
+  if (localFirst) return <><DeviceHome account={account} api={api} workspaceId={account.workspace.id} go={go} /><RoomsCard account={account} go={go} /></>;
   const uploads = featureOn(account, 'cloud.uploads');
   return <>
     {uploads && <section className="cloud-hero"><div><p className="cloud-eyebrow">MADE FOR YOUR NEXT SET</p><h2>Your library starts here.</h2><p>Add your tracks and SelectaDJ will prepare them for your next mix.</p><button className="primary" onClick={() => go('uploads')}>Add music</button></div><div className="cloud-hero-art" aria-hidden="true"><span>♪</span><i /><b /><em /></div></section>}

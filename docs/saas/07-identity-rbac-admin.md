@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Local-first architecture supersession (accepted 2026-11-13; implementation not started).** Identity, RBAC and auditing remain essential. Add paired-device credentials, an outbound agent channel, independent local command authorisation, output authority and explicit permissions for local files. Remove obsolete hosted DSP worker and music-storage admin operations only after replacement. See [ADR-0462](../adr/adr-0462-device-pairing-and-secure-local-cloud-command-channel.md), [fleet ops](../adr/adr-0479-local-agent-fleet-health-and-privacy-safe-operations.md). Historical plan details and past implementation evidence below are retained; this documentation PR does not change running software.
+
+
 ## 7. Identity, roles and the admin console
 
 ### 7.1 Sign-in
