@@ -27,6 +27,7 @@ export default defineConfig({
     proxy: {
       '/api': api,
       '/dev/stack': api,
+      '/dev/local-watches': api,
       '/dev-objects': api,
       '/dev-stripe': api,
       '/user_management': identity,
