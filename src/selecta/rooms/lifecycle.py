@@ -104,7 +104,26 @@ def open_room(
         settings = RoomSettings.from_json(settings)
     settings = settings.within(entitlement)
     name = clean_room_name(name)
-    if ctx.catalog.count_requestable(workspace_id, settings.crate) <= 0:
+    if ctx.local_first is not None:
+        # The room is pinned to a registered zone; never substitute another zone's
+        # speaker or an old cloud-upload catalogue when the engine is disconnected.
+        from selecta.rooms.local_first import LocalSpeaker
+
+        try:
+            speaker = ctx.local_first.speaker(workspace_id, settings.zone_id)
+            valid_zone = (
+                isinstance(speaker, LocalSpeaker)
+                and speaker.workspace_id == workspace_id
+                and speaker.zone_id == settings.zone_id
+            )
+            count = ctx.local_first.count_requestable(
+                workspace_id, settings.zone_id, settings.crate, settings.clean_only
+            ) if valid_zone else 0
+        except Exception:
+            count = 0
+    else:
+        count = ctx.catalog.count_requestable(workspace_id, settings.crate)
+    if count <= 0:
         raise RoomError(Refusal.NO_SONGS)
     with transaction(ctx.engine, workspace_id) as conn:
         now = resolve_now(conn, now)
@@ -210,6 +229,10 @@ def update_settings(
         now = resolve_now(conn, None)
         room = live_room(conn, workspace_id, room_id)
         settings = settings.keeping_limits_of(room.settings)
+        # Switching a live room to a different output zone would let old guests
+        # schedule requests against a speaker they never joined.
+        if ctx.local_first is not None and settings.zone_id != room.settings.zone_id:
+            raise RoomError(Refusal.NOT_ALLOWED)
         ends_at = min(room.ends_at, room.created_at + settings.max_hours * 3600)
         save_room(conn, room.id, settings=settings, ends_at=ends_at)
         if room.settings.display and not settings.display:
