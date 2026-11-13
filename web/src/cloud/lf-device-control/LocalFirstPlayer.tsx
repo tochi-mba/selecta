@@ -18,7 +18,7 @@ export function LocalFirstPlayer({ api, workspaceId, actorId, adapter }: { api: 
     isFresh(speaker.last_confirmed_server_at, TELEMETRY_FRESH_MS));
   const freshSpeaker = Boolean(session && isFresh(session.observed_at, TELEMETRY_FRESH_MS) && speakerOnline);
   const isAnotherSpeaker = Boolean(session?.speaker_device_id && session.speaker_device_id !== here?.device_id);
-  const active = Boolean(pending && ['requested', 'prepared', 'queued', 'uncertain'].includes(pending.stage));
+  const active = control.checkingDestination || Boolean(pending && ['requested', 'prepared', 'queued', 'uncertain'].includes(pending.stage));
   const canRemote = Boolean(session?.speaker_device_id && freshSpeaker && session.original_can_be_fenced);
   const cannotTakeover = blocked ?? (active ? 'Another operation needs reconciliation first.' : null);
 
@@ -152,6 +152,9 @@ export function LocalFirstPlayer({ api, workspaceId, actorId, adapter }: { api: 
           </button>
           <small>New output must pass local preflight. Failure leaves the existing output active.</small>
         </div>
+      )}
+      {control.checkingDestination && !pending && (
+        <p className="lf-player-command" role="status" aria-live="polite">requested — Checking destination recordings, output and speaker safety…</p>
       )}
       {pending && (
         <p className="lf-player-command" data-testid="lf12-command" role="status" aria-live="polite" aria-atomic="true">
