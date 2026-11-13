@@ -8,10 +8,6 @@ from zoneinfo import ZoneInfo
 import pytest
 import sqlalchemy as sa
 
-from selecta.business.rooms import ports
-from selecta.business.rooms.schema import business_zone_rooms
-from selecta.persistence import transaction
-from selecta.rooms.schema import rooms as personal_rooms
 from test_business_rooms_support import (  # noqa: F401
     BAR,
     TERRACE,
@@ -20,6 +16,11 @@ from test_business_rooms_support import (  # noqa: F401
     seen,
 )
 from test_business_rooms_support import Clock as WeekClock
+
+from selecta.business.rooms import ports
+from selecta.business.rooms.schema import business_zone_rooms
+from selecta.persistence import transaction
+from selecta.rooms.schema import rooms as personal_rooms
 
 # Share the canonical fixtures without shadowing them in test parameters.
 pytest_plugins = ("test_business_rooms_support",)
