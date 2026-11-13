@@ -125,7 +125,9 @@ def plan_backfill(
             if not isinstance(asset_id, str) or not _SAFE_ID.fullmatch(asset_id):
                 raise MigrationConflict("invalid historical asset reference")
             binding = bindings.get(asset_id)
-            occurrence = str(uuid.uuid5(_NAMESPACE, f"{workspace_id}:{mix_id}:{revision_id}:{index}"))
+            occurrence = str(
+                uuid.uuid5(_NAMESPACE, f"{workspace_id}:{mix_id}:{revision_id}:{index}")
+            )
             references.append({
                 "occurrence_id": occurrence,
                 "position": index,
@@ -225,7 +227,9 @@ class LocalPlanJournal:
         self._atomic(path, record)
         return record
 
-    def checkpoint(self, plan_id: str, revision_id: str, *, approved: bool = False) -> dict[str, Any]:
+    def checkpoint(
+        self, plan_id: str, revision_id: str, *, approved: bool = False
+    ) -> dict[str, Any]:
         if not approved:
             raise PermissionError("explicit operator approval required")
         existing = self.read(plan_id)
