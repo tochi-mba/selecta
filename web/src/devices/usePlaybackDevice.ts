@@ -69,6 +69,9 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const latestPoll = useRef(0);
   // Never let cached/buffered audio outlive the server-issued exclusive lease.
   const leaseDeadline = useRef<number | null>(null);
+  // Expiry silences cached audio, but reconnect may resume if the server still owns it.
+  const expiredSpeaker = useRef(false);
+  const recoveringExpired = useRef(false);
   const claiming = useRef(false);
   const speaking = useRef(false);
   const appliedSeq = useRef(-1);
@@ -103,6 +106,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     if (!speaking.current) return;
     speaking.current = false;
     leaseDeadline.current = null;
+    expiredSpeaker.current = false;
     speaker?.stop(fadeMs);
     wake.current?.release();
     wake.current = null;
@@ -112,6 +116,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const startSpeaking = useCallback(async (session: SessionState) => {
     if (!speaker) return;
     speaking.current = true;
+    expiredSpeaker.current = false;
     leaseDeadline.current = session.lease_expires_at;
     appliedSeq.current = session.seq;
     if (!wake.current) wake.current = holdWakeLock();
@@ -131,6 +136,33 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     else if (session.state === 'playing' && !speaker.active()) speaker.resume();
   }, [speaker, remoteControl]);
 
+  // Once a missed-lease safeguard silences the device, reconnect under the server's
+  // session lock. If someone else took over, stay silent; otherwise resume from the
+  // authoritative server position. This does not unpause an explicitly paused session.
+  const recoverExpired = useCallback(async () => {
+    if (!expiredSpeaker.current || recoveringExpired.current || !deviceId || !speaker) return;
+    recoveringExpired.current = true;
+    try {
+      const answer = await api<{ action: string; session: SessionState | null; message: string | null }>(
+        '/playback/reconnect',
+        { method: 'POST', body: JSON.stringify({ device_id: deviceId }) },
+        workspaceId,
+      );
+      if (!expiredSpeaker.current) return;
+      expiredSpeaker.current = false;
+      if (answer.action === 'continue' && answer.session) {
+        await startSpeaking(answer.session);
+        setMessage('');
+      } else {
+        setMessage(answer.message ?? 'Playback moved to another device.');
+      }
+    } catch {
+      // Retry after a later successful session poll, not in a tight loop.
+    } finally {
+      recoveringExpired.current = false;
+    }
+  }, [api, deviceId, speaker, startSpeaking, workspaceId]);
+
   const poll = useCallback(async (forDecision = false): Promise<SessionView | null> => {
     if (!deviceId) return null;
     const requestId = ++latestPoll.current;
@@ -144,6 +176,13 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       learnClock(sentAt, next.server_time);
       setView(next);
       setError('');
+      if (expiredSpeaker.current) {
+        if (next.speaker === 'here') void recoverExpired();
+        else {
+          expiredSpeaker.current = false;
+          setMessage(next.speaker_name ? `Playback moved to ${next.speaker_name}` : 'Playback stopped.');
+        }
+      }
       if (speaking.current && next.speaker === 'here' && next.session) {
         leaseDeadline.current = next.session.lease_expires_at;
       }
@@ -160,7 +199,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       setError((problem as Error).message);
       return null;
     }
-  }, [api, becomeRemote, deviceId, follow, workspaceId]);
+  }, [api, becomeRemote, deviceId, follow, recoverExpired, workspaceId]);
 
   // When the page opens on the device that was the speaker, carry on or fade out as the
   // server says (it may have moved while this one was away).
@@ -189,6 +228,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     const timer = window.setInterval(() => {
       if (speaking.current && leaseDeadline.current !== null && serverNow() >= leaseDeadline.current) {
         becomeRemote('Playback stopped because this device could not renew its audio lease.', 0);
+        expiredSpeaker.current = true;
       }
     }, SPEAKER_POLL_MS);
     return () => window.clearInterval(timer);
@@ -217,10 +257,16 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     return () => window.clearInterval(beat);
   }, [api, becomeRemote, deviceId, poll, speaker, workspaceId]);
 
-  useEffect(() => () => { speaker?.stop(0); speaker?.dispose?.(); wake.current?.release(); }, [speaker]);
+  useEffect(() => () => {
+    expiredSpeaker.current = false;
+    speaker?.stop(0);
+    speaker?.dispose?.();
+    wake.current?.release();
+  }, [speaker]);
 
   const playHere = useCallback(async (observedOwnerId?: string | null) => {
     if (!deviceId || !speaker || claiming.current) return;
+    expiredSpeaker.current = false;
     claiming.current = true;
     setStarting(true); setMessage('Starting here...'); setError('');
     try {
