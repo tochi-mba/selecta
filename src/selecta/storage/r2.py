@@ -29,6 +29,7 @@ from urllib.parse import quote, urlsplit
 
 import httpx
 
+from selecta.lf_egress import legacy_retrieval_enabled, require_media_write, require_upload_action
 from selecta.storage.objects import (
     MAX_COPY_BYTES,
     MAX_DELETE_BATCH,
@@ -272,6 +273,7 @@ class R2Client:
     ) -> PutResult:
         """Upload a file or bytes in one request. The body's SHA-256 is signed, so R2 refuses a
         body that changed on the way, and stored as `sha256` metadata for later checks."""
+        require_media_write("put")
         if isinstance(source, bytes | bytearray):
             data = bytes(source)
             size, digest = len(data), hashlib.sha256(data).hexdigest()
@@ -413,6 +415,16 @@ class R2Client:
     ) -> str:
         """Server-side copy; returns the new object's ETag. Refuses objects over 5 GiB, R2's limit
         for one copy. Passing `metadata` or `content_type` replaces the source's metadata."""
+        # DRAIN permits only staged-original promotions, never new derived media.
+        from selecta.storage.keys import Bucket, validate_key
+        try:
+            legacy_promotion = (
+                validate_key(src_key) is Bucket.STAGING
+                and validate_key(dst_key) is Bucket.ORIGINALS
+            )
+        except ValueError:
+            legacy_promotion = False
+        require_media_write("promote_legacy" if legacy_promotion else "copy")
         operation = f"CopyObject {src_bucket}/{src_key} -> {dst_bucket}/{dst_key}"
         if size is None:
             size = self.head_object(src_bucket, src_key).size
@@ -442,6 +454,7 @@ class R2Client:
         metadata: Mapping[str, str] | None = None,
     ) -> str:
         """Start a multipart upload; returns its upload id."""
+        require_upload_action("start")
         headers = _metadata_headers(metadata)
         if content_type:
             headers["content-type"] = content_type
@@ -472,6 +485,14 @@ class R2Client:
     ) -> str:
         """A presigned `PUT` for one part. Treat the URL as a secret until it expires. With
         `content_length`, the URL signs it, so storage refuses a part of any other size."""
+        from selecta.storage.keys import Bucket, validate_key
+        try:
+            is_staging = validate_key(key) is Bucket.STAGING
+        except ValueError:
+            is_staging = False
+        if not is_staging:
+            require_media_write("presign_put")
+        require_upload_action("parts")
         if not 1 <= part_number <= MAX_PARTS:
             raise ValueError(f"Part numbers run from 1 to {MAX_PARTS}.")
         query = [("partNumber", str(part_number)), ("uploadId", upload_id)]
@@ -513,6 +534,12 @@ class R2Client:
         self, bucket: str, key: str, upload_id: str, parts: Sequence[Part]
     ) -> str:
         """Join the listed parts into one object; returns its ETag."""
+        from selecta.storage.keys import Bucket, validate_key
+        try:
+            is_staging = validate_key(key) is Bucket.STAGING
+        except ValueError:
+            is_staging = False
+        require_media_write("complete_legacy" if is_staging else "complete")
         operation = f"CompleteMultipartUpload {bucket}/{key}"
         root = ET.Element("CompleteMultipartUpload")
         for part in sorted(parts, key=lambda p: p.number):
@@ -579,6 +606,9 @@ class R2Client:
 
     def presign_get(self, bucket: str, key: str, ttl: int, download_name: str | None = None) -> str:
         """A presigned `GET`. With `download_name`, the browser saves the file under that name."""
+        if not legacy_retrieval_enabled():
+            from selecta.lf_egress import AdmissionDenied
+            raise AdmissionDenied("legacy_audio_retrieval_disabled")
         query = []
         if download_name is not None:
             query.append(("response-content-disposition", content_disposition(download_name)))
@@ -586,4 +616,5 @@ class R2Client:
 
     def presign_put(self, bucket: str, key: str, ttl: int) -> str:
         """A presigned single `PUT` (up to 5 GiB), for a worker writing one attempt's output."""
+        require_media_write("presign_put")
         return self._presign("PUT", bucket, key, ttl)

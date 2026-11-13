@@ -12,6 +12,7 @@ from sqlalchemy.engine import Engine
 
 from selecta.admin.state import DbWorkControls
 from selecta.identity.tokens import Claims
+from selecta.lf_egress import AdmissionDenied, require_proxy_job
 from selecta.persistence import db_now, transaction
 from selecta.scheduling.policy import Lane
 from selecta.storage.artifacts import Buckets
@@ -40,6 +41,11 @@ def install_routes(
         require_id(asset_id, {"code": "asset_not_found"})
         principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
         workspace_id = principal.workspace.id
+        # Approved historical retrieval uses the storage API, never a new DSP job.
+        try:
+            require_proxy_job()
+        except AdmissionDenied as error:
+            raise HTTPException(status_code=410, detail={"code": error.code}) from None
         with transaction(engine, workspace_id) as conn:
             asset = conn.execute(select(assets).where(
                 assets.c.id == asset_id, assets.c.workspace_id == workspace_id,

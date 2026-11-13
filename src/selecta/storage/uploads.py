@@ -40,6 +40,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
+from selecta.lf_egress import require_upload_action
 from selecta.persistence import db_now, lock_rows, new_id
 from selecta.storage.artifacts import DEFAULT_BUCKETS, MAX_URL_TTL, Buckets
 from selecta.storage.keys import original_key, staging_key
@@ -256,6 +257,7 @@ class Uploads:
         self, conn: Connection, workspace_id: str, files: Sequence[FileSpec]
     ) -> list[PlannedFile]:
         """Plan up to 500 files, one result per file in the order given."""
+        require_upload_action("plan")
         files = list(files)
         if len(files) > MAX_BATCH:
             raise BatchTooLarge(
@@ -329,6 +331,7 @@ class Uploads:
         session = self._load(conn, session_id, workspace_id, lock=True)
         if session.status is not Status.PLANNED:
             return session
+        require_upload_action("start")
         if session.expires_at <= db_now(conn):
             raise InvalidState("This upload has expired; please upload the file again.")
         upload_id = self.client.create_multipart_upload(
@@ -343,6 +346,7 @@ class Uploads:
     ) -> dict[int, str]:
         """Presigned `PUT` URLs for up to 100 parts at a time, by part number. The URLs are
         secrets until they expire: hand them to the browser, never log them."""
+        require_upload_action("parts")
         if session.status is not Status.UPLOADING or not session.upload_id:
             raise InvalidState(f"Parts can't be sent to an upload that is {session.status}.")
         numbers = sorted(set(part_numbers))
@@ -387,6 +391,7 @@ class Uploads:
     ) -> Outcome:
         """Check what arrived and complete the upload on the server. Calling it again returns the
         same outcome; R2 errors worth retrying are raised, leaving the session as it was."""
+        require_upload_action("complete")
         session = self._load(conn, session_id, workspace_id, lock=True)
         if session.status is Status.ACCEPTED:
             return Outcome(session, asset_id=session.id)
@@ -449,6 +454,7 @@ class Uploads:
         """Keep a validated file: copy it to the originals bucket, record the asset, and turn
         the reservation into committed usage. The asset takes the session's id, so a retry
         copies to the same key and finds the same row."""
+        require_upload_action("accept")
         session = self._load(conn, session_id, workspace_id, lock=True)
         if session.status is Status.ACCEPTED:
             return Outcome(session, asset_id=session.id)
