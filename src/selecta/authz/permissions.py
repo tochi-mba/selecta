@@ -62,7 +62,9 @@ R, C, S, D = Danger.READ, Danger.CHANGE, Danger.SENSITIVE, Danger.DANGEROUS
 
 _DECLARED: tuple[Permission, ...] = (
     Permission("platform.dashboard.read", "See the admin overview: health, queues, spend.", R),
-    Permission("business.pilots.create", "Create a time-limited business pilot for a named owner.", S),
+    Permission(
+        "business.pilots.create", "Create a time-limited business pilot for a named owner.", S
+    ),
     Permission("accounts.list", "Search accounts by email, plan and status.", R),
     Permission("accounts.read_metadata", "Open one account's metadata (never its content).", S),
     Permission("accounts.suspend", "Suspend an account: read-only, no processing.", S),

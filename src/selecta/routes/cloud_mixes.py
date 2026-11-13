@@ -15,8 +15,8 @@ from fastapi import Body, Depends, FastAPI, HTTPException, Request
 from sqlalchemy.engine import Engine
 
 from selecta import cloud_mixes
-from selecta.cloud_mixes import create as create_cloud_mix
 from selecta.authz.roles import WorkspaceAction
+from selecta.cloud_mixes import create as create_cloud_mix
 from selecta.identity.tokens import Claims
 
 _MIX_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")

@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection, Engine
 
 from selecta.admin import http
-from selecta.authz.check import Actor, authorize
+from selecta.authz.check import authorize
 from selecta.business import pilot
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now
