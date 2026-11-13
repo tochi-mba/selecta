@@ -8,12 +8,11 @@ must use metadata-only device snapshots and local engine handoff.
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
-
 import os
 import sqlite3
 import threading
 import time
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
