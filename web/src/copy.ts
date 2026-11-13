@@ -92,3 +92,8 @@ export function copyMode(): Mode {
 export function words(): Record<CopyKey, string> {
   return copy[mode];
 }
+
+// Explicit user-clicked local engine and setup help links in the connected experience.
+// They are not fetched or loaded automatically by standalone Selecta.
+export const localEngineUrl = 'http://127.0.0.1:8733/';
+export const localEngineSetupGuide = 'https://github.com/tochi-mba/selecta/blob/main/README.md';
