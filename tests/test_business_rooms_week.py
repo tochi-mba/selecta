@@ -66,15 +66,41 @@ def test_one_standing_room_per_zone_and_no_expiry_over_a_week(make, clock):
 
 
 def test_overnight_close_is_open_after_midnight_and_closed_at_two(make, clock):
-    hours = WeekHours()
+    # Wednesday at 01:30 belongs to Tuesday's overnight opening. Make Tuesday
+    # an opening day in this test; the default fixture intentionally closes Tuesdays.
+    hours = WeekHours(closed_weekday=0)
     svc = make(hours=hours)
     token = svc.join(code_of(svc), "10.0.0.2").token
-    clock.now = datetime(2026, 10, 21, 1, 30, tzinfo=LONDON).timestamp()  # Wed 01:30
-    seen(svc)
-    assert state_of(svc, token)["state"] == "open"
-    clock.now = datetime(2026, 10, 21, 2, 30, tzinfo=LONDON).timestamp()
-    shown = state_of(svc, token)
-    assert shown["state"] == "closed" and shown["text"] == "Requests open at 17:00"
+    for day, hour, minute in (
+        (20, 23, 59),  # Tuesday night
+        (21, 0, 0),    # Wednesday midnight
+        (21, 1, 30),   # the reported regression
+        (21, 1, 59),   # just before the scheduled close
+    ):
+        clock.now = datetime(2026, 10, day, hour, minute, tzinfo=LONDON).timestamp()
+        seen(svc)  # staff must still be present for staff-approved requests
+        assert state_of(svc, token)["state"] == "open", (day, hour, minute)
+    for hour, minute in ((2, 0), (2, 30)):
+        clock.now = datetime(2026, 10, 21, hour, minute, tzinfo=LONDON).timestamp()
+        shown = state_of(svc, token)
+        assert shown["state"] == "closed"
+        assert shown["text"] == "Requests open at 17:00"
+
+
+def test_closed_tuesday_keeps_monday_overnight_but_not_tuesday_night(make, clock):
+    hours = WeekHours()  # Tuesday has no opening period
+    svc = make(hours=hours)
+    token = svc.join(code_of(svc), "10.0.0.8").token
+    for day, hour, minute, expected in (
+        (20, 1, 30, "open"),   # Monday opening continues into Tuesday
+        (20, 2, 0, "closed"),  # closes exactly at the boundary
+        (20, 19, 0, "closed"), # Tuesday has no 17:00 opening
+        (21, 1, 30, "closed"), # Wednesday morning belongs to closed Tuesday
+    ):
+        clock.now = datetime(2026, 10, day, hour, minute, tzinfo=LONDON).timestamp()
+        seen(svc)
+        assert state_of(svc, token)["state"] == expected, (day, hour, minute)
+
 
 
 def test_closed_day_points_to_the_next_opening(make, clock):

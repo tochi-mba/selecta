@@ -274,14 +274,14 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 
 <!-- owner-runbook:generated:begin -->
 
-**Open person-only tasks: 762.**
+**Open person-only tasks: 763.**
 
 | Sitting | Tasks | Tracker |
 |---|---|---|
 | 1. Visual review and baseline approval | 96 | [tracker/visual-review.md](tracker/visual-review.md) |
 | 2. Screen-reader and keyboard session | 86 | [tracker/screen-reader.md](tracker/screen-reader.md) |
 | 3. Phones, touch, zoom and hardware | 113 | [tracker/devices.md](tracker/devices.md) |
-| 4. Listening session | 86 | [tracker/listening.md](tracker/listening.md) |
+| 4. Listening session | 87 | [tracker/listening.md](tracker/listening.md) |
 | 5. User-study sessions | 216 | [tracker/user-study.md](tracker/user-study.md) |
 | 6. Staging, drills and rollback | 16 | [tracker/staging.md](tracker/staging.md) |
 | 7. Legal and business list | 14 | [tracker/legal-business.md](tracker/legal-business.md) |
@@ -351,7 +351,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 - `selecta-cloud-implementation-checklist.md` (2): SC-0394-04, SC-0395-06
 - `selecta-creative-interface-implementation-checklist.md` (8): CI-0170-03, CI-0170-07, CI-0171-07, CI-0175-07, CI-0176-07, CI-0180-06, CI-0184-05, CI-0184-06
 - `selecta-experience-implementation-checklist.md` (9): EX-0115-05, EX-0116-05, EX-0121-01, EX-0122-05, EX-0124-05, EX-0125-02, EX-0127-04, EX-0129-02, EX-0129-05
-- `selecta-flow-implementation-checklist.md` (14): SF-0198-04, SF-0208-02, SF-0210-08, SF-0211-02, SF-0211-08, SF-0212-03, SF-0213-02, SF-0214-08, SF-0221-01, SF-0231-08, SF-0235-04, SF-0240-03, SF-0246-02, SF-0246-08
+- `selecta-flow-implementation-checklist.md` (15): SF-0198-04, SF-0208-02, SF-0209-02, SF-0210-08, SF-0211-02, SF-0211-08, SF-0212-03, SF-0213-02, SF-0214-08, SF-0221-01, SF-0231-08, SF-0235-04, SF-0240-03, SF-0246-02, SF-0246-08
 - `selecta-gap-polish-implementation-checklist.md` (3): GP-0248-08, GP-0255-08, GP-0260-08
 - `selecta-library-lucy-experience-implementation-checklist.md` (1): LX-0354-08
 - `selecta-measured-micro-polish-implementation-checklist.md` (3): MP-0285-08, MP-0296-08, MP-0299-06
