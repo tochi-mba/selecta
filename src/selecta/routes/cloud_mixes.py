@@ -15,6 +15,7 @@ from fastapi import Body, Depends, FastAPI, HTTPException, Request
 from sqlalchemy.engine import Engine
 
 from selecta import cloud_mixes
+from selecta.cloud_mixes import create as create_cloud_mix
 from selecta.authz.roles import WorkspaceAction
 from selecta.identity.tokens import Claims
 
@@ -79,7 +80,7 @@ def install_routes(
     ) -> dict[str, Any]:
         principal = allowed(request, claims, WorkspaceAction.MIXES_EDIT)
         try:
-            mix = cloud_mixes.create(
+            mix = create_cloud_mix(
                 engine,
                 principal.workspace.id,
                 principal.user.id,

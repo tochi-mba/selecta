@@ -5,9 +5,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
+import pytest
 import sqlalchemy as sa
 from test_business_rooms_support import (  # noqa: F401
     BAR,
+    Clock as WeekClock,
     TERRACE,
     WeekHours,
     code_of,
@@ -23,6 +25,12 @@ from selecta.rooms.schema import rooms as personal_rooms
 pytest_plugins = ("test_business_rooms_support",)
 
 LONDON = ZoneInfo("Europe/London")
+
+
+@pytest.fixture
+def clock():
+    """Use the callable room-service clock instead of the database clock fixture."""
+    return WeekClock()
 
 
 def state_of(svc, token):
