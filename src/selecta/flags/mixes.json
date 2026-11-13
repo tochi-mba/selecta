@@ -1,12 +1,6 @@
 {
   "area": "Make a Mix",
   "flags": {
-    "mixes.intent_language": {
-      "label": "Clear mix intent and setting scope",
-      "about": "Explains quick listening versus building a mix to keep, which settings persist, and what plays next without moving existing controls.",
-      "surfaces": ["mixes"],
-      "words": ["What would you like to do?", "Quick listen", "Build a mix to keep"]
-    },
     "mixes.ideas": {
       "label": "Mix ideas",
       "about": "Ready-made mixes under the moment, the mood, the sound and the journey.",
