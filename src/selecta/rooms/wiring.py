@@ -68,6 +68,7 @@ def install(
             now_playing=ports.now_playing,
             events=OutboxRoomEvents(),
             started_at=_database_now(engine),
+            local_first=ports.local_first,
         )
     app.state.rooms = service
     limiter = Limiter()
