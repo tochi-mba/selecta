@@ -261,3 +261,22 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /internal/workers/attempts/{attempt_id}/progress` | Reports progress |
 | `POST /internal/workers/attempts/{attempt_id}/complete` | Completes an attempt |
 | `POST /internal/workers/attempts/{attempt_id}/fail` | Fails an attempt |
+
+### Business venues and Autopilot (`src/selecta/routes/business_hours.py`, `src/selecta/routes/autopilot.py`) - Venue operations
+
+| Route | Side effect |
+|---|---|
+| `DELETE /api/autopilot/venues/{venue_id}/overrides/{override_id}` | Revokes an Autopilot override |
+| `DELETE /api/business/venues/{venue_id}/hour-exceptions/{exception_id}` | Removes one venue-hours exception |
+| `POST /api/autopilot/sessions` | Creates an Autopilot session |
+| `POST /api/autopilot/sessions/{session_id}/controls/{control}` | Issues a guarded session control, preserving staff takeover |
+| `POST /api/autopilot/sessions/{session_id}/transitions` | Records or starts an authorized session transition |
+| `POST /api/autopilot/venues/{venue_id}/candidates` | Sets candidates for the venue |
+| `POST /api/autopilot/venues/{venue_id}/overrides` | Adds a timed policy override |
+| `POST /api/autopilot/venues/{venue_id}/policies` | Creates a venue policy revision |
+| `POST /api/business/venues/{venue_id}/close-now` | Closes the venue early |
+| `POST /api/business/venues/{venue_id}/close-now/{override_id}/undo` | Undoes a close-now override |
+| `POST /api/business/venues/{venue_id}/hour-exceptions` | Adds an opening-hours exception |
+| `POST /api/business/venues/{venue_id}/stay-open-late` | Extends the current opening window |
+| `PUT /api/autopilot/venues/{venue_id}/setup/{step}` | Changes a specific venue setup step |
+| `PUT /api/business/venues/{venue_id}/hours` | Replaces the weekly opening hours |

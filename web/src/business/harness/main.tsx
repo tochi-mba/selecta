@@ -60,9 +60,9 @@ function BusinessHarness() {
       </section>
       <section aria-label="Activity" className="biz-card">
         <h2>Fixture activity</h2>
-        {data.activity.length === 0
+        {!data.activity?.length
           ? <p>No activity.</p>
-          : <ul>{data.activity.map((item) => <li key={item.id}>{item.words}</li>)}</ul>}
+          : <ul>{data.activity?.map((item) => <li key={item.id}>{item.words}</li>)}</ul>}
       </section>
     </main>
   );

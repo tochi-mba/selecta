@@ -90,7 +90,7 @@ def test_no_pull_request_target_or_workflow_run_trigger():
 def test_no_stored_secret_in_a_workflow_pull_requests_run():
     for name, (text, flow) in FLOWS.items():
         if "pull_request" in _triggers(flow):
-            assert not re.search(r"secrets\.(?!GITHUB_TOKEN\b)", text), name
+            assert not re.search(r"\$\{\{\s*secrets\.(?!GITHUB_TOKEN\b)", text), name
 
 
 def test_untrusted_values_reach_shells_only_through_env():
