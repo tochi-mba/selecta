@@ -16,11 +16,11 @@ from selecta.lf_jobs.contract import (
     validate_sources,
 )
 from selecta.lf_jobs.governor import DeviceResources, LocalResourceGovernor
+from selecta.scheduling.policy import WorkerCaps
 from selecta.work.enqueue import JobSpec
 from selecta.work.model import JobState
 from selecta.workers import local_host
 from selecta.workers.runner import WorkerRunner
-from selecta.scheduling.policy import WorkerCaps
 
 
 def resources(**changes):
@@ -208,7 +208,9 @@ def test_local_job_policy_is_identical_across_paid_tiers():
 
 def test_crashed_decoder_is_not_published_as_success(tmp_path):
     store = local_host.open_store(tmp_path)
-    caps = WorkerCaps(pool="local-analysis", worker_id="decoder", job_types=frozenset({"analyse.song"}))
+    caps = WorkerCaps(
+        pool="local-analysis", worker_id="decoder", job_types=frozenset({"analyse.song"})
+    )
     store.register_worker(caps)
     made = store.enqueue(JobSpec(
         "local", "analyse.song", input_ref={"song": 1}, pool="local-analysis"
