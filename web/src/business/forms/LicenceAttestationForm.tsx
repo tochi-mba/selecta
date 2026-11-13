@@ -73,10 +73,10 @@ export function LicenceAttestationForm({ initial, now, onSave, disabled, onDraft
       </div>
     </div>
     <label className="bzf-check bzf-rights">
-      <input type="checkbox" checked={rights} disabled={off} onChange={(event) => setRights(event.target.checked)} aria-invalid={errors.rights ? true : undefined} />
+      <input type="checkbox" checked={rights} disabled={off} onChange={(event) => setRights(event.target.checked)} aria-invalid={errors.rights ? true : undefined} aria-describedby={errors.rights ? 'bzf-rights-error' : undefined} />
       <span>{LICENCE_COPY.rights}</span>
     </label>
-    {errors.rights && <p className="warn" role="alert">{errors.rights}</p>}
+    {errors.rights && <p className="warn" role="alert" id="bzf-rights-error">{errors.rights}</p>}
     {disabled && <p className="biz-quiet">{disabled}</p>}
     <div className="biz-row"><Action type="button" className="primary" run={submit} disabled={off} title={disabled ?? undefined} working="Saving">{submitLabel}</Action></div>
   </form>;

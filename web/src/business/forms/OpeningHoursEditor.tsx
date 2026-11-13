@@ -90,11 +90,11 @@ export function OpeningHoursEditor({ hours, holidays, onChange, disabled }: {
         </ul>
       )}
       <div className="biz-row bzf-holiday-add">
-        <label>{HOURS_COPY.holidayDate} <input type="date" value={holidayDate} onChange={(event) => setHolidayDate(event.target.value)} aria-invalid={holidayError ? true : undefined} /></label>
+        <label>{HOURS_COPY.holidayDate} <input type="date" value={holidayDate} onChange={(event) => setHolidayDate(event.target.value)} aria-invalid={holidayError ? true : undefined} aria-describedby={holidayError ? 'bzf-holiday-error' : undefined} /></label>
         <label>{HOURS_COPY.holidayLabel} <input type="text" value={holidayLabel} onChange={(event) => setHolidayLabel(event.target.value)} /></label>
         <button type="button" onClick={addHoliday}>{HOURS_COPY.addHoliday}</button>
       </div>
-      {holidayError && <p className="warn" role="alert">{holidayError}</p>}
+      {holidayError && <p className="warn" role="alert" id="bzf-holiday-error">{holidayError}</p>}
     </fieldset>
     {disabled && <p className="biz-quiet">{disabled}</p>}
   </div>;

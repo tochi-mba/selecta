@@ -28,6 +28,7 @@ const OWN_CLIENTS = [
   'cloud/devAuthKit.tsx',
   'devcloud/authkit.tsx',
   'devices/audioSpeaker.ts', 'harness/main.tsx', 'rooms/dom.ts', 'studio.ts',
+  'venueops/staffApi.ts',
 ];
 
 describe('polling policy (T0068)', () => {
