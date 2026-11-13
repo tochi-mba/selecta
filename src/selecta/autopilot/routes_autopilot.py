@@ -104,17 +104,13 @@ def install_routes(
 
         def workspace_of(request: Request, claims=Depends(current_claims)) -> str:  # noqa: B008
             principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
-            # The informational routes don't name a venue and remain available to signed-in
-            # personal workspaces. Everything stateful belongs to a Business organisation.
-            information = request.url.path in {
-                "/api/autopilot/availability", "/api/autopilot/maturity",
-            }
-            if not information:
-                if principal.workspace.kind != "business":
-                    raise HTTPException(status_code=404, detail={"code": "not_found"})
-                role = str(getattr(principal.workspace_role, "value", principal.workspace_role))
-                if request.method not in {"GET", "HEAD"} and role not in {"owner", "editor"}:
-                    raise HTTPException(status_code=403, detail={"code": "not_allowed"})
+            # Autopilot is an organisation-only surface, even for its capability reports.
+            # principal_for has already proved the caller's membership of the chosen workspace.
+            if principal.workspace.kind != "business":
+                raise HTTPException(status_code=404, detail={"code": "not_found"})
+            role = str(getattr(principal.workspace_role, "value", principal.workspace_role))
+            if request.method not in {"GET", "HEAD"} and role not in {"owner", "editor"}:
+                raise HTTPException(status_code=403, detail={"code": "not_allowed"})
             return str(principal.workspace.id)
 
         scope = workspace_of
