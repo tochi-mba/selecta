@@ -123,7 +123,7 @@ export function FolderWatches({ compact = false }: { compact?: boolean }) {
       if (!navigator.onLine) {
         setPhase('error');
       } else {
-        setPhase(snapshot => snapshot ? 'error' : 'unavailable');
+        setPhase((previous) => previous === 'ready' ? 'error' : 'unavailable');
       }
     }
   }, [local]);
@@ -292,4 +292,20 @@ export function FolderWatches({ compact = false }: { compact?: boolean }) {
     </>}
     <p className="lfw-privacy">Your audio never leaves this device through folder watching. When using Selecta Cloud on another computer, you must manage its folders on that computer.</p>
   </section>;
+}
+
+/** Legacy hosted accounts keep their existing upload flow, with an explicit local alternative. */
+export function LegacyFolderWatchEntry() {
+  const [open, setOpen] = useState(false);
+  return <div className="lfw-entry">
+    <div>
+      <p className="cloud-eyebrow">ALSO AVAILABLE · DEVICE-LOCAL MUSIC</p>
+      <h2>Prefer to watch a music folder?</h2>
+      <p>Connect several folders or drives, and Selecta checks them for new recordings automatically. This is separate from your existing Cloud uploads: originals stay on this computer.</p>
+    </div>
+    <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+      {open ? 'Hide folder watches' : 'Manage folder watches'}
+    </button>
+    {open && <div className="lfw-entry-expanded"><FolderWatches compact /></div>}
+  </div>;
 }
