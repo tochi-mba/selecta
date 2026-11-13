@@ -342,7 +342,7 @@ def add_routes(app, ctx) -> None:
             )
         except ArtifactCancelled:
             finish(job, "cancelled", error=None)
-        except Exception as problem:  # noqa: BLE001 - it becomes the job's reason, not a lost thread
+        except Exception as problem:  # noqa: BLE001 - convert thread errors to job state
             finish(job, "failed", error=_words_for(problem))
         finally:
             with lock:
@@ -408,7 +408,7 @@ def add_routes(app, ctx) -> None:
     @app.get("/api/exports/local-artifacts/{artifact_id}")
     def local_artifact_state(artifact_id: str) -> dict:
         """Controller-safe local completion metadata, never an audio URL or filesystem path."""
-        if not JOB_ID.fullmatch(artifact_id[:32]) or len(artifact_id) != 64:
+        if not re.fullmatch(r"[0-9a-f]{64}", artifact_id):
             raise HTTPException(404, "There's no local artifact like that.")
         return artifacts.public_state(
             artifact_id, device_id=str(getattr(ctx, "device_id", "local-engine"))
