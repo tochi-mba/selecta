@@ -2,8 +2,9 @@
 
 A Cloud mix is a chain of immutable revisions in the shared contract (`selecta.mix_contract`).
 Each revision is stored as one protected, content-addressed row in the existing `artifacts`
-table (`kind="mix_revision"`, `input_hash` = the revision id, the contract in `provenance.settings`), so
-no schema migration is needed, eviction never removes one (`protected`), and the same contents
+table (`kind="mix_revision"`, `input_hash` = the revision id, with the contract under
+`provenance.settings`), so no schema migration is needed, eviction never removes one
+(`protected`), and the same contents
 can never be written twice under different ids. An edit adds a revision; it never rewrites one.
 
 Songs are the workspace's own live Cloud assets, checked in the same transaction. A seam is
@@ -176,8 +177,8 @@ def _facts(conn: Connection, workspace_id: str, hashes: Sequence[str]) -> dict[s
         )
     ).all()
     found: dict[str, SongFacts] = {}
-    for input_hash, provenance in rows:
-        values = (provenance or {}).get("facts") or {}
+    for input_hash, record in rows:
+        values = (record or {}).get("facts") or {}
         bpm = values.get("bpm")
         energy = values.get("energy")
         found[input_hash] = SongFacts(
