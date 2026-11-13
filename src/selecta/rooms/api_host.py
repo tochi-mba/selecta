@@ -97,6 +97,7 @@ def host_json(view: HostView) -> dict[str, Any]:
         "unfit": [item_json(item) for item in view.unfit],
         "renders_left": view.renders_left,
         "music_paused": view.music_paused,
+        "local_first": view.local_first,
         "displays": view.displays,
         "screens": [
             {

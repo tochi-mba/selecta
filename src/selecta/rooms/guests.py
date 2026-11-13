@@ -71,6 +71,8 @@ def join(
     with transaction(ctx.engine, workspace_id) as conn:
         now = resolve_now(conn, now)
         room = live_room(conn, workspace_id, room_id)
+        if ctx.local_first is not None and room.ends_at <= now:
+            raise RoomError(Refusal.ROOM_ENDED)
         if room.code_hash != digest:
             raise RoomError(Refusal.NO_SUCH_ROOM)  # the code changed a moment ago
         if token_digest is not None:
@@ -206,13 +208,17 @@ def ban_guest(
                 )
             )
             for request in room_requests_where(conn, room, WAITING, guest_id=guest.id):
-                set_request(
-                    conn,
-                    request.id,
-                    status=RequestStatus.WITHDRAWN,
-                    reason="banned",
-                    resolved_at=now,
-                )
+                if ctx.local_first is not None and request.song_request_id is not None:
+                    # Device-acknowledged playback cannot be falsely declared cancelled.
+                    set_request(conn, request.id, reason="banned")
+                else:
+                    set_request(
+                        conn,
+                        request.id,
+                        status=RequestStatus.WITHDRAWN,
+                        reason="banned",
+                        resolved_at=now,
+                    )
                 withdrawn.append(request.song_request_id)
             voted_on = conn.execute(
                 sa.select(room_votes.c.request_id).where(room_votes.c.guest_id == guest.id)

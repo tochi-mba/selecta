@@ -4,7 +4,8 @@ A Premium host has one room open at a time. A room can't open with nothing to re
 refuses, saying why, when the host has no mix-ready songs. It ends when the host ends it, after
 its hours run out (twelve at most), or after an hour with no speaker device online. When it ends,
 requests the planner hasn't been given are withdrawn; ones it already holds carry on into the
-host's mix, where the host can still cancel them as usual.
+host's mix, where the host can still cancel them as usual. In local-first mode a missing
+cloud heartbeat cannot prove that a venue speaker stopped its offline playback.
 
 A new code stops the old one working at once. Guests already in stay, unless the host also
 chooses to remove everyone; a paired display stays paired because it's tied to the room.
@@ -24,7 +25,7 @@ from selecta.persistence import new_id, transaction
 from selecta.rooms import codes
 from selecta.rooms.errors import Refusal, RoomError
 from selecta.rooms.planning import pump, withdraw_from_planner
-from selecta.rooms.schema import display_pairings, room_guests, rooms
+from selecta.rooms.schema import display_pairings, room_guests, room_requests, rooms
 from selecta.rooms.settings import RoomSettings
 from selecta.rooms.store import (
     LIVE,
@@ -104,7 +105,26 @@ def open_room(
         settings = RoomSettings.from_json(settings)
     settings = settings.within(entitlement)
     name = clean_room_name(name)
-    if ctx.catalog.count_requestable(workspace_id, settings.crate) <= 0:
+    if ctx.local_first is not None:
+        # The room is pinned to a registered zone; never substitute another zone's
+        # speaker or an old cloud-upload catalogue when the engine is disconnected.
+        from selecta.rooms.local_first import LocalSpeaker
+
+        try:
+            speaker = ctx.local_first.speaker(workspace_id, settings.zone_id)
+            valid_zone = (
+                isinstance(speaker, LocalSpeaker)
+                and speaker.workspace_id == workspace_id
+                and speaker.zone_id == settings.zone_id
+            )
+            count = ctx.local_first.count_requestable(
+                workspace_id, settings.zone_id, settings.crate, settings.clean_only
+            ) if valid_zone else 0
+        except Exception:
+            count = 0
+    else:
+        count = ctx.catalog.count_requestable(workspace_id, settings.crate)
+    if count <= 0:
         raise RoomError(Refusal.NO_SONGS)
     with transaction(ctx.engine, workspace_id) as conn:
         now = resolve_now(conn, now)
@@ -210,6 +230,28 @@ def update_settings(
         now = resolve_now(conn, None)
         room = live_room(conn, workspace_id, room_id)
         settings = settings.keeping_limits_of(room.settings)
+        # Switching a live room to a different output zone would let old guests
+        # schedule requests against a speaker they never joined.
+        if ctx.local_first is not None and settings.zone_id != room.settings.zone_id:
+            raise RoomError(Refusal.NOT_ALLOWED)
+        if ctx.local_first is not None and settings.clean_only and not room.settings.clean_only:
+            # A newly restricted policy cannot silently invalidate already
+            # committed physical playback on the local speaker.
+            scheduled = conn.execute(
+                sa.select(room_requests.c.id).where(
+                    room_requests.c.workspace_id == workspace_id,
+                    room_requests.c.room_id == room.id,
+                    room_requests.c.song_request_id.is_not(None),
+                    room_requests.c.status.in_(
+                        [RequestStatus.ACCEPTED.value, RequestStatus.UNFIT.value]
+                    ),
+                ).limit(1)
+            ).first()
+            if scheduled is not None:
+                raise RoomError(
+                    Refusal.NOT_ALLOWED,
+                    "Finish the locally scheduled requests before enabling clean-only music.",
+                )
         ends_at = min(room.ends_at, room.created_at + settings.max_hours * 3600)
         save_room(conn, room.id, settings=settings, ends_at=ends_at)
         if room.settings.display and not settings.display:
@@ -282,20 +324,36 @@ def expire_rooms(ctx: RoomContext, *, now: float | None = None) -> list[EndedRoo
         ).all()
     ended: list[EndedRoom] = []
     for room_id, workspace_id in live:
-        online = ctx.speakers.speaker_online(workspace_id)
         withdrawn: list[str | None] = []
         reason = None
         with transaction(ctx.engine, workspace_id) as conn:
             room = load_room(conn, workspace_id, room_id, lock=True)
             if not room.live:
                 continue
+            if ctx.local_first is None:
+                online = ctx.speakers.speaker_online(workspace_id)
+            else:
+                from selecta.rooms.local_first import ready_speaker
+
+                try:
+                    snapshot = ctx.local_first.speaker(workspace_id, room.settings.zone_id)
+                    online = ready_speaker(
+                        snapshot, workspace_id, room.settings.zone_id, now
+                    )
+                except Exception:
+                    online = False
             if online:
                 save_room(conn, room.id, last_speaker_seen_at=now)
             last_seen = now if online else (room.last_speaker_seen_at or room.created_at)
             if now >= room.ends_at:
                 reason = EndReason.TIME
-            elif now - last_seen >= room.settings.no_speaker_minutes * 60:
+            elif (
+                ctx.local_first is None
+                and now - last_seen >= room.settings.no_speaker_minutes * 60
+            ):
                 reason = EndReason.NO_SPEAKER
+            # An unreachable local engine may still be executing approved playback
+            # offline. Losing its cloud heartbeat cannot close its room or stop sound.
             if reason is not None:
                 withdrawn = end_in(conn, ctx, room, now, reason)
         if reason is not None:

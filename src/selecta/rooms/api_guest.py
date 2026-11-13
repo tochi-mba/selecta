@@ -89,6 +89,7 @@ def guest_json(
         "votes_on": view.votes_on and allowed,
         "requests_open": view.requests_open,
         "music_paused": view.music_paused,
+        "local_first": view.local_first,
         "now_playing": song_json(view.now_playing),
         "up_next": [song_json(song) for song in view.up_next],
         "coming_up": [item_json(item) for item in view.coming_up],

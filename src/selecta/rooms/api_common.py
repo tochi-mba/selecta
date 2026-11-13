@@ -114,6 +114,7 @@ def item_json(item: UpcomingItem) -> dict[str, Any]:
         "nickname": item.nickname,
         "voted": item.voted,
         "mine": item.mine,
+        "stage": item.stage,
     }
 
 
@@ -125,6 +126,7 @@ def mine_json(item: MyRequest) -> dict[str, Any]:
         "text": item.text,
         "votes": item.votes,
         "minutes_until": item.minutes_until,
+        "stage": item.stage,
     }
 
 
