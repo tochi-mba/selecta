@@ -1,78 +1,129 @@
 {
   "area": "Make a Mix",
   "flags": {
-    "mixes.intent_language": {
-      "label": "Clear mix intent and setting scope",
-      "about": "Explains quick listening versus building a mix to keep, which settings persist, and what plays next without moving existing controls.",
-      "surfaces": ["mixes"],
-      "words": ["What would you like to do?", "Quick listen", "Build a mix to keep"]
-    },
     "mixes.ideas": {
       "label": "Mix ideas",
       "about": "Ready-made mixes under the moment, the mood, the sound and the journey.",
-      "surfaces": ["mixes"],
-      "words": ["Choose another feeling"]
+      "surfaces": [
+        "mixes"
+      ],
+      "words": [
+        "Choose another feeling"
+      ]
     },
     "mixes.genre_variants": {
       "label": "Single-genre journeys",
       "about": "Each journey drawn from one genre only, such as Afrobeats · Slow burn. Without it, journeys draw from the whole library.",
-      "requires": ["mixes.ideas"],
-      "surfaces": ["mixes"]
+      "requires": [
+        "mixes.ideas"
+      ],
+      "surfaces": [
+        "mixes"
+      ]
     },
     "mixes.seasonal": {
       "label": "Seasonal mixes",
       "about": "The Christmas mix, once there are enough Christmas songs. They stay out of every other mix either way.",
-      "requires": ["mixes.ideas"],
-      "surfaces": ["mixes"],
-      "words": ["Christmas"]
+      "requires": [
+        "mixes.ideas"
+      ],
+      "surfaces": [
+        "mixes"
+      ],
+      "words": [
+        "Christmas"
+      ]
     },
     "mixes.wordplay_showcase": {
       "label": "Wordplay showcase",
       "about": "A mix built around word hand-offs.",
-      "requires": ["mixes.ideas", "lyrics.word_timing"],
-      "surfaces": ["mixes"],
-      "words": ["Wordplay showcase"]
+      "requires": [
+        "mixes.ideas",
+        "lyrics.word_timing"
+      ],
+      "surfaces": [
+        "mixes"
+      ],
+      "words": [
+        "Wordplay showcase"
+      ]
     },
     "mixes.shaping": {
       "label": "Shape this mix",
       "about": "The optional setup that shapes the next mix before it's built.",
-      "routes": ["POST /api/steer"],
-      "surfaces": ["mixes", "overlay.shaping"],
-      "words": ["Shape this mix"]
+      "routes": [
+        "POST /api/steer"
+      ],
+      "surfaces": [
+        "mixes",
+        "overlay.shaping"
+      ],
+      "words": [
+        "Shape this mix"
+      ]
     },
     "mixes.shaping.feel": {
       "label": "Transition feel",
       "about": "Balanced, seamless, punchy or wordplay.",
-      "requires": ["mixes.shaping"],
-      "surfaces": ["overlay.shaping"],
-      "words": ["Transition feel"]
+      "requires": [
+        "mixes.shaping"
+      ],
+      "surfaces": [
+        "overlay.shaping"
+      ],
+      "words": [
+        "Transition feel"
+      ]
     },
     "mixes.shaping.energy_arc": {
       "label": "Energy arc",
       "about": "A five-stop energy curve, drawn or set with sliders.",
-      "requires": ["mixes.shaping"],
-      "surfaces": ["overlay.shaping"],
-      "words": ["Build to a peak"]
+      "requires": [
+        "mixes.shaping"
+      ],
+      "surfaces": [
+        "overlay.shaping"
+      ],
+      "words": [
+        "Build to a peak"
+      ]
     },
     "mixes.shaping.destination": {
       "label": "Take me to",
       "about": "End the mix on a song you choose.",
-      "requires": ["mixes.shaping"],
-      "surfaces": ["overlay.shaping"],
-      "words": ["Take me to"]
+      "requires": [
+        "mixes.shaping"
+      ],
+      "surfaces": [
+        "overlay.shaping"
+      ],
+      "words": [
+        "Take me to"
+      ]
     },
     "mixes.shaping.stem_moves": {
       "label": "Stem move steering",
       "about": "Never, Sometimes or Often for moves that need separated stems.",
-      "requires": ["mixes.shaping", "stems"],
-      "surfaces": ["overlay.shaping"],
-      "words": ["Stem-assisted moves"]
+      "requires": [
+        "mixes.shaping",
+        "stems"
+      ],
+      "surfaces": [
+        "overlay.shaping"
+      ],
+      "words": [
+        "Stem-assisted moves"
+      ]
     },
     "mixes.shaping.remember_length": {
       "label": "Remember mix length",
       "about": "The chosen length (30 min, 1 hour or 2 hours) is kept in this browser for the next visit, like the other shaping choices.",
-      "requires": ["mixes.shaping"],
-      "surfaces": ["mixes"]
+      "requires": [
+        "mixes.shaping"
+      ],
+      "surfaces": [
+        "mixes"
+      ]
     }
   }
 }
