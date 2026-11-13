@@ -1,13 +1,14 @@
 import { useEffect, useState, type KeyboardEvent } from 'react';
 import type { Api } from '../api';
 import { useLocalFirstControl } from './useLocalFirstControl';
+import type { LocalControlAdapter } from './adapter';
 import {
   audibleTruth, isFresh, TELEMETRY_FRESH_MS, verifiedCount, type CommandKind,
 } from './contracts';
 import './localFirstPlayer.css';
 
-export function LocalFirstPlayer({ api, workspaceId, actorId }: { api: Api; workspaceId: string; actorId: string }) {
-  const control = useLocalFirstControl({ api, workspaceId, actorId });
+export function LocalFirstPlayer({ api, workspaceId, actorId, adapter }: { api: Api; workspaceId: string; actorId: string; adapter?: LocalControlAdapter }) {
+  const control = useLocalFirstControl({ api, workspaceId, actorId, adapter });
   const { here, speaker, session, readiness, blocked, pending, error, notice } = control;
   const [controlling, setControlling] = useState(false);
   const [showTakeover, setShowTakeover] = useState(false);
