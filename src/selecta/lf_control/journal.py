@@ -1,12 +1,14 @@
 """Bounded SQLite command journal and metadata-only offline event reconciliation.
 
 Cloud and each engine use separate database files. Neither an ACK nor queue delivery is
-proof of playback; only a locally verified execution report can advance to 'applied'.
+proof of playback; only a locally verified execution report can advance to `applied`.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
@@ -54,7 +56,7 @@ class Event:
 
 
 def _event_payload(kind: str, raw: Mapping[str, Any]) -> dict[str, Any]:
-    if kind not in EVENT_FIELDS or type(raw) is not dict or set(raw) != EVENT_FIELDS[kind]:
+    if type(kind) is not str or kind not in EVENT_FIELDS or type(raw) is not dict or set(raw) != EVENT_FIELDS[kind]:
         raise ControlError("unsafe_event")
     p = dict(raw)
     if kind == "command_result":
@@ -117,6 +119,11 @@ class ControlJournal:
                     last_sequence INTEGER NOT NULL,
                     PRIMARY KEY(workspace, device, generation)
                 );
+                CREATE TABLE IF NOT EXISTS lf_command_reports (
+                    workspace TEXT NOT NULL, device TEXT NOT NULL, operation TEXT NOT NULL,
+                    event_id TEXT NOT NULL,
+                    PRIMARY KEY(workspace, device, operation)
+                );
                 CREATE TABLE IF NOT EXISTS lf_inbox (
                     workspace TEXT NOT NULL, device TEXT NOT NULL, generation INTEGER NOT NULL,
                     sequence INTEGER NOT NULL, event_id TEXT NOT NULL, kind TEXT NOT NULL,
@@ -128,6 +135,12 @@ class ControlJournal:
                     workspace TEXT NOT NULL, device TEXT NOT NULL, generation INTEGER NOT NULL,
                     applied_sequence INTEGER NOT NULL,
                     PRIMARY KEY(workspace, device, generation)
+                );
+                CREATE TABLE IF NOT EXISTS lf_inbox_receipts (
+                    workspace TEXT NOT NULL, device TEXT NOT NULL, generation INTEGER NOT NULL,
+                    sequence INTEGER NOT NULL, event_id TEXT NOT NULL, digest TEXT NOT NULL,
+                    PRIMARY KEY(workspace, device, generation, sequence),
+                    UNIQUE(workspace, device, event_id)
                 );
             """)
 
@@ -192,6 +205,8 @@ class ControlJournal:
             old = row["state"]
             if old == state:
                 return CommandRecord(operation, workspace, device, old, row["digest"], row["updated"])
+            if old == "applied" and state in {"rejected", "conflicted", "superseded", "expired"}:
+                raise ControlError("invalid_transition")
             if old in TERMINAL or (state not in NEXT.get(old, set()) and state not in
                                    {"rejected", "conflicted", "superseded", "expired"}):
                 raise ControlError("invalid_transition")
@@ -326,6 +341,51 @@ class ControlJournal:
             db.commit()
             return True
 
+    def append_generated_event(self, workspace: str, device: str, generation: int,
+                               kind: str, payload: dict[str, Any], *, now: float,
+                               report_operation: str | None = None) -> Event | None:
+        """Allocate event sequence and persist it atomically for concurrent local controllers."""
+        _id(workspace)
+        _id(device)
+        _integer(generation)
+        if report_operation is not None:
+            _id(report_operation)
+        encoded = json.dumps(_event_payload(kind, payload), sort_keys=True, separators=(",", ":"))
+        with _db(self.path) as db:
+            db.execute("BEGIN IMMEDIATE")
+            if report_operation is not None:
+                old = db.execute("SELECT event_id FROM lf_command_reports WHERE workspace=? "
+                                 "AND device=? AND operation=?",
+                                 (workspace, device, report_operation)).fetchone()
+                if old:
+                    prior = db.execute("SELECT * FROM lf_events WHERE workspace=? AND device=? "
+                                       "AND event_id=?", (workspace, device, old[0])).fetchone()
+                    # After server ACK or compaction, do not allocate another report.
+                    if prior is None or prior["acknowledged"] is not None:
+                        return None
+                    return Event(prior["event_id"], workspace, device, prior["generation"],
+                                 prior["sequence"], prior["kind"],
+                                 json.loads(prior["payload"]), prior["recorded"])
+            count = db.execute("SELECT count(*) FROM lf_events WHERE workspace=? AND device=? "
+                               "AND acknowledged IS NULL", (workspace, device)).fetchone()[0]
+            if count >= self.limit:
+                raise ControlError("outbox_full")
+            row = db.execute("SELECT last_sequence FROM lf_event_fences WHERE workspace=? "
+                             "AND device=? AND generation=?", (workspace, device, generation)).fetchone()
+            sequence = (row[0] if row else 0) + 1
+            event_id = uuid.uuid4().hex
+            db.execute("INSERT INTO lf_events VALUES(?,?,?,?,?,?,?,?,NULL)",
+                       (workspace, device, event_id, generation, sequence, kind, encoded, now))
+            db.execute("INSERT INTO lf_event_fences VALUES(?,?,?,?) "
+                       "ON CONFLICT(workspace,device,generation) DO UPDATE SET "
+                       "last_sequence=excluded.last_sequence",
+                       (workspace, device, generation, sequence))
+            if report_operation is not None:
+                db.execute("INSERT INTO lf_command_reports VALUES(?,?,?,?)",
+                           (workspace, device, report_operation, event_id))
+            db.commit()
+            return Event(event_id, workspace, device, generation, sequence, kind, payload, now)
+
     def pending_events(self, workspace: str, device: str, *, limit: int = 100) -> list[Event]:
         if type(limit) is not int or not 1 <= limit <= 500:
             raise ControlError("invalid_limit")
@@ -347,7 +407,7 @@ class ControlJournal:
             return result.rowcount == 1
 
     def ingest_remote(self, event: Event) -> tuple[str, ...]:
-        """Cloud stages reordered events; returns only contiguous IDs to process."""
+        """Cloud stages reordered events; returns *only* newly contiguous IDs for processing."""
         _id(event.event_id)
         _id(event.workspace_id)
         _id(event.device_id)
@@ -363,6 +423,16 @@ class ControlJournal:
                               event.device_generation, event.sequence)).fetchone()
             if old and (old["event_id"] != event.event_id or old["payload"] != encoded or old["kind"] != event.kind):
                 raise ControlError("event_conflict")
+            fence = db.execute("SELECT applied_sequence FROM lf_inbox_fences WHERE workspace=? "
+                               "AND device=? AND generation=?",
+                               (event.workspace_id, event.device_id,
+                                event.device_generation)).fetchone()
+            cursor = fence[0] if fence else 0
+            # A compacted receipt is replay-safe only if BOTH ID and content still match.
+            # Outside the bounded receipt window we refuse a repeat, never blindly ACK it.
+            if event.sequence <= cursor:
+                self._verify_receipt(db, event)
+                return ()
             if not old:
                 unprocessed = db.execute("SELECT count(*) FROM lf_inbox WHERE workspace=? AND "
                                          "device=? AND applied=0",
@@ -372,10 +442,6 @@ class ControlJournal:
                 db.execute("INSERT INTO lf_inbox VALUES(?,?,?,?,?,?,?,0)",
                            (event.workspace_id, event.device_id, event.device_generation,
                             event.sequence, event.event_id, event.kind, encoded))
-            fence = db.execute("SELECT applied_sequence FROM lf_inbox_fences WHERE workspace=? "
-                               "AND device=? AND generation=?",
-                               (event.workspace_id, event.device_id, event.device_generation)).fetchone()
-            cursor = fence[0] if fence else 0
             newly: list[str] = []
             while True:
                 row = db.execute("SELECT event_id FROM lf_inbox WHERE workspace=? AND device=? "
@@ -399,12 +465,53 @@ class ControlJournal:
                        (before,))
             db.commit()
 
+    @staticmethod
+    def _verify_receipt(db: sqlite3.Connection, event: Event) -> None:
+        row = db.execute("SELECT event_id,digest FROM lf_inbox_receipts WHERE workspace=? "
+                         "AND device=? AND generation=? AND sequence=?",
+                         (event.workspace_id, event.device_id, event.device_generation,
+                          event.sequence)).fetchone()
+        if row is None:
+            raise ControlError("event_replay_unverifiable")
+        digest = hashlib.sha256((event.kind + ":" + json.dumps(
+            _event_payload(event.kind, event.payload), sort_keys=True,
+            separators=(",", ":"))).encode("utf-8")).hexdigest()
+        if row["event_id"] != event.event_id or row["digest"] != digest:
+            raise ControlError("event_conflict")
+
+    def compact_inbox(self, workspace: str, device: str, generation: int) -> int:
+        """Prune processed cloud events without forgetting their durable high-water fence."""
+        with _db(self.path) as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT applied_sequence FROM lf_inbox_fences WHERE workspace=? "
+                             "AND device=? AND generation=?",
+                             (workspace, device, generation)).fetchone()
+            cursor = row[0] if row else 0
+            deleted = db.execute("DELETE FROM lf_inbox WHERE workspace=? AND device=? "
+                                 "AND generation=? AND applied=1 AND sequence<=?",
+                                 (workspace, device, generation, cursor)).rowcount
+            db.commit()
+            return deleted
+
+    def inbox_processed(self, workspace: str, device: str, event: Event) -> bool:
+        if workspace != event.workspace_id or device != event.device_id:
+            raise ControlError("scope_denied")
+        with _db(self.path) as db:
+            row = db.execute("SELECT applied_sequence FROM lf_inbox_fences WHERE workspace=? "
+                             "AND device=? AND generation=?",
+                             (workspace, device, event.device_generation)).fetchone()
+            if row is None or event.sequence > row[0]:
+                return False
+            self._verify_receipt(db, event)
+            return True
+
     def inbox_event(self, workspace: str, device: str, event_id: str) -> Event | None:
         with _db(self.path) as db:
-            row = db.execute("SELECT * FROM lf_inbox WHERE workspace=? AND device=? AND event_id=?",
-                             (workspace, device, event_id)).fetchone()
+            row = db.execute("SELECT * FROM lf_inbox WHERE workspace=? AND device=? AND event_id=? "
+                             "", (workspace, device, event_id)).fetchone()
         if row is None:
             return None
+        # Kind/recorded time are not needed by the idempotent cloud reducer; payload is typed.
         data = json.loads(row["payload"])
         kind = row["kind"]
         return Event(event_id, workspace, device, row["generation"],
@@ -428,6 +535,14 @@ class ControlJournal:
             current = fence[0] if fence else 0
             if row["sequence"] != current + 1:
                 raise ControlError("event_out_of_order")
+            digest = hashlib.sha256((row["kind"] + ":" + row["payload"]).encode(
+                "utf-8")).hexdigest()
+            db.execute("INSERT INTO lf_inbox_receipts VALUES(?,?,?,?,?,?)",
+                       (workspace, device, generation, row["sequence"], event_id, digest))
+            # Keep only the latest bounded receipt window. Older replays are refused, not ACKed.
+            db.execute("DELETE FROM lf_inbox_receipts WHERE workspace=? AND device=? "
+                       "AND generation=? AND sequence<=?",
+                       (workspace, device, generation, row["sequence"] - self.limit))
             db.execute("UPDATE lf_inbox SET applied=1 WHERE workspace=? AND device=? "
                        "AND generation=? AND event_id=?", (workspace, device, generation, event_id))
             db.execute("INSERT INTO lf_inbox_fences VALUES(?,?,?,?) "

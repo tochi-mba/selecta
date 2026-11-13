@@ -8,7 +8,7 @@ import hashlib
 import hmac
 import json
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any, Mapping
 
 VERSION = 1
@@ -17,7 +17,7 @@ MAX_SKEW = 30.0
 EPHEMERAL = frozenset({"play", "pause", "skip", "seek"})
 DURABLE = frozenset({"set_volume", "set_schedule", "set_policy", "steer", "reorder", "approve_request"})
 COMMANDS = EPHEMERAL | DURABLE
-IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:\-]{0,127}$")
 ROLES = frozenset({"owner", "admin", "dj", "staff", "viewer"})
 _ALLOWED = frozenset({
     "schema_version", "operation_id", "actor_id", "actor_role", "workspace_id", "zone_id",
@@ -75,10 +75,10 @@ def _bad_constant(_: str) -> None:
     raise ControlError("invalid_number")
 
 
-def strict_json(raw: bytes | str) -> Mapping[str, Any]:
+def strict_json(raw: bytes | str, *, max_bytes: int = MAX_BYTES) -> Mapping[str, Any]:
     if isinstance(raw, str):
         raw = raw.encode("utf-8")
-    if len(raw) > MAX_BYTES:
+    if len(raw) > max_bytes:
         raise ControlError("message_too_large")
     try:
         doc = json.loads(raw, object_pairs_hook=_unique, parse_constant=_bad_constant)
@@ -238,6 +238,9 @@ class LocalScope:
     minimum_policy_version: int
     generation: int
     recipe_revision: str | None
+    # Locally cached, authenticated role snapshot; a signed command's actor_role alone
+    # is not proof that the actor is currently allowed to operate this zone.
+    authorised_actors: Mapping[str, str] = field(default_factory=dict)
     revoked: bool = False
 
 
@@ -253,5 +256,7 @@ def authorise_local(envelope: CommandEnvelope, scope: LocalScope) -> None:
         raise ControlError("stale_generation")
     if envelope.expected_recipe_revision != scope.recipe_revision:
         raise ControlError("stale_recipe")
+    if scope.authorised_actors.get(envelope.actor_id) != envelope.actor_role:
+        raise ControlError("actor_revoked_or_changed")
     authorise_actor(envelope, ActorScope(envelope.actor_id, scope.workspace_id,
                                         envelope.actor_role, scope.zones))
