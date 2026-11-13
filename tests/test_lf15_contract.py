@@ -6,7 +6,12 @@ import json
 import pytest
 
 from selecta.lf_ai import (
-    BoundaryError, PlanError, parse_model_plan, prompt_for, safe_catalogue, safe_user_text,
+    BoundaryError,
+    PlanError,
+    parse_model_plan,
+    prompt_for,
+    safe_catalogue,
+    safe_user_text,
 )
 
 
