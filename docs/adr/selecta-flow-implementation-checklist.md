@@ -1,6 +1,6 @@
 # Selecta / Flow - complete artistic UI/UX implementation checklist: 400 SF tasks
 
-**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 400 tasks: 266 Implemented, 15 In progress, 69 Not started, 46 Needs a person, 4 Superseded. 134 name a person-only step. 263 ticked. 0 independently Verified.
+**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 400 tasks: 267 Implemented, 15 In progress, 68 Not started, 46 Needs a person, 4 Superseded. 134 name a person-only step. 263 ticked. 0 independently Verified.
 
 **2026-11-12 status:** **Decision:** 50 Accepted ADRs. **Implementation:** 263 Implemented, 18 In progress, 69 Not started, 46 Needs a person, 4 Superseded (as recounted in the line above); **Independent verification:** 0 Verified. Work is on branch `feat/finish-checklists-2`.
 

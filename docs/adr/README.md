@@ -13,14 +13,14 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 | [Experience-first (EX)](selecta-experience-implementation-checklist.md) | 105 | 102 | 0 | 0 | 0 | 3 | 59 | 51 |
 | [Microinteraction (MI)](selecta-microinteraction-implementation-checklist.md) | 240 | 213 | 27 | 0 | 0 | 0 | 213 | 0 |
 | [Creative interface (CI)](selecta-creative-interface-implementation-checklist.md) | 140 | 108 | 1 | 0 | 31 | 0 | 108 | 0 |
-| [Flow (SF)](selecta-flow-implementation-checklist.md) | 400 | 266 | 15 | 69 | 46 | 4 | 263 | 0 |
+| [Flow (SF)](selecta-flow-implementation-checklist.md) | 400 | 267 | 15 | 68 | 46 | 4 | 263 | 0 |
 | [Gap polish (GP)](selecta-gap-polish-implementation-checklist.md) | 128 | 111 | 0 | 0 | 17 | 0 | 111 | 0 |
 | [Final polish (FP)](selecta-final-polish-implementation-checklist.md) | 64 | 53 | 11 | 0 | 0 | 0 | 0 | 0 |
 | [Measured micro-polish (MP)](selecta-measured-micro-polish-implementation-checklist.md) | 224 | 194 | 29 | 1 | 0 | 0 | 194 | 0 |
 | [Library + Lucy (LX)](selecta-library-lucy-experience-implementation-checklist.md) | 208 | 179 | 29 | 0 | 0 | 0 | 147 | 0 |
 | [Unified finish (UF)](selecta-unified-finish-implementation-checklist.md) | 192 | 192 | 0 | 0 | 0 | 0 | 123 | 0 |
 | [Selecta Cloud (SC)](selecta-cloud-implementation-checklist.md) | 136 | 93 | 38 | 5 | 0 | 0 | 91 | 0 |
-| [selecta-autopilot-implementation-checklist.md](selecta-autopilot-implementation-checklist.md) | 120 | 0 | 0 | 120 | 0 | 0 | 0 | 0 |
+| [selecta-autopilot-implementation-checklist.md](selecta-autopilot-implementation-checklist.md) | 120 | 10 | 0 | 110 | 0 | 0 | 0 | 0 |
 | [selecta-business-implementation-checklist.md](selecta-business-implementation-checklist.md) | 179 | 0 | 0 | 179 | 0 | 0 | 0 | 0 |
 <!-- checklist-summary:end -->
 

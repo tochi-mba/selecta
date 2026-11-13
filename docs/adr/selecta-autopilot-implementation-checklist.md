@@ -1,6 +1,6 @@
 # Selecta Autopilot and UX integration implementation checklist (ADR-0417 to ADR-0440)
 
-**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 120 tasks: 0 Implemented, 0 In progress, 120 Not started, 0 Needs a person, 0 Superseded. 0 name a person-only step. 0 ticked. 0 independently Verified.
+**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 120 tasks: 10 Implemented, 0 In progress, 110 Not started, 0 Needs a person, 0 Superseded. 10 name a person-only step. 0 ticked. 0 independently Verified.
 
 **Status:** 24 Proposed ADRs; 120 Not started tasks, zero independently Verified. This docs-only proposal does not touch app/audio/source functionality or older ADR statuses. Tick a task only with actual implementing SHA and passing Evidence: tests, keeping separate independent reviewer evidence.
 
