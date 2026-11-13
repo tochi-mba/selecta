@@ -1,4 +1,5 @@
 """LF-0463 safety and failure-injection tests; no commercial audio needed."""
+
 from __future__ import annotations
 
 from dataclasses import replace
@@ -108,6 +109,22 @@ def test_real_output_deadlines_protect_speaker_and_preempt_background(tmp_path):
     resumed = gate.reserve(job(), "resumed")
     assert resumed is not None
     resumed.close()
+
+
+def test_imminent_transition_can_use_last_spare_core(tmp_path):
+    gate = governor(tmp_path, resources(logical_cores=2))
+    gate.observe_zone(ZoneDemand("output-a", True, deadline_at=10**12))
+    assert gate.reserve(job(), "background") is None
+    seam = gate.reserve(job("seam.render", 0), "urgent-prep")
+    assert seam is not None
+    seam.close()
+
+
+def test_one_core_with_live_audio_blocks_background_and_imminent_dsp(tmp_path):
+    gate = governor(tmp_path, resources(logical_cores=1))
+    gate.observe_zone(ZoneDemand("output-a", True, deadline_at=10**12))
+    assert gate.reserve(job(), "background") is None
+    assert gate.reserve(job("seam.render", 0), "urgent-prep") is None
 
 
 def test_five_active_zones_reserve_cpu_and_bound_workers(tmp_path):
@@ -260,3 +277,5 @@ def test_export_dependencies_remain_durable(tmp_path):
     )).job
     assert store.job(export.id).state == JobState.WAITING_DEPS
     assert store.job(seam.id).state == JobState.QUEUED
+    store.cancel("local", seam.id)
+    assert store.job(export.id).state == JobState.BLOCKED
