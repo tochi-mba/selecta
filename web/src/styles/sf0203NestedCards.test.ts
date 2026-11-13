@@ -35,6 +35,31 @@ const drawn = (body: string, property: string) => {
   return values.length ? !/^(none|0|0px|transparent|unset|initial)\b/.test(values[values.length - 1]) : undefined;
 };
 
+/** Split CSS selector lists only at top-level commas, not inside :is() or :where(). */
+function splitSelectors(text: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let quote: string | null = null;
+  let start = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (quote) {
+      if (char === quote && text[i - 1] !== '\\') quote = null;
+    } else if (char === "'" || char === '"') {
+      quote = char;
+    } else if (char === '(' || char === '[') {
+      depth += 1;
+    } else if (char === ')' || char === ']') {
+      depth = Math.max(0, depth - 1);
+    } else if (char === ',' && depth === 0) {
+      out.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  out.push(text.slice(start));
+  return out;
+}
+
 /** Classes whose own rules make a card surface: rounded, bordered, filled and padded. */
 function cardClasses(): Set<string> {
   const traits = new Map<string, Record<string, boolean>>();
@@ -48,7 +73,7 @@ function cardClasses(): Set<string> {
         fill: drawn(body, 'background(?:-color)?'),
         padding: drawn(body, 'padding'),
       };
-      for (const selector of match[1].split(',')) {
+      for (const selector of splitSelectors(match[1])) {
         const own = selector.trim().match(/^\.([\w-]+)$/);
         if (!own) continue;
         const entry = traits.get(own[1]) ?? {};
@@ -156,6 +181,10 @@ const nestings = (cards: Set<string>) => {
  */
 const ALLOWED: Record<string, string> = {
   'panel > card': 'ControlGallery is the dev-only specimen sheet; each specimen card sits on the gallery panel on purpose (not a product surface).',
+  'panel > problem': 'Storage, folder and specimen panels must show an actionable failure within their own context instead of hiding it elsewhere.',
+  'adder > problem': 'The add-song form displays its recoverable input error immediately beside the control the user can fix.',
+  'lucy-approve > problem': 'Lucy approvals surface refusal and retry guidance beside the decision without losing the pending proposal.',
+  'requests > problem': 'Song search failures appear beside the request field and its retry action, rather than in a distant page banner.',
 };
 
 describe('nested cards (SF-0203-04)', () => {
@@ -194,7 +223,7 @@ describe('nested cards (SF-0203-04)', () => {
       for (const match of text.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
         const body = match[2];
         if (!(drawn(body, 'border-radius') && drawn(body, 'border') && drawn(body, 'background(?:-color)?'))) continue;
-        for (const selector of match[1].split(',')) {
+        for (const selector of splitSelectors(match[1])) {
           const parts = selector.trim().split(/\s*>\s*|\s+/).filter(Boolean);
           if (parts.length < 2) continue;
           const last = parts[parts.length - 1].match(/^\.([\w-]+)/)?.[1];
