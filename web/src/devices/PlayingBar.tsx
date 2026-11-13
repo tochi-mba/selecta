@@ -26,6 +26,7 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
   useEffect(() => { if (audio.current) setSpeaker(speakerFor(audio.current, source)); }, [source, speakerFor]);
   const pb = usePlaybackDevice({ api, workspaceId, speaker, remoteControl });
   const [asking, setAsking] = useState(false);
+  const [observedOwner, setObservedOwner] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [, tick] = useState(0);
   useEffect(() => { const t = window.setInterval(() => tick((n) => n + 1), 1000); return () => window.clearInterval(t); }, []);
@@ -49,7 +50,9 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
   const pressPlayHere = async () => {
     if (asking) {
       setAsking(false);
-      await pb.playHere();
+      // Transfer only the lease the listener actually confirmed. A third device may
+      // have become the speaker while the dialog was open.
+      await pb.playHere(observedOwner);
       return;
     }
     // The other browser may have acquired the lease since our last poll. A click must
@@ -58,8 +61,14 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
     try {
       const latest = await pb.refreshSession();
       if (!latest) return; // The hook reports a connectivity or authorization problem.
-      if (latest.ask_before_playing_here) { setAsking(true); return; }
-      await pb.playHere();
+      if (latest.ask_before_playing_here) {
+        setObservedOwner(latest.speaker_device_id);
+        setAsking(true);
+        return;
+      }
+      // No remote owner was observed; reject an unexpected live owner under the
+      // backend's session lock instead of skipping the confirmation.
+      await pb.playHere(null);
     } finally {
       setChecking(false);
     }

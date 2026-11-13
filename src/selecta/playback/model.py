@@ -70,6 +70,12 @@ class CommandUnavailable(PlaybackError):
     code = "command_unavailable"
 
 
+class OwnershipChanged(PlaybackError):
+    """An observed playback owner changed before a confirmed transfer could be applied."""
+
+    code = "playback_owner_changed"
+
+
 class IdempotencyConflict(PlaybackError):
     """The same idempotency key came back with a different command."""
 

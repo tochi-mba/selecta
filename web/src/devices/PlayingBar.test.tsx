@@ -19,11 +19,18 @@ const elsewhere: SessionView = {
 };
 
 function fakeApi(warnings: { code: string; text: string }[]): Api {
+  let onPhone = false;
   return (async (path: string) => {
     if (path === '/devices') return { device: { id: 'phone', name: 'Safari on iPhone', kind: 'phone', signed_in: true, this_device: true, poor_speaker: warnings.length > 0, last_seen_at: 0, warnings }, notice: null };
-    if (path.startsWith('/playback/session')) return elsewhere;
+    if (path.startsWith('/playback/session')) return onPhone ? {
+      ...elsewhere, session: { ...session, active_device_id: 'phone', seq: 4 },
+      speaker: 'here', speaker_device_id: 'phone', ask_before_playing_here: false,
+    } : elsewhere;
     if (path === '/playback/reconnect') return { action: 'stop_moved', session, message: null };
-    if (path === '/playback/take-over') return { session: { ...session, active_device_id: 'phone', seq: 4 }, previous_device: null, server_time: 100 };
+    if (path === '/playback/take-over') {
+      onPhone = true;
+      return { session: { ...session, active_device_id: 'phone', seq: 4 }, previous_device: null, server_time: 100 };
+    }
     throw new Error(`unexpected ${path}`);
   }) as Api;
 }

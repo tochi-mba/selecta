@@ -219,18 +219,32 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
 
   useEffect(() => () => { speaker?.stop(0); speaker?.dispose?.(); wake.current?.release(); }, [speaker]);
 
-  const playHere = useCallback(async () => {
+  const playHere = useCallback(async (observedOwnerId?: string | null) => {
     if (!deviceId || !speaker || claiming.current) return;
     claiming.current = true;
     setStarting(true); setMessage('Starting here...'); setError('');
     try {
       const sentAt = Date.now();
       const moved = await api<{ session: SessionState; previous_device: { name: string } | null; server_time: number }>('/playback/take-over', {
-        method: 'POST', body: JSON.stringify({ device_id: deviceId, start_playing: true }),
+        method: 'POST', body: JSON.stringify({
+          device_id: deviceId, start_playing: true,
+          ...(observedOwnerId === undefined ? {} : {
+            require_observed_owner: true, observed_owner_id: observedOwnerId,
+          }),
+        }),
       }, workspaceId);
       learnClock(sentAt, moved.server_time);
       if (moved.previous_device) await new Promise((resolve) => window.setTimeout(resolve, START_DELAY_MS));
-      await startSpeaking(moved.session);
+      // A rapid second takeover (or a reload) can happen during the old speaker's
+      // fade. Verify current ownership before producing audio: an old response does
+      // not grant permission to start after a newer transfer.
+      const current = await poll(true);
+      if (!current || current.speaker !== 'here' || !current.session) {
+        setError('Playback moved to another device or could not be verified. Check the speaker before trying again.');
+        setMessage('');
+        return;
+      }
+      await startSpeaking(current.session);
       setMessage('');
     } catch (problem) {
       setError((problem as Error).message);

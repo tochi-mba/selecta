@@ -114,6 +114,35 @@ def test_play_here_moves_the_lease_and_names_the_old_speaker(party):
     assert "playback.moved" in topics and "playback.state" in topics
 
 
+def test_cloud_browser_takeover_rejects_an_unconfirmed_or_changed_live_owner(party):
+    client = party.client
+    laptop = party.register(ALICE, "Laptop")["device"]["id"]
+    phone = party.register(ALICE, "Phone")["device"]["id"]
+    tablet = party.register(ALICE, "Tablet")["device"]["id"]
+    client.post("/api/playback/take-over", headers=auth(ALICE), json={"device_id": laptop})
+    unconfirmed = client.post(
+        "/api/playback/take-over", headers=auth(ALICE),
+        json={"device_id": phone, "require_observed_owner": True},
+    )
+    assert unconfirmed.status_code == 409
+    assert unconfirmed.json()["detail"]["code"] == "playback_owner_changed"
+    confirmed = client.post(
+        "/api/playback/take-over", headers=auth(ALICE),
+        json={"device_id": phone, "require_observed_owner": True, "observed_owner_id": laptop},
+    )
+    assert confirmed.status_code == 200
+    assert confirmed.json()["session"]["active_device_id"] == phone
+    stale = client.post(
+        "/api/playback/take-over", headers=auth(ALICE),
+        json={"device_id": tablet, "require_observed_owner": True, "observed_owner_id": laptop},
+    )
+    assert stale.status_code == 409
+    assert stale.json()["detail"]["code"] == "playback_owner_changed"
+    assert client.get(
+        f"/api/playback/session?device_id={phone}", headers=auth(ALICE)
+    ).json()["speaker"] == "here"
+
+
 def test_heartbeat_renews_for_the_speaker_and_records_its_position(party):
     client = party.client
     device = party.speaker_on()

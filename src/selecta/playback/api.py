@@ -34,6 +34,7 @@ from selecta.playback.model import (
     DeviceSignedOut,
     IdempotencyConflict,
     InvalidCommand,
+    OwnershipChanged,
     PlaybackError,
     PlayState,
     Position,
@@ -80,6 +81,8 @@ class HeartbeatBody(DeviceBody):
 
 class TakeOverBody(DeviceBody):
     start_playing: bool = True
+    require_observed_owner: bool = False
+    observed_owner_id: str | None = Field(default=None, max_length=64)
 
 
 class CommandBody(DeviceBody):
@@ -163,7 +166,7 @@ def install_routes(
                 status_code=422,
                 detail={"code": error.code, "message": str(error)},
             )
-        if isinstance(error, (CommandUnavailable, IdempotencyConflict)):
+        if isinstance(error, (CommandUnavailable, IdempotencyConflict, OwnershipChanged)):
             return HTTPException(
                 status_code=409,
                 detail={"code": error.code, "message": str(error)},
@@ -318,7 +321,11 @@ def install_routes(
         here = mine(found, body.device_id, request)
         try:
             result = session.take_over(
-                engine, found.workspace.id, here, start_playing=body.start_playing, events=events
+                engine, found.workspace.id, here,
+                start_playing=body.start_playing,
+                require_observed_owner=body.require_observed_owner,
+                observed_owner_id=body.observed_owner_id,
+                events=events
             )
         except PlaybackError as error:
             raise refused(error) from error

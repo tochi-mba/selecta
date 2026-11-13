@@ -21,6 +21,7 @@ from selecta.playback.model import (
     LEASE_SECONDS,
     CommandUnavailable,
     DeviceSignedOut,
+    OwnershipChanged,
     PlayState,
     Position,
     Session,
@@ -222,6 +223,33 @@ def test_play_here_moves_the_lease_bumps_the_sequence_and_names_the_previous_spe
     assert events.kinds() == [ports.MOVED, ports.STATE]
     assert events.of(ports.MOVED)[0]["device_id"] == laptop.id
     assert _beat(engine, laptop).outcome is HeartbeatOutcome.REFUSED
+
+
+def test_browser_takeover_requires_the_owner_the_person_saw(engine, clock, laptop, phone, tablet):
+    first = session.take_over(engine, WORKSPACE, laptop.id).session
+    # An unconfirmed press cannot silently displace a newly live owner.
+    with pytest.raises(OwnershipChanged):
+        session.take_over(engine, WORKSPACE, phone.id, require_observed_owner=True)
+    assert _current(engine) == first
+
+    # Confirmation authorises the previously observed speaker only.
+    moved = session.take_over(
+        engine, WORKSPACE, phone.id, require_observed_owner=True,
+        observed_owner_id=laptop.id,
+    ).session
+    assert moved.active_device_id == phone.id
+    with pytest.raises(OwnershipChanged):
+        session.take_over(
+            engine, WORKSPACE, tablet.id, require_observed_owner=True,
+            observed_owner_id=laptop.id,
+        )
+    assert _current(engine) == moved
+    # A genuinely expired speaker does not demand an impossible confirmation.
+    clock.advance(LEASE_SECONDS)
+    recovered = session.take_over(
+        engine, WORKSPACE, tablet.id, require_observed_owner=True,
+    ).session
+    assert recovered.active_device_id == tablet.id
 
 
 def test_play_here_on_the_speaker_itself_tells_nobody_it_moved(engine, laptop):

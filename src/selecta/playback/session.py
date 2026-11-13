@@ -34,6 +34,7 @@ from selecta.playback.model import (
     Device,
     IdempotencyConflict,
     InvalidCommand,
+    OwnershipChanged,
     PlayState,
     Position,
     Session,
@@ -215,6 +216,8 @@ def take_over(
     device_id: str,
     *,
     start_playing: bool = True,
+    require_observed_owner: bool = False,
+    observed_owner_id: str | None = None,
     zone_id: str | None = None,
     now: float | None = None,
     events: PlaybackEvents = NO_EVENTS,
@@ -226,7 +229,12 @@ def take_over(
         require_signed_in(conn, workspace_id, device_id)
         touch_device(conn, device_id, now)
         session = lock_session(conn, workspace_id, now, zone_id)
-        return take_over_in(conn, session, device_id, now, events, start_playing=start_playing)
+        return take_over_in(
+            conn, session, device_id, now, events,
+            start_playing=start_playing,
+            require_observed_owner=require_observed_owner,
+            observed_owner_id=observed_owner_id,
+        )
 
 
 def take_over_in(
@@ -237,9 +245,21 @@ def take_over_in(
     events: PlaybackEvents,
     *,
     start_playing: bool = True,
+    require_observed_owner: bool = False,
+    observed_owner_id: str | None = None,
 ) -> TakeOverResult:
     """`take_over` on a locked session."""
     workspace_id = session.workspace_id
+    # The Cloud browser sends the owner it actually displayed to the person. Under the
+    # session row lock, refuse a transfer if somebody else has acquired a live lease
+    # since that observation. Existing non-interactive/zone callers are unchanged.
+    if (
+        require_observed_owner
+        and session.active_device_id != device_id
+        and session.lease_live(now)
+        and session.active_device_id != observed_owner_id
+    ):
+        raise OwnershipChanged("Playback moved to another device. Check the current speaker and confirm again.")
     previous_id = session.active_device_id
     if previous_id == device_id:
         previous_id = None
