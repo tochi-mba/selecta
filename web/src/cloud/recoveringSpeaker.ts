@@ -32,10 +32,15 @@ export function recoveringSpeaker(
   let last: Position | null = null;
   let recovering = false;
   let failedAgain = false;
+  // Invalidate media recovery when the lease is lost or a different song is started.
+  // Otherwise a pending next-song URL may restart audio after stop() has yielded it.
+  let epoch = 0;
+  const invalidate = () => { epoch++; recovering = false; failedAgain = false; };
 
   const label = (index: number) => songName(index) ?? `Song ${index + 1}`;
 
   const recover = async () => {
+    const mine = epoch;
     const at = inner.position() ?? last;
     if (disposed || recovering || !at) return;
     recovering = true;
@@ -50,7 +55,7 @@ export function recoveringSpeaker(
       }
       const next = at.song_index + 1;
       const url = await source(next).catch(() => null);
-      if (disposed) return;
+      if (disposed || mine !== epoch) return;
       if (!url) {
         inner.stop(0);
         last = null;
@@ -60,9 +65,12 @@ export function recoveringSpeaker(
       onProblem(`${label(at.song_index)} could not be played, so SelectaDJ moved to the next song.`);
       await inner.start(next, 0, true);
     } finally {
-      recovering = false;
-      // The fresh link failed while recovery was under way: take the next step now.
-      if (failedAgain && !disposed) { failedAgain = false; void recover(); }
+      // A later explicit start or lease loss owns the element now. Do not alter its
+      // recovery state or retry a song from an earlier ownership generation.
+      if (mine === epoch) {
+        recovering = false;
+        if (failedAgain && !disposed) { failedAgain = false; void recover(); }
+      }
     }
   };
 
@@ -76,10 +84,12 @@ export function recoveringSpeaker(
 
   return {
     async start(songIndex, offsetMs, playing) {
+      invalidate();
+      retried = -1;
       last = { song_index: songIndex, offset_ms: offsetMs, state: playing ? 'playing' : 'paused' };
       await inner.start(songIndex, offsetMs, playing);
     },
-    stop(fadeMs) { last = null; inner.stop(fadeMs); },
+    stop(fadeMs) { invalidate(); last = null; inner.stop(fadeMs); },
     pause() { inner.pause(); },
     resume() { inner.resume(); },
     position() {
@@ -91,6 +101,7 @@ export function recoveringSpeaker(
     dispose() {
       if (disposed) return;
       disposed = true;
+      invalidate();
       audio.removeEventListener('error', onError);
       inner.dispose?.();
     },
