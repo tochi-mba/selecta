@@ -73,6 +73,8 @@ def search(ctx: RoomContext, guest_token: str, query: str, limit: int = 20) -> l
     with transaction(ctx.engine, ref.workspace_id) as conn:
         now = resolve_now(conn, None)
         room = live_room(conn, ref.workspace_id, ref.room_id)
+        if ctx.local_first is not None and room.ends_at <= now:
+            raise RoomError(Refusal.ROOM_ENDED)
         active_guest(conn, room, ref.guest_id, now)
     limit = max(1, min(int(limit), SEARCH_LIMIT_MAX))
     query = (query or "").strip()[:QUERY_MAX]
@@ -107,6 +109,8 @@ def request(
     with transaction(ctx.engine, workspace_id) as conn:
         now = resolve_now(conn, now)
         room = live_room(conn, workspace_id, ref.room_id)
+        if ctx.local_first is not None and room.ends_at <= now:
+            raise RoomError(Refusal.ROOM_ENDED)
         guest = active_guest(conn, room, ref.guest_id, now)
         if room.settings.request_mode is RequestMode.OFF:
             raise RoomError(Refusal.REQUESTS_OFF)
