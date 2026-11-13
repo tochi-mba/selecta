@@ -235,4 +235,7 @@ def fleet_summary(reports: list[EngineReport], *, now: datetime) -> dict[str, ob
         if existing is None or report.received_at > existing.received_at:
             newest[key] = report
     counts = Counter(assess(report, now=now).status.value for report in newest.values())
-    return {"total": len(newest), "health": {status.value: counts[status.value] for status in Health}}
+    return {
+        "total": len(newest),
+        "health": {status.value: counts[status.value] for status in Health},
+    }

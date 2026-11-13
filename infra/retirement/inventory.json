@@ -36,7 +36,8 @@
         "services/worker/models.lock.json"
       ],
       "markers": [
-        "demucs"
+        "beat_this.small0",
+        "sha256"
       ]
     },
     {
@@ -172,7 +173,7 @@
         "src/selecta/routes/cloud_assets.py"
       ],
       "markers": [
-        "cloud"
+        "APIRouter"
       ]
     },
     {
