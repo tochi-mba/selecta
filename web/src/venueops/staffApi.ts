@@ -57,6 +57,13 @@ async function json<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
+/** A single client owns all venue staff HTTP calls, including the feature gate. */
+export async function staffRuntimeFlags(): Promise<Record<string, boolean>> {
+  const response = await fetch('/api/status');
+  const status = await json<{ flags?: Record<string, boolean> }>(response);
+  return status.flags ?? {};
+}
+
 export async function fetchDashboard(session: string): Promise<DashboardState> {
   return json(await fetch(`/api/venue/staff/${encodeURIComponent(session)}/dashboard`));
 }

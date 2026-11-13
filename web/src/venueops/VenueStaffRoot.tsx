@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { setFlags } from '../flags';
 import { StaffDashboard } from './StaffDashboard';
-import { emergencyStop, fetchDashboard, sendCommand, type CommandKind, type DashboardState } from './staffApi';
+import { emergencyStop, fetchDashboard, sendCommand, staffRuntimeFlags, type CommandKind, type DashboardState } from './staffApi';
 
 /** URL host for the opt-in venue staff dashboard. The server feature gate controls
  * visibility: a default/off flag remains Not found, and no UI action bypasses the
@@ -18,15 +18,13 @@ export function VenueStaffRoot() {
     let active = true;
     const load = async () => {
       try {
-        const statusResponse = await fetch('/api/status');
-        if (!statusResponse.ok) throw new Error('The venue service is unavailable.');
-        const status = (await statusResponse.json()) as { flags?: Record<string, boolean> };
+        const flags = await staffRuntimeFlags();
         if (!active) return;
-        if (status.flags?.['venue.staff_dashboard'] !== true) {
+        if (flags['venue.staff_dashboard'] !== true) {
           setChecked(true);
           return;
         }
-        setFlags(status.flags);
+        setFlags(flags);
         setAllowed(true);
         const next = await fetchDashboard(session);
         if (active) setState(next);
@@ -51,6 +49,7 @@ export function VenueStaffRoot() {
 
   if (!checked) return <main><h1>Loading staff dashboard</h1></main>;
   if (!allowed) return <main><h1>Not found</h1></main>;
+  if (!state) return <main><h1>Connecting to venue staff</h1>{error && <p role="alert">{error}</p>}</main>;
   return (
     <main className="staff-screen">
       <StaffDashboard state={state} onCommand={command} onStop={stop} />
