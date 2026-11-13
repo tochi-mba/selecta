@@ -31,7 +31,16 @@ def _check(name: str, values: tuple[str, ...]) -> str:
 
 def upgrade() -> None:
     connection = op.get_bind()
+    legacy_speakers = []
     if connection.dialect.name == "sqlite":
+        # SQLite ON DELETE SET NULL actions can run while Alembic replaces devices,
+        # even when foreign-key checks are deferred. Capture existing speakers first.
+        legacy_speakers = connection.execute(
+            sa.text(
+                "SELECT workspace_id, active_device_id FROM playback_sessions "
+                "WHERE active_device_id IS NOT NULL"
+            )
+        ).all()
         # Workspaces is referenced by many child tables. SQLite cannot change a CHECK
         # without rebuilding that table; defer FK checks until it has been replaced.
         connection.exec_driver_sql("PRAGMA defer_foreign_keys=ON")
@@ -103,6 +112,17 @@ def upgrade() -> None:
         unique=True,
     )
 
+    # Restore speaker references cleared by SQLite's table-replacement FK actions.
+    # The corresponding devices survived the schema upgrade.
+    for workspace_id, active_device_id in legacy_speakers:
+        connection.execute(
+            sa.text(
+                "UPDATE playback_sessions SET active_device_id = :device_id "
+                "WHERE workspace_id = :workspace_id"
+            ),
+            {"workspace_id": workspace_id, "device_id": active_device_id},
+        )
+
 
 def downgrade() -> None:
     connection = op.get_bind()
@@ -129,7 +149,14 @@ def downgrade() -> None:
         )
     ).first():
         raise RuntimeError("Cannot downgrade while zoned playback state exists")
+    legacy_speakers = []
     if connection.dialect.name == "sqlite":
+        legacy_speakers = connection.execute(
+            sa.text(
+                "SELECT workspace_id, active_device_id FROM playback_sessions "
+                "WHERE active_device_id IS NOT NULL"
+            )
+        ).all()
         connection.exec_driver_sql("PRAGMA defer_foreign_keys=ON")
 
     op.drop_index("uq_playback_sessions_workspace_id_zone", table_name="playback_sessions")
@@ -167,3 +194,13 @@ def downgrade() -> None:
         )
         batch.drop_column("legal_name")
         batch.drop_column("pilot_until")
+
+    # Device-table replacement on SQLite can also clear the legacy speaker on rollback.
+    for workspace_id, active_device_id in legacy_speakers:
+        connection.execute(
+            sa.text(
+                "UPDATE playback_sessions SET active_device_id = :device_id "
+                "WHERE workspace_id = :workspace_id"
+            ),
+            {"workspace_id": workspace_id, "device_id": active_device_id},
+        )

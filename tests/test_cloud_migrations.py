@@ -10,12 +10,19 @@ from __future__ import annotations
 
 import pytest
 import sqlalchemy as sa
+from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy.engine import Engine
 
 from selecta.persistence import migrate
 
 VERSION_TABLE = "alembic_version"
+
+
+def current_heads(engine: Engine) -> set[str]:
+    """An Alembic branch point legitimately has more than one current head."""
+    with engine.connect() as connection:
+        return set(MigrationContext.configure(connection).get_current_heads())
 
 
 def revisions_oldest_first() -> list[str]:
@@ -151,7 +158,7 @@ def test_step_by_step_down_and_up_rebuilds_the_same_schema(cloud_engine):
 
     for target in reversed(chain[:-1]):
         migrate.downgrade(cloud_engine, target)
-        assert migrate.current(cloud_engine) == target
+        assert target in current_heads(cloud_engine)
     migrate.downgrade(cloud_engine, "base")
     assert leftovers(cloud_engine) == {}
 
