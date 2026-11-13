@@ -213,8 +213,13 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
         // The device may have lost the lease while its reconnect response was in
         // flight. Never resurrect audio from that earlier grant on a reloaded tab.
         const verified = await poll(true);
-        if (current && verified?.speaker === 'here' && verified.session) {
+        if (!current) return;
+        if (verified?.speaker === 'here' && verified.session) {
           await startSpeaking(verified.session);
+        } else if (!verified) {
+          // Reconnect succeeded but verification could not reach the server.
+          // Keep quiet and retry only after a later successful session poll.
+          expiredSpeaker.current = true;
         }
       }
     }).catch(() => undefined).finally(() => { if (current) void poll(); });
