@@ -17,7 +17,14 @@ from sqlalchemy.engine import Connection
 from selecta.persistence import transaction
 from selecta.rooms.errors import Refusal, RoomError
 from selecta.rooms.lifecycle import room_code
-from selecta.rooms.local_first import LocalNowPlaying, LocalStage, fresh, ready_speaker, valid_progress, visible
+from selecta.rooms.local_first import (
+    LocalNowPlaying,
+    LocalStage,
+    fresh,
+    ready_speaker,
+    valid_progress,
+    visible,
+)
 from selecta.rooms.ordering import inbox_order
 from selecta.rooms.planning import queue_order, renders_left
 from selecta.rooms.ports import NowPlaying, SongSummary

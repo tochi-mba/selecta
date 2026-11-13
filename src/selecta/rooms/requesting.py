@@ -92,7 +92,9 @@ def search(ctx: RoomContext, guest_token: str, query: str, limit: int = 20) -> l
                 entry, ref.workspace_id, room.settings.zone_id, now,
                 clean_only=room.settings.clean_only,
             )
-            if song is not None and (room.settings.crate is None or song.song_id in room.settings.crate):
+            if song is not None and (
+                room.settings.crate is None or song.song_id in room.settings.crate
+            ):
                 songs.append(song)
         return songs
     return ctx.catalog.search(ref.workspace_id, query, room.settings.crate, limit)

@@ -167,7 +167,8 @@ def test_local_progress_is_not_played_until_verified_device_report(env):
     assert rooms.guest_view(guest.guest_token).my_requests[0].stage == "prepared"
     assert rooms.record_outcome(HOST, asked.song_request_id, "played") is None
     venue.stage(asked.song_request_id, LocalStage.PLAYED)
-    assert rooms.record_outcome(HOST, asked.song_request_id, "played").status is RequestStatus.PLAYED
+    played = rooms.record_outcome(HOST, asked.song_request_id, "played")
+    assert played is not None and played.status is RequestStatus.PLAYED
     assert rooms.guest_view(guest.guest_token).my_requests[0].stage == "played"
 
 

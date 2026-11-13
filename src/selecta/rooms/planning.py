@@ -202,7 +202,9 @@ def _hand_over_local(
             _release_local_claim(ctx, room, request)
             return False
         entry = bridge.track(workspace_id, zone_id, request.song_id)
-        if visible(entry, workspace_id, zone_id, stamp, clean_only=room.settings.clean_only) is None:
+        if visible(
+            entry, workspace_id, zone_id, stamp, clean_only=room.settings.clean_only
+        ) is None:
             with transaction(ctx.engine, workspace_id) as conn:
                 updated = conn.execute(
                     sa.update(room_requests)
@@ -213,7 +215,9 @@ def _hand_over_local(
                         room_requests.c.status == RequestStatus.ACCEPTED.value,
                         room_requests.c.song_request_id.is_(None),
                     )
-                    .values(status=RequestStatus.UNFIT.value, reason="unavailable", submitted_at=None)
+                    .values(
+                        status=RequestStatus.UNFIT.value, reason="unavailable", submitted_at=None
+                    )
                 ).rowcount
                 if updated:
                     ctx.publish(conn, room, "room.request", {"request_id": request.id})
@@ -276,7 +280,10 @@ def withdraw_from_planner(
                             room_requests.c.song_request_id == song_request_id,
                         ).limit(1)
                     ).scalar()
-                    zone_id = load_room(conn, workspace_id, room_id).settings.zone_id if room_id else None
+                    zone_id = (
+                        load_room(conn, workspace_id, room_id).settings.zone_id
+                        if room_id else None
+                    )
                 if zone_id is not None:
                     ctx.local_first.cancel(workspace_id, zone_id, song_request_id)
         except Exception:

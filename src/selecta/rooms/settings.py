@@ -11,8 +11,8 @@ room opens, so a host who downgrades mid-party keeps the room they opened until 
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 import re
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, fields, replace
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
@@ -108,7 +108,8 @@ class RoomSettings:
 
     def checked(self) -> RoomSettings:
         """The same settings with every number pulled inside its allowed range."""
-        if not isinstance(self.zone_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", self.zone_id):
+        if (not isinstance(self.zone_id, str)
+                or not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", self.zone_id)):
             raise ValueError("zone_id must be a zone identifier")
         if not isinstance(self.clean_only, bool):
             raise ValueError("clean_only must be true or false")
