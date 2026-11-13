@@ -106,6 +106,8 @@ class MixContract:
     version: int = CONTRACT_VERSION
 
     def __post_init__(self) -> None:
+        if self.version != CONTRACT_VERSION or isinstance(self.version, bool):
+            raise ContractError(f"Unsupported legacy mix contract version {self.version!r}")
         if self.source not in SOURCES:
             raise ContractError(f"Unknown mix source {self.source!r}")
         if not self.name.strip() or len(self.name) > NAME_LIMIT:

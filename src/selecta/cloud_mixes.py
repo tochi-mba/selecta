@@ -26,6 +26,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
+from selecta.identity.schema import workspaces
 from selecta.mix_contract import (
     MAX_SONGS,
     ContractError,
@@ -305,6 +306,19 @@ def edit(
     """A new revision made from the latest one. `base_revision` must be the latest, so an edit
     made from an older view is refused (`stale_revision`) instead of silently overwriting."""
     with transaction(engine, workspace_id) as conn:
+        # Serialize legacy writers with v2 editors. A migrated mix must not fork into
+        # competing cloud-asset and canonical-recipe histories.
+        conn.execute(
+            sa.select(workspaces.c.id).where(workspaces.c.id == workspace_id).with_for_update()
+        ).scalar_one_or_none()
+        from selecta.lf_recipes.store import _v2
+
+        if _v2(conn, workspace_id, mix_id):
+            raise CloudMixError(
+                "recipe_upgrade_required",
+                "This mix now has a portable recipe revision; open it in an updated client.",
+                409,
+            )
         chain = revisions(conn, workspace_id, mix_id)
         if not chain:
             raise CloudMixError("mix_not_found", "That mix is not in this account.", 404)
