@@ -2,7 +2,7 @@
 
 The public Cloud API and worker handlers are real. Only external dependencies are
 replaced: hosted identity, R2 and Stripe use local development adapters.
-Invoked through \`dev.cmd cloud\`; intentionally not a production entrypoint.
+Invoked through `dev.cmd cloud`; intentionally not a production entrypoint.
 """
 
 from __future__ import annotations
