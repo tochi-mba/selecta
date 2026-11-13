@@ -90,7 +90,7 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
 
   // Local-first renders no browser media element and never invokes R2 playback proxies.
   // The legacy path is retained only for workspaces not yet migrated to the new protocol.
-  if (localFirst) return <LocalFirstPlayer api={api} workspaceId={workspaceId} />;
+  if (localFirst) return <LocalFirstPlayer api={api} workspaceId={workspaceId} actorId={account.user.id} />;
 
   const track = player.track;
   const devices = featureOn(account, 'devices');
