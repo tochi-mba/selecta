@@ -433,16 +433,30 @@ class LocalRunner:
         """Held from the stop check to the end of a claim, so `stop()` can't miss one."""
         self._wakes = [threading.Event() for _ in self.runners]
         self._threads: list[threading.Thread] = []
+        self._registered = False
 
     @property
     def slots(self) -> int:
         return len(self.runners)
 
+    def register(self) -> None:
+        """Register the pool's workers without starting any claim threads.
+
+        Local Cloud can register all pools before any worker starts writing to the
+        shared SQLite database. A failed partial registration may be retried safely.
+        """
+        if self._threads:
+            raise RuntimeError("This runner has already started.")
+        if self._registered:
+            return
+        for runner in self.runners:
+            self.store.register_worker(runner.caps)
+        self._registered = True
+
     def start(self) -> None:
         if self._threads:
             raise RuntimeError("This runner has already started.")
-        for runner in self.runners:
-            self.store.register_worker(runner.caps)
+        self.register()
         self.store.add_waker(self.wake)
         self._threads = [
             threading.Thread(
