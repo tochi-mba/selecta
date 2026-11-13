@@ -71,6 +71,8 @@ def join(
     with transaction(ctx.engine, workspace_id) as conn:
         now = resolve_now(conn, now)
         room = live_room(conn, workspace_id, room_id)
+        if ctx.local_first is not None and room.ends_at <= now:
+            raise RoomError(Refusal.ROOM_ENDED)
         if room.code_hash != digest:
             raise RoomError(Refusal.NO_SUCH_ROOM)  # the code changed a moment ago
         if token_digest is not None:
