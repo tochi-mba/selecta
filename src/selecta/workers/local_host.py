@@ -157,7 +157,8 @@ class LocalWork:
                 stop_child()
             except Exception:  # noqa: BLE001 - still stop the other workers
                 log.exception("Stopping a local worker process failed")
-        finished = all(runner.stop(timeout) for runner in self.runners)
+        stopped = [runner.stop(timeout) for runner in self.runners]
+        finished = all(stopped)
         if self._upkeep is not None:
             self._upkeep.join(timeout)
         if finished:
