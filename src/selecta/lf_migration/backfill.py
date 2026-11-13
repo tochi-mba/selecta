@@ -197,7 +197,10 @@ class LocalPlanJournal:
         if not isinstance(plan, dict) or plan.get("schema") != SIDECAR_SCHEMA:
             raise MigrationConflict("journal plan is damaged")
         core = dict(plan)
-        if core.pop("plan_id", None) != plan_id or hashlib.sha256(_canonical(core)).hexdigest() != plan_id:
+        if (
+            core.pop("plan_id", None) != plan_id
+            or hashlib.sha256(_canonical(core)).hexdigest() != plan_id
+        ):
             raise MigrationConflict("journal plan checksum mismatch")
         if not set(document.get("completed", ())).issubset(
             {item["legacy_revision_id"] for item in plan["revisions"]}
