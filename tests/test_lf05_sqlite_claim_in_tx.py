@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-import sqlalchemy as sa
-
 from selecta.persistence import make_engine, transaction
 from selecta.scheduling.policy import WorkerCaps
 from selecta.work import cloud_ports
