@@ -267,7 +267,7 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.mini-song` | styles/shell.css, styles/polish.css, styles/typography.css | styles/shell.css |
 | `.mix` | styles/shell.css, styles/creation.css | styles/shell.css |
 | `.mix-head` | style.css, styles/polish.css, styles/creation.css, styles/typography.css | style.css |
-| `.mixes` | styles/shell.css, styles/polish.css | styles/shell.css |
+| `.mixes` | styles/shell.css, styles/polish.css, styles/listening.css | styles/shell.css |
 | `.music-seam-diagram` | styles/music-objects.css, styles/depth.css | styles/music-objects.css |
 | `.music-visualizer` | style.css, styles/listening.css | style.css |
 | `.nav` | styles/shell.css, styles/polish.css, styles/icons.css | styles/shell.css |
