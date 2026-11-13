@@ -116,3 +116,70 @@ def test_claim_session_still_supports_existing_adapter_protocol():
     assert claim.standing("workspace").tier == "free"
     assert not claim._flag_on("workspace", "playback")
     assert claim._flag_on("workspace", None)
+
+
+def test_completion_accounting_reuses_active_sqlite_transaction(tmp_path, monkeypatch):
+    """Finishing a job cannot nest a second BEGIN IMMEDIATE for plan accounting."""
+    from selecta.work import lifecycle
+
+    engine = _sqlite_with_account(tmp_path)
+    monkeypatch.setattr(
+        cloud_ports.stripe_sync,
+        "effective_entitlement",
+        lambda connection, workspace: SimpleNamespace(
+            plan_id="premium", plan_version=2, snapshot_version=3
+        ),
+    )
+    monkeypatch.setattr(
+        cloud_ports.plans,
+        "plan_for",
+        lambda *_args: SimpleNamespace(
+            id="premium", concurrency={"standard": 2}, flags=frozenset()
+        ),
+    )
+    calls = []
+
+    def finished(connection, pool, lane, workspace_id, **kwargs):
+        calls.append((connection, pool, lane, workspace_id, kwargs))
+
+    monkeypatch.setattr(lifecycle.heads, "job_finished", finished)
+    config = SimpleNamespace(
+        weight=lambda tier: 2 if tier == "premium" else 1,
+        lane_weight=lambda lane: 1,
+        correction_clamp_s=5.0,
+    )
+    store = SimpleNamespace(
+        config=config, entitlements=cloud_ports.CloudJobEntitlements(engine)
+    )
+    attempt = SimpleNamespace(
+        pool="cpu-light", lane="standard", workspace_id="workspace", est_cost_s=3.0
+    )
+    with transaction(engine) as connection:
+        lifecycle.free_slot(connection, store, attempt, cost_s=1.5, now=200.0)
+        assert len(calls) == 1
+        assert calls[0][0] is connection
+        assert calls[0][4]["weight"] == 2
+
+
+def test_completion_accounting_preserves_legacy_entitlement_adapter(monkeypatch):
+    from selecta.work import lifecycle
+
+    calls = []
+    monkeypatch.setattr(
+        lifecycle.heads, "job_finished", lambda *args, **kwargs: calls.append(kwargs)
+    )
+    store = SimpleNamespace(
+        entitlements=SimpleNamespace(
+            standing=lambda workspace_id: AccountStanding(tier="free")
+        ),
+        config=SimpleNamespace(
+            weight=lambda tier: 1 if tier == "free" else 2,
+            lane_weight=lambda lane: 1,
+            correction_clamp_s=5.0,
+        ),
+    )
+    attempt = SimpleNamespace(
+        pool="export", lane="standard", workspace_id="local", est_cost_s=2.0
+    )
+    lifecycle.free_slot(SimpleNamespace(), store, attempt, cost_s=1.0, now=20.0)
+    assert calls[0]["weight"] == 1
