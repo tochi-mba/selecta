@@ -5,8 +5,6 @@ browser sweep can visit it. These tests do not turn headless safety work into a
 fictional customer page.
 """
 
-from dataclasses import replace
-
 from selecta import flags
 
 
@@ -43,6 +41,8 @@ def test_all_venue_cloud_exclusions_have_real_metadata_and_safe_defaults():
 
 
 def test_registry_rejects_fake_exclusions_and_requires_real_justifications():
+    from dataclasses import replace
+
     original = flags.registry()["venue.staff_dashboard"]
 
     def violations(**changes):

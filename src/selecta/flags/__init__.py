@@ -282,8 +282,10 @@ def _cloud_problems(flag: Flag) -> list[str]:
         found.append(f"{flag.id}: cloud_default should be true or false")
     if flag.cloud_surface_kind is not None:
         if flag.cloud_surface_kind not in CLOUD_SURFACE_KINDS:
-            found.append(f"{flag.id}: cloud_surface_kind must be one of {', '.join(CLOUD_SURFACE_KINDS)}")
-        if not isinstance(flag.cloud_surface_reason, str) or len(flag.cloud_surface_reason.strip()) < 20:
+            allowed = ", ".join(CLOUD_SURFACE_KINDS)
+            found.append(f"{flag.id}: cloud_surface_kind must be one of {allowed}")
+        reason = flag.cloud_surface_reason
+        if not isinstance(reason, str) or len(reason.strip()) < 20:
             found.append(f"{flag.id}: cloud_surface_reason must explain the exclusion")
         if "cloud" not in flag.modes:
             found.append(f"{flag.id}: a Cloud exclusion needs cloud mode")
@@ -480,6 +482,9 @@ def markdown() -> str:
             needs = ", ".join(f"`{need}`" for need in flag.requires)
             about = flag.about if not flag.core else f"{flag.about} **Core:** {flag.core}"
             if flag.cloud_surface_kind:
-                about += f" **Cloud surface:** {flag.cloud_surface_kind} ({flag.cloud_surface_reason})."
+                about += (
+                    f" **Cloud surface:** {flag.cloud_surface_kind} "
+                    f"({flag.cloud_surface_reason})."
+                )
             lines.append(f"| `{flag.id}` | **{flag.label}.** {about} | {needs} |")
     return "\n".join(lines) + "\n"
