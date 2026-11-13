@@ -2,6 +2,7 @@ import { lazy, ReactNode, Suspense, useEffect, useState } from 'react';
 import { App } from './App';
 import type { MixData } from './api';
 import { setCopyMode } from './copy';
+import { setFlags } from './flags';
 import { handOnStartupStatus } from './startupStatus';
 import { prefetchLibrary } from './views/libraryPrefetch';
 
@@ -35,12 +36,15 @@ export function RuntimeApp() {
     fetch(`${apiOrigin}/api/status`)
       .then(async (response) => {
         if (!response.ok) throw new Error('SelectaDJ API is unavailable.');
-        const status = await response.json() as { mode?: string };
+        const status = await response.json() as { mode?: string; flags?: Record<string, boolean> };
         if (!current) return;
         const next = status.mode === 'cloud' ? 'cloud' : 'local';
         // Words like "this PC" follow the server's mode before anything is drawn (src/copy.ts).
         setCopyMode(next);
         if (next === 'local') {
+          // The shell and Make a Mix depend on resolved feature flags for their geometry.
+          // Apply the already-fetched flags before the first local React tree paints.
+          setFlags(status.flags);
           handOnStartupStatus(status);
           if (initialMix) {
             const mix = await initialMix;
