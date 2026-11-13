@@ -220,6 +220,8 @@ def request_stage(ctx: RoomContext, room: Room, request: RoomRequest, now: float
     if request.status is RequestStatus.PLAYED:
         return LocalStage.PLAYED.value
     if request.status is RequestStatus.ACCEPTED:
+        if ctx.local_first is not None and request.reason in ("banned", "unavailable"):
+            return LocalStage.DEFERRED.value
         if ctx.local_first is None:
             return LocalStage.ACCEPTED.value
         if request.song_request_id:

@@ -24,7 +24,7 @@ from selecta.persistence import new_id, transaction
 from selecta.rooms import codes
 from selecta.rooms.errors import Refusal, RoomError
 from selecta.rooms.planning import pump, withdraw_from_planner
-from selecta.rooms.schema import display_pairings, room_guests, rooms
+from selecta.rooms.schema import room_requests, display_pairings, room_guests, rooms
 from selecta.rooms.settings import RoomSettings
 from selecta.rooms.store import (
     LIVE,
@@ -233,6 +233,24 @@ def update_settings(
         # schedule requests against a speaker they never joined.
         if ctx.local_first is not None and settings.zone_id != room.settings.zone_id:
             raise RoomError(Refusal.NOT_ALLOWED)
+        if ctx.local_first is not None and settings.clean_only and not room.settings.clean_only:
+            # A newly restricted policy cannot silently invalidate already
+            # committed physical playback on the local speaker.
+            scheduled = conn.execute(
+                sa.select(room_requests.c.id).where(
+                    room_requests.c.workspace_id == workspace_id,
+                    room_requests.c.room_id == room.id,
+                    room_requests.c.song_request_id.is_not(None),
+                    room_requests.c.status.in_(
+                        [RequestStatus.ACCEPTED.value, RequestStatus.UNFIT.value]
+                    ),
+                ).limit(1)
+            ).first()
+            if scheduled is not None:
+                raise RoomError(
+                    Refusal.NOT_ALLOWED,
+                    "Finish the locally scheduled requests before enabling clean-only music.",
+                )
         ends_at = min(room.ends_at, room.created_at + settings.max_hours * 3600)
         save_room(conn, room.id, settings=settings, ends_at=ends_at)
         if room.settings.display and not settings.display:

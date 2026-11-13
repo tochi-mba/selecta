@@ -208,13 +208,17 @@ def ban_guest(
                 )
             )
             for request in room_requests_where(conn, room, WAITING, guest_id=guest.id):
-                set_request(
-                    conn,
-                    request.id,
-                    status=RequestStatus.WITHDRAWN,
-                    reason="banned",
-                    resolved_at=now,
-                )
+                if ctx.local_first is not None and request.song_request_id is not None:
+                    # Device-acknowledged playback cannot be falsely declared cancelled.
+                    set_request(conn, request.id, reason="banned")
+                else:
+                    set_request(
+                        conn,
+                        request.id,
+                        status=RequestStatus.WITHDRAWN,
+                        reason="banned",
+                        resolved_at=now,
+                    )
                 withdrawn.append(request.song_request_id)
             voted_on = conn.execute(
                 sa.select(room_votes.c.request_id).where(room_votes.c.guest_id == guest.id)

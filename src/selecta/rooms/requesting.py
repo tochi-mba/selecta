@@ -505,13 +505,18 @@ def song_removed(
         for room_id in room_ids:
             room = load_room(conn, workspace_id, room_id, lock=True)
             for target in room_requests_where(conn, room, WAITING, song_id=song_id):
-                set_request(
-                    conn,
-                    target.id,
-                    status=RequestStatus.WITHDRAWN,
-                    reason="song_gone",
-                    resolved_at=now,
-                )
+                if ctx.local_first is not None and target.song_request_id is not None:
+                    # A committed local operation may survive a cloud-side removal.
+                    # Do not claim withdrawal until the authoritative engine confirms it.
+                    set_request(conn, target.id, reason="unavailable")
+                else:
+                    set_request(
+                        conn,
+                        target.id,
+                        status=RequestStatus.WITHDRAWN,
+                        reason="song_gone",
+                        resolved_at=now,
+                    )
                 ctx.publish(conn, room, "room.request", {"request_id": target.id})
                 affected.append(target)
             if room.live:

@@ -309,6 +309,33 @@ def test_expired_room_blocks_join_and_scheduling_even_before_periodic_sweep(env)
     assert venue.requested == []
 
 
+def test_removed_scheduled_song_remains_unconfirmed_until_engine_cancels(env):
+    rooms, venue, _ = env
+    made, guest = opened(env)
+    scheduled = rooms.request(guest.guest_token, 1).request
+    rooms.song_removed(HOST, 1)
+    view = rooms.guest_view(guest.guest_token)
+    assert view.my_requests[0].stage == "deferred"
+    assert scheduled.song_request_id in venue.cancelled
+    venue.stage(scheduled.song_request_id, LocalStage.PLAYED)
+    result = rooms.record_outcome(HOST, scheduled.song_request_id, "played")
+    assert result is not None and result.status is RequestStatus.PLAYED
+
+
+def test_clean_only_policy_change_cannot_override_committed_audio(env):
+    rooms, venue, _ = env
+    made, guest = opened(env)
+    scheduled = rooms.request(guest.guest_token, 2).request
+    values = {**made.room.settings.to_json(), "clean_only": True}
+    with pytest.raises(RoomError) as error:
+        rooms.update_settings(HOST, made.room.id, values)
+    assert error.value.refusal is Refusal.NOT_ALLOWED
+    venue.stage(scheduled.song_request_id, LocalStage.PLAYED)
+    rooms.record_outcome(HOST, scheduled.song_request_id, "played")
+    changed = rooms.update_settings(HOST, made.room.id, values)
+    assert changed.settings.clean_only
+
+
 def test_invalid_speaker_and_ack_never_count_as_local_playback(env):
     rooms, venue, clock = env
     speaker = venue.speaker(HOST, "main")
