@@ -29,8 +29,8 @@ from pathlib import Path
 from selecta import db, jobs
 from selecta.api_common import _Background
 from selecta.config import ANALYSIS_VERSION, Settings, load_settings
-from selecta.persistence import new_id
 from selecta.lf_jobs.governor import LocalResourceGovernor
+from selecta.persistence import new_id
 from selecta.scheduling.policy import LATER, REQUEST, WorkerCaps
 from selecta.work.enqueue import JobSpec
 from selecta.work.model import Job
