@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 from types import MappingProxyType
-from typing import Mapping
+from collections.abc import Mapping
 
 
 class ContractModel(StrEnum):
