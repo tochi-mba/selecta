@@ -173,7 +173,8 @@
         "src/selecta/routes/cloud_assets.py"
       ],
       "markers": [
-        "APIRouter"
+        "upload_sessions",
+        "tombstone"
       ]
     },
     {
