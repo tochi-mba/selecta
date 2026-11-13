@@ -77,6 +77,16 @@ def build(settings: Settings):
     )
     work.watchers.append(background.watch)
     work.watchers.append(_seam_worker_watch(seams))
+    work.child_stoppers.append(background.supervisor.stop)
+
+    def stop_seam_worker() -> None:
+        from selecta.jobs import kill_tree
+
+        process = seams._worker
+        if process is not None and process.poll() is None:
+            kill_tree(process.pid)
+
+    work.child_stoppers.append(stop_seam_worker)
     return work, seams, background, exports
 
 
