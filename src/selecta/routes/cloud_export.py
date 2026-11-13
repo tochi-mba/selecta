@@ -26,9 +26,9 @@ from starlette.background import BackgroundTask
 
 from selecta.billing import plans, stripe_sync
 from selecta.billing.schema import entitlement_snapshots, subscriptions
-from selecta.lf_migration.retrieval import RetrievalGrant, require_grant
 from selecta.flags.rules import user_flag_preferences
 from selecta.identity.tokens import Claims
+from selecta.lf_migration.retrieval import RetrievalGrant, require_grant
 from selecta.lucy import cloud_settings as lucy_cloud
 from selecta.persistence import transaction
 from selecta.playback.schema import devices, playback_sessions
@@ -210,7 +210,9 @@ def install_routes(
                         continue
                     if legacy_retrieval_grant_factory is not None:
                         try:
-                            require_grant(legacy_retrieval_grant_factory(workspace.id), workspace.id)
+                            require_grant(
+                                legacy_retrieval_grant_factory(workspace.id), workspace.id
+                            )
                         except PermissionError as error:
                             raise HTTPException(
                                 status_code=403, detail={"code": "legacy_retrieval_not_approved"}
