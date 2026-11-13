@@ -84,7 +84,11 @@ def add_routes(app, ctx) -> None:
 
     # Opt-in capability set by the local-engine runtime (Agent 01); existing
     # standalone and durable-local-job routes keep their established behavior.
-    local_first = bool(getattr(ctx, "local_first_artifacts", False))
+    local_first = bool(
+        getattr(ctx, "local_first_artifacts", False)
+        or getattr(settings, "local_first_artifacts", False)
+        or os.environ.get("SELECTA_LOCAL_FIRST_ARTIFACTS") == "1"
+    )
     artifacts = LocalArtifactStore(settings.home / "lf_artifacts")
     artifacts.recover(settings.home / "exports")
     running: dict[str, threading.Event] = {}
