@@ -43,7 +43,10 @@ def measure_device(home: Path) -> DeviceResources:
     """Use real OS measurements. Unknown GPU capacity is never treated as infinite."""
     home.mkdir(parents=True, exist_ok=True)
     memory = psutil.virtual_memory()
-    battery = psutil.sensors_battery()
+    try:
+        battery = psutil.sensors_battery()
+    except (AttributeError, OSError, RuntimeError):
+        battery = None
     thermal = False
     try:
         temperatures = psutil.sensors_temperatures()
@@ -70,7 +73,7 @@ def measure_device(home: Path) -> DeviceResources:
                 )
         finally:
             pynvml.nvmlShutdown()
-    except (ImportError, OSError, RuntimeError):
+    except Exception:  # noqa: BLE001 - optional GPU telemetry must fail safely
         pass
     return DeviceResources(
         cpu_percent=psutil.cpu_percent(interval=None),
@@ -259,9 +262,10 @@ class LocalResourceGovernor:
                 "SELECT token,priority FROM permits WHERE attempt_id=?", (attempt_id,)
             ).fetchone()
             if existing:
-                token = str(existing[0])
-                priority = JobPriority(existing[1])
-            elif not self._safe(conn, priority, memory, scratch, gpu, resources):
+                # Duplicate delivery of the *same* attempt must not execute twice.
+                # It may be retried once this holder expires after a process crash.
+                return None
+            if not self._safe(conn, priority, memory, scratch, gpu, resources):
                 return None
             else:
                 conn.execute(
