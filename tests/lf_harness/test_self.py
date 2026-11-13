@@ -64,7 +64,7 @@ class AudioTests(unittest.TestCase):
 
 class FleetTests(unittest.TestCase):
     def test_five_of_eight_and_isolation(self):
-        with make_five_of_eight_fleet() as fleet:
+        with make_five_of_eight_fleet():
             a, b = fleet.devices["engine-a"], fleet.devices["engine-b"]
             self.assertEqual(len(a.inventory()), 5)
             self.assertEqual(len(b.inventory()), 8)
