@@ -16,6 +16,7 @@
   padding: clamp(14px, 2.2vw, 24px);
 }
 
+.lf-personal .lf-placeholder { min-height: 160px; }
 .lf-personal .lf-hero {
   background: var(--surface-raised, var(--surface, transparent));
 }
