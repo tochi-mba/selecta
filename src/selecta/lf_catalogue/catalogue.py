@@ -11,7 +11,6 @@ import json
 import os
 import re
 import sqlite3
-import stat
 import time
 import uuid
 from collections.abc import Callable, Iterable, Mapping, Sequence
@@ -187,7 +186,7 @@ class LocalCatalogue:
     def close(self) -> None:
         self.conn.close()
 
-    def __enter__(self) -> "LocalCatalogue":
+    def __enter__(self) -> LocalCatalogue:
         return self
 
     def __exit__(self, *_exc: Any) -> None:
@@ -227,7 +226,7 @@ class LocalCatalogue:
 
     def relink_source(self, source_id: str, new_directory: Path | str) -> None:
         """Require at least one private exact-content witness before changing a root."""
-        source = self._source(source_id)
+        self._source(source_id)
         raw = os.fspath(new_directory)
         if not os.path.isabs(raw) or raw.startswith(("\\\\", "//")):
             raise ValueError("Expected an absolute local folder")
@@ -683,13 +682,16 @@ class LocalCatalogue:
         elif (bound["verified_at"] is None or 
               self.clock() - bound["verified_at"] > self.freshness_seconds):
             state, reason = MatchState.STALE, "verification_expired"
-        elif expected_policy_generation is not None and bound["policy_generation"] != expected_policy_generation:
+        elif (expected_policy_generation is not None and
+              bound["policy_generation"] != expected_policy_generation):
             state, reason = MatchState.STALE, "policy_generation_changed"
         elif bound["rights_until"] is not None and self.clock() > bound["rights_until"]:
             state, reason = MatchState.BLOCKED, "rights_expired"
-        elif zone_id is not None and json.loads(bound["allowed_zones"]) and zone_id not in json.loads(bound["allowed_zones"]):
+        elif (zone_id is not None and json.loads(bound["allowed_zones"]) and
+              zone_id not in json.loads(bound["allowed_zones"])):
             state, reason = MatchState.BLOCKED, "zone_not_authorised"
-        elif not bound["allow_explicit"] and "explicit" in edition_flags(json.loads(bound["metadata"])):
+        elif (not bound["allow_explicit"] and
+              "explicit" in edition_flags(json.loads(bound["metadata"]))):
             state, reason = MatchState.BLOCKED, "explicit_not_allowed"
         elif _conflict(json.loads(bound["expected_metadata"]), json.loads(bound["metadata"])):
             state, reason = MatchState.INCOMPATIBLE_VERSION, "different_recording"
