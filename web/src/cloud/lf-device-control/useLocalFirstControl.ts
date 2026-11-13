@@ -55,6 +55,8 @@ export function useLocalFirstControl({
   const refreshSeq = useRef(0);
   const activeOperation = useRef<string | null>(null);
   const sending = useRef(false);
+  const preflightBusy = useRef(false);
+  const [checkingDestination, setCheckingDestination] = useState(false);
 
   const here = devices.find((device) => device.this_device) ?? null;
   const speaker = devices.find((device) => device.device_id === session?.speaker_device_id) ?? null;
@@ -165,7 +167,10 @@ export function useLocalFirstControl({
   }, [actorId, adapter, pending, refresh, workspaceId]);
 
   const takeOver = useCallback(async () => {
-    if (!here || !outputId || !session?.recipe_revision || sending.current) return;
+    if (!here || !outputId || !session?.recipe_revision || sending.current || preflightBusy.current ||
+      (pending && ['requested', 'prepared', 'queued', 'uncertain'].includes(pending.stage))) return;
+    preflightBusy.current = true;
+    setCheckingDestination(true);
     setNotice('Checking current speaker, local music and physical output…');
     try {
       // Never act on an earlier card's cached readiness or a changed generation.
@@ -189,8 +194,11 @@ export function useLocalFirstControl({
       await run('takeover', here.device_id, current, { output_id: outputId, preflight_id: preflight.preflight_id });
     } catch (problem) {
       setNotice(`No takeover was requested: ${(problem as Error).message}. The original speaker is unchanged.`);
+    } finally {
+      preflightBusy.current = false;
+      setCheckingDestination(false);
     }
-  }, [adapter, here, outputId, run, session?.recipe_revision]);
+  }, [adapter, here, outputId, pending, run, session?.recipe_revision]);
 
   const sendTransport = useCallback(async (kind: 'play' | 'pause' | 'skip') => {
     try {
@@ -208,7 +216,10 @@ export function useLocalFirstControl({
   }, [adapter, run]);
 
   const changeOutput = useCallback(async (nextOutput: string) => {
-    if (!session?.speaker_device_id || !session.recipe_revision || sending.current) return;
+    if (!session?.speaker_device_id || !session.recipe_revision || sending.current || preflightBusy.current ||
+      (pending && ['requested', 'prepared', 'queued', 'uncertain'].includes(pending.stage))) return;
+    preflightBusy.current = true;
+    setCheckingDestination(true);
     try {
       const current = await adapter.session();
       const target = devices.find((d) => d.device_id === current?.speaker_device_id);
@@ -235,7 +246,8 @@ export function useLocalFirstControl({
       }
       await run('change_output', target.device_id, current, { output_id: nextOutput, preflight_id: prepared.preflight_id });
     } catch (problem) { setNotice(`Output remains unchanged: ${(problem as Error).message}`); }
-  }, [adapter, devices, run, session?.recipe_revision, session?.speaker_device_id]);
+    finally { preflightBusy.current = false; setCheckingDestination(false); }
+  }, [adapter, devices, pending, run, session?.recipe_revision, session?.speaker_device_id]);
 
   // Poll operation and actual local telemetry separately: a queued/accepted/HTTP ACK is never
   // interpreted as sound. Lost/late ACKs remain uncertain, never retried with a new UUID.
@@ -277,6 +289,6 @@ export function useLocalFirstControl({
   const blocked = readinessReason(here, readiness, session, outputId);
   return {
     adapter, devices, here, speaker, session, readiness, outputId, localOutput, setOutputId,
-    blocked, pending, error, notice, refresh, verify, takeOver, sendTransport, changeOutput,
+    blocked, pending, checkingDestination, error, notice, refresh, verify, takeOver, sendTransport, changeOutput,
   };
 }
