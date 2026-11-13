@@ -15,11 +15,12 @@ from sqlalchemy.engine import Connection, Engine
 
 from selecta.admin import actions, emergency, flags_admin, http, takedowns
 from selecta.admin import state as emergency_state
-from selecta.authz.check import Actor
+from selecta.authz.check import Actor, authorize
+from selecta.authz.scopes import ResourceRef
 from selecta.flags.matching import Rule
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
-from selecta.persistence import db_now, transaction
+from selecta.persistence import db_now
 
 
 class ControlRequest(BaseModel):
@@ -216,10 +217,17 @@ def install_routes(
     ):
         if command not in {"act", "reject"}:
             raise HTTPException(404, detail={"code": "unknown_command"})
-        # The decision writes that workspace's rows, so it runs as that workspace (row-level
-        # security), the way job commands do.
-        with transaction(engine) as conn:
-            workspace_id = takedowns.notice_workspace(conn, notice_id)
+        # Only a staff member allowed to manage notices may discover their workspace.
+        # The command also checks authorization in its tenant-scoped transaction.
+        actor = http.staff_actor(engine, request, claims)
+
+        def authorized_workspace(conn: Connection) -> str | None:
+            authorize(
+                conn, actor, "legal.takedowns.manage", ResourceRef("takedown_notice", notice_id)
+            )
+            return takedowns.notice_workspace(conn, notice_id)
+
+        workspace_id = http.run(engine, actor, authorized_workspace)
         if command == "act":
             return run(
                 request,
