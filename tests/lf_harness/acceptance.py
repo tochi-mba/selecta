@@ -171,7 +171,10 @@ class AcceptanceRunner:
                 source_commit=self.config.source_commit,
                 test_case="physical_output_measurement",
                 expected_result="independent measured speaker output",
-                actual_result="BLOCKED: real-device acoustic capture and signed six-hour soak are required",
+                actual_result=(
+                    "BLOCKED: real-device acoustic capture and signed "
+                    "six-hour soak are required"
+                ),
                 outcome="BLOCKED",
                 evidence_class="physical",
                 reviewer=self.config.reviewer,
