@@ -18,9 +18,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 
 from selecta import jobs as engine_jobs
+from selecta.lf_jobs.governor import LocalResourceGovernor, Reservation
 from selecta.observability import tracing
 from selecta.persistence import new_id
-from selecta.lf_jobs.governor import LocalResourceGovernor, Reservation
 from selecta.scheduling.policy import WorkerCaps
 from selecta.storage.artifacts import ArtifactStore
 from selecta.work.claims import Claim
