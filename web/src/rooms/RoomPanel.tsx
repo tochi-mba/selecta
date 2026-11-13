@@ -27,7 +27,8 @@ type Panel = {
 const POLL_MS = 3000;
 const ANNOUNCE_EVERY_MS = 10_000;
 const songText = (song: Song | null) => (song ? `${song.title} - ${song.artist}` : 'Unavailable recording');
-const requestStageText = (stage?: string) => ({
+const requestStageText = (stage?: string): string => (({
+
   awaiting_moderation: 'Awaiting moderation',
   accepted: 'Host accepted · awaiting speaker',
   deferred: 'Deferred · speaker or recording unavailable',
@@ -37,7 +38,7 @@ const requestStageText = (stage?: string) => ({
   rejected: 'Rejected',
   expired: 'Expired',
   withdrawn: 'Withdrawn',
-}[stage ?? ''] ?? 'Pending');
+} as Record<string, string>)[stage ?? ''] ?? 'Pending');
 
 export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn = true, playHereOn = true, freshOnly = false, zoneId = 'main', origin = window.location.origin }: {
   api: Api; workspaceId: string; locked?: string; votesOn?: boolean; displayOn?: boolean; playHereOn?: boolean; origin?: string; zoneId?: string;
