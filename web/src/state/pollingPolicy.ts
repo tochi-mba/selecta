@@ -40,6 +40,7 @@ export const POLLING: readonly PollRule[] = [
   { file: 'studio.ts', reads: null, everyMs: 'audio clock', hidden: 'continues', why: 'Stem Studio playback position' },
   { file: 'ui/ActivityPanel.tsx', reads: null, everyMs: 30000, hidden: 'continues', why: 'refreshes "x minutes ago" wording only' },
   { file: 'cloud/events.ts', reads: 'cloud events fallback', everyMs: 'pollMs', hidden: 'pauses', why: 'useVisiblePoll when the event stream is unavailable (Cloud programme)' },
+  { file: 'cloud/lf-personal/state.ts', reads: 'selected device readiness snapshot', everyMs: 30000, hidden: 'pauses', why: 'the local-first device status poll checks visibility and resumes on return, with online and focus refresh' },
   { file: 'cloud/checkout.ts', reads: 'checkout confirmation', everyMs: 'bounded tries', hidden: 'continues', why: 'a payment confirmation must finish; it stops after a set number of tries (Cloud programme)' },
   { file: 'devices/DevicesPanel.tsx', reads: 'devices', everyMs: 15000, hidden: 'continues', why: 'Cloud programme' },
   { file: 'devices/usePlaybackDevice.ts', reads: 'remote playback state and heartbeat', everyMs: '1000 or 2000', hidden: 'continues', why: 'remote playback keeps going while this tab is hidden (Cloud programme)' },
