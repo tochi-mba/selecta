@@ -61,3 +61,24 @@ test('manager actions remain keyboard reachable at 320 CSS pixels', async ({ bro
   expect(overflow).toBeLessThanOrEqual(0);
   await context.close();
 });
+
+test('staff phone has simple recovery copy and retains controls at 320px', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 320, height: 640 }, reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  await page.goto(FLEET);
+  await page.getByRole('button', { name: 'Review Demo venue 4 readiness' }).click();
+  await page.getByRole('button', { name: 'Staff phone view' }).click();
+  await expect(page.getByRole('heading', { name: /Staff controls: Demo venue 4/ })).toBeVisible();
+  await expect(page.getByText('Speaker needs a manager check')).toBeVisible();
+  await expect(page.getByTestId('staff-deck')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Skip' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Bigger' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Calmer' })).toBeVisible();
+  await expect(page.getByText('Local music source unavailable')).toHaveCount(0);
+  const overflow = await page.evaluate(() => {
+    const staff = document.querySelector('.lf13-staff-phone');
+    return staff ? Math.round(staff.scrollWidth - staff.clientWidth) : 1;
+  });
+  expect(overflow).toBeLessThanOrEqual(0);
+  await context.close();
+});
