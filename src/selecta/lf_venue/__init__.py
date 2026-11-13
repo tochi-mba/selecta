@@ -35,6 +35,6 @@ __all__ = [
     "VenueError",
     "Zone",
 ]
-from .runner import VenueRunner
+from .runner import VenueRunner as VenueRunner
 
 __all__.append("VenueRunner")
