@@ -20,6 +20,7 @@ from selecta.lf_migration import (
     MigrationConflict,
     RetrievalGrant,
     VerifiedLocalBinding,
+    apply_prepared_plan,
     audit_references,
     collect_inventory,
     deletion_readiness,
@@ -27,6 +28,7 @@ from selecta.lf_migration import (
     plan_backfill,
     require_grant,
     restore_legacy_revisions,
+    rollback_prepared_plan,
     retrieve_original,
 )
 from selecta.mix_contract import SongRef, new_contract
@@ -253,3 +255,65 @@ def test_old_client_export_keeps_legacy_archive_until_cutover(tmp_path, monkeypa
         assert response.headers["x-selecta-export-mode"] == "legacy"
         with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
             assert any(name.startswith("originals/" + asset_id) for name in archive.namelist())
+
+
+class _ProjectionWriter:
+    recipe_schema = "selecta.lf04.recipe-test/1"
+
+    def __init__(self):
+        self.migrated = {}
+        self.calls = 0
+        self.crash_after_upsert = False
+
+    def upsert_sidecar(self, workspace_id, revision, sidecar, *, idempotency_key):
+        self.calls += 1
+        assert sidecar["legacy_contract"]["revision"] == revision
+        assert workspace_id == "workspace1"
+        self.migrated[idempotency_key] = copy.deepcopy(sidecar)
+        if self.crash_after_upsert:
+            self.crash_after_upsert = False
+            raise RuntimeError("connection lost after commit")
+
+    def rollback_sidecar(self, workspace_id, revision, *, idempotency_key):
+        assert workspace_id == "workspace1"
+        self.migrated.pop(idempotency_key, None)
+
+
+def test_agent04_adapter_refuses_unapproved_or_version_mismatched_writes(tmp_path):
+    plan = plan_backfill("workspace1", [_contract().to_json()])
+    journal = LocalPlanJournal(tmp_path)
+    journal.prepare(plan)
+    writer = _ProjectionWriter()
+    with pytest.raises(PermissionError):
+        apply_prepared_plan(journal, plan["plan_id"], writer,
+                            expected_recipe_schema=writer.recipe_schema)
+    with pytest.raises(MigrationConflict, match="schema mismatch"):
+        apply_prepared_plan(journal, plan["plan_id"], writer,
+                            expected_recipe_schema="incorrect", approved=True)
+    assert writer.migrated == {}
+
+
+def test_adapter_crash_after_commit_replay_then_compensating_rollback(tmp_path):
+    base = _contract()
+    later = base.edited(songs=base.songs, name="Edited")
+    plan = plan_backfill("workspace1", [base.to_json(), later.to_json()])
+    journal = LocalPlanJournal(tmp_path)
+    journal.prepare(plan)
+    writer = _ProjectionWriter()
+    writer.crash_after_upsert = True
+    with pytest.raises(RuntimeError, match="connection lost"):
+        apply_prepared_plan(journal, plan["plan_id"], writer,
+                            expected_recipe_schema=writer.recipe_schema, approved=True)
+    assert len(writer.migrated) == 1
+    assert journal.read(plan["plan_id"])["completed"] == []
+    assert apply_prepared_plan(journal, plan["plan_id"], writer,
+                               expected_recipe_schema=writer.recipe_schema,
+                               approved=True)["state"] == "complete"
+    assert len(writer.migrated) == 2
+    assert rollback_prepared_plan(journal, plan["plan_id"], writer,
+                                 expected_recipe_schema=writer.recipe_schema,
+                                 approved=True)["state"] == "rolled_back"
+    assert writer.migrated == {}
+    assert {r["revision"] for r in restore_legacy_revisions(plan)} == {
+        base.revision, later.revision,
+    }
