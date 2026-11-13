@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import sys
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
-import sys
-import threading
 
 import pytest
 
@@ -148,7 +148,10 @@ def test_safe_handoff_requires_release_before_destination_sound(tmp_path):
     assert result.stage is TransferStage.STARTED
     assert coordinator.ledger.current_owner(req.scope) == ("new", 10, "audible")
     names = [e[0] for e in engine.events]
-    assert names.index("prepare") < names.index("release") < names.index("acquire") < names.index("start")
+    assert (
+        names.index("prepare") < names.index("release")
+        < names.index("acquire") < names.index("start")
+    )
     assert engine.audible == {"old": False, "new": True, "other": False}
 
 
@@ -262,7 +265,10 @@ def test_crash_recovery_between_every_committed_stage(tmp_path):
 
 def test_deadline_before_release_preserves_source(tmp_path):
     clock, engine, coordinator, req = build(tmp_path)
-    assert coordinator.advance(coordinator.begin(req).request.operation_id).stage is TransferStage.PREPARED
+    assert (
+        coordinator.advance(coordinator.begin(req).request.operation_id).stage
+        is TransferStage.PREPARED
+    )
     clock.now += 60
     assert coordinator.advance(req.operation_id).stage is TransferStage.ABORTED
     assert engine.audible["old"]
@@ -320,7 +326,10 @@ def test_manually_isolated_offline_speaker_requires_hardware_proof(tmp_path):
     with pytest.raises(TransferRejected) as exc:
         coordinator.manual_isolation(req.operation_id, "untrusted-button-click")
     assert exc.value.code == "unverified_isolation"
-    assert coordinator.manual_isolation(req.operation_id, "hardware-witness").stage is TransferStage.RELEASED
+    assert (
+        coordinator.manual_isolation(req.operation_id, "hardware-witness").stage
+        is TransferStage.RELEASED
+    )
     engine.online["old"] = True
     assert coordinator.execute(req).stage is TransferStage.STARTED
     assert not engine.audible["old"] and engine.audible["new"]
