@@ -5,6 +5,7 @@ import { unfinishedUploads } from './uploadParts';
 import { useSharedLibraryPlayer } from './cloudTransport';
 import { useCloudPlayer } from './useCloudPlayer';
 import { DeviceLibrary } from './lf-personal/PersonalWorkspace';
+import { LegacyFolderWatchEntry } from './lf-personal/FolderWatches';
 
 // The Cloud library: private originals, played from prepared playback files. Listening starts a
 // run from that song to the end of the list, with the next song buffered ahead (see
@@ -125,6 +126,7 @@ function LegacyLibraryPanel({ api, workspaceId, setError, refreshAccount, go, re
     : <>{state.stale && <p className="cloud-feedback" role="status">This list may be out of date: {state.stale} <button onClick={() => void load()}>Try again</button></p>}{list}</>;
   return (
     <section className="cloud-library">
+      <LegacyFolderWatchEntry />
       <div className="cloud-library-heading">
         <div><p className="cloud-eyebrow">PRIVATE TO THIS WORKSPACE</p><p>Listen from any song and the rest of the list follows, with the next song loaded ahead. Removing songs frees space at once.</p></div>
         <div><button onClick={() => void load()} disabled={busy}>Refresh</button><button className="primary" onClick={() => go('uploads')}>Upload tracks</button></div>
