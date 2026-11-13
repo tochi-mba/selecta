@@ -6,8 +6,8 @@ import {
 } from './contracts';
 import './localFirstPlayer.css';
 
-export function LocalFirstPlayer({ api, workspaceId }: { api: Api; workspaceId: string }) {
-  const control = useLocalFirstControl({ api, workspaceId });
+export function LocalFirstPlayer({ api, workspaceId, actorId }: { api: Api; workspaceId: string; actorId: string }) {
+  const control = useLocalFirstControl({ api, workspaceId, actorId });
   const { here, speaker, session, readiness, blocked, pending, error, notice } = control;
   const [controlling, setControlling] = useState(false);
   const [showTakeover, setShowTakeover] = useState(false);
