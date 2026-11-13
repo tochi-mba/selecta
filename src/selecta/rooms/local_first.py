@@ -208,6 +208,7 @@ def ready_speaker(
         and speaker.online
         and speaker.output_ready
         and fresh(speaker.checked_at, now)
+        and isinstance(speaker.committed_until, (float, int))
         and math.isfinite(speaker.committed_until)
     )
 
