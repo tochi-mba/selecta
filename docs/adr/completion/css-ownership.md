@@ -44,6 +44,10 @@ Feature-local sheets live beside the one component that imports them and style n
 | `cloud/makeCloudMix.css` | Cloud mix creation interface layout and controls | `cloud/MakeCloudMix.tsx` |
 | `venueops/staffDashboard.css` | unattended playback dashboard and staff controls | `venueops/StaffDashboard.tsx` |
 | `views/mixIntent.css` | mix intent and setting-scope explanatory surfaces | `views/MixIntent.tsx` |
+| `business/localFirst/readiness.css` | local-first venue and zone readiness, recovery, real-output status and mobile HQ layout | `business/localFirst/ReadinessPanel.tsx` |
+| `cloud/lf-device-control/localFirstPlayer.css` | device-owned transport controls, readiness, takeover states and narrow phone layout | `cloud/lf-device-control/LocalFirstPlayer.tsx` |
+| `cloud/lf-mix-repair/repair.css` | per-device missing-media repair, candidate review and narrow mix panels | `cloud/lf-mix-repair/DeviceMixRepair.tsx` |
+| `cloud/lf-personal/personal.css` | local music onboarding, device selection and connected personal library states | `cloud/lf-personal/PersonalWorkspace.tsx` |
 
 Load order (`web/src/main.tsx`): tokens, style.css, shell, polish, foundation, listening, creation,
 operations, music-objects, glossary, palette, icons, depth, typography. Later files refine earlier
