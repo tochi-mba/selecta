@@ -64,13 +64,19 @@ class TransferRequest:
         for value in (self.operation_id, self.idempotency_key, self.actor_id,
                       self.target_device_id, self.recipe_revision):
             if not isinstance(value, str) or not value.strip() or len(value) > 256:
-                raise TransferRejected("invalid_request", "Required identity or revision is invalid")
+                raise TransferRejected(
+                    "invalid_request", "Required identity or revision is invalid"
+                )
         if self.expected_generation < 0:
             raise TransferRejected("invalid_generation", "Expected generation must be nonnegative")
         if self.expires_at <= now or self.expires_at - now > 300:
-            raise TransferRejected("expired", "A transfer requires a future deadline within five minutes")
+            raise TransferRejected(
+                "expired", "A transfer requires a future deadline within five minutes"
+            )
         if not self.recording_refs or any(not r or not r.strip() for r in self.recording_refs):
-            raise TransferRejected("invalid_recipe", "Every playable occurrence needs a recording ref")
+            raise TransferRejected(
+                "invalid_recipe", "Every playable occurrence needs a recording ref"
+            )
         if any(not r or not r.strip() for r in self.transition_refs):
             raise TransferRejected("invalid_recipe", "Transition references cannot be blank")
 
