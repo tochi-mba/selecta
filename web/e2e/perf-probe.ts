@@ -12,7 +12,12 @@ import { clsOf, inpOf, type Reading } from './vitals';
 export type LongTask = { start: number; duration: number };
 export type LongFrame = { start: number; duration: number; blocking: number; scripts: string[] };
 export type Interaction = { name: string; start: number; duration: number; target: string; id?: number };
-export type Shift = { start: number; value: number };
+export type Shift = {
+  start: number;
+  value: number;
+  /** Layout Instability API attribution: which visible DOM nodes actually moved. */
+  sources?: { element: string; fromY: number; toY: number; fromX: number; toX: number }[];
+};
 export type Probe = {
   longTasks: LongTask[];
   longFrames: LongFrame[];
@@ -80,8 +85,23 @@ export async function installProbe(page: Page) {
     } catch { /* no Event Timing: the in-page paint times below still apply */ }
     try {
       new PerformanceObserver((list) => {
-        for (const entry of list.getEntries() as (PerformanceEntry & { value: number; hadRecentInput: boolean })[]) {
-          if (!entry.hadRecentInput) probe.shifts.push({ start: entry.startTime, value: entry.value });
+        for (const entry of list.getEntries() as (PerformanceEntry & {
+          value: number;
+          hadRecentInput: boolean;
+          sources?: { node: Node | null; previousRect: DOMRectReadOnly; currentRect: DOMRectReadOnly }[];
+        })[]) {
+          if (entry.hadRecentInput) continue;
+          const sources = entry.sources?.filter((source) => source.node instanceof Element).map((source) => {
+            const node = source.node as Element;
+            return {
+              element: `${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ''}${[...node.classList].slice(0, 3).map((name) => `.${name}`).join('')}`,
+              fromY: Math.round(source.previousRect.top),
+              toY: Math.round(source.currentRect.top),
+              fromX: Math.round(source.previousRect.left),
+              toX: Math.round(source.currentRect.left),
+            };
+          });
+          probe.shifts.push({ start: entry.startTime, value: entry.value, sources });
         }
       }).observe({ type: 'layout-shift', buffered: true });
     } catch { /* no Layout Instability API */ }
