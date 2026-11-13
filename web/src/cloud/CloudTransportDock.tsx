@@ -23,6 +23,7 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
   const workspaceId = account.workspace.id;
   const audioRef = useRef<HTMLAudioElement>(null);
   const deviceBox = useRef<HTMLDivElement>(null);
+  const deviceSpeaker = useRef<Speaker | null>(null);
   const [error, setError] = useState('');
   const [deviceProblem, setDeviceProblem] = useState('');
   const [armed, setArmed] = useState(page === 'listen');
@@ -32,13 +33,20 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
   useEffect(() => { if (page === 'listen') setArmed(true); }, [page]);
   // The Library page plays through this dock's player rather than its own element.
   useEffect(() => { shareLibraryPlayer(workspaceId, player); });
-  useEffect(() => () => { shareLibraryPlayer(null, null); releaseFocus('library'); releaseFocus('device'); }, [workspaceId]);
+  useEffect(() => () => {
+    deviceSpeaker.current = null;
+    shareLibraryPlayer(null, null);
+    releaseFocus('library');
+    releaseFocus('device');
+  }, [workspaceId]);
 
   const library = useMemo(() => catalogueSource(api, workspaceId), [api, workspaceId]);
   useEffect(() => { if (reload) library.catalogue.refresh(); }, [library, reload]);
-  const speakerFor = useCallback((audio: HTMLAudioElement, source: (index: number) => Promise<string | null>): Speaker => (
-    recoveringSpeaker(audio, source, { onProblem: setDeviceProblem, songName: library.name })
-  ), [library]);
+  const speakerFor = useCallback((audio: HTMLAudioElement, source: (index: number) => Promise<string | null>): Speaker => {
+    const made = recoveringSpeaker(audio, source, { onProblem: setDeviceProblem, songName: library.name });
+    deviceSpeaker.current = made;
+    return made;
+  }, [library]);
 
   // The speaker's element lives inside PlayingBar; media events don't bubble, but they do pass
   // through ancestors while capturing, so the dock hears the speaker start without reaching in.
@@ -49,7 +57,12 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
       const element = event.target as HTMLMediaElement;
       // Recovery may play the next song immediately after reporting a failed one.
       // Do not erase that explanation on its automatic `play` event.
-      claimFocus({ id: 'device', pause: () => element.pause() });
+      claimFocus({ id: 'device', pause: () => {
+        // Pausing for Library focus must reach the recovery wrapper too, otherwise
+        // a pending failed-track skip can restart the speaker after the Library wins.
+        deviceSpeaker.current?.pause();
+        element.pause();
+      } });
     };
     // Paused or faded out (the lease moved): it no longer holds the sound.
     const stopped = () => releaseFocus('device');
