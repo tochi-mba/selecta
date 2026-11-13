@@ -16,7 +16,7 @@ engine_app = typer.Typer(no_args_is_help=True, add_completion=False)
 
 @engine_app.command("run")
 def engine_run(
-    state_dir: Path | None = typer.Option(None, help="Private engine state directory."),
+    state_dir: Path | None = typer.Option(None, help="Private engine state directory."),  # noqa: B008
 ) -> None:
     """Supervise the existing local Python/FFmpeg API in the foreground."""
     from selecta.local_engine.config import state_directory
@@ -99,8 +99,8 @@ def engine_capabilities() -> None:
 
 @engine_app.command("config")
 def engine_config(
-    port: int | None = typer.Option(None, min=1024, max=65535),
-    workspace: str | None = typer.Option(None, help="standalone, personal, organisation"),
+    port: int | None = typer.Option(None, min=1024, max=65535),  # noqa: B008
+    workspace: str | None = typer.Option(None, help="standalone, personal, organisation"),  # noqa: B008
 ) -> None:
     """View or atomically change config while stopped; no effect on legacy data home."""
     from dataclasses import asdict
