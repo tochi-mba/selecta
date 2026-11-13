@@ -84,7 +84,7 @@ def test_business_zone_upgrade_keeps_existing_personal_playback(tmp_path):
 
         # Roll back business-only rows, then confirm a downgrade does not drop playback.
         with engine.begin() as connection:
-            connection.exec_driver_sql("DELETE FROM workspace_members WHERE workspace_id = 'business-1'")
+            connection.exec_driver_sql(\n                "DELETE FROM workspace_members WHERE workspace_id = 'business-1'"\n            )
             connection.exec_driver_sql("DELETE FROM workspaces WHERE id = 'business-1'")
         downgrade(engine, "merge_0416_heads")
         with engine.connect() as connection:
@@ -92,6 +92,6 @@ def test_business_zone_upgrade_keeps_existing_personal_playback(tmp_path):
                 "SELECT workspace_id, song_index, offset_ms, state, active_device_id, seq "
                 "FROM playback_sessions"
             ).one() == ("workspace-1", 7, 12345, "paused", "device-1", 5)
-        assert "id" not in {column["name"] for column in sa.inspect(engine).get_columns("playback_sessions")}
+        columns = sa.inspect(engine).get_columns("playback_sessions")\n        assert "id" not in {column["name"] for column in columns}
     finally:
         engine.dispose()
