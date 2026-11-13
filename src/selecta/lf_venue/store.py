@@ -59,7 +59,8 @@ class VenueStore:
         self.db.executescript("""
           CREATE TABLE IF NOT EXISTS config (workspace TEXT, venue TEXT, document TEXT NOT NULL,
               PRIMARY KEY (workspace, venue));
-          CREATE TABLE IF NOT EXISTS tracks (workspace TEXT, venue TEXT, track TEXT, document TEXT NOT NULL,
+          CREATE TABLE IF NOT EXISTS tracks (workspace TEXT, venue TEXT, track TEXT,
+              document TEXT NOT NULL,
               PRIMARY KEY (workspace, venue, track));
           CREATE TABLE IF NOT EXISTS output_bindings (engine TEXT, output TEXT, channel INTEGER,
               workspace TEXT, venue TEXT, zone TEXT,
@@ -153,7 +154,8 @@ class VenueStore:
                     "Physical output channel already assigned to another zone"
                 ) from exc
             db.execute(
-                "INSERT INTO config VALUES (?,?,?) ON CONFLICT(workspace,venue) DO UPDATE SET document=excluded.document",
+                "INSERT INTO config VALUES (?,?,?) "
+                "ON CONFLICT(workspace,venue) DO UPDATE SET document=excluded.document",
                 (venue.workspace_id, venue.venue_id, json.dumps(asdict(venue))),
             )
             for zone in venue.zones:
@@ -174,7 +176,9 @@ class VenueStore:
         self.config(workspace, venue)  # must exist; never let inventories cross venues
         with self.tx() as db:
             db.execute(
-                "INSERT INTO tracks VALUES (?,?,?,?) ON CONFLICT(workspace,venue,track) DO UPDATE SET document=excluded.document",
+                "INSERT INTO tracks VALUES (?,?,?,?) "
+                "ON CONFLICT(workspace,venue,track) "
+                "DO UPDATE SET document=excluded.document",
                 (workspace, venue, recording.track_id, json.dumps(asdict(recording))),
             )
 
@@ -255,16 +259,20 @@ class VenueStore:
             if db.execute("SELECT 1 FROM journal WHERE event_id=?", (event_id,)).fetchone():
                 return False
             row = db.execute(
-                "SELECT COALESCE(MAX(seq),0)+1 FROM journal WHERE workspace=? AND venue=? AND zone=?",
+                "SELECT COALESCE(MAX(seq),0)+1 FROM journal "
+                "WHERE workspace=? AND venue=? AND zone=?",
                 (workspace, venue, zone),
             ).fetchone()
             db.execute(
-                "INSERT INTO journal (workspace,venue,zone,seq,event_id,kind,track,generated_at,generation,source) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO journal (workspace,venue,zone,seq,event_id,kind,track,"
+                "generated_at,generation,source) VALUES (?,?,?,?,?,?,?,?,?,?)",
                 (workspace, venue, zone, row[0], event_id, kind, track, at, generation, source),
             )
             if kind == "started" and track:
                 db.execute(
-                    "INSERT INTO played VALUES (?,?,?,?,?) ON CONFLICT(workspace,venue,zone,track) DO UPDATE SET played_at=excluded.played_at",
+                    "INSERT INTO played VALUES (?,?,?,?,?) "
+                "ON CONFLICT(workspace,venue,zone,track) "
+                "DO UPDATE SET played_at=excluded.played_at",
                     (workspace, venue, zone, track, at),
                 )
             return True
@@ -295,15 +303,19 @@ class VenueStore:
             if cursor.rowcount != 1:
                 raise VenueError("Unknown local session")
             seq = db.execute(
-                "SELECT COALESCE(MAX(seq),0)+1 FROM journal WHERE workspace=? AND venue=? AND zone=?",
+                "SELECT COALESCE(MAX(seq),0)+1 FROM journal "
+                "WHERE workspace=? AND venue=? AND zone=?",
                 (workspace, venue, zone),
             ).fetchone()[0]
             db.execute(
-                "INSERT INTO journal (workspace,venue,zone,seq,event_id,kind,track,generated_at,generation,source) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO journal (workspace,venue,zone,seq,event_id,kind,track,"
+                "generated_at,generation,source) VALUES (?,?,?,?,?,?,?,?,?,?)",
                 (workspace, venue, zone, seq, event, "started", track, at, generation, source),
             )
             db.execute(
-                "INSERT INTO played VALUES (?,?,?,?,?) ON CONFLICT(workspace,venue,zone,track) DO UPDATE SET played_at=excluded.played_at",
+                "INSERT INTO played VALUES (?,?,?,?,?) "
+                "ON CONFLICT(workspace,venue,zone,track) "
+                "DO UPDATE SET played_at=excluded.played_at",
                 (workspace, venue, zone, track, at),
             )
 
@@ -316,7 +328,9 @@ class VenueStore:
 
     def pending_events(self, workspace: str, venue: str, limit: int = 500) -> list[dict]:
         rows = self.db.execute(
-            "SELECT zone,seq,event_id,kind,track,generated_at,generation,source FROM journal WHERE workspace=? AND venue=? AND uploaded=0 ORDER BY zone,seq LIMIT ?",
+            "SELECT zone,seq,event_id,kind,track,generated_at,generation,source "
+            "FROM journal WHERE workspace=? AND venue=? AND uploaded=0 "
+            "ORDER BY zone,seq LIMIT ?",
             (workspace, venue, min(max(limit, 1), 500)),
         ).fetchall()
         return [dict(row) for row in rows]  # deliberately metadata-only, never transport commands
