@@ -130,13 +130,20 @@ class HostedLucyPlanner:
     ) -> PlanningOutcome:
         catalogue = safe_catalogue(catalogue_rows)
         system, user = prompt_for(user_request, catalogue)
-        fallback = lambda reason: PlanningOutcome(
-            deterministic_plan(
-                catalogue, workspace_id=workspace_id, device_id=device_id,
-                user_request=user_request,
-            ),
-            fallback_reason=reason,
-        )
+        def fallback(
+            reason: str, tokens_in: int = 0, tokens_out: int = 0,
+            cost: float = 0.0,
+        ) -> PlanningOutcome:
+            return PlanningOutcome(
+                deterministic_plan(
+                    catalogue, workspace_id=workspace_id, device_id=device_id,
+                    user_request=user_request,
+                ),
+                hosted_tokens_in=tokens_in,
+                hosted_tokens_out=tokens_out,
+                hosted_cost_usd=cost,
+                fallback_reason=reason,
+            )
         if cancelled and cancelled():
             raise asyncio.CancelledError
         if provider is None:
@@ -180,14 +187,14 @@ class HostedLucyPlanner:
                 or tokens_out > b.max_output_tokens
                 or tokens_in + tokens_out > b.max_total_tokens
             ):
-                return fallback("token_limit")
+                return fallback("token_limit", tokens_in, tokens_out, b.estimate(tokens_in, tokens_out))
             cost = b.estimate(tokens_in, tokens_out)
             if cost > b.max_cost_usd:
-                return fallback("spend_limit")
+                return fallback("spend_limit", tokens_in, tokens_out, cost)
             if getattr(result, "calls", []) or getattr(result, "stop", "") in (
                 "max_tokens", "length", "refusal",
             ):
-                return fallback("unsafe_or_incomplete_model_response")
+                return fallback("unsafe_or_incomplete_model_response", tokens_in, tokens_out, cost)
             raw = "".join(chunks) or getattr(result, "text", "")
             plan = parse_model_plan(
                 raw, workspace_id=workspace_id, device_id=device_id,
@@ -196,5 +203,5 @@ class HostedLucyPlanner:
             return PlanningOutcome(plan, tokens_in, tokens_out, cost)
         except asyncio.CancelledError:
             raise
-        except (Exception,):  # noqa: BLE001 - an untrusted provider cannot block local fallback
+        except Exception:  # noqa: BLE001 - an untrusted provider cannot block local fallback
             return fallback("model_unavailable_or_invalid")
