@@ -548,6 +548,10 @@ for (const zoom of [2, 4]) {
     expect((await zoomDefects(page)).defects.join()).toContain('a sentence far too long');
     for (const route of ['/listen', '/library', '/mix/current/edit', '/mixes', '/mixes/mine']) {
       await open(page, route);
+      // Listen briefly shows its empty-state links while the saved mix loads.
+      // Wait for the actual transport before measuring hit targets so the scan
+      // does not hold detached buttons after React replaces the loading state.
+      if (route === '/listen') await expect(page.locator('main.page.now')).toBeVisible();
       const found = await zoomDefects(page);
       expect(found.overflow, `${route} scrolls sideways at ${zoom * 100}%`).toBeLessThanOrEqual(1);
       expect(found.defects, `${route} at ${zoom * 100}% (${width}px)`).toEqual([]);

@@ -283,6 +283,7 @@ test('MP-0274-06 the context bar, editor scope, inspector and Studio ruler never
   }
   // Listen's side column pins under the bar's real height too
   await open(page, '/listen', 1440, 700);
+  await expect(page.locator('main.page.now .listen-side')).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 600));
   const listen = await page.evaluate(chrome);
   const layoutEnd = await page.locator('.listen-layout').evaluate((element) => element.getBoundingClientRect().bottom);

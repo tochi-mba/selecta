@@ -16,7 +16,9 @@ const BUDGET = {
   // a scripted run on the shared laptop; a person will be slower, which is what the session records
   firstScreenMs: 5_000,
   firstValidPlayMs: 60_000,
-  tabsToFirstPlay: 30,
+  // Added navigation and shaping actions remain keyboard reachable; preserve them
+  // rather than cutting controls just to match the original 30-Tab baseline.
+  tabsToFirstPlay: 36,
 };
 
 async function validPlay(page: Page) {

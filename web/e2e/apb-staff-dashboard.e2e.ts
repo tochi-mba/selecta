@@ -2,10 +2,9 @@ import { expect, test, type Page } from '@playwright/test';
 
 /**
  * ADR-0430 (AV-0430-01, -03, -04, -05) and ADR-0439 (AV-0439-02, -04): the staff dashboard in a real
- * browser. NEEDS MOUNTING FIRST: the session lead mounts web/src/venueops/StaffDashboard.tsx at
- * STAFF_PATH and src/selecta/venueops/routes_staff.py on the e2e server, with
- * SELECTA_FLAGS="+autopilot.venue_mode +venue.staff_dashboard". Until then this spec is written, not run.
- * The dashboard state is answered here by page.route, so the layout checks don't depend on a live night.
+ * browser. The local E2E server opts into the private dashboard flag and the page hosts
+ * the real StaffDashboard component. The dashboard state is answered by page.route,
+ * so layout checks don't require a live night or public staff session.
  * Run with SELECTA_E2E_DIST=dist-apb2 SELECTA_E2E_PORT=9041.
  */
 const STAFF_PATH = process.env.SELECTA_STAFF_PATH ?? '/venue/staff/e2e';
