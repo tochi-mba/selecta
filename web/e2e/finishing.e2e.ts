@@ -226,6 +226,27 @@ for (const [width, height] of [[1280, 860], [375, 812]]) {
   });
 }
 
+/** Direct Make a Mix entry must not mistake an in-flight current-mix GET for first-run
+ * onboarding. The startup fetch happens alongside the status probe, not after the first paint. */
+test('Make a Mix never flashes first-run setup over an existing mix during startup', async ({ page }) => {
+  await page.route('**/api/mix', async (route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    await new Promise((done) => setTimeout(done, 350));
+    await route.continue();
+  });
+  await page.addInitScript(() => {
+    const observed = window as unknown as { sawPrematureMixSetup: boolean };
+    observed.sawPrematureMixSetup = false;
+    new MutationObserver(() => {
+      if (document.querySelector('.setup-steps')) observed.sawPrematureMixSetup = true;
+    }).observe(document, { childList: true, subtree: true });
+  });
+  await page.goto('/mixes');
+  await expect(page.getByRole('heading', { name: 'Make a Mix' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Current mix' })).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { sawPrematureMixSetup: boolean }).sawPrematureMixSetup)).toBe(false);
+});
+
 test('pages hold their shape while they load, even when every answer is slow', async ({ page }) => {
   await page.addInitScript(() => {
     const measurements = window as unknown as {
