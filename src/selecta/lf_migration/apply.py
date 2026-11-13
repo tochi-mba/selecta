@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any, Protocol
 
-from .backfill import LocalPlanJournal, MigrationConflict, SIDECAR_SCHEMA
+from .backfill import SIDECAR_SCHEMA, LocalPlanJournal, MigrationConflict
 
 
 class RecipeProjectionWriter(Protocol):
