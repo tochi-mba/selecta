@@ -9,6 +9,7 @@
 //
 // The stub below only does autoplay detection (ADR-0445): it resumes a silent AudioContext and
 // plays one silent buffer. If the context stays suspended, the browser wants a tap first.
+// Unlocking the browser NEVER proves a physical speaker played user music.
 
 export interface KioskAudio {
   /** Try to allow sound. Resolves true when the browser lets this page play. */
@@ -47,7 +48,8 @@ export function stubAudio(make: () => AudioContextLike | null = defaultContext):
       }
       return unlocked;
     },
-    playing: () => unlocked,
+    // A silent unlock probe cannot count as playback or a positive heartbeat.
+    playing: () => false,
     savedHoursAhead: () => 0,
   };
 }
