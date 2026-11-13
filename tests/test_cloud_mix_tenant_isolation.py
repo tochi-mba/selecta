@@ -7,6 +7,7 @@ import hashlib
 import pytest
 import sqlalchemy as sa
 from cloud_party import ALICE, BOB, auth, made_up
+
 from selecta import flags
 from selecta.persistence import db_now, transaction
 from selecta.storage.keys import original_key

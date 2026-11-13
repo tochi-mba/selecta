@@ -9,6 +9,7 @@ from __future__ import annotations
 import pytest
 import sqlalchemy as sa
 from cloud_party import ALICE, BOB, auth, made_up
+
 from selecta import flags
 from selecta.business import orgs, venues
 from selecta.identity.schema import users, workspace_members
