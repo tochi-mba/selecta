@@ -63,6 +63,49 @@ describe('the playback session on a device', () => {
     } finally { hook.unmount(); }
   });
 
+  it('a delayed reconnect after device takeover never restarts the old speaker', async () => {
+    const oldSession = session({ active_device_id: 'd1' });
+    const newSession = session({ active_device_id: 'd2', seq: 5 });
+    let answerReconnect!: (answer: { action: string; session: SessionState; message: null }) => void;
+    let reconnectCalled = false;
+    let reads = 0;
+    const speaker: Speaker = {
+      start: vi.fn(async () => undefined), stop: vi.fn(), pause: vi.fn(), resume: vi.fn(),
+      position: () => null, active: () => false,
+    };
+    const api = (async (path: string) => {
+      if (path === '/devices') return { device: {
+        id: 'd1', name: 'First device', kind: 'laptop', signed_in: true,
+        this_device: true, poor_speaker: false, last_seen_at: 0, warnings: [],
+      }, notice: null };
+      if (path === '/playback/reconnect') {
+        reconnectCalled = true;
+        return new Promise<{ action: string; session: SessionState; message: null }>(
+          (resolve) => { answerReconnect = resolve; },
+        );
+      }
+      if (path.startsWith('/playback/session')) {
+        reads++;
+        return {
+          session: newSession, speaker: 'elsewhere', speaker_device_id: 'd2',
+          speaker_name: 'Second device', ask_before_playing_here: true,
+          server_time: Date.now() / 1000,
+        };
+      }
+      throw new Error(`unexpected ${path}`);
+    }) as Api;
+    const hook = renderHook(() => usePlaybackDevice({
+      api, workspaceId: 'ws-reconnect-race', speaker,
+    }));
+    try {
+      await waitFor(() => expect(reconnectCalled).toBe(true));
+      answerReconnect({ action: 'continue', session: oldSession, message: null });
+      await waitFor(() => expect(reads).toBeGreaterThan(0));
+      expect(speaker.start).not.toHaveBeenCalled();
+      expect(hook.result.current.isSpeaker()).toBe(false);
+    } finally { hook.unmount(); }
+  });
+
   it('tears the speaker down when the page lets it go', () => {
     const speaker: Speaker = { start: async () => {}, stop: vi.fn(), pause: () => {}, resume: () => {}, position: () => null, active: () => false, dispose: vi.fn() };
     const api = (() => new Promise(() => {})) as Api;
