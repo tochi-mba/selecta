@@ -85,6 +85,22 @@ def test_export_is_permanent_and_never_clobbers_an_existing_file(tmp_path):
     assert store.state(first["id"]) == "ready"
 
 
+def test_repeated_exports_have_distinct_records_but_the_same_recipe_identity(tmp_path):
+    store = LocalArtifactStore(tmp_path / "registry")
+    frozen = spec(kind="export")
+    a, _ = store.publish(frozen, write_bytes(b"first"),
+                         destination=tmp_path / "first.flac")
+    b, _ = store.publish(frozen, write_bytes(b"second"),
+                         destination=tmp_path / "second.flac")
+    assert a["id"] != b["id"]
+    assert a["spec_id"] == b["spec_id"] == frozen.identity
+    assert store.state(a["id"]) == "ready"
+    assert store.state(b["id"]) == "ready"
+    assert store.evict(10**9) == 0
+    assert (tmp_path / "first.flac").read_bytes() == b"first"
+    assert (tmp_path / "second.flac").read_bytes() == b"second"
+
+
 def test_interrupted_writer_removes_partials_and_preserves_previous_output(tmp_path):
     store = LocalArtifactStore(tmp_path / "artifacts")
     target = tmp_path / "export.flac"
