@@ -67,7 +67,7 @@ export function localFirstOn(features: Record<string, boolean> | undefined | nul
   return features?.['business.local_first'] === true;
 }
 
-function verifiedAt(report: LocalZoneReport | undefined): number | null {
+function verifiedAt(report: LocalZoneReport | null | undefined): number | null {
   const at = report?.verified_at;
   return typeof at === 'number' && Number.isFinite(at) && at > 0 ? at : null;
 }
@@ -78,20 +78,21 @@ export function inspectZone(zone: Zone, venue: Venue, now: number, browserOfflin
   const at = verifiedAt(report);
   const base: ZoneReadiness = {
     zoneId: zone.id, zoneName: zone.name, state: 'unknown', verifiedAt: at,
-    verified: report?.inventory.verified ?? null, required: report?.inventory.required ?? null,
-    committedMinutes: report?.horizon.committed_minutes ?? null,
-    preparedMinutes: report?.horizon.prepared_minutes ?? null,
-    plannedMinutes: report?.horizon.planned_minutes ?? null,
-    fallbackMinutes: report?.horizon.fallback_minutes ?? null,
-    speaker: report?.output.device_name ?? null,
-    generation: report?.output.generation ?? null, output: report?.output.state ?? null,
+    verified: report?.inventory?.verified ?? null, required: report?.inventory?.required ?? null,
+    committedMinutes: report?.horizon?.committed_minutes ?? null,
+    preparedMinutes: report?.horizon?.prepared_minutes ?? null,
+    plannedMinutes: report?.horizon?.planned_minutes ?? null,
+    fallbackMinutes: report?.horizon?.fallback_minutes ?? null,
+    speaker: typeof report?.output?.device_name === 'string' && !/[\\/]/.test(report.output.device_name) ? report.output.device_name : null,
+    generation: Number.isSafeInteger(report?.output?.generation) ? report!.output.generation! : null, output: report?.output?.state ?? null,
     issues: [], activationReady: false,
   };
-  if (!report || at == null || at > now + 30 || now - at > TELEMETRY_STALE_SECONDS) {
+  if (!report || !report.engine || !report.source || !report.inventory || !report.horizon || !report.output
+    || at == null || at > now + 30 || now - at > TELEMETRY_STALE_SECONDS) {
     base.issues.push(recovery('verify', 'Local status not verified recently', 'Check the engine on site, then refresh this page. Do not assume audio is playing.', 'devices'));
     // A previously confirmed offline engine is reported as OFFLINE with last-known evidence,
     // never "currently playing". It remains unsafe for activation/takeover.
-    if (report?.engine.state === 'offline_playing' && report.output.physical_verified && report.output.state === 'playing') {
+    if (report?.engine?.state === 'offline_playing' && report.output?.physical_verified && report.output?.state === 'playing') {
       base.state = 'offline';
     }
     return base;
