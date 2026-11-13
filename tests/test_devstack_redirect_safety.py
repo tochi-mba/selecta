@@ -1,13 +1,13 @@
 """Regression tests for local-development callback and billing redirect boundaries.
 
-The checkout and identity adapters consume caller-controlled return URLs.  They
+The checkout and identity adapters consume caller-controlled return URLs. They
 must keep navigation on the local Selecta site without dropping legitimate
 same-site paths and query parameters.
 """
 
-from urllib.parse import urlsplit
+from __future__ import annotations
 
-import pytest
+from urllib.parse import urlsplit
 
 from selecta.devstack.billing import same_site
 from selecta.devstack.redirects import safe_path, site_target
@@ -26,24 +26,24 @@ UNTRUSTED_RETURNS = (
 )
 
 
-@pytest.mark.parametrize("candidate", UNTRUSTED_RETURNS)
-def test_billing_return_url_cannot_change_origin(candidate: str) -> None:
-    destination = same_site(candidate)
-    parts = urlsplit(destination)
-    assert destination.startswith("/")
-    assert not destination.startswith("//")
-    assert "\\" not in destination
-    assert not parts.scheme
-    assert not parts.netloc
-    assert "\r" not in destination and "\n" not in destination
+def test_billing_return_url_cannot_change_origin() -> None:
+    for candidate in UNTRUSTED_RETURNS:
+        destination = same_site(candidate)
+        parts = urlsplit(destination)
+        assert destination.startswith("/")
+        assert not destination.startswith("//")
+        assert "\\" not in destination
+        assert not parts.scheme
+        assert not parts.netloc
+        assert "\r" not in destination and "\n" not in destination
 
 
-@pytest.mark.parametrize("candidate", UNTRUSTED_RETURNS)
-def test_identity_redirect_is_built_from_allowlisted_origin(candidate: str) -> None:
+def test_identity_redirect_is_built_from_allowlisted_origin() -> None:
     origin = "http://127.0.0.1:5173"
-    destination = site_target(candidate, (origin,))
-    assert destination.startswith(origin + "/")
-    assert urlsplit(destination).netloc == "127.0.0.1:5173"
+    for candidate in UNTRUSTED_RETURNS:
+        destination = site_target(candidate, (origin,))
+        assert destination.startswith(origin + "/")
+        assert urlsplit(destination).netloc == "127.0.0.1:5173"
 
 
 def test_identity_rejects_origin_prefix_and_userinfo_tricks() -> None:
