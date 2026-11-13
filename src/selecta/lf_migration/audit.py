@@ -117,7 +117,7 @@ def deletion_readiness(
             blockers.append("active_legacy_assets")
             break
     if any(
-        s.get("status") not in ("aborted", "expired", "rejected")
+        s.get("status") not in ("aborted", "expired", "rejected", "accepted")
         for s in snapshot.get("upload_sessions", ())
     ):
         blockers.append("unfinished_upload_sessions")
