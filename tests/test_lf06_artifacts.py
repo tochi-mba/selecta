@@ -68,7 +68,8 @@ def test_identity_includes_all_provenance_and_is_stable_under_mapping_order():
                      {"render": "1", "analysis": "1", "renderer": "1"}, {"gain": 0})
     assert a.identity == b.identity
     with pytest.raises(ArtifactInvalid):
-        ArtifactSpec("preview", {"song": "/private/song.wav"}, {"renderer": "1"}).identity
+        _ = ArtifactSpec("preview", {"song": "/private/song.wav"},
+                         {"renderer": "1"}).identity
 
 
 def test_export_is_permanent_and_never_clobbers_an_existing_file(tmp_path):
