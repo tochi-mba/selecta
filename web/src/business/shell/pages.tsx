@@ -10,15 +10,15 @@ import { access } from './nav';
 
 const HqConsole = lazy(() => import('../console/HqConsole').then((m) => ({ default: m.HqConsole })));
 const VenuesPage = lazy(() => import('../console/VenuesPage').then((m) => ({ default: m.VenuesPage })));
-const SchedulesPage = lazy(() => import('./sections').then((m) => ({ default: m.SchedulesPage })));
-const BillingPage = lazy(() => import('./sections').then((m) => ({ default: m.BillingPage })));
+const SchedulesPage = lazy(() => import('../console/SchedulesPage').then((m) => ({ default: m.SchedulesPage })));
+const BillingPage = lazy(() => import('../console/BillingPage').then((m) => ({ default: m.BillingPage })));
 const VenueManager = lazy(() => import('../venue/VenueManager').then((m) => ({ default: m.VenueManager })));
-const PeoplePage = lazy(() => import('./sections').then((m) => ({ default: m.PeoplePage })));
-const RequestsPage = lazy(() => import('./sections').then((m) => ({ default: m.RequestsPage })));
-const StaffControl = lazy(() => import('./sections').then((m) => ({ default: m.StaffControl })));
-const OnboardingPage = lazy(() => import('./sections').then((m) => ({ default: m.OnboardingPage })));
-const OrgLibrary = lazy(() => import('./sections').then((m) => ({ default: m.OrgLibrary })));
-const SettingsPage = lazy(() => import('./sections').then((m) => ({ default: m.SettingsPage })));
+const PeoplePage = lazy(() => import('../venue/PeoplePage').then((m) => ({ default: m.PeoplePage })));
+const RequestsPage = lazy(() => import('../venue/RequestsPage').then((m) => ({ default: m.RequestsPage })));
+const StaffControl = lazy(() => import('../staff/StaffControl').then((m) => ({ default: m.StaffControl })));
+const OnboardingPage = lazy(() => import('../onboarding/OnboardingPage').then((m) => ({ default: m.OnboardingPage })));
+const OrgLibrary = lazy(() => import('../library/OrgLibrary').then((m) => ({ default: m.OrgLibrary })));
+const SettingsPage = lazy(() => import('../settings/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 
 export function PageFallback() {
   return <p className="biz-quiet biz-page-loading" role="status">{SHELL_COPY.loadingPage}</p>;
