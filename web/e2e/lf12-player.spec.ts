@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 // Runs against a Vite dev server; see docs/integration/lf12.md. The fixture uses synthetic
 // metadata only, so no licensed music, cloud auth, server runtime or local media is required.
-const URL = (process.env.SELECTA_LF12_VITE_URL ?? 'http://127.0.0.1:5173') +
+const URL = (process.env.SELECTA_LF12_VITE_URL ?? 'http://127.0.0.1:5182') +
   '/src/cloud/lf-device-control/lf12-fixture.html';
 
 async function open(page: Page) {
