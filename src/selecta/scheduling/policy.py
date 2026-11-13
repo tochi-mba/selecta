@@ -135,6 +135,7 @@ class PolicyConfig:
     max_defer_s: float = 3_600.0
     max_result_bytes: int = 1_000_000
     strict_lanes: bool = False
+    enforce_speculative_budget: bool = True
     """Interactive always before standard, never shared by virtual time. Only the local app sets
     it: one person, one machine, and the seam about to be heard must never wait behind the rest
     of the mix (the local seam worker's order, SC-0394-04)."""
