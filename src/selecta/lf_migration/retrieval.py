@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from selecta.storage.artifacts import Buckets, DEFAULT_BUCKETS
+from selecta.storage.artifacts import DEFAULT_BUCKETS, Buckets
 from selecta.storage.keys import Bucket, original_key
 from selecta.storage.objects import ObjectClient, R2Error
 
@@ -44,7 +44,9 @@ class RetrievalGrant:
         )
 
 
-def require_grant(grant: RetrievalGrant | None, workspace_id: str, now: float | None = None) -> None:
+def require_grant(
+    grant: RetrievalGrant | None, workspace_id: str, now: float | None = None
+) -> None:
     if grant is None or not grant.authorizes(workspace_id, now=now):
         raise LegacyRetrievalDenied("legacy audio retrieval requires a current reviewed grant")
 
