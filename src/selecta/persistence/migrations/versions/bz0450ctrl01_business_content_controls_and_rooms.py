@@ -17,6 +17,9 @@ from collections.abc import Sequence
 
 from alembic import op
 
+from selecta.business.content import schema as content_schema
+from selecta.business.rooms import schema as rooms_schema
+
 revision: str = "bz0450ctrl01"
 down_revision: str | Sequence[str] | None = "bz0447bill01"
 branch_labels: str | Sequence[str] | None = None
@@ -26,16 +29,34 @@ POLICY = "workspace_isolation"
 SCOPE = "coalesce(current_setting('app.workspace_id', true), '')"
 RULE = f"({SCOPE} = '' OR workspace_id = {SCOPE})"
 
-# Filled in from `selecta.business.content.schema` and `selecta.business.rooms.schema`.
-TABLES: list[str] = []
+# Freeze the table inventory: later schema additions require a new revision.
+TABLES = (
+    "business_song_flags", "business_clean_links", "business_blocklist",
+    "business_zone_rules", "business_volume_rules", "business_rule_overrides",
+    "business_policy_versions", "business_flag_undo", "business_zone_rooms",
+    "business_zone_room_retired_codes", "business_zone_room_guests",
+    "business_zone_room_requests", "business_zone_room_votes",
+    "business_venue_networks", "business_staff_presence",
+)
+
+
+def _tables():
+    tables = (*content_schema.TABLES, *rooms_schema.TABLES)
+    if tuple(table.name for table in tables) != TABLES:
+        raise RuntimeError("BZ-5 table declarations changed; add a new migration")
+    return tables
 
 
 def _create_tables() -> None:
-    """The BZ-5 tables. Written out once the package schemas are final."""
+    # Only a migration may emit schema DDL. Table.create includes partial indexes,
+    # constraints and foreign keys declared by the business schema.
+    for table in _tables():
+        table.create(op.get_bind())
 
 
 def _drop_tables() -> None:
-    """Drops the BZ-5 tables in reverse dependency order."""
+    for table in reversed(_tables()):
+        table.drop(op.get_bind())
 
 
 def upgrade() -> None:
