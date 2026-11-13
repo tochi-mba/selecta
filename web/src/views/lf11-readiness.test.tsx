@@ -63,7 +63,7 @@ describe('LF11 local-first recipe readiness', () => {
     )).toBe(false);
     expect(canAcceptCandidate(
       { ...refs[7], explicit: false },
-      { ...candidate, candidateExplicit: false, equivalentVerified: true, candidateId: refs[7].recordingId },
+      { ...candidate, candidateExplicit: false, equivalentVerified: true, candidateId: refs[7].recordingId, candidateVersion: refs[7].version },
     )).toBe(true);
   });
   it('cannot consume stale, offline, disconnected-drive, or invalidated caches', () => {
