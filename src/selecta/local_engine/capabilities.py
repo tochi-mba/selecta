@@ -5,6 +5,7 @@ from __future__ import annotations
 import ctypes
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -32,23 +33,59 @@ def negotiate_version(peer_min: int, peer_max: int) -> int:
 
 
 def ffmpeg_probe() -> dict[str, Any]:
+    """Require a working binary and enumerate decoders; no inferred codec claims."""
     binary = shutil.which("ffmpeg")
+    missing = {"available": False, "version": None, "decoders": []}
     if binary is None:
-        return {"available": False, "version": None}
+        return missing
     try:
-        result = subprocess.run(
+        info = subprocess.run(
             [binary, "-version"], capture_output=True, text=True, timeout=3, check=False
         )
-        first_line = result.stdout.splitlines()[0] if result.stdout else ""
+        header = info.stdout.splitlines()[0] if info.stdout else ""
+        if info.returncode or not header.startswith("ffmpeg version "):
+            return missing
+        listing = subprocess.run(
+            [binary, "-hide_banner", "-decoders"],
+            capture_output=True, text=True, timeout=3, check=False,
+        )
+        lines = listing.stdout if listing.returncode == 0 else ""
+        supported = []
+        for codec, prefix in (
+            ("aac", "aac"),
+            ("flac", "flac"),
+            ("mp3", "mp3"),
+            ("wav", "pcm_s16"),
+        ):
+            if re.search(rf"(?m)^\\s*[A-Z.]{6}\\s+{prefix}\\w*\\s+", lines):
+                supported.append(codec)
         return {
-            "available": result.returncode == 0 and first_line.startswith("ffmpeg version"),
-            "version": first_line.split(" ")[2][:48] if first_line.startswith(
-                "ffmpeg version "
-            ) else None,
+            "available": True,
+            "version": header.split(" ")[2][:48],
+            "decoders": supported,
         }
     except (OSError, subprocess.TimeoutExpired):
-        return {"available": False, "version": None}
+        return missing
 
+
+def model_inventory(home: Path | None = None) -> dict[str, Any]:
+    """Count local checkpoint candidates without exporting names or file paths."""
+    folder = (
+        home if home is not None else
+        Path(os.environ.get("SELECTA_HOME", str(Path.home() / ".selecta")))
+    ) / "models"
+    try:
+        count = sum(
+            child.is_file() and child.suffix.lower() in
+            {".pt", ".pth", ".ckpt", ".onnx", ".safetensors"}
+            for child in folder.iterdir()
+        )
+    except OSError:
+        count = 0
+    return {
+        "checkpoint_candidates": count,
+        "state": "present_unvalidated" if count else "not_detected",
+    }
 
 def output_inventory(platform_name: str | None = None) -> dict[str, Any]:
     """A conservative presence probe; never label output working from enumeration."""
@@ -120,8 +157,8 @@ def capability_report(
         "platform": name,
         "architecture": platform.machine(),
         "ffmpeg": ffmpeg,
-        "supported_codecs": ["flac", "wav", "mp3", "aac"] if ffmpeg["available"] else [],
-        "models": {"installed": "unverified"},
+        "supported_codecs": ffmpeg.get("decoders", []),
+        "models": model_inventory(),
         "resources": resources(),
         "output": {
             **output,

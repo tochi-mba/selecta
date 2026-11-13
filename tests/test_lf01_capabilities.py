@@ -36,3 +36,14 @@ def test_output_enumeration_never_claims_playback(monkeypatch):
     fresh = caps.OutputEvidence("speaker-1", time.time(), True)
     assert caps.capability_report(output_evidence=fresh)["ready_for_audio"]
     assert "speaker-1" not in str(caps.capability_report(output_evidence=fresh))
+
+
+def test_model_inventory_never_leaks_local_filenames(tmp_path):
+    from selecta.local_engine.capabilities import model_inventory
+
+    folder = tmp_path / "models"
+    folder.mkdir()
+    (folder / "private-training-name.pt").write_bytes(b"checkpoint")
+    report = model_inventory(tmp_path)
+    assert report == {"checkpoint_candidates": 1, "state": "present_unvalidated"}
+    assert "private-training-name" not in str(report)
