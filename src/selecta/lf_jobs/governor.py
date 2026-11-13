@@ -14,10 +14,10 @@ import sqlite3
 import threading
 import time
 import uuid
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Iterator
 
 import psutil
 
@@ -207,7 +207,8 @@ class LocalResourceGovernor:
     @staticmethod
     def _needs(job) -> tuple[JobPriority, int, int, int, str | None]:
         priority = priority_for_legacy(
-            str(job.type), int(getattr(job, "base_urgency", 4) or 0),
+            str(job.type),
+            int(getattr(job, "base_urgency", 4) or 0),
             str(getattr(job, "lane", "")),
         )
         defaults = {"analyse.song": 1024, "seam.render": 768, "export.render": 512}
@@ -218,8 +219,15 @@ class LocalResourceGovernor:
         return priority, memory, scratch, gpu, zone
 
     def _safe(
-        self, conn: sqlite3.Connection, priority: JobPriority, memory: int,
-        scratch: int, gpu: int, resources: DeviceResources, *, excluding: str = ""
+        self,
+        conn: sqlite3.Connection,
+        priority: JobPriority,
+        memory: int,
+        scratch: int,
+        gpu: int,
+        resources: DeviceResources,
+        *,
+        excluding: str = "",
     ) -> bool:
         zones, imminent = self._zones(conn)
         if priority == JobPriority.ACTIVE_PLAYBACK:
@@ -234,10 +242,13 @@ class LocalResourceGovernor:
         current_gpu = sum(int(row[3]) for row in rows)
         # Preserve one core when an output is active; an otherwise-idle
         # single-core device may still analyse its library.
-        spare = (
-            max(0, resources.logical_cores - zones - 1)
-            if zones else max(1, resources.logical_cores - 1)
-        )
+        if zones:
+            # Imminent transitions may use the spare output-adjacent core;
+            # background jobs must leave another core for the OS.
+            reserve_for_os = 0 if priority <= JobPriority.IMMINENT_TRANSITION else 1
+            spare = max(0, resources.logical_cores - zones - reserve_for_os)
+        else:
+            spare = max(1, resources.logical_cores - 1)
         capacity = min(self.max_heavy_workers, spare)
         if len(rows) >= capacity:
             return False
@@ -245,8 +256,9 @@ class LocalResourceGovernor:
             return False
         if resources.memory_available_mb < memory + current_memory + 256:
             return False
-        if gpu and (resources.gpu_free_mb is None or
-                    resources.gpu_free_mb < gpu + current_gpu):
+        if gpu and (
+            resources.gpu_free_mb is None or resources.gpu_free_mb < gpu + current_gpu
+        ):
             return False
         if resources.thermal_warning or resources.on_low_battery:
             return priority <= JobPriority.IMMINENT_TRANSITION
@@ -276,12 +288,13 @@ class LocalResourceGovernor:
                 return None
             if not self._safe(conn, priority, memory, scratch, gpu, resources):
                 return None
-            else:
-                conn.execute(
-                    "INSERT INTO permits VALUES (?,?,?,?,?,?,?,?)",
-                    (attempt_id, token, int(priority), memory, scratch, gpu, zone,
-                     now + self.lease_s),
-                )
+            conn.execute(
+                "INSERT INTO permits VALUES (?,?,?,?,?,?,?,?)",
+                (
+                    attempt_id, token, int(priority), memory, scratch, gpu, zone,
+                    now + self.lease_s,
+                ),
+            )
         return Reservation(self, attempt_id, token, priority).start()
 
     def _renew(self, permit: Reservation) -> bool:
