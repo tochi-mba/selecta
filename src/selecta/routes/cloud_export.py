@@ -25,6 +25,7 @@ from sqlalchemy.engine import Engine
 from starlette.background import BackgroundTask
 
 from selecta.billing import plans, stripe_sync
+from selecta.billing.schema import entitlement_snapshots, subscriptions
 from selecta.lf_migration.retrieval import RetrievalGrant, require_grant
 from selecta.flags.rules import user_flag_preferences
 from selecta.identity.tokens import Claims
@@ -131,6 +132,26 @@ def install_routes(
                 )
                 .mappings()
                 .all()
+            ]
+            billing_rows = [
+                {"id": item["id"], "status": item["status"],
+                 "price_id": item["price_id"],
+                 "current_period_end": item["current_period_end"]}
+                for item in conn.execute(
+                    select(subscriptions.c.id, subscriptions.c.status,
+                           subscriptions.c.price_id, subscriptions.c.current_period_end)
+                    .where(subscriptions.c.workspace_id == workspace.id)
+                ).mappings()
+            ]
+            plan_history = [
+                dict(item)
+                for item in conn.execute(
+                    select(entitlement_snapshots.c.version, entitlement_snapshots.c.plan_id,
+                           entitlement_snapshots.c.plan_version, entitlement_snapshots.c.source,
+                           entitlement_snapshots.c.reason, entitlement_snapshots.c.computed_at)
+                    .where(entitlement_snapshots.c.workspace_id == workspace.id)
+                    .order_by(entitlement_snapshots.c.version)
+                ).mappings()
             ]
             revision_rows = [
                 dict(row)
@@ -331,6 +352,12 @@ def install_routes(
                 archive.writestr("settings.json", json.dumps(settings, indent=2))
                 archive.writestr("assets.json", json.dumps(exported_assets, indent=2))
                 archive.writestr("mixes.json", json.dumps(mixes, indent=2, default=str))
+                if mode == "metadata":
+                    archive.writestr("billing.json", json.dumps({
+                        "subscriptions": billing_rows,
+                        "entitlement_history": plan_history,
+                        "stripe_payment_details": "not included",
+                    }, indent=2, default=str))
         except Exception:
             shutil.rmtree(temp_dir, ignore_errors=True)
             raise
