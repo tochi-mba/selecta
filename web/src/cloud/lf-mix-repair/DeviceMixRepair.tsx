@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from 'react';
 import type { DeviceTarget, DeviceMixReadiness, TrackReference, VerifiedTrack, RepairVariation } from './readiness';
-import { canAcceptCandidate, countReadiness, createTemporaryVariation, isStale, MEDIA_STATES } from './readiness';
+import { canAcceptCandidate, countReadiness, createTemporaryVariation, isStale, isTrackReady, MEDIA_STATES } from './readiness';
 import './repair.css';
 
 export type LocalRepairRequest =
@@ -55,7 +55,8 @@ export function DeviceMixRepair({
   const capability = counts?.capabilities;
   const live = !!device && !!scoped && !stale && device.connected === true;
   const selectedRows = tracks.map((track, at) => ({
-    track, at, status: stale ? 'Unknown' : scoped?.tracks[at]?.state ?? 'Unknown',
+    track, at, status: stale || (scoped?.tracks[at]?.state === 'Ready' && !isTrackReady(scoped.tracks[at]))
+      ? 'Unknown' : scoped?.tracks[at]?.state ?? 'Unknown',
     verified: scoped?.tracks[at],
   }));
 
