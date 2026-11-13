@@ -75,8 +75,7 @@ def local_policy() -> PolicyConfig:
         tier_weights={"free": 1.0, "standard": 1.0, "premium": 1.0},
         lane_caps={tier: {lane: 8 for lane in ("interactive", "standard", "speculative")}
                    for tier in ("free", "standard", "premium")},
-        speculative_budget_cpu_min={tier: 1_000_000_000.0
-                                    for tier in ("free", "standard", "premium")},
+        enforce_speculative_budget=False,
         strict_lanes=True,
         speculative_headroom_slots=0,
         speculative_headroom_share=0.0,
