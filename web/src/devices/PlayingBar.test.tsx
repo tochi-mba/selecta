@@ -70,6 +70,42 @@ describe('live transfer confirmation (AV-0419-05)', () => {
   });
 });
 
+describe('overlapping device polls (AV-0419-05)', () => {
+  it('keeps the button confirmation when a reconnect poll overtakes its server response', async () => {
+    let finishReconnect!: (value: unknown) => void;
+    let finishClickRead!: (value: SessionView) => void;
+    let reads = 0;
+    const takeover = vi.fn();
+    const api = (async (path: string) => {
+      if (path === '/devices') return { device: {
+        id: 'phone', name: 'Second device', kind: 'laptop', signed_in: true,
+        this_device: true, poor_speaker: false, last_seen_at: 0, warnings: [],
+      }, notice: null };
+      if (path === '/playback/reconnect') return new Promise((resolve) => { finishReconnect = resolve; });
+      if (path.startsWith('/playback/session')) {
+        reads += 1;
+        if (reads === 1) return new Promise((resolve) => { finishClickRead = resolve; });
+        return elsewhere;
+      }
+      if (path === '/playback/take-over') return takeover();
+      throw new Error(`unexpected ${path}`);
+    }) as Api;
+    render(<PlayingBar api={api} workspaceId="ws-overlap" source={source} />);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Play here' })).toBeEnabled());
+    await userEvent.click(screen.getByRole('button', { name: 'Play here' }));
+    await waitFor(() => expect(reads).toBe(1));
+    // Device registration's reconnect finishes after the click and starts a newer poll.
+    finishReconnect({ action: 'stop_moved', session, message: null });
+    await waitFor(() => expect(reads).toBe(2));
+    finishClickRead(elsewhere);
+    expect(await screen.findByRole('alertdialog', { name: 'Move playback here?' })).toBeVisible();
+    expect(takeover).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(takeover).not.toHaveBeenCalled();
+  });
+});
+
 describe('the playing bar on a phone (SC-0415-05)', () => {
   it('warns an iPhone to keep the screen on when it is asked to play here', async () => {
     render(<PlayingBar api={fakeApi([{ code: 'ios_keep_screen_on', text: IOS_WARNING }])} workspaceId="ws" source={source} />);

@@ -67,6 +67,9 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const clockOffset = useRef(0);
   // A slow poll must never overwrite a newer ownership decision.
   const latestPoll = useRef(0);
+  // Never let cached/buffered audio outlive the server-issued exclusive lease.
+  const leaseDeadline = useRef<number | null>(null);
+  const claiming = useRef(false);
   const speaking = useRef(false);
   const appliedSeq = useRef(-1);
   const wake = useRef<WakeLockHold | null>(null);
@@ -96,10 +99,11 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     clockOffset.current = serverTime - midpoint;
   };
 
-  const becomeRemote = useCallback((why: string) => {
+  const becomeRemote = useCallback((why: string, fadeMs = FADE_MS) => {
     if (!speaking.current) return;
     speaking.current = false;
-    speaker?.stop(FADE_MS);
+    leaseDeadline.current = null;
+    speaker?.stop(fadeMs);
     wake.current?.release();
     wake.current = null;
     setMessage(why);
@@ -108,6 +112,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const startSpeaking = useCallback(async (session: SessionState) => {
     if (!speaker) return;
     speaking.current = true;
+    leaseDeadline.current = session.lease_expires_at;
     appliedSeq.current = session.seq;
     if (!wake.current) wake.current = holdWakeLock();
     await speaker.start(session.song_index, extrapolate(session, serverNow()), session.state === 'playing');
@@ -126,16 +131,22 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     else if (session.state === 'playing' && !speaker.active()) speaker.resume();
   }, [speaker, remoteControl]);
 
-  const poll = useCallback(async (): Promise<SessionView | null> => {
+  const poll = useCallback(async (forDecision = false): Promise<SessionView | null> => {
     if (!deviceId) return null;
     const requestId = ++latestPoll.current;
     const sentAt = Date.now();
     try {
       const next = await api<SessionView>(`/playback/session?device_id=${encodeURIComponent(deviceId)}`, {}, workspaceId);
-      if (requestId !== latestPoll.current) return null;
+      // A reconnect/background poll can start after a person's button press. It must not
+      // discard that button's authoritative answer: the UI still needs to ask before
+      // taking an existing lease. Only the most recent response changes shared state.
+      if (requestId !== latestPoll.current) return forDecision ? next : null;
       learnClock(sentAt, next.server_time);
       setView(next);
       setError('');
+      if (speaking.current && next.speaker === 'here' && next.session) {
+        leaseDeadline.current = next.session.lease_expires_at;
+      }
       if (speaking.current && next.speaker !== 'here') {
         becomeRemote(next.speaker_name ? `Playback moved to ${next.speaker_name}` : 'Playback stopped.');
       } else if (speaking.current && next.session) {
@@ -170,6 +181,19 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     return () => window.clearInterval(timer);
   }, [deviceId, poll, starting, view?.speaker]);
 
+  // A partitioned browser cannot renew the lease. Let it use its buffered audio for a
+  // short interruption, but stop at the lease deadline so a different device may play
+  // without unbounded double audio once the backend permits a new owner.
+  useEffect(() => {
+    if (!deviceId) return;
+    const timer = window.setInterval(() => {
+      if (speaking.current && leaseDeadline.current !== null && serverNow() >= leaseDeadline.current) {
+        becomeRemote('Playback stopped because this device could not renew its audio lease.', 0);
+      }
+    }, SPEAKER_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [becomeRemote, deviceId]);
+
   useEffect(() => {
     if (!deviceId) return;
     const beat = window.setInterval(async () => {
@@ -182,6 +206,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
           method: 'POST', body: JSON.stringify({ device_id: deviceId, ...at, seq: appliedSeq.current }),
         }, workspaceId);
         learnClock(sentAt, answer.server_time);
+        if (answer.outcome !== 'refused') leaseDeadline.current = answer.session.lease_expires_at;
         if (answer.outcome === 'refused') {
           // Another device took over: the session says which, so the message can name it.
           await poll();
@@ -195,7 +220,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   useEffect(() => () => { speaker?.stop(0); speaker?.dispose?.(); wake.current?.release(); }, [speaker]);
 
   const playHere = useCallback(async () => {
-    if (!deviceId || !speaker) return;
+    if (!deviceId || !speaker || claiming.current) return;
+    claiming.current = true;
     setStarting(true); setMessage('Starting here...'); setError('');
     try {
       const sentAt = Date.now();
@@ -210,6 +236,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       setError((problem as Error).message);
       setMessage('');
     } finally {
+      claiming.current = false;
       setStarting(false);
       void poll();
     }
@@ -231,5 +258,5 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     }
   }, [api, deviceId, poll, view?.session, workspaceId]);
 
-  return { device, notice, view, message, starting, error, playHere, refreshSession: poll, command, serverNow, isSpeaker: () => speaking.current };
+  return { device, notice, view, message, starting, error, playHere, refreshSession: () => poll(true), command, serverNow, isSpeaker: () => speaking.current };
 }

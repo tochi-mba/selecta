@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { Api, extrapolate, FADE_MS, SessionState, Speaker, SPEAKER_POLL_MS, START_DELAY_MS, usePlaybackDevice } from './usePlaybackDevice';
 
@@ -19,6 +19,32 @@ describe('the playback session on a device', () => {
 
   it('waits for the old speaker to hear and fade before starting here', () => {
     expect(START_DELAY_MS).toBeGreaterThan(SPEAKER_POLL_MS + FADE_MS);
+  });
+
+  it('stops the buffered speaker when an unreachable server cannot renew its lease', async () => {
+    const clock = Date.now() / 1000;
+    const expiredSoon = session({ lease_expires_at: clock + 0.6, anchor_at: clock });
+    const quiet: Speaker = {
+      start: vi.fn(async () => undefined), stop: vi.fn(), pause: vi.fn(), resume: vi.fn(),
+      position: () => ({ song_index: 2, offset_ms: 0, state: 'playing' }), active: () => true,
+    };
+    const api = (async (path: string) => {
+      if (path === '/devices') return { device: {
+        id: 'd1', name: 'Device 1', kind: 'laptop', signed_in: true,
+        this_device: true, poor_speaker: false, last_seen_at: clock, warnings: [],
+      }, notice: null };
+      if (path === '/playback/reconnect') return { action: 'continue', session: expiredSoon, message: null };
+      if (path.startsWith('/playback/session')) throw new TypeError('network offline');
+      if (path === '/playback/heartbeat') throw new TypeError('network offline');
+      throw new Error(`unexpected ${path}`);
+    }) as Api;
+    const hook = renderHook(() => usePlaybackDevice({ api, workspaceId: 'ws-lease-expiry', speaker: quiet }));
+    try {
+      await waitFor(() => expect(quiet.start).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(quiet.stop).toHaveBeenCalledWith(0), { timeout: 3500 });
+      expect(hook.result.current.isSpeaker()).toBe(false);
+      expect(hook.result.current.message).toContain('could not renew its audio lease');
+    } finally { hook.unmount(); }
   });
 
   it('tears the speaker down when the page lets it go', () => {
