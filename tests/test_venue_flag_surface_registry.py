@@ -7,7 +7,6 @@ fictional customer page.
 
 from selecta import flags
 
-
 EXPECTED = {
     "venue.continuity": "headless",
     "venue.fault_injection": "rehearsal",
