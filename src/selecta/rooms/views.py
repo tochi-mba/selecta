@@ -217,7 +217,8 @@ def nickname_map(conn: Connection, room: Room) -> dict[str, str]:
 
 
 def describe_songs(
-    ctx: RoomContext, room: Room, requests: Iterable[RoomRequest]
+    ctx: RoomContext, room: Room, requests: Iterable[RoomRequest], *,
+    now: float | None = None,
 ) -> Mapping[int, SongSummary]:
     ids = {request.song_id for request in requests}
     if not ids:
@@ -229,9 +230,10 @@ def describe_songs(
     except Exception:
         return {}
     # Recheck every metadata DTO to prevent another zone's catalogue leaking to guests.
-    from selecta.persistence import db_now
-    with ctx.engine.connect() as conn:
-        now = db_now(conn)
+    if now is None:
+        from selecta.persistence import db_now
+        with ctx.engine.connect() as conn:
+            now = db_now(conn)
     results: dict[int, SongSummary] = {}
     for song_id in ids:
         song = visible(
@@ -321,7 +323,7 @@ def guest_view(ctx: RoomContext, guest_token: str, *, now: float | None = None) 
         music_paused=room.live and not speaker_ready(ctx, room, now),
         local_first=ctx.local_first is not None,
     )
-    songs = describe_songs(ctx, room, [*mine, *coming_up, *waiting])
+    songs = describe_songs(ctx, room, [*mine, *coming_up, *waiting], now=now)
     my_requests = tuple(_mine(ctx, room, request, songs, now) for request in mine)
     if not room.live or guest.status is not GuestStatus.ACTIVE:
         return replace(base, my_requests=my_requests)
@@ -430,7 +432,7 @@ def host_view(
             )
         )
         names = nickname_map(conn, room)
-    songs = describe_songs(ctx, room, [*coming_up, *inbox, *unfit])
+    songs = describe_songs(ctx, room, [*coming_up, *inbox, *unfit], now=now)
     return HostView(
         room=room,
         code=room_code(ctx, room),
