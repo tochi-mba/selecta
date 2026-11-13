@@ -109,6 +109,9 @@ export function inspectZone(zone: Zone, venue: Venue, now: number, browserOfflin
     return base;
   }
 
+  if (zone.state === 'not_paired' || zone.state === 'not_reporting' || zone.state === 'plan_paused') {
+    base.issues.push(recovery('verify', 'Zone is not ready for playback', 'Check pairing, zone availability and the latest local engine status.', 'devices'));
+  }
   if (report.engine.state !== 'ready') {
     base.issues.push(recovery('engine', 'Local engine not ready', 'Open the engine on the venue computer and check its service, then pair or restart it.', 'devices'));
   }
