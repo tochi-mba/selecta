@@ -53,6 +53,8 @@ def drain_seconds(queued_est_s: float, slots: int) -> float:
 
 def speculative_left_s(config: PolicyConfig, tier: str | None, used_s: float) -> float:
     """Reference seconds of spare-time work this account may still use today."""
+    if not config.enforce_speculative_budget:
+        return float("inf")
     return max(config.speculative_budget_s(tier) - max(used_s, 0.0), 0.0)
 
 
@@ -73,7 +75,12 @@ def admit(
     if queued_of_type >= config.queued_cap(job_type):
         return Admission(Verdict.PLAN, f"{queued_of_type} {job_type} jobs are already queued.")
     overloaded = backlog_drain_s > config.overload_drain_s
-    if overloaded and lane == Lane.STANDARD and (tier or config.default_tier) == Tier.FREE:
+    if (
+        overloaded
+        and config.enforce_plan_backpressure
+        and lane == Lane.STANDARD
+        and (tier or config.default_tier) == Tier.FREE
+    ):
         wait = min(backlog_drain_s - config.overload_drain_s, config.max_defer_s)
         return Admission(Verdict.DEFER, "Waiting for capacity.", max(wait, 0.0))
     return Admission(Verdict.ACCEPT)

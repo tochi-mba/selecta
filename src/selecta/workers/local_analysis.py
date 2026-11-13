@@ -29,6 +29,7 @@ from pathlib import Path
 from selecta import db, jobs
 from selecta.api_common import _Background
 from selecta.config import ANALYSIS_VERSION, Settings, load_settings
+from selecta.lf_jobs.governor import LocalResourceGovernor
 from selecta.persistence import new_id
 from selecta.scheduling.policy import LATER, REQUEST, WorkerCaps
 from selecta.work.enqueue import JobSpec
@@ -200,7 +201,10 @@ class AnalysisWorker:
             job_types=frozenset({ANALYSIS_JOB}),
             worker_id=f"analysis-{new_id()}",
         )
-        self.runner = WorkerRunner(work, self.caps, {ANALYSIS_JOB: self.handle}, idle_s=idle_s)
+        self.runner = WorkerRunner(
+            work, self.caps, {ANALYSIS_JOB: self.handle}, idle_s=idle_s,
+            resource_governor=LocalResourceGovernor(settings.home),
+        )
         self.idle_s = idle_s
         self._analysers = analysers
         self._analyse = analyse

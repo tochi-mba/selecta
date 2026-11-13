@@ -18,6 +18,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 
 from selecta import jobs as engine_jobs
+from selecta.lf_jobs.governor import (
+    LocalResourceGovernor,
+    Reservation,
+    ReservationAlreadyHeld,
+)
 from selecta.observability import tracing
 from selecta.persistence import new_id
 from selecta.scheduling.policy import WorkerCaps
@@ -118,6 +123,7 @@ class WorkerRunner:
         clock: Callable[[], float] = time.monotonic,
         no_progress_s: float | None = None,
         artifact_store: ArtifactStore | None = None,
+        resource_governor: LocalResourceGovernor | None = None,
     ) -> None:
         if caps.worker_id is None:
             raise ValueError("WorkerCaps.worker_id is required for a running worker.")
@@ -137,6 +143,7 @@ class WorkerRunner:
         self.idle_s = idle_s
         self.clock = clock
         self.artifact_store = artifact_store
+        self.resource_governor = resource_governor
         self.no_progress_s = no_progress_s
         """The watchdog stops a job that reports no progress for this long (None: never)."""
         self.live: dict[str, AttemptSignals] = {}
@@ -151,7 +158,36 @@ class WorkerRunner:
         return self.run_claim(claim)
 
     def run_claim(self, claim: Claim) -> RunResult:
-        """Start and execute one already-claimed attempt, in the job's trace (ADR-0410)."""
+        """Admit on measured local resources before starting the fenced DSP attempt."""
+        permit = None
+        if self.resource_governor is not None:
+            try:
+                permit = self.resource_governor.reserve(claim.job, claim.attempt_id)
+            except ReservationAlreadyHeld:
+                # Do NOT release the shared durable lease: another delivery is
+                # still executing this attempt and owns its fencing generation.
+                return self._result(
+                    claim, claim.job, AttemptOutcome.SUPERSEDED, "Attempt already executing."
+                )
+            if permit is None:
+                # Backpressure is not a failed DSP attempt. Preserve retry/dependency history.
+                try:
+                    released = self.store.release(claim.attempt_id, claim.fencing_token, 0.0)
+                except StaleLease as problem:
+                    return self._result(
+                        claim, claim.job, AttemptOutcome.SUPERSEDED, str(problem)
+                    )
+                time.sleep(min(self.idle_s, 0.25))  # prevent claim/release busy spinning
+                return self._result(
+                    claim, released, AttemptOutcome.RELEASED, "Local playback capacity reserved."
+                )
+        try:
+            return self._run_with_trace(claim, permit)
+        finally:
+            if permit is not None:
+                permit.close()
+
+    def _run_with_trace(self, claim: Claim, permit: Reservation | None) -> RunResult:
         with tracing.job_span(
             "worker.run",
             claim.job.id,
@@ -162,11 +198,11 @@ class WorkerRunner:
                 "selecta.pool": self.caps.pool,
             },
         ) as span:
-            result = self._run_claim(claim)
+            result = self._run_claim(claim, permit)
             span.set_attribute("selecta.outcome", str(result.outcome))
             return result
 
-    def _run_claim(self, claim: Claim) -> RunResult:
+    def _run_claim(self, claim: Claim, permit: Reservation | None = None) -> RunResult:
         job = claim.job
         try:
             job = self.store.start(claim.attempt_id, claim.fencing_token)
@@ -204,6 +240,7 @@ class WorkerRunner:
                 artifact_publisher=getattr(self.store, "publish_artifact", None),
                 artifact_store=self.artifact_store,
                 clock=self.clock,
+                resource_stop=permit.should_yield if permit is not None else None,
             )
             self.live[claim.attempt_id] = signals
             heartbeat_stop = threading.Event()
