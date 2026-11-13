@@ -4,7 +4,6 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-
 REQUIRED_RETIREMENT_GATES = (
     "migration_complete",
     "local_engine_parity",
@@ -117,7 +116,10 @@ def deletion_readiness(
         if asset.get("deleted_at") is None:
             blockers.append("active_legacy_assets")
             break
-    if any(s.get("status") not in ("aborted", "expired", "rejected") for s in snapshot.get("upload_sessions", ())):
+    if any(
+        s.get("status") not in ("aborted", "expired", "rejected")
+        for s in snapshot.get("upload_sessions", ())
+    ):
         blockers.append("unfinished_upload_sessions")
     return {
         "workspace_id": snapshot["workspace_id"],
@@ -131,7 +133,9 @@ def deletion_readiness(
     }
 
 
-def dry_run_report(snapshot: Mapping[str, Any], *, gates: Mapping[str, bool] | None = None) -> dict[str, Any]:
+def dry_run_report(
+    snapshot: Mapping[str, Any], *, gates: Mapping[str, bool] | None = None
+) -> dict[str, Any]:
     """Summary suitable for a migration operator; no side effects."""
     audit = audit_references(snapshot)
     return {
