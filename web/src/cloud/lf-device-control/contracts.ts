@@ -128,6 +128,7 @@ export function readinessReason(
       !isFresh(readiness.last_verified_at, READINESS_FRESH_MS, now)) {
     return 'Media readiness is unknown or stale. Verify exact local recordings first.';
   }
+  if (readiness.tracks.length === 0) return 'No recordings have been verified on this local engine.';
   const unresolved = readiness.tracks.filter((entry) => entry.state !== 'ready');
   if (readiness.status !== 'ready' || unresolved.length ||
       readiness.transition_states.some((item) => item.state !== 'ready')) {
