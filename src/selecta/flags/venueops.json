@@ -5,109 +5,181 @@
       "label": "Venue audio continuity",
       "about": "Gap and duplicate targets, ready-to-play fallback songs and fenced speaker leases, so a venue night keeps playing through faults.",
       "default": false,
-      "requires": ["autopilot.venue_mode"],
-      "modes": ["cloud"],
+      "requires": [
+        "autopilot.venue_mode"
+      ],
+      "modes": [
+        "cloud"
+      ],
       "kind": "experiment",
-      "owner": "autopilot"
+      "owner": "autopilot",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "Runtime gap and duplicate targets, fallback preparation and speaker leases have no Cloud screen"
     },
     "venue.fault_injection": {
       "label": "Venue fault rehearsal",
       "about": "Inject network, model and render faults on purpose in a test run to prove the night keeps playing.",
       "default": false,
-      "requires": ["venue.continuity"],
-      "modes": ["cloud"],
+      "requires": [
+        "venue.continuity"
+      ],
+      "modes": [
+        "cloud"
+      ],
       "kind": "ops",
-      "owner": "autopilot"
+      "owner": "autopilot",
+      "cloud_surface_kind": "rehearsal",
+      "cloud_surface_reason": "Fault injection is run by the venue test and chaos harness, not by a customer-facing Cloud control"
     },
     "venue.speakers": {
       "label": "Venue speakers and zones",
       "about": "Name the venue's speakers, group them into zones, and move or reconnect playback without two speakers playing at once.",
       "default": false,
-      "requires": ["venue.continuity"],
-      "modes": ["cloud"],
+      "requires": [
+        "venue.continuity"
+      ],
+      "modes": [
+        "cloud"
+      ],
       "kind": "experiment",
-      "owner": "autopilot"
+      "owner": "autopilot",
+      "cloud_surface_kind": "unreleased",
+      "cloud_surface_reason": "Speaker zone and lease models exist, but no speaker management page is mounted in Cloud"
     },
     "venue.staff_dashboard": {
       "label": "Staff dashboard",
       "about": "One screen for venue staff: what is playing, what is next, typed steering, pending versus applied changes and an always-visible Stop.",
       "default": false,
-      "requires": ["autopilot.venue_mode"],
-      "modes": ["cloud"],
+      "requires": [
+        "autopilot.venue_mode"
+      ],
+      "modes": [
+        "cloud"
+      ],
       "kind": "experiment",
-      "owner": "autopilot"
+      "owner": "autopilot",
+      "cloud_surface_kind": "unreleased",
+      "cloud_surface_reason": "Staff dashboard state and isolated route tests exist, but no staff venue page or routes are mounted in Cloud"
     },
     "venue.moderated_requests": {
       "label": "Autopilot guest requests",
       "about": "Guest requests in a venue night go through Room moderation, are planned fairly and tell the guest honestly what happened.",
       "default": false,
-      "requires": ["autopilot.venue_mode"],
-      "modes": ["cloud"],
+      "requires": [
+        "autopilot.venue_mode"
+      ],
+      "modes": [
+        "cloud"
+      ],
       "kind": "experiment",
-      "owner": "autopilot"
+      "owner": "autopilot",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "The Room-to-Autopilot request planning bridge has no separate shipped Cloud interface"
     },
     "venue.learning": {
       "label": "Venue learning",
       "about": "Learn a venue's taste from staff and guest feedback within a cap, with a reset, an explanation and a retention limit.",
       "default": false,
-      "requires": ["autopilot.venue_mode"],
-      "modes": ["cloud"],
+      "requires": [
+        "autopilot.venue_mode"
+      ],
+      "modes": [
+        "cloud"
+      ],
       "kind": "experiment",
-      "owner": "autopilot"
+      "owner": "autopilot",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "Venue feedback memory, adaptation caps and retention operate in the backend without a Cloud control"
     },
     "venue.rights_gate": {
       "label": "Venue rights check",
       "about": "Check music and model rights before each media operation in a venue and refuse the ones that are not cleared.",
       "default": false,
-      "requires": ["autopilot.venue_mode"],
-      "modes": ["cloud"],
+      "requires": [
+        "autopilot.venue_mode"
+      ],
+      "modes": [
+        "cloud"
+      ],
       "kind": "ops",
-      "owner": "autopilot"
+      "owner": "autopilot",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "Media and model rights checks are backend safety decisions without a person-facing Cloud page"
     },
     "venue.roles": {
       "label": "Venue roles",
       "about": "Owner, manager, staff and guest roles decide who may steer, stop or change a venue night, and revoked devices lose access at once.",
       "default": false,
-      "requires": ["autopilot.venue_mode"],
-      "modes": ["cloud"],
+      "requires": [
+        "autopilot.venue_mode"
+      ],
+      "modes": [
+        "cloud"
+      ],
       "kind": "experiment",
-      "owner": "autopilot"
+      "owner": "autopilot",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "Role permissions and paired-device revocation are backend authorization services, not Cloud pages"
     },
     "venue.safe_gain": {
       "label": "Safe venue loudness",
       "about": "Cap automatic gain changes so Autopilot never makes the room suddenly louder.",
       "default": false,
-      "requires": ["autopilot.venue_mode"],
-      "modes": ["cloud"],
+      "requires": [
+        "autopilot.venue_mode"
+      ],
+      "modes": [
+        "cloud"
+      ],
       "kind": "ops",
-      "owner": "autopilot"
+      "owner": "autopilot",
+      "cloud_surface_kind": "headless",
+      "cloud_surface_reason": "Automatic gain bounds are applied to venue playback decisions without a Cloud volume panel"
     },
     "venue.health": {
       "label": "Venue health and alerts",
       "about": "Audio health signals, operator alert thresholds with runbook links, redacted logs and rehearsed recovery.",
       "default": false,
-      "requires": ["autopilot.venue_mode"],
-      "modes": ["cloud"],
+      "requires": [
+        "autopilot.venue_mode"
+      ],
+      "modes": [
+        "cloud"
+      ],
       "kind": "ops",
-      "owner": "autopilot"
+      "owner": "autopilot",
+      "cloud_surface_kind": "operations",
+      "cloud_surface_reason": "Audio health monitoring, alerts and recovery rehearsal are operator tooling with no Cloud dashboard"
     },
     "venue.soak": {
       "label": "Long-session soak tools",
       "about": "Real venue workloads, gap and resource metrics and long soak and chaos runs that record their evidence.",
       "default": false,
-      "requires": ["venue.continuity"],
-      "modes": ["cloud"],
+      "requires": [
+        "venue.continuity"
+      ],
+      "modes": [
+        "cloud"
+      ],
       "kind": "ops",
-      "owner": "autopilot"
+      "owner": "autopilot",
+      "cloud_surface_kind": "rehearsal",
+      "cloud_surface_reason": "Long-session soak and chaos evidence are generated by the command-line harness, not Cloud UI"
     },
     "venue.rollout_gates": {
       "label": "Venue rollout gates",
       "about": "Phased rollout order, no-go gates for P0 blockers and a flag-off rollback check before any venue release.",
       "default": false,
-      "requires": ["autopilot.venue_mode"],
-      "modes": ["cloud"],
+      "requires": [
+        "autopilot.venue_mode"
+      ],
+      "modes": [
+        "cloud"
+      ],
       "kind": "ops",
-      "owner": "autopilot"
+      "owner": "autopilot",
+      "cloud_surface_kind": "operations",
+      "cloud_surface_reason": "Release phase ordering, readiness gates and flag rollback checks run as operational tooling"
     }
   }
 }

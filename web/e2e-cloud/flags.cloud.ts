@@ -47,8 +47,9 @@ const PARTS: Record<string, FlagId> = {
   '.cloud-hero': 'cloud.uploads',
 };
 
-/** Cloud features with no page of their own to sweep, and why. Anything else that's cloud-only,
- * non-core and targetable must name a `cloud.*` surface, so a new cloud feature can't skip this. */
+/** Legacy cloud-only features with no page of their own. New exclusions belong in the JSON
+ * registry as cloud_surface_kind + cloud_surface_reason, reviewed by Python registry tests.
+ * Otherwise a non-core targetable cloud flag must name a sweepable `cloud.*` page. */
 const NO_SURFACE: Partial<Record<FlagId, string>> = {
   'account.labs': 'The Labs settings page is not built yet (SC-0414-09); only the API exists.',
   'cloud.signups': 'Decided before anyone is signed in: onboarding answers flag_off.',
@@ -73,7 +74,7 @@ const NO_SURFACE: Partial<Record<FlagId, string>> = {
   'lucy.deep_plan': 'No control on the site: the server decides it for each Lucy turn.',
 };
 
-type Spec = (typeof REGISTRY)[FlagId] & { modes?: string[]; when_locked?: string };
+type Spec = (typeof REGISTRY)[FlagId] & { modes?: string[]; when_locked?: string; default?: boolean; owner?: string };
 const spec = (id: FlagId) => REGISTRY[id] as Spec;
 const cloudSurfaces = (id: FlagId) => (spec(id).surfaces ?? []).filter((surface) => surface.startsWith('cloud.'));
 const untargetable = (id: FlagId) => id === 'admin' || id.startsWith('admin.') || id === 'staff' || id.startsWith('staff.');
@@ -203,14 +204,47 @@ test('every cloud feature a person can see is in the sweep, or says why not', ()
     const flag = spec(id);
     const cloudOnly = (flag.modes ?? []).length === 1 && flag.modes?.[0] === 'cloud';
     if (!cloudOnly || flag.core || untargetable(id)) continue;
-    if (!cloudSurfaces(id).length && !NO_SURFACE[id]) missing.push(`${id} names no cloud surface`);
-    if (cloudSurfaces(id).length && NO_SURFACE[id]) missing.push(`${id} has surfaces, so drop it from NO_SURFACE`);
+    const excluded = Boolean(flag.cloud_surface_kind && flag.cloud_surface_reason);
+    if (!cloudSurfaces(id).length && !NO_SURFACE[id] && !excluded) missing.push(`${id} names no cloud surface`);
+    if (cloudSurfaces(id).length && (NO_SURFACE[id] || excluded)) missing.push(`${id} has surfaces and a nonvisual exclusion`);
   }
   for (const id of FLAG_IDS) {
     for (const surface of cloudSurfaces(id)) if (!SURFACES[surface]) missing.push(`${id}: the sweep doesn't open ${surface}`);
   }
   expect(missing).toEqual([]);
   expect(SWEPT.length).toBeGreaterThan(8);
+});
+
+
+/** A declared exclusion is not a pretend UI page. New venue pages must replace their exclusion
+ * with a real cloud.* surface and be picked up by the disabled-feature Playwright sweep. */
+test('each venue flag names its real nonvisual Cloud ownership, without fabricating a page', () => {
+  const expected: Record<string, string> = {
+  'venue.continuity': 'headless',
+  'venue.fault_injection': 'rehearsal',
+  'venue.speakers': 'unreleased',
+  'venue.staff_dashboard': 'unreleased',
+  'venue.moderated_requests': 'headless',
+  'venue.learning': 'headless',
+  'venue.rights_gate': 'headless',
+  'venue.roles': 'headless',
+  'venue.safe_gain': 'headless',
+  'venue.health': 'operations',
+  'venue.soak': 'rehearsal',
+  'venue.rollout_gates': 'operations',
+  };
+  const venueIds = FLAG_IDS.filter((id) => id.startsWith('venue.'));
+  expect([...venueIds].sort()).toEqual(Object.keys(expected).sort());
+  for (const id of venueIds) {
+    const flag = spec(id);
+    expect(flag.modes, id).toEqual(['cloud']);
+    expect(flag.default, id).toBe(false);
+    expect(flag.owner, id).toBe('autopilot');
+    expect(cloudSurfaces(id), id).toEqual([]);
+    expect(flag.cloud_surface_kind, id).toBe(expected[id]);
+    expect(flag.cloud_surface_reason?.length ?? 0, id).toBeGreaterThan(20);
+    expect(NO_SURFACE[id], id).toBeUndefined();
+  }
 });
 
 test('with the cloud defaults, lyric display is off and every page closes up around it', async ({ page, request }) => {

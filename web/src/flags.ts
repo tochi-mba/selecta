@@ -44,6 +44,8 @@ export type FlagSpec = {
   requires?: string[];
   routes?: string[];
   surfaces?: string[];
+  cloud_surface_kind?: "headless" | "unreleased" | "rehearsal" | "operations";
+  cloud_surface_reason?: string;
   words?: string[];
   cli?: string[];
 };
