@@ -11,7 +11,11 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from selecta.lf_playback import (  # noqa: E402
-    FencedLocalOutput, Preflight, Scope, TransferRejected, TransferRequest,
+    FencedLocalOutput,
+    Preflight,
+    Scope,
+    TransferRejected,
+    TransferRequest,
 )
 
 
@@ -28,8 +32,17 @@ class Audio:
         return self.audible
 
     def preflight(self, request):
-        return Preflight(request.recipe_revision, request.recording_refs,
-                         request.transition_refs, True, True, True, True, True, 1.0)
+        return Preflight(
+            request.recipe_revision,
+            request.recording_refs,
+            request.transition_refs,
+            True,
+            True,
+            True,
+            True,
+            True,
+            1.0,
+        )
 
     def prepare_silent(self, request):
         self.prepares += 1
@@ -50,8 +63,18 @@ class Audio:
 
 
 def request():
-    return TransferRequest(Scope("business-1", "bar-1"), "attempt-1", "key-1",
-                           "staff", "new", 7, "r5", ("rec-1",), (), 40.0)
+    return TransferRequest(
+        Scope("business-1", "bar-1"),
+        "attempt-1",
+        "key-1",
+        "staff",
+        "new",
+        7,
+        "r5",
+        ("rec-1",),
+        (),
+        40.0,
+    )
 
 
 def test_persistent_local_source_fence_rejects_stale_restart(tmp_path):

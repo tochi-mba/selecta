@@ -24,12 +24,23 @@ def test_no_ffmpeg_no_audio_readiness(monkeypatch):
 
 
 def test_output_enumeration_never_claims_playback(monkeypatch):
-    monkeypatch.setattr(caps, "ffmpeg_probe", lambda: {
-        "available": True, "version": "test",
-    })
-    monkeypatch.setattr(caps, "output_inventory", lambda name: {
-        "detected": 1, "supported": True, "probe": "fake",
-    })
+    monkeypatch.setattr(
+        caps,
+        "ffmpeg_probe",
+        lambda: {
+            "available": True,
+            "version": "test",
+        },
+    )
+    monkeypatch.setattr(
+        caps,
+        "output_inventory",
+        lambda name: {
+            "detected": 1,
+            "supported": True,
+            "probe": "fake",
+        },
+    )
     assert not caps.capability_report()["ready_for_audio"]
     stale = caps.OutputEvidence("speaker-1", time.time() - 99, True)
     assert not caps.capability_report(output_evidence=stale)["ready_for_audio"]

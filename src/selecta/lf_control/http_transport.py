@@ -45,16 +45,26 @@ def event_from_wire(raw: bytes | str | Mapping[str, Any]) -> Event:
     if type(raw) in (str, bytes):
         raw = strict_json(raw, max_bytes=MAX_BYTES)
     if type(raw) is not dict or set(raw) != {
-        "event_id", "workspace_id", "device_id", "device_generation",
-        "sequence", "kind", "payload", "recorded_at",
+        "event_id",
+        "workspace_id",
+        "device_id",
+        "device_generation",
+        "sequence",
+        "kind",
+        "payload",
+        "recorded_at",
     }:
         raise ControlError("invalid_event_envelope")
     # Reuse the same typed validator used for local journaling.
     value = Event(
-        _id(raw["event_id"]), _id(raw["workspace_id"]), _id(raw["device_id"]),
+        _id(raw["event_id"]),
+        _id(raw["workspace_id"]),
+        _id(raw["device_id"]),
         _integer(raw["device_generation"], minimum=1),
-        _integer(raw["sequence"], minimum=1), raw["kind"],
-        _event_payload(raw["kind"], raw["payload"]), _timestamp(raw["recorded_at"]),
+        _integer(raw["sequence"], minimum=1),
+        raw["kind"],
+        _event_payload(raw["kind"], raw["payload"]),
+        _timestamp(raw["recorded_at"]),
     )
     if len(json.dumps(event_to_wire(value), separators=(",", ":"))) > MAX_BYTES:
         raise ControlError("message_too_large")
@@ -70,9 +80,16 @@ class HTTPSOutboundTransport:
 
     def __init__(self, cloud_origin: str, *, client: httpx.AsyncClient | None = None) -> None:
         parsed = urlsplit(cloud_origin)
-        if (parsed.scheme != "https" or not parsed.hostname or parsed.username is not None
-                or parsed.password is not None or parsed.path not in ("", "/")
-                or parsed.query or parsed.fragment or not parsed.netloc):
+        if (
+            parsed.scheme != "https"
+            or not parsed.hostname
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.path not in ("", "/")
+            or parsed.query
+            or parsed.fragment
+            or not parsed.netloc
+        ):
             raise ControlError("unsafe_cloud_origin")
         # No redirects, no ambient proxy or cookie credentials by default.
         self._origin = cloud_origin.rstrip("/")
@@ -84,8 +101,9 @@ class HTTPSOutboundTransport:
         if self._credential is not None:
             raise ControlError("already_connected")
         if self._client is None:
-            self._client = httpx.AsyncClient(verify=True, follow_redirects=False,
-                                             trust_env=False, timeout=10.0)
+            self._client = httpx.AsyncClient(
+                verify=True, follow_redirects=False, trust_env=False, timeout=10.0
+            )
         self._credential = credential
 
     def _headers(self) -> dict[str, str]:
@@ -100,7 +118,9 @@ class HTTPSOutboundTransport:
             "Cache-Control": "no-store",
         }
 
-    async def _request(self, method: str, path: str, *, payload: dict | None = None) -> httpx.Response:
+    async def _request(
+        self, method: str, path: str, *, payload: dict | None = None
+    ) -> httpx.Response:
         if self._client is None:
             raise ControlError("not_connected")
         kwargs: dict[str, Any] = {"headers": self._headers(), "follow_redirects": False}
@@ -126,24 +146,34 @@ class HTTPSOutboundTransport:
         if credential is None:
             raise ControlError("not_connected")
         for event in events:
-            if (event.workspace_id != credential.workspace_id
-                    or event.device_id != credential.device_id
-                    or event.device_generation != credential.generation):
+            if (
+                event.workspace_id != credential.workspace_id
+                or event.device_id != credential.device_id
+                or event.device_generation != credential.generation
+            ):
                 raise ControlError("scope_denied")
-        response = await self._request("POST", "/api/local-first/v1/engine/events",
-                                       payload={"schema_version": 1,
-                                                "events": [event_to_wire(e) for e in events]})
+        response = await self._request(
+            "POST",
+            "/api/local-first/v1/engine/events",
+            payload={"schema_version": 1, "events": [event_to_wire(e) for e in events]},
+        )
         try:
             result = strict_json(response.content, max_bytes=MAX_RESPONSE_BYTES)
         except ControlError:
             raise
-        if set(result) != {"schema_version", "acknowledged_event_ids"} or result["schema_version"] != 1:
+        if (
+            set(result) != {"schema_version", "acknowledged_event_ids"}
+            or result["schema_version"] != 1
+        ):
             raise ControlError("invalid_cloud_response")
         allowed = {e.event_id for e in events}
         values = result["acknowledged_event_ids"]
-        if type(values) is not list or len(values) > len(events) or any(
-            type(v) is not str or v not in allowed for v in values
-        ) or len(values) != len(set(values)):
+        if (
+            type(values) is not list
+            or len(values) > len(events)
+            or any(type(v) is not str or v not in allowed for v in values)
+            or len(values) != len(set(values))
+        ):
             raise ControlError("invalid_cloud_response")
         return values
 
@@ -156,7 +186,10 @@ class HTTPSOutboundTransport:
         raw = strict_json(response.content, max_bytes=MAX_BYTES + 512)
         # Cloud must never hand a scoped engine another workspace's command.
         signed = SignedCommand.from_wire(raw, now=None)  # validate with agent's own clock
-        if self._credential is None or signed.envelope.workspace_id != self._credential.workspace_id:
+        if (
+            self._credential is None
+            or signed.envelope.workspace_id != self._credential.workspace_id
+        ):
             raise ControlError("scope_denied")
         if signed.envelope.target_device_id != self._credential.device_id:
             raise ControlError("scope_denied")

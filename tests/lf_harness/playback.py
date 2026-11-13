@@ -2,11 +2,11 @@
 
 A pure simulation must never be reported as measured hardware audio evidence.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Literal
-
 
 EvidenceKind = Literal["simulation", "process", "measured_physical_output"]
 
@@ -48,7 +48,7 @@ class OutputSafetyMonitor:
         if scope not in {"speaker", "zone", "both"}:
             raise ValueError("invalid scope")
         for i, a in enumerate(self.observations):
-            for b in self.observations[i + 1:]:
+            for b in self.observations[i + 1 :]:
                 if a.start_ms >= b.end_ms or b.start_ms >= a.end_ms:
                     continue
                 same_output = a.physical_output_id == b.physical_output_id
@@ -64,8 +64,11 @@ class OutputSafetyMonitor:
 
     def assert_physically_verified(self, *, required_outputs: set[str]) -> None:
         for output in required_outputs:
-            measured = [o for o in self.observations if o.physical_output_id == output and
-                        o.kind == "measured_physical_output"]
+            measured = [
+                o
+                for o in self.observations
+                if o.physical_output_id == output and o.kind == "measured_physical_output"
+            ]
             if not measured:
                 raise AssertionError(f"UNVERIFIED_PHYSICAL_OUTPUT: {output}")
         self.assert_no_double_audio()
@@ -82,6 +85,7 @@ class TakeoverDecision:
 @dataclass
 class TakeoverScenario:
     """Reference safety *oracle*, never a substitute for integration test adapter."""
+
     active_device: str
     generation: int = 7
     partitioned_devices: set[str] = field(default_factory=set)
@@ -95,8 +99,9 @@ class TakeoverScenario:
             return True
         return False
 
-    def attempt(self, *, operation_id: str, target: str, expected_generation: int,
-                released_old: bool) -> TakeoverDecision:
+    def attempt(
+        self, *, operation_id: str, target: str, expected_generation: int, released_old: bool
+    ) -> TakeoverDecision:
         if operation_id in self.attempted_ids:
             return self.attempted_ids[operation_id]
         if expected_generation != self.generation:

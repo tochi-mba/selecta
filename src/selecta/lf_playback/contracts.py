@@ -61,8 +61,13 @@ class TransferRequest:
 
     def validate(self, now: float) -> None:
         self.scope.validate()
-        for value in (self.operation_id, self.idempotency_key, self.actor_id,
-                      self.target_device_id, self.recipe_revision):
+        for value in (
+            self.operation_id,
+            self.idempotency_key,
+            self.actor_id,
+            self.target_device_id,
+            self.recipe_revision,
+        ):
             if not isinstance(value, str) or not value.strip() or len(value) > 256:
                 raise TransferRejected(
                     "invalid_request", "Required identity or revision is invalid"
@@ -125,8 +130,13 @@ class Preflight:
             have = Counter(self.verified_transitions)[ref]
             if have < needed:
                 problems.append(f"transition:{ref}:{have}/{needed}")
-        for name in ("engine_ready", "permissions_ok", "output_ready",
-                     "silent_prepare_supported", "media_revision_current"):
+        for name in (
+            "engine_ready",
+            "permissions_ok",
+            "output_ready",
+            "silent_prepare_supported",
+            "media_revision_current",
+        ):
             if not getattr(self, name):
                 problems.append(name)
         if not (self.verified_at <= now and now - self.verified_at <= 15):
@@ -164,13 +174,16 @@ class EnginePort(Protocol):
 
     def prepare_silent(self, request: TransferRequest, generation: int) -> str: ...
 
-    def stop_and_confirm(self, source_device_id: str, request: TransferRequest,
-                         generation: int) -> bool: ...
+    def stop_and_confirm(
+        self, source_device_id: str, request: TransferRequest, generation: int
+    ) -> bool: ...
 
-    def acquire_silent(self, request: TransferRequest, generation: int,
-                       prepared_token: str) -> bool: ...
+    def acquire_silent(
+        self, request: TransferRequest, generation: int, prepared_token: str
+    ) -> bool: ...
 
     def start_and_confirm(self, request: TransferRequest, generation: int) -> bool: ...
 
-    def manual_isolate(self, source_device_id: str, request: TransferRequest,
-                       generation: int, evidence_token: str) -> bool: ...
+    def manual_isolate(
+        self, source_device_id: str, request: TransferRequest, generation: int, evidence_token: str
+    ) -> bool: ...

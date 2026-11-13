@@ -3,6 +3,7 @@
 This adapter is strictly local; it is NOT a cloud upload serializer. Job owners
 must validate placement on an authorised engine before using this output.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -27,9 +28,13 @@ def to_local_work_output(spec: ArtifactSpec, record: dict[str, Any]):
         settings=dict(spec.settings),
     )
     output = ArtifactOutput(
-        kind=kind, input_hash=spec.identity, keys=[record["local_path"]],
-        checksum=record["checksum"], size_bytes=record["bytes"],
-        provenance=provenance, protected=record["storage"] == "export",
+        kind=kind,
+        input_hash=spec.identity,
+        keys=[record["local_path"]],
+        checksum=record["checksum"],
+        size_bytes=record["bytes"],
+        provenance=provenance,
+        protected=record["storage"] == "export",
     )
     check_output(output)
     return output

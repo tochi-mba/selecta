@@ -3,11 +3,11 @@
 Cloud catalogue IDs are *not* a claim that a recording exists on this computer.
 A zone is audible only after a local audio port confirms the physical output.
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
-from pathlib import Path
 from typing import Protocol
 from zoneinfo import ZoneInfo
 
@@ -25,7 +25,7 @@ class Opening:
 
     def __post_init__(self) -> None:
         if not 0 <= self.weekday <= 6:
-            raise ValueError('weekday must be 0..6')
+            raise ValueError("weekday must be 0..6")
         for value in (self.start, self.end):
             time.fromisoformat(value)
 
@@ -38,7 +38,11 @@ class Daypart:
     blocked_artists: tuple[str, ...] = ()
 
     def covers(self, instant: datetime) -> bool:
-        current, start, end = instant.time().replace(tzinfo=None), time.fromisoformat(self.start), time.fromisoformat(self.end)
+        current, start, end = (
+            instant.time().replace(tzinfo=None),
+            time.fromisoformat(self.start),
+            time.fromisoformat(self.end),
+        )
         return start <= current < end if start < end else current >= start or current < end
 
 
@@ -54,8 +58,20 @@ class Policy:
     rights_attested: bool = False
     dayparts: tuple[Daypart, ...] = ()
 
-    def permits(self, track: 'Recording', now: float, last_played: float | None = None, *, request: bool = False, timezone: str = 'UTC') -> bool:
-        if not self.rights_attested or (self.rights_until is not None and now >= self.rights_until) or (self.plan_until is not None and now >= self.plan_until):
+    def permits(
+        self,
+        track: Recording,
+        now: float,
+        last_played: float | None = None,
+        *,
+        request: bool = False,
+        timezone: str = "UTC",
+    ) -> bool:
+        if (
+            not self.rights_attested
+            or (self.rights_until is not None and now >= self.rights_until)
+            or (self.plan_until is not None and now >= self.plan_until)
+        ):
             return False
         if request and not self.allow_requests:
             return False
@@ -95,14 +111,14 @@ class Venue:
     zones: tuple[Zone, ...]
     policy: Policy
     authorised_roots: tuple[str, ...]
-    programme_id: str = ''
+    programme_id: str = ""
 
     def __post_init__(self) -> None:
         ZoneInfo(self.timezone)  # validate IANA timezone
         if not self.workspace_id or not self.venue_id or not self.engine_id:
-            raise ValueError('workspace, venue and engine identity are required')
+            raise ValueError("workspace, venue and engine identity are required")
         if len({z.id for z in self.zones}) != len(self.zones):
-            raise ValueError('zone IDs must be unique within a venue')
+            raise ValueError("zone IDs must be unique within a venue")
 
     def open_at(self, now: float) -> bool:
         """Local wall-clock openings, including overnight and DST folds, via UTC instants."""
@@ -115,9 +131,14 @@ class Venue:
                     continue
                 if period.all_day:
                     start = datetime.combine(d, time.min, tzinfo=tz).astimezone(UTC)
-                    end = datetime.combine(d + timedelta(days=1), time.min, tzinfo=tz).astimezone(UTC)
+                    end = datetime.combine(d + timedelta(days=1), time.min, tzinfo=tz).astimezone(
+                        UTC
+                    )
                 else:
-                    start_t, end_t = time.fromisoformat(period.start), time.fromisoformat(period.end)
+                    start_t, end_t = (
+                        time.fromisoformat(period.start),
+                        time.fromisoformat(period.end),
+                    )
                     end_d = d + timedelta(days=1) if end_t <= start_t else d
                     start = _resolve_wall(tz, d, start_t)
                     end = _resolve_wall(tz, end_d, end_t)
@@ -152,7 +173,7 @@ class Recording:
     explicit: bool | None
     duration_s: float
     revision: str  # exact, locally verified revision; no remaster guessing
-    sha256: str = ''
+    sha256: str = ""
     requested: bool = False
 
 
@@ -174,9 +195,12 @@ class OutputProbe:
 
 class LocalAudioPort(Protocol):
     """Implemented by the *local* engine/Agent 08 playback adapter only."""
+
     def preflight(self, zone: Zone, recording: Recording) -> bool: ...
     def prepare(self, zone: Zone, recording: Recording, prior: Recording | None) -> str: ...
-    def start(self, zone: Zone, recording: Recording, handle: str, generation: int, position_s: float) -> bool: ...
+    def start(
+        self, zone: Zone, recording: Recording, handle: str, generation: int, position_s: float
+    ) -> bool: ...
     def stop(self, zone: Zone, generation: int) -> bool: ...
     def probe(self, zone: Zone) -> OutputProbe: ...
 
@@ -206,4 +230,4 @@ class Diagnosis:
     prepared: tuple[str, ...]
     planned: tuple[str, ...]
     last_verified_at: float | None
-    physical_hardware_gate: str = 'outstanding'
+    physical_hardware_gate: str = "outstanding"

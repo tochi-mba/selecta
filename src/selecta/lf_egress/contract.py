@@ -4,6 +4,7 @@ Use validate_envelope() at each cloud egress/ingress integration boundary.
 A typed field allowlist is mandatory: unknown fields never silently become data
 transport. Content inspection is a secondary defence, not a substitute for schemas.
 """
+
 from __future__ import annotations
 
 import base64
@@ -38,53 +39,185 @@ class PayloadRejected(ValueError):
 # All fields in nested objects are subject to the same per-kind allowlist. The
 # contract intentionally has no extensible arbitrary JSON/attachments/debug fields.
 _FIELDS: dict[PayloadKind, frozenset[str]] = {
-    PayloadKind.RECIPE: frozenset({
-        "recipe_id", "revision_id", "parent_revision_id", "occurrences", "occurrence_id",
-        "recording_ref", "position", "cue_in_ms", "cue_out_ms", "transition_ms",
-        "transition_kind", "timebase", "bpm", "key", "title", "artist",
-        "notes", "status", "created_at", "updated_at", "cues", "transitions",
-        "source_revision", "intent", "expected_duration_ms", "confidence",
-    }),
-    PayloadKind.CONTROL: frozenset({
-        "operation_id", "actor_id", "device_id", "zone_id", "recipe_revision_id",
-        "generation", "expected_generation", "expiry", "idempotency_key",
-        "command", "state", "status", "reason_code", "position_ms", "volume",
-        "parameters", "target_device_id", "sequence", "issued_at", "applied_at",
-        "recording_ref", "transition_ms",
-    }),
-    PayloadKind.CATALOGUE: frozenset({
-        "recordings", "recording_ref", "title", "artist", "album", "duration_ms",
-        "bpm", "key", "genre", "explicit", "year", "availability",
-        "device_id", "zone_id", "last_verified_at", "state", "count", "revision",
-    }),
-    PayloadKind.AVAILABILITY: frozenset({
-        "device_id", "zone_id", "recording_ref", "state", "verified_at",
-        "expires_at", "confidence", "total", "ready", "missing", "blocked",
-        "candidate", "engine_state", "output_state", "generation",
-    }),
-    PayloadKind.SCHEDULE: frozenset({
-        "schedule_id", "zone_id", "device_id", "timezone", "dayparts",
-        "day", "start_time", "end_time", "recipe_id", "revision_id",
-        "enabled", "policy", "state", "effective_at", "priority",
-    }),
-    PayloadKind.PLAY_LOG: frozenset({
-        "event_id", "device_id", "zone_id", "recording_ref", "recipe_revision_id",
-        "started_at", "ended_at", "duration_ms", "state", "reason_code",
-        "generation", "position_ms",
-    }),
-    PayloadKind.AI_PLAN: frozenset({
-        "plan_id", "intent", "constraints", "recording_ref", "recordings",
-        "recipe_id", "revision_id", "occurrences", "occurrence_id",
-        "transition_ms", "bpm", "key", "title", "artist", "duration_ms",
-        "status", "reason_code", "confidence", "sequence", "steps",
-        "position", "action", "operation_id",
-    }),
-    PayloadKind.DIAGNOSTIC: frozenset({
-        "event_id", "device_id", "zone_id", "timestamp", "category",
-        "reason_code", "engine_state", "connection_state", "queue_depth",
-        "memory_pressure", "cpu_percent", "job_count", "uptime_seconds",
-        "version", "state", "last_seen_at",
-    }),
+    PayloadKind.RECIPE: frozenset(
+        {
+            "recipe_id",
+            "revision_id",
+            "parent_revision_id",
+            "occurrences",
+            "occurrence_id",
+            "recording_ref",
+            "position",
+            "cue_in_ms",
+            "cue_out_ms",
+            "transition_ms",
+            "transition_kind",
+            "timebase",
+            "bpm",
+            "key",
+            "title",
+            "artist",
+            "notes",
+            "status",
+            "created_at",
+            "updated_at",
+            "cues",
+            "transitions",
+            "source_revision",
+            "intent",
+            "expected_duration_ms",
+            "confidence",
+        }
+    ),
+    PayloadKind.CONTROL: frozenset(
+        {
+            "operation_id",
+            "actor_id",
+            "device_id",
+            "zone_id",
+            "recipe_revision_id",
+            "generation",
+            "expected_generation",
+            "expiry",
+            "idempotency_key",
+            "command",
+            "state",
+            "status",
+            "reason_code",
+            "position_ms",
+            "volume",
+            "parameters",
+            "target_device_id",
+            "sequence",
+            "issued_at",
+            "applied_at",
+            "recording_ref",
+            "transition_ms",
+        }
+    ),
+    PayloadKind.CATALOGUE: frozenset(
+        {
+            "recordings",
+            "recording_ref",
+            "title",
+            "artist",
+            "album",
+            "duration_ms",
+            "bpm",
+            "key",
+            "genre",
+            "explicit",
+            "year",
+            "availability",
+            "device_id",
+            "zone_id",
+            "last_verified_at",
+            "state",
+            "count",
+            "revision",
+        }
+    ),
+    PayloadKind.AVAILABILITY: frozenset(
+        {
+            "device_id",
+            "zone_id",
+            "recording_ref",
+            "state",
+            "verified_at",
+            "expires_at",
+            "confidence",
+            "total",
+            "ready",
+            "missing",
+            "blocked",
+            "candidate",
+            "engine_state",
+            "output_state",
+            "generation",
+        }
+    ),
+    PayloadKind.SCHEDULE: frozenset(
+        {
+            "schedule_id",
+            "zone_id",
+            "device_id",
+            "timezone",
+            "dayparts",
+            "day",
+            "start_time",
+            "end_time",
+            "recipe_id",
+            "revision_id",
+            "enabled",
+            "policy",
+            "state",
+            "effective_at",
+            "priority",
+        }
+    ),
+    PayloadKind.PLAY_LOG: frozenset(
+        {
+            "event_id",
+            "device_id",
+            "zone_id",
+            "recording_ref",
+            "recipe_revision_id",
+            "started_at",
+            "ended_at",
+            "duration_ms",
+            "state",
+            "reason_code",
+            "generation",
+            "position_ms",
+        }
+    ),
+    PayloadKind.AI_PLAN: frozenset(
+        {
+            "plan_id",
+            "intent",
+            "constraints",
+            "recording_ref",
+            "recordings",
+            "recipe_id",
+            "revision_id",
+            "occurrences",
+            "occurrence_id",
+            "transition_ms",
+            "bpm",
+            "key",
+            "title",
+            "artist",
+            "duration_ms",
+            "status",
+            "reason_code",
+            "confidence",
+            "sequence",
+            "steps",
+            "position",
+            "action",
+            "operation_id",
+        }
+    ),
+    PayloadKind.DIAGNOSTIC: frozenset(
+        {
+            "event_id",
+            "device_id",
+            "zone_id",
+            "timestamp",
+            "category",
+            "reason_code",
+            "engine_state",
+            "connection_state",
+            "queue_depth",
+            "memory_pressure",
+            "cpu_percent",
+            "job_count",
+            "uptime_seconds",
+            "version",
+            "state",
+            "last_seen_at",
+        }
+    ),
 }
 _MAX_BYTES = 64 * 1024
 _MAX_DEPTH = 8
@@ -125,17 +258,21 @@ def _check_text(value: str) -> None:
         raise PayloadRejected("invalid_metadata_json") from error
     if size > _MAX_STRING:
         raise PayloadRejected("metadata_string_too_large")
-    if (any(ord(char) < 32 for char in value) or _LOCAL_PATH.search(value)
-            or _DATA_URL.search(value)
-            or re.search(r"\b(?:https?|ftp|s3|r2)://|\bblob:", value, re.IGNORECASE)):
+    if (
+        any(ord(char) < 32 for char in value)
+        or _LOCAL_PATH.search(value)
+        or _DATA_URL.search(value)
+        or re.search(r"\b(?:https?|ftp|s3|r2)://|\bblob:", value, re.IGNORECASE)
+    ):
         raise PayloadRejected("forbidden_metadata")
     # Detect common encoded media; generic opaque encoding is not a permitted
     # metadata field either. This includes base64url, hex and JSON-wrapped audio.
     for match in _BASE64_TOKEN.finditer(value):
         token = match.group()
         try:
-            binary = base64.b64decode(token.replace("-", "+").replace("_", "/") +
-                                      "=" * (-len(token) % 4), validate=True)
+            binary = base64.b64decode(
+                token.replace("-", "+").replace("_", "/") + "=" * (-len(token) % 4), validate=True
+            )
         except (binascii.Error, ValueError):
             continue
         if _looks_like_audio(binary) or (len(token) >= 128 and len(binary) >= 64):
@@ -152,42 +289,119 @@ def _check_text(value: str) -> None:
 # Permit a short set of known scalar and structural field types. A field
 # allowlist without type constraints would let a client put PCM samples into
 # "title": [0, 32767, ...] or smuggle bytes through nested arrays.
-_TEXT_FIELDS = frozenset({
-    "recipe_id", "revision_id", "parent_revision_id", "occurrence_id",
-    "recording_ref", "transition_kind", "timebase", "key", "title",
-    "artist", "notes", "status", "source_revision", "intent", "operation_id",
-    "actor_id", "device_id", "zone_id", "recipe_revision_id",
-    "idempotency_key", "command", "state", "reason_code",
-    "target_device_id", "album", "genre", "availability", "engine_state",
-    "output_state", "schedule_id", "timezone", "day", "start_time",
-    "end_time", "event_id", "category", "connection_state", "version",
-    "action",
-})
-_NUMBER_FIELDS = frozenset({
-    "position", "cue_in_ms", "cue_out_ms", "transition_ms", "bpm",
-    "expected_duration_ms", "confidence", "generation",
-    "expected_generation", "volume", "position_ms", "sequence",
-    "duration_ms", "year", "total", "ready", "missing", "blocked",
-    "candidate", "count", "priority", "cpu_percent", "memory_pressure",
-    "queue_depth", "job_count", "uptime_seconds",
-})
-_TIMESTAMP_FIELDS = frozenset({
-    "expiry", "created_at", "updated_at", "issued_at", "applied_at",
-    "verified_at", "expires_at", "last_verified_at", "effective_at",
-    "started_at", "ended_at", "timestamp", "last_seen_at",
-})
+_TEXT_FIELDS = frozenset(
+    {
+        "recipe_id",
+        "revision_id",
+        "parent_revision_id",
+        "occurrence_id",
+        "recording_ref",
+        "transition_kind",
+        "timebase",
+        "key",
+        "title",
+        "artist",
+        "notes",
+        "status",
+        "source_revision",
+        "intent",
+        "operation_id",
+        "actor_id",
+        "device_id",
+        "zone_id",
+        "recipe_revision_id",
+        "idempotency_key",
+        "command",
+        "state",
+        "reason_code",
+        "target_device_id",
+        "album",
+        "genre",
+        "availability",
+        "engine_state",
+        "output_state",
+        "schedule_id",
+        "timezone",
+        "day",
+        "start_time",
+        "end_time",
+        "event_id",
+        "category",
+        "connection_state",
+        "version",
+        "action",
+    }
+)
+_NUMBER_FIELDS = frozenset(
+    {
+        "position",
+        "cue_in_ms",
+        "cue_out_ms",
+        "transition_ms",
+        "bpm",
+        "expected_duration_ms",
+        "confidence",
+        "generation",
+        "expected_generation",
+        "volume",
+        "position_ms",
+        "sequence",
+        "duration_ms",
+        "year",
+        "total",
+        "ready",
+        "missing",
+        "blocked",
+        "candidate",
+        "count",
+        "priority",
+        "cpu_percent",
+        "memory_pressure",
+        "queue_depth",
+        "job_count",
+        "uptime_seconds",
+    }
+)
+_TIMESTAMP_FIELDS = frozenset(
+    {
+        "expiry",
+        "created_at",
+        "updated_at",
+        "issued_at",
+        "applied_at",
+        "verified_at",
+        "expires_at",
+        "last_verified_at",
+        "effective_at",
+        "started_at",
+        "ended_at",
+        "timestamp",
+        "last_seen_at",
+    }
+)
 _BOOL_FIELDS = frozenset({"enabled", "explicit"})
-_LIST_OF_OBJECTS = frozenset({
-    "occurrences", "cues", "transitions", "recordings", "dayparts", "steps",
-})
+_LIST_OF_OBJECTS = frozenset(
+    {
+        "occurrences",
+        "cues",
+        "transitions",
+        "recordings",
+        "dayparts",
+        "steps",
+    }
+)
 _OBJECT_FIELDS = frozenset({"parameters", "constraints", "policy"})
 # A revision may be a numeric generation or a stable opaque revision ID.
 _BOTH_FIELDS = frozenset({"revision"})
 
 
 def _validate_value(
-    value: Any, allowed: frozenset[str], depth: int, field: str | None = None,
-    *, list_item: bool = False,
+    value: Any,
+    allowed: frozenset[str],
+    depth: int,
+    field: str | None = None,
+    *,
+    list_item: bool = False,
 ) -> None:
     if depth > _MAX_DEPTH:
         raise PayloadRejected("metadata_too_deep")
@@ -248,8 +462,11 @@ def _no_constant(_constant: str) -> None:
 
 
 def validate_envelope(
-    value: Mapping[str, Any] | bytes | str, *, workspace_id: str,
-    kind: PayloadKind | str, max_bytes: int = _MAX_BYTES,
+    value: Mapping[str, Any] | bytes | str,
+    *,
+    workspace_id: str,
+    kind: PayloadKind | str,
+    max_bytes: int = _MAX_BYTES,
 ) -> dict[str, Any]:
     """Validate a fully typed, tenant-bound metadata-only envelope.
 
@@ -315,16 +532,30 @@ def validate_envelope(
 def safe_audit_fields(code: str, kind: PayloadKind | str) -> dict[str, str]:
     """Only opaque, bounded enums/codes; never log raw input, paths, hashes or IDs."""
     safe_codes = {
-        "metadata_rejected", "metadata_too_large", "metadata_invalid_field",
-        "metadata_field_not_allowed", "metadata_string_too_large",
-        "metadata_too_many_items", "metadata_too_many_fields", "metadata_too_deep",
-        "invalid_metadata_json", "invalid_metadata_envelope", "unexpected_binary_payload",
-        "encoded_media_forbidden", "forbidden_metadata", "metadata_duplicate_field",
-        "metadata_invalid_number", "metadata_wrong_type",
-        "tenant_scope_mismatch", "invalid_tenant_scope",
-        "metadata_kind_not_allowed", "metadata_version_unsupported",
-        "cloud_audio_disabled", "cloud_audio_storage_disabled",
-        "cloud_audio_processing_disabled", "new_cloud_audio_uploads_disabled",
+        "metadata_rejected",
+        "metadata_too_large",
+        "metadata_invalid_field",
+        "metadata_field_not_allowed",
+        "metadata_string_too_large",
+        "metadata_too_many_items",
+        "metadata_too_many_fields",
+        "metadata_too_deep",
+        "invalid_metadata_json",
+        "invalid_metadata_envelope",
+        "unexpected_binary_payload",
+        "encoded_media_forbidden",
+        "forbidden_metadata",
+        "metadata_duplicate_field",
+        "metadata_invalid_number",
+        "metadata_wrong_type",
+        "tenant_scope_mismatch",
+        "invalid_tenant_scope",
+        "metadata_kind_not_allowed",
+        "metadata_version_unsupported",
+        "cloud_audio_disabled",
+        "cloud_audio_storage_disabled",
+        "cloud_audio_processing_disabled",
+        "new_cloud_audio_uploads_disabled",
     }
     return {
         "event": "lf_egress_refused",

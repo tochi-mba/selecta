@@ -4,6 +4,7 @@ All SQL reads are scoped through the existing workspace RLS transaction. Object
 listing never uses a global prefix: staging objects are checked only for sessions
 belonging to the requested workspace. No object writes or deletes are exposed.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
@@ -80,6 +81,7 @@ def collect_inventory(
 
     concerns: list[dict[str, str]] = []
     references: dict[tuple[str, str], set[str]] = {}
+
     def mark(bucket: Bucket, key: str, kind: str) -> None:
         issue = _check_key(key, workspace_id, bucket)
         if issue:
@@ -105,9 +107,9 @@ def collect_inventory(
             try:
                 bucket = validate_key(key)
             except (UnsafeKey, TypeError, ValueError):
-                concerns.append({
-                    "kind": "unsafe_artifact_key", "reference": str(a["id"]), "key": key
-                })
+                concerns.append(
+                    {"kind": "unsafe_artifact_key", "reference": str(a["id"]), "key": key}
+                )
                 continue
             mark(bucket, key, "artifact:" + str(a["id"]))
 
@@ -117,15 +119,20 @@ def collect_inventory(
         if a["kind"] != "mix_revision":
             continue
         contract = (a.get("provenance") or {}).get("settings", {}).get("contract")
-        revisions.append({
-            "id": a["id"], "revision": a["input_hash"], "protected": bool(a["protected"]),
-            "contract": contract, "created_at": a["created_at"],
-            "invalid_contract": not isinstance(contract, dict),
-        })
+        revisions.append(
+            {
+                "id": a["id"],
+                "revision": a["input_hash"],
+                "protected": bool(a["protected"]),
+                "contract": contract,
+                "created_at": a["created_at"],
+                "invalid_contract": not isinstance(contract, dict),
+            }
+        )
         if not a["protected"]:
-            concerns.append({
-                "kind": "unprotected_mix_revision", "reference": str(a["id"]), "key": ""
-            })
+            concerns.append(
+                {"kind": "unprotected_mix_revision", "reference": str(a["id"]), "key": ""}
+            )
 
     observed: dict[tuple[str, str], int] = {}
     scanned_count = 0
@@ -142,16 +149,20 @@ def collect_inventory(
                         raise IncompleteInventory("object limit exceeded; increase scope or limit")
                     identity = (bucket.value, item.key)
                     if _check_key(item.key, workspace_id, bucket):
-                        concerns.append({
-                            "kind": "invalid_listed_key", "reference": bucket.value, "key": item.key
-                        })
+                        concerns.append(
+                            {
+                                "kind": "invalid_listed_key",
+                                "reference": bucket.value,
+                                "key": item.key,
+                            }
+                        )
                         continue
                     observed[identity] = int(item.size)
             except IncompleteInventory:
                 raise
             except Exception as exc:
                 raise IncompleteInventory("R2 listing incomplete for " + bucket.value) from exc
-        for (kind, key) in references:
+        for kind, key in references:
             if kind != Bucket.STAGING.value:
                 continue
             try:
@@ -181,15 +192,21 @@ def collect_inventory(
             try:
                 head = objects.head_object(buckets.name(Bucket.ORIGINALS), key)
             except R2NotFound:
-                concerns.append({"kind": "original_disappeared_during_scan",
-                                 "reference": str(asset["id"]), "key": key})
+                concerns.append(
+                    {
+                        "kind": "original_disappeared_during_scan",
+                        "reference": str(asset["id"]),
+                        "key": key,
+                    }
+                )
                 continue
             except Exception as exc:
                 raise IncompleteInventory("original HEAD incomplete") from exc
             remote_hash = {k.lower(): v for k, v in head.metadata.items()}.get("sha256")
             if remote_hash is None or remote_hash.lower() != str(asset["sha256"]).lower():
-                concerns.append({"kind": "original_sha_mismatch",
-                                 "reference": str(asset["id"]), "key": key})
+                concerns.append(
+                    {"kind": "original_sha_mismatch", "reference": str(asset["id"]), "key": key}
+                )
     for (bucket, key), size in observed.items():
         if (
             bucket == Bucket.ORIGINALS.value
@@ -209,20 +226,33 @@ def collect_inventory(
         "assets": asset_rows,
         "upload_sessions": upload_rows,
         "artifacts": [
-            {"id": a["id"], "kind": a["kind"], "keys": a["keys"],
-             "protected": bool(a["protected"]), "input_hash": a["input_hash"]}
+            {
+                "id": a["id"],
+                "kind": a["kind"],
+                "keys": a["keys"],
+                "protected": bool(a["protected"]),
+                "input_hash": a["input_hash"],
+            }
             for a in artifact_rows
         ],
         "mix_revisions": revisions,
         "revision_artifact_links": links,
         "subscriptions": [
-            {"id": s["id"], "status": s["status"], "price_id": s["price_id"],
-             "current_period_end": s["current_period_end"]}
+            {
+                "id": s["id"],
+                "status": s["status"],
+                "price_id": s["price_id"],
+                "current_period_end": s["current_period_end"],
+            }
             for s in subscription_rows
         ],
         "plan_versions": [
-            {"version": e["version"], "plan_id": e["plan_id"],
-             "plan_version": e["plan_version"], "source": e["source"]}
+            {
+                "version": e["version"],
+                "plan_id": e["plan_id"],
+                "plan_version": e["plan_version"],
+                "source": e["source"],
+            }
             for e in plan_rows
         ],
         "deletions": deletion_rows,

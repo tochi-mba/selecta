@@ -55,9 +55,9 @@ def test_crash_restart_budget_and_reboot_status(tmp_path):
     assert supervisor.run() == 3
     status = read_status(tmp_path, now=time.time() + 60)
     assert status["state"] == "offline"
-    assert json.loads((tmp_path / "status.json").read_text())[
-        "reason"
-    ] == "restart_budget_exhausted"
+    assert (
+        json.loads((tmp_path / "status.json").read_text())["reason"] == "restart_budget_exhausted"
+    )
 
 
 def test_generation_bound_stop_and_graceful_shutdown(tmp_path, monkeypatch):

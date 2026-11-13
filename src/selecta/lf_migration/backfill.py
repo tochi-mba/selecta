@@ -5,6 +5,7 @@ sidecar which Agent 04's schema adapter can attach to a canonical recipe
 revision after verifying its own schema version. Historical contract bytes,
 revision IDs and lineage remain untouched.
 """
+
 from __future__ import annotations
 
 import copy
@@ -53,8 +54,9 @@ class VerifiedLocalBinding:
 
 
 def _canonical(data: Mapping[str, Any]) -> bytes:
-    return json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=True,
-                      allow_nan=False).encode("utf-8")
+    return json.dumps(
+        data, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False
+    ).encode("utf-8")
 
 
 def plan_backfill(
@@ -132,23 +134,29 @@ def plan_backfill(
             occurrence = str(
                 uuid.uuid5(_NAMESPACE, f"{workspace_id}:{mix_id}:{revision_id}:{index}")
             )
-            references.append({
-                "occurrence_id": occurrence,
-                "position": index,
-                "legacy_asset_id": asset_id,
-                "canonical_track_id": binding.canonical_track_id if binding else None,
-                "resolution": "verified_on_device" if binding else "unresolved",
-                "verified_device_id": binding.device_id if binding else None,
-                "verification_proof_id": binding.proof_id if binding else None,
-                "recording_revision": binding.recording_revision if binding else None,
-            })
-        sidecars.append({
-            "legacy_revision_id": revision_id, "mix_id": mix_id,
-            "number": number, "parent": parent,
-            "legacy_contract_version": rev["version"],
-            "legacy_contract": original,
-            "references": references,
-        })
+            references.append(
+                {
+                    "occurrence_id": occurrence,
+                    "position": index,
+                    "legacy_asset_id": asset_id,
+                    "canonical_track_id": binding.canonical_track_id if binding else None,
+                    "resolution": "verified_on_device" if binding else "unresolved",
+                    "verified_device_id": binding.device_id if binding else None,
+                    "verification_proof_id": binding.proof_id if binding else None,
+                    "recording_revision": binding.recording_revision if binding else None,
+                }
+            )
+        sidecars.append(
+            {
+                "legacy_revision_id": revision_id,
+                "mix_id": mix_id,
+                "number": number,
+                "parent": parent,
+                "legacy_contract_version": rev["version"],
+                "legacy_contract": original,
+                "references": references,
+            }
+        )
     # Sort for stable replay regardless of discovery/query ordering.
     sidecars.sort(key=lambda item: (item["mix_id"], item["number"], item["legacy_revision_id"]))
     result = {
@@ -239,8 +247,12 @@ class LocalPlanJournal:
             if existing.get("plan") != dict(plan):
                 raise MigrationConflict("journal plan changed since prepare")
             return existing
-        record = {"plan_id": identity, "state": "prepared", "completed": [],
-                  "plan": copy.deepcopy(dict(plan))}
+        record = {
+            "plan_id": identity,
+            "state": "prepared",
+            "completed": [],
+            "plan": copy.deepcopy(dict(plan)),
+        }
         self._atomic(path, record)
         return record
 

@@ -37,8 +37,11 @@ def test_config_atomic_roundtrip_and_corrupt_recovery(tmp_path):
 
 def test_invalid_config_refused(tmp_path):
     for invalid in (
-        {"port": 80}, {"port": True}, {"workspace": "cloud"},
-        {"version": 99}, {"unexpected_key": "wrong"},
+        {"port": 80},
+        {"port": True},
+        {"workspace": "cloud"},
+        {"version": 99},
+        {"unexpected_key": "wrong"},
     ):
         with pytest.raises((EngineConfigError, TypeError)):
             EngineConfig.from_dict(invalid)

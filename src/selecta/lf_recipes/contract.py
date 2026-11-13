@@ -3,6 +3,7 @@
 This module has no dependency on cloud audio or local file paths. Recording verification
 is an explicit device-scoped input, never inferred from titles or catalogue entries.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -21,10 +22,20 @@ _ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
 _SHA = re.compile(r"^[0-9a-f]{64}$")
 _TIMEBASES = frozenset({"source_seconds", "beats"})
 _TRANSITIONS = frozenset({"cut", "crossfade", "beatmatched_crossfade", "planned"})
-_ALLOWED_KEYS = frozenset({
-    "schema_version", "recipe_id", "name", "revision_number", "parent_revision",
-    "draft", "occurrences", "cues", "transitions", "revision_id",
-})
+_ALLOWED_KEYS = frozenset(
+    {
+        "schema_version",
+        "recipe_id",
+        "name",
+        "revision_number",
+        "parent_revision",
+        "draft",
+        "occurrences",
+        "cues",
+        "transitions",
+        "revision_id",
+    }
+)
 
 
 class RecipeError(ValueError):
@@ -185,9 +196,12 @@ class Recipe:
 
     def body(self) -> dict[str, Any]:
         return {
-            "schema_version": self.schema_version, "recipe_id": self.recipe_id,
-            "name": self.name, "revision_number": self.revision_number,
-            "parent_revision": self.parent_revision, "draft": self.draft,
+            "schema_version": self.schema_version,
+            "recipe_id": self.recipe_id,
+            "name": self.name,
+            "revision_number": self.revision_number,
+            "parent_revision": self.parent_revision,
+            "draft": self.draft,
             "occurrences": [o.to_json() for o in self.occurrences],
             "cues": [c.to_json() for c in self.cues],
             "transitions": [t.to_json() for t in self.transitions],
@@ -201,9 +215,13 @@ class Recipe:
         return {**self.body(), "revision_id": self.revision_id}
 
     def edited(
-        self, *, occurrences: Sequence[Occurrence] | None = None,
-        cues: Sequence[Cue] | None = None, transitions: Sequence[Transition] | None = None,
-        name: str | None = None, draft: bool | None = None,
+        self,
+        *,
+        occurrences: Sequence[Occurrence] | None = None,
+        cues: Sequence[Cue] | None = None,
+        transitions: Sequence[Transition] | None = None,
+        name: str | None = None,
+        draft: bool | None = None,
     ) -> Recipe:
         """Preserve historical content; invalidate only dependencies on changed recordings.
 
@@ -214,17 +232,18 @@ class Recipe:
         next_occ = tuple(self.occurrences if occurrences is None else occurrences)
         old = {o.occurrence_id: o for o in self.occurrences}
         changed = {
-            o.occurrence_id for o in next_occ
-            if o.occurrence_id not in old or (
-                o.canonical_track_id, o.legacy_asset_id, o.recording_version
-            ) != (
-                old[o.occurrence_id].canonical_track_id, old[o.occurrence_id].legacy_asset_id,
-                old[o.occurrence_id].recording_version
+            o.occurrence_id
+            for o in next_occ
+            if o.occurrence_id not in old
+            or (o.canonical_track_id, o.legacy_asset_id, o.recording_version)
+            != (
+                old[o.occurrence_id].canonical_track_id,
+                old[o.occurrence_id].legacy_asset_id,
+                old[o.occurrence_id].recording_version,
             )
         }
         next_occ = tuple(
-            replace(o, analysis_valid=False) if o.occurrence_id in changed else o
-            for o in next_occ
+            replace(o, analysis_valid=False) if o.occurrence_id in changed else o for o in next_occ
         )
         existing_cues = self.cues if cues is None else tuple(cues)
         next_cues = tuple(
@@ -234,13 +253,18 @@ class Recipe:
         existing_trans = self.transitions if transitions is None else tuple(transitions)
         next_trans = tuple(
             replace(t, requires_rebuild=True)
-            if t.from_occurrence_id in changed or t.to_occurrence_id in changed else t
+            if t.from_occurrence_id in changed or t.to_occurrence_id in changed
+            else t
             for t in existing_trans
         )
         return Recipe(
-            recipe_id=self.recipe_id, name=self.name if name is None else name.strip(),
-            occurrences=next_occ, cues=next_cues, transitions=next_trans,
-            revision_number=self.revision_number + 1, parent_revision=self.revision_id,
+            recipe_id=self.recipe_id,
+            name=self.name if name is None else name.strip(),
+            occurrences=next_occ,
+            cues=next_cues,
+            transitions=next_trans,
+            revision_number=self.revision_number + 1,
+            parent_revision=self.revision_id,
             draft=self.draft if draft is None else draft,
         )
 
@@ -254,8 +278,7 @@ def parse_recipe(data: Mapping[str, Any]) -> Recipe:
     trans_keys = frozenset(Transition.__dataclass_fields__)
     try:
         occurrences = tuple(
-            Occurrence(**_fields(item, occ_keys, "occurrence"))
-            for item in raw["occurrences"]
+            Occurrence(**_fields(item, occ_keys, "occurrence")) for item in raw["occurrences"]
         )
         cues = tuple(Cue(**_fields(item, cue_keys, "cue")) for item in raw.get("cues", ()))
         transitions = tuple(
@@ -263,9 +286,14 @@ def parse_recipe(data: Mapping[str, Any]) -> Recipe:
             for item in raw.get("transitions", ())
         )
         recipe = Recipe(
-            recipe_id=raw["recipe_id"], name=raw["name"], occurrences=occurrences,
-            cues=cues, transitions=transitions, revision_number=raw["revision_number"],
-            parent_revision=raw.get("parent_revision"), draft=raw.get("draft", True),
+            recipe_id=raw["recipe_id"],
+            name=raw["name"],
+            occurrences=occurrences,
+            cues=cues,
+            transitions=transitions,
+            revision_number=raw["revision_number"],
+            parent_revision=raw.get("parent_revision"),
+            draft=raw.get("draft", True),
         )
         if raw.get("revision_id") is not None and raw["revision_id"] != recipe.revision_id:
             raise RecipeError("Recipe content does not match immutable revision id")
@@ -284,20 +312,28 @@ def new_recipe(
     for raw in tracks:
         values = _fields(
             raw,
-            frozenset({
-                "occurrence_id", "canonical_track_id", "recording_version",
-                "title", "artist",
-            }),
+            frozenset(
+                {
+                    "occurrence_id",
+                    "canonical_track_id",
+                    "recording_version",
+                    "title",
+                    "artist",
+                }
+            ),
             "occurrence",
         )
         if not values.get("canonical_track_id"):
             raise RecipeError("New recipes require explicit canonical_track_id")
-        occurrences.append(Occurrence(
-            occurrence_id=values.get("occurrence_id") or uuid.uuid4().hex,
-            canonical_track_id=values["canonical_track_id"],
-            recording_version=values.get("recording_version"),
-            title=values.get("title", "Untitled"), artist=values.get("artist"),
-        ))
+        occurrences.append(
+            Occurrence(
+                occurrence_id=values.get("occurrence_id") or uuid.uuid4().hex,
+                canonical_track_id=values["canonical_track_id"],
+                recording_version=values.get("recording_version"),
+                title=values.get("title", "Untitled"),
+                artist=values.get("artist"),
+            )
+        )
     return Recipe(
         recipe_id=recipe_id or uuid.uuid4().hex, name=name, occurrences=tuple(occurrences)
     )
@@ -316,14 +352,22 @@ def from_legacy(contract: Any) -> Recipe:
         occurrence_id = uuid.uuid5(
             uuid.NAMESPACE_URL, f"selecta/{contract.mix_id}/{song.id}/{counters[song.id]}"
         ).hex
-        occurrences.append(Occurrence(
-            occurrence_id=occurrence_id, canonical_track_id=None,
-            legacy_asset_id=song.id, title=song.title, artist=song.artist,
-        ))
+        occurrences.append(
+            Occurrence(
+                occurrence_id=occurrence_id,
+                canonical_track_id=None,
+                legacy_asset_id=song.id,
+                title=song.title,
+                artist=song.artist,
+            )
+        )
     return Recipe(
-        recipe_id=contract.mix_id, name=contract.name,
-        occurrences=tuple(occurrences), revision_number=contract.number,
-        parent_revision=contract.parent, draft=True,
+        recipe_id=contract.mix_id,
+        name=contract.name,
+        occurrences=tuple(occurrences),
+        revision_number=contract.number,
+        parent_revision=contract.parent,
+        draft=True,
     )
 
 
@@ -370,15 +414,22 @@ class DeviceInventory:
 
 class RecordingResolver(Protocol):
     """Agent 03 adapter; never returns a filesystem path or raw media fingerprint."""
+
     def resolve(
-        self, workspace_id: str, target_device_id: str,
+        self,
+        workspace_id: str,
+        target_device_id: str,
         canonical_track_ids: tuple[str, ...],
     ) -> DeviceInventory: ...
 
 
 def availability(
-    recipe: Recipe, workspace_id: str, target_device_id: str,
-    resolver: RecordingResolver | None, *, now: float,
+    recipe: Recipe,
+    workspace_id: str,
+    target_device_id: str,
+    resolver: RecordingResolver | None,
+    *,
+    now: float,
 ) -> dict[str, Any]:
     """Strict per-device snapshot; absent or stale verification is Unknown, never Ready."""
     _id(target_device_id, "target_device_id")
@@ -387,9 +438,11 @@ def availability(
     )
     snapshot = resolver.resolve(workspace_id, target_device_id, requested) if resolver else None
     fresh = bool(
-        snapshot and snapshot.workspace_id == workspace_id
+        snapshot
+        and snapshot.workspace_id == workspace_id
         and snapshot.target_device_id == target_device_id
-        and math.isfinite(snapshot.verified_at) and math.isfinite(snapshot.expires_at)
+        and math.isfinite(snapshot.verified_at)
+        and math.isfinite(snapshot.expires_at)
         and snapshot.verified_at <= now <= snapshot.expires_at
         and snapshot.expires_at > snapshot.verified_at
     )
@@ -399,9 +452,9 @@ def availability(
         binding = bindings.get(item.canonical_track_id) if item.canonical_track_id else None
         state = binding.state if binding else AvailabilityState.UNKNOWN
         reason = (
-            binding.reason if binding else (
-                "unresolved_legacy_reference" if not item.canonical_track_id else "unverified"
-            )
+            binding.reason
+            if binding
+            else ("unresolved_legacy_reference" if not item.canonical_track_id else "unverified")
         )
         if state == AvailabilityState.READY and (
             item.recording_version is not None
@@ -412,23 +465,29 @@ def availability(
             # Local analysis can be re-run; a playable recording does not imply transitions ready.
             reason = "analysis_requires_local_verification"
         tracks.append({"occurrence_id": item.occurrence_id, "state": state.value, "reason": reason})
-    transitions = [{
-        "from_occurrence_id": t.from_occurrence_id,
-        "to_occurrence_id": t.to_occurrence_id,
-        # Recording readiness alone cannot certify a prepared transition. Agent 06/09
-        # must provide a separately verified local transition status before enabling it.
-        "state": "requires_local_rebuild",
-    } for t in recipe.transitions]
+    transitions = [
+        {
+            "from_occurrence_id": t.from_occurrence_id,
+            "to_occurrence_id": t.to_occurrence_id,
+            # Recording readiness alone cannot certify a prepared transition. Agent 06/09
+            # must provide a separately verified local transition status before enabling it.
+            "state": "requires_local_rebuild",
+        }
+        for t in recipe.transitions
+    ]
     counts = {
-        state.value: sum(t["state"] == state.value for t in tracks)
-        for state in AvailabilityState
+        state.value: sum(t["state"] == state.value for t in tracks) for state in AvailabilityState
     }
     can_run = counts["ready"] == len(tracks) and all(t["state"] == "ready" for t in transitions)
     return {
-        "target_device_id": target_device_id, "recipe_revision": recipe.revision_id,
+        "target_device_id": target_device_id,
+        "recipe_revision": recipe.revision_id,
         "policy_version": snapshot.policy_version if fresh and snapshot else None,
         "verified_at": snapshot.verified_at if fresh and snapshot else None,
-        "fresh": fresh, "status": "ready" if can_run else "needs_attention",
-        "can_run": can_run, "counts": counts, "tracks": tracks,
+        "fresh": fresh,
+        "status": "ready" if can_run else "needs_attention",
+        "can_run": can_run,
+        "counts": counts,
+        "tracks": tracks,
         "transition_states": transitions,
     }

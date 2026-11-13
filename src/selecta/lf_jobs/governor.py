@@ -5,6 +5,7 @@ checkpoints, cancellation and publication fencing. This sidecar coordinates boun
 CPU/GPU/memory/scratch budgets ACROSS the analysis, seam and export processes,
 without querying hosted storage, plans or daily paid compute quotas.
 """
+
 from __future__ import annotations
 
 import logging
@@ -57,7 +58,8 @@ def measure_device(home: Path) -> DeviceResources:
         temperatures = psutil.sensors_temperatures()
         thermal = any(
             entry.critical is not None and entry.current >= entry.critical
-            for group in temperatures.values() for entry in group
+            for group in temperatures.values()
+            for entry in group
         )
     except (AttributeError, OSError, RuntimeError):
         pass
@@ -71,9 +73,8 @@ def measure_device(home: Path) -> DeviceResources:
             count = pynvml.nvmlDeviceGetCount()
             if count:
                 gpu_free = min(
-                    pynvml.nvmlDeviceGetMemoryInfo(
-                        pynvml.nvmlDeviceGetHandleByIndex(index)
-                    ).free // (1024 * 1024)
+                    pynvml.nvmlDeviceGetMemoryInfo(pynvml.nvmlDeviceGetHandleByIndex(index)).free
+                    // (1024 * 1024)
                     for index in range(count)
                 )
         finally:
@@ -198,13 +199,10 @@ class LocalResourceGovernor:
             )
 
     def _zones(self, conn: sqlite3.Connection) -> tuple[int, bool]:
-        rows = conn.execute(
-            "SELECT deadline_at FROM zones WHERE active=1"
-        ).fetchall()
+        rows = conn.execute("SELECT deadline_at FROM zones WHERE active=1").fetchall()
         now = self.clock()
         imminent = any(
-            deadline is None or deadline - now <= DEADLINE_GUARD_SECONDS
-            for (deadline,) in rows
+            deadline is None or deadline - now <= DEADLINE_GUARD_SECONDS for (deadline,) in rows
         )
         return len(rows), imminent
 
@@ -260,9 +258,7 @@ class LocalResourceGovernor:
             return False
         if resources.memory_available_mb < memory + current_memory + 256:
             return False
-        if gpu and (
-            resources.gpu_free_mb is None or resources.gpu_free_mb < gpu + current_gpu
-        ):
+        if gpu and (resources.gpu_free_mb is None or resources.gpu_free_mb < gpu + current_gpu):
             return False
         if resources.thermal_warning or resources.on_low_battery:
             return priority <= JobPriority.IMMINENT_TRANSITION
@@ -295,7 +291,13 @@ class LocalResourceGovernor:
             conn.execute(
                 "INSERT INTO permits VALUES (?,?,?,?,?,?,?,?)",
                 (
-                    attempt_id, token, int(priority), memory, scratch, gpu, zone,
+                    attempt_id,
+                    token,
+                    int(priority),
+                    memory,
+                    scratch,
+                    gpu,
+                    zone,
                     now + self.lease_s,
                 ),
             )
@@ -304,10 +306,8 @@ class LocalResourceGovernor:
     def _renew(self, permit: Reservation) -> bool:
         with self._db() as conn:
             updated = conn.execute(
-                "UPDATE permits SET expires_at=? WHERE attempt_id=? AND token=?"
-                " AND expires_at > ?",
-                (self.clock() + self.lease_s, permit.attempt_id,
-                 permit.token, self.clock()),
+                "UPDATE permits SET expires_at=? WHERE attempt_id=? AND token=? AND expires_at > ?",
+                (self.clock() + self.lease_s, permit.attempt_id, permit.token, self.clock()),
             )
             return updated.rowcount == 1
 

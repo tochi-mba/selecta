@@ -1,4 +1,5 @@
 """LF15 offline, model failure, cost and cancellation tests."""
+
 from __future__ import annotations
 
 import asyncio
@@ -12,20 +13,40 @@ from selecta.lf_ai import HostedBudget, HostedLucyPlanner, deterministic_plan, s
 
 def rows():
     return [
-        {"recording_id": "one", "title": "One", "artist": "A", "bpm": 120,
-         "energy": 0.3, "genre": "dance"},
-        {"recording_id": "two", "title": "Two", "artist": "B", "bpm": 121,
-         "energy": 0.4, "genre": "dance"},
+        {
+            "recording_id": "one",
+            "title": "One",
+            "artist": "A",
+            "bpm": 120,
+            "energy": 0.3,
+            "genre": "dance",
+        },
+        {
+            "recording_id": "two",
+            "title": "Two",
+            "artist": "B",
+            "bpm": 121,
+            "energy": 0.4,
+            "genre": "dance",
+        },
     ]
 
 
 def response(ids=("one", "two")):
-    return json.dumps({
-        "schema_version": 1,
-        "summary": "Suggested ordering from permitted metadata",
-        "steps": [{"op": "suggest_order", "recording_ids": list(ids),
-                   "transition": "blend", "note": "Smooth tempo difference"}],
-    })
+    return json.dumps(
+        {
+            "schema_version": 1,
+            "summary": "Suggested ordering from permitted metadata",
+            "steps": [
+                {
+                    "op": "suggest_order",
+                    "recording_ids": list(ids),
+                    "transition": "blend",
+                    "note": "Smooth tempo difference",
+                }
+            ],
+        }
+    )
 
 
 class FakeProvider:
@@ -55,8 +76,12 @@ class FakeProvider:
 def run(provider=None, budget=None, cancelled=None):
     return asyncio.run(
         HostedLucyPlanner(budget).plan(
-            workspace_id="w", device_id="device-1", user_request="dance mix",
-            catalogue_rows=rows(), provider=provider, cancelled=cancelled,
+            workspace_id="w",
+            device_id="device-1",
+            user_request="dance mix",
+            catalogue_rows=rows(),
+            provider=provider,
+            cancelled=cancelled,
         )
     )
 

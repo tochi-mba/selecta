@@ -4,6 +4,7 @@ Cloud mode never binds WeftAI audio tools. A host-supplied authenticated context
 provides explicitly shareable catalogue metadata; no local files are fetched.
 Standalone Lucy keeps its existing (fully local) tool pipeline.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -17,7 +18,12 @@ from selecta.lucy.providers import ProviderError
 
 
 async def answer_cloud_turn(
-    app: Any, active: Any, conn: Any, config: dict, ctx: Any, writer: Any,
+    app: Any,
+    active: Any,
+    conn: Any,
+    config: dict,
+    ctx: Any,
+    writer: Any,
     usage: dict,
 ) -> None:
     """Only a trusted authenticated host may supply workspace/device scope.
@@ -39,7 +45,9 @@ async def answer_cloud_turn(
         if asyncio.iscoroutine(trusted):
             trusted = await trusted
         if not isinstance(trusted, Mapping) or set(trusted) != {
-            "workspace_id", "device_id", "catalogue_rows"
+            "workspace_id",
+            "device_id",
+            "catalogue_rows",
         }:
             raise BoundaryError("invalid trusted catalogue context")
         budgets = config["budgets"]

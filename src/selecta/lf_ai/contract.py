@@ -3,6 +3,7 @@
 This module is deliberately independent of the local catalogue and DSP implementations.
 An AI response is data, never an executable tool invocation.
 """
+
 from __future__ import annotations
 
 import json
@@ -17,10 +18,20 @@ MAX_TRACKS = 48
 MAX_STEPS = 12
 MAX_ORDER = 32
 MAX_PROMPT_CHARS = 1200
-FIELDS = frozenset({
-    "recording_id", "title", "artist", "album", "genre", "bpm", "key",
-    "energy", "duration_seconds", "year",
-})
+FIELDS = frozenset(
+    {
+        "recording_id",
+        "title",
+        "artist",
+        "album",
+        "genre",
+        "bpm",
+        "key",
+        "energy",
+        "duration_seconds",
+        "year",
+    }
+)
 TEXT_FIELDS = frozenset({"title", "artist", "album", "genre", "key"})
 OPS = frozenset({"suggest_order", "suggest_transition", "explain"})
 TRANSITIONS = frozenset({"cut", "beatmatch", "blend", "fade", "echo_out"})
@@ -37,13 +48,12 @@ PATH = re.compile(
     r"file://|https?://|data:[\w+.-]+/[\w+.-]+;base64,)",
     re.I,
 )
-MEDIA_SIGNATURE = re.compile(
-    r"(?:UklGR|SUQz|T2dnUw|ZkxhQ|AAAAHGZ0eXA|/9j/)[A-Za-z0-9+/=]{20,}"
-)
+MEDIA_SIGNATURE = re.compile(r"(?:UklGR|SUQz|T2dnUw|ZkxhQ|AAAAHGZ0eXA|/9j/)[A-Za-z0-9+/=]{20,}")
 BASE64_BLOB = re.compile(r"(?:[A-Za-z0-9+/]{160,}={0,2})")
 READINESS_CLAIM = re.compile(
     r"\b(?:verified|ready|available|present|playing|playable|rendered|"
-    r"downloaded|exists?|confirmed|loaded)\b", re.I,
+    r"downloaded|exists?|confirmed|loaded)\b",
+    re.I,
 )
 CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 INJECTION_MARKER = re.compile(
@@ -66,8 +76,10 @@ def _safe_string(value: Any, limit: int, *, untrusted: bool = True) -> str:
         raise BoundaryError("metadata must be text")
     value = CONTROL.sub(" ", value).strip()
     if (
-        len(value) > limit or PATH.search(value)
-        or MEDIA_SIGNATURE.search(value) or BASE64_BLOB.search(value)
+        len(value) > limit
+        or PATH.search(value)
+        or MEDIA_SIGNATURE.search(value)
+        or BASE64_BLOB.search(value)
     ):
         raise BoundaryError("unsafe media, path, URL or excessive text")
     if untrusted and (INJECTION_MARKER.search(value) or "<" in value or ">" in value):
@@ -141,14 +153,16 @@ def safe_catalogue(rows: list[Mapping[str, Any]]) -> tuple[TrackFact, ...]:
         year = row.get("year")
         if year is not None and (type(year) is not int or year < 1850 or year > 2200):
             raise BoundaryError("invalid year")
-        clean.append(TrackFact(
-            recording_id=recording,
-            bpm=_bounded_number(row.get("bpm"), 20, 320),
-            energy=_bounded_number(row.get("energy"), 0, 1),
-            duration_seconds=_bounded_number(row.get("duration_seconds"), 0, 86400),
-            year=year,
-            **strings,
-        ))
+        clean.append(
+            TrackFact(
+                recording_id=recording,
+                bpm=_bounded_number(row.get("bpm"), 20, 320),
+                energy=_bounded_number(row.get("energy"), 0, 1),
+                duration_seconds=_bounded_number(row.get("duration_seconds"), 0, 86400),
+                year=year,
+                **strings,
+            )
+        )
     return tuple(clean)
 
 
@@ -180,14 +194,16 @@ class LucyPlan:
             "source": self.source,
             "availability": "unverified",
             "steps": [
-                vars(step) | {"recording_ids": list(step.recording_ids)}
-                for step in self.steps
+                vars(step) | {"recording_ids": list(step.recording_ids)} for step in self.steps
             ],
         }
 
 
 def parse_model_plan(
-    raw: str | Mapping[str, Any], *, workspace_id: str, device_id: str,
+    raw: str | Mapping[str, Any],
+    *,
+    workspace_id: str,
+    device_id: str,
     allowed_recordings: set[str] | frozenset[str],
 ) -> LucyPlan:
     """Strictly parse AI *suggestions*. Reject every unrecognised instruction or key."""
@@ -214,13 +230,18 @@ def parse_model_plan(
     steps: list[Suggestion] = []
     for row in rows:
         if not isinstance(row, Mapping) or set(row) != {
-            "op", "recording_ids", "transition", "note"
+            "op",
+            "recording_ids",
+            "transition",
+            "note",
         }:
             raise PlanError("unexpected step fields (no tools, URLs, paths or commands)")
         op, ids, transition = row["op"], row["recording_ids"], row["transition"]
         if (
-            not isinstance(op, str) or op not in OPS
-            or not isinstance(ids, list) or len(ids) > MAX_ORDER
+            not isinstance(op, str)
+            or op not in OPS
+            or not isinstance(ids, list)
+            or len(ids) > MAX_ORDER
         ):
             raise PlanError("invalid planning operation")
         if op == "explain" and ids:

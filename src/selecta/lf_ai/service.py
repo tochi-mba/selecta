@@ -1,4 +1,5 @@
 """Hosted Lucy planning without remote tools, plus an offline deterministic DJ fallback."""
+
 from __future__ import annotations
 
 import asyncio
@@ -23,7 +24,10 @@ from selecta.lf_ai.contract import (
 class TextProvider(Protocol):
     def user(self, text: str) -> dict: ...
     async def turn(
-        self, system: list[str], messages: list[dict], tools: list[dict],
+        self,
+        system: list[str],
+        messages: list[dict],
+        tools: list[dict],
         on_text: Callable[[str], Any],
     ) -> Any: ...
 
@@ -56,7 +60,9 @@ class HostedBudget:
             (
                 input_tokens * self.input_usd_per_million
                 + output_tokens * self.output_usd_per_million
-            ) / 1_000_000, 8
+            )
+            / 1_000_000,
+            8,
         )
 
 
@@ -86,8 +92,12 @@ def _musical_distance(a: TrackFact, b: TrackFact) -> float:
 
 
 def deterministic_plan(
-    catalogue: Sequence[TrackFact], *, workspace_id: str, device_id: str,
-    user_request: str = "", maximum: int = 8,
+    catalogue: Sequence[TrackFact],
+    *,
+    workspace_id: str,
+    device_id: str,
+    user_request: str = "",
+    maximum: int = 8,
 ) -> LucyPlan:
     """Network-free, stable ordering from *offered metadata*; no audio is accessed.
 
@@ -95,6 +105,7 @@ def deterministic_plan(
     possible, then chooses musically adjacent candidates. No readiness is implied.
     """
     from selecta.lf_ai.contract import REF, safe_user_text
+
     if not REF.fullmatch(workspace_id) or not REF.fullmatch(device_id):
         raise BoundaryError("invalid trusted workspace or device ID")
     query = safe_user_text(user_request).casefold()
@@ -116,14 +127,13 @@ def deterministic_plan(
         remaining.remove(choice)
     refs = tuple(t.recording_id for t in selected)
     steps = (
-        (Suggestion("suggest_order", refs, "blend", "Unverified musical ordering"),)
-        if refs else ()
+        (Suggestion("suggest_order", refs, "blend", "Unverified musical ordering"),) if refs else ()
     )
     summary = (
         f"Suggested {len(refs)} recordings from permitted metadata; "
         "the target device must verify all recordings and transitions."
-        if refs else
-        "No permitted catalogue metadata is available; local availability is unknown."
+        if refs
+        else "No permitted catalogue metadata is available; local availability is unknown."
     )
     return LucyPlan(SCHEMA_VERSION, workspace_id, device_id, summary, steps, source="builtin")
 
@@ -137,19 +147,29 @@ class HostedLucyPlanner:
             raise ValueError("invalid hosted AI budget")
 
     async def plan(
-        self, *, workspace_id: str, device_id: str, user_request: str,
-        catalogue_rows: list[dict], provider: TextProvider | None,
+        self,
+        *,
+        workspace_id: str,
+        device_id: str,
+        user_request: str,
+        catalogue_rows: list[dict],
+        provider: TextProvider | None,
         cancelled: Callable[[], bool] | None = None,
     ) -> PlanningOutcome:
         catalogue = safe_catalogue(catalogue_rows)
         system, user = prompt_for(user_request, catalogue)
+
         def fallback(
-            reason: str, tokens_in: int = 0, tokens_out: int = 0,
+            reason: str,
+            tokens_in: int = 0,
+            tokens_out: int = 0,
             cost: float = 0.0,
         ) -> PlanningOutcome:
             return PlanningOutcome(
                 deterministic_plan(
-                    catalogue, workspace_id=workspace_id, device_id=device_id,
+                    catalogue,
+                    workspace_id=workspace_id,
+                    device_id=device_id,
                     user_request=user_request,
                 ),
                 hosted_tokens_in=tokens_in,
@@ -157,6 +177,7 @@ class HostedLucyPlanner:
                 hosted_cost_usd=cost,
                 fallback_reason=reason,
             )
+
         if cancelled and cancelled():
             raise asyncio.CancelledError
         if provider is None:
@@ -194,8 +215,10 @@ class HostedLucyPlanner:
             tokens_in = getattr(result, "tokens_in", 0)
             tokens_out = getattr(result, "tokens_out", 0)
             if (
-                type(tokens_in) is not int or type(tokens_out) is not int
-                or tokens_in < 0 or tokens_out < 0
+                type(tokens_in) is not int
+                or type(tokens_out) is not int
+                or tokens_in < 0
+                or tokens_out < 0
                 or tokens_in > b.max_input_tokens
                 or tokens_out > b.max_output_tokens
                 or tokens_in + tokens_out > b.max_total_tokens
@@ -207,12 +230,16 @@ class HostedLucyPlanner:
             if cost > b.max_cost_usd:
                 return fallback("spend_limit", tokens_in, tokens_out, cost)
             if getattr(result, "calls", []) or getattr(result, "stop", "") in (
-                "max_tokens", "length", "refusal",
+                "max_tokens",
+                "length",
+                "refusal",
             ):
                 return fallback("unsafe_or_incomplete_model_response", tokens_in, tokens_out, cost)
             raw = "".join(chunks) or getattr(result, "text", "")
             plan = parse_model_plan(
-                raw, workspace_id=workspace_id, device_id=device_id,
+                raw,
+                workspace_id=workspace_id,
+                device_id=device_id,
                 allowed_recordings={t.recording_id for t in catalogue},
             )
             return PlanningOutcome(plan, tokens_in, tokens_out, cost)

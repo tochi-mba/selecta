@@ -16,8 +16,10 @@ from selecta.modes.core import (
 
 def test_legacy_defaults_preserved(monkeypatch):
     for key in (
-        "SELECTA_MODE", "SELECTA_WORKSPACE_KIND",
-        "SELECTA_ENGINE_ROLE", "SELECTA_CONNECTIVITY",
+        "SELECTA_MODE",
+        "SELECTA_WORKSPACE_KIND",
+        "SELECTA_ENGINE_ROLE",
+        "SELECTA_CONNECTIVITY",
     ):
         monkeypatch.delenv(key, raising=False)
     assert current_mode() is Mode.LOCAL

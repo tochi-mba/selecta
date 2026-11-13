@@ -23,8 +23,11 @@ NOW = datetime(2026, 11, 13, 21, 0, tzinfo=UTC)
 
 def attestation() -> dict[str, object]:
     return {
-        "passed": True, "independent": True, "evidence_id": "LF_EVIDENCE_0001",
-        "reviewer_id": "independent_reviewer", "confirmed_at": NOW.isoformat(),
+        "passed": True,
+        "independent": True,
+        "evidence_id": "LF_EVIDENCE_0001",
+        "reviewer_id": "independent_reviewer",
+        "confirmed_at": NOW.isoformat(),
     }
 
 
@@ -41,8 +44,12 @@ def test_inventory_covers_retire_review_and_critical_retained_services():
     assert by_id["r2-originals-backup"]["stage"] == "storage"
     assert by_id["render-control-api-and-gateway"]["classification"] == "mixed"
     for keep in (
-        "control-postgres", "control-workos-stripe-ai", "control-api-service",
-        "control-cloudflare-pages-waf", "control-db-backup", "control-observability-audit",
+        "control-postgres",
+        "control-workos-stripe-ai",
+        "control-api-service",
+        "control-cloudflare-pages-waf",
+        "control-db-backup",
+        "control-observability-audit",
     ):
         assert by_id[keep]["classification"] == "retain"
     assert audit_inventory(ROOT) == []
@@ -81,10 +88,18 @@ def test_missing_source_and_new_unknown_audio_reference_are_found(tmp_path):
     (root / "infra" / "retirement").mkdir(parents=True)
     (root / "services" / "worker").mkdir(parents=True)
     (root / ".github" / "workflows").mkdir(parents=True)
-    inventory = {"schema_version": 1, "assets": [{
-        "id": "worker", "classification": "audio", "stage": "workers",
-        "source_paths": ["infra/modal/worker.py"], "markers": ["modal.App"],
-    }]}
+    inventory = {
+        "schema_version": 1,
+        "assets": [
+            {
+                "id": "worker",
+                "classification": "audio",
+                "stage": "workers",
+                "source_paths": ["infra/modal/worker.py"],
+                "markers": ["modal.App"],
+            }
+        ],
+    }
     (root / "infra" / "retirement" / "inventory.json").write_text(json.dumps(inventory))
     (root / "infra" / "new_worker.sh").write_text("modal deploy new_worker.py")
     findings = audit_inventory(root)
@@ -97,26 +112,41 @@ def test_missing_source_and_new_unknown_audio_reference_are_found(tmp_path):
 
 def test_inventory_rejects_path_traversal_and_misclassified_shared_api(tmp_path):
     (tmp_path / "infra" / "retirement").mkdir(parents=True)
-    manifest = {"schema_version": 1, "assets": [{
-        "id": "bad", "classification": "audio", "stage": "workers",
-        "source_paths": ["../../secrets"], "markers": ["secret"],
-    }]}
+    manifest = {
+        "schema_version": 1,
+        "assets": [
+            {
+                "id": "bad",
+                "classification": "audio",
+                "stage": "workers",
+                "source_paths": ["../../secrets"],
+                "markers": ["secret"],
+            }
+        ],
+    }
     file = tmp_path / "infra" / "retirement" / "inventory.json"
     file.write_text(json.dumps(manifest))
     with pytest.raises(ValueError):
         load_manifest(tmp_path)
-    manifest["assets"][0].update({
-        "classification": "mixed", "stage": "workers", "source_paths": ["infra/test.txt"]
-    })
+    manifest["assets"][0].update(
+        {"classification": "mixed", "stage": "workers", "source_paths": ["infra/test.txt"]}
+    )
     file.write_text(json.dumps(manifest))
     with pytest.raises(ValueError):
         load_manifest(tmp_path)
 
 
-@pytest.mark.parametrize("scopes", [
-    ["audio_uploads"], ["audio_streaming"], ["r2_audio_bucket"],
-    ["remote_stems"], ["cloud_control", "*"], ["worker_gateway"],
-])
+@pytest.mark.parametrize(
+    "scopes",
+    [
+        ["audio_uploads"],
+        ["audio_streaming"],
+        ["r2_audio_bucket"],
+        ["remote_stems"],
+        ["cloud_control", "*"],
+        ["worker_gateway"],
+    ],
+)
 def test_unsafe_rollback_never_restores_media_endpoints(scopes):
     with pytest.raises(ValueError):
         validate_rollback_scopes(scopes, media_purged=False, retrieval_authorised=True)
@@ -154,18 +184,26 @@ def test_audit_never_embeds_credentials_or_source_lines_in_findings(tmp_path):
     (tmp_path / "infra" / "retirement").mkdir(parents=True)
     (tmp_path / "services" / "worker").mkdir(parents=True)
     (tmp_path / ".github" / "workflows").mkdir(parents=True)
-    (tmp_path / "infra" / "retirement" / "inventory.json").write_text(json.dumps({
-        "schema_version": 1, "assets": [{
-            "id": "test", "classification": "audio", "stage": "workers",
-            "source_paths": ["infra/legacy.sh"], "markers": ["modal deploy"],
-        }],
-    }))
+    (tmp_path / "infra" / "retirement" / "inventory.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "assets": [
+                    {
+                        "id": "test",
+                        "classification": "audio",
+                        "stage": "workers",
+                        "source_paths": ["infra/legacy.sh"],
+                        "markers": ["modal deploy"],
+                    }
+                ],
+            }
+        )
+    )
     (tmp_path / "infra" / "legacy.sh").write_text(
         "modal deploy --token=ultra-secret-should-never-appear\n"
     )
-    (tmp_path / "infra" / "unexpected.sh").write_text(
-        "rclone copy --password=very-private\n"
-    )
+    (tmp_path / "infra" / "unexpected.sh").write_text("rclone copy --password=very-private\n")
     findings = audit_inventory(tmp_path)
     text = json.dumps([item.as_dict() for item in findings])
     assert "ultra-secret" not in text and "very-private" not in text

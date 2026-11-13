@@ -1,10 +1,12 @@
 """Deterministic virtual network with delay, packet loss, partitions and reordering."""
+
 from __future__ import annotations
 
 import heapq
 import itertools
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 
 @dataclass
@@ -45,13 +47,19 @@ class DeterministicNetwork:
         self.received: list[Packet] = []
         self.dropped: list[Packet] = []
 
-    def send(self, source: str, destination: str, payload: Any, *, delay_ms: int | None = None) -> int:
+    def send(
+        self, source: str, destination: str, payload: Any, *, delay_ms: int | None = None
+    ) -> int:
         delay = self.latency_ms if delay_ms is None else delay_ms
         if delay < 0:
             raise ValueError("negative delay")
         packet_id = next(self._ids)
-        heapq.heappush(self._queue, Packet(self.clock.milliseconds + delay, packet_id,
-                                          packet_id, source, destination, payload))
+        heapq.heappush(
+            self._queue,
+            Packet(
+                self.clock.milliseconds + delay, packet_id, packet_id, source, destination, payload
+            ),
+        )
         return packet_id
 
     def disconnect(self, name: str) -> None:
@@ -91,8 +99,13 @@ class DeterministicNetwork:
         delivered: list[Packet] = []
         while self._queue and self._queue[0].deliver_at_ms <= self.clock.milliseconds:
             packet = heapq.heappop(self._queue)
-            if packet.packet_id in self.drop_next or packet.source in self.offline or (
-                packet.destination in self.offline or (packet.source, packet.destination) in self.partitions
+            if (
+                packet.packet_id in self.drop_next
+                or packet.source in self.offline
+                or (
+                    packet.destination in self.offline
+                    or (packet.source, packet.destination) in self.partitions
+                )
             ):
                 self.dropped.append(packet)
                 self.drop_next.discard(packet.packet_id)

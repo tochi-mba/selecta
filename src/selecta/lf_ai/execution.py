@@ -1,4 +1,5 @@
 """Authorised device-local execution adapter. No hosted model can invoke this directly."""
+
 from __future__ import annotations
 
 import time
@@ -22,7 +23,8 @@ class EngineScope:
     def valid(self) -> bool:
         return (
             bool(self.workspace_id and self.device_id and self.actor_id)
-            and type(self.generation) is int and self.generation >= 0
+            and type(self.generation) is int
+            and self.generation >= 0
             and bool(self.recipe_revision)
         )
 
@@ -55,34 +57,44 @@ class LocalEnginePort(Protocol):
 
     def verify_exact(self, scope: EngineScope, recording_id: str) -> VerifiedRecording: ...
     def authorise(
-        self, scope: EngineScope, suggestion: Suggestion, approval_token: str,
+        self,
+        scope: EngineScope,
+        suggestion: Suggestion,
+        approval_token: str,
     ) -> bool: ...
     def apply_suggestion(self, scope: EngineScope, suggestion: Suggestion) -> None: ...
 
 
 class LocalPlanExecutor:
-    def __init__(self, port: LocalEnginePort, *, now: Callable[[], float] = time.time,
-                 max_verification_age: float = 30.0) -> None:
+    def __init__(
+        self,
+        port: LocalEnginePort,
+        *,
+        now: Callable[[], float] = time.time,
+        max_verification_age: float = 30.0,
+    ) -> None:
         if not 0 < max_verification_age <= 300:
             raise ValueError("verification age must be positive and bounded")
         self.port = port
         self.now = now
         self.max_verification_age = max_verification_age
 
-    def inspect(self, plan: LucyPlan, scope: EngineScope,
-                cancelled: Callable[[], bool] | None = None) -> ExecutionResult:
+    def inspect(
+        self, plan: LucyPlan, scope: EngineScope, cancelled: Callable[[], bool] | None = None
+    ) -> ExecutionResult:
         """Read-only verification; a cloud plan is NEVER an availability claim."""
         if not scope.valid() or (plan.workspace_id, plan.device_id) != (
-            scope.workspace_id, scope.device_id
+            scope.workspace_id,
+            scope.device_id,
         ):
             return ExecutionResult("scope_denied")
         if plan.schema_version != 1 or plan.availability != "unverified":
             return ExecutionResult("invalid_plan")
         if any(step.op not in OPS for step in plan.steps):
             return ExecutionResult("invalid_plan")
-        refs = tuple(dict.fromkeys(
-            recording for step in plan.steps for recording in step.recording_ids
-        ))
+        refs = tuple(
+            dict.fromkeys(recording for step in plan.steps for recording in step.recording_ids)
+        )
         ready, blocked = [], []
         for recording in refs:
             if cancelled and cancelled():
@@ -98,11 +110,16 @@ class LocalPlanExecutor:
                 blocked.append(recording)
         return ExecutionResult(
             "verified" if not blocked else "unavailable",
-            tuple(ready), tuple(blocked),
+            tuple(ready),
+            tuple(blocked),
         )
 
     def apply(
-        self, plan: LucyPlan, scope: EngineScope, *, approval_token: str,
+        self,
+        plan: LucyPlan,
+        scope: EngineScope,
+        *,
+        approval_token: str,
         cancelled: Callable[[], bool] | None = None,
     ) -> ExecutionResult:
         """Host-approved proposals only; never play/stop/delete/audio/DSP from an AI turn.

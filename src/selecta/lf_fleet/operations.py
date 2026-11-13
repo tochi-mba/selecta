@@ -49,8 +49,10 @@ def fleet_alerts(
                 counts["expired_credentials"] += 1
             elif (report.credential_expires_at - now).total_seconds() <= 86400:
                 counts["expiring_credentials"] += 1
-        if (report.protocol_version != protocol_version
-                or int(report.engine_version.split(".")[0]) != supported_engine_major):
+        if (
+            report.protocol_version != protocol_version
+            or int(report.engine_version.split(".")[0]) != supported_engine_major
+        ):
             counts["incompatible_versions"] += 1
         if report.venue_id is not None and state.status != Health.HEALTHY:
             failing_venues.add((report.workspace_id, report.venue_id))
@@ -64,6 +66,5 @@ def fleet_alerts(
         ("incompatible_versions", "ticket"),
     )
     return [
-        FleetAlert(code, counts[code], severity)
-        for code, severity in order if counts[code] > 0
+        FleetAlert(code, counts[code], severity) for code, severity in order if counts[code] > 0
     ]

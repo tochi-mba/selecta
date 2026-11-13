@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import asdict
 from pathlib import Path
-from typing import Iterator
 
 from .contracts import Scope, TransferRejected, TransferRequest, TransferSnapshot, TransferStage
 
@@ -124,15 +124,25 @@ class SQLiteOwnershipLedger:
             return row["device"], row["generation"], row["state"]
 
     @staticmethod
-    def mutate(db: sqlite3.Connection, operation_id: str, stage: TransferStage,
-               *, token: str | None = None, failure: str | None = None) -> None:
-        db.execute("""UPDATE transfers SET stage=?,
+    def mutate(
+        db: sqlite3.Connection,
+        operation_id: str,
+        stage: TransferStage,
+        *,
+        token: str | None = None,
+        failure: str | None = None,
+    ) -> None:
+        db.execute(
+            """UPDATE transfers SET stage=?,
                       prepared_token=COALESCE(?, prepared_token), failure_code=?
-                      WHERE operation_id=?""", (stage.value, token, failure, operation_id))
+                      WHERE operation_id=?""",
+            (stage.value, token, failure, operation_id),
+        )
 
     @staticmethod
-    def owner_state(db: sqlite3.Connection, scope: Scope, generation: int,
-                    device: str | None, state: str) -> None:
+    def owner_state(
+        db: sqlite3.Connection, scope: Scope, generation: int, device: str | None, state: str
+    ) -> None:
         updated = db.execute(
             "UPDATE ownership SET generation=?, device=?, state=? WHERE workspace=? AND zone=?",
             (generation, device, state, scope.workspace_id, scope.zone_key),

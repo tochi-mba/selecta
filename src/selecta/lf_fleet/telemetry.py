@@ -15,12 +15,24 @@ from enum import StrEnum
 
 _ID = re.compile(r"^[A-Za-z0-9_-]{1,80}$")
 _VERSION = re.compile(r"^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}(?:[-+][A-Za-z0-9.-]{1,30})?$")
-_FIELDS = frozenset({
-    "workspace_id", "device_id", "venue_id", "engine_version", "protocol_version",
-    "source_state", "output_health", "playback_state", "prepared_horizon_seconds",
-    "fallback_runway_seconds", "journal_delay_seconds", "pending_update",
-    "opening_failure", "credential_expires_at",
-})
+_FIELDS = frozenset(
+    {
+        "workspace_id",
+        "device_id",
+        "venue_id",
+        "engine_version",
+        "protocol_version",
+        "source_state",
+        "output_health",
+        "playback_state",
+        "prepared_horizon_seconds",
+        "fallback_runway_seconds",
+        "journal_delay_seconds",
+        "pending_update",
+        "opening_failure",
+        "credential_expires_at",
+    }
+)
 _SOURCE = frozenset({"ready", "partial", "disconnected", "blocked", "unknown"})
 _OUTPUT = frozenset({"verified", "silent", "fault", "unknown"})
 _PLAYBACK = frozenset({"playing", "scheduled", "idle", "unknown"})
@@ -221,9 +233,7 @@ def assess(
         return FleetAssessment(Health.UNKNOWN, ("journal_unverified",), seconds)
     if report.journal_delay_seconds > 300:
         reasons.append("offline_journal_delayed")
-    return FleetAssessment(
-        Health.DEGRADED if reasons else Health.HEALTHY, tuple(reasons), seconds
-    )
+    return FleetAssessment(Health.DEGRADED if reasons else Health.HEALTHY, tuple(reasons), seconds)
 
 
 def fleet_summary(reports: list[EngineReport], *, now: datetime) -> dict[str, object]:

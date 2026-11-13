@@ -1,8 +1,9 @@
 """Deterministic local-time venue schedule, zone and outage fixtures."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, time, timedelta, timezone
+from datetime import UTC, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 
@@ -22,8 +23,9 @@ class OpeningHours:
         if self.start < self.end:
             return local.weekday() not in self.closed_weekdays and self.start <= current < self.end
         # Overnight service belongs to the day it started, including after midnight.
-        return ((current >= self.start and local.weekday() not in self.closed_weekdays) or
-                (current < self.end and (local.weekday() - 1) % 7 not in self.closed_weekdays))
+        return (current >= self.start and local.weekday() not in self.closed_weekdays) or (
+            current < self.end and (local.weekday() - 1) % 7 not in self.closed_weekdays
+        )
 
 
 @dataclass
@@ -34,7 +36,7 @@ class VenueClock:
     def __post_init__(self) -> None:
         if self.utc.tzinfo is None:
             raise ValueError("venue clock must use aware UTC datetime")
-        self.utc = self.utc.astimezone(timezone.utc)
+        self.utc = self.utc.astimezone(UTC)
         ZoneInfo(self.timezone_name)  # Fail early for unavailable/invalid IANA zone.
 
     @property
@@ -86,15 +88,22 @@ class VenueSimulation:
             raise ValueError("unknown zone")
         if event_id not in self.local_event_journal:
             self.local_event_journal[event_id] = {
-                "event_id": event_id, "zone_id": zone_id, "kind": kind,
+                "event_id": event_id,
+                "zone_id": zone_id,
+                "kind": kind,
                 "occurred_at": self.clock.utc.isoformat(),
             }
 
     def can_restore_after_power(self, zone_id: str) -> bool:
         zone = self.zones[zone_id]
-        return self.opening.is_open(self.clock.local) and all((
-            zone.ready, zone.rights_ok, zone.policy_ok, zone.checkpoint is not None,
-        ))
+        return self.opening.is_open(self.clock.local) and all(
+            (
+                zone.ready,
+                zone.rights_ok,
+                zone.policy_ok,
+                zone.checkpoint is not None,
+            )
+        )
 
     def local_schedule_samples(self, every: timedelta, count: int) -> list[tuple[str, bool]]:
         if every.total_seconds() <= 0 or count < 0:

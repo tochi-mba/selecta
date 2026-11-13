@@ -1,4 +1,5 @@
 """LF17 safety, compatibility and recovery tests. All objects and databases are synthetic."""
+
 from __future__ import annotations
 
 import copy
@@ -44,15 +45,22 @@ def _contract():
 
 def _proof(workspace="workspace1"):
     return VerifiedLocalBinding(
-        workspace, "assetOne", "canonicalOne", "engineOne",
-        "proof-verified-on-device", True, "recording-v1",
+        workspace,
+        "assetOne",
+        "canonicalOne",
+        "engineOne",
+        "proof-verified-on-device",
+        True,
+        "recording-v1",
     )
 
 
 def test_idempotent_backfill_and_repeated_occurrences_remain_distinct():
     base = _contract()
     repeated = new_contract(
-        "mixRepeated", "Repeated", "cloud",
+        "mixRepeated",
+        "Repeated",
+        "cloud",
         [SongRef("cloud", "assetOne", "A"), SongRef("cloud", "assetOne", "A")],
     )
     inputs = [base.to_json(), repeated.to_json()]
@@ -109,8 +117,10 @@ def test_old_history_rollback_and_replay_after_interruption(tmp_path, monkeypatc
     assert journal.read(plan["plan_id"])["state"] == "in_progress"
 
     old_replace = __import__("os").replace
+
     def crash(*_args):
         raise OSError("simulated process crash")
+
     monkeypatch.setattr("selecta.lf_migration.backfill.os.replace", crash)
     with pytest.raises(OSError, match="crash"):
         journal.checkpoint(plan["plan_id"], later.revision, approved=True)
@@ -124,7 +134,8 @@ def test_old_history_rollback_and_replay_after_interruption(tmp_path, monkeypatc
         restored.checkpoint(plan["plan_id"], later.revision, approved=True)["state"] == "complete"
     )
     assert [r["revision"] for r in restore_legacy_revisions(plan)] == [
-        base.revision, later.revision,
+        base.revision,
+        later.revision,
     ]
     assert restored.rollback(plan["plan_id"], approved=True)["state"] == "rolled_back"
     with pytest.raises(MigrationConflict):
@@ -134,7 +145,9 @@ def test_old_history_rollback_and_replay_after_interruption(tmp_path, monkeypatc
 def test_conflicting_history_positions_cannot_replace_an_immutable_root():
     original = _contract().to_json()
     changed_root = new_contract(
-        "mixABC", "Another root", "cloud",
+        "mixABC",
+        "Another root",
+        "cloud",
         [SongRef("cloud", "assetOne", "First"), SongRef("cloud", "assetTwo", "Second")],
     ).to_json()
     with pytest.raises(MigrationConflict, match="history position"):
@@ -194,11 +207,18 @@ def test_cross_tenant_asset_dangling_reference_and_corrupted_revision_audit():
     snapshot = {
         "workspace_id": "workspace1",
         "assets": [{"id": "assetOne", "workspace_id": "workspace1", "deleted_at": None}],
-        "mix_revisions": [{
-            "revision": rev["revision"], "contract": rev, "protected": True,
-        }],
-        "issues": [], "missing_objects": [], "orphan_objects": [],
-        "subscriptions": [{"id": "sub"}], "plan_versions": [],
+        "mix_revisions": [
+            {
+                "revision": rev["revision"],
+                "contract": rev,
+                "protected": True,
+            }
+        ],
+        "issues": [],
+        "missing_objects": [],
+        "orphan_objects": [],
+        "subscriptions": [{"id": "sub"}],
+        "plan_versions": [],
     }
     report = audit_references(snapshot, known_foreign_asset_ids=["assetTwo"])
     assert len(report["unresolved"]) == 1
@@ -219,8 +239,7 @@ def test_grant_is_workspace_bounded_revocable_and_time_limited():
     with pytest.raises(LegacyRetrievalDenied):
         require_grant(None, "workspace1", now=1_005)
     with pytest.raises(LegacyRetrievalDenied):
-        require_grant(RetrievalGrant("workspace1", "admin", 1, 20, "n", True),
-                      "workspace1", now=5)
+        require_grant(RetrievalGrant("workspace1", "admin", 1, 20, "n", True), "workspace1", now=5)
 
 
 def test_approved_legacy_retrieval_integrity_and_cross_tenant_refusal(tmp_path, monkeypatch):
@@ -230,17 +249,35 @@ def test_approved_legacy_retrieval_integrity_and_cross_tenant_refusal(tmp_path, 
         row = dict(collect_inventory(world.engine, world.workspace_id)["assets"][0])
         grant = RetrievalGrant(world.workspace_id, "security", 100, 500, "notice-v1")
         dest = tmp_path / "retrieved.wav"
-        result = retrieve_original(world.objects, grant, workspace_id=world.workspace_id,
-                                   asset=row, destination=dest, now=101)
+        result = retrieve_original(
+            world.objects,
+            grant,
+            workspace_id=world.workspace_id,
+            asset=row,
+            destination=dest,
+            now=101,
+        )
         assert result["verified"] and dest.read_bytes() == payload
         with pytest.raises(LegacyRetrievalDenied):
-            retrieve_original(world.objects, grant, workspace_id="someoneelse", asset=row,
-                              destination=tmp_path / "foreign.wav", now=101)
+            retrieve_original(
+                world.objects,
+                grant,
+                workspace_id="someoneelse",
+                asset=row,
+                destination=tmp_path / "foreign.wav",
+                now=101,
+            )
         # Failure cleans a new destination rather than leaving a plausible corrupt file.
         world.objects.objects.pop(("sel-originals", original_key(world.workspace_id, asset_id)))
         with pytest.raises(R2Error):
-            retrieve_original(world.objects, grant, workspace_id=world.workspace_id,
-                              asset=row, destination=tmp_path / "gone.wav", now=101)
+            retrieve_original(
+                world.objects,
+                grant,
+                workspace_id=world.workspace_id,
+                asset=row,
+                destination=tmp_path / "gone.wav",
+                now=101,
+            )
 
 
 def test_metadata_account_export_retains_revision_history_without_r2_get(tmp_path, monkeypatch):
@@ -248,9 +285,13 @@ def test_metadata_account_export_retains_revision_history_without_r2_get(tmp_pat
         a = add_asset(world.engine, world.objects, world.workspace_id, b"private original")
         checksum = hashlib.sha256(b"private original").hexdigest()
         first = new_contract(
-            "mixABC", "Original", "cloud",
-            [SongRef("cloud", a, "Track", sha256=checksum),
-             SongRef("cloud", a, "Again", sha256=checksum)],
+            "mixABC",
+            "Original",
+            "cloud",
+            [
+                SongRef("cloud", a, "Track", sha256=checksum),
+                SongRef("cloud", a, "Again", sha256=checksum),
+            ],
         )
         second = first.edited(songs=first.songs, name="Second")
         with transaction(world.engine, world.workspace_id) as conn:
@@ -312,11 +353,13 @@ def test_agent04_adapter_refuses_unapproved_or_version_mismatched_writes(tmp_pat
     journal.prepare(plan)
     writer = _ProjectionWriter()
     with pytest.raises(PermissionError):
-        apply_prepared_plan(journal, plan["plan_id"], writer,
-                            expected_recipe_schema=writer.recipe_schema)
+        apply_prepared_plan(
+            journal, plan["plan_id"], writer, expected_recipe_schema=writer.recipe_schema
+        )
     with pytest.raises(MigrationConflict, match="schema mismatch"):
-        apply_prepared_plan(journal, plan["plan_id"], writer,
-                            expected_recipe_schema="incorrect", approved=True)
+        apply_prepared_plan(
+            journal, plan["plan_id"], writer, expected_recipe_schema="incorrect", approved=True
+        )
     assert writer.migrated == {}
 
 
@@ -329,18 +372,38 @@ def test_adapter_crash_after_commit_replay_then_compensating_rollback(tmp_path):
     writer = _ProjectionWriter()
     writer.crash_after_upsert = True
     with pytest.raises(RuntimeError, match="connection lost"):
-        apply_prepared_plan(journal, plan["plan_id"], writer,
-                            expected_recipe_schema=writer.recipe_schema, approved=True)
+        apply_prepared_plan(
+            journal,
+            plan["plan_id"],
+            writer,
+            expected_recipe_schema=writer.recipe_schema,
+            approved=True,
+        )
     assert len(writer.migrated) == 1
     assert journal.read(plan["plan_id"])["completed"] == []
-    assert apply_prepared_plan(journal, plan["plan_id"], writer,
-                               expected_recipe_schema=writer.recipe_schema,
-                               approved=True)["state"] == "complete"
+    assert (
+        apply_prepared_plan(
+            journal,
+            plan["plan_id"],
+            writer,
+            expected_recipe_schema=writer.recipe_schema,
+            approved=True,
+        )["state"]
+        == "complete"
+    )
     assert len(writer.migrated) == 2
-    assert rollback_prepared_plan(journal, plan["plan_id"], writer,
-                                 expected_recipe_schema=writer.recipe_schema,
-                                 approved=True)["state"] == "rolled_back"
+    assert (
+        rollback_prepared_plan(
+            journal,
+            plan["plan_id"],
+            writer,
+            expected_recipe_schema=writer.recipe_schema,
+            approved=True,
+        )["state"]
+        == "rolled_back"
+    )
     assert writer.migrated == {}
     assert {r["revision"] for r in restore_legacy_revisions(plan)} == {
-        base.revision, later.revision,
+        base.revision,
+        later.revision,
     }

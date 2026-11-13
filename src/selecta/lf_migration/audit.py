@@ -1,4 +1,5 @@
 """Non-destructive integrity and retirement-readiness audits for LF17."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
@@ -70,19 +71,26 @@ def audit_references(
                 issue = "unresolved_legacy_asset"
             else:
                 continue
-            unresolved.append({
-                "revision": revision_id, "occurrence": str(occurrence),
-                "asset_id": asset_id, "reason": issue,
-            })
+            unresolved.append(
+                {
+                    "revision": revision_id,
+                    "occurrence": str(occurrence),
+                    "asset_id": asset_id,
+                    "reason": issue,
+                }
+            )
             issues.append({"kind": issue, "reference": revision_id, "asset_id": asset_id})
     # A deletion ledger row for another tenant means corrupt snapshot input.
     for tombstone in snapshot.get("deletions", ()):
         if tombstone.get("workspace_id") != workspace_id:
             issues.append({"kind": "cross_tenant_tombstone", "reference": str(tombstone.get("id"))})
     return {
-        "workspace_id": workspace_id, "read_only": True,
-        "assets": len(owned), "revisions": len(snapshot.get("mix_revisions", ())),
-        "unresolved": unresolved, "issues": issues,
+        "workspace_id": workspace_id,
+        "read_only": True,
+        "assets": len(owned),
+        "revisions": len(snapshot.get("mix_revisions", ())),
+        "unresolved": unresolved,
+        "issues": issues,
         "missing_objects": list(snapshot.get("missing_objects", ())),
         "orphan_objects": list(snapshot.get("orphan_objects", ())),
         "subscription_count": len(snapshot.get("subscriptions", ())),

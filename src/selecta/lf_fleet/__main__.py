@@ -34,9 +34,7 @@ def main(argv: list[str] | None = None) -> int:
         evidence = None
         if args.evidence is not None:
             evidence = json.loads(args.evidence.read_text(encoding="utf-8"))
-        result = retirement_plan(
-            args.root, environment=args.environment, evidence=evidence
-        )
+        result = retirement_plan(args.root, environment=args.environment, evidence=evidence)
         status = 2 if result["inventory_findings"] else 0
     print(json.dumps(result, indent=2, sort_keys=True))
     return status

@@ -20,9 +20,11 @@ from selecta.local_engine.updates import (
 
 def signed_manifest(private, version, content):
     data = {
-        "version": version, "platform": "linux",
+        "version": version,
+        "platform": "linux",
         "sha256": hashlib.sha256(content).hexdigest(),
-        "key_id": "local-test", "rollout_percent": 100,
+        "key_id": "local-test",
+        "rollout_percent": 100,
     }
     canonical = json.dumps(data, sort_keys=True, separators=(",", ":")).encode()
     data["signature"] = base64.b64encode(private.sign(canonical)).decode()
@@ -69,13 +71,21 @@ def test_rejected_tamper_wrong_platform_and_rollout(tmp_path):
     package.write_bytes(b"wrong")
     with pytest.raises(UpdateRejected, match="checksum"):
         stage_update(
-            tmp_path, package, manifest, {"local-test": key},
-            identifier="device", platform_name="linux",
+            tmp_path,
+            package,
+            manifest,
+            {"local-test": key},
+            identifier="device",
+            platform_name="linux",
         )
     with pytest.raises(UpdateRejected, match="operating system"):
         stage_update(
-            tmp_path, package, manifest, {"local-test": key},
-            identifier="device", platform_name="win32",
+            tmp_path,
+            package,
+            manifest,
+            {"local-test": key},
+            identifier="device",
+            platform_name="win32",
         )
     assert not in_rollout("device", "1", 0)
     assert in_rollout("device", "1", 100)

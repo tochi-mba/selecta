@@ -1,4 +1,5 @@
 """LF15 independent local permission and exact-media gates."""
+
 from __future__ import annotations
 
 from selecta.lf_ai import (
@@ -14,12 +15,18 @@ def plan():
         {
             "schema_version": 1,
             "summary": "A suggested two-song mix",
-            "steps": [{
-                "op": "suggest_order", "recording_ids": ["one", "two"],
-                "transition": "blend", "note": "Possible musical transition",
-            }],
+            "steps": [
+                {
+                    "op": "suggest_order",
+                    "recording_ids": ["one", "two"],
+                    "transition": "blend",
+                    "note": "Possible musical transition",
+                }
+            ],
         },
-        workspace_id="w", device_id="speaker-1", allowed_recordings={"one", "two"},
+        workspace_id="w",
+        device_id="speaker-1",
+        allowed_recordings={"one", "two"},
     )
 
 
@@ -71,7 +78,9 @@ def test_local_engine_authorises_each_suggestion_before_apply():
 def test_permission_denial_prevents_side_effects():
     engine = Engine(grants=False)
     result = LocalPlanExecutor(engine, now=lambda: 100).apply(
-        plan(), scope(), approval_token="invalid",
+        plan(),
+        scope(),
+        approval_token="invalid",
     )
     assert result.status == "permission_denied"
     assert engine.executed == []
@@ -81,7 +90,9 @@ def test_missing_or_candidate_recording_cannot_be_claimed_ready():
     for state in ("missing", "candidate", "version_mismatch", "permission_required", "unknown"):
         engine = Engine(states={"one": "ready", "two": state})
         result = LocalPlanExecutor(engine, now=lambda: 100).apply(
-            plan(), scope(), approval_token="valid",
+            plan(),
+            scope(),
+            approval_token="valid",
         )
         assert result.status == "unavailable"
         assert result.blocked == ("two",)
@@ -92,7 +103,9 @@ def test_missing_or_candidate_recording_cannot_be_claimed_ready():
 def test_scope_mismatch_fails_before_local_lookup():
     engine = Engine()
     result = LocalPlanExecutor(engine, now=lambda: 100).apply(
-        plan(), scope("another-speaker"), approval_token="yes",
+        plan(),
+        scope("another-speaker"),
+        approval_token="yes",
     )
     assert result.status == "scope_denied"
     assert engine.verify_calls == []
@@ -102,7 +115,9 @@ def test_scope_mismatch_fails_before_local_lookup():
 def test_stale_exact_verification_is_not_sufficient():
     engine = Engine(at=40)
     result = LocalPlanExecutor(engine, now=lambda: 100).apply(
-        plan(), scope(), approval_token="yes",
+        plan(),
+        scope(),
+        approval_token="yes",
     )
     assert result.status == "unavailable"
     assert engine.executed == []
@@ -111,7 +126,10 @@ def test_stale_exact_verification_is_not_sufficient():
 def test_cancellation_prevents_any_execution():
     engine = Engine()
     result = LocalPlanExecutor(engine, now=lambda: 100).apply(
-        plan(), scope(), approval_token="yes", cancelled=lambda: True,
+        plan(),
+        scope(),
+        approval_token="yes",
+        cancelled=lambda: True,
     )
     assert result.status == "cancelled"
     assert engine.executed == []

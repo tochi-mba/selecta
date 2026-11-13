@@ -4,6 +4,7 @@ An ExecutionRequest is device-private. Never send it or a resolved LocalSource t
 the cloud: source paths, native file handles, decoder inputs and audio-derived data
 are excluded from cloud/control-plane messages.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -103,9 +104,7 @@ class ExecutionReceipt:
     error_code: str | None = None
 
 
-def validate_sources(
-    request: ExecutionRequest, resolve: SourceResolver
-) -> tuple[LocalSource, ...]:
+def validate_sources(request: ExecutionRequest, resolve: SourceResolver) -> tuple[LocalSource, ...]:
     """Fail closed on missing, unlicensed, stale or unverified device-local audio.
 
     No guessed equivalent recording is substituted. Call again at job execution,

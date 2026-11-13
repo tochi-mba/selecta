@@ -25,8 +25,7 @@ class LocalEngineRegistry:
 
     def observe(self, device_id: str, scope: Scope) -> OutputObservation:
         device = self.engines.get(device_id)
-        return (device.inspect(scope) if device else
-                OutputObservation(False, None, None, None))
+        return device.inspect(scope) if device else OutputObservation(False, None, None, None)
 
     def preflight(self, request: TransferRequest) -> Preflight:
         return self._get(request.target_device_id).preflight(request)
@@ -34,18 +33,22 @@ class LocalEngineRegistry:
     def prepare_silent(self, request: TransferRequest, generation: int) -> str:
         return self._get(request.target_device_id).prepare_silent(request, generation)
 
-    def stop_and_confirm(self, source_device_id: str, request: TransferRequest,
-                         generation: int) -> bool:
+    def stop_and_confirm(
+        self, source_device_id: str, request: TransferRequest, generation: int
+    ) -> bool:
         return self._get(source_device_id).stop_and_confirm(request, generation)
 
-    def acquire_silent(self, request: TransferRequest, generation: int,
-                       prepared_token: str) -> bool:
-        return self._get(request.target_device_id).acquire_silent(request, generation,
-                                                                 prepared_token)
+    def acquire_silent(
+        self, request: TransferRequest, generation: int, prepared_token: str
+    ) -> bool:
+        return self._get(request.target_device_id).acquire_silent(
+            request, generation, prepared_token
+        )
 
     def start_and_confirm(self, request: TransferRequest, generation: int) -> bool:
         return self._get(request.target_device_id).start_and_confirm(request, generation)
 
-    def manual_isolate(self, source_device_id: str, request: TransferRequest,
-                       generation: int, evidence_token: str) -> bool:
+    def manual_isolate(
+        self, source_device_id: str, request: TransferRequest, generation: int, evidence_token: str
+    ) -> bool:
         return self._get(source_device_id).manual_isolate(request, generation, evidence_token)

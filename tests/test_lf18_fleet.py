@@ -13,11 +13,19 @@ NOW = datetime(2026, 11, 13, 21, 0, tzinfo=UTC)
 
 def payload(**changes: object) -> dict[str, object]:
     base: dict[str, object] = {
-        "workspace_id": "workspace-A", "device_id": "engine-A", "venue_id": "venue-A",
-        "engine_version": "1.4.2", "protocol_version": 1, "source_state": "ready",
-        "output_health": "verified", "playback_state": "playing",
-        "prepared_horizon_seconds": 180, "fallback_runway_seconds": 900,
-        "journal_delay_seconds": 0, "pending_update": False, "opening_failure": False,
+        "workspace_id": "workspace-A",
+        "device_id": "engine-A",
+        "venue_id": "venue-A",
+        "engine_version": "1.4.2",
+        "protocol_version": 1,
+        "source_state": "ready",
+        "output_health": "verified",
+        "playback_state": "playing",
+        "prepared_horizon_seconds": 180,
+        "fallback_runway_seconds": 900,
+        "journal_delay_seconds": 0,
+        "pending_update": False,
+        "opening_failure": False,
         "credential_expires_at": "2027-02-01T00:00:00Z",
     }
     base.update(changes)
@@ -47,16 +55,19 @@ def test_stale_offline_skewed_and_missing_are_distinct():
     assert assess(sample, now=NOW + timedelta(seconds=59)).status == Health.HEALTHY
 
 
-@pytest.mark.parametrize(("overrides", "expected_reason"), [
-    ({"source_state": "disconnected"}, "source_not_ready"),
-    ({"source_state": "blocked"}, "source_not_ready"),
-    ({"prepared_horizon_seconds": 2}, "prepared_horizon_short"),
-    ({"fallback_runway_seconds": 0}, "fallback_runway_short"),
-    ({"journal_delay_seconds": 800}, "offline_journal_delayed"),
-    ({"opening_failure": True}, "venue_opening_failure"),
-    ({"pending_update": True}, "update_pending"),
-    ({"credential_expires_at": "2026-11-10T00:00:00Z"}, "credential_expired"),
-])
+@pytest.mark.parametrize(
+    ("overrides", "expected_reason"),
+    [
+        ({"source_state": "disconnected"}, "source_not_ready"),
+        ({"source_state": "blocked"}, "source_not_ready"),
+        ({"prepared_horizon_seconds": 2}, "prepared_horizon_short"),
+        ({"fallback_runway_seconds": 0}, "fallback_runway_short"),
+        ({"journal_delay_seconds": 800}, "offline_journal_delayed"),
+        ({"opening_failure": True}, "venue_opening_failure"),
+        ({"pending_update": True}, "update_pending"),
+        ({"credential_expires_at": "2026-11-10T00:00:00Z"}, "credential_expired"),
+    ],
+)
 def test_degraded_modes(overrides, expected_reason):
     state = assess(report(**overrides), now=NOW)
     assert state.status == Health.DEGRADED
@@ -74,17 +85,20 @@ def test_incomplete_prepared_or_fallback_verification_is_unknown():
     assert assess(report(journal_delay_seconds=None), now=NOW).status == Health.UNKNOWN
 
 
-@pytest.mark.parametrize(("forbidden", "value"), [
-    ("local_path", "C:\\DJ\\private\\recording.flac"),
-    ("pcm", "base64-encoded-audio"),
-    ("fingerprint", "a1b2c3"),
-    ("lyrics", "copyrighted text"),
-    ("audio_hash", "deadbeef"),
-    ("token", "bearer-secret"),
-    ("crash_bundle", {"stack": "/home/venue/music.wav"}),
-    ("sample", b"RIFF"),
-    ("recording_id", "opaque-recording"),
-])
+@pytest.mark.parametrize(
+    ("forbidden", "value"),
+    [
+        ("local_path", "C:\\DJ\\private\\recording.flac"),
+        ("pcm", "base64-encoded-audio"),
+        ("fingerprint", "a1b2c3"),
+        ("lyrics", "copyrighted text"),
+        ("audio_hash", "deadbeef"),
+        ("token", "bearer-secret"),
+        ("crash_bundle", {"stack": "/home/venue/music.wav"}),
+        ("sample", b"RIFF"),
+        ("recording_id", "opaque-recording"),
+    ],
+)
 def test_forbidden_diagnostics_are_rejected_without_echo(forbidden, value):
     data = payload(**{forbidden: value})
     with pytest.raises(ValueError) as exc:
@@ -129,8 +143,13 @@ def test_metric_summary_is_bounded_and_reconnects_are_deduplicated():
 def test_alerts_explain_failures_without_leaking_ids_or_media():
     samples = [
         report(device_id="d1", source_state="disconnected"),
-        report(device_id="d2", engine_version="2.1.0", protocol_version=3,
-               output_health="silent", credential_expires_at="2026-10-10T00:00:00Z"),
+        report(
+            device_id="d2",
+            engine_version="2.1.0",
+            protocol_version=3,
+            output_health="silent",
+            credential_expires_at="2026-10-10T00:00:00Z",
+        ),
         report(device_id="d3", venue_id="venue-B", opening_failure=True),
         report(device_id="d4", venue_id=None),
     ]

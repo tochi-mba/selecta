@@ -1,4 +1,5 @@
 """LF04 durable revisions, optimistic concurrency and tenancy boundaries."""
+
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
@@ -13,13 +14,18 @@ pytest_plugins = ("cloud_party",)
 
 
 def _items(count=3):
-    return [{"occurrence_id": f"occ{i}", "canonical_track_id": f"track{i}",
-             "title": f"Track {i}"} for i in range(count)]
+    return [
+        {"occurrence_id": f"occ{i}", "canonical_track_id": f"track{i}", "title": f"Track {i}"}
+        for i in range(count)
+    ]
 
 
 def _created(party):
     return store.create(
-        party.engine, party.workspaces[ALICE], "author", name="Persisted",
+        party.engine,
+        party.workspaces[ALICE],
+        "author",
+        name="Persisted",
         occurrences=_items(),
     )
 
@@ -28,12 +34,20 @@ def test_revision_history_restore_and_failed_edit_are_atomic(party):
     first = _created(party)
     ws = party.workspaces[ALICE]
     second = store.edit(
-        party.engine, ws, "author", first["recipe_id"],
-        base_revision=first["revision_id"], changes={"name": "Edited"},
+        party.engine,
+        ws,
+        "author",
+        first["recipe_id"],
+        base_revision=first["revision_id"],
+        changes={"name": "Edited"},
     )
     third = store.edit(
-        party.engine, ws, "author", first["recipe_id"],
-        base_revision=second["revision_id"], changes={},
+        party.engine,
+        ws,
+        "author",
+        first["recipe_id"],
+        base_revision=second["revision_id"],
+        changes={},
         restore=first["revision_id"],
     )
     assert third["name"] == "Persisted"
@@ -41,16 +55,23 @@ def test_revision_history_restore_and_failed_edit_are_atomic(party):
     assert third["revision_id"] != first["revision_id"]
     previous = store.read(party.engine, ws, first["recipe_id"])
     assert [entry["revision"] for entry in previous["history"]] == [
-        third["revision_id"], second["revision_id"], first["revision_id"],
+        third["revision_id"],
+        second["revision_id"],
+        first["revision_id"],
     ]
     with pytest.raises(store.RecipeStoreError) as exc:
         store.edit(
-            party.engine, ws, "author", first["recipe_id"],
+            party.engine,
+            ws,
+            "author",
+            first["recipe_id"],
             base_revision=third["revision_id"],
-            changes={"occurrences": [
-                {"occurrence_id": "same", "canonical_track_id": "a"},
-                {"occurrence_id": "same", "canonical_track_id": "b"},
-            ]},
+            changes={
+                "occurrences": [
+                    {"occurrence_id": "same", "canonical_track_id": "a"},
+                    {"occurrence_id": "same", "canonical_track_id": "b"},
+                ]
+            },
         )
     assert exc.value.code == "invalid_recipe"
     assert store.read(party.engine, ws, first["recipe_id"]) == previous
@@ -59,14 +80,20 @@ def test_revision_history_restore_and_failed_edit_are_atomic(party):
 def test_concurrent_offline_editors_get_one_conflict_not_two_heads(party):
     first = _created(party)
     ws = party.workspaces[ALICE]
+
     def change(name):
         try:
             return store.edit(
-                party.engine, ws, name, first["recipe_id"],
-                base_revision=first["revision_id"], changes={"name": name},
+                party.engine,
+                ws,
+                name,
+                first["recipe_id"],
+                base_revision=first["revision_id"],
+                changes={"name": name},
             )["revision_id"]
         except store.RecipeStoreError as error:
             return error.code
+
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(change, ("Editor A", "Editor B")))
     assert results.count("stale_revision") == 1
@@ -96,9 +123,7 @@ def test_legacy_endpoints_unchanged_and_new_recipe_tenant_scoped(party):
 def test_unverified_device_never_gets_optimistic_ready(party):
     first = _created(party)
     ws = party.workspaces[ALICE]
-    result = store.check_availability(
-        party.engine, ws, first["recipe_id"], "device-b"
-    )
+    result = store.check_availability(party.engine, ws, first["recipe_id"], "device-b")
     assert result["counts"]["unknown"] == 3
     assert result["can_run"] is False
     assert result["verified_at"] is None
@@ -111,11 +136,16 @@ def test_failed_backfill_or_unsupported_editor_does_not_mutate_history(party):
     before = store.read(party.engine, ws, first["recipe_id"])
     with pytest.raises(store.RecipeStoreError) as exc:
         store.edit(
-            party.engine, ws, "author", first["recipe_id"],
+            party.engine,
+            ws,
+            "author",
+            first["recipe_id"],
             base_revision=first["revision_id"],
-            changes={"occurrences": [
-                {"occurrence_id": "unsafe", "canonical_track_id": "../wrong"},
-            ]},
+            changes={
+                "occurrences": [
+                    {"occurrence_id": "unsafe", "canonical_track_id": "../wrong"},
+                ]
+            },
         )
     assert exc.value.code == "invalid_recipe"
     assert store.read(party.engine, ws, first["recipe_id"]) == before

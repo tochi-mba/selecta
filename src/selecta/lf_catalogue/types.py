@@ -3,6 +3,7 @@
 Only the dataclasses with `to_cloud_dict` are safe to serialize to controllers.
 Paths, hardware identifiers and content digests are never present in those objects.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -33,6 +34,7 @@ class SourceState(StrEnum):
 @dataclass(frozen=True, slots=True)
 class RecordingRef:
     """Canonical workspace identity; independent of media and mix position."""
+
     workspace_id: str
     canonical_track_id: str
 
@@ -40,6 +42,7 @@ class RecordingRef:
 @dataclass(frozen=True, slots=True)
 class MixOccurrence:
     """An occurrence may reference the same recording more than once."""
+
     occurrence_id: str
     recording: RecordingRef
 

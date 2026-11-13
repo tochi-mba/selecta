@@ -1,4 +1,5 @@
 """Agent 16: local-first plan-version and migration compatibility (ADR-0470)."""
+
 from __future__ import annotations
 
 from dataclasses import replace
@@ -100,8 +101,12 @@ def test_migration_requires_all_approvals():
 )
 def test_plan_cannot_override_device_role_media_or_policy(overrides, reason):
     allowed = dict(
-        entitled=True, feature_enabled=True, role_permitted=True,
-        device_capable=True, media_verified=True, venue_policy_allows=True,
+        entitled=True,
+        feature_enabled=True,
+        role_permitted=True,
+        device_capable=True,
+        media_verified=True,
+        venue_policy_allows=True,
     )
     assert decide_access(**(allowed | overrides)).reason is reason
     assert not decide_access(**(allowed | overrides)).allowed
@@ -109,30 +114,27 @@ def test_plan_cannot_override_device_role_media_or_policy(overrides, reason):
 
 
 def test_stripe_price_version_must_be_known_and_explicit():
-    legacy = stripe_sync.parse_price_map({
-        "price_existing": {"plan": "standard", "version": 1, "interval": "month"}
-    })
+    legacy = stripe_sync.parse_price_map(
+        {"price_existing": {"plan": "standard", "version": 1, "interval": "month"}}
+    )
     assert legacy["price_existing"].plan_version == 1
-    future = stripe_sync.parse_price_map({
-        "price_not_live": {"plan": "premium", "version": 2, "interval": "year"}
-    })
+    future = stripe_sync.parse_price_map(
+        {"price_not_live": {"plan": "premium", "version": 2, "interval": "year"}}
+    )
     assert future["price_not_live"].plan_version == 2
     for version in (0, 3, -1, True, "1.5"):
         with pytest.raises(ValueError, match="unsupported plan version|invalid plan version"):
-            stripe_sync.parse_price_map({
-                "price_bad": {"plan": "standard", "version": version}
-            })
+            stripe_sync.parse_price_map({"price_bad": {"plan": "standard", "version": version}})
 
 
 def test_legacy_snapshot_retains_purchased_version_after_v2_is_published():
     sub = {
-        "id": "sub_existing", "status": "active",
+        "id": "sub_existing",
+        "status": "active",
         "items": {"data": [{"price": {"id": "price_existing"}}]},
         "current_period_end": 1_900_000_000,
     }
-    mapping = stripe_sync.parse_price_map({
-        "price_existing": {"plan": "standard", "version": 1}
-    })
+    mapping = stripe_sync.parse_price_map({"price_existing": {"plan": "standard", "version": 1}})
     decision = stripe_sync.snapshot_from_subscription(sub, mapping, 1_800_000_000)
     assert (decision.plan_id, decision.plan_version) == ("standard", 1)
     assert effective_contract(decision.plan_id, decision.plan_version).migration_required
@@ -140,8 +142,12 @@ def test_legacy_snapshot_retains_purchased_version_after_v2_is_published():
 
 def test_offline_client_does_not_gain_new_entitlements_or_stop_local_audio():
     decision = decide_access(
-        entitled=True, feature_enabled=True, role_permitted=True,
-        device_capable=False, media_verified=False, venue_policy_allows=True,
+        entitled=True,
+        feature_enabled=True,
+        role_permitted=True,
+        device_capable=False,
+        media_verified=False,
+        venue_policy_allows=True,
     )
     assert decision.reason is GateReason.DEVICE_UNAVAILABLE
     # Billing decisions do not issue stop commands or alter an engine.

@@ -2,21 +2,36 @@
 
 Synthetic metadata only. No commercial recordings, local paths or cloud audio.
 """
+
 from __future__ import annotations
 
 from dataclasses import replace
 
 import pytest
-
 from test_cloud_rooms_fakes import (
-    HOST, OTHER_HOST, PEPPER, FakePlans, FakeRequestPlanner, FakeSongCatalog,
-    FakeSpeakers, follow_clock,
+    HOST,
+    OTHER_HOST,
+    PEPPER,
+    FakePlans,
+    FakeRequestPlanner,
+    FakeSongCatalog,
+    FakeSpeakers,
+    follow_clock,
 )
+
 from selecta.rooms.errors import Refusal, RoomError
 from selecta.rooms.limits import GUEST_WRITE_PER_ROOM, Limited, Limiter
 from selecta.rooms.local_first import (
-    LocalProgress, LocalScheduleReceipt, LocalSpeaker, LocalStage, LocalTrack,
-    RecordingState, ready_speaker, safe_song, valid_receipt, visible,
+    LocalProgress,
+    LocalScheduleReceipt,
+    LocalSpeaker,
+    LocalStage,
+    LocalTrack,
+    RecordingState,
+    ready_speaker,
+    safe_song,
+    valid_receipt,
+    visible,
 )
 from selecta.rooms.planning import pump
 from selecta.rooms.ports import SongSummary
@@ -42,54 +57,105 @@ class VenueBridge:
         for song_id in (1, 2, 3, 4):
             self.entries[song_id] = self.entry(song_id)
 
-    def entry(self, song_id, *, zone="main", workspace=HOST, state=RecordingState.READY,
-              explicit=False, title=None, permitted=True, at=None):
+    def entry(
+        self,
+        song_id,
+        *,
+        zone="main",
+        workspace=HOST,
+        state=RecordingState.READY,
+        explicit=False,
+        title=None,
+        permitted=True,
+        at=None,
+    ):
         return LocalTrack(
-            workspace, zone, SongSummary(song_id, title or f"Track {song_id}", "Artist", 182.0),
-            state, self.clock.now if at is None else at, permitted, explicit,
+            workspace,
+            zone,
+            SongSummary(song_id, title or f"Track {song_id}", "Artist", 182.0),
+            state,
+            self.clock.now if at is None else at,
+            permitted,
+            explicit,
         )
 
     def speaker(self, workspace_id, zone_id):
-        return LocalSpeaker(workspace_id, zone_id, "speaker-1", self.generation,
-                            self.clock.now, self.online, self.online,
-                            self.committed_until, "policy-1")
+        return LocalSpeaker(
+            workspace_id,
+            zone_id,
+            "speaker-1",
+            self.generation,
+            self.clock.now,
+            self.online,
+            self.online,
+            self.committed_until,
+            "policy-1",
+        )
 
     def count_requestable(self, workspace_id, zone_id, crate, clean_only):
-        return sum(1 for song_id, entry in self.entries.items()
-                   if (crate is None or song_id in crate) and
-                   visible(entry, workspace_id, zone_id, self.clock.now,
-                           clean_only=clean_only) is not None)
+        return sum(
+            1
+            for song_id, entry in self.entries.items()
+            if (crate is None or song_id in crate)
+            and visible(entry, workspace_id, zone_id, self.clock.now, clean_only=clean_only)
+            is not None
+        )
 
     def search(self, workspace_id, zone_id, query, limit):
-        entries = [entry for entry in self.entries.values()
-                   if query.lower() in entry.song.title.lower() or
-                   query.lower() in entry.song.artist.lower()]
+        entries = [
+            entry
+            for entry in self.entries.values()
+            if query.lower() in entry.song.title.lower()
+            or query.lower() in entry.song.artist.lower()
+        ]
         return [*entries, *self.foreign][:limit]
 
     def track(self, workspace_id, zone_id, song_id):
         return self.entries.get(song_id)
 
     def describe(self, workspace_id, zone_id, song_ids):
-        return {song_id: self.entries[song_id] for song_id in song_ids
-                if song_id in self.entries}
+        return {song_id: self.entries[song_id] for song_id in song_ids if song_id in self.entries}
 
-    def schedule(self, workspace_id, zone_id, room_id, request_id, song_id, *,
-                 expected_generation, not_before, policy_revision):
-        self.requested.append(dict(
-            workspace=workspace_id, zone=zone_id, room=room_id, request=request_id,
-            song=song_id, generation=expected_generation, not_before=not_before,
-        ))
+    def schedule(
+        self,
+        workspace_id,
+        zone_id,
+        room_id,
+        request_id,
+        song_id,
+        *,
+        expected_generation,
+        not_before,
+        policy_revision,
+    ):
+        self.requested.append(
+            dict(
+                workspace=workspace_id,
+                zone=zone_id,
+                room=room_id,
+                request=request_id,
+                song=song_id,
+                generation=expected_generation,
+                not_before=not_before,
+            )
+        )
         if not self.acknowledge:
             return None
         operation_id = "lf-" + request_id.replace("-", "")[:40]
         self.progresses[operation_id] = LocalProgress(
-            workspace_id, zone_id, operation_id, expected_generation,
+            workspace_id,
+            zone_id,
+            operation_id,
+            expected_generation,
             LocalStage.LOCALLY_SCHEDULED,
         )
         return LocalScheduleReceipt(
-            workspace_id, zone_id, operation_id,
+            workspace_id,
+            zone_id,
+            operation_id,
             expected_generation + (1 if self.invalid_ack else 0),
-            not_before - (1 if self.invalid_ack else 0), True,
+            not_before - (1 if self.invalid_ack else 0),
+            True,
         )
 
     def progress(self, workspace_id, zone_id, operation_id):
@@ -101,7 +167,11 @@ class VenueBridge:
 
     def stage(self, operation_id, stage, *, zone="main", workspace=HOST):
         self.progresses[operation_id] = LocalProgress(
-            workspace, zone, operation_id, self.generation, stage,
+            workspace,
+            zone,
+            operation_id,
+            self.generation,
+            stage,
         )
 
 
@@ -110,8 +180,13 @@ def env(cloud_engine, clock, monkeypatch):
     follow_clock(monkeypatch, clock)
     venue = VenueBridge(clock)
     rooms = Rooms(
-        cloud_engine, PEPPER, catalog=FakeSongCatalog(), planner=FakeRequestPlanner(),
-        plans=FakePlans(), speakers=FakeSpeakers(), local_first=venue,
+        cloud_engine,
+        PEPPER,
+        catalog=FakeSongCatalog(),
+        planner=FakeRequestPlanner(),
+        plans=FakePlans(),
+        speakers=FakeSpeakers(),
+        local_first=venue,
     )
     return rooms, venue, clock
 
@@ -343,7 +418,11 @@ def test_invalid_speaker_and_ack_never_count_as_local_playback(env):
     assert not ready_speaker(replace(speaker, checked_at=clock.now - 100), HOST, "main", clock.now)
     assert not ready_speaker(replace(speaker, workspace_id=OTHER_HOST), HOST, "main", clock.now)
     assert not valid_receipt(
-        LocalScheduleReceipt(HOST, "main", "op", speaker.generation,
-                             speaker.committed_until - 1, True),
-        speaker, HOST, "main", speaker.committed_until,
+        LocalScheduleReceipt(
+            HOST, "main", "op", speaker.generation, speaker.committed_until - 1, True
+        ),
+        speaker,
+        HOST,
+        "main",
+        speaker.committed_until,
     )

@@ -4,6 +4,7 @@ There is deliberately no PUT, upload or DELETE capability here. An active
 retrieval grant is workspace-scoped; neither a service credential nor a download
 URL is permission to fetch music from another workspace.
 """
+
 from __future__ import annotations
 
 import hashlib

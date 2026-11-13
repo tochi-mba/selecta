@@ -4,6 +4,7 @@ No request headers, client versions, user flags or billing entitlements can over
 policy. Deployed services fail closed. Temporary migration exceptions are explicit,
 UTC-deadlined server configuration; standalone installs retain their existing behaviour.
 """
+
 from __future__ import annotations
 
 import os
@@ -26,9 +27,7 @@ class AdmissionDenied(PermissionError):
         super().__init__(code)
 
 
-def current_phase(
-    env: Mapping[str, str] | None = None, *, now: datetime | None = None
-) -> Phase:
+def current_phase(env: Mapping[str, str] | None = None, *, now: datetime | None = None) -> Phase:
     """Resolve an immutable-for-this-operation, fail-closed server-side stage.
 
     On cloud deployments, legacy/drain requires an explicit approved exception with an

@@ -1,4 +1,5 @@
 """LF04 contract and device-availability invariants; uses no real music."""
+
 from __future__ import annotations
 
 from dataclasses import replace
@@ -22,8 +23,12 @@ from selecta.mix_contract import ContractError, SongRef, from_json, new_contract
 
 def _tracks(count=8):
     return [
-        {"occurrence_id": f"occ{i}", "canonical_track_id": f"track{i}",
-         "title": f"Song {i}", "recording_version": "v1"}
+        {
+            "occurrence_id": f"occ{i}",
+            "canonical_track_id": f"track{i}",
+            "title": f"Song {i}",
+            "recording_version": "v1",
+        }
         for i in range(count)
     ]
 
@@ -40,8 +45,10 @@ class Resolver:
 
 def _snapshot(states, *, expires_at=200, device_id="device-b"):
     return DeviceInventory(
-        workspace_id="tenant-a", target_device_id=device_id,
-        verified_at=100, expires_at=expires_at,
+        workspace_id="tenant-a",
+        target_device_id=device_id,
+        verified_at=100,
+        expires_at=expires_at,
         bindings=tuple(
             DeviceBinding(f"track{i}", state, recording_version="v1")
             for i, state in enumerate(states)
@@ -57,20 +64,20 @@ def test_eight_track_device_transfer_is_truthful_and_does_not_change_saved_revis
     resolver = Resolver(_snapshot(states))
     status = availability(recipe, "tenant-a", "device-b", resolver, now=110)
     assert status["counts"] == {
-        "ready": 5, "missing": 2, "candidate": 1,
-        "version_mismatch": 0, "blocked": 0, "unknown": 0,
+        "ready": 5,
+        "missing": 2,
+        "candidate": 1,
+        "version_mismatch": 0,
+        "blocked": 0,
+        "unknown": 0,
     }
     assert status["can_run"] is False
     assert status["fresh"] is True
     assert [row["state"] for row in status["tracks"]] == [item.value for item in states]
     assert status["target_device_id"] == "device-b"
     assert recipe.revision_id == original
-    assert [o.canonical_track_id for o in recipe.occurrences] == [
-        f"track{i}" for i in range(8)
-    ]
-    assert resolver.requested == (
-        "tenant-a", "device-b", tuple(f"track{i}" for i in range(8))
-    )
+    assert [o.canonical_track_id for o in recipe.occurrences] == [f"track{i}" for i in range(8)]
+    assert resolver.requested == ("tenant-a", "device-b", tuple(f"track{i}" for i in range(8)))
     assert "path" not in str(recipe.to_json()).lower()
     assert "sha256" not in str(status).lower()
 
@@ -92,31 +99,51 @@ def test_stale_and_wrong_workspace_device_reports_are_unknown_not_missing_or_rea
 def test_candidates_mismatch_blocked_and_missing_remain_distinct():
     recipe = new_recipe("Mix", _tracks(4))
     status = availability(
-        recipe, "tenant-a", "device-b",
-        Resolver(_snapshot([
-            State.CANDIDATE, State.BLOCKED, State.MISSING, State.READY,
-        ])), now=110,
+        recipe,
+        "tenant-a",
+        "device-b",
+        Resolver(
+            _snapshot(
+                [
+                    State.CANDIDATE,
+                    State.BLOCKED,
+                    State.MISSING,
+                    State.READY,
+                ]
+            )
+        ),
+        now=110,
     )
     assert status["counts"]["candidate"] == 1
     assert status["counts"]["blocked"] == 1
     assert status["counts"]["missing"] == 1
     assert status["counts"]["ready"] == 1
-    altered = replace(recipe, occurrences=(
-        *recipe.occurrences[:3],
-        replace(recipe.occurrences[3], recording_version="v2"),
-    ))
+    altered = replace(
+        recipe,
+        occurrences=(
+            *recipe.occurrences[:3],
+            replace(recipe.occurrences[3], recording_version="v2"),
+        ),
+    )
     mismatched = availability(
-        altered, "tenant-a", "device-b",
-        Resolver(_snapshot([State.READY] * 4)), now=110,
+        altered,
+        "tenant-a",
+        "device-b",
+        Resolver(_snapshot([State.READY] * 4)),
+        now=110,
     )
     assert mismatched["counts"]["version_mismatch"] == 1
 
 
 def test_duplicate_recordings_have_distinct_stable_occurrence_ids():
     song = {"canonical_track_id": "track-one", "title": "Same recording"}
-    recipe = new_recipe("Duplicate", [
-        {"occurrence_id": "first", **song}, {"occurrence_id": "second", **song},
-    ])
+    recipe = new_recipe(
+        "Duplicate",
+        [
+            {"occurrence_id": "first", **song},
+            {"occurrence_id": "second", **song},
+        ],
+    )
     assert [o.occurrence_id for o in recipe.occurrences] == ["first", "second"]
     changed = recipe.edited(occurrences=tuple(reversed(recipe.occurrences)))
     assert [o.occurrence_id for o in changed.occurrences] == ["second", "first"]
@@ -135,11 +162,13 @@ def test_recording_change_invalidates_related_cue_transition_and_analysis_only()
             Transition("occ1", "occ2", "crossfade", 4, False),
         ),
     )
-    updated = initial.edited(occurrences=[
-        *initial.occurrences[:1],
-        replace(initial.occurrences[1], recording_version="v2"),
-        initial.occurrences[2],
-    ])
+    updated = initial.edited(
+        occurrences=[
+            *initial.occurrences[:1],
+            replace(initial.occurrences[1], recording_version="v2"),
+            initial.occurrences[2],
+        ]
+    )
     assert updated.occurrences[0].analysis_valid is True
     assert updated.occurrences[1].analysis_valid is False
     assert updated.occurrences[2].analysis_valid is True
@@ -160,13 +189,19 @@ def test_recipe_rejects_unknown_version_tampered_digest_or_media_paths():
         with pytest.raises(RecipeError):
             parse_recipe({**recipe.to_json(), **patch})
     with pytest.raises(RecipeError):
-        new_recipe("Unsafe", [
-            {"canonical_track_id": "../music/private.flac"},
-        ])
+        new_recipe(
+            "Unsafe",
+            [
+                {"canonical_track_id": "../music/private.flac"},
+            ],
+        )
     with pytest.raises(RecipeError):
-        new_recipe("Unsafe", [
-            {"canonical_track_id": "a" * 64},
-        ])
+        new_recipe(
+            "Unsafe",
+            [
+                {"canonical_track_id": "a" * 64},
+            ],
+        )
     bad = recipe.to_json()
     bad["occurrences"][0]["path"] = "/private/song.flac"
     with pytest.raises(RecipeError):

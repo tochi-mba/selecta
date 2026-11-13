@@ -69,8 +69,9 @@ class FencedLocalOutput:
             if row["workspace"] is not None and not self._scope_matches(row, scope):
                 # Never disclose another tenant's output or allow one to operate it.
                 return OutputObservation(True, None, None, None)
-            return OutputObservation(True, self.audio.is_audible(),
-                                     row["generation"], row["floor"], row["operation_id"])
+            return OutputObservation(
+                True, self.audio.is_audible(), row["generation"], row["floor"], row["operation_id"]
+            )
 
     def adopt_active(self, scope: Scope, generation: int) -> None:
         """One-time local migration requires a physically confirmed playing output."""
@@ -81,9 +82,11 @@ class FencedLocalOutput:
             row = self._row(db)
             if row["state"] != "idle" or self.audio.is_audible() is not True:
                 raise TransferRejected("unverified_owner", "Output cannot be adopted")
-            db.execute("""UPDATE local_output_fence SET workspace=?, zone=?, floor=?,
+            db.execute(
+                """UPDATE local_output_fence SET workspace=?, zone=?, floor=?,
                          generation=?, state='audible' WHERE id=1""",
-                       (scope.workspace_id, scope.zone_key, generation, generation))
+                (scope.workspace_id, scope.zone_key, generation, generation),
+            )
 
     def preflight(self, request: TransferRequest) -> Preflight:
         self._require_target(request)
@@ -101,8 +104,11 @@ class FencedLocalOutput:
             self._require_scope(row, request.scope)
             if generation <= row["floor"]:
                 raise TransferRejected("stale_generation", "Destination fence is newer")
-            if (row["operation_id"] == request.operation_id and row["token"]
-                    and row["state"] == "prepared"):
+            if (
+                row["operation_id"] == request.operation_id
+                and row["token"]
+                and row["state"] == "prepared"
+            ):
                 return row["token"]
             if row["state"] not in ("idle", "silent"):
                 raise TransferRejected("output_busy", "The output is not idle")
@@ -111,10 +117,11 @@ class FencedLocalOutput:
             token = self.audio.prepare_silent(request)
             if not token or self.audio.is_audible() is not False:
                 raise TransferRejected("unsafe_preparation", "Preparation was not silent")
-            db.execute("""UPDATE local_output_fence SET workspace=?, zone=?,
+            db.execute(
+                """UPDATE local_output_fence SET workspace=?, zone=?,
                          operation_id=?, token=?, state='prepared' WHERE id=1""",
-                       (request.scope.workspace_id, request.scope.zone_key,
-                        request.operation_id, token))
+                (request.scope.workspace_id, request.scope.zone_key, request.operation_id, token),
+            )
             return token
 
     def stop_and_confirm(self, request: TransferRequest, generation: int) -> bool:
@@ -125,38 +132,54 @@ class FencedLocalOutput:
             if row["floor"] >= generation:
                 # A restored cloud backup can request an obsolete transfer.
                 # Never acknowledge one whose fence belongs to a *newer* operation.
-                return (row["floor"] == generation and row["generation"] is None
-                        and row["operation_id"] == request.operation_id
-                        and self.audio.is_audible() is False)
+                return (
+                    row["floor"] == generation
+                    and row["generation"] is None
+                    and row["operation_id"] == request.operation_id
+                    and self.audio.is_audible() is False
+                )
             if row["generation"] != generation - 1:
                 raise TransferRejected("stale_generation", "Source generation changed")
             self.audio.mute_and_stop()
             if self.audio.is_audible() is not False:
                 return False
-            db.execute("""UPDATE local_output_fence SET floor=?, generation=NULL,
+            db.execute(
+                """UPDATE local_output_fence SET floor=?, generation=NULL,
                          operation_id=?, token=NULL, state='silent' WHERE id=1""",
-                       (generation, request.operation_id))
+                (generation, request.operation_id),
+            )
             return True
 
-    def acquire_silent(self, request: TransferRequest, generation: int,
-                       prepared_token: str) -> bool:
+    def acquire_silent(
+        self, request: TransferRequest, generation: int, prepared_token: str
+    ) -> bool:
         self._require_target(request)
         with self.ledger.transaction() as db:
             row = self._row(db)
             self._require_scope(row, request.scope)
-            if (row["generation"] == generation and row["operation_id"] == request.operation_id
-                    and row["state"] in ("owned_silent", "audible")):
+            if (
+                row["generation"] == generation
+                and row["operation_id"] == request.operation_id
+                and row["state"] in ("owned_silent", "audible")
+            ):
                 return self.audio.is_audible() is False or row["state"] == "audible"
-            if (generation <= row["floor"] or row["state"] != "prepared"
-                    or row["operation_id"] != request.operation_id
-                    or not prepared_token or row["token"] != prepared_token):
+            if (
+                generation <= row["floor"]
+                or row["state"] != "prepared"
+                or row["operation_id"] != request.operation_id
+                or not prepared_token
+                or row["token"] != prepared_token
+            ):
                 raise TransferRejected(
                     "stale_or_unprepared", "Output is not prepared for acquisition"
                 )
             if self.audio.is_audible() is not False:
                 return False
-            db.execute("""UPDATE local_output_fence SET floor=?, generation=?,
-                         state='owned_silent' WHERE id=1""", (generation, generation))
+            db.execute(
+                """UPDATE local_output_fence SET floor=?, generation=?,
+                         state='owned_silent' WHERE id=1""",
+                (generation, generation),
+            )
             return True
 
     def start_and_confirm(self, request: TransferRequest, generation: int) -> bool:
@@ -178,20 +201,24 @@ class FencedLocalOutput:
             db.execute("UPDATE local_output_fence SET state='audible' WHERE id=1")
             return True
 
-    def manual_isolate(self, request: TransferRequest, generation: int,
-                       evidence_token: str) -> bool:
+    def manual_isolate(
+        self, request: TransferRequest, generation: int, evidence_token: str
+    ) -> bool:
         """Requires a locally verified *hardware* interlock, never a UI checkbox."""
         with self.ledger.transaction() as db:
             row = self._row(db)
             self._require_scope(row, request.scope)
-            if (row["generation"] != generation - 1
-                    or not self.audio.verify_hardware_isolation(evidence_token)):
+            if row["generation"] != generation - 1 or not self.audio.verify_hardware_isolation(
+                evidence_token
+            ):
                 return False
             if self.audio.is_audible() is not False:
                 return False
-            db.execute("""UPDATE local_output_fence SET floor=?, generation=NULL,
+            db.execute(
+                """UPDATE local_output_fence SET floor=?, generation=NULL,
                          operation_id=?, token=NULL, state='silent' WHERE id=1""",
-                       (generation, request.operation_id))
+                (generation, request.operation_id),
+            )
             return True
 
     def _require_target(self, request: TransferRequest) -> None:

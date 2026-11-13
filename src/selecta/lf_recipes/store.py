@@ -5,6 +5,7 @@ has immutable, tenant-scoped content-addressed manifests. v1 manifests stay unto
 Workspace row locks serialize offline editors even on PostgreSQL READ COMMITTED; SQLite
 transactions already begin IMMEDIATE.
 """
+
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
@@ -66,11 +67,12 @@ def _valid_recipes(conn: Connection, workspace_id: str) -> list[tuple[Recipe, fl
                 continue
             recipe = parse_recipe(settings["recipe"])
             if (
-                row.input_hash != recipe.revision_id or row.checksum != recipe.revision_id
-                or row.keys != [] or row.size_bytes != 0 or not row.protected
-                or row.provenance["versions"] != {
-                    "lf_recipe": 2, "producer": PRODUCER
-                }
+                row.input_hash != recipe.revision_id
+                or row.checksum != recipe.revision_id
+                or row.keys != []
+                or row.size_bytes != 0
+                or not row.protected
+                or row.provenance["versions"] != {"lf_recipe": 2, "producer": PRODUCER}
             ):
                 continue
             result.append((recipe, float(row.created_at)))
@@ -103,15 +105,24 @@ def _head(conn: Connection, workspace_id: str, recipe_id: str) -> tuple[Recipe |
 def _history(conn: Connection, workspace_id: str, recipe_id: str) -> list[dict[str, Any]]:
     result = [
         {
-            "revision": original.revision, "number": original.number, "name": original.name,
-            "schema_version": 1, "parent_revision": original.parent,
+            "revision": original.revision,
+            "number": original.number,
+            "name": original.name,
+            "schema_version": 1,
+            "parent_revision": original.parent,
         }
         for original in _legacy(conn, workspace_id, recipe_id)
     ]
-    result.extend({
-        "revision": item.revision_id, "number": item.revision_number,
-        "name": item.name, "schema_version": 2, "parent_revision": item.parent_revision,
-    } for item in _v2(conn, workspace_id, recipe_id))
+    result.extend(
+        {
+            "revision": item.revision_id,
+            "number": item.revision_number,
+            "name": item.name,
+            "schema_version": 2,
+            "parent_revision": item.parent_revision,
+        }
+        for item in _v2(conn, workspace_id, recipe_id)
+    )
     return sorted(result, key=lambda item: item["number"], reverse=True)
 
 
@@ -127,12 +138,21 @@ def _store(conn: Connection, workspace_id: str, user_id: str, recipe: Recipe) ->
     )
     provenance.check(KIND, made)
     now = db_now(conn)
-    conn.execute(artifacts.insert().values(
-        id=new_id(), workspace_id=workspace_id, kind=KIND,
-        input_hash=recipe.revision_id, checksum=recipe.revision_id,
-        keys=[], size_bytes=0, provenance=made, protected=True,
-        created_at=now, last_used_at=now,
-    ))
+    conn.execute(
+        artifacts.insert().values(
+            id=new_id(),
+            workspace_id=workspace_id,
+            kind=KIND,
+            input_hash=recipe.revision_id,
+            checksum=recipe.revision_id,
+            keys=[],
+            size_bytes=0,
+            provenance=made,
+            protected=True,
+            created_at=now,
+            last_used_at=now,
+        )
+    )
 
 
 def _parse_items(data: Mapping[str, Any], base: Recipe, key: str, model: type):
@@ -154,8 +174,12 @@ def _parse_items(data: Mapping[str, Any], base: Recipe, key: str, model: type):
 
 
 def create(
-    engine: Engine, workspace_id: str, user_id: str, *,
-    name: str, occurrences: Sequence[Mapping[str, Any]],
+    engine: Engine,
+    workspace_id: str,
+    user_id: str,
+    *,
+    name: str,
+    occurrences: Sequence[Mapping[str, Any]],
     cues: Sequence[Mapping[str, Any]] = (),
     transitions: Sequence[Mapping[str, Any]] = (),
     draft: bool = True,
@@ -163,7 +187,8 @@ def create(
     try:
         base = new_recipe(name, occurrences)
         data = {
-            "cues": list(cues), "transitions": list(transitions),
+            "cues": list(cues),
+            "transitions": list(transitions),
         }
         changed = replace(
             base,
@@ -191,7 +216,8 @@ def read(engine: Engine, workspace_id: str, recipe_id: str) -> dict[str, Any]:
         if head is None:
             raise RecipeStoreError("recipe_not_found", "Recipe not found", 404)
         return {
-            "recipe": head.to_json(), "head_revision": head_id,
+            "recipe": head.to_json(),
+            "head_revision": head_id,
             "history": _history(conn, workspace_id, recipe_id),
             "legacy_read_only_view": not bool(_v2(conn, workspace_id, recipe_id)),
         }
@@ -206,17 +232,27 @@ def list_recipes(engine: Engine, workspace_id: str) -> list[dict[str, Any]]:
             head, head_id = _head(conn, workspace_id, recipe_id)
             if head is None:
                 continue
-            found.append({
-                "recipe_id": recipe_id, "name": head.name,
-                "revision": head_id, "revision_number": head.revision_number,
-                "occurrences": len(head.occurrences),
-            })
+            found.append(
+                {
+                    "recipe_id": recipe_id,
+                    "name": head.name,
+                    "revision": head_id,
+                    "revision_number": head.revision_number,
+                    "occurrences": len(head.occurrences),
+                }
+            )
         return sorted(found, key=lambda item: item["recipe_id"])
 
 
 def edit(
-    engine: Engine, workspace_id: str, user_id: str, recipe_id: str, *,
-    base_revision: str, changes: Mapping[str, Any], restore: str | None = None,
+    engine: Engine,
+    workspace_id: str,
+    user_id: str,
+    recipe_id: str,
+    *,
+    base_revision: str,
+    changes: Mapping[str, Any],
+    restore: str | None = None,
 ) -> dict[str, Any]:
     if not isinstance(changes, Mapping):
         raise RecipeStoreError("invalid_recipe", "Invalid edit document")
@@ -230,8 +266,11 @@ def edit(
             raise RecipeStoreError("recipe_not_found", "Recipe not found", 404)
         if base_revision != head_id:
             raise RecipeStoreError(
-                "stale_revision", "This recipe changed while you were offline", 409,
-                latest=head_id, submitted=base_revision,
+                "stale_revision",
+                "This recipe changed while you were offline",
+                409,
+                latest=head_id,
+                submitted=base_revision,
             )
         target = latest
         if restore is not None:
@@ -260,7 +299,8 @@ def edit(
                 occurrences=occ if occ is not None else target.occurrences,
                 cues=cues if cues is not None else target.cues,
                 transitions=transitions if transitions is not None else target.transitions,
-                name=name, draft=draft,
+                name=name,
+                draft=draft,
             )
             # A v1 virtual view has a distinct derived ID; parent must name the *actual*
             # preserved v1 artifact, not a virtual conversion's digest.
@@ -283,7 +323,10 @@ def edit(
 
 
 def check_availability(
-    engine: Engine, workspace_id: str, recipe_id: str, target_device_id: str,
+    engine: Engine,
+    workspace_id: str,
+    recipe_id: str,
+    target_device_id: str,
     resolver: RecordingResolver | None = None,
 ) -> dict[str, Any]:
     with transaction(engine, workspace_id) as conn:

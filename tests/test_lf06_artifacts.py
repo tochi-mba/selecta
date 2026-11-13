@@ -1,4 +1,5 @@
 """LF-06 local-artifact safety and failure-injection tests; synthetic bytes/audio only."""
+
 from __future__ import annotations
 
 import errno
@@ -31,9 +32,11 @@ def digest(data: bytes) -> str:
 
 def spec(*, kind="preview", source=b"source-a", renderer="1", model=None, gain=0):
     return ArtifactSpec(
-        kind=kind, source_revisions={"song:0": digest(source)},
+        kind=kind,
+        source_revisions={"song:0": digest(source)},
         versions={"renderer": renderer, "analysis": "1", "render": renderer},
-        settings={"gain": gain}, models={"stem": model} if model else {},
+        settings={"gain": gain},
+        models={"stem": model} if model else {},
     )
 
 
@@ -41,6 +44,7 @@ def write_bytes(data: bytes):
     def writer(path: Path):
         path.write_bytes(data)
         return {"seconds": 1}
+
     return writer
 
 
@@ -64,12 +68,15 @@ def test_identity_includes_all_provenance_and_is_stable_under_mapping_order():
     assert a.identity != spec(renderer="2").identity
     assert a.identity != spec(gain=1).identity
     assert a.identity != spec(model="checkpoint").identity
-    b = ArtifactSpec("preview", {"song:0": digest(b"source-a")},
-                     {"render": "1", "analysis": "1", "renderer": "1"}, {"gain": 0})
+    b = ArtifactSpec(
+        "preview",
+        {"song:0": digest(b"source-a")},
+        {"render": "1", "analysis": "1", "renderer": "1"},
+        {"gain": 0},
+    )
     assert a.identity == b.identity
     with pytest.raises(ArtifactInvalid):
-        _ = ArtifactSpec("preview", {"song": "/private/song.wav"},
-                         {"renderer": "1"}).identity
+        _ = ArtifactSpec("preview", {"song": "/private/song.wav"}, {"renderer": "1"}).identity
 
 
 def test_export_is_permanent_and_never_clobbers_an_existing_file(tmp_path):
@@ -88,10 +95,8 @@ def test_export_is_permanent_and_never_clobbers_an_existing_file(tmp_path):
 def test_repeated_exports_have_distinct_records_but_the_same_recipe_identity(tmp_path):
     store = LocalArtifactStore(tmp_path / "registry")
     frozen = spec(kind="export")
-    a, _ = store.publish(frozen, write_bytes(b"first"),
-                         destination=tmp_path / "first.flac")
-    b, _ = store.publish(frozen, write_bytes(b"second"),
-                         destination=tmp_path / "second.flac")
+    a, _ = store.publish(frozen, write_bytes(b"first"), destination=tmp_path / "first.flac")
+    b, _ = store.publish(frozen, write_bytes(b"second"), destination=tmp_path / "second.flac")
     assert a["id"] != b["id"]
     assert a["spec_id"] == b["spec_id"] == frozen.identity
     assert store.state(a["id"]) == "ready"
@@ -135,8 +140,7 @@ def test_disk_reservation_blocks_a_writer_before_side_effects(tmp_path, monkeypa
     import selecta.lf_artifacts.store as artifacts
 
     usage = namedtuple("Usage", "total used free")
-    monkeypatch.setattr(artifacts.shutil, "disk_usage",
-                        lambda _dir: usage(1000, 999, 1))
+    monkeypatch.setattr(artifacts.shutil, "disk_usage", lambda _dir: usage(1000, 999, 1))
     store = LocalArtifactStore(tmp_path / "artifacts")
     writes = []
     with pytest.raises(InsufficientSpace):
@@ -178,8 +182,7 @@ def test_source_revision_and_renderer_upgrade_invalidate_without_deleting_export
     store = LocalArtifactStore(tmp_path / "store")
     track = tmp_path / "source.flac"
     track.write_bytes(b"first")
-    first = ArtifactSpec("export", {"song:0": sha256_file(track)},
-                         {"renderer": "v1"})
+    first = ArtifactSpec("export", {"song:0": sha256_file(track)}, {"renderer": "v1"})
     target = tmp_path / "saved.flac"
     record, _ = store.publish(first, write_bytes(b"kept export"), destination=target)
     track.write_bytes(b"second")
@@ -206,8 +209,12 @@ def test_cancel_before_or_during_render_never_publishes(tmp_path):
     event = threading.Event()
     event.set()
     with pytest.raises(ArtifactCancelled):
-        store.publish(spec(kind="export"), write_bytes(b"mix"),
-                      destination=tmp_path / "cancelled.flac", cancel=event)
+        store.publish(
+            spec(kind="export"),
+            write_bytes(b"mix"),
+            destination=tmp_path / "cancelled.flac",
+            cancel=event,
+        )
     event.clear()
 
     def cancel_during(path):
@@ -215,8 +222,12 @@ def test_cancel_before_or_during_render_never_publishes(tmp_path):
         event.set()
 
     with pytest.raises(ArtifactCancelled):
-        store.publish(spec(kind="export"), cancel_during,
-                      destination=tmp_path / "cancelled.flac", cancel=event)
+        store.publish(
+            spec(kind="export"),
+            cancel_during,
+            destination=tmp_path / "cancelled.flac",
+            cancel=event,
+        )
     assert not (tmp_path / "cancelled.flac").exists()
 
 
@@ -232,8 +243,9 @@ def test_destination_permissions_fail_without_deleting_other_files(tmp_path, mon
 
     monkeypatch.setattr(artifacts.os, "link", deny)
     with pytest.raises(PermissionError):
-        store.publish(spec(kind="export"), write_bytes(b"mix"),
-                      destination=tmp_path / "protected.flac")
+        store.publish(
+            spec(kind="export"), write_bytes(b"mix"), destination=tmp_path / "protected.flac"
+        )
     assert original.read_bytes() == b"do not touch"
     assert not (tmp_path / "protected.flac").exists()
 
@@ -242,8 +254,7 @@ def test_interrupted_export_cleanup_cannot_remove_user_files(tmp_path):
     store = LocalArtifactStore(tmp_path / "registry")
     exports = tmp_path / "exports"
     exports.mkdir()
-    damaged = exports / (".selecta-mix-20261113-120000-abcdef.flac."
-                         + "0" * 32 + ".part")
+    damaged = exports / (".selecta-mix-20261113-120000-abcdef.flac." + "0" * 32 + ".part")
     damaged.write_bytes(b"partial")
     good = exports / "selecta-mix-20261113-120000-abcdef.flac"
     good.write_bytes(b"permanent")
@@ -266,16 +277,21 @@ def test_flac_validation_must_succeed_before_publication(tmp_path):
         return {"seconds": len(audio) / SAMPLE_RATE}
 
     row, _ = store.publish(
-        spec(kind="export"), render, destination=target,
+        spec(kind="export"),
+        render,
+        destination=target,
         validate=lambda path, made: verify_export(path, made["seconds"]),
     )
     assert row["validation_checksum"] == verify_export(target, len(audio) / SAMPLE_RATE)
     assert store.state(row["id"]) == "ready"
     broken = tmp_path / "broken.flac"
     with pytest.raises(ValueError):
-        store.publish(spec(kind="export", source=b"different"),
-                      write_bytes(b"not flac"), destination=broken,
-                      validate=lambda path, made: verify_export(path, made["seconds"]))
+        store.publish(
+            spec(kind="export", source=b"different"),
+            write_bytes(b"not flac"),
+            destination=broken,
+            validate=lambda path, made: verify_export(path, made["seconds"]),
+        )
     assert not broken.exists()
 
 

@@ -1,4 +1,5 @@
 """Deterministic, internally generated PCM/WAV test signals. No licensed media."""
+
 from __future__ import annotations
 
 import hashlib
@@ -20,8 +21,12 @@ class AudioFixture:
 
 
 def make_synthetic_wave(
-    target: Path, *, recording_number: int, duration_ms: int = 120,
-    sample_rate: int = 8_000, channels: int = 1,
+    target: Path,
+    *,
+    recording_number: int,
+    duration_ms: int = 120,
+    sample_rate: int = 8_000,
+    channels: int = 1,
 ) -> AudioFixture:
     """Write a stable sine-mixture test tone; unique, distinguishable per recording.
 
@@ -41,10 +46,15 @@ def make_synthetic_wave(
         t = frame / sample_rate
         # 0.24 peak amplitude, deterministic envelope to avoid clicks.
         envelope = min(1.0, frame / 24, (frames - frame - 1) / 24)
-        sample = int(32767 * 0.24 * max(0, envelope) * (
-            0.73 * math.sin(2 * math.pi * frequency * t)
-            + 0.27 * math.sin(2 * math.pi * frequency * 1.5 * t)
-        ))
+        sample = int(
+            32767
+            * 0.24
+            * max(0, envelope)
+            * (
+                0.73 * math.sin(2 * math.pi * frequency * t)
+                + 0.27 * math.sin(2 * math.pi * frequency * 1.5 * t)
+            )
+        )
         output.extend(struct.pack("<h", sample) * channels)
     target.parent.mkdir(parents=True, exist_ok=True)
     with wave.open(str(target), "wb") as handle:
@@ -60,7 +70,9 @@ def validate_synthetic_wave(fixture: AudioFixture) -> None:
         raise AssertionError("never accept unknown-source audio as synthetic")
     with wave.open(str(fixture.path), "rb") as handle:
         if (handle.getnchannels(), handle.getframerate(), handle.getnframes()) != (
-            fixture.channels, fixture.sample_rate, fixture.frames
+            fixture.channels,
+            fixture.sample_rate,
+            fixture.frames,
         ):
             raise AssertionError("audio format or length has changed")
         if handle.getsampwidth() != 2:

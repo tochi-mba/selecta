@@ -1,10 +1,11 @@
 """Reproducible faults with explicit state and automatic restoration."""
+
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator
 
 from .audio import corrupt_wave
 from .fixtures import Device

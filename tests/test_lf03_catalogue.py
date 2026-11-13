@@ -1,4 +1,5 @@
 """LF03 contract and adversarial tests. Synthetic local media; no cloud audio calls."""
+
 from __future__ import annotations
 
 import os
@@ -38,8 +39,11 @@ def clock():
 @pytest.fixture
 def catalogue(tmp_path: Path, clock):
     with LocalCatalogue(
-        tmp_path / "private" / "catalogue.sqlite", "workspace_01", "device_01",
-        freshness_seconds=60, clock=lambda: clock[0],
+        tmp_path / "private" / "catalogue.sqlite",
+        "workspace_01",
+        "device_01",
+        freshness_seconds=60,
+        clock=lambda: clock[0],
     ) as store:
         yield store
 
@@ -102,20 +106,17 @@ def test_canonical_match_requires_private_evidence_or_approval(catalogue, tmp_pa
     catalogue.bind_recording(track, local_id)
     assert catalogue.resolve(track).state == MatchState.CANDIDATE
     with pytest.raises(UnsafeRecording):
-        catalogue.bind_recording(track, local_id, kind=MatchState.EXACT,
-                                 expected_private_digest="a" * 64)
+        catalogue.bind_recording(
+            track, local_id, kind=MatchState.EXACT, expected_private_digest="a" * 64
+        )
     with pytest.raises(UnsafeRecording):
-        catalogue.bind_recording(track, local_id,
-                                 kind=MatchState.VERIFIED_EQUIVALENT)
-    catalogue.bind_recording(track, local_id, kind=MatchState.VERIFIED_EQUIVALENT,
-                             approved=True)
+        catalogue.bind_recording(track, local_id, kind=MatchState.VERIFIED_EQUIVALENT)
+    catalogue.bind_recording(track, local_id, kind=MatchState.VERIFIED_EQUIVALENT, approved=True)
     assert catalogue.resolve(track).playable
     assert catalogue.resolve(track).state == MatchState.VERIFIED_EQUIVALENT
 
 
-def test_content_replacement_same_size_mtime_invalidates_artifacts_and_match(
-    catalogue, tmp_path
-):
+def test_content_replacement_same_size_mtime_invalidates_artifacts_and_match(catalogue, tmp_path):
     folder = tmp_path / "music"
     path = _wav(folder / "Edit.wav", b"\x00\x01")
     source = catalogue.add_source(folder)
@@ -238,15 +239,21 @@ def test_explicit_clean_and_remaster_conflicts_do_not_substitute(catalogue, tmp_
     explicit = next(entry for name, entry in items.items() if "Explicit" in name)
     ref = RecordingRef("workspace_01", "canonical_explicit")
     with pytest.raises(UnsafeRecording):
-        catalogue.bind_recording(ref, explicit["local_file_id"],
-                                 kind=MatchState.VERIFIED_EQUIVALENT,
-                                 approved=True, allow_explicit=False)
+        catalogue.bind_recording(
+            ref,
+            explicit["local_file_id"],
+            kind=MatchState.VERIFIED_EQUIVALENT,
+            approved=True,
+            allow_explicit=False,
+        )
     with pytest.raises(UnsafeRecording):
-        catalogue.bind_recording(ref, explicit["local_file_id"],
-                                 expected_metadata={"title": "Song (Clean)"})
+        catalogue.bind_recording(
+            ref, explicit["local_file_id"], expected_metadata={"title": "Song (Clean)"}
+        )
     with pytest.raises(UnsafeRecording):
-        catalogue.bind_recording(ref, explicit["local_file_id"],
-                                 expected_metadata={"title": "Song (2020 Remastered)"})
+        catalogue.bind_recording(
+            ref, explicit["local_file_id"], expected_metadata={"title": "Song (2020 Remastered)"}
+        )
 
 
 def test_staleness_policy_zone_and_rights_never_claim_ready(catalogue, tmp_path, clock):
@@ -256,9 +263,15 @@ def test_staleness_policy_zone_and_rights_never_claim_ready(catalogue, tmp_path,
     _scan_all(catalogue, source)
     fid = _first(catalogue, source)
     ref = RecordingRef("workspace_01", "canonical_zone")
-    catalogue.bind_recording(ref, fid, kind=MatchState.VERIFIED_EQUIVALENT, approved=True,
-                             allowed_zones=["zone_a"], rights_until=10030.0,
-                             policy_generation=7)
+    catalogue.bind_recording(
+        ref,
+        fid,
+        kind=MatchState.VERIFIED_EQUIVALENT,
+        approved=True,
+        allowed_zones=["zone_a"],
+        rights_until=10030.0,
+        policy_generation=7,
+    )
     assert catalogue.resolve(ref, zone_id="zone_a", expected_policy_generation=7).playable
     assert catalogue.resolve(ref, zone_id="zone_b").state == MatchState.BLOCKED
     assert catalogue.resolve(ref, expected_policy_generation=8).state == MatchState.STALE
@@ -321,15 +334,19 @@ def test_device_isolation_and_no_private_fields_in_payload(catalogue, tmp_path, 
     ref = catalogue.mint_local_recording(_first(catalogue, source))
     public = str(catalogue.resolve(ref).to_cloud_dict())
     public += str(catalogue.scan_progress(source).to_cloud_dict())
-    public += str(catalogue.resolve_recipe(
-        "revision_01", [MixOccurrence("occurrence_01", ref)]
-    ).to_cloud_dict())
+    public += str(
+        catalogue.resolve_recipe(
+            "revision_01", [MixOccurrence("occurrence_01", ref)]
+        ).to_cloud_dict()
+    )
     assert str(folder) not in public
     assert str(song) not in public
     assert "digest" not in public and "relative_path" not in public
     assert "local_file_id" not in public
     with LocalCatalogue(
-        catalogue.database, "workspace_other", "device_other",
+        catalogue.database,
+        "workspace_other",
+        "device_other",
         clock=lambda: clock[0],
     ) as other:
         assert other.list_local_instances(other.add_source(folder)) == []
@@ -355,8 +372,11 @@ def test_engine_can_supply_a_stricter_local_decoder_probe(tmp_path, clock):
     folder = tmp_path / "music"
     song = _wav(folder / "Valid.wav")
     with LocalCatalogue(
-        tmp_path / "private" / "probe.sqlite", "workspace_01", "device_01",
-        clock=lambda: clock[0], decoder_probe=lambda candidate: candidate != song,
+        tmp_path / "private" / "probe.sqlite",
+        "workspace_01",
+        "device_01",
+        clock=lambda: clock[0],
+        decoder_probe=lambda candidate: candidate != song,
     ) as catalog:
         source = catalog.add_source(folder)
         _scan_all(catalog, source)
@@ -364,15 +384,16 @@ def test_engine_can_supply_a_stricter_local_decoder_probe(tmp_path, clock):
         assert record["state"] == "incompatible"
 
 
-@pytest.mark.parametrize("alternate", [
-    "Song (Live).wav",
-    "Song (Radio Edit).wav",
-    "Song (2024 Remastered).wav",
-    "Song (Clean).wav",
-])
-def test_no_edition_substitution_even_with_same_local_metadata(
-    catalogue, tmp_path, alternate
-):
+@pytest.mark.parametrize(
+    "alternate",
+    [
+        "Song (Live).wav",
+        "Song (Radio Edit).wav",
+        "Song (2024 Remastered).wav",
+        "Song (Clean).wav",
+    ],
+)
+def test_no_edition_substitution_even_with_same_local_metadata(catalogue, tmp_path, alternate):
     folder = tmp_path / "music"
     _wav(folder / "Song (Explicit).wav")
     source = catalogue.add_source(folder)
@@ -381,6 +402,7 @@ def test_no_edition_substitution_even_with_same_local_metadata(
         catalogue.bind_recording(
             RecordingRef("workspace_01", "canonical_no_substitution"),
             _first(catalogue, source),
-            kind=MatchState.VERIFIED_EQUIVALENT, approved=True,
+            kind=MatchState.VERIFIED_EQUIVALENT,
+            approved=True,
             expected_metadata={"title": Path(alternate).stem},
         )

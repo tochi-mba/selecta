@@ -13,8 +13,14 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from selecta.lf_playback import (  # noqa: E402
-    OutputObservation, Preflight, Scope, SQLiteOwnershipLedger, TransferCoordinator,
-    TransferRejected, TransferRequest, TransferStage,
+    OutputObservation,
+    Preflight,
+    Scope,
+    SQLiteOwnershipLedger,
+    TransferCoordinator,
+    TransferRejected,
+    TransferRequest,
+    TransferStage,
 )
 
 
@@ -58,9 +64,13 @@ class FakeEngines:
             self.events.append(("observe", device_id))
             if not self.online.get(device_id):
                 return OutputObservation(False, None, None, None)
-            return OutputObservation(True, self.audible[device_id],
-                                     self.generation[device_id], self.fenced[device_id],
-                                     self.operations.get(device_id))
+            return OutputObservation(
+                True,
+                self.audible[device_id],
+                self.generation[device_id],
+                self.fenced[device_id],
+                self.operations.get(device_id),
+            )
 
     def preflight(self, request):
         self.events.append(("preflight", request.target_device_id))
@@ -68,8 +78,12 @@ class FakeEngines:
             self.preflight_revision,
             tuple(r for r in request.recording_refs if r not in self.missing),
             tuple(t for t in request.transition_refs if t not in self.missing_transitions),
-            self.engine_ready, self.permissions_ok, self.output_ready,
-            self.silent_prepare_supported, self.media_revision_current, self.clock(),
+            self.engine_ready,
+            self.permissions_ok,
+            self.output_ready,
+            self.silent_prepare_supported,
+            self.media_revision_current,
+            self.clock(),
         )
 
     def prepare_silent(self, request, generation):
@@ -136,9 +150,18 @@ def build(tmp_path):
     coordinator = TransferCoordinator(ledger, engines, clock=clock)
     scope = Scope("workspace-1")
     coordinator.adopt_verified_owner(scope, "old", 9)
-    request = TransferRequest(scope, "attempt-1", "click-1", "actor-1", "new",
-                              9, "revision-42", tuple(f"song-{i}" for i in range(8)),
-                              ("seam-1", "seam-2"), clock() + 45)
+    request = TransferRequest(
+        scope,
+        "attempt-1",
+        "click-1",
+        "actor-1",
+        "new",
+        9,
+        "revision-42",
+        tuple(f"song-{i}" for i in range(8)),
+        ("seam-1", "seam-2"),
+        clock() + 45,
+    )
     return clock, engines, coordinator, request
 
 
@@ -149,8 +172,10 @@ def test_safe_handoff_requires_release_before_destination_sound(tmp_path):
     assert coordinator.ledger.current_owner(req.scope) == ("new", 10, "audible")
     names = [e[0] for e in engine.events]
     assert (
-        names.index("prepare") < names.index("release")
-        < names.index("acquire") < names.index("start")
+        names.index("prepare")
+        < names.index("release")
+        < names.index("acquire")
+        < names.index("start")
     )
     assert engine.audible == {"old": False, "new": True, "other": False}
 
@@ -175,8 +200,16 @@ def test_partial_library_5_of_8_preserves_old_speaker(tmp_path):
     assert not any(e[0] == "release" for e in engine.events)
 
 
-@pytest.mark.parametrize("attribute", ["engine_ready", "permissions_ok", "output_ready",
-                                        "silent_prepare_supported", "media_revision_current"])
+@pytest.mark.parametrize(
+    "attribute",
+    [
+        "engine_ready",
+        "permissions_ok",
+        "output_ready",
+        "silent_prepare_supported",
+        "media_revision_current",
+    ],
+)
 def test_preflight_rejects_unsafe_destination(tmp_path, attribute):
     _, engine, coordinator, req = build(tmp_path)
     setattr(engine, attribute, False)
@@ -223,8 +256,15 @@ def test_destination_failure_after_release_never_resumes_old(tmp_path, outcome):
     assert not engine.audible["old"] and not engine.audible["new"]
     # Prevent later requests entering an unresolved handoff.
     with pytest.raises(TransferRejected) as exc:
-        coordinator.begin(replace(req, operation_id="attempt-2", idempotency_key="click-2",
-                                  target_device_id="other", expected_generation=10))
+        coordinator.begin(
+            replace(
+                req,
+                operation_id="attempt-2",
+                idempotency_key="click-2",
+                target_device_id="other",
+                expected_generation=10,
+            )
+        )
     assert exc.value.code == "transfer_busy"
 
 
@@ -254,11 +294,16 @@ def test_start_ack_loss_reconciles_verified_real_audio(tmp_path):
 def test_crash_recovery_between_every_committed_stage(tmp_path):
     clock, engine, coordinator, req = build(tmp_path)
     assert coordinator.begin(req).stage is TransferStage.REQUESTED
-    for expected in (TransferStage.PREPARED, TransferStage.RELEASED,
-                     TransferStage.ACQUIRED, TransferStage.STARTED):
+    for expected in (
+        TransferStage.PREPARED,
+        TransferStage.RELEASED,
+        TransferStage.ACQUIRED,
+        TransferStage.STARTED,
+    ):
         # New process/object against same durable SQLite journal.
-        coordinator = TransferCoordinator(SQLiteOwnershipLedger(tmp_path / "ownership.db"),
-                                          engine, clock=clock)
+        coordinator = TransferCoordinator(
+            SQLiteOwnershipLedger(tmp_path / "ownership.db"), engine, clock=clock
+        )
         assert coordinator.advance(req.operation_id).stage is expected
     assert not engine.audible["old"] and engine.audible["new"]
 
@@ -299,8 +344,9 @@ def test_duplicate_keys_and_stale_generation_rejected(tmp_path):
 
 def test_two_simultaneous_play_here_requests_are_linearizable(tmp_path):
     _, engine, coordinator, req = build(tmp_path)
-    second = replace(req, operation_id="attempt-2", idempotency_key="click-2",
-                     target_device_id="other")
+    second = replace(
+        req, operation_id="attempt-2", idempotency_key="click-2", target_device_id="other"
+    )
     barrier = threading.Barrier(2)
 
     def run(request):
@@ -347,8 +393,9 @@ def test_scope_isolation_and_no_cloud_audio_data(tmp_path):
     _, engine, coordinator, req = build(tmp_path)
     # All persisted fields are identifiers, metadata and fence state only.
     coordinator.begin(req)
-    other = replace(req, scope=Scope("workspace-2"), operation_id="cross",
-                    idempotency_key="other-key")
+    other = replace(
+        req, scope=Scope("workspace-2"), operation_id="cross", idempotency_key="other-key"
+    )
     with pytest.raises(TransferRejected) as exc:
         coordinator.begin(other)
     assert exc.value.code == "uninitialized"

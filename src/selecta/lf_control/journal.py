@@ -3,26 +3,44 @@
 Cloud and each engine use separate database files. Neither an ACK nor queue delivery is
 proof of playback; only a locally verified execution report can advance to `applied`.
 """
+
 from __future__ import annotations
 
 import hashlib
 import json
 import sqlite3
 import uuid
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from .credentials import _db
-from .protocol import (CommandEnvelope, ControlError, LocalScope, _id, _integer,
-                       authorise_local)
+from .protocol import CommandEnvelope, ControlError, LocalScope, _id, _integer, authorise_local
 
-STATES = frozenset({"created", "authorised", "queued", "delivered", "accepted",
-                    "applied", "acknowledged", "rejected", "conflicted", "superseded", "expired"})
+STATES = frozenset(
+    {
+        "created",
+        "authorised",
+        "queued",
+        "delivered",
+        "accepted",
+        "applied",
+        "acknowledged",
+        "rejected",
+        "conflicted",
+        "superseded",
+        "expired",
+    }
+)
 TERMINAL = frozenset({"acknowledged", "rejected", "conflicted", "superseded", "expired"})
 NEXT = {
-    "created": {"authorised"}, "authorised": {"queued"}, "queued": {"delivered"},
-    "delivered": {"accepted"}, "accepted": {"applied"}, "applied": {"acknowledged"},
+    "created": {"authorised"},
+    "authorised": {"queued"},
+    "queued": {"delivered"},
+    "delivered": {"accepted"},
+    "accepted": {"applied"},
+    "applied": {"acknowledged"},
 }
 EVENT_FIELDS: dict[str, frozenset[str]] = {
     "command_result": frozenset({"operation_id", "status", "generation", "output_confirmed"}),
@@ -56,7 +74,12 @@ class Event:
 
 
 def _event_payload(kind: str, raw: Mapping[str, Any]) -> dict[str, Any]:
-    if type(kind) is not str or kind not in EVENT_FIELDS or type(raw) is not dict or set(raw) != EVENT_FIELDS[kind]:
+    if (
+        type(kind) is not str
+        or kind not in EVENT_FIELDS
+        or type(raw) is not dict
+        or set(raw) != EVENT_FIELDS[kind]
+    ):
         raise ControlError("unsafe_event")
     p = dict(raw)
     if kind == "command_result":
@@ -146,43 +169,78 @@ class ControlJournal:
 
     def envelope(self, workspace: str, device: str, operation: str) -> CommandEnvelope | None:
         with _db(self.path) as db:
-            row = db.execute("SELECT envelope FROM lf_commands WHERE workspace=? AND device=? "
-                             "AND operation=?", (workspace, device, operation)).fetchone()
+            row = db.execute(
+                "SELECT envelope FROM lf_commands WHERE workspace=? AND device=? AND operation=?",
+                (workspace, device, operation),
+            ).fetchone()
         return CommandEnvelope.parse(json.loads(row[0])) if row else None
 
     def get(self, workspace: str, device: str, operation: str) -> CommandRecord | None:
         with _db(self.path) as db:
-            row = db.execute("SELECT * FROM lf_commands WHERE workspace=? AND device=? AND operation=?",
-                             (workspace, device, operation)).fetchone()
+            row = db.execute(
+                "SELECT * FROM lf_commands WHERE workspace=? AND device=? AND operation=?",
+                (workspace, device, operation),
+            ).fetchone()
         if not row:
             return None
-        return CommandRecord(row["operation"], row["workspace"], row["device"],
-                             row["state"], row["digest"], row["updated"])
+        return CommandRecord(
+            row["operation"],
+            row["workspace"],
+            row["device"],
+            row["state"],
+            row["digest"],
+            row["updated"],
+        )
 
-    def _insert(self, db: sqlite3.Connection, env: CommandEnvelope,
-                state: str, now: float) -> CommandRecord:
-        existing = db.execute("SELECT * FROM lf_commands WHERE workspace=? AND device=? "
-                              "AND (operation=? OR idem_key=?)",
-                              (env.workspace_id, env.target_device_id, env.operation_id,
-                               env.idempotency_key)).fetchone()
+    def _insert(
+        self, db: sqlite3.Connection, env: CommandEnvelope, state: str, now: float
+    ) -> CommandRecord:
+        existing = db.execute(
+            "SELECT * FROM lf_commands WHERE workspace=? AND device=? "
+            "AND (operation=? OR idem_key=?)",
+            (env.workspace_id, env.target_device_id, env.operation_id, env.idempotency_key),
+        ).fetchone()
         if existing:
             if existing["digest"] != env.digest or existing["operation"] != env.operation_id:
                 raise ControlError("idempotency_conflict")
-            return CommandRecord(env.operation_id, env.workspace_id, env.target_device_id,
-                                 existing["state"], env.digest, existing["updated"], True)
-        count = db.execute("SELECT count(*) FROM lf_commands WHERE workspace=? AND device=? "
-                           "AND state NOT IN ('acknowledged','rejected','conflicted','superseded','expired')",
-                           (env.workspace_id, env.target_device_id)).fetchone()[0]
+            return CommandRecord(
+                env.operation_id,
+                env.workspace_id,
+                env.target_device_id,
+                existing["state"],
+                env.digest,
+                existing["updated"],
+                True,
+            )
+        count = db.execute(
+            "SELECT count(*) FROM lf_commands WHERE workspace=? AND device=? "
+            "AND state NOT IN ('acknowledged','rejected','conflicted','superseded','expired')",
+            (env.workspace_id, env.target_device_id),
+        ).fetchone()[0]
         if count >= self.limit:
             raise ControlError("journal_full")
-        db.execute("INSERT INTO lf_commands VALUES(?,?,?,?,?,?,?,?,?,?)",
-                   (env.workspace_id, env.target_device_id, env.operation_id,
-                    env.idempotency_key, env.digest, env.canonical().decode("ascii"),
-                    state, env.created_at, env.expires_at, now))
-        db.execute("INSERT INTO lf_command_history VALUES(?,?,?,?,?)",
-                   (env.workspace_id, env.target_device_id, env.operation_id, state, now))
-        return CommandRecord(env.operation_id, env.workspace_id, env.target_device_id,
-                             state, env.digest, now)
+        db.execute(
+            "INSERT INTO lf_commands VALUES(?,?,?,?,?,?,?,?,?,?)",
+            (
+                env.workspace_id,
+                env.target_device_id,
+                env.operation_id,
+                env.idempotency_key,
+                env.digest,
+                env.canonical().decode("ascii"),
+                state,
+                env.created_at,
+                env.expires_at,
+                now,
+            ),
+        )
+        db.execute(
+            "INSERT INTO lf_command_history VALUES(?,?,?,?,?)",
+            (env.workspace_id, env.target_device_id, env.operation_id, state, now),
+        )
+        return CommandRecord(
+            env.operation_id, env.workspace_id, env.target_device_id, state, env.digest, now
+        )
 
     def create_cloud(self, env: CommandEnvelope, *, now: float) -> CommandRecord:
         CommandEnvelope.parse(json.loads(env.canonical()), now=now)
@@ -192,96 +250,145 @@ class ControlJournal:
             db.commit()
             return record
 
-    def move_cloud(self, workspace: str, device: str, operation: str,
-                   state: str, *, now: float, local_proof: bool = False) -> CommandRecord:
+    def move_cloud(
+        self,
+        workspace: str,
+        device: str,
+        operation: str,
+        state: str,
+        *,
+        now: float,
+        local_proof: bool = False,
+    ) -> CommandRecord:
         if state not in STATES:
             raise ControlError("invalid_state")
         with _db(self.path) as db:
             db.execute("BEGIN IMMEDIATE")
-            row = db.execute("SELECT * FROM lf_commands WHERE workspace=? AND device=? AND operation=?",
-                             (workspace, device, operation)).fetchone()
+            row = db.execute(
+                "SELECT * FROM lf_commands WHERE workspace=? AND device=? AND operation=?",
+                (workspace, device, operation),
+            ).fetchone()
             if row is None:
                 raise ControlError("unknown_operation")
             old = row["state"]
             if old == state:
-                return CommandRecord(operation, workspace, device, old, row["digest"], row["updated"])
+                return CommandRecord(
+                    operation, workspace, device, old, row["digest"], row["updated"]
+                )
             if old == "applied" and state in {"rejected", "conflicted", "superseded", "expired"}:
                 raise ControlError("invalid_transition")
-            if old in TERMINAL or (state not in NEXT.get(old, set()) and state not in
-                                   {"rejected", "conflicted", "superseded", "expired"}):
+            if old in TERMINAL or (
+                state not in NEXT.get(old, set())
+                and state not in {"rejected", "conflicted", "superseded", "expired"}
+            ):
                 raise ControlError("invalid_transition")
             if state == "applied" and not local_proof:
                 raise ControlError("local_proof_required")
             if state == "acknowledged" and not local_proof:
                 raise ControlError("local_proof_required")
-            db.execute("UPDATE lf_commands SET state=?, updated=? WHERE workspace=? AND device=? AND operation=?",
-                       (state, now, workspace, device, operation))
-            db.execute("INSERT INTO lf_command_history VALUES(?,?,?,?,?)",
-                       (workspace, device, operation, state, now))
+            db.execute(
+                "UPDATE lf_commands SET state=?, updated=? WHERE workspace=? AND device=? AND operation=?",
+                (state, now, workspace, device, operation),
+            )
+            db.execute(
+                "INSERT INTO lf_command_history VALUES(?,?,?,?,?)",
+                (workspace, device, operation, state, now),
+            )
             db.commit()
             return CommandRecord(operation, workspace, device, state, row["digest"], now)
 
-    def accept_local(self, env: CommandEnvelope, scope: LocalScope,
-                     *, now: float) -> CommandRecord:
+    def accept_local(self, env: CommandEnvelope, scope: LocalScope, *, now: float) -> CommandRecord:
         CommandEnvelope.parse(json.loads(env.canonical()), now=now)
         authorise_local(env, scope)
         with _db(self.path) as db:
             db.execute("BEGIN IMMEDIATE")
-            existing = db.execute("SELECT * FROM lf_commands WHERE workspace=? AND device=? "
-                                  "AND (operation=? OR idem_key=?)",
-                                  (env.workspace_id, env.target_device_id, env.operation_id,
-                                   env.idempotency_key)).fetchone()
+            existing = db.execute(
+                "SELECT * FROM lf_commands WHERE workspace=? AND device=? "
+                "AND (operation=? OR idem_key=?)",
+                (env.workspace_id, env.target_device_id, env.operation_id, env.idempotency_key),
+            ).fetchone()
             if existing:
                 if existing["digest"] != env.digest or existing["operation"] != env.operation_id:
                     raise ControlError("idempotency_conflict")
-                return CommandRecord(env.operation_id, env.workspace_id, env.target_device_id,
-                                     existing["state"], env.digest, existing["updated"], True)
-            fence = db.execute("SELECT last_sequence FROM lf_command_fences "
-                               "WHERE workspace=? AND device=?",
-                               (env.workspace_id, env.target_device_id)).fetchone()
+                return CommandRecord(
+                    env.operation_id,
+                    env.workspace_id,
+                    env.target_device_id,
+                    existing["state"],
+                    env.digest,
+                    existing["updated"],
+                    True,
+                )
+            fence = db.execute(
+                "SELECT last_sequence FROM lf_command_fences WHERE workspace=? AND device=?",
+                (env.workspace_id, env.target_device_id),
+            ).fetchone()
             if fence and env.sequence <= fence[0]:
                 raise ControlError("stale_sequence")
             record = self._insert(db, env, "accepted", now)
-            db.execute("INSERT INTO lf_command_fences VALUES(?,?,?) "
-                       "ON CONFLICT(workspace,device) DO UPDATE SET last_sequence=excluded.last_sequence",
-                       (env.workspace_id, env.target_device_id, env.sequence))
+            db.execute(
+                "INSERT INTO lf_command_fences VALUES(?,?,?) "
+                "ON CONFLICT(workspace,device) DO UPDATE SET last_sequence=excluded.last_sequence",
+                (env.workspace_id, env.target_device_id, env.sequence),
+            )
             db.commit()
             return record
 
-    def finish_local(self, env: CommandEnvelope, *, applied: bool, output_confirmed: bool,
-                     now: float) -> CommandRecord:
+    def finish_local(
+        self, env: CommandEnvelope, *, applied: bool, output_confirmed: bool, now: float
+    ) -> CommandRecord:
         with _db(self.path) as db:
             db.execute("BEGIN IMMEDIATE")
-            row = db.execute("SELECT * FROM lf_commands WHERE workspace=? AND device=? AND operation=?",
-                             (env.workspace_id, env.target_device_id, env.operation_id)).fetchone()
+            row = db.execute(
+                "SELECT * FROM lf_commands WHERE workspace=? AND device=? AND operation=?",
+                (env.workspace_id, env.target_device_id, env.operation_id),
+            ).fetchone()
             if row is None or row["digest"] != env.digest:
                 raise ControlError("unknown_operation")
             if row["state"] in TERMINAL | {"applied"}:
-                return CommandRecord(env.operation_id, env.workspace_id, env.target_device_id,
-                                     row["state"], env.digest, row["updated"])
+                return CommandRecord(
+                    env.operation_id,
+                    env.workspace_id,
+                    env.target_device_id,
+                    row["state"],
+                    env.digest,
+                    row["updated"],
+                )
             if row["state"] != "accepted":
                 raise ControlError("invalid_transition")
             # Transport effects need an actual engine observation; never infer audio from delivery.
-            if applied and env.command in {"play", "pause", "skip", "seek", "set_volume"} and not output_confirmed:
+            if (
+                applied
+                and env.command in {"play", "pause", "skip", "seek", "set_volume"}
+                and not output_confirmed
+            ):
                 raise ControlError("output_unconfirmed")
             state = "applied" if applied else "rejected"
-            db.execute("UPDATE lf_commands SET state=?, updated=? WHERE workspace=? AND device=? AND operation=?",
-                       (state, now, env.workspace_id, env.target_device_id, env.operation_id))
-            db.execute("INSERT INTO lf_command_history VALUES(?,?,?,?,?)",
-                       (env.workspace_id, env.target_device_id, env.operation_id, state, now))
+            db.execute(
+                "UPDATE lf_commands SET state=?, updated=? WHERE workspace=? AND device=? AND operation=?",
+                (state, now, env.workspace_id, env.target_device_id, env.operation_id),
+            )
+            db.execute(
+                "INSERT INTO lf_command_history VALUES(?,?,?,?,?)",
+                (env.workspace_id, env.target_device_id, env.operation_id, state, now),
+            )
             db.commit()
-            return CommandRecord(env.operation_id, env.workspace_id, env.target_device_id,
-                                 state, env.digest, now)
+            return CommandRecord(
+                env.operation_id, env.workspace_id, env.target_device_id, state, env.digest, now
+            )
 
-    def discard_stale(self, *, now: float, workspace: str, device: str,
-                      minimum_policy: int | None = None) -> int:
+    def discard_stale(
+        self, *, now: float, workspace: str, device: str, minimum_policy: int | None = None
+    ) -> int:
         """Never auto-execute an undelivered transport button after reconnect."""
         count = 0
         with _db(self.path) as db:
             db.execute("BEGIN IMMEDIATE")
-            rows = db.execute("SELECT * FROM lf_commands WHERE workspace=? AND device=? "
-                              "AND state IN ('created','authorised','queued','delivered','accepted')",
-                              (workspace, device)).fetchall()
+            rows = db.execute(
+                "SELECT * FROM lf_commands WHERE workspace=? AND device=? "
+                "AND state IN ('created','authorised','queued','delivered','accepted')",
+                (workspace, device),
+            ).fetchall()
             for row in rows:
                 data = json.loads(row["envelope"])
                 expired = row["expires"] <= now
@@ -289,10 +396,14 @@ class ControlJournal:
                 if not expired and not stale:
                     continue
                 state = "expired" if expired else "superseded"
-                db.execute("UPDATE lf_commands SET state=?, updated=? WHERE workspace=? AND device=? AND operation=?",
-                           (state, now, workspace, device, row["operation"]))
-                db.execute("INSERT INTO lf_command_history VALUES(?,?,?,?,?)",
-                           (workspace, device, row["operation"], state, now))
+                db.execute(
+                    "UPDATE lf_commands SET state=?, updated=? WHERE workspace=? AND device=? AND operation=?",
+                    (state, now, workspace, device, row["operation"]),
+                )
+                db.execute(
+                    "INSERT INTO lf_command_history VALUES(?,?,?,?,?)",
+                    (workspace, device, row["operation"], state, now),
+                )
                 count += 1
             db.commit()
         return count
@@ -307,43 +418,75 @@ class ControlJournal:
         encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         with _db(self.path) as db:
             db.execute("BEGIN IMMEDIATE")
-            found = db.execute("SELECT * FROM lf_events WHERE workspace=? AND device=? "
-                               "AND (event_id=? OR (generation=? AND sequence=?))",
-                               (event.workspace_id, event.device_id, event.event_id,
-                                event.device_generation, event.sequence)).fetchone()
+            found = db.execute(
+                "SELECT * FROM lf_events WHERE workspace=? AND device=? "
+                "AND (event_id=? OR (generation=? AND sequence=?))",
+                (
+                    event.workspace_id,
+                    event.device_id,
+                    event.event_id,
+                    event.device_generation,
+                    event.sequence,
+                ),
+            ).fetchone()
             if found:
-                if (found["event_id"], found["generation"], found["sequence"],
-                    found["kind"], found["payload"]) != (
-                        event.event_id, event.device_generation, event.sequence,
-                        event.kind, encoded):
+                if (
+                    found["event_id"],
+                    found["generation"],
+                    found["sequence"],
+                    found["kind"],
+                    found["payload"],
+                ) != (event.event_id, event.device_generation, event.sequence, event.kind, encoded):
                     raise ControlError("event_conflict")
                 return False
-            count = db.execute("SELECT count(*) FROM lf_events WHERE workspace=? AND device=? "
-                               "AND acknowledged IS NULL", (event.workspace_id, event.device_id)).fetchone()[0]
+            count = db.execute(
+                "SELECT count(*) FROM lf_events WHERE workspace=? AND device=? "
+                "AND acknowledged IS NULL",
+                (event.workspace_id, event.device_id),
+            ).fetchone()[0]
             if count >= self.limit:
                 raise ControlError("outbox_full")
-            last_row = db.execute("SELECT last_sequence FROM lf_event_fences "
-                                  "WHERE workspace=? AND device=? AND generation=?",
-                                  (event.workspace_id, event.device_id,
-                                   event.device_generation)).fetchone()
+            last_row = db.execute(
+                "SELECT last_sequence FROM lf_event_fences "
+                "WHERE workspace=? AND device=? AND generation=?",
+                (event.workspace_id, event.device_id, event.device_generation),
+            ).fetchone()
             last = last_row[0] if last_row else 0
             if event.sequence != last + 1:
                 raise ControlError("event_out_of_order")
-            db.execute("INSERT INTO lf_events VALUES(?,?,?,?,?,?,?,?,NULL)",
-                       (event.workspace_id, event.device_id, event.event_id,
-                        event.device_generation, event.sequence, event.kind,
-                        encoded, event.recorded_at))
-            db.execute("INSERT INTO lf_event_fences VALUES(?,?,?,?) "
-                       "ON CONFLICT(workspace,device,generation) DO UPDATE SET "
-                       "last_sequence=excluded.last_sequence",
-                       (event.workspace_id, event.device_id, event.device_generation,
-                        event.sequence))
+            db.execute(
+                "INSERT INTO lf_events VALUES(?,?,?,?,?,?,?,?,NULL)",
+                (
+                    event.workspace_id,
+                    event.device_id,
+                    event.event_id,
+                    event.device_generation,
+                    event.sequence,
+                    event.kind,
+                    encoded,
+                    event.recorded_at,
+                ),
+            )
+            db.execute(
+                "INSERT INTO lf_event_fences VALUES(?,?,?,?) "
+                "ON CONFLICT(workspace,device,generation) DO UPDATE SET "
+                "last_sequence=excluded.last_sequence",
+                (event.workspace_id, event.device_id, event.device_generation, event.sequence),
+            )
             db.commit()
             return True
 
-    def append_generated_event(self, workspace: str, device: str, generation: int,
-                               kind: str, payload: dict[str, Any], *, now: float,
-                               report_operation: str | None = None) -> Event | None:
+    def append_generated_event(
+        self,
+        workspace: str,
+        device: str,
+        generation: int,
+        kind: str,
+        payload: dict[str, Any],
+        *,
+        now: float,
+        report_operation: str | None = None,
+    ) -> Event | None:
         """Allocate event sequence and persist it atomically for concurrent local controllers."""
         _id(workspace)
         _id(device)
@@ -354,35 +497,58 @@ class ControlJournal:
         with _db(self.path) as db:
             db.execute("BEGIN IMMEDIATE")
             if report_operation is not None:
-                old = db.execute("SELECT event_id FROM lf_command_reports WHERE workspace=? "
-                                 "AND device=? AND operation=?",
-                                 (workspace, device, report_operation)).fetchone()
+                old = db.execute(
+                    "SELECT event_id FROM lf_command_reports WHERE workspace=? "
+                    "AND device=? AND operation=?",
+                    (workspace, device, report_operation),
+                ).fetchone()
                 if old:
-                    prior = db.execute("SELECT * FROM lf_events WHERE workspace=? AND device=? "
-                                       "AND event_id=?", (workspace, device, old[0])).fetchone()
+                    prior = db.execute(
+                        "SELECT * FROM lf_events WHERE workspace=? AND device=? AND event_id=?",
+                        (workspace, device, old[0]),
+                    ).fetchone()
                     # After server ACK or compaction, do not allocate another report.
                     if prior is None or prior["acknowledged"] is not None:
                         return None
-                    return Event(prior["event_id"], workspace, device, prior["generation"],
-                                 prior["sequence"], prior["kind"],
-                                 json.loads(prior["payload"]), prior["recorded"])
-            count = db.execute("SELECT count(*) FROM lf_events WHERE workspace=? AND device=? "
-                               "AND acknowledged IS NULL", (workspace, device)).fetchone()[0]
+                    return Event(
+                        prior["event_id"],
+                        workspace,
+                        device,
+                        prior["generation"],
+                        prior["sequence"],
+                        prior["kind"],
+                        json.loads(prior["payload"]),
+                        prior["recorded"],
+                    )
+            count = db.execute(
+                "SELECT count(*) FROM lf_events WHERE workspace=? AND device=? "
+                "AND acknowledged IS NULL",
+                (workspace, device),
+            ).fetchone()[0]
             if count >= self.limit:
                 raise ControlError("outbox_full")
-            row = db.execute("SELECT last_sequence FROM lf_event_fences WHERE workspace=? "
-                             "AND device=? AND generation=?", (workspace, device, generation)).fetchone()
+            row = db.execute(
+                "SELECT last_sequence FROM lf_event_fences WHERE workspace=? "
+                "AND device=? AND generation=?",
+                (workspace, device, generation),
+            ).fetchone()
             sequence = (row[0] if row else 0) + 1
             event_id = uuid.uuid4().hex
-            db.execute("INSERT INTO lf_events VALUES(?,?,?,?,?,?,?,?,NULL)",
-                       (workspace, device, event_id, generation, sequence, kind, encoded, now))
-            db.execute("INSERT INTO lf_event_fences VALUES(?,?,?,?) "
-                       "ON CONFLICT(workspace,device,generation) DO UPDATE SET "
-                       "last_sequence=excluded.last_sequence",
-                       (workspace, device, generation, sequence))
+            db.execute(
+                "INSERT INTO lf_events VALUES(?,?,?,?,?,?,?,?,NULL)",
+                (workspace, device, event_id, generation, sequence, kind, encoded, now),
+            )
+            db.execute(
+                "INSERT INTO lf_event_fences VALUES(?,?,?,?) "
+                "ON CONFLICT(workspace,device,generation) DO UPDATE SET "
+                "last_sequence=excluded.last_sequence",
+                (workspace, device, generation, sequence),
+            )
             if report_operation is not None:
-                db.execute("INSERT INTO lf_command_reports VALUES(?,?,?,?)",
-                           (workspace, device, report_operation, event_id))
+                db.execute(
+                    "INSERT INTO lf_command_reports VALUES(?,?,?,?)",
+                    (workspace, device, report_operation, event_id),
+                )
             db.commit()
             return Event(event_id, workspace, device, generation, sequence, kind, payload, now)
 
@@ -390,19 +556,33 @@ class ControlJournal:
         if type(limit) is not int or not 1 <= limit <= 500:
             raise ControlError("invalid_limit")
         with _db(self.path) as db:
-            rows = db.execute("SELECT * FROM lf_events WHERE workspace=? AND device=? "
-                              "AND acknowledged IS NULL ORDER BY generation,sequence LIMIT ?",
-                              (workspace, device, limit)).fetchall()
-        return [Event(r["event_id"], workspace, device, r["generation"], r["sequence"],
-                      r["kind"], json.loads(r["payload"]), r["recorded"]) for r in rows]
+            rows = db.execute(
+                "SELECT * FROM lf_events WHERE workspace=? AND device=? "
+                "AND acknowledged IS NULL ORDER BY generation,sequence LIMIT ?",
+                (workspace, device, limit),
+            ).fetchall()
+        return [
+            Event(
+                r["event_id"],
+                workspace,
+                device,
+                r["generation"],
+                r["sequence"],
+                r["kind"],
+                json.loads(r["payload"]),
+                r["recorded"],
+            )
+            for r in rows
+        ]
 
-    def acknowledge_event(self, workspace: str, device: str, event_id: str,
-                          *, now: float) -> bool:
+    def acknowledge_event(self, workspace: str, device: str, event_id: str, *, now: float) -> bool:
         with _db(self.path) as db:
             db.execute("BEGIN IMMEDIATE")
-            result = db.execute("UPDATE lf_events SET acknowledged=? WHERE workspace=? AND "
-                                "device=? AND event_id=? AND acknowledged IS NULL",
-                                (now, workspace, device, event_id))
+            result = db.execute(
+                "UPDATE lf_events SET acknowledged=? WHERE workspace=? AND "
+                "device=? AND event_id=? AND acknowledged IS NULL",
+                (now, workspace, device, event_id),
+            )
             db.commit()
             return result.rowcount == 1
 
@@ -413,20 +593,33 @@ class ControlJournal:
         _id(event.device_id)
         _integer(event.device_generation)
         _integer(event.sequence, minimum=1)
-        encoded = json.dumps(_event_payload(event.kind, event.payload),
-                             sort_keys=True, separators=(",", ":"))
+        encoded = json.dumps(
+            _event_payload(event.kind, event.payload), sort_keys=True, separators=(",", ":")
+        )
         with _db(self.path) as db:
             db.execute("BEGIN IMMEDIATE")
-            old = db.execute("SELECT * FROM lf_inbox WHERE workspace=? AND device=? AND "
-                             "(event_id=? OR (generation=? AND sequence=?))",
-                             (event.workspace_id, event.device_id, event.event_id,
-                              event.device_generation, event.sequence)).fetchone()
-            if old and (old["event_id"] != event.event_id or old["payload"] != encoded or old["kind"] != event.kind):
+            old = db.execute(
+                "SELECT * FROM lf_inbox WHERE workspace=? AND device=? AND "
+                "(event_id=? OR (generation=? AND sequence=?))",
+                (
+                    event.workspace_id,
+                    event.device_id,
+                    event.event_id,
+                    event.device_generation,
+                    event.sequence,
+                ),
+            ).fetchone()
+            if old and (
+                old["event_id"] != event.event_id
+                or old["payload"] != encoded
+                or old["kind"] != event.kind
+            ):
                 raise ControlError("event_conflict")
-            fence = db.execute("SELECT applied_sequence FROM lf_inbox_fences WHERE workspace=? "
-                               "AND device=? AND generation=?",
-                               (event.workspace_id, event.device_id,
-                                event.device_generation)).fetchone()
+            fence = db.execute(
+                "SELECT applied_sequence FROM lf_inbox_fences WHERE workspace=? "
+                "AND device=? AND generation=?",
+                (event.workspace_id, event.device_id, event.device_generation),
+            ).fetchone()
             cursor = fence[0] if fence else 0
             # A compacted receipt is replay-safe only if BOTH ID and content still match.
             # Outside the bounded receipt window we refuse a repeat, never blindly ACK it.
@@ -434,20 +627,31 @@ class ControlJournal:
                 self._verify_receipt(db, event)
                 return ()
             if not old:
-                unprocessed = db.execute("SELECT count(*) FROM lf_inbox WHERE workspace=? AND "
-                                         "device=? AND applied=0",
-                                         (event.workspace_id, event.device_id)).fetchone()[0]
+                unprocessed = db.execute(
+                    "SELECT count(*) FROM lf_inbox WHERE workspace=? AND device=? AND applied=0",
+                    (event.workspace_id, event.device_id),
+                ).fetchone()[0]
                 if unprocessed >= self.limit:
                     raise ControlError("inbox_full")
-                db.execute("INSERT INTO lf_inbox VALUES(?,?,?,?,?,?,?,0)",
-                           (event.workspace_id, event.device_id, event.device_generation,
-                            event.sequence, event.event_id, event.kind, encoded))
+                db.execute(
+                    "INSERT INTO lf_inbox VALUES(?,?,?,?,?,?,?,0)",
+                    (
+                        event.workspace_id,
+                        event.device_id,
+                        event.device_generation,
+                        event.sequence,
+                        event.event_id,
+                        event.kind,
+                        encoded,
+                    ),
+                )
             newly: list[str] = []
             while True:
-                row = db.execute("SELECT event_id FROM lf_inbox WHERE workspace=? AND device=? "
-                                 "AND generation=? AND sequence=? AND applied=0",
-                                 (event.workspace_id, event.device_id, event.device_generation,
-                                  cursor + 1)).fetchone()
+                row = db.execute(
+                    "SELECT event_id FROM lf_inbox WHERE workspace=? AND device=? "
+                    "AND generation=? AND sequence=? AND applied=0",
+                    (event.workspace_id, event.device_id, event.device_generation, cursor + 1),
+                ).fetchone()
                 if not row:
                     break
                 cursor += 1
@@ -461,21 +665,29 @@ class ControlJournal:
         """Keep unacknowledged events; only old, already confirmed metadata may be removed."""
         with _db(self.path) as db:
             db.execute("BEGIN IMMEDIATE")
-            db.execute("DELETE FROM lf_events WHERE acknowledged IS NOT NULL AND acknowledged<?",
-                       (before,))
+            db.execute(
+                "DELETE FROM lf_events WHERE acknowledged IS NOT NULL AND acknowledged<?", (before,)
+            )
             db.commit()
 
     @staticmethod
     def _verify_receipt(db: sqlite3.Connection, event: Event) -> None:
-        row = db.execute("SELECT event_id,digest FROM lf_inbox_receipts WHERE workspace=? "
-                         "AND device=? AND generation=? AND sequence=?",
-                         (event.workspace_id, event.device_id, event.device_generation,
-                          event.sequence)).fetchone()
+        row = db.execute(
+            "SELECT event_id,digest FROM lf_inbox_receipts WHERE workspace=? "
+            "AND device=? AND generation=? AND sequence=?",
+            (event.workspace_id, event.device_id, event.device_generation, event.sequence),
+        ).fetchone()
         if row is None:
             raise ControlError("event_replay_unverifiable")
-        digest = hashlib.sha256((event.kind + ":" + json.dumps(
-            _event_payload(event.kind, event.payload), sort_keys=True,
-            separators=(",", ":"))).encode("utf-8")).hexdigest()
+        digest = hashlib.sha256(
+            (
+                event.kind
+                + ":"
+                + json.dumps(
+                    _event_payload(event.kind, event.payload), sort_keys=True, separators=(",", ":")
+                )
+            ).encode("utf-8")
+        ).hexdigest()
         if row["event_id"] != event.event_id or row["digest"] != digest:
             raise ControlError("event_conflict")
 
@@ -483,13 +695,17 @@ class ControlJournal:
         """Prune processed cloud events without forgetting their durable high-water fence."""
         with _db(self.path) as db:
             db.execute("BEGIN IMMEDIATE")
-            row = db.execute("SELECT applied_sequence FROM lf_inbox_fences WHERE workspace=? "
-                             "AND device=? AND generation=?",
-                             (workspace, device, generation)).fetchone()
+            row = db.execute(
+                "SELECT applied_sequence FROM lf_inbox_fences WHERE workspace=? "
+                "AND device=? AND generation=?",
+                (workspace, device, generation),
+            ).fetchone()
             cursor = row[0] if row else 0
-            deleted = db.execute("DELETE FROM lf_inbox WHERE workspace=? AND device=? "
-                                 "AND generation=? AND applied=1 AND sequence<=?",
-                                 (workspace, device, generation, cursor)).rowcount
+            deleted = db.execute(
+                "DELETE FROM lf_inbox WHERE workspace=? AND device=? "
+                "AND generation=? AND applied=1 AND sequence<=?",
+                (workspace, device, generation, cursor),
+            ).rowcount
             db.commit()
             return deleted
 
@@ -497,9 +713,11 @@ class ControlJournal:
         if workspace != event.workspace_id or device != event.device_id:
             raise ControlError("scope_denied")
         with _db(self.path) as db:
-            row = db.execute("SELECT applied_sequence FROM lf_inbox_fences WHERE workspace=? "
-                             "AND device=? AND generation=?",
-                             (workspace, device, event.device_generation)).fetchone()
+            row = db.execute(
+                "SELECT applied_sequence FROM lf_inbox_fences WHERE workspace=? "
+                "AND device=? AND generation=?",
+                (workspace, device, event.device_generation),
+            ).fetchone()
             if row is None or event.sequence > row[0]:
                 return False
             self._verify_receipt(db, event)
@@ -507,47 +725,63 @@ class ControlJournal:
 
     def inbox_event(self, workspace: str, device: str, event_id: str) -> Event | None:
         with _db(self.path) as db:
-            row = db.execute("SELECT * FROM lf_inbox WHERE workspace=? AND device=? AND event_id=? "
-                             "", (workspace, device, event_id)).fetchone()
+            row = db.execute(
+                "SELECT * FROM lf_inbox WHERE workspace=? AND device=? AND event_id=? ",
+                (workspace, device, event_id),
+            ).fetchone()
         if row is None:
             return None
         # Kind/recorded time are not needed by the idempotent cloud reducer; payload is typed.
         data = json.loads(row["payload"])
         kind = row["kind"]
-        return Event(event_id, workspace, device, row["generation"],
-                     row["sequence"], kind, data, 0)
+        return Event(event_id, workspace, device, row["generation"], row["sequence"], kind, data, 0)
 
-    def acknowledge_remote(self, workspace: str, device: str, generation: int,
-                           event_id: str) -> bool:
+    def acknowledge_remote(
+        self, workspace: str, device: str, generation: int, event_id: str
+    ) -> bool:
         """Commit a contiguous cloud event only after the consumer has handled it."""
         with _db(self.path) as db:
             db.execute("BEGIN IMMEDIATE")
-            row = db.execute("SELECT * FROM lf_inbox WHERE workspace=? AND device=? AND "
-                             "generation=? AND event_id=?",
-                             (workspace, device, generation, event_id)).fetchone()
+            row = db.execute(
+                "SELECT * FROM lf_inbox WHERE workspace=? AND device=? AND "
+                "generation=? AND event_id=?",
+                (workspace, device, generation, event_id),
+            ).fetchone()
             if row is None:
                 raise ControlError("unknown_event")
             if row["applied"]:
                 return False
-            fence = db.execute("SELECT applied_sequence FROM lf_inbox_fences WHERE "
-                               "workspace=? AND device=? AND generation=?",
-                               (workspace, device, generation)).fetchone()
+            fence = db.execute(
+                "SELECT applied_sequence FROM lf_inbox_fences WHERE "
+                "workspace=? AND device=? AND generation=?",
+                (workspace, device, generation),
+            ).fetchone()
             current = fence[0] if fence else 0
             if row["sequence"] != current + 1:
                 raise ControlError("event_out_of_order")
-            digest = hashlib.sha256((row["kind"] + ":" + row["payload"]).encode(
-                "utf-8")).hexdigest()
-            db.execute("INSERT INTO lf_inbox_receipts VALUES(?,?,?,?,?,?)",
-                       (workspace, device, generation, row["sequence"], event_id, digest))
+            digest = hashlib.sha256(
+                (row["kind"] + ":" + row["payload"]).encode("utf-8")
+            ).hexdigest()
+            db.execute(
+                "INSERT INTO lf_inbox_receipts VALUES(?,?,?,?,?,?)",
+                (workspace, device, generation, row["sequence"], event_id, digest),
+            )
             # Keep only the latest bounded receipt window. Older replays are refused, not ACKed.
-            db.execute("DELETE FROM lf_inbox_receipts WHERE workspace=? AND device=? "
-                       "AND generation=? AND sequence<=?",
-                       (workspace, device, generation, row["sequence"] - self.limit))
-            db.execute("UPDATE lf_inbox SET applied=1 WHERE workspace=? AND device=? "
-                       "AND generation=? AND event_id=?", (workspace, device, generation, event_id))
-            db.execute("INSERT INTO lf_inbox_fences VALUES(?,?,?,?) "
-                       "ON CONFLICT(workspace,device,generation) DO UPDATE SET "
-                       "applied_sequence=excluded.applied_sequence",
-                       (workspace, device, generation, row["sequence"]))
+            db.execute(
+                "DELETE FROM lf_inbox_receipts WHERE workspace=? AND device=? "
+                "AND generation=? AND sequence<=?",
+                (workspace, device, generation, row["sequence"] - self.limit),
+            )
+            db.execute(
+                "UPDATE lf_inbox SET applied=1 WHERE workspace=? AND device=? "
+                "AND generation=? AND event_id=?",
+                (workspace, device, generation, event_id),
+            )
+            db.execute(
+                "INSERT INTO lf_inbox_fences VALUES(?,?,?,?) "
+                "ON CONFLICT(workspace,device,generation) DO UPDATE SET "
+                "applied_sequence=excluded.applied_sequence",
+                (workspace, device, generation, row["sequence"]),
+            )
             db.commit()
             return True

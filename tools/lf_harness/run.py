@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Run LF19 harness self-tests or explicitly gated integrated acceptance."""
+
 from __future__ import annotations
 
 import argparse
@@ -30,8 +31,9 @@ from lf_harness.evidence import (  # noqa: E402
 
 
 def self_test(out: Path) -> int:
-    suite = unittest.defaultTestLoader.discover(start_dir=str(ROOT / "tests"),
-                                                 pattern="test_*.py", top_level_dir=str(ROOT / "tests"))
+    suite = unittest.defaultTestLoader.discover(
+        start_dir=str(ROOT / "tests"), pattern="test_*.py", top_level_dir=str(ROOT / "tests")
+    )
     cases = list(_walk_tests(suite))  # unittest consumes TestSuite entries during execution.
     result = unittest.TextTestRunner(verbosity=2).run(suite)
     ledger = EvidenceLedger()
@@ -41,16 +43,24 @@ def self_test(out: Path) -> int:
     for test in cases:
         key = str(test)
         outcome = failures.get(key, "PASS")
-        ledger.add(Evidence(
-            task_id="LF-0482-02", adr="ADR-0482", source_commit=current_git_commit(),
-            test_case=key, expected_result="harness assertion passes",
-            actual_result="self-test assertion passed" if outcome == "PASS" else
-                          "self-test failed; see test runner stderr",
-            outcome=outcome, evidence_class="harness_self_test",
-            environment=runtime_environment(),
-            residual_risks=["independent production and physical acceptance outstanding"],
-            migration_stage="harness-only", next_decision="integrate production adapters",
-        ))
+        ledger.add(
+            Evidence(
+                task_id="LF-0482-02",
+                adr="ADR-0482",
+                source_commit=current_git_commit(),
+                test_case=key,
+                expected_result="harness assertion passes",
+                actual_result="self-test assertion passed"
+                if outcome == "PASS"
+                else "self-test failed; see test runner stderr",
+                outcome=outcome,
+                evidence_class="harness_self_test",
+                environment=runtime_environment(),
+                residual_risks=["independent production and physical acceptance outstanding"],
+                migration_stage="harness-only",
+                next_decision="integrate production adapters",
+            )
+        )
     ledger.write(out)
     print(f"Self-test evidence saved to {out} ({len(ledger.records)} cases)")
     return 0 if result.wasSuccessful() else 1
@@ -64,8 +74,9 @@ def _walk_tests(suite):
             yield test
 
 
-def acceptance(adapter_spec: str | None, reviewer: str | None,
-               evidence_link: str | None, out: Path) -> int:
+def acceptance(
+    adapter_spec: str | None, reviewer: str | None, evidence_link: str | None, out: Path
+) -> int:
     missing = []
     if not adapter_spec:
         missing.append("no production adapter supplied")
@@ -83,7 +94,9 @@ def acceptance(adapter_spec: str | None, reviewer: str | None,
         runner = AcceptanceRunner(AcceptanceConfig(current_git_commit(), reviewer, evidence_link))
         ledger = runner.run(adapter)
     except Exception as error:
-        ledger = blocked_ledger(reason=f"adapter failed: {type(error).__name__}: {str(error)[:140]}")
+        ledger = blocked_ledger(
+            reason=f"adapter failed: {type(error).__name__}: {str(error)[:140]}"
+        )
         ledger.write(out)
         print(f"ERROR / NO-GO: adapter run failed. Evidence: {out}", file=sys.stderr)
         return 1
@@ -98,8 +111,12 @@ def acceptance(adapter_spec: str | None, reviewer: str | None,
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=("self-test", "acceptance"))
-    parser.add_argument("--out", type=Path, required=True,
-                        help="Evidence JSON path OUTSIDE tracked source tree (e.g. /tmp/lf19.json)")
+    parser.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="Evidence JSON path OUTSIDE tracked source tree (e.g. /tmp/lf19.json)",
+    )
     parser.add_argument("--adapter", help="Integration bridge module:object (not included in LF19)")
     parser.add_argument("--reviewer", help="Independent reviewer name/id")
     parser.add_argument("--evidence-link", help="Independent run/trace archive URI")

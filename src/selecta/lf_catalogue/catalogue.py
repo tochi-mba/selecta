@@ -4,6 +4,7 @@ This store is intentionally NOT Selecta's cloud database. Paths, device/inode tu
 digests and local recording IDs are confined to this SQLite file. Callers must use
 the explicit availability DTOs for all cloud/controller traffic.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -28,8 +29,7 @@ from .types import (
 )
 
 # A file not supported by the current engine is inventoried but never playable.
-SUPPORTED_CODECS = {".mp3", ".flac", ".m4a", ".aac", ".ogg", ".opus",
-                    ".wav", ".aiff", ".aif"}
+SUPPORTED_CODECS = {".mp3", ".flac", ".m4a", ".aac", ".ogg", ".opus", ".wav", ".aiff", ".aif"}
 RECOGNISED_AUDIO = SUPPORTED_CODECS | {".wma", ".ape", ".alac", ".dsf", ".dff"}
 _ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
 _EDITIONS = {
@@ -235,8 +235,14 @@ class LocalCatalogue:
         self.conn.execute(
             "INSERT INTO sources(id,workspace_id,device_id,root,state,last_event) "
             "VALUES(?,?,?,?,?,?)",
-            (source_id, self.workspace_id, self.device_id, str(root),
-             SourceState.STALE.value, self.clock()),
+            (
+                source_id,
+                self.workspace_id,
+                self.device_id,
+                str(root),
+                SourceState.STALE.value,
+                self.clock(),
+            ),
         )
         self.conn.commit()
         return source_id
@@ -321,13 +327,17 @@ class LocalCatalogue:
         self.conn.commit()
 
     def _invalidate_dependents(self, file_id: str) -> None:
-        self.conn.execute(
-            "UPDATE dependents SET invalidated=1 WHERE file_id=?", (file_id,)
-        )
+        self.conn.execute("UPDATE dependents SET invalidated=1 WHERE file_id=?", (file_id,))
 
-    def _record(self, source: sqlite3.Row, path: Path, rel: str,
-                file_stat: os.stat_result, epoch: int,
-                should_cancel: Callable[[], bool]) -> None:
+    def _record(
+        self,
+        source: sqlite3.Row,
+        path: Path,
+        rel: str,
+        file_stat: os.stat_result,
+        epoch: int,
+        should_cancel: Callable[[], bool],
+    ) -> None:
         old = self.conn.execute(
             "SELECT * FROM local_files WHERE source_id=? AND relative_path=?",
             (source["id"], rel),
@@ -339,7 +349,9 @@ class LocalCatalogue:
             # Detect concurrent replacement during hashing; do not bless a race.
             after = path.stat()
             if (after.st_size, after.st_mtime_ns, after.st_ino) != (
-                file_stat.st_size, file_stat.st_mtime_ns, file_stat.st_ino
+                file_stat.st_size,
+                file_stat.st_mtime_ns,
+                file_stat.st_ino,
             ):
                 raise UnsafeRecording("changed_during_verification")
             try:
@@ -347,8 +359,7 @@ class LocalCatalogue:
             except Exception:
                 decodable = False
             state = (
-                "ready" if path.suffix.lower() in SUPPORTED_CODECS and decodable
-                else "incompatible"
+                "ready" if path.suffix.lower() in SUPPORTED_CODECS and decodable else "incompatible"
             )
             metadata = _metadata(path)
         except ScanCancelled:
@@ -365,8 +376,7 @@ class LocalCatalogue:
                 (source["id"], file_stat.st_dev, file_stat.st_ino, rel),
             ).fetchall()
             missing_moves = [
-                row for row in match
-                if not (Path(source["root"]) / row["relative_path"]).exists()
+                row for row in match if not (Path(source["root"]) / row["relative_path"]).exists()
             ]
             if len(missing_moves) == 1:
                 old = missing_moves[0]
@@ -379,7 +389,8 @@ class LocalCatalogue:
                     (source["id"], digest),
                 ).fetchall()
                 removed = [
-                    row for row in duplicates
+                    row
+                    for row in duplicates
                     if not (Path(source["root"]) / row["relative_path"]).exists()
                 ]
                 if len(removed) == 1:
@@ -396,9 +407,21 @@ class LocalCatalogue:
                 "UPDATE local_files SET relative_path=?,fs_device=?,fs_inode=?,"
                 "size=?,mtime_ns=?,digest=?,revision=?,metadata=?,codec=?,"
                 "state=?,verified_at=?,seen_epoch=? WHERE id=?",
-                (rel, file_stat.st_dev, file_stat.st_ino, size, file_stat.st_mtime_ns,
-                 digest, rev, _json(metadata), path.suffix.lower(), state,
-                 self.clock(), epoch, old["id"]),
+                (
+                    rel,
+                    file_stat.st_dev,
+                    file_stat.st_ino,
+                    size,
+                    file_stat.st_mtime_ns,
+                    digest,
+                    rev,
+                    _json(metadata),
+                    path.suffix.lower(),
+                    state,
+                    self.clock(),
+                    epoch,
+                    old["id"],
+                ),
             )
             if changed:
                 self._invalidate_dependents(old["id"])
@@ -407,13 +430,29 @@ class LocalCatalogue:
                 "INSERT INTO local_files(id,source_id,relative_path,fs_device,fs_inode,"
                 "size,mtime_ns,digest,revision,metadata,codec,state,verified_at,seen_epoch)"
                 "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                (uuid.uuid4().hex, source["id"], rel, file_stat.st_dev, file_stat.st_ino,
-                 size, file_stat.st_mtime_ns, digest, 1, _json(metadata),
-                 path.suffix.lower(), state, self.clock(), epoch),
+                (
+                    uuid.uuid4().hex,
+                    source["id"],
+                    rel,
+                    file_stat.st_dev,
+                    file_stat.st_ino,
+                    size,
+                    file_stat.st_mtime_ns,
+                    digest,
+                    1,
+                    _json(metadata),
+                    path.suffix.lower(),
+                    state,
+                    self.clock(),
+                    epoch,
+                ),
             )
 
     def scan_step(
-        self, source_id: str, *, max_entries: int = 256,
+        self,
+        source_id: str,
+        *,
+        max_entries: int = 256,
         should_cancel: Callable[[], bool] = lambda: False,
     ) -> ScanProgress:
         """Process a bounded number of directory entries with persistent cursor.
@@ -474,9 +513,14 @@ class LocalCatalogue:
                                     )
                                     try:
                                         file_stat = entry.stat(follow_symlinks=False)
-                                        self._record(source, Path(entry.path), relative,
-                                                     file_stat, source["scan_epoch"],
-                                                     should_cancel)
+                                        self._record(
+                                            source,
+                                            Path(entry.path),
+                                            relative,
+                                            file_stat,
+                                            source["scan_epoch"],
+                                            should_cancel,
+                                        )
                                     except ScanCancelled:
                                         raise
                                     except OSError:
@@ -539,8 +583,11 @@ class LocalCatalogue:
             (source_id,),
         ).fetchone()[0]
         return ScanProgress(
-            source_id, _source_state(source["state"]), source["scanned"],
-            source["discovered"], pending,
+            source_id,
+            _source_state(source["state"]),
+            source["scanned"],
+            source["discovered"],
+            pending,
             source["state"] == SourceState.READY.value and not pending,
             source["last_verified"],
         )
@@ -590,9 +637,13 @@ class LocalCatalogue:
         """Device-only browser. Never serialize these records through cloud APIs."""
         self._source(source_id)
         return [
-            {"local_file_id": r["id"], "relative_path": r["relative_path"],
-             "metadata": json.loads(r["metadata"]), "revision": r["revision"],
-             "state": r["state"]}
+            {
+                "local_file_id": r["id"],
+                "relative_path": r["relative_path"],
+                "metadata": json.loads(r["metadata"]),
+                "revision": r["revision"],
+                "state": r["state"],
+            }
             for r in self.conn.execute(
                 "SELECT * FROM local_files WHERE source_id=? ORDER BY relative_path", (source_id,)
             )
@@ -610,7 +661,10 @@ class LocalCatalogue:
         return row
 
     def bind_recording(
-        self, recording: RecordingRef, file_id: str, *, 
+        self,
+        recording: RecordingRef,
+        file_id: str,
+        *,
         kind: MatchState = MatchState.CANDIDATE,
         expected_private_digest: str | None = None,
         approved: bool = False,
@@ -660,9 +714,20 @@ class LocalCatalogue:
             "allow_explicit=excluded.allow_explicit,"
             "allowed_zones=excluded.allowed_zones,rights_until=excluded.rights_until,"
             "policy_generation=excluded.policy_generation",
-            (self.workspace_id, self.device_id, recording.canonical_track_id, file_id,
-             kind.value, file["revision"], expected_private_digest, _json(metadata),
-             int(allow_explicit), _json(zones), rights_until, policy_generation),
+            (
+                self.workspace_id,
+                self.device_id,
+                recording.canonical_track_id,
+                file_id,
+                kind.value,
+                file["revision"],
+                expected_private_digest,
+                _json(metadata),
+                int(allow_explicit),
+                _json(zones),
+                rights_until,
+                policy_generation,
+            ),
         )
         self.conn.commit()
 
@@ -673,15 +738,20 @@ class LocalCatalogue:
             raise UnsafeRecording("Cannot mint from unverified media")
         ref = RecordingRef(self.workspace_id, "track_" + uuid.uuid4().hex)
         self.bind_recording(
-            ref, file_id, kind=MatchState.EXACT,
+            ref,
+            file_id,
+            kind=MatchState.EXACT,
             expected_private_digest=file["digest"],
             expected_metadata=json.loads(file["metadata"]),
         )
         return ref
 
     def resolve(
-        self, recording: RecordingRef, *,
-        zone_id: str | None = None, expected_policy_generation: int | None = None,
+        self,
+        recording: RecordingRef,
+        *,
+        zone_id: str | None = None,
+        expected_policy_generation: int | None = None,
     ) -> Availability:
         if recording.workspace_id != self.workspace_id:
             raise PermissionError("Cross-workspace availability is forbidden")
@@ -694,8 +764,16 @@ class LocalCatalogue:
             (self.workspace_id, self.device_id, recording.canonical_track_id),
         ).fetchone()
         if bound is None:
-            return Availability(self.workspace_id, self.device_id, recording.canonical_track_id,
-                                MatchState.MISSING, "no_local_binding", None, None, None)
+            return Availability(
+                self.workspace_id,
+                self.device_id,
+                recording.canonical_track_id,
+                MatchState.MISSING,
+                "no_local_binding",
+                None,
+                None,
+                None,
+            )
         source_state = _source_state(bound["source_state"])
         reason: str | None = None
         state: MatchState
@@ -711,38 +789,58 @@ class LocalCatalogue:
             state, reason = MatchState.INCOMPATIBLE_VERSION, "unsupported_codec_or_changed_file"
         elif bound["file_state"] != "ready":
             state, reason = MatchState.STALE, "file_changed"
-        elif (bound["verified_at"] is None or 
-              self.clock() - bound["verified_at"] > self.freshness_seconds):
+        elif (
+            bound["verified_at"] is None
+            or self.clock() - bound["verified_at"] > self.freshness_seconds
+        ):
             state, reason = MatchState.STALE, "verification_expired"
-        elif (expected_policy_generation is not None and
-              bound["policy_generation"] != expected_policy_generation):
+        elif (
+            expected_policy_generation is not None
+            and bound["policy_generation"] != expected_policy_generation
+        ):
             state, reason = MatchState.STALE, "policy_generation_changed"
         elif bound["rights_until"] is not None and self.clock() > bound["rights_until"]:
             state, reason = MatchState.BLOCKED, "rights_expired"
-        elif (zone_id is not None and json.loads(bound["allowed_zones"]) and
-              zone_id not in json.loads(bound["allowed_zones"])):
+        elif (
+            zone_id is not None
+            and json.loads(bound["allowed_zones"])
+            and zone_id not in json.loads(bound["allowed_zones"])
+        ):
             state, reason = MatchState.BLOCKED, "zone_not_authorised"
-        elif (not bound["allow_explicit"] and
-              "explicit" in edition_flags(json.loads(bound["metadata"]))):
+        elif not bound["allow_explicit"] and "explicit" in edition_flags(
+            json.loads(bound["metadata"])
+        ):
             state, reason = MatchState.BLOCKED, "explicit_not_allowed"
         elif _conflict(json.loads(bound["expected_metadata"]), json.loads(bound["metadata"])):
             state, reason = MatchState.INCOMPATIBLE_VERSION, "different_recording"
-        elif (bound["revision"] != bound["approved_revision"] or
-              bound["expected_private_digest"] and
-              bound["digest"] != bound["expected_private_digest"]):
+        elif (
+            bound["revision"] != bound["approved_revision"]
+            or bound["expected_private_digest"]
+            and bound["digest"] != bound["expected_private_digest"]
+        ):
             state, reason = MatchState.CANDIDATE, "local_content_revision_changed"
         else:
             state = MatchState(bound["kind"])
             if state == MatchState.CANDIDATE:
                 reason = "requires_local_approval"
         return Availability(
-            self.workspace_id, self.device_id, recording.canonical_track_id,
-            state, reason, bound["verified_at"], bound["revision"], source_state,
+            self.workspace_id,
+            self.device_id,
+            recording.canonical_track_id,
+            state,
+            reason,
+            bound["verified_at"],
+            bound["revision"],
+            source_state,
         )
 
     def resolve_recipe(
-        self, recipe_revision: str, occurrences: Iterable[MixOccurrence], *,
-        zone_id: str | None = None, policy_generation: int | None = None,
+        self,
+        recipe_revision: str,
+        occurrences: Iterable[MixOccurrence],
+        *,
+        zone_id: str | None = None,
+        policy_generation: int | None = None,
     ) -> RecipeAvailability:
         _id(recipe_revision)
         tracks = []
@@ -750,7 +848,8 @@ class LocalCatalogue:
         for occurrence in occurrences:
             _id(occurrence.occurrence_id)
             result = self.resolve(
-                occurrence.recording, zone_id=zone_id,
+                occurrence.recording,
+                zone_id=zone_id,
                 expected_policy_generation=policy_generation,
             )
             track = {
@@ -763,13 +862,19 @@ class LocalCatalogue:
             if result.last_verified_at is not None:
                 verified.append(result.last_verified_at)
         status = (
-            "ready" if tracks and all(t["state"] == "ready" for t in tracks)
-            else "unknown" if any(t["state"] in ("unknown", "stale") for t in tracks)
+            "ready"
+            if tracks and all(t["state"] == "ready" for t in tracks)
+            else "unknown"
+            if any(t["state"] in ("unknown", "stale") for t in tracks)
             else "needs_attention"
         )
         return RecipeAvailability(
-            self.workspace_id, self.device_id, recipe_revision, status,
-            tuple(tracks), min(verified) if verified else None,
+            self.workspace_id,
+            self.device_id,
+            recipe_revision,
+            status,
+            tuple(tracks),
+            min(verified) if verified else None,
         )
 
     def register_dependent(self, artifact_id: str, file_id: str) -> None:
@@ -790,8 +895,12 @@ class LocalCatalogue:
             "FROM dependents d JOIN local_files f ON f.id=d.file_id WHERE d.artifact_id=?",
             (_id(artifact_id),),
         ).fetchone()
-        return bool(row and not row["invalidated"] and row["revision"] ==
-                    row["recorded_revision"] and row["state"] == "ready")
+        return bool(
+            row
+            and not row["invalidated"]
+            and row["revision"] == row["recorded_revision"]
+            and row["state"] == "ready"
+        )
 
     def candidate_matches(
         self, requested: Mapping[str, Any], *, limit: int = 25
@@ -815,13 +924,13 @@ class LocalCatalogue:
             ):
                 continue
             state = (
-                MatchState.INCOMPATIBLE_VERSION if _conflict(requested, actual)
+                MatchState.INCOMPATIBLE_VERSION
+                if _conflict(requested, actual)
                 else MatchState.CANDIDATE
             )
             if file["state"] != "ready" or file["source_state"] != "ready":
                 continue
-            found.append({"local_file_id": file["id"], "state": state.value,
-                          "metadata": actual})
+            found.append({"local_file_id": file["id"], "state": state.value, "metadata": actual})
             if len(found) >= limit:
                 break
         return found

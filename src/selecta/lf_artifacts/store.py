@@ -4,6 +4,7 @@ Only the local engine may construct this store. No cloud API, network or schedul
 imported: the optional Agent-05 bridge is in work_adapter.py. Files in source
 directories are never writable through this module.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -52,7 +53,9 @@ def sha256_file(path: Path) -> str:
             digest.update(chunk)
     after = path.stat()
     if (before.st_size, before.st_mtime_ns, before.st_ino) != (
-        after.st_size, after.st_mtime_ns, after.st_ino
+        after.st_size,
+        after.st_mtime_ns,
+        after.st_ino,
     ):
         raise ArtifactInvalid("The source changed during verification.")
     return digest.hexdigest()
@@ -92,15 +95,21 @@ class ArtifactSpec:
         models = _safe_map(self.models, "models")
         if not sources or not versions:
             raise ArtifactInvalid("Artifact identity requires sources and renderer versions.")
-        if any(len(value) != 64 or any(c not in "0123456789abcdef" for c in value)
-               for value in sources.values()):
+        if any(
+            len(value) != 64 or any(c not in "0123456789abcdef" for c in value)
+            for value in sources.values()
+        ):
             raise ArtifactInvalid("Source revisions must be SHA-256 hex digests.")
         if not isinstance(self.settings, Mapping):
             raise ArtifactInvalid("Settings must be a mapping.")
         # JSON conversion also rejects unbounded / non-serialisable settings.
         data = {
-            "schema": 1, "kind": self.kind, "sources": sources, "versions": versions,
-            "settings": dict(self.settings), "models": models,
+            "schema": 1,
+            "kind": self.kind,
+            "sources": sources,
+            "versions": versions,
+            "settings": dict(self.settings),
+            "models": models,
         }
         if len(_json(data)) > 65536:
             raise ArtifactInvalid("Artifact settings are too large.")
@@ -266,15 +275,23 @@ class LocalArtifactStore:
                 # independently saved exports need separate publication records.
                 publication_id = (
                     hashlib.sha256((identity + ":" + uuid.uuid4().hex).encode()).hexdigest()
-                    if permanent else identity
+                    if permanent
+                    else identity
                 )
                 record = {
-                    "schema": 1, "id": publication_id, "spec_id": identity,
+                    "schema": 1,
+                    "id": publication_id,
+                    "spec_id": identity,
                     "kind": spec.kind,
-                    "spec": spec.canonical(), "storage": "export" if permanent else "cache",
-                    "local_path": str(final.absolute()), "bytes": final.stat().st_size,
-                    "checksum": byte_checksum, "validation_checksum": validation_checksum,
-                    "state": "ready", "created_at": now, "updated_at": now,
+                    "spec": spec.canonical(),
+                    "storage": "export" if permanent else "cache",
+                    "local_path": str(final.absolute()),
+                    "bytes": final.stat().st_size,
+                    "checksum": byte_checksum,
+                    "validation_checksum": validation_checksum,
+                    "state": "ready",
+                    "created_at": now,
+                    "updated_at": now,
                 }
                 self._save(record)
                 return record, result
@@ -302,8 +319,12 @@ class LocalArtifactStore:
                 return "corrupt"
         return "ready"
 
-    def invalidate(self, *, source_revisions: Mapping[str, str] | None = None,
-                   versions: Mapping[str, str] | None = None) -> int:
+    def invalidate(
+        self,
+        *,
+        source_revisions: Mapping[str, str] | None = None,
+        versions: Mapping[str, str] | None = None,
+    ) -> int:
         """Mark affected records stale, keeping exported audio and source recordings."""
         changed = 0
         current_sources = dict(source_revisions or {})
@@ -316,11 +337,14 @@ class LocalArtifactStore:
                 spec = record.get("spec", {})
                 sources = spec.get("sources", {})
                 renderers = spec.get("versions", {})
-                if (
-                    any(sources.get(key) != value for key, value in current_sources.items()
-                        if key in sources)
-                    or any(renderers.get(key) != value for key, value in current_versions.items()
-                           if key in renderers)
+                if any(
+                    sources.get(key) != value
+                    for key, value in current_sources.items()
+                    if key in sources
+                ) or any(
+                    renderers.get(key) != value
+                    for key, value in current_versions.items()
+                    if key in renderers
                 ):
                     if record.get("state") != "stale":
                         record["state"] = "stale"
@@ -370,7 +394,8 @@ class LocalArtifactStore:
             for path in Path(default_exports).glob(".selecta-mix-*.part*"):
                 if re.fullmatch(
                     r"\.selecta-mix-\d{8}-\d{6}-[a-f0-9]{6}\.flac"
-                    r"\.[a-f0-9]{32}\.part(?:\.part)?", path.name,
+                    r"\.[a-f0-9]{32}\.part(?:\.part)?",
+                    path.name,
                 ) and (path.is_file() or path.is_symlink()):
                     path.unlink(missing_ok=True)
                     removed += 1
@@ -382,8 +407,11 @@ class LocalArtifactStore:
         with self._lock:
             for item in self.records.glob("*.json"):
                 record = self.read(item.stem)
-                if (record and source_name in record.get("spec", {}).get("sources", {})
-                        and record.get("state") != "stale"):
+                if (
+                    record
+                    and source_name in record.get("spec", {}).get("sources", {})
+                    and record.get("state") != "stale"
+                ):
                     record["state"] = "stale"
                     record["updated_at"] = time.time()
                     self._save(record)
@@ -396,10 +424,13 @@ class LocalArtifactStore:
         if record is None:
             return {"artifact_id": identity, "device_id": device_id, "state": "missing"}
         return {
-            "artifact_id": record["id"], "device_id": device_id,
+            "artifact_id": record["id"],
+            "device_id": device_id,
             # Polling remote controllers must not hash gigabyte-scale FLACs.
             # Deep integrity checks are available through state(verify_bytes=True).
-            "kind": record["kind"], "state": self.state(identity, verify_bytes=False),
-            "storage": record["storage"], "size_bytes": record["bytes"],
+            "kind": record["kind"],
+            "state": self.state(identity, verify_bytes=False),
+            "storage": record["storage"],
+            "size_bytes": record["bytes"],
             "completed_at": record["created_at"],
         }

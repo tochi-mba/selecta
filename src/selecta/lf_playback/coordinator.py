@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import sqlite3
 import time
-from typing import Callable
+from collections.abc import Callable
 
 from .contracts import (
     EnginePort,
@@ -22,8 +22,13 @@ from .ledger import SQLiteOwnershipLedger, encode_request
 
 
 class TransferCoordinator:
-    def __init__(self, ledger: SQLiteOwnershipLedger, engine: EnginePort,
-                 *, clock: Callable[[], float] = time.time) -> None:
+    def __init__(
+        self,
+        ledger: SQLiteOwnershipLedger,
+        engine: EnginePort,
+        *,
+        clock: Callable[[], float] = time.time,
+    ) -> None:
         self.ledger = ledger
         self.engine = engine
         self.clock = clock
@@ -41,13 +46,18 @@ class TransferCoordinator:
             if self.ledger.owner(db, scope):
                 raise TransferRejected("already_initialized", "Ownership already established")
             state = self.engine.observe(device_id, scope)
-            if (not state.reachable or state.audible is not True
-                    or state.owned_generation != generation
-                    or state.fenced_generation is None
-                    or state.fenced_generation != generation):
+            if (
+                not state.reachable
+                or state.audible is not True
+                or state.owned_generation != generation
+                or state.fenced_generation is None
+                or state.fenced_generation != generation
+            ):
                 raise TransferRejected("unverified_owner", "Local audible ownership not proven")
-            db.execute("INSERT INTO ownership VALUES (?,?,?,?,?)",
-                       (scope.workspace_id, scope.zone_key, generation, device_id, "audible"))
+            db.execute(
+                "INSERT INTO ownership VALUES (?,?,?,?,?)",
+                (scope.workspace_id, scope.zone_key, generation, device_id, "audible"),
+            )
 
     def initialize_silent(self, scope: Scope, device_id: str) -> None:
         """Initial provisioning, only after operator confirms no older speaker exists.
@@ -59,12 +69,12 @@ class TransferCoordinator:
             if self.ledger.owner(db, scope):
                 raise TransferRejected("already_initialized", "Ownership already established")
             state = self.engine.observe(device_id, scope)
-            if (not state.reachable or state.audible is not False
-                    or state.fenced_generation is None):
+            if not state.reachable or state.audible is not False or state.fenced_generation is None:
                 raise TransferRejected("unverified_silence", "Local output silence not proven")
-            db.execute("INSERT INTO ownership VALUES (?,?,?,?,?)",
-                       (scope.workspace_id, scope.zone_key, state.fenced_generation,
-                        None, "silent"))
+            db.execute(
+                "INSERT INTO ownership VALUES (?,?,?,?,?)",
+                (scope.workspace_id, scope.zone_key, state.fenced_generation, None, "silent"),
+            )
 
     def begin(self, request: TransferRequest) -> TransferSnapshot:
         """Exactly one active operation per workspace/zone; idempotent across tabs."""
@@ -101,9 +111,16 @@ class TransferCoordinator:
                        (operation_id,workspace,zone,idempotency_key,request_json,
                         source_device,generation,stage)
                        VALUES (?,?,?,?,?,?,?,?)""",
-                    (request.operation_id, request.scope.workspace_id, request.scope.zone_key,
-                     request.idempotency_key, raw, owner["device"],
-                     owner["generation"] + 1, TransferStage.REQUESTED.value),
+                    (
+                        request.operation_id,
+                        request.scope.workspace_id,
+                        request.scope.zone_key,
+                        request.idempotency_key,
+                        raw,
+                        owner["device"],
+                        owner["generation"] + 1,
+                        TransferStage.REQUESTED.value,
+                    ),
                 )
             except sqlite3.IntegrityError as exc:
                 raise TransferRejected("transfer_busy", "Another takeover is in progress") from exc
@@ -113,8 +130,11 @@ class TransferCoordinator:
         """Advance every safe step; retry after crash using the same operation ID."""
         snapshot = self.begin(request)
         for _ in range(4):
-            if snapshot.stage in (TransferStage.STARTED, TransferStage.ABORTED,
-                                  TransferStage.BLOCKED):
+            if snapshot.stage in (
+                TransferStage.STARTED,
+                TransferStage.ABORTED,
+                TransferStage.BLOCKED,
+            ):
                 break
             snapshot = self.advance(request.operation_id)
         return snapshot
@@ -132,8 +152,7 @@ class TransferCoordinator:
                 raise TransferRejected("unknown_operation", "No such transfer")
             snapshot = self.ledger.snapshot(db, row)
             stage = snapshot.stage
-            if stage in (TransferStage.STARTED, TransferStage.ABORTED,
-                         TransferStage.BLOCKED):
+            if stage in (TransferStage.STARTED, TransferStage.ABORTED, TransferStage.BLOCKED):
                 return snapshot
             request = snapshot.request
             generation = snapshot.generation
@@ -151,8 +170,14 @@ class TransferCoordinator:
                 raise AssertionError(stage)
             return self.ledger.snapshot(db, self.ledger.attempt(db, operation_id))
 
-    def _fail(self, db: sqlite3.Connection, snapshot: TransferSnapshot, code: str,
-              *, uncertain: bool = False) -> None:
+    def _fail(
+        self,
+        db: sqlite3.Connection,
+        snapshot: TransferSnapshot,
+        code: str,
+        *,
+        uncertain: bool = False,
+    ) -> None:
         # No automatic return to the old speaker once it was physically released.
         after_release = snapshot.stage in (TransferStage.RELEASED, TransferStage.ACQUIRED)
         stage = TransferStage.BLOCKED if after_release or uncertain else TransferStage.ABORTED
@@ -172,21 +197,26 @@ class TransferCoordinator:
                 return
             token = self.engine.prepare_silent(request, s.generation)
             observed = self.engine.observe(request.target_device_id, request.scope)
-            if (not token or not observed.reachable or observed.audible is not False):
+            if not token or not observed.reachable or observed.audible is not False:
                 self._fail(db, s, "silent_preparation_unverified", uncertain=True)
                 return
             self.ledger.mutate(db, request.operation_id, TransferStage.PREPARED, token=token)
         except (OSError, TimeoutError, RuntimeError, TransferRejected) as exc:
             self._pre_release_failure(db, s, "prepare_failed:" + type(exc).__name__)
 
-    def _pre_release_failure(self, db: sqlite3.Connection, s: TransferSnapshot,
-                             reason: str) -> None:
+    def _pre_release_failure(
+        self, db: sqlite3.Connection, s: TransferSnapshot, reason: str
+    ) -> None:
         try:
             observed = self.engine.observe(s.request.target_device_id, s.request.scope)
         except (OSError, TimeoutError, RuntimeError, TransferRejected):
             observed = None
-        self._fail(db, s, reason, uncertain=(observed is None or
-                   not observed.reachable or observed.audible is not False))
+        self._fail(
+            db,
+            s,
+            reason,
+            uncertain=(observed is None or not observed.reachable or observed.audible is not False),
+        )
 
     def _release(self, db: sqlite3.Connection, s: TransferSnapshot) -> None:
         source = s.source_device_id
@@ -203,16 +233,20 @@ class TransferCoordinator:
                 observed = None
             # Acknowledgements are insufficient without measured silence AND a
             # persisted local fence preventing the old generation restarting.
-            confirmed = (observed is not None and observed.reachable
-                         and observed.audible is False
-                         and observed.fenced_generation is not None
-                         and observed.fenced_generation == s.generation
-                         and observed.operation_id == s.request.operation_id)
+            confirmed = (
+                observed is not None
+                and observed.reachable
+                and observed.audible is False
+                and observed.fenced_generation is not None
+                and observed.fenced_generation == s.generation
+                and observed.operation_id == s.request.operation_id
+            )
             if not confirmed:
                 # If source remains audibly playing, preserve it; if its physical
                 # state is unknown, block rather than assert a safe migration.
-                uncertain = (observed is None or not observed.reachable
-                             or observed.audible is not True)
+                uncertain = (
+                    observed is None or not observed.reachable or observed.audible is not True
+                )
                 self._fail(db, s, "source_release_unconfirmed", uncertain=uncertain)
                 return
             # A lost stop ack is recoverable only with local physical+fence proof.
@@ -225,52 +259,61 @@ class TransferCoordinator:
             if report.missing(s.request, self.clock()):
                 self._fail(db, s, "preflight_changed_after_release")
                 return
-            if not self.engine.acquire_silent(s.request, s.generation,
-                                             s.prepared_token or ""):
+            if not self.engine.acquire_silent(s.request, s.generation, s.prepared_token or ""):
                 self._fail(db, s, "silent_acquire_refused")
                 return
             observed = self.engine.observe(s.request.target_device_id, s.request.scope)
-            if (not observed.reachable or observed.audible is not False
-                    or observed.owned_generation != s.generation
-                    or observed.fenced_generation is None
-                    or observed.fenced_generation != s.generation
-                    or observed.operation_id != s.request.operation_id):
+            if (
+                not observed.reachable
+                or observed.audible is not False
+                or observed.owned_generation != s.generation
+                or observed.fenced_generation is None
+                or observed.fenced_generation != s.generation
+                or observed.operation_id != s.request.operation_id
+            ):
                 self._fail(db, s, "silent_acquire_unverified")
                 return
         except (OSError, TimeoutError, RuntimeError, TransferRejected) as exc:
             self._fail(db, s, "acquire_failed:" + type(exc).__name__)
             return
-        self.ledger.owner_state(db, s.request.scope, s.generation,
-                                s.request.target_device_id, "silent")
+        self.ledger.owner_state(
+            db, s.request.scope, s.generation, s.request.target_device_id, "silent"
+        )
         self.ledger.mutate(db, s.request.operation_id, TransferStage.ACQUIRED)
 
     def _start(self, db: sqlite3.Connection, s: TransferSnapshot) -> None:
         try:
             self.engine.start_and_confirm(s.request, s.generation)
             observed = self.engine.observe(s.request.target_device_id, s.request.scope)
-            if (not observed.reachable or observed.audible is not True
-                    or observed.owned_generation != s.generation
-                    or observed.fenced_generation != s.generation
-                    or observed.operation_id != s.request.operation_id):
+            if (
+                not observed.reachable
+                or observed.audible is not True
+                or observed.owned_generation != s.generation
+                or observed.fenced_generation != s.generation
+                or observed.operation_id != s.request.operation_id
+            ):
                 self._fail(db, s, "start_unverified")
                 return
         except (OSError, TimeoutError, RuntimeError, TransferRejected) as exc:
             # Failure after output starts but before acknowledgement is not
             # retried as a second start if we cannot inspect physical truth.
             try:
-                observed = self.engine.observe(s.request.target_device_id,
-                                               s.request.scope)
+                observed = self.engine.observe(s.request.target_device_id, s.request.scope)
             except (OSError, TimeoutError, RuntimeError, TransferRejected):
                 observed = None
-            if (observed is None or not observed.reachable
-                    or observed.audible is not True
-                    or observed.owned_generation != s.generation
-                    or observed.fenced_generation != s.generation
-                    or observed.operation_id != s.request.operation_id):
+            if (
+                observed is None
+                or not observed.reachable
+                or observed.audible is not True
+                or observed.owned_generation != s.generation
+                or observed.fenced_generation != s.generation
+                or observed.operation_id != s.request.operation_id
+            ):
                 self._fail(db, s, "start_failed:" + type(exc).__name__)
                 return
-        self.ledger.owner_state(db, s.request.scope, s.generation,
-                                s.request.target_device_id, "audible")
+        self.ledger.owner_state(
+            db, s.request.scope, s.generation, s.request.target_device_id, "audible"
+        )
         self.ledger.mutate(db, s.request.operation_id, TransferStage.STARTED)
 
     def manual_isolation(self, operation_id: str, evidence_token: str) -> TransferSnapshot:
@@ -298,16 +341,20 @@ class TransferCoordinator:
                 preflight = self.engine.preflight(s.request)
             except Exception as exc:
                 raise TransferRejected("unverified_destination", "Cannot verify target") from exc
-            if (not target.reachable or target.audible is not False
-                    or preflight.missing(s.request, self.clock())):
+            if (
+                not target.reachable
+                or target.audible is not False
+                or preflight.missing(s.request, self.clock())
+            ):
                 raise TransferRejected("unverified_destination", "Target is not safe to acquire")
             owner = self.ledger.owner(db, s.request.scope)
             if owner["device"] != s.source_device_id or owner["generation"] + 1 != s.generation:
                 raise TransferRejected("stale_generation", "Ownership has changed")
             if self.clock() >= s.request.expires_at:
                 raise TransferRejected("expired", "Start a fresh recovery operation")
-            if not self.engine.manual_isolate(s.source_device_id, s.request,
-                                               s.generation, evidence_token):
+            if not self.engine.manual_isolate(
+                s.source_device_id, s.request, s.generation, evidence_token
+            ):
                 raise TransferRejected("unverified_isolation", "Physical isolation not established")
             self.ledger.owner_state(db, s.request.scope, s.generation, None, "silent")
             self.ledger.mutate(db, operation_id, TransferStage.RELEASED)

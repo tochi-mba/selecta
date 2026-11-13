@@ -2,31 +2,52 @@
 
 No route, audio transport or filesystem access is provided by this module.
 """
+
 from __future__ import annotations
 
 import hashlib
 import hmac
 import json
 import re
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
-from typing import Any, Mapping
+from typing import Any
 
 VERSION = 1
 MAX_BYTES = 16_384
 MAX_SKEW = 30.0
 EPHEMERAL = frozenset({"play", "pause", "skip", "seek"})
-DURABLE = frozenset({"set_volume", "set_schedule", "set_policy", "steer", "reorder", "approve_request"})
+DURABLE = frozenset(
+    {"set_volume", "set_schedule", "set_policy", "steer", "reorder", "approve_request"}
+)
 COMMANDS = EPHEMERAL | DURABLE
 IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:\-]{0,127}$")
 ROLES = frozenset({"owner", "admin", "dj", "staff", "viewer"})
-_ALLOWED = frozenset({
-    "schema_version", "operation_id", "actor_id", "actor_role", "workspace_id", "zone_id",
-    "target_device_id", "expected_generation", "expected_recipe_revision", "policy_version",
-    "sequence", "command", "arguments", "created_at", "expires_at", "idempotency_key",
-})
+_ALLOWED = frozenset(
+    {
+        "schema_version",
+        "operation_id",
+        "actor_id",
+        "actor_role",
+        "workspace_id",
+        "zone_id",
+        "target_device_id",
+        "expected_generation",
+        "expected_recipe_revision",
+        "policy_version",
+        "sequence",
+        "command",
+        "arguments",
+        "created_at",
+        "expires_at",
+        "idempotency_key",
+    }
+)
 _ARG_FIELDS: dict[str, frozenset[str]] = {
-    "play": frozenset(), "pause": frozenset(),
-    "skip": frozenset({"song_index"}), "seek": frozenset({"song_index", "offset_ms"}),
+    "play": frozenset(),
+    "pause": frozenset(),
+    "skip": frozenset({"song_index"}),
+    "seek": frozenset({"song_index", "offset_ms"}),
     "set_volume": frozenset({"volume"}),
     "set_schedule": frozenset({"schedule_id", "revision", "enabled"}),
     "set_policy": frozenset({"revision", "enabled"}),
@@ -119,10 +140,13 @@ def _args(command: str, raw: Any) -> dict[str, Any]:
             if len(set(clean[name])) != len(clean[name]):
                 raise ControlError("unsafe_arguments")
     required = {
-        "seek": {"offset_ms"}, "set_volume": {"volume"},
+        "seek": {"offset_ms"},
+        "set_volume": {"volume"},
         "set_schedule": {"schedule_id", "revision", "enabled"},
-        "set_policy": {"revision", "enabled"}, "steer": {"direction"},
-        "reorder": {"occurrence_ids"}, "approve_request": {"request_id"},
+        "set_policy": {"revision", "enabled"},
+        "steer": {"direction"},
+        "reorder": {"occurrence_ids"},
+        "approve_request": {"request_id"},
     }.get(command, set())
     if not required <= clean.keys():
         raise ControlError("missing_arguments")
@@ -171,15 +195,21 @@ class CommandEnvelope:
             if expires <= now:
                 raise ControlError("expired")
         value = cls(
-            schema_version=VERSION, operation_id=_id(raw["operation_id"]),
-            actor_id=_id(raw["actor_id"]), actor_role=role,
-            workspace_id=_id(raw["workspace_id"]), zone_id=_id(raw["zone_id"], optional=True),
+            schema_version=VERSION,
+            operation_id=_id(raw["operation_id"]),
+            actor_id=_id(raw["actor_id"]),
+            actor_role=role,
+            workspace_id=_id(raw["workspace_id"]),
+            zone_id=_id(raw["zone_id"], optional=True),
             target_device_id=_id(raw["target_device_id"]),
             expected_generation=_integer(raw["expected_generation"]),
             expected_recipe_revision=_id(raw["expected_recipe_revision"], optional=True),
             policy_version=_integer(raw["policy_version"]),
-            sequence=_integer(raw["sequence"], minimum=1), command=command,
-            arguments=_args(command, raw["arguments"]), created_at=created, expires_at=expires,
+            sequence=_integer(raw["sequence"], minimum=1),
+            command=command,
+            arguments=_args(command, raw["arguments"]),
+            created_at=created,
+            expires_at=expires,
             idempotency_key=_id(raw["idempotency_key"]),
         )
         if len(value.canonical()) > MAX_BYTES:
@@ -187,8 +217,9 @@ class CommandEnvelope:
         return value
 
     def canonical(self) -> bytes:
-        return json.dumps(asdict(self), sort_keys=True, separators=(",", ":"),
-                          ensure_ascii=True, allow_nan=False).encode("utf-8")
+        return json.dumps(
+            asdict(self), sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False
+        ).encode("utf-8")
 
     @property
     def durable(self) -> bool:
@@ -219,8 +250,12 @@ class ActorScope:
 
 
 def authorise_actor(envelope: CommandEnvelope, scope: ActorScope) -> None:
-    if (scope.actor_id != envelope.actor_id or scope.workspace_id != envelope.workspace_id
-            or scope.role != envelope.actor_role or envelope.zone_id not in scope.zones):
+    if (
+        scope.actor_id != envelope.actor_id
+        or scope.workspace_id != envelope.workspace_id
+        or scope.role != envelope.actor_role
+        or envelope.zone_id not in scope.zones
+    ):
         raise ControlError("scope_denied")
     if scope.role == "viewer":
         raise ControlError("role_denied")
@@ -247,8 +282,11 @@ class LocalScope:
 def authorise_local(envelope: CommandEnvelope, scope: LocalScope) -> None:
     if scope.revoked:
         raise ControlError("device_revoked")
-    if (envelope.workspace_id != scope.workspace_id or envelope.target_device_id != scope.device_id
-            or envelope.zone_id not in scope.zones):
+    if (
+        envelope.workspace_id != scope.workspace_id
+        or envelope.target_device_id != scope.device_id
+        or envelope.zone_id not in scope.zones
+    ):
         raise ControlError("scope_denied")
     if envelope.policy_version < scope.minimum_policy_version:
         raise ControlError("stale_policy")
@@ -258,5 +296,7 @@ def authorise_local(envelope: CommandEnvelope, scope: LocalScope) -> None:
         raise ControlError("stale_recipe")
     if scope.authorised_actors.get(envelope.actor_id) != envelope.actor_role:
         raise ControlError("actor_revoked_or_changed")
-    authorise_actor(envelope, ActorScope(envelope.actor_id, scope.workspace_id,
-                                        envelope.actor_role, scope.zones))
+    authorise_actor(
+        envelope,
+        ActorScope(envelope.actor_id, scope.workspace_id, envelope.actor_role, scope.zones),
+    )

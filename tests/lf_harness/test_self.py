@@ -1,24 +1,41 @@
 """Pure harness unit tests. Never present these as LF system acceptance results."""
+
 from __future__ import annotations
 
-import json
 import tempfile
 import unittest
 import wave
-from datetime import datetime, time, timedelta, timezone
+from datetime import UTC, datetime, time, timedelta
 from pathlib import Path
 
 from .audio import make_synthetic_wave, validate_synthetic_wave
-from .contracts import (ContractViolation, assert_availability_contract,
-                        assert_command_contract, assert_command_result, synthetic_recipe)
+from .contracts import (
+    ContractViolation,
+    assert_availability_contract,
+    assert_command_contract,
+    assert_command_result,
+    synthetic_recipe,
+)
 from .evidence import Evidence, EvidenceLedger, runtime_environment
-from .faults import (DiskBudget, ResourcePressure, corrupt_media, crashed_engine,
-                     disconnected_drive, heartbeat_stale, missing_output, power_cycle)
+from .faults import (
+    DiskBudget,
+    ResourcePressure,
+    corrupt_media,
+    crashed_engine,
+    disconnected_drive,
+    heartbeat_stale,
+    missing_output,
+    power_cycle,
+)
 from .fixtures import make_five_of_eight_fleet
 from .network import DeterministicNetwork, VirtualClock
 from .playback import OutputSafetyMonitor, PlaybackObservation, TakeoverScenario
-from .security import (assert_no_media_in_cloud_capture, cross_tenant_command,
-                       forbidden_media_probes, malicious_local_paths)
+from .security import (
+    assert_no_media_in_cloud_capture,
+    cross_tenant_command,
+    forbidden_media_probes,
+    malicious_local_paths,
+)
 from .venues import OpeningHours, VenueClock, VenueSimulation
 
 
@@ -56,10 +73,14 @@ class FleetTests(unittest.TestCase):
             self.assertNotEqual(a.output_dir, b.output_dir)
             self.assertNotEqual(a.root / "identities", b.root / "identities")
             self.assertFalse(a.source_dir.is_relative_to(b.root))
-            self.assertEqual([x["state"] for x in a.availability(fleet.recipe_ids, now_ms=1)["tracks"]],
-                             ["ready"] * 5 + ["missing"] * 3)
-            self.assertEqual([x["state"] for x in b.availability(fleet.recipe_ids, now_ms=1)["tracks"]],
-                             ["ready"] * 8)
+            self.assertEqual(
+                [x["state"] for x in a.availability(fleet.recipe_ids, now_ms=1)["tracks"]],
+                ["ready"] * 5 + ["missing"] * 3,
+            )
+            self.assertEqual(
+                [x["state"] for x in b.availability(fleet.recipe_ids, now_ms=1)["tracks"]],
+                ["ready"] * 8,
+            )
             self.assertTrue((a.root / "catalogue.json").exists())
             recipe = synthetic_recipe(fleet.recipe_ids)
             self.assertEqual(len(recipe["occurrences"]), 8)
@@ -68,7 +89,9 @@ class FleetTests(unittest.TestCase):
     def test_controller_denied_local_media(self):
         with make_five_of_eight_fleet() as fleet:
             with self.assertRaises(ValueError):
-                fleet.add_device("bad-controller", "workspace-a", "controller", recording_numbers=(1,))
+                fleet.add_device(
+                    "bad-controller", "workspace-a", "controller", recording_numbers=(1,)
+                )
 
     def test_disconnection_crash_and_stale_availability(self):
         with make_five_of_eight_fleet() as fleet:
@@ -76,11 +99,14 @@ class FleetTests(unittest.TestCase):
             with disconnected_drive(device):
                 self.assertFalse(device.source_dir.exists())
                 self.assertFalse(device.inventory())
-                self.assertEqual(device.availability(fleet.recipe_ids, now_ms=1)["tracks"][0]["state"],
-                                 "source_disconnected")
+                self.assertEqual(
+                    device.availability(fleet.recipe_ids, now_ms=1)["tracks"][0]["state"],
+                    "source_disconnected",
+                )
             with crashed_engine(device):
-                self.assertEqual(device.availability(fleet.recipe_ids, now_ms=1)["tracks"][0]["state"],
-                                 "unknown")
+                self.assertEqual(
+                    device.availability(fleet.recipe_ids, now_ms=1)["tracks"][0]["state"], "unknown"
+                )
             self.assertTrue(device.running)
             self.assertTrue(device.drive_connected)
             self.assertTrue(heartbeat_stale(device, now_ms=60_001))
@@ -151,26 +177,32 @@ class FaultTests(unittest.TestCase):
 
 class PlaybackTests(unittest.TestCase):
     def test_overlap_oracle_detects_double_audio(self):
-        monitor = OutputSafetyMonitor([
-            PlaybackObservation("engine-a", "zone-1", "speaker-a", 0, 110, 2),
-            PlaybackObservation("engine-b", "zone-1", "speaker-b", 100, 200, 3),
-        ])
+        monitor = OutputSafetyMonitor(
+            [
+                PlaybackObservation("engine-a", "zone-1", "speaker-a", 0, 110, 2),
+                PlaybackObservation("engine-b", "zone-1", "speaker-b", 100, 200, 3),
+            ]
+        )
         with self.assertRaisesRegex(AssertionError, "unsafe overlap"):
             monitor.assert_no_double_audio()
 
     def test_distinct_zones_and_adjacent_intervals_allowed(self):
-        monitor = OutputSafetyMonitor([
-            PlaybackObservation("engine-a", "zone-1", "speaker-a", 0, 100, 1),
-            PlaybackObservation("engine-b", "zone-2", "speaker-b", 50, 150, 1),
-            PlaybackObservation("engine-c", "zone-1", "speaker-c", 100, 200, 2),
-        ])
+        monitor = OutputSafetyMonitor(
+            [
+                PlaybackObservation("engine-a", "zone-1", "speaker-a", 0, 100, 1),
+                PlaybackObservation("engine-b", "zone-2", "speaker-b", 50, 150, 1),
+                PlaybackObservation("engine-c", "zone-1", "speaker-c", 100, 200, 2),
+            ]
+        )
         monitor.assert_no_double_audio()
 
     def test_same_exclusive_physical_output_cross_zone_rejected(self):
-        monitor = OutputSafetyMonitor([
-            PlaybackObservation("engine-a", "zone-a", "dac-1", 0, 100, 1),
-            PlaybackObservation("engine-a", "zone-b", "dac-1", 20, 110, 1),
-        ])
+        monitor = OutputSafetyMonitor(
+            [
+                PlaybackObservation("engine-a", "zone-a", "dac-1", 0, 100, 1),
+                PlaybackObservation("engine-a", "zone-b", "dac-1", 20, 110, 1),
+            ]
+        )
         with self.assertRaisesRegex(AssertionError, "unsafe overlap"):
             monitor.assert_no_double_audio()
 
@@ -179,47 +211,58 @@ class PlaybackTests(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "UNVERIFIED_PHYSICAL_OUTPUT"):
             monitor.assert_physically_verified(required_outputs={"speaker"})
         with self.assertRaises(ValueError):
-            PlaybackObservation("a", "z", "speaker", 0, 50, 1,
-                                kind="measured_physical_output")
+            PlaybackObservation("a", "z", "speaker", 0, 50, 1, kind="measured_physical_output")
 
     def test_concurrent_takeover_and_retries(self):
         scenario = TakeoverScenario(active_device="engine-a")
         self.assertTrue(scenario.prepare("engine-b", media_ready=True, output_ready=True))
         self.assertTrue(scenario.prepare("engine-c", media_ready=True, output_ready=True))
-        first = scenario.attempt(operation_id="one", target="engine-b", expected_generation=7,
-                                 released_old=True)
-        second = scenario.attempt(operation_id="two", target="engine-c", expected_generation=7,
-                                  released_old=True)
+        first = scenario.attempt(
+            operation_id="one", target="engine-b", expected_generation=7, released_old=True
+        )
+        second = scenario.attempt(
+            operation_id="two", target="engine-c", expected_generation=7, released_old=True
+        )
         self.assertTrue(first.accepted)
         self.assertFalse(second.accepted)
         self.assertEqual(second.reason, "stale_generation")
-        self.assertEqual(scenario.attempt(operation_id="one", target="engine-b",
-                                          expected_generation=7, released_old=True), first)
+        self.assertEqual(
+            scenario.attempt(
+                operation_id="one", target="engine-b", expected_generation=7, released_old=True
+            ),
+            first,
+        )
         self.assertEqual(scenario.generation, 8)
 
     def test_partition_and_missing_media_refuse_takeover(self):
         scenario = TakeoverScenario(active_device="engine-a", partitioned_devices={"engine-a"})
         self.assertFalse(scenario.prepare("engine-b", media_ready=False, output_ready=True))
-        self.assertEqual(scenario.attempt(operation_id="one", target="engine-b",
-                                          expected_generation=7, released_old=True).reason,
-                         "preflight_required")
+        self.assertEqual(
+            scenario.attempt(
+                operation_id="one", target="engine-b", expected_generation=7, released_old=True
+            ).reason,
+            "preflight_required",
+        )
         scenario.prepare("engine-b", media_ready=True, output_ready=True)
-        self.assertEqual(scenario.attempt(operation_id="two", target="engine-b",
-                                          expected_generation=7, released_old=True).reason,
-                         "unsafe_old_speaker_partition")
+        self.assertEqual(
+            scenario.attempt(
+                operation_id="two", target="engine-b", expected_generation=7, released_old=True
+            ).reason,
+            "unsafe_old_speaker_partition",
+        )
         self.assertEqual(scenario.active_device, "engine-a")
 
 
 class VenueTests(unittest.TestCase):
     def test_overnight_open_uses_previous_open_day(self):
         open_hours = OpeningHours(time(22), time(4), closed_weekdays=frozenset({0}))
-        tuesday_1am = datetime(2026, 11, 17, 1, tzinfo=timezone.utc)
+        tuesday_1am = datetime(2026, 11, 17, 1, tzinfo=UTC)
         self.assertFalse(open_hours.is_open(tuesday_1am))
-        wednesday_1am = datetime(2026, 11, 18, 1, tzinfo=timezone.utc)
+        wednesday_1am = datetime(2026, 11, 18, 1, tzinfo=UTC)
         self.assertTrue(open_hours.is_open(wednesday_1am))
 
     def test_dst_fall_back_yields_two_distinct_1am_hours(self):
-        clock = VenueClock(datetime(2026, 10, 25, 0, 30, tzinfo=timezone.utc))
+        clock = VenueClock(datetime(2026, 10, 25, 0, 30, tzinfo=UTC))
         earlier = clock.local
         clock.advance(timedelta(hours=1))
         later = clock.local
@@ -228,8 +271,10 @@ class VenueTests(unittest.TestCase):
         self.assertNotEqual(earlier.utcoffset(), later.utcoffset())
 
     def test_spring_forward_and_30_day_outage(self):
-        venue = VenueSimulation(VenueClock(datetime(2026, 3, 29, 0, 30, tzinfo=timezone.utc)),
-                                OpeningHours(time(0), time(0), all_day=True))
+        venue = VenueSimulation(
+            VenueClock(datetime(2026, 3, 29, 0, 30, tzinfo=UTC)),
+            OpeningHours(time(0), time(0), all_day=True),
+        )
         venue.add_zone("ground", "speaker-one")
         venue.add_zone("upper", "speaker-two")
         with self.assertRaises(ValueError):
@@ -245,9 +290,9 @@ class VenueTests(unittest.TestCase):
         self.assertTrue(venue.connected_to_cloud)
 
     def test_power_restore_requires_all_local_conditions(self):
-        venue = VenueSimulation(VenueClock(datetime(2026, 11, 13, 22, 30,
-                                                      tzinfo=timezone.utc)),
-                                OpeningHours(time(20), time(2)))
+        venue = VenueSimulation(
+            VenueClock(datetime(2026, 11, 13, 22, 30, tzinfo=UTC)), OpeningHours(time(20), time(2))
+        )
         venue.add_zone("main", "speaker")
         self.assertFalse(venue.can_restore_after_power("main"))
         zone = venue.zones["main"]
@@ -275,11 +320,13 @@ class SecurityTests(unittest.TestCase):
 
     def test_cross_tenant_and_path_adversaries(self):
         with make_five_of_eight_fleet() as fleet:
-            foreign = cross_tenant_command(target_device_id="engine-a",
-                                           foreign_workspace="workspace-b")
+            foreign = cross_tenant_command(
+                target_device_id="engine-a", foreign_workspace="workspace-b"
+            )
             with self.assertRaisesRegex(ContractViolation, "cross-tenant"):
-                assert_command_contract(foreign, target_workspace="workspace-a",
-                                        device_id="engine-a")
+                assert_command_contract(
+                    foreign, target_workspace="workspace-a", device_id="engine-a"
+                )
             self.assertEqual(len(malicious_local_paths()), 6)
 
 
@@ -287,37 +334,64 @@ class ContractTests(unittest.TestCase):
     def test_availability_shape_and_false_ready(self):
         with make_five_of_eight_fleet() as fleet:
             availability = fleet.devices["engine-a"].availability(fleet.recipe_ids, now_ms=5)
-            assert_availability_contract(availability, device_id="engine-a",
-                                         revision="rev-synthetic-1", expected_occurrences=8)
+            assert_availability_contract(
+                availability,
+                device_id="engine-a",
+                revision="rev-synthetic-1",
+                expected_occurrences=8,
+            )
             availability["status"] = "ready"
             with self.assertRaisesRegex(ContractViolation, "falsely ready"):
-                assert_availability_contract(availability, device_id="engine-a",
-                                             revision="rev-synthetic-1")
+                assert_availability_contract(
+                    availability, device_id="engine-a", revision="rev-synthetic-1"
+                )
             availability["tracks"][0]["file_path"] = "/private/music.wav"
             with self.assertRaisesRegex(ContractViolation, "forbidden cloud field"):
-                assert_availability_contract(availability, device_id="engine-a",
-                                             revision="rev-synthetic-1")
+                assert_availability_contract(
+                    availability, device_id="engine-a", revision="rev-synthetic-1"
+                )
 
     def test_command_ttl_and_ack_truth(self):
         with make_five_of_eight_fleet() as fleet:
             cmd = fleet.command_for("engine-a", actor_workspace="workspace-a", generation=2)
-            assert_command_contract(cmd, target_workspace="workspace-a", device_id="engine-a", now=3)
+            assert_command_contract(
+                cmd, target_workspace="workspace-a", device_id="engine-a", now=3
+            )
             with self.assertRaisesRegex(ContractViolation, "expired"):
-                assert_command_contract(cmd, target_workspace="workspace-a", device_id="engine-a", now=10_001)
+                assert_command_contract(
+                    cmd, target_workspace="workspace-a", device_id="engine-a", now=10_001
+                )
         with self.assertRaisesRegex(ContractViolation, "not actual local application"):
             assert_command_result({"status": "applied"}, local_ack=False)
         assert_command_result({"status": "accepted"}, local_ack=False)
 
 
 class EvidenceTests(unittest.TestCase):
-    def sample(self, *, klass="simulated", outcome="PASS", actual="simulation-only outcome",
-               reviewer=None, link=None):
-        return Evidence(task_id="LF-0482-03", adr="ADR-0482", source_commit="deadbeef",
-                        test_case="partition", environment=runtime_environment(),
-                        expected_result="deny unsafe takeover", actual_result=actual,
-                        outcome=outcome, evidence_class=klass, reviewer=reviewer,
-                        evidence_link=link, residual_risks=["real hardware untested"],
-                        migration_stage="pre-integration", next_decision="await independent hardware")
+    def sample(
+        self,
+        *,
+        klass="simulated",
+        outcome="PASS",
+        actual="simulation-only outcome",
+        reviewer=None,
+        link=None,
+    ):
+        return Evidence(
+            task_id="LF-0482-03",
+            adr="ADR-0482",
+            source_commit="deadbeef",
+            test_case="partition",
+            environment=runtime_environment(),
+            expected_result="deny unsafe takeover",
+            actual_result=actual,
+            outcome=outcome,
+            evidence_class=klass,
+            reviewer=reviewer,
+            evidence_link=link,
+            residual_risks=["real hardware untested"],
+            migration_stage="pre-integration",
+            next_decision="await independent hardware",
+        )
 
     def test_simulated_does_not_satisfy_release_gate(self):
         ledger = EvidenceLedger([self.sample()])

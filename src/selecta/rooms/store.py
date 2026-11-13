@@ -22,8 +22,8 @@ from sqlalchemy.engine import Connection, Engine
 
 from selecta.persistence import db_now, transaction
 from selecta.rooms import codes
-from selecta.rooms.local_first import LocalRoomsBridge
 from selecta.rooms.errors import Refusal, RoomError
+from selecta.rooms.local_first import LocalRoomsBridge
 from selecta.rooms.ports import (
     NoRoomEvents,
     NothingPlaying,

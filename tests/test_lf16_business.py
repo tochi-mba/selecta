@@ -1,4 +1,5 @@
 """Agent 16: independently audible zones, quantities, grace and offline venues."""
+
 from __future__ import annotations
 
 import pytest
@@ -25,23 +26,29 @@ PRICES = {
 
 def sub(status="active", counts=None):
     counts = counts or {
-        "price_venues": 2, "price_zones": 3, "price_staff": 5,
-        "price_devices": 4, "price_rooms": 2,
+        "price_venues": 2,
+        "price_zones": 3,
+        "price_staff": 5,
+        "price_devices": 4,
+        "price_rooms": 2,
     }
     return {
         "id": "sub_business_test",
         "status": status,
         "current_period_end": NOW + 30 * 86_400,
-        "items": {"data": [
-            {"price": {"id": key}, "quantity": count} for key, count in counts.items()
-        ]},
+        "items": {
+            "data": [{"price": {"id": key}, "quantity": count} for key, count in counts.items()]
+        },
     }
 
 
 def allocation(status="active", at=NOW, counts=None, failed_at=None):
     return from_stripe(
-        sub(status, counts), workspace_id="org_1", approved_prices=PRICES,
-        verified_at=at, past_due_since=failed_at,
+        sub(status, counts),
+        workspace_id="org_1",
+        approved_prices=PRICES,
+        verified_at=at,
+        past_due_since=failed_at,
     )
 
 
@@ -95,13 +102,17 @@ def test_no_new_business_provisioning_for_ended_status(status):
 def test_stale_client_and_unknown_price_fail_closed():
     with pytest.raises(ValueError, match="Unrecognised business price"):
         from_stripe(
-            sub(counts={"price_unapproved": 1}), workspace_id="org_1",
-            approved_prices=PRICES, verified_at=NOW,
+            sub(counts={"price_unapproved": 1}),
+            workspace_id="org_1",
+            approved_prices=PRICES,
+            verified_at=NOW,
         )
     with pytest.raises(ValueError, match="Mixed contract versions"):
         from_stripe(
-            sub(counts={"price_zones": 1}), workspace_id="org_1",
-            approved_prices=PRICES, verified_at=NOW,
+            sub(counts={"price_zones": 1}),
+            workspace_id="org_1",
+            approved_prices=PRICES,
+            verified_at=NOW,
             terms=BusinessTerms(version=3),
         )
     with pytest.raises(ValueError, match="quantity"):
@@ -118,10 +129,16 @@ def test_venues_seats_devices_are_separate_billable_quantities():
 
 
 def test_shared_or_missing_speaker_output_does_not_count_as_independently_audible():
-    assert independently_audible_zone_count([
-        ("bar", "alsa:1"), ("restaurant", "alsa:2"),
-        ("unready", ""),
-    ]) == 2
+    assert (
+        independently_audible_zone_count(
+            [
+                ("bar", "alsa:1"),
+                ("restaurant", "alsa:2"),
+                ("unready", ""),
+            ]
+        )
+        == 2
+    )
     with pytest.raises(ValueError, match="Duplicate"):
         independently_audible_zone_count([("bar", "alsa:1"), ("restaurant", "alsa:1")])
     with pytest.raises(ValueError, match="Duplicate"):

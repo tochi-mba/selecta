@@ -31,7 +31,9 @@ def test_engine_health_precedes_legacy_catchall(tmp_path):
     port = 8768
     client = TestClient(
         guarded_application(
-            old, directory=tmp_path, config=EngineConfig(port=port),
+            old,
+            directory=tmp_path,
+            config=EngineConfig(port=port),
         ),
         base_url=f"http://127.0.0.1:{port}",
     )
@@ -48,10 +50,10 @@ def test_engine_health_precedes_legacy_catchall(tmp_path):
 
 def test_endpoint_rejects_dns_rebinding(tmp_path):
     app = guarded_application(
-        FastAPI(), directory=tmp_path, config=EngineConfig(port=8768),
+        FastAPI(),
+        directory=tmp_path,
+        config=EngineConfig(port=8768),
     )
     client = TestClient(app, base_url="http://127.0.0.1:8768")
-    response = client.get(
-        "/api/local-engine/health", headers={"host": "attacker.example:8768"}
-    )
+    response = client.get("/api/local-engine/health", headers={"host": "attacker.example:8768"})
     assert response.status_code == 403

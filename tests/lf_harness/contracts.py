@@ -3,9 +3,9 @@
 The protocol is an integration seam. Actual production adapters must be supplied by
 other agents, translated from these design shapes, and independently reviewed.
 """
+
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any, Protocol, runtime_checkable
 
 
@@ -13,19 +13,57 @@ class ContractViolation(AssertionError):
     """An observed implementation response violates a documented LF invariant."""
 
 
-AVAILABILITY_STATES = frozenset({
-    "ready", "missing", "candidate", "version_mismatch", "source_disconnected",
-    "permission_required", "unsupported", "blocked", "unknown", "cache_invalid",
-})
-COMMAND_STATES = frozenset({
-    "created", "authorised", "queued", "delivered", "accepted", "applied",
-    "acknowledged", "rejected", "expired", "superseded", "conflicted", "failed", "unknown",
-})
-FORBIDDEN_CLOUD_FIELDS = frozenset({
-    "local_path", "absolute_path", "file_path", "pcm", "raw_audio", "audio_base64",
-    "audio_bytes", "fingerprint", "file_hash", "raw_features", "waveform", "stem_data",
-    "lyrics_full", "r2_key", "presigned_url", "storage_url",
-})
+AVAILABILITY_STATES = frozenset(
+    {
+        "ready",
+        "missing",
+        "candidate",
+        "version_mismatch",
+        "source_disconnected",
+        "permission_required",
+        "unsupported",
+        "blocked",
+        "unknown",
+        "cache_invalid",
+    }
+)
+COMMAND_STATES = frozenset(
+    {
+        "created",
+        "authorised",
+        "queued",
+        "delivered",
+        "accepted",
+        "applied",
+        "acknowledged",
+        "rejected",
+        "expired",
+        "superseded",
+        "conflicted",
+        "failed",
+        "unknown",
+    }
+)
+FORBIDDEN_CLOUD_FIELDS = frozenset(
+    {
+        "local_path",
+        "absolute_path",
+        "file_path",
+        "pcm",
+        "raw_audio",
+        "audio_base64",
+        "audio_bytes",
+        "fingerprint",
+        "file_hash",
+        "raw_features",
+        "waveform",
+        "stem_data",
+        "lyrics_full",
+        "r2_key",
+        "presigned_url",
+        "storage_url",
+    }
+)
 
 
 def _assert_no_forbidden_fields(value: Any, *, prefix: str = "$") -> None:
@@ -39,8 +77,9 @@ def _assert_no_forbidden_fields(value: Any, *, prefix: str = "$") -> None:
             _assert_no_forbidden_fields(inner, prefix=f"{prefix}[{index}]")
 
 
-def assert_availability_contract(value: dict, *, device_id: str, revision: str,
-                                 expected_occurrences: int | None = None) -> None:
+def assert_availability_contract(
+    value: dict, *, device_id: str, revision: str, expected_occurrences: int | None = None
+) -> None:
     if not isinstance(value, dict):
         raise ContractViolation("availability must be an object")
     _assert_no_forbidden_fields(value)
@@ -70,13 +109,23 @@ def assert_availability_contract(value: dict, *, device_id: str, revision: str,
         raise ContractViolation("missing transition readiness")
 
 
-def assert_command_contract(value: dict, *, target_workspace: str, device_id: str,
-                            now: int | None = None) -> None:
+def assert_command_contract(
+    value: dict, *, target_workspace: str, device_id: str, now: int | None = None
+) -> None:
     if not isinstance(value, dict):
         raise ContractViolation("command must be an object")
     _assert_no_forbidden_fields(value)
-    for key in ("operation_id", "idempotency_key", "actor_id", "zone_id", "command",
-                "expected_recipe_revision", "schema_version", "created_at", "expires_at"):
+    for key in (
+        "operation_id",
+        "idempotency_key",
+        "actor_id",
+        "zone_id",
+        "command",
+        "expected_recipe_revision",
+        "schema_version",
+        "created_at",
+        "expires_at",
+    ):
         if key not in value:
             raise ContractViolation(f"missing command field {key}")
     if value.get("workspace_id") != target_workspace or value.get("target_device_id") != device_id:
@@ -109,8 +158,9 @@ class EngineAdapter(Protocol):
     """
 
     def register_engine(self, *, identity: dict, capabilities: dict) -> dict: ...
-    def availability(self, *, workspace_id: str, target_device_id: str,
-                     recipe: dict, policy_version: int) -> dict: ...
+    def availability(
+        self, *, workspace_id: str, target_device_id: str, recipe: dict, policy_version: int
+    ) -> dict: ...
     def dispatch_command(self, *, actor: dict, command: dict) -> dict: ...
     def observed_output(self, *, device_id: str, zone_id: str) -> dict: ...
     def send_cloud_payload(self, *, workspace_id: str, payload: dict) -> dict: ...
@@ -119,14 +169,21 @@ class EngineAdapter(Protocol):
 
 def resolve_adapter(import_path: str) -> EngineAdapter:
     import importlib
+
     if ":" not in import_path:
         raise ValueError("adapter must be module:factory or module:object")
     name, attribute = import_path.split(":", 1)
     mod = importlib.import_module(name)
     candidate = getattr(mod, attribute)
     adapter = candidate() if isinstance(candidate, type) else candidate
-    required = ("register_engine", "availability", "dispatch_command",
-                "observed_output", "send_cloud_payload", "revoke_device")
+    required = (
+        "register_engine",
+        "availability",
+        "dispatch_command",
+        "observed_output",
+        "send_cloud_payload",
+        "revoke_device",
+    )
     if not all(callable(getattr(adapter, method, None)) for method in required):
         raise TypeError(f"adapter does not implement required {required}")
     return adapter
@@ -134,11 +191,21 @@ def resolve_adapter(import_path: str) -> EngineAdapter:
 
 def synthetic_recipe(recording_ids: list[str]) -> dict:
     return {
-        "recipe_id": "mix-harness", "revision_id": "rev-synthetic-1",
-        "parent_revision": None, "schema_version": 2,
-        "occurrences": [{"occurrence_id": f"occ-{i + 1}", "canonical_track_id": track}
-                        for i, track in enumerate(recording_ids)],
-        "seams": [{"from_occurrence_id": f"occ-{i}", "to_occurrence_id": f"occ-{i + 1}",
-                   "type": "beatmatched_crossfade", "duration_seconds": 8}
-                  for i in range(1, len(recording_ids))],
+        "recipe_id": "mix-harness",
+        "revision_id": "rev-synthetic-1",
+        "parent_revision": None,
+        "schema_version": 2,
+        "occurrences": [
+            {"occurrence_id": f"occ-{i + 1}", "canonical_track_id": track}
+            for i, track in enumerate(recording_ids)
+        ],
+        "seams": [
+            {
+                "from_occurrence_id": f"occ-{i}",
+                "to_occurrence_id": f"occ-{i + 1}",
+                "type": "beatmatched_crossfade",
+                "duration_seconds": 8,
+            }
+            for i in range(1, len(recording_ids))
+        ],
     }

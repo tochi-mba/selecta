@@ -3,6 +3,7 @@
 The legacy `selecta.library` browse/search/correction/analysis APIs stay intact.
 No cloud database migrations or hosted-media routes are required.
 """
+
 from .catalogue import LocalCatalogue, ScanCancelled, UnsafeRecording
 from .types import (
     Availability,

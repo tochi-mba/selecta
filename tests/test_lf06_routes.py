@@ -1,4 +1,5 @@
 """LF06 export-route integration: authoritatively local, frozen FLAC, no cloud media."""
+
 from __future__ import annotations
 
 import json
@@ -62,12 +63,18 @@ def engine(tmp_path, monkeypatch):
 
     snapshots = [
         {
-            "song_id": 1, "title": "Synthetic A", "artist": "Test",
-            "duration": 0.1, "seam": {"settings": {}, "state": {"key": "first"}},
+            "song_id": 1,
+            "title": "Synthetic A",
+            "artist": "Test",
+            "duration": 0.1,
+            "seam": {"settings": {}, "state": {"key": "first"}},
         },
         {
-            "song_id": 2, "title": "Synthetic B", "artist": "Test",
-            "duration": 0.1, "seam": {"settings": {}, "state": {"key": "seam-a"}},
+            "song_id": 2,
+            "title": "Synthetic B",
+            "artist": "Test",
+            "duration": 0.1,
+            "seam": {"settings": {}, "state": {"key": "seam-a"}},
         },
     ]
     monkeypatch.setattr(mix, "read_mix", lambda *_a: snapshots)
@@ -75,8 +82,12 @@ def engine(tmp_path, monkeypatch):
     monkeypatch.delenv("SELECTA_LOCAL_FIRST_ARTIFACTS", raising=False)
 
     ctx = SimpleNamespace(
-        connect=connect, settings=settings, store=seams, durable_exports=None,
-        local_first_artifacts=True, device_id="local-engine-01",
+        connect=connect,
+        settings=settings,
+        store=seams,
+        durable_exports=None,
+        local_first_artifacts=True,
+        device_id="local-engine-01",
     )
     app = FastAPI()
     exports.add_routes(app, ctx)
@@ -119,8 +130,15 @@ def test_local_route_exports_verified_flac_and_sanitised_state(engine, monkeypat
     assert public["device_id"] == "local-engine-01"
     assert public["storage"] == "export"
     exposed = json.dumps(public)
-    for forbidden in ("local_path", "checksum", "recording-1", "clip.flac",
-                      "http://", "https://", str(settings.home)):
+    for forbidden in (
+        "local_path",
+        "checksum",
+        "recording-1",
+        "clip.flac",
+        "http://",
+        "https://",
+        str(settings.home),
+    ):
         assert forbidden not in exposed
     assert sources[0].exists() and sources[1].exists()
 
@@ -150,8 +168,7 @@ def test_local_export_checks_space_before_rendering(engine, monkeypatch):
     from selecta.lf_artifacts import store as local_store
 
     usage = namedtuple("Usage", "total used free")
-    monkeypatch.setattr(local_store.shutil, "disk_usage",
-                        lambda _path: usage(1000, 1000, 0))
+    monkeypatch.setattr(local_store.shutil, "disk_usage", lambda _path: usage(1000, 1000, 0))
     calls = []
     monkeypatch.setattr(mix, "export_snapshot", lambda *_a: calls.append(1))
     started = client.post("/api/exports/jobs").json()

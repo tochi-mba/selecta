@@ -11,8 +11,14 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from selecta.lf_playback import (  # noqa: E402
-    FencedLocalOutput, LocalEngineRegistry, Preflight, Scope,
-    SQLiteOwnershipLedger, TransferCoordinator, TransferRejected, TransferRequest,
+    FencedLocalOutput,
+    LocalEngineRegistry,
+    Preflight,
+    Scope,
+    SQLiteOwnershipLedger,
+    TransferCoordinator,
+    TransferRejected,
+    TransferRequest,
     TransferStage,
 )
 
@@ -32,9 +38,17 @@ class TestOutput:
         return self.audible
 
     def preflight(self, request):
-        return Preflight(request.recipe_revision, request.recording_refs,
-                         request.transition_refs, self.ready, True, True, True, True,
-                         self.clock())
+        return Preflight(
+            request.recipe_revision,
+            request.recording_refs,
+            request.transition_refs,
+            self.ready,
+            True,
+            True,
+            True,
+            True,
+            self.clock(),
+        )
 
     def prepare_silent(self, request):
         assert self.audible is False
@@ -63,9 +77,18 @@ def setup(tmp_path):
     engine = LocalEngineRegistry({"old": old, "new": new})
     coordinator = TransferCoordinator(ledger, engine, clock=lambda: 100.0)
     coordinator.adopt_verified_owner(scope, "old", 12)
-    req = TransferRequest(scope, "op", "idempotent", "actor", "new", 12,
-                          "recipe", ("exact-recording-a", "exact-recording-b"),
-                          ("transition-a",), 130.0)
+    req = TransferRequest(
+        scope,
+        "op",
+        "idempotent",
+        "actor",
+        "new",
+        12,
+        "recipe",
+        ("exact-recording-a", "exact-recording-b"),
+        ("transition-a",),
+        130.0,
+    )
     return coordinator, req, old_audio, new_audio, old, new
 
 
@@ -102,8 +125,9 @@ def test_crash_after_real_source_stop_before_coordinator_commit(tmp_path, monkey
     assert old.inspect(req.scope).fenced_generation == 13
     assert coordinator.ledger.current_owner(req.scope) == ("old", 12, "audible")
     monkeypatch.setattr(SQLiteOwnershipLedger, "owner_state", staticmethod(original))
-    second_process = TransferCoordinator(SQLiteOwnershipLedger(tmp_path / "owner.db"),
-                                         coordinator.engine, clock=lambda: 100.0)
+    second_process = TransferCoordinator(
+        SQLiteOwnershipLedger(tmp_path / "owner.db"), coordinator.engine, clock=lambda: 100.0
+    )
     assert second_process.execute(req).succeeded
     assert new_audio.audible and not old_audio.audible
     assert new_audio.starts == 1

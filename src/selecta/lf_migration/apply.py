@@ -4,6 +4,7 @@ No SQL DML is implemented here. A production Agent 04 writer must explicitly
 implement this port, including row-level security, atomic upsert, immutable
 revision preservation and compensation. The default run path only plans.
 """
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -38,7 +39,9 @@ class RecipeProjectionWriter(Protocol):
 
 
 def _validate(
-    journal: LocalPlanJournal, plan_id: str, writer: RecipeProjectionWriter,
+    journal: LocalPlanJournal,
+    plan_id: str,
+    writer: RecipeProjectionWriter,
     expected_recipe_schema: str,
 ) -> dict[str, Any]:
     record = journal.read(plan_id)
