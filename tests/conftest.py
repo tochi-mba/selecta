@@ -8,6 +8,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+# Register before other test helpers can import this fixture plugin, so its
+# assert statements retain pytest's useful rewritten failure diagnostics.
+pytest.register_assert_rewrite("cloud_party")
+
 from cloud_db import (  # noqa: E402, F401
     clock,
     cloud_engine,
