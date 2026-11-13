@@ -14,11 +14,11 @@ import shutil
 import threading
 import time
 import uuid
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterator, TypeVar
+from typing import Any, TypeVar
 
 T = TypeVar("T")
 KINDS = frozenset({"preview", "seam", "stem", "export"})
