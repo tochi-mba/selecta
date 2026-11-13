@@ -31,6 +31,8 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.lucy.commit` | session | `web/src/views/LucyApprove.tsx` | A Lucy change waiting for approval in this tab | Lucy |
 | `selecta.study.<study>` | session | `web/src/views/Listening.tsx` | Progress through a blind listening study in this tab | Learning |
 | `selecta-full-motion` | session | `web/src/ui/lowPower.ts` | That the low-power motion notice was dismissed in this tab | Shared foundation |
+| `selecta.workspace.<user>` | local | `web/src/business/workspace.ts` | Last chosen workspace for each signed-in account, restored only for that account | Cloud workspace switcher |
+| `selecta.workspace.tab` | session | `web/src/business/workspace.ts` | Workspace chosen in this tab, scoped to the signed-in account | Cloud workspace switcher |
 | `selecta.device.<workspace>` | local | `web/src/devices/usePlaybackDevice.ts`, `web/src/devices/DevicesPanel.tsx` | This browser's playback device id (Cloud) | Cloud playback |
 | `selecta.cloud.last-event-id` | session | `web/src/cloud/events.ts` | The last Cloud event seen, to resume the stream (Cloud) | Cloud |
 | `selecta.guest.room.<code>` | local | `web/src/guest/main.ts` (through `store` in `web/src/rooms/dom.ts`) | The guest's room id for a party code (Cloud) | Requests (guest rooms) |

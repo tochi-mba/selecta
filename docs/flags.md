@@ -234,3 +234,36 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `rooms.display` | **Room display.** Pair a screen to show the room QR code and playback queue. | `rooms` |
 | `lucy.deep_plan` | **Lucy deep planning.** Use Lucy's premium planning model and larger plan allowance. | `lucy` |
 | `admin.console` | **Staff console.** Show internal tools to authenticated staff with the required permission. |  |
+
+## Autopilot and venue
+
+| Flag | What it is | Needs |
+|---|---|---|
+| `cloud.mix_create` | **Make a mix in the Cloud.** Create and edit intelligent mixes from Cloud Library songs, using the same mix contract as the local app. |  |
+| `cloud.single_audio_owner` | **One Cloud player.** Cloud Library previews and Cloud Listen play through one persistent player that keeps playing across pages. |  |
+| `cloud.account_states` | **Clear Cloud account states.** Exact Cloud routes and distinct messages for signed-out, expired, suspended and unreachable accounts. |  |
+| `cloud.library_states` | **Truthful Cloud Library states.** Tell loading, failed, empty and ready apart, and report each uploaded file's own result. |  |
+| `rooms.nickname_confirm` | **Confirmed guest nicknames.** Show a guest's nickname as saving, saved or not saved, and ignore older Room updates that arrive late. |  |
+| `mixes.intent_language` | **Plain Make a mix choices.** Separate quick listen from a saved mix and say how long each setting lasts and what it applies to. |  |
+| `autopilot.venue_mode` | **Autopilot venue mode.** Let SelectaDJ plan and play a whole evening as a resident DJ, with pause, stop and manual takeover always available. |  |
+| `autopilot.venue_policy` | **Venue music identity.** Versioned venue music policies, schedules, hard limits and timed overrides for Autopilot. | `autopilot.venue_mode` |
+| `autopilot.horizon` | **Rolling musical horizon.** Plan the next stretch of the evening ahead, rank songs deterministically and replan only at safe points. | `autopilot.venue_mode` |
+| `autopilot.safe_transitions` | **Conservative Autopilot transitions.** Check every transition before it plays and fall back to simpler, safer blends when a check fails. | `autopilot.venue_mode` |
+| `autopilot.ai_director` | **AI DJ director.** Let an AI suggest typed, bounded changes to the Autopilot plan that staff can inspect and undo. | `autopilot.venue_mode` |
+
+## Venue operations
+
+| Flag | What it is | Needs |
+|---|---|---|
+| `venue.continuity` | **Venue audio continuity.** Gap and duplicate targets, ready-to-play fallback songs and fenced speaker leases, so a venue night keeps playing through faults. | `autopilot.venue_mode` |
+| `venue.fault_injection` | **Venue fault rehearsal.** Inject network, model and render faults on purpose in a test run to prove the night keeps playing. | `venue.continuity` |
+| `venue.speakers` | **Venue speakers and zones.** Name the venue's speakers, group them into zones, and move or reconnect playback without two speakers playing at once. | `venue.continuity` |
+| `venue.staff_dashboard` | **Staff dashboard.** One screen for venue staff: what is playing, what is next, typed steering, pending versus applied changes and an always-visible Stop. | `autopilot.venue_mode` |
+| `venue.moderated_requests` | **Autopilot guest requests.** Guest requests in a venue night go through Room moderation, are planned fairly and tell the guest honestly what happened. | `autopilot.venue_mode` |
+| `venue.learning` | **Venue learning.** Learn a venue's taste from staff and guest feedback within a cap, with a reset, an explanation and a retention limit. | `autopilot.venue_mode` |
+| `venue.rights_gate` | **Venue rights check.** Check music and model rights before each media operation in a venue and refuse the ones that are not cleared. | `autopilot.venue_mode` |
+| `venue.roles` | **Venue roles.** Owner, manager, staff and guest roles decide who may steer, stop or change a venue night, and revoked devices lose access at once. | `autopilot.venue_mode` |
+| `venue.safe_gain` | **Safe venue loudness.** Cap automatic gain changes so Autopilot never makes the room suddenly louder. | `autopilot.venue_mode` |
+| `venue.health` | **Venue health and alerts.** Audio health signals, operator alert thresholds with runbook links, redacted logs and rehearsed recovery. | `autopilot.venue_mode` |
+| `venue.soak` | **Long-session soak tools.** Real venue workloads, gap and resource metrics and long soak and chaos runs that record their evidence. | `venue.continuity` |
+| `venue.rollout_gates` | **Venue rollout gates.** Phased rollout order, no-go gates for P0 blockers and a flag-off rollback check before any venue release. | `autopilot.venue_mode` |

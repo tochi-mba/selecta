@@ -1,7 +1,7 @@
 """display_pairings.last_seen_at
 
 Revision ID: rm0416pres01
-Revises: bz0447bill01
+Revises: bz0450ctrl01
 Create Date: 2026-11-13
 
 A paired big screen now records when it last asked for its view, so the host's room panel can
@@ -15,7 +15,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "rm0416pres01"
-down_revision: str | Sequence[str] | None = "bz0447bill01"
+down_revision: str | Sequence[str] | None = "bz0450ctrl01"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

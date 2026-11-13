@@ -38,7 +38,7 @@ _INSTRUCTIONS = (
     "do not change it: call proposals.plan with no songs and ask_permission true. Finish every "
     "answer by calling proposals.plan once with the song ids in play order."
 )
-SYSTEM = "You are Lucy, the DJ assistant in SelectaDJ." + _INSTRUCTIONS
+SYSTEM = "You are Lucy, the DJ assistant in Selecta." + _INSTRUCTIONS
 """Local mode's wording."""
 CLOUD_SYSTEM = "You are Lucy, the DJ assistant in SelectaDJ." + _INSTRUCTIONS
 """Cloud mode's: the product named as users see it."""

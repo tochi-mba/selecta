@@ -210,7 +210,7 @@ for (const viewport of VIEWPORTS) {
     expect(shots).toHaveLength(SCREENS.length * THEMES.length);
     const manifest = JSON.stringify({
       task: 'SF-0201-08',
-      status: 'candidate-not-approved',
+      status: 'candidate-not-independently-verified',
       ...provenance(),
       capturedAt: new Date().toISOString(),
       browser: 'msedge',
