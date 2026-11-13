@@ -1,8 +1,6 @@
 """Agent 16: independently audible zones, quantities, grace and offline venues."""
 from __future__ import annotations
 
-from types import MappingProxyType
-
 import pytest
 
 from selecta.billing.business_quantities import (
