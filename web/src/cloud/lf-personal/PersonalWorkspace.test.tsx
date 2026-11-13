@@ -35,8 +35,8 @@ describe('LF10 personal workspace', () => {
     const api = apiFor();
     render(<DeviceHome account={account} api={api} workspaceId="ws-1" go={noop} />);
     expect(await screen.findByText('5 of 8 tracks verified')).toBeInTheDocument();
-    expect(screen.getByText('Recently verified on this device')).toBeInTheDocument();
-    expect(screen.getByText(/Another device owns playback/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Recently verified on this device/)).toBeInTheDocument();
+    expect(screen.queryByText(/Another device owns playback/)).not.toBeInTheDocument();
     expect(screen.getByText(/Evictable cache/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Current speaker' })).toBeInTheDocument();
     expect(screen.getByText(/Saved recipes are editable even when/)).toBeInTheDocument();
