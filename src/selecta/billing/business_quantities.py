@@ -9,7 +9,7 @@ import math
 from dataclasses import dataclass
 from enum import StrEnum
 from types import MappingProxyType
-from typing import Mapping, Sequence
+from collections.abc import Mapping, Sequence
 
 
 class Quantity(StrEnum):
@@ -94,13 +94,14 @@ def from_stripe(
     verified_at: float,
     past_due_since: float | None = None,
     grace_seconds: int = 7 * 24 * 3600,
-    terms: BusinessTerms = BusinessTerms(),
+    terms: BusinessTerms | None = None,
 ) -> BusinessAllocation:
     """Translate a freshly fetched Stripe subscription, never a webhook payload.
 
     An unknown price is a hard error for NEW business provisioning. It must be
     reconciled by a human; existing commercial rights remain outside this adapter.
     """
+    terms = BusinessTerms() if terms is None else terms
     if not workspace_id:
         raise ValueError("workspace_id is required")
     sub_id = subscription.get("id")
