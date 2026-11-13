@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import enum
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 
 from selecta import flags
@@ -216,17 +216,47 @@ PREMIUM_1 = Plan(
     flags=EVERY_PLAN | PREMIUM_ONLY,
 )
 
+# The approved ADR-0470 local-first schema is deliberately opt-in. Each v2 envelope
+# refuses hosted-audio storage and DSP requests; it does not constrain device-local
+# files, stems or renders. Future commercial benefits live in local_first.py.
+# Do not change a v1 record, a live Stripe price, or the implicit default to v2.
+LF_FLAGS = EVERY_PLAN - {"cloud.uploads"}
+FREE_2 = replace(
+    FREE_1, version=2, storage_bytes=0, analysis_songs_per_day=0,
+    speculative_cpu_minutes_per_day=0, stem_preview_windows_per_day=None,
+    stems=StemAccess.FULL, exports_per_month=None, export_retention_days=0,
+    max_upload_bytes=0, max_upload_seconds=0, library_soft_cap_songs=0,
+    flags=LF_FLAGS,
+)
+STANDARD_2 = replace(
+    STANDARD_1, version=2, storage_bytes=0, analysis_songs_per_day=0,
+    speculative_cpu_minutes_per_day=0, stem_preview_windows_per_day=None,
+    stems=StemAccess.FULL, exports_per_month=None, export_retention_days=0,
+    max_upload_bytes=0, max_upload_seconds=0, library_soft_cap_songs=0,
+    devices_signed_in=3, flags=LF_FLAGS,
+)
+PREMIUM_2 = replace(
+    PREMIUM_1, version=2, storage_bytes=0, analysis_songs_per_day=0,
+    speculative_cpu_minutes_per_day=0, stem_preview_windows_per_day=None,
+    stems=StemAccess.FULL, exports_per_month=None, export_retention_days=0,
+    max_upload_bytes=0, max_upload_seconds=0, library_soft_cap_songs=0,
+    flags=LF_FLAGS | PREMIUM_ONLY,
+)
+
 # Every version of every plan, oldest first. Add a version; never change or remove one, because
 # subscriptions point at it.
 CATALOGUE: Mapping[str, tuple[Plan, ...]] = MappingProxyType(
     {
-        "free": (FREE_1,),
-        "standard": (STANDARD_1,),
-        "premium": (PREMIUM_1,),
+        "free": (FREE_1, FREE_2),
+        "standard": (STANDARD_1, STANDARD_2),
+        "premium": (PREMIUM_1, PREMIUM_2),
     }
 )
 
 DEFAULT_PLAN = "free"
+# Launch remains v1. Only an explicit, approved price->v2 mapping (or a later
+# deliberate free-account migration) may opt a customer into local-first billing.
+DEFAULT_VERSIONS = MappingProxyType({"free": 1, "standard": 1, "premium": 1})
 PLAN_IDS = tuple(CATALOGUE)
 
 
@@ -241,7 +271,7 @@ def plan_for(plan_id: str | None, version: int | None = None) -> Plan:
     if not versions:
         raise UnknownPlan(f"There's no plan called {plan_id!r}; plans are {', '.join(PLAN_IDS)}.")
     if version is None:
-        return versions[-1]
+        version = DEFAULT_VERSIONS[plan_id]
     for plan in versions:
         if plan.version == version:
             return plan
@@ -249,19 +279,27 @@ def plan_for(plan_id: str | None, version: int | None = None) -> Plan:
 
 
 def current_plans() -> tuple[Plan, ...]:
-    """The current version of each plan, cheapest first. A plan with no versions has no current
-    one; `problems()` reports it."""
-    current = (versions[-1] for versions in CATALOGUE.values() if versions)
-    return tuple(sorted(current, key=lambda p: p.rank))
+    """Versions currently sold under existing approved commercial terms (v1).
+
+    Publishing a v2 contract must never silently switch a checkout or a Free account.
+    """
+    return tuple(sorted((plan_for(plan_id) for plan_id in CATALOGUE), key=lambda p: p.rank))
+
+
+def local_first_plans() -> tuple[Plan, ...]:
+    """Explicit future v2 envelopes, not yet generally available for checkout."""
+    return tuple(sorted((plan_for(plan_id, 2) for plan_id in CATALOGUE), key=lambda p: p.rank))
 
 
 def plan_gated_flags() -> frozenset[str]:
     """Flags some current plans include and others don't."""
-    plans = current_plans()
-    if not plans:
+    # Consider every historical and future version: uploads are not part of
+    # local-first v2, even though every grandfathered v1 plan includes them.
+    all_versions = tuple(plan for versions in CATALOGUE.values() for plan in versions)
+    if not all_versions:
         return frozenset()
-    named = frozenset().union(*(plan.flags for plan in plans))
-    everywhere = frozenset.intersection(*(plan.flags for plan in plans))
+    named = frozenset().union(*(plan.flags for plan in all_versions))
+    everywhere = frozenset.intersection(*(plan.flags for plan in all_versions))
     return named - everywhere
 
 
@@ -337,6 +375,7 @@ def _plan_problems(plan_id: str, plan: Plan, registry: Mapping[str, flags.Flag])
     found: list[str] = []
     if plan.id != plan_id:
         found.append(f"{name}: is filed under {plan_id} but says it's {plan.id}")
+    local_first = plan.version >= 2
     positive = {
         "storage_bytes": plan.storage_bytes,
         "scheduling_weight": plan.scheduling_weight,
@@ -350,8 +389,20 @@ def _plan_problems(plan_id: str, plan: Plan, registry: Mapping[str, flags.Flag])
         "devices_playing": plan.devices_playing,
     }
     for name_of, value in positive.items():
-        if value <= 0:
+        if value <= 0 and not (local_first and name_of in {
+            "storage_bytes", "analysis_songs_per_day",
+            "speculative_cpu_minutes_per_day", "export_retention_days",
+            "max_upload_bytes", "max_upload_seconds", "library_soft_cap_songs",
+        }):
             found.append(f"{name}: {name_of} must be more than 0")
+    if local_first:
+        obsolete = (
+            plan.storage_bytes, plan.analysis_songs_per_day,
+            plan.speculative_cpu_minutes_per_day, plan.export_retention_days,
+            plan.max_upload_bytes, plan.max_upload_seconds, plan.library_soft_cap_songs,
+        )
+        if any(obsolete) or plan.exports_per_month is not None or "cloud.uploads" in plan.flags:
+            found.append(f"{name}: local-first cannot sell or enable hosted-audio quotas")
     if plan.max_upload_bytes > plan.storage_bytes:
         found.append(f"{name}: one upload can't be bigger than the whole storage allowance")
     if plan.devices_playing > plan.devices_signed_in:
