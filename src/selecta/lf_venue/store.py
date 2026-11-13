@@ -90,7 +90,8 @@ class VenueStore:
                     state = db.execute('SELECT state FROM sessions WHERE workspace=? AND venue=? AND zone=?',
                                        (venue.workspace_id, venue.venue_id, current.id)).fetchone()
                     new_zone = next((z for z in venue.zones if z.id == current.id), None)
-                    if state is not None and state[0] in ('playing', 'unknown') and (new_zone is None or
+                    if state is not None and state[0] in ('playing', 'unknown') and (
+                            venue.engine_id != previous.engine_id or new_zone is None or
                             (new_zone.output_id, new_zone.channels) != prior_outputs[current.id]):
                         raise VenueError('Cannot remap an active or unknown physical output')
             db.execute('DELETE FROM output_bindings WHERE workspace=? AND venue=?',

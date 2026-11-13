@@ -121,22 +121,31 @@ class VenueEngine:
         now = self.clock()
         self._clock(state, now)
         self._resources(venue)
-        if not zone.enabled or not venue.open_at(now):
+        if not zone.enabled or not (venue.open_at(now) or venue.open_at(now + 45 * 60)):
             return ()
-        pending = list(dict.fromkeys(state['committed'] + state['planned'][:8]))
+        pending = list(dict.fromkeys(state['committed'] + state['planned'][:8] + list(venue.policy.fallback_ids)))
         result: list[dict] = []
         prior: Recording | None = None
+        existing = {(entry['track_id'], entry['revision'], entry.get('from_track'), entry.get('from_revision')): entry
+                    for entry in state['prepared']}
         for track_id in pending:
             rec = self._eligible(venue, zone, track_id, now,
                                  ignore_repeat=track_id == state['current'])
             if rec is None or not self.audio.preflight(zone, rec):
                 continue
-            try:
-                handle = self.audio.prepare(zone, rec, prior)
-            except Exception:  # local DSP failure leaves current output untouched
-                continue
+            predecessor = (prior.track_id if prior else None, prior.revision if prior else None)
+            prev = existing.get((rec.track_id, rec.revision, *predecessor))
+            if prev:
+                handle = prev['handle']
+            else:
+                try:
+                    handle = self.audio.prepare(zone, rec, prior)
+                except Exception:  # local DSP failure leaves current output untouched
+                    continue
             if handle and '://' not in handle:  # forbid cloud/pre-signed media handles
-                result.append({'track_id': rec.track_id, 'revision': rec.revision, 'handle': handle})
+                result.append({'track_id': rec.track_id, 'revision': rec.revision,
+                               'from_track': predecessor[0], 'from_revision': predecessor[1],
+                               'handle': handle})
                 prior = rec
         self.store.mutate(workspace, venue_id, zone_id, prepared=result, last_seen_utc=now)
         return tuple(item['track_id'] for item in result)
@@ -183,7 +192,14 @@ class VenueEngine:
             raise VenueError('No permitted open-hours programme for this zone')
         if state['state'] in ('playing', 'unknown'):
             raise VenueError('A live or unknown speaker must be released before starting')
-        return self._start(venue, zone, state, state['committed'][0], now)
+        wanted = state['committed'][0]
+        if self._eligible(venue, zone, wanted, now) and self._prepared(state, self.store.recording(workspace, venue_id, wanted)):
+            return self._start(venue, zone, state, wanted, now)
+        for fallback in venue.policy.fallback_ids:
+            rec = self._eligible(venue, zone, fallback, now)
+            if rec and self._prepared(state, rec):
+                return self._start(venue, zone, state, fallback, now, source='fallback')
+        return self._start(venue, zone, state, wanted, now)
 
     def stop(self, workspace: str, venue_id: str, zone_id: str, *, reason: str = 'staff') -> bool:
         venue, zone, state = self._get(workspace, venue_id, zone_id)

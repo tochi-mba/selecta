@@ -279,3 +279,55 @@ def test_restart_persistence_and_source_integrity(fixture):
     assert rebuilt.prepare('w', 'v', 'bar') == ()
     assert rebuilt.tick('w', 'v', 'bar').state == 'stopped'
     reopened.close()
+
+
+def test_approved_local_fallback_and_preparation_cache(fixture):
+    clock, store, audio, _, service, configure, register = fixture
+    configure(policy=Policy(rights_attested=True, fallback_ids=('safe',), repeat_after_seconds=0))
+    register('v', 'planned')
+    register('v', 'safe')
+    service.plan('w', 'v', 'bar', ['planned'])
+    assert service.prepare('w', 'v', 'bar') == ('planned', 'safe')
+    preps = len(audio.prepared)
+    service.prepare('w', 'v', 'bar')
+    assert len(audio.prepared) == preps  # don't continually rerender audio on every tick
+    assert service.start('w', 'v', 'bar')
+    gen = store.session('w', 'v', 'bar')['generation']
+    clock[0] += 5
+    audio.playing.pop('bar')
+    assert service.ended('w', 'v', 'bar', generation=gen)
+    assert audio.playing['bar'][0] == 'safe'
+    assert service.diagnose('w', 'v', 'bar').state == 'playing'
+    assert store.pending_events('w', 'v')[-1]['source'] == 'fallback'
+
+
+def test_runner_boot_and_staff_stop_does_not_autorestart(fixture):
+    clock, store, audio, _, service, configure, register = fixture
+    from selecta.lf_venue import VenueRunner
+    configure()
+    register('v', 'first')
+    service.plan('w', 'v', 'bar', ['first'])
+    runner = VenueRunner(service, 'w', 'v', 'bar')
+    assert runner.step().state == 'playing'
+    assert service.stop('w', 'v', 'bar', reason='staff')
+    for _ in range(5):
+        clock[0] += 60
+        assert runner.step().state == 'stopped'
+    assert len([x for x in store.pending_events('w', 'v') if x['kind'] == 'started']) == 1
+
+
+def test_dayparts_and_repeat_limiter(fixture):
+    clock, store, audio, _, service, configure, register = fixture
+    local_time = datetime.fromtimestamp(clock[0], UTC)
+    assert local_time.hour == 21
+    configure(policy=Policy(rights_attested=True, allow_explicit=True, repeat_after_seconds=500,
+                            dayparts=(Daypart('20:00', '23:00', allow_explicit=False),)))
+    register('v', 'clean', explicit=False)
+    register('v', 'explicit', explicit=True)
+    service.plan('w', 'v', 'bar', ['clean', 'explicit'])
+    assert service.prepare('w', 'v', 'bar') == ('clean',)
+    assert service.start('w', 'v', 'bar')
+    gen = store.session('w', 'v', 'bar')['generation']
+    audio.playing.pop('bar')
+    assert not service.ended('w', 'v', 'bar', generation=gen)  # explicit must stay blocked
+    assert service._eligible(store.config('w', 'v'), store.config('w', 'v').zones[0], 'clean', clock[0]) is None
