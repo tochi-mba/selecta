@@ -8,8 +8,9 @@ from __future__ import annotations
 import json
 import math
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any
 
 SCHEMA_VERSION = 1
 MAX_TRACKS = 48
@@ -41,8 +42,8 @@ MEDIA_SIGNATURE = re.compile(
 )
 BASE64_BLOB = re.compile(r"(?:[A-Za-z0-9+/]{160,}={0,2})")
 READINESS_CLAIM = re.compile(
-    r"\b(?:verified|ready to play|available on|present on|playing on|rendered|"
-    r"downloaded to|exists on|confirmed on|already playable)\b", re.I,
+    r"\b(?:verified|ready|available|present|playing|playable|rendered|"
+    r"downloaded|exists?|confirmed|loaded)\b", re.I,
 )
 CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 INJECTION_MARKER = re.compile(
@@ -64,17 +65,23 @@ def _safe_string(value: Any, limit: int, *, untrusted: bool = True) -> str:
     if not isinstance(value, str):
         raise BoundaryError("metadata must be text")
     value = CONTROL.sub(" ", value).strip()
-    if len(value) > limit or PATH.search(value) or MEDIA_SIGNATURE.search(value) or BASE64_BLOB.search(value):
+    if (
+        len(value) > limit or PATH.search(value)
+        or MEDIA_SIGNATURE.search(value) or BASE64_BLOB.search(value)
+    ):
         raise BoundaryError("unsafe media, path, URL or excessive text")
-    if untrusted and INJECTION_MARKER.search(value):
+    if untrusted and (INJECTION_MARKER.search(value) or "<" in value or ">" in value):
         # Treat malicious catalogue tags as absent rather than prompt instructions.
         raise BoundaryError("untrusted metadata contains instructions")
     return value
 
 
 def safe_user_text(value: str) -> str:
-    # User may ask for a mix in ordinary language, never supply raw local media.
-    return _safe_string(value, MAX_PROMPT_CHARS, untrusted=False)
+    # Explicit lyrics, transcripts and pasted verses are not an approved cloud data class.
+    safe = _safe_string(value, MAX_PROMPT_CHARS, untrusted=False)
+    if re.search(r"\b(?:lyrics?|transcripts?|verse\s*:)\b", safe, re.I) or "\n" in safe:
+        raise BoundaryError("lyrics or multiline source text cannot be sent to hosted AI")
+    return safe
 
 
 @dataclass(frozen=True)
@@ -119,7 +126,9 @@ def safe_catalogue(rows: list[Mapping[str, Any]]) -> tuple[TrackFact, ...]:
         if not isinstance(row, Mapping):
             raise BoundaryError("catalogue entry is not an object")
         keys = set(row)
-        if keys - FIELDS or any(not isinstance(key, str) or PRIVATE_NAME.search(key) for key in keys):
+        if keys - FIELDS or any(
+            not isinstance(key, str) or PRIVATE_NAME.search(key) for key in keys
+        ):
             raise BoundaryError("catalogue contains a non-allowlisted field")
         recording = row.get("recording_id")
         if not isinstance(recording, str) or not REF.fullmatch(recording) or recording in ids:
@@ -170,7 +179,10 @@ class LucyPlan:
             "summary": self.summary,
             "source": self.source,
             "availability": "unverified",
-            "steps": [vars(step) | {"recording_ids": list(step.recording_ids)} for step in self.steps],
+            "steps": [
+                vars(step) | {"recording_ids": list(step.recording_ids)}
+                for step in self.steps
+            ],
         }
 
 
@@ -206,7 +218,10 @@ def parse_model_plan(
         }:
             raise PlanError("unexpected step fields (no tools, URLs, paths or commands)")
         op, ids, transition = row["op"], row["recording_ids"], row["transition"]
-        if not isinstance(op, str) or op not in OPS or not isinstance(ids, list) or len(ids) > MAX_ORDER:
+        if (
+            not isinstance(op, str) or op not in OPS
+            or not isinstance(ids, list) or len(ids) > MAX_ORDER
+        ):
             raise PlanError("invalid planning operation")
         if op == "explain" and ids:
             raise PlanError("explanations cannot reference unverified audio")
@@ -216,11 +231,13 @@ def parse_model_plan(
             not isinstance(transition, str) or transition not in TRANSITIONS
         ):
             raise PlanError("unknown transition technique")
-        if len(set(ids)) != len(ids) or any(
+        if any(
             not isinstance(identifier, str) or identifier not in allowed_recordings
             for identifier in ids
         ):
-            raise PlanError("model invented a recording or repeated an occurrence")
+            raise PlanError("model invented a recording")
+        if len(set(ids)) != len(ids):
+            raise PlanError("model repeated an occurrence")
         try:
             note = _safe_string(row["note"], 240)
             if READINESS_CLAIM.search(note):
