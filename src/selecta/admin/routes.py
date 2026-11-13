@@ -25,8 +25,7 @@ from selecta.admin.http import CommandRefused
 from selecta.authz import assignments, audit
 from selecta.authz.check import Actor, active_assignments, authorize
 from selecta.authz.roles import ROLE_PERMISSIONS
-from selecta.authz.scopes import ResourceRef
-from selecta.authz.scopes import Scope
+from selecta.authz.scopes import ResourceRef, Scope
 from selecta.identity.tokens import Claims
 
 JOB_COMMANDS: dict[str, Callable[..., Any]] = {
