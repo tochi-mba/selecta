@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -18,7 +18,7 @@ from selecta.lf_fleet.retirement import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-NOW = datetime(2026, 11, 13, 21, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 11, 13, 21, 0, tzinfo=UTC)
 
 
 def attestation() -> dict[str, object]:

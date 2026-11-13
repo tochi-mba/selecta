@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from selecta.lf_fleet import EngineReport, Health, assess, fleet_alerts, fleet_summary
 
-NOW = datetime(2026, 11, 13, 21, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 11, 13, 21, 0, tzinfo=UTC)
 
 
 def payload(**changes: object) -> dict[str, object]:

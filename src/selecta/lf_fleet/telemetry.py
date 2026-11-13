@@ -10,7 +10,7 @@ import re
 from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
 
 _ID = re.compile(r"^[A-Za-z0-9_-]{1,80}$")
@@ -37,7 +37,7 @@ class Health(StrEnum):
 def _aware(value: datetime, field: str) -> datetime:
     if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
         raise ValueError(f"{field} must be a timezone-aware datetime")
-    return value.astimezone(timezone.utc)
+    return value.astimezone(UTC)
 
 
 def _id(value: object, field: str) -> str:

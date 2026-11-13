@@ -10,7 +10,7 @@ import json
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path, PurePosixPath
 
 CLASSIFICATIONS = frozenset({"audio", "mixed", "retain"})
@@ -173,7 +173,7 @@ def _read_stamp(value: object) -> datetime | None:
         return None
     if result.tzinfo is None or result.utcoffset() is None:
         return None
-    return result.astimezone(timezone.utc)
+    return result.astimezone(UTC)
 
 
 def _attested(entry: object, *, now: datetime) -> bool:
@@ -204,10 +204,10 @@ def retirement_plan(
     """Return a dry-run report ONLY. Even all-green gates grant no API execution privilege."""
     if environment not in {"staging", "production"}:
         raise ValueError("environment must be staging or production")
-    current = now or datetime.now(timezone.utc)
+    current = now or datetime.now(UTC)
     if current.tzinfo is None or current.utcoffset() is None:
         raise ValueError("now must be timezone aware")
-    current = current.astimezone(timezone.utc)
+    current = current.astimezone(UTC)
     if evidence is None:
         evidence = {}
     if not isinstance(evidence, Mapping):

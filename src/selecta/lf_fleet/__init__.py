@@ -3,8 +3,8 @@
 No module in this package controls playback, retires services or accesses local media.
 """
 
-from .telemetry import EngineReport, FleetAssessment, Health, assess, fleet_summary
 from .operations import fleet_alerts
+from .telemetry import EngineReport, FleetAssessment, Health, assess, fleet_summary
 
 __all__ = [
     "EngineReport",
