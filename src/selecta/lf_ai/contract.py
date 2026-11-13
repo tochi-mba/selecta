@@ -40,6 +40,10 @@ MEDIA_SIGNATURE = re.compile(
     r"(?:UklGR|SUQz|T2dnUw|ZkxhQ|AAAAHGZ0eXA|/9j/)[A-Za-z0-9+/=]{20,}"
 )
 BASE64_BLOB = re.compile(r"(?:[A-Za-z0-9+/]{160,}={0,2})")
+READINESS_CLAIM = re.compile(
+    r"\b(?:verified|ready to play|available on|present on|playing on|rendered|"
+    r"downloaded to|exists on|confirmed on|already playable)\b", re.I,
+)
 CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 INJECTION_MARKER = re.compile(
     r"(?i)(?:ignore (?:all |previous |the )?(?:system |safety |prior )?"
@@ -188,6 +192,8 @@ def parse_model_plan(
         raise PlanError("unsupported plan version")
     try:
         summary = _safe_string(raw["summary"], 320)
+        if READINESS_CLAIM.search(summary):
+            raise PlanError("model cannot assert device availability")
     except BoundaryError as exc:
         raise PlanError("unsafe plan summary") from exc
     rows = raw["steps"]
@@ -200,13 +206,15 @@ def parse_model_plan(
         }:
             raise PlanError("unexpected step fields (no tools, URLs, paths or commands)")
         op, ids, transition = row["op"], row["recording_ids"], row["transition"]
-        if op not in OPS or not isinstance(ids, list) or len(ids) > MAX_ORDER:
+        if not isinstance(op, str) or op not in OPS or not isinstance(ids, list) or len(ids) > MAX_ORDER:
             raise PlanError("invalid planning operation")
         if op == "explain" and ids:
             raise PlanError("explanations cannot reference unverified audio")
         if op == "suggest_transition" and len(ids) != 2:
             raise PlanError("transition must name two recordings")
-        if transition is not None and transition not in TRANSITIONS:
+        if transition is not None and (
+            not isinstance(transition, str) or transition not in TRANSITIONS
+        ):
             raise PlanError("unknown transition technique")
         if len(set(ids)) != len(ids) or any(
             not isinstance(identifier, str) or identifier not in allowed_recordings
@@ -215,6 +223,8 @@ def parse_model_plan(
             raise PlanError("model invented a recording or repeated an occurrence")
         try:
             note = _safe_string(row["note"], 240)
+            if READINESS_CLAIM.search(note):
+                raise PlanError("model cannot assert device readiness")
         except BoundaryError as exc:
             raise PlanError("unsafe plan note") from exc
         steps.append(Suggestion(op, tuple(ids), transition, note))
