@@ -76,6 +76,16 @@ class LocalSpeaker:
 
 
 @dataclass(frozen=True)
+class LocalNowPlaying:
+    workspace_id: str
+    zone_id: str
+    generation: int
+    checked_at: float
+    current: LocalTrack | None = None
+    up_next: tuple[LocalTrack, ...] = ()
+
+
+@dataclass(frozen=True)
 class LocalScheduleReceipt:
     """Engine acknowledgment, not cloud queue acceptance or command delivery."""
 
@@ -121,6 +131,8 @@ class LocalRoomsBridge(Protocol):
     def describe(
         self, workspace_id: str, zone_id: str, song_ids: Collection[int]
     ) -> Mapping[int, LocalTrack]: ...
+
+    def now_playing(self, workspace_id: str, zone_id: str) -> LocalNowPlaying | None: ...
 
     def schedule(
         self,
@@ -185,7 +197,7 @@ def visible(
         or entry.workspace_id != workspace_id
         or entry.zone_id != zone_id
         or entry.state is not RecordingState.READY
-        or not entry.permitted
+        or entry.permitted is not True
         or (clean_only and entry.explicit)
         or not fresh(entry.verified_at, now)
     ):
@@ -205,8 +217,8 @@ def ready_speaker(
         and isinstance(speaker.generation, int)
         and not isinstance(speaker.generation, bool)
         and speaker.generation >= 0
-        and speaker.online
-        and speaker.output_ready
+        and speaker.online is True
+        and speaker.output_ready is True
         and fresh(speaker.checked_at, now)
         and isinstance(speaker.committed_until, (float, int))
         and math.isfinite(speaker.committed_until)
@@ -222,7 +234,7 @@ def valid_receipt(
 ) -> bool:
     return bool(
         isinstance(receipt, LocalScheduleReceipt)
-        and receipt.acknowledged
+        and receipt.acknowledged is True
         and receipt.workspace_id == workspace_id
         and receipt.zone_id == zone_id
         and receipt.generation == speaker.generation
