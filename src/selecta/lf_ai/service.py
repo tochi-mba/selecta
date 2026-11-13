@@ -8,8 +8,15 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from selecta.lf_ai.contract import (
-    SCHEMA_VERSION, BoundaryError, LucyPlan, PlanError, Suggestion, TrackFact,
-    parse_model_plan, prompt_for, safe_catalogue,
+    SCHEMA_VERSION,
+    BoundaryError,
+    LucyPlan,
+    PlanError,
+    Suggestion,
+    TrackFact,
+    parse_model_plan,
+    prompt_for,
+    safe_catalogue,
 )
 
 
