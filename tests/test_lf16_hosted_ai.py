@@ -115,7 +115,8 @@ def test_operation_key_is_tenant_scoped_and_invalid_inputs_rejected(cloud_engine
     with transaction(cloud_engine, "ws_lf16_invalid") as conn:
         with pytest.raises(ValueError, match="integer"):
             hosted_ai.preflight(
-                conn, "ws_lf16_invalid", STANDARD, maximum_cost_micros=1.5,  # type: ignore[arg-type]
+                conn, "ws_lf16_invalid", STANDARD,
+                maximum_cost_micros=1.5,  # type: ignore[arg-type]
             )
         with pytest.raises(ValueError, match="tenant-scoped"):
             hosted_ai.charge_once(
