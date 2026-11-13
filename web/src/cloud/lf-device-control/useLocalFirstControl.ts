@@ -139,7 +139,8 @@ export function useLocalFirstControl({
     const record: PendingControl = {
       id, kind, target, expectedGeneration: current.generation,
       outputId: kind === 'takeover' || kind === 'change_output' ? String(args.output_id ?? '') : current.output_id,
-      stage: 'requested', message: 'Requesting local engine approval…', submittedAt: Date.now(),
+      stage: kind === 'takeover' || kind === 'change_output' ? 'prepared' : 'requested',
+      message: kind === 'takeover' || kind === 'change_output' ? 'Destination prepared; requesting fenced transfer…' : 'Requesting local engine approval…', submittedAt: Date.now(),
     };
     setPending(record); setNotice(''); setError('');
     try {
@@ -176,7 +177,7 @@ export function useLocalFirstControl({
       if (refusal) { setNotice(refusal); return; }
       if (!current || !current.recipe_revision) return;
       const preflight = await adapter.preflight(here.device_id, current.recipe_revision, outputId, current.generation);
-      if (!preflight.safe || !isFresh(preflight.expires_at, 0, Date.parse(preflight.expires_at)) ||
+      if (!preflight.safe ||
         preflight.target_device_id !== here.device_id || preflight.recipe_revision !== current.recipe_revision ||
         preflight.expected_generation !== current.generation || preflight.output_id !== outputId ||
         Date.parse(preflight.expires_at) <= Date.now()) {
