@@ -12,6 +12,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.engine import Engine
 
 from selecta.identity.tokens import Claims
+from selecta.lf_egress import legacy_retrieval_enabled
 from selecta.persistence import transaction
 from selecta.storage.artifacts import DEFAULT_BUCKETS, MAX_URL_TTL, Buckets
 from selecta.storage.ids import require_id
@@ -76,6 +77,8 @@ def install_routes(
     ) -> dict[str, Any]:
         require_id(asset_id, ASSET_NOT_FOUND)
         workspace_id = workspace(request, claims)
+        if not legacy_retrieval_enabled():
+            raise HTTPException(status_code=410, detail={"code": "legacy_audio_retrieval_disabled"})
         query = (
             select(
                 assets.c.id,
@@ -156,6 +159,8 @@ def install_routes(
             # A malformed key looks exactly like a key that isn't the caller's.
             raise HTTPException(status_code=404, detail=ARTIFACT_NOT_FOUND) from None
         workspace_id = workspace(request, claims)
+        if not legacy_retrieval_enabled():
+            raise HTTPException(status_code=410, detail={"code": "legacy_audio_retrieval_disabled"})
         if bucket is not Bucket.DERIVED or workspace_of(body.key) != workspace_id:
             # Don't reveal whether another tenant's key exists.
             raise HTTPException(status_code=404, detail=ARTIFACT_NOT_FOUND)

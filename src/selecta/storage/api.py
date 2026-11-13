@@ -17,6 +17,7 @@ from sqlalchemy.engine import Connection, Engine
 from selecta.admin import state as emergency_state
 from selecta.billing import plans, stripe_sync
 from selecta.identity.tokens import Claims
+from selecta.lf_egress import AdmissionDenied, Phase, current_phase, require_upload_action
 from selecta.persistence import transaction
 from selecta.storage.artifacts import Buckets
 from selecta.storage.audio_check import Rejected
@@ -106,7 +107,7 @@ def _session_json(session: UploadSession) -> dict[str, Any]:
         "name": session.display_name,
         "size": session.declared_size,
         "content_type": session.content_type,
-        "sha256": session.sha256,
+        "sha256": session.sha256 if current_phase() is Phase.LEGACY else None,
         "part_size": session.part_size,
         "part_count": session.part_count,
         "status": session.status.value,
@@ -229,13 +230,19 @@ def install_routes(
                         "message": "Uploads are suspended for this account."},
             )
 
+    def guard_upload(action: str) -> None:
+        try:
+            require_upload_action(action)
+        except AdmissionDenied as error:
+            raise HTTPException(status_code=410, detail={"code": error.code}) from None
+
     def map_error(error: Exception) -> HTTPException:
+        if isinstance(error, AdmissionDenied):
+            return HTTPException(status_code=410, detail={"code": error.code})
         if isinstance(error, SessionNotFound):
             return HTTPException(status_code=404, detail=dict(UPLOAD_NOT_FOUND))
         if isinstance(error, (InvalidState, ValueError)):
-            return HTTPException(
-                status_code=400, detail={"code": "invalid_upload", "message": str(error)}
-            )
+            return HTTPException(status_code=400, detail={"code": "invalid_upload"})
         if isinstance(error, R2Error):
             return HTTPException(
                 status_code=503, detail={"code": "storage_temporarily_unavailable"}
@@ -249,6 +256,7 @@ def install_routes(
         claims: Claims = Depends(current_claims),
     ):
         workspace_id = workspace(request, claims)
+        guard_upload("plan")
         refuse_if_restricted(workspace_id)
         try:
             with service() as (uploads, _client):
@@ -265,7 +273,7 @@ def install_routes(
                 status_code=413,
                 detail={"code": "storage_quota_exceeded", "message": str(error)},
             ) from error
-        except (R2Error, ValueError) as error:
+        except (R2Error, ValueError, AdmissionDenied) as error:
             raise map_error(error) from error
         return {"uploads": [_planned_json(item) for item in results]}
 
@@ -297,10 +305,10 @@ def install_routes(
             with service() as (uploads, _client):
                 with transaction(engine, workspace_id) as conn:
                     session = uploads.get(conn, session_id, workspace_id=workspace_id)
-                    if session.status.value == "planned":
+                    if session.status.value == "planned" and current_phase() is Phase.LEGACY:
                         session = uploads.start(conn, session_id, workspace_id=workspace_id)
                 parts = uploads.uploaded_parts(session)
-        except (SessionNotFound, InvalidState, R2Error, ValueError) as error:
+        except (SessionNotFound, InvalidState, R2Error, ValueError, AdmissionDenied) as error:
             raise map_error(error) from error
         return {
             "upload": _session_json(session),
@@ -318,15 +326,17 @@ def install_routes(
     ):
         require_id(session_id, UPLOAD_NOT_FOUND)
         workspace_id = workspace(request, claims)
+        guard_upload("parts")
         refuse_if_restricted(workspace_id)
         try:
             with service() as (uploads, _client):
                 with transaction(engine, workspace_id) as conn:
                     session = uploads.get(conn, session_id, workspace_id=workspace_id)
                     if session.status.value == "planned":
+                        guard_upload("start")
                         session = uploads.start(conn, session_id, workspace_id=workspace_id)
                 urls = uploads.presign_parts(session, body.part_numbers)
-        except (SessionNotFound, InvalidState, R2Error, ValueError) as error:
+        except (SessionNotFound, InvalidState, R2Error, ValueError, AdmissionDenied) as error:
             raise map_error(error) from error
         return {"part_urls": {str(number): url for number, url in urls.items()}}
 
@@ -338,6 +348,7 @@ def install_routes(
     ):
         require_id(session_id, UPLOAD_NOT_FOUND)
         workspace_id = workspace(request, claims)
+        guard_upload("complete")
         try:
             with service() as (uploads, client):
                 with transaction(engine, workspace_id) as conn:
@@ -368,7 +379,7 @@ def install_routes(
                             audio_probe,
                             workspace_id=workspace_id,
                         )
-        except (SessionNotFound, InvalidState, R2Error, ValueError) as error:
+        except (SessionNotFound, InvalidState, R2Error, ValueError, AdmissionDenied) as error:
             raise map_error(error) from error
         return _outcome_json(outcome)
 
@@ -384,7 +395,7 @@ def install_routes(
             with service() as (uploads, _client):
                 with transaction(engine, workspace_id) as conn:
                     outcome = uploads.cancel(conn, session_id, workspace_id=workspace_id)
-        except (SessionNotFound, InvalidState, R2Error, ValueError) as error:
+        except (SessionNotFound, InvalidState, R2Error, ValueError, AdmissionDenied) as error:
             raise map_error(error) from error
         return _outcome_json(outcome)
 

@@ -33,6 +33,7 @@ from typing import Protocol
 from urllib.parse import quote
 
 from selecta.storage.keys import Bucket, validate_key
+from selecta.lf_egress import require_media_write
 from selecta.storage.objects import ObjectClient, R2NotFound
 from selecta.storage.r2 import file_sha256
 
@@ -209,6 +210,7 @@ class R2ArtifactStore:
             shutil.rmtree(folder, ignore_errors=True)
 
     def publish(self, key: str, path: Path) -> tuple[int, str]:
+        require_media_write("publish")
         result = self.client.put_object(self.buckets.for_key(key), key, Path(path))
         return result.size, result.sha256
 
@@ -241,6 +243,7 @@ class R2ArtifactStore:
         return self.client.presign_get(bucket, key, _check_ttl(ttl, self.max_ttl), download_name)
 
     def presign_put(self, key: str, ttl: int) -> str:
+        require_media_write("presign_put")
         bucket = self.buckets.for_key(key)
         return self.client.presign_put(bucket, key, _check_ttl(ttl, self.max_ttl))
 
