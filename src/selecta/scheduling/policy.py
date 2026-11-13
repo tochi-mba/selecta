@@ -136,6 +136,7 @@ class PolicyConfig:
     max_result_bytes: int = 1_000_000
     strict_lanes: bool = False
     enforce_speculative_budget: bool = True
+    enforce_plan_backpressure: bool = True
     """Interactive always before standard, never shared by virtual time. Only the local app sets
     it: one person, one machine, and the seam about to be heard must never wait behind the rest
     of the mix (the local seam worker's order, SC-0394-04)."""
