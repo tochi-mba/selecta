@@ -129,8 +129,12 @@ def visualizers() -> list[str]:
 
 def studio_lanes() -> list[str]:
     source = _read("web/src/studio.ts")
-    lanes = re.findall(r"'([a-z]+)'", re.search(r"export const LANES[^=]*=\s*\[([^\]]*)\]", source)[1])
-    sides = re.findall(r"'([a-z]+)'", re.search(r"export const SIDES[^=]*=\s*\[([^\]]*)\]", source)[1])
+    lanes = re.findall(
+        r"'([a-z]+)'", re.search(r"export const LANES[^=]*=\s*\[([^\]]*)\]", source)[1]
+    )
+    sides = re.findall(
+        r"'([a-z]+)'", re.search(r"export const SIDES[^=]*=\s*\[([^\]]*)\]", source)[1]
+    )
     return [f"{side}.{lane}" for side in sides for lane in lanes]
 
 

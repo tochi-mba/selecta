@@ -78,7 +78,8 @@ def clean_rule(values: dict | None) -> dict[str, Any]:
         raise BusinessInvalid("crate_ids must be a list of crate ids", code="invalid_rule")
     found = {
         "filter_mode": mode, "crate_ids": crates,
-        "bpm_min": _number(values, "bpm_min", 1, 400), "bpm_max": _number(values, "bpm_max", 1, 400),
+        "bpm_min": _number(values, "bpm_min", 1, 400),
+        "bpm_max": _number(values, "bpm_max", 1, 400),
         "energy_min": _number(values, "energy_min", 0, 1),
         "energy_max": _number(values, "energy_max", 0, 1),
         "song_spacing_hours": _number(values, "song_spacing_hours", 0, 168),
@@ -104,7 +105,9 @@ def clean_windows(raw: Any) -> list[list[int]]:
             else:
                 day, start, end = (int(v) for v in item)
         except (KeyError, TypeError, ValueError) as error:
-            raise BusinessInvalid(f"daypart window {item!r}: {error}", code="invalid_rule") from None
+            raise BusinessInvalid(
+                f"daypart window {item!r}: {error}", code="invalid_rule"
+            ) from None
         if not (0 <= day <= 6 and 0 <= start < 1440 and 0 <= end <= 1440 and start != end):
             raise BusinessInvalid(f"daypart window {item!r} isn't a time span", code="invalid_rule")
         windows.append([day, start, end])

@@ -10,11 +10,7 @@ from test_business_rooms_support import (  # noqa: F401
     BAR,
     TERRACE,
     WeekHours,
-    clock,
     code_of,
-    content,
-    engine,
-    make,
     seen,
 )
 
@@ -22,6 +18,9 @@ from selecta.business.rooms import ports
 from selecta.business.rooms.schema import business_zone_rooms
 from selecta.persistence import transaction
 from selecta.rooms.schema import rooms as personal_rooms
+
+# Share the canonical fixtures without shadowing them in test parameters.
+pytest_plugins = ("test_business_rooms_support",)
 
 LONDON = ZoneInfo("Europe/London")
 

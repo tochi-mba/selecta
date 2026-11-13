@@ -72,6 +72,7 @@ from selecta.audit.business_kiosk_support import (
     unb64url,
     verify_signature,
 )
+
 from selecta.audit.business_trace import (
     AudioSpan,
     BusinessTrace,

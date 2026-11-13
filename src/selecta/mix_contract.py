@@ -177,7 +177,11 @@ def _song_json(song: SongRef) -> dict[str, Any]:
         "artist": song.artist,
         "duration": song.duration,
         "sha256": song.sha256,
-        "facts": {"bpm": song.facts.bpm, "camelot": song.facts.camelot, "energy": song.facts.energy},
+        "facts": {
+            "bpm": song.facts.bpm,
+            "camelot": song.facts.camelot,
+            "energy": song.facts.energy,
+        },
     }
 
 
