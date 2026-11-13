@@ -40,8 +40,8 @@ from pathlib import Path
 import psutil
 from sqlalchemy.engine import Engine
 
-from selecta.persistence import make_engine, migrate
 from selecta.lf_jobs.governor import LocalResourceGovernor
+from selecta.persistence import make_engine, migrate
 from selecta.scheduling.policy import PolicyConfig
 from selecta.work.enqueue import Enqueued, JobSpec
 from selecta.work.ports import ProcessFlags
