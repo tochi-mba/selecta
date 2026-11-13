@@ -59,6 +59,7 @@ WITHDRAWN_TEXT = {
     "banned": "Withdrawn",
     "song_gone": "This song isn't available any more",
     "room_ended": "The room ended before this one played",
+    "expired": "The local request expired before it could play",
 }
 
 
@@ -206,7 +207,7 @@ def request_stage(ctx: RoomContext, room: Room, request: RoomRequest, now: float
     if request.status is RequestStatus.WITHDRAWN:
         return (
             LocalStage.EXPIRED.value
-            if request.reason == "room_ended"
+            if request.reason in ("room_ended", "expired")
             else LocalStage.WITHDRAWN.value
         )
     if request.status is RequestStatus.PLAYED:
@@ -394,6 +395,8 @@ def _mine(
         }.get(stage, text)
         if request.status is RequestStatus.UNFIT and request.reason == "unavailable":
             text = "Can't schedule: this recording is no longer available"
+        elif request.status is RequestStatus.UNFIT and request.reason == "blocked":
+            text = "Blocked by the venue's music policy"
     elif request.status is RequestStatus.ACCEPTED and request.song_request_id:
         minutes = ctx.now_playing.minutes_until(room.workspace_id, request.song_request_id)
         if minutes is not None:
