@@ -41,6 +41,7 @@ import psutil
 from sqlalchemy.engine import Engine
 
 from selecta.persistence import make_engine, migrate
+from selecta.lf_jobs.governor import LocalResourceGovernor
 from selecta.scheduling.policy import PolicyConfig
 from selecta.work.enqueue import Enqueued, JobSpec
 from selecta.work.ports import ProcessFlags
@@ -70,6 +71,12 @@ def local_policy() -> PolicyConfig:
     no headroom free of spare-time work, because each local pool is one worker process that
     gives way at its next `check_in()` instead."""
     return PolicyConfig(
+        # Local CPU, audio and storage are device resources, not per-subscriber quotas.
+        tier_weights={"free": 1.0, "standard": 1.0, "premium": 1.0},
+        lane_caps={tier: {lane: 8 for lane in ("interactive", "standard", "speculative")}
+                   for tier in ("free", "standard", "premium")},
+        speculative_budget_cpu_min={tier: 1_000_000_000.0
+                                    for tier in ("free", "standard", "premium")},
         strict_lanes=True,
         speculative_headroom_slots=0,
         speculative_headroom_share=0.0,
@@ -160,6 +167,7 @@ def open_local_work(
     """Build (not start) the host for `home`. `pools` maps each in-process pool to its thread
     count; pools served by worker processes are left out."""
     store = store or open_store(home)
+    runner_options.setdefault("resource_governor", LocalResourceGovernor(home))
     runners = [
         LocalRunner(store, pool, handlers, threads=threads, **runner_options)
         for pool, threads in (pools if pools is not None else {"cpu-heavy": 1}).items()
