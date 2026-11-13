@@ -69,6 +69,8 @@ class EvidenceLedger:
         self.records.append(record)
 
     def gate(self, *, mandatory_cases: list[str], require_physical: bool = False) -> tuple[bool, list[str]]:
+        if not mandatory_cases:
+            return False, ["no mandatory verification cases specified"]
         missing = []
         for case in mandatory_cases:
             verified = [r for r in self.records if r.test_case == case and

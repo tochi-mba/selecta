@@ -38,7 +38,7 @@ class AcceptanceAdapter(Protocol):
                          partition_original: bool) -> dict[str, Any]: ...
     def dispatch_cross_tenant(self, *, command: dict[str, Any]) -> dict[str, Any]: ...
     def inspect_ingress(self, *, payload: dict[str, Any]) -> dict[str, Any]: ...
-    def captured_egress(self) -> list[Any]: ...
+    def captured_egress(self) -> dict[str, Any]: ...
     def close(self) -> None: ...
 
 
@@ -128,6 +128,8 @@ class AcceptanceRunner:
             raise ContractViolation(f"{device}: expected {ready}/8 ready")
         if result["status"] == "ready" and ready != 8:
             raise ContractViolation("aggregate falsely ready")
+        if ready == 8 and result["status"] != "ready":
+            raise ContractViolation("all recordings ready but aggregate incorrectly unavailable")
         return True
 
     @staticmethod
@@ -156,12 +158,19 @@ class AcceptanceRunner:
             if response.get("result") not in {"accepted", "rejected", "conflicted", "applied", "acknowledged"}:
                 raise ContractViolation("missing authoritative takeover status")
         monitor.assert_no_double_audio()
+        if any(o.kind == "simulation" for o in monitor.observations):
+            raise ContractViolation("simulation is not a valid integrated output observation")
+        applied = sum(r["result"] in {"applied", "acknowledged"} for r in (first, second))
         if partition and any(r["result"] in {"accepted", "applied", "acknowledged"} for r in (first, second)):
             raise ContractViolation("unsafe takeover while old speaker may be audible")
-        if not partition and sum(r["result"] in {"applied", "acknowledged"} for r in (first, second)) > 1:
-            raise ContractViolation("concurrent takeover double-applied")
+        if partition and any(o.device_id == "engine-b" for o in monitor.observations):
+            raise ContractViolation("partitioned new speaker was observed outputting audio")
+        if not partition and applied != 1:
+            raise ContractViolation("takeover must apply exactly once with local ACK")
         if not monitor.observations:
             raise ContractViolation("no instrumented output intervals supplied")
+        if not partition and {o.device_id for o in monitor.observations} != {"engine-a", "engine-b"}:
+            raise ContractViolation("missing original or destination output observations")
         return True
 
     @staticmethod
@@ -175,10 +184,11 @@ class AcceptanceRunner:
 
     @staticmethod
     def _check_egress(adapter: AcceptanceAdapter, fleet: Fleet) -> bool:
-        captures = adapter.captured_egress()
-        if not isinstance(captures, list):
-            raise ContractViolation("egress capture unavailable")
-        for cap in captures:
+        capture = adapter.captured_egress()
+        if (not isinstance(capture, dict) or capture.get("instrumentation_active") is not True
+                or not isinstance(capture.get("packets"), list) or not capture["packets"]):
+            raise ContractViolation("no active, nonempty independent egress capture")
+        for cap in capture["packets"]:
             for device in (fleet.devices["engine-a"], fleet.devices["engine-b"]):
                 for fixture in device.catalogue.values():
                     assert_no_media_in_cloud_capture(cap, fixture)
