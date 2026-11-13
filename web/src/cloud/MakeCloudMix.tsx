@@ -47,9 +47,17 @@ function MixMaker({ api, workspaceId, localFirstEnabled }: { api: Api; workspace
   const [devices, setDevices] = useState<DeviceTarget[]>([]);
   const [deviceId, setDeviceId] = useState('');
   const [deviceMessage, setDeviceMessage] = useState('');
+  const [online, setOnline] = useState(() => typeof navigator !== 'undefined' && navigator.onLine);
   const [availability, setAvailability] = useState<Record<string, DeviceMixReadiness>>({});
   const [undoStack, setUndoStack] = useState<Array<{ ids: string[]; name: string }>>([]);
   const [redoStack, setRedoStack] = useState<Array<{ ids: string[]; name: string }>>([]);
+
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); };
+  }, []);
 
   // Only the explicit LF device contract may provide local verification. A
   // historical cloud asset's "available" flag is not proof of local audio.
@@ -239,6 +247,7 @@ function MixMaker({ api, workspaceId, localFirstEnabled }: { api: Api; workspace
         <button className="primary" type="submit" disabled={busy || picked.length < 2}>Make mix</button>
       </form>
 
+      {!online && <p role="status">This controller is offline. Local verification is unknown; saved arrangements remain editable.</p>}
       {deviceMessage && <p role="status">{deviceMessage}</p>}
       {!localFirstEnabled && <p className="lf11-muted">Local device verification is not yet enabled for this workspace. Saved mixes remain editable, but cloud asset availability does not prove they can play on a device.</p>}
 
@@ -248,7 +257,7 @@ function MixMaker({ api, workspaceId, localFirstEnabled }: { api: Api; workspace
             <li key={mix.mix_id}>
               <button onClick={() => void openMix(mix.mix_id)}>{mix.name}</button>
               <span>{mix.songs} songs · version {mix.number} · {mix.intelligent_seams} planned changes</span>
-              <ReadinessBadge readiness={availability[availabilityKey(mix.mix_id, mix.revision)] ?? null} total={mix.songs} />
+              <ReadinessBadge readiness={online && devices.find(device => device.id === deviceId)?.connected ? availability[availabilityKey(mix.mix_id, mix.revision)] ?? null : null} total={mix.songs} />
             </li>
           ))}
         </ul>
@@ -264,7 +273,7 @@ function MixMaker({ api, workspaceId, localFirstEnabled }: { api: Api; workspace
             devices={devices}
             deviceId={deviceId}
             onDeviceChange={setDeviceId}
-            readiness={availability[availabilityKey(open.mix.mix_id, open.mix.revision)] ?? null}
+            readiness={online && devices.find(device => device.id === deviceId)?.connected ? availability[availabilityKey(open.mix.mix_id, open.mix.revision)] ?? null : null}
             currentDraftChanged={changed}
             onApplyVariation={applyVariation}
           />
