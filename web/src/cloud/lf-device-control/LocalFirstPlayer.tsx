@@ -60,7 +60,7 @@ export function LocalFirstPlayer({ api, workspaceId, actorId, adapter }: { api: 
   };
 
   return (
-    <section className="lf-player cloud-card" aria-label="Local-first player and remote" data-testid="lf12-player" onKeyDown={onKeys}>
+    <section className="lf-player cloud-card" aria-label="Local-first player and remote" tabIndex={0} data-testid="lf12-player" onKeyDown={onKeys}>
       <div className="lf-player-heading">
         <div>
           <p className="cloud-eyebrow">DEVICE-OWNED PLAYBACK</p>
