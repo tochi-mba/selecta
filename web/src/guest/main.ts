@@ -14,11 +14,11 @@
 import { ApiError, call, h, replace, Song, songLength, songLine, store } from '../rooms/dom';
 import './guest.css';
 
-type Item = { request_id: string; song: Song | null; status: string; votes: number; nickname: string | null; voted: boolean; mine: boolean };
-type Mine = { request_id: string; song: Song | null; status: string; text: string; votes: number };
+type Item = { request_id: string; song: Song | null; status: string; stage?: string; votes: number; nickname: string | null; voted: boolean; mine: boolean };
+type Mine = { request_id: string; song: Song | null; status: string; stage?: string; text: string; votes: number };
 type View = {
   room_name: string; room_status: string; guest_status: string; nickname: string;
-  votes_on: boolean; requests_open: boolean; music_paused: boolean;
+  votes_on: boolean; requests_open: boolean; music_paused: boolean; local_first?: boolean;
   now_playing: Song | null; up_next: Song[]; coming_up: Item[]; waiting: Item[]; my_requests: Mine[];
   nickname_confirm?: boolean;
 };
@@ -26,6 +26,16 @@ type View = {
 const POLL_MS = 5000;
 const MAX_WAIT_MS = 15_000;
 const RECONNECTING = 'Reconnecting...';
+const stageText = (stage?: string): string => {
+  const labels: Record<string, string> = {
+    requested: 'Requested', awaiting_moderation: 'Waiting for host review',
+    accepted: 'Host accepted · awaiting speaker',
+    deferred: 'Deferred · speaker unavailable',
+    locally_scheduled: 'Scheduled on speaker', prepared: 'Prepared on speaker',
+    played: 'Played', rejected: 'Rejected', withdrawn: 'Withdrawn', expired: 'Expired',
+  };
+  return labels[stage ?? ''] ?? 'Pending';
+};
 const root = document.getElementById('guest') as HTMLElement;
 const code = (location.pathname.split('/r/')[1] ?? '').replace(/[^0-9A-Za-z]/g, '').toUpperCase().slice(0, 8);
 const roomKey = `selecta.guest.room.${code}`;
@@ -211,7 +221,9 @@ function draw(): void {
     v.nickname_confirm && nameSave?.state === 'failed' ? h('p', { className: 'g-error', role: 'alert' }, `${nameSave.name} wasn't saved. ${nameSave.error ?? ''}`.trim(), ' ', h('button', { type: 'button', className: 'g-link', onclick: () => void saveNickname(nameSave?.name ?? '') }, 'Try again')) : null);
   replace(parts.banners,
     v.guest_status === 'pending' ? h('p', { className: 'g-banner' }, "The host hasn't let you in yet. This page will update when they do.") : null,
-    v.music_paused ? h('p', { className: 'g-banner' }, "The music's paused. Requests will wait until it starts again.") : null);
+    v.music_paused ? h('p', { className: 'g-banner', role: 'status' },
+      v.local_first ? 'The venue speaker is unavailable. A host may accept a request, but it will not be scheduled until the local speaker is ready.'
+        : "The music's paused. Requests will wait until it starts again.") : null);
   const active = v.guest_status === 'active';
   replace(parts.now, active
     ? section('Now playing', v.now_playing ? h('p', { className: 'g-now' }, songLine(v.now_playing)) : h('p', { className: 'g-muted' }, 'Nothing is playing right now.'),
@@ -220,7 +232,7 @@ function draw(): void {
   parts.search.hidden = !(active && v.requests_open);
   replace(parts.lists,
     active && !v.requests_open ? section('Requests', h('p', { className: 'g-muted' }, 'Requests are off in this room.')) : null,
-    active && v.coming_up.length ? section('Coming up from guests', h('ol', { className: 'g-list' }, ...v.coming_up.map((item) => songItem(item.song, item.nickname ? h('span', { className: 'g-muted' }, item.nickname) : null, voteButton(item))))) : null,
+    active && v.coming_up.length ? section(v.local_first ? 'Accepted guest requests' : 'Coming up from guests', h('ol', { className: 'g-list' }, ...v.coming_up.map((item) => songItem(item.song, item.nickname ? h('span', { className: 'g-muted' }, item.nickname) : null, v.local_first ? h('span', { className: 'g-muted' }, stageText(item.stage)) : null, voteButton(item))))) : null,
     active && v.waiting.length ? section('Waiting for the host', h('ul', { className: 'g-list' }, ...v.waiting.map((item) => songItem(item.song, voteButton(item))))) : null);
   replace(parts.mine, myRequests(v));
 }
@@ -229,7 +241,7 @@ function myRequests(v: View): HTMLElement {
   if (!v.my_requests.length) return section('My requests', h('p', { className: 'g-muted' }, "You haven't asked for anything yet."));
   return section('My requests', h('ul', { className: 'g-list' }, ...v.my_requests.map((item) => songItem(item.song,
     h('span', { className: `g-status g-${item.status}` }, item.text),
-    item.status === 'sent' || item.status === 'accepted'
+    (item.status === 'sent' || item.status === 'accepted') && !['locally_scheduled', 'prepared', 'played'].includes(item.stage ?? '')
       ? h('button', { type: 'button', className: 'g-quiet', 'aria-label': `Withdraw ${songLine(item.song)}`, onclick: () => void act(`${base()}/requests/${encodeURIComponent(item.request_id)}`, 'DELETE', undefined, 'Request withdrawn.') }, 'Withdraw')
       : null))));
 }
@@ -244,7 +256,7 @@ function searchPanel(): HTMLElement {
   });
   return h('section', { className: 'g-section', id: 'g-search', 'aria-label': 'Request a song' },
     h('h2', {}, 'Request a song'),
-    h('label', { for: 'g-q' }, 'Search the host\'s songs'),
+    h('label', { for: 'g-q' }, view?.local_first ? 'Search music permitted for this venue zone' : 'Search the host\'s songs'),
     input,
     results);
 }
