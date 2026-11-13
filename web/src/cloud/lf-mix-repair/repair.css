@@ -1,0 +1,21 @@
+/* Scoped LF11 controls: responsive without changing existing legacy cloud styles. */
+.lf11-panel{display:grid;gap:var(--space-2, .75rem);border:1px solid var(--line, #6665);border-radius:.75rem;padding:var(--space-3,1rem);min-width:0}
+.lf11-panel h3,.lf11-panel h4,.lf11-panel p{margin:0}
+.lf11-panel label{font-weight:600}
+.lf11-panel select{width:100%;max-width:32rem;min-height:2.5rem}
+.lf11-muted{font-size:.875rem;color:var(--text-soft, #777)}
+.lf11-readiness{font-size:.875rem;font-weight:600}
+.lf11-capabilities{display:flex;flex-wrap:wrap;gap:.5rem}
+.lf11-capabilities span,.lf11-state{border:1px solid var(--line,#6665);border-radius:1rem;padding:.2rem .55rem;font-size:.875rem}
+.lf11-track-list{display:grid;gap:.8rem;list-style:none;padding:0;margin:0;max-height:25rem;overflow:auto}
+.lf11-track-list li{display:grid;gap:.5rem;border-block-start:1px solid var(--line,#6665);padding-block-start:.7rem;min-width:0}
+.lf11-track-list li strong{overflow-wrap:anywhere}
+.lf11-track-list li p{font-size:.875rem;overflow-wrap:anywhere}
+.lf11-state{display:inline-block;margin-inline-start:.6rem}
+.lf11-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem}
+.lf11-actions button{white-space:normal;text-align:left;min-height:2.5rem}
+.lf11-hidden-file{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.lf11-variation{display:grid;gap:.5rem;border-inline-start:3px solid var(--line,#6665);padding-inline-start:.75rem}
+.lf11-notice{font-weight:600}
+@media(max-width:420px){.lf11-panel{padding:.75rem}.lf11-actions{display:grid;grid-template-columns:minmax(0,1fr)}.lf11-actions button{width:100%}}
+@media(prefers-reduced-motion:reduce){.lf11-panel *{scroll-behavior:auto}}
