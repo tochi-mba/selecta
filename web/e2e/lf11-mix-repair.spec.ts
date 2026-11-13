@@ -87,7 +87,7 @@ async function openFixture(page: import('@playwright/test').Page,
 
 test('eight tracks: 5 ready, 2 missing, 1 candidate; every repair path preserves the original', async ({ page, request }) => {
   const { editor, originalWrites } = await openFixture(page, request);
-  await expect(editor.getByText('5/8 exact recordings verified')).toBeVisible();
+  await expect(editor.getByText(/5\\/8 exact recordings verified/)).toBeVisible();
   await expect(editor.getByText('Missing', { exact: true })).toHaveCount(2);
   await expect(editor.getByText('Candidate', { exact: true })).toHaveCount(1);
   await expect(editor.getByText('Playable: No')).toBeVisible();
@@ -134,9 +134,9 @@ test('late verification for another device cannot win; keyboard focus and narrow
   await expect(choice).toBeFocused();
   await choice.selectOption('speaker-b');
   await expect(choice).toBeFocused();
-  await expect(editor.getByText('0/8 exact recordings verified')).toBeVisible();
+  await expect(editor.getByText(/0\\/8 exact recordings verified/)).toBeVisible();
   await page.waitForTimeout(1000);
-  await expect(editor.getByText('0/8 exact recordings verified')).toBeVisible();
+  await expect(editor.getByText(/0\\/8 exact recordings verified/)).toBeVisible();
   await page.setViewportSize({ width: 320, height: 800 });
   const panel = editor.getByRole('region', { name: 'Device mix readiness and repair' });
   const box = await panel.boundingBox();
