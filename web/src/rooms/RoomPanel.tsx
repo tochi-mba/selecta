@@ -14,22 +14,33 @@ import './rooms.css';
 
 type Api = <T>(path: string, init?: RequestInit, workspaceId?: string) => Promise<T>;
 type Song = { song_id: number; title: string; artist: string; length_s: number };
-type Item = { request_id: string; song: Song | null; status: string; votes: number; nickname: string | null };
+type Item = { request_id: string; song: Song | null; status: string; stage?: string; votes: number; nickname: string | null };
 type Guest = { id: string; nickname: string; status: string; joined_at?: number; last_seen_at?: number; online?: boolean };
 type Screen = { id: string; label: string; paired_at: number | null; last_seen_at: number | null; online: boolean };
-type Settings = { join_mode: string; request_mode: string; votes: boolean; names_shown: boolean; display: boolean };
+type Settings = { join_mode: string; request_mode: string; votes: boolean; names_shown: boolean; display: boolean; zone_id?: string; clean_only?: boolean };
 type Panel = {
   room: { id: string; name: string; status: string; settings: Settings; ends_at: number };
   code: string | null; join_path: string | null; guests: Guest[]; inbox: Item[]; coming_up: Item[]; unfit: Item[];
-  renders_left: number; music_paused: boolean; displays: number; screens?: Screen[]; now?: number;
+  renders_left: number; music_paused: boolean; local_first?: boolean; displays: number; screens?: Screen[]; now?: number;
 };
 
 const POLL_MS = 3000;
 const ANNOUNCE_EVERY_MS = 10_000;
-const songText = (song: Song | null) => (song ? `${song.title} - ${song.artist}` : 'A song');
+const songText = (song: Song | null) => (song ? `${song.title} - ${song.artist}` : 'Unavailable recording');
+const requestStageText = (stage?: string) => ({
+  awaiting_moderation: 'Awaiting moderation',
+  accepted: 'Host accepted · awaiting speaker',
+  deferred: 'Deferred · speaker or recording unavailable',
+  locally_scheduled: 'Locally scheduled',
+  prepared: 'Prepared on speaker',
+  played: 'Played',
+  rejected: 'Rejected',
+  expired: 'Expired',
+  withdrawn: 'Withdrawn',
+}[stage ?? ''] ?? 'Pending');
 
-export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn = true, playHereOn = true, freshOnly = false, origin = window.location.origin }: {
-  api: Api; workspaceId: string; locked?: string; votesOn?: boolean; displayOn?: boolean; playHereOn?: boolean; origin?: string;
+export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn = true, playHereOn = true, freshOnly = false, zoneId = 'main', origin = window.location.origin }: {
+  api: Api; workspaceId: string; locked?: string; votesOn?: boolean; displayOn?: boolean; playHereOn?: boolean; origin?: string; zoneId?: string;
   /** ADR-0422 (rooms.nickname_confirm): a poll that overlapped one of the host's own changes is dropped. */
   freshOnly?: boolean;
 }) {
@@ -108,7 +119,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
   if (!loaded) return <section className="room-panel" aria-busy="true"><h2 id="room-title">Room</h2><p>Loading...</p></section>;
 
   if (!panel) {
-    const open = (event: FormEvent) => { event.preventDefault(); void act('/rooms', { method: 'POST', body: JSON.stringify({ name: name || 'Party', settings: {} }) }, 'Room open.'); };
+    const open = (event: FormEvent) => { event.preventDefault(); void act('/rooms', { method: 'POST', body: JSON.stringify({ name: name || 'Party', settings: { zone_id: zoneId } }) }, 'Room open.'); };
     return (
       <section className="room-panel" aria-labelledby="room-title">
         <h2 id="room-title">Open a room</h2>
@@ -146,7 +157,10 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
         <h2 id="room-title">{room.name}</h2>
         <span className="room-status" data-testid="room-status">{room.status === 'locked' ? 'Locked: no new guests' : 'Open'}</span>
       </header>
-      {panel.music_paused && <p className="room-banner">{`No speaker is playing, so guests see "The music's paused".${playHereOn ? ' Press Play here on a device to start.' : ''}`}</p>}
+      {panel.music_paused && <p className="room-banner" role="status">{panel.local_first
+        ? 'The local venue speaker is offline or not verified. Host acceptance is not playback scheduling; requests will be deferred.'
+        : `No speaker is playing, so guests see "The music's paused".${playHereOn ? ' Press Play here on a device to start.' : ''}`}</p>}
+      {panel.local_first && <p className="room-muted">Local speaker zone: {settings.zone_id ?? 'main'}. Playback is performed on that device, never on a guest phone.</p>}
       <div className="room-share">
         {link && <div className="room-qr" data-testid="room-qr" data-link={link} dangerouslySetInnerHTML={{ __html: qrSvg(link, `QR code to join ${room.name}`) }} />}
         <div>
@@ -173,6 +187,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
           <option value="auto">Accept automatically</option><option value="approve">I approve each</option><option value="off">Off (watch only)</option>
         </select></label>
         {votesOn && <label className="room-check"><input type="checkbox" checked={settings.votes} onChange={(event) => save({ votes: event.target.checked })} /> Guests can vote</label>}
+        {panel.local_first && <label className="room-check"><input type="checkbox" checked={settings.clean_only ?? false} onChange={(event) => save({ clean_only: event.target.checked })} /> Clean recordings only in this zone</label>}
         <label className="room-check"><input type="checkbox" checked={settings.names_shown} onChange={(event) => save({ names_shown: event.target.checked })} /> Show guest nicknames to everyone</label>
       </fieldset>
 
@@ -187,9 +202,9 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
         )}
       </section>
       <section aria-labelledby="coming-title">
-        <h3 id="coming-title">Coming up</h3>
+        <h3 id="coming-title">{panel.local_first ? 'Accepted guest requests' : 'Coming up'}</h3>
         {panel.coming_up.length === 0 ? <p className="room-muted">No guest requests in the queue.</p> : (
-          <ol className="room-list">{panel.coming_up.map((item) => <li key={item.request_id}><span>{songText(item.song)}<span className="room-muted"> · {item.nickname}</span></span></li>)}</ol>
+          <ol className="room-list">{panel.coming_up.map((item) => <li key={item.request_id}><span>{songText(item.song)}<span className="room-muted"> · {item.nickname}{panel.local_first ? ` · ${requestStageText(item.stage)}` : ''}</span></span></li>)}</ol>
         )}
         {panel.unfit.length > 0 && (<>
           <h3>Couldn't fit</h3>
