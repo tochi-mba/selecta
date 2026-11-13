@@ -135,6 +135,8 @@ def test_venue_routes_are_refused_when_rolled_back(tmp_path):
     try:
         client = TestClient(create_app(Settings(tmp_path), tmp_path / "no-web"))
         for flag_id in rollout.rollback_flags():
+            if "local" not in flags.registry()[flag_id].modes:
+                continue  # Cloud-only Autopilot routes cannot be called on the local server.
             for route in flags.registry()[flag_id].routes:
                 method, template = route.split(" ", 1)
                 response = client.request(method, re.sub(r"\{[^}]+\}", "1", template), json={})

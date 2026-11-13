@@ -62,7 +62,7 @@ test('a refreshed browser carries on an upload from the parts already uploaded',
 
   await page.locator('input[type=file]').setInputFiles(file);
   await page.getByRole('button', { name: 'Start upload' }).click();
-  await expect(page.getByText('Needs attention')).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText('Needs attention', { exact: true })).toBeVisible({ timeout: 60_000 });
   const before = await r2Log(request);
   expect(before.filter((entry) => entry.method === 'PUT' && entry.status === 200).map((entry) => entry.part)).toEqual([1]);
 

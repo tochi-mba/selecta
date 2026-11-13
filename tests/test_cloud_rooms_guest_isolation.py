@@ -42,7 +42,8 @@ GUEST: dict[tuple[str, str], dict | None] = {
 }
 # Reached with no cookie at all (joining) or with the display's own cookie.
 ANONYMOUS = {("POST", "/api/guest/join")}
-DISPLAY = {("POST", "/api/display/pairings"), ("GET", "/api/display/view")}
+DISPLAY = {("POST", "/api/display/pairings"), ("GET", "/api/display/view"),
+           ("DELETE", "/api/display/pairing")}
 
 
 def _join(party, code: str) -> tuple[TestClient, dict]:

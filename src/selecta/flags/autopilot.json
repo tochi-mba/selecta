@@ -125,7 +125,10 @@
         "autopilot.venue_mode"
       ],
       "kind": "experiment",
-      "owner": "autopilot"
+      "owner": "autopilot",
+      "modes": [
+        "cloud"
+      ]
     },
     "autopilot.safe_transitions": {
       "label": "Conservative Autopilot transitions",
@@ -135,7 +138,10 @@
         "autopilot.venue_mode"
       ],
       "kind": "experiment",
-      "owner": "autopilot"
+      "owner": "autopilot",
+      "modes": [
+        "cloud"
+      ]
     },
     "autopilot.ai_director": {
       "label": "AI DJ director",
@@ -145,7 +151,10 @@
         "autopilot.venue_mode"
       ],
       "kind": "experiment",
-      "owner": "autopilot"
+      "owner": "autopilot",
+      "modes": [
+        "cloud"
+      ]
     }
   }
 }

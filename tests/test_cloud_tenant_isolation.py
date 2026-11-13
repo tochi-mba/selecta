@@ -106,7 +106,46 @@ STAFF_ONLY = {
     ("POST", "/api/admin/takedowns"),
     ("POST", "/api/admin/takedowns/{notice_id}/{command}"),
     ("POST", "/api/admin/upload-restrictions/{workspace_id}/lift"),
+    ("POST", "/api/admin/business/pilots"),
 }
+# Business routes require an organisation workspace and membership, not merely a
+# personal library workspace. The dedicated Business tests exercise their tenant
+# checks and the flag-guard suite proves they are disabled before rollout.
+BUSINESS_SCOPED = {
+    ("GET", "/api/business/orgs"),
+    ("POST", "/api/business/orgs"),
+    ("GET", "/api/business/orgs/{org_id}"),
+    ("GET", "/api/business/venues"),
+    ("POST", "/api/business/venues"),
+    ("GET", "/api/business/venues/{venue_id}"),
+    ("PATCH", "/api/business/venues/{venue_id}"),
+    ("POST", "/api/business/venues/{venue_id}/archive"),
+    ("GET", "/api/business/zones"),
+    ("POST", "/api/business/zones"),
+    ("PATCH", "/api/business/zones/{zone_id}"),
+    ("POST", "/api/business/zones/{zone_id}/archive"),
+    ("GET", "/api/business/crates"),
+    ("POST", "/api/business/crates"),
+    ("GET", "/api/business/crates/{crate_id}"),
+    ("PUT", "/api/business/crates/{crate_id}/songs"),
+    ("DELETE", "/api/business/crates/{crate_id}"),
+    ("GET", "/api/business/venues/{venue_id}/hours"),
+    ("PUT", "/api/business/venues/{venue_id}/hours"),
+    ("POST", "/api/business/venues/{venue_id}/hour-exceptions"),
+    ("DELETE", "/api/business/venues/{venue_id}/hour-exceptions/{exception_id}"),
+    ("GET", "/api/business/venues/{venue_id}/holiday-suggestions"),
+    ("POST", "/api/business/venues/{venue_id}/stay-open-late"),
+    ("POST", "/api/business/venues/{venue_id}/close-now"),
+    ("POST", "/api/business/venues/{venue_id}/close-now/{override_id}/undo"),
+    ("GET", "/api/business/zones/{zone_id}/state"),
+    ("GET", "/api/business/zones/{zone_id}/programme"),
+    ("PUT", "/api/business/zones/{zone_id}/programme"),
+    ("GET", "/api/business/zones/{zone_id}/offline-manifest"),
+    ("POST", "/api/business/zones/{zone_id}/commands"),
+    ("PUT", "/api/business/zones/{zone_id}/cache-report"),
+    ("GET", "/api/workspaces"),
+}
+
 # Every route that can reach a workspace's data, with a body valid enough to get past
 # validation, so the refusal we see comes from the workspace check and not from a 422.
 SCOPED: dict[tuple[str, str], dict | None] = {
@@ -368,7 +407,7 @@ def test_every_cloud_route_is_classified(world):
         if isinstance(route, APIRoute) and route.path.startswith("/api")
         for method in route.methods - {"HEAD"}
     }
-    classified = PUBLIC | CAPABILITY_ONLY | SELF_ONLY | STAFF_ONLY | set(SCOPED)
+    classified = PUBLIC | CAPABILITY_ONLY | SELF_ONLY | STAFF_ONLY | BUSINESS_SCOPED | set(SCOPED)
     assert routes - classified == set(), "new routes must join the tenant isolation matrix"
     assert classified - routes == set(), "the matrix names routes that no longer exist"
 

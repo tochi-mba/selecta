@@ -38,6 +38,8 @@ from selecta.admin import routes as admin_routes
 from selecta.admin import routes_controls as admin_control_routes
 from selecta.admin.state import EmergencyCache
 from selecta.autopilot import routes_autopilot as autopilot_routes
+from selecta.business import admin_routes as business_admin_routes
+from selecta.business import routes as business_org_routes
 from selecta.billing import api as billing_api
 from selecta.billing import plans, stripe_sync
 from selecta.devstack import guard as dev_guard
@@ -702,6 +704,10 @@ def create_cloud_app(
     cloud_mix_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal
     )
+    business_org_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal,
+        rules=rule_cache,
+    )
     for business_routes in (business_hours_routes, business_zones_routes):
         business_routes.install_routes(
             app, engine=engine, current_claims=current_claims, principal_for=_principal
@@ -742,6 +748,9 @@ def create_cloud_app(
         rules=rule_cache, allowed_origins=settings.allowed_origins, ports=room_ports,
     )
 
+    business_admin_routes.install_routes(
+        app, engine=engine, current_claims=current_claims,
+    )
     admin_routes.install_routes(
         app,
         engine=engine,
