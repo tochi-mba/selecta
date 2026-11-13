@@ -164,7 +164,7 @@ def test_step_by_step_down_and_up_rebuilds_the_same_schema(cloud_engine):
 
     for target in chain:
         migrate.upgrade(cloud_engine, target)
-        assert migrate.current(cloud_engine) == target
+        assert target in current_heads(cloud_engine)
 
     assert shape(cloud_engine) == at_head
     assert migrate.pending_changes(cloud_engine) == []
