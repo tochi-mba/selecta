@@ -14,6 +14,7 @@ from fastapi import Depends, FastAPI, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection, Engine
 
+from selecta import flags
 from selecta.admin import http
 from selecta.authz.check import authorize
 from selecta.business import pilot
@@ -52,6 +53,12 @@ def install_routes(
 
         def provision(conn: Connection) -> dict:
             authorize(conn, actor, "business.pilots.create")
+            # RBAC comes first: a disabled pilot rollout cannot hide permission denials.
+            if not flags.on("business.pilots"):
+                flag = flags.registry()["business.pilots"]
+                raise http.CommandRefused(
+                    403, "flag_off", f"{flag.label} is turned off in this build.", flag=flag.id
+                )
             return pilot.create_pilot(
                 conn,
                 owner_user_id=body.owner_user_id,

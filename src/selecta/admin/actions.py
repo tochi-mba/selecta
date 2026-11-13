@@ -72,13 +72,9 @@ def listing(conn: Connection, actor: Actor) -> list[dict[str, Any]]:
 def _known(conn: Connection, actor: Actor, action_id: str) -> None:
     """A missing action is refused unless the actor may list actions anyway (which shows that it
     isn't there), so its id reveals nothing to anyone else."""
-    try:
-        delayed.get(conn, action_id)
-    except delayed.ActionNotFound:
-        authorize(
-            conn, actor, "platform.dashboard.read", ResourceRef("dangerous_action", action_id)
-        )
-        raise
+    # Check before looking up any action id, including an existing action.
+    authorize(conn, actor, "platform.dashboard.read", ResourceRef("dangerous_action", action_id))
+    delayed.get(conn, action_id)
 
 
 def approve(conn: Connection, actor: Actor, action_id: str, payload_hash: str) -> dict:
