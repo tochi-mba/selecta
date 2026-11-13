@@ -97,7 +97,8 @@ def collect_inventory(
             expected = ""
         if key != expected:
             concerns.append({"kind": "foreign_staging_key", "reference": str(s["id"]), "key": key})
-        else:
+        elif s.get("status") in ("planned", "uploading", "completing"):
+            # Accepted uploads are copied out of staging; absence is expected.
             mark(Bucket.STAGING, key, "upload:" + str(s["id"]))
     for a in artifact_rows:
         for key in _safe_artifact_keys(a):
