@@ -18,8 +18,6 @@ from sqlalchemy.engine import Engine
 from selecta.admin import state as emergency_state
 from selecta.authz.roles import WorkspaceAction
 from selecta.billing import plans, stripe_sync
-from selecta.billing.local_first import effective_contract
-from selecta.usage import hosted_ai
 from selecta.billing.schema import checkout_consents, stripe_customers
 from selecta.billing.stripe_sync import PricePlan, parse_price_map
 from selecta.billing.webhooks import (
@@ -96,31 +94,6 @@ def install_routes(
         if not key:
             raise HTTPException(status_code=503, detail={"code": "billing_not_configured"})
         return HttpStripeClient(key, api_version=os.environ.get("SELECTA_STRIPE_API_VERSION"))
-
-    @app.get("/api/billing/contract")
-    def read_contract(
-        request: Request,
-        claims: Claims = Depends(current_claims),
-    ):
-        """Expose authoritative commercial terms without asserting audio availability.
-
-        The tenant is derived from verified claims, not user-supplied identifiers.
-        Legacy accounts keep v1 storage and benefits until an approved migration.
-        """
-        principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
-        with transaction(engine, principal.workspace.id) as conn:
-            grant = stripe_sync.effective_entitlement(conn, principal.workspace.id)
-            commercial = effective_contract(grant.plan_id, grant.plan_version)
-            payload = commercial.public_payload()
-            payload["reason"] = grant.reason
-            payload["valid_until"] = grant.valid_until
-            payload["snapshot_version"] = grant.snapshot_version
-            payload["held_during_outage"] = grant.held
-            if commercial.benefits is not None:
-                payload["hosted_ai_usage"] = hosted_ai.current_usage(
-                    conn, principal.workspace.id, commercial.benefits,
-                )
-            return payload
 
     @app.post("/api/billing/checkout")
     def checkout(
