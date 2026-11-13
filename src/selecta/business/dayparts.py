@@ -16,7 +16,7 @@ from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, time, timedelta, tzinfo
 from types import MappingProxyType
-from typing import Any, TypeVar
+from typing import Any
 
 from selecta.analysis.song import SongInfo
 from selecta.planner import arc
@@ -55,8 +55,6 @@ HARD_CUTS = frozenset(name for name, words in MOVE_NAMES.items() if words == "cu
 
 WEEKDAYS = range(7)
 """Python's `date.weekday()`: 0 is Monday."""
-
-T = TypeVar("T", bound=Hashable)
 
 
 class ProgrammeError(ValueError):
@@ -457,24 +455,29 @@ def land_boundary(transition_times: Iterable[float], boundary: float) -> float |
     return min(near, key=lambda t: (abs(t - boundary), t))
 
 
-def bridge_or_echo(
+def bridge_or_echo[T: Hashable](
     old_pool: Sequence[T],
     new_pool: Sequence[T],
     compatible: Callable[[T, T], bool],
+    *,
+    bridges: Sequence[T] | None = None,
 ) -> tuple[str, Any]:
-    """How the old block's pool reaches the new one, never by a hard cut.
+    """How the old block reaches the new one, never by a hard cut.
 
+    `old_pool` holds the songs the old block can end on (usually just its planned last song).
     ("direct", (old, new)) when a pair carries a real move; ("bridge", (old, song, new)) when a
-    song allowed in both pools joins them, as `request_planner` bridges a request; otherwise
-    ("echo_out", None), the move `planner/choose.py` always has available.
+    song allowed in both blocks joins them, as `request_planner` bridges a request; otherwise
+    ("echo_out", None), the move `planner/choose.py` always has available. `bridges` are the
+    songs both blocks' rules allow; by default the songs the two pools share.
     """
     for old in old_pool:
         for new in new_pool:
             if compatible(old, new):
                 return ("direct", (old, new))
-    new_set = set(new_pool)
-    shared = [song for song in old_pool if song in new_set]
-    for bridge in shared:
+    if bridges is None:
+        new_set = set(new_pool)
+        bridges = [song for song in old_pool if song in new_set]
+    for bridge in bridges:
         for old in old_pool:
             if old == bridge or not compatible(old, bridge):
                 continue

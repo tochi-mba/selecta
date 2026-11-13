@@ -7,8 +7,10 @@ artifact is protected when:
 
 - its row is marked `protected`;
 - a frozen revision uses it (`revision_artifacts.frozen`, for an exported or kept mix); or
-- the revision playing now uses it: the workspace's playback session names that revision and is
-  playing or paused.
+- a revision playing now uses it: any of the workspace's playback sessions (one per business
+  zone, ADR-0443) names that revision and is playing or paused; or
+- a kiosk reports that revision cached for offline playback (ADR-0446), through the provider
+  installed with `set_cached_revisions` (none until offline playback installs one).
 
 `pin` records which artifacts a revision uses and `unpin` forgets a revision. `evict` takes the
 workspace's artifact rows in least-recently-used order (`last_used_at`, which every reuse
@@ -24,7 +26,7 @@ and gives its bytes back. So `evict` and `over_budget` leave `export` rows out e
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 
 import sqlalchemy as sa
@@ -100,21 +102,56 @@ def unpin(connection: Connection, workspace_id: str, revision_id: str) -> None:
     )
 
 
-def protected_ids(connection: Connection, workspace_id: str) -> set[str]:
-    """Every artifact of the workspace that eviction must leave alone."""
+CachedRevisions = Callable[[Connection, str], set[str]]
+
+
+def _no_cached_revisions(_connection: Connection, _workspace_id: str) -> set[str]:
+    return set()
+
+
+_cached_revisions: CachedRevisions = _no_cached_revisions
+
+
+def set_cached_revisions(provider: CachedRevisions | None) -> None:
+    """Install the source of revisions kiosks report cached (ADR-0446); None removes it."""
+    global _cached_revisions
+    _cached_revisions = provider or _no_cached_revisions
+
+
+def live_revision_ids(
+    connection: Connection,
+    workspace_id: str,
+    *,
+    cached_revisions: CachedRevisions | None = None,
+) -> set[str]:
+    """Every revision in use now: each session's playing or paused revision, every zone's
+    included, and every revision a kiosk reports cached."""
     playing = connection.execute(
         sa.select(playback_sessions.c.mix_revision_id).where(
             playback_sessions.c.workspace_id == workspace_id,
             playback_sessions.c.state.in_(LIVE_PLAYBACK),
             playback_sessions.c.mix_revision_id.is_not(None),
         )
-    ).scalar()
+    ).scalars()
+    provider = cached_revisions or _cached_revisions
+    return {revision for revision in playing if revision} | set(
+        provider(connection, workspace_id) or ()
+    )
+
+
+def protected_ids(
+    connection: Connection,
+    workspace_id: str,
+    *,
+    cached_revisions: CachedRevisions | None = None,
+) -> set[str]:
+    """Every artifact of the workspace that eviction must leave alone."""
+    live = live_revision_ids(connection, workspace_id, cached_revisions=cached_revisions)
+    in_use = [revision_artifacts.c.frozen.is_(True)]
+    if live:
+        in_use.append(revision_artifacts.c.revision_id.in_(sorted(live)))
     held = sa.select(revision_artifacts.c.artifact_id).where(
-        revision_artifacts.c.workspace_id == workspace_id,
-        sa.or_(
-            revision_artifacts.c.frozen.is_(True),
-            revision_artifacts.c.revision_id == (playing or ""),
-        ),
+        revision_artifacts.c.workspace_id == workspace_id, sa.or_(*in_use)
     )
     marked = sa.select(artifacts.c.id).where(
         artifacts.c.workspace_id == workspace_id, artifacts.c.protected.is_(True)
@@ -122,7 +159,14 @@ def protected_ids(connection: Connection, workspace_id: str) -> set[str]:
     return set(connection.execute(held).scalars()) | set(connection.execute(marked).scalars())
 
 
-def evict(engine: Engine, workspace_id: str, store, *, budget_bytes: int | None = None) -> Evicted:
+def evict(
+    engine: Engine,
+    workspace_id: str,
+    store,
+    *,
+    budget_bytes: int | None = None,
+    cached_revisions: CachedRevisions | None = None,
+) -> Evicted:
     """Bring one workspace's derived data under budget, least recently used first."""
     with persistence.transaction(engine, workspace_id) as connection:
         budget = budget_for(connection, workspace_id) if budget_bytes is None else budget_bytes
@@ -134,7 +178,7 @@ def evict(engine: Engine, workspace_id: str, store, *, budget_bytes: int | None 
             .order_by(artifacts.c.last_used_at, artifacts.c.id)
             .with_for_update()
         ).all()
-        keep = protected_ids(connection, workspace_id)
+        keep = protected_ids(connection, workspace_id, cached_revisions=cached_revisions)
         before = sum(int(row.size_bytes or 0) for row in rows)
         total, removed, keys = before, [], []
         for row in rows:
@@ -180,8 +224,10 @@ __all__ = [
     "Evicted",
     "budget_for",
     "evict",
+    "live_revision_ids",
     "over_budget",
     "pin",
     "protected_ids",
+    "set_cached_revisions",
     "unpin",
 ]

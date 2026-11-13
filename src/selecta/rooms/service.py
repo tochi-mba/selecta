@@ -98,8 +98,17 @@ class Rooms(RoomContext):
     ) -> None:
         display.confirm_pairing(self, workspace_id, room_id, pairing_code, now=now)
 
-    def unpair_displays(self, workspace_id: str, room_id: str) -> int:
-        return display.unpair_displays(self, workspace_id, room_id)
+    def unpair_displays(
+        self,
+        workspace_id: str,
+        room_id: str,
+        *,
+        display_id: str | None = None,
+        now: float | None = None,
+    ) -> int:
+        return display.unpair_displays(
+            self, workspace_id, room_id, display_id=display_id, now=now
+        )
 
     # Guests.
     def hash_ip(self, ip: str) -> str:
@@ -152,6 +161,9 @@ class Rooms(RoomContext):
 
     def display_view(self, display_token: str, *, now: float | None = None) -> display.DisplayView:
         return display.display_view(self, display_token, now=now)
+
+    def disconnect_display(self, display_token: str, *, now: float | None = None) -> None:
+        display.disconnect(self, display_token, now=now)
 
     # The planner and the library telling the room what happened.
     def record_outcome(

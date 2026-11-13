@@ -96,7 +96,7 @@ test('S4-0103-08 two tabs playing, one request: it joins the mix once, and a rep
     await a.getByRole('button', { name: /^Requests/ }).first().click();
     const drawer = a.getByRole('dialog', { name: 'Requests' });
     await drawer.getByRole('combobox', { name: 'Request a song' }).fill('Last Call');
-    await drawer.getByRole('button', { name: /Last Call.* - Request$/ }).first().click();
+    await drawer.getByRole('button', { name: /Last Call.* Request$/ }).first().click();
     // both tabs keep looking for a spot every few seconds; wait for the song to join
     await expect.poll(async () => order((await api(server.base, 'GET', '/api/mix')).json).length, { timeout: 420_000, intervals: [3000] }).toBeGreaterThan(4);
     const after = order((await api(server.base, 'GET', '/api/mix')).json);

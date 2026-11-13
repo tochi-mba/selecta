@@ -146,7 +146,7 @@ def _span(period: Period) -> tuple[int, int]:
 
 def _overlap_message(first: Period, second: Period) -> str:
     if first.weekday == second.weekday:
-        a, b = sorted((first, second), key=lambda p: (not p.all_day, _minutes(p.opens or "0:00")))
+        a, b = sorted((first, second), key=lambda p: -1 if p.all_day else _minutes(p.opens))
         return f"{WEEKDAYS[a.weekday]} has two periods that overlap: {_label(a)} and {_label(b)}"
     return (
         f"{WEEKDAYS[first.weekday]}'s period {_label(first)} runs into "
@@ -421,7 +421,7 @@ def _close_times(
     return iv.end, iv.end + timedelta(seconds=CLOSING_MAX_S + CLOSING_FADE_S)
 
 
-_Segment = tuple[str, datetime, "datetime | None", Interval]
+_Segment = tuple[str, datetime, datetime | None, Interval]
 
 
 def _segments(intervals: Sequence[Interval], closing_mode: str) -> list[_Segment]:

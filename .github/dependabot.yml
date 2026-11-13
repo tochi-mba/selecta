@@ -35,3 +35,15 @@ updates:
         update-types: [minor, patch]
     commit-message:
       prefix: deps(web)
+
+  # The service image's base (infra/docker/service.Dockerfile). Python's minor version is held
+  # to the one pyproject.toml allows; test.yml's service-image job builds every update.
+  - package-ecosystem: docker
+    directory: /infra/docker
+    schedule:
+      interval: monthly
+    ignore:
+      - dependency-name: python
+        update-types: [version-update:semver-major, version-update:semver-minor]
+    commit-message:
+      prefix: deps(docker)

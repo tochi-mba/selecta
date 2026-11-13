@@ -10,6 +10,7 @@ and playback don't need it.
 from __future__ import annotations
 
 import os
+import time
 from collections.abc import Callable, Iterable
 from typing import Any
 
@@ -60,6 +61,7 @@ def install(
             speakers=CloudSpeakers(engine),
             now_playing=ports.now_playing,
             events=OutboxRoomEvents(),
+            started_at=time.time(),
         )
     app.state.rooms = service
     limiter = Limiter()

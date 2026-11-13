@@ -16,7 +16,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
-from selecta.persistence import db_now
+from selecta.persistence import db_now, new_id
 from selecta.playback import ports
 from selecta.playback.model import (
     Capabilities,
@@ -24,6 +24,7 @@ from selecta.playback.model import (
     DeviceKind,
     DeviceSignedOut,
     PlayState,
+    Principal,
     Session,
     UnknownDevice,
     frozen,
@@ -48,6 +49,9 @@ def device_from_row(row: Mapping[str, Any]) -> Device:
         created_at=row["created_at"],
         last_seen_at=row["last_seen_at"],
         signed_out_at=row["signed_out_at"],
+        principal=Principal(row.get("principal") or Principal.PERSON.value),
+        zone_id=row.get("zone_id"),
+        machine_fingerprint=row.get("machine_fingerprint"),
     )
 
 
@@ -63,6 +67,9 @@ def session_from_row(row: Mapping[str, Any]) -> Session:
         lease_expires_at=row["lease_expires_at"],
         seq=row["seq"],
         updated_at=row["updated_at"],
+        zone_id=row.get("zone_id"),
+        volume=row.get("volume"),
+        hand_back_to_device_id=row.get("hand_back_to_device_id"),
     )
 
 
@@ -109,25 +116,41 @@ def device_names(conn: Connection, workspace_id: str, ids: Iterable[str | None])
     return {row.id: row.name for row in rows}
 
 
-def _session_query(workspace_id: str) -> sa.Select:
-    return sa.select(playback_sessions).where(playback_sessions.c.workspace_id == workspace_id)
+def _zone_is(zone_id: str | None):
+    if zone_id is None:
+        return playback_sessions.c.zone_id.is_(None)
+    return playback_sessions.c.zone_id == zone_id
 
 
-def load_session(conn: Connection, workspace_id: str) -> Session | None:
-    row = conn.execute(_session_query(workspace_id)).mappings().first()
+def _session_query(workspace_id: str, zone_id: str | None = None) -> sa.Select:
+    """The one session for this workspace and zone. A personal workspace's has no zone."""
+    return sa.select(playback_sessions).where(
+        playback_sessions.c.workspace_id == workspace_id, _zone_is(zone_id)
+    )
+
+
+def load_session(
+    conn: Connection, workspace_id: str, zone_id: str | None = None
+) -> Session | None:
+    row = conn.execute(_session_query(workspace_id, zone_id)).mappings().first()
     return session_from_row(row) if row else None
 
 
-def lock_session(conn: Connection, workspace_id: str, now: float) -> Session:
-    """The workspace's session, locked for this transaction, created stopped if there's none."""
-    query = _session_query(workspace_id).with_for_update()
+def lock_session(
+    conn: Connection, workspace_id: str, now: float, zone_id: str | None = None
+) -> Session:
+    """The session for this workspace and zone, locked for this transaction, created stopped if
+    there's none."""
+    query = _session_query(workspace_id, zone_id).with_for_update()
     row = conn.execute(query).mappings().first()
     if row is None:
         try:
             with conn.begin_nested():
                 conn.execute(
                     sa.insert(playback_sessions).values(
+                        id=new_id(),
                         workspace_id=workspace_id,
+                        zone_id=zone_id,
                         song_index=0,
                         offset_ms=0,
                         state=PlayState.STOPPED.value,
@@ -141,10 +164,37 @@ def lock_session(conn: Connection, workspace_id: str, now: float) -> Session:
     return session_from_row(row)
 
 
+def zone_sessions(conn: Connection, workspace_id: str) -> list[Session]:
+    """Every zone session of a business workspace (none for a personal one)."""
+    rows = conn.execute(
+        sa.select(playback_sessions)
+        .where(
+            playback_sessions.c.workspace_id == workspace_id,
+            playback_sessions.c.zone_id.is_not(None),
+        )
+        .order_by(playback_sessions.c.zone_id)
+    ).mappings()
+    return [session_from_row(row) for row in rows]
+
+
+def lock_device(conn: Connection, workspace_id: str, device_id: str) -> None:
+    """Hold this device's row for the transaction, so two zone leases for one device are decided
+    one after the other (ADR-0443: a device holds at most one zone lease). Zone callers lock the
+    device before any session, always in that order, so two of them can't deadlock."""
+    conn.execute(
+        sa.select(devices.c.id)
+        .where(devices.c.workspace_id == workspace_id, devices.c.id == device_id)
+        .with_for_update()
+    ).first()
+
+
 def save_session(conn: Connection, session: Session) -> None:
     conn.execute(
         sa.update(playback_sessions)
-        .where(playback_sessions.c.workspace_id == session.workspace_id)
+        .where(
+            playback_sessions.c.workspace_id == session.workspace_id,
+            _zone_is(session.zone_id),
+        )
         .values(
             mix_revision_id=session.mix_revision_id,
             song_index=session.song_index,
@@ -155,13 +205,16 @@ def save_session(conn: Connection, session: Session) -> None:
             lease_expires_at=session.lease_expires_at,
             seq=session.seq,
             updated_at=session.updated_at,
+            volume=session.volume,
+            hand_back_to_device_id=session.hand_back_to_device_id,
         )
     )
 
 
 def session_payload(session: Session) -> dict[str, Any]:
-    """The session as every device sees it on its event stream."""
-    return {
+    """The session as every device sees it on its event stream. A zone session also names its
+    zone and carries the zone's shared volume; a personal one looks exactly as before."""
+    payload: dict[str, Any] = {
         "mix_revision_id": session.mix_revision_id,
         "song_index": session.song_index,
         "offset_ms": session.offset_ms,
@@ -171,6 +224,19 @@ def session_payload(session: Session) -> dict[str, Any]:
         "lease_expires_at": session.lease_expires_at,
         "seq": session.seq,
     }
+    if session.zone_id is not None:
+        payload["zone_id"] = session.zone_id
+        payload["volume"] = session.volume
+        payload["hand_back_to_device_id"] = session.hand_back_to_device_id
+    return payload
+
+
+def zone_payload(session: Session, payload: Mapping[str, Any]) -> dict[str, Any]:
+    """An event payload with the session's zone added, when it has one (ADR-0443 events)."""
+    out = dict(payload)
+    if session.zone_id is not None:
+        out["zone_id"] = session.zone_id
+    return out
 
 
 def stop_playback(
@@ -191,7 +257,10 @@ def stop_playback(
         conn,
         session.workspace_id,
         ports.STOPPED,
-        {"device_id": session.active_device_id, "reason": reason, "seq": stopped.seq},
+        zone_payload(
+            session,
+            {"device_id": session.active_device_id, "reason": reason, "seq": stopped.seq},
+        ),
     )
     events.publish(conn, session.workspace_id, ports.STATE, session_payload(stopped))
     return stopped
@@ -225,11 +294,15 @@ def sign_out_devices(
         events.publish(
             conn, workspace_id, ports.SIGNED_OUT, {"device_id": device_id, "reason": reason}
         )
-    session = load_session(conn, workspace_id)
-    if session is None or session.active_device_id not in ids:
-        return False
-    session = lock_session(conn, workspace_id, now)
-    if session.active_device_id not in ids:
-        return False
-    stop_playback(conn, session, now, reason, events)
-    return True
+    # The personal session, and every zone session of a business workspace (ADR-0443).
+    candidates = [load_session(conn, workspace_id), *zone_sessions(conn, workspace_id)]
+    stopped = False
+    for found in candidates:
+        if found is None or found.active_device_id not in ids:
+            continue
+        session = lock_session(conn, workspace_id, now, found.zone_id)
+        if session.active_device_id not in ids:
+            continue
+        stop_playback(conn, session, now, reason, events)
+        stopped = True
+    return stopped

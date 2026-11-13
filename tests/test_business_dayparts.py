@@ -81,8 +81,9 @@ def test_date_replacement_replaces_the_weekly_day():
 
 
 def test_version_is_immutable_and_round_trips_json():
-    version = ProgrammeVersion("v1", "owner@example.test", datetime(2026, 11, 1, tzinfo=UTC),
-                               _programme())
+    version = ProgrammeVersion(
+        "v1", "owner@example.test", datetime(2026, 11, 1, tzinfo=UTC), _programme()
+    )
     with pytest.raises(dataclasses.FrozenInstanceError):
         version.version_id = "v2"  # type: ignore[misc]
     with pytest.raises(dataclasses.FrozenInstanceError):
@@ -94,8 +95,9 @@ def test_version_is_immutable_and_round_trips_json():
     again = ProgrammeVersion.from_json(version.to_json())
     assert again == version
     assert again.to_json() == version.to_json()
-    row = ProgrammeVersion.from_row("v1", version.created_by, version.created_at,
-                                    version.blocks_json)
+    row = ProgrammeVersion.from_row(
+        "v1", version.created_by, version.created_at, version.blocks_json
+    )
     assert row.programme == version.programme
     assert json.loads(version.blocks_json)["replacements"]["2026-12-24"][0]["energy"] == 90
 
@@ -143,9 +145,7 @@ def test_languages_and_stems_match_what_session_steer_accepts(tmp_path):
 
 def test_block_windows_run_to_the_next_block_or_the_close_and_clamp_early_blocks():
     monday = date(2026, 11, 16)
-    windows = block_windows(
-        _programme(), _london(monday, 11), _london(monday, 20), monday, LONDON
-    )
+    windows = block_windows(_programme(), _london(monday, 11), _london(monday, 20), monday, LONDON)
     assert [w.block.name for w in windows] == ["Brunch calm", "Lunch", "Evening lift"]
     assert windows[0].start == _london(monday, 11)  # clamped to the opening
     assert windows[0].end == windows[1].start == _london(monday, 12)
@@ -155,9 +155,7 @@ def test_block_windows_run_to_the_next_block_or_the_close_and_clamp_early_blocks
 
 def test_block_windows_keep_only_the_latest_block_before_opening_and_drop_after_close():
     monday = date(2026, 11, 16)
-    windows = block_windows(
-        _programme(), _london(monday, 13), _london(monday, 17), monday, LONDON
-    )
+    windows = block_windows(_programme(), _london(monday, 13), _london(monday, 17), monday, LONDON)
     assert [w.block.name for w in windows] == ["Lunch"]
     assert windows[0].seconds == 4 * 3600
 
@@ -167,9 +165,7 @@ def test_block_windows_place_after_midnight_blocks_on_overnight_hours():
     late = Block("01:00", "Late", energy=70)
     programme = Programme(weekly={5: (Block("20:00", "Night", energy=60), late)})
     sunday = date(2026, 11, 22)
-    windows = block_windows(
-        programme, _london(saturday, 20), _london(sunday, 3), saturday, LONDON
-    )
+    windows = block_windows(programme, _london(saturday, 20), _london(sunday, 3), saturday, LONDON)
     assert [w.block.name for w in windows] == ["Night", "Late"]
     assert windows[1].start == _london(sunday, 1)
 
@@ -212,9 +208,7 @@ def test_planner_inputs_for_a_level_are_a_flat_curve_with_the_blocks_own_pool():
 
 
 def test_a_vibe_block_without_energy_follows_the_vibes_own_arc():
-    inputs = planner_inputs(
-        Block("10:00", "Vibe", vibe=A_VIBE), 3600, zone_default_crates=()
-    )
+    inputs = planner_inputs(Block("10:00", "Vibe", vibe=A_VIBE), 3600, zone_default_crates=())
     assert inputs.custom_curve is None
     assert inputs.arc_preset == BY_KEY[A_VIBE].arc
     assert inputs.vibe == A_VIBE
@@ -266,8 +260,11 @@ def test_bridge_then_echo_out_when_pools_do_not_connect():
         return abs(a - b) <= 5
 
     assert bridge_or_echo([10, 20], [24, 90], compatible) == ("direct", (20, 24))
-    assert bridge_or_echo([10, 40, 46], [46, 50], lambda a, b: a in (40, 46) and b in (46, 50)
-                          and a != b and (a, b) != (40, 50)) == ("bridge", (40, 46, 50))
+    pairs = {(10, 46), (46, 50)}
+    assert bridge_or_echo([10], [50, 51], lambda a, b: (a, b) in pairs, bridges=[30, 46]) == (
+        "bridge",
+        (10, 46, 50),
+    )
     assert bridge_or_echo([10, 11], [80, 81], compatible) == (ECHO_OUT, None)
 
 
@@ -388,4 +385,4 @@ def test_the_module_never_plans_a_set_itself():
     source = dayparts.__file__
     with open(source, encoding="utf-8") as handle:
         text = handle.read()
-    assert "def plan_set" not in text and "beam_search" not in text
+    assert "def plan_set(" not in text and "enumerate_candidates(a, b)" in text

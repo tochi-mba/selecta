@@ -43,7 +43,7 @@ test('pilot walkthrough of the study card paths', async ({ page, request }) => {
   // EX-0115-01 / EX-0114-01: the five destinations from the first screen
   await page.goto('/');
   for (const label of ['Listen', 'Make a Mix', 'My Mixes', 'Library', 'Workspace']) {
-    const link = page.getByRole('link', { name: label, exact: true }).first();
+    const link = page.getByRole('link', { name: new RegExp(`^${label}`) }).first();
     note('EX-0115-01', `${label}: ${(await link.count()) ? 'in navigation' : 'MISSING'}`);
   }
 
@@ -72,8 +72,11 @@ test('pilot walkthrough of the study card paths', async ({ page, request }) => {
   // EX-0119-01: current mix, drafts and the render line on My Mixes
   const made = await (await request.post('/api/drafts', { data: { name: 'Pilot later' } })).json();
   await request.post(`/api/mix/songs?draft=${made.id}`, { data: { song_id: 3 } });
+  const line = await request.post(`/api/drafts/${made.id}/line`);
+  note('EX-0119-01', `put in render line: HTTP ${line.status()}`);
   await page.goto('/mixes/mine');
   await expect(page.locator('.draft-list .draft').first()).toBeVisible();
+  await page.waitForTimeout(1500);
   note('EX-0119-01', `drafts section: ${await page.getByRole('region', { name: 'Your drafts' }).count()}, render line: ${await page.getByRole('region', { name: 'Render line' }).count()}, draft "Pilot later" shown: ${await page.getByText('Pilot later').first().isVisible()}`);
   await request.delete(`/api/drafts/${made.id}`);
 
@@ -92,6 +95,9 @@ test('pilot walkthrough of the study card paths', async ({ page, request }) => {
     if (await studio.count()) {
       await studio.click();
       const open = page.getByRole('button', { name: 'Open the Studio' });
+      await open.waitFor({ timeout: 30_000 }).catch(() => undefined);
+      const warn = await page.locator('.warn').allInnerTexts();
+      if (warn.length) note('EX-0122-02', `Studio says: ${warn.join(' / ')}`);
       if (await open.count()) {
         await open.click();
         await page.waitForTimeout(3000);
@@ -114,7 +120,7 @@ test('pilot walkthrough of the study card paths', async ({ page, request }) => {
   const field = page.getByRole('textbox').first();
   await field.fill('C:\\Windows\\win.ini');
   await page.getByRole('button', { name: 'Start', exact: true }).click();
-  await page.waitForTimeout(2500);
-  const advice = await page.getByText(/That’s a file|folder/).allInnerTexts();
-  note('EX-0126-01', `after a file address: ${advice.slice(0, 2).map((t) => t.replace(/\s+/g, ' ').trim()).join(' / ')}`);
+  const advice = page.getByText('That’s a file').first();
+  await advice.waitFor({ timeout: 20_000 }).catch(() => undefined);
+  note('EX-0126-01', `after a file address: ${(await advice.count()) ? (await advice.innerText()).replace(/\s+/g, ' ').trim() : 'no file advice shown'}`);
 });

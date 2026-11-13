@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any
 
 HORIZON_TARGET_S = 4 * 3600
 HORIZON_MINIMUM_OPEN_S = 3600
@@ -214,7 +215,7 @@ class Command:
         return self.issued_at + self.device_offset_s
 
     @classmethod
-    def from_dict(cls, raw: Mapping[str, Any]) -> "Command":
+    def from_dict(cls, raw: Mapping[str, Any]) -> Command:
         return cls(
             id=str(raw["id"]),
             zone_id=str(raw["zone_id"]),

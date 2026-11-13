@@ -188,7 +188,8 @@ def test_the_host_can_unpair_every_display(rooms):
     rooms.confirm_pairing(HOST, opened.room.id, second.pairing_code)
     assert rooms.unpair_displays(HOST, opened.room.id) == 2
     assert rooms.unpair_displays(HOST, opened.room.id) == 0
-    assert rooms.display_view(screen.display_token).state is DisplayState.ENDED
+    # the room is still on, so the screen hears it was disconnected and pairs again
+    assert rooms.display_view(screen.display_token).state is DisplayState.UNPAIRED
     _refused(Refusal.NO_SUCH_ROOM, rooms.unpair_displays, OTHER_HOST, opened.room.id)
 
 
@@ -205,7 +206,8 @@ def test_display_tokens_can_only_read(rooms):
         for name, method in inspect.getmembers(Rooms, inspect.isfunction)
         if "display_token" in inspect.signature(method).parameters
     ]
-    assert takes_a_display_token == ["display_view"]
+    # reading its view, and deleting its own pairing ("Disconnect this screen"), nothing else
+    assert takes_a_display_token == ["disconnect_display", "display_view"]
 
 
 def test_an_unknown_or_missing_display_token_is_refused(rooms):

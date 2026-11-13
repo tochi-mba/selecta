@@ -13,6 +13,7 @@ from cloud_party import ALICE, BOB, CAROL, auth, made_up, party  # noqa: F401
 from test_cloud_playback_fakes import follow_clock
 
 from selecta import flags
+from selecta.business import device_cookie
 from selecta.persistence import transaction
 from selecta.playback.model import MAX_SIGNED_IN_DEVICES
 from selecta.work.schema import outbox_events
@@ -48,7 +49,8 @@ def test_registering_again_with_the_same_id_keeps_the_device(party):
 
 def test_the_cookie_names_the_device_when_the_body_does_not(party):
     device = party.register(ALICE)["device"]
-    assert party.client.cookies.get("selecta_device") == device["id"]
+    cookie = device_cookie.cookie_name(party.workspaces[ALICE])
+    assert party.client.cookies.get(cookie) == device["id"]
     view = party.client.get("/api/playback/session", headers=auth(ALICE))
     assert view.status_code == 200 and view.json()["speaker"] == "none"
 

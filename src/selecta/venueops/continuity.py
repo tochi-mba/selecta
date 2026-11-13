@@ -121,6 +121,7 @@ class Play:
     zone_id: str = "main"
     blend_s: float = 0.0  # planned overlap with the previous play in the same zone
     source: str = "plan"  # "plan", "fallback" or "manual"
+    resumed: bool = False  # the rest of the previous play, after a speaker handover
 
     def __post_init__(self) -> None:
         if self.end_s < self.start_s:
@@ -290,6 +291,8 @@ def find_duplicates(
     last_start: dict[str, float] = {}
     previous: str | None = None
     for play in plays:
+        if play.resumed and previous == play.song_id:
+            continue  # the same play carrying on after a handover, not a repeat
         seen = last_start.get(play.song_id)
         back_to_back = previous == play.song_id
         if back_to_back or (seen is not None and play.start_s - seen < window_min * 60.0):

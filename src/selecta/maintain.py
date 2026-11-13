@@ -425,8 +425,9 @@ def database_url(env: Mapping[str, str] | None = None) -> str:
 
 def main(tick_s: float = 1.0) -> None:
     """`selecta maintain`: build everything from the environment and run until stopped."""
-    from selecta.observability import metrics
+    from selecta.observability import errors, metrics
 
+    errors.configure_from_environment("maintenance")
     metrics.configure_from_environment("maintenance")
     engine = make_engine(database_url())
     lock = engine.connect()

@@ -1,23 +1,39 @@
-# Turns on auto-merge for Dependabot's patch and minor updates. The PR still merges only once
-# the required `verify` check on main passes. Major updates are left for the owner to merge by
-# hand, because they can change behaviour the tests don't cover.
+# Turns on auto-merge for Dependabot's patch and minor updates. GitHub then merges the PR only
+# once the checks that branch protection on main requires (at least `verify`) have passed, and
+# only the commit Dependabot pushed: a commit anyone else adds stops this job, and
+# --match-head-commit refuses a head that moved. Major updates, and updates whose type
+# Dependabot can't tell, are left for the owner to merge by hand, because they can change
+# behaviour the tests don't cover. Without required checks on main, --auto would merge at once,
+# so keep `verify` required in the branch protection rule.
 name: Dependabot auto-merge
 
 on: pull_request
 
-permissions:
-  contents: write
-  pull-requests: write
+# Nothing by default; the one job asks for what merging needs.
+permissions: {}
 
 jobs:
   auto-merge:
-    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == 'tochi-mba/selecta'
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]'
+      && github.actor == 'dependabot[bot]'
+      && github.repository == 'tochi-mba/selecta'
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - id: meta
         uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
-      - if: steps.meta.outputs.update-type != 'version-update:semver-major'
-        run: gh pr merge --auto --merge "$PR_URL"
+        with:
+          github-token: ${{ github.token }}
+      - name: Enable auto-merge for a patch or minor update
+        if: >-
+          steps.meta.outputs.update-type == 'version-update:semver-patch'
+          || steps.meta.outputs.update-type == 'version-update:semver-minor'
+        run: gh pr merge --auto --merge --match-head-commit "$HEAD_SHA" "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ github.token }}

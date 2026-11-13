@@ -248,7 +248,7 @@ TASK_CARDS: tuple[TaskCard, ...] = (
     ),
     TaskCard(
         "EX-0119-01", "/mixes/mine",
-        "current mix playing; one saved draft; one draft waiting in the render line",
+        "current mix playing; one saved draft; one draft put in the render line (Prioritize)",
         "Show me the mix you are hearing now, a mix kept for later, and anything still being "
         "prepared. For each one, would pressing it change what you hear?",
         "all three pointed to correctly and the playback answer right for each",
@@ -287,7 +287,8 @@ TASK_CARDS: tuple[TaskCard, ...] = (
     ),
     TaskCard(
         "EX-0128-01", "/workshop",
-        "server with SELECTA_E2E_BULK=5, so analysis waits paused with songs to go",
+        "plain server: its made-up library has one song that could not be analysed, which "
+        "What needs you lists with its fix link",
         "Something is stopping SelectaDJ from getting all your songs ready. Find out what it is "
         "and what you would do about it.",
         "the blocker named in the participant's words and its fix link followed",

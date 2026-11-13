@@ -849,11 +849,13 @@ export function RequestsPanel() {
             const identity = `${song.title ?? 'Untitled'} - ${song.artist ?? 'Unknown artist'}${duplicate ? ` (song ${song.id})` : ''}`;
             return (
               <li key={song.id} id={`request-option-${song.id}`} role="option" aria-selected={activeMatch === index}>
-                <button aria-label={`${identity} - ${already || 'Request'}`} className={already === 'Requested' ? 'picked' : ''} disabled={!!already} onClick={() => pick(song)}>
+                {/* S4 (2026-11-12): the name is the visible words, so it starts with what is shown (axe
+                    label-content-name-mismatch, WCAG 2.5.3); the spaces keep them apart for a screen reader */}
+                <button className={already === 'Requested' ? 'picked' : ''} disabled={!!already} onClick={() => pick(song)} data-identity={identity}>
                   <span className="request-name">
-                    <b>{song.title ?? 'Untitled'}</b>
+                    <b>{song.title ?? 'Untitled'}</b>{' '}
                     <span>{song.artist ?? 'Unknown artist'}{duplicate ? ` · Song ${song.id}` : ''}</span>
-                  </span>
+                  </span>{' '}
                   <small>{already === 'Requested' ? <><Icon name="check" size="compact" /> Requested</> : already || <><Icon name="plus" size="compact" /> Request</>}</small>
                 </button>
               </li>

@@ -220,10 +220,10 @@ preparation only: no participant took part and it is not a study result.
 - Who: novice and expert (participant codes only)
 - Set up first: Turn on Ready and search for Episode before handing over.
 - Prompt (read as written, no coaching): Nothing shows. Say why, then bring back the song you were looking for.
-- Success: Names both the search and the filter, then drops only the filter and finds Episode 12.
+- Success: Names both the search and the filter, then finds Episode 12 under Set aside.
 - Hesitation: a pause over 10 s, a question to the facilitator, or clearing everything without first saying why the list is empty.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; the empty result says Looking in: Ready, searching for Episode. Clear search alone does not bring Episode 12 back (it is set aside, not ready); Show all songs drops only the filter, so the success line now says so.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): completable; the empty result says Looking in: Ready, searching for Episode. Clear search alone does not bring Episode 12 back (it is set aside, not ready). A second walkthrough at a7747636 showed Show all songs leaves Everything plus Episode with 0 songs: set-aside songs are searched only under Set aside. The page now says so on a no-match search, and the success line names Set aside.
 
 ### LX-0344-04 - Row action choice
 
@@ -299,12 +299,12 @@ preparation only: no participant took part and it is not a study result.
 
 - Route: /library
 - Who: novice and expert (participant codes only)
-- Set up first: Show Needs attention plus search zzqx, then a filter that is empty, no search.
+- Set up first: Show Needs attention plus search zzqx, then Priority list with no search.
 - Prompt (read as written, no coaching): For each of these two screens, say what is wrong and what you would do next.
 - Success: Tells an empty filter from a search with no match and picks each screen's own action.
 - Hesitation: a pause over 10 s, a question to the facilitator, or giving the same next step for both screens.
 - Record: seconds, confidence 1 to 5, hesitated, success
-- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): the zero-match screen works (Nothing matches zzqx, with Clear search and Show all songs), but Set aside is not empty in this fixture (Episode 12), so the set-up now asks for a filter that is empty.
+- Pilot (preparation, not a result): eb9e6eab cognitive walkthrough by Claude (Edge, made-up library, preparation only): the zero-match screen works (Nothing matches zzqx, with Clear search and Show all songs), but Set aside is not empty in this fixture (Episode 12), so the set-up now names Priority list, which is empty here. At a7747636 its screen still said to try another spelling with no search typed; that copy is fixed (it now says no song is in Priority list right now).
 
 ### LX-0353-01 - Two creation paths
 

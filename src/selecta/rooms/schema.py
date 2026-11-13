@@ -162,4 +162,7 @@ display_pairings = sa.Table(
     sa.Column("created_at", Epoch, nullable=False),
     sa.Column("paired_at", Epoch, nullable=True),
     sa.Column("expires_at", Epoch, nullable=False),
+    # When the paired screen last asked for its view (at most every few seconds); the host's
+    # panel shows a screen as "showing now" only while this is recent.
+    sa.Column("last_seen_at", Epoch, nullable=True),
 )

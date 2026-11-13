@@ -193,16 +193,15 @@ class ZoneDirectory:
         """Move a zone whose speaker dropped to another live speaker in it, if there is one."""
         flags.require(FLAG)
         zone = self.zone(zone_id)
-        current = self.leases.current(zone_id, now)
-        if current is not None and current.holder not in zone.dropped:
-            return None  # the holder is fine
+        if self.leases.current(zone_id, now) is not None:
+            return None  # the lease is still live: the holder may only be slow
+        previous = self.history[-1].to_speaker if self.history else None
         for speaker in zone.speakers.values():
             if speaker.can_play_audio and speaker.speaker_id not in zone.dropped:
-                if current is not None and speaker.speaker_id == current.holder:
+                if speaker.speaker_id == previous and previous is not None:
                     continue
                 lease = self.leases.takeover(zone_id, speaker.speaker_id, now,
                                              reason="failover")
-                previous = current.holder if current else None
                 return self._record(zone, previous, lease, "failover", now, catch_up=False)
         return None
 

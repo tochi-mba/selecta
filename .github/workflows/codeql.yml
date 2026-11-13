@@ -13,11 +13,15 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Weekly as well, so new CodeQL queries reach code that hasn't changed.
+  schedule:
+    - cron: "29 5 * * 1"
   workflow_dispatch:
 
+# A newer push to a pull request cancels the analysis it supersedes; runs on main never are.
 concurrency:
   group: codeql-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read

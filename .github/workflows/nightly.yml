@@ -4,19 +4,24 @@ name: nightly
 # Python and web dependency (about two minutes each). Every Sunday: the cloud property tests at
 # 5,000 examples each against a real PostgreSQL, plus the scrambled Stripe replay at 250,000
 # webhook deliveries (SC-0403-02), which takes long enough that running it
-# nightly would use most of a private repository's monthly Actions minutes. A manual run does
-# both. A failure opens no PR; it shows on the Actions page and in GitHub notifications.
-# See docs/engineering/testing.md.
+# nightly would use most of a private repository's monthly Actions minutes. Also on Sunday, in
+# Edge on Windows, the browser suites the test workflow leaves out: the MP-0272 measured
+# baseline (`pnpm e2e:mp`), the Selecta 4.0 server drills (playwright.drills.config.ts) and the
+# PF-21 first-Play check in Edge, Firefox and WebKit (playwright.pf21.config.ts). A manual run
+# does everything. A failed scheduled run opens (or comments on) one "Nightly CI failed" issue,
+# and every run writes a summary. See docs/engineering/testing.md.
 
 on:
   schedule:
     - cron: "17 3 * * *" # nightly audits
-    - cron: "43 4 * * 0" # weekly long property run
+    - cron: "43 4 * * 0" # weekly long property run and extra browser suites
   workflow_dispatch:
 
+# One group per schedule, never cancelled: a manual run must not kill the two-hour weekly run,
+# and a nightly audit must not kill either.
 concurrency:
-  group: nightly-${{ github.ref }}
-  cancel-in-progress: true
+  group: nightly-${{ github.event.schedule || github.event_name }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -114,3 +119,124 @@ jobs:
           tests/test_cloud_*.py tests/test_worker_gateway_api.py tests/test_room_to_play.py
           tests/test_operation_identity.py tests/test_flags.py tests/test_flag_server.py
           -q -p no:cacheprovider --hypothesis-show-statistics
+
+  browser-extras:
+    # Browser suites too slow or too special for every push, each against its own real
+    # tests/e2e_server.py. Each step runs even if an earlier one failed, so one run reports all
+    # three; the job fails if any did.
+    name: Browser / measured baseline, server drills, PF-21 engines
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule == '43 4 * * 0' }}
+    runs-on: windows-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          version: "0.12.15" # matches infra/docker/service.Dockerfile
+          enable-cache: true
+      - name: Install FFmpeg
+        # A download from a third-party mirror, so retried; tests themselves never are here.
+        run: |
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            choco install ffmpeg --yes --no-progress
+            if ($LASTEXITCODE -eq 0) { exit 0 }
+            Write-Output "::warning::FFmpeg install failed (attempt $attempt of 3)"
+            Start-Sleep -Seconds 20
+          }
+          exit 1
+      - run: uv sync --locked
+        working-directory: .
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          version: 10
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Cache Playwright's Firefox and WebKit
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/AppData/Local/ms-playwright
+          key: playwright-windows-${{ hashFiles('web/pnpm-lock.yaml') }}
+      - name: Install Firefox and WebKit for PF-21 (Edge is already on the runner)
+        # Downloads fail now and then, so the install is retried; tests are not.
+        run: |
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            pnpm exec playwright install firefox webkit
+            if ($LASTEXITCODE -eq 0) { exit 0 }
+            Write-Output "::warning::Playwright browser install failed (attempt $attempt of 3)"
+            Start-Sleep -Seconds 20
+          }
+          exit 1
+      - run: pnpm build
+      - name: MP-0272 measured baseline, stress library
+        id: mp
+        run: pnpm e2e:mp
+      - name: Selecta 4.0 server drills
+        id: drills
+        if: ${{ !cancelled() && steps.mp.conclusion != 'skipped' }}
+        run: pnpm exec playwright test -c playwright.drills.config.ts
+      - name: PF-21 first Play in Edge, Firefox and WebKit
+        id: pf21
+        if: ${{ !cancelled() && steps.mp.conclusion != 'skipped' }}
+        run: pnpm exec playwright test -c playwright.pf21.config.ts
+      - name: Keep the results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nightly-browser-extras
+          path: |
+            web/mp-results
+            web/test-results-drills
+            web/test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
+  report:
+    # A scheduled failure would otherwise only reach whoever watches the Actions page.
+    name: Report
+    needs: [python-dependencies, web-dependencies, cloud-properties, browser-extras]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Summarise, and on a failed scheduled run open or update the tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESULTS: >-
+            Python audit=${{ needs.python-dependencies.result }},
+            web audit=${{ needs.web-dependencies.result }},
+            cloud properties=${{ needs.cloud-properties.result }},
+            browser extras=${{ needs.browser-extras.result }}
+        run: |
+          echo "### Nightly: $RESULTS" >> "$GITHUB_STEP_SUMMARY"
+          case "$RESULTS" in
+            *=failure* | *=cancelled*) ;;
+            *) exit 0 ;;
+          esac
+          if [ "$EVENT_NAME" != schedule ]; then
+            echo "A manual run failed; no issue is filed for it."
+            exit 0
+          fi
+          title="Nightly CI failed"
+          body="Run: $RUN_URL"$'\n\n'"$RESULTS"
+          number=$(gh issue list --state open --search "\"$title\" in:title" --json number,title \
+            --jq "map(select(.title == \"$title\")) | .[0].number // empty")
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi

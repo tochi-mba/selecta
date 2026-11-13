@@ -132,9 +132,10 @@ def game_day(r: Rehearsal) -> None:
 
     def code(response: httpx.Response) -> str | None:
         try:
-            return response.json().get("detail", {}).get("code")
+            detail = response.json().get("detail")
         except ValueError:
             return None
+        return detail.get("code") if isinstance(detail, dict) else None
 
     def labs() -> httpx.Response:
         return r.call("PUT", "/api/account/labs/account.labs", customer, json={"enabled": False})

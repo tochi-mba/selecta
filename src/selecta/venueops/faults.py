@@ -25,6 +25,7 @@ import random
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
+from pathlib import Path
 
 from selecta import flags
 from selecta.venueops.continuity import ContinuityReport, Play, evaluate
@@ -32,6 +33,8 @@ from selecta.venueops.fallback_cache import Candidate, FallbackCache
 from selecta.venueops.leases import FencedSpeaker, LeaseTable
 
 FLAG = "venue.fault_injection"
+# Simulated songs have no file; the simulator's checker never opens this path.
+_NO_PATH = Path("simulated-song-without-a-file")
 
 
 class FaultKind(StrEnum):
@@ -206,6 +209,7 @@ def simulate_night(
     next_plan = 0
     t = 0.0
     previous_planned = False
+    resolved_until = -1.0  # faults that ended by here have been waited out
 
     def heartbeat_through(start: float, end: float) -> None:
         tick = math.ceil(start / heartbeat_s) * heartbeat_s
@@ -214,7 +218,8 @@ def simulate_night(
             tick += heartbeat_s
 
     while t < night_s - 0.25:
-        blocked = injector.prep_blocked(t - lead_s, t) if t > 0 else None
+        window_start = max(t - lead_s, resolved_until + 1e-6)
+        blocked = injector.prep_blocked(window_start, t) if t > 0 else None
         song: Song
         source = "plan"
         if blocked is not None:
@@ -223,7 +228,7 @@ def simulate_night(
                 recoveries.append(Recovery(blocked.kind, t, "silence"))
                 # Nothing ready: wait out the fault, keeping the lease alive.
                 heartbeat_through(t, blocked.end_s)
-                t = blocked.end_s + heartbeat_s
+                t = resolved_until = blocked.end_s
                 previous_planned = False
                 continue
             recoveries.append(Recovery(blocked.kind, t, "fallback", chosen.song_id))
@@ -251,33 +256,32 @@ def simulate_night(
             lease = table.current(zone_id, drop.at_s)
             expires = lease.expires_at if lease is not None else drop.at_s
             standby_id = next(s for s in speakers if s != dropped.speaker_id)
-            ready_at = max(expires, down_until[standby_id])
+            # The standby takes over once the lease lapses; if it is down too, whichever
+            # speaker comes back first takes the zone.
+            standby_at = max(expires, down_until[standby_id])
+            back_at = max(expires, drop.end_s)
+            if standby_at <= back_at:
+                ready_at, how = standby_at, "failover"
+            else:
+                ready_at, how, standby_id = back_at, "reconnect", dropped.speaker_id
             takeover_at = math.ceil(ready_at / heartbeat_s) * heartbeat_s
             if table.current(zone_id, takeover_at) is not None:
                 raise RuntimeError("Lease outlived its holder.")
-            if down_until[standby_id] > expires:
-                # Both speakers are down: the first one back reconnects and resumes.
-                if down_until[standby_id] > drop.end_s:
-                    standby_id = dropped.speaker_id
-                    takeover_at = math.ceil(drop.end_s / heartbeat_s) * heartbeat_s
-                how = "reconnect"
-            else:
-                how = "failover"
             active = speakers[standby_id]
             active.hold(table.takeover(zone_id, active.speaker_id, takeover_at, reason=how))
             recoveries.append(Recovery(FaultKind.SPEAKER_DROP, drop.at_s, how, standby_id))
-            if dropped is not active:
-                # The dropped speaker wakes and tries to carry on with its old token: refused.
-                if not dropped.play(song.song_id, max(drop.end_s, takeover_at)):
-                    stale_refused += 1
             remaining = song.duration_s - (drop.at_s - start)
             resume_end = min(takeover_at + remaining, night_s)
             if not active.play(song.song_id, takeover_at):
                 raise RuntimeError("The new holder was fenced out.")
+            if dropped is not active:
+                # A late command from the frozen speaker arrives with its old token: refused.
+                if not dropped.play(song.song_id, takeover_at):
+                    stale_refused += 1
             heartbeat_through(takeover_at, resume_end)
             if resume_end > takeover_at:
                 plays.append(Play(song.song_id, takeover_at, resume_end, active.speaker_id,
-                                  zone_id, 0.0, source))
+                                  zone_id, 0.0, source, resumed=True))
             t = resume_end
             previous_planned = False
         if use_fallbacks:
@@ -286,16 +290,6 @@ def simulate_night(
 
     report = evaluate(plays, 0.0, night_s, zones=[zone_id])
     return NightResult(plays, report, plan, recoveries, stale_refused, len(table.events))
-
-
-class _NoPath:
-    """A placeholder path for simulated songs; the simulator's checker never opens it."""
-
-    def __fspath__(self) -> str:  # pragma: no cover - never opened
-        raise OSError("simulated song has no file")
-
-
-_NO_PATH = _NoPath()  # type: ignore[assignment]
 
 
 def demo_library(count: int, prefix: str, *, seed: int = 7) -> list[Song]:

@@ -22,7 +22,7 @@ HISTORY_MESSAGES = 24
 MESSAGE_CHARS = 2400
 
 _LOCAL_OPENING = (
-    "You are Lucy, the mix-making helper inside Selecta, a local auto-DJ "
+    "You are Lucy, the mix-making helper inside SelectaDJ, a local auto-DJ "
     "for one person's"
 )
 _CLOUD_OPENING = (

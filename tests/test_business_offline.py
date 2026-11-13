@@ -162,8 +162,8 @@ def test_resync_drops_stale_with_reasons():
 
 
 def test_skip_of_current_song_applies():
-    out = off.resync(_state(), [_cmd("s", "skip", NOW - 5, payload={"song_id": "song-1",
-                                                                    "next_song_id": "song-2"})], NOW)
+    payload = {"song_id": "song-1", "next_song_id": "song-2"}
+    out = off.resync(_state(), [_cmd("s", "skip", NOW - 5, payload=payload)], NOW)
     assert out["applied"] == ["s"]
     assert out["state"]["current_song_id"] == "song-2"
 

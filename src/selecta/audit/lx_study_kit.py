@@ -270,7 +270,10 @@ PILOTS: dict[str, str] = {
         f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
         "completable; the empty result says Looking in: Ready, searching for Episode. "
         "Clear search alone does not bring Episode 12 back (it is set aside, not "
-        "ready); Show all songs drops only the filter, so the success line now says so."
+        "ready). A second walkthrough at a7747636 showed Show all songs leaves "
+        "Everything plus Episode with 0 songs: set-aside songs are searched only under "
+        "Set aside. The page now says so on a no-match search, and the success line "
+        "names Set aside."
     ),
     "LX-0344-04": (
         f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
@@ -317,7 +320,9 @@ PILOTS: dict[str, str] = {
         f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
         "the zero-match screen works (Nothing matches zzqx, with Clear search and Show "
         "all songs), but Set aside is not empty in this fixture (Episode 12), so the "
-        "set-up now asks for a filter that is empty."
+        "set-up now names Priority list, which is empty here. At a7747636 its screen "
+        "still said to try another spelling with no search typed; that copy is fixed "
+        "(it now says no song is in Priority list right now)."
     ),
     "LX-0353-01": (
         f"{PILOT_SHA} cognitive walkthrough by Claude (Edge, made-up library, preparation only): "
@@ -419,7 +424,7 @@ CARDS: tuple[Study, ...] = (
         "Empty and combined constraints",
         "/library",
         "Nothing shows. Say why, then bring back the song you were looking for.",
-        "Names both the search and the filter, then drops only the filter and finds Episode 12.",
+        "Names both the search and the filter, then finds Episode 12 under Set aside.",
         "clearing everything without first saying why the list is empty",
         setup="Turn on Ready and search for Episode before handing over.",
     ),
@@ -489,7 +494,7 @@ CARDS: tuple[Study, ...] = (
         "For each of these two screens, say what is wrong and what you would do next.",
         "Tells an empty filter from a search with no match and picks each screen's own action.",
         "giving the same next step for both screens",
-        setup="Show Needs attention plus search zzqx, then a filter that is empty, no search.",
+        setup="Show Needs attention plus search zzqx, then Priority list with no search.",
     ),
     _c(
         "LX-0353-01",

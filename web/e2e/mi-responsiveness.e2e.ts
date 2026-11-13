@@ -254,7 +254,7 @@ for (const outcome of ['answered', 'refused'] as const) {
     const drawer = page.getByRole('dialog', { name: 'Requests' });
     await expect(drawer).toBeVisible();
     await drawer.getByRole('combobox', { name: 'Request a song' }).fill('Déjà');
-    const option = drawer.getByRole('button', { name: /^Déjà Vu - Zoë Müller - Request$/ });
+    const option = drawer.getByRole('button', { name: /^Déjà Vu Zoë Müller Request$/ });
     await expect(option).toBeVisible();
     const held = await holdBack(page, /\/api\/requests$/, 'POST', outcome);
     await arm(page, '.request-row[data-stage="adding"]', 'Déjà Vu');
