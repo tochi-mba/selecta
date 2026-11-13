@@ -259,6 +259,13 @@ def _include(config: dict):
     return include
 
 
+def _local_first_cloud_mode() -> bool:
+    """Cloud never runs the legacy audio/WeftAI tool registry."""
+    from selecta.modes.core import Mode, current_mode
+
+    return current_mode() is Mode.CLOUD
+
+
 async def _run(app: Any, active: Active) -> None:
     conn = app.connect()
     schema.ensure(conn)
@@ -412,6 +419,10 @@ async def _run(app: Any, active: Active) -> None:
         _set_state(ctx, "interpreting")
         if not config["enabled"] or not config["phases"]["chat"]:
             await writer.write("Lucy is turned off. Make a Mix works as usual.")
+        elif _local_first_cloud_mode():
+            from selecta.lf_ai.bridge import answer_cloud_turn
+
+            await answer_cloud_turn(app, active, conn, config, ctx, writer, usage)
         else:
             provider = make_provider(app, conn, config)
             if provider is None:
