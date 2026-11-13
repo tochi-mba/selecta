@@ -56,6 +56,18 @@ Artifacts record input asset hashes, analysis version (`ANALYSIS_VERSION`), rend
 - `models`: name to checkpoint, required for stems;
 - `settings_hash`: SHA-256 of the sorted settings JSON (`settings` may ride along and must hash to it). No other top-level keys.
 
+Cloud mix revisions (ADR-0418) are zero-byte, protected artifact manifests, not uploaded
+audio objects. They follow the same provenance envelope: `inputs.songs` is the ordered list
+of SHA-256s of the owner's Cloud Library assets (including repeats), and an edited revision
+also has `inputs.parent` naming the preceding revision's SHA-256. `versions` names
+`mix_contract` (contract format version) and `producer` (`cloud.mix_create`).
+`settings.contract` contains the full immutable mix contract, while `settings.by` identifies
+the creator for audit; both are covered by `settings_hash`. The artifact `input_hash` and
+`checksum` equal the contract's computed `revision`, with empty `keys` and zero
+`size_bytes`. `work.provenance` rejects unexpected fields, broken lineage or inconsistent
+hashes. Both creation and editing call this builder; the reader refuses malformed manifests.
+This type is introduced before merge in PR #56, so no legacy production migration is needed.
+
 The rule runs before a file is stored (`JobContext.publish`, so for both `LocalArtifactStore` and `R2ArtifactStore`; `publish_artifact` and `RemoteWorkerClient.publish_artifact` behind the gateway), when a handler queues an output (`CollectingSink`), when `complete` accepts outputs (local runner, cloud runner and the gateway's `/complete`) and in `artifacts.write`. A refusal raises `ProvenanceInvalid`; at `complete` the attempt fails with error class `engine_bug` (the gateway answers 422 `completion_rejected`) and no row is written. Migration `a3f8d2c61b97` made both columns NOT NULL and rewrote the older flat `play.proxy` provenance into this shape (input hashes unchanged); it stops instead of guessing if any row lacks either. Invariant 5 (`selecta.audit.invariants`) flags a row whose provenance fails the rule. Tests: `tests/test_cloud_artifact_provenance.py`.
 
 ---

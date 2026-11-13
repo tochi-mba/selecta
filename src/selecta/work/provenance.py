@@ -14,7 +14,11 @@ this shape:
   settings object still has one). `settings` may carry those settings too; when it does, it must
   hash to `settings_hash`.
 
-No other top-level keys are allowed, so the shape can't drift one producer at a time. `build()`
+No other top-level keys are allowed, so the shape can't drift one producer at a time. A
+`mix_revision` additionally requires a valid frozen Cloud mix in `settings.contract`, its
+creator in `settings.by`, the exact ordered song hashes and optional parent in `inputs`,
+and its producer and contract version in `versions`. Its row is a zero-byte manifest whose
+input hash and checksum are the mix contract's content-addressed revision. `build()`
 makes a valid object; `check()` and `check_output()` are the one rule every publish and complete
 path applies, raising `ProvenanceInvalid` with what is missing. A worker that raises it fails as
 an engine bug: the code that published the artifact is wrong, and retrying wouldn't help.
@@ -35,6 +39,7 @@ KEYS = frozenset({"inputs", "versions", "models", "settings", "settings_hash"})
 REQUIRED_VERSIONS: Mapping[str, tuple[str, ...]] = {
     "playback": ("proxy",),
     "seam": ("analysis", "render"),
+    "mix_revision": ("mix_contract", "producer"),
 }
 """Versions a kind must name, because its bytes change when they do."""
 
@@ -122,6 +127,55 @@ def check(kind: str, provenance: Any) -> None:
         not isinstance(settings, Mapping) or settings_hash(settings) != digest
     ):
         raise ProvenanceInvalid(f"The {kind} artifact's settings don't match their settings_hash.")
+    if kind == "mix_revision":
+        _check_mix_revision(inputs, versions, settings, models)
+
+
+def _check_mix_revision(
+    inputs: Mapping[str, Any],
+    versions: Mapping[str, Any],
+    settings: Any,
+    models: Any,
+) -> None:
+    """Check this manifest's actual lineage, not just the generic JSON envelope."""
+    from selecta.mix_contract import ContractError, from_json
+
+    if (
+        set(versions) != {"mix_contract", "producer"}
+        or versions["producer"] != "cloud.mix_create"
+        or not isinstance(versions["mix_contract"], int)
+        or isinstance(versions["mix_contract"], bool)
+        or versions["mix_contract"] < 1
+        or models is not None
+    ):
+        raise ProvenanceInvalid("The mix_revision artifact has invalid producer or versions.")
+    if (
+        not isinstance(settings, Mapping)
+        or set(settings) != {"by", "contract"}
+        or not isinstance(settings["by"], str)
+        or not settings["by"].strip()
+        or not isinstance(settings["contract"], Mapping)
+    ):
+        raise ProvenanceInvalid("The mix_revision artifact must name its creator and contract.")
+    try:
+        contract = from_json(settings["contract"])
+    except (ContractError, KeyError, ValueError, TypeError, AttributeError) as error:
+        raise ProvenanceInvalid("The mix_revision artifact has an invalid contract.") from error
+    if (
+        contract.source != "cloud"
+        or contract.version != versions["mix_contract"]
+        or contract.to_json() != settings["contract"]
+        or len(contract.songs) < 2
+    ):
+        raise ProvenanceInvalid("The mix_revision artifact has an inconsistent contract.")
+    hashes = [song.sha256 for song in contract.songs]
+    if not all(isinstance(digest, str) and SHA256.fullmatch(digest) for digest in hashes):
+        raise ProvenanceInvalid("The mix_revision artifact must reference song content hashes.")
+    expected_inputs = {"songs": hashes}
+    if contract.parent is not None:
+        expected_inputs["parent"] = contract.parent
+    if dict(inputs) != expected_inputs:
+        raise ProvenanceInvalid("The mix_revision artifact's inputs differ from its contract.")
 
 
 def check_checksum(kind: str, checksum: Any) -> None:
@@ -133,3 +187,13 @@ def check_output(output: Any) -> None:
     """The whole rule for one published output (`work.ports.ArtifactOutput`)."""
     check_checksum(output.kind, output.checksum)
     check(output.kind, output.provenance)
+    if output.kind == "mix_revision":
+        revision = output.provenance["settings"]["contract"]["revision"]
+        if output.input_hash != revision or output.checksum != revision:
+            raise ProvenanceInvalid(
+                "The mix_revision artifact's input hash and checksum must match its revision."
+            )
+        if output.keys != [] or output.size_bytes != 0:
+            raise ProvenanceInvalid(
+                "The mix_revision artifact must be a zero-byte manifest without stored keys."
+            )

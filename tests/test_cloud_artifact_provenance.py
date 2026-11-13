@@ -11,6 +11,8 @@ import sqlalchemy as sa
 from alembic.runtime.migration import MigrationContext
 from test_cloud_jobs_support import made_provenance, make_store, output, worker
 
+from selecta.cloud_mixes import PRODUCER, revision_provenance
+from selecta.mix_contract import SongRef, new_contract
 from selecta.persistence import migrate, transaction
 from selecta.work import artifacts as artifact_rows
 from selecta.work import provenance, proxies
@@ -211,3 +213,92 @@ def test_the_migration_stops_rather_than_invent_a_history(cloud_engine, missing)
     with cloud_engine.connect() as connection:
         after_heads = frozenset(MigrationContext.configure(connection).get_current_heads())
     assert after_heads == before_heads
+
+
+# --- Frozen Cloud mix revision manifests ---------------------------------------------------
+
+
+def sample_cloud_mix():
+    return new_contract(
+        "mix-1", "Evening", "cloud",
+        (
+            SongRef(source="cloud", id="asset-1", title="One", sha256="a" * 64),
+            SongRef(source="cloud", id="asset-2", title="Two", sha256="b" * 64),
+        ),
+    )
+
+
+@pytest.mark.parametrize("edited", [False, True])
+def test_mix_revision_provenance_preserves_song_inputs_creator_and_parent(edited):
+    first = sample_cloud_mix()
+    contract = first.edited(songs=first.songs, name="Later") if edited else first
+    made = revision_provenance(contract, "user-1")
+    provenance.check("mix_revision", made)
+    provenance.check_output(ArtifactOutput(
+        "mix_revision", contract.revision, [], contract.revision, 0, made
+    ))
+    assert made["versions"] == {"mix_contract": 1, "producer": PRODUCER}
+    assert made["settings"]["by"] == "user-1"
+    assert made["settings"]["contract"] == contract.to_json()
+    assert made["inputs"]["songs"] == ["a" * 64, "b" * 64]
+    assert made["inputs"].get("parent") == contract.parent
+
+
+@pytest.mark.parametrize(
+    "malformation",
+    [
+        "legacy_flat", "foreign_top_level_key", "wrong_producer", "wrong_version",
+        "missing_creator", "missing_contract", "wrong_song_order", "missing_parent",
+        "wrong_contract_revision", "wrong_contract_source", "unexpected_setting",
+    ],
+)
+def test_mix_revision_malformed_provenance_is_refused(malformation):
+    first = sample_cloud_mix()
+    contract = first.edited(songs=first.songs, name="Later")
+    made = revision_provenance(contract, "user-1")
+    if malformation == "legacy_flat":
+        made = {"producer": PRODUCER, "by": "user-1", "contract": contract.to_json()}
+    elif malformation == "foreign_top_level_key":
+        made["by"] = "user-1"
+    elif malformation == "wrong_producer":
+        made["versions"]["producer"] = "some.other.producer"
+    elif malformation == "wrong_version":
+        made["versions"]["mix_contract"] = 3
+    elif malformation == "wrong_song_order":
+        made["inputs"]["songs"].reverse()
+    elif malformation == "missing_parent":
+        del made["inputs"]["parent"]
+    else:
+        settings = made["settings"]
+        if malformation == "missing_creator":
+            settings["by"] = ""
+        elif malformation == "missing_contract":
+            del settings["contract"]
+        elif malformation == "wrong_contract_revision":
+            settings["contract"]["revision"] = "c" * 64
+        elif malformation == "wrong_contract_source":
+            settings["contract"]["source"] = "local"
+        elif malformation == "unexpected_setting":
+            settings["note"] = "unvalidated"
+        made["settings_hash"] = provenance.settings_hash(settings)
+    with pytest.raises(ProvenanceInvalid):
+        provenance.check("mix_revision", made)
+
+
+@pytest.mark.parametrize("corruption", ["input_hash", "checksum", "keys", "size_bytes"])
+def test_mix_revision_manifest_cannot_disagree_with_its_content_hash(corruption):
+    contract = sample_cloud_mix()
+    made = revision_provenance(contract, "user-1")
+    values = {
+        "input_hash": contract.revision, "checksum": contract.revision,
+        "keys": [], "size_bytes": 0,
+    }
+    values[corruption] = {
+        "input_hash": "f" * 64, "checksum": "f" * 64,
+        "keys": ["w/foreign/key"], "size_bytes": 1,
+    }[corruption]
+    with pytest.raises(ProvenanceInvalid):
+        provenance.check_output(ArtifactOutput(
+            "mix_revision", values["input_hash"], values["keys"],
+            values["checksum"], values["size_bytes"], made
+        ))

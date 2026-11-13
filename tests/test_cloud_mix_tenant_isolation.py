@@ -9,9 +9,11 @@ import sqlalchemy as sa
 from cloud_party import ALICE, BOB, auth, made_up
 
 from selecta import flags
+from selecta.audit import invariants
 from selecta.persistence import db_now, transaction
 from selecta.storage.keys import original_key
 from selecta.storage.schema import assets
+from selecta.work import provenance
 from selecta.work.schema import artifacts
 
 pytest_plugins = ("cloud_party",)
@@ -137,3 +139,85 @@ def test_owner_can_still_edit_their_mix_after_isolation_checks(alice_mix):
     assert read.status_code == 200
     assert read.json()["mix"]["name"] == "New name"
     assert len(read.json()["history"]) == 2
+
+
+def _mix_artifacts(engine, workspace_id):
+    with transaction(engine, workspace_id) as conn:
+        return conn.execute(
+            sa.select(artifacts).where(
+                artifacts.c.workspace_id == workspace_id,
+                artifacts.c.kind == "mix_revision",
+            )
+        ).all()
+
+
+def test_new_mix_manifest_is_valid_and_records_its_actual_source_hashes(alice_mix):
+    party = alice_mix["party"]
+    workspace_id = party.workspaces[ALICE]
+    rows = _mix_artifacts(party.engine, workspace_id)
+    assert len(rows) == 1
+    row = rows[0]
+    provenance.check_output(row)
+    assert row.protected is True
+    assert row.input_hash == alice_mix["mix"]["revision"]
+    assert row.provenance["settings"]["contract"]["revision"] == alice_mix["mix"]["revision"]
+    # The response adds availability to each song; the persisted contract does not.
+    assert all("available" not in song for song in row.provenance["settings"]["contract"]["songs"])
+    with transaction(party.engine, workspace_id) as conn:
+        hashes = dict(conn.execute(
+            sa.select(assets.c.id, assets.c.sha256).where(
+                assets.c.id.in_(alice_mix["assets"]),
+                assets.c.workspace_id == workspace_id,
+            )
+        ))
+    assert row.provenance["inputs"] == {
+        "songs": [hashes[asset_id] for asset_id in alice_mix["assets"]],
+    }
+    invariants.assert_clean(party.engine)
+
+
+def test_edited_mix_manifest_links_to_parent_without_overwriting_history(alice_mix):
+    party = alice_mix["party"]
+    workspace_id = party.workspaces[ALICE]
+    first = alice_mix["mix"]
+    changed = party.client.post(
+        f"/api/cloud-mixes/{first['mix_id']}/revisions", headers=auth(ALICE),
+        json={"base_revision": first["revision"], "name": "Second revision"},
+    )
+    assert changed.status_code == 201, changed.text
+    second = changed.json()["mix"]
+    by_revision = {row.input_hash: row for row in _mix_artifacts(party.engine, workspace_id)}
+    assert set(by_revision) == {first["revision"], second["revision"]}
+    for row in by_revision.values():
+        provenance.check_output(row)
+        assert row.protected is True
+    assert "parent" not in by_revision[first["revision"]].provenance["inputs"]
+    assert by_revision[second["revision"]].provenance["inputs"]["parent"] == first["revision"]
+    assert by_revision[second["revision"]].provenance["settings"]["contract"]["name"] == (
+        "Second revision"
+    )
+    assert party.client.get(
+        f"/api/cloud-mixes/{first['mix_id']}", headers=auth(BOB)
+    ).status_code == 404
+    assert not _mix_artifacts(party.engine, party.workspaces[BOB])
+    invariants.assert_clean(party.engine)
+
+
+@pytest.mark.invariants_off("deliberately corrupts a provenance row to test the read boundary")
+def test_a_tampered_revision_is_never_read_as_a_valid_mix(alice_mix):
+    party = alice_mix["party"]
+    workspace_id = party.workspaces[ALICE]
+    row = _mix_artifacts(party.engine, workspace_id)[0]
+    bad = dict(row.provenance)
+    bad["settings"] = {**bad["settings"], "by": ""}
+    bad["settings_hash"] = provenance.settings_hash(bad["settings"])
+    with transaction(party.engine, workspace_id) as conn:
+        conn.execute(
+            artifacts.update().where(artifacts.c.id == row.id).values(provenance=bad)
+        )
+    own = party.client.get(
+        f"/api/cloud-mixes/{alice_mix['mix']['mix_id']}", headers=auth(ALICE)
+    )
+    assert own.status_code == 404, own.text
+    with party.engine.connect() as conn:
+        assert any(item.invariant == 5 for item in invariants.check(conn))

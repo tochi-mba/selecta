@@ -2,7 +2,7 @@
 
 A Cloud mix is a chain of immutable revisions in the shared contract (`selecta.mix_contract`).
 Each revision is stored as one protected, content-addressed row in the existing `artifacts`
-table (`kind="mix_revision"`, `input_hash` = the revision id, the contract in `provenance`), so
+table (`kind="mix_revision"`, `input_hash` = the revision id, the contract in `provenance.settings`), so
 no schema migration is needed, eviction never removes one (`protected`), and the same contents
 can never be written twice under different ids. An edit adds a revision; it never rewrites one.
 
@@ -36,6 +36,7 @@ from selecta.mix_contract import (
 )
 from selecta.persistence import db_now, new_id, transaction
 from selecta.storage.schema import assets, upload_sessions
+from selecta.work import provenance
 from selecta.work.schema import artifacts
 
 KIND = "mix_revision"
@@ -208,7 +209,26 @@ def _songs(conn: Connection, workspace_id: str, asset_ids: Sequence[str]) -> lis
     return [live[asset_id] for asset_id in asset_ids]
 
 
+def revision_provenance(contract: MixContract, user_id: str) -> dict[str, Any]:
+    """A virtual mix artifact's source hashes, parent, producer and immutable contents.
+
+    Song hashes retain their order (and repeats). The parent is a distinct input on edits;
+    the creator is audit metadata, not a revision input, so different editors cannot
+    silently change a content-addressed revision's identity.
+    """
+    return provenance.build(
+        inputs={
+            "songs": [song.sha256 for song in contract.songs],
+            **({"parent": contract.parent} if contract.parent is not None else {}),
+        },
+        versions={"mix_contract": contract.version, "producer": PRODUCER},
+        settings={"by": user_id, "contract": contract.to_json()},
+    )
+
+
 def _store(conn: Connection, workspace_id: str, contract: MixContract, user_id: str) -> None:
+    made = revision_provenance(contract, user_id)
+    provenance.check(KIND, made)
     now = db_now(conn)
     conn.execute(
         artifacts.insert().values(
@@ -219,7 +239,7 @@ def _store(conn: Connection, workspace_id: str, contract: MixContract, user_id: 
             keys=[],
             checksum=contract.revision,
             size_bytes=0,
-            provenance={"producer": PRODUCER, "by": user_id, "contract": contract.to_json()},
+            provenance=made,
             protected=True,
             created_at=now,
             last_used_at=now,
@@ -229,16 +249,20 @@ def _store(conn: Connection, workspace_id: str, contract: MixContract, user_id: 
 
 def _all_revisions(conn: Connection, workspace_id: str) -> list[tuple[MixContract, float]]:
     rows = conn.execute(
-        sa.select(artifacts.c.provenance, artifacts.c.created_at).where(
-            artifacts.c.workspace_id == workspace_id, artifacts.c.kind == KIND
-        )
+        sa.select(
+            artifacts.c.input_hash, artifacts.c.provenance, artifacts.c.created_at
+        ).where(artifacts.c.workspace_id == workspace_id, artifacts.c.kind == KIND)
     ).all()
     found = []
-    for provenance, created_at in rows:
+    for input_hash, record, created_at in rows:
         try:
-            found.append((from_json(provenance["contract"]), float(created_at)))
-        except (ContractError, KeyError, TypeError):
-            continue  # a damaged row is never served as a mix
+            provenance.check(KIND, record)
+            contract = from_json(record["settings"]["contract"])
+            if contract.revision != input_hash:
+                continue
+            found.append((contract, float(created_at)))
+        except (provenance.ProvenanceInvalid, ContractError, KeyError, TypeError, ValueError):
+            continue  # damaged or incorrectly attributed rows are never served as mixes
     return found
 
 
@@ -357,5 +381,6 @@ __all__ = [
     "edit",
     "list_mixes",
     "read",
+    "revision_provenance",
     "revisions",
 ]
