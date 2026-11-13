@@ -1,5 +1,6 @@
 import { ChangeEvent, useCallback, useEffect, useState } from 'react';
-import type { Api } from './api';
+import type { Api, Page } from './api';
+import { ConnectLocalMusic } from './lf-personal/PersonalWorkspace';
 import { completeOutcome, completeStatusWords, uploadSummary, UploadResult, withUnreached } from './libraryState';
 import { fileSha256, resumableFor, sendParts, unfinishedUploads, UploadEntry, UploadSession, UploadStatus } from './uploadParts';
 
@@ -13,7 +14,24 @@ type Item = UploadResult;
 // outcome (added, already there, skipped, needs attention, not uploaded), one file's failure
 // doesn't stop the rest, and the closing message counts them instead of one "Upload finished".
 
-export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, onAccepted, perFile = true }: {
+/** /upload and /uploads keep their deep links, with no hosted audio transfer in LF mode. */
+export function UploadsPanel(props: {
+  api: Api;
+  workspaceId: string;
+  setError: (value: string) => void;
+  setNotice: (value: string) => void;
+  blocked: string | null;
+  onAccepted?: () => void;
+  perFile?: boolean;
+  localFirst?: boolean;
+  go?: (page: Page) => void;
+}) {
+  if (props.localFirst) return <ConnectLocalMusic api={props.api} workspaceId={props.workspaceId}
+    go={props.go ?? (() => { window.location.assign('/library'); })} />;
+  return <LegacyUploadsPanel {...props} />;
+}
+
+function LegacyUploadsPanel({ api, workspaceId, setError, setNotice, blocked, onAccepted, perFile = true }: {
   api: Api;
   workspaceId: string;
   setError: (value: string) => void;
