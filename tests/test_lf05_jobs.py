@@ -223,7 +223,7 @@ def test_typed_contract_rejects_invalid_dependencies_and_negative_resources():
 def test_local_job_policy_is_identical_across_paid_tiers():
     policy = local_host.local_policy()
     for tier in ("free", "standard", "premium"):
-        assert policy.speculative_budget_cpu_min[tier] >= 10**9
+        assert policy.enforce_speculative_budget is False
         assert policy.lane_caps[tier] == policy.lane_caps["free"]
         assert policy.tier_weights[tier] == 1.0
 
