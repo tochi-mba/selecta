@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import enum
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 
 from selecta import flags
@@ -216,6 +216,63 @@ PREMIUM_1 = Plan(
     flags=EVERY_PLAN | PREMIUM_ONLY,
 )
 
+# ADR-0470: v2 is deliberately published OUTSIDE the active v1 catalogue.
+# Existing subscriptions, Free accounts and current checkout keep their contracted
+# versions. Only a version-qualified Stripe price mapping or explicitly approved
+# migration may opt into v2. The zero fields below DENY hosted-media operations;
+# device-local processing/storage is not governed by the legacy quota columns.
+LF_FLAGS = EVERY_PLAN - {"cloud.uploads"}
+FREE_2 = replace(
+    FREE_1, version=2, storage_bytes=0, analysis_songs_per_day=0,
+    speculative_cpu_minutes_per_day=0, stem_preview_windows_per_day=None,
+    stems=StemAccess.FULL, exports_per_month=None, export_retention_days=0,
+    max_upload_bytes=0, max_upload_seconds=0, library_soft_cap_songs=0,
+    flags=LF_FLAGS - {"devices.remote_control"},
+)
+STANDARD_2 = replace(
+    STANDARD_1, version=2, storage_bytes=0, analysis_songs_per_day=0,
+    speculative_cpu_minutes_per_day=0, stem_preview_windows_per_day=None,
+    stems=StemAccess.FULL, exports_per_month=None, export_retention_days=0,
+    max_upload_bytes=0, max_upload_seconds=0, library_soft_cap_songs=0,
+    devices_signed_in=3, flags=LF_FLAGS,
+)
+PREMIUM_2 = replace(
+    PREMIUM_1, version=2, storage_bytes=0, analysis_songs_per_day=0,
+    speculative_cpu_minutes_per_day=0, stem_preview_windows_per_day=None,
+    stems=StemAccess.FULL, exports_per_month=None, export_retention_days=0,
+    max_upload_bytes=0, max_upload_seconds=0, library_soft_cap_songs=0,
+    flags=LF_FLAGS | PREMIUM_ONLY,
+)
+LOCAL_FIRST_CATALOGUE: Mapping[str, Plan] = MappingProxyType({
+    "free": FREE_2, "standard": STANDARD_2, "premium": PREMIUM_2,
+})
+
+
+def local_first_plans() -> tuple[Plan, ...]:
+    """Future versioned plans; never implicitly presented for sale."""
+    return tuple(sorted(LOCAL_FIRST_CATALOGUE.values(), key=lambda plan: plan.rank))
+
+
+def local_first_problems(registry: Mapping[str, flags.Flag] | None = None) -> list[str]:
+    """Check the separate, opt-in v2 catalogue for hosted-media benefits."""
+    registry = flags.registry() if registry is None else registry
+    found: list[str] = []
+    for plan in LOCAL_FIRST_CATALOGUE.values():
+        # Plan v2 legacy storage and processing fields must be absent, not huge fake limits.
+        if any((
+            plan.storage_bytes, plan.analysis_songs_per_day,
+            plan.speculative_cpu_minutes_per_day, plan.export_retention_days,
+            plan.max_upload_bytes, plan.max_upload_seconds, plan.library_soft_cap_songs,
+        )) or plan.exports_per_month is not None or "cloud.uploads" in plan.flags:
+            found.append(f"{plan.id} v2: hosted media quotas must be removed")
+        if plan.version != 2:
+            found.append(f"{plan.id}: local-first contract must use v2")
+        for flag_id in plan.flags:
+            if flag_id not in registry:
+                found.append(f"{plan.id} v2: unregistered flag {flag_id}")
+    return found
+
+
 # Every version of every plan, oldest first. Add a version; never change or remove one, because
 # subscriptions point at it.
 CATALOGUE: Mapping[str, tuple[Plan, ...]] = MappingProxyType(
@@ -245,6 +302,10 @@ def plan_for(plan_id: str | None, version: int | None = None) -> Plan:
     for plan in versions:
         if plan.version == version:
             return plan
+    # Future v2 must be explicitly requested; never use it for unspecified version.
+    future = LOCAL_FIRST_CATALOGUE.get(plan_id)
+    if future is not None and future.version == version:
+        return future
     raise UnknownPlan(f"{plan_id} has no version {version}.")
 
 
