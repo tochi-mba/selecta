@@ -21,7 +21,8 @@ from selecta.lf_jobs.governor import (
     LocalResourceGovernor,
     ReservationAlreadyHeld,
 )
-from selecta.scheduling.policy import WorkerCaps
+from selecta.scheduling.admission import Verdict, admit
+from selecta.scheduling.policy import Lane, WorkerCaps
 from selecta.work.enqueue import JobSpec
 from selecta.work.model import JobState
 from selecta.workers import local_host
@@ -224,6 +225,16 @@ def test_local_job_policy_is_identical_across_paid_tiers():
     policy = local_host.local_policy()
     for tier in ("free", "standard", "premium"):
         assert policy.enforce_speculative_budget is False
+        assert policy.enforce_plan_backpressure is False
+        assert admit(
+            policy, job_type="seam.render", lane=Lane.SPECULATIVE,
+            tier=tier, queued_of_type=0, backlog_drain_s=100_000,
+            speculative_used_s=100_000_000,
+        ).verdict == Verdict.ACCEPT
+        assert admit(
+            policy, job_type="seam.render", lane=Lane.STANDARD,
+            tier=tier, queued_of_type=0, backlog_drain_s=100_000,
+        ).verdict == Verdict.ACCEPT
         assert policy.lane_caps[tier] == policy.lane_caps["free"]
         assert policy.tier_weights[tier] == 1.0
 
