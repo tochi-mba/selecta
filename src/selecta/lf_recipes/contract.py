@@ -10,8 +10,8 @@ import json
 import math
 import re
 import uuid
-from dataclasses import dataclass, replace
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import Any, Protocol
 
