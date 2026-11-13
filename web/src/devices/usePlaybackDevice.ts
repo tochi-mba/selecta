@@ -65,6 +65,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
   const clockOffset = useRef(0);
+  // A slow poll must never overwrite a newer ownership decision.
+  const latestPoll = useRef(0);
   const speaking = useRef(false);
   const appliedSeq = useRef(-1);
   const wake = useRef<WakeLockHold | null>(null);
@@ -124,11 +126,13 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     else if (session.state === 'playing' && !speaker.active()) speaker.resume();
   }, [speaker, remoteControl]);
 
-  const poll = useCallback(async () => {
-    if (!deviceId) return;
+  const poll = useCallback(async (): Promise<SessionView | null> => {
+    if (!deviceId) return null;
+    const requestId = ++latestPoll.current;
     const sentAt = Date.now();
     try {
       const next = await api<SessionView>(`/playback/session?device_id=${encodeURIComponent(deviceId)}`, {}, workspaceId);
+      if (requestId !== latestPoll.current) return null;
       learnClock(sentAt, next.server_time);
       setView(next);
       setError('');
@@ -137,10 +141,13 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       } else if (speaking.current && next.session) {
         await follow(next.session);
       }
+      return next;
     } catch (problem) {
+      if (requestId !== latestPoll.current) return null;
       const status = (problem as { status?: number }).status;
       if (status === 403) becomeRemote('This device was signed out, so playback stopped.');
       setError((problem as Error).message);
+      return null;
     }
   }, [api, becomeRemote, deviceId, follow, workspaceId]);
 
@@ -224,5 +231,5 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     }
   }, [api, deviceId, poll, view?.session, workspaceId]);
 
-  return { device, notice, view, message, starting, error, playHere, command, serverNow, isSpeaker: () => speaking.current };
+  return { device, notice, view, message, starting, error, playHere, refreshSession: poll, command, serverNow, isSpeaker: () => speaking.current };
 }
