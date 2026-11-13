@@ -122,3 +122,26 @@ def test_operation_key_is_tenant_scoped_and_invalid_inputs_rejected(cloud_engine
                 conn, "ws_lf16_invalid", STANDARD, operation_id="",
                 actual_cost_micros=10_000, provider="test", model_class="planning",
             )
+
+
+def test_duplicate_charge_across_month_rollover_is_never_billed_twice(
+    cloud_engine, monkeypatch
+):
+    ws = "ws_lf16_month_boundary"
+    monkeypatch.setattr(hosted_ai.persistence, "db_now", lambda conn: 1_800_000_000.0)
+    with transaction(cloud_engine, ws) as conn:
+        first = hosted_ai.charge_once(
+            conn, ws, STANDARD, operation_id="provider-late-replay",
+            actual_cost_micros=100_000, provider="test", model_class="planning",
+        )
+    monkeypatch.setattr(
+        hosted_ai.persistence, "db_now", lambda conn: 1_800_000_000.0 + 40 * 86_400
+    )
+    with transaction(cloud_engine, ws) as conn:
+        replay = hosted_ai.charge_once(
+            conn, ws, STANDARD, operation_id="provider-late-replay",
+            actual_cost_micros=100_000, provider="test", model_class="planning",
+        )
+        cost = totals(conn, ws, kinds=[Kind.AI_COST])
+    assert first.charged and replay.duplicate and not replay.charged
+    assert cost[Kind.AI_COST.value] == pytest.approx(0.1)
