@@ -6,6 +6,7 @@
       "about": "Gap and duplicate targets, ready-to-play fallback songs and fenced speaker leases, so a venue night keeps playing through faults.",
       "default": false,
       "requires": ["autopilot.venue_mode"],
+      "modes": ["cloud"],
       "kind": "experiment",
       "owner": "autopilot"
     },
@@ -14,6 +15,7 @@
       "about": "Inject network, model and render faults on purpose in a test run to prove the night keeps playing.",
       "default": false,
       "requires": ["venue.continuity"],
+      "modes": ["cloud"],
       "kind": "ops",
       "owner": "autopilot"
     },
@@ -22,6 +24,7 @@
       "about": "Name the venue's speakers, group them into zones, and move or reconnect playback without two speakers playing at once.",
       "default": false,
       "requires": ["venue.continuity"],
+      "modes": ["cloud"],
       "kind": "experiment",
       "owner": "autopilot"
     },
@@ -30,6 +33,7 @@
       "about": "One screen for venue staff: what is playing, what is next, typed steering, pending versus applied changes and an always-visible Stop.",
       "default": false,
       "requires": ["autopilot.venue_mode"],
+      "modes": ["cloud"],
       "kind": "experiment",
       "owner": "autopilot"
     },
@@ -38,6 +42,7 @@
       "about": "Guest requests in a venue night go through Room moderation, are planned fairly and tell the guest honestly what happened.",
       "default": false,
       "requires": ["autopilot.venue_mode"],
+      "modes": ["cloud"],
       "kind": "experiment",
       "owner": "autopilot"
     },
@@ -46,6 +51,7 @@
       "about": "Learn a venue's taste from staff and guest feedback within a cap, with a reset, an explanation and a retention limit.",
       "default": false,
       "requires": ["autopilot.venue_mode"],
+      "modes": ["cloud"],
       "kind": "experiment",
       "owner": "autopilot"
     },
@@ -54,6 +60,7 @@
       "about": "Check music and model rights before each media operation in a venue and refuse the ones that are not cleared.",
       "default": false,
       "requires": ["autopilot.venue_mode"],
+      "modes": ["cloud"],
       "kind": "ops",
       "owner": "autopilot"
     },
@@ -62,6 +69,7 @@
       "about": "Owner, manager, staff and guest roles decide who may steer, stop or change a venue night, and revoked devices lose access at once.",
       "default": false,
       "requires": ["autopilot.venue_mode"],
+      "modes": ["cloud"],
       "kind": "experiment",
       "owner": "autopilot"
     },
@@ -70,6 +78,7 @@
       "about": "Cap automatic gain changes so Autopilot never makes the room suddenly louder.",
       "default": false,
       "requires": ["autopilot.venue_mode"],
+      "modes": ["cloud"],
       "kind": "ops",
       "owner": "autopilot"
     },
@@ -78,6 +87,7 @@
       "about": "Audio health signals, operator alert thresholds with runbook links, redacted logs and rehearsed recovery.",
       "default": false,
       "requires": ["autopilot.venue_mode"],
+      "modes": ["cloud"],
       "kind": "ops",
       "owner": "autopilot"
     },
@@ -86,6 +96,7 @@
       "about": "Real venue workloads, gap and resource metrics and long soak and chaos runs that record their evidence.",
       "default": false,
       "requires": ["venue.continuity"],
+      "modes": ["cloud"],
       "kind": "ops",
       "owner": "autopilot"
     },
@@ -94,6 +105,7 @@
       "about": "Phased rollout order, no-go gates for P0 blockers and a flag-off rollback check before any venue release.",
       "default": false,
       "requires": ["autopilot.venue_mode"],
+      "modes": ["cloud"],
       "kind": "ops",
       "owner": "autopilot"
     }

@@ -614,6 +614,40 @@ def test_local_decisions_equal_resolve_for_every_flag_that_runs_locally(text):
             assert decision.reason in (t.BUILD_OFF, t.MODE_OFF), (text, flag_id)
 
 
+
+
+def test_venue_autopilot_flags_are_cloud_only_with_real_dependency_gates():
+    """Local mode must not advertise a cloud-only feature or bypass venue-mode safety."""
+    registry = flags.registry()
+    venue_flags = [flag_id for flag_id in registry if flag_id.startswith("venue.")]
+    assert venue_flags
+    assert registry["autopilot.venue_mode"].modes == ("cloud",)
+    assert all(registry[flag_id].modes == ("cloud",) for flag_id in venue_flags)
+
+    cloud = Context(mode="cloud", workspace_id="venue", user_id="operator", plan="premium")
+    for text, continuity_on in (
+        ("minimal", False),
+        ("all", True),
+        ("all -lyrics.lookup", True),
+        ("all -autopilot.venue_mode", False),
+        ("all -venue.continuity", False),
+        ("all -autopilot.venue_mode +venue.continuity", False),
+    ):
+        states = flags.resolve(text)
+        settings = dict(build_states=states, rules={}, entitled=(), plan_gated=(), lock_plans={})
+        local = t.decide_all(LOCAL, **settings)
+        remote = t.decide_all(cloud, **settings)
+        assert remote.on("venue.continuity") is continuity_on, text
+        assert states["venue.continuity"].on is continuity_on, text
+        for flag_id in venue_flags:
+            assert not local.on(flag_id), (text, flag_id)
+            assert local.decisions[flag_id].reason in (t.BUILD_OFF, t.MODE_OFF), (text, flag_id)
+        if text == "all -autopilot.venue_mode":
+            assert remote.decisions["venue.continuity"].reason == "needs:autopilot.venue_mode"
+        if text == "all -venue.continuity":
+            assert remote.decisions["venue.speakers"].reason == "needs:venue.continuity"
+
+
 # Explanations
 
 
