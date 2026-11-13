@@ -18,7 +18,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 
 from selecta import jobs as engine_jobs
-from selecta.lf_jobs.governor import LocalResourceGovernor, Reservation
+from selecta.lf_jobs.governor import (
+    LocalResourceGovernor,
+    Reservation,
+    ReservationAlreadyHeld,
+)
 from selecta.observability import tracing
 from selecta.persistence import new_id
 from selecta.scheduling.policy import WorkerCaps
@@ -157,7 +161,14 @@ class WorkerRunner:
         """Admit on measured local resources before starting the fenced DSP attempt."""
         permit = None
         if self.resource_governor is not None:
-            permit = self.resource_governor.reserve(claim.job, claim.attempt_id)
+            try:
+                permit = self.resource_governor.reserve(claim.job, claim.attempt_id)
+            except ReservationAlreadyHeld:
+                # Do NOT release the shared durable lease: another delivery is
+                # still executing this attempt and owns its fencing generation.
+                return self._result(
+                    claim, claim.job, AttemptOutcome.SUPERSEDED, "Attempt already executing."
+                )
             if permit is None:
                 # Backpressure is not a failed DSP attempt. Preserve retry/dependency history.
                 try:
