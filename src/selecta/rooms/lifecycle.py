@@ -4,7 +4,8 @@ A Premium host has one room open at a time. A room can't open with nothing to re
 refuses, saying why, when the host has no mix-ready songs. It ends when the host ends it, after
 its hours run out (twelve at most), or after an hour with no speaker device online. When it ends,
 requests the planner hasn't been given are withdrawn; ones it already holds carry on into the
-host's mix, where the host can still cancel them as usual.
+host's mix, where the host can still cancel them as usual. In local-first mode a missing
+cloud heartbeat cannot prove that a venue speaker stopped its offline playback.
 
 A new code stops the old one working at once. Guests already in stay, unless the host also
 chooses to remove everyone; a paired display stays paired because it's tied to the room.
@@ -24,7 +25,7 @@ from selecta.persistence import new_id, transaction
 from selecta.rooms import codes
 from selecta.rooms.errors import Refusal, RoomError
 from selecta.rooms.planning import pump, withdraw_from_planner
-from selecta.rooms.schema import room_requests, display_pairings, room_guests, rooms
+from selecta.rooms.schema import display_pairings, room_guests, room_requests, rooms
 from selecta.rooms.settings import RoomSettings
 from selecta.rooms.store import (
     LIVE,
