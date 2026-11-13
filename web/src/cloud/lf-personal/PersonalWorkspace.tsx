@@ -6,6 +6,7 @@ import {
   PersonalSnapshot, requestLocalScan, recentCheck, verificationWords,
 } from './contract';
 import { usePersonalRead, usePersonalSelection } from './state';
+import { FolderWatches } from './FolderWatches';
 import './personal.css';
 
 type Props = { api: Api; workspaceId: string; go: (page: Page) => void; revision?: number };
@@ -183,6 +184,7 @@ export function ConnectLocalMusic({ api, workspaceId, go }: Props) {
   return <div className="lf-personal">
     <div className="lf-hero"><p className="cloud-eyebrow">DEVICE-LOCAL SOURCE SETUP</p><h2>Connect local music</h2><p>Choose a local folder or drive in the installed engine. Selecta Cloud never receives your audio, folder paths or raw fingerprints.</p></div>
     <ReadFeedback read={read} />
+    <FolderWatches />
     <SetupJourney api={api} workspaceId={workspaceId} refresh={read.refresh} devices={devices} onController={selection.chooseControllerOnly} />
     {selection.selected && <p className="lf-state">Current selection: {selection.selected.name}. <button onClick={() => go('library')}>View source health</button></p>}
     <p className="lf-muted">Older /upload and /uploads bookmarks lead here in local-first workspaces. Historical uploads are not deleted by this UI change.</p>
@@ -218,6 +220,7 @@ export function DeviceLibrary({ api, workspaceId, go, revision = 0 }: Props) {
   return <section className="lf-personal" aria-label="Per-device music library">
     <div className="lf-hero"><p className="cloud-eyebrow">DEVICE-LOCAL LIBRARY</p><h2>Music sources on each device</h2><p>This view shows approved metadata reported by your devices, not the contents of cloud object storage.</p></div>
     <ReadFeedback read={read} />
+    <FolderWatches compact />
     {read.snapshot && <>
       <DeviceChooser devices={devices} value={selected?.id ?? ''} controllerOnly={selection.controllerOnly} onChoose={selection.choose} />
       <StatusLine device={selection.controllerOnly ? null : selected} readFresh={read.phase === 'ready'} />
