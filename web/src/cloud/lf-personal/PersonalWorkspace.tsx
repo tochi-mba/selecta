@@ -71,20 +71,20 @@ function SetupJourney({ api, workspaceId, refresh, devices, onController }: {
     <h2 id="lf-setup-title">Set up your music</h2>
     <p>Your recordings remain on the computer or authorised music drive. This browser does not upload originals.</p>
     <fieldset className="lf-choices"><legend>How do you want to use Selecta?</legend>
-      <label><input type="radio" name="lf-setup-mode" checked={mode === 'computer'} onChange={() => { setMode('computer'); setMessage(''); }} /> Use this computer</label>
+      <label><input type="radio" name="lf-setup-mode" checked={mode === 'computer'} onChange={() => { setMode('computer'); setMessage(''); }} /> Use this device</label>
       <label><input type="radio" name="lf-setup-mode" checked={mode === 'pair'} onChange={() => { setMode('pair'); setMessage(''); }} /> Pair an existing speaker</label>
       <label><input type="radio" name="lf-setup-mode" checked={mode === 'controller'} onChange={() => { setMode('controller'); setMessage(''); onController(); }} /> Controller only</label>
     </fieldset>
     {mode === 'computer' && <div className="lf-next">
-      <h3>Prepare this computer</h3>
+      <h3>Prepare this device</h3>
       <ol>
         <li><a href={ENGINE_INSTALL_GUIDE} target="_blank" rel="noopener noreferrer">Read local engine installation guidance</a> (Windows-first; other platforms may differ)</li>
-        <li><LocalEngineLink>Open the engine on this computer</LocalEngineLink> and grant access to your music folders there</li>
+        <li><LocalEngineLink>Open the engine on this device</LocalEngineLink> and grant access to your music folders there</li>
         <li>Scan the library locally; wait for supported files to finish indexing and analysis</li>
         <li>Test a real speaker or headphones in the engine; an online status alone does not confirm sound</li>
         <li>Return here and check this device’s verified status</li>
       </ol>
-      <p className="lf-muted">A link to localhost opens on this browser’s computer, never on a remote speaker.</p>
+      <p className="lf-muted">The engine link opens on the device running this browser, never on a remote speaker.</p>
     </div>}
     {mode === 'pair' && <form className="lf-next" onSubmit={(event) => void submit(event)}>
       <h3>Pair a speaker already running Selecta</h3>
