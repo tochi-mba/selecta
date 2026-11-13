@@ -35,8 +35,8 @@ from pathlib import Path
 
 from selecta import db, jobs
 from selecta.config import Settings
-from selecta.persistence import new_id
 from selecta.lf_jobs.governor import LocalResourceGovernor
+from selecta.persistence import new_id
 from selecta.planner.wordreel import CannotTrust
 from selecta.scheduling.policy import (
     LATER,
