@@ -401,6 +401,12 @@
       "status": "allowed",
       "version": "1.18.1"
     },
+    "sentry-sdk": {
+      "licence": "Not declared",
+      "note": "Runtime SDK added to the image; verify declared licence and redistribution obligations before release.",
+      "status": "review",
+      "version": "2.75.0"
+    },
     "setuptools": {
       "licence": "MIT",
       "status": "allowed",
