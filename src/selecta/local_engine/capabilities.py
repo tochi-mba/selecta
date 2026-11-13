@@ -57,7 +57,7 @@ def ffmpeg_probe() -> dict[str, Any]:
             ("mp3", "mp3"),
             ("wav", "pcm_s16"),
         ):
-            if re.search(rf"(?m)^\\s*[A-Z.]{6}\\s+{prefix}\\w*\\s+", lines):
+            if re.search(rf"(?m)^\s*[A-Z.]{6}\s+{prefix}\w*\s+", lines):
                 supported.append(codec)
         return {
             "available": True,

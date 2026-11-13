@@ -47,3 +47,20 @@ def test_model_inventory_never_leaks_local_filenames(tmp_path):
     report = model_inventory(tmp_path)
     assert report == {"checkpoint_candidates": 1, "state": "present_unvalidated"}
     assert "private-training-name" not in str(report)
+
+
+def test_decoder_probe_requires_ffmpeg_decoder_listing(monkeypatch):
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(caps.shutil, "which", lambda _: "fake-ffmpeg")
+
+    def fake_run(argv, **_kwargs):
+        if "-version" in argv:
+            return SimpleNamespace(returncode=0, stdout="ffmpeg version 7.0 build\n")
+        return SimpleNamespace(
+            returncode=0,
+            stdout=" A..... flac FLAC decoder\n A..... pcm_s16le PCM decoder\n",
+        )
+
+    monkeypatch.setattr(caps.subprocess, "run", fake_run)
+    assert caps.ffmpeg_probe()["decoders"] == ["flac", "wav"]
