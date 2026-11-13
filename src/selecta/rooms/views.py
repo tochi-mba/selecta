@@ -17,6 +17,7 @@ from sqlalchemy.engine import Connection
 from selecta.persistence import transaction
 from selecta.rooms.errors import Refusal, RoomError
 from selecta.rooms.lifecycle import room_code
+from selecta.rooms.local_first import LocalStage, ready_speaker, valid_progress, visible
 from selecta.rooms.ordering import inbox_order
 from selecta.rooms.planning import queue_order, renders_left
 from selecta.rooms.ports import NowPlaying, SongSummary
@@ -70,6 +71,7 @@ class UpcomingItem:
     nickname: str | None  # None when names are hidden from this viewer
     voted: bool = False  # this guest has voted for it
     mine: bool = False
+    stage: str = "requested"
 
 
 @dataclass(frozen=True)
@@ -80,6 +82,7 @@ class MyRequest:
     text: str
     votes: int
     minutes_until: float | None = None
+    stage: str = "requested"
 
 
 @dataclass(frozen=True)
@@ -96,6 +99,7 @@ class GuestView:
     coming_up: tuple[UpcomingItem, ...] = ()  # accepted, in the order they'll reach the mix
     waiting: tuple[UpcomingItem, ...] = ()  # sent, waiting for the host
     my_requests: tuple[MyRequest, ...] = ()
+    local_first: bool = False
 
 
 @dataclass(frozen=True)
@@ -133,6 +137,7 @@ class HostView:
     displays: int  # paired screens, online or not
     screens: tuple[ScreenSummary, ...] = ()
     now: float = 0.0  # the server's clock, so "last seen 5 min ago" ignores the host's clock
+    local_first: bool = False
 
 
 def is_online(
@@ -145,7 +150,63 @@ def is_online(
 
 
 def now_playing_for(ctx: RoomContext, workspace_id: str) -> NowPlaying:
+    # Legacy now-playing is workspace-wide and cannot prove which zone is playing.
+    # The local bridge must provide verified zone playback in a later integration.
+    if ctx.local_first is not None:
+        return NowPlaying(None)
     return ctx.now_playing.now_playing(workspace_id)
+
+
+def speaker_ready(ctx: RoomContext, room: Room, now: float) -> bool:
+    if ctx.local_first is None:
+        return ctx.speakers.speaker_online(room.workspace_id)
+    try:
+        speaker = ctx.local_first.speaker(room.workspace_id, room.settings.zone_id)
+    except Exception:
+        return False
+    return ready_speaker(speaker, room.workspace_id, room.settings.zone_id, now)
+
+
+def request_stage(ctx: RoomContext, room: Room, request: RoomRequest, now: float) -> str:
+    if request.status is RequestStatus.SENT:
+        return LocalStage.AWAITING_MODERATION.value
+    if request.status is RequestStatus.PASSED:
+        return LocalStage.REJECTED.value
+    if request.status is RequestStatus.UNFIT:
+        return LocalStage.DEFERRED.value
+    if request.status is RequestStatus.WITHDRAWN:
+        return (
+            LocalStage.EXPIRED.value
+            if request.reason == "room_ended"
+            else LocalStage.WITHDRAWN.value
+        )
+    if request.status is RequestStatus.PLAYED:
+        return LocalStage.PLAYED.value
+    if request.status is RequestStatus.ACCEPTED:
+        if ctx.local_first is None:
+            return LocalStage.ACCEPTED.value
+        if request.song_request_id:
+            try:
+                progress = ctx.local_first.progress(
+                    room.workspace_id, room.settings.zone_id, request.song_request_id
+                )
+            except Exception:
+                progress = None
+            if valid_progress(
+                progress, room.workspace_id, room.settings.zone_id, request.song_request_id
+            ) and progress.stage in (
+                LocalStage.LOCALLY_SCHEDULED, LocalStage.PREPARED, LocalStage.PLAYED
+            ):
+                # A played progress is not stored as played until the trusted
+                # record_outcome callback confirms it; don't leapfrog the DB.
+                return (
+                    progress.stage.value if progress.stage is not LocalStage.PLAYED
+                    else LocalStage.PREPARED.value
+                )
+            return LocalStage.LOCALLY_SCHEDULED.value  # durable ack ID stored by pump
+        return (LocalStage.ACCEPTED.value if speaker_ready(ctx, room, now)
+                else LocalStage.DEFERRED.value)
+    return LocalStage.REQUESTED.value
 
 
 def nickname_map(conn: Connection, room: Room) -> dict[str, str]:
@@ -159,7 +220,27 @@ def describe_songs(
     ctx: RoomContext, room: Room, requests: Iterable[RoomRequest]
 ) -> Mapping[int, SongSummary]:
     ids = {request.song_id for request in requests}
-    return ctx.catalog.describe(room.workspace_id, ids) if ids else {}
+    if not ids:
+        return {}
+    if ctx.local_first is None:
+        return ctx.catalog.describe(room.workspace_id, ids)
+    try:
+        entries = ctx.local_first.describe(room.workspace_id, room.settings.zone_id, ids)
+    except Exception:
+        return {}
+    # Recheck every metadata DTO to prevent another zone's catalogue leaking to guests.
+    from selecta.persistence import db_now
+    with ctx.engine.connect() as conn:
+        now = db_now(conn)
+    results: dict[int, SongSummary] = {}
+    for song_id in ids:
+        song = visible(
+            entries.get(song_id), room.workspace_id, room.settings.zone_id, now,
+            clean_only=room.settings.clean_only,
+        )
+        if song is not None and song.song_id == song_id:
+            results[song_id] = song
+    return results
 
 
 def as_items(
@@ -170,6 +251,7 @@ def as_items(
     show_names: bool,
     voted: Iterable[str] = (),
     me: str | None = None,
+    stages: Mapping[str, str] | None = None,
 ) -> tuple[UpcomingItem, ...]:
     voted = set(voted)
     return tuple(
@@ -181,6 +263,7 @@ def as_items(
             nickname=names.get(request.guest_id) if show_names else None,
             voted=request.id in voted,
             mine=request.guest_id == me,
+            stage=stages.get(request.id, "requested") if stages else "requested",
         )
         for request in requests
     )
@@ -235,37 +318,58 @@ def guest_view(ctx: RoomContext, guest_token: str, *, now: float | None = None) 
             and guest.status is GuestStatus.ACTIVE
             and settings.request_mode is not RequestMode.OFF
         ),
-        music_paused=room.live and not ctx.speakers.speaker_online(workspace_id),
+        music_paused=room.live and not speaker_ready(ctx, room, now),
+        local_first=ctx.local_first is not None,
     )
     songs = describe_songs(ctx, room, [*mine, *coming_up, *waiting])
-    my_requests = tuple(_mine(ctx, workspace_id, request, songs) for request in mine)
+    my_requests = tuple(_mine(ctx, room, request, songs, now) for request in mine)
     if not room.live or guest.status is not GuestStatus.ACTIVE:
         return replace(base, my_requests=my_requests)
     playing = now_playing_for(ctx, workspace_id)
     show = settings.names_shown
+    stages = {request.id: request_stage(ctx, room, request, now)
+              for request in [*coming_up, *waiting]}
     return replace(
         base,
         now_playing=playing.current,
         up_next=playing.up_next,
-        coming_up=as_items(coming_up, songs, names, show_names=show, voted=voted, me=guest.id),
-        waiting=as_items(waiting, songs, names, show_names=show, voted=voted, me=guest.id),
+        coming_up=as_items(coming_up, songs, names, show_names=show, voted=voted,
+                           me=guest.id, stages=stages),
+        waiting=as_items(waiting, songs, names, show_names=show, voted=voted,
+                         me=guest.id, stages=stages),
         my_requests=my_requests,
     )
 
 
 def _mine(
-    ctx: RoomContext, workspace_id: str, request: RoomRequest, songs: Mapping[int, SongSummary]
+    ctx: RoomContext, room: Room, request: RoomRequest,
+    songs: Mapping[int, SongSummary], now: float,
 ) -> MyRequest:
+    stage = request_stage(ctx, room, request, now)
     text = STATUS_TEXT[request.status]
     if request.status is RequestStatus.WITHDRAWN and request.reason in WITHDRAWN_TEXT:
         text = WITHDRAWN_TEXT[request.reason]
     minutes = None
-    if request.status is RequestStatus.ACCEPTED and request.song_request_id:
-        minutes = ctx.now_playing.minutes_until(workspace_id, request.song_request_id)
+    if ctx.local_first is not None:
+        text = {
+            LocalStage.AWAITING_MODERATION.value: "Waiting for the host to review",
+            LocalStage.ACCEPTED.value: "Accepted by the host; awaiting local scheduling",
+            LocalStage.DEFERRED.value: "Deferred: the venue speaker or recording is unavailable",
+            LocalStage.LOCALLY_SCHEDULED.value: "Scheduled on the venue speaker",
+            LocalStage.PREPARED.value: "Prepared on the venue speaker",
+            LocalStage.PLAYED.value: "Played on the venue speaker",
+            LocalStage.REJECTED.value: "The host passed on this one",
+            LocalStage.EXPIRED.value: "Expired when the room ended",
+        }.get(stage, text)
+        if request.status is RequestStatus.UNFIT and request.reason == "unavailable":
+            text = "Can't schedule: this recording is no longer available"
+    elif request.status is RequestStatus.ACCEPTED and request.song_request_id:
+        minutes = ctx.now_playing.minutes_until(room.workspace_id, request.song_request_id)
         if minutes is not None:
             text = f"Accepted, playing in about {max(1, round(minutes))} min"
     return MyRequest(
-        request.id, songs.get(request.song_id), request.status, text, request.votes, minutes
+        request.id, songs.get(request.song_id), request.status, text, request.votes, minutes,
+        stage,
     )
 
 
@@ -332,12 +436,16 @@ def host_view(
         code=room_code(ctx, room),
         settings=room.settings,
         guests=guests,
-        inbox=as_items(inbox, songs, names, show_names=True),
-        coming_up=as_items(coming_up, songs, names, show_names=True),
-        unfit=as_items(unfit, songs, names, show_names=True),
+        inbox=as_items(inbox, songs, names, show_names=True,
+                       stages={r.id: request_stage(ctx, room, r, now) for r in inbox}),
+        coming_up=as_items(coming_up, songs, names, show_names=True,
+                           stages={r.id: request_stage(ctx, room, r, now) for r in coming_up}),
+        unfit=as_items(unfit, songs, names, show_names=True,
+                       stages={r.id: request_stage(ctx, room, r, now) for r in unfit}),
         renders_left=left,
-        music_paused=room.live and not ctx.speakers.speaker_online(workspace_id),
+        music_paused=room.live and not speaker_ready(ctx, room, now),
         displays=len(screens),
         screens=screens,
         now=now,
+        local_first=ctx.local_first is not None,
     )
