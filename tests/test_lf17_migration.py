@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import io
 import json
 import shutil
@@ -216,9 +217,11 @@ def test_approved_legacy_retrieval_integrity_and_cross_tenant_refusal(tmp_path, 
 def test_metadata_account_export_retains_revision_history_without_r2_get(tmp_path, monkeypatch):
     with signed_up(tmp_path, monkeypatch) as world:
         a = add_asset(world.engine, world.objects, world.workspace_id, b"private original")
+        checksum = hashlib.sha256(b"private original").hexdigest()
         first = new_contract(
             "mixABC", "Original", "cloud",
-            [SongRef("cloud", a, "Track"), SongRef("cloud", a, "Again")],
+            [SongRef("cloud", a, "Track", sha256=checksum),
+             SongRef("cloud", a, "Again", sha256=checksum)],
         )
         second = first.edited(songs=first.songs, name="Second")
         with transaction(world.engine, world.workspace_id) as conn:
