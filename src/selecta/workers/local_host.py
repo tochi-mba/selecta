@@ -76,6 +76,7 @@ def local_policy() -> PolicyConfig:
         lane_caps={tier: {lane: 8 for lane in ("interactive", "standard", "speculative")}
                    for tier in ("free", "standard", "premium")},
         enforce_speculative_budget=False,
+        enforce_plan_backpressure=False,
         strict_lanes=True,
         speculative_headroom_slots=0,
         speculative_headroom_share=0.0,
