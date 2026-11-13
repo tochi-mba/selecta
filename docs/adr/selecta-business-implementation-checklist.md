@@ -1,6 +1,6 @@
 # SelectaDJ for Business implementation checklist (ADR-0441 to ADR-0454)
 
-**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 119 tasks: 0 Implemented, 0 In progress, 119 Not started, 0 Needs a person, 0 Superseded. 13 name a person-only step. 0 ticked. 0 independently Verified.
+**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 179 tasks: 0 Implemented, 0 In progress, 179 Not started, 0 Needs a person, 0 Superseded. 15 name a person-only step. 0 ticked. 0 independently Verified.
 
 **Status:** 14 ADRs proposed on 2026-11-12, awaiting the owner's decision. 0 Implemented. Proposal: [docs/saas/19-business-venues.md](../saas/19-business-venues.md).
 

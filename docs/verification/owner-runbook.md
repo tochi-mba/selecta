@@ -274,13 +274,13 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 
 <!-- owner-runbook:generated:begin -->
 
-**Open person-only tasks: 751.**
+**Open person-only tasks: 753.**
 
 | Sitting | Tasks | Tracker |
 |---|---|---|
 | 1. Visual review and baseline approval | 97 | [tracker/visual-review.md](tracker/visual-review.md) |
 | 2. Screen-reader and keyboard session | 86 | [tracker/screen-reader.md](tracker/screen-reader.md) |
-| 3. Phones, touch, zoom and hardware | 108 | [tracker/devices.md](tracker/devices.md) |
+| 3. Phones, touch, zoom and hardware | 110 | [tracker/devices.md](tracker/devices.md) |
 | 4. Listening session | 85 | [tracker/listening.md](tracker/listening.md) |
 | 5. User-study sessions | 216 | [tracker/user-study.md](tracker/user-study.md) |
 | 6. Staging, drills and rollback | 16 | [tracker/staging.md](tracker/staging.md) |
@@ -327,7 +327,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 - `selecta-3-1-implementation-checklist.md` (17): S31-0080-03, S31-0080-10, S31-0081-03, S31-0081-09, S31-0082-07, S31-0082-08, S31-0083-04, S31-0084-07, S31-0085-10, S31-0086-03, S31-0086-07, S31-0086-10, S31-0086-11, S31-0087-06, S31-0087-07, S31-0087-08, S31-0087-10
 - `selecta-3-implementation-checklist.md` (6): S3-0067-04, S3-0072-04, S3-0073-01, S3-0073-04, S3-0073-05, S3-0073-08
 - `selecta-4-implementation-checklist.md` (26): S4-0091-08, S4-0092-03, S4-0092-06, S4-0092-10, S4-0093-06, S4-0093-10, S4-0094-02, S4-0094-06, S4-0098-04, S4-0098-05, S4-0100-03, S4-0100-09, S4-0101-09, S4-0102-02, S4-0105-01, S4-0105-08, S4-0106-08, S4-0107-03, S4-0107-10, S4-0110-09, S4-0111-05, S4-0111-06, S4-0111-07, S4-0111-08, S4-0112-08, S4-0113-03
-- `selecta-business-implementation-checklist.md` (1): BZ-0454-12
+- `selecta-business-implementation-checklist.md` (3): BZ-0445-12, BZ-0446-12, BZ-0454-12
 - `selecta-cloud-implementation-checklist.md` (5): SC-0399-02, SC-0415-03, SC-0415-04, SC-0415-05, SC-0416-02
 - `selecta-creative-interface-implementation-checklist.md` (4): CI-0170-06, CI-0171-03, CI-0174-07, CI-0183-05
 - `selecta-experience-implementation-checklist.md` (3): EX-0120-05, EX-0123-05, EX-0133-03

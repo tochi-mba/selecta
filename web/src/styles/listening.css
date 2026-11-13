@@ -154,7 +154,11 @@
   max-width: 100%;
 }
 .listen-identity { container-type: inline-size; }
-.stage .listen-identity .track-title { font-size: clamp(1.35rem, 3cqi, 2.5rem); }
+/* Keep the Stage heading subordinate to lyrics, while long names still wrap in full. */
+.stage .listen-identity .track-title {
+  font-size: clamp(1.35rem, 2.4cqi, 2rem);
+  max-width: 50ch;
+}
 
 /* A quiet editorial sleeve, not album art or a representation of measured audio.
    During a real handoff the trim changes state without adding fake movement. */
@@ -515,8 +519,13 @@
   .now.stage .handoff { padding: var(--space-3) var(--space-4); margin: 0.5vh 0 1.5vh; }
   .now.stage .countdown-track { height: clamp(20px, 4vh, 40px); }
   .now.stage .countdown-number strong { font-size: clamp(2rem, 6vh, 3.5rem); }
-  .now.stage .lyrics .sung { font-size: clamp(2.4rem, min(6vw, 8.5vh), 6rem); }
-  .now.stage .lyrics { --stage-sung: clamp(2.4rem, min(6vw, 8.5vh), 6rem); }
+  /* The ink and highlighted words need a full line box, not the 1.12 legacy
+     leading that clipped the active line on laptop-height screens. */
+  .now.stage .lyrics .sung { font-size: clamp(2.4rem, min(6vw, 8.5vh), 6rem); line-height: 1.35; }
+  .now.stage .lyrics {
+    --stage-sung: clamp(2.4rem, min(6vw, 8.5vh), 6rem);
+    min-height: calc(var(--stage-sung) * 1.35 * 2 + var(--stage-line) * 1.5 * 2 + 2rem);
+  }
 }
 /* A phone-width Stage (MP-0285-04): the countdown is a compact line, not a second headline, so the lyrics
    keep the most room under it */

@@ -21,7 +21,7 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 | [Unified finish (UF)](selecta-unified-finish-implementation-checklist.md) | 192 | 192 | 0 | 0 | 0 | 0 | 123 | 0 |
 | [Selecta Cloud (SC)](selecta-cloud-implementation-checklist.md) | 136 | 93 | 38 | 5 | 0 | 0 | 91 | 0 |
 | [selecta-autopilot-implementation-checklist.md](selecta-autopilot-implementation-checklist.md) | 120 | 0 | 0 | 120 | 0 | 0 | 0 | 0 |
-| [selecta-business-implementation-checklist.md](selecta-business-implementation-checklist.md) | 119 | 0 | 0 | 119 | 0 | 0 | 0 | 0 |
+| [selecta-business-implementation-checklist.md](selecta-business-implementation-checklist.md) | 179 | 0 | 0 | 179 | 0 | 0 | 0 | 0 |
 <!-- checklist-summary:end -->
 
 ---
