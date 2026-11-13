@@ -10,6 +10,7 @@ import zipfile
 
 import pytest
 from cloud_world import HEADERS, add_asset, signed_up
+
 from selecta.cloud_mixes import _store
 from selecta.lf_migration import (
     IncompleteInventory,
