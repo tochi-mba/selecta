@@ -51,7 +51,9 @@ class FencedLocalOutput:
                 floor INTEGER NOT NULL DEFAULT 0, generation INTEGER,
                 operation_id TEXT, token TEXT, state TEXT NOT NULL
             )""")
-            db.execute("INSERT OR IGNORE INTO local_output_fence(id, floor, state) VALUES (1,0,'idle')")
+            db.execute(
+                "INSERT OR IGNORE INTO local_output_fence(id, floor, state) VALUES (1,0,'idle')"
+            )
 
     @staticmethod
     def _row(db: sqlite3.Connection) -> sqlite3.Row:
@@ -148,7 +150,9 @@ class FencedLocalOutput:
             if (generation <= row["floor"] or row["state"] != "prepared"
                     or row["operation_id"] != request.operation_id
                     or not prepared_token or row["token"] != prepared_token):
-                raise TransferRejected("stale_or_unprepared", "Output is not prepared for acquisition")
+                raise TransferRejected(
+                    "stale_or_unprepared", "Output is not prepared for acquisition"
+                )
             if self.audio.is_audible() is not False:
                 return False
             db.execute("""UPDATE local_output_fence SET floor=?, generation=?,
