@@ -105,7 +105,9 @@ def collect_inventory(
             try:
                 bucket = validate_key(key)
             except (UnsafeKey, TypeError, ValueError):
-                concerns.append({"kind": "unsafe_artifact_key", "reference": str(a["id"]), "key": key})
+                concerns.append({
+                    "kind": "unsafe_artifact_key", "reference": str(a["id"]), "key": key
+                })
                 continue
             mark(bucket, key, "artifact:" + str(a["id"]))
 
@@ -121,7 +123,9 @@ def collect_inventory(
             "invalid_contract": not isinstance(contract, dict),
         })
         if not a["protected"]:
-            concerns.append({"kind": "unprotected_mix_revision", "reference": str(a["id"]), "key": ""})
+            concerns.append({
+                "kind": "unprotected_mix_revision", "reference": str(a["id"]), "key": ""
+            })
 
     observed: dict[tuple[str, str], int] = {}
     if objects is not None:
@@ -134,7 +138,9 @@ def collect_inventory(
                 for item in objects.list_objects_v2(buckets.name(bucket), prefix):
                     identity = (bucket.value, item.key)
                     if _check_key(item.key, workspace_id, bucket):
-                        concerns.append({"kind": "invalid_listed_key", "reference": bucket.value, "key": item.key})
+                        concerns.append({
+                            "kind": "invalid_listed_key", "reference": bucket.value, "key": item.key
+                        })
                         continue
                     observed[identity] = int(item.size)
                     if len(observed) > object_limit:
@@ -166,7 +172,11 @@ def collect_inventory(
     ]
     original_sizes = {str(a["original_key"]): int(a["size"]) for a in asset_rows}
     for (bucket, key), size in observed.items():
-        if bucket == Bucket.ORIGINALS.value and key in original_sizes and original_sizes[key] != size:
+        if (
+            bucket == Bucket.ORIGINALS.value
+            and key in original_sizes
+            and original_sizes[key] != size
+        ):
             concerns.append({"kind": "original_size_mismatch", "reference": key, "key": key})
 
     verified_backups = [dict(item) for item in backups]
