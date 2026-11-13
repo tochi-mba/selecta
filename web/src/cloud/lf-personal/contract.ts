@@ -7,8 +7,8 @@ import type { Api, Account } from '../api';
  */
 export const PERSONAL_FLAG = 'local_first.personal';
 export const PERSONAL_SNAPSHOT_PATH = '/local-first/personal/snapshot';
-export const LOCAL_ENGINE_URL = 'http://127.0.0.1:8733/';
-export const ENGINE_INSTALL_GUIDE = 'https://github.com/tochi-mba/selecta/blob/main/README.md';
+// Device-specific links are centralised in the mode-aware copy module.
+export { localEngineUrl as LOCAL_ENGINE_URL, localEngineSetupGuide as ENGINE_INSTALL_GUIDE } from '../../copy';
 
 export function personalEnabled(account: Account | null): boolean {
   // Opt-in only. Unflagged accounts retain historical UI/API behaviour.
