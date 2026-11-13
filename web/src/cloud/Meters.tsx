@@ -28,6 +28,13 @@ function allowanceWords(allowance: Allowance, unit: string) {
 }
 
 export function StorageMeter({ account }: { account: Account }) {
+  if (account.entitlement.plan_version === 2) {
+    return <section className="cloud-card cloud-meter-card" aria-label="Local music storage">
+      <p className="cloud-eyebrow">LOCAL MUSIC STORAGE</p>
+      <h2>On your device, not billed by GB</h2>
+      <p>Storage capacity, available music and cache health are verified by the local engine. Cloud account data does not prove a recording can play.</p>
+    </section>;
+  }
   const storage = account.usage?.storage;
   const used = storage?.used_bytes ?? account.entitlement.storage_used_bytes;
   const limit = storage?.limit_bytes ?? account.entitlement.storage_limit_bytes;
@@ -39,6 +46,20 @@ export function StorageMeter({ account }: { account: Account }) {
 export function Meters({ account }: { account: Account }) {
   const usage = account.usage;
   const zone = account.user.timezone;
+  const localFirst = account.entitlement.plan_version === 2;
+  if (localFirst) return <div className="cloud-meters">
+    <StorageMeter account={account} />
+    <section className="cloud-card cloud-meter-card" aria-label="Local processing">
+      <p className="cloud-eyebrow">LOCAL PROCESSING</p>
+      <h2>No plan-imposed daily quota</h2>
+      <p>Device-local analysis, stems, renders and permanent exports use your own hardware. Safety and available resources still apply.</p>
+    </section>
+    {featureOn(account, 'lucy') && <section className="cloud-card cloud-meter-card" aria-label="Hosted Lucy usage">
+      <p className="cloud-eyebrow">HOSTED LUCY</p>
+      <h2>{usage ? `${usage.lucy_turns_month.used} turns this month` : 'Usage tracked on Selecta Cloud'}</h2>
+      <p>Hosted AI has separate spend and request safeguards. Local analysis is never charged as hosted AI.</p>
+    </section>}
+  </div>;
   if (!usage) return <div className="cloud-meters"><StorageMeter account={account} /></div>;
   const lucy = usage.lucy_turns_month;
   const exports = usage.exports_month;
