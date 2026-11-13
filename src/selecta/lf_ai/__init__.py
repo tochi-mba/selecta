@@ -1,10 +1,10 @@
 """Local-first Lucy: metadata-only AI suggestions; authorised local audio (ADR-0472)."""
 
 from selecta.lf_ai.contract import (
+    SCHEMA_VERSION,
     BoundaryError,
     LucyPlan,
     PlanError,
-    SCHEMA_VERSION,
     Suggestion,
     TrackFact,
     parse_model_plan,
