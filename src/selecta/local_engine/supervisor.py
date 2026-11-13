@@ -16,7 +16,11 @@ from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
 from selecta.local_engine.config import (
-    EngineConfig, atomic_json, ensure_private, load_config, state_directory,
+    EngineConfig,
+    atomic_json,
+    ensure_private,
+    load_config,
+    state_directory,
 )
 from selecta.local_engine.discovery import installation_id, pid_alive, read_status
 

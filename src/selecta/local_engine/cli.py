@@ -106,7 +106,10 @@ def engine_config(
     from dataclasses import asdict
 
     from selecta.local_engine.config import (
-        EngineConfig, load_config, save_config, state_directory,
+        EngineConfig,
+        load_config,
+        save_config,
+        state_directory,
     )
     from selecta.local_engine.discovery import read_status
 

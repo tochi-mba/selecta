@@ -3,8 +3,14 @@ from __future__ import annotations
 import pytest
 
 from selecta.modes.core import (
-    Connectivity, EngineRole, Mode, ModeError, WorkspaceKind,
-    current_mode, parse_mode, runtime_topology,
+    Connectivity,
+    EngineRole,
+    Mode,
+    ModeError,
+    WorkspaceKind,
+    current_mode,
+    parse_mode,
+    runtime_topology,
 )
 
 

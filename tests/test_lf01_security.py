@@ -5,7 +5,6 @@ from fastapi.testclient import TestClient
 
 from selecta.local_engine.security import LoopbackGuard, allowed_request
 
-
 PORT = 8768
 
 

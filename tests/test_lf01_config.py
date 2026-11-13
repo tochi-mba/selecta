@@ -5,8 +5,13 @@ from dataclasses import replace
 import pytest
 
 from selecta.local_engine.config import (
-    EngineConfig, EngineConfigError, access_token, load_config,
-    rotate_access, save_config, state_directory,
+    EngineConfig,
+    EngineConfigError,
+    access_token,
+    load_config,
+    rotate_access,
+    save_config,
+    state_directory,
 )
 
 

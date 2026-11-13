@@ -12,7 +12,11 @@ import pytest
 from selecta.local_engine.config import EngineConfig, atomic_json
 from selecta.local_engine.discovery import read_status
 from selecta.local_engine.supervisor import (
-    EngineBusy, InstanceLock, Supervisor, port_free, request_stop,
+    EngineBusy,
+    InstanceLock,
+    Supervisor,
+    port_free,
+    request_stop,
 )
 
 
