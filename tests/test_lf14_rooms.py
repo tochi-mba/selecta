@@ -271,6 +271,21 @@ def test_request_flood_is_capped_without_touching_local_schedule(env):
     assert exc.value.refusal is Refusal.GUEST_PENDING_LIMIT
 
 
+def test_expired_room_blocks_join_and_scheduling_even_before_periodic_sweep(env):
+    rooms, venue, clock = env
+    made, guest = opened(env, max_hours=0.5)
+    venue.online = False
+    clock.advance(1801)
+    with pytest.raises(RoomError) as exc:
+        rooms.join(made.code, None)
+    assert exc.value.refusal is Refusal.ROOM_ENDED
+    with pytest.raises(RoomError) as exc:
+        rooms.request(guest.guest_token, 1)
+    assert exc.value.refusal is Refusal.ROOM_ENDED
+    assert pump(rooms, HOST, made.room.id) == 0
+    assert venue.requested == []
+
+
 def test_invalid_speaker_and_ack_never_count_as_local_playback(env):
     rooms, venue, clock = env
     speaker = venue.speaker(HOST, "main")
