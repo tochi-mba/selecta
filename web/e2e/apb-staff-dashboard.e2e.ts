@@ -10,6 +10,16 @@ import { expect, test, type Page } from '@playwright/test';
  */
 const STAFF_PATH = process.env.SELECTA_STAFF_PATH ?? '/venue/staff/e2e';
 
+// The local E2E server supplies a flag-switch endpoint. Enable the still-private
+// dashboard only for these integration tests; production defaults remain off.
+test.beforeEach(async ({ request }) => {
+  const response = await request.post('/api/test/flags', { data: { flags: '+autopilot.venue_mode +venue.staff_dashboard' } });
+  expect(response.ok()).toBe(true);
+});
+test.afterEach(async ({ request }) => {
+  await request.post('/api/test/flags', { data: { flags: '' } });
+});
+
 const STATE = {
   nav: 'live', headline: 'Autopilot is playing.',
   now: { title: 'A Very Long Song Title That Would Never Fit On A Small Phone (Extended Mix)', artist: 'Artist', seconds_left: 80 },

@@ -5,6 +5,8 @@ import { handOnStartupStatus } from './startupStatus';
 import { prefetchLibrary } from './views/libraryPrefetch';
 
 const CloudRoot = lazy(() => import('./cloud/CloudRoot').then((module) => ({ default: module.CloudRoot })));
+const VenueStaffRoot = lazy(() => import('./venueops/VenueStaffRoot').then((module) => ({ default: module.VenueStaffRoot })));
+
 
 type Mode = 'loading' | 'local' | 'cloud' | 'unavailable';
 const apiOrigin = (import.meta.env.VITE_SELECTA_API_ORIGIN ?? '').replace(/\/$/, '');
@@ -53,7 +55,12 @@ export function RuntimeApp() {
       </RuntimeMessage>
     );
   }
-  if (mode === 'local') return <App />;
+  if (mode === 'local') {
+    if (/^\/venue\/staff\/[A-Za-z0-9_-]+$/.test(window.location.pathname)) {
+      return <Suspense fallback={<RuntimeMessage title="Starting venue staff dashboard" detail="Connecting to the venue…" />}><VenueStaffRoot /></Suspense>;
+    }
+    return <App />;
+  }
 
   const clientId = import.meta.env.VITE_WORKOS_CLIENT_ID;
   if (!clientId) {

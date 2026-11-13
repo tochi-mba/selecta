@@ -53,8 +53,8 @@
 .staff-dashboard[data-nav='loading'] .staff-nav-dot { background: var(--status-unavailable); }
 
 .staff-stop {
-  min-block-size: var(--control-height);
-  min-inline-size: var(--control-height);
+  min-block-size: max(44px, var(--control-height));
+  min-inline-size: max(44px, var(--control-height));
   padding: var(--control-pad-block) var(--space-5);
   border: 2px solid var(--danger);
   border-radius: var(--radius);
