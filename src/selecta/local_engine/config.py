@@ -106,7 +106,7 @@ def load_config(directory: Path, *, recover: bool = True) -> EngineConfig:
             raise EngineConfigError("Unsafe or oversized configuration.")
         data = json.loads(path.read_text(encoding="utf-8"))
         return EngineConfig.from_dict(data)
-    except (OSError, ValueError, TypeError, EngineConfigError) as exc:
+    except (OSError, ValueError, TypeError) as exc:
         if not recover:
             raise EngineConfigError(f"Invalid configuration: {type(exc).__name__}") from exc
         # Preserve damaged configuration for inspection, never execute its contents.

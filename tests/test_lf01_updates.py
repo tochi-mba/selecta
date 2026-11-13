@@ -5,8 +5,8 @@ import hashlib
 import json
 
 import pytest
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from selecta.local_engine.updates import (
     UpdateRejected, in_rollout, record_activation, rollback_activation,

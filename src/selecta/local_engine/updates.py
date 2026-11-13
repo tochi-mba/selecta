@@ -7,13 +7,15 @@ platform-specific installer applying the verified artifact in a separate release
 from __future__ import annotations
 
 import base64
+import binascii
 import hashlib
 import json
 import os
-import shutil
 from pathlib import Path
 
-from selecta.local_engine.config import EngineConfigError, atomic_json, ensure_private
+from cryptography.exceptions import InvalidSignature
+
+from selecta.local_engine.config import atomic_json, ensure_private
 
 
 class UpdateRejected(ValueError):
@@ -47,7 +49,7 @@ def verify_manifest(manifest: dict, trusted_keys: dict[str, bytes]) -> dict:
     try:
         signature = base64.b64decode(manifest["signature"], validate=True)
         Ed25519PublicKey.from_public_bytes(key).verify(signature, canonical)
-    except (ValueError, TypeError, Exception) as exc:
+    except (ValueError, TypeError, binascii.Error, InvalidSignature) as exc:
         raise UpdateRejected("Update signature verification failed.") from exc
     return payload
 

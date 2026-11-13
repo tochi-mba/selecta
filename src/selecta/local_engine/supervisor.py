@@ -61,7 +61,7 @@ class InstanceLock:
                         self.path.unlink()
                 except FileNotFoundError:
                     continue
-                except (ValueError, TypeError, json.JSONDecodeError) as exc:
+                except (ValueError, TypeError) as exc:
                     raise EngineBusy("Invalid lock; inspect it before manual recovery.") from exc
         raise EngineBusy("Could not acquire local engine lock.")
 
