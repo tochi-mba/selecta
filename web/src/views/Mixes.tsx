@@ -187,7 +187,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       <h1 className="display small">Make a Mix</h1>
       <LinkTabs label="Make a Mix" items={exploreTabs()} current={exploreTabs().some((tab) => tab.path === here) ? here : '/mixes'} />
       {mix.length > 0 && <CurrentMix mix={mix} mixName={mixName} now={now} player={player} setView={setView} />}
-      {on('mixes.intent_language') && <MixIntentGuide replacing={replacing} mixName={mixName} />}
+      {on('mixes.intent_language') && !firstMix && <MixIntentGuide replacing={replacing} mixName={mixName} />}
 
       <div className="mix-paths" role="group" aria-label="Ways to make a mix">
       <section className="hero mix-quick" aria-labelledby="mix-quick-title">
@@ -240,6 +240,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           {replacing ? ` Playing a new mix replaces ${mixName}, which you can undo.${on('drafts') ? ' To keep it playing, use Save as draft.' : ''}` : ''}
         </p>
       </section>
+      {on('mixes.intent_language') && firstMix && <MixIntentGuide replacing={replacing} mixName={mixName} />}
 
       {on('lucy') && (
       <section className="mix-create" aria-labelledby="mix-create-title">

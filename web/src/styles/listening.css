@@ -26,6 +26,8 @@
 .mix-length .chips, .mix-length .hint { margin: 0; }
 /* MP-0283-01: the pick's facts share the title's left edge and sit between it and the description */
 .mix-quick-facts { margin: var(--space-2) 0 0; }
+/* Keep long explanatory paragraphs readable at desktop and ultrawide widths. */
+.mixes p, .mixes li > span, .mixes dd { max-inline-size: 60em; }
 .card-actions { gap: var(--space-2); }
 .card-actions .quiet { background: none; border-color: var(--border); }
 .hero .row { row-gap: var(--space-3); }
@@ -268,6 +270,7 @@
 /* MP-0285-04: the lyrics keep the most room even before the first line is sung. The box holds a
    two-line current lyric and a neighbour either side at Stage sizes (style.css), plus the timing caption,
    so it is never shorter than the visualiser or the countdown. */
+.now.stage .lyrics .sung { line-height: 1.4; }
 .now.stage .lyrics {
   --stage-sung: clamp(2.4rem, 7vw, 6rem);
   --stage-line: clamp(1.1rem, 2.6vw, 2rem);

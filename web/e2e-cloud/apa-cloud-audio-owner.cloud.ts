@@ -71,6 +71,10 @@ test('AV-0419-05: the lease moves to another device with no double audio, and a 
 
   // The speaker's media fails: one fresh try, then the next song, said plainly.
   await two.route('**/*.wav*', (route) => route.abort());
-  await two.getByTestId('speaker-audio').evaluate((element: HTMLAudioElement) => { element.src = '/missing.wav'; });
+  // First media failure may recover from a fresh URL; the second must skip and announce.
+  const audio = two.getByTestId('speaker-audio');
+  await audio.evaluate((element: HTMLAudioElement) => { element.src = '/missing.wav'; });
+  await expect.poll(() => audio.evaluate((element: HTMLAudioElement) => !element.src.endsWith('/missing.wav'))).toBe(true);
+  await audio.evaluate((element: HTMLAudioElement) => { element.src = '/missing.wav'; });
   await expect(two.getByRole('alert')).toContainText('could not be played');
 });

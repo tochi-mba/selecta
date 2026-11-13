@@ -37,7 +37,7 @@ function TrackTitle({ title, songId, stage }: { title: string; songId?: number; 
       // MP-0275-03: a complete title wins over shrinking. The floor is a token (--title-floor, 24px),
       // so a long title wraps onto more lines at a readable size instead of being squeezed smaller.
       const minimum = Number.parseFloat(getComputedStyle(node).getPropertyValue('--title-floor')) || 24;
-      const maximum = Math.max(minimum, Math.min(stage ? 40 : 52, Math.max(stage ? 24 : 28, width * (stage ? 0.055 : 0.095))));
+      const maximum = Math.max(minimum, Math.min(stage ? 32 : 52, Math.max(stage ? 24 : 28, width * (stage ? 0.055 : 0.095))));
       let low = minimum;
       let high = maximum;
       node.style.paddingBlockStart = '';
