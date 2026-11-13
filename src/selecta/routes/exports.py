@@ -27,6 +27,8 @@ from pathlib import Path
 from fastapi import HTTPException, Request
 
 from selecta import mix
+from selecta.config import SAMPLE_RATE
+from selecta.export_validation import verify_export
 from selecta.lf_artifacts.store import (
     ArtifactCancelled,
     ArtifactInvalid,
@@ -35,8 +37,6 @@ from selecta.lf_artifacts.store import (
     LocalArtifactStore,
     sha256_file,
 )
-from selecta.config import SAMPLE_RATE
-from selecta.export_validation import verify_export
 from selecta.seams import request_from
 
 CHECK_EVERY_SECONDS = 1.0
