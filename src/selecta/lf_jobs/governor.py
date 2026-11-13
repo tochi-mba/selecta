@@ -220,10 +220,13 @@ class LocalResourceGovernor:
         current_memory = sum(int(row[1]) for row in rows)
         current_scratch = sum(int(row[2]) for row in rows)
         current_gpu = sum(int(row[3]) for row in rows)
-        capacity = min(
-            self.max_heavy_workers,
-            max(0, resources.logical_cores - max(zones, 1)),
+        # Preserve one core when an output is active; an otherwise-idle
+        # single-core device may still analyse its library.
+        spare = (
+            max(0, resources.logical_cores - zones - 1)
+            if zones else max(1, resources.logical_cores - 1)
         )
+        capacity = min(self.max_heavy_workers, spare)
         if len(rows) >= capacity:
             return False
         if resources.disk_free_mb < scratch + current_scratch + 256:
