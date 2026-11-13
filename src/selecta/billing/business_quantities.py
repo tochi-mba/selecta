@@ -6,10 +6,10 @@ mutated here; an operator must approve each v2 price mapping separately.
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from types import MappingProxyType
-from collections.abc import Mapping, Sequence
 
 
 class Quantity(StrEnum):
