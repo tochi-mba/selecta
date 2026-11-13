@@ -3,7 +3,6 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.responses import PlainTextResponse
-from starlette.routing import Mount
 
 from selecta.local_engine.config import EngineConfig
 from selecta.local_engine.http import guarded_application
