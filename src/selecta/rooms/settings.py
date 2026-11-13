@@ -12,6 +12,7 @@ room opens, so a host who downgrades mid-party keeps the room they opened until 
 from __future__ import annotations
 
 from collections.abc import Mapping
+import re
 from dataclasses import asdict, dataclass, fields, replace
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
@@ -63,6 +64,8 @@ class RoomSettings:
     no_speaker_minutes: int = 60
     renders_per_hour: int = 60
     max_guests: int = 100
+    zone_id: str = "main"  # immutable room-to-speaker zone binding in local-first mode
+    clean_only: bool = False  # no explicit recordings in this room
 
     @property
     def crate(self) -> frozenset[int] | None:
@@ -91,7 +94,11 @@ class RoomSettings:
                 values[field.name] = RequestMode(value)
             elif field.name == "crate_song_ids":
                 values[field.name] = _crate(value)
-            elif field.name in ("votes", "names_shown", "display"):
+            elif field.name == "zone_id":
+                if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", value):
+                    raise ValueError("zone_id must be a zone identifier")
+                values[field.name] = value
+            elif field.name in ("votes", "names_shown", "display", "clean_only"):
                 if not isinstance(value, bool):
                     raise ValueError(f"{field.name} must be true or false")
                 values[field.name] = value
@@ -101,6 +108,10 @@ class RoomSettings:
 
     def checked(self) -> RoomSettings:
         """The same settings with every number pulled inside its allowed range."""
+        if not isinstance(self.zone_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", self.zone_id):
+            raise ValueError("zone_id must be a zone identifier")
+        if not isinstance(self.clean_only, bool):
+            raise ValueError("clean_only must be true or false")
         changes: dict[str, Any] = {}
         for name, (low, high) in BOUNDS.items():
             value = getattr(self, name)
