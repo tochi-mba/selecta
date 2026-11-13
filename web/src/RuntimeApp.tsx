@@ -1,6 +1,8 @@
 import { lazy, ReactNode, Suspense, useEffect, useState } from 'react';
 import { App } from './App';
+import type { MixData } from './api';
 import { setCopyMode } from './copy';
+import { setFlags } from './flags';
 import { handOnStartupStatus } from './startupStatus';
 import { prefetchLibrary } from './views/libraryPrefetch';
 
@@ -18,21 +20,38 @@ const cloudBuild = !!import.meta.env.VITE_WORKOS_CLIENT_ID;
 export function RuntimeApp() {
   const [mode, setMode] = useState<Mode>('loading');
   const [attempt, setAttempt] = useState(0);
+  const [startupMix, setStartupMix] = useState<MixData | null>(null);
 
   useEffect(() => {
     let current = true;
     // S4-0111-05: a build that can only be local opened on the Library asks for its first rows now,
     // alongside this check, rather than once the check has answered and the app has started
     if (!cloudBuild && !apiOrigin && window.location.pathname === '/library') prefetchLibrary(window.location.search);
+    // The current mix is needed to lay out Make a Mix correctly. Fetch it alongside the mode
+    // probe, not after first painting a false 'first mix' onboarding state and removing it.
+    // The other routes still open without waiting for this optional request.
+    const initialMix = !cloudBuild && window.location.pathname === '/mixes'
+      ? fetch(`${apiOrigin}/api/mix`).then(async (response) => response.ok ? await response.json() as MixData : null).catch(() => null)
+      : null;
     fetch(`${apiOrigin}/api/status`)
       .then(async (response) => {
         if (!response.ok) throw new Error('SelectaDJ API is unavailable.');
-        const status = await response.json() as { mode?: string };
+        const status = await response.json() as { mode?: string; flags?: Record<string, boolean> };
         if (!current) return;
         const next = status.mode === 'cloud' ? 'cloud' : 'local';
         // Words like "this PC" follow the server's mode before anything is drawn (src/copy.ts).
         setCopyMode(next);
-        if (next === 'local') handOnStartupStatus(status);
+        if (next === 'local') {
+          // The shell and Make a Mix depend on resolved feature flags for their geometry.
+          // Apply the already-fetched flags before the first local React tree paints.
+          setFlags(status.flags);
+          handOnStartupStatus(status);
+          if (initialMix) {
+            const mix = await initialMix;
+            if (!current) return;
+            setStartupMix(mix);
+          }
+        }
         setMode(next);
       })
       .catch(() => { if (current) setMode('unavailable'); });
@@ -59,7 +78,7 @@ export function RuntimeApp() {
     if (/^\/venue\/staff\/[A-Za-z0-9_-]+$/.test(window.location.pathname)) {
       return <Suspense fallback={<RuntimeMessage title="Starting venue staff dashboard" detail="Connecting to the venue…" />}><VenueStaffRoot /></Suspense>;
     }
-    return <App />;
+    return <App initialMix={startupMix} />;
   }
 
   const clientId = import.meta.env.VITE_WORKOS_CLIENT_ID;

@@ -226,12 +226,54 @@ for (const [width, height] of [[1280, 860], [375, 812]]) {
   });
 }
 
+/** Direct Make a Mix entry must not mistake an in-flight current-mix GET for first-run
+ * onboarding. The startup fetch happens alongside the status probe, not after the first paint. */
+test('Make a Mix never flashes first-run setup over an existing mix during startup', async ({ page }) => {
+  await page.route('**/api/mix', async (route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    await new Promise((done) => setTimeout(done, 350));
+    await route.continue();
+  });
+  await page.addInitScript(() => {
+    const observed = window as unknown as { sawPrematureMixSetup: boolean };
+    observed.sawPrematureMixSetup = false;
+    new MutationObserver(() => {
+      if (document.querySelector('.setup-steps')) observed.sawPrematureMixSetup = true;
+    }).observe(document, { childList: true, subtree: true });
+  });
+  await page.goto('/mixes');
+  await expect(page.getByRole('heading', { name: 'Make a Mix' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Current mix' })).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { sawPrematureMixSetup: boolean }).sawPrematureMixSetup)).toBe(false);
+});
+
 test('pages hold their shape while they load, even when every answer is slow', async ({ page }) => {
   await page.addInitScript(() => {
-    (window as unknown as { shifted: number }).shifted = 0;
+    const measurements = window as unknown as {
+      shifted: number;
+      shiftSources: { score: number; sources: { element: string; fromY: number; toY: number }[] }[];
+    };
+    measurements.shifted = 0;
+    measurements.shiftSources = [];
     new PerformanceObserver((list) => {
-      for (const entry of list.getEntries() as (PerformanceEntry & { value: number; hadRecentInput: boolean })[]) {
-        if (!entry.hadRecentInput) (window as unknown as { shifted: number }).shifted += entry.value;
+      for (const entry of list.getEntries() as (PerformanceEntry & {
+        value: number;
+        hadRecentInput: boolean;
+        sources?: { node: Node | null; previousRect: DOMRectReadOnly; currentRect: DOMRectReadOnly }[];
+      })[]) {
+        if (entry.hadRecentInput) continue;
+        measurements.shifted += entry.value;
+        measurements.shiftSources.push({
+          score: entry.value,
+          sources: (entry.sources ?? []).filter((source) => source.node instanceof Element).map((source) => {
+            const node = source.node as Element;
+            return {
+              element: `${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ''}${[...node.classList].slice(0, 3).map((name) => `.${name}`).join('')}`,
+              fromY: Math.round(source.previousRect.top),
+              toY: Math.round(source.currentRect.top),
+            };
+          }),
+        });
       }
     }).observe({ type: 'layout-shift', buffered: true });
   });
@@ -245,6 +287,12 @@ test('pages hold their shape while they load, even when every answer is slow', a
     await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible({ timeout: 30_000 });
     await page.waitForTimeout(1200);
     found[address] = Math.round(await page.evaluate(() => (window as unknown as { shifted: number }).shifted) * 1000) / 1000;
+    if (found[address] > 0.1) {
+      const contributors = await page.evaluate(() => (window as unknown as {
+        shiftSources: { score: number; sources: { element: string; fromY: number; toY: number }[] }[];
+      }).shiftSources.slice().sort((a, b) => b.score - a.score).slice(0, 12));
+      console.log(`Slow-load CLS contributors for ${address}: ${JSON.stringify(contributors)}`);
+    }
   }
   console.log(`layout shift while loading slowly: ${JSON.stringify(found)}`);
   const bad = Object.entries(found).filter(([, shift]) => shift > 0.25);

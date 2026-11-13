@@ -299,7 +299,7 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.popover-panel` | styles/foundation.css, styles/depth.css | styles/foundation.css |
 | `.preview` | style.css, styles/shell.css | style.css |
 | `.primary` | style.css, styles/shell.css, styles/polish.css, styles/foundation.css, styles/listening.css, styles/creation.css | style.css |
-| `.problem` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/listening.css | styles/shell.css |
+| `.problem` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/listening.css, styles/depth.css | styles/shell.css |
 | `.prominent` | styles/listening.css, styles/depth.css | styles/listening.css |
 | `.quiet` | style.css, styles/listening.css | style.css |
 | `.ready` | style.css, styles/music-objects.css | style.css |
@@ -314,7 +314,7 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.request-row` | style.css, styles/polish.css, styles/depth.css | style.css |
 | `.request-tag` | style.css, styles/listening.css | style.css |
 | `.requested` | style.css, styles/depth.css | style.css |
-| `.requests` | style.css, styles/foundation.css | style.css |
+| `.requests` | style.css, styles/foundation.css, styles/depth.css | style.css |
 | `.requests-head` | style.css, styles/foundation.css | style.css |
 | `.round` | style.css, styles/shell.css | style.css |
 | `.row` | style.css, styles/polish.css, styles/listening.css, styles/operations.css | style.css |

@@ -72,7 +72,7 @@ const scopeKey = (scope: number | null) => (scope === null ? 'current' : `draft:
 
 const nameOfControl = (control: HTMLElement) => (control.getAttribute('aria-label') ?? control.textContent ?? '').trim();
 
-export function App() {
+export function App({ initialMix = null }: { initialMix?: MixData | null } = {}) {
   // a page whose feature is off in this build is Not Found, as if it had never been built
   const on = useFlags();
   const route = shownRoute(useRoute());
@@ -85,7 +85,9 @@ export function App() {
   useEffect(() => warmRouteChunks(), []);
   const [status, setStatus] = useState<Status | null>(null);
   const [problem, setProblem] = useState('');
-  const [data, setData] = useState<MixData>({ mix: [], name: 'Your mix', can_undo: false });
+  // A fresh /mixes navigation can already have the authoritative mix from the parallel
+  // startup request. Never paint an empty mix as a first-run state while its GET is pending.
+  const [data, setData] = useState<MixData>(() => initialMix ?? { mix: [], name: 'Your mix', can_undo: false });
   const currentCanUndo = useRef(data.can_undo);
   currentCanUndo.current = data.can_undo;
   const [helping, setHelping] = useState(false);
@@ -338,24 +340,33 @@ export function App() {
       setFlags(handed.flags);
       setStatus(handed);
     } else void refreshStatus();
-    const seen = mixChanges.current;
-    get<MixData>('/mix')
-      .then((next) => {
-        // A user may act before the first read returns, including from
-        // another tab. Do not replace that newer state with startup data.
-        if (seen !== mixChanges.current) return;
-        setMixData(next);
-        const resume = loadResume(next.mix);
-        if (resume) {
-          player.cue(resume.position, resume.time);
-          // an address that says where to go wins over where you were listening
-          if (window.location.pathname === '/') navigate('/listen', { replace: true });
-        }
-      })
-      .catch((error: Error) => {
-        if (problemKind(error) !== 'offline') showProblem(`Couldn’t read your mix: ${error.message}`);
-      });
-  }, [refreshStatus, setMixData, player]);
+    const resumeFrom = (next: MixData) => {
+      const resume = loadResume(next.mix);
+      if (resume) {
+        player.cue(resume.position, resume.time);
+        // an address that says where to go wins over where you were listening
+        if (window.location.pathname === '/') navigate('/listen', { replace: true });
+      }
+    };
+    // Direct Make a Mix already fetched the authoritative mix alongside mode detection.
+    // Reusing it avoids a second GET and never paints a false onboarding state.
+    if (initialMix) {
+      resumeFrom(initialMix);
+    } else {
+      const seen = mixChanges.current;
+      get<MixData>('/mix')
+        .then((next) => {
+          // A user may act before the first read returns, including from
+          // another tab. Do not replace that newer state with startup data.
+          if (seen !== mixChanges.current) return;
+          setMixData(next);
+          resumeFrom(next);
+        })
+        .catch((error: Error) => {
+          if (problemKind(error) !== 'offline') showProblem(`Couldn’t read your mix: ${error.message}`);
+        });
+    }
+  }, [refreshStatus, setMixData, player, initialMix]);
   // A hidden tab stops asking the server and catches up the moment it's looked at again.
   useVisiblePoll(refreshStatus, 4000);
 

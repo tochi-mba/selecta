@@ -258,6 +258,12 @@ test('MP-0298-06 (lab part) layout shift, largest paint and interaction delay st
     await page.waitForTimeout(300);
     const reading = await vitalsSince(page, 0, route);
     results[route] = { cls: reading.cls, lcp: reading.lcpMs, inp: reading.inpMs, slowest: reading.worst };
+    if (reading.cls >= BUDGETS.cls) {
+      // Keep the real strict budget. Attribute failures to moved DOM elements so CI tells us
+      // whether they came from startup, loading geometry or an interaction.
+      const shifts = await page.evaluate(() => [...window.mi0162.shifts].sort((a, b) => b.value - a.value).slice(0, 12));
+      console.log(`CLS contributors for ${route}: ${JSON.stringify(shifts)}`);
+    }
     expect(reading.cls, `${route}: cumulative layout shift`).toBeLessThan(BUDGETS.cls);
     expect(reading.lcpMs, `${route}: largest contentful paint`).toBeLessThan(BUDGETS.lcpMs);
     expect(reading.inpMs, `${route}: slowest interaction`).toBeLessThan(BUDGETS.inpMs);
