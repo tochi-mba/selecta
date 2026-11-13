@@ -24,7 +24,6 @@ from typing import Any
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
 
@@ -33,7 +32,7 @@ from selecta.billing import stripe_sync
 from selecta.billing.plans import plan_for
 from selecta.billing.schema import stripe_customers
 from selecta.devstack.pages import page
-from selecta.devstack.redirects import safe_path
+from selecta.devstack.redirects import LocalPathRedirectResponse, safe_path
 from selecta.persistence import db_now, transaction
 from selecta.usage import quota
 
@@ -157,8 +156,8 @@ card is asked for: this page stands in for Stripe Checkout on this computer.</p>
         ).replace("\\", "")
         parsed = urlsplit(target)
         if parsed.scheme or parsed.netloc:
-            return RedirectResponse("/", status_code=303)
-        return RedirectResponse(target, status_code=303)
+            return LocalPathRedirectResponse("/", status_code=303)
+        return LocalPathRedirectResponse(target, status_code=303)
 
     @app.post(PREFIX + "/checkout/{session_id}/decline", include_in_schema=False)
     def decline(session_id: str):
@@ -213,8 +212,8 @@ card is asked for: this page stands in for Stripe Checkout on this computer.</p>
         )
         parsed = urlsplit(target)
         if parsed.scheme or parsed.netloc:
-            return RedirectResponse("/account/billing", status_code=303)
-        return RedirectResponse(target, status_code=303)
+            return LocalPathRedirectResponse("/account/billing", status_code=303)
+        return LocalPathRedirectResponse(target, status_code=303)
 
     return DevStripe
 

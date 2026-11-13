@@ -11,6 +11,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from urllib.parse import urlsplit
 
+from fastapi.responses import RedirectResponse
+
 
 def safe_path(value: object) -> str:
     if not isinstance(value, str) or len(value) > 2048:
@@ -42,4 +44,11 @@ def site_target(value: object, origins: Sequence[str]) -> str:
     return home + "/"
 
 
-__all__ = ["safe_path", "site_target"]
+class LocalPathRedirectResponse(RedirectResponse):
+    """Keep local-development redirects on this server, even at the response boundary."""
+
+    def __init__(self, destination: object, *, status_code: int = 303) -> None:
+        super().__init__(safe_path(destination), status_code=status_code)
+
+
+__all__ = ["LocalPathRedirectResponse", "safe_path", "site_target"]
