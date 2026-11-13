@@ -308,6 +308,7 @@
         "routes": [
           "POST /api/admin/session",
           "GET /api/admin/me",
+          "POST /api/admin/business/pilots",
           "GET /api/admin/overview",
           "GET /api/admin/jobs",
           "GET /api/admin/jobs/{job_id}",
