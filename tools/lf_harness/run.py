@@ -12,11 +12,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tests"))
 
-from lf_harness.acceptance import (AcceptanceConfig, AcceptanceRunner, MANDATORY_CASES,
-                                   blocked_ledger)
-from lf_harness.contracts import resolve_adapter
-from lf_harness.evidence import (Evidence, EvidenceLedger, current_git_commit,
-                                 runtime_environment)
+# CLI startup must add tests/ to sys.path before importing the harness package.
+# These narrowly scoped E402 exceptions preserve direct execution without PYTHONPATH.
+from lf_harness.acceptance import (  # noqa: E402
+    MANDATORY_CASES,
+    AcceptanceConfig,
+    AcceptanceRunner,
+    blocked_ledger,
+)
+from lf_harness.contracts import resolve_adapter  # noqa: E402
+from lf_harness.evidence import (  # noqa: E402
+    Evidence,
+    EvidenceLedger,
+    current_git_commit,
+    runtime_environment,
+)
 
 
 def self_test(out: Path) -> int:
