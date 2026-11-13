@@ -216,10 +216,11 @@ PREMIUM_1 = Plan(
     flags=EVERY_PLAN | PREMIUM_ONLY,
 )
 
-# The approved ADR-0470 local-first schema is deliberately opt-in. Each v2 envelope
-# refuses hosted-audio storage and DSP requests; it does not constrain device-local
-# files, stems or renders. Future commercial benefits live in local_first.py.
-# Do not change a v1 record, a live Stripe price, or the implicit default to v2.
+# ADR-0470: v2 is deliberately published OUTSIDE the active v1 catalogue.
+# Existing subscriptions, Free accounts and current checkout keep their contracted
+# versions. Only a version-qualified Stripe price mapping or explicitly approved
+# migration may opt into v2. The zero fields below DENY hosted-media operations;
+# device-local processing/storage is not governed by the legacy quota columns.
 LF_FLAGS = EVERY_PLAN - {"cloud.uploads"}
 FREE_2 = replace(
     FREE_1, version=2, storage_bytes=0, analysis_songs_per_day=0,
@@ -242,21 +243,47 @@ PREMIUM_2 = replace(
     max_upload_bytes=0, max_upload_seconds=0, library_soft_cap_songs=0,
     flags=LF_FLAGS | PREMIUM_ONLY,
 )
+LOCAL_FIRST_CATALOGUE: Mapping[str, Plan] = MappingProxyType({
+    "free": FREE_2, "standard": STANDARD_2, "premium": PREMIUM_2,
+})
+
+
+def local_first_plans() -> tuple[Plan, ...]:
+    """Future versioned plans; never implicitly presented for sale."""
+    return tuple(sorted(LOCAL_FIRST_CATALOGUE.values(), key=lambda plan: plan.rank))
+
+
+def local_first_problems(registry: Mapping[str, flags.Flag] | None = None) -> list[str]:
+    """Check the separate, opt-in v2 catalogue for hosted-media benefits."""
+    registry = flags.registry() if registry is None else registry
+    found: list[str] = []
+    for plan in LOCAL_FIRST_CATALOGUE.values():
+        # Plan v2 legacy storage and processing fields must be absent, not huge fake limits.
+        if any((
+            plan.storage_bytes, plan.analysis_songs_per_day,
+            plan.speculative_cpu_minutes_per_day, plan.export_retention_days,
+            plan.max_upload_bytes, plan.max_upload_seconds, plan.library_soft_cap_songs,
+        )) or plan.exports_per_month is not None or "cloud.uploads" in plan.flags:
+            found.append(f"{plan.id} v2: hosted media quotas must be removed")
+        if plan.version != 2:
+            found.append(f"{plan.id}: local-first contract must use v2")
+        for flag_id in plan.flags:
+            if flag_id not in registry:
+                found.append(f"{plan.id} v2: unregistered flag {flag_id}")
+    return found
+
 
 # Every version of every plan, oldest first. Add a version; never change or remove one, because
 # subscriptions point at it.
 CATALOGUE: Mapping[str, tuple[Plan, ...]] = MappingProxyType(
     {
-        "free": (FREE_1, FREE_2),
-        "standard": (STANDARD_1, STANDARD_2),
-        "premium": (PREMIUM_1, PREMIUM_2),
+        "free": (FREE_1,),
+        "standard": (STANDARD_1,),
+        "premium": (PREMIUM_1,),
     }
 )
 
 DEFAULT_PLAN = "free"
-# Launch remains v1. Only an explicit, approved price->v2 mapping (or a later
-# deliberate free-account migration) may opt a customer into local-first billing.
-DEFAULT_VERSIONS = MappingProxyType({"free": 1, "standard": 1, "premium": 1})
 PLAN_IDS = tuple(CATALOGUE)
 
 
@@ -271,35 +298,31 @@ def plan_for(plan_id: str | None, version: int | None = None) -> Plan:
     if not versions:
         raise UnknownPlan(f"There's no plan called {plan_id!r}; plans are {', '.join(PLAN_IDS)}.")
     if version is None:
-        version = DEFAULT_VERSIONS[plan_id]
+        return versions[-1]
     for plan in versions:
         if plan.version == version:
             return plan
+    # Future v2 must be explicitly requested; never use it for unspecified version.
+    future = LOCAL_FIRST_CATALOGUE.get(plan_id)
+    if future is not None and future.version == version:
+        return future
     raise UnknownPlan(f"{plan_id} has no version {version}.")
 
 
 def current_plans() -> tuple[Plan, ...]:
-    """Versions currently sold under existing approved commercial terms (v1).
-
-    Publishing a v2 contract must never silently switch a checkout or a Free account.
-    """
-    return tuple(sorted((plan_for(plan_id) for plan_id in CATALOGUE), key=lambda p: p.rank))
-
-
-def local_first_plans() -> tuple[Plan, ...]:
-    """Explicit future v2 envelopes, not yet generally available for checkout."""
-    return tuple(sorted((plan_for(plan_id, 2) for plan_id in CATALOGUE), key=lambda p: p.rank))
+    """The current version of each plan, cheapest first. A plan with no versions has no current
+    one; `problems()` reports it."""
+    current = (versions[-1] for versions in CATALOGUE.values() if versions)
+    return tuple(sorted(current, key=lambda p: p.rank))
 
 
 def plan_gated_flags() -> frozenset[str]:
     """Flags some current plans include and others don't."""
-    # Consider every historical and future version: uploads are not part of
-    # local-first v2, even though every grandfathered v1 plan includes them.
-    all_versions = tuple(plan for versions in CATALOGUE.values() for plan in versions)
-    if not all_versions:
+    plans = current_plans()
+    if not plans:
         return frozenset()
-    named = frozenset().union(*(plan.flags for plan in all_versions))
-    everywhere = frozenset.intersection(*(plan.flags for plan in all_versions))
+    named = frozenset().union(*(plan.flags for plan in plans))
+    everywhere = frozenset.intersection(*(plan.flags for plan in plans))
     return named - everywhere
 
 
@@ -375,7 +398,6 @@ def _plan_problems(plan_id: str, plan: Plan, registry: Mapping[str, flags.Flag])
     found: list[str] = []
     if plan.id != plan_id:
         found.append(f"{name}: is filed under {plan_id} but says it's {plan.id}")
-    local_first = plan.version >= 2
     positive = {
         "storage_bytes": plan.storage_bytes,
         "scheduling_weight": plan.scheduling_weight,
@@ -389,20 +411,8 @@ def _plan_problems(plan_id: str, plan: Plan, registry: Mapping[str, flags.Flag])
         "devices_playing": plan.devices_playing,
     }
     for name_of, value in positive.items():
-        if value <= 0 and not (local_first and name_of in {
-            "storage_bytes", "analysis_songs_per_day",
-            "speculative_cpu_minutes_per_day", "export_retention_days",
-            "max_upload_bytes", "max_upload_seconds", "library_soft_cap_songs",
-        }):
+        if value <= 0:
             found.append(f"{name}: {name_of} must be more than 0")
-    if local_first:
-        obsolete = (
-            plan.storage_bytes, plan.analysis_songs_per_day,
-            plan.speculative_cpu_minutes_per_day, plan.export_retention_days,
-            plan.max_upload_bytes, plan.max_upload_seconds, plan.library_soft_cap_songs,
-        )
-        if any(obsolete) or plan.exports_per_month is not None or "cloud.uploads" in plan.flags:
-            found.append(f"{name}: local-first cannot sell or enable hosted-audio quotas")
     if plan.max_upload_bytes > plan.storage_bytes:
         found.append(f"{name}: one upload can't be bigger than the whole storage allowance")
     if plan.devices_playing > plan.devices_signed_in:
