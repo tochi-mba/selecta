@@ -262,8 +262,15 @@ class LocalArtifactStore:
                     os.replace(stage, final)
                 _sync_parent(final)
                 now = time.time()
+                # Immutable recipe identity is shared across renders, but two
+                # independently saved exports need separate publication records.
+                publication_id = (
+                    hashlib.sha256((identity + ":" + uuid.uuid4().hex).encode()).hexdigest()
+                    if permanent else identity
+                )
                 record = {
-                    "schema": 1, "id": identity, "kind": spec.kind,
+                    "schema": 1, "id": publication_id, "spec_id": identity,
+                    "kind": spec.kind,
                     "spec": spec.canonical(), "storage": "export" if permanent else "cache",
                     "local_path": str(final.absolute()), "bytes": final.stat().st_size,
                     "checksum": byte_checksum, "validation_checksum": validation_checksum,
