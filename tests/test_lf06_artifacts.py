@@ -4,7 +4,6 @@ from __future__ import annotations
 import errno
 import hashlib
 import json
-import os
 import threading
 from collections import namedtuple
 from pathlib import Path
@@ -16,8 +15,12 @@ import soundfile as sf
 from selecta.config import SAMPLE_RATE
 from selecta.export_validation import verify_export
 from selecta.lf_artifacts import (
-    ArtifactCancelled, ArtifactInvalid, ArtifactSpec, InsufficientSpace,
-    LocalArtifactStore, sha256_file,
+    ArtifactCancelled,
+    ArtifactInvalid,
+    ArtifactSpec,
+    InsufficientSpace,
+    LocalArtifactStore,
+    sha256_file,
 )
 from selecta.lf_artifacts.work_adapter import to_local_work_output
 
