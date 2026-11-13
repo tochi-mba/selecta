@@ -97,7 +97,21 @@ def schedule(
             at = rng.uniform(60.0, max(61.0, night_s - 60.0))
             faults.append(Fault(kind, round(at, 3), round(rng.uniform(shortest, longest), 3)))
     faults.sort(key=lambda f: (f.at_s, f.kind.value))
-    return FaultPlan(seed, night_s, tuple(faults))
+    # The baseline two-speaker soak measures recovery from one speaker failure at a time.
+    # Two overlapping power cuts leave no powered speaker, so they cannot satisfy an
+    # uninterrupted-audio SLO. Keep the seeded baseline's drops non-overlapping;
+    # an explicit FaultPlan may still model simultaneous outages and report their gap.
+    last_drop_end = -1.0
+    spaced: list[Fault] = []
+    for fault in faults:
+        if fault.kind is FaultKind.SPEAKER_DROP:
+            at = max(fault.at_s, last_drop_end + 1.0)
+            if at + fault.duration_s <= night_s:
+                fault = Fault(fault.kind, round(at, 3), fault.duration_s)
+            last_drop_end = fault.end_s
+        spaced.append(fault)
+    spaced.sort(key=lambda f: (f.at_s, f.kind.value))
+    return FaultPlan(seed, night_s, tuple(spaced))
 
 
 @dataclass
