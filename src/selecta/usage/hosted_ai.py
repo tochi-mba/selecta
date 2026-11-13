@@ -104,7 +104,10 @@ def charge_once(
         raise ValueError("Provider and model class must be bounded labels")
     marker_kind = _op_kind(workspace_id, operation_id)
     now = persistence.db_now(connection)
-    period_key, started, reset = allowances.period_window(allowances.Period.MONTH, "UTC", now)
+    # Persist the operation marker across all months. Month-scoped markers could
+    # charge a delayed Stripe/provider retry a second time after UTC midnight.
+    # It is tenant-scoped and lasts as long as the append-only billing ledger.
+    period_key, started, reset = "global", 0.0, 253402300799.0
     key = (
         (allowance_counters.c.workspace_id == workspace_id)
         & (allowance_counters.c.kind == marker_kind)
