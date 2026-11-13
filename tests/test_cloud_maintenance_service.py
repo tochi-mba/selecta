@@ -52,6 +52,7 @@ def test_every_core_cloud_task_runs_cleanly_and_missing_secrets_are_named(sqlite
     plan = cloud_plan(sqlite_engine, env={})
     names = {task.name for task in plan.tasks}
     assert names == {
+        "business.zone_clock",
         "actions",
         "reservations",
         "lucy_runs",

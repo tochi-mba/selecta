@@ -71,7 +71,7 @@ for (const width of WIDTHS) {
     await keep(page, `${width}-editor-page`, files);
 
     const manifest = JSON.stringify({
-      task: 'SF-0207-05', status: 'candidate-not-reviewed', ...provenance(),
+      task: 'SF-0207-05', status: 'candidate-not-independently-verified', ...provenance(),
       capturedAt: new Date().toISOString(), browser: 'msedge', width, height: 900,
       fixture: 'tests/e2e_server.py', seam: { meaning: rowMeaning, state: rowState, family: rowFamily }, files,
     }, null, 2);

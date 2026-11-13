@@ -263,8 +263,8 @@ def test_a_take_over_landing_while_a_speaker_reconnects_still_sends_it_away(
     session.take_over(cloud_engine, WORKSPACE, laptop.id)
     real_lock = session.lock_session
 
-    def phone_got_there_first(conn, workspace_id, now):
-        locked = real_lock(conn, workspace_id, now)
+    def phone_got_there_first(conn, workspace_id, now, zone_id=None):
+        locked = real_lock(conn, workspace_id, now, zone_id)
         moved = replace(locked, active_device_id=phone.id)
         store.save_session(conn, moved)
         return moved

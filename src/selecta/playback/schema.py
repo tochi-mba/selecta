@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 
-from selecta.persistence import Epoch, Id, metadata
+from selecta.persistence import Epoch, Id, metadata, new_id
 
 DEVICE_KINDS = ("laptop", "desktop", "phone", "tablet", "tv")
 DEVICE_PRINCIPALS = ("person", "kiosk")
@@ -50,7 +50,8 @@ devices = sa.Table(
 playback_sessions = sa.Table(
     "playback_sessions",
     metadata,
-    sa.Column("id", Id, primary_key=True),
+    # Direct SQLAlchemy inserts must also create an id, not only the session service.
+    sa.Column("id", Id, primary_key=True, default=new_id),
     sa.Column("workspace_id", Id, nullable=False, index=True),
     # Empty for a personal workspace's one session; a business zone's session names its zone.
     sa.Column("zone_id", Id, nullable=True),
