@@ -197,6 +197,20 @@ class LocalWatches:
         self._wake.set()
         return {"accepted": True, "enabled": enabled}
 
+    def forget(self, source_id: str) -> dict:
+        """Remove a watch from this device, retaining the catalogue and all files."""
+        with self._gate, self._catalogue() as catalogue:
+            gone = catalogue.conn.execute(
+                "DELETE FROM watch_settings WHERE source_id=?", (source_id,)
+            ).rowcount
+            if not gone:
+                raise KeyError("Unknown local source")
+            catalogue.conn.commit()
+            self._cancel.add(source_id)
+            self._requests.discard(source_id)
+        self._wake.set()
+        return {"accepted": True, "files_deleted": False}
+
     def scan(self, source_id: str) -> dict:
         with self._gate, self._catalogue() as catalogue:
             row = catalogue.conn.execute(
@@ -329,5 +343,13 @@ def install_routes(app: FastAPI, settings: DevSettings) -> None:
         local_request(request)
         try:
             return manager.toggle(source_id, body.enabled)
+        except KeyError as exc:
+            raise HTTPException(404, str(exc)) from exc
+
+    @app.delete("/dev/local-watches/{source_id}", include_in_schema=False)
+    def forget_watch(request: Request, source_id: str) -> dict:
+        local_request(request)
+        try:
+            return manager.forget(source_id)
         except KeyError as exc:
             raise HTTPException(404, str(exc)) from exc
