@@ -24,6 +24,8 @@ describe('the playback session on a device', () => {
   it('stops the buffered speaker when an unreachable server cannot renew its lease', async () => {
     const clock = Date.now() / 1000;
     const expiredSoon = session({ lease_expires_at: clock + 0.6, anchor_at: clock });
+    const renewed = session({ lease_expires_at: clock + 60, anchor_at: clock });
+    let online = false;
     const quiet: Speaker = {
       start: vi.fn(async () => undefined), stop: vi.fn(), pause: vi.fn(), resume: vi.fn(),
       position: () => ({ song_index: 2, offset_ms: 0, state: 'playing' }), active: () => true,
@@ -33,8 +35,17 @@ describe('the playback session on a device', () => {
         id: 'd1', name: 'Device 1', kind: 'laptop', signed_in: true,
         this_device: true, poor_speaker: false, last_seen_at: clock, warnings: [],
       }, notice: null };
-      if (path === '/playback/reconnect') return { action: 'continue', session: expiredSoon, message: null };
-      if (path.startsWith('/playback/session')) throw new TypeError('network offline');
+      if (path === '/playback/reconnect') return {
+        action: 'continue', session: online ? renewed : expiredSoon, message: null,
+      };
+      if (path.startsWith('/playback/session')) {
+        if (!online) throw new TypeError('network offline');
+        return {
+          session: renewed, speaker: 'here', speaker_device_id: 'd1',
+          speaker_name: 'Device 1', ask_before_playing_here: false,
+          server_time: Date.now() / 1000,
+        };
+      }
       if (path === '/playback/heartbeat') throw new TypeError('network offline');
       throw new Error(`unexpected ${path}`);
     }) as Api;
@@ -44,6 +55,11 @@ describe('the playback session on a device', () => {
       await waitFor(() => expect(quiet.stop).toHaveBeenCalledWith(0), { timeout: 3500 });
       expect(hook.result.current.isSpeaker()).toBe(false);
       expect(hook.result.current.message).toContain('could not renew its audio lease');
+      online = true;
+      // A normal poll re-establishes ownership atomically via /reconnect, without
+      // requiring a page reload or resuming if another device has since taken over.
+      await waitFor(() => expect(quiet.start).toHaveBeenCalledTimes(2), { timeout: 5000 });
+      expect(hook.result.current.isSpeaker()).toBe(true);
     } finally { hook.unmount(); }
   });
 
