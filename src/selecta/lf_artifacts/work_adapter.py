@@ -15,7 +15,7 @@ def to_local_work_output(spec: ArtifactSpec, record: dict[str, Any]):
     from selecta.work.ports import ArtifactOutput
     from selecta.work.provenance import build, check_output
 
-    if record.get("id") != spec.identity or record.get("state") != "ready":
+    if record.get("spec_id") != spec.identity or record.get("state") != "ready":
         raise ArtifactInvalid("The output does not match its frozen local identity.")
     if record.get("storage") not in {"cache", "export"}:
         raise ArtifactInvalid("Only device-owned files may be published to local work.")
