@@ -88,10 +88,10 @@ describe('overlapping device polls (AV-0419-05)', () => {
         id: 'phone', name: 'Second device', kind: 'laptop', signed_in: true,
         this_device: true, poor_speaker: false, last_seen_at: 0, warnings: [],
       }, notice: null };
-      if (path === '/playback/reconnect') return new Promise((resolve) => { finishReconnect = resolve; });
+      if (path === '/playback/reconnect') return new Promise<unknown>((resolve) => { finishReconnect = resolve; });
       if (path.startsWith('/playback/session')) {
         reads += 1;
-        if (reads === 1) return new Promise((resolve) => { finishClickRead = resolve; });
+        if (reads === 1) return new Promise<SessionView>((resolve) => { finishClickRead = resolve; });
         return elsewhere;
       }
       if (path === '/playback/take-over') return takeover();
