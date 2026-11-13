@@ -36,6 +36,9 @@ def audit_references(
     if owned & foreign:
         raise ValueError("an asset cannot be both tenant-owned and foreign")
     issues = list(snapshot.get("issues", ()))
+    for asset in snapshot.get("assets", ()):
+        if asset.get("workspace_id") != workspace_id:
+            issues.append({"kind": "cross_tenant_asset_row", "reference": str(asset.get("id"))})
     revision_ids = {r.get("revision") for r in snapshot.get("mix_revisions", ())}
     seen_revisions: dict[str, str] = {}
     unresolved: list[dict[str, str]] = []
@@ -51,7 +54,10 @@ def audit_references(
             issues.append({"kind": "revision_collision", "reference": revision_id})
         if contract.get("revision") != revision_id:
             issues.append({"kind": "revision_identity_mismatch", "reference": revision_id})
-        if contract.get("number", 1) > 1 and contract.get("parent") not in revision_ids:
+        number = contract.get("number")
+        if isinstance(number, bool) or not isinstance(number, int) or number < 1:
+            issues.append({"kind": "invalid_revision_number", "reference": revision_id})
+        elif number > 1 and contract.get("parent") not in revision_ids:
             issues.append({"kind": "dangling_revision_parent", "reference": revision_id})
         for occurrence, song in enumerate(contract.get("songs") or ()):
             if not isinstance(song, Mapping):

@@ -48,7 +48,7 @@ class VerifiedLocalBinding:
                 raise MigrationConflict("invalid " + name)
         if not self.proof_id.strip() or not self.recording_revision.strip():
             raise MigrationConflict("verification evidence and recording revision are required")
-        if not self.verified:
+        if self.verified is not True:
             raise MigrationConflict("candidate matches cannot become canonical bindings")
 
 
@@ -81,6 +81,7 @@ def plan_backfill(
             raise MigrationConflict("conflicting verified bindings for legacy asset")
 
     seen: dict[str, bytes] = {}
+    seen_positions: dict[tuple[str, int], str] = {}
     sidecars = []
     for raw in legacy_revisions:
         rev = raw.get("contract", raw)
@@ -116,6 +117,9 @@ def plan_backfill(
                 raise MigrationConflict("conflicting documents for immutable revision")
             continue
         seen[revision_id] = digest
+        prior_revision = seen_positions.setdefault((mix_id, number), revision_id)
+        if prior_revision != revision_id:
+            raise MigrationConflict("conflicting immutable revisions at one history position")
 
         references = []
         for index, song in enumerate(songs):
@@ -189,6 +193,16 @@ class LocalPlanJournal:
         document = json.loads(path.read_text(encoding="utf-8"))
         if document.get("plan_id") != plan_id:
             raise MigrationConflict("journal identity mismatch")
+        plan = document.get("plan")
+        if not isinstance(plan, dict) or plan.get("schema") != SIDECAR_SCHEMA:
+            raise MigrationConflict("journal plan is damaged")
+        core = dict(plan)
+        if core.pop("plan_id", None) != plan_id or hashlib.sha256(_canonical(core)).hexdigest() != plan_id:
+            raise MigrationConflict("journal plan checksum mismatch")
+        if not set(document.get("completed", ())).issubset(
+            {item["legacy_revision_id"] for item in plan["revisions"]}
+        ):
+            raise MigrationConflict("journal checkpoint contains unknown revisions")
         return document
 
     def _atomic(self, path: Path, data: dict[str, Any]) -> None:

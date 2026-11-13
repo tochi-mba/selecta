@@ -128,6 +128,7 @@ def collect_inventory(
             })
 
     observed: dict[tuple[str, str], int] = {}
+    scanned_count = 0
     if objects is not None:
         # Lists all workspace-prefixed originals, derived and exports, including
         # orphan objects. Staging is not prefix-scoped by workspace, so HEAD only
@@ -136,6 +137,9 @@ def collect_inventory(
             prefix = "w/" + workspace_id + "/"
             try:
                 for item in objects.list_objects_v2(buckets.name(bucket), prefix):
+                    scanned_count += 1
+                    if scanned_count > object_limit:
+                        raise IncompleteInventory("object limit exceeded; increase scope or limit")
                     identity = (bucket.value, item.key)
                     if _check_key(item.key, workspace_id, bucket):
                         concerns.append({
@@ -143,8 +147,6 @@ def collect_inventory(
                         })
                         continue
                     observed[identity] = int(item.size)
-                    if len(observed) > object_limit:
-                        raise IncompleteInventory("object limit exceeded; increase scope or limit")
             except IncompleteInventory:
                 raise
             except Exception as exc:
@@ -171,6 +173,23 @@ def collect_inventory(
         if (bucket, key) not in references
     ]
     original_sizes = {str(a["original_key"]): int(a["size"]) for a in asset_rows}
+    if objects is not None:
+        for asset in asset_rows:
+            key = str(asset["original_key"])
+            if (Bucket.ORIGINALS.value, key) not in observed:
+                continue
+            try:
+                head = objects.head_object(buckets.name(Bucket.ORIGINALS), key)
+            except R2NotFound:
+                concerns.append({"kind": "original_disappeared_during_scan",
+                                 "reference": str(asset["id"]), "key": key})
+                continue
+            except Exception as exc:
+                raise IncompleteInventory("original HEAD incomplete") from exc
+            remote_hash = {k.lower(): v for k, v in head.metadata.items()}.get("sha256")
+            if remote_hash is None or remote_hash.lower() != str(asset["sha256"]).lower():
+                concerns.append({"kind": "original_sha_mismatch",
+                                 "reference": str(asset["id"]), "key": key})
     for (bucket, key), size in observed.items():
         if (
             bucket == Bucket.ORIGINALS.value

@@ -52,7 +52,7 @@ def _proof(workspace="workspace1"):
 def test_idempotent_backfill_and_repeated_occurrences_remain_distinct():
     base = _contract()
     repeated = new_contract(
-        "mixABC", "Repeated", "cloud",
+        "mixRepeated", "Repeated", "cloud",
         [SongRef("cloud", "assetOne", "A"), SongRef("cloud", "assetOne", "A")],
     )
     inputs = [base.to_json(), repeated.to_json()]
@@ -82,6 +82,8 @@ def test_rejects_cross_tenant_evidence_unverified_candidates_and_unsupported_ver
         plan_backfill("workspace1", [_contract().to_json()], [_proof("workspace2")])
     with pytest.raises(MigrationConflict, match="candidate"):
         VerifiedLocalBinding("workspace1", "assetOne", "track", "device", "proof", False, "rev")
+    with pytest.raises(MigrationConflict, match="candidate"):
+        VerifiedLocalBinding("workspace1", "assetOne", "track", "device", "proof", "yes", "rev")
     invalid = _contract().to_json()
     invalid["version"] = 99
     with pytest.raises(MigrationConflict, match="unsupported"):
@@ -129,11 +131,33 @@ def test_old_history_rollback_and_replay_after_interruption(tmp_path, monkeypatc
         restored.checkpoint(plan["plan_id"], base.revision, approved=True)
 
 
+def test_conflicting_history_positions_cannot_replace_an_immutable_root():
+    original = _contract().to_json()
+    changed_root = new_contract(
+        "mixABC", "Another root", "cloud",
+        [SongRef("cloud", "assetOne", "First"), SongRef("cloud", "assetTwo", "Second")],
+    ).to_json()
+    with pytest.raises(MigrationConflict, match="history position"):
+        plan_backfill("workspace1", [original, changed_root])
+
+
 def test_journal_detects_plan_checksum_tampering(tmp_path):
     plan = plan_backfill("workspace1", [_contract().to_json()])
     plan["revisions"][0]["references"][0]["canonical_track_id"] = "forged"
     with pytest.raises(MigrationConflict, match="checksum"):
         LocalPlanJournal(tmp_path).prepare(plan)
+
+
+def test_journal_refuses_tampered_on_disk_plan(tmp_path):
+    plan = plan_backfill("workspace1", [_contract().to_json()])
+    journal = LocalPlanJournal(tmp_path)
+    journal.prepare(plan)
+    path = tmp_path / (plan["plan_id"] + ".json")
+    record = json.loads(path.read_text())
+    record["plan"]["revisions"][0]["references"][0]["canonical_track_id"] = "forged"
+    path.write_text(json.dumps(record))
+    with pytest.raises(MigrationConflict, match="checksum"):
+        journal.read(plan["plan_id"])
 
 
 def test_snapshot_dry_run_r2_missing_object_and_backup_gate(tmp_path, monkeypatch):
