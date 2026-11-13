@@ -384,6 +384,11 @@ class LocalCatalogue:
                 ]
                 if len(removed) == 1:
                     old = removed[0]
+        # A path rename cannot change the recording's identity or erase a
+        # previously observed explicit/clean edition. Byte-identical media
+        # retains verified metadata rather than trusting its new filename.
+        if old is not None and digest is not None and old["digest"] == digest:
+            metadata = json.loads(old["metadata"])
         changed = old is None or old["digest"] != digest or old["state"] != state
         if old:
             rev = old["revision"] + int(changed)
@@ -451,6 +456,9 @@ class LocalCatalogue:
                             processed += 1
                             next_index = index + 1
                             if entry.is_symlink():
+                                if processed >= max_entries:
+                                    exhausted = False
+                                    break
                                 continue
                             relative = str(Path(row["relative_path"]) / entry.name)
                             if entry.is_dir(follow_symlinks=False):
