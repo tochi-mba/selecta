@@ -8,6 +8,8 @@ must use metadata-only device snapshots and local engine handoff.
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+
 import os
 import sqlite3
 import threading
@@ -293,8 +295,22 @@ def install_routes(app: FastAPI, settings: DevSettings) -> None:
     """Register routes only in selecta.devstack.cloud_app, never in api_cloud."""
     guard.require_development()
     manager = LocalWatches(settings)
-    manager.start()
-    app.add_event_handler("shutdown", manager.stop)
+
+    # Cloud already owns a lifespan for event fanout and resource disposal.
+    # FastAPI versions with lifespan support no longer expose add_event_handler;
+    # compose the existing context instead of overriding or bypassing it.
+    parent_lifespan = app.router.lifespan_context
+
+    @asynccontextmanager
+    async def with_local_watches(application: FastAPI):
+        async with parent_lifespan(application):
+            manager.start()
+            try:
+                yield
+            finally:
+                manager.stop()
+
+    app.router.lifespan_context = with_local_watches
 
     def local_request(request: Request) -> None:
         # Vite proxies this explicit local-only header to the loopback API.
