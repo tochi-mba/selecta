@@ -521,7 +521,7 @@
   .now.stage .countdown-number strong { font-size: clamp(2rem, 6vh, 3.5rem); }
   /* The ink and highlighted words need a full line box, not the 1.12 legacy
      leading that clipped the active line on laptop-height screens. */
-  .now.stage .lyrics .sung { font-size: clamp(2.4rem, min(6vw, 8.5vh), 6rem); line-height: 1.35; }
+  .now.stage .lyrics .sung { font-size: clamp(2.4rem, min(6vw, 8.5vh), 6rem); line-height: 1.4; }
   .now.stage .lyrics {
     --stage-sung: clamp(2.4rem, min(6vw, 8.5vh), 6rem);
     min-height: calc(var(--stage-sung) * 1.35 * 2 + var(--stage-line) * 1.5 * 2 + 2rem);
