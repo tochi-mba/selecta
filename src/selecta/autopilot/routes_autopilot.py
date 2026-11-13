@@ -217,7 +217,8 @@ def install_routes(
     def put_setup(venue_id: str, step: str, body: dict = Body(...),  # noqa: B008
                   workspace: str = workspace_dep) -> dict[str, Any]:
         try:
-            return setups.save(workspace, accessible_venue(workspace, venue_id), step, body).to_dict()
+            venue = accessible_venue(workspace, venue_id)
+            return setups.save(workspace, venue, step, body).to_dict()
         except SetupError as error:
             raise _bad("setup_invalid", str(error), 422, step=error.step,
                        errors=error.errors) from error
@@ -289,7 +290,8 @@ def install_routes(
                      workspace: str = workspace_dep) -> dict[str, Any]:
         now = clock()
         try:
-            ended = policies.end_override(workspace, accessible_venue(workspace, venue_id), override_id, now)
+            venue = accessible_venue(workspace, venue_id)
+            ended = policies.end_override(workspace, venue, override_id, now)
         except PolicyError as error:
             raise _bad("override_not_found", str(error), 404) from error
         return ended.to_dict(now)

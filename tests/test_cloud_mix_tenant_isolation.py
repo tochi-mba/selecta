@@ -7,12 +7,14 @@ import hashlib
 import pytest
 import sqlalchemy as sa
 
-from cloud_party import ALICE, BOB, auth, made_up, party  # noqa: F401
+from cloud_party import ALICE, BOB, auth, made_up
 from selecta import flags
 from selecta.persistence import db_now, transaction
 from selecta.storage.keys import original_key
 from selecta.storage.schema import assets
 from selecta.work.schema import artifacts
+
+pytest_plugins = ("cloud_party",)
 
 
 @pytest.fixture
@@ -100,7 +102,7 @@ def test_mixes_and_revision_ids_do_not_reveal_another_tenants_data(alice_mix):
         ("GET", "", None),
         ("POST", "/revisions", {"base_revision": revision, "name": "Stolen"}),
     ):
-        def request(candidate):
+        def request(candidate, method=method, suffix=suffix, body=body):
             return party.client.request(
                 method, f"/api/cloud-mixes/{candidate}{suffix}",
                 headers=auth(BOB), json=body,

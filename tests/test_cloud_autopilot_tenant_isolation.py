@@ -6,14 +6,16 @@ The standalone in-memory Autopilot tests deliberately inject a scope to exercise
 
 from __future__ import annotations
 
-import sqlalchemy as sa
 import pytest
+import sqlalchemy as sa
 
-from cloud_party import ALICE, BOB, auth, made_up, party  # noqa: F401
+from cloud_party import ALICE, BOB, auth, made_up
 from selecta import flags
 from selecta.business import orgs, venues
 from selecta.identity.schema import users, workspace_members
 from selecta.persistence import db_now, transaction
+
+pytest_plugins = ("cloud_party",)
 
 
 @pytest.fixture
@@ -104,7 +106,7 @@ def test_foreign_venue_and_guessed_venue_are_indistinguishable(tenants):
         ("DELETE", "/overrides/unknown", None),
         ("POST", "/candidates", {"candidates": []}),
     ):
-        def ask(venue):
+        def ask(venue, method=method, suffix=suffix, body=body):
             return party.client.request(
                 method, f"/api/autopilot/venues/{venue}{suffix}",
                 headers=auth(ALICE, own["org"]), json=body,
@@ -145,7 +147,7 @@ def test_session_ids_are_scoped_and_writes_cannot_mutate_another_org(tenants):
         ("/transitions", "POST", {"to": "warming"}),
         ("/controls/stop", "POST", {}),
     ):
-        def ask(session_id):
+        def ask(session_id, method=method, suffix=suffix, body=body):
             return party.client.request(
                 method, f"/api/autopilot/sessions/{session_id}{suffix}",
                 headers=auth(BOB, bob["org"]), json=body,
