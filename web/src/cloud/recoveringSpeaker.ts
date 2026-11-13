@@ -35,6 +35,7 @@ export function recoveringSpeaker(
   // Invalidate media recovery when the lease is lost or a different song is started.
   // Otherwise a pending next-song URL may restart audio after stop() has yielded it.
   let epoch = 0;
+  let wantsPlay = false;
   const invalidate = () => { epoch++; recovering = false; failedAgain = false; };
 
   const label = (index: number) => songName(index) ?? `Song ${index + 1}`;
@@ -50,7 +51,8 @@ export function recoveringSpeaker(
         // A fresh speaker has no cached copies, so the source is asked for a new link.
         inner.dispose?.();
         inner = make(audio, source);
-        await inner.start(at.song_index, at.offset_ms, at.state === 'playing');
+        await inner.start(at.song_index, at.offset_ms, wantsPlay && at.state === 'playing');
+        if (mine === epoch && !wantsPlay) inner.pause();
         return;
       }
       const next = at.song_index + 1;
@@ -63,7 +65,8 @@ export function recoveringSpeaker(
         return;
       }
       onProblem(`${label(at.song_index)} could not be played, so SelectaDJ moved to the next song.`);
-      await inner.start(next, 0, true);
+      await inner.start(next, 0, wantsPlay);
+      if (mine === epoch && !wantsPlay) inner.pause();
     } finally {
       // A later explicit start or lease loss owns the element now. Do not alter its
       // recovery state or retry a song from an earlier ownership generation.
@@ -85,13 +88,14 @@ export function recoveringSpeaker(
   return {
     async start(songIndex, offsetMs, playing) {
       invalidate();
+      wantsPlay = playing;
       retried = -1;
       last = { song_index: songIndex, offset_ms: offsetMs, state: playing ? 'playing' : 'paused' };
       await inner.start(songIndex, offsetMs, playing);
     },
-    stop(fadeMs) { invalidate(); last = null; inner.stop(fadeMs); },
-    pause() { inner.pause(); },
-    resume() { inner.resume(); },
+    stop(fadeMs) { invalidate(); wantsPlay = false; last = null; inner.stop(fadeMs); },
+    pause() { wantsPlay = false; inner.pause(); },
+    resume() { wantsPlay = true; inner.resume(); },
     position() {
       const at = inner.position();
       if (at) last = at;
