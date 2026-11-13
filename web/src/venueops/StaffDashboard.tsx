@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { FlagId, useFlag } from '../flags';
 import { CommandKind, DashboardState, STEERING, StaffCommand } from './staffApi';
 import './staffDashboard.css';
@@ -50,6 +50,10 @@ export function StaffDashboard(props: StaffDashboardProps) {
 }
 
 function Dashboard({ state, onCommand, onStop, genres = [], link }: StaffDashboardProps) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  // The page arrives after async flag and session checks. Orient keyboard and screen reader
+  // visitors at its title; the -1 target stays out of the ordinary Tab sequence.
+  useEffect(() => { headingRef.current?.focus(); }, []);
   const [genre, setGenre] = useState(genres[0] ?? '');
   const nav = state?.nav ?? 'loading';
   const enabled = new Set(state?.enabled ?? []);
@@ -64,7 +68,7 @@ function Dashboard({ state, onCommand, onStop, genres = [], link }: StaffDashboa
     <section className="staff-dashboard" data-nav={nav} aria-labelledby="staff-dashboard-title" aria-busy={nav === 'loading'}>
       <header className="staff-top">
         <div className="staff-heading">
-          <h1 id="staff-dashboard-title">Staff dashboard</h1>
+          <h1 id="staff-dashboard-title" ref={headingRef} tabIndex={-1}>Staff dashboard</h1>
           <p className="staff-nav" data-testid="staff-nav"><span className="staff-nav-dot" aria-hidden="true" />{NAV_WORDS[nav]}</p>
         </div>
         <button type="button" className="staff-stop" onClick={onStop} disabled={!stopEnabled}

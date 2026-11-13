@@ -47,7 +47,8 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
     if (!box) return;
     const started = (event: Event) => {
       const element = event.target as HTMLMediaElement;
-      setDeviceProblem('');
+      // Recovery may play the next song immediately after reporting a failed one.
+      // Do not erase that explanation on its automatic `play` event.
       claimFocus({ id: 'device', pause: () => element.pause() });
     };
     // Paused or faded out (the lease moved): it no longer holds the sound.
@@ -81,7 +82,7 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
         <div ref={deviceBox}>
           <PlayingBar api={api} workspaceId={workspaceId} source={library.source} songName={library.name}
             remoteControl={account.features['devices.remote_control'] !== false} speakerFor={speakerFor} />
-          {deviceProblem && <p className="cloud-feedback error" role="alert">{deviceProblem}</p>}
+          {deviceProblem && <p className="cloud-feedback error" role="alert">{deviceProblem} <button type="button" onClick={() => setDeviceProblem('')}>Dismiss</button></p>}
         </div>
       )}
       {track && (

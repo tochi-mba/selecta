@@ -26,6 +26,7 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
   useEffect(() => { if (audio.current) setSpeaker(speakerFor(audio.current, source)); }, [source, speakerFor]);
   const pb = usePlaybackDevice({ api, workspaceId, speaker, remoteControl });
   const [asking, setAsking] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [, tick] = useState(0);
   useEffect(() => { const t = window.setInterval(() => tick((n) => n + 1), 1000); return () => window.clearInterval(t); }, []);
 
@@ -45,10 +46,23 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
     return 'Nothing is playing';
   }, [here, view]);
 
-  const pressPlayHere = () => {
-    if (view?.ask_before_playing_here && !asking) { setAsking(true); return; }
-    setAsking(false);
-    void pb.playHere();
+  const pressPlayHere = async () => {
+    if (asking) {
+      setAsking(false);
+      await pb.playHere();
+      return;
+    }
+    // The other browser may have acquired the lease since our last poll. A click must
+    // check the server, not silently bypass the transfer confirmation with a stale view.
+    setChecking(true);
+    try {
+      const latest = await pb.refreshSession();
+      if (!latest) return; // The hook reports a connectivity or authorization problem.
+      if (latest.ask_before_playing_here) { setAsking(true); return; }
+      await pb.playHere();
+    } finally {
+      setChecking(false);
+    }
   };
   const remote = remoteControl && (view?.speaker === 'elsewhere' || (here && Boolean(session)));
 
@@ -67,13 +81,13 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
           </>
         )}
         {!here && !pb.starting && (
-          <button type="button" className="primary" onClick={pressPlayHere} disabled={!pb.device || !speaker}>Play here</button>
+          <button type="button" className="primary" onClick={() => void pressPlayHere()} disabled={!pb.device || !speaker || checking}>Play here</button>
         )}
       </div>
       {asking && (
         <div className="playing-bar-ask" role="alertdialog" aria-label="Move playback here?">
           <span>{`Playing on ${view?.speaker_name ?? 'another device'}. Play here instead?`}</span>
-          <button type="button" className="primary" onClick={pressPlayHere}>Play here instead</button>
+          <button type="button" className="primary" onClick={() => void pressPlayHere()}>Play here instead</button>
           <button type="button" onClick={() => setAsking(false)}>Cancel</button>
         </div>
       )}

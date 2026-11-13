@@ -62,10 +62,18 @@ test('Stop stays visible while scrolling at 320px and at 400% zoom', async ({ br
 
 test('keyboard reaches Stop first, then steering, then expert controls', async ({ page }) => {
   await open(page);
-  await page.getByRole('heading', { level: 1 }).click();
+  // Clicking a heading does not establish keyboard focus. Async page entry deliberately
+  // focuses the title (not part of Tab order), then the first Tab must reach emergency Stop.
+  await expect(page.getByRole('heading', { level: 1, name: 'Staff dashboard' })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'Stop' })).toBeFocused();
+  for (const name of ['More energy', 'Less energy', 'Skip next', 'Extend current', 'Pause', 'Hand to manual']) {
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name })).toBeFocused();
+  }
   const expert = page.getByRole('navigation', { name: 'Expert controls' });
+  await page.keyboard.press('Tab');
+  await expect(expert.getByRole('link', { name: 'Listen and transport' })).toBeFocused();
   for (const control of STATE.expert_controls) await expect(expert.getByRole('link', { name: control.label })).toHaveAttribute('href', control.path);
 });
 

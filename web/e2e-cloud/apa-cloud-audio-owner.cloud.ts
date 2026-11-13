@@ -64,10 +64,14 @@ test('AV-0419-05: the lease moves to another device with no double audio, and a 
   await expect.poll(() => playing(one)).toBe(1);
 
   await two.getByRole('button', { name: 'Play here' }).click();
+  await expect(two.getByRole('alertdialog', { name: 'Move playback here?' })).toBeVisible();
+  // The second device must be silent until the first speaker has yielded the lease.
+  await expect.poll(() => playing(two)).toBe(0);
   await two.getByRole('button', { name: 'Play here instead' }).click();
   await expect(two.getByTestId('playing-where')).toHaveText('Playing here');
   await expect.poll(() => playing(one)).toBe(0);
   await expect.poll(() => playing(two)).toBe(1);
+  await expect.poll(async () => (await playing(one)) + (await playing(two))).toBe(1);
 
   // The speaker's media fails: one fresh try, then the next song, said plainly.
   await two.route('**/*.wav*', (route) => route.abort());
