@@ -390,7 +390,9 @@ class LocalArtifactStore:
             return {"artifact_id": identity, "device_id": device_id, "state": "missing"}
         return {
             "artifact_id": record["id"], "device_id": device_id,
-            "kind": record["kind"], "state": self.state(identity),
+            # Polling remote controllers must not hash gigabyte-scale FLACs.
+            # Deep integrity checks are available through state(verify_bytes=True).
+            "kind": record["kind"], "state": self.state(identity, verify_bytes=False),
             "storage": record["storage"], "size_bytes": record["bytes"],
             "completed_at": record["created_at"],
         }
