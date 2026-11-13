@@ -16,7 +16,11 @@ from selecta.lf_jobs.contract import (
     priority_for_legacy,
     validate_sources,
 )
-from selecta.lf_jobs.governor import DeviceResources, LocalResourceGovernor
+from selecta.lf_jobs.governor import (
+    DeviceResources,
+    LocalResourceGovernor,
+    ReservationAlreadyHeld,
+)
 from selecta.scheduling.policy import WorkerCaps
 from selecta.work.enqueue import JobSpec
 from selecta.work.model import JobState
@@ -155,7 +159,8 @@ def test_duplicate_delivery_of_one_attempt_cannot_run_twice(tmp_path):
     gate = governor(tmp_path)
     one = gate.reserve(job(), "op:attempt-7")
     assert one is not None
-    assert gate.reserve(job(), "op:attempt-7") is None
+    with pytest.raises(ReservationAlreadyHeld):
+        gate.reserve(job(), "op:attempt-7")
     one.close()
     next_attempt = gate.reserve(job(), "op:attempt-8")
     assert next_attempt is not None
