@@ -52,6 +52,23 @@ describe('the speaker recovers from media failure (AV-0419-05)', () => {
     expect(problems).toEqual(['Song 2.wav could not be played, so SelectaDJ moved to the next song.']);
   });
 
+  it('never restarts the next song from a recovery pending during device takeover', async () => {
+    let releaseNext!: (url: string | null) => void;
+    const nextUrl = new Promise<string | null>((resolve) => { releaseNext = resolve; });
+    const { speaker, made, problems, fail } = setUp(async (index) => (
+      index === 2 ? nextUrl : `https://r2.test/${index}`
+    ));
+    await speaker.start(1, 0, true);
+    await fail(); // refresh song 2 once
+    await fail(); // waiting for song 3's link after the second failure
+    speaker.stop(0); // server moved the audio lease to another device
+    releaseNext('https://r2.test/2');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(made[1]?.starts).toEqual([[1, 4000, true]]);
+    expect(made[1]?.stops).toContain(0);
+    expect(problems).toEqual([]); // no misleading skip notification after takeover
+  });
+
   it('at the end of the list it stops and says so, instead of retrying for ever', async () => {
     const { speaker, made, problems, fail } = setUp(async (index) => (index < 1 ? 'https://r2.test/0' : null));
     await speaker.start(0, 0, true);
