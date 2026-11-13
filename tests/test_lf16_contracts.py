@@ -7,10 +7,10 @@ import pytest
 
 from selecta.billing import plans, stripe_sync
 from selecta.billing.local_first import (
+    PERSONAL_V2,
     Benefit,
     ContractModel,
     GateReason,
-    PERSONAL_V2,
     decide_access,
     effective_contract,
     migration_eligible,
