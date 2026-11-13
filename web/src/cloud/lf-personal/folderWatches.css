@@ -120,3 +120,22 @@
   .lfw-pill, .lfw-root .lfw-warning { border: 1px solid CanvasText; }
   .lfw-pill::before { background: CanvasText; }
 }
+.lfw-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--border, rgba(168, 160, 139, .24));
+  border-radius: 16px;
+  padding: clamp(16px, 2.3vw, 24px);
+  background: var(--surface-raised, #1b1915);
+  margin-bottom: 26px;
+}
+.lfw-entry h2 { margin: 4px 0 7px; font-size: 1.22rem; }
+.lfw-entry p:not(.cloud-eyebrow) { margin: 0; color: var(--muted, #b5ad98); line-height: 1.55; }
+.lfw-entry-expanded { grid-column: 1 / -1; min-width: 0; }
+.lfw-entry button:focus-visible { outline: 3px solid var(--accent, #e9ff31); outline-offset: 3px; }
+@media (max-width: 640px) {
+  .lfw-entry { grid-template-columns: 1fr; }
+  .lfw-entry > button { justify-self: start; }
+}
