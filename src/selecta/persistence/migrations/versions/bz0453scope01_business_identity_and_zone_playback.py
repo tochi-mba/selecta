@@ -54,7 +54,9 @@ def upgrade() -> None:
     with op.batch_alter_table("devices") as batch:
         batch.alter_column("user_id", existing_type=ID, nullable=True)
         # Old signed-in devices are always person devices, never kiosks.
-        batch.add_column(\n            sa.Column("principal", sa.String(8), nullable=False, server_default="person")\n        )
+        batch.add_column(
+            sa.Column("principal", sa.String(8), nullable=False, server_default="person")
+        )
         batch.add_column(sa.Column("zone_id", ID, nullable=True))
         batch.add_column(sa.Column("machine_fingerprint", sa.String(64), nullable=True))
         batch.create_check_constraint(
