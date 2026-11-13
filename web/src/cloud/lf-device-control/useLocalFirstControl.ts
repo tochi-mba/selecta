@@ -124,7 +124,7 @@ export function useLocalFirstControl({
     kind: CommandKind, target: string, current: LocalSession,
     args: Record<string, string | number | boolean | null> = {},
   ) => {
-    if (sending.current) return;
+    if (sending.current || (pending && ['requested', 'prepared', 'queued', 'uncertain'].includes(pending.stage))) return;
     sending.current = true;
     const id = operationId();
     activeOperation.current = id;
@@ -162,7 +162,7 @@ export function useLocalFirstControl({
     } finally {
       sending.current = false;
     }
-  }, [actorId, adapter, refresh, workspaceId]);
+  }, [actorId, adapter, pending, refresh, workspaceId]);
 
   const takeOver = useCallback(async () => {
     if (!here || !outputId || !session?.recipe_revision || sending.current) return;
