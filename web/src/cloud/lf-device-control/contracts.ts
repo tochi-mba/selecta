@@ -66,6 +66,9 @@ export interface LocalCommand {
   operation_id: string;
   idempotency_key: string;
   workspace_id: string;
+  zone_id: string | null;
+  actor: { kind: 'user'; id: string };
+  created_at: string;
   target_device_id: string;
   expected_generation: number;
   expected_recipe_revision: string | null;
