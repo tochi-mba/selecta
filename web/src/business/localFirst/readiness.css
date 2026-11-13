@@ -1,0 +1,30 @@
+/* Agent 13 local-first business additions. Mobile-first, neutral semantic status styles. */
+.lf13-hq,.lf13-detail,.lf13-setup{min-width:0}
+.lf13-hq-head{justify-content:space-between;align-items:flex-start}
+.lf13-hq h2,.lf13-detail h2{margin:0}
+.lf13-counts{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:var(--space-2);margin:0}
+.lf13-counts>div{border:1px solid var(--line);border-radius:var(--radius-sm);padding:var(--space-2);min-width:0}
+.lf13-counts dt{font-size:var(--type-meta);color:var(--text-soft)}
+.lf13-counts dd{font-weight:700;font-variant-numeric:tabular-nums;margin:0}
+.lf13-state{display:inline-flex;align-items:center;gap:var(--space-1);padding:var(--space-1) var(--space-2);border:1px solid currentColor;border-radius:var(--radius-pill);font-size:var(--type-meta);max-width:100%;white-space:normal}
+.lf13-state-healthy{color:var(--status-ready,var(--ink))}
+.lf13-state-degraded{color:var(--status-warning,var(--ink))}
+.lf13-state-silent{color:var(--status-blocked,var(--ink))}
+.lf13-state-offline,.lf13-state-unknown{color:var(--text-soft)}
+.lf13-venue-list,.lf13-recovery{padding:0;margin:0;list-style:none;display:grid;gap:var(--space-2)}
+.lf13-venue-list li,.lf13-recovery li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-2);border-block-end:1px solid var(--line);padding:var(--space-2) 0;min-width:0}
+.lf13-venue-list li>div,.lf13-recovery li>div{display:grid;gap:var(--space-1);min-width:120px;flex:1}
+.lf13-venue-list li span,.lf13-recovery li p{overflow-wrap:anywhere;margin:0}
+.lf13-hq button,.lf13-detail button{min-height:44px;max-width:100%}
+.lf13-zones{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:var(--space-3)}
+.lf13-zone{display:grid;align-content:start;gap:var(--space-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:var(--space-3);min-width:0}
+.lf13-zone h3{margin:0}
+.lf13-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-2);margin:0}
+.lf13-fact{min-width:0;overflow-wrap:anywhere}
+.lf13-fact dt{color:var(--text-soft);font-size:var(--type-meta)}
+.lf13-fact dd{font-weight:600;margin:0}
+.lf13-recovery li{align-items:flex-start}
+.lf13-staff-line{margin:0;padding:var(--space-2);border:1px solid var(--line);border-radius:var(--radius-sm)}
+@media(max-width:360px){.lf13-facts{grid-template-columns:1fr}.lf13-hq{padding:var(--space-3)}.lf13-venue-list li button,.lf13-recovery li button{width:100%}}
+@media(forced-colors:active){.lf13-state,.lf13-zone,.lf13-staff-line{border-color:CanvasText}}
+@media(prefers-reduced-motion:reduce){.lf13-hq *,.lf13-detail *{animation:none;transition:none}}
