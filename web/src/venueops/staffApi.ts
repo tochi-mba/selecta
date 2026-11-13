@@ -52,23 +52,21 @@ export const STEERING: { kind: CommandKind; label: string }[] = [
   { kind: 'hand_to_manual', label: 'Hand to manual' },
 ];
 
-const base = (session: string) => `/api/venue/staff/${encodeURIComponent(session)}`;
-
 async function json<T>(response: Response): Promise<T> {
   if (!response.ok) throw new Error(`The staff dashboard couldn't reach SelectaDJ (${response.status}).`);
   return (await response.json()) as T;
 }
 
 export async function fetchDashboard(session: string): Promise<DashboardState> {
-  return json(await fetch(`${base(session)}/dashboard`));
+  return json(await fetch(`/api/venue/staff/${encodeURIComponent(session)}/dashboard`));
 }
 
 export async function sendCommand(session: string, kind: CommandKind, params: Record<string, unknown> = {}): Promise<StaffCommand> {
-  return json(await fetch(`${base(session)}/commands`, {
+  return json(await fetch(`/api/venue/staff/${encodeURIComponent(session)}/commands`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, params }),
   }));
 }
 
 export async function emergencyStop(session: string): Promise<StaffCommand> {
-  return json(await fetch(`${base(session)}/stop`, { method: 'POST' }));
+  return json(await fetch(`/api/venue/staff/${encodeURIComponent(session)}/stop`, { method: 'POST' }));
 }

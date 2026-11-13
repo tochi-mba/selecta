@@ -9,11 +9,13 @@ const sources = import.meta.glob(
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>;
 
-const key = (path: string) => path.replace(/^\.\.\//, '');
+const key = (path: string) => path.replace(/^\.\.\//, '').replace(/^\.\//, 'cloud/');
+// The inventory defines its own pattern examples; they are not runtime media contexts.
+const scanned = Object.entries(sources).filter(([path]) => key(path) !== 'cloud/cloudMediaContexts.ts');
 
 describe('Cloud media contexts (AV-0419-01)', () => {
   it('scans the Cloud, Rooms and devices sources', () => {
-    const files = Object.keys(sources).map(key);
+    const files = scanned.map(([path]) => key(path));
     expect(files).toContain('cloud/Library.tsx');
     expect(files).toContain('rooms/CloudListen.tsx');
     expect(files).toContain('devices/PlayingBar.tsx');
@@ -21,7 +23,7 @@ describe('Cloud media contexts (AV-0419-01)', () => {
 
   it('finds exactly the registered media contexts, file by file', () => {
     const found: Record<string, number> = {};
-    for (const [path, text] of Object.entries(sources)) {
+    for (const [path, text] of scanned) {
       const count = mediaCount(text);
       if (count) found[key(path)] = count;
     }

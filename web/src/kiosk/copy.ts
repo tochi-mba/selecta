@@ -5,7 +5,7 @@
 
 export const KIOSK_COPY = {
   pairTitle: 'Pair this player',
-  pairAt: 'Pair this player at selecta.app/pair',
+  pairAt: 'Open /pair in your SelectaDJ app to pair this player',
   pairHow: 'Type the code shown on the player, then choose the zone it plays in.',
   pairRenews: 'The code changes every 10 minutes.',
   pairCodeLabel: (code: string) => `Pairing code ${code.split('').join(' ')}`,
@@ -50,4 +50,4 @@ export const KIOSK_COPY = {
 /** The pairing link a manager's phone opens from the QR. */
 export const PAIR_PATH = '/pair';
 /** The kiosk-flags guide for managers (ADR-0445 setup guide), linked from Tap to start. */
-export const GUIDE_URL = 'https://selecta.app/help/kiosk-setup';
+export const GUIDE_URL = '/help/kiosk-setup';
