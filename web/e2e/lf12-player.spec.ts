@@ -107,6 +107,26 @@ test('slow ACK never announces audio until actual engine telemetry confirms soun
   await expect(page.getByTestId('lf12-actual-speaker')).toContainText('Playing on Studio PC');
 });
 
+
+test('output switching stays queued until the engine confirms the new physical output', async ({ page }) => {
+  await open(page);
+  await page.getByLabel('Change Output').selectOption('alternate');
+  await page.getByRole('button', { name: 'Apply output change' }).click();
+  await expect(page.getByTestId('lf12-command')).toContainText('queued');
+  expect(await page.evaluate(() => window.lf12?.commands[0]?.command)).toBe('change_output');
+  await expect(page.getByTestId('lf12-actual-speaker')).toContainText('Main speakers');
+  await page.evaluate(() => {
+    if (!window.lf12) return;
+    window.lf12.ack = 'applied';
+    window.lf12.session = {
+      ...window.lf12.session, output_id: 'alternate', output_name: 'Alternate output',
+      generation: 24, output_state: 'audible', observed_at: new Date().toISOString(),
+    };
+  });
+  await expect(page.getByTestId('lf12-command')).toContainText('applied', { timeout: 8000 });
+  await expect(page.getByTestId('lf12-actual-speaker')).toContainText('Alternate output');
+});
+
 test('failed output preflight preserves the current speaker and verified output', async ({ page }) => {
   await open(page);
   await page.evaluate(() => { if (window.lf12) window.lf12.preflightSafe = false; });
