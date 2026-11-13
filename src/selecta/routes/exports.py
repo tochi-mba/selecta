@@ -251,7 +251,7 @@ def add_routes(app, ctx) -> None:
     def source_revisions(conn: sqlite3.Connection, job: dict) -> dict[str, str]:
         """Read actual bytes only on this engine; no source path enters job records or cloud."""
         sources = {
-            f"song:{index}": sha256_file(load_song(conn, settings, song["song_id"]).path)
+            f"song:{index}": sha256_file(Path(load_song(conn, settings, song["song_id"]).path))
             for index, song in enumerate(job["songs"])
         }
         for index, seam in enumerate(job["seams"]):
