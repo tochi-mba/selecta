@@ -94,7 +94,7 @@ def pump(ctx: RoomContext, workspace_id: str, room_id: str, *, now: float | None
     with transaction(ctx.engine, workspace_id) as conn:
         now = resolve_now(conn, now)
         room = load_room(conn, workspace_id, room_id, lock=True)
-        if not room.live:
+        if not room.live or (ctx.local_first is not None and room.ends_at <= now):
             return 0
         if ctx.local_first is not None:
             try:
