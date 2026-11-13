@@ -21,7 +21,7 @@ import threading
 from html import escape
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlencode, urlsplit
+from urllib.parse import parse_qs, urlencode, urlparse, urlsplit
 
 from fastapi import FastAPI, Request
 from sqlalchemy import select
@@ -154,10 +154,10 @@ card is asked for: this page stands in for Stripe Checkout on this computer.</p>
         target = same_site(
             fields["success_url"].replace("\\", "").replace("{CHECKOUT_SESSION_ID}", session_id)
         ).replace("\\", "")
-        parsed = urlsplit(target)
-        if parsed.scheme or parsed.netloc:
-            return LocalPathRedirectResponse("/", status_code=303)
-        return LocalPathRedirectResponse(target, status_code=303)
+        # Only a relative URL without a host or scheme may reach the redirect response.
+        if not urlparse(target).netloc and not urlparse(target).scheme:
+            return LocalPathRedirectResponse(target, status_code=303)
+        return LocalPathRedirectResponse("/", status_code=303)
 
     @app.post(PREFIX + "/checkout/{session_id}/decline", include_in_schema=False)
     def decline(session_id: str):
@@ -210,10 +210,10 @@ card is asked for: this page stands in for Stripe Checkout on this computer.</p>
         target = same_site(str(fields.get("back", "/account/billing")).replace("\\", "")).replace(
             "\\", ""
         )
-        parsed = urlsplit(target)
-        if parsed.scheme or parsed.netloc:
-            return LocalPathRedirectResponse("/account/billing", status_code=303)
-        return LocalPathRedirectResponse(target, status_code=303)
+        # Only a relative URL without a host or scheme may reach the redirect response.
+        if not urlparse(target).netloc and not urlparse(target).scheme:
+            return LocalPathRedirectResponse(target, status_code=303)
+        return LocalPathRedirectResponse("/account/billing", status_code=303)
 
     return DevStripe
 
