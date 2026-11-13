@@ -42,8 +42,8 @@ function confirmed(operation: PendingControl, session: LocalSession | null): boo
 
 /** A local engine owns all audio. This hook handles only bounded, authenticated metadata. */
 export function useLocalFirstControl({
-  api, workspaceId, adapter: injected,
-}: { api: Api; workspaceId: string; adapter?: LocalControlAdapter }) {
+  api, workspaceId, actorId, adapter: injected,
+}: { api: Api; workspaceId: string; actorId: string; adapter?: LocalControlAdapter }) {
   const adapter = useMemo(() => injected ?? httpLocalControl(api, workspaceId), [api, workspaceId, injected]);
   const [devices, setDevices] = useState<LocalDevice[]>([]);
   const [session, setSession] = useState<LocalSession | null>(null);
@@ -130,7 +130,8 @@ export function useLocalFirstControl({
     activeOperation.current = id;
     const request: LocalCommand = {
       schema_version: 1, operation_id: id, idempotency_key: id,
-      workspace_id: workspaceId, target_device_id: target,
+      workspace_id: workspaceId, zone_id: null, actor: { kind: 'user', id: actorId },
+      created_at: new Date().toISOString(), target_device_id: target,
       expected_generation: current.generation,
       expected_recipe_revision: current.recipe_revision,
       expires_at: new Date(Date.now() + COMMAND_TTL_MS).toISOString(),
@@ -161,7 +162,7 @@ export function useLocalFirstControl({
     } finally {
       sending.current = false;
     }
-  }, [adapter, refresh, workspaceId]);
+  }, [actorId, adapter, refresh, workspaceId]);
 
   const takeOver = useCallback(async () => {
     if (!here || !outputId || !session?.recipe_revision || sending.current) return;
