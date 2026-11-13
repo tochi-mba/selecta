@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import IntEnum, StrEnum
 from pathlib import Path
-from typing import Protocol, Sequence
+from typing import Protocol
 
 
 class JobKind(StrEnum):
