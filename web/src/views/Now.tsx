@@ -711,7 +711,8 @@ export function Now(props: ViewProps) {
 
           {!stage && (
             <>
-              <div className="transport">
+              {/* SF-0209-02: Previous, Play/Pause and Next are one named group; Play/Pause is its one primary */}
+              <div className="transport" role="group" aria-label="Song controls">
                 {withKey('Previous song (P)', <button aria-label="Previous song" title={keys ? undefined : 'Previous song'} disabled={idle} onClick={() => void player.previous()}><Icon name="previous" /></button>)}
                 <button className="primary big" disabled={now.phase === 'loading'} onClick={() => void player.togglePause()}>
                   {resumable ? `Resume from ${transportClock(now.songTime)}` : playLabel(now.phase)}

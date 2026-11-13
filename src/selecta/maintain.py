@@ -22,6 +22,7 @@ depends on a cron somebody forgot:
 | `export_expiry` | 1 h | Exports past their plan's retention (`storage.export_expiry`) |
 | `autoscale` | 30 s | Size each worker pool and tell the launcher (`work.autoscale_leader`) |
 | `dmca_renewal` | 24 h | Owner alert as the DMCA agent's renewal nears (`admin.dmca`) |
+| `business.zone_clock` | 30 s | Each venue zone's next opening or closing change |
 | `queue_metrics`, `lost_jobs`, `backup_freshness` | 15 s, 10 min, 10 min | The SLO and alert
   series only the leader sees (`observability.leader_metrics`) |
 
@@ -325,6 +326,18 @@ def _dmca(engine: Engine, env: Mapping[str, str], plan: Plan) -> None:
     plan.tasks.append(Task("dmca_renewal", DAY_S, check))
 
 
+def _business_hours(engine: Engine, plan: Plan) -> None:
+    """Venue zone clocks (ADR-0444), only while `business.schedules` is on."""
+    from selecta.business import zone_clock
+
+    def run(fence: TermFence) -> object:
+        if not _flag_on(zone_clock.FLAG):
+            return None
+        return zone_clock.tick(engine, fence)
+
+    plan.tasks.append(Task(zone_clock.TASK_NAME, zone_clock.EVERY_S, run))
+
+
 def cloud_plan(engine: Engine, env: Mapping[str, str] | None = None) -> Plan:
     """Every recurring cloud task this environment can run."""
     env = os.environ if env is None else env
@@ -336,6 +349,7 @@ def cloud_plan(engine: Engine, env: Mapping[str, str] | None = None) -> Plan:
     _export_expiry(engine, env, plan)
     _autoscale(engine, env, plan)
     _dmca(engine, env, plan)
+    _business_hours(engine, plan)
     from selecta.observability import leader_metrics
 
     made, off = leader_metrics.tasks(engine, env)

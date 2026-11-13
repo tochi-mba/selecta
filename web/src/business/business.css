@@ -1,0 +1,50 @@
+/* SelectaDJ for Business: shared pieces (ADR-0453 D5, D14). Tokens only, no new colours.
+   Surface stylesheets (onboarding.css, console.css, venue.css, staff.css, shell.css) sit beside
+   this one. The kiosk has its own stylesheet in web/src/kiosk and never loads this file. */
+
+.biz {
+  --control-height-big: 64px;
+  --type-big-screen: var(--type-page);
+  --biz-gap-big: var(--space-3);
+  color: var(--ink);
+  background: var(--bg);
+}
+
+.biz h1, .biz h2, .biz h3 { overflow-wrap: anywhere; }
+.biz-quiet { color: var(--text-soft); margin: 0; }
+.biz-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.biz-stack { display: grid; gap: var(--space-4); }
+.biz-card { border: 1px solid var(--line); background: var(--panel); border-radius: var(--radius); padding: var(--space-5); display: grid; gap: var(--space-3); min-width: 0; }
+.biz-card h2, .biz-card h3 { margin: 0; font-size: var(--type-section); }
+.biz-button { display: inline-flex; align-items: center; min-height: var(--control-height); padding: 0 var(--space-cozy); border: 1px solid var(--edge-interactive); border-radius: var(--radius-sm); color: var(--ink); text-decoration: none; }
+
+/* Two lines then truncate; the full text lives in the accessible name and title (D5). */
+.biz-clamp, .biz-now-title, .biz-now-artist { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+.biz-now { display: grid; gap: var(--space-hair); min-width: 0; }
+.biz-now-title { font-weight: 700; }
+.biz-now-artist { color: var(--text-soft); font-size: var(--type-meta); }
+
+/* Manager notices: a mark and words, never colour alone, never pulsing (D5). */
+.biz-banners { display: grid; gap: var(--space-2); }
+.biz-notice { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-start; padding: var(--space-3) var(--space-4); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface-raised); }
+.biz-notice p { margin: 0; flex: 1 1 240px; }
+.biz-notice-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.biz-manager-line { margin: 0; padding: var(--space-2) var(--space-3); font-size: var(--type-meta); color: var(--text-soft); border-top: 1px solid var(--line); }
+
+.biz-silent { border: 2px solid var(--status-blocked); border-radius: var(--radius); padding: var(--space-4); background: var(--surface-raised); display: grid; gap: var(--space-3); }
+.biz-silent h2 { margin: 0; font-size: var(--type-section); display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+.biz-silent ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.biz-silent p { margin: 0; }
+
+.biz-attention { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: var(--space-4); display: grid; gap: var(--space-3); align-content: start; }
+.biz-attention h2, .biz-attention h3 { margin: 0; font-size: var(--type-section); }
+.biz-attention ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.biz-attention li { display: grid; gap: var(--space-1); }
+
+.biz-pilot-badge { display: inline-flex; padding: var(--space-1) var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-pill); font-size: var(--type-meta); }
+
+@media (prefers-reduced-motion: reduce) { .biz * { animation: none !important; transition: none !important; } }
+:root[data-motion='still'] .biz * { animation: none !important; transition: none !important; }
+@media (forced-colors: active) {
+  .biz-notice, .biz-silent, .biz-attention, .biz-card, .biz-pilot-badge { border-color: CanvasText; }
+}

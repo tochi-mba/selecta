@@ -70,7 +70,7 @@ export function CloudApp() {
       // An account-level refusal replaces the whole app with a plain explanation.
       const accountState = blockedCode(code);
       if (accountState) setBlocked(accountState);
-      throw new CloudError(refusalMessage(code) ?? messageOf(payload, `Request failed (${response.status}).`), response.status, code);
+      throw new CloudError(refusalMessage(code) ?? messageOf(payload, `Request failed (${response.status}).`), response.status, code, payload);
     }
     return payload as T;
   }, [getAccessToken]);

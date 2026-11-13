@@ -34,6 +34,7 @@ jobs:
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: "3.12"
+          version: "0.12.15" # matches infra/docker/service.Dockerfile
           enable-cache: true
       - name: Export the exact locked versions
         # PyTorch's CPU builds carry a "+cpu" local version that PyPI doesn't list; the
@@ -102,6 +103,7 @@ jobs:
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: "3.12"
+          version: "0.12.15" # matches infra/docker/service.Dockerfile
           enable-cache: true
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg

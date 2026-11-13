@@ -4,36 +4,52 @@
     "cloud.mix_create": {
       "label": "Make a mix in the Cloud",
       "about": "Create and edit intelligent mixes from Cloud Library songs, using the same mix contract as the local app.",
-      "routes": [
-        "GET /api/cloud/mix-capabilities",
-        "POST /api/cloud/mixes"
+      "surfaces": [
+        "cloud.listen",
+        "cloud.library"
       ],
-      "surfaces": ["cloud.listen", "cloud.library"],
-      "modes": ["cloud"],
+      "modes": [
+        "cloud"
+      ],
       "kind": "release",
       "owner": "autopilot"
     },
     "cloud.single_audio_owner": {
       "label": "One Cloud player",
       "about": "Cloud Library previews and Cloud Listen play through one persistent player that keeps playing across pages.",
-      "surfaces": ["cloud.listen", "cloud.library"],
-      "modes": ["cloud"],
+      "surfaces": [
+        "cloud.listen",
+        "cloud.library"
+      ],
+      "modes": [
+        "cloud"
+      ],
       "kind": "release",
       "owner": "autopilot"
     },
     "cloud.account_states": {
       "label": "Clear Cloud account states",
       "about": "Exact Cloud routes and distinct messages for signed-out, expired, suspended and unreachable accounts.",
-      "surfaces": ["cloud.home", "cloud.settings"],
-      "modes": ["cloud"],
+      "surfaces": [
+        "cloud.home",
+        "cloud.settings"
+      ],
+      "modes": [
+        "cloud"
+      ],
       "kind": "release",
       "owner": "autopilot"
     },
     "cloud.library_states": {
       "label": "Truthful Cloud Library states",
       "about": "Tell loading, failed, empty and ready apart, and report each uploaded file's own result.",
-      "surfaces": ["cloud.library", "cloud.uploads"],
-      "modes": ["cloud"],
+      "surfaces": [
+        "cloud.library",
+        "cloud.uploads"
+      ],
+      "modes": [
+        "cloud"
+      ],
       "kind": "release",
       "owner": "autopilot"
     },
@@ -46,7 +62,9 @@
     "mixes.intent_language": {
       "label": "Plain Make a mix choices",
       "about": "Separate quick listen from a saved mix and say how long each setting lasts and what it applies to.",
-      "surfaces": ["mixes"],
+      "surfaces": [
+        "mixes"
+      ],
       "kind": "release",
       "owner": "autopilot"
     },
@@ -54,11 +72,6 @@
       "label": "Autopilot venue mode",
       "about": "Let SelectaDJ plan and play a whole evening as a resident DJ, with pause, stop and manual takeover always available.",
       "default": false,
-      "routes": [
-        "GET /api/autopilot/status",
-        "POST /api/autopilot/session",
-        "POST /api/autopilot/session/{session_id}/command"
-      ],
       "kind": "experiment",
       "when_off": "stop",
       "owner": "autopilot"
@@ -67,11 +80,8 @@
       "label": "Venue music identity",
       "about": "Versioned venue music policies, schedules, hard limits and timed overrides for Autopilot.",
       "default": false,
-      "requires": ["autopilot.venue_mode"],
-      "routes": [
-        "GET /api/autopilot/policies",
-        "POST /api/autopilot/policies",
-        "POST /api/autopilot/policies/{policy_id}/override"
+      "requires": [
+        "autopilot.venue_mode"
       ],
       "kind": "experiment",
       "owner": "autopilot"
@@ -80,8 +90,9 @@
       "label": "Rolling musical horizon",
       "about": "Plan the next stretch of the evening ahead, rank songs deterministically and replan only at safe points.",
       "default": false,
-      "requires": ["autopilot.venue_mode"],
-      "routes": ["GET /api/autopilot/session/{session_id}/horizon"],
+      "requires": [
+        "autopilot.venue_mode"
+      ],
       "kind": "experiment",
       "owner": "autopilot"
     },
@@ -89,7 +100,9 @@
       "label": "Conservative Autopilot transitions",
       "about": "Check every transition before it plays and fall back to simpler, safer blends when a check fails.",
       "default": false,
-      "requires": ["autopilot.venue_mode"],
+      "requires": [
+        "autopilot.venue_mode"
+      ],
       "kind": "experiment",
       "owner": "autopilot"
     },
@@ -97,10 +110,8 @@
       "label": "AI DJ director",
       "about": "Let an AI suggest typed, bounded changes to the Autopilot plan that staff can inspect and undo.",
       "default": false,
-      "requires": ["autopilot.venue_mode"],
-      "routes": [
-        "POST /api/autopilot/session/{session_id}/intent",
-        "POST /api/autopilot/session/{session_id}/intent/{intent_id}/undo"
+      "requires": [
+        "autopilot.venue_mode"
       ],
       "kind": "experiment",
       "owner": "autopilot"

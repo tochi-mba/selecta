@@ -55,6 +55,7 @@ AREAS = (
     "tools",
     "cloud",
     "autopilot",
+    "venueops",
 )
 
 # Places in the site a flag can show up. The browser sweep opens each one with that flag off.

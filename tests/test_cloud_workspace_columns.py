@@ -50,6 +50,7 @@ MIXED_TABLES: dict[str, str] = {
     "audit_events": "staff and platform actions that name no workspace are audited too",
     "dangerous_actions": "delayed staff actions, only some of which target a workspace",
     "display_pairings": "a room display asks to pair before any host has claimed it",
+    "kiosk_pairings": "a venue kiosk asks to pair before any manager has claimed it",
     "outbox_events": "platform topics, such as worker and scheduler events, name no workspace",
 }
 
