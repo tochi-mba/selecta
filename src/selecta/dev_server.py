@@ -29,3 +29,14 @@ def application():
         return result
     finally:
         faulthandler.cancel_dump_traceback_later()
+
+
+def engine_application():
+    """Explicit opt-in guarded local-engine factory, not the existing dev default."""
+    from selecta.modes import Mode, current_mode
+
+    if current_mode() is not Mode.LOCAL:
+        raise RuntimeError("A local engine must use SELECTA_MODE=local.")
+    from selecta.local_engine.http import application as local_engine_application
+
+    return local_engine_application()
