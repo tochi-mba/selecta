@@ -337,3 +337,50 @@ def test_device_isolation_and_no_private_fields_in_payload(catalogue, tmp_path, 
             other.resolve(ref)
         with pytest.raises(PermissionError):
             other.bind_recording(ref, _first(catalogue, source))
+
+
+def test_corrupt_supported_extension_is_not_playable(catalogue, tmp_path):
+    folder = tmp_path / "music"
+    folder.mkdir()
+    (folder / "fake.wav").write_bytes(b"not even a WAV header")
+    source = catalogue.add_source(folder)
+    _scan_all(catalogue, source)
+    record = catalogue.list_local_instances(source)[0]
+    assert record["state"] == "incompatible"
+    with pytest.raises(UnsafeRecording):
+        catalogue.mint_local_recording(record["local_file_id"])
+
+
+def test_engine_can_supply_a_stricter_local_decoder_probe(tmp_path, clock):
+    folder = tmp_path / "music"
+    song = _wav(folder / "Valid.wav")
+    with LocalCatalogue(
+        tmp_path / "private" / "probe.sqlite", "workspace_01", "device_01",
+        clock=lambda: clock[0], decoder_probe=lambda candidate: candidate != song,
+    ) as catalog:
+        source = catalog.add_source(folder)
+        _scan_all(catalog, source)
+        record = catalog.list_local_instances(source)[0]
+        assert record["state"] == "incompatible"
+
+
+@pytest.mark.parametrize("alternate", [
+    "Song (Live).wav",
+    "Song (Radio Edit).wav",
+    "Song (2024 Remastered).wav",
+    "Song (Clean).wav",
+])
+def test_no_edition_substitution_even_with_same_local_metadata(
+    catalogue, tmp_path, alternate
+):
+    folder = tmp_path / "music"
+    _wav(folder / "Song (Explicit).wav")
+    source = catalogue.add_source(folder)
+    _scan_all(catalogue, source)
+    with pytest.raises(UnsafeRecording):
+        catalogue.bind_recording(
+            RecordingRef("workspace_01", "canonical_no_substitution"),
+            _first(catalogue, source),
+            kind=MatchState.VERIFIED_EQUIVALENT, approved=True,
+            expected_metadata={"title": Path(alternate).stem},
+        )
