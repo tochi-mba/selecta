@@ -105,7 +105,7 @@ class EvidenceLedger:
         return (not missing, missing)
 
     def write(self, target: Path) -> None:
-        """Atomic output, suitable for build artifact collection. Never mark simulated as verified."""
+        """Atomic output for build artifacts. Never mark simulated data as verified."""
         target.parent.mkdir(parents=True, exist_ok=True)
         temporary = target.with_name(target.name + ".tmp")
         with temporary.open("w", encoding="utf-8") as file:
