@@ -51,26 +51,26 @@ from pathlib import Path
 from typing import Any
 
 from selecta.audit.business_kiosk_support import (
-    SAFE_HOSTS as SAFE_HOSTS,
-    KIOSK_COOKIE as KIOSK_COOKIE,
-    refuse_production as refuse_production,
-    percentile as percentile,
-    iso as iso,
-    from_iso as from_iso,
-    dt as dt,
-    Clock as Clock,
-    VirtualClock as VirtualClock,
-    RealClock as RealClock,
-    b64url as b64url,
-    unb64url as unb64url,
-    DeviceKey as DeviceKey,
-    load_public_jwk as load_public_jwk,
-    verify_signature as verify_signature,
-    TransportDown as TransportDown,
-    Answer as Answer,
-    LatencyBook as LatencyBook,
-    Transport as Transport,
-    HttpTransport as HttpTransport,
+    KIOSK_COOKIE,
+    SAFE_HOSTS,
+    Answer,
+    Clock,
+    DeviceKey,
+    HttpTransport,
+    LatencyBook,
+    RealClock,
+    Transport,
+    TransportDown,
+    VirtualClock,
+    b64url,
+    dt,
+    from_iso,
+    iso,
+    load_public_jwk,
+    percentile,
+    refuse_production,
+    unb64url,
+    verify_signature,
 )
 
 from selecta.audit.business_trace import (
@@ -82,6 +82,30 @@ from selecta.audit.business_trace import (
     Play,
     Stop,
     VolumeReport,
+)
+
+# Re-export simulator primitives so existing scenarios keep their import paths.
+__all__ = (
+    "KIOSK_COOKIE",
+    "SAFE_HOSTS",
+    "Answer",
+    "Clock",
+    "DeviceKey",
+    "HttpTransport",
+    "LatencyBook",
+    "RealClock",
+    "Transport",
+    "TransportDown",
+    "VirtualClock",
+    "b64url",
+    "dt",
+    "from_iso",
+    "iso",
+    "load_public_jwk",
+    "percentile",
+    "refuse_production",
+    "unb64url",
+    "verify_signature",
 )
 
 HEARTBEAT_S = 5.0
