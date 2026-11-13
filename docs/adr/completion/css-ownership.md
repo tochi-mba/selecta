@@ -30,6 +30,7 @@ Feature-local sheets live beside the one component that imports them and style n
 |---|---|---|
 | `admin/admin.css` | the admin area | `admin/AdminArea.tsx` |
 | `cloud/cloud.css` | the cloud app | `cloud/CloudApp.tsx` |
+| `business/business.css` | business console shared surfaces, notices, statuses and controls | `cloud/CloudApp.tsx` |
 | `devices/devices.css` | device list and playing bar | `devices/DevicesPanel.tsx`, `devices/PlayingBar.tsx` |
 | `display/display.css` | the display page | `display/main.ts` |
 | `guest/guest.css` | the guest request page | `guest/main.ts` |

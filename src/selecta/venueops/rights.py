@@ -103,7 +103,9 @@ class GateResult:
 class RightsRefused(PermissionError):
     def __init__(self, result: GateResult) -> None:
         self.result = result
-        super().__init__(f"{result.operation}: {result.decision.value}; {'; '.join(result.reasons)}")
+        super().__init__(
+            f"{result.operation}: {result.decision.value}; {'; '.join(result.reasons)}"
+        )
 
 
 @dataclass(frozen=True)
@@ -149,7 +151,9 @@ def gate(
     """Decide one media operation. Every venue media path calls this before it touches audio."""
     op = Operation(operation)
     if not commercial:
-        return GateResult(op.value, Decision.ALLOW, ("personal use: the venue gate does not apply",))
+        return GateResult(
+            op.value, Decision.ALLOW, ("personal use: the venue gate does not apply",)
+        )
     table = table or matrix()
     row = table.operations[op.value]
     state = content.effective_state(op.value, territory, time.time() if now is None else now)

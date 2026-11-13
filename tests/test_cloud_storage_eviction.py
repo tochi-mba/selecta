@@ -210,7 +210,7 @@ def test_every_zone_sessions_playing_revision_is_protected_not_just_one(world):
     assert set(result.removed) == {ids[5], ids[6]}
 
 
-def test_a_stopped_zone_does_not_protect_its_revision(world):
+def test_a_stopped_zone_does_not_protect_its_revision_in_zone_sessions(world):
     engine, _, files, ids = world
     with transaction(engine, WS) as connection:
         eviction.pin(connection, WS, "rev-bar", [ids[1]])
@@ -225,7 +225,7 @@ def test_a_stopped_zone_does_not_protect_its_revision(world):
     assert left(engine) == {ids[1], ids[2]}
 
 
-def test_revisions_a_kiosk_reports_cached_are_protected(world):
+def test_revisions_a_kiosk_reports_cached_are_protected_in_zone_sessions(world):
     """BZ-0442-09: an injected provider (ADR-0446 plugs the kiosk reports in) protects a
     revision no session is playing."""
     engine, _, files, ids = world

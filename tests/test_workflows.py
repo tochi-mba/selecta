@@ -147,7 +147,10 @@ def test_verify_needs_every_other_test_job_and_checks_each_result():
 
 def test_only_the_browser_jobs_can_be_skipped_and_only_on_a_docs_only_change():
     jobs = FLOWS["test.yml"][1]["jobs"]
-    gated = {name for name, job in jobs.items() if "needs.changes.outputs.code" in str(job.get("if"))}
+    gated = {
+        name for name, job in jobs.items()
+        if "needs.changes.outputs.code" in str(job.get("if"))
+    }
     assert gated == {"browser", "flags", "cloud-browser"}
     for name in gated:
         assert "changes" in jobs[name]["needs"]

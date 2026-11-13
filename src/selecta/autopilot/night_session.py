@@ -25,13 +25,13 @@ import threading
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from selecta.autopilot.maturity import Action, MaturityLevel, may
 
 
-class SessionState(str, Enum):
+class SessionState(StrEnum):
     SETUP = "setup"
     WARMING = "warming"
     LIVE = "live"
@@ -42,7 +42,7 @@ class SessionState(str, Enum):
     FAILED = "failed"
 
 
-class Actor(str, Enum):
+class Actor(StrEnum):
     STAFF = "staff"
     AUTOPILOT = "autopilot"
     SYSTEM = "system"

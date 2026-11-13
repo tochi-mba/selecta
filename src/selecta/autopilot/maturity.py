@@ -14,7 +14,7 @@ level a venue can run right now, never a level whose prerequisites are missing.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum, IntEnum
+from enum import IntEnum, StrEnum
 from typing import Any
 
 
@@ -26,7 +26,7 @@ class MaturityLevel(IntEnum):
     L4_UNATTENDED = 4
 
 
-class Action(str, Enum):
+class Action(StrEnum):
     """Things Autopilot itself may do, never a staff member's own control."""
 
     SUGGEST_NEXT = "suggest_next"

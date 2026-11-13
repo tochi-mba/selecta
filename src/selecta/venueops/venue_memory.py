@@ -195,10 +195,12 @@ class VenueMemory:
         }
 
     def apply(
-        self, baseline: Mapping[str, float], limits: VenueHardLimits = VenueHardLimits()
+        self, baseline: Mapping[str, float], limits: VenueHardLimits | None = None
     ) -> dict[str, float]:
         """Baseline weights times (1 + learned bias), with the venue's hard limits on top. Blocked
         subjects are left out whatever was learned; ceilings cap the result."""
+        if limits is None:
+            limits = VenueHardLimits()
         bias = self.learned_bias()
         out: dict[str, float] = {}
         for subject, weight in baseline.items():
@@ -236,7 +238,8 @@ class VenueMemory:
             kind, _, value = subject.partition(":")
             direction = "more" if shift > 0 else "less"
             sources = ", ".join(
-                f"{n} from {PLAIN[p]}" for p, n in sorted(counts[subject].items(), key=lambda x: -x[1])
+                f"{n} from {PLAIN[p]}"
+                for p, n in sorted(counts[subject].items(), key=lambda x: -x[1])
             )
             capped = " (at the limit)" if abs(shift) >= self.caps.total else ""
             lines.append(

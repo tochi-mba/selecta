@@ -16,6 +16,8 @@ import { StorageMeter } from './Meters';
 import { blockedByQuota, OverQuotaBanner } from './OverQuota';
 import { UploadsPanel } from './Uploads';
 import './cloud.css';
+// Shared business styles are scoped to .biz and loaded by the Cloud shell.
+import '../business/business.css';
 
 // The staff console is its own bundle, loaded only when a staff member opens it.
 const AdminArea = lazy(() => import('../admin/AdminArea'));

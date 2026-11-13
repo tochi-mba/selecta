@@ -57,7 +57,9 @@ class SafeGain:
             self._rises.popleft()
         return sum(amount for _, amount in self._rises)
 
-    def propose(self, wanted_db: float, now: float, limiter_reduction_db: float = 0.0) -> GainDecision:
+    def propose(
+        self, wanted_db: float, now: float, limiter_reduction_db: float = 0.0
+    ) -> GainDecision:
         """Apply the caps to one automatic change and return what was set."""
         reasons: list[str] = []
         target = wanted_db

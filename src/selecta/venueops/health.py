@@ -197,9 +197,11 @@ PATH = "[path]"
 GUEST = "[guest]"
 
 
-def redact_text(text: str, policy: RedactionPolicy = RedactionPolicy(),
+def redact_text(text: str, policy: RedactionPolicy | None = None,
                 titles: Sequence[str] = ()) -> str:
     """Free text with secrets, paths, guest names and (by policy) known titles removed."""
+    if policy is None:
+        policy = RedactionPolicy()
     out = scrub_text(text) or ""
     out = _PATH.sub(PATH, out)
     for name in sorted(policy.guest_names, key=len, reverse=True):
@@ -212,9 +214,11 @@ def redact_text(text: str, policy: RedactionPolicy = RedactionPolicy(),
     return out
 
 
-def redact(record: Mapping[str, object], policy: RedactionPolicy = RedactionPolicy()) -> dict:
+def redact(record: Mapping[str, object], policy: RedactionPolicy | None = None) -> dict:
     """A structured log record made safe: secrets via `authz.audit.scrub`, media and guest
     fields by key, and free-text values through `redact_text`."""
+    if policy is None:
+        policy = RedactionPolicy()
     titles = [str(v) for k, v in record.items() if re.search("title|artist", k, re.I) and v]
     cleaned = scrub(dict(record))
     out: dict[str, object] = {}

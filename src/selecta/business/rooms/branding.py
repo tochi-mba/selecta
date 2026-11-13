@@ -81,7 +81,9 @@ def guest_branding(
     accent: str | None, branding_on: bool,
 ) -> dict:
     """What the guest page shows about the venue. Without the branding flag, names only."""
-    shown: dict = {"venue_name": venue_name, "zone_name": zone_name, "footer": "Powered by SelectaDJ"}
+    shown: dict = {
+        "venue_name": venue_name, "zone_name": zone_name, "footer": "Powered by SelectaDJ",
+    }
     if not branding_on:
         return {**shown, "logo_url": None, "welcome": None, "accent": None, "accent_ink": None}
     decision = check_accent(accent)

@@ -352,7 +352,9 @@ def install_routes(
         workspace_id = scope(request, claims)
         now = _now(workspace_id)
         try:
-            override = hours.close_now(_tonight(workspace_id, venue_id, now), now, by=claims.subject)
+            override = hours.close_now(
+                _tonight(workspace_id, venue_id, now), now, by=claims.subject
+            )
         except hours.HoursError as error:
             raise _bad(str(error)) from None
         override_id = _store_override(workspace_id, venue_id, override)

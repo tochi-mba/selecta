@@ -19,6 +19,7 @@ afterEach(() => {
   cleanup();
   setFlags({});
   vi.unstubAllGlobals();
-  localStorage.clear();
-  sessionStorage.clear();
+  // Node-only source audits have no browser storage; DOM tests still clear both stores.
+  if (typeof localStorage !== 'undefined') localStorage.clear();
+  if (typeof sessionStorage !== 'undefined') sessionStorage.clear();
 });
