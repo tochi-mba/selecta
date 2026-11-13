@@ -48,6 +48,7 @@ Feature-local sheets live beside the one component that imports them and style n
 | `cloud/lf-device-control/localFirstPlayer.css` | device-owned transport controls, readiness, takeover states and narrow phone layout | `cloud/lf-device-control/LocalFirstPlayer.tsx` |
 | `cloud/lf-mix-repair/repair.css` | per-device missing-media repair, candidate review and narrow mix panels | `cloud/lf-mix-repair/DeviceMixRepair.tsx` |
 | `cloud/lf-personal/personal.css` | local music onboarding, device selection and connected personal library states | `cloud/lf-personal/PersonalWorkspace.tsx` |
+| `cloud/lf-personal/folderWatches.css` | local device folder-watch manager, progress, watch cards and confirmation states | `cloud/lf-personal/FolderWatches.tsx` |
 
 Load order (`web/src/main.tsx`): tokens, style.css, shell, polish, foundation, listening, creation,
 operations, music-objects, glossary, palette, icons, depth, typography. Later files refine earlier
