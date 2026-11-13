@@ -227,7 +227,7 @@ FREE_2 = replace(
     speculative_cpu_minutes_per_day=0, stem_preview_windows_per_day=None,
     stems=StemAccess.FULL, exports_per_month=None, export_retention_days=0,
     max_upload_bytes=0, max_upload_seconds=0, library_soft_cap_songs=0,
-    flags=LF_FLAGS,
+    flags=LF_FLAGS - {"devices.remote_control"},
 )
 STANDARD_2 = replace(
     STANDARD_1, version=2, storage_bytes=0, analysis_songs_per_day=0,
