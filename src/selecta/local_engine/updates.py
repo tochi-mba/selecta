@@ -7,7 +7,6 @@ platform-specific installer applying the verified artifact in a separate release
 from __future__ import annotations
 
 import base64
-import binascii
 import hashlib
 import json
 import os
@@ -49,7 +48,7 @@ def verify_manifest(manifest: dict, trusted_keys: dict[str, bytes]) -> dict:
     try:
         signature = base64.b64decode(manifest["signature"], validate=True)
         Ed25519PublicKey.from_public_bytes(key).verify(signature, canonical)
-    except (ValueError, TypeError, binascii.Error, InvalidSignature) as exc:
+    except (ValueError, TypeError, InvalidSignature) as exc:
         raise UpdateRejected("Update signature verification failed.") from exc
     return payload
 
