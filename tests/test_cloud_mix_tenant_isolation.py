@@ -164,12 +164,15 @@ def test_new_mix_manifest_is_valid_and_records_its_actual_source_hashes(alice_mi
     # The response adds availability to each song; the persisted contract does not.
     assert all("available" not in song for song in row.provenance["settings"]["contract"]["songs"])
     with transaction(party.engine, workspace_id) as conn:
-        hashes = dict(conn.execute(
-            sa.select(assets.c.id, assets.c.sha256).where(
-                assets.c.id.in_(alice_mix["assets"]),
-                assets.c.workspace_id == workspace_id,
-            )
-        ))
+        hashes = {
+            asset_id: digest
+            for asset_id, digest in conn.execute(
+                sa.select(assets.c.id, assets.c.sha256).where(
+                    assets.c.id.in_(alice_mix["assets"]),
+                    assets.c.workspace_id == workspace_id,
+                )
+            ).tuples()
+        }
     assert row.provenance["inputs"] == {
         "songs": [hashes[asset_id] for asset_id in alice_mix["assets"]],
     }
@@ -200,6 +203,60 @@ def test_edited_mix_manifest_links_to_parent_without_overwriting_history(alice_m
         f"/api/cloud-mixes/{first['mix_id']}", headers=auth(BOB)
     ).status_code == 404
     assert not _mix_artifacts(party.engine, party.workspaces[BOB])
+    invariants.assert_clean(party.engine)
+
+
+
+
+def test_reordered_mix_revision_keeps_source_hash_order_and_rejects_missing_assets(alice_mix):
+    party = alice_mix["party"]
+    workspace_id = party.workspaces[ALICE]
+    first = alice_mix["mix"]
+    reordered_ids = list(reversed(alice_mix["assets"]))
+    reordered = party.client.post(
+        f"/api/cloud-mixes/{first['mix_id']}/revisions", headers=auth(ALICE),
+        json={"base_revision": first["revision"], "asset_ids": reordered_ids},
+    )
+    assert reordered.status_code == 201, reordered.text
+    second = reordered.json()["mix"]
+    assert [song["id"] for song in second["songs"]] == reordered_ids
+
+    # Compare both immutable manifests with the actual bytes inserted by alice_mix.
+    original_hashes = [
+        hashlib.sha256(f"alice-track-{pos}".encode()).hexdigest() for pos in range(2)
+    ]
+    by_revision = {
+        row.input_hash: row for row in _mix_artifacts(party.engine, workspace_id)
+    }
+    assert set(by_revision) == {first["revision"], second["revision"]}
+    assert by_revision[first["revision"]].provenance["inputs"] == {
+        "songs": original_hashes,
+    }
+    assert by_revision[second["revision"]].provenance["inputs"] == {
+        "songs": list(reversed(original_hashes)),
+        "parent": first["revision"],
+    }
+    for row in by_revision.values():
+        provenance.check_output(row)
+        assert row.protected is True
+        assert all(
+            "available" not in song
+            for song in row.provenance["settings"]["contract"]["songs"]
+        )
+
+    # A rejected edit must not create a third revision or modify the first two.
+    missing = party.client.post(
+        f"/api/cloud-mixes/{first['mix_id']}/revisions", headers=auth(ALICE),
+        json={"base_revision": second["revision"], "asset_ids": [reordered_ids[0], made_up()]},
+    )
+    assert missing.status_code == 404, missing.text
+    assert missing.json()["detail"]["code"] == "song_not_found"
+    assert {
+        row.input_hash: row.provenance
+        for row in _mix_artifacts(party.engine, workspace_id)
+    } == {
+        revision: row.provenance for revision, row in by_revision.items()
+    }
     invariants.assert_clean(party.engine)
 
 
