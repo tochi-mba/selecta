@@ -9,6 +9,7 @@ import { ZoneSwitcher } from './ZoneSwitcher';
 import { usePinGate } from './usePinGate';
 import { useStaffCommands } from './useStaffCommands';
 import { thisDeviceId } from '../venue/useVenue';
+import { StaffSpeakerLine } from '../localFirst/ReadinessPanel';
 
 export function StaffControl({ venueId }: { venueId: string }) {
   const { org, venues, client, offline, readOnly, now, refresh } = useBusiness();
@@ -39,6 +40,7 @@ export function StaffControl({ venueId }: { venueId: string }) {
   return <section className="biz biz-stack"><h1>Staff controls: {venue.name}</h1>
     <ZoneSwitcher zones={venue.zones} current={zone.id} onChange={setZoneId} />
     <StaffNow zone={zone} venue={venue} now={now} paused={zone.state === 'paused_by_staff'} pausedBy={zone.paused_by ?? ''} />
+    {businessOn(org.features, 'business.local_first') && <StaffSpeakerLine zone={zone} venue={venue} now={now} offline={offline} />}
     {disabled ? <p role="status">This organisation is read-only. Controls are unavailable.</p> :
       <StaffControlDeck zoneName={zone.name} paused={zone.state === 'paused_by_staff'}
         steerable={zone.paid && (zone.state === 'playing' || zone.state === 'playing_saved')}
