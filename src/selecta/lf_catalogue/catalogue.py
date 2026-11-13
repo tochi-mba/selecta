@@ -122,6 +122,21 @@ def _conflict(expected: Mapping[str, Any], actual: Mapping[str, Any]) -> bool:
     return False
 
 
+def _container_valid(path: Path) -> bool:
+    """Fail closed on malformed/unknown audio, without decoding or uploading bytes.
+
+    Engines may inject a stronger FFmpeg/capability-aware probe. This default only
+    verifies a recognisable container and stream; actual output is checked later.
+    """
+    try:
+        from mutagen import File
+
+        audio = File(path)
+        return audio is not None and getattr(audio, "info", None) is not None
+    except Exception:
+        return False
+
+
 def _metadata(path: Path) -> dict[str, str]:
     # Filenames are discovery hints, never conclusive recording identity.
     result: dict[str, str] = {"title": path.stem}
@@ -142,7 +157,7 @@ def _metadata(path: Path) -> dict[str, str]:
     # Edition qualifiers in the filename remain relevant even when tags omit them.
     flags = edition_flags({"title": path.stem})
     for flag in sorted(flags):
-        result["edition"] = (result.get("edition", "") + " " + flag).strip()
+        result["edition"] = (result.get("edition", "") + " " + flag.replace("_", " ")).strip()
     return result
 
 
@@ -167,6 +182,7 @@ class LocalCatalogue:
         freshness_seconds: float = 300.0,
         clock: Callable[[], float] = time.time,
         max_file_bytes: int = 2 * 1024 * 1024 * 1024,
+        decoder_probe: Callable[[Path], bool] | None = None,
     ):
         self.workspace_id = _id(workspace_id)
         self.device_id = _id(device_id)
@@ -175,6 +191,7 @@ class LocalCatalogue:
         self.freshness_seconds = freshness_seconds
         self.max_file_bytes = max_file_bytes
         self.clock = clock
+        self.decoder_probe = decoder_probe or _container_valid
         self.database = Path(database)
         self.database.parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(self.database)
@@ -325,7 +342,14 @@ class LocalCatalogue:
                 file_stat.st_size, file_stat.st_mtime_ns, file_stat.st_ino
             ):
                 raise UnsafeRecording("changed_during_verification")
-            state = "ready" if path.suffix.lower() in SUPPORTED_CODECS else "incompatible"
+            try:
+                decodable = self.decoder_probe(path)
+            except Exception:
+                decodable = False
+            state = (
+                "ready" if path.suffix.lower() in SUPPORTED_CODECS and decodable
+                else "incompatible"
+            )
             metadata = _metadata(path)
         except ScanCancelled:
             raise
