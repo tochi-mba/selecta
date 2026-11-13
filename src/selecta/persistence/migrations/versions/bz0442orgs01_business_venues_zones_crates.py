@@ -45,8 +45,13 @@ def upgrade() -> None:
         sa.Column("created_at", EPOCH, nullable=False),
         sa.Column("archived_at", EPOCH),
         sa.Column("purge_after", EPOCH),
-        sa.CheckConstraint("status IN ('active', 'paused', 'archived')", name=op.f("ck_venues_status")),
-        sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"], ondelete="CASCADE", name=op.f("fk_venues_workspace_id_workspaces")),
+        sa.CheckConstraint(
+            "status IN ('active', 'paused', 'archived')", name=op.f("ck_venues_status"),
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE",
+            name=op.f("fk_venues_workspace_id_workspaces"),
+        ),
     )
     _index("venues", "workspace_id")
 
@@ -62,9 +67,17 @@ def upgrade() -> None:
         sa.Column("standby_device_id", ID),
         sa.Column("created_at", EPOCH, nullable=False),
         sa.Column("archived_at", EPOCH),
-        sa.CheckConstraint("status IN ('active', 'paused', 'archived')", name=op.f("ck_zones_status")),
-        sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"], ondelete="CASCADE", name=op.f("fk_zones_workspace_id_workspaces")),
-        sa.ForeignKeyConstraint(["venue_id"], ["venues.id"], ondelete="CASCADE", name=op.f("fk_zones_venue_id_venues")),
+        sa.CheckConstraint(
+            "status IN ('active', 'paused', 'archived')", name=op.f("ck_zones_status"),
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE",
+            name=op.f("fk_zones_workspace_id_workspaces"),
+        ),
+        sa.ForeignKeyConstraint(
+            ["venue_id"], ["venues.id"], ondelete="CASCADE",
+            name=op.f("fk_zones_venue_id_venues"),
+        ),
     )
     _index("zones", "workspace_id")
     _index("zones", "venue_id")
@@ -84,8 +97,14 @@ def upgrade() -> None:
         sa.Column("created_by", ID),
         sa.Column("created_at", EPOCH, nullable=False),
         sa.Column("archived_at", EPOCH),
-        sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"], ondelete="CASCADE", name=op.f("fk_crates_workspace_id_workspaces")),
-        sa.ForeignKeyConstraint(["venue_id"], ["venues.id"], ondelete="CASCADE", name=op.f("fk_crates_venue_id_venues")),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE",
+            name=op.f("fk_crates_workspace_id_workspaces"),
+        ),
+        sa.ForeignKeyConstraint(
+            ["venue_id"], ["venues.id"], ondelete="CASCADE",
+            name=op.f("fk_crates_venue_id_venues"),
+        ),
     )
     _index("crates", "workspace_id")
     _index("crates", "venue_id")
@@ -97,8 +116,14 @@ def upgrade() -> None:
         sa.Column("workspace_id", ID, nullable=False),
         sa.Column("position", sa.Integer(), nullable=False),
         sa.Column("removed_at", EPOCH),
-        sa.ForeignKeyConstraint(["crate_id"], ["crates.id"], ondelete="CASCADE", name=op.f("fk_crate_songs_crate_id_crates")),
-        sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"], ondelete="CASCADE", name=op.f("fk_crate_songs_workspace_id_workspaces")),
+        sa.ForeignKeyConstraint(
+            ["crate_id"], ["crates.id"], ondelete="CASCADE",
+            name=op.f("fk_crate_songs_crate_id_crates"),
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE",
+            name=op.f("fk_crate_songs_workspace_id_workspaces"),
+        ),
     )
     _index("crate_songs", "workspace_id")
     _index("crate_songs", "workspace_id", "song_id")
@@ -107,7 +132,9 @@ def upgrade() -> None:
         for table in TABLES:
             op.execute(f'ALTER TABLE "{table}" ENABLE ROW LEVEL SECURITY')
             op.execute(f'ALTER TABLE "{table}" FORCE ROW LEVEL SECURITY')
-            op.execute(f'CREATE POLICY workspace_isolation ON "{table}" USING {RULE} WITH CHECK {RULE}')
+            op.execute(
+                f'CREATE POLICY workspace_isolation ON "{table}" USING {RULE} WITH CHECK {RULE}'
+            )
 
 
 def downgrade() -> None:

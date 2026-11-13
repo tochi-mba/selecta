@@ -103,7 +103,9 @@ def upgrade() -> None:
         for table in TABLES:
             op.execute(f'ALTER TABLE "{table}" ENABLE ROW LEVEL SECURITY')
             op.execute(f'ALTER TABLE "{table}" FORCE ROW LEVEL SECURITY')
-            op.execute(f'CREATE POLICY workspace_isolation ON "{table}" USING {RULE} WITH CHECK {RULE}')
+            op.execute(
+                f'CREATE POLICY workspace_isolation ON "{table}" USING {RULE} WITH CHECK {RULE}'
+            )
 
 
 def downgrade() -> None:
