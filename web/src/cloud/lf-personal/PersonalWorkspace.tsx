@@ -23,11 +23,11 @@ function DeviceChooser({ devices, value, controllerOnly, onChoose }: {
   </label>;
 }
 
-function StatusLine({ device, now = Date.now() }: { device: PersonalDevice | null; now?: number }) {
+function StatusLine({ device, now = Date.now(), readFresh = true }: { device: PersonalDevice | null; now?: number; readFresh?: boolean }) {
   if (!device) return <p className="lf-state" role="status">No local speaker selected. This browser cannot play music from another computer.</p>;
   const current = recentCheck(device.lastVerifiedAt, now);
-  const canPlay = device.role === 'engine' && device.engine === 'ready' && device.connectivity === 'online' && current && device.output === 'verified';
-  const reason = device.role !== 'engine' ? 'Controller only — no audio executor'
+  const canPlay = readFresh && device.role === 'engine' && device.engine === 'ready' && device.connectivity === 'online' && current && device.output === 'verified';
+  const reason = !readFresh ? 'Cloud status is unavailable; last device report is unconfirmed' : device.role !== 'engine' ? 'Controller only — no audio executor'
     : !current ? 'Device check is stale or unavailable'
     : device.connectivity !== 'online' ? 'Device connection is not confirmed'
     : device.engine !== 'ready' ? `Engine ${device.engine.replaceAll('_', ' ')}`
@@ -105,8 +105,8 @@ function SetupJourney({ api, workspaceId, refresh, devices, onController }: {
   </section>;
 }
 
-function DeviceOverview({ snapshot, selected, controllerOnly, now }: {
-  snapshot: PersonalSnapshot; selected: PersonalDevice | null; controllerOnly: boolean; now: number;
+function DeviceOverview({ snapshot, selected, controllerOnly, now, readFresh }: {
+  snapshot: PersonalSnapshot; selected: PersonalDevice | null; controllerOnly: boolean; now: number; readFresh: boolean;
 }) {
   const storage = snapshot.storage.find((s) => s.deviceId === selected?.id);
   const owner = snapshot.playback;
@@ -115,7 +115,7 @@ function DeviceOverview({ snapshot, selected, controllerOnly, now }: {
     <section className="lf-panel" aria-label="Selected device readiness">
       <h2>Speaker readiness</h2>
       <p>{controllerOnly ? 'Controller-only browser' : selected?.name ?? 'No speaker selected'}</p>
-      <StatusLine device={controllerOnly ? null : selected} now={now} />
+      <StatusLine device={controllerOnly ? null : selected} now={now} readFresh={readFresh} />
       {selected && <p className="lf-muted">{verificationWords(selected.lastVerifiedAt, now)}</p>}
       {selected && <p>Music verified: {selected.checkedTracks === null || selected.totalTracks === null ? 'Not reported' : `${selected.checkedTracks} of ${selected.totalTracks}`}</p>}
       <p>Output: {selected?.output === 'verified' ? 'Recently verified locally' : selected?.output === 'silent' ? 'Reported silent' : 'Not confirmed'}</p>
@@ -165,9 +165,10 @@ export function DeviceHome({ account, api, go, revision = 0 }: Props & { account
       <div className="lf-actions"><button className="primary" onClick={() => go('uploads')}>Connect local music</button><button onClick={() => go('library')}>Browse device library</button></div>
     </div>
     <ReadFeedback read={{ ...read, refresh: checkAgain }} />
+    {read.phase === 'loading' && <div className="lf-grid" aria-hidden="true"><div className="lf-panel lf-placeholder" /><div className="lf-panel lf-placeholder" /><div className="lf-panel lf-placeholder" /></div>}
     {read.snapshot && <>
       <DeviceChooser devices={devices} value={selection.selected?.id ?? ''} controllerOnly={selection.controllerOnly} onChoose={selection.choose} />
-      <DeviceOverview snapshot={read.snapshot} selected={selection.selected} controllerOnly={selection.controllerOnly} now={now} />
+      <DeviceOverview snapshot={read.snapshot} selected={selection.selected} controllerOnly={selection.controllerOnly} now={now} readFresh={read.phase === 'ready'} />
       <RecipeRecent snapshot={read.snapshot} selected={selection.selected} now={now} go={go} />
     </>}
     {(!read.snapshot || devices.length === 0) && <SetupJourney api={api} workspaceId={account.workspace.id} refresh={checkAgain} devices={devices} onController={selection.chooseControllerOnly} />}
@@ -219,7 +220,7 @@ export function DeviceLibrary({ api, workspaceId, go, revision = 0 }: Props) {
     <ReadFeedback read={read} />
     {read.snapshot && <>
       <DeviceChooser devices={devices} value={selected?.id ?? ''} controllerOnly={selection.controllerOnly} onChoose={selection.choose} />
-      <StatusLine device={selection.controllerOnly ? null : selected} />
+      <StatusLine device={selection.controllerOnly ? null : selected} readFresh={read.phase === 'ready'} />
       {selected && <p className="lf-muted">{verificationWords(selected.lastVerifiedAt)}</p>}
       <div className="lf-actions">
         <button className="primary" onClick={() => go('uploads')}>Add local source</button>
