@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import threading
 import time
@@ -193,8 +194,16 @@ class LocalArtifactStore:
         token = uuid.uuid4().hex
         with self._lock:
             outstanding = sum(size for dev, size in self._reservations.values() if dev == device)
-            if shutil.disk_usage(dest).free - outstanding - self.safety_bytes < amount:
-                raise InsufficientSpace("Not enough unreserved space on the destination drive.")
+            free = shutil.disk_usage(dest).free - outstanding - self.safety_bytes
+            if free < amount:
+                # Try only evictable cache on this exact filesystem. An export,
+                # recording, or user-selected file must never be reclaimed.
+                if self.cache.exists() and not self.cache.is_symlink():
+                    if self.cache.stat().st_dev == device:
+                        self.evict(amount - max(0, free))
+                free = shutil.disk_usage(dest).free - outstanding - self.safety_bytes
+                if free < amount:
+                    raise InsufficientSpace("Not enough unreserved space on the destination drive.")
             self._reservations[token] = (device, amount)
         try:
             yield
@@ -335,8 +344,8 @@ class LocalArtifactStore:
                     self._record_path(record["id"]).unlink(missing_ok=True)
         return freed
 
-    def recover(self) -> int:
-        """Only own staging/cache remnants are removed, not original media or exports."""
+    def recover(self, default_exports: Path | None = None) -> int:
+        """Remove our temporary files, including interrupted default FLAC exports."""
         removed = 0
         for folder in (self.staging, self.cache):
             if not folder.exists() or folder.is_symlink():
@@ -345,7 +354,32 @@ class LocalArtifactStore:
                 if path.is_file() or path.is_symlink():
                     path.unlink(missing_ok=True)
                     removed += 1
+        # Legacy export destinations are not recursively cleaned, and selected
+        # user paths are never traversed. Only our generated temporary basename
+        # pattern is eligible; a finished .flac is always preserved.
+        if default_exports is not None and Path(default_exports).is_dir():
+            for path in Path(default_exports).glob(".selecta-mix-*.part*"):
+                if re.fullmatch(
+                    r"\\.selecta-mix-\\d{8}-\\d{6}-[a-f0-9]{6}\\.flac"
+                    r"\\.[a-f0-9]{32}\\.part(?:\\.part)?", path.name,
+                ) and (path.is_file() or path.is_symlink()):
+                    path.unlink(missing_ok=True)
+                    removed += 1
         return removed
+
+    def mark_source_missing(self, source_name: str) -> int:
+        """Source loss invalidates eligibility, never destroys an existing export."""
+        changed = 0
+        with self._lock:
+            for item in self.records.glob("*.json"):
+                record = self.read(item.stem)
+                if (record and source_name in record.get("spec", {}).get("sources", {})
+                        and record.get("state") != "stale"):
+                    record["state"] = "stale"
+                    record["updated_at"] = time.time()
+                    self._save(record)
+                    changed += 1
+        return changed
 
     def public_state(self, identity: str, *, device_id: str) -> dict[str, Any]:
         """Bounded, audio-free metadata safe for a controller; never a path/URL/hash."""
