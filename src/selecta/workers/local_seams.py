@@ -36,6 +36,7 @@ from pathlib import Path
 from selecta import db, jobs
 from selecta.config import Settings
 from selecta.persistence import new_id
+from selecta.lf_jobs.governor import LocalResourceGovernor
 from selecta.planner.wordreel import CannotTrust
 from selecta.scheduling.policy import (
     LATER,
@@ -374,7 +375,8 @@ class SeamWorker:
             worker_id=f"seams-{new_id()}",
         )
         self.runner = WorkerRunner(
-            store.work, self.caps, {SEAM_JOB: self.handle}, heartbeat_s=heartbeat_s, idle_s=idle_s
+            store.work, self.caps, {SEAM_JOB: self.handle}, heartbeat_s=heartbeat_s,
+            idle_s=idle_s, resource_governor=LocalResourceGovernor(store.settings.home),
         )
         self.idle_s = idle_s
         self.waiting_s = waiting_s
