@@ -25,7 +25,7 @@ export function PeoplePage({ venueId }: { venueId?: string }) {
   };
   return <section className="biz biz-stack"><h1>People</h1>
     {members.loading && !members.data && <p role="status">Loading people</p>}
-    {members.error && <p role="alert">Couldn't load people. <button type="button" onClick={() => { void members.reload(); }}>Retry</button></p>}
+    {Boolean(members.error) && <p role="alert">Couldn't load people. <button type="button" onClick={() => { void members.reload(); }}>Retry</button></p>}
     <ul>{(members.data ?? []).filter((member) => !venueId || member.venue_ids === null || member.venue_ids.includes(venueId)).map((member) => <li key={member.id} className="biz-card">
       <strong>{member.name}</strong> ({member.email}) — {roleWords(member.role)}
       {canManage && member.role !== 'owner' && <button type="button" disabled={working} onClick={async () => {

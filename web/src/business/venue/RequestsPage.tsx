@@ -16,7 +16,7 @@ export function RequestsPage({ venueId }: { venueId?: string }) {
   return <section className="biz biz-stack">
     <h1>Guest requests</h1>
     {requests.loading && !requests.data && <p role="status">Loading requests</p>}
-    {requests.error && <p role="alert">Couldn't load requests. <button type="button" onClick={() => { void requests.reload(); }}>Retry</button></p>}
+    {Boolean(requests.error) && <p role="alert">Couldn't load requests. <button type="button" onClick={() => { void requests.reload(); }}>Retry</button></p>}
     {!zones.length && <p>No zones yet.</p>}
     {zones.map((zone) => <section key={zone.id} className="biz-card"><h2>{zone.name}</h2>
       <RequestApprovalQueue disabled={disabled} requests={requests.data?.[zone.id] ?? []} onDecide={async (id, verdict) => {

@@ -9,7 +9,7 @@ export function OrgLibrary() {
   return <section className="biz biz-stack"><h1>{org.name} music library</h1>
     <p>Music you manage here belongs to the organisation, not your personal library.</p>
     {library.loading && !library.data && <p role="status">Loading music library</p>}
-    {library.error && <p role="alert">Couldn't load music. <button type="button" onClick={() => { void library.reload(); }}>Retry</button></p>}
+    {Boolean(library.error) && <p role="alert">Couldn't load music. <button type="button" onClick={() => { void library.reload(); }}>Retry</button></p>}
     {!library.loading && !library.data?.length && <p>No music here yet. Add music to your organisation to make a mix.</p>}
     {library.data && <section className="biz-card">
       <h2>Explicit markings</h2>

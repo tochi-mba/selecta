@@ -6,7 +6,7 @@ import { VenueForm } from '../forms/VenueForm';
 import { ZoneListEditor } from '../forms/ZoneListEditor';
 import { LicenceAttestationForm } from '../forms/LicenceAttestationForm';
 import { PairingCodeEntry } from '../forms/PairingCodeEntry';
-import { SETUP_COPY, STEP_COPY } from '../copy/onboarding';
+import { SETUP_COPY, STEP_COPY, SERVICE_COPY } from '../copy/onboarding';
 import type { SetupStepId, WeekHours, Holiday } from '../types';
 
 const steps: SetupStepId[] = ['business', 'venue', 'hours', 'zones', 'licence', 'music', 'pair', 'service'];
@@ -73,7 +73,7 @@ export function OnboardingPage() {
       </>}
       {current === 'service' && <><p>Review each zone's schedule before your first service.</p>
         {venue && <button type="button" onClick={() => go(PATHS.venue(org.id, venue.id, 'schedule'))}>Open schedule</button>}
-        <button type="button" disabled={!!disabled || busy} onClick={() => { void advance(true); }}>{SETUP_COPY.finish}</button>
+        <button type="button" disabled={!!disabled || busy} onClick={() => { void advance(true); }}>{SERVICE_COPY.finish}</button>
       </>}
       {!venue && current !== 'business' && current !== 'venue' && <p>{SETUP_COPY.noVenueYet}</p>}
     </div>
