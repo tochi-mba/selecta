@@ -41,6 +41,7 @@ export const POLLING: readonly PollRule[] = [
   { file: 'ui/ActivityPanel.tsx', reads: null, everyMs: 30000, hidden: 'continues', why: 'refreshes "x minutes ago" wording only' },
   { file: 'cloud/events.ts', reads: 'cloud events fallback', everyMs: 'pollMs', hidden: 'pauses', why: 'useVisiblePoll when the event stream is unavailable (Cloud programme)' },
   { file: 'cloud/lf-personal/state.ts', reads: 'selected device readiness snapshot', everyMs: 30000, hidden: 'pauses', why: 'the local-first device status poll checks visibility and resumes on return, with online and focus refresh' },
+  { file: 'cloud/lf-device-control/useLocalFirstControl.ts', reads: 'authenticated speaker status and pending operation acknowledgement', everyMs: '2500 speaker, 2000 pending command', hidden: 'continues', why: 'the physical speaker and outstanding command can continue while the controller tab is hidden; stale timestamps and expiry are kept visible' },
   { file: 'cloud/checkout.ts', reads: 'checkout confirmation', everyMs: 'bounded tries', hidden: 'continues', why: 'a payment confirmation must finish; it stops after a set number of tries (Cloud programme)' },
   { file: 'devices/DevicesPanel.tsx', reads: 'devices', everyMs: 15000, hidden: 'continues', why: 'Cloud programme' },
   { file: 'devices/usePlaybackDevice.ts', reads: 'remote playback state and heartbeat', everyMs: '1000 or 2000', hidden: 'continues', why: 'remote playback keeps going while this tab is hidden (Cloud programme)' },
