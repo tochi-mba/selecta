@@ -138,13 +138,21 @@ export function isStale(readiness: DeviceMixReadiness, now = Date.now()): boolea
     now - readiness.checkedAt > VERIFICATION_TTL_MS;
 }
 
+/** A track claim must be recent too; a fresh aggregate heartbeat can contain
+ * old per-file observations. It must never resurrect a disconnected file. */
+export function isTrackReady(track: VerifiedTrack, now = Date.now()): boolean {
+  return track.state === 'Ready' && track.verifiedAt !== null &&
+    track.verifiedAt !== undefined && track.verifiedAt <= now + 5_000 &&
+    now - track.verifiedAt <= VERIFICATION_TTL_MS;
+}
+
 /** Separate editability, file rendering, partial audition, and actual speaker
  * playback. Never equate 'some local audio' with a safe mix takeover. */
 export function capabilitiesFor(readiness: DeviceMixReadiness, now = Date.now()): MixCapabilities {
   const stale = isStale(readiness, now);
   const all = readiness.tracks.length > 0 &&
-    readiness.tracks.every(t => t.state === 'Ready' && t.cueValid && t.seamValid);
-  const any = readiness.tracks.some(t => t.state === 'Ready' && t.previewValid);
+    readiness.tracks.every(t => isTrackReady(t, now) && t.cueValid && t.seamValid);
+  const any = readiness.tracks.some(t => isTrackReady(t, now) && t.previewValid);
   const common = !stale && readiness.engineHealthy && readiness.sourceConnected && readiness.policyAllowed;
   const renderable = common && all;
   const auditionable = common && any;
@@ -163,7 +171,11 @@ export function capabilitiesFor(readiness: DeviceMixReadiness, now = Date.now())
 export function countReadiness(readiness: DeviceMixReadiness, now = Date.now()): ReadinessCounts {
   const states = Object.fromEntries(MEDIA_STATES.map(state => [state, 0])) as Record<MediaState, number>;
   const stale = isStale(readiness, now);
-  for (const track of readiness.tracks) states[stale ? 'Unknown' : track.state] += 1;
+  for (const track of readiness.tracks) {
+    const state = stale || (track.state === 'Ready' && !isTrackReady(track, now))
+      ? 'Unknown' : track.state;
+    states[state] += 1;
+  }
   const ready = states.Ready;
   return {
     ready, total: readiness.tracks.length, unresolved: readiness.tracks.length - ready,
@@ -210,7 +222,7 @@ export function createTemporaryVariation(
   if (isStale(availability, now) || availability.mixId !== mixId || availability.revision !== revision ||
       !availability.engineHealthy || !availability.sourceConnected || !availability.policyAllowed) return null;
   const ordered = tracks.filter(t =>
-    availability.tracks.some(a => a.occurrenceId === t.occurrenceId && a.state === 'Ready')).map(t => t.occurrenceId);
+    availability.tracks.some(a => a.occurrenceId === t.occurrenceId && isTrackReady(a, now))).map(t => t.occurrenceId);
   if (!ordered.length) return null;
   return {
     fromMixId: mixId, originalRevision: revision,
