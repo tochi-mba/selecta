@@ -259,7 +259,9 @@ def take_over_in(
         and session.lease_live(now)
         and session.active_device_id != observed_owner_id
     ):
-        raise OwnershipChanged("Playback moved to another device. Check the current speaker and confirm again.")
+        raise OwnershipChanged(
+            "Playback moved to another device. Check the current speaker and confirm again."
+        )
     previous_id = session.active_device_id
     if previous_id == device_id:
         previous_id = None
