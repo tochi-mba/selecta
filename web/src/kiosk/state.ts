@@ -17,6 +17,8 @@ import type { KioskView, ZoneState } from './view';
 export type KioskFacts = {
   paired: boolean;
   audioUnlocked: boolean;
+  /** Asserted only by the actual local audio executor/output monitor, never a silent AudioContext. */
+  playingConfirmed?: boolean;
   online: boolean;
   /** Hours of music this player holds ahead; above zero means it can keep playing offline. */
   savedHoursAhead: number;
@@ -74,7 +76,8 @@ export function kioskScreen(view: KioskView, facts: KioskFacts): KioskScreen {
   if (!facts.online) {
     if (state === 'silent' || state === 'problem') return { kind: 'problem', code: view.diagnostic_code ?? LOCAL_CODES.problem };
     if (facts.savedHoursAhead <= 0) return { kind: 'problem', code: LOCAL_CODES.savedRanOut };
-    return facts.audioUnlocked ? { kind: 'playing', saved: true } : { kind: 'needs_tap' };
+    if (!facts.audioUnlocked) return { kind: 'needs_tap' };
+    return facts.playingConfirmed === true ? { kind: 'playing', saved: true } : { kind: 'problem', code: LOCAL_CODES.problem };
   }
   if (state === 'silent') {
     // A player that hasn't been tapped can't make sound; asking for the tap is the fix.
@@ -85,7 +88,8 @@ export function kioskScreen(view: KioskView, facts: KioskFacts): KioskScreen {
   if (IN_SERVICE.includes(state)) {
     if (!facts.audioUnlocked) return { kind: 'needs_tap' };
     if (state === 'starting' || !view.now) return { kind: 'starting' };
-    return { kind: 'playing', saved: false };
+    // The cloud's 'open' state and a browser unlock cannot prove local speaker output.
+    return facts.playingConfirmed === true ? { kind: 'playing', saved: false } : { kind: 'problem', code: LOCAL_CODES.silent };
   }
   return { kind: 'starting' };
 }
