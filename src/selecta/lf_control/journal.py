@@ -287,7 +287,8 @@ class ControlJournal:
             if state == "acknowledged" and not local_proof:
                 raise ControlError("local_proof_required")
             db.execute(
-                "UPDATE lf_commands SET state=?, updated=? WHERE workspace=? AND device=? AND operation=?",
+                "UPDATE lf_commands SET state=?, updated=? "
+                "WHERE workspace=? AND device=? AND operation=?",
                 (state, now, workspace, device, operation),
             )
             db.execute(
@@ -365,7 +366,8 @@ class ControlJournal:
                 raise ControlError("output_unconfirmed")
             state = "applied" if applied else "rejected"
             db.execute(
-                "UPDATE lf_commands SET state=?, updated=? WHERE workspace=? AND device=? AND operation=?",
+                "UPDATE lf_commands SET state=?, updated=? "
+                "WHERE workspace=? AND device=? AND operation=?",
                 (state, now, env.workspace_id, env.target_device_id, env.operation_id),
             )
             db.execute(
@@ -397,7 +399,8 @@ class ControlJournal:
                     continue
                 state = "expired" if expired else "superseded"
                 db.execute(
-                    "UPDATE lf_commands SET state=?, updated=? WHERE workspace=? AND device=? AND operation=?",
+                    "UPDATE lf_commands SET state=?, updated=? "
+                "WHERE workspace=? AND device=? AND operation=?",
                     (state, now, workspace, device, row["operation"]),
                 )
                 db.execute(
