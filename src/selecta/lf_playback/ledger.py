@@ -93,7 +93,9 @@ class SQLiteOwnershipLedger:
 
     @staticmethod
     def attempt(db: sqlite3.Connection, operation_id: str) -> sqlite3.Row | None:
-        return db.execute("SELECT * FROM transfers WHERE operation_id=?", (operation_id,)).fetchone()
+        return db.execute(
+            "SELECT * FROM transfers WHERE operation_id=?", (operation_id,)
+        ).fetchone()
 
     @staticmethod
     def snapshot(db: sqlite3.Connection, row: sqlite3.Row) -> TransferSnapshot:
