@@ -155,7 +155,6 @@ class TransferCoordinator:
             if stage in (TransferStage.STARTED, TransferStage.ABORTED, TransferStage.BLOCKED):
                 return snapshot
             request = snapshot.request
-            generation = snapshot.generation
             if self.clock() >= request.expires_at:
                 self._fail(db, snapshot, "deadline_exceeded")
             elif stage is TransferStage.REQUESTED:
