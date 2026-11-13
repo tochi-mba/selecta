@@ -21,6 +21,7 @@ from sqlalchemy.engine import Connection
 
 from selecta.persistence import new_id, transaction
 from selecta.rooms.errors import Refusal, RoomError
+from selecta.rooms.local_first import LocalStage, valid_progress, visible
 from selecta.rooms.planning import pump, queue_order, renders_left, withdraw_from_planner
 from selecta.rooms.ports import SongSummary
 from selecta.rooms.schema import room_requests, room_votes
@@ -72,9 +73,25 @@ def search(ctx: RoomContext, guest_token: str, query: str, limit: int = 20) -> l
         room = live_room(conn, ref.workspace_id, ref.room_id)
         active_guest(conn, room, ref.guest_id, now)
     limit = max(1, min(int(limit), SEARCH_LIMIT_MAX))
-    return ctx.catalog.search(
-        ref.workspace_id, (query or "").strip()[:QUERY_MAX], room.settings.crate, limit
-    )
+    query = (query or "").strip()[:QUERY_MAX]
+    if ctx.local_first is not None:
+        # An untrusted room query never falls back to a private workspace library.
+        try:
+            candidates = ctx.local_first.search(
+                ref.workspace_id, room.settings.zone_id, query, limit
+            )
+        except Exception:
+            return []
+        songs: list[SongSummary] = []
+        for entry in candidates[:limit]:
+            song = visible(
+                entry, ref.workspace_id, room.settings.zone_id, now,
+                clean_only=room.settings.clean_only,
+            )
+            if song is not None and (room.settings.crate is None or song.song_id in room.settings.crate):
+                songs.append(song)
+        return songs
+    return ctx.catalog.search(ref.workspace_id, query, room.settings.crate, limit)
 
 
 def request(
@@ -92,6 +109,8 @@ def request(
         if room.settings.request_mode is RequestMode.OFF:
             raise RoomError(Refusal.REQUESTS_OFF)
         existing = room_requests_where(conn, room, WAITING, song_id=song_id)
+        if existing and ctx.local_first is not None:
+            _check_local_song(ctx, room, song_id, now)
         if existing:
             outcome = _ask_again(conn, ctx, room, guest, existing[0], now)
         else:
@@ -125,7 +144,9 @@ def _check_song(conn: Connection, ctx: RoomContext, room: Room, song_id: int, no
     crate = room.settings.crate
     if crate is not None and song_id not in crate:
         raise RoomError(Refusal.NOT_REQUESTABLE)
-    if not ctx.catalog.is_requestable(room.workspace_id, song_id):
+    if ctx.local_first is not None:
+        _check_local_song(ctx, room, song_id, now)
+    elif not ctx.catalog.is_requestable(room.workspace_id, song_id):
         raise RoomError(Refusal.NOT_REQUESTABLE)
     cooldown = room.settings.replay_cooldown_minutes * 60.0
     if cooldown <= 0:
@@ -137,10 +158,26 @@ def _check_song(conn: Connection, ctx: RoomContext, room: Room, song_id: int, no
             room_requests.c.status == RequestStatus.PLAYED.value,
         )
     ).scalar_one()
-    played_in_mix = ctx.catalog.last_played_at(room.workspace_id, song_id)
+    played_in_mix = (ctx.catalog.last_played_at(room.workspace_id, song_id)
+                     if ctx.local_first is None else None)
     last = max((t for t in (played_in_room, played_in_mix) if t is not None), default=None)
     if last is not None and now - last < cooldown:
         raise RoomError(Refusal.COOLDOWN, retry_after_s=cooldown - (now - last))
+
+
+def _check_local_song(ctx: RoomContext, room: Room, song_id: int, now: float) -> None:
+    bridge = ctx.local_first
+    if bridge is None:
+        return
+    try:
+        entry = bridge.track(room.workspace_id, room.settings.zone_id, song_id)
+    except Exception:
+        entry = None
+    if visible(
+        entry, room.workspace_id, room.settings.zone_id, now,
+        clean_only=room.settings.clean_only,
+    ) is None:
+        raise RoomError(Refusal.NOT_REQUESTABLE)
 
 
 def _count(conn: Connection, *conditions: sa.ColumnElement[bool]) -> int:
@@ -265,6 +302,10 @@ def withdraw(
             raise RoomError(Refusal.NO_SUCH_REQUEST)
         if target.status not in WAITING:
             raise RoomError(Refusal.NOT_ALLOWED)
+        # Once the speaker acknowledges a schedule, it owns its committed
+        # playback window. A guest cannot undo that through a cloud-only write.
+        if ctx.local_first is not None and target.song_request_id is not None:
+            raise RoomError(Refusal.NOT_ALLOWED)
         set_request(
             conn, target.id, status=RequestStatus.WITHDRAWN, reason="guest", resolved_at=now
         )
@@ -288,6 +329,8 @@ def approve(
         now = resolve_now(conn, now)
         room = live_room(conn, workspace_id, room_id)
         target = load_request(conn, room, request_id)
+        if ctx.local_first is not None:
+            _check_local_song(ctx, room, target.song_id, now)
         if target.status is RequestStatus.UNFIT:
             # It stopped counting as waiting when it couldn't fit; taking it back must not put
             # the guest or the room over their limits. It goes through the planner queue again,
@@ -343,6 +386,8 @@ def pass_request(
         target = load_request(conn, room, request_id)
         if target.status not in WAITING:
             raise RoomError(Refusal.NOT_ALLOWED)
+        if ctx.local_first is not None and target.song_request_id is not None:
+            raise RoomError(Refusal.NOT_ALLOWED)
         set_request(conn, target.id, status=RequestStatus.PASSED, reason="host", resolved_at=now)
         ctx.publish(conn, room, "room.request", {"request_id": target.id})
         done = load_request(conn, room, target.id)
@@ -386,6 +431,17 @@ def record_outcome(
         for target in targets:
             room = load_room(conn, workspace_id, target.room_id, lock=True)
             if outcome is Outcome.PLAYED:
+                if ctx.local_first is not None:
+                    try:
+                        proof = ctx.local_first.progress(
+                            workspace_id, room.settings.zone_id, str(song_request_id)
+                        )
+                    except Exception:
+                        proof = None
+                    if (not valid_progress(
+                        proof, workspace_id, room.settings.zone_id, str(song_request_id)
+                    ) or proof.stage is not LocalStage.PLAYED):
+                        continue  # Cloud delivery or legacy planner completion is not audio proof.
                 set_request(conn, target.id, status=RequestStatus.PLAYED, resolved_at=now)
             elif outcome is Outcome.UNFIT and target.status is RequestStatus.ACCEPTED:
                 set_request(conn, target.id, status=RequestStatus.UNFIT)
