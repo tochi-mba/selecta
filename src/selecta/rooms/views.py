@@ -17,7 +17,7 @@ from sqlalchemy.engine import Connection
 from selecta.persistence import transaction
 from selecta.rooms.errors import Refusal, RoomError
 from selecta.rooms.lifecycle import room_code
-from selecta.rooms.local_first import LocalStage, ready_speaker, valid_progress, visible
+from selecta.rooms.local_first import LocalNowPlaying, LocalStage, fresh, ready_speaker, valid_progress, visible
 from selecta.rooms.ordering import inbox_order
 from selecta.rooms.planning import queue_order, renders_left
 from selecta.rooms.ports import NowPlaying, SongSummary
@@ -149,12 +149,41 @@ def is_online(
     return started_at is None or last_seen_at >= started_at
 
 
-def now_playing_for(ctx: RoomContext, workspace_id: str) -> NowPlaying:
-    # Legacy now-playing is workspace-wide and cannot prove which zone is playing.
-    # The local bridge must provide verified zone playback in a later integration.
-    if ctx.local_first is not None:
+def now_playing_for(
+    ctx: RoomContext, workspace_id: str, *, room: Room | None = None,
+    now: float | None = None,
+) -> NowPlaying:
+    if ctx.local_first is None:
+        return ctx.now_playing.now_playing(workspace_id)
+    # A legacy workspace-wide snapshot could describe a different speaker/zone.
+    if room is None or now is None or room.workspace_id != workspace_id:
         return NowPlaying(None)
-    return ctx.now_playing.now_playing(workspace_id)
+    try:
+        speaker = ctx.local_first.speaker(workspace_id, room.settings.zone_id)
+        snapshot = ctx.local_first.now_playing(workspace_id, room.settings.zone_id)
+    except Exception:
+        return NowPlaying(None)
+    if (
+        not ready_speaker(speaker, workspace_id, room.settings.zone_id, now)
+        or not isinstance(snapshot, LocalNowPlaying)
+        or snapshot.workspace_id != workspace_id
+        or snapshot.zone_id != room.settings.zone_id
+        or snapshot.generation != speaker.generation
+        or not fresh(snapshot.checked_at, now)
+    ):
+        return NowPlaying(None)
+    current = visible(
+        snapshot.current, workspace_id, room.settings.zone_id, now,
+        clean_only=room.settings.clean_only,
+    )
+    following = tuple(
+        song for entry in snapshot.up_next[:3]
+        if (song := visible(
+            entry, workspace_id, room.settings.zone_id, now,
+            clean_only=room.settings.clean_only,
+        )) is not None
+    )
+    return NowPlaying(current, following)
 
 
 def speaker_ready(ctx: RoomContext, room: Room, now: float) -> bool:
@@ -327,7 +356,7 @@ def guest_view(ctx: RoomContext, guest_token: str, *, now: float | None = None) 
     my_requests = tuple(_mine(ctx, room, request, songs, now) for request in mine)
     if not room.live or guest.status is not GuestStatus.ACTIVE:
         return replace(base, my_requests=my_requests)
-    playing = now_playing_for(ctx, workspace_id)
+    playing = now_playing_for(ctx, workspace_id, room=room, now=now)
     show = settings.names_shown
     stages = {request.id: request_stage(ctx, room, request, now)
               for request in [*coming_up, *waiting]}
