@@ -57,7 +57,7 @@ function RecoveryList({ issues, onOpenTab }: {
 }) {
   if (!issues.length) return <p className="biz-quiet">All required local checks have current confirmation.</p>;
   return <ul className="lf13-recovery">
-    {issues.map((issue) => <li key={issue.kind}>
+    {issues.map((issue) => <li key={`${issue.kind}:${issue.title}`}>
       <div><strong>{issue.title}</strong><p>{issue.action}</p></div>
       <button type="button" onClick={() => onOpenTab(issue.tab)} aria-label={'Open ' + issue.tab + ' for ' + issue.title}>Open {issue.tab}</button>
     </li>)}
