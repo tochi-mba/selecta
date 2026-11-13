@@ -105,6 +105,7 @@ class LocalWork:
     runners: list[LocalRunner]
     upkeep_s: float = 1.0
     watchers: list[Callable[[], None]] = field(default_factory=list)
+    child_stoppers: list[Callable[[], None]] = field(default_factory=list)
     """Run on every upkeep tick: they start worker processes that have work waiting."""
     _stop: threading.Event = field(default_factory=threading.Event)
     _upkeep: threading.Thread | None = None
@@ -119,6 +120,8 @@ class LocalWork:
     def tick(self) -> None:
         """Reap lapsed leases and promote due retries, as the maintenance leader does in Cloud,
         then let each watcher start what has work waiting."""
+        if self._stop.is_set():
+            return
         try:
             self.store.reap_expired()
             self.store.promote_due_retries()
@@ -147,6 +150,13 @@ class LocalWork:
                 for worker in runner.runners:
                     for signals in list(worker.live.values()):
                         signals.stop_for(signals.cancel, "The app is stopping.")
+        # Workers in separate processes may have child decoders/models. Terminate
+        # their whole process trees instead of leaving an orphan after host shutdown.
+        for stop_child in self.child_stoppers:
+            try:
+                stop_child()
+            except Exception:  # noqa: BLE001 - still stop the other workers
+                log.exception("Stopping a local worker process failed")
         finished = all(runner.stop(timeout) for runner in self.runners)
         if self._upkeep is not None:
             self._upkeep.join(timeout)
@@ -186,6 +196,8 @@ def spawn_worker(home: Path, module: str, *args: str) -> subprocess.Popen:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         close_fds=True,
+        start_new_session=os.name != "nt",
+        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0,
         env={**os.environ, "SELECTA_HOME": str(home), PARENT_ENV: str(os.getpid())},
     )
 
@@ -271,3 +283,8 @@ class Supervisor:
         with self._lock:
             if self.running():
                 kill_tree(self.process.pid)
+                try:
+                    self.process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    log.warning("Worker process did not exit after tree termination")
+            self.process = None
