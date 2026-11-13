@@ -112,6 +112,8 @@ def request(
             raise RoomError(Refusal.REQUESTS_OFF)
         existing = room_requests_where(conn, room, WAITING, song_id=song_id)
         if existing and ctx.local_first is not None:
+            if room.settings.crate is not None and song_id not in room.settings.crate:
+                raise RoomError(Refusal.NOT_REQUESTABLE)
             _check_local_song(ctx, room, song_id, now)
         if existing:
             outcome = _ask_again(conn, ctx, room, guest, existing[0], now)
@@ -471,7 +473,7 @@ def record_outcome(
                 live[room.id] = None
     for room_id in live:
         pump(ctx, workspace_id, room_id, now=now)
-    return done[0]
+    return done[0] if done else None
 
 
 def song_removed(
