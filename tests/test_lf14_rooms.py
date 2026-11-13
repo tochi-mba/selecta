@@ -228,18 +228,40 @@ def test_tenant_zone_scope_and_untrusted_metadata_fail_closed(env):
 
 def test_closed_room_and_expired_invitation_do_not_accept_new_requests(env):
     rooms, venue, _ = env
-    made, guest = opened(env)
+    made, guest = opened(env, request_mode="approve")
     old_code = made.code
     rooms.rotate_code(HOST, made.room.id)
     with pytest.raises(RoomError):
         rooms.join(old_code, None)
     pending = rooms.request(guest.guest_token, 1).request
+    assert pending.song_request_id is None
     rooms.end_room(HOST, made.room.id)
     assert rooms.guest_view(guest.guest_token).my_requests[0].stage == "expired"
     with pytest.raises(RoomError) as exc:
         rooms.request(guest.guest_token, 2)
     assert exc.value.refusal is Refusal.ROOM_ENDED
-    assert pending.song_request_id in venue.cancelled
+    assert venue.cancelled == []
+
+
+def test_committed_local_request_retains_true_status_when_room_closes(env):
+    rooms, venue, _ = env
+    made, guest = opened(env)
+    committed = rooms.request(guest.guest_token, 1).request
+    assert committed.song_request_id is not None
+    rooms.end_room(HOST, made.room.id)
+    assert rooms.guest_view(guest.guest_token).my_requests[0].stage == "locally_scheduled"
+    assert committed.song_request_id not in venue.cancelled
+
+
+def test_offline_local_venue_does_not_auto_end_room_due_to_cloud_heartbeat(env):
+    rooms, venue, clock = env
+    made, guest = opened(env, no_speaker_minutes=5)
+    venue.online = False
+    rooms.speakers.offline.add(HOST)
+    clock.advance(301)
+    assert rooms.expire_rooms(now=clock.now) == []
+    assert rooms.current_room(HOST).id == made.room.id
+    assert rooms.guest_view(guest.guest_token).music_paused
 
 
 def test_guest_nickname_is_consistent_after_rejoin_and_host_moderation(env):

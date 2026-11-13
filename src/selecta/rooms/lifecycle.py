@@ -305,20 +305,36 @@ def expire_rooms(ctx: RoomContext, *, now: float | None = None) -> list[EndedRoo
         ).all()
     ended: list[EndedRoom] = []
     for room_id, workspace_id in live:
-        online = ctx.speakers.speaker_online(workspace_id)
         withdrawn: list[str | None] = []
         reason = None
         with transaction(ctx.engine, workspace_id) as conn:
             room = load_room(conn, workspace_id, room_id, lock=True)
             if not room.live:
                 continue
+            if ctx.local_first is None:
+                online = ctx.speakers.speaker_online(workspace_id)
+            else:
+                from selecta.rooms.local_first import ready_speaker
+
+                try:
+                    snapshot = ctx.local_first.speaker(workspace_id, room.settings.zone_id)
+                    online = ready_speaker(
+                        snapshot, workspace_id, room.settings.zone_id, now
+                    )
+                except Exception:
+                    online = False
             if online:
                 save_room(conn, room.id, last_speaker_seen_at=now)
             last_seen = now if online else (room.last_speaker_seen_at or room.created_at)
             if now >= room.ends_at:
                 reason = EndReason.TIME
-            elif now - last_seen >= room.settings.no_speaker_minutes * 60:
+            elif (
+                ctx.local_first is None
+                and now - last_seen >= room.settings.no_speaker_minutes * 60
+            ):
                 reason = EndReason.NO_SPEAKER
+            # An unreachable local engine may still be executing approved playback
+            # offline. Losing its cloud heartbeat cannot close its room or stop sound.
             if reason is not None:
                 withdrawn = end_in(conn, ctx, room, now, reason)
         if reason is not None:
