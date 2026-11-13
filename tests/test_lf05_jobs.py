@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -42,10 +41,12 @@ def governor(tmp_path, snapshot=None, **options):
 
 
 def job(kind="analyse.song", urgency=4, **extra):
-    return SimpleNamespace(
+    fields = dict(
         type=kind, base_urgency=urgency, lane="standard", scratch_mb=200,
-        gpu_memory_mb=0, **extra
+        gpu_memory_mb=0,
     )
+    fields.update(extra)
+    return SimpleNamespace(**fields)
 
 
 def request():
