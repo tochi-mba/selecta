@@ -218,6 +218,7 @@ class WorkspaceRole(StrEnum):
     OWNER = "owner"
     EDITOR = "editor"
     VIEWER = "viewer"
+    BUSINESS_MEMBER = "business_member"
 
 
 class WorkspaceAction(StrEnum):
@@ -237,6 +238,8 @@ WORKSPACE_ROLE_ACTIONS: Mapping[WorkspaceRole, frozenset[WorkspaceAction]] = Map
         WorkspaceRole.OWNER: frozenset(WorkspaceAction),
         WorkspaceRole.EDITOR: _EDIT,
         WorkspaceRole.VIEWER: _VIEW,
+        # Business members may inspect their organisation, but cannot change venue policy.
+        WorkspaceRole.BUSINESS_MEMBER: _VIEW,
     }
 )
 
