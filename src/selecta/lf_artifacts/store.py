@@ -228,6 +228,8 @@ class LocalArtifactStore:
         """
         identity = spec.identity
         permanent = destination is not None
+        if spec.kind == "export" and not permanent:
+            raise ArtifactInvalid("Completed exports require a permanent destination.")
         final = Path(destination) if permanent else self._cache_path(spec)
         if final.is_symlink() or (not permanent and not self._owned_cache_file(final)):
             raise ArtifactInvalid("Unsafe artifact destination.")
@@ -360,8 +362,8 @@ class LocalArtifactStore:
         if default_exports is not None and Path(default_exports).is_dir():
             for path in Path(default_exports).glob(".selecta-mix-*.part*"):
                 if re.fullmatch(
-                    r"\\.selecta-mix-\\d{8}-\\d{6}-[a-f0-9]{6}\\.flac"
-                    r"\\.[a-f0-9]{32}\\.part(?:\\.part)?", path.name,
+                    r"\.selecta-mix-\d{8}-\d{6}-[a-f0-9]{6}\.flac"
+                    r"\.[a-f0-9]{32}\.part(?:\.part)?", path.name,
                 ) and (path.is_file() or path.is_symlink()):
                     path.unlink(missing_ok=True)
                     removed += 1
