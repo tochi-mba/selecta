@@ -1,6 +1,7 @@
 import { ChangeEvent, useCallback, useEffect, useState } from 'react';
 import type { Api, Page } from './api';
 import { ConnectLocalMusic } from './lf-personal/PersonalWorkspace';
+import { LegacyFolderWatchEntry } from './lf-personal/FolderWatches';
 import { completeOutcome, completeStatusWords, uploadSummary, UploadResult, withUnreached } from './libraryState';
 import { fileSha256, resumableFor, sendParts, unfinishedUploads, UploadEntry, UploadSession, UploadStatus } from './uploadParts';
 
@@ -148,6 +149,7 @@ function LegacyUploadsPanel({ api, workspaceId, setError, setNotice, blocked, on
 
   return (
     <section className="cloud-upload-panel">
+      <LegacyFolderWatchEntry />
       <div className="cloud-upload-intro"><p className="cloud-eyebrow">PRIVATE LIBRARY</p><h2>Add your tracks</h2><p>Files transfer directly to private object storage. SelectaDJ checks the actual audio format, file size and duration before accepting an upload.</p></div>
       {blocked && <p className="cloud-inline-error" role="status">{blocked}</p>}
       {unfinished.length > 0 && (
