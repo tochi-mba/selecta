@@ -1,5 +1,7 @@
 # ADR-0416 - Rooms: Premium guest requests by QR code
 
+> **Local-first supersession (2026-11-13):** Relevant hosted-audio assumptions in this historical ADR are superseded by ADR-0473 and [the LF preservation map](selecta-local-first-overlap-and-parity.md). Historic statuses and completed evidence remain unchanged. New architecture is accepted, not implemented.
+
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 4/7 Implemented; 2/7 In progress; 1/7 Not started.
 - **Independent verification:** 0/7 Verified.

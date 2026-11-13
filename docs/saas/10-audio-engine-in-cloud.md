@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Local-first architecture supersession (accepted 2026-11-13; implementation not started).** **Superseded as a deployment target.** Do not build hosted audio analysis, stem, proxy, transition or export workers. Preserve DSP algorithms, local provenance and model licence review, but perform work inside supported local engines. See [architecture chapter 20](20-local-first-cloud-architecture.md), [ADR-0464](../adr/adr-0464-local-artifact-provenance-caches-and-exports.md), [licence gate](../adr/adr-0475-music-and-software-licensing-release-gates.md). Historical plan details and past implementation evidence below are retained; this documentation PR does not change running software.
+
+
 ## 10. The audio engine in the cloud
 
 ### 10.1 Storage abstraction for the engine

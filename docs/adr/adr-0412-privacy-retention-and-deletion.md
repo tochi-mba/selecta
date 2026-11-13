@@ -1,5 +1,7 @@
 # ADR-0412 - Privacy, retention and the deletion ledger
 
+> **Local-first supersession (2026-11-13):** Relevant hosted-audio assumptions in this historical ADR are superseded by ADR-0457, ADR-0480 and [the LF preservation map](selecta-local-first-overlap-and-parity.md). Historic statuses and completed evidence remain unchanged. New architecture is accepted, not implemented.
+
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 2/4 Implemented; 2/4 In progress; 0/4 Not started.
 - **Independent verification:** 0/4 Verified.

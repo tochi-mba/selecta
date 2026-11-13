@@ -1,5 +1,8 @@
 # SelectaDJ cloud: SaaS setup and launch checklist (WIP)
 
+> **Accepted local-first target (2026-11-13; implementation not started).** All hosted-audio commercial launch checks must be re-evaluated under local-first hard gates: copyright, locally provisioned venue sources, zero cloud audio, real device sound/output, recipe migration, offline control and hardware support. No paid launch approved by docs alone. See LF release gates. Historic architecture and evidence below remain part of the record. [Current direction](20-local-first-cloud-architecture.md) · [Migration](22-local-first-transition.md).
+
+
 > **Work in progress, cross-checked against the code on 12 November 2026.** Practical operator checklist for the accepted cloud design (internally "Selecta Cloud"; customers see **SelectaDJ**, a **REX Technologies** product). This does **not** mean the accounts are configured or the product is deployment-ready. Source of truth: [Cloud implementation checklist](../adr/selecta-cloud-implementation-checklist.md), [hosting plan](13-hosting-and-cost.md), [architecture](03-architecture.md), [authentication](07a-authentication.md), [billing](08-billing.md), [operations](14-operations.md), and [licence register](licence-register.md). Verify current vendor requirements and costs before paying. **Set up staging before production.** Local mode remains unchanged.
 
 ## 1. Accounts and services to create

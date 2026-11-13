@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Local-first architecture supersession (accepted 2026-11-13; implementation not started).** The source inventory of local/cloud behavior remains historical. New target: keep current local DSP; move all cloud-mode DSP into installed local engines, with a cloud metadata/control service. See [source map](../adr/selecta-local-first-source-map.md) and [ADR-0455](../adr/adr-0455-local-first-cloud-charter.md). Historical plan details and past implementation evidence below are retained; this documentation PR does not change running software.
+
+
 ## 2. What exists today (verified in the code)
 
 ### 2.1 Backend facts that drive the design

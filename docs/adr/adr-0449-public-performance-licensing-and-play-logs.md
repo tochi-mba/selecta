@@ -1,5 +1,7 @@
 # ADR-0449 - Public performance licensing: attestation, play logs and business terms
 
+> **Local-first architecture supersession (2026-11-13):** Future media ownership, plan/venue execution and UI contracts are governed by ADR-0475 and [the LF parity matrix](selecta-local-first-overlap-and-parity.md). This older decision remains a historical record; past status and evidence are not erased. LF implementation is not started.
+
 - **Decision:** Proposed (2026-11-12).
 - **Implementation:** 0/11 Not started.
 - **Independent verification:** 0/11 Verified.

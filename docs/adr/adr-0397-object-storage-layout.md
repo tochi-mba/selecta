@@ -1,5 +1,7 @@
 # ADR-0397 - Object storage layout and artifact provenance on R2
 
+> **Architecture supersession (2026-11-13):** Historical implementation and acceptance statuses below remain recorded, but any conflicting hosted-user-audio design is superseded for future work by LF ADR-0457, ADR-0464, ADR-0480. See [LF preservation map](selecta-local-first-overlap-and-parity.md). The replacement is accepted as a design, **not implemented**.
+
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 4/5 Implemented; 1/5 In progress; 0/5 Not started.
 - **Independent verification:** 0/5 Verified.

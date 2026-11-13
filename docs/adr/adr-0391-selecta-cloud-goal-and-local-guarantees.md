@@ -1,5 +1,7 @@
 # ADR-0391 - Selecta Cloud becomes a goal; local-only guarantees are scoped to local mode
 
+> **Architecture supersession (2026-11-13):** Historical implementation and acceptance statuses below remain recorded, but any conflicting hosted-user-audio design is superseded for future work by LF ADR-0455, ADR-0457. See [LF preservation map](selecta-local-first-overlap-and-parity.md). The replacement is accepted as a design, **not implemented**.
+
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 4/4 Implemented; 0/4 In progress; 0/4 Not started.
 - **Independent verification:** 0/4 Verified.

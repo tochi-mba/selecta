@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Accepted local-first target (2026-11-13; not implemented).** Historical R2 music GB, Modal CPU/GPU render, upload and proxy economics do not apply to new local-first plan versions. Keep control API, Postgres, identity, billing, hosted AI and safe metadata backup; measure hardware support/installation costs. See ADR-0481 and migration chapter 22. The following historic hosted-media plan and implementation evidence are preserved for reference. [Current architecture](20-local-first-cloud-architecture.md) · [Transition](22-local-first-transition.md).
+
+
 ## 13. Hosting, infrastructure and cost
 
 ### 13.1 Chosen stack (beta)

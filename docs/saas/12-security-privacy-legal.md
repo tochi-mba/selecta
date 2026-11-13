@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Accepted local-first target (2026-11-13; not implemented).** No hosted user audio reduces platform custody but does not automatically resolve reproduction, format shifting, derived works, public performances, model/lyrics licences or distribution of native binaries. Cloud no-audio egress, local filesystem security and separately scoped metadata/privacy duties now dominate. See ADR-0457 and ADR-0475. The following historic hosted-media plan and implementation evidence are preserved for reference. [Current architecture](20-local-first-cloud-architecture.md) · [Transition](22-local-first-transition.md).
+
+
 ## 12. Security, privacy and legal
 
 ### 12.1 Threat model highlights

@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Local-first architecture supersession (accepted 2026-11-13; implementation not started).** Authentication and session lifecycle remain; connected local engines now have independently revocable, workspace-scoped device identities. A browser controller never inherits filesystem privileges. See [ADR-0462](../adr/adr-0462-device-pairing-and-secure-local-cloud-command-channel.md). Historical plan details and past implementation evidence below are retained; this documentation PR does not change running software.
+
+
 ## 7A. Authentication: every flow and edge case
 
 Selecta never sees a password. Sign-up, sign-in, Google sign-in, "forgot password", email verification and MFA all happen on AuthKit's hosted pages (WorkOS), styled as Selecta. Our code does three things: start the sign-in, check the access token on every request, and keep its own account records in step with WorkOS. This chapter is the specification for all three ([ADR-0400](../adr/adr-0400-identity-with-workos-authkit.md)).

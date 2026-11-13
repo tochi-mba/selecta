@@ -1,5 +1,7 @@
 # ADR-0392 - Two runtime modes, one codebase
 
+> **Architecture supersession (2026-11-13):** Historical implementation and acceptance statuses below remain recorded, but any conflicting hosted-user-audio design is superseded for future work by LF ADR-0456. See [LF preservation map](selecta-local-first-overlap-and-parity.md). The replacement is accepted as a design, **not implemented**.
+
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 5/5 Implemented; 0/5 In progress; 0/5 Not started.
 - **Independent verification:** 0/5 Verified.

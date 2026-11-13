@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Local-first architecture supersession (accepted 2026-11-13; implementation not started).** Stripe, account consent, taxes and historic entitlements remain. Future billing should not meter user-funded local render, analysis, upload storage or local exports. Preserve old paid-plan versions/contracts through a recorded transition. See [personal plan ADR](../adr/adr-0470-personal-plans-without-hosted-audio-and-compute-quotas.md), [business plan ADR](../adr/adr-0471-business-billing-zones-seats-and-locally-provisioned-media.md). Historical plan details and past implementation evidence below are retained; this documentation PR does not change running software.
+
+
 ## 8. Billing and entitlements (Stripe, UK business)
 
 ### 8.1 Stripe setup

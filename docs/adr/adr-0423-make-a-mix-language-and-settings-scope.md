@@ -1,5 +1,7 @@
 # ADR-0423 - Make a Mix language and settings scope
 
+> **Local-first supersession (2026-11-13):** Relevant hosted-audio assumptions in this historical ADR are superseded by ADR-0459, ADR-0477 and [the LF preservation map](selecta-local-first-overlap-and-parity.md). Historic statuses and completed evidence remain unchanged. New architecture is accepted, not implemented.
+
 - **Decision:** Proposed (2026-11-12; owner acceptance pending).
 - **Implementation:** 0/5 Implemented; 5/5 Not started.
 - **Independent verification:** 0/5 Verified.

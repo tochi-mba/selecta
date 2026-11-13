@@ -1,5 +1,7 @@
 # ADR-0409 - Hosting topology, regions and environments
 
+> **Local-first supersession (2026-11-13):** Relevant hosted-audio assumptions in this historical ADR are superseded by ADR-0481 and [the LF preservation map](selecta-local-first-overlap-and-parity.md). Historic statuses and completed evidence remain unchanged. New architecture is accepted, not implemented.
+
 - **Decision:** Accepted (owner, 2026-11-09).
 - **Implementation:** 0/4 Implemented; 4/4 In progress; 0/4 Not started.
 - **Independent verification:** 0/4 Verified.

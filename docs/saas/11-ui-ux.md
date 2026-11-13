@@ -1,5 +1,8 @@
 *Part of the [Selecta Cloud proposal](README.md). Accepted by the owner on 2026-11-09.*
 
+> **Local-first architecture supersession (accepted 2026-11-13; implementation not started).** Cloud upload manager, storage meters and remote audio playback screens below are historical UI assumptions. New device-first onboarding, local source and media availability, mix repair, controller-only mode, Studio parity and truthful billing are accepted but not built. See [UX chapter 21](21-local-first-ux.md), [full state matrix](../adr/selecta-local-first-ui-state-matrix.md). Historical plan details and past implementation evidence below are retained; this documentation PR does not change running software.
+
+
 ## 11. UI and UX changes
 
 The music-first app stays recognisable: same five destinations, same design tokens, same accessibility bar. Changes concentrate on accounts, uploads, honest async status, plans, and removing machine settings.
