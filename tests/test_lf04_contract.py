@@ -5,10 +5,17 @@ from dataclasses import replace
 
 import pytest
 
+from selecta.lf_recipes.contract import AvailabilityState as State
 from selecta.lf_recipes.contract import (
-    AvailabilityState as State, Cue, DeviceBinding, DeviceInventory,
-    Occurrence, Recipe, RecipeError, Transition, availability, from_legacy,
-    new_recipe, parse_recipe,
+    Cue,
+    DeviceBinding,
+    DeviceInventory,
+    RecipeError,
+    Transition,
+    availability,
+    from_legacy,
+    new_recipe,
+    parse_recipe,
 )
 from selecta.mix_contract import ContractError, SongRef, from_json, new_contract
 

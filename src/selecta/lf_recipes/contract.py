@@ -11,8 +11,9 @@ import math
 import re
 import uuid
 from dataclasses import dataclass, replace
-from enum import Enum
-from typing import Any, Mapping, Protocol, Sequence
+from collections.abc import Mapping, Sequence
+from enum import StrEnum
+from typing import Any, Protocol
 
 SCHEMA_VERSION = 2
 MAX_OCCURRENCES = 200
@@ -30,7 +31,7 @@ class RecipeError(ValueError):
     """Malformed or unsupported recipe; fail closed rather than guessing."""
 
 
-class AvailabilityState(str, Enum):
+class AvailabilityState(StrEnum):
     READY = "ready"
     MISSING = "missing"
     CANDIDATE = "candidate"
@@ -65,7 +66,9 @@ def _fields(raw: Any, expected: frozenset[str], label: str) -> Mapping[str, Any]
 
 
 def _canonical(value: Any) -> str:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False)
+    return json.dumps(
+        value, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False
+    )
 
 
 @dataclass(frozen=True)
@@ -159,7 +162,11 @@ class Recipe:
         ids = tuple(item.occurrence_id for item in self.occurrences)
         if len(set(ids)) != len(ids):
             raise RecipeError("Duplicate occurrence id")
-        if isinstance(self.revision_number, bool) or not isinstance(self.revision_number, int) or self.revision_number < 1:
+        if (
+            isinstance(self.revision_number, bool)
+            or not isinstance(self.revision_number, int)
+            or self.revision_number < 1
+        ):
             raise RecipeError("Invalid revision number")
         if self.parent_revision is not None and not _SHA.fullmatch(self.parent_revision):
             raise RecipeError("Invalid parent revision")
@@ -215,7 +222,10 @@ class Recipe:
                 old[o.occurrence_id].recording_version
             )
         }
-        next_occ = tuple(replace(o, analysis_valid=False) if o.occurrence_id in changed else o for o in next_occ)
+        next_occ = tuple(
+            replace(o, analysis_valid=False) if o.occurrence_id in changed else o
+            for o in next_occ
+        )
         existing_cues = self.cues if cues is None else tuple(cues)
         next_cues = tuple(
             replace(c, requires_revalidation=True) if c.occurrence_id in changed else c
@@ -243,9 +253,15 @@ def parse_recipe(data: Mapping[str, Any]) -> Recipe:
     cue_keys = frozenset(Cue.__dataclass_fields__)
     trans_keys = frozenset(Transition.__dataclass_fields__)
     try:
-        occurrences = tuple(Occurrence(**_fields(item, occ_keys, "occurrence")) for item in raw["occurrences"])
+        occurrences = tuple(
+            Occurrence(**_fields(item, occ_keys, "occurrence"))
+            for item in raw["occurrences"]
+        )
         cues = tuple(Cue(**_fields(item, cue_keys, "cue")) for item in raw.get("cues", ()))
-        transitions = tuple(Transition(**_fields(item, trans_keys, "transition")) for item in raw.get("transitions", ()))
+        transitions = tuple(
+            Transition(**_fields(item, trans_keys, "transition"))
+            for item in raw.get("transitions", ())
+        )
         recipe = Recipe(
             recipe_id=raw["recipe_id"], name=raw["name"], occurrences=occurrences,
             cues=cues, transitions=transitions, revision_number=raw["revision_number"],
@@ -258,13 +274,22 @@ def parse_recipe(data: Mapping[str, Any]) -> Recipe:
         raise RecipeError("Malformed recipe document") from exc
 
 
-def new_recipe(name: str, tracks: Sequence[Mapping[str, Any]], recipe_id: str | None = None) -> Recipe:
+def new_recipe(
+    name: str, tracks: Sequence[Mapping[str, Any]], recipe_id: str | None = None
+) -> Recipe:
     """New metadata-only recipe; canonical IDs are supplied by authorised catalogue services."""
     if not isinstance(tracks, (list, tuple)):
         raise RecipeError("occurrences must be an array")
     occurrences = []
     for raw in tracks:
-        values = _fields(raw, frozenset({"occurrence_id", "canonical_track_id", "recording_version", "title", "artist"}), "occurrence")
+        values = _fields(
+            raw,
+            frozenset({
+                "occurrence_id", "canonical_track_id", "recording_version",
+                "title", "artist",
+            }),
+            "occurrence",
+        )
         if not values.get("canonical_track_id"):
             raise RecipeError("New recipes require explicit canonical_track_id")
         occurrences.append(Occurrence(
@@ -273,7 +298,9 @@ def new_recipe(name: str, tracks: Sequence[Mapping[str, Any]], recipe_id: str | 
             recording_version=values.get("recording_version"),
             title=values.get("title", "Untitled"), artist=values.get("artist"),
         ))
-    return Recipe(recipe_id=recipe_id or uuid.uuid4().hex, name=name, occurrences=tuple(occurrences))
+    return Recipe(
+        recipe_id=recipe_id or uuid.uuid4().hex, name=name, occurrences=tuple(occurrences)
+    )
 
 
 def from_legacy(contract: Any) -> Recipe:
@@ -355,7 +382,9 @@ def availability(
 ) -> dict[str, Any]:
     """Strict per-device snapshot; absent or stale verification is Unknown, never Ready."""
     _id(target_device_id, "target_device_id")
-    requested = tuple(sorted({o.canonical_track_id for o in recipe.occurrences if o.canonical_track_id}))
+    requested = tuple(
+        sorted({o.canonical_track_id for o in recipe.occurrences if o.canonical_track_id})
+    )
     snapshot = resolver.resolve(workspace_id, target_device_id, requested) if resolver else None
     fresh = bool(
         snapshot and snapshot.workspace_id == workspace_id
@@ -369,9 +398,14 @@ def availability(
     for item in recipe.occurrences:
         binding = bindings.get(item.canonical_track_id) if item.canonical_track_id else None
         state = binding.state if binding else AvailabilityState.UNKNOWN
-        reason = binding.reason if binding else ("unresolved_legacy_reference" if not item.canonical_track_id else "unverified")
+        reason = (
+            binding.reason if binding else (
+                "unresolved_legacy_reference" if not item.canonical_track_id else "unverified"
+            )
+        )
         if state == AvailabilityState.READY and (
-            item.recording_version is not None and binding.recording_version != item.recording_version
+            item.recording_version is not None
+            and binding.recording_version != item.recording_version
         ):
             state, reason = AvailabilityState.VERSION_MISMATCH, "recording_version_changed"
         if state == AvailabilityState.READY and not item.analysis_valid:
@@ -385,7 +419,10 @@ def availability(
         # must provide a separately verified local transition status before enabling it.
         "state": "requires_local_rebuild",
     } for t in recipe.transitions]
-    counts = {state.value: sum(t["state"] == state.value for t in tracks) for state in AvailabilityState}
+    counts = {
+        state.value: sum(t["state"] == state.value for t in tracks)
+        for state in AvailabilityState
+    }
     can_run = counts["ready"] == len(tracks) and all(t["state"] == "ready" for t in transitions)
     return {
         "target_device_id": target_device_id, "recipe_revision": recipe.revision_id,

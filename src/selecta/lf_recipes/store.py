@@ -17,8 +17,16 @@ from sqlalchemy.engine import Connection, Engine
 from selecta import cloud_mixes
 from selecta.identity.schema import workspaces
 from selecta.lf_recipes.contract import (
-    Cue, Occurrence, Recipe, RecipeError, Transition, availability, from_legacy,
-    new_recipe, parse_recipe, RecordingResolver,
+    Cue,
+    Occurrence,
+    Recipe,
+    RecipeError,
+    RecordingResolver,
+    Transition,
+    availability,
+    from_legacy,
+    new_recipe,
+    parse_recipe,
 )
 from selecta.persistence import db_now, new_id, transaction
 from selecta.work import provenance
@@ -227,9 +235,15 @@ def edit(
             )
         target = latest
         if restore is not None:
-            candidate = next((r for r in _v2(conn, workspace_id, recipe_id) if r.revision_id == restore), None)
+            candidate = next(
+                (r for r in _v2(conn, workspace_id, recipe_id) if r.revision_id == restore),
+                None,
+            )
             if candidate is None:
-                legacy = next((c for c in _legacy(conn, workspace_id, recipe_id) if c.revision == restore), None)
+                legacy = next(
+                    (c for c in _legacy(conn, workspace_id, recipe_id) if c.revision == restore),
+                    None,
+                )
                 candidate = from_legacy(legacy) if legacy else None
             if candidate is None:
                 raise RecipeStoreError("revision_not_found", "Revision not found", 404)
@@ -255,8 +269,12 @@ def edit(
             # Never treat user-supplied preparation/analysis flags as verified device facts.
             next_recipe = replace(
                 next_recipe,
-                occurrences=tuple(replace(o, analysis_valid=False) for o in next_recipe.occurrences),
-                transitions=tuple(replace(t, requires_rebuild=True) for t in next_recipe.transitions),
+                occurrences=tuple(
+                    replace(o, analysis_valid=False) for o in next_recipe.occurrences
+                ),
+                transitions=tuple(
+                    replace(t, requires_rebuild=True) for t in next_recipe.transitions
+                ),
             )
         except (RecipeError, TypeError, ValueError) as exc:
             raise RecipeStoreError("invalid_recipe", str(exc)) from exc

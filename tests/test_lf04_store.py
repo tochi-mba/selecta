@@ -4,8 +4,8 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
-
 from cloud_party import ALICE, BOB, auth
+
 from selecta import flags
 from selecta.lf_recipes import store
 
