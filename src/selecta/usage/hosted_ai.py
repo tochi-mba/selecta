@@ -138,7 +138,11 @@ def charge_once(
         connection, workspace_id, ledger.Kind.AI_COST,
         actual_cost_micros / 1_000_000,
         ref=hashlib.sha256(operation_id.encode()).hexdigest(),
-        detail={"provider": provider, "model_class": model_class, "billing_contract": "local_first_v2"},
+        detail={
+            "provider": provider,
+            "model_class": model_class,
+            "billing_contract": "local_first_v2",
+        },
     )
     connection.execute(
         sa.update(allowance_counters).where(key).values(used=1.0, updated_at=now)
@@ -146,7 +150,9 @@ def charge_once(
     return AICharge(True, False, "charged")
 
 
-def current_usage(connection: Connection, workspace_id: str, plan: PersonalBenefits) -> dict[str, int | float]:
+def current_usage(
+    connection: Connection, workspace_id: str, plan: PersonalBenefits
+) -> dict[str, int | float]:
     balance = allowances.remaining(
         connection, workspace_id, COST_KIND, _limit(plan),
         timezone="UTC", period=allowances.Period.MONTH,
