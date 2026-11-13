@@ -123,7 +123,7 @@ def opened(env, **settings):
 
 
 def test_clean_zone_catalogue_cannot_expose_private_records(env):
-    rooms, venue, clock = env
+    rooms, venue, _ = env
     venue.entries[2] = venue.entry(2, explicit=True)
     venue.entries[3] = venue.entry(3, state=RecordingState.DISCONNECTED)
     venue.entries[4] = venue.entry(4, title="file:///Users/host/audio.flac")
@@ -158,7 +158,7 @@ def test_offline_cloud_acceptance_is_deferred_until_local_speaker_is_back(env):
 
 def test_local_progress_is_not_played_until_verified_device_report(env):
     rooms, venue, _ = env
-    made, guest = opened(env)
+    _made, guest = opened(env)
     asked = rooms.request(guest.guest_token, 1).request
     assert asked.song_request_id is not None
     assert rooms.guest_view(guest.guest_token).my_requests[0].stage == "locally_scheduled"
@@ -183,7 +183,7 @@ def test_rejects_stale_or_unfenced_schedule_receipts(env):
 
 
 def test_moderation_and_duplicate_votes_preserved(env):
-    rooms, venue, _ = env
+    rooms, _venue, _ = env
     made, first = opened(env, request_mode="approve")
     second = rooms.join(made.code, None)
     asked = rooms.request(first.guest_token, 1).request
@@ -202,7 +202,7 @@ def test_moderation_and_duplicate_votes_preserved(env):
 
 def test_missing_media_rejected_and_disconnected_source_is_deferred(env):
     rooms, venue, _ = env
-    made, guest = opened(env)
+    _made, guest = opened(env)
     venue.entries[2] = venue.entry(2, state=RecordingState.MISSING)
     venue.entries[3] = venue.entry(3, state=RecordingState.DISCONNECTED)
     for song_id in (2, 3):
@@ -216,7 +216,7 @@ def test_missing_media_rejected_and_disconnected_source_is_deferred(env):
 
 def test_tenant_zone_scope_and_untrusted_metadata_fail_closed(env):
     rooms, venue, clock = env
-    made, guest = opened(env)
+    _made, guest = opened(env)
     venue.entries[1] = venue.entry(1, workspace=OTHER_HOST)
     venue.entries[2] = venue.entry(2, zone="back_room")
     venue.entries[3] = venue.entry(3, at=clock.now - 120)
@@ -311,7 +311,7 @@ def test_expired_room_blocks_join_and_scheduling_even_before_periodic_sweep(env)
 
 def test_removed_scheduled_song_remains_unconfirmed_until_engine_cancels(env):
     rooms, venue, _ = env
-    made, guest = opened(env)
+    _made, guest = opened(env)
     scheduled = rooms.request(guest.guest_token, 1).request
     rooms.song_removed(HOST, 1)
     view = rooms.guest_view(guest.guest_token)
@@ -337,7 +337,7 @@ def test_clean_only_policy_change_cannot_override_committed_audio(env):
 
 
 def test_invalid_speaker_and_ack_never_count_as_local_playback(env):
-    rooms, venue, clock = env
+    _rooms, venue, clock = env
     speaker = venue.speaker(HOST, "main")
     assert ready_speaker(speaker, HOST, "main", clock.now)
     assert not ready_speaker(replace(speaker, checked_at=clock.now - 100), HOST, "main", clock.now)
