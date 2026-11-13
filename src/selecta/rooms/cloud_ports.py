@@ -24,6 +24,7 @@ from sqlalchemy.engine import Connection, Engine
 from selecta.billing import plans, stripe_sync
 from selecta.persistence import db_now, transaction
 from selecta.playback import session as playback_session
+from selecta.rooms.local_first import LocalRoomsBridge
 from selecta.rooms.ports import (
     NothingPlaying,
     NowPlayingPort,
@@ -125,6 +126,7 @@ class RoomPorts:
     catalog: SongCatalogPort = field(default_factory=NoCloudLibrary)
     planner: RequestPlannerPort = field(default_factory=NoCloudPlanner)
     now_playing: NowPlayingPort = field(default_factory=NothingPlaying)
+    local_first: LocalRoomsBridge | None = None
 
 
 __all__ = [
