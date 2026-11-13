@@ -53,6 +53,8 @@ def drain_seconds(queued_est_s: float, slots: int) -> float:
 
 def speculative_left_s(config: PolicyConfig, tier: str | None, used_s: float) -> float:
     """Reference seconds of spare-time work this account may still use today."""
+    if not config.enforce_speculative_budget:
+        return float("inf")
     return max(config.speculative_budget_s(tier) - max(used_s, 0.0), 0.0)
 
 
