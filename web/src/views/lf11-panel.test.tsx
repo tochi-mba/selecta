@@ -40,7 +40,7 @@ describe('LF11 repair UI', () => {
     expect(within(panel).getByText('Playable: No')).toBeInTheDocument();
     expect(within(panel).getAllByText('Missing', { exact: true })).toHaveLength(2);
     expect(within(panel).getByText('Candidate', { exact: true })).toBeInTheDocument();
-    expect(within(panel).getByRole('button', { name: 'Locate local recording' })).toBeDisabled();
+    expect(within(panel).getAllByRole('button', { name: 'Locate local recording' })[0]).toBeDisabled();
     expect(container.querySelector('audio, canvas')).toBeNull();
     await userEvent.click(within(panel).getByRole('button', { name: 'Create temporary playable variation' }));
     expect(within(panel).getByText(/5 verified tracks selected; 3 skipped/)).toBeInTheDocument();
