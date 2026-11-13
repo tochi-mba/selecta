@@ -19,6 +19,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from selecta.mix_contract import ContractError, from_json
+
 SIDECAR_SCHEMA = "selecta.lf17.recipe-sidecar/1"
 SUPPORTED_LEGACY_VERSIONS = frozenset({1})
 _SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}\Z")
@@ -104,6 +106,10 @@ def plan_backfill(
         if not isinstance(songs, list):
             raise MigrationConflict("legacy songs must be a sequence")
         original = copy.deepcopy(dict(rev))
+        try:
+            from_json(original)  # validate content-addressed identity and revision structure
+        except (ContractError, KeyError, TypeError, ValueError, AttributeError) as exc:
+            raise MigrationConflict("legacy content-addressed contract is invalid") from exc
         digest = _canonical(original)
         if revision_id in seen:
             if seen[revision_id] != digest:
