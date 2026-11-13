@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pytest
 import sqlalchemy as sa
+from alembic.runtime.migration import MigrationContext
 from test_cloud_jobs_support import made_provenance, make_store, output, worker
 
 from selecta.persistence import migrate, transaction
@@ -199,8 +200,14 @@ def test_the_migration_rewrites_old_playback_rows_and_rolls_back_and_forward(clo
 @pytest.mark.invariants_off("leaves an artifact row the migration refuses")
 def test_the_migration_stops_rather_than_invent_a_history(cloud_engine, missing):
     migrate.downgrade(cloud_engine, BEFORE)
+    # A merge revision can leave another valid migration branch at this target.
+    # Compare the complete set of heads, not the single-head convenience API.
+    with cloud_engine.connect() as connection:
+        before_heads = frozenset(MigrationContext.configure(connection).get_current_heads())
     with transaction(cloud_engine) as connection:
         connection.execute(artifacts.insert().values(row(**{missing: None})))
     with pytest.raises(RuntimeError, match="1 artifact rows"):
         migrate.upgrade(cloud_engine)
-    assert migrate.current(cloud_engine) == BEFORE
+    with cloud_engine.connect() as connection:
+        after_heads = frozenset(MigrationContext.configure(connection).get_current_heads())
+    assert after_heads == before_heads
