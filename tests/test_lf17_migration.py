@@ -6,11 +6,9 @@ import hashlib
 import io
 import json
 import shutil
-import time
 import zipfile
 
 import pytest
-
 from cloud_world import HEADERS, add_asset, signed_up
 from selecta.cloud_mixes import _store
 from selecta.lf_migration import (
@@ -28,8 +26,8 @@ from selecta.lf_migration import (
     plan_backfill,
     require_grant,
     restore_legacy_revisions,
-    rollback_prepared_plan,
     retrieve_original,
+    rollback_prepared_plan,
 )
 from selecta.mix_contract import SongRef, new_contract
 from selecta.persistence import transaction
@@ -102,7 +100,9 @@ def test_old_history_rollback_and_replay_after_interruption(tmp_path, monkeypatc
     with pytest.raises(PermissionError):
         journal.checkpoint(plan["plan_id"], base.revision)
     journal.checkpoint(plan["plan_id"], base.revision, approved=True)
-    assert journal.checkpoint(plan["plan_id"], base.revision, approved=True)["completed"] == [base.revision]
+    assert journal.checkpoint(plan["plan_id"], base.revision, approved=True)["completed"] == [
+        base.revision
+    ]
     assert journal.read(plan["plan_id"])["state"] == "in_progress"
 
     old_replace = __import__("os").replace
@@ -117,7 +117,9 @@ def test_old_history_rollback_and_replay_after_interruption(tmp_path, monkeypatc
     backup = tmp_path / "offsite-journal"
     shutil.copytree(tmp_path / "migration", backup)
     restored = LocalPlanJournal(backup)
-    assert restored.checkpoint(plan["plan_id"], later.revision, approved=True)["state"] == "complete"
+    assert (
+        restored.checkpoint(plan["plan_id"], later.revision, approved=True)["state"] == "complete"
+    )
     assert [r["revision"] for r in restore_legacy_revisions(plan)] == [
         base.revision, later.revision,
     ]
