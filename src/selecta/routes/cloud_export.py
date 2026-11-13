@@ -16,7 +16,7 @@ import zipfile
 from collections.abc import Callable
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
@@ -25,6 +25,7 @@ from sqlalchemy.engine import Engine
 from starlette.background import BackgroundTask
 
 from selecta.billing import plans, stripe_sync
+from selecta.lf_migration.retrieval import RetrievalGrant, require_grant
 from selecta.flags.rules import user_flag_preferences
 from selecta.identity.tokens import Claims
 from selecta.lucy import cloud_settings as lucy_cloud
@@ -34,6 +35,7 @@ from selecta.storage.artifacts import DEFAULT_BUCKETS, Buckets
 from selecta.storage.keys import Bucket, original_key
 from selecta.storage.objects import ObjectClient, R2Error
 from selecta.storage.schema import assets, upload_sessions
+from selecta.work.schema import artifacts
 
 MIXES_UNAVAILABLE = "Cloud mix revisions are not yet stored by this application version."
 
@@ -52,12 +54,14 @@ def install_routes(
     principal_for: Callable[..., Any],
     object_client_factory: Callable[[], ObjectClient],
     buckets: Buckets = DEFAULT_BUCKETS,
+    legacy_retrieval_grant_factory: Callable[[str], RetrievalGrant | None] | None = None,
 ) -> None:
     """Install a personal-workspace export with integrity-checked original audio files."""
 
     @app.get("/api/account/export")
     def export_account(
         request: Request,
+        mode: Literal["legacy", "metadata"] = "legacy",
         claims: Claims = Depends(current_claims),  # noqa: B008
     ) -> FileResponse:
         principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
@@ -128,6 +132,16 @@ def install_routes(
                 .mappings()
                 .all()
             ]
+            revision_rows = [
+                dict(row)
+                for row in conn.execute(
+                    select(artifacts.c.id, artifacts.c.input_hash, artifacts.c.protected,
+                           artifacts.c.provenance, artifacts.c.created_at)
+                    .where(artifacts.c.workspace_id == workspace.id,
+                           artifacts.c.kind == "mix_revision")
+                    .order_by(artifacts.c.created_at, artifacts.c.input_hash)
+                ).mappings()
+            ]
             session = (
                 conn.execute(
                     select(
@@ -162,6 +176,24 @@ def install_routes(
             ) as archive:
                 for row in rows:
                     asset_id = str(row["id"])
+                    if mode == "metadata":
+                        exported_assets.append({
+                            "id": asset_id,
+                            "legacy_asset_id": asset_id,
+                            "format": row["format"],
+                            "size": int(row["size"]),
+                            "created_at": row["created_at"],
+                            "status": "historical_cloud_reference",
+                            "local_original_included": False,
+                        })
+                        continue
+                    if legacy_retrieval_grant_factory is not None:
+                        try:
+                            require_grant(legacy_retrieval_grant_factory(workspace.id), workspace.id)
+                        except PermissionError as error:
+                            raise HTTPException(
+                                status_code=403, detail={"code": "legacy_retrieval_not_approved"}
+                            ) from error
                     canonical_key = original_key(workspace.id, asset_id)
                     if row["original_key"] != canonical_key:
                         raise HTTPException(
@@ -249,6 +281,30 @@ def install_routes(
                     # What was last playing, so the export holds every mix fact Cloud keeps.
                     "playback_session": dict(session) if session else None,
                 }
+                if mode == "metadata":
+                    # Every historical virtual revision is retained verbatim, even
+                    # when its media is missing or its provenance needs repair.
+                    preserved = []
+                    for revision in revision_rows:
+                        provenance = revision.get("provenance") or {}
+                        settings = provenance.get("settings") or {}
+                        contract = settings.get("contract")
+                        preserved.append({
+                            "id": revision["id"],
+                            "revision": revision["input_hash"],
+                            "created_at": revision["created_at"],
+                            "protected": bool(revision["protected"]),
+                            "contract": contract,
+                            "requires_review": not isinstance(contract, dict)
+                                or contract.get("revision") != revision["input_hash"],
+                        })
+                    mixes = {
+                        "schema_version": 2,
+                        "available": True,
+                        "mixes": preserved,
+                        "historical_revisions_immutable": True,
+                        "playback_session": dict(session) if session else None,
+                    }
                 manifest = {
                     "schema_version": 1,
                     "workspace_id": workspace.id,
@@ -261,6 +317,16 @@ def install_routes(
                         "playback_session": "included in mixes.json",
                     },
                 }
+                if mode == "metadata":
+                    manifest = {
+                        "schema_version": 2,
+                        "workspace_id": workspace.id,
+                        "mode": "metadata_only",
+                        "asset_count": len(exported_assets),
+                        "originals": "not included: local music remains on user devices",
+                        "mixes": {"available": True, "revision_count": len(mixes["mixes"])},
+                        "local_recordings": "never collected or deleted by account archive",
+                    }
                 archive.writestr("manifest.json", json.dumps(manifest, indent=2))
                 archive.writestr("settings.json", json.dumps(settings, indent=2))
                 archive.writestr("assets.json", json.dumps(exported_assets, indent=2))
@@ -273,6 +339,7 @@ def install_routes(
             archive_path,
             media_type="application/zip",
             filename="selectadj-account-export.zip",
+            headers={"Cache-Control": "no-store", "X-Selecta-Export-Mode": mode},
             background=BackgroundTask(shutil.rmtree, temp_dir, ignore_errors=True),
         )
 
