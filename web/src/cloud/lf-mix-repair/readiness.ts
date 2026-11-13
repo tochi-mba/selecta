@@ -188,10 +188,12 @@ export function countReadiness(readiness: DeviceMixReadiness, now = Date.now()):
  * Stable IDs from LF04 are preferred; this fallback is scoped to a recipe revision. */
 export function referencesOf(songs: ReadonlyArray<{
   id: string; title: string; artist?: string | null; occurrence_id?: string;
+  explicit?: boolean | null; version?: string | null;
 }>): TrackReference[] {
   return songs.map((song, index) => ({
     occurrenceId: song.occurrence_id || `legacy:${index}:${song.id}`,
     recordingId: song.id, title: song.title, artist: song.artist ?? null,
+    explicit: song.explicit ?? null, version: song.version ?? null,
   }));
 }
 
@@ -204,6 +206,7 @@ export function canAcceptCandidate(
     candidate.candidateExplicit !== null && candidate.candidateExplicit !== undefined &&
     reference.explicit !== null && reference.explicit !== undefined &&
     candidate.candidateExplicit === reference.explicit &&
+    !!reference.version && candidate.candidateVersion === reference.version &&
     !!candidate.candidateId && candidate.candidateId === reference.recordingId;
 }
 
