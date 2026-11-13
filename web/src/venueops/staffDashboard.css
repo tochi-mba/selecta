@@ -1,0 +1,163 @@
+/* ADR-0430 staff dashboard. Tokens only (web/src/styles/tokens.css). Reflows to one column at 320px
+   and at 400% zoom; Stop stays in the sticky top bar in every state. */
+
+.staff-dashboard {
+  display: grid;
+  gap: var(--rhythm-section);
+  max-inline-size: var(--content-work);
+  margin-inline: auto;
+  padding-inline: var(--page-gutter);
+  padding-block-end: var(--page-end);
+  color: var(--text);
+  background: var(--bg);
+  min-inline-size: 0;
+}
+
+.staff-top {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: var(--layer-sticky);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  background: var(--surface-base);
+  border-block-end: 1px solid var(--border);
+}
+
+.staff-heading { min-inline-size: 0; }
+.staff-heading h1 { margin: 0; font: var(--type-page); overflow-wrap: anywhere; }
+
+.staff-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--icon-gap);
+  margin: 0;
+  font: var(--type-meta);
+  color: var(--text-soft);
+}
+
+.staff-nav-dot {
+  inline-size: var(--space-2);
+  block-size: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--status-ready);
+}
+.staff-dashboard[data-nav='paused'] .staff-nav-dot,
+.staff-dashboard[data-nav='manual'] .staff-nav-dot { background: var(--status-warning); }
+.staff-dashboard[data-nav='offline'] .staff-nav-dot,
+.staff-dashboard[data-nav='failed'] .staff-nav-dot { background: var(--status-failed); }
+.staff-dashboard[data-nav='stopped'] .staff-nav-dot,
+.staff-dashboard[data-nav='loading'] .staff-nav-dot { background: var(--status-unavailable); }
+
+.staff-stop {
+  min-block-size: max(44px, var(--control-height));
+  min-inline-size: max(44px, var(--control-height));
+  padding: var(--control-pad-block) var(--space-5);
+  border: 2px solid var(--danger);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  color: var(--danger);
+  font: var(--type-label);
+  font-weight: 700;
+  cursor: pointer;
+}
+.staff-stop:disabled { background: var(--surface-control); color: var(--text-soft); cursor: default; }
+
+.staff-dashboard button:focus-visible,
+.staff-dashboard a:focus-visible,
+.staff-dashboard select:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.staff-headline { margin: 0; font: var(--type-section); overflow-wrap: anywhere; }
+
+.staff-glance {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--space-3);
+}
+
+.staff-card {
+  min-inline-size: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-panel);
+}
+.staff-card h2 { margin: 0 0 var(--space-1); font: var(--type-label); color: var(--text-soft); }
+.staff-card p { display: grid; gap: var(--space-hair); margin: 0; overflow-wrap: anywhere; }
+.staff-card strong { font: var(--type-song); }
+.staff-health.is-warning { border-color: var(--status-warning); }
+.staff-health.is-fault { border-color: var(--status-failed); }
+
+.staff-steer, .staff-changes, .staff-expert { display: grid; gap: var(--space-2); min-inline-size: 0; }
+.staff-steer h2, .staff-changes h2, .staff-expert h2 { margin: 0; font: var(--type-section); }
+.staff-changes h3 { margin: 0; font: var(--type-label); }
+
+.staff-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  gap: var(--space-2);
+}
+.staff-buttons button {
+  min-block-size: var(--control-height);
+  padding: var(--control-pad-block) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-control);
+  color: var(--text);
+  font: var(--type-label);
+  cursor: pointer;
+}
+.staff-buttons button:disabled { opacity: 0.55; cursor: default; }
+
+.staff-genre { display: grid; gap: var(--space-1); max-inline-size: 20rem; }
+.staff-genre select { min-block-size: var(--control-height); }
+
+.staff-changes ul, .staff-expert ul { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+.staff-command { display: flex; flex-wrap: wrap; gap: var(--space-2); overflow-wrap: anywhere; }
+.staff-command-state {
+  padding-inline: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font: var(--type-caption);
+}
+.staff-command.is-pending .staff-command-state { border-color: var(--status-working); }
+.staff-command.is-applied .staff-command-state { border-color: var(--status-ready); }
+.staff-command.is-rejected .staff-command-state { border-color: var(--status-failed); }
+.staff-live { margin: 0; min-block-size: 1lh; }
+
+.staff-expert a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--control-height);
+  color: var(--link);
+}
+
+.staff-visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .staff-buttons button, .staff-stop { transition: background-color var(--motion-fast) var(--motion-ease); }
+}
+
+@media (prefers-contrast: more) {
+  .staff-card, .staff-buttons button, .staff-top { border-color: var(--text); }
+  .staff-buttons button:disabled { opacity: 1; text-decoration: line-through; }
+}
+
+@media (forced-colors: active) {
+  .staff-stop { border-color: ButtonText; background: ButtonFace; color: ButtonText; }
+  .staff-nav-dot { background: CanvasText; forced-color-adjust: none; }
+  .staff-dashboard button:focus-visible, .staff-dashboard a:focus-visible { outline-color: Highlight; }
+}

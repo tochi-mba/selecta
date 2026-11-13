@@ -28,7 +28,7 @@ from sqlalchemy.engine import Connection
 
 from selecta.admin.schema import worker_controls
 from selecta.authz import audit, delayed
-from selecta.authz.check import Actor, authorize
+from selecta.authz.check import Actor, authorize, ensure_not_own_workspace
 from selecta.authz.scopes import ResourceRef
 from selecta.billing import plans, stripe_sync
 from selecta.identity import accounts
@@ -229,6 +229,7 @@ def grant_override(
     reason = _need_reason(reason)
     resource = ResourceRef("workspace", workspace_id, workspace_id)
     authorize(conn, actor, "billing.overrides.create", resource)
+    ensure_not_own_workspace(conn, actor, "billing.overrides.create", [workspace_id])
     _check_override(conn, workspace_id, plan_id, expires_at)
     override_id = _apply_override(conn, workspace_id, plan_id, reason, actor.user_id, expires_at)
     _audit(conn, actor, "admin.override.grant", resource, reason, override_id=override_id,
@@ -269,6 +270,7 @@ def propose_mass_override(
     # Checked before the workspaces are looked up, so they reveal nothing to anyone else.
     authorize(conn, actor, delayed.RULES[delayed.ActionKind.MASS_ENTITLEMENT_OVERRIDE].propose,
               ResourceRef("entitlement_overrides", None))
+    ensure_not_own_workspace(conn, actor, "billing.overrides.create", unique)
     for workspace_id in unique:
         _check_override(conn, workspace_id, plan_id, expires_at)
     return delayed.propose(

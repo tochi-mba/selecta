@@ -14,10 +14,24 @@ const LOWEST_TEMPO = 40;
 const HIGHEST_TEMPO = 240;
 const KEY_SHAPE = /^(1[0-2]|[1-9])[AB]$/;
 
+/** S4-0106-03: a tempo as typed, in either decimal separator: "120,5" in a German browser and "120.5"
+ * in an English one are both 120.5. Anything else (letters, two separators, thousands groups) is NaN, so
+ * it is refused rather than read as something else: "120,5" must never become 1205. */
+export function parseDecimal(text: string): number {
+  const plain = text.trim().replace(/\s/g, '');
+  if (!/^\d+(?:[.,]\d+)?$/.test(plain)) return Number.NaN;
+  return Number(plain.replace(',', '.'));
+}
+
+/** A number shown the way this browser's language writes it: 120,5 in German, 120.5 in English. */
+export function localDecimal(value: number): string {
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 1, useGrouping: false }).format(value);
+}
+
 /** Is this tempo acceptable? Says what's wrong if not. The server checks too. */
 export function tempoProblem(text: string): string {
   if (!text.trim()) return '';
-  const value = Number(text);
+  const value = parseDecimal(text);
   if (!Number.isFinite(value) || value < LOWEST_TEMPO || value > HIGHEST_TEMPO) return `Tempo has to be between ${LOWEST_TEMPO} and ${HIGHEST_TEMPO}.`;
   return '';
 }
@@ -31,7 +45,7 @@ export function keyProblem(text: string): string {
 export function nextStep(status: string | undefined): string {
   switch (status) {
     case 'needs_attention': return 'Try analysing it again from its row in the Library. If it fails again the file may be damaged; replacing it with a good copy can help.';
-    case 'missing': return 'Put the file back where it was, or check your music folders in Workshop. Selecta never moves or deletes your files.';
+    case 'missing': return 'Put the file back where it was, or check your music folders in Workshop. SelectaDJ never moves or deletes your files.';
     case 'queued': return 'Nothing to do: it’s in line and will be analysed in the background.';
     case 'processing': return 'Nothing to do: it’s being analysed now.';
     case 'excluded': return 'Turn off Never play to let mixes pick it again.';
@@ -54,7 +68,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
   onPriority: (song: LibrarySong) => Promise<void>;
   onNever: (song: LibrarySong) => Promise<void>;
 }) {
-  const savedBpm = song.override_bpm ? String(song.override_bpm) : '';
+  const savedBpm = song.override_bpm ? localDecimal(song.override_bpm) : '';
   const savedKey = song.override_camelot ?? '';
   const [bpm, setBpm] = useState(savedBpm);
   const [camelot, setCamelot] = useState(savedKey);
@@ -105,7 +119,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
       return;
     }
     await send({
-      ...(bpm ? { bpm: Number(bpm) } : {}),
+      ...(bpm ? { bpm: parseDecimal(bpm) } : {}),
       ...(camelot ? { camelot: camelot.trim() } : {}),
       clear: [...(bpm ? [] : ['bpm']), ...(camelot ? [] : ['camelot'])],
     }, 'Saved your correction.');
@@ -149,17 +163,18 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
       {flagOn('library.corrections') && (
       <section className="stack">
         <h3>Correct it</h3>
-        <p className="hint">If Selecta got something wrong. What it measured is kept, so this can be put back, and analysing the song again won’t lose it. Transitions with this song may be made again, using what you enter here.</p>
+        <p className="hint">If SelectaDJ got something wrong. What it measured is kept, so this can be put back, and analysing the song again won’t lose it. Transitions with this song may be made again, using what you enter here.</p>
         <div className="correct-row">
           <Field label={`Tempo${detectedTempo ? ` (measured ${detectedTempo})` : ''}`} error={bpmError} help="Between 40 and 240 BPM" className="correct-field">
             {(field) => (
               <input
                 {...field}
                 ref={bpmBox}
-                type="number"
-                min={LOWEST_TEMPO}
-                max={HIGHEST_TEMPO}
-                step="0.1"
+                // text, not number: a number box in a German browser dropped the comma from "120,5"
+                // and sent 1205 (S4-0106-03); this one takes either separator and checks the range itself
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
                 value={bpm}
                 onChange={(event) => { setBpm(event.target.value); setBpmError(''); }}
                 placeholder={detectedTempo ? String(detectedTempo) : ''}
@@ -192,7 +207,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
           </Action>
           {(song.override_bpm || song.override_camelot) && (
             <Action run={async () => {
-              if (await send({ clear: ['bpm', 'camelot'] }, 'Back to what Selecta measured.')) {
+              if (await send({ clear: ['bpm', 'camelot'] }, 'Back to what SelectaDJ measured.')) {
                 setBpm('');
                 setCamelot('');
               }
@@ -205,8 +220,8 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
       )}
       {!facts.setAside && (flagOn('library.priority') || flagOn('library.never_play')) && (
       <section className="stack">
-        <h3>How Selecta treats it</h3>
-        <p className="hint">None of these move or delete your file. They only change what Selecta does with this song.</p>
+        <h3>How SelectaDJ treats it</h3>
+        <p className="hint">None of these move or delete your file. They only change what SelectaDJ does with this song.</p>
         <div className="row wrap">
           {flagOn('library.priority') && (
             <Action aria-pressed={song.priority} run={() => onPriority(song)} title="Prioritized songs are analysed first and their stem windows are protected from cache cleanup">
@@ -214,7 +229,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
             </Action>
           )}
           {flagOn('library.never_play') && (
-            <Action aria-pressed={song.never} run={() => onNever(song)} title="Selecta won’t pick this when it builds a mix">
+            <Action aria-pressed={song.never} run={() => onNever(song)} title="SelectaDJ won’t pick this when it builds a mix">
               {song.never ? 'Never: on' : 'Never play'}
             </Action>
           )}
@@ -231,7 +246,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
           ) : (
             <Action run={() => send({ is_music: false }, 'Set aside.')}>This isn’t music</Action>
           )}
-          {song.music_override != null && <Action run={() => send({ clear: ['is_music'] }, 'Selecta will decide again next time it reads your folder.')}>Let Selecta decide</Action>}
+          {song.music_override != null && <Action run={() => send({ clear: ['is_music'] }, 'SelectaDJ will decide again next time it reads your folder.')}>Let SelectaDJ decide</Action>}
         </div>
       </section>
       )}

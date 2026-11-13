@@ -47,19 +47,34 @@ const PARTS: Record<string, FlagId> = {
   '.cloud-hero': 'cloud.uploads',
 };
 
-/** Cloud features with no page of their own to sweep, and why. Anything else that's cloud-only,
- * non-core and targetable must name a `cloud.*` surface, so a new cloud feature can't skip this. */
+/** Legacy cloud-only features with no page of their own. New exclusions belong in the JSON
+ * registry as cloud_surface_kind + cloud_surface_reason, reviewed by Python registry tests.
+ * Otherwise a non-core targetable cloud flag must name a sweepable `cloud.*` page. */
 const NO_SURFACE: Partial<Record<FlagId, string>> = {
   'account.labs': 'The Labs settings page is not built yet (SC-0414-09); only the API exists.',
   'cloud.signups': 'Decided before anyone is signed in: onboarding answers flag_off.',
+  'cloud.error_reporting': 'Sentry error transport is server-side observability, with no customer-facing page.',
+  'cloud.email': 'Maintenance sends notification emails in the background; it has no customer-facing control.',
+  'autopilot.venue_mode': 'Autopilot session APIs exist but the Cloud venue dashboard has not been released.',
+  'autopilot.venue_policy': 'Venue policy APIs are server-only until the venue console ships.',
+  'autopilot.horizon': 'The rolling horizon planner runs on the server, not on a Cloud page.',
+  'autopilot.safe_transitions': 'The transition safety gate is evaluated by the server, not on a Cloud page.',
+  'autopilot.ai_director': 'AI director decisions run in the server planner; its control UI is not yet released.',
+  'business.signups': 'Business self-serve sign-up is disabled pending legal review; no Cloud sign-up page.',
+  'business.orgs': 'Business organisation, venue and crate APIs are not yet wired to a customer-facing page.',
+  'business.schedules': 'Venue scheduling APIs are server-only until the venue console is built.',
+  'business.offline': 'Offline venue playback is managed by kiosk/server commands, not a Cloud page.',
+  'business.workspaces': 'Business workspace switching currently has an API but no visible menu in Cloud.',
+  'business.pilots': 'Staff-only pilot provisioning is an admin API, not a customer-facing Cloud page.',
   'cloud.tracing': 'Server-side OpenTelemetry job spans, with no person-facing Cloud page.',
   'cloud.metrics': 'Server-side service telemetry consumed by SLOs and alerts, with no person-facing Cloud page.',
   'cloud.export_expiry': 'Server-side maintenance sweep for retained exports, with no person-facing Cloud page.',
   'cloud.autoscale': 'Server-side maintenance task that sizes worker pools, with no person-facing Cloud page.',
+  'cloud.dmca_renewal_reminder': 'Server-side maintenance alert for the owner, with no person-facing Cloud page.',
   'lucy.deep_plan': 'No control on the site: the server decides it for each Lucy turn.',
 };
 
-type Spec = (typeof REGISTRY)[FlagId] & { modes?: string[]; when_locked?: string };
+type Spec = (typeof REGISTRY)[FlagId] & { modes?: string[]; when_locked?: string; default?: boolean; owner?: string };
 const spec = (id: FlagId) => REGISTRY[id] as Spec;
 const cloudSurfaces = (id: FlagId) => (spec(id).surfaces ?? []).filter((surface) => surface.startsWith('cloud.'));
 const untargetable = (id: FlagId) => id === 'admin' || id.startsWith('admin.') || id === 'staff' || id.startsWith('staff.');
@@ -189,14 +204,47 @@ test('every cloud feature a person can see is in the sweep, or says why not', ()
     const flag = spec(id);
     const cloudOnly = (flag.modes ?? []).length === 1 && flag.modes?.[0] === 'cloud';
     if (!cloudOnly || flag.core || untargetable(id)) continue;
-    if (!cloudSurfaces(id).length && !NO_SURFACE[id]) missing.push(`${id} names no cloud surface`);
-    if (cloudSurfaces(id).length && NO_SURFACE[id]) missing.push(`${id} has surfaces, so drop it from NO_SURFACE`);
+    const excluded = Boolean(flag.cloud_surface_kind && flag.cloud_surface_reason);
+    if (!cloudSurfaces(id).length && !NO_SURFACE[id] && !excluded) missing.push(`${id} names no cloud surface`);
+    if (cloudSurfaces(id).length && (NO_SURFACE[id] || excluded)) missing.push(`${id} has surfaces and a nonvisual exclusion`);
   }
   for (const id of FLAG_IDS) {
     for (const surface of cloudSurfaces(id)) if (!SURFACES[surface]) missing.push(`${id}: the sweep doesn't open ${surface}`);
   }
   expect(missing).toEqual([]);
   expect(SWEPT.length).toBeGreaterThan(8);
+});
+
+
+/** A declared exclusion is not a pretend UI page. New venue pages must replace their exclusion
+ * with a real cloud.* surface and be picked up by the disabled-feature Playwright sweep. */
+test('each venue flag names its real nonvisual Cloud ownership, without fabricating a page', () => {
+  const expected: Record<string, string> = {
+  'venue.continuity': 'headless',
+  'venue.fault_injection': 'rehearsal',
+  'venue.speakers': 'unreleased',
+  'venue.staff_dashboard': 'unreleased',
+  'venue.moderated_requests': 'headless',
+  'venue.learning': 'headless',
+  'venue.rights_gate': 'headless',
+  'venue.roles': 'headless',
+  'venue.safe_gain': 'headless',
+  'venue.health': 'operations',
+  'venue.soak': 'rehearsal',
+  'venue.rollout_gates': 'operations',
+  };
+  const venueIds = FLAG_IDS.filter((id) => id.startsWith('venue.'));
+  expect([...venueIds].sort()).toEqual(Object.keys(expected).sort());
+  for (const id of venueIds) {
+    const flag = spec(id);
+    expect(flag.modes, id).toEqual(['cloud']);
+    expect(flag.default, id).toBe(false);
+    expect(flag.owner, id).toBe('autopilot');
+    expect(cloudSurfaces(id), id).toEqual([]);
+    expect(flag.cloud_surface_kind, id).toBe(expected[id]);
+    expect(flag.cloud_surface_reason?.length ?? 0, id).toBeGreaterThan(20);
+    expect(NO_SURFACE[id], id).toBeUndefined();
+  }
 });
 
 test('with the cloud defaults, lyric display is off and every page closes up around it', async ({ page, request }) => {

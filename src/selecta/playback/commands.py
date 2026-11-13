@@ -4,6 +4,10 @@ Play, pause, skip and seek change the session itself. Steering, reordering and a
 change the mix, so they go through `MixControl`, and the session only records the revision that
 comes back. Every command is checked here first, so a bad one is refused without using up a
 sequence number.
+
+`set_volume` exists only for a venue zone's session (ADR-0443): the zone's volume is shared state
+every remote sees, clamped to the zone's cap (ADR-0450) and applied by the speaker as gain. A
+personal session keeps volume on each device, so the command is unavailable there.
 """
 
 from __future__ import annotations
@@ -31,6 +35,7 @@ class Command(StrEnum):
     STEER = "steer"
     REORDER = "reorder"
     APPROVE_REQUEST = "approve_request"
+    SET_VOLUME = "set_volume"
 
 
 STEER_DIRECTIONS = ("bigger", "calmer", "something_else")
@@ -68,6 +73,11 @@ def validate(command: str, args: Mapping[str, Any] | None) -> tuple[Command, dic
         if not raw:
             raise InvalidCommand("Reorder needs the new order")
         clean = raw
+    elif name is Command.SET_VOLUME:
+        volume = _whole(raw.get("volume"), "volume")
+        if volume > 100:
+            raise InvalidCommand("volume must be from 0 to 100")
+        clean["volume"] = volume
     elif name is Command.APPROVE_REQUEST:
         request_id = raw.get("request_id")
         if isinstance(request_id, bool) or not isinstance(request_id, (str, int)):
@@ -82,8 +92,15 @@ def apply(
     args: Mapping[str, Any],
     now: float,
     mix: MixControl | None,
+    *,
+    volume_cap: int = 100,
 ) -> Session:
     """The session after this command. The caller bumps the sequence and saves it."""
+    if name is Command.SET_VOLUME:
+        if session.zone_id is None:
+            raise CommandUnavailable("Volume is set on each device")
+        cap = max(0, min(100, volume_cap))
+        return replace(session, volume=min(args["volume"], cap))
     if name is Command.PLAY:
         return replace(frozen(session, now), state=PlayState.PLAYING)
     if name is Command.PAUSE:

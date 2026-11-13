@@ -1,0 +1,55 @@
+- link "Skip to the page":
+  - /url: "#content"
+- navigation "Main":
+  - link "Selecta, go to Make a Mix":
+    - /url: /mixes
+    - text: Selecta
+  - list:
+    - listitem:
+      - link "Listen":
+        - /url: /listen
+    - listitem:
+      - link "Make a Mix":
+        - /url: /mixes
+    - listitem:
+      - link "My Mixes":
+        - /url: /mixes/mine
+    - listitem:
+      - link "Library":
+        - /url: /library
+    - listitem:
+      - link "Workspace":
+        - /url: /workshop
+    - listitem:
+      - link "Edit":
+        - /url: /mix/current/edit
+  - 'button "Requests: Request a song"': Request a song
+  - button "Collapse the side bar"
+- banner:
+  - navigation "Breadcrumb":
+    - list:
+      - listitem:
+        - link "Make a Mix":
+          - /url: /mixes
+      - listitem: /Harmonic matches
+  - button "Search Ctrl K"
+  - 'button "Theme: Match this computer"'
+  - button "Activity"
+  - link "Workspace, 1 item needs your attention":
+    - /url: /workshop
+    - text: "1"
+  - button "Keyboard shortcuts"
+- main:
+  - navigation "Make a Mix":
+    - link "Mix ideas":
+      - /url: /mixes
+    - link "Word connections":
+      - /url: /discover
+    - link "Harmonic matches":
+      - /url: /discover/harmonic
+  - heading "Harmonic matches" [level=1]
+  - paragraph:
+    - text: No chord matches to hear yet. They turn up as more of your library is analysed.
+    - link "See analysis progress":
+      - /url: /workshop
+- status: "Workspace needs your attention: 1 song failed."

@@ -18,7 +18,7 @@ def _archive(world) -> zipfile.ZipFile:
     answer = world.client.get("/api/account/export", headers=HEADERS)
     assert answer.status_code == 200, answer.text
     assert answer.headers["content-type"] == "application/zip"
-    assert "selecta-account-export.zip" in answer.headers["content-disposition"]
+    assert "selectadj-account-export.zip" in answer.headers["content-disposition"]
     return zipfile.ZipFile(io.BytesIO(answer.content))
 
 
@@ -100,6 +100,8 @@ def test_the_mixes_json_says_what_cloud_keeps_and_includes_the_playback_session(
             manifest = json.loads(archive.read("manifest.json"))
         session = mixes["playback_session"]
         assert (session["mix_revision_id"], session["song_index"], session["offset_ms"]) == (
-            revision, 3, 42_000,
+            revision,
+            3,
+            42_000,
         )
         assert manifest["mixes"]["playback_session"] == "included in mixes.json"

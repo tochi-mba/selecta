@@ -14,6 +14,8 @@ export type Toast = {
   undo?: () => Promise<unknown> | void;
   tone: ToastTone;
   activity: number;
+  /** UF-0380-07: the mix this change was made in, said on the toast itself, not only in Activity. */
+  where?: string;
 };
 
 const SHOWN = 3;
@@ -50,7 +52,7 @@ export function setToastsQuiet(on: boolean) {
   }
 }
 
-export function showToast(message: string, options: { undo?: Toast['undo']; tone?: ToastTone; scope?: string | null } = {}): number {
+export function showToast(message: string, options: { undo?: Toast['undo']; tone?: ToastTone; scope?: string | null; where?: string } = {}): number {
   const clean = message.replace(/\.\.$/, '.');
   const tone = options.tone ?? 'info';
   const key = `${options.scope ?? ''}\u0000${clean}`;
@@ -68,7 +70,7 @@ export function showToast(message: string, options: { undo?: Toast['undo']; tone
     recentRoutine.set(key, { at: Date.now(), id: -activity });
   }
   if (quiet && tone !== 'problem') return -activity;
-  const toast: Toast = { id: next++, message: clean, undo: options.undo, tone, activity };
+  const toast: Toast = { id: next++, message: clean, undo: options.undo, tone, activity, where: options.where || undefined };
   const all = [...toasts, toast];
   // room is made from the oldest with no Undo first. One with an Undo can go too, because Activity has it.
   // UF-0371-07: routine news goes before a problem, so background completions never push an error away.
@@ -166,6 +168,7 @@ function ToastRow({ toast }: { toast: Toast }) {
       onBlur={start}
     >
       <span>{toast.message}</span>
+      {toast.where && <small className="toast-where">In {toast.where}.</small>}
       {toast.undo && (
         <button
           onClick={() => void undo()}

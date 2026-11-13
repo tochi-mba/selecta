@@ -65,7 +65,7 @@ describe('GP-0263-01 a catalogue of actual faults', () => {
   it('a healthy PC says nothing is wrong, and the flag off removes the section', async () => {
     fakeBackend({ 'GET /diagnostics': healthy });
     const { unmount } = render(<Diagnostics />);
-    expect(await screen.findByText('Nothing Selecta checks for is wrong right now.')).toBeInTheDocument();
+    expect(await screen.findByText('Nothing SelectaDJ checks for is wrong right now.')).toBeInTheDocument();
     unmount();
     setFlags({ 'workspace.self_service': false });
     fakeBackend({ 'GET /diagnostics': everything });

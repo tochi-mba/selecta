@@ -56,7 +56,7 @@ describe('honest shared musical objects', () => {
       state: { status: 'queued', key: 'queued-1' },
     };
     render(<SeamDiagram seam={seam} from="Before" into="After" />);
-    expect(screen.getByRole('img', { name: /Queued to render.*Selecta’s choice/ })).toHaveAttribute('data-family', 'unknown');
+    expect(screen.getByRole('img', { name: /Queued to render.*SelectaDJ’s choice/ })).toHaveAttribute('data-family', 'unknown');
     expect(seamFamily('word_cut')).toBe('words');
     expect(seamFamily('stem_intertwine')).toBe('stems');
     expect(seamFamily('cut_on_one')).toBe('cut');

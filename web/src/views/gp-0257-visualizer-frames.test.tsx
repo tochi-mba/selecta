@@ -4,7 +4,8 @@ import { DEFAULT_PREFS, setPrefs } from '../state/prefs';
 import { MusicVisualizer } from './Now';
 
 /** GP-0257-05: how much drawing the visualizer asks for. Hidden or Still costs no frames at all, and
- * playing is held to about 15 drawn frames a second however fast the screen refreshes. */
+ * normal playback can draw about 30 frames a second for music responsiveness; slow devices
+ * back off to 15 without spending frames when hidden or under Still. */
 
 let queued: FrameRequestCallback[] = [];
 let drawn = 0;
@@ -80,13 +81,49 @@ describe('GP-0257-05 the visualizer only spends frames when someone can see it m
     expect(drawn).toBe(0);
   });
 
-  it('draws about 15 frames a second while playing on a 60 Hz screen, not 60', () => {
+  it('draws about 30 frames a second while playing on a 60 Hz screen, not 60', () => {
     setPrefs({ ...DEFAULT_PREFS, motion: 'expressive' });
     show();
     const first = drawn;
     pump(60);
     const perSecond = drawn - first;
-    expect(perSecond).toBeGreaterThanOrEqual(12);
-    expect(perSecond).toBeLessThanOrEqual(16);
+    expect(perSecond).toBeGreaterThanOrEqual(27);
+    expect(perSecond).toBeLessThanOrEqual(32);
+  });
+});
+
+describe('SF-0212-07 a still visualizer never holds the silent first frame', () => {
+  it('looks again until there is sound, then holds that one frame without asking for animation frames', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      setPrefs({ ...DEFAULT_PREFS, motion: 'still' });
+      let level = 0;
+      const quietThenLoud = { getSpectrum: () => new Uint8Array(64).fill(level) } as never;
+      render(<MusicVisualizer player={quietThenLoud} active stage={false} intensity="standard" spectrumShape="bars" />);
+      expect(drawn).toBe(1);
+      vi.advanceTimersByTime(250);
+      expect(drawn).toBe(2);
+      level = 120;
+      vi.advanceTimersByTime(250);
+      expect(drawn).toBe(3);
+      vi.advanceTimersByTime(5000);
+      expect(drawn).toBe(3);
+      expect(window.requestAnimationFrame).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('gives up after a few seconds of silence rather than polling for ever', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      setPrefs({ ...DEFAULT_PREFS, motion: 'still' });
+      const silent = { getSpectrum: () => new Uint8Array(64) } as never;
+      render(<MusicVisualizer player={silent} active stage={false} intensity="standard" spectrumShape="bars" />);
+      vi.advanceTimersByTime(60_000);
+      expect(drawn).toBe(41);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

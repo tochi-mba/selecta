@@ -1,6 +1,6 @@
 # Selecta - final-polish verification and acceptance matrix
 
-**FP documentation proposal as of 2026-11-08:** baseline main `5347e7309c5ff8b2e2965c2194bf2089b6ad2721`. 8 Proposed ADRs (0264–0271), 64 task acceptances Not started, 0 In progress, 0 Implemented, 0 independently Verified. All owner decisions pending; no source change or human verification is claimed.
+**Historical baseline - FP documentation proposal as of 2026-11-08:** baseline main `5347e7309c5ff8b2e2965c2194bf2089b6ad2721`. 8 Proposed ADRs (0264–0271), 64 task acceptances Not started, 0 In progress, 0 Implemented, 0 independently Verified. All owner decisions pending; no source change or human verification is claimed.
 
 ## Programme-specific acceptance routes
 
@@ -31,6 +31,6 @@ A green screenshot test, manually styled candidate image or a synthetic-muted se
 
 **Not started → In progress:** assigned implementation owner and named source PR. **Implemented:** source/test artifacts, exact SHA and passing relevant regressions or documented accepted reconciliation. **Independently Verified:** separately reviewed task on that SHA with recorded outcomes. Decision **Proposed → Accepted** requires an explicit owner decision, not merge of ADR docs.
 
-**Current FP programme:** 8 decisions Proposed; 64 task acceptances Not started; 0 independently Verified. New enhancement release **NO-GO** until the programme-specific [release gates](selecta-final-polish-release-gates.md) are met; this does not assert the existing app is unusable.
+**Current FP programme (2026-11-12, recounted from the checklist task lines):** 8 decisions Accepted; 64 task acceptances: 53 Implemented, 11 In progress, 0 Not started; 0 independently Verified. New enhancement release **NO-GO** until the programme-specific [release gates](selecta-final-polish-release-gates.md) are met; this does not assert the existing app is unusable.
 
 [Roadmap](selecta-final-polish-roadmap.md) · [Checklist](selecta-final-polish-implementation-checklist.md) · [Evidence](selecta-final-polish-implementation-evidence.md) · [JSON](selecta-final-polish-code-status.json) · [Parity](selecta-final-polish-overlap-and-parity.md) · [Verification](selecta-final-polish-verification-matrix.md) · [Reconciliation](selecta-final-polish-status-reconciliation.md) · [Release](selecta-final-polish-release-gates.md)

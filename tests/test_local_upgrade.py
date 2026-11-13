@@ -66,7 +66,11 @@ SAVED_MIXES = [{"name": "Friday", "items": [{"song_id": 1}, {"song_id": 2}]}]
 
 # The shape a fresh library file has on LOCAL_SCHEMA_VERSION. If this test fails, the local
 # schema changed: bump local_upgrade.LOCAL_SCHEMA_VERSION and record the new fingerprint here.
-FINGERPRINTS = {1: "dadd35e2317a12632dfb0a20fa06f1828af888b549c436badb6ea013343b3511"}
+FINGERPRINTS = {
+    1: "dadd35e2317a12632dfb0a20fa06f1828af888b549c436badb6ea013343b3511",
+    2: "925fd708411764e33a60cbbed5eec13a4eb7273c83a8f4dfbfe24cb7ebef0c72",
+    3: "f5cced751093f8f3882ce8182f4a59b526a0dc7ba30b9488e80798c43ace197e",
+}
 
 
 def old_library(path: Path) -> Path:
@@ -78,8 +82,16 @@ def old_library(path: Path) -> Path:
         conn.execute(
             "INSERT INTO songs(id,path,folder,size,mtime,duration,artist,title) "
             "VALUES(?,?,?,?,?,?,?,?)",
-            (song_id, f"C:/Music/{song_id}.mp3", "C:/Music", 4_000_000, 1.7e9, 200.0,
-             "Artist", f"Song {song_id}"),
+            (
+                song_id,
+                f"C:/Music/{song_id}.mp3",
+                "C:/Music",
+                4_000_000,
+                1.7e9,
+                200.0,
+                "Artist",
+                f"Song {song_id}",
+            ),
         )
         conn.execute(
             "INSERT INTO analysis(song_id,version,bpm,key,camelot,energy) VALUES(?,?,?,?,?,?)",
@@ -93,9 +105,7 @@ def old_library(path: Path) -> Path:
         "INSERT INTO seam_book(id,song_a,song_b,kind,payload,score) "
         "VALUES(1,1,2,'same_melody','{\"x\": 1}',0.8)"
     )
-    conn.execute(
-        "INSERT INTO ratings(seam_id,song_a,song_b,method,rating) VALUES(1,1,2,'blend',5)"
-    )
+    conn.execute("INSERT INTO ratings(seam_id,song_a,song_b,method,rating) VALUES(1,1,2,'blend',5)")
     conn.execute("INSERT INTO queue(position,song_id,transition) VALUES(0,1,'blend')")
     conn.execute("INSERT INTO queue(position,song_id,transition) VALUES(1,2,'cut')")
     conn.commit()
@@ -226,3 +236,27 @@ def test_a_schema_change_bumps_the_local_schema_version(tmp_path):
     assert FINGERPRINTS[local_upgrade.LOCAL_SCHEMA_VERSION] == fingerprint, (
         "db.SCHEMA changed: bump local_upgrade.LOCAL_SCHEMA_VERSION and record " + fingerprint
     )
+
+
+class _CorruptCopy(sqlite3.Connection):
+    """A connection whose integrity check fails, as a copy damaged on the way to disk would."""
+
+    def execute(self, sql, *args):
+        if sql.strip().upper() == "PRAGMA INTEGRITY_CHECK":
+            return super().execute("SELECT 'row 1 missing from index'")
+        return super().execute(sql, *args)
+
+
+def test_a_copy_that_fails_its_integrity_check_is_removed(tmp_path, monkeypatch):
+    """A damaged copy is deleted, so it never stands in for a good one or pushes one out."""
+    old = old_library(tmp_path / "old.sqlite")
+    real_connect = sqlite3.connect
+    monkeypatch.setattr(sqlite3, "connect", lambda *a, **k: real_connect(*a, factory=_CorruptCopy))
+    with pytest.raises(local_upgrade.UpgradeBackupError):
+        db.connect(old)
+    monkeypatch.undo()
+
+    check = sqlite3.connect(old)
+    assert check.execute("PRAGMA user_version").fetchone()[0] == 0
+    check.close()
+    assert list((tmp_path / local_upgrade.FOLDER).iterdir()) == []

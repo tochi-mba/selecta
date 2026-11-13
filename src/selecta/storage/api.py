@@ -149,12 +149,28 @@ def _r2_client() -> R2Client:
     )
 
 
+DEPLOYED_ENVIRONMENTS = ("staging", "production")
+
+
+def default_bucket(kind: str, environment: str | None = None) -> str:
+    """The bucket OpenTofu creates for `kind` (`infra/cloudflare/main.tf`): `selecta-ENV-KIND` in
+    a deployed environment (`SELECTA_ENV`), else the development stack's `sel-KIND`."""
+    stage = (os.environ.get("SELECTA_ENV", "") if environment is None else environment)
+    stage = stage.strip().lower()
+    return f"selecta-{stage}-{kind}" if stage in DEPLOYED_ENVIRONMENTS else f"sel-{kind}"
+
+
+def _bucket(kind: str) -> str:
+    return (os.environ.get(f"SELECTA_R2_BUCKET_{kind.upper()}", "").strip()
+            or default_bucket(kind))
+
+
 def _buckets() -> Buckets:
     return Buckets(
-        originals=os.environ.get("SELECTA_R2_BUCKET_ORIGINALS", "sel-originals"),
-        derived=os.environ.get("SELECTA_R2_BUCKET_DERIVED", "sel-derived"),
-        exports=os.environ.get("SELECTA_R2_BUCKET_EXPORTS", "sel-exports"),
-        staging=os.environ.get("SELECTA_R2_BUCKET_STAGING", "sel-staging"),
+        originals=_bucket("originals"),
+        derived=_bucket("derived"),
+        exports=_bucket("exports"),
+        staging=_bucket("staging"),
     )
 
 

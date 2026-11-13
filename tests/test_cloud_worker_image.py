@@ -71,6 +71,18 @@ def test_the_image_bakes_pinned_models_and_checks_them_before_the_worker_starts(
     assert entry[-2:] == ["-m", "selecta.workers.cloud"]
 
 
+def test_every_setting_the_image_sets_is_one_the_code_reads():
+    """A setting nothing reads only misleads an operator (the image once set SELECTA_MODEL_LOCK
+    and SELECTA_MODEL_ROOT; model_lock takes both as arguments)."""
+    env = " ".join(rest for keyword, rest in instructions() if keyword == "ENV")
+    set_here = set(re.findall(r"(SELECTA_[A-Z0-9_]+)=", env))
+    assert "SELECTA_WORKER_SCRATCH_ROOT" in set_here
+    read = set()
+    for path in (ROOT / "src" / "selecta").rglob("*.py"):
+        read |= set(re.findall(r'"(SELECTA_[A-Z0-9_]+)"', path.read_text("utf-8")))
+    assert sorted(set_here - read) == []
+
+
 def test_the_worker_runs_as_a_user_without_secrets_baked_in():
     found = instructions()
     users = [rest for keyword, rest in found if keyword == "USER"]

@@ -1,0 +1,171 @@
+- grid "Stems for Morning Light and Slow Tide":
+  - row "Bars":
+    - columnheader "Bar"
+    - columnheader "1"
+    - columnheader "3"
+    - columnheader "5"
+    - columnheader "7"
+    - columnheader "9"
+    - columnheader "11"
+    - columnheader "13"
+    - columnheader "15"
+  - rowgroup "Morning Light":
+    - row "Morning Light":
+      - gridcell "Morning Light":
+        - heading "Morning Light" [level=4]
+    - row "Hear only Morning Light voice Morning Light voice, bars 1–2, on Morning Light voice, bars 3–4, on Morning Light voice, bars 5–6, on Morning Light voice, bars 7–8, on Morning Light voice, bars 9–10, off Morning Light voice, bars 11–12, off Morning Light voice, bars 13–14, off Morning Light voice, bars 15–16, off":
+      - rowheader "Hear only Morning Light voice":
+        - button "Hear only Morning Light voice": Voice
+      - gridcell "Morning Light voice, bars 1–2, on":
+        - button "Morning Light voice, bars 1–2, on" [pressed]
+      - gridcell "Morning Light voice, bars 3–4, on":
+        - button "Morning Light voice, bars 3–4, on" [pressed]
+      - gridcell "Morning Light voice, bars 5–6, on":
+        - button "Morning Light voice, bars 5–6, on" [pressed]
+      - gridcell "Morning Light voice, bars 7–8, on":
+        - button "Morning Light voice, bars 7–8, on" [pressed]
+      - gridcell "Morning Light voice, bars 9–10, off":
+        - button "Morning Light voice, bars 9–10, off"
+      - gridcell "Morning Light voice, bars 11–12, off":
+        - button "Morning Light voice, bars 11–12, off"
+      - gridcell "Morning Light voice, bars 13–14, off":
+        - button "Morning Light voice, bars 13–14, off"
+      - gridcell "Morning Light voice, bars 15–16, off":
+        - button "Morning Light voice, bars 15–16, off"
+    - row "Hear only Morning Light drums Morning Light drums, bars 1–2, on Morning Light drums, bars 3–4, on Morning Light drums, bars 5–6, on Morning Light drums, bars 7–8, on Morning Light drums, bars 9–10, off Morning Light drums, bars 11–12, off Morning Light drums, bars 13–14, off Morning Light drums, bars 15–16, off":
+      - rowheader "Hear only Morning Light drums":
+        - button "Hear only Morning Light drums": Drums
+      - gridcell "Morning Light drums, bars 1–2, on":
+        - button "Morning Light drums, bars 1–2, on" [pressed]
+      - gridcell "Morning Light drums, bars 3–4, on":
+        - button "Morning Light drums, bars 3–4, on" [pressed]
+      - gridcell "Morning Light drums, bars 5–6, on":
+        - button "Morning Light drums, bars 5–6, on" [pressed]
+      - gridcell "Morning Light drums, bars 7–8, on":
+        - button "Morning Light drums, bars 7–8, on" [pressed]
+      - gridcell "Morning Light drums, bars 9–10, off":
+        - button "Morning Light drums, bars 9–10, off"
+      - gridcell "Morning Light drums, bars 11–12, off":
+        - button "Morning Light drums, bars 11–12, off"
+      - gridcell "Morning Light drums, bars 13–14, off":
+        - button "Morning Light drums, bars 13–14, off"
+      - gridcell "Morning Light drums, bars 15–16, off":
+        - button "Morning Light drums, bars 15–16, off"
+    - row "Hear only Morning Light bass Morning Light bass, bars 1–2, on Morning Light bass, bars 3–4, on Morning Light bass, bars 5–6, on Morning Light bass, bars 7–8, on Morning Light bass, bars 9–10, off Morning Light bass, bars 11–12, off Morning Light bass, bars 13–14, off Morning Light bass, bars 15–16, off":
+      - rowheader "Hear only Morning Light bass":
+        - button "Hear only Morning Light bass": Bass
+      - gridcell "Morning Light bass, bars 1–2, on":
+        - button "Morning Light bass, bars 1–2, on" [pressed]
+      - gridcell "Morning Light bass, bars 3–4, on":
+        - button "Morning Light bass, bars 3–4, on" [pressed]
+      - gridcell "Morning Light bass, bars 5–6, on":
+        - button "Morning Light bass, bars 5–6, on" [pressed]
+      - gridcell "Morning Light bass, bars 7–8, on":
+        - button "Morning Light bass, bars 7–8, on" [pressed]
+      - gridcell "Morning Light bass, bars 9–10, off":
+        - button "Morning Light bass, bars 9–10, off"
+      - gridcell "Morning Light bass, bars 11–12, off":
+        - button "Morning Light bass, bars 11–12, off"
+      - gridcell "Morning Light bass, bars 13–14, off":
+        - button "Morning Light bass, bars 13–14, off"
+      - gridcell "Morning Light bass, bars 15–16, off":
+        - button "Morning Light bass, bars 15–16, off"
+    - row "Hear only Morning Light melody Morning Light melody, bars 1–2, on Morning Light melody, bars 3–4, on Morning Light melody, bars 5–6, on Morning Light melody, bars 7–8, on Morning Light melody, bars 9–10, off Morning Light melody, bars 11–12, off Morning Light melody, bars 13–14, off Morning Light melody, bars 15–16, off":
+      - rowheader "Hear only Morning Light melody":
+        - button "Hear only Morning Light melody": Melody
+      - gridcell "Morning Light melody, bars 1–2, on":
+        - button "Morning Light melody, bars 1–2, on" [pressed]
+      - gridcell "Morning Light melody, bars 3–4, on":
+        - button "Morning Light melody, bars 3–4, on" [pressed]
+      - gridcell "Morning Light melody, bars 5–6, on":
+        - button "Morning Light melody, bars 5–6, on" [pressed]
+      - gridcell "Morning Light melody, bars 7–8, on":
+        - button "Morning Light melody, bars 7–8, on" [pressed]
+      - gridcell "Morning Light melody, bars 9–10, off":
+        - button "Morning Light melody, bars 9–10, off"
+      - gridcell "Morning Light melody, bars 11–12, off":
+        - button "Morning Light melody, bars 11–12, off"
+      - gridcell "Morning Light melody, bars 13–14, off":
+        - button "Morning Light melody, bars 13–14, off"
+      - gridcell "Morning Light melody, bars 15–16, off":
+        - button "Morning Light melody, bars 15–16, off"
+  - rowgroup "Slow Tide":
+    - row "Slow Tide":
+      - gridcell "Slow Tide":
+        - heading "Slow Tide" [level=4]
+    - row "Hear only Slow Tide voice Slow Tide voice, bars 1–2, on Slow Tide voice, bars 3–4, on Slow Tide voice, bars 5–6, on Slow Tide voice, bars 7–8, on Slow Tide voice, bars 9–10, off Slow Tide voice, bars 11–12, off Slow Tide voice, bars 13–14, off Slow Tide voice, bars 15–16, off":
+      - rowheader "Hear only Slow Tide voice":
+        - button "Hear only Slow Tide voice": Voice
+      - gridcell "Slow Tide voice, bars 1–2, on":
+        - button "Slow Tide voice, bars 1–2, on" [pressed]
+      - gridcell "Slow Tide voice, bars 3–4, on":
+        - button "Slow Tide voice, bars 3–4, on" [pressed]
+      - gridcell "Slow Tide voice, bars 5–6, on":
+        - button "Slow Tide voice, bars 5–6, on" [pressed]
+      - gridcell "Slow Tide voice, bars 7–8, on":
+        - button "Slow Tide voice, bars 7–8, on" [pressed]
+      - gridcell "Slow Tide voice, bars 9–10, off":
+        - button "Slow Tide voice, bars 9–10, off"
+      - gridcell "Slow Tide voice, bars 11–12, off":
+        - button "Slow Tide voice, bars 11–12, off"
+      - gridcell "Slow Tide voice, bars 13–14, off":
+        - button "Slow Tide voice, bars 13–14, off"
+      - gridcell "Slow Tide voice, bars 15–16, off":
+        - button "Slow Tide voice, bars 15–16, off"
+    - row "Hear only Slow Tide drums Slow Tide drums, bars 1–2, on Slow Tide drums, bars 3–4, on Slow Tide drums, bars 5–6, on Slow Tide drums, bars 7–8, on Slow Tide drums, bars 9–10, off Slow Tide drums, bars 11–12, off Slow Tide drums, bars 13–14, off Slow Tide drums, bars 15–16, off":
+      - rowheader "Hear only Slow Tide drums":
+        - button "Hear only Slow Tide drums": Drums
+      - gridcell "Slow Tide drums, bars 1–2, on":
+        - button "Slow Tide drums, bars 1–2, on" [pressed]
+      - gridcell "Slow Tide drums, bars 3–4, on":
+        - button "Slow Tide drums, bars 3–4, on" [pressed]
+      - gridcell "Slow Tide drums, bars 5–6, on":
+        - button "Slow Tide drums, bars 5–6, on" [pressed]
+      - gridcell "Slow Tide drums, bars 7–8, on":
+        - button "Slow Tide drums, bars 7–8, on" [pressed]
+      - gridcell "Slow Tide drums, bars 9–10, off":
+        - button "Slow Tide drums, bars 9–10, off"
+      - gridcell "Slow Tide drums, bars 11–12, off":
+        - button "Slow Tide drums, bars 11–12, off"
+      - gridcell "Slow Tide drums, bars 13–14, off":
+        - button "Slow Tide drums, bars 13–14, off"
+      - gridcell "Slow Tide drums, bars 15–16, off":
+        - button "Slow Tide drums, bars 15–16, off"
+    - row "Hear only Slow Tide bass Slow Tide bass, bars 1–2, on Slow Tide bass, bars 3–4, on Slow Tide bass, bars 5–6, on Slow Tide bass, bars 7–8, on Slow Tide bass, bars 9–10, off Slow Tide bass, bars 11–12, off Slow Tide bass, bars 13–14, off Slow Tide bass, bars 15–16, off":
+      - rowheader "Hear only Slow Tide bass":
+        - button "Hear only Slow Tide bass": Bass
+      - gridcell "Slow Tide bass, bars 1–2, on":
+        - button "Slow Tide bass, bars 1–2, on" [pressed]
+      - gridcell "Slow Tide bass, bars 3–4, on":
+        - button "Slow Tide bass, bars 3–4, on" [pressed]
+      - gridcell "Slow Tide bass, bars 5–6, on":
+        - button "Slow Tide bass, bars 5–6, on" [pressed]
+      - gridcell "Slow Tide bass, bars 7–8, on":
+        - button "Slow Tide bass, bars 7–8, on" [pressed]
+      - gridcell "Slow Tide bass, bars 9–10, off":
+        - button "Slow Tide bass, bars 9–10, off"
+      - gridcell "Slow Tide bass, bars 11–12, off":
+        - button "Slow Tide bass, bars 11–12, off"
+      - gridcell "Slow Tide bass, bars 13–14, off":
+        - button "Slow Tide bass, bars 13–14, off"
+      - gridcell "Slow Tide bass, bars 15–16, off":
+        - button "Slow Tide bass, bars 15–16, off"
+    - row "Hear only Slow Tide melody Slow Tide melody, bars 1–2, on Slow Tide melody, bars 3–4, on Slow Tide melody, bars 5–6, on Slow Tide melody, bars 7–8, on Slow Tide melody, bars 9–10, off Slow Tide melody, bars 11–12, off Slow Tide melody, bars 13–14, off Slow Tide melody, bars 15–16, off":
+      - rowheader "Hear only Slow Tide melody":
+        - button "Hear only Slow Tide melody": Melody
+      - gridcell "Slow Tide melody, bars 1–2, on":
+        - button "Slow Tide melody, bars 1–2, on" [pressed]
+      - gridcell "Slow Tide melody, bars 3–4, on":
+        - button "Slow Tide melody, bars 3–4, on" [pressed]
+      - gridcell "Slow Tide melody, bars 5–6, on":
+        - button "Slow Tide melody, bars 5–6, on" [pressed]
+      - gridcell "Slow Tide melody, bars 7–8, on":
+        - button "Slow Tide melody, bars 7–8, on" [pressed]
+      - gridcell "Slow Tide melody, bars 9–10, off":
+        - button "Slow Tide melody, bars 9–10, off"
+      - gridcell "Slow Tide melody, bars 11–12, off":
+        - button "Slow Tide melody, bars 11–12, off"
+      - gridcell "Slow Tide melody, bars 13–14, off":
+        - button "Slow Tide melody, bars 13–14, off"
+      - gridcell "Slow Tide melody, bars 15–16, off":
+        - button "Slow Tide melody, bars 15–16, off"

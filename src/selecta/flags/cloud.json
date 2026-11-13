@@ -136,6 +136,20 @@
       "kind": "ops",
       "owner": "platform"
     },
+    "cloud.error_reporting": {
+      "label": "Error reporting",
+      "about": "Send API, gateway, maintenance and worker errors to Sentry, scrubbed of signed links, tokens and email addresses. Needs SELECTA_SENTRY_DSN; nothing is sent without it.",
+      "modes": ["cloud"],
+      "kind": "ops",
+      "owner": "platform"
+    },
+    "cloud.email": {
+      "label": "Transactional email",
+      "about": "Email people from SelectaDJ when a long job finishes or their storage goes over quota, through Postmark or Resend. Needs the SELECTA_EMAIL_* settings on the maintenance service.",
+      "modes": ["cloud"],
+      "kind": "ops",
+      "owner": "platform"
+    },
     "cloud.export_expiry": {
       "label": "Export expiry",
       "about": "The maintenance leader deletes finished exports when their plan's retention runs out (Free 7 days, Standard 30, Premium 90) and gives their bytes back to the quota.",
@@ -149,6 +163,31 @@
       "modes": ["cloud"],
       "kind": "ops",
       "owner": "platform"
+    },
+    "cloud.dmca_renewal_reminder": {
+      "label": "DMCA agent renewal reminder",
+      "about": "The maintenance leader raises an owner alert from 90 days before the DMCA designated agent's three-year registration lapses, and daily once it has.",
+      "modes": ["cloud"],
+      "kind": "ops",
+      "owner": "legal"
+    },
+    "cloud.privacy_notice_draft": {
+      "label": "Privacy notice draft",
+      "about": "Shows the draft privacy notice, marked as a draft pending legal review, under Settings so the owner and a privacy adviser can read it in place. Off by default: it is not published.",
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "legal",
+      "surfaces": ["cloud.settings"]
+    },
+    "cloud.device_check": {
+      "label": "Device check",
+      "about": "A checklist under Settings for the real-device checks (Play here, an offline speaker, the iPhone screen-on note, seam alignment) that reads what this browser supports and writes a copyable record. Off by default.",
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback",
+      "surfaces": ["cloud.settings"]
     },
     "billing.webhooks": {
       "label": "Billing updates",
@@ -241,7 +280,9 @@
       "routes": [
         "POST /api/rooms/{room_id}/displays",
         "DELETE /api/rooms/{room_id}/displays",
+        "DELETE /api/rooms/{room_id}/displays/{display_id}",
         "POST /api/display/pairings",
+        "DELETE /api/display/pairing",
         "GET /api/display/view"
       ],
       "requires": ["rooms"],
@@ -267,6 +308,7 @@
         "routes": [
           "POST /api/admin/session",
           "GET /api/admin/me",
+          "POST /api/admin/business/pilots",
           "GET /api/admin/overview",
           "GET /api/admin/jobs",
           "GET /api/admin/jobs/{job_id}",

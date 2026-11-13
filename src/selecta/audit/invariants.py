@@ -30,8 +30,9 @@ What each check looks at:
    attempt and a finish time, and counters are never negative.
 
 Invariants 8 (AI output never authorises an action) and 10 (the UI never shows "done" without a
-verified result) can't be read from the database; their tests live with the AI gateway and the
-site. `NOT_CHECKED` names them so a report can say so.
+verified result) can't be read from the database; `NOT_CHECKED` names them so a report can say
+so. Their proof is the tests named in `selecta.audit.invariant_proofs`, which a full cloud run
+must pass (`tests/invariant_gate.py`).
 """
 
 from __future__ import annotations
@@ -65,8 +66,8 @@ NAMES = {
     9: "no corrupt state",
 }
 NOT_CHECKED = {
-    8: "AI output never authorises an action (checked by the AI gateway tests)",
-    10: "the UI never shows done without a verified result (checked by the site's tests)",
+    8: "AI output never authorises an action (proved by the tests in invariant_proofs)",
+    10: "the UI never shows done without a verified result (proved by invariant_proofs' tests)",
 }
 BLOCK_REASONS = frozenset({"dependency", "flag_off", "staff_hold"})
 
@@ -106,7 +107,8 @@ def lost_jobs(connection: Connection, accepted: Iterable[str] = ()) -> list[Viol
             continue
         prerequisites[link.job_id].append(rows[link.depends_on].state)
     live = Counter(
-        row.job_id for row in connection.execute(
+        row.job_id
+        for row in connection.execute(
             sa.select(job_attempts.c.job_id).where(job_attempts.c.outcome.is_(None))
         )
     )
@@ -153,7 +155,9 @@ def stale_publish(connection: Connection) -> list[Violation]:
         attempt = attempts.get(artifact.attempt_id)
         job = rows.get(artifact.job_id)
         if (
-            attempt is None or job is None or attempt.outcome != "succeeded"
+            attempt is None
+            or job is None
+            or attempt.outcome != "succeeded"
             or attempt.fencing_token != job.lease_generation
         ):
             found.append(Violation(2, f"artifact {artifact.id} came from a stale attempt"))
@@ -168,9 +172,10 @@ def _key_owner(key: Any) -> str | None:
 
 def cross_tenant(connection: Connection) -> list[Violation]:
     found: list[Violation] = []
-    owner = {row.id: row.workspace_id for row in connection.execute(
-        sa.select(jobs.c.id, jobs.c.workspace_id)
-    )}
+    owner = {
+        row.id: row.workspace_id
+        for row in connection.execute(sa.select(jobs.c.id, jobs.c.workspace_id))
+    }
     for attempt in _rows(connection, job_attempts):
         if attempt.job_id in owner and owner[attempt.job_id] != attempt.workspace_id:
             found.append(Violation(3, f"attempt {attempt.id} sits in another workspace's job"))
@@ -208,10 +213,13 @@ def quota(connection: Connection) -> list[Violation]:
         if used > int(row.limit_bytes) and row.state != "over_quota_read_only":
             found.append(Violation(4, f"{row.workspace_id} uses {used} of {row.limit_bytes} bytes"))
         if int(row.reserved_bytes) != active[row.workspace_id]:
-            found.append(Violation(
-                4, f"{row.workspace_id} reserves {row.reserved_bytes} bytes but its active "
-                f"reservations hold {active[row.workspace_id]}"
-            ))
+            found.append(
+                Violation(
+                    4,
+                    f"{row.workspace_id} reserves {row.reserved_bytes} bytes but its active "
+                    f"reservations hold {active[row.workspace_id]}",
+                )
+            )
     return found
 
 
@@ -253,17 +261,18 @@ def duplicates(connection: Connection) -> list[Violation]:
     for key, count in live.items():
         if count > 1:
             found.append(Violation(6, f"{count} live jobs share the idempotency key {key}"))
-    made = Counter((row.workspace_id, row.kind, row.input_hash) for row in _rows(
-        connection, artifacts
-    ))
+    made = Counter(
+        (row.workspace_id, row.kind, row.input_hash) for row in _rows(connection, artifacts)
+    )
     for key, count in made.items():
         if count > 1:
             found.append(Violation(6, f"{count} artifacts for the same inputs {key}"))
     entries = Counter(
         (row.workspace_id, row.ref, row.amount > 0)
         for row in connection.execute(
-            sa.select(usage_ledger.c.workspace_id, usage_ledger.c.ref, usage_ledger.c.amount)
-            .where(usage_ledger.c.kind == "storage_bytes", usage_ledger.c.ref.is_not(None))
+            sa.select(usage_ledger.c.workspace_id, usage_ledger.c.ref, usage_ledger.c.amount).where(
+                usage_ledger.c.kind == "storage_bytes", usage_ledger.c.ref.is_not(None)
+            )
         )
     )
     for (workspace, ref, grew), count in entries.items():
@@ -271,7 +280,8 @@ def duplicates(connection: Connection) -> list[Violation]:
             sign = "commits" if grew else "releases"
             found.append(Violation(6, f"{workspace} ledger {sign} {ref} {count} times"))
     committed = {
-        row.id for row in connection.execute(
+        row.id
+        for row in connection.execute(
             sa.select(storage_reservations.c.id).where(storage_reservations.c.state == "committed")
         )
     }
@@ -306,22 +316,32 @@ def entitlements(connection: Connection) -> list[Violation]:
         if plan_bytes is None:
             found.append(Violation(7, f"{row.workspace_id} is on an unknown plan {row.plan_id}"))
             continue
-        allowed = max([plan_bytes, *(
-            _storage_allowed(plan_id, None) or 0 for plan_id in overrides[row.workspace_id]
-        )])
+        allowed = max(
+            [
+                plan_bytes,
+                *(_storage_allowed(plan_id, None) or 0 for plan_id in overrides[row.workspace_id]),
+            ]
+        )
         if int(row.limit_bytes) > allowed:
-            found.append(Violation(
-                7, f"{row.workspace_id} may store {row.limit_bytes} bytes; its plan gives {allowed}"
-            ))
+            found.append(
+                Violation(
+                    7,
+                    f"{row.workspace_id} may store {row.limit_bytes} bytes; "
+                    f"its plan gives {allowed}",
+                )
+            )
         plan = plan_catalogue.plan_for(row.plan_id, row.plan_version)
         granted = [plan, *(plan_catalogue.plan_for(p) for p in overrides[row.workspace_id])]
         for lane in ("interactive", "standard"):
             cap = max(int(item.concurrency.get(lane, 0)) for item in granted)
             if running[(row.workspace_id, lane)] > cap:
-                found.append(Violation(
-                    7, f"{row.workspace_id} runs {running[(row.workspace_id, lane)]} {lane} "
-                    f"jobs; its plan allows {cap}"
-                ))
+                found.append(
+                    Violation(
+                        7,
+                        f"{row.workspace_id} runs {running[(row.workspace_id, lane)]} {lane} "
+                        f"jobs; its plan allows {cap}",
+                    )
+                )
     return found
 
 
@@ -331,7 +351,8 @@ def corrupt_state(connection: Connection) -> list[Violation]:
         for key in upkeep.head_suspects(connection)
     ]
     live = {
-        row.job_id for row in connection.execute(
+        row.job_id
+        for row in connection.execute(
             sa.select(job_attempts.c.job_id).where(job_attempts.c.outcome.is_(None))
         )
     }

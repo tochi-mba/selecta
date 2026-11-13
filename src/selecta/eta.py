@@ -20,8 +20,10 @@ import os
 import sqlite3
 import statistics
 import tempfile
+import threading
 import time
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -208,8 +210,42 @@ class JobClock:
 
     def __init__(self, home: Path):
         self.path = home / FILE_NAME
+        self._read: tuple[tuple[int, int], dict] | None = None
+        self._held = threading.local()
+
+    @contextmanager
+    def held(self) -> Iterator[None]:
+        """r11: for one request that asks for thousands of estimates (My Mixes with 500 drafts),
+        the file is looked at once and what it held answers every estimate in this thread until
+        the request ends. Other threads, and later requests, look at the file as usual."""
+        if getattr(self._held, "times", None) is not None:
+            yield
+            return
+        self._held.times = self._everything()
+        try:
+            yield
+        finally:
+            self._held.times = None
 
     def _everything(self) -> dict:
+        """What the file holds. Every seam's estimate asks, and a list of 500 drafts has thousands
+        of seams, so the file is only read again once it has changed (by its size and time)."""
+        held = getattr(self._held, "times", None)
+        return dict(held) if held is not None else self._on_disk()
+
+    def _on_disk(self) -> dict:
+        try:
+            info = self.path.stat()
+        except OSError:
+            return {}
+        stamp = (info.st_mtime_ns, info.st_size)
+        if self._read is not None and self._read[0] == stamp:
+            return dict(self._read[1])
+        loaded = self._parsed()
+        self._read = (stamp, loaded)
+        return dict(loaded)
+
+    def _parsed(self) -> dict:
         try:
             loaded = json.loads(self.path.read_text("utf-8"))
         except (OSError, ValueError):
@@ -236,7 +272,7 @@ class JobClock:
         took, when `seconds` is only part of it, so the score kept is of what a person was told."""
         if not (0 < seconds <= LONGEST_BELIEVABLE) or not math.isfinite(seconds):
             return
-        stored = self._everything()
+        stored = self._on_disk()  # never a held copy, which another process may have outdated
         stored[VERSION_KEY] = FILE_VERSION
         before = stored.get(kind, [])
         told = quoted if quoted else self.estimate(kind).seconds
@@ -368,12 +404,16 @@ def mix_time_left(
 
 
 def time_ahead(
-    mixes: list[list[dict]], clock: JobClock, now: float | None = None
+    mixes: list[list[dict]],
+    clock: JobClock,
+    now: float | None = None,
+    seen: set[str] | None = None,
 ) -> tuple[list[Estimate], set[str]]:
-    """All the work in these mixes, in order, counting a seam that's in two of them once."""
+    """All the work in these mixes, in order, counting a seam that's in two of them once. `seen`
+    carries on from an earlier call, so a long line can be added up one mix at a time."""
     now = time.time() if now is None else now
     estimates: list[Estimate] = []
-    seen: set[str] = set()
+    seen = set() if seen is None else set(seen)
     for items in mixes:
         for item in _in_turn(items):
             key = item["seam"]["state"].get("key")

@@ -56,6 +56,14 @@ describe('S31-0086-02 a Library row reads song, facts, readiness, then actions',
     }
   });
 
+  it('S4-0091-05 the facts and status read as separate words, not run together as one line', async () => {
+    show();
+    const ready = (await screen.findByText('Ready one')).closest('li')!;
+    const text = (ready.textContent ?? '').replace(/\s+/g, ' ');
+    expect(text).toContain('120 BPM 8A 3:20 ');
+    expect(text).not.toMatch(/BPM8A|\d:\d\dReady/);
+  });
+
   it('a blocked song says why next to its status, before any action', async () => {
     show();
     const blocked = (await screen.findByText('Blocked one')).closest('li')!;

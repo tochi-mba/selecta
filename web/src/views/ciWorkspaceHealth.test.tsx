@@ -28,7 +28,7 @@ describe('CI-0180-01 library health and one next action', () => {
     const rows = screen.getAllByRole('listitem');
     expect(rows).toHaveLength(3);
     expect(rows[0]).toHaveClass('needs-you-first');
-    expect(rows[0]).toHaveTextContent('Do this first. Selecta needs 6 mix-ready songs to build a mix, and has 4.');
+    expect(rows[0]).toHaveTextContent('Do this first. SelectaDJ needs 6 mix-ready songs to build a mix, and has 4.');
     expect(within(rows[0]).getByRole('link', { name: 'See what’s holding them back' })).toBeInTheDocument();
     // one first action only; the others stay reachable, unmarked
     expect(screen.getAllByText(/Do this first/)).toHaveLength(1);

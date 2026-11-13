@@ -29,8 +29,7 @@ OPERATION_TIERS: dict[str, str] = {}
 """Filled in by tools.py as each operation is registered; checked by `audit`."""
 
 CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f‪-‮⁦-⁩]")
-TAG = re.compile(r"<\s*/?\s*(script|iframe|object|embed|style|img|svg|a|form|input)\b[^>]*>",
-                 re.I)
+TAG = re.compile(r"<\s*/?\s*(script|iframe|object|embed|style|img|svg|a|form|input)\b[^>]*>", re.I)
 INSTRUCTION = re.compile(
     r"\b(ignore (all|any|previous|the above) (instructions|rules)|system prompt|you are now|"
     r"approve (this|the) (mix|draft)|call the tool|run the following)\b",
@@ -63,7 +62,7 @@ def audit(operations: list[Any]) -> list[str]:
         if tier != "read" and operation.effects != "write":
             problems.append(f"{operation.name} changes state but declares itself a read.")
         if operation.annotations["openWorld"]:
-            problems.append(f"{operation.name} must not reach outside Selecta.")
+            problems.append(f"{operation.name} must not reach outside SelectaDJ.")
         if tier in {"propose", "save"} and operation.annotations["destructive"]:
             problems.append(f"{operation.name} is marked destructive but only adds records.")
     return problems
@@ -82,7 +81,7 @@ def looks_like_instruction(text: str) -> bool:
 
 def as_data(label: str, value: Any) -> str:
     """Wrap untrusted content so a model reads it as quoted data, never as orders."""
-    return f"<data name=\"{label}\">{clean_text(value, 2000)}</data>"
+    return f'<data name="{label}">{clean_text(value, 2000)}</data>'
 
 
 PRIVATE_KEYS = {"path", "folder", "file", "api_key", "key_secret", "authorization"}
@@ -125,4 +124,3 @@ class RateLimit:
             mine.append(now)
             self._all.append(now)
             return True
-

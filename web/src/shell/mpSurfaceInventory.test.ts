@@ -79,6 +79,9 @@ describe('MP-0272 surface inventory', () => {
   it('covers every overlay the source opens', () => {
     const counted = new Map<string, number>();
     for (const [file, text] of Object.entries(SOURCES)) {
+      // Plain .ts files can contain generic types such as list<Workspace>.
+      // Only TSX can contain JSX overlay elements.
+      if (!file.endsWith('.tsx')) continue;
       if (inventory.outOfScope.some((scope) => file.startsWith(`${scope.path}/`))) continue;
       const opens = (text.match(/<(Dialog|Drawer|Workspace|Sheet)(\s|>|$)/gm) ?? []).length + (text.match(/role="alertdialog"/g) ?? []).length;
       if (opens) counted.set(file, opens);

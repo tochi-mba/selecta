@@ -14,7 +14,9 @@ const ROUTES = ['/mixes', '/library', '/mixes/mine', '/workshop', '/discover', '
 async function open(page: Page, route: string, width: number, height = 900) {
   await page.setViewportSize({ width, height });
   await page.goto(route);
-  await expect(page.locator('main#main')).toBeVisible();
+  // the editor, My Mixes, Discover and Workspace load as their own chunks (routeChunks.ts); until one
+  // arrives, App's Suspense fallback is a busy main#main with only a title, so wait for the page itself
+  await expect(page.locator('main#main:not([aria-busy="true"])')).toBeVisible();
   // the route reveal and any late data both settle before a pixel is read
   await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
 }
@@ -281,6 +283,7 @@ test('MP-0274-06 the context bar, editor scope, inspector and Studio ruler never
   }
   // Listen's side column pins under the bar's real height too
   await open(page, '/listen', 1440, 700);
+  await expect(page.locator('main.page.now .listen-side')).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 600));
   const listen = await page.evaluate(chrome);
   const layoutEnd = await page.locator('.listen-layout').evaluate((element) => element.getBoundingClientRect().bottom);

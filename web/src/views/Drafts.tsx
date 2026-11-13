@@ -1,9 +1,10 @@
 import { Icon } from '../ui/Icon';
-import { FormEvent, useCallback, useEffect, useId, useRef, useState } from 'react';
+import { FormEvent, memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { del, DraftInfo, DraftList, get, post } from '../api';
 import { useFlags } from '../flags';
 import { etaRangeWords, length, nth } from '../lib';
 import { PageLink } from '../shell/PageLink';
+import { keepUnchangedDrafts } from '../state/keepUnchanged';
 import { draftReadiness } from '../state/readiness';
 import { Action, Dialog, Menu, Problem, Skeleton, Status } from '../ui/controls';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
@@ -11,7 +12,11 @@ import { MenuItem } from '../ui/primitives';
 import { MixSignature } from '../ui/MusicObjects';
 import { ViewProps } from './shared';
 
-type Props = Pick<ViewProps, 'notify' | 'openDraft' | 'playDraft' | 'setView'>;
+type Props = Pick<ViewProps, 'notify' | 'openDraft' | 'playDraft' | 'setView'> & {
+  /** SF-0204-02: My Mixes has one primary action, and the drafts own it (the first draft's Edit, or
+   * starting the first draft) unless the page leads with something else. */
+  lead?: boolean;
+};
 
 const CHECK_EVERY_MS = 4000;
 
@@ -56,7 +61,7 @@ function RenderLine({ inLine, current, onMove, onLeave }: {
     <section className="render-line" aria-label="Render line">
       <h2 className="section-title">Render line</h2>
       <p className="hint">
-        The order Selecta prepares audio in, in the background. It doesn’t change what’s playing or the order of songs in any mix.
+        The order SelectaDJ prepares audio in, in the background. It doesn’t change what’s playing or the order of songs in any mix.
       </p>
       <p className="hint" role="status">
         {current.left > 0
@@ -80,9 +85,90 @@ function RenderLine({ inLine, current, onMove, onLeave }: {
   );
 }
 
+/** What a draft's row can ask for. One object for the whole list, whose functions never change, so a
+ * row that's handed the same draft as last time doesn't redraw. */
+type RowActions = {
+  open: (id: number) => void;
+  play: (id: number) => Promise<void> | void;
+  rename: (id: number) => void;
+  renamed: () => void;
+  duplicate: (draft: DraftInfo) => void;
+  prioritize: (draft: DraftInfo) => void;
+  outOfLine: (draft: DraftInfo) => void;
+  askDelete: (draft: DraftInfo) => void;
+};
+
+/** One draft in the list. Memoised: a poll or a change to one draft redraws only the rows whose
+ * draft really changed (see keepUnchangedDrafts), not all of them. */
+const DraftRow = memo(function DraftRow({ draft, twin, failure, renaming, editor, line, primary, actions }: {
+  draft: DraftInfo;
+  /** another draft has the same name, so this one says its number */
+  twin: boolean;
+  failure?: string;
+  renaming: boolean;
+  editor: boolean;
+  line: boolean;
+  /** SF-0204-02: this row's Edit is the page's one primary action */
+  primary: boolean;
+  actions: RowActions;
+}) {
+  const facts = draftReadiness(draft);
+  const who = twin ? `${draft.name} (draft ${draft.id})` : draft.name;
+  const signature = useMemo(() => (draft.song_ids ?? []).map((song_id) => ({ song_id })), [draft.song_ids]);
+  return (
+    <li className={draft.place ? 'draft in-line' : 'draft'}>
+      <div className="draft-name">
+        {renaming ? (
+          <RenameDraft id={draft.id} name={draft.name} onDone={actions.renamed} />
+        ) : (
+          editor
+            ? <PageLink id={`draft-${draft.id}`} to={`/mixes/drafts/${draft.id}/edit`} className="draft-open"><b>{draft.name}</b></PageLink>
+            : <b id={`draft-${draft.id}`} className="draft-open">{draft.name}</b>
+        )}
+        {/* UF-0379-01/07: drafts that share a name are told apart by their exact draft number */}
+        {twin && <span className="soft draft-number"> Draft {draft.id}</span>}
+        {signature.length ? <MixSignature items={signature} compact /> : null}
+        <span className="soft">
+          {draft.songs > 0 && `${draft.songs} ${draft.songs === 1 ? 'song' : 'songs'}, about ${length(draft.seconds)}. `}
+          Saved.
+        </span>
+        <Status kind={facts.kind}>{facts.words}</Status>
+        {line && draft.place !== null && <span className="soft"> {nth(draft.place)} in the render line.</span>}
+        {draft.seams > 0 && (
+          <SeamSegments draft={draft} />
+        )}
+        {line && draft.place === null && draft.waiting > 0 && draft.seams > 0 && (
+          <span className="soft"> Rendering it would take {etaRangeWords({ seconds: draft.to_render, low: draft.to_render, high: draft.to_render })}.</span>
+        )}
+        {draft.missing > 0 && (
+          <Status kind="warning">{draft.missing} {draft.missing === 1 ? 'song has' : 'songs have'} left your library.</Status>
+        )}
+        {failure && <p className="warn" role="alert">{failure}</p>}
+      </div>
+      <div className="row wrap draft-actions">
+        {editor && <button className={primary ? 'draft-edit primary' : 'draft-edit'} aria-label={`Edit ${who}`} onClick={() => actions.open(draft.id)}>Edit</button>}
+        <Action disabled={draft.songs === 0} working="Starting…" title={draft.songs === 0 ? 'Add a song first' : 'Plays this now. What was playing is kept in your drafts.'} aria-label={`Play ${who}`} run={() => actions.play(draft.id)}>
+          Play
+        </Action>
+        <Menu title={`More actions for ${who}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {who}</span></>}>
+          <MenuItem aria-label={`Rename ${who}`} onClick={() => actions.rename(draft.id)}>Rename</MenuItem>
+          <MenuItem aria-label={`Copy ${who}`} onClick={() => actions.duplicate(draft)}>Copy</MenuItem>
+          {line && draft.place === null && draft.seams > 0 && draft.waiting > 0 && (
+            <MenuItem aria-label={`Prioritize ${who}`} title="Renders in the background, right after your current mix" onClick={() => actions.prioritize(draft)}>Prioritize</MenuItem>
+          )}
+          {line && draft.place !== null && (
+            <MenuItem aria-label={`Out of line: ${who}`} onClick={() => actions.outOfLine(draft)}>Out of line</MenuItem>
+          )}
+          <MenuItem danger aria-label={`Delete ${who}`} onClick={() => actions.askDelete(draft)}><Icon name="trash" /> Delete</MenuItem>
+        </Menu>
+      </div>
+    </li>
+  );
+});
+
 /** Mixes being worked on. Nothing here touches what's playing until you press Play. Saved and able to
  * be heard are different things, so a draft says each of them. */
-export function Drafts({ notify, openDraft, playDraft }: Props) {
+export function Drafts({ notify, openDraft, playDraft, lead = true }: Props) {
   const [list, setList] = useState<DraftList | null>(null);
   const [problem, setProblem] = useState('');
   const [failures, setFailures] = useState<Record<number, string>>({});
@@ -97,6 +183,21 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
   const readVersion = useRef(0);
   const pendingWrites = useRef(0);
   const writeQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const focusAfterMove = useRef<{ id: number; step: number } | null>(null);
+  // r8a: an answer that changes nothing keeps the drafts already shown, so their rows don't redraw
+  const show = useCallback((next: DraftList) => setList((before) => keepUnchangedDrafts(before, next)), []);
+  // The server's reordered list must be committed to the DOM before focus
+  // moves to the draft's surviving enabled control.
+  useLayoutEffect(() => {
+    const pending = focusAfterMove.current;
+    if (!pending) return;
+    const same = document.querySelector<HTMLButtonElement>(`[data-line-move="${pending.id}:${pending.step}"]`);
+    const other = document.querySelector<HTMLButtonElement>(`[data-line-move="${pending.id}:${-pending.step}"]`);
+    const target = same && !same.disabled ? same : other && !other.disabled ? other : null;
+    if (!target) return;
+    focusAfterMove.current = null;
+    target.focus({ preventScroll: true });
+  }, [list]);
 
   const refresh = useCallback(() => {
     const version = ++readVersion.current;
@@ -104,14 +205,14 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
     return get<DraftList>('/drafts')
       .then((next) => {
         if (version !== readVersion.current || pendingWrites.current) return;
-        setList(next);
+        show(next);
         setProblem('');
         setCouldntLoad(false);
       })
       .catch(() => {
         if (version === readVersion.current && !pendingWrites.current) setCouldntLoad(true);
       });
-  }, []);
+  }, [show]);
 
   // A poll that began before a mutation must never replace its acknowledged result.
   // Serialize changes to the render line so their server snapshots stay in intent order.
@@ -140,6 +241,7 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
   /** Something done to one draft. If it fails, that draft says so and what's saved hasn't changed. */
   const onDraft = async (draft: DraftInfo, doing: string, work: () => Promise<void>): Promise<boolean> => {
     setFailures((before) => {
+      if (!(draft.id in before)) return before;
       const { [draft.id]: _gone, ...rest } = before;
       return rest;
     });
@@ -151,12 +253,14 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
       return false;
     }
   };
-  const act = async (send: () => Promise<DraftList>) => {
+  const act = async (send: () => Promise<DraftList>): Promise<boolean> => {
     try {
-      setList(await write(send));
+      show(await write(send));
       setProblem('');
+      return true;
     } catch (error) {
       setProblem((error as Error).message);
+      return false;
     }
   };
   const startNew = async () => {
@@ -170,7 +274,7 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
   };
   const prioritize = (draft: DraftInfo) => onDraft(draft, 'put that in line', async () => {
     const next = await write(() => post<DraftList>(`/drafts/${draft.id}/line`));
-    setList(next);
+    show(next);
     const placed = next.drafts.find((item) => item.id === draft.id);
     if (!placed?.place) notify(`${draft.name} is already ready.`);
     else if (next.current.left > 0 || placed.place > 1) notify(`${draft.name} is in line, and will be ready in ${etaRangeWords(placed.eta ?? undefined)}.`);
@@ -204,18 +308,28 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
     });
   });
 
+  // The rows get stable functions that call whatever this render's handlers are.
+  const latest = useRef({ openDraft, playDraft, prioritize, duplicate, act });
+  latest.current = { openDraft, playDraft, prioritize, duplicate, act };
+  const actions = useMemo<RowActions>(() => ({
+    open: (id) => latest.current.openDraft?.(id),
+    play: (id) => latest.current.playDraft?.(id),
+    rename: (id) => setRenaming(id),
+    renamed: () => { setRenaming(null); void refresh(); },
+    duplicate: (draft) => void latest.current.duplicate(draft),
+    prioritize: (draft) => void latest.current.prioritize(draft),
+    outOfLine: (draft) => void latest.current.act(() => del<DraftList>(`/drafts/${draft.id}/line`)),
+    askDelete: (draft) => setDeleting(draft),
+  }), [refresh]);
+
   const on = useFlags();
   const line = on('render_line');
-  // nothing to show yet isn't the same as having no drafts
-  if (!list) {
-    return couldntLoad
-      ? <Problem retry={refresh}>Couldn’t load your drafts. They’re still saved.</Problem>
-      : <Skeleton variant="cards" label="Loading your drafts" />;
-  }
-  const { drafts, current, out_of_room: outOfRoom } = list;
-  const inLine = drafts.filter((draft) => draft.place !== null);
+  const editor = on('editor');
+  const all = list?.drafts;
   const cleanQuery = query.trim().toLocaleLowerCase();
-  const shownDrafts = drafts
+  // r8a: filtering, sorting and counting names happen when the drafts, search or sort change, not on
+  // every redraw of the page
+  const shownDrafts = useMemo(() => (all ?? [])
     .filter((draft) => !cleanQuery || draft.name.toLocaleLowerCase().includes(cleanQuery))
     .sort((a, b) => {
       if (sort === 'name') return a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true });
@@ -225,10 +339,20 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
         return readinessB - readinessA || b.id - a.id;
       }
       return b.id - a.id;
-    });
-  const sameName = new Map<string, number>();
-  for (const draft of drafts) sameName.set(draft.name, (sameName.get(draft.name) ?? 0) + 1);
-  const who = (draft: DraftInfo) => ((sameName.get(draft.name) ?? 0) > 1 ? `${draft.name} (draft ${draft.id})` : draft.name);
+    }), [all, cleanQuery, sort]);
+  const sameName = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const draft of all ?? []) counts.set(draft.name, (counts.get(draft.name) ?? 0) + 1);
+    return counts;
+  }, [all]);
+  const inLine = useMemo(() => (all ?? []).filter((draft) => draft.place !== null), [all]);
+  // nothing to show yet isn't the same as having no drafts
+  if (!list) {
+    return couldntLoad
+      ? <Problem retry={refresh}>Couldn’t load your drafts. They’re still saved.</Problem>
+      : <Skeleton variant="cards" label="Loading your drafts" />;
+  }
+  const { drafts, current, out_of_room: outOfRoom } = list;
   return (
     <>
       <section className="drafts" aria-label="Your drafts">
@@ -270,7 +394,7 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
           <div className="empty-state">
             <h3>A place for your next mix</h3>
             <p>Create a draft, or save a copy of your current mix. Editing a draft leaves playback alone.</p>
-            <Action className="primary" working="Starting…" run={startNew}>Start your first draft</Action>
+            <Action className={lead ? 'primary' : undefined} working="Starting…" run={startNew}>Start your first draft</Action>
           </div>
         )}
         {drafts.length > 0 && shownDrafts.length === 0 && (
@@ -281,59 +405,11 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
         )}
         {shownDrafts.length > 0 && (
           <ul className={shownDrafts.length > 20 ? 'draft-list density long' : 'draft-list density'}>
-            {shownDrafts.slice(0, visibleCount).map((draft) => {
-              const facts = draftReadiness(draft);
-              const failure = failures[draft.id];
-              return (
-                <li key={draft.id} className={draft.place ? 'draft in-line' : 'draft'}>
-                  <div className="draft-name">
-                    {renaming === draft.id ? (
-                      <RenameDraft id={draft.id} name={draft.name} onDone={() => { setRenaming(null); void refresh(); }} />
-                    ) : (
-                      on('editor')
-                        ? <PageLink id={`draft-${draft.id}`} to={`/mixes/drafts/${draft.id}/edit`} className="draft-open"><b>{draft.name}</b></PageLink>
-                        : <b id={`draft-${draft.id}`} className="draft-open">{draft.name}</b>
-                    )}
-                    {/* UF-0379-01/07: drafts that share a name are told apart by their exact draft number */}
-                    {(sameName.get(draft.name) ?? 0) > 1 && <span className="soft draft-number"> Draft {draft.id}</span>}
-                    {draft.song_ids?.length ? <MixSignature items={draft.song_ids.map((song_id) => ({ song_id }))} compact /> : null}
-                    <span className="soft">
-                      {draft.songs > 0 && `${draft.songs} ${draft.songs === 1 ? 'song' : 'songs'}, about ${length(draft.seconds)}. `}
-                      Saved.
-                    </span>
-                    <Status kind={facts.kind}>{facts.words}</Status>
-                    {line && draft.place !== null && <span className="soft"> {nth(draft.place)} in the render line.</span>}
-                    {draft.seams > 0 && (
-                      <SeamSegments draft={draft} />
-                    )}
-                    {line && draft.place === null && draft.waiting > 0 && draft.seams > 0 && (
-                      <span className="soft"> Rendering it would take {etaRangeWords({ seconds: draft.to_render, low: draft.to_render, high: draft.to_render })}.</span>
-                    )}
-                    {draft.missing > 0 && (
-                      <Status kind="warning">{draft.missing} {draft.missing === 1 ? 'song has' : 'songs have'} left your library.</Status>
-                    )}
-                    {failure && <p className="warn" role="alert">{failure}</p>}
-                  </div>
-                  <div className="row wrap draft-actions">
-                    {on('editor') && <button className="primary" aria-label={`Edit ${who(draft)}`} onClick={() => openDraft?.(draft.id)}>Edit</button>}
-                    <Action disabled={draft.songs === 0} working="Starting…" title={draft.songs === 0 ? 'Add a song first' : 'Plays this now. What was playing is kept in your drafts.'} aria-label={`Play ${who(draft)}`} run={() => playDraft?.(draft.id)}>
-                      Play
-                    </Action>
-                    <Menu title={`More actions for ${who(draft)}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {who(draft)}</span></>}>
-                      <MenuItem aria-label={`Rename ${who(draft)}`} onClick={() => setRenaming(draft.id)}>Rename</MenuItem>
-                      <MenuItem aria-label={`Copy ${who(draft)}`} onClick={() => void duplicate(draft)}>Copy</MenuItem>
-                      {line && draft.place === null && draft.seams > 0 && draft.waiting > 0 && (
-                        <MenuItem aria-label={`Prioritize ${who(draft)}`} title="Renders in the background, right after your current mix" onClick={() => void prioritize(draft)}>Prioritize</MenuItem>
-                      )}
-                      {line && draft.place !== null && (
-                        <MenuItem aria-label={`Out of line: ${who(draft)}`} onClick={() => void act(() => del<DraftList>(`/drafts/${draft.id}/line`))}>Out of line</MenuItem>
-                      )}
-                      <MenuItem danger aria-label={`Delete ${who(draft)}`} onClick={() => setDeleting(draft)}><Icon name="trash" /> Delete</MenuItem>
-                    </Menu>
-                  </div>
-                </li>
-              );
-            })}
+            {shownDrafts.slice(0, visibleCount).map((draft, index) => (
+              <DraftRow key={draft.id} draft={draft} twin={(sameName.get(draft.name) ?? 0) > 1}
+                failure={failures[draft.id]} renaming={renaming === draft.id} editor={editor} line={line}
+                primary={lead && index === 0} actions={actions} />
+            ))}
           </ul>
         )}
         {shownDrafts.length > visibleCount && (
@@ -368,15 +444,12 @@ export function Drafts({ notify, openDraft, playDraft }: Props) {
         <RenderLine
           inLine={inLine}
           current={current}
-          onMove={(draft, step) => void act(() => post<DraftList>(`/drafts/${draft.id}/line/move`, { step })).then(() => {
-            // S4-0099-08: keep the keyboard on the draft that moved. Its button may now be at an end of
-            // the line and disabled, so fall back to its other direction rather than the top of the page.
-            window.requestAnimationFrame(() => {
-              const same = document.querySelector<HTMLButtonElement>(`[data-line-move="${draft.id}:${step}"]`);
-              const other = document.querySelector<HTMLButtonElement>(`[data-line-move="${draft.id}:${-step}"]`);
-              (same && !same.disabled ? same : other && !other.disabled ? other : null)?.focus({ preventScroll: true });
+          onMove={(draft, step) => {
+            focusAfterMove.current = { id: draft.id, step };
+            void act(() => post<DraftList>(`/drafts/${draft.id}/line/move`, { step })).then((succeeded) => {
+              if (!succeeded) focusAfterMove.current = null;
             });
-          })}
+          }}
           onLeave={(draft) => void act(() => del<DraftList>(`/drafts/${draft.id}/line`))}
         />
       )}

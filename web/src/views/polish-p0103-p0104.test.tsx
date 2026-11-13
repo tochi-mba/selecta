@@ -67,7 +67,7 @@ describe('P0103 filter, query and focus survive details, a refused value, a fail
     const list = [row(1, 'Night One'), row(2, 'Night Two'), row(3, 'Night Three')];
     const calls = fakeBackend({
       'GET /library': { songs: list, total: list.length, next: null },
-      'POST /songs/2/correct': new Reply(500, { detail: 'Selecta had a problem saving that.' }),
+      'POST /songs/2/correct': new Reply(500, { detail: 'SelectaDJ had a problem saving that.' }),
     });
     show();
     const opener = await screen.findByRole('button', { name: 'Details for Night Two' });
@@ -77,7 +77,7 @@ describe('P0103 filter, query and focus survive details, a refused value, a fail
     expect(asked).toContain('state=ready');
     await userEvent.click(opener);
     const details = screen.getByRole('dialog');
-    const tempo = within(details).getByRole('spinbutton', { name: /^Tempo/ });
+    const tempo = within(details).getByRole('textbox', { name: /^Tempo/ });
 
     // a value Selecta refuses: the message belongs to its own field, focus goes there, nothing is sent
     await userEvent.clear(tempo);
@@ -91,16 +91,16 @@ describe('P0103 filter, query and focus survive details, a refused value, a fail
     // the error follows its own field's control, inside the same field, not elsewhere in the sheet
     expect(tempo.compareDocumentPosition(fieldError) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(tempo).toHaveFocus();
-    expect(tempo).toHaveValue(400);
+    expect(tempo).toHaveValue('400');
     expect(calls.some((call) => call.method === 'POST')).toBe(false);
 
     // a value it accepts, but the server fails: what was typed stays, and the problem takes focus
     await userEvent.clear(tempo);
     await userEvent.type(tempo, '128');
     await userEvent.click(within(details).getByRole('button', { name: 'Save correction' }));
-    const problem = await within(details).findByText('Selecta had a problem saving that.');
+    const problem = await within(details).findByText('SelectaDJ had a problem saving that.');
     await waitFor(() => expect(problem).toHaveFocus(), { timeout: 3000 });
-    expect(tempo).toHaveValue(128);
+    expect(tempo).toHaveValue('128');
 
     // the way back: the sheet closes, focus returns to the song that opened it, and the search,
     // the filter and the address are exactly as they were
@@ -168,7 +168,7 @@ describe('P0104 a 20,000-song library pages and searches without losing place or
     const search = screen.getByRole('searchbox', { name: 'Search your library' });
     await userEvent.click(search);
     await userEvent.type(search, 'Night');
-    expect(await screen.findByText('Showing 100 of 1200 songs.', {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(await screen.findByText('Showing 100 of 1200 songs.', {}, { timeout: 10_000 })).toBeInTheDocument();
     expect(search).toHaveFocus();
     expect(document.querySelectorAll('.library-rows .song-row')).toHaveLength(100);
     // 400 full rows in jsdom are slow to draw on a loaded machine; the timing itself is MP-0291-07's job

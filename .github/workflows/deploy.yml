@@ -21,6 +21,7 @@ concurrency:
 
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/selecta-service
+  BACKUP_IMAGE: ghcr.io/${{ github.repository_owner }}/selecta-backup
 
 jobs:
   image:
@@ -47,6 +48,11 @@ jobs:
           echo "${REGISTRY_TOKEN}" | docker login ghcr.io -u "${ACTOR}" --password-stdin
           docker build -f infra/docker/service.Dockerfile -t "${IMAGE}:${GITHUB_SHA}" .
           docker push "${IMAGE}:${GITHUB_SHA}"
+          # The backup cron jobs' own image (infra/backup/render-cron.yaml); no app code in it.
+          docker build -f infra/backup/Dockerfile -t "${BACKUP_IMAGE}:${GITHUB_SHA}" .
+          docker push "${BACKUP_IMAGE}:${GITHUB_SHA}"
+          docker tag "${BACKUP_IMAGE}:${GITHUB_SHA}" "${BACKUP_IMAGE}:main"
+          docker push "${BACKUP_IMAGE}:main"
           docker logout ghcr.io
 
   staging:
@@ -65,6 +71,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.12.15" # matches infra/docker/service.Dockerfile
       - name: Short-lived credentials over OIDC
         env:
           SELECTA_CREDENTIAL_BROKER_URL: ${{ vars.SELECTA_CREDENTIAL_BROKER_URL }}
@@ -97,6 +105,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.12.15" # matches infra/docker/service.Dockerfile
       - name: Short-lived credentials over OIDC
         env:
           SELECTA_CREDENTIAL_BROKER_URL: ${{ vars.SELECTA_CREDENTIAL_BROKER_URL }}

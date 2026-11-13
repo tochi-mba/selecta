@@ -226,12 +226,54 @@ for (const [width, height] of [[1280, 860], [375, 812]]) {
   });
 }
 
+/** Direct Make a Mix entry must not mistake an in-flight current-mix GET for first-run
+ * onboarding. The startup fetch happens alongside the status probe, not after the first paint. */
+test('Make a Mix never flashes first-run setup over an existing mix during startup', async ({ page }) => {
+  await page.route('**/api/mix', async (route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    await new Promise((done) => setTimeout(done, 350));
+    await route.continue();
+  });
+  await page.addInitScript(() => {
+    const observed = window as unknown as { sawPrematureMixSetup: boolean };
+    observed.sawPrematureMixSetup = false;
+    new MutationObserver(() => {
+      if (document.querySelector('.setup-steps')) observed.sawPrematureMixSetup = true;
+    }).observe(document, { childList: true, subtree: true });
+  });
+  await page.goto('/mixes');
+  await expect(page.getByRole('heading', { name: 'Make a Mix' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Current mix' })).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { sawPrematureMixSetup: boolean }).sawPrematureMixSetup)).toBe(false);
+});
+
 test('pages hold their shape while they load, even when every answer is slow', async ({ page }) => {
   await page.addInitScript(() => {
-    (window as unknown as { shifted: number }).shifted = 0;
+    const measurements = window as unknown as {
+      shifted: number;
+      shiftSources: { score: number; sources: { element: string; fromY: number; toY: number }[] }[];
+    };
+    measurements.shifted = 0;
+    measurements.shiftSources = [];
     new PerformanceObserver((list) => {
-      for (const entry of list.getEntries() as (PerformanceEntry & { value: number; hadRecentInput: boolean })[]) {
-        if (!entry.hadRecentInput) (window as unknown as { shifted: number }).shifted += entry.value;
+      for (const entry of list.getEntries() as (PerformanceEntry & {
+        value: number;
+        hadRecentInput: boolean;
+        sources?: { node: Node | null; previousRect: DOMRectReadOnly; currentRect: DOMRectReadOnly }[];
+      })[]) {
+        if (entry.hadRecentInput) continue;
+        measurements.shifted += entry.value;
+        measurements.shiftSources.push({
+          score: entry.value,
+          sources: (entry.sources ?? []).filter((source) => source.node instanceof Element).map((source) => {
+            const node = source.node as Element;
+            return {
+              element: `${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ''}${[...node.classList].slice(0, 3).map((name) => `.${name}`).join('')}`,
+              fromY: Math.round(source.previousRect.top),
+              toY: Math.round(source.currentRect.top),
+            };
+          }),
+        });
       }
     }).observe({ type: 'layout-shift', buffered: true });
   });
@@ -245,6 +287,12 @@ test('pages hold their shape while they load, even when every answer is slow', a
     await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible({ timeout: 30_000 });
     await page.waitForTimeout(1200);
     found[address] = Math.round(await page.evaluate(() => (window as unknown as { shifted: number }).shifted) * 1000) / 1000;
+    if (found[address] > 0.1) {
+      const contributors = await page.evaluate(() => (window as unknown as {
+        shiftSources: { score: number; sources: { element: string; fromY: number; toY: number }[] }[];
+      }).shiftSources.slice().sort((a, b) => b.score - a.score).slice(0, 12));
+      console.log(`Slow-load CLS contributors for ${address}: ${JSON.stringify(contributors)}`);
+    }
   }
   console.log(`layout shift while loading slowly: ${JSON.stringify(found)}`);
   const bad = Object.entries(found).filter(([, shift]) => shift > 0.25);
@@ -474,7 +522,7 @@ test('the mini-player and bottom bar never overlap, and the last row can always 
       const nav = document.querySelector('.nav')!.getBoundingClientRect();
       const rows = document.querySelectorAll('.library-rows .song-row');
       const last = rows[rows.length - 1].getBoundingClientRect();
-      return { mini: [mini.top, mini.bottom], nav: [nav.top, nav.bottom, nav.left, nav.right], last: last.bottom, height: window.innerHeight, navAtBottom: nav.width > window.innerWidth / 2 };
+      return { mini: [mini.top, mini.bottom], nav: [nav.top, nav.bottom, nav.left, nav.right], last: last.bottom, height: window.innerHeight, navAtBottom: nav.width > window.innerWidth / 2 && getComputedStyle(document.querySelector('.nav')!).position === 'fixed' };
     });
     const place = `${width}x${height}`;
     if (geometry.navAtBottom && geometry.mini[1] > geometry.nav[0] + 1) found.push(`${place}: the player runs into the bottom bar`);
@@ -565,6 +613,9 @@ test('a saved file has the songs of the mix at the moment it was saved, in that 
     expect(new Set(places).size).toBe(places.length);
     // and a song that isn't in the mix isn't, which shows the check can tell them apart
     for (const song of measured.absent) expect(song.score).toBeLessThan(0.6);
+    // S4-0108-10: a file that decodes in order is not a listening acceptance; that verdict is a person's
+    expect(measured.listening.verdict).toBe('not reviewed');
+    expect(measured.listening.transitions_to_hear).toHaveLength(songs.length - 1);
   } finally {
     rmSync(folder, { recursive: true, force: true });
   }

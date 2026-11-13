@@ -427,7 +427,8 @@ def test_turning_the_big_screen_off_unpairs_its_display(rooms):
     assert rooms.host_view(HOST, opened.room.id).displays == 1
     rooms.update_settings(HOST, opened.room.id, {"display": False})
     assert rooms.host_view(HOST, opened.room.id).displays == 0
-    assert rooms.display_view(screen.display_token).state.value == "ended"
+    # Switching the display setting off disconnects the screen while the room stays live.
+    assert rooms.display_view(screen.display_token).state.value == "unpaired"
 
 
 def test_an_unknown_room_is_refused_wherever_it_is_named(rooms):

@@ -1,4 +1,4 @@
-import { KeyboardEvent, PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { KeyboardEvent, memo, PointerEvent, RefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, Eta, MixData, MixItem, post } from '../api';
 import { flagOn } from '../flags';
 import { mainPlayerTouched, releaseAudio, takeAudio } from '../audio/focus';
@@ -66,6 +66,43 @@ function keepShape(key: string, shape: Shape | null) {
     return false;
   }
 }
+
+type CellActions = { focus: (row: number, column: number) => void; toggle: (side: Side, lane: Lane, index: number) => void };
+
+/** One square of the grid. Memoised (r8c): the playhead moving on redraws only the square it leaves
+ * and the one it reaches, not all of them, and the handlers come through a ref so they never count
+ * as a change. */
+const StudioCell = memo(function StudioCell({ side, lane, row, index, value, now, changed, lost, saving, focusable, label, title, actions }: {
+  side: Side;
+  lane: Lane;
+  row: number;
+  index: number;
+  value: number;
+  now: boolean;
+  changed: boolean;
+  lost: boolean;
+  saving: boolean;
+  focusable: boolean;
+  label: string;
+  title: string;
+  actions: RefObject<CellActions>;
+}) {
+  return (
+    <span role="gridcell" className="studio-gridcell">
+      <button
+        data-cell={`${row}-${index}`}
+        tabIndex={focusable ? 0 : -1}
+        className={`studio-cell ${now ? 'now' : ''} ${changed ? 'ai-changed' : ''}`}
+        aria-pressed={Boolean(value)}
+        aria-disabled={lost || saving || undefined}
+        aria-label={label}
+        title={title}
+        onFocus={() => actions.current.focus(row, index)}
+        onClick={(event) => { if (event.detail === 0) actions.current.toggle(side, lane, index); }}
+      />
+    </span>
+  );
+});
 
 function StudioListEditor({ shape, titles, missing, barsPerCell, soloed, disabled, onToggle, onSolo }: {
   shape: Shape;
@@ -298,7 +335,7 @@ export function Studio(props: {
       const answer = await post<{ shape: Shape; changes: string[] }>(at(`/mix/${position}/studio/tune`), { shape: mine ? shape : null });
       if (request !== tuneAttempt.current) return;
       if (latestShape.current !== sent) {
-        setChanges(['You changed the grid while Selecta was working, so your version stays.']);
+        setChanges(['You changed the grid while SelectaDJ was working, so your version stays.']);
         return;
       }
       const same = JSON.stringify(answer.shape) === JSON.stringify(shape);
@@ -307,7 +344,7 @@ export function Studio(props: {
       setShape(answer.shape);
       deck.current?.setShape(answer.shape);
       if (session?.key) setRetained(keepShape(session.key, answer.shape));
-      setChanges(same ? [mine ? 'Nothing to change. This is as good as Selecta can make it.' : 'This is already what Selecta would make.'] : mine ? answer.changes : ['Selecta arranged this from what’s in the stems.']);
+      setChanges(same ? [mine ? 'Nothing to change. This is as good as SelectaDJ can make it.' : 'This is already what SelectaDJ would make.'] : mine ? answer.changes : ['SelectaDJ arranged this from what’s in the stems.']);
     } catch (error) {
       if (request === tuneAttempt.current && latestShape.current === sent) setProblem((error as Error).message);
     } finally {
@@ -478,7 +515,10 @@ export function Studio(props: {
   const barsPerCell = session?.bars && session.cells ? session.bars / session.cells : 2;
   const columns = session?.cells ?? 8;
   const committed = session?.shape ?? session?.start_shape;
-  const dirty = !!shape && JSON.stringify(shape) !== JSON.stringify(committed);
+  // r8c: worked out once per change of the grid, not on every move of the playhead
+  const dirty = useMemo(() => !!shape && JSON.stringify(shape) !== JSON.stringify(committed), [shape, committed]);
+  const cellActions = useRef<CellActions>({ focus: () => {}, toggle: () => {} });
+  cellActions.current = { focus: (row, column) => setFocusCell({ row, column }), toggle };
   // Only the actual returned eight-lane cells count as an AI change. Freeform explanation
   // text never drives the visual diff, and editing after a proposal clears this comparison.
   const aiDiffs = useMemo(() => {
@@ -539,14 +579,14 @@ export function Studio(props: {
           <dl className="studio-states" aria-label="Where this shape has got to">
             <div className={dirty ? 'on' : undefined}><dt>Working copy</dt><dd>{dirty ? 'Changed, not applied yet' : 'Same as what’s applied'}</dd></div>
             <div className={restored ? 'on' : undefined}><dt>Recovered from this browser</dt><dd>{restored ? 'Yes, your earlier work' : 'Nothing to recover'}</dd></div>
-            <div><dt>Applied to the mix</dt><dd>{session?.shape ? 'Your shape' : 'Selecta’s starting shape'}</dd></div>
+            <div><dt>Applied to the mix</dt><dd>{session?.shape ? 'Your shape' : 'SelectaDJ’s starting shape'}</dd></div>
             <div><dt>Rendered audio</dt><dd>{rendered.words}</dd></div>
           </dl>
           <p className="hint">
             Two songs, four parts per song: voice, drums, bass and melody.<TermHint term="studio-lane" /> Each square is {barsPerCell} bar{barsPerCell === 1 ? '' : 's'} in that song.<TermHint term="studio-cell" /> The Grid and List change the same exact cells. Tap one to turn that part on or off; press a name to hear only that part during a preview.<TermHint term="solo" />
           </p>
           <p className="hint">Previewing pauses the main mix. After stopping or closing Studio, use the main player to resume it.</p>
-          <p className="studio-save-state" role="status">{saving ? 'Applying your transition…' : dirty ? 'Unsaved changes - not applied to the mix' : 'Showing the saved transition'}{dirty && retained ? '. Your work is kept on this browser when you close Studio.' : ''}</p>
+          <p className="studio-save-state" role="status">{saving ? 'Applying your transition…' : dirty ? 'Unsaved changes - not applied to the mix' : 'Showing the saved transition'}{dirty && retained ? `${saving ? ' ' : '. '}Your work is kept on this browser when you close Studio.` : ''}</p>
           {!retained && <p className="warn" role="alert">This browser could not keep a local copy. Apply your changes before closing Studio to keep them.</p>}
           {missing.length > 0 && (
             <p className="warn" role="alert">
@@ -556,7 +596,7 @@ export function Studio(props: {
           {flagOn('stem_studio.auto_arrange') && (
             <div className="row wrap">
               <button disabled={saving || !!asking} aria-busy={asking === 'arrange'} onClick={() => void askSelecta(false)}>
-                {asking === 'arrange' ? 'Arranging…' : 'Let Selecta arrange it'}
+                {asking === 'arrange' ? 'Arranging…' : 'Let SelectaDJ arrange it'}
               </button>
               <button disabled={saving || !!asking} aria-busy={asking === 'tune'} onClick={() => void askSelecta(true)}>
                 {asking === 'tune' ? 'Fine tuning…' : 'Fine tune mine'}
@@ -571,7 +611,7 @@ export function Studio(props: {
             </ul>
           )}
           {before && <details className="studio-diff" open>
-            <summary>{aiDiffs.length} exact cell {aiDiffs.length === 1 ? 'change' : 'changes'} from Selecta’s suggestion</summary>
+            <summary>{aiDiffs.length} exact cell {aiDiffs.length === 1 ? 'change' : 'changes'} from SelectaDJ’s suggestion</summary>
             <p className="hint">Only the returned arrangement is compared with your previous working copy. Put it back to undo the whole suggestion.</p>
             <ol>
               {aiDiffs.map((diff) => (
@@ -652,19 +692,22 @@ export function Studio(props: {
                         </button>
                       </span>
                       {shape[side][lane].map((value, index) => (
-                        <span role="gridcell" className="studio-gridcell" key={index}>
-                          <button
-                            data-cell={`${row}-${index}`}
-                            tabIndex={focusCell.row === row && focusCell.column === index ? 0 : -1}
-                            className={`studio-cell ${index === cell ? 'now' : ''} ${changedCells.has(side + '_' + lane + ':' + index) ? 'ai-changed' : ''}`}
-                            aria-pressed={Boolean(value)}
-                            aria-disabled={lost || saving || undefined}
-                            aria-label={`${titles[side]} ${LANE_WORDS[lane].toLowerCase()}, ${barRange(index, barsPerCell)}, ${value ? 'on' : 'off'}${lost ? ', unavailable' : ''}`}
-                            title={lost ? 'This part couldn’t be loaded' : barRange(index, barsPerCell)}
-                            onFocus={() => setFocusCell({ row, column: index })}
-                            onClick={(event) => { if (event.detail === 0) toggle(side, lane, index); }}
-                          />
-                        </span>
+                        <StudioCell
+                          key={index}
+                          side={side}
+                          lane={lane}
+                          row={row}
+                          index={index}
+                          value={value}
+                          now={index === cell}
+                          changed={changedCells.has(side + '_' + lane + ':' + index)}
+                          lost={lost}
+                          saving={saving}
+                          focusable={focusCell.row === row && focusCell.column === index}
+                          label={`${titles[side]} ${LANE_WORDS[lane].toLowerCase()}, ${barRange(index, barsPerCell)}, ${value ? 'on' : 'off'}${lost ? ', unavailable' : ''}`}
+                          title={lost ? 'This part couldn’t be loaded' : barRange(index, barsPerCell)}
+                          actions={cellActions}
+                        />
                       ))}
                     </div>
                   );

@@ -1,0 +1,210 @@
+// S3 venue manager copy (ADR-0453 D8, ADR-0449 to ADR-0452). Manager copy only: never imported
+// by the kiosk, guest or display bundles. Plain words, no blame, no exclamation marks, SelectaDJ.
+
+import { duration } from '../time';
+
+export const VENUE_TABS = {
+  now: 'Now',
+  today: 'Today',
+  schedule: 'Schedule',
+  rules: 'Music rules',
+  requests: 'Requests',
+  devices: 'Devices',
+  people: 'People',
+  licence: 'Licence',
+  log: 'Play log',
+} as const;
+
+export type VenueTab = keyof typeof VENUE_TABS;
+
+export const VENUE_COPY = {
+  tabsLabel: 'Venue sections',
+  localTime: (time: string) => `Local time ${time}`,
+  notFound: "This venue isn't in your organisation, or you don't have access to it",
+  noZones: 'Add a zone to start',
+  addZone: 'Add a zone',
+  silentSteps: (speaker: string) => [`Check the ${speaker} player is on.`, 'Check its internet.', 'Try Play here on this device'],
+  playHere: 'Play here',
+  playHereStarted: (zone: string) => `${zone} is playing on this device for now`,
+  paymentNoBilling: "There's a payment problem. Your owner has been told",
+  offline: "You're offline",
+  viewerReadOnly: 'You can look here but not change things',
+  flagOff: 'The venue view is not switched on for this organisation yet',
+  lastKnown: (time: string) => `Last known state from ${time}`,
+  commandsSlow: 'Changes may take longer to reach the players',
+  planPaused: (zone: string, covered: number) => `${zone} is paused because your plan covers ${covered} zone${covered === 1 ? '' : 's'}. Its music stops at closing time`,
+  pilotScoped: (venue: string) => `${venue} is part of your SelectaDJ pilot`,
+
+  // Now
+  zonesHeading: 'Zones',
+  nowPlaying: 'Now playing',
+  nothingPlaying: 'Nothing playing',
+  next: 'Next',
+  volume: (zone: string) => `${zone} volume`,
+  capNote: (cap: number) => `Staff can turn it up to ${cap}`,
+  requestsWaiting: (count: number) => count === 0 ? 'No requests waiting' : `${count} request${count === 1 ? '' : 's'} waiting`,
+  stayLate: (until: string) => `Keep the music on until ${until}`,
+  stayLateOn: (until: string) => `The music stays on until ${until}`,
+  stayLateUsed: 'Tonight\'s extra time is already in use',
+  stayLateNone: 'Staying open late is not set up for this venue',
+  stayLateClosed: 'The venue is closed now',
+
+  // Today and Schedule
+  todayHeading: 'Today',
+  daypartsOf: (zone: string) => `${zone} today`,
+  scheduleOf: (zone: string) => `${zone} schedule`,
+  saveSchedule: 'Save schedule',
+  savingSchedule: 'Saving',
+  scheduleSaved: (zone: string) => `${zone} schedule saved. It starts with the next block, never mid-song`,
+  scheduleConflict: (who: string, seconds: number) => `Changed by ${who} ${duration(seconds)} ago`,
+  scheduleConflictHelp: 'Load their version to see it, then make your change again',
+  loadTheirs: 'Load their version',
+  noSchedule: 'No schedule yet. Pick blocks below and save',
+  scheduleFailed: "The schedule didn't save. Try again",
+
+  // Music rules
+  rulesHeading: 'Music rules',
+  explicitLabel: 'Explicit songs',
+  explicitAllow: 'Allow',
+  explicitBlock: 'Block',
+  explicitDaytime: 'Block in the daytime',
+  allowedCrates: (zone: string) => `Crates allowed in ${zone}`,
+  allowedCratesDaypart: (zone: string, part: string) => `Crates allowed in ${zone} during ${part}`,
+  allCrates: 'Every crate',
+  brandHeading: 'Brand range',
+  bpmMin: 'Lowest BPM',
+  bpmMax: 'Highest BPM',
+  energyMax: 'Highest energy (1 to 10)',
+  volumeCap: (zone: string) => `Highest volume in ${zone}`,
+  quietHours: 'Quiet hours',
+  quietFrom: (zone: string) => `${zone} quiet from`,
+  quietTo: (zone: string) => `${zone} quiet until`,
+  quietCap: (zone: string) => `${zone} volume during quiet hours`,
+  addQuiet: (zone: string) => `Add quiet hours for ${zone}`,
+  removeQuiet: (zone: string) => `Remove ${zone} quiet hours`,
+  saveRules: 'Save rules',
+  rulesSaved: 'Rules saved. Songs that no longer fit leave the plan; the song playing finishes',
+  emptyPool: (zone: string) => `Nothing can play in ${zone} with these rules. Change the rules or add songs`,
+  rulesFailed: "The rules didn't save. Try again",
+  bpmOrder: 'The lowest BPM must be below the highest',
+
+  explicitHeading: 'Mark songs explicit',
+  explicitHelp: "SelectaDJ can't hear explicit lyrics reliably, so people mark them. Pick songs and mark them",
+  explicitColumnSong: 'Song',
+  explicitColumnArtist: 'Artist',
+  explicitColumnNow: 'Marked',
+  explicitYes: 'Explicit',
+  explicitNo: 'Not marked',
+  selectSong: (title: string) => `Select ${title}`,
+  markExplicit: (count: number) => `Mark ${count} explicit`,
+  markClean: (count: number) => `Mark ${count} not explicit`,
+  marked: (count: number) => `${count} song${count === 1 ? '' : 's'} updated`,
+  noSongs: 'No songs in the library yet',
+
+  blocklistHeading: 'Never play',
+  blocklistFind: 'Find a song or artist',
+  blocklistNone: 'Nothing is blocked',
+  blocklistAdded: (label: string) => `${label} will never play here`,
+  blocklistRemove: (label: string) => `Remove ${label} from never play`,
+  blocklistSong: 'Song',
+  blocklistArtist: 'Artist',
+
+  // Requests
+  requestsHeading: 'Guest requests',
+  requestModes: (zone: string) => `Requests in ${zone}`,
+  modeApprove: 'Staff approve each',
+  modeAuto: 'Accept automatically',
+  modeOff: 'Off (guests can only see what is playing)',
+  limitsHeading: 'Limits',
+  limitPerGuest: 'Waiting per guest (1 to 3)',
+  limitPerHour: 'Per guest each hour (1 to 6)',
+  limitCooldown: 'Minutes before a song can play again (30 to 240)',
+  limitZonePending: 'Waiting in each zone (5 to 50)',
+  limitAccepted: 'Accepted in each zone each hour (1 to 30)',
+  limitRange: (min: number, max: number) => `Pick a number from ${min} to ${max}`,
+  saveRequests: 'Save request settings',
+  requestsSaved: 'Request settings saved',
+  noRequests: 'No requests yet. Print table cards',
+  printCards: (zone: string) => `Print table cards for ${zone}`,
+  waitingHeading: 'Waiting for you',
+
+  brandingHeading: 'Guest page look',
+  welcome: 'Welcome line (up to 140 letters)',
+  accent: 'Accent colour (hex, for example #1F6F5B)',
+  accentBad: 'Use a colour written like #1F6F5B',
+  accentLow: (theme: string, ratio: string) => `This colour is too faint on the ${theme} theme (${ratio} to 1, needs 4.5). Guests will see the standard colours instead. Pick a darker or stronger colour`,
+  accentOk: 'This colour is easy to read in both themes',
+  saveBranding: 'Save guest page',
+  brandingSaved: 'Guest page saved',
+
+  // Devices
+  devicesHeading: 'Players and tablets',
+  noDevices: 'No players paired yet. Pair one below',
+  deviceZone: (zone: string) => `Plays in ${zone}`,
+  deviceNoZone: 'Not in a zone',
+  deviceOnline: 'Online',
+  deviceOffline: 'Offline',
+  deviceSaved: (hours: number) => `${hours.toFixed(1)} hours of saved music ahead`,
+  deviceSeen: (time: string) => `Last seen ${time}`,
+  deviceVersion: (version: string) => `Version ${version}`,
+  deviceClosedOffline: 'Offline while the venue is closed. Check it before opening',
+  unpair: (name: string) => `Unpair ${name}`,
+  unpairTitle: (name: string) => `Unpair ${name}?`,
+  unpairBody: (zone: string) => `${zone} goes silent until another player is paired. The player is signed out at once and needs a new code to come back`,
+  unpairBodyNoZone: 'The player is signed out at once and needs a new code to come back',
+  unpairConfirm: 'Unpair',
+  keep: 'Keep it',
+  unpaired: (name: string) => `${name} unpaired`,
+  pairHeading: 'Pair a player',
+
+  // People
+  peopleHeading: 'People',
+  inviteHeading: 'Invite someone',
+  inviteEmail: 'Email',
+  inviteRole: 'Role',
+  inviteVenues: 'Venues',
+  inviteSend: 'Send invite',
+  invited: (email: string) => `Invite sent to ${email}. It lasts 7 days`,
+  noSeatsManager: 'No free seats. Ask an owner or admin to add one',
+  noSeatsOwner: 'No free seats. Inviting adds a paid seat to your next invoice',
+  seatsLeft: (count: number) => `${count} free seat${count === 1 ? '' : 's'}`,
+  allVenues: 'Every venue',
+  remove: (name: string) => `Remove ${name}`,
+  removeTitle: (name: string) => `Remove ${name}?`,
+  removeBody: 'They are signed out everywhere for this organisation within 30 seconds: their sessions end, devices they registered are signed out, their PIN is deleted and their invites are cancelled. Players they paired keep playing. Their seat is freed',
+  removeConfirm: 'Remove',
+  removed: (name: string) => `${name} removed`,
+  noMembers: 'Nobody else here yet. Invite someone',
+  peopleNotAllowed: "People are managed by your owner or admin",
+  roleOwner: 'Owner', roleAdmin: 'Admin', roleManager: 'Venue manager', roleStaff: 'Staff', roleViewer: 'Viewer',
+
+  // Licence
+  licenceHeading: 'Music licence',
+  licenceNone: 'No licence recorded. Zones will not start on schedule until one is added',
+  licenceKind: (kind: string) => `Licence: ${kind}`,
+  licenceNumber: (number: string) => `Number: ${number}`,
+  licenceExpires: (day: string) => `Ends on ${day}`,
+  licenceEndsSoon: (days: number) => `Ends in ${days} day${days === 1 ? '' : 's'}`,
+  licenceExpired: 'This licence date has passed',
+  licenceCurrent: 'Current',
+  updateLicence: 'Update licence',
+  addLicence: 'Add licence',
+  licenceSaved: 'Licence saved',
+  tml: 'TheMusicLicence (PPL PRS)',
+
+  // Play log and requests page
+  playLogHeading: 'Play log',
+  requestsPageHeading: 'Requests',
+  requestsPageEmpty: 'No requests waiting anywhere you manage',
+  loading: 'Loading',
+} as const;
+
+export function roleWords(role: string): string {
+  switch (role) {
+    case 'owner': return VENUE_COPY.roleOwner;
+    case 'admin': return VENUE_COPY.roleAdmin;
+    case 'venue_manager': return VENUE_COPY.roleManager;
+    case 'staff': return VENUE_COPY.roleStaff;
+    default: return VENUE_COPY.roleViewer;
+  }
+}

@@ -71,7 +71,7 @@ describe('EX-0117-04 Play, Edit and Save consequences', () => {
 
 // EX-0117-02: length joins feel, stems, energy and destination as a remembered choice.
 describe('EX-0117-02 the chosen length is remembered', () => {
-  const pick: VibeCard = { ...card, key: 'pick', name: 'Selecta’s pick', group: '' };
+  const pick: VibeCard = { ...card, key: 'pick', name: 'SelectaDJ’s pick', group: '' };
   function open() {
     fakeBackend({ 'GET /vibes': [pick] });
     const player = new SetPlayer(() => [], () => {});

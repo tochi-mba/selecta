@@ -32,7 +32,7 @@ def decide(conn: Connection, principal, flag_id: str, rules: RulesCache) -> targ
     # SQLite once the request has written, and needlessly spends another pooled connection on
     # PostgreSQL.
     rules.refresh_if_stale(conn)
-    snapshot = rules.snapshot
+    snapshot = rules.snapshot_for(conn)
     workspace_id = principal.workspace.id
     entitlement = stripe_sync.effective_entitlement(conn, workspace_id)
     plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)

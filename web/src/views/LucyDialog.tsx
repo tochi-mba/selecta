@@ -1,4 +1,5 @@
 import { ReactNode, useId, useLayoutEffect, useRef } from 'react';
+import { returnFocus } from '../ui/focusReturn';
 import { Icon } from '../ui/Icon';
 
 /** A native modal dialog. The browser keeps focus inside it and makes the page behind it inert;
@@ -31,8 +32,7 @@ export function NativeDialog({ title, onClose, children, footer, className = '' 
       } catch {
         /* already closed */
       }
-      if (before?.isConnected && before !== document.body) before.focus({ preventScroll: true });
-      else document.getElementById('content')?.focus({ preventScroll: true });
+      returnFocus(before);
     };
   }, []);
   return (

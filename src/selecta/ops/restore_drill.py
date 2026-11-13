@@ -2,7 +2,9 @@
 
 `docs/saas/13-hosting-and-cost.md` §13.5 orders the steps after any restore: replay the
 deletions ledger, run storage reconciliation, re-run Stripe reconciliation, expire leases, then
-reopen. `after_restore` runs them in that order against the restored database, stops at the
+reopen. Before reopening, the drill also checks that every song in the deletions ledger is still
+hidden (SC-0412-03: data deleted since the backup stays gone). `after_restore` runs them in
+that order against the restored database, stops at the
 first failure (customer traffic stays closed), and returns a report with each step's time. The
 monthly drill (`infra/backup/restore_drill.sh`) restores last night's dump into a scratch
 database first and passes the time the restore began, so the report's total is the whole
@@ -76,8 +78,10 @@ class DrillReport:
             "| Step | Result | Seconds | Detail |",
             "|---|---|---|---|",
         ]
-        lines += [f"| {s.name} | {'ok' if s.ok else 'FAILED'} | {s.seconds:.1f} | {s.detail} |"
-                  for s in self.steps]
+        lines += [
+            f"| {s.name} | {'ok' if s.ok else 'FAILED'} | {s.seconds:.1f} | {s.detail} |"
+            for s in self.steps
+        ]
         if not self.completed:
             lines += ["", "Keep customer traffic closed: a step failed."]
         return "\n".join(lines) + "\n"
@@ -105,8 +109,9 @@ def after_restore(
 
     def storage_tombstones() -> str:
         replay = replay_storage_tombstones_after_restore(engine, objects, ledger_bucket)
-        return (f"{replay.tombstones_replayed} tombstones, "
-                f"{replay.storage.assets_hidden} assets hidden")
+        return (
+            f"{replay.tombstones_replayed} tombstones, {replay.storage.assets_hidden} assets hidden"
+        )
 
     def account_deletions() -> str:
         replay = replay_account_deletions_after_restore(engine, objects, ledger_bucket)
@@ -131,12 +136,36 @@ def after_restore(
         jobs = store or JobStore(engine)
         return f"{len(jobs.reap_expired())} expired leases reclaimed"
 
+    def deleted_stays_gone() -> str:
+        import sqlalchemy as sa
+
+        from selecta.storage.schema import assets, deletions
+
+        songs = deletions.c.kind == "song"
+        with transaction(engine) as connection:
+            back = (
+                connection.execute(
+                    sa.select(deletions.c.ref)
+                    .select_from(deletions.join(assets, assets.c.id == deletions.c.ref))
+                    .where(songs, assets.c.deleted_at.is_(None))
+                )
+                .scalars()
+                .all()
+            )
+            count = connection.execute(
+                sa.select(sa.func.count()).select_from(deletions).where(songs)
+            ).scalar_one()
+        if back:
+            raise RuntimeError(f"{len(back)} deleted songs are visible again: {sorted(back)[:5]}")
+        return f"all {count} deleted songs stay hidden"
+
     plan: list[tuple[str, StepFn]] = [
         ("Replay storage tombstones", storage_tombstones),
         ("Replay account deletions", account_deletions),
         ("Storage reconciliation", storage_reconciliation),
         ("Stripe reconciliation", stripe_reconciliation),
         ("Expire leases", expire_leases),
+        ("Deleted data stays gone", deleted_stays_gone),
     ]
     report = DrillReport(restore_started=restore_started)
     for name, run in plan:
@@ -154,8 +183,12 @@ def after_restore(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the post-restore steps and time them.")
-    parser.add_argument("--restore-started", type=float, required=True,
-                        help="Epoch seconds when the database restore began.")
+    parser.add_argument(
+        "--restore-started",
+        type=float,
+        required=True,
+        help="Epoch seconds when the database restore began.",
+    )
     parser.add_argument("--report", type=Path, required=True)
     args = parser.parse_args(argv)
     flags.require(FLAG)
@@ -166,10 +199,29 @@ def main(argv: list[str] | None = None) -> int:
     bucket = os.environ.get("SELECTA_R2_BUCKET_DELETION_LEDGER", "").strip()
     if not bucket:
         raise SystemExit("Set SELECTA_R2_BUCKET_DELETION_LEDGER.")
+    # Stripe reconciliation runs whenever the Stripe settings are present; without them the
+    # step reports itself skipped.
+    from selecta.billing.stripe_sync import load_price_map
+    from selecta.billing.webhooks import HttpStripeClient
+
+    stripe_key = os.environ.get("SELECTA_STRIPE_SECRET_KEY", "").strip()
+    prices = load_price_map()
+    stripe = (
+        HttpStripeClient(stripe_key, api_version=os.environ.get("SELECTA_STRIPE_API_VERSION"))
+        if stripe_key and prices
+        else None
+    )
     engine = make_engine(os.environ["SELECTA_DATABASE_URL"])
     client = storage_api.r2_client()
     try:
-        report = after_restore(engine, client, bucket, restore_started=args.restore_started)
+        report = after_restore(
+            engine,
+            client,
+            bucket,
+            restore_started=args.restore_started,
+            stripe=stripe,
+            price_map=prices if stripe is not None else None,
+        )
     finally:
         client.close()
         engine.dispose()

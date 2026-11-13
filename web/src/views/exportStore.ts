@@ -18,15 +18,15 @@ const SLOW_MS = 15000;
 const ACTIVE = new Set(['preparing', 'encoding', 'cancelling']);
 
 let now: ExportsNow = { jobs: null, stale: false, unsupported: false };
-const EXPORT_STATES = new Set(['preparing', 'encoding', 'ready', 'failed', 'cancelling', 'cancelled', 'interrupted', 'expired']);
-
 function validJob(value: unknown): value is ExportJob {
   if (!value || typeof value !== 'object') return false;
   const job = value as Partial<ExportJob>;
   return typeof job.id === 'string'
     && typeof job.name === 'string'
     && typeof job.mix_name === 'string'
-    && typeof job.state === 'string' && EXPORT_STATES.has(job.state)
+    // a state this site doesn't know yet is still a job: its own row says "State unknown"
+    // (ExportJobs.tsx exportStage), and the rest of the list stays readable
+    && typeof job.state === 'string' && job.state.length > 0
     && (job.scope === 'current' || job.scope === 'draft')
     && Array.isArray(job.songs)
     && typeof job.created_at === 'number' && Number.isFinite(job.created_at)

@@ -1,13 +1,13 @@
 // The staff console against a fake admin API (there is no Cloud browser-test server yet, so this
 // is the walkthrough): entering a session, the six pages, and that every action is a command
 // with a reason sent to the server.
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DataTable } from '../ui/DataTable';
 import AdminArea, { adminPageFor } from './AdminArea';
 import { paramsFor } from './FlagsPage';
-import { Fresh } from './parts';
+import { Fresh, useLoad } from './parts';
 
 type Call = { method: string; path: string; body: unknown; headers: Headers };
 const OWNER = ['platform.dashboard.read', 'jobs.read', 'jobs.retry', 'jobs.cancel', 'workers.read', 'workers.drain', 'accounts.list', 'accounts.read_metadata', 'accounts.suspend',
@@ -238,5 +238,78 @@ describe('freshness and tables', () => {
   it('says so in words when a table is empty', () => {
     render(<DataTable caption="Things" rows={[]} rowKey={() => 'x'} columns={[{ key: 'a', label: 'A' }]} empty="No things yet." />);
     expect(screen.getByRole('table', { name: 'Things' })).toHaveTextContent('No things yet.');
+  });
+});
+
+describe('admin pages that change under a request', () => {
+  it("never shows one job's command result on another job", async () => {
+    const base = answer;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit = {}) => {
+      const path = url.replace(/^https?:\/\/[^/]+/, '');
+      const method = init.method ?? 'GET';
+      calls.push({ method, path, body: init.body ? JSON.parse(String(init.body)) : undefined, headers: new Headers(init.headers) });
+      let [status, body] = base(method, path.replace('job-2', 'job-1'));
+      if (path.startsWith('/api/admin/jobs?') || path === '/api/admin/jobs') {
+        const jobs = (body as { jobs: Record<string, unknown>[] }).jobs;
+        body = { jobs: [...jobs, { ...jobs[0], id: 'job-2' }] };
+      }
+      return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+    }));
+    const nav = await enter();
+    await userEvent.click(nav.getByRole('button', { name: 'Jobs & workers' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Open job job-1' }));
+    await command('Quarantine', 'bad output');
+    expect(await screen.findByText(/the job is now blocked/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Open job job-2' }));
+    expect(await screen.findByText('Job job-2')).toBeInTheDocument();
+    expect(screen.queryByText(/the job is now blocked/)).toBeNull();
+  });
+
+  it('drops a flag impact preview when another flag is opened', async () => {
+    const base = answer;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit = {}) => {
+      const path = url.replace(/^https?:\/\/[^/]+/, '');
+      const method = init.method ?? 'GET';
+      calls.push({ method, path, body: init.body ? JSON.parse(String(init.body)) : undefined, headers: new Headers(init.headers) });
+      let [status, body] = base(method, path);
+      if (path === '/api/admin/flags') {
+        const flags = (body as { flags: Record<string, unknown>[] }).flags;
+        body = { flags: [...flags, { ...flags[0], id: 'export', label: 'Export', area: 'Cloud services' }] };
+      }
+      return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+    }));
+    const nav = await enter();
+    await userEvent.click(nav.getByRole('button', { name: 'Flags' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Open flag rooms' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Preview impact' }));
+    expect(await screen.findByLabelText('Impact preview')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Open flag export' }));
+    expect(await screen.findByText('Export (export)')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Impact preview')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Apply: Off for everyone' })).toBeNull();
+  });
+
+  it('says why a waiting action did not run', async () => {
+    const base = answer;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit = {}) => {
+      const path = url.replace(/^https?:\/\/[^/]+/, '');
+      const method = init.method ?? 'GET';
+      calls.push({ method, path, body: undefined, headers: new Headers(init.headers) });
+      const [status, body] = path === '/api/admin/actions/act-1/execute' ? [409, { detail: { code: 'not_ready' } }] : base(method, path);
+      return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+    }));
+    const nav = await enter();
+    await userEvent.click(nav.getByRole('button', { name: 'Security' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Run now if due' }));
+    expect(await screen.findByText(/still waiting for its delay/)).toBeInTheDocument();
+  });
+
+  it('keeps the newest load when an older one answers last', async () => {
+    const answers: Record<string, (value: string) => void> = {};
+    const { result, rerender } = renderHook(({ id }) => useLoad(() => new Promise<string>((resolve) => { answers[id] = resolve; }), [id]), { initialProps: { id: 'a' } });
+    rerender({ id: 'b' });
+    await act(async () => { answers.b('b data'); });
+    await act(async () => { answers.a('a data'); });
+    expect(result.current.data).toBe('b data');
   });
 });

@@ -13,10 +13,11 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from fastapi import HTTPException, Request, Response
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from selecta import db, flags, jobs, mix, self_service
+from selecta import cache_care, db, flags, jobs, mix, self_service
 from selecta.api_common import (
     API_FEATURES,
     API_VERSION,
@@ -42,7 +43,7 @@ from selecta.eta import analysis_left, analysis_line_left
 from selecta.library.relink import RelinkError, commit_relink, preview_relink
 from selecta.seam_kinds import moves_on
 from selecta.session import get_steering, queue, steer
-from selecta.stems import MIN_CACHE_BYTES, cache_bytes, largest_cache_bytes, prune_cache
+from selecta.stems import MIN_CACHE_BYTES, cache_room, largest_cache_bytes, prune_cache
 
 
 class RelinkRequest(BaseModel):
@@ -135,16 +136,19 @@ def add_routes(app, ctx) -> None:
                 mark("Reading the cached transition count without filesystem scans")
                 transitions_ready, transitions_indexing = store.remembered_count()
                 mark("Assembling queue, background jobs and estimates")
+                # r8d: each asked once. The asked-for line is a query per song, and the render
+                # sign and the analysis process are looked at again by nothing below
+                analysing = bool(background.analysis and background.analysis.poll() is None)
+                mix_rendering = jobs.mix_is_rendering(settings.home)
+                asked = songs_in_line(conn)
                 result = {
                     "counts": counts,
                     "steering": steering,
                     "queue": queue(conn),
                     "moves": {name: label for name, (label, _) in moves_on().items()},
-                    "analysis_running": bool(
-                        background.analysis and background.analysis.poll() is None
-                    ),
-                    "analysing": songs_in_line(conn),
-                    "mix_rendering": jobs.mix_is_rendering(settings.home),
+                    "analysis_running": analysing,
+                    "analysing": asked,
+                    "mix_rendering": mix_rendering,
                     "mixes_in_line": len(mix.line_order(conn)),
                     "transitions_ready": transitions_ready,
                     "transitions_indexing": transitions_indexing,
@@ -152,12 +156,9 @@ def add_routes(app, ctx) -> None:
                     "flags": flags.snapshot(),
                     "eta": {
                         "analysis": analysis_left(
-                            conn,
-                            bool(background.analysis and background.analysis.poll() is None),
-                            jobs.mix_is_rendering(settings.home),
-                            rendering_ahead(conn),
+                            conn, analysing, mix_rendering, rendering_ahead(conn)
                         ),
-                        "line": analysis_line_left(conn, songs_in_line(conn)),
+                        "line": analysis_line_left(conn, asked),
                         "jobs": store.clock.recent(),
                         "accuracy": store.clock.accuracy(),
                     },
@@ -179,8 +180,7 @@ def add_routes(app, ctx) -> None:
                     used += path.stat().st_size
             except FileNotFoundError:
                 continue  # cache pruning may remove a file during this snapshot
-        cache = cache_bytes(settings)
-        largest = largest_cache_bytes(settings)
+        cache, largest = cache_room(settings)  # r8d: one walk of the cache, not two
         return {
             "used_bytes": used,
             "cache_bytes": cache,
@@ -199,10 +199,11 @@ def add_routes(app, ctx) -> None:
             raise HTTPException(400, "The limit can't go below 0.5 GB.")
         # T0096: another window may have changed the limit since this page read it. Say so
         # rather than silently replacing the newer choice.
-        current = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
+        largest = largest_cache_bytes(settings)  # r8d: one walk of the cache for all three uses
+        current = min(settings.effective_cache_cap_bytes, largest)
         # T0094: a retry whose first try already landed (its reply lost, or the server restarted)
         # finds the limit it asked for, which is a success to repeat rather than a conflict.
-        already = current == min(wanted, largest_cache_bytes(settings))
+        already = current == min(wanted, largest)
         if (
             body.expected_budget_bytes is not None
             and body.expected_budget_bytes != current
@@ -218,8 +219,11 @@ def add_routes(app, ctx) -> None:
                 },
                 status_code=409,
             )
-        settings.set_storage_budget(min(wanted, largest_cache_bytes(settings)))
-        prune_cache(settings)
+        settings.set_storage_budget(min(wanted, largest))
+        # a lower limit never costs the mix now playing its seams (render priority)
+        with connect() as conn:
+            playing = cache_care.current_mix_keys(conn, store)
+        prune_cache(settings, playing)
         return storage()
 
     @app.get("/api/backup")
@@ -233,14 +237,14 @@ def add_routes(app, ctx) -> None:
             data,
             media_type="application/zip",
             headers={
-                "Content-Disposition": 'attachment; filename="selecta-local-backup.zip"',
+                "Content-Disposition": 'attachment; filename="selectadj-local-backup.zip"',
                 "Cache-Control": "no-store",
             },
         )
 
     async def _read_backup(request: Request) -> bytes:
         if request.headers.get("content-type", "").split(";")[0] != "application/zip":
-            raise HTTPException(415, "Choose a Selecta ZIP backup.")
+            raise HTTPException(415, "Choose a SelectaDJ ZIP backup.")
         pieces = []
         total = 0
         async for part in request.stream():
@@ -254,11 +258,13 @@ def add_routes(app, ctx) -> None:
     async def preview_local_backup(request: Request) -> dict:
         data = await _read_backup(request)
         try:
-            manifest, _, counts = validate_backup(data)
+            # r8d: unpacking and checking a whole library archive is slow work; off the event
+            # loop, every other request keeps being answered while it runs
+            manifest, _, counts = await run_in_threadpool(validate_backup, data)
         except BackupError as problem:
             raise HTTPException(400, str(problem)) from problem
         return {
-            "token": hashlib.sha256(data).hexdigest(),
+            "token": await run_in_threadpool(lambda: hashlib.sha256(data).hexdigest()),
             "created_utc": manifest["created_utc"],
             "counts": counts,
             "replaces": "Local song database, drafts, ratings and preferences at next restart",
@@ -268,8 +274,9 @@ def add_routes(app, ctx) -> None:
     @app.post("/api/backup/stage")
     async def stage_local_backup(request: Request) -> dict:
         data = await _read_backup(request)
+        token = request.headers.get("x-backup-token", "")
         try:
-            return stage_restore(settings, data, request.headers.get("x-backup-token", ""))
+            return await run_in_threadpool(stage_restore, settings, data, token)
         except BackupError as problem:
             raise HTTPException(409, str(problem)) from problem
 
@@ -300,7 +307,7 @@ def add_routes(app, ctx) -> None:
         if request.headers.get("sec-fetch-site") in {"cross-site", "same-site"} or (
             origin and urlsplit(origin).hostname not in LOCAL_HOSTS
         ):
-            raise HTTPException(403, "Selecta is local only")
+            raise HTTPException(403, "SelectaDJ is local only")
 
     @app.post("/api/folders/relink/preview")
     def preview_moved_folder(body: RelinkRequest, request: Request) -> dict:
@@ -331,7 +338,7 @@ def add_routes(app, ctx) -> None:
         if request.headers.get("sec-fetch-site") in {"cross-site", "same-site"} or (
             origin and urlsplit(origin).hostname not in LOCAL_HOSTS
         ):
-            raise HTTPException(403, "Selecta is local only")
+            raise HTTPException(403, "SelectaDJ is local only")
         with connect() as conn:
             return check_folder(conn, path)
 
@@ -361,8 +368,8 @@ def add_routes(app, ctx) -> None:
                 "ON s.id=a.song_id WHERE a.error IS NOT NULL ORDER BY a.analysed_at DESC LIMIT 5"
             ).fetchall()
             worker = store._worker
-            limit = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
-            full = cache_bytes(settings) >= limit
+            used, largest = cache_room(settings)  # r8d: one walk of the cache, not two
+            full = used >= min(settings.effective_cache_cap_bytes, largest)
             counts = _counts(conn)
             return {
                 "worker": {
@@ -406,7 +413,7 @@ def add_routes(app, ctx) -> None:
 
             missing = sum(not folder.is_dir() for folder in library_folders(conn))
         worker = store._worker
-        limit = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
+        used, largest = cache_room(settings)  # r8d: one walk of the cache, not two
         scan = background.scan if isinstance(background.scan, dict) else {}
         return {
             "api_version": API_VERSION,
@@ -426,7 +433,7 @@ def add_routes(app, ctx) -> None:
             "exports": self_service.export_outcomes(settings.home),
             "scan_failed": scan.get("status") == "failed",
             "folders_missing": missing,
-            "storage_full": cache_bytes(settings) >= limit,
+            "storage_full": used >= min(settings.effective_cache_cap_bytes, largest),
         }
 
     @app.post("/api/steer")

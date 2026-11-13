@@ -241,16 +241,30 @@ COMMANDS = {
     "/api/admin/jobs/{job_id}/{command}": ("retry", "cancel", "quarantine", "release"),
     "/api/admin/workers/{worker_id}/{command}": ("drain", "pause", "resume"),
     "/api/admin/accounts/{user_id}/{command}": ("suspend", "restore"),
-    "/api/admin/actions/{action_id}/{command}": ("approve", "cancel"),
+    "/api/admin/actions/{action_id}/{command}": ("approve", "cancel", "execute"),
     "/api/admin/emergency/{control}/{command}": ("engage", "release"),
     "/api/admin/takedowns/{notice_id}/{command}": ("act", "reject"),
 }
 # One body that satisfies every admin request model, so validation never answers first.
 EVERY_FIELD = {
-    "reason": "permission sweep", "workspace_id": "w-none", "workspace_ids": ["w-1", "w-2"],
-    "plan_id": "standard", "expires_at": time.time() + 3600, "user_id": "u-none",
-    "role": "support", "version": 1, "on": True, "action": "kill_switch", "params": {},
-    "asset_id": "a-none", "complainant": "A label", "work": "A song", "payload_hash": "0" * 64,
+    "reason": "permission sweep",
+    "workspace_id": "w-none",
+    "workspace_ids": ["w-1", "w-2"],
+    "plan_id": "standard",
+    "expires_at": time.time() + 3600,
+    "user_id": "u-none",
+    "role": "support",
+    "version": 1,
+    "on": True,
+    "action": "kill_switch",
+    "params": {},
+    "asset_id": "a-none",
+    "complainant": "A label",
+    "work": "A song",
+    "payload_hash": "0" * 64,
+    "owner_user_id": "u-none",
+    "org_name": "Permission sweep pilot",
+    "venues": [{"name": "Test venue", "timezone": "Europe/London", "country": "GB"}],
 }
 # Routes any signed-in staff member may call: starting the admin session and reading who you are.
 SELF_ONLY = {"POST /api/admin/session", "GET /api/admin/me"}
@@ -264,6 +278,109 @@ def _staff_without_roles(admin_world) -> dict[str, str]:
         accounts.provision(conn, claims, age_confirmed=True)
         session = privileged.start(conn, claims, staff_organization_id="staff-org", lifetime=3600)
     return {"Authorization": "Bearer roleless", "X-Admin-Session": session.id}
+
+
+
+def test_business_pilot_requires_staff_permission_before_rollout_flag(admin_world):
+    """An admin route needs RBAC even when its independently controlled feature is off."""
+    headers = _staff_without_roles(admin_world)
+    body = {**EVERY_FIELD}
+    with transaction(admin_world.engine) as conn:
+        body["owner_user_id"] = accounts.provision(
+            conn, admin_world.tokens.claims["customer"], age_confirmed=True
+        ).user.id
+    try:
+        flags.use("-business.pilots")
+        no_role = admin_world.http.post("/api/admin/business/pilots", headers=headers, json=body)
+        assert (no_role.status_code, no_role.json()["detail"]["code"]) == (403, "forbidden")
+        assert no_role.json()["detail"]["permission"] == "business.pilots.create"
+
+        off = admin_world.http.post(
+            "/api/admin/business/pilots", headers=admin_world.headers, json=body
+        )
+        assert (off.status_code, off.json()["detail"]["code"]) == (403, "flag_off")
+        assert off.json()["detail"]["flag"] == "business.pilots"
+
+        flags.use("+business.pilots -business.orgs")
+        blocked_dependency = admin_world.http.post(
+            "/api/admin/business/pilots", headers=admin_world.headers, json=body
+        )
+        assert blocked_dependency.json()["detail"]["code"] == "flag_off"
+
+        flags.use("+business.orgs +business.pilots")
+        still_denied = admin_world.http.post(
+            "/api/admin/business/pilots", headers=headers, json=body
+        )
+        assert still_denied.status_code == 403
+        assert still_denied.json()["detail"]["permission"] == "business.pilots.create"
+
+        allowed = admin_world.http.post(
+            "/api/admin/business/pilots", headers=admin_world.headers, json=body
+        )
+        assert allowed.status_code == 201, allowed.text
+        assert allowed.json()["pilot"]["org"]["name"] == body["org_name"]
+    finally:
+        flags.use(None)
+
+
+@pytest.mark.parametrize("command", ["retry", "cancel", "quarantine", "release"])
+def test_roleless_staff_cannot_probe_job_workspace(admin_world, monkeypatch, command):
+    """The job's tenant isn't queried until a caller has a matching command role."""
+    from selecta.admin import commands
+
+    headers = _staff_without_roles(admin_world)
+
+    def forbidden_lookup(*_args, **_kwargs):
+        pytest.fail("looked up job workspace before checking command role")
+
+    monkeypatch.setattr(commands, "job_workspace", forbidden_lookup)
+    response = admin_world.http.post(
+        f"/api/admin/jobs/no-such-job/{command}",
+        headers=headers,
+        json={"reason": "permission probe"},
+    )
+    assert (response.status_code, response.json()["detail"]["code"]) == (403, "forbidden")
+    assert response.json()["detail"]["permission"] in {"jobs.retry", "jobs.cancel"}
+
+
+@pytest.mark.parametrize("command", ["act", "reject"])
+def test_roleless_staff_cannot_probe_notice_workspace(admin_world, monkeypatch, command):
+    """The notice's tenant is not looked up before legal.takedowns.manage."""
+    from selecta.admin import takedowns
+
+    headers = _staff_without_roles(admin_world)
+
+    def forbidden_lookup(*_args, **_kwargs):
+        pytest.fail("queried notice workspace before permission check")
+
+    monkeypatch.setattr(takedowns, "notice_workspace", forbidden_lookup)
+    response = admin_world.http.post(
+        f"/api/admin/takedowns/no-such-notice/{command}",
+        headers=headers,
+        json={"reason": "permission probe"},
+    )
+    assert (response.status_code, response.json()["detail"]["code"]) == (403, "forbidden")
+    assert response.json()["detail"]["permission"] == "legal.takedowns.manage"
+
+
+@pytest.mark.parametrize("command", ["approve", "cancel", "execute"])
+def test_roleless_staff_cannot_probe_action_ids(admin_world, monkeypatch, command):
+    """Read authorization precedes fetching the action or returning its absence."""
+    from selecta.admin import actions
+
+    headers = _staff_without_roles(admin_world)
+
+    def forbidden_lookup(*_args, **_kwargs):
+        pytest.fail("queried action before permission check")
+
+    monkeypatch.setattr(actions.delayed, "get", forbidden_lookup)
+    response = admin_world.http.post(
+        f"/api/admin/actions/no-such-action/{command}",
+        headers=headers,
+        json=EVERY_FIELD,
+    )
+    assert (response.status_code, response.json()["detail"]["code"]) == (403, "forbidden")
+    assert response.json()["detail"]["permission"] == "platform.dashboard.read"
 
 
 def test_every_admin_route_and_command_checks_a_registered_permission_first(admin_world):
@@ -289,7 +406,10 @@ def test_every_admin_route_and_command_checks_a_registered_permission_first(admi
                 path = path.replace("{control}", "uploads.paused").replace("{flag_id}", "requests")
                 path = re.sub(r"\{\w+\}", "id-that-does-not-exist", path)
                 answer = admin_world.http.request(
-                    method, path, headers=headers, json=EVERY_FIELD,
+                    method,
+                    path,
+                    headers=headers,
+                    json=EVERY_FIELD,
                     params={"reason": "permission sweep"},
                 )
                 detail = answer.json().get("detail", {})

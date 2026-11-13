@@ -33,6 +33,7 @@ STEPS = [
     "Storage reconciliation",
     "Stripe reconciliation",
     "Expire leases",
+    "Deleted data stays gone",
 ]
 
 
@@ -74,13 +75,13 @@ def test_the_drill_replays_the_ledger_reconciles_and_reports_every_step_in_order
     engine, fake = restored
     assert hidden(engine)["song-1"] is False  # the restore brought the deleted song back
     clock = Clock()
-    report = restore_drill.after_restore(engine, fake, BUCKET, restore_started=900.0,
-                                         clock=clock)
+    report = restore_drill.after_restore(engine, fake, BUCKET, restore_started=900.0, clock=clock)
     assert [step.name for step in report.steps] == STEPS
     assert all(step.ok for step in report.steps), report.steps
     assert hidden(engine) == {"song-1": True, "song-2": False, "song-9": False}
     assert report.steps[0].detail.startswith("1 tombstones")
     assert report.steps[2].detail == "ledger, quota and inventory agree"
+    assert report.steps[-1].detail == "all 1 deleted songs stay hidden"
     assert all(step.seconds == 5.0 for step in report.steps)
     assert report.total_s == clock.now - 900.0
     assert report.passed
@@ -96,25 +97,50 @@ def test_the_drill_reclaims_leases_that_expired_while_the_database_was_down(rest
     store.enqueue(JobSpec(WS, "analyse.song"))
     assert store.claim("cpu-heavy", worker()) is not None
     time.sleep(0.2)
-    report = restore_drill.after_restore(engine, fake, BUCKET, restore_started=0.0,
-                                         store=store, clock=Clock())
-    assert report.steps[-1].detail == "1 expired leases reclaimed"
+    report = restore_drill.after_restore(
+        engine, fake, BUCKET, restore_started=0.0, store=store, clock=Clock()
+    )
+    assert report.steps[-2].detail == "1 expired leases reclaimed"
 
 
 def test_a_failed_step_stops_the_drill_and_keeps_traffic_closed(restored, monkeypatch):
     engine, fake = restored
     fake.fail_next("list_objects_v2", RuntimeError("R2 down"), times=50)
-    report = restore_drill.after_restore(engine, fake, BUCKET, restore_started=0.0,
-                                         clock=Clock())
+    report = restore_drill.after_restore(engine, fake, BUCKET, restore_started=0.0, clock=Clock())
     assert [step.ok for step in report.steps] == [False]
     assert not report.completed and not report.passed
     assert "Keep customer traffic closed" in report.markdown()
 
 
+def test_a_deleted_song_that_comes_back_after_the_replay_fails_the_drill(restored):
+    """SC-0412-03: traffic stays closed if anything deleted since the backup is visible again."""
+    engine, fake = restored
+
+    class Resurrecting:
+        """A lease sweep with a bug that brings the deleted song back after the replay."""
+
+        def reap_expired(self):
+            with transaction(engine) as conn:
+                conn.execute(
+                    sa.update(assets).where(assets.c.id == "song-1").values(deleted_at=None)
+                )
+            return []
+
+    report = restore_drill.after_restore(
+        engine, fake, BUCKET, restore_started=0.0, store=Resurrecting(), clock=Clock()
+    )
+    assert report.steps[-1].name == "Deleted data stays gone" and not report.steps[-1].ok
+    assert "1 deleted songs are visible again: ['song-1']" in report.steps[-1].detail
+    assert not report.passed and "Keep customer traffic closed" in report.markdown()
+    with transaction(engine) as conn:  # put it right for the fixture's invariant check
+        conn.execute(sa.update(assets).where(assets.c.id == "song-1").values(deleted_at=1.0))
+
+
 def test_a_recovery_slower_than_an_hour_fails_the_drill(restored):
     engine, fake = restored
-    report = restore_drill.after_restore(engine, fake, BUCKET, restore_started=0.0,
-                                         clock=Clock(start=3_600.0))
+    report = restore_drill.after_restore(
+        engine, fake, BUCKET, restore_started=0.0, clock=Clock(start=3_600.0)
+    )
     assert report.completed and not report.passed
     assert report.markdown().startswith("# Restore drill: FAILED")
 
@@ -123,8 +149,10 @@ def _bash() -> str | None:
     """A working bash: Git's on Windows (System32's bash is WSL, often with no distro)."""
     git = shutil.which("git")
     if git:
-        for candidate in (Path(git).parents[1] / "bin" / "bash.exe",
-                          Path(git).parents[1] / "usr" / "bin" / "bash.exe"):
+        for candidate in (
+            Path(git).parents[1] / "bin" / "bash.exe",
+            Path(git).parents[1] / "usr" / "bin" / "bash.exe",
+        ):
             if candidate.is_file():
                 return str(candidate)
     found = shutil.which("bash")
@@ -141,9 +169,52 @@ def test_every_infra_shell_script_parses_and_stops_on_errors(script):
 def test_the_drill_script_restores_first_then_runs_the_steps_timed_from_the_start():
     text = (ROOT / "infra" / "backup" / "restore_drill.sh").read_text("utf-8")
     text = text.split("set -euo pipefail", 1)[1]  # the steps, not the header comment
-    order = [text.index(part) for part in (
-        'started="$(date -u +%s)"', "sha256sum --check", "pg_restore", "selecta db upgrade",
-        "python -m selecta.ops.restore_drill --restore-started \"${started}\"")]
+    order = [
+        text.index(part)
+        for part in (
+            'started="$(date -u +%s)"',
+            "sha256sum --check",
+            "pg_restore",
+            "selecta db upgrade",
+            'python -m selecta.ops.restore_drill --restore-started "${started}"',
+        )
+    ]
     assert order == sorted(order)
     copy = (ROOT / "infra" / "backup" / "copy_originals.sh").read_text("utf-8")
     assert "rclone copy" in copy and "rclone sync" not in copy
+
+
+def test_the_drill_command_runs_stripe_reconciliation_when_stripe_is_configured(
+    monkeypatch, tmp_path
+):
+    """With the Stripe settings in the environment, `main` hands after_restore a Stripe client
+    and the price map, so the drill re-runs billing reconciliation instead of skipping it."""
+    from selecta import flags, persistence
+    from selecta.storage import api as storage_api
+
+    class Closeable:
+        def close(self) -> None: ...
+
+        def dispose(self) -> None: ...
+
+    seen: dict = {}
+
+    def fake_after_restore(engine, objects, bucket, **kwargs):
+        seen.update(kwargs)
+        report = restore_drill.DrillReport(restore_started=kwargs["restore_started"])
+        report.finished = kwargs["restore_started"]
+        return report
+
+    monkeypatch.setattr(flags, "require", lambda _flag: None)
+    monkeypatch.setattr(persistence, "make_engine", lambda _url: Closeable())
+    monkeypatch.setattr(storage_api, "r2_client", Closeable)
+    monkeypatch.setattr(restore_drill, "after_restore", fake_after_restore)
+    monkeypatch.setenv("SELECTA_DATABASE_URL", "postgresql://drill")
+    monkeypatch.setenv("SELECTA_R2_BUCKET_DELETION_LEDGER", "ledger")
+    monkeypatch.setenv("SELECTA_STRIPE_SECRET_KEY", "sk_test_drill")
+    monkeypatch.setenv(
+        "SELECTA_STRIPE_PRICES", '{"price_standard_month":{"plan":"standard","interval":"month"}}'
+    )
+    restore_drill.main(["--restore-started", "0", "--report", str(tmp_path / "drill.md")])
+    assert seen["stripe"] is not None
+    assert set(seen["price_map"]) == {"price_standard_month"}

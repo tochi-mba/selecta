@@ -117,7 +117,7 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
         window.clearTimeout(poll.current.timer);
         poll.current.timer = window.setTimeout(() => void reconcile(asked), POLL_MS);
       } else {
-        setOutcome({ state: 'unknown', message: 'Selecta is still working on it.' });
+        setOutcome({ state: 'unknown', message: 'SelectaDJ is still working on it.' });
       }
       return;
     }
@@ -149,7 +149,7 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
     } catch (error) {
       if (!alive.current || asked.revision !== revisionNow.current) return;
       if (error instanceof ApiError && error.status === 404) setOutcome({ state: 'not-received' });
-      else setOutcome({ state: 'unknown', message: problemKind(error) === 'offline' ? 'Selecta can’t be reached right now.' : (error as Error).message });
+      else setOutcome({ state: 'unknown', message: problemKind(error) === 'offline' ? 'SelectaDJ can’t be reached right now.' : (error as Error).message });
     }
   }
 
@@ -270,7 +270,7 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
       )}
       {outcome?.state === 'not-received' && pending.current && (
         <div className="problem" role="alert">
-          <p>Selecta didn’t receive that, so nothing was saved.</p>
+          <p>SelectaDJ didn’t receive that, so nothing was saved.</p>
           <Action working="Sending…" run={() => pending.current && submit(pending.current)}>Try again</Action>
         </div>
       )}

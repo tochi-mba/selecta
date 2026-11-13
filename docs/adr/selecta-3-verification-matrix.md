@@ -1,9 +1,9 @@
 # Selecta 3.0 - verification, adversarial edge cases and release gates
 
 - **Decision status:** Accepted.
-- **Implementation status:** Not started.
-- **Test execution status:** Not executed for this S3 programme; prior test suites exist but no new outcome is claimed by these docs.
-- **Applies to:** All 30 new ADRs and all 252 unstarted implementation items.
+- **Implementation status (2026-11-12):** In progress. 221 of 258 tasks are ticked as implemented with automated evidence in [the checklist](selecta-3-implementation-checklist.md); 35 need a person and 2 are in progress.
+- **Test execution status (2026-11-12):** automated checks have run and are recorded per task in the checklist and [evidence](selecta-3-evidence.md); the person-run checks (screen readers, listening, usability sessions, installed app) have not, and no task is independently Verified.
+- **Applies to:** All 31 new ADRs and all 258 implementation items (252 planned on 2026-11-07, plus 6 in ADR-0077).
 - **Related:** [ADR index](selecta-3-roadmap.md), [work checklist](selecta-3-implementation-checklist.md), [parity](selecta-3-parity-matrix.md), [evidence](selecta-3-evidence.md).
 
 ## Coverage contract
@@ -131,4 +131,4 @@ Visual snapshots need approved fixtures, stable time/animations, deterministic f
 - **P2, review and disposition:** Noncritical typography, alignment, animation and secondary metadata defects.
 - **Evidence:** Reviewed screenshots, exact CI and manual runs, measured performance, accessibility reports, real listening results, user task outcomes and rollback rehearsal.
 
-A passing docs link check or the presence of planned tests does not complete a test. **All new S3 verification remains Not started.**
+A passing docs link check or the presence of planned tests does not complete a test. **Independent verification (2026-11-12): 0 of 258 tasks Verified; automated checks are recorded per task, person-run checks remain open.**

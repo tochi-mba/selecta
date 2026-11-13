@@ -20,6 +20,9 @@ export type NowState = {
   songTime: number;
   duration: number;
   inSeam: boolean;
+  /** UF-0374-04: in a transition's tail, after the switch point: the song now current is the one
+   * still entering, so the handoff names it, not the song after it. */
+  seamTail?: boolean;
   seamAt: number | null;
   notice: string;
   nextReady: boolean;
@@ -40,6 +43,10 @@ const WAKE_WAIT_MS = 3000;
 const SEAM_POLL_FIRST = 1000;
 const SEAM_POLL_MOST = 5000;
 const SEAM_POLL_NEAR_END = 30;
+/** PF-21: the longest the sound device waits for an idle moment before it is opened anyway. */
+export const PREPARE_IDLE_MS = 1000;
+/** PF-21: where requestIdleCallback is missing (Safari), open it this long after asking. */
+export const PREPARE_FALLBACK_MS = 300;
 
 function savedSound(): { volume: number; muted: boolean } {
   try {
@@ -89,6 +96,9 @@ export function audiblePosition(mix: Pick<MixItem, 'song_id'>[], songId: number,
 
 export class SetPlayer {
   private context: AudioContext | null = null;
+  private preparing = false;
+  private visualTaps: { left: AnalyserNode; right: AnalyserNode } | null = null;
+  private visualSplit: { split: ChannelSplitterNode; context: AudioContext } | null = null;
   private master: GainNode | null = null;
   private output: GainNode | null = null;
   private analyser: AnalyserNode | null = null;
@@ -153,8 +163,46 @@ export class SetPlayer {
     });
   }
 
+  /** PF-21: open the sound device ahead of the first Play, while the browser is idle.
+   *
+   * `new AudioContext` opens the output device synchronously and can take 0.3 to 2 s on a slow
+   * machine; inside the Play press that froze the page before "Loading song" showed. Made here,
+   * outside any gesture, the context starts "suspended" (every browser allows that), so the Play
+   * press only has to call resume(), which is cheap, async and still counts as the user gesture that
+   * Safari and Chrome need to unlock sound. Asking twice, or after the context exists, does nothing;
+   * where Web Audio is missing it does nothing and Play makes the context as before. */
+  prepare(): void {
+    if (this.context || this.preparing || typeof AudioContext === 'undefined') return;
+    this.preparing = true;
+    const open = () => {
+      this.preparing = false;
+      if (this.context) return;
+      try {
+        const context = this.audio();
+        // A browser that allows autoplay starts it running. Nothing plays yet, so put it to sleep
+        // rather than keep the sound device busy; Play's resume() wakes it.
+        if (context.state === 'running' && this.state.phase === 'idle') void this.hold(context).catch(() => {});
+      } catch {
+        // the device refused for now; Play makes the context inside its own press instead
+        this.context = null;
+        this.master = null;
+        this.dropVisualTaps();
+      }
+    };
+    const idle = (window as Window & { requestIdleCallback?: Window['requestIdleCallback'] }).requestIdleCallback;
+    const later = () => {
+      if (typeof idle === 'function') idle.call(window, open, { timeout: PREPARE_IDLE_MS });
+      else window.setTimeout(open, PREPARE_FALLBACK_MS);
+    };
+    // never while the page itself is still loading
+    if (document.readyState === 'complete') later();
+    else window.addEventListener('load', later, { once: true });
+  }
+
   private audio(): AudioContext {
     if (!this.context) {
+      // taps made on an earlier context would read a dead graph
+      this.dropVisualTaps();
       this.context = new AudioContext({ sampleRate: 44100 });
       this.master = this.context.createGain();
       this.analyser = this.context.createAnalyser();
@@ -193,7 +241,9 @@ export class SetPlayer {
    * never answering, so this stops waiting and reports whether it got it. */
   private async wake(context: AudioContext): Promise<boolean> {
     const isRunning = () => context.state === 'running';
-    if (isRunning()) return true;
+    // Idle preparation may still be suspending an autoplay-enabled context. Queue the
+    // resume within this Play gesture even if the context still reports "running".
+    if (isRunning() && !this.holdingSound) return true;
     let wait: number | undefined;
     try {
       await Promise.race([
@@ -238,6 +288,36 @@ export class SetPlayer {
     if (!this.analyser || !this.spectrum) return null;
     this.analyser.getByteFrequencyData(this.spectrum);
     return this.spectrum;
+  }
+
+  /** Read-only side taps for the visualizer: unsmoothed left and right analysers on the mix. Never
+   * routed to the speakers. They belong to the context they were made on, so a new context gets new
+   * taps and the old splitter is disconnected. */
+  getVisualTaps(): { left: AnalyserNode; right: AnalyserNode } | null {
+    if (!this.context || !this.master) return null;
+    if (this.visualSplit && this.visualSplit.context !== this.context) this.dropVisualTaps();
+    if (!this.visualTaps) {
+      const split = this.context.createChannelSplitter(2);
+      const left = this.context.createAnalyser();
+      const right = this.context.createAnalyser();
+      for (const tap of [left, right]) { tap.fftSize = 1024; tap.smoothingTimeConstant = 0; }
+      this.master.connect(split);
+      split.connect(left, 0);
+      split.connect(right, 1);
+      this.visualTaps = { left, right };
+      this.visualSplit = { split, context: this.context };
+    }
+    return this.visualTaps;
+  }
+
+  private dropVisualTaps() {
+    try {
+      this.visualSplit?.split.disconnect();
+    } catch {
+      // already gone with its context
+    }
+    this.visualSplit = null;
+    this.visualTaps = null;
   }
 
   private update(changes: Partial<NowState>) {
@@ -551,7 +631,7 @@ export class SetPlayer {
         .then(() => post(`/mix/${item.position}/render`))
         .then(() => this.refreshMix())
         .catch(() => {});
-      this.update({ notice: `That move couldn’t work into ${item.title}, so Selecta picked another.` });
+      this.update({ notice: `That move couldn’t work into ${item.title}, so SelectaDJ picked another.` });
       return;
     }
     if ((seam.status === 'none' || seam.status === 'queued') && !this.requested.has(seam.key)) {
@@ -589,13 +669,21 @@ export class SetPlayer {
           this.watchedState = fresh;
           void this.plan(current, next, fresh);
           this.refreshMix();
+        } else if (fresh.status === 'failed') {
+          // A failed seam is terminal: use the fresh state to request a fallback
+          // now, rather than waiting for the slower whole-mix refresh.
+          this.watchedState = fresh;
+          this.requestSeam(next, fresh);
+          this.refreshMix();
         }
       })
       .catch(() => { /* Retry while the original song continues playing. */ })
       .finally(() => {
         window.clearTimeout(timeout);
-        if (this.stateRead === controller) this.stateRead = null;
-        if (this.seamPollKey !== seam.key) return;
+        // a read stopAll let go of (playback stopped or restarted) is not one of the current backoff's
+        const current = this.stateRead === controller;
+        if (current) this.stateRead = null;
+        if (!current || this.seamPollKey !== seam.key) return;
         this.seamPollReads += 1;
         this.seamPollDone = performance.now();
       });
@@ -645,6 +733,7 @@ export class SetPlayer {
       position: current.position,
       songTime: time,
       inSeam,
+      seamTail: this.seamTailEnd !== null && !(this.planned && now >= this.planned.whenA),
       seamAt: seam?.status === 'ready' ? (seam.a_source_start ?? null) : null,
       nextReady: seam?.status === 'ready',
     });
@@ -688,7 +777,7 @@ export class SetPlayer {
     post<{ moved: boolean }>(`/mix/${nextItem.position}/leave-later`, { after: time })
       .then(({ moved }) => {
         if (!moved) return;
-        this.update({ notice: 'That transition has gone by, so Selecta is making another further on.' });
+        this.update({ notice: 'That transition has gone by, so SelectaDJ is making another further on.' });
         this.refreshMix();
       })
       .catch(() => {});

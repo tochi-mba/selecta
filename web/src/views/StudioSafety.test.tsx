@@ -89,7 +89,7 @@ describe('Studio safety cases', () => {
     fireEvent.click(cell);
     expect(screen.getByText('Changed, not applied yet')).toBeInTheDocument();
     expect(screen.getByText(/Unsaved changes - not applied to the mix/)).toBeInTheDocument();
-    expect(screen.getByText('Selecta’s starting shape')).toBeInTheDocument();
+    expect(screen.getByText('SelectaDJ’s starting shape')).toBeInTheDocument();
   });
 
   it('never recovers a working copy with a different cell count (a 64-cell draft into an 8-cell pair)', async () => {
@@ -128,11 +128,11 @@ describe('Studio safety cases', () => {
       url.endsWith('/studio/tune') ? new Promise<Response>((resolve) => { answer = resolve; }) : backend(url, init)
     )));
     const cell = await first('Song 2 voice');
-    fireEvent.click(screen.getByRole('button', { name: 'Let Selecta arrange it' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Let SelectaDJ arrange it' }));
     fireEvent.click(cell);
     expect(cell).toHaveAttribute('aria-pressed', 'true');
     await act(async () => { answer(new Response(JSON.stringify({ shape: shape(0, 0), changes: ['late'] }), { status: 200 })); });
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Let Selecta arrange it' })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Let SelectaDJ arrange it' })).toBeEnabled());
     expect(cell).toHaveAttribute('aria-pressed', 'true');
     expect(await first('Song 1 voice')).toHaveAttribute('aria-pressed', 'true');
     expect(deck.made[0].setShape).not.toHaveBeenCalledWith(shape(0, 0));

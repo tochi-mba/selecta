@@ -19,6 +19,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 
+from selecta.business import device_cookie
 from selecta.flags import cloud_gate
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
@@ -33,6 +34,7 @@ from selecta.playback.model import (
     DeviceSignedOut,
     IdempotencyConflict,
     InvalidCommand,
+    OwnershipChanged,
     PlaybackError,
     PlayState,
     Position,
@@ -42,7 +44,8 @@ from selecta.playback.model import (
 from selecta.playback.ports import PlaybackEvents
 from selecta.playback.store import load_device, session_payload
 
-DEVICE_COOKIE = "selecta_device"
+# The legacy name; each workspace now has its own cookie (`business.device_cookie`, ADR-0442).
+DEVICE_COOKIE = device_cookie.LEGACY_COOKIE
 NOT_FOUND = {"code": "unknown_device", "message": "That device isn't signed in here."}
 
 
@@ -78,6 +81,8 @@ class HeartbeatBody(DeviceBody):
 
 class TakeOverBody(DeviceBody):
     start_playing: bool = True
+    require_observed_owner: bool = False
+    observed_owner_id: str | None = Field(default=None, max_length=64)
 
 
 class CommandBody(DeviceBody):
@@ -124,9 +129,18 @@ def install_routes(
             cloud_gate.require(conn, found, flag_id, rules)
         return found
 
+    def cookie_device(found, request: Request, device_id: str | None = None) -> str | None:
+        """The body's device id, else this workspace's own device cookie."""
+        return device_cookie.read(
+            request.cookies,
+            found.workspace.id,
+            personal=found.workspace.kind == "personal",
+            body_device_id=device_id,
+        )
+
     def mine(found, device_id: str | None, request: Request) -> str:
         """The caller's own device id, from the body or the cookie; anything else is 404."""
-        device_id = device_id or request.cookies.get(DEVICE_COOKIE)
+        device_id = cookie_device(found, request, device_id)
         if not device_id:
             raise HTTPException(status_code=404, detail=NOT_FOUND)
         with transaction(engine, found.workspace.id) as conn:
@@ -152,7 +166,7 @@ def install_routes(
                 status_code=422,
                 detail={"code": error.code, "message": str(error)},
             )
-        if isinstance(error, (CommandUnavailable, IdempotencyConflict)):
+        if isinstance(error, (CommandUnavailable, IdempotencyConflict, OwnershipChanged)):
             return HTTPException(
                 status_code=409,
                 detail={"code": error.code, "message": str(error)},
@@ -174,11 +188,11 @@ def install_routes(
             name=body.name,
             kind=body.kind,
             capabilities=Capabilities(**body.capabilities.model_dump()),
-            device_id=body.device_id or request.cookies.get(DEVICE_COOKIE),
+            device_id=cookie_device(found, request, body.device_id),
             events=events,
         )
         response.set_cookie(
-            DEVICE_COOKIE,
+            device_cookie.cookie_name(found.workspace.id),
             result.device.id,
             max_age=400 * 86_400,
             path="/api",
@@ -208,7 +222,7 @@ def install_routes(
         claims: Claims = Depends(current_claims),  # noqa: B008
     ) -> dict[str, Any]:
         found = principal(request, claims)
-        here = device_id or request.cookies.get(DEVICE_COOKIE)
+        here = cookie_device(found, request, device_id)
         listed = devices.list_devices(engine, found.workspace.id, user_id=found.user.id)
         return {
             "devices": [device_json(device, this_device=here) for device in listed],
@@ -307,7 +321,11 @@ def install_routes(
         here = mine(found, body.device_id, request)
         try:
             result = session.take_over(
-                engine, found.workspace.id, here, start_playing=body.start_playing, events=events
+                engine, found.workspace.id, here,
+                start_playing=body.start_playing,
+                require_observed_owner=body.require_observed_owner,
+                observed_owner_id=body.observed_owner_id,
+                events=events
             )
         except PlaybackError as error:
             raise refused(error) from error

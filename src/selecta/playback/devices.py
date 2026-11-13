@@ -49,7 +49,7 @@ class SpeakerWarning(StrEnum):
 WARNING_TEXT = {
     SpeakerWarning.NO_AUDIO: "This device can't play audio, so it can only be a remote.",
     SpeakerWarning.IOS_KEEP_SCREEN_ON: (
-        "On iPhone, keep Selecta open with the screen on while it plays."
+        "On iPhone, keep SelectaDJ open with the screen on while it plays."
     ),
     SpeakerWarning.NO_WAKE_LOCK: (
         "This browser can't keep the screen awake. If the screen sleeps, the music may stop."

@@ -54,6 +54,9 @@ AREAS = (
     "app",
     "tools",
     "cloud",
+    "autopilot",
+    "venueops",
+    "business",
 )
 
 # Places in the site a flag can show up. The browser sweep opens each one with that flag off.
@@ -113,6 +116,8 @@ FIELDS = {
     "owner",
     "review_by",
     "cloud_default",
+    "cloud_surface_kind",
+    "cloud_surface_reason",
 }
 
 # The cloud-only fields and the values each may take. The first value is the default.
@@ -122,6 +127,8 @@ WHEN_OFF = ("drain", "stop")
 WHEN_LOCKED = ("hide", "teaser")
 # A `beta` flag is one people switch on for themselves in the cloud (a "Labs" setting).
 KINDS = ("release", "ops", "experiment", "beta")
+# A Cloud-only flag without a shipped page declares why it is intentionally absent.
+CLOUD_SURFACE_KINDS = ("headless", "unreleased", "rehearsal", "operations")
 FLAG_ID = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$")
 ROUTE = re.compile(r"^(GET|POST|PUT|PATCH|DELETE) /api/\S+$")
 PRESETS = {"minimal": False, "all": True}
@@ -162,6 +169,8 @@ class Flag:
     # A cloud product can start more conservatively than the local app. An explicit
     # `SELECTA_FLAGS=+name` still enables it, so licensing/operations is configuration.
     cloud_default: bool | None = None
+    cloud_surface_kind: str | None = None
+    cloud_surface_reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -203,6 +212,8 @@ def registry() -> dict[str, Flag]:
                 owner=spec.get("owner"),
                 review_by=spec.get("review_by"),
                 cloud_default=spec.get("cloud_default"),
+                cloud_surface_kind=spec.get("cloud_surface_kind"),
+                cloud_surface_reason=spec.get("cloud_surface_reason"),
             )
     return flags
 
@@ -269,6 +280,19 @@ def _cloud_problems(flag: Flag) -> list[str]:
             found.append(f"{flag.id}: review_by {flag.review_by!r} isn't a date like 2027-01-31")
     if flag.cloud_default is not None and not isinstance(flag.cloud_default, bool):
         found.append(f"{flag.id}: cloud_default should be true or false")
+    if flag.cloud_surface_kind is not None:
+        if flag.cloud_surface_kind not in CLOUD_SURFACE_KINDS:
+            allowed = ", ".join(CLOUD_SURFACE_KINDS)
+            found.append(f"{flag.id}: cloud_surface_kind must be one of {allowed}")
+        reason = flag.cloud_surface_reason
+        if not isinstance(reason, str) or len(reason.strip()) < 20:
+            found.append(f"{flag.id}: cloud_surface_reason must explain the exclusion")
+        if "cloud" not in flag.modes:
+            found.append(f"{flag.id}: a Cloud exclusion needs cloud mode")
+        if any(surface.startswith("cloud.") for surface in flag.surfaces):
+            found.append(f"{flag.id}: a flag with Cloud surfaces cannot also exclude them")
+    elif flag.cloud_surface_reason is not None:
+        found.append(f"{flag.id}: cloud_surface_reason needs cloud_surface_kind")
     return found
 
 
@@ -457,5 +481,10 @@ def markdown() -> str:
         for flag in flags:
             needs = ", ".join(f"`{need}`" for need in flag.requires)
             about = flag.about if not flag.core else f"{flag.about} **Core:** {flag.core}"
+            if flag.cloud_surface_kind:
+                about += (
+                    f" **Cloud surface:** {flag.cloud_surface_kind} "
+                    f"({flag.cloud_surface_reason})."
+                )
             lines.append(f"| `{flag.id}` | **{flag.label}.** {about} | {needs} |")
     return "\n".join(lines) + "\n"

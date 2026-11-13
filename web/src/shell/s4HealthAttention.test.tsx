@@ -68,4 +68,36 @@ describe('S4-0092-09 / S4-0107-08 global health attention', () => {
     await act(async () => { await refreshJobs(); });
     await waitFor(() => expect(within(header()).getByRole('link', { name: 'Workspace, 1 item needs your attention' })).toHaveAttribute('href', '/workshop'));
   });
+
+  it('on a phone, More carries the attention as an accessible description and opens a route to Workspace', async () => {
+    window.history.pushState({}, '', '/library');
+    backend(jobs({ storage_full: true }));
+    render(<App />);
+    await act(async () => { await refreshJobs(); });
+    const more = await waitFor(() => {
+      const button = document.querySelector<HTMLButtonElement>('.nav-more-mobile');
+      expect(button).toHaveAttribute('aria-description', 'Workspace needs your attention');
+      return button!;
+    });
+    // the dot is decoration; the description is what a screen reader hears
+    expect(more.querySelector('.nav-attention')).toHaveAttribute('aria-hidden', 'true');
+    expect(more).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(more).toHaveAttribute('aria-expanded', 'false');
+    more.click();
+    const drawer = await screen.findByRole('navigation', { name: 'Workspace' });
+    const links = within(drawer).getAllByRole('link');
+    expect(links.length).toBeGreaterThan(0);
+    for (const link of links) expect(link.getAttribute('href')).toMatch(/^\/workshop/);
+  });
+
+  it('a healthy server leaves More without a description or dot', async () => {
+    window.history.pushState({}, '', '/library');
+    backend(jobs());
+    render(<App />);
+    await act(async () => { await refreshJobs(); });
+    await screen.findByRole('navigation', { name: 'Main' });
+    const more = document.querySelector<HTMLButtonElement>('.nav-more-mobile');
+    expect(more).not.toHaveAttribute('aria-description');
+    expect(more?.querySelector('.nav-attention')).toBeNull();
+  });
 });

@@ -46,8 +46,10 @@ def test_k_songs_use_exactly_k_minus_one_verified_directed_edges(lucy, lucy_home
     seams = revision["snapshot"]["seams"]
     assert len(seams) == 5
     assert all(seam["ready"]["verified"] for seam in seams)
-    assert all(seam["key"] == SeamRequest(a=seam["a"], b=seam["b"], move="bass_swap_blend").key
-               for seam in seams)
+    assert all(
+        seam["key"] == SeamRequest(a=seam["a"], b=seam["b"], move="bass_swap_blend").key
+        for seam in seams
+    )
     ledger = revision["ledger"]
     assert ledger["needed"] == 5 and ledger["ready"] == 5 and ledger["playable_now"]
     duration = revision["snapshot"]["evaluation"]["duration"]
@@ -91,8 +93,11 @@ def test_a_shorter_offer_keeps_an_immovable_end_song(lucy, lucy_home):
     kept = {(rule.kind, rule.value) for rule in intent.parse(relaxed)}
     assert kept == {("count", 9), ("end_with", "Last Call"), ("prefer_ready", True)}
     # nothing reaches Morning Light, so no shorter mix can end there: only relaxing is offered
-    snap = say(lucy, new_conversation(lucy), "make 9 songs, end with Morning Light, only "
-                                             "transitions that are already ready")
+    snap = say(
+        lucy,
+        new_conversation(lucy),
+        "make 9 songs, end with Morning Light, only transitions that are already ready",
+    )
     assert snap["proposal"] is None
     text = reply(snap)["content"]
     assert "-song mix" not in text and "you can render new ones" in text
@@ -106,8 +111,9 @@ def test_reversed_pairs_and_history_never_count_as_ready(lucy, lucy_home):
     gone = SeamRequest(a=1, b=3, move="bass_swap_blend")
     (history / f"{gone.key}.json").write_text(json.dumps({"status": "ready", "key": gone.key}))
     cid = new_conversation(lucy)
-    snap = say(lucy, cid, "make 3 songs starting with Morning Light, only already ready "
-                          "transitions")
+    snap = say(
+        lucy, cid, "make 3 songs starting with Morning Light, only already ready transitions"
+    )
     assert snap["proposal"] is None
 
 
@@ -129,9 +135,10 @@ def test_ready_only_build_and_play_queue_no_renders(lucy, lucy_home):
     revision = current(say(lucy, cid, "make 6 songs, only transitions that are already ready"))
     granted = approve(lucy, revision, "draft_and_play")
     assert granted["preflight"]["ok"] and granted["preflight"]["playable_now"]
-    done = lucy.post("/api/lucy/commits", json={"token": granted["token"],
-                                                "idempotency_key": "play-1",
-                                                "confirm_play": True}).json()
+    done = lucy.post(
+        "/api/lucy/commits",
+        json={"token": granted["token"], "idempotency_key": "play-1", "confirm_play": True},
+    ).json()
     assert done["status"] == "committed" and done["played"]
     playing = lucy.get("/api/mix").json()["mix"]
     assert [item["song_id"] for item in playing] == song_ids(revision)
@@ -155,8 +162,9 @@ def test_eviction_after_proposing_blocks_approval_and_shows_why(lucy, lucy_home)
     assert granted["preflight"]["ready"] == 4
     ledger = lucy.get(f"/api/lucy/revisions/{revision['id']}/readiness").json()
     assert ledger["seams"][2]["status"] == "gone" and not ledger["playable_now"]
-    failed = lucy.post("/api/lucy/commits", json={"token": granted["token"],
-                                                  "idempotency_key": "gone-1"}).json()
+    failed = lucy.post(
+        "/api/lucy/commits", json={"token": granted["token"], "idempotency_key": "gone-1"}
+    ).json()
     assert failed["status"] == "failed" and failed["draft_id"] is None
     assert lucy.get("/api/drafts").json()["drafts"] == []
 
@@ -174,18 +182,27 @@ def test_cue_checks_mirror_the_mix_engine():
     assert not _compatible(entered, too_soon, songs)
     assert _compatible(entered, fine, songs)
     for edge in (too_soon, fine):
-        settled = mix.with_room({}, 2, 3, 20.0, 200.0, lambda _key, e=edge: {
-            "status": "ready", "a_source_start": e.a_source_start})
+        settled = mix.with_room(
+            {},
+            2,
+            3,
+            20.0,
+            200.0,
+            lambda _key, e=edge: {"status": "ready", "a_source_start": e.a_source_start},
+        )
         assert (settled == {}) == _compatible(entered, edge, songs)
 
 
 def test_ready_only_drafts_pin_their_clips(lucy_home):
     conn = db.connect(lucy_home / "selecta.sqlite")
     items = [[1, None, 0], [2, json.dumps({"move": "bass_swap_blend"}), 0]]
-    conn.execute("INSERT INTO drafts(name,items,ready_only) VALUES('Ready',?,1)",
-                 (json.dumps(items),))
-    conn.execute("INSERT INTO drafts(name,items,ready_only) VALUES('Other',?,0)",
-                 (json.dumps([[3, None, 0], [4, None, 0]]),))
+    conn.execute(
+        "INSERT INTO drafts(name,items,ready_only) VALUES('Ready',?,1)", (json.dumps(items),)
+    )
+    conn.execute(
+        "INSERT INTO drafts(name,items,ready_only) VALUES('Other',?,0)",
+        (json.dumps([[3, None, 0], [4, None, 0]]),),
+    )
     conn.commit()
     from selecta.lucy import schema
 
@@ -193,3 +210,15 @@ def test_ready_only_drafts_pin_their_clips(lucy_home):
     keys = readiness.pinned_keys(conn)
     assert request_from(1, 2, {"move": "bass_swap_blend"}).key in keys
     assert request_from(3, 4, {}).key not in keys
+
+
+def test_the_relaxed_offer_keeps_rules_written_after_the_strict_one():
+    """LX-0359-06: dropping the ready-only rule must not also drop a rule that follows it in
+    the same clause ("... and make 10 songs"), nor quote a request with nothing left in it."""
+    from selecta.lucy.builtin import _rephrase
+
+    relaxed = _rephrase("only use ready transitions and make 10 songs", relax=True)
+    assert relaxed is not None and not relaxed.startswith((",", "and "))
+    kept = {(rule.kind, rule.value) for rule in intent.parse(relaxed)}
+    assert kept == {("count", 10), ("prefer_ready", True)}
+    assert _rephrase("only ready transitions", relax=True) is None

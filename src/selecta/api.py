@@ -52,7 +52,10 @@ SAFE_OPERATION = re.compile(r"[a-z]{1,32}-[A-Za-z0-9-]{1,96}")
 
 
 def create_app(
-    settings: Settings | None = None, web_dir: Path | None = None, prepare_links: bool = False
+    settings: Settings | None = None,
+    web_dir: Path | None = None,
+    prepare_links: bool = False,
+    durable: bool | None = None,
 ) -> FastAPI:
     settings = settings or load_settings()
     flags.effective()  # a mistake in SELECTA_FLAGS stops the start, rather than a request later
@@ -83,11 +86,22 @@ def create_app(
             print(f"[BOOT] +{time.monotonic() - started_at:.1f}s {stage}", flush=True)
 
     progress("Loading persisted transition metadata...")
-    store = SeamStore(settings)
+    # SC-0394-04: with core.durable_local_jobs, the app's own workers (`selecta web`) take their
+    # work from the job store in the home, and seams, analysis and exports are read from it
+    if durable is None:
+        durable = prepare_links and flags.on("core.durable_local_jobs")
+    work = durable_exports = None
+    if durable:
+        from selecta.workers import local_app
+
+        work, store, background, durable_exports = local_app.build(settings)
+    else:
+        store = SeamStore(settings)
     progress("Transition metadata loaded; clearing incomplete render states...")
     store.forget_unfinished()  # no worker is running yet, so nothing can be under way
     progress("Constructing background worker controller...")
-    background = _Background(settings.home)
+    if not durable:
+        background = _Background(settings.home)
 
     # Operation names are not permission to replay an unrelated command. Bind
     # each name to the exact route and body that first used it.
@@ -106,6 +120,8 @@ def create_app(
         background=background,
         recent_operations=recent_operations,
         restore_problem=restore_problem,
+        work=work,
+        durable_exports=durable_exports,
     )
     progress("Registering helper and library routes...")
     helpers_routes(app, ctx)
@@ -165,7 +181,9 @@ def create_app(
             )
         )
         fingerprint = hashlib.sha256(identity).hexdigest()
-        if operation in running_operations:
+        # A loop, not an if: when a try fails, every waiting retry wakes, and only the first may
+        # run it again; the rest wait for that rerun instead of doing the change once each.
+        while operation in running_operations:
             if active_fingerprints.get(operation) != fingerprint:
                 return JSONResponse(
                     {"detail": "That operation ID already belongs to a different action."},
@@ -275,6 +293,9 @@ def create_app(
                 ranked_links(conn)
 
         threading.Thread(target=warm_up, daemon=True).start()
+
+    if work is not None:
+        local_app.start(app, work)
 
     progress("Starting optional workers and setting up static assets...")
     root = web_dir or Path(__file__).parents[2] / "web" / "dist"

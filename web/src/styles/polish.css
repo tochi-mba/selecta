@@ -4,7 +4,10 @@ body { text-rendering: optimizeLegibility; }
 /* Feedback stays inside the control: hit targets and keyboard focus never move. */
 button:not(:disabled):not([aria-disabled='true']):active,
 a.button:active { box-shadow: inset 0 0 0 2px currentColor; }
-.chips button[aria-pressed='true'] { box-shadow: inset 0 -2px 0 currentColor; }
+/* Pressed segmented toggles carry a bar along the bottom as well as the fill, so the state is never
+   colour alone (EX-0130-01). */
+.chips button[aria-pressed='true'],
+:is(.library-density, .library-layout) button[aria-pressed='true'] { box-shadow: inset 0 -3px 0 currentColor; }
 :is(input, textarea, select) {
   transition: border-color var(--motion-fast) var(--motion-ease), background-color var(--motion-fast) var(--motion-ease);
 }
@@ -145,9 +148,22 @@ button[aria-disabled='true'] { cursor: progress; }
 .skeleton-vibes .skeleton-action { width: 100%; height: 48px; }
 @media (max-width: 1040px) { .skeleton-vibes .skeleton-content { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 620px) { .skeleton-vibes .skeleton-content { grid-template-columns: 1fr; } .skeleton-vibes .skeleton-unit:nth-child(n + 4) { display: none; } }
-.skeleton-library .skeleton-unit { min-height: 108px; padding-block: var(--space-4); border-bottom: 1px solid var(--border); grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
-.skeleton-library .skeleton-detail { grid-row: 2; }
+/* P0033: the Library placeholder follows the loaded rows' own grid (operations.css .library-rows .song-row):
+   name, facts, readiness and actions side by side over 1024px, facts under the name below that, and each
+   unit stands at the same median row height (--library-row-estimate) in both densities. */
+.skeleton-library .skeleton-content { gap: var(--row-gap, var(--space-4)); }
+.skeleton-library .skeleton-unit {
+  box-sizing: border-box; min-height: var(--library-row-estimate, 126px); padding-block: var(--row-pad, var(--space-4)); border-bottom: 1px solid var(--border);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) var(--library-actions-width, 200px); align-content: start;
+}
+.skeleton-library .skeleton-detail { grid-row: 2; grid-column: 1; }
 .skeleton-library .skeleton-meta { grid-column: 2; grid-row: 1; width: 80%; }
+@media (max-width: 1024px) {
+  .skeleton-library .skeleton-unit { grid-template-columns: minmax(0, 1fr) auto; }
+  .skeleton-library .skeleton-meta { grid-column: 1; grid-row: 3; width: 38%; }
+}
+/* Library card view: the same tracks and gap as .library-rows.library-cards (music-objects.css) */
+.library .skeleton-cards .skeleton-content { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: var(--space-3); }
 .skeleton-listen .skeleton-unit { min-height: 260px; }
 .skeleton-listen .skeleton-region { height: 120px; }
 /* P0035: song rows and the transitions hanging between them, at the timeline's own row heights
@@ -171,6 +187,65 @@ button[aria-disabled='true'] { cursor: progress; }
 .skeleton-inspector .skeleton-unit { min-height: 240px; }
 .skeleton-metrics .skeleton-content { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
 .skeleton-metrics .skeleton-unit { min-height: 110px; padding: var(--space-4); }
+/* P0032: the Mix feeling cards' placeholder follows .vibe-group and .vibe-card (listening.css): a group
+   heading rule, then the same 3/2/1 tracks and gap, cards at the same padding and floor, the motif, name,
+   summary, facts and disclosure stacked, and the two-up actions with Save draft under them at the foot. */
+.skeleton-vibes { padding-top: var(--space-6); }
+.skeleton-vibes::before { width: 96px; height: 12px; margin-bottom: var(--space-3); border-radius: var(--radius-mark); }
+.skeleton-vibes .skeleton-content { gap: var(--space-3); }
+.skeleton-vibes .skeleton-vibe { display: flex; flex-direction: column; gap: var(--space-3); box-sizing: border-box; min-height: 448px; padding: var(--space-4); }
+.skeleton-vibe .skeleton-motif { width: min(210px, 100%); height: 74px; margin-bottom: var(--space-2); }
+.skeleton-vibe .skeleton-title { width: 70%; height: 28px; }
+.skeleton-vibe .skeleton-disclosure { width: 58%; height: 20px; margin-top: auto; }
+.skeleton-vibe .skeleton-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-1); }
+.skeleton-vibe .skeleton-action { width: 100%; height: var(--control-height); margin-top: 0; }
+.skeleton-vibe .skeleton-action-quiet { grid-column: 1 / -1; width: 96px; height: var(--control-height); background: none; }
+/* two columns are narrower than three, so the real cards' words wrap more and they stand taller */
+@media (min-width: 621px) and (max-width: 1040px) {
+  .skeleton-vibes .skeleton-vibe { min-height: 536px; }
+  /* at this width the real Play and Shape first labels wrap to two lines, so the buttons are taller */
+  .skeleton-vibe .skeleton-action { height: 66px; }
+}
+/* the Quick Play pick's facts line, held at one line of its text until the facts arrive */
+.skeleton-facts i { display: block; max-width: 100%; height: 1lh; border-radius: var(--radius-mark); background: var(--surface-control); }
+/* the song count, then the length of source audio: two pieces that wrap where the real pair wraps */
+.skeleton-facts i:first-child { width: 8em; }
+.skeleton-facts i:last-child { width: 17em; }
+/* the filter names stand in the filters' place, dimmed, until there's something to filter */
+.vibe-filters-pending button:disabled { opacity: 0.6; }
+/* P0034: Listen. The waveform's place is one flat block at .strip's own height and margins (style.css),
+   in the strip's phone order; the words' place is .lyrics' own box: its margins and floor, the timing
+   note, and three lines with the sung one larger. */
+.skeleton-strip { height: 92px; margin: var(--space-2) 0 var(--space-5); border-radius: var(--radius-sm); background: var(--surface-control); }
+.skeleton-strip[data-revealed='false'] { visibility: hidden; }
+.now .skeleton-listen { padding-block: 0; margin: var(--space-2) 0 var(--space-5); min-height: 7.5em; }
+/* the desktop words keep an 18rem floor (listening.css), so their placeholder does too */
+.now:not(.stage) .skeleton-listen { min-height: 18rem; }
+.skeleton-listen .skeleton-lyrics { min-height: 0; gap: var(--space-dense); }
+.skeleton-lyrics .skeleton-meta { width: min(320px, 70%); margin-bottom: var(--space-2); }
+.skeleton-lyrics .skeleton-detail { width: 54%; height: 18px; }
+.skeleton-lyrics .skeleton-title { width: 78%; height: clamp(1.4rem, 4.4vw, 2.5rem); }
+@media (max-width: 760px) {
+  .skeleton-strip { order: 3; }
+  .now:not(.stage) .skeleton-listen { min-height: max(7.5em, calc(100svh - 36px - var(--above-lyrics))); }
+}
+@media (forced-colors: active) { .skeleton-strip { background: GrayText; } }
+/* P0036: Discover. Word connections use .link-grid's tracks and gap and .link-card's padding (style.css);
+   a chord match is one full-width .discovery card under its real heading. */
+.skeleton-pairs .skeleton-content { grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); gap: var(--space-3); }
+.skeleton-pairs .skeleton-unit { padding: var(--space-4); min-height: 472px; }
+.discoveries > .skeleton-pairs { padding-block: var(--space-snug) 0; }
+.discoveries > .skeleton-pairs .skeleton-content { grid-template-columns: minmax(0, 1fr); }
+.discoveries > .skeleton-pairs .skeleton-unit { padding: var(--space-3); min-height: 200px; }
+/* P0036: Workshop lists. A row is a label and a status at .job-list's tracks (shell.css). */
+.skeleton-rows { padding-block: 0; }
+/* the real lists sit flush under their heading (.job-list, .library-health), so the rows do too */
+.stack > .skeleton-rows { margin-top: 0; }
+.skeleton-rows .skeleton-content { gap: var(--space-2); }
+.skeleton-rows .skeleton-row { grid-template-columns: minmax(150px, 220px) 1fr; gap: var(--space-1) var(--space-3); align-items: center; min-height: 24px; }
+.skeleton-row .skeleton-title { width: 70%; height: 16px; }
+.skeleton-row .skeleton-detail { width: min(320px, 100%); height: 20px; border-radius: var(--radius-pill); }
+@media (max-width: 560px) { .skeleton-rows .skeleton-row { grid-template-columns: 1fr; } }
 @keyframes skeleton-reveal { from { opacity: 0; } to { opacity: 1; } }
 @media (max-width: 760px) {
   .page { padding-top: var(--space-5); }
@@ -208,6 +283,9 @@ button[aria-disabled='true'] { cursor: progress; }
     background: Highlight;
     color: HighlightText;
     border: 2px solid Highlight;
+    /* without this the browser paints its Canvas-coloured text backplate under the label, and
+       HighlightText on that backplate hid "Play" entirely (owner-delegated forced-colours check 2026-11-12) */
+    forced-color-adjust: none;
   }
   button[aria-pressed='true'], .nav a[aria-current='page'],
   .inspector-tabs button[aria-selected='true'],
@@ -261,7 +339,9 @@ button[aria-disabled='true'] { cursor: progress; }
     border-color: GrayText;
     color: GrayText;
   }
-  .studio-cell[aria-pressed='true']::after { background: Highlight; }
+  /* forced-color-adjust: without it the browser drops this mark's background, and an on square
+     differs from an off one only by its border colour (owner-delegated check UF-0382-03, 2026-11-12) */
+  :root .studio-cell[aria-pressed='true']::after { background: Highlight; forced-color-adjust: none; }
 }
 
 /* Causal, short microinteractions. All state changes stay textual and immediate;

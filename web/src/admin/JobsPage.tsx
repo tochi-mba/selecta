@@ -35,7 +35,7 @@ export function JobsPage({ api, can }: { api: AdminFetch; can: (permission: stri
             { key: 'pool', label: 'Pool and lane', render: (j) => `${j.pool} / ${j.lane}` }, { key: 'attempt_count', label: 'Attempts', numeric: true },
             { key: 'created_at', label: 'Created', render: (j) => when(j.created_at) }]} />
       </Panel>
-      {picked && <JobDetail api={api} jobId={picked} can={can} onChanged={() => void jobs.reload()} />}
+      {picked && <JobDetail key={picked} api={api} jobId={picked} can={can} onChanged={() => void jobs.reload()} />}
       <Workers api={api} canDrain={can('workers.drain')} />
     </div>
   );

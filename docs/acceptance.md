@@ -2,6 +2,8 @@
 
 This ledger combines measured acceptance runs with the latest live-library snapshot below. Evidence may come from the real library, a browser, or automated tests; a passing test proves its stated behavior, not that a transition sounds good. Only a listener can say whether Selecta sounds good, so "Heard" says what the listener has told us so far.
 
+**How this ledger is checked (T0004, 2026-11-12).** Every number or rule here that the code itself decides (tempo gaps, bridge sizes, timings, limits, counts of mixes, local-only hosts) is re-read from the code by `tests/test_acceptance_ledger.py`, which fails when the two drift apart. Everything measured on the owner's real library or by ear (scan, analysis and lyric counts, times, request fits, ratings, what was heard) is a **historical snapshot**: true on the date given, not re-measured since and not re-checked by any test. Read those as what happened then, not as a promise about now.
+
 ## Works
 
 | What | Evidence | Known limits |

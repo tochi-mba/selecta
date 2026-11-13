@@ -22,12 +22,16 @@ type Restore = { time: number; wasPlaying: boolean };
 const PROXY_POLL_MS = 1500;
 const PROXY_DEADLINE_MS = 300_000;
 
-export function useCloudPlayer({ api, workspaceId, audio, setError, fetchImpl = fetch }: {
+export function useCloudPlayer({ api, workspaceId, audio, setError, fetchImpl = fetch, skipOnFailure = false }: {
   api: Api;
   workspaceId: string;
   audio: RefObject<HTMLAudioElement | null>;
   setError: (value: string) => void;
   fetchImpl?: typeof fetch;
+  /** One Cloud player (`cloud.single_audio_owner`, AV-0419-05): a song that still can't load
+   * after its one refresh, or a buffered copy that fails, moves on to the next song and says
+   * which song was skipped. Off, the player stops there and asks for Listen again, as before. */
+  skipOnFailure?: boolean;
 }) {
   const [queue, setQueue] = useState<Asset[]>([]);
   const [index, setIndex] = useState(-1);
@@ -133,12 +137,29 @@ export function useCloudPlayer({ api, workspaceId, audio, setError, fetchImpl = 
     }
   }, [index, queue, start, track]);
 
+  /** Give up on this song and play the next, saying so; past the end, say playback stopped. */
+  const skipFailed = useCallback((current: Track) => {
+    if (index + 1 < queue.length) {
+      void start(queue, index + 1).then(() => {
+        setError(`${current.name} could not be played, so the next song is playing.`);
+        if (current.buffered) URL.revokeObjectURL(current.url);
+      });
+    } else {
+      setError(`${current.name} could not be played and it was the last song, so playback stopped.`);
+    }
+  }, [index, queue, setError, start]);
+
   /** The media element couldn't load: refresh this song's URL once, keeping place and queue. */
   const refreshUrl = useCallback(async () => {
     const current = track;
     const element = audio.current;
-    if (!current || current.buffered) return;
+    if (!current) return;
+    if (current.buffered) {
+      if (skipOnFailure) skipFailed(current);
+      return;
+    }
     if (refreshedFor.current === current.id) {
+      if (skipOnFailure) { skipFailed(current); return; }
       setError('This playback link could not be refreshed. Try Listen again.');
       return;
     }
@@ -157,9 +178,10 @@ export function useCloudPlayer({ api, workspaceId, audio, setError, fetchImpl = 
     } catch (problem) {
       if (mine !== generation.current) return;
       restore.current = null;
+      if (skipOnFailure) { skipFailed(current); return; }
       setError((problem as Error).message || 'This playback link could not be refreshed.');
     }
-  }, [api, audio, setError, track, workspaceId]);
+  }, [api, audio, setError, skipFailed, skipOnFailure, track, workspaceId]);
 
   /** The element's position and play state, as it plays. */
   const heard = useCallback(() => {

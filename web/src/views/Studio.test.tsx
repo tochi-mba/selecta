@@ -307,16 +307,16 @@ describe('the seam studio', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('lets Selecta arrange it, and what was there can be put back', async () => {
+  it('lets SelectaDJ arrange it, and what was there can be put back', async () => {
     const made = shape(0, 1);
     const { calls } = open(ready, { 'POST /mix/1/studio/tune': { shape: made, changes: [] } });
     const cell = await square('Song 2 bass, square 1');
     expect(cell).toHaveAttribute('aria-pressed', 'false');
-    fireEvent.click(screen.getByRole('button', { name: 'Let Selecta arrange it' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Let SelectaDJ arrange it' }));
     await waitFor(() => expect(cell).toHaveAttribute('aria-pressed', 'true'));
     expect(calls.find((call) => call.path.endsWith('/tune'))?.body).toEqual({ shape: null });
     expect(deck.made[0].setShape).toHaveBeenLastCalledWith(made);
-    expect(screen.getByText('Selecta arranged this from what’s in the stems.')).toBeInTheDocument();
+    expect(screen.getByText('SelectaDJ arranged this from what’s in the stems.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Put it back' }));
     expect(cell).toHaveAttribute('aria-pressed', 'false');
     expect(screen.queryByRole('button', { name: 'Put it back' })).toBeNull();
@@ -368,20 +368,20 @@ describe('the seam studio', () => {
     fireEvent.click(cell);
     expect(cell).toHaveAttribute('aria-pressed', 'true');
     await act(async () => release());
-    expect(await screen.findByText('You changed the grid while Selecta was working, so your version stays.')).toBeInTheDocument();
+    expect(await screen.findByText('You changed the grid while SelectaDJ was working, so your version stays.')).toBeInTheDocument();
     expect(cell).toHaveAttribute('aria-pressed', 'true');
     expect(await square('Song 2 bass, square 2')).toHaveAttribute('aria-pressed', 'false');
     expect(screen.queryByText('Brought every part in.')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Put it back' })).toBeNull();
   });
 
-  it('explains when Selecta can’t arrange these two, and keeps the grid as it is', async () => {
+  it('explains when SelectaDJ can’t arrange these two, and keeps the grid as it is', async () => {
     open();
     const cell = await square('Song 1 voice, square 1');
-    fireEvent.click(screen.getByRole('button', { name: 'Let Selecta arrange it' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Let SelectaDJ arrange it' }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(cell).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Let Selecta arrange it' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Let SelectaDJ arrange it' })).toBeEnabled();
   });
 
   it('nothing it does is final until “Apply to this transition”', async () => {
@@ -455,14 +455,14 @@ describe('Studio pointer painting', () => {
     const suggested = shape(0, 1);
     open(ready, { 'POST /mix/1/studio/tune': { shape: suggested, changes: ['A new arrangement.'] } });
     const cell = await square('Song 2 bass, square 1');
-    fireEvent.click(screen.getByRole('button', { name: 'Let Selecta arrange it' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Let SelectaDJ arrange it' }));
     await waitFor(() => expect(cell).toHaveAttribute('aria-pressed', 'true'));
     expect(cell).toHaveClass('ai-changed');
-    expect(screen.getByText('64 exact cell changes from Selecta’s suggestion')).toBeInTheDocument();
+    expect(screen.getByText('64 exact cell changes from SelectaDJ’s suggestion')).toBeInTheDocument();
     expect(screen.getByText('Song 2 · Bass · square 1: Off → On')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Put it back' }));
     expect(cell).not.toHaveClass('ai-changed');
-    expect(screen.queryByText('64 exact cell changes from Selecta’s suggestion')).toBeNull();
+    expect(screen.queryByText('64 exact cell changes from SelectaDJ’s suggestion')).toBeNull();
   });
 
   it('stops the owned Studio preview and its playhead when the tab becomes hidden', async () => {

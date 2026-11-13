@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { resetMix } from './helpers';
+import { allRendered, resetMix } from './helpers';
 import { assertNoPersonalData, provenance } from './pairedEvidence';
 
 /**
@@ -65,6 +65,9 @@ for (const viewport of VIEWPORTS) {
 
     for (const theme of ['light', 'dark'] as const) {
       await resetMix(request);
+      // Capture both themes with every transition of the reset mix made, or the editor reads
+      // "Rendering 2 of 3" in one theme and "3 of 3 ready" in the other.
+      await allRendered(request);
       await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
       await page.goto('/mixes');
       await page.evaluate((chosen) => {
@@ -72,13 +75,22 @@ for (const viewport of VIEWPORTS) {
       }, theme);
 
       const capture = async (id: string, path: string) => {
-        await expect(page.locator('main#main')).toBeVisible();
+        // Do not compare an actual page in one theme with Suspense's temporary
+        // loading shell in the other. Capture only once the heading has mounted.
+        const main = page.locator('main#main:not([aria-busy="true"])');
+        await expect(main.locator('h1, h2').first()).toBeVisible();
         await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
-        // The exact accessible labels/roles/control state should not depend on the palette.
-        // Record an equality hash, NOT a fabricated judgement of visual quality.
+        // A page's own data placeholders are not its controls: Word connections waits out a 200ms
+        // search pause before it asks, so a reading taken while its placeholder shows records the
+        // loading state in one theme and the loaded page in the other. Read once the data is in.
+        // Diagnostics deliberately exhibits nine permanent loading examples in the component gallery.
+        // They are specimens, not an unfinished network request; real route placeholders must settle.
+        await expect(main.locator('.skeleton:not(.control-gallery .skeleton)')).toHaveCount(0);
+        // Semantic controls must agree across light/dark. Poll for asynchronous
+        // route data to settle, while preserving the strict equality assertion.
         await page.waitForTimeout(180);
-        const semantics = await page.locator('main#main').evaluate((main) =>
-          JSON.stringify([...main.querySelectorAll('button, input, select, textarea, summary, [role="tab"], a[href]')].map((node) => ({
+        const semantics = () => main.evaluate((element) =>
+          JSON.stringify([...element.querySelectorAll('button, input, select, textarea, summary, [role="tab"], a[href]')].map((node) => ({
             tag: node.tagName,
             role: node.getAttribute('role'),
             label: (node.getAttribute('aria-label') ?? node.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 120),
@@ -88,9 +100,14 @@ for (const viewport of VIEWPORTS) {
             disabled: (node as HTMLButtonElement).disabled === true,
           }))),
         );
-        const semanticSha256 = hash(semantics);
+        if (theme === 'dark') {
+          await expect.poll(async () => hash(await semantics()), {
+            timeout: 10_000,
+            message: `Theme changed semantic controls in ${id} at ${viewport.width}px`,
+          }).toBe(expectedSemantics.get(id));
+        }
+        const semanticSha256 = hash(await semantics());
         if (theme === 'light') expectedSemantics.set(id, semanticSha256);
-        else expect(semanticSha256, `Theme changed semantic controls in ${id} at ${viewport.width}px`).toBe(expectedSemantics.get(id));
         const screenshot = `candidate-${viewport.width}x${viewport.height}-${id}-${theme}.png`;
         await page.screenshot({
           path: info.outputPath(screenshot), fullPage: true,

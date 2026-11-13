@@ -178,11 +178,17 @@ export function Lucy({ conversation, setMixData, player }: LucyProps) {
   const lastMessage = view.messages[view.messages.length - 1];
   const settledCards = Object.values(view.cards).filter((card) => card.status !== 'queued' && card.status !== 'running').length;
   const contentKey = `${view.messages.length}:${lastMessage?.content.length ?? 0}:${lastMessage?.status}:${view.notes.length}:${view.planOrder.length}:${settledCards}:${pending?.state}:${view.permissions.length}`;
-  const sticky = useStickToBottom(contentKey, view.messages.length, split || tab === 'chat');
+  const sticky = useStickToBottom(contentKey, view.messages.length, split || tab === 'chat', conversation);
+  // still going: Lucy is working, or a reply is still arriving
+  const ongoing = running || (!!pending && pending.state !== 'failed') || lastMessage?.status === 'streaming';
+  const ongoingRef = useRef(ongoing);
+  ongoingRef.current = ongoing;
 
+  // A conversation opens at its top, heading first. Only one that is still going opens at the newest
+  // message, and its heading is still a scroll (or Home) away (LX, 2026-11-12).
   useEffect(() => {
     if (convo.load.state !== 'ready') return;
-    const frame = window.requestAnimationFrame(() => window.scrollTo({ top: document.documentElement.scrollHeight }));
+    const frame = window.requestAnimationFrame(() => window.scrollTo({ top: ongoingRef.current ? document.documentElement.scrollHeight : 0 }));
     return () => window.cancelAnimationFrame(frame);
   }, [conversation, convo.load.state]);
 
@@ -239,7 +245,7 @@ export function Lucy({ conversation, setMixData, player }: LucyProps) {
         void readStatus();
       } else if (kind === 'offline' || kind === 'server' || (error instanceof ApiError && error.status === 408)) {
         // Sending again uses the same name, so the server won't take it twice if it did arrive.
-        message = 'Selecta didn’t answer, so it may not have arrived. Press Send to try again.';
+        message = 'SelectaDJ didn’t answer, so it may not have arrived. Press Send to try again.';
       } else {
         message = (error as Error).message;
         attempt.current = null;
@@ -404,7 +410,7 @@ export function Lucy({ conversation, setMixData, player }: LucyProps) {
         <Approve
           revision={shown}
           isCurrent={isCurrent}
-          blocked={status && !status.phases.commit ? 'Saving is turned off in Lucy’s settings.' : !status ? 'Can’t reach Selecta right now.' : ''}
+          blocked={status && !status.phases.commit ? 'Saving is turned off in Lucy’s settings.' : !status ? 'Can’t reach SelectaDJ right now.' : ''}
           seen={view.commits}
           onStale={convo.reload}
           startPlaying={startPlaying}
@@ -417,7 +423,7 @@ export function Lucy({ conversation, setMixData, player }: LucyProps) {
     <main className={`page lucy ${split ? 'is-split' : 'is-stacked'}`} id="main" ref={page}>
       {header}
       {(offline || convo.stream === 'reconnecting') && (
-        <p className="lucy-banner" role="status">Can’t reach Selecta right now. What’s shown may be out of date, and anything you type is kept.</p>
+        <p className="lucy-banner" role="status">Can’t reach SelectaDJ right now. What’s shown may be out of date, and anything you type is kept.</p>
       )}
       {statusProblem && !offline && statusProblem.kind !== 'old' && !status && (
         <Problem retry={readStatus}>Couldn’t check Lucy’s settings: {statusProblem.message}</Problem>

@@ -43,7 +43,7 @@ Dispositions: **existing** means the acceptance was already met by code that pre
 | CI-0167-01 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0167-02 | built | Built or given a focused test on 2026-11-10 |
 | CI-0167-03 | existing | Met by earlier code; tests named on the checklist line |
-| CI-0167-04 | person | Needs a person: keyboard, desktop and mobile focus review of shell action priority |
+| CI-0167-04 | existing | Existing shell action priority; 2026-11-12 owner-delegated desktop and mobile focus review cited in checklist |
 | CI-0167-05 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0167-06 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0167-07 | existing | Met by earlier code; tests named on the checklist line |
@@ -82,7 +82,7 @@ Dispositions: **existing** means the acceptance was already met by code that pre
 | CI-0172-05 | person | Needs a person: API feasibility review and owner decision on an Inspector A/B; today compare exists only in the blind listening test (web/src/views/Listening.test.tsx "won’t let you choose between two you haven’t both heard") |
 | CI-0172-06 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0172-07 | person | Needs a person: observed audition, edit and compare task |
-| CI-0173-01 | person | Needs a person: full-density and 320px specimen review of song blocks and seam links |
+| CI-0173-01 | existing | Existing song and seam link hierarchy; 2026-11-12 owner-delegated full-density and 320px specimen review cited in checklist |
 | CI-0173-02 | built | dropPreview.ts with dropPreview.test.tsx; flag editor.drag_preview |
 | CI-0173-03 | existing | Met by earlier code; tests named on the checklist line |
 | CI-0173-04 | existing | Met by earlier code; tests named on the checklist line |

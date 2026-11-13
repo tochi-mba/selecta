@@ -285,7 +285,7 @@ def provision(
     if existing is not None:
         return _existing(conn, existing, claims, identity)
     if age_confirmed is not True:
-        raise AgeConfirmationRequired(f"Selecta accounts are for people aged {MINIMUM_AGE}+")
+        raise AgeConfirmationRequired(f"SelectaDJ accounts are for people aged {MINIMUM_AGE}+")
     if not TIMEZONE.match(timezone):
         raise ValueError(f"not a timezone name: {timezone!r}")
 
@@ -400,7 +400,7 @@ def resolve_principal(
     """
     user = user_by_subject(conn, claims.subject)
     if user is None:
-        raise NotProvisioned("no Selecta account for this sign-in yet")
+        raise NotProvisioned("no SelectaDJ account for this sign-in yet")
     if user.deleted_at is not None:
         raise AccountDeleted("this account has been deleted")
     if session_id_revoked(conn, claims.session_id):

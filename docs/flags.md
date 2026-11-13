@@ -25,6 +25,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 |---|---|---|
 | `core.local_server` | **Local server.** The server on this computer: its status, the local-only checks and the one data folder. **Core:** Everything else talks to it. |  |
 | `core.upgrade_backup` | **Backup before upgrade.** The first time a newer Selecta opens a library, it keeps a copy of the library's database before changing its tables. **Core:** An upgrade must never be the thing that loses a library. |  |
+| `core.durable_local_jobs` | **Durable local jobs.** Local background work through the durable job store in the library home (work.sqlite), so it survives restarts and crashes. Off by default while the local audio jobs move onto it. |  |
 | `core.library` | **Library.** Reading a music folder, setting aside what isn't music, and the Library page with search, filters and sorting. **Core:** Without songs there is nothing to play. |  |
 | `core.analysis` | **Analysis.** Beats, downbeats, key, tempo and energy for every song, in the background. **Core:** A mix can only be planned from analysed songs. |  |
 | `core.playback` | **Playback.** The Listen page, the player, gapless audio, what's coming up, and rendering the transitions it plays. **Core:** Selecta is for listening. |  |
@@ -80,6 +81,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 |---|---|---|
 | `drafts` | **Drafts.** Mixes you build and edit without touching what's playing. |  |
 | `render_line` | **Render line.** Prioritized drafts render in the background after the current mix, in an order you choose. | `drafts` |
+| `mymixes.lean_list` | **Lean draft list.** Pickers and shortcuts fetch only each draft's name, not its songs and readiness. | `drafts` |
 | `mymixes.continue_working` | **Continue working.** A shortcut back to the draft you last edited. | `drafts` |
 
 ## Editor
@@ -162,12 +164,15 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `ratings` | **Ratings.** Rate a transition Good or Bad, and the planner learns from it. |  |
 | `learning.memory` | **What it's learned.** The Learning tab's summary of what ratings have taught the planner. | `ratings` |
 | `listening_study` | **Blind listening study.** Compare two renders without knowing which is which, and grade them. |  |
+| `listening_study.skip_and_stop` | **Skip and stop in the listening study.** Skip a comparison without answering, or stop for now and pick up later, with the skipped ones counted as unanswered. | `listening_study` |
 
 ## Workspace
 
 | Flag | What it is | Needs |
 |---|---|---|
 | `workspace.storage` | **Storage.** Free and cached space, and the cache budget. |  |
+| `workspace.cache_care` | **Cache tidying.** When the seam worker is idle it removes crash leftovers, caches of removed or changed songs, seams from an older engine and stems unused for two weeks, shares identical clips, and compacts the library file. The current mix is never touched. |  |
+| `workspace.song_audio_cache` | **Song audio cache.** A whole song asked for on its own is decoded once into the render cache and served from there, with Range and a tag from its source file. It counts toward the cache limit and goes least recently used first; the current mix's seams are never pushed out for it. Off, each request decodes the song again. |  |
 | `workspace.backup` | **Local backup.** Back up the library's data and restore it on the next start. |  |
 | `workspace.diagnostics` | **Diagnostics.** The raw details of what Selecta is doing, for when something goes wrong. |  |
 | `workspace.library_health` | **Library health.** Overview says whether the library can be mixed or what blocks it, and which one thing to do first. |  |
@@ -187,12 +192,14 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `app.classic_nav` | **Classic navigation.** The older navigation labels over the same pages, with ?ui=classic as a way back. |  |
 | `app.scene_transitions` | **Page cross-fades.** With Expressive motion, pages cross-fade where the browser supports it; otherwise they change at once. | `app.motion_choice` |
 | `app.install` | **Install as an app.** Chrome and Edge can install Selecta as its own window. |  |
+| `app.attention_announce` | **Say when Workspace needs attention.** When storage fills, analysis pauses with songs left, or a song or transition fails, a screen reader hears it once on whatever page is open. The header mark stays either way. |  |
 
 ## Tools
 
 | Flag | What it is | Needs |
 |---|---|---|
 | `tools.reels` | **Listening reels.** Render one transition or a reel of them, check beats by ear, and play reels in a browser. |  |
+| `tools.key_benchmark` | **Key method benchmark.** Score a replacement key method against S-KEY's stored keys on this library, read-only, for choosing S-KEY's Cloud replacement. |  |
 | `tools.set_mix` | **Whole-set render.** Render a planned set straight to one file from the command line. |  |
 | `tools.stem_preview` | **Stem preview.** Hear two songs' stems side by side from the command line. | `stems` |
 | `tools.old_planner` | **Rolling set planner.** The original rolling set plan, before mix ideas. |  |
@@ -214,8 +221,13 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `cloud.operations` | **Cloud operations.** Schema migrations, the worker gateway, and the maintenance and recovery commands that keep the service correct. **Core:** The cloud service can't run, recover or erase data on time without them. |  |
 | `cloud.tracing` | **Job tracing.** OpenTelemetry spans across the API, worker gateway, workers and storage, one trace per job with its id as a span attribute. |  |
 | `cloud.metrics` | **Service metrics.** OpenTelemetry metrics the SLOs and alerts read: lost jobs, webhook-to-entitlement time, queue age, quarantines, spend ceilings, audit writes, reconciliation drift, backups and the maintenance leader. |  |
+| `cloud.error_reporting` | **Error reporting.** Send API, gateway, maintenance and worker errors to Sentry, scrubbed of signed links, tokens and email addresses. Needs SELECTA_SENTRY_DSN; nothing is sent without it. |  |
+| `cloud.email` | **Transactional email.** Email people from SelectaDJ when a long job finishes or their storage goes over quota, through Postmark or Resend. Needs the SELECTA_EMAIL_* settings on the maintenance service. |  |
 | `cloud.export_expiry` | **Export expiry.** The maintenance leader deletes finished exports when their plan's retention runs out (Free 7 days, Standard 30, Premium 90) and gives their bytes back to the quota. |  |
 | `cloud.autoscale` | **Worker autoscaling.** The maintenance leader sizes each worker pool from the queue and asks the configured launcher (Modal) to start or stop workers. |  |
+| `cloud.dmca_renewal_reminder` | **DMCA agent renewal reminder.** The maintenance leader raises an owner alert from 90 days before the DMCA designated agent's three-year registration lapses, and daily once it has. |  |
+| `cloud.privacy_notice_draft` | **Privacy notice draft.** Shows the draft privacy notice, marked as a draft pending legal review, under Settings so the owner and a privacy adviser can read it in place. Off by default: it is not published. |  |
+| `cloud.device_check` | **Device check.** A checklist under Settings for the real-device checks (Play here, an offline speaker, the iPhone screen-on note, seam alignment) that reads what this browser supports and writes a copyable record. Off by default. |  |
 | `billing.webhooks` | **Billing updates.** Accept signed subscription state changes from Stripe. **Core:** Billing changes must be applied even when checkout is paused. |  |
 | `devices` | **Playback devices.** Sign browsers in as devices, list, rename and sign them out, and move playback between them with Play here. |  |
 | `devices.remote_control` | **Remote playback control.** Control the account's active playback session from another device. | `devices` |
@@ -224,3 +236,47 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `rooms.display` | **Room display.** Pair a screen to show the room QR code and playback queue. | `rooms` |
 | `lucy.deep_plan` | **Lucy deep planning.** Use Lucy's premium planning model and larger plan allowance. | `lucy` |
 | `admin.console` | **Staff console.** Show internal tools to authenticated staff with the required permission. |  |
+
+## Autopilot and venue
+
+| Flag | What it is | Needs |
+|---|---|---|
+| `cloud.mix_create` | **Make a mix in the Cloud.** Create and edit planned mixes from Cloud Library songs, using the same mix contract as the local app. Seams are plain crossfades until songs have tempo and key facts. |  |
+| `cloud.single_audio_owner` | **One Cloud player.** Cloud Library previews and Cloud Listen play through one persistent player that keeps playing across pages. |  |
+| `cloud.account_states` | **Clear Cloud account states.** Exact Cloud routes and distinct messages for signed-out, expired, suspended and unreachable accounts. |  |
+| `cloud.library_states` | **Truthful Cloud Library states.** Tell loading, failed, empty and ready apart, and report each uploaded file's own result. |  |
+| `rooms.nickname_confirm` | **Confirmed guest nicknames.** Show a guest's nickname as saving, saved or not saved, and ignore older Room updates that arrive late. |  |
+| `mixes.intent_language` | **Plain Make a mix choices.** Separate quick listen from a saved mix and say how long each setting lasts and what it applies to. |  |
+| `autopilot.venue_mode` | **Autopilot venue mode.** Night sessions for a venue with defined autonomy levels, and pause, stop and manual takeover always available. |  |
+| `autopilot.venue_policy` | **Venue music identity.** Versioned venue music policies, schedules, hard limits and timed overrides for Autopilot. | `autopilot.venue_mode` |
+| `autopilot.horizon` | **Rolling musical horizon.** Plan the next stretch of the evening ahead, rank songs deterministically and replan only at safe points. | `autopilot.venue_mode` |
+| `autopilot.safe_transitions` | **Conservative Autopilot transitions.** Check every transition before it plays and fall back to simpler, safer blends when a check fails. | `autopilot.venue_mode` |
+| `autopilot.ai_director` | **AI DJ director.** Let an AI suggest typed, bounded changes to the Autopilot plan that staff can inspect and undo. | `autopilot.venue_mode` |
+
+## Venue operations
+
+| Flag | What it is | Needs |
+|---|---|---|
+| `venue.continuity` | **Venue audio continuity.** Gap and duplicate targets, ready-to-play fallback songs and fenced speaker leases, so a venue night keeps playing through faults. **Cloud surface:** headless (Runtime gap and duplicate targets, fallback preparation and speaker leases have no Cloud screen). | `autopilot.venue_mode` |
+| `venue.fault_injection` | **Venue fault rehearsal.** Inject network, model and render faults on purpose in a test run to prove the night keeps playing. **Cloud surface:** rehearsal (Fault injection is run by the venue test and chaos harness, not by a customer-facing Cloud control). | `venue.continuity` |
+| `venue.speakers` | **Venue speakers and zones.** Name the venue's speakers, group them into zones, and move or reconnect playback without two speakers playing at once. **Cloud surface:** unreleased (Speaker zone and lease models exist, but no speaker management page is mounted in Cloud). | `venue.continuity` |
+| `venue.staff_dashboard` | **Staff dashboard.** One screen for venue staff: what is playing, what is next, typed steering, pending versus applied changes and an always-visible Stop. **Cloud surface:** unreleased (Staff dashboard state and isolated route tests exist, but no staff venue page or routes are mounted in Cloud). | `autopilot.venue_mode` |
+| `venue.moderated_requests` | **Autopilot guest requests.** Guest requests in a venue night go through Room moderation, are planned fairly and tell the guest honestly what happened. **Cloud surface:** headless (The Room-to-Autopilot request planning bridge has no separate shipped Cloud interface). | `autopilot.venue_mode` |
+| `venue.learning` | **Venue learning.** Learn a venue's taste from staff and guest feedback within a cap, with a reset, an explanation and a retention limit. **Cloud surface:** headless (Venue feedback memory, adaptation caps and retention operate in the backend without a Cloud control). | `autopilot.venue_mode` |
+| `venue.rights_gate` | **Venue rights check.** Check music and model rights before each media operation in a venue and refuse the ones that are not cleared. **Cloud surface:** headless (Media and model rights checks are backend safety decisions without a person-facing Cloud page). | `autopilot.venue_mode` |
+| `venue.roles` | **Venue roles.** Owner, manager, staff and guest roles decide who may steer, stop or change a venue night, and revoked devices lose access at once. **Cloud surface:** headless (Role permissions and paired-device revocation are backend authorization services, not Cloud pages). | `autopilot.venue_mode` |
+| `venue.safe_gain` | **Safe venue loudness.** Cap automatic gain changes so Autopilot never makes the room suddenly louder. **Cloud surface:** headless (Automatic gain bounds are applied to venue playback decisions without a Cloud volume panel). | `autopilot.venue_mode` |
+| `venue.health` | **Venue health and alerts.** Audio health signals, operator alert thresholds with runbook links, redacted logs and rehearsed recovery. **Cloud surface:** operations (Audio health monitoring, alerts and recovery rehearsal are operator tooling with no Cloud dashboard). | `autopilot.venue_mode` |
+| `venue.soak` | **Long-session soak tools.** Real venue workloads, gap and resource metrics and long soak and chaos runs that record their evidence. **Cloud surface:** rehearsal (Long-session soak and chaos evidence are generated by the command-line harness, not Cloud UI). | `venue.continuity` |
+| `venue.rollout_gates` | **Venue rollout gates.** Phased rollout order, no-go gates for P0 blockers and a flag-off rollback check before any venue release. **Cloud surface:** operations (Release phase ordering, readiness gates and flag rollback checks run as operational tooling). | `autopilot.venue_mode` |
+
+## Business
+
+| Flag | What it is | Needs |
+|---|---|---|
+| `business.signups` | **SelectaDJ for Business sign-up.** Self-serve business sign-up and selling of business plans. Off until the legal review passes; pilots work without it. |  |
+| `business.orgs` | **Organisations, venues, zones and crates.** An organisation workspace with its venues, each venue's zones, and organisation and venue crates drawn from one shared library. |  |
+| `business.schedules` | **Venue schedules and programmes.** Opening hours, holiday exceptions, stay-open-late and close-now overrides, plus zone programmes and state. | `business.orgs` |
+| `business.offline` | **Offline zone controls.** Kiosk offline manifests, idempotent command resync and device cache reports for business zones. | `business.schedules` |
+| `business.workspaces` | **Workspace switcher.** Switch between your personal SelectaDJ and the organisations you belong to. Personal and business data never mix. | `business.orgs` |
+| `business.pilots` | **Business pilots.** REX Technologies staff create free pilot organisations with their venues and zones, using the same model a paying venue will. | `admin.console`, `business.orgs` |

@@ -51,6 +51,9 @@ class JobSpec:
     created_by: str | None = None
     entitlement_version: int | None = None
     flag_id: str | None = CATALOGUE_FLAG
+    pool: str | None = None
+    """None: the catalogue's pool. The local app gives analysis a pool of its own, because its
+    analysis worker is a separate process from its seam worker (SC-0394-04)."""
 
     @classmethod
     def from_rank(cls, workspace_id: str, type: str, rank: int, **values: Any) -> JobSpec:
@@ -106,7 +109,7 @@ def values_for(spec: JobSpec, state: JobState, now: float) -> dict[str, Any]:
         "id": new_id(),
         "workspace_id": spec.workspace_id,
         "type": spec.type,
-        "pool": kind.pool,
+        "pool": spec.pool or kind.pool,
         "lane": str(lane),
         "base_lane": str(lane),
         "urgency": urgency,
@@ -198,8 +201,9 @@ def add_dependency(
     if prerequisite.state in UNSUCCESSFUL or prerequisite.state == S.BLOCKED:
         if job.state != S.BLOCKED:
             detail = f"It needs job {prerequisite_id}, which didn't finish."
-            job = set_state(connection, job, S.BLOCKED, now, error_class="dependency",
-                            error_detail=detail)
+            job = set_state(
+                connection, job, S.BLOCKED, now, error_class="dependency", error_detail=detail
+            )
             dependents.block(connection, job.id, now, detail)
         return job
     if job.state == S.QUEUED:

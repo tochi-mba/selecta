@@ -247,10 +247,16 @@ class R2Client:
         return root
 
     def _presign(
-        self, method: str, bucket: str, key: str, ttl: int, query: Sequence[tuple[str, str]] = ()
+        self,
+        method: str,
+        bucket: str,
+        key: str,
+        ttl: int,
+        query: Sequence[tuple[str, str]] = (),
+        headers: Mapping[str, str] | None = None,
     ) -> str:
         return self._signer.presign(
-            method, self._scheme, self._host, self._path(bucket, key), ttl, query
+            method, self._scheme, self._host, self._path(bucket, key), ttl, query, headers=headers
         )
 
     # -- single objects ---------------------------------------------------------------------
@@ -455,13 +461,26 @@ class R2Client:
         return upload_id
 
     def presign_upload_part(
-        self, bucket: str, key: str, upload_id: str, part_number: int, ttl: int
+        self,
+        bucket: str,
+        key: str,
+        upload_id: str,
+        part_number: int,
+        ttl: int,
+        *,
+        content_length: int | None = None,
     ) -> str:
-        """A presigned `PUT` for one part. Treat the URL as a secret until it expires."""
+        """A presigned `PUT` for one part. Treat the URL as a secret until it expires. With
+        `content_length`, the URL signs it, so storage refuses a part of any other size."""
         if not 1 <= part_number <= MAX_PARTS:
             raise ValueError(f"Part numbers run from 1 to {MAX_PARTS}.")
         query = [("partNumber", str(part_number)), ("uploadId", upload_id)]
-        return self._presign("PUT", bucket, key, ttl, query)
+        headers = None
+        if content_length is not None:
+            if isinstance(content_length, bool) or int(content_length) < 1:
+                raise ValueError("A part's length is a whole number of bytes above 0.")
+            headers = {"content-length": str(int(content_length))}
+        return self._presign("PUT", bucket, key, ttl, query, headers)
 
     def list_parts(self, bucket: str, key: str, upload_id: str) -> list[Part]:
         """Every part uploaded so far, reading every page, in part-number order."""

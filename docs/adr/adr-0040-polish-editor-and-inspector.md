@@ -1,7 +1,7 @@
 # ADR-0040: Precise editing timeline and context-preserving transition inspector
 
 - **Decision status:** Accepted (owner requested implementation in PR #23)
-- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23)); 2026-11-10 reconciliation: 4 of 10 tasks ticked (P0072, P0075-P0077), 5 implemented but not verified (browser checks failing), P0079 needs a person. See the [evidence ledger](polish-implementation-evidence.md).
+- **Implementation status:** In progress ([#23](https://github.com/tochi-mba/selecta/pull/23)); 2026-11-12: 7 of 10 tasks ticked (P0070, P0072-P0077); P0070, P0073 and P0074 ticked after `mp-0287-editor-rows.e2e.ts` and `mp-0288-seam-inspector.e2e.ts` passed in Edge on 2026-11-12 and in CI run 43119473767; P0079 needs a person. See the [evidence ledger](polish-implementation-evidence.md).
 - **Proposed:** 2026-11-06
 - **Programme:** UI/UX polish
 - **Delivery phase:** 4 - Editing and Stem Studio
@@ -54,6 +54,7 @@ The owner accepted proceeding with implementation in PR #23. Implementation prog
 |---|---|---|---|
 | 2026-11-06 | Proposed | Not started | Original documentation-only proposal |
 | 2026-11-06 | Accepted | In progress | Owner requested full implementation and merge after green CI in PR #23; verification pending |
+| 2026-11-12 | Accepted | In progress (7/10) | P0070, P0073, P0074 ticked: MP-0287-03/-07 and MP-0288-01..07 passed in Edge (local run and CI run 43119473767) |
 
 ## References
 

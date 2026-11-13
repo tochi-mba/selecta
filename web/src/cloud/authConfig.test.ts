@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { authKitConfig, BLOCKED_MESSAGES, blockedCode, followReturnTo, MISSING_AUTH_DOMAIN, refusalMessage, safeReturnPath } from './authConfig';
+import { authKitConfig, BLOCKED_MESSAGES, blockedCode, callbackProblem, followReturnTo, MISSING_AUTH_DOMAIN, refusalMessage, safeReturnPath, withoutCallbackError } from './authConfig';
 
 const origin = 'https://app.selecta.test';
 
@@ -70,5 +70,21 @@ describe('account refusals', () => {
       expect(blockedCode(retired)).toBeNull();
       expect(refusalMessage(retired)).toBeNull();
     }
+  });
+});
+
+describe('coming back from AuthKit without signing in', () => {
+  it('says what happened in our own words, never the address text', () => {
+    expect(callbackProblem('?error=access_denied&error_description=Click%20evil.test')).toBe('Sign-in was cancelled. Choose Sign in to try again.');
+    expect(callbackProblem('?error=expired')).toMatch(/That link has expired/);
+    expect(callbackProblem('?error=password_reset_token_expired')).toMatch(/Forgot password\?/);
+    expect(callbackProblem('?error=server_error&error_description=Click%20evil.test')).toBe('Sign-in didn’t finish. Choose Sign in to try again.');
+    expect(callbackProblem('?code=abc&state=x')).toBeNull();
+    expect(callbackProblem('')).toBeNull();
+  });
+
+  it('takes only the error parameters off the address', () => {
+    expect(withoutCallbackError('/library', '?error=access_denied&error_description=x&error_uri=y&state=z')).toBe('/library');
+    expect(withoutCallbackError('/library', '?view=grid&error=x', '#top')).toBe('/library?view=grid#top');
   });
 });

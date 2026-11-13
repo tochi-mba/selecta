@@ -52,6 +52,10 @@
     "app.install": {
       "label": "Install as an app",
       "about": "Chrome and Edge can install Selecta as its own window."
+    },
+    "app.attention_announce": {
+      "label": "Say when Workspace needs attention",
+      "about": "When storage fills, analysis pauses with songs left, or a song or transition fails, a screen reader hears it once on whatever page is open. The header mark stays either way."
     }
   }
 }

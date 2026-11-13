@@ -1,0 +1,45 @@
+[
+  {
+    "label": "export",
+    "insideAtOpen": true,
+    "tabsThatLeft": 0,
+    "focusAfterEscape": "button \"Download audio\"",
+    "axe": [
+      "scrollable-region-focusable"
+    ]
+  },
+  {
+    "label": "customize",
+    "insideAtOpen": true,
+    "tabsThatLeft": 0,
+    "focusAfterEscape": "button \"Customize: Shape this mix (optional)\"",
+    "axe": []
+  },
+  {
+    "label": "requests",
+    "insideAtOpen": true,
+    "tabsThatLeft": 0,
+    "focusAfterEscape": "div \"ListenSearchCtrl KTheme: Match this comp\"",
+    "axe": []
+  },
+  {
+    "label": "song-details",
+    "insideAtOpen": true,
+    "tabsThatLeft": 0,
+    "focusAfterEscape": "button \"Details for Untitled\"",
+    "axe": []
+  },
+  {
+    "label": "palette",
+    "insideAtOpen": true,
+    "tabsThatLeft": 0,
+    "focusAfterEscape": "div \"LibrarySearchCtrl KTheme: Match this com\"",
+    "axe": []
+  },
+  {
+    "label": "nested requests+palette",
+    "dialogsOpen": 1,
+    "afterOneEscape": 0,
+    "afterTwoEscapes": 0
+  }
+]

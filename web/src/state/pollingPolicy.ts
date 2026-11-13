@@ -21,6 +21,9 @@ export type PollRule = {
 };
 
 export const POLLING: readonly PollRule[] = [
+  { file: 'business/BusinessApp.tsx', reads: 'business overview while streaming is unavailable', everyMs: 'TICK_MS', hidden: 'continues', why: 'the visual clock keeps ticking while useVisiblePoll pauses network reads in hidden tabs' },
+  { file: 'business/console/HqConsole.tsx', reads: 'HQ venue state when the stream is unavailable', everyMs: 10000, hidden: 'pauses', why: 'useVisiblePoll pauses requests when the tab is hidden and refreshes on return' },
+  { file: 'business/staff/useStaffCommands.ts', reads: null, everyMs: 'SWEEP_MS', hidden: 'continues', why: 'the offline command queue still expires stale commands even when the page is hidden' },
   { file: 'App.tsx', reads: '/status, /mix, /drafts/{id}', everyMs: '4000 status, 1500 mix while busy, 2000 draft while busy', hidden: 'pauses', why: 'the app shell owns status, the current mix and the open draft (useVisiblePoll)' },
   { file: 'state/async.ts', reads: 'whatever a page reads with useAsync', everyMs: 'options.every', hidden: 'pauses', why: 'checks visibilityState and reads again on return' },
   { file: 'state/jobs.ts', reads: '/jobs', everyMs: 'per subscriber', hidden: 'pauses', why: 'one shared jobs snapshot for every page that shows work' },

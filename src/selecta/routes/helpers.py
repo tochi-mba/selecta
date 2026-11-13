@@ -5,17 +5,17 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
-import time
+from collections.abc import Callable
 
 from fastapi import HTTPException
 
 from selecta import db, jobs, mix
 from selecta import requests as song_requests
-from selecta.api_common import LINKS_KEEP_SECONDS, _counts
+from selecta.api_common import _counts
 from selecta.config import ANALYSIS_VERSION
 from selecta.eta import combine, mix_time_left, time_ahead
 from selecta.seams import STUDIO_SESSION, SeamRequest, request_from
-from selecta.stems import cache_bytes, largest_cache_bytes
+from selecta.stems import cache_room
 
 
 def add_routes(app, ctx) -> None:
@@ -23,7 +23,7 @@ def add_routes(app, ctx) -> None:
     settings = ctx.settings
     store = ctx.store
 
-    links_cache: dict = {"at": 0.0, "links": []}
+    links_cache: dict = {"stamp": None, "links": []}
 
     library_cache: dict = {}
 
@@ -44,11 +44,22 @@ def add_routes(app, ctx) -> None:
         return set(db.preference(conn, "never_play", []))
 
     def all_links(conn: sqlite3.Connection):
+        """Word links across the library. r8d: found again only when the timed lyrics they come
+        from have changed. They were found again every ten minutes, and on every call while a
+        library had none, and finding them parses every song's lyrics (seconds on a laptop)."""
         from selecta.discovery.search import lyric_links
 
-        if time.monotonic() - links_cache["at"] > LINKS_KEEP_SECONDS or not links_cache["links"]:
+        stamp = tuple(
+            conn.execute(
+                "SELECT COUNT(*), MAX(l.fetched_at), TOTAL(l.song_id), TOTAL(s.mtime), "
+                "MAX(s.id) FROM lyrics l JOIN songs s ON s.id=l.song_id "
+                "WHERE l.status='synced' AND l.synced IS NOT NULL "
+                "AND s.is_music=1 AND s.duplicate_of IS NULL"
+            ).fetchone()
+        )
+        if links_cache["stamp"] != stamp:
             links_cache["links"] = lyric_links(conn)
-            links_cache["at"] = time.monotonic()
+            links_cache["stamp"] = stamp
         return links_cache["links"]
 
     def songs_in_line(conn: sqlite3.Connection) -> list[int]:
@@ -59,14 +70,37 @@ def add_routes(app, ctx) -> None:
             if not db.is_analysed(conn, song, ANALYSIS_VERSION)
         ]
 
-    def read_with_windows(conn: sqlite3.Connection, draft: int | None = None) -> list[dict]:
+    def one_look(scan: bool = True) -> Callable[[str], dict]:
+        """Seam states for reading many mixes in one request: one look at which seams exist on
+        disk (unless `scan` is off, for a handful of seams), and each seam read at most once
+        however many mixes, or passes over a mix, ask for it."""
+        reader = store.status_reader() if scan else store.status
+        seen: dict[str, dict] = {}
+
+        def status(key: str) -> dict:
+            if key not in seen:
+                seen[key] = reader(key)
+            # a copy each time, since a mix's own reading adds to its states
+            return dict(seen[key])
+
+        return status
+
+    def read_with_windows(
+        conn: sqlite3.Connection,
+        draft: int | None = None,
+        rows: list | None = None,
+        status: Callable[[str], dict] | None = None,
+        songs_by_id: dict | None = None,
+    ) -> list[dict]:
         """A mix, with how many stems each unfinished seam still has to split, which is what most
-        decides how long it will take. Songs that can't be looked at just get the usual estimate."""
+        decides how long it will take. Songs that can't be looked at just get the usual estimate.
+        `rows` (from mix.rows_for_drafts) and `status` (from one_look) are for reading many."""
         try:
-            mix.settle_chain(conn, store, draft)
+            if mix.settle_chain(conn, store, draft, rows, status):
+                rows = None  # a seam changed, so read the mix again as it now is
         except sqlite3.OperationalError:
             pass  # the worker is writing, and the next look will do it
-        items = mix.read_mix(conn, store, draft)
+        items = mix.read_mix(conn, store, draft, rows, status)
         waiting = [
             (before, item)
             for before, item in zip(items, items[1:], strict=False)
@@ -74,13 +108,14 @@ def add_routes(app, ctx) -> None:
         ]
         if not waiting:
             return items
-        try:
-            songs, _ = library_now(conn)
-        except (OSError, ValueError, KeyError, AttributeError, TypeError):
-            return items
-        by_id = {song.id: song for song in songs}
+        if songs_by_id is None:
+            try:
+                songs, _ = library_now(conn)
+            except (OSError, ValueError, KeyError, AttributeError, TypeError):
+                return items
+            songs_by_id = {song.id: song for song in songs}
         for before, item in waiting:
-            a, b = by_id.get(before["song_id"]), by_id.get(item["song_id"])
+            a, b = songs_by_id.get(before["song_id"]), songs_by_id.get(item["song_id"])
             if a is None or b is None:
                 continue
             request = request_from(before["song_id"], item["song_id"], item["seam"]["settings"])
@@ -94,8 +129,9 @@ def add_routes(app, ctx) -> None:
         """Analysis waits while mixes render, so that wait is part of how long it will take."""
         if not jobs.mix_is_rendering(settings.home):
             return []
-        mixes = [read_with_windows(conn)]
-        mixes += [read_with_windows(conn, draft) for draft in mix.line_order(conn)]
+        status = one_look()
+        mixes = [read_with_windows(conn, status=status)]
+        mixes += [read_with_windows(conn, draft, status=status) for draft in mix.line_order(conn)]
         return time_ahead(mixes, store.clock)[0]
 
     def studio_request_at(
@@ -112,7 +148,10 @@ def add_routes(app, ctx) -> None:
         return request, session
 
     def mix_payload(conn: sqlite3.Connection, draft: int | None = None) -> dict:
-        items = read_with_windows(conn, draft)
+        # each seam read from disk once, though settling and reading both ask, and so may the
+        # mixes ahead of this one
+        status = one_look(scan=False)
+        items = read_with_windows(conn, draft, status=status)
         payload = {
             "mix": items,
             "name": mix.mix_name(conn, draft),
@@ -127,7 +166,10 @@ def add_routes(app, ctx) -> None:
         line = mix.line_order(conn)
         before = line[: line.index(draft)] if draft in line else line
         ahead, seen = time_ahead(
-            [read_with_windows(conn), *(read_with_windows(conn, other) for other in before)],
+            [
+                read_with_windows(conn, status=status),
+                *(read_with_windows(conn, other, status=status) for other in before),
+            ],
             store.clock,
         )
         eta = mix_time_left(items, store.clock, ahead=ahead, seen=seen)
@@ -168,27 +210,51 @@ def add_routes(app, ctx) -> None:
         }
 
     def drafts_payload(conn: sqlite3.Connection) -> dict:
+        # r11: thousands of seam estimates, and one look at the job times file for all of them
+        with store.clock.held():
+            return _drafts_payload(conn)
+
+    def _drafts_payload(conn: sqlite3.Connection) -> dict:
+        # One query for the drafts (without their revisions), one for all of their songs, and one
+        # look at the seams on disk, rather than several queries and a disk read per seam per draft.
         rows = {row["id"]: row for row in mix.all_drafts(conn)}
-        items = {draft: read_with_windows(conn, draft) for draft in rows}
+        status = one_look()
+        loaded = mix.rows_for_drafts(conn, {draft: row["items"] for draft, row in rows.items()})
+        # One library snapshot for the whole draft list. Re-reading it per draft used to
+        # execute thousands of SQLite queries for a 500-draft library.
+        try:
+            songs, _ = library_now(conn)
+        except (OSError, ValueError, KeyError, AttributeError, TypeError):
+            songs = []
+        songs_by_id = {song.id: song for song in songs}
+        items = {
+            draft: read_with_windows(conn, draft, loaded[draft], status, songs_by_id)
+            for draft in rows
+        }
         for draft in mix.line_order(conn):
             # a mix with nothing left to render has had its turn
             if not any(seam_unfinished(item) for item in items[draft]):
                 mix.leave_line(conn, draft)
         line = mix.line_order(conn)
-        current = read_with_windows(conn)
-        ahead = [current]
+        current = read_with_windows(conn, status=status, songs_by_id=songs_by_id)
+        # each place adds one more mix to what is ahead of it, rather than adding them all up again
+        ahead, seen = time_ahead([current], store.clock)
         places: dict[int, tuple[int, dict]] = {}
         for index, draft in enumerate(line):
-            ahead = [*ahead, items[draft]]
-            estimates, _ = time_ahead(ahead, store.clock)
-            places[draft] = (index + 1, combine(estimates).as_dict())
+            more, seen = time_ahead([items[draft]], store.clock, seen=seen)
+            ahead = [*ahead, *more]
+            places[draft] = (index + 1, combine(ahead).as_dict())
         summaries = []
         for draft in sorted(rows, key=lambda d: line.index(d) if d in line else len(line)):
             place, eta = places.get(draft, (None, None))
             own = combine(time_ahead([items[draft]], store.clock)[0]).seconds
             summaries.append(draft_summary(rows[draft], items[draft], place, eta, own))
         left, _ = time_ahead([current], store.clock)
-        limit = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
+        # r8a: only a line can be held up by a full cache, and one walk of it says both numbers
+        out_of_room = False
+        if line:
+            used, largest = cache_room(settings)
+            out_of_room = used >= min(settings.effective_cache_cap_bytes, largest)
         return {
             "drafts": summaries,
             "current": {
@@ -197,7 +263,7 @@ def add_routes(app, ctx) -> None:
                 "left": len(left),
                 "eta": combine(left).as_dict(),
             },
-            "out_of_room": bool(line) and cache_bytes(settings) >= limit,
+            "out_of_room": out_of_room,
         }
 
     def seam_unfinished(item: dict) -> bool:

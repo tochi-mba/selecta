@@ -1,0 +1,26 @@
+{
+  "about": "UF-0389-03 and UF-0380-08: one row per scenario measured on a named device model, with its budget and measured value. Checked by python -m selecta.audit.uf_human_logs.",
+  "tasks": [
+    "UF-0389-03",
+    "UF-0380-08"
+  ],
+  "key": "scenario",
+  "required": [
+    "library-20k",
+    "lucy-long",
+    "editor-40",
+    "spectrum-active"
+  ],
+  "fields": [
+    "device",
+    "cpu",
+    "os",
+    "browser",
+    "sha",
+    "metric",
+    "budget",
+    "measured",
+    "date"
+  ],
+  "entries": []
+}

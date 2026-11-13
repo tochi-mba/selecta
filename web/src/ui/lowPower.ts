@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
-import { flagOn } from '../flags';
-import { prefs } from '../state/prefs';
+import { flagOn, onFlagsChange } from '../flags';
+import { onPrefsChange, prefs } from '../state/prefs';
 
 /** SF-0235-08: when this device can't keep up with decorative motion, lower it automatically.
  *
@@ -110,9 +110,19 @@ export function watchLowPower(clock: Clock = browserClock()): () => void {
   let strikes = 0;
   let calm = 0;
   let rest = 0;
+  // With the flag off or Still chosen there is nothing to watch, so no frames are asked for at all
+  // until one of those changes back (a hidden tab gets no frames from the browser anyway).
+  let parked = false;
+  const wanted = () => flagOn('app.auto_low_motion') && prefs().motion !== 'still';
   const tick = (time: number) => {
     if (stopped) return;
-    if (!flagOn('app.auto_low_motion') || prefs().motion === 'still' || clock.hidden()) {
+    if (!wanted()) {
+      last = -1;
+      deltas = [];
+      parked = true;
+      return;
+    }
+    if (clock.hidden()) {
       last = -1;
       deltas = [];
       handle = clock.frame(tick);
@@ -141,9 +151,18 @@ export function watchLowPower(clock: Clock = browserClock()): () => void {
     }
     handle = clock.frame(tick);
   };
+  const wake = () => {
+    if (!parked || stopped || !wanted()) return;
+    parked = false;
+    handle = clock.frame(tick);
+  };
+  const unwatchFlags = onFlagsChange(wake);
+  const unwatchPrefs = onPrefsChange(wake);
   if (!stopped) handle = clock.frame(tick);
   return () => {
     stopped = true;
+    unwatchFlags();
+    unwatchPrefs();
     clock.cancel(handle);
     clock.clear(rest);
   };

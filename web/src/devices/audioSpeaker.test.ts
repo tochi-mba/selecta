@@ -58,4 +58,29 @@ describe('the speaker buffers ahead (SC-0415-04)', () => {
     expect(audio.src).toBe('https://r2.example/signed.wav');
     expect(audio.play).toHaveBeenCalled();
   });
+
+  it('leaves no listener or copy behind once torn down', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(`audio ${url}`)));
+    let made = 0;
+    const revoked: string[] = [];
+    vi.spyOn(URL, 'createObjectURL').mockImplementation(() => `blob:copy-${made++}`);
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation((url) => { revoked.push(url); });
+    const audio = fakeAudio();
+    const added: string[] = [];
+    const removed: string[] = [];
+    const add = audio.addEventListener.bind(audio);
+    const remove = audio.removeEventListener.bind(audio);
+    audio.addEventListener = ((type: string, fn: EventListener, options?: AddEventListenerOptions) => { if (!options?.once) added.push(type); add(type, fn, options); }) as typeof audio.addEventListener;
+    audio.removeEventListener = ((type: string, fn: EventListener, options?: EventListenerOptions) => { removed.push(type); remove(type, fn, options); }) as typeof audio.removeEventListener;
+    const speaker = audioSpeaker(audio, async (index) => `/song/${index}.wav`);
+    await speaker.start(0, 0, true);
+    await vi.waitFor(() => expect(made).toBe(3));
+    expect(speaker.dispose).toBeTypeOf('function');
+    speaker.dispose?.();
+    expect(removed).toEqual(added);
+    await vi.waitFor(() => expect([...revoked].sort()).toEqual(['blob:copy-0', 'blob:copy-1', 'blob:copy-2']));
+    audio.dispatchEvent(new Event('ended'));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(audio.play).toHaveBeenCalledTimes(1);
+  });
 });

@@ -17,8 +17,8 @@ from synth import make_track
 from test_api_contracts import (  # noqa: F401 - pytest fixtures shared with the contract tests
     _fill,
     _somewhere_for_files,
-    client,
-    conn,
+    client,  # noqa: F811 - pytest fixtures used by test function parameters
+    conn,  # noqa: F811 - pytest fixtures used by test function parameters
     settings,
 )
 
@@ -28,7 +28,7 @@ from selecta.seams import seam_options
 
 # The chooser at base 9b663f9f (before PR #29), name -> label. Its descriptions were the same.
 BEFORE_4 = {
-    "auto": "Let Selecta pick",
+    "auto": "Let SelectaDJ pick",
     "bass_swap_blend": "Blend",
     "vocal_ride": "Vocal ride",
     "stem_arrange": "Strip and land",
@@ -105,7 +105,8 @@ def test_each_setting_is_saved_exactly_at_its_edges(client, conn, choice):  # no
 
 
 def test_settings_are_saved_exactly_in_a_draft_too_and_never_reach_the_current_mix(
-    client, conn  # noqa: F811
+    client,  # noqa: F811
+    conn,  # noqa: F811
 ):
     _fill(conn, 1, 2)
     conn.commit()
@@ -137,7 +138,10 @@ def test_a_cue_sent_empty_goes_back_to_wherever_is_best(client, conn):  # noqa: 
     ],
 )
 def test_a_setting_outside_the_songs_is_refused_and_changes_nothing(
-    client, conn, choice, words  # noqa: F811
+    client,  # noqa: F811
+    conn,  # noqa: F811
+    choice,
+    words,  # noqa: F811
 ):
     _fill(conn, 1, 2)
     conn.commit()
@@ -150,7 +154,9 @@ def test_a_setting_outside_the_songs_is_refused_and_changes_nothing(
 
 
 def test_a_cue_for_a_song_whose_bars_are_unknown_is_kept_for_the_render_to_place(
-    client, conn, monkeypatch  # noqa: F811
+    client,  # noqa: F811
+    conn,  # noqa: F811
+    monkeypatch,  # noqa: F811
 ):
     _fill(conn, 1, 2)
     conn.commit()

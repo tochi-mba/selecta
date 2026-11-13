@@ -1,0 +1,10 @@
+{
+ "used_bytes": 38933984,
+ "cache_bytes": 0,
+ "kept_bytes": 38933984,
+ "budget_bytes": 5368709120,
+ "largest_budget_bytes": 37696069632,
+ "smallest_budget_bytes": 536870912,
+ "free_bytes": 39843545088,
+ "total_bytes": 510659653632
+}

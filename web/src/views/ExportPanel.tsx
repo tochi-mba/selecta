@@ -82,8 +82,8 @@ export function ExportPanel(props: {
   return (
     <Dialog title="Save as an audio file" onClose={onClose}>
       <p><b>{mixName}</b> <span className="soft">{inDraft ? 'draft' : 'current mix'}, {mix.length} songs, about {length(runningTime(mix))}. FLAC.</span></p>
-      <p className="hint">
-        {mix.length ? <>From <b>{mix[0].title}</b> to <b>{mix[mix.length - 1].title}</b>. </> : ''}
+      <p className="hint export-ends">
+        {mix.length ? <>From <b dir="auto">{mix[0].title}</b> to <b dir="auto">{mix[mix.length - 1].title}</b>. </> : ''}
         Save captures exactly the songs and transitions shown for this {inDraft ? 'draft' : 'current mix'} at the moment you start. Later edits will not change the exported file.
       </p>
       {mine?.revision && <p className="hint">Frozen revision <code>{mine.revision}</code>. Use this ID to distinguish this file from later exports of the same mix.</p>}
@@ -116,7 +116,8 @@ export function ExportPanel(props: {
       {mine && !file && <p role="status"><Status kind={exportStage(mine).kind}>{exportStage(mine).words}</Status></p>}
       {!mine && <p className="hint">{ready} of {seams.length} transitions ready. {left.length ? 'The rest get rendered first.' : 'Everything’s ready.'}</p>}
       {!mine && !!left.length && (
-        <ul className="export-left">
+        // a list that can scroll must be reachable by keyboard to scroll it (axe scrollable-region-focusable)
+        <ul className="export-left" tabIndex={0} aria-label="Transitions still to render">
           {left.slice(0, 8).map((item) => {
             const facts = seamFacts(item.seam, names);
             return <li key={item.position}><Status kind={facts.kind}>Into {item.title}: {facts.words}</Status></li>;

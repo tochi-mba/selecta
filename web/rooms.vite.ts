@@ -7,7 +7,7 @@
 // - With SELECTA_CLOUD_E2E=1 it also builds the cloud browser-test harness page, which never
 //   ships otherwise.
 //
-// A static host must answer /r/* with guest.html and /display with display.html.
+// A static host must answer /r/* with guest.html, /display with display.html and /kiosk with kiosk.html.
 
 import { resolve } from 'node:path';
 import type { Plugin } from 'vite';
@@ -24,8 +24,12 @@ export function roomPages(root: string): Plugin {
         main: resolve(root, 'index.html'),
         guest: resolve(root, 'guest.html'),
         display: resolve(root, 'display.html'),
+        // the business kiosk player screen (ADR-0453 S5): its own entry, no React, no manager code
+        kiosk: resolve(root, 'kiosk.html'),
       };
       if (process.env.SELECTA_CLOUD_E2E === '1') input.harness = resolve(root, 'cloud-harness.html');
+      // business pages on made-up data (web/src/business/fixtures.ts), for browser tests only
+      if (process.env.SELECTA_CLOUD_E2E === '1' || process.env.SELECTA_BUSINESS_E2E === '1') input.business_harness = resolve(root, 'business-harness.html');
       return { build: { rollupOptions: { input } } };
     },
     configureServer(server) {
@@ -33,6 +37,7 @@ export function roomPages(root: string): Plugin {
         const path = (req.url ?? '').split('?')[0];
         if (/^\/r\/[^/]+\/?$/.test(path)) req.url = '/guest.html';
         else if (path === '/display' || path === '/display/') req.url = '/display.html';
+        else if (path === '/kiosk' || path === '/kiosk/') req.url = '/kiosk.html';
         next();
       });
     },

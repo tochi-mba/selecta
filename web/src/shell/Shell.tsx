@@ -5,7 +5,7 @@ import { NowState, SetPlayer } from '../player';
 import { Route, savedScroll, useLocationText } from '../router';
 import { setPrefs, usePrefs } from '../state/prefs';
 import { useUnseenActivity } from '../state/activity';
-import { jobAttention, useJobsStatus } from '../state/jobs';
+import { attentionWords, jobAttention, useJobsStatus } from '../state/jobs';
 import { announce, Drawer, LiveRegion } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { playLabel, SEAM_LABEL, songArtist, songTitle, timeLabel, transportClock } from '../audio/transportWords';
@@ -84,6 +84,13 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
   const on = useFlags();
   const bar = useRef<HTMLElement>(null);
   useHeaderBlock(bar);
+  // S4-0092-09: a new blocker is said once, on whatever page is open; a count that falls is not news
+  const heard = useRef(0);
+  const speak = on('app.attention_announce');
+  useEffect(() => {
+    if (speak && attention > heard.current) announce(attentionWords(jobs));
+    heard.current = attention;
+  }, [attention, jobs, speak]);
   return (
     <header className="context-bar" ref={bar}>
       <nav className="crumbs" aria-label="Breadcrumb">
@@ -134,7 +141,9 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
  * what React doesn't render: the window, the theme menu, fonts. */
 function measureHeaderBlock(element: HTMLElement) {
   const root = document.documentElement;
-  const value = `${Math.ceil(element.getBoundingClientRect().height)}px`;
+  // EX-0115-04: in a very short window the bar scrolls away with the page, so nothing pins under it
+  const pinned = getComputedStyle(element).position === 'sticky';
+  const value = `${pinned ? Math.ceil(element.getBoundingClientRect().height) : 0}px`;
   if (root.style.getPropertyValue('--header-block') !== value) root.style.setProperty('--header-block', value);
 }
 
@@ -150,7 +159,10 @@ function useHeaderBlock(bar: { current: HTMLElement | null }) {
     measure();
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
     observer?.observe(element);
+    // zooming or a shorter window can unpin the bar without changing its size
+    window.addEventListener('resize', measure);
     return () => {
+      window.removeEventListener('resize', measure);
       observer?.disconnect();
       root.style.removeProperty('--header-block');
     };
@@ -284,7 +296,7 @@ export function Shell({
       {!stage && <a className="skip-link" href="#content">Skip to the page</a>}
       {!stage && (
         <nav className="nav" aria-label="Main">
-          <PageLink to="/mixes" className="brand" aria-label="Selecta, go to Make a Mix"><span className="brand-word">Selecta</span><span className="brand-mark" aria-hidden="true">S</span></PageLink>
+          <PageLink to="/mixes" className="brand" aria-label="SelectaDJ, go to Make a Mix"><span className="brand-word">SelectaDJ</span><span className="brand-mark" aria-hidden="true">S</span></PageLink>
           <ul>
             {classic
               ? classicDestinations().map((item) => (

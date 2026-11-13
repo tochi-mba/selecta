@@ -55,7 +55,7 @@ export function FlagsPage({ api, can }: { api: AdminFetch; can: (permission: str
   return (
     <div className="admin-page">
       <Failure error={list.error} />
-      {flag && <FlagDetail api={api} flag={flag} can={can} onChanged={() => void list.reload()} />}
+      {flag && <FlagDetail key={flag.id} api={api} flag={flag} can={can} onChanged={() => void list.reload()} />}
       <Trace api={api} />
       {areas.map(([area, flags]) => (
         <Panel key={area} title={area}>

@@ -23,10 +23,10 @@ from selecta.admin import actions, alerts, commands, http, pages, read_models
 from selecta.admin import state as emergency_state
 from selecta.admin.http import CommandRefused
 from selecta.authz import assignments, audit
-from selecta.authz.check import Actor, authorize
-from selecta.authz.scopes import Scope
+from selecta.authz.check import Actor, active_assignments, authorize
+from selecta.authz.roles import ROLE_PERMISSIONS
+from selecta.authz.scopes import ResourceRef, Scope
 from selecta.identity.tokens import Claims
-from selecta.persistence import transaction
 
 JOB_COMMANDS: dict[str, Callable[..., Any]] = {
     "retry": commands.retry_job,
@@ -121,11 +121,25 @@ def install_routes(
         if do is None:
             raise HTTPException(404, detail={"code": "unknown_command"})
         actor = staff(request, claims)
-        with transaction(engine) as conn:
+        permission = {
+            "retry": "jobs.retry", "release": "jobs.retry",
+            "cancel": "jobs.cancel", "quarantine": "jobs.cancel",
+        }[command]
+
+        def authorized_workspace(conn: Connection) -> str | None:
+            # Without a relevant command role, deny before probing the job's tenant.
+            # Scoped Support roles still need the final resource authorization in _job.
+            if not any(
+                permission in ROLE_PERMISSIONS[assignment.role]
+                for assignment in active_assignments(conn, actor.user_id)
+            ):
+                authorize(conn, actor, permission, ResourceRef("job", job_id))
             try:
-                workspace_id = commands.job_workspace(conn, job_id)
+                return commands.job_workspace(conn, job_id)
             except LookupError:
-                workspace_id = None
+                return None
+
+        workspace_id = http.run(engine, actor, authorized_workspace)
         job = http.run(engine, actor, lambda conn: do(conn, actor, job_id, reason=body.reason),
                        workspace_id=workspace_id)
         return {"job": {"id": job.id, "state": str(job.state), "workspace_id": job.workspace_id,

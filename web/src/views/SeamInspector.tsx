@@ -156,7 +156,7 @@ function SeamEditor(props: {
     <div className="editor stack">
       {requested === 'stem_studio' && <p className="hint">You shaped this one in the studio.</p>}
       {requested === 'stem_arrange' && (
-        <p className="hint">Selecta built this from what’s in the stems, and learns from every one you rate. Open the grid to see or change it.</p>
+        <p className="hint">SelectaDJ built this from what’s in the stems, and learns from every one you rate. Open the grid to see or change it.</p>
       )}
       {fellBack && (
         <p className="warn">
@@ -257,7 +257,7 @@ function SeamEditor(props: {
                   </option>
                 ))}
               </select>
-              <small className="hint">{exitRange ? `Possible from ${exitRange}.` : 'Selecta hasn’t found another safe place to leave it.'}</small>
+              <small className="hint">{exitRange ? `Possible from ${exitRange}.` : 'SelectaDJ hasn’t found another safe place to leave it.'}</small>
             </label>
             <label>
               <span>Bring in <b>{item.title}</b> at</span>
@@ -274,7 +274,7 @@ function SeamEditor(props: {
                   </option>
                 ))}
               </select>
-              <small className="hint">{entryRange ? `Possible from ${entryRange}.` : 'Selecta hasn’t found another safe place to bring it in.'}</small>
+              <small className="hint">{entryRange ? `Possible from ${entryRange}.` : 'SelectaDJ hasn’t found another safe place to bring it in.'}</small>
             </label>
           </div>
         </fieldset>
@@ -391,7 +391,7 @@ export function SeamInspector(props: {
         {shownTab === 'change' && <SeamEditor position={position} item={item} previous={previous} refreshMix={refreshMix} notify={notify} guard={guard} names={names} />}
         {shownTab === 'studio' && (
           <>
-            <p className="hint">Both songs’ voice, drums, bass and melody on a grid you can hear straight away. Choose exactly what plays when, or let Selecta arrange it.</p>
+            <p className="hint">Both songs’ voice, drums, bass and melody on a grid you can hear straight away. Choose exactly what plays when, or let SelectaDJ arrange it.</p>
             {capabilityError ? <Problem retry={() => setCapabilityAttempt((value) => value + 1)}>Couldn’t check Studio availability.</Problem> : !canStudio ? <Skeleton variant="inspector" label="Checking Studio availability" /> : !canStudio.available ? (
               <p className="warn">{canStudio.reason}</p>
             ) : (

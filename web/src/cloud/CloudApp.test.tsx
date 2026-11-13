@@ -4,12 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cloudAccount } from '../test/cloudAccount';
 import type { Account } from './api';
 
+const SIGNED_IN = { id: 'user-1', email: 'listener@example.test', emailVerified: true };
+const auth = vi.hoisted(() => ({ user: null as unknown, signOut: vi.fn() }));
 vi.mock('@workos-inc/authkit-react', () => ({
   useAuth: () => ({
     isLoading: false,
-    user: { id: 'user-1', email: 'listener@example.test', emailVerified: true },
+    user: auth.user,
     getAccessToken: async () => 'token',
-    signIn: vi.fn(), signUp: vi.fn(), signOut: vi.fn(),
+    signIn: vi.fn(), signUp: vi.fn(), signOut: auth.signOut,
   }),
 }));
 
@@ -19,15 +21,28 @@ let account: Account;
 const requests: string[] = [];
 /** What /api/events answers: null is a blocked stream, so the page polls. */
 let events: string | null = null;
+/** From which /api/account call on the session counts as revoked (Infinity: never). */
+let revokedFromCall = Infinity;
+let signOutEverywhere: Response | null = null;
 
 beforeEach(() => {
   account = cloudAccount();
   requests.length = 0;
   events = null;
+  revokedFromCall = Infinity;
+  signOutEverywhere = null;
+  auth.user = SIGNED_IN;
+  auth.signOut.mockReset();
+  let accountCalls = 0;
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
     requests.push(`${init?.method ?? 'GET'} ${url}`);
-    const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
-    if (url === '/api/account') return json(account);
+    const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+    if (url === '/api/account') {
+      accountCalls += 1;
+      if (accountCalls >= revokedFromCall) return json({ detail: { code: 'session_revoked', message: 'You were signed out. Sign in again.' } }, 401);
+      return json(account);
+    }
+    if (url === '/api/account/sign-out-everywhere') return signOutEverywhere ?? json({ revoked_before: 1, sessions_revoked: 2, devices_signed_out: 1, playback_stopped: true });
     if (url === '/api/events') {
       if (events === null) throw new TypeError('blocked');
       return new Response(events, { status: 200, headers: { 'content-type': 'text/event-stream' } });
@@ -104,6 +119,48 @@ describe('the Cloud app', () => {
     expect(await within(menu).findByRole('button', { name: 'Add music' })).toBeInTheDocument();
     account = { ...cloudAccount(), features: { 'cloud.uploads': false } };
     await waitFor(() => expect(within(menu).queryByRole('button', { name: 'Add music' })).toBeNull(), { timeout: 5000 });
+  });
+
+  it('shows "You were signed out" when the event stream says the sign-in was revoked', async () => {
+    events = 'event: selecta\ndata: {"topic":"session.revoked","payload":{}}\n\n';
+    revokedFromCall = 2;
+    render(<CloudApp />);
+    expect(await screen.findByRole('heading', { name: 'You were signed out' }, { timeout: 5000 })).toBeInTheDocument();
+    expect(screen.getByText(/password reset/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in again' }));
+    expect(auth.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('signs out here after signing out everywhere, and says so when some devices stay signed in', async () => {
+    const { unmount } = render(<CloudApp />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Sign out everywhere' }));
+    await waitFor(() => expect(auth.signOut).toHaveBeenCalledTimes(1));
+    expect(requests).toContain('POST /api/account/sign-out-everywhere');
+    unmount();
+
+    auth.signOut.mockReset();
+    signOutEverywhere = new Response(JSON.stringify({ detail: { code: 'sign_out_incomplete', message: 'Signed out here, but some devices may stay signed in. Try again.' } }), { status: 502, headers: { 'content-type': 'application/json' } });
+    render(<CloudApp />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Sign out everywhere' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('some devices may stay signed in');
+    expect(auth.signOut).not.toHaveBeenCalled();
+  });
+
+  it('says why AuthKit sent the person back unsigned-in, then cleans the address', async () => {
+    auth.user = null;
+    window.history.replaceState({}, '', '/library?error=access_denied&error_description=%3Cb%3Ehi%3C%2Fb%3E&state=x');
+    render(<CloudApp />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Sign-in was cancelled. Choose Sign in to try again.');
+    expect(screen.queryByText('hi')).toBeNull();
+    expect(`${window.location.pathname}${window.location.search}`).toBe('/library');
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
+  });
+
+  it('shows no sign-in problem on a plain visit', async () => {
+    auth.user = null;
+    render(<CloudApp />);
+    expect(await screen.findByRole('heading', { name: 'Your music, ready to move.' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('shows Rooms on the overview as an invitation, a teaser naming the plan, or not at all', async () => {

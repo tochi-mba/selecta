@@ -7,7 +7,9 @@ small enough to query freely.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
+import threading
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -37,6 +39,11 @@ CREATE TABLE IF NOT EXISTS songs (
     ,processing_priority INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS songs_is_music ON songs(is_music);
+-- SF-0235-05: Library pages walk these in sort order and stop after one page, and counts read
+-- songs_listed alone, so a 20,000-song library pages without sorting every song each time.
+CREATE INDEX IF NOT EXISTS songs_title_order ON songs(lower(coalesce(title,'')), id);
+CREATE INDEX IF NOT EXISTS songs_artist_order ON songs(lower(coalesce(artist,'')), id);
+CREATE INDEX IF NOT EXISTS songs_listed ON songs(is_music, duplicate_of);
 
 CREATE TABLE IF NOT EXISTS analysis (
     song_id INTEGER PRIMARY KEY REFERENCES songs(id) ON DELETE CASCADE,
@@ -58,6 +65,9 @@ CREATE TABLE IF NOT EXISTS analysis (
     error TEXT,
     analysed_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+-- r8d: status polls count current analyses and the library asks for the newest version. Rows
+-- carry sections and timbre, so counting them without this reads every page of the table.
+CREATE INDEX IF NOT EXISTS analysis_version ON analysis(version, error);
 
 CREATE TABLE IF NOT EXISTS lyrics (
     song_id INTEGER PRIMARY KEY REFERENCES songs(id) ON DELETE CASCADE,
@@ -66,6 +76,8 @@ CREATE TABLE IF NOT EXISTS lyrics (
     plain TEXT,
     fetched_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+-- r8d: status polls count synced lyrics; without this each count reads every lyric's text.
+CREATE INDEX IF NOT EXISTS lyrics_status ON lyrics(status);
 
 CREATE TABLE IF NOT EXISTS song_overrides (
     song_id INTEGER PRIMARY KEY REFERENCES songs(id) ON DELETE CASCADE,
@@ -90,6 +102,10 @@ CREATE TABLE IF NOT EXISTS seam_book (
     status TEXT NOT NULL DEFAULT 'new',
     UNIQUE(song_a, song_b, kind, payload)
 );
+-- r8d: Discover reads one kind best first, and every connect looks for legacy kinds, so neither
+-- walks every word link. Removing a song finds its links as song_b without a full scan too.
+CREATE INDEX IF NOT EXISTS seam_book_kind ON seam_book(kind, score DESC, id);
+CREATE INDEX IF NOT EXISTS seam_book_song_b ON seam_book(song_b);
 
 CREATE TABLE IF NOT EXISTS ratings (
     id INTEGER PRIMARY KEY,
@@ -101,6 +117,11 @@ CREATE TABLE IF NOT EXISTS ratings (
     tags TEXT NOT NULL DEFAULT '[]',
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+-- r8d: the foreign keys' own lookups. Without these, removing one song or one link scans every
+-- rating (SQLite doesn't index a foreign key by itself), and a relink counts them the same way.
+CREATE INDEX IF NOT EXISTS ratings_seam ON ratings(seam_id);
+CREATE INDEX IF NOT EXISTS ratings_song_a ON ratings(song_a);
+CREATE INDEX IF NOT EXISTS ratings_song_b ON ratings(song_b);
 
 CREATE TABLE IF NOT EXISTS drafts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -112,6 +133,11 @@ CREATE TABLE IF NOT EXISTS drafts (
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+-- My Mixes lists drafts in this order (mix.LISTED_ORDER) without sorting them, and the render line
+-- (and clearing it) reads only the few drafts in line, never every draft with its revisions.
+CREATE INDEX IF NOT EXISTS drafts_listed
+    ON drafts(line IS NULL, line, updated_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS drafts_in_line ON drafts(line, id) WHERE line IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS queue (
     position INTEGER PRIMARY KEY,
@@ -158,11 +184,77 @@ def _saved_mixes_become_drafts(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
+# r8d: every request opens the library. The schema script and the column checks run once per
+# process for each library file; after that a connect only takes the data steps below, which use
+# indexes and normally find nothing. SQLite's schema cookie changes whenever the file's schema does
+# (a dropped table, a column another process added), and a restored or replaced file is a different
+# file, so either brings the full check back.
+_CHECKED: dict[tuple[str, int, int], int] = {}
+_checked_lock = threading.Lock()
+JOURNAL_SIZE_LIMIT = 64 * 1024 * 1024
+
+
+def _identity(path: Path | str) -> tuple[str, int, int] | None:
+    """This exact file. Anything that can't be told apart from another gets the full check."""
+    try:
+        facts = os.stat(path)
+    except (OSError, ValueError):
+        return None
+    if not facts.st_ino:
+        return None
+    return (os.path.normcase(os.path.abspath(path)), facts.st_dev, facts.st_ino)
+
+
+def _schema_cookie(conn: sqlite3.Connection) -> int:
+    return int(conn.execute("PRAGMA schema_version").fetchone()[0])
+
+
+def _already_checked(conn: sqlite3.Connection, identity: tuple[str, int, int] | None) -> bool:
+    if identity is None:
+        return False
+    with _checked_lock:
+        cookie = _CHECKED.get(identity)
+    return (
+        cookie is not None
+        and cookie == _schema_cookie(conn)
+        and local_upgrade.schema_version(conn) >= local_upgrade.LOCAL_SCHEMA_VERSION
+    )
+
+
+def _legacy_kinds_renamed(conn: sqlite3.Connection) -> None:
+    legacy = conn.execute(
+        "SELECT id,kind,payload FROM seam_book WHERE kind IN ('same_melody','harmonic_cousin')"
+    ).fetchall()
+    for row in legacy:
+        payload = {
+            "method": "legacy_whole_track_mean_chroma",
+            "legacy_kind": row["kind"],
+            "legacy_payload": row["payload"],
+            "reason": (
+                "Average pitch-profile resemblance; melody and chord order were not verified."
+            ),
+        }
+        conn.execute(
+            "UPDATE seam_book SET kind='tonal_profile_cousin',payload=? WHERE id=?",
+            (json.dumps(payload), row["id"]),
+        )
+    if legacy:
+        conn.commit()
+
+
 def connect(path: Path) -> sqlite3.Connection:
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    # r8d: not kept in the file, so every connection sets it; a long render can't grow the WAL
+    # without bound between checkpoints
+    conn.execute(f"PRAGMA journal_size_limit={JOURNAL_SIZE_LIMIT}")
+    identity = _identity(path)
+    if _already_checked(conn, identity):
+        _saved_mixes_become_drafts(conn)
+        _legacy_kinds_renamed(conn)
+        return conn
     # an older library is copied aside before any step below changes it (core.upgrade_backup)
     local_upgrade.backup_before_migrating(conn, path)
     conn.executescript(SCHEMA)
@@ -186,25 +278,12 @@ def connect(path: Path) -> sqlite3.Connection:
             if "duplicate column" not in str(problem):
                 raise
     _saved_mixes_become_drafts(conn)
-    legacy = conn.execute(
-        "SELECT id,kind,payload FROM seam_book WHERE kind IN ('same_melody','harmonic_cousin')"
-    ).fetchall()
-    for row in legacy:
-        payload = {
-            "method": "legacy_whole_track_mean_chroma",
-            "legacy_kind": row["kind"],
-            "legacy_payload": row["payload"],
-            "reason": (
-                "Average pitch-profile resemblance; melody and chord order were not verified."
-            ),
-        }
-        conn.execute(
-            "UPDATE seam_book SET kind='tonal_profile_cousin',payload=? WHERE id=?",
-            (json.dumps(payload), row["id"]),
-        )
-    if legacy:
-        conn.commit()
+    _legacy_kinds_renamed(conn)
     local_upgrade.mark_migrated(conn)
+    identity = identity or _identity(path)  # a new file exists only once it has been opened
+    if identity is not None:
+        with _checked_lock:
+            _CHECKED[identity] = _schema_cookie(conn)
     return conn
 
 

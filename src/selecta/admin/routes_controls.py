@@ -15,7 +15,8 @@ from sqlalchemy.engine import Connection, Engine
 
 from selecta.admin import actions, emergency, flags_admin, http, takedowns
 from selecta.admin import state as emergency_state
-from selecta.authz.check import Actor
+from selecta.authz.check import Actor, authorize
+from selecta.authz.scopes import ResourceRef
 from selecta.flags.matching import Rule
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
@@ -214,6 +215,19 @@ def install_routes(
     def admin_notice_command(
         notice_id: str, command: str, body: Decision, request: Request, claims: SignedIn
     ):
+        if command not in {"act", "reject"}:
+            raise HTTPException(404, detail={"code": "unknown_command"})
+        # Only a staff member allowed to manage notices may discover their workspace.
+        # The command also checks authorization in its tenant-scoped transaction.
+        actor = http.staff_actor(engine, request, claims)
+
+        def authorized_workspace(conn: Connection) -> str | None:
+            authorize(
+                conn, actor, "legal.takedowns.manage", ResourceRef("takedown_notice", notice_id)
+            )
+            return takedowns.notice_workspace(conn, notice_id)
+
+        workspace_id = http.run(engine, actor, authorized_workspace)
         if command == "act":
             return run(
                 request,
@@ -221,15 +235,14 @@ def install_routes(
                 lambda conn, actor: takedowns.act_on_notice(
                     conn, actor, notice_id, reason=body.reason
                 ),
+                workspace_id=workspace_id,
             )
-        if command == "reject":
 
-            def reject(conn: Connection, actor: Actor) -> dict:
-                notice = takedowns.reject_notice(conn, actor, notice_id, reason=body.reason)
-                return {"notice": notice.to_dict(db_now(conn))}
+        def reject(conn: Connection, actor: Actor) -> dict:
+            notice = takedowns.reject_notice(conn, actor, notice_id, reason=body.reason)
+            return {"notice": notice.to_dict(db_now(conn))}
 
-            return run(request, claims, reject)
-        raise HTTPException(404, detail={"code": "unknown_command"})
+        return run(request, claims, reject, workspace_id=workspace_id)
 
     @app.post("/api/admin/upload-restrictions/{workspace_id}/lift")
     def admin_lift_restriction(

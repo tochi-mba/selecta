@@ -54,15 +54,25 @@ def park(connection: Connection, job: Job, now: float) -> Job:
     detail = f"Its feature ({job.flag_id}) was switched off."
     if when_off(job.flag_id) == STOP:
         job = set_state(
-            connection, job, S.CANCELLED, now, finished_at=now,
+            connection,
+            job,
+            S.CANCELLED,
+            now,
+            finished_at=now,
             payload={"reason": FLAG_OFF, "flag": job.flag_id},
-            error_class=FLAG_OFF, error_detail=detail,
+            error_class=FLAG_OFF,
+            error_detail=detail,
         )
         after_unsuccessful(connection, job, now)
         return job
     return set_state(
-        connection, job, S.BLOCKED, now, payload={"reason": FLAG_OFF, "flag": job.flag_id},
-        error_class=FLAG_OFF, error_detail=detail,
+        connection,
+        job,
+        S.BLOCKED,
+        now,
+        payload={"reason": FLAG_OFF, "flag": job.flag_id},
+        error_class=FLAG_OFF,
+        error_detail=detail,
     )
 
 
@@ -71,8 +81,9 @@ def stop_running(connection: Connection, job_id: str, now: float) -> bool:
     job = lock_job(connection, job_id)
     if job.state not in ACTIVE or job.state == S.CANCEL_REQUESTED:
         return False
-    set_state(connection, job, S.CANCEL_REQUESTED, now,
-              payload={"reason": FLAG_OFF, "flag": job.flag_id})
+    set_state(
+        connection, job, S.CANCEL_REQUESTED, now, payload={"reason": FLAG_OFF, "flag": job.flag_id}
+    )
     connection.execute(
         job_attempts.update()
         .where(job_attempts.c.job_id == job.id, job_attempts.c.outcome.is_(None))
@@ -82,22 +93,38 @@ def stop_running(connection: Connection, job_id: str, now: float) -> bool:
 
 
 def resume(
-    connection: Connection, pool: str, flag_on: Callable[[str, str], bool], now: float,
-    *, limit: int = RESUME_BATCH,
+    connection: Connection,
+    pool: str,
+    flag_on: Callable[[str, str], bool],
+    now: float,
+    *,
+    limit: int = RESUME_BATCH,
 ) -> list[str]:
     """Put back in line this pool's `flag_off` jobs whose flag is on again. Returns their ids."""
     from selecta.work.retrying import unblock  # retrying imports the lifecycle, as we do
 
     rows = connection.execute(
-        sa.select(jobs).where(
-            jobs.c.pool == pool, jobs.c.state == str(S.BLOCKED), jobs.c.error_class == FLAG_OFF,
-        ).order_by(jobs.c.updated_at, jobs.c.id).limit(limit)
+        sa.select(jobs)
+        .where(
+            jobs.c.pool == pool,
+            jobs.c.state == str(S.BLOCKED),
+            jobs.c.error_class == FLAG_OFF,
+        )
+        .order_by(jobs.c.updated_at, jobs.c.id)
+        .limit(limit)
     ).all()
+    due = [
+        Job.from_row(row)
+        for row in rows
+        if row.flag_id is None or flag_on(row.workspace_id, row.flag_id)
+    ]
+    if due:
+        # Requeuing changes heads (in any pool its dependents are in), so take every lane clock
+        # first, as every head-changing transaction must (`heads.py`); the claim calls this
+        # before it takes its own pool's clocks.
+        heads.lock_all_lanes(connection)
     resumed: list[str] = []
-    for row in rows:
-        job = Job.from_row(row)
-        if job.flag_id is not None and not flag_on(job.workspace_id, job.flag_id):
-            continue
+    for job in due:
         update_fields(connection, job, now, error_class=None, error_detail=None)
         unblock(connection, [job.id], now)
         resumed.append(job.id)

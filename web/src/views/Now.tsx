@@ -8,6 +8,7 @@ import { playLabel, SEAM_LABEL, songArtist, songTitle, transportClock } from '..
 import { orderOf } from '../state/readiness';
 import { Action, announce, Problem, Skeleton, Status, Tooltip } from '../ui/controls';
 import { useShownTheme } from '../state/prefs';
+import { useRevealed } from '../ui/Skeleton';
 import { TermHint } from '../ui/Glossary';
 import { Icon } from '../ui/Icon';
 import { useMediaQuery } from '../ui/useMediaQuery';
@@ -15,9 +16,12 @@ import { useReducedMotion } from '../ui/useReducedMotion';
 import { seamFacts } from '../ui/seam';
 import { seamFamily, SongMotif } from '../ui/MusicObjects';
 import { RequestsContext, RequestTag, waitingRequestCount } from './Requests';
-import { frequencyLevels, paintFrequencyFrame, SPECTRUM_MODES, spectrumLevelCount, type SpectrumShape } from './spectrumVisuals';
+import { clearVisualState, createVisualState, migrateSpectrumShape, paintVisualFrame, SPECTRUM_MODES, type SpectrumShape } from './spectrumVisuals';
+import { createFeatureTracker } from './visualizer/features';
+import { createFrameSource, gridOf } from './visualizer/source';
 import { ViewProps } from './shared';
 import { FirstHandoff } from './FirstHandoff';
+import { Strip, StripPlaceholder } from './NowStrip';
 
 /** Fit the complete music title to its actual column, not the viewport.
  * Keep it in the accessibility tree and allow more lines at extreme zoom. */
@@ -33,7 +37,7 @@ function TrackTitle({ title, songId, stage }: { title: string; songId?: number; 
       // MP-0275-03: a complete title wins over shrinking. The floor is a token (--title-floor, 24px),
       // so a long title wraps onto more lines at a readable size instead of being squeezed smaller.
       const minimum = Number.parseFloat(getComputedStyle(node).getPropertyValue('--title-floor')) || 24;
-      const maximum = Math.max(minimum, Math.min(stage ? 40 : 52, Math.max(stage ? 24 : 28, width * (stage ? 0.055 : 0.095))));
+      const maximum = Math.max(minimum, Math.min(stage ? 32 : 52, Math.max(stage ? 24 : 28, width * (stage ? 0.055 : 0.095))));
       let low = minimum;
       let high = maximum;
       node.style.paddingBlockStart = '';
@@ -62,11 +66,14 @@ function TrackTitle({ title, songId, stage }: { title: string; songId?: number; 
       }
     };
     fit();
+    // r8c: each fit is about twenty forced layouts, so a resize runs it once: the observer already
+    // sees the container change, and the window listener is only for browsers without one
     const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null;
     observer?.observe(container);
-    window.addEventListener('resize', fit);
-    document.fonts?.ready.then(fit).catch(() => {});
-    return () => { observer?.disconnect(); window.removeEventListener('resize', fit); };
+    if (!observer) window.addEventListener('resize', fit);
+    let live = true;
+    document.fonts?.ready.then(() => { if (live) fit(); }).catch(() => {});
+    return () => { live = false; observer?.disconnect(); window.removeEventListener('resize', fit); };
   }, [title, stage]);
   return <h1 ref={heading} className="display track-title" dir="auto">
     {songId !== undefined && <SongMotif songId={songId} large />}{title}
@@ -81,21 +88,12 @@ function savedView(): ListenView {
   const defaults: ListenView = { lyrics: false, spectrum: true, timing: true, intensity: 'standard', spectrumShape: 'bars' };
   try {
     const saved = JSON.parse(window.localStorage.getItem(VIEW_KEY) ?? '{}') as Partial<ListenView>;
-    return { ...defaults, ...saved, intensity: ['quiet', 'standard', 'focused'].includes(saved.intensity ?? '') ? saved.intensity! : 'standard', spectrumShape: SPECTRUM_MODES.some((mode) => mode.id === saved.spectrumShape) ? saved.spectrumShape! : (saved.spectrumShape as string) === 'radial' ? 'ribbon' : 'bars' };
+    return { ...defaults, ...saved, intensity: ['quiet', 'standard', 'focused'].includes(saved.intensity ?? '') ? saved.intensity! : 'standard', spectrumShape: migrateSpectrumShape(saved.spectrumShape) };
   } catch {
     return defaults;
   }
 }
 
-const SECTION_WORDS: Record<string, string> = {
-  intro: 'Intro',
-  verse: 'Verse',
-  chorus: 'Chorus',
-  bridge: 'Bridge',
-  break: 'Break',
-  outro: 'Outro',
-  instrumental: 'Band',
-};
 const LYRIC_WORD = /^[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)?$/u;
 
 function highlightedLine(text: string, activeWord: number) {
@@ -113,154 +111,6 @@ function highlightedLine(text: string, activeWord: number) {
 }
 
 /** Sections as a person would name them: neighbours with the same name are one section. */
-function mergedSections(detail: SongDetail) {
-  const merged: { label: string; start: number; end: number }[] = [];
-  for (const section of detail.sections) {
-    const last = merged[merged.length - 1];
-    if (last && last.label === section.label) last.end = section.end;
-    else merged.push({ ...section });
-  }
-  return merged;
-}
-
-const CANT_SEEK = 'You can’t move around during a transition, because it plays as one finished piece. You can again once the next song has taken over.';
-
-/** The whole song as one strip, with its sections named. Where the seam falls is marked. During a
- * transition it stays the same control, and says why it won't move rather than quietly becoming
- * something else. */
-function Strip({ detail, time, seamAt, onSeek, seekBlocked }: { detail: SongDetail; time: number; seamAt: number | null; onSeek: (seconds: number) => void; seekBlocked?: boolean }) {
-  const noteId = useId();
-  const duration = Number.isFinite(detail.duration) && detail.duration > 0 ? detail.duration : 0;
-  const safeTime = Math.min(Math.max(Number.isFinite(time) ? time : 0, 0), duration);
-  const unavailable = duration === 0;
-  const locked = !!seekBlocked || unavailable;
-  const unavailableWords = 'The duration of this song is not known yet, so seeking is unavailable.';
-  // A pointer drag is a proposal, not an actual seek. Keep the real playhead
-  // anchored to the audio clock until the pointer is released and the player accepts it.
-  const [seekPreview, setSeekPreview] = useState<number | null>(null);
-  const dragging = useRef<number | null>(null);
-  useEffect(() => {
-    dragging.current = null;
-    setSeekPreview(null);
-  }, [detail.id, seekBlocked]);
-  const percent = (seconds: number) =>
-    100 * Math.min(Math.max(Number.isFinite(seconds) ? seconds : 0, 0), duration) / Math.max(duration, 1);
-  const shape = useMemo(() => {
-    const step = 100 / Math.max(detail.peaks.length, 1);
-    return detail.peaks
-      .map((peak, index) => {
-        const height = Math.max(peak * 100, 4);
-        return `M${(index * step).toFixed(2)} ${(50 - height / 2).toFixed(1)}v${height.toFixed(1)}`;
-      })
-      .join('');
-  }, [detail.peaks]);
-  const sections = useMemo(() => mergedSections(detail), [detail]);
-  const barTimes = detail.bar_times ?? [];
-  const clip = `played-${detail.id}`;
-  const pointAt = (event: PointerEvent<HTMLDivElement>) => {
-    const box = event.currentTarget.getBoundingClientRect();
-    if (!box.width || unavailable) return null;
-    return Math.min(Math.max((event.clientX - box.left) / box.width, 0), 1) * duration;
-  };
-  const beginSeek = (event: PointerEvent<HTMLDivElement>) => {
-    // Real browsers expose isPrimary; tolerate older PointerEvent shims that omit it.
-    if (event.isPrimary === false || event.button !== 0) return;
-    if (locked) {
-      announce(unavailable ? unavailableWords : CANT_SEEK);
-      return;
-    }
-    const target = pointAt(event);
-    if (target === null) return;
-    dragging.current = event.pointerId;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-    setSeekPreview(target);
-  };
-  const moveSeek = (event: PointerEvent<HTMLDivElement>) => {
-    if (dragging.current !== event.pointerId) return;
-    const target = pointAt(event);
-    if (target !== null) setSeekPreview(target);
-  };
-  const endSeek = (event: PointerEvent<HTMLDivElement>) => {
-    if (dragging.current !== event.pointerId) return;
-    dragging.current = null;
-    const target = pointAt(event);
-    setSeekPreview(null);
-    if (!locked && target !== null) onSeek(target);
-  };
-  const cancelSeek = () => {
-    dragging.current = null;
-    setSeekPreview(null);
-  };
-  const keys = (event: KeyboardEvent<HTMLDivElement>) => {
-    const moves: Record<string, number> = { ArrowLeft: safeTime - 5, ArrowDown: safeTime - 5, ArrowRight: safeTime + 5, ArrowUp: safeTime + 5, Home: 0, End: Math.max(duration - 1, 0), PageDown: safeTime - 30, PageUp: safeTime + 30 };
-    if (moves[event.key] === undefined) return;
-    event.preventDefault();
-    event.stopPropagation();
-    if (locked) announce(unavailable ? unavailableWords : CANT_SEEK);
-    else onSeek(Math.min(Math.max(moves[event.key], 0), duration));
-  };
-  return (
-    <>
-    <div
-      className={`strip ${locked ? 'seek-blocked' : 'can-seek'}`}
-      role="slider"
-      tabIndex={0}
-      aria-label="Where in the song"
-      aria-valuemin={0}
-      aria-valuemax={Math.round(duration)}
-      aria-valuenow={Math.round(safeTime)}
-      aria-valuetext={unavailable ? 'Duration unknown' : `${transportClock(safeTime)} of ${transportClock(duration)}, ${transportClock(duration - safeTime)} left`}
-      aria-disabled={locked || undefined}
-      aria-describedby={locked ? noteId : undefined}
-      onPointerDown={beginSeek}
-      onPointerMove={moveSeek}
-      onPointerUp={endSeek}
-      onPointerCancel={cancelSeek}
-      onLostPointerCapture={cancelSeek}
-      onKeyDown={keys}
-    >
-      <svg className="peaks" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-        <defs>
-          <clipPath id={clip}>
-            <rect x="0" y="0" width={percent(time)} height="100" />
-          </clipPath>
-        </defs>
-        <path d={shape} className="unplayed" vectorEffect="non-scaling-stroke" />
-        <path d={shape} className="played" clipPath={`url(#${clip})`} vectorEffect="non-scaling-stroke" />
-      </svg>
-      <div className="bar-ticks" aria-hidden="true">
-        {barTimes
-          .filter((_, index) => index % Math.max(1, Math.ceil(barTimes.length / 24)) === 0)
-          .map((bar, index) => (
-            <i key={index} style={{ left: `${percent(bar)}%` }} />
-          ))}
-      </div>
-      <div className="sections">
-        {sections.map((section, index) => {
-          const width = percent(section.end - section.start);
-          return (
-            <span key={index} style={{ left: `${percent(section.start)}%`, width: `${width}%` }}>
-              {width > 9 ? (SECTION_WORDS[section.label] ?? section.label) : ''}
-            </span>
-          );
-        })}
-      </div>
-      {seamAt !== null && <b className="seam-mark" style={{ left: `${percent(seamAt)}%` }} title={`Seam at ${clock(seamAt)}`} />}
-      <b className="playhead" style={{ left: `${percent(time)}%` }} aria-hidden="true" />
-      {seekPreview !== null && (
-        <b className="scrub-ghost" style={{ left: `${percent(seekPreview)}%` }} aria-hidden="true" />
-      )}
-      {/* MP-0274-03: room for the longest reading this song can show, "duration / duration", so the clock
-          never widens and nudges the separator when 9:59 becomes 10:00 */}
-      <span className="time" style={{ minWidth: `${(unavailable ? 0 : clock(duration).length * 2) + 3}ch` }}>
-        {seekPreview === null ? transportClock(safeTime) : `Seek to ${transportClock(seekPreview)}`} / {unavailable ? 'unknown duration' : transportClock(duration)}
-      </span>
-    </div>
-    <p className="hint seek-note" id={noteId}>{unavailable ? unavailableWords : seekBlocked ? CANT_SEEK : ' '}</p>
-    </>
-  );
-}
-
 function upperBound(points: number[], value: number) {
   let low = 0;
   let high = points.length;
@@ -395,13 +245,31 @@ function TransitionCountdown({
   );
 }
 
+/** SF-0212-07: below this every level counts as silence, so a still visualizer looks again (up to
+ * MAX_STILL_RETRIES times, STILL_RETRY_MS apart) for a frame with sound in it before holding one. */
+const SILENT_LEVEL = 0.02;
+const STILL_RETRY_MS = 250;
+const MAX_STILL_RETRIES = 40;
+/** Owner feedback 2026-11-12 ("I can't actually see the visualizer reacting to the music well
+ * enough") raised the cap from 15 to 30 frames a second, so a kick shows within one 33 ms frame.
+ * A device whose measured script cost per frame passes FRAME_BUDGET_MS drops back to 15. */
+const FRAME_MS = 1000 / 30;
+const SLOW_FRAME_MS = 1000 / 15;
+const FRAME_BUDGET_MS = 4;
+/** Styles drawn from hits alone hold a calm spectrum as their still frame under reduced motion. */
+const EVENT_ONLY: SpectrumShape[] = ['sparkle', 'bursts', 'lanes', 'shock', 'grid'];
+
 /** Exported only so its frame use can be measured (GP-0257-05). */
-export function MusicVisualizer({ player, active, stage, intensity, spectrumShape }: { player: ViewProps['player']; active: boolean; stage: boolean; intensity: ListenView['intensity']; spectrumShape: ListenView['spectrumShape'] }) {
+export function MusicVisualizer({ player, active, stage, intensity, spectrumShape, detail }: { player: ViewProps['player']; active: boolean; stage: boolean; intensity: ListenView['intensity']; spectrumShape: ListenView['spectrumShape']; detail?: SongDetail | null }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const reduceMotion = useReducedMotion();
   // Its colours come from the page; theme and forced-colour changes repaint real analyser data.
   const theme = useShownTheme();
   const [paletteRevision, setPaletteRevision] = useState(0);
+  // the song's analysed beat grid and sections, read each frame without restarting the loop
+  const songGrid = useMemo(() => gridOf(detail), [detail]);
+  const grid = useRef(songGrid);
+  grid.current = songGrid;
   useEffect(() => {
     const contrast = window.matchMedia?.('(forced-colors: active)');
     const changed = () => setPaletteRevision((revision) => revision + 1);
@@ -423,15 +291,27 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
     const forced = window.matchMedia?.('(forced-colors: active)').matches ?? false;
     const accent = forced ? fallback : style.getPropertyValue('--accent').trim() || fallback;
     const soft = forced ? 'Highlight' : style.getPropertyValue('--ok').trim() || fallback;
+    const cool = forced ? 'Highlight' : style.getPropertyValue('--request').trim() || soft;
+    const warm = forced ? fallback : style.getPropertyValue('--warn').trim() || accent;
     let gradient: CanvasGradient | null = null;
     let gradientHeight = 0;
-    const history: number[][] = [];
+    const source = createFrameSource(player);
+    const tracker = createFeatureTracker();
+    const state = createVisualState(spectrumShape);
+    const shape: SpectrumShape = reduceMotion && EVENT_ONLY.includes(spectrumShape) ? 'bars' : spectrumShape;
     let lastDraw = -Infinity;
+    let interval = FRAME_MS;
+    let cost = 0;
+    let costFrames = 0;
     let drewReducedFrame = false;
+    delete node.dataset.frozen;
+    let reducedRetries = 0;
+    let retry = 0;
+    const forget = () => { tracker.reset(); clearVisualState(state); };
     const draw = (timestamp = 0) => {
       // nothing to look at while the tab is hidden, and the music mustn't pay for it
       if (document.hidden || !visible) {
-        history.length = 0;
+        forget();
         frame = 0;
         return;
       }
@@ -444,11 +324,12 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
         frame = 0;
         return;
       }
-      if (active && !reduceMotion && timestamp - lastDraw < 1000 / 15) {
+      if (active && !reduceMotion && timestamp - lastDraw < interval - 1) {
         frame = window.requestAnimationFrame(draw);
         return;
       }
       lastDraw = timestamp;
+      const started = performance.now();
       const rect = node.getBoundingClientRect();
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
       const width = Math.max(1, Math.round(rect.width * ratio));
@@ -464,20 +345,40 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
         gradient.addColorStop(0, accent);
         gradient.addColorStop(1, soft);
       }
-      const spectrum = active ? player.getSpectrum() : null;
-      if (!spectrum || spectrum.length === 0) {
-        history.length = 0;
+      const input = active ? source.read(started, grid.current) : null;
+      if (!input) {
+        forget();
         // No analyzer bins means there are no measurements. Keep the surface
         // still; do not draw decorative "frequency levels" in their place.
         // Continue the visibility-limited sampling loop so a late-starting
         // audio context can begin drawing as soon as real data is available.
         if (active && !reduceMotion) frame = window.requestAnimationFrame(draw);
+        else if (active && reduceMotion && reducedRetries < MAX_STILL_RETRIES) {
+          reducedRetries += 1;
+          retry = window.setTimeout(() => { retry = 0; wake(); }, STILL_RETRY_MS);
+        }
         return;
       }
-      if (!active) history.length = 0;
-      const levels = frequencyLevels(spectrum, spectrumLevelCount(width, ratio, spectrumShape));
-      paintFrequencyFrame(context, width, height, levels, spectrumShape, { accent, soft, gradient }, history);
-      if (reduceMotion) drewReducedFrame = true;
+      const features = tracker.update(input);
+      paintVisualFrame(context, width, height, features, shape, { accent, soft, cool, warm, gradient }, state);
+      // the measured script cost of this frame; a device that can't afford 30 fps gets 15
+      cost = cost * 0.9 + (performance.now() - started) * 0.1;
+      costFrames += 1;
+      if (costFrames % 30 === 0) {
+        interval = cost > FRAME_BUDGET_MS ? SLOW_FRAME_MS : FRAME_MS;
+        node.dataset.frameMs = cost.toFixed(2);
+      }
+      // SF-0212-07: a still visualizer keeps one frame with sound in it. Play starts on silence, so a frame
+      // taken then was blank and stayed blank for the whole song (2026-11-12 reduced-motion review); until
+      // real levels arrive it looks again a few times a second, then holds that frame as before.
+      const heard = !features.silent && features.levels.some((level) => level > SILENT_LEVEL);
+      if (reduceMotion && heard) {
+        drewReducedFrame = true;
+        node.dataset.frozen = 'true';
+      } else if (reduceMotion && reducedRetries < MAX_STILL_RETRIES) {
+        reducedRetries += 1;
+        retry = window.setTimeout(() => { retry = 0; wake(); }, STILL_RETRY_MS);
+      }
       if (active && !reduceMotion) frame = window.requestAnimationFrame(draw);
     };
     const wake = () => {
@@ -487,7 +388,7 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
       visible = entry?.isIntersecting ?? false;
       if (!visible) {
         window.cancelAnimationFrame(frame);
-        history.length = 0;
+        forget();
         frame = 0;
       } else wake();
     });
@@ -505,7 +406,8 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
       observer?.disconnect();
       intersection?.disconnect();
       window.cancelAnimationFrame(frame);
-      history.length = 0;
+      window.clearTimeout(retry);
+      forget();
     };
   }, [player, active, stage, reduceMotion, theme, paletteRevision, spectrumShape]);
   return <canvas ref={canvas} className={`music-visualizer ${stage ? 'large' : ''} ${intensity === 'focused' ? 'focused' : ''}`} role="img" aria-label={active ? `${SPECTRUM_MODES.find((mode) => mode.id === spectrumShape)?.label ?? 'Frequency'} - actual mixed-audio frequency levels` : 'Audio frequency visualizer paused'} />;
@@ -516,7 +418,7 @@ function noLyricsWords(status: string | null | undefined): string {
   switch (status) {
     case 'instrumental': return 'Instrumental';
     case 'plain': return 'Lyrics for this song aren’t timed, so they can’t follow along.';
-    case 'failed': return 'Looking up lyrics for this song didn’t work. Selecta will try again later.';
+    case 'failed': return 'Looking up lyrics for this song didn’t work. SelectaDJ will try again later.';
     case 'synced': return 'The timed lyrics for this song couldn’t be read.';
     case null:
     case undefined: return 'Lyrics haven’t been looked up yet.';
@@ -629,9 +531,9 @@ function TransitionTruth({ seam, ready, names }: { seam: ViewProps['mix'][number
     <div className="transition-truth">
       <p><Status kind={facts.kind}>{facts.words}</Status><TermHint term="transition" /></p>
       {rendered && facts.asked && state?.label && facts.asked !== state.label && <p className="hint">You asked for {facts.asked}. What will play is {state.label}.</p>}
-      {!rendered && state?.status !== 'failed' && <p className="hint">Planned: {facts.asked ?? 'Selecta’s choice'}. It hasn’t been made yet, so what plays can still change.<TermHint term="planned" /></p>}
+      {!rendered && state?.status !== 'failed' && <p className="hint">Planned: {facts.asked ?? 'SelectaDJ’s choice'}. It hasn’t been made yet, so what plays can still change.<TermHint term="planned" /></p>}
       {!ready && !rendered && <p className="hint">If it isn’t ready in time, this song plays on and the next one fades in, so the music doesn’t stop.</p>}
-      {state?.status === 'failed' && <p className="hint">If it can’t be made, Selecta falls back to its own pick. You can choose another in Edit.</p>}
+      {state?.status === 'failed' && <p className="hint">If it can’t be made, SelectaDJ falls back to its own pick. You can choose another in Edit.</p>}
     </div>
   );
 }
@@ -641,6 +543,10 @@ export function Now(props: ViewProps) {
   const requests = useContext(RequestsContext);
   const item = mix[now.position];
   const next = mix[now.position + 1];
+  // UF-0374-04: after the switch point the transition into the current song is still playing
+  const tail = now.inSeam && !!now.seamTail;
+  const entering = tail ? item : next;
+  const leaving = tail ? mix[now.position - 1] : item;
   const [detail, setDetail] = useState<SongDetail | null>(null);
   const [detailFailed, setDetailFailed] = useState(false);
   const [detailAttempt, setDetailAttempt] = useState(0);
@@ -763,7 +669,7 @@ export function Now(props: ViewProps) {
     now.phase === 'loading'
       ? 'Loading'
       : now.inSeam
-        ? `${SEAM_LABEL}, mixing into ${next?.title ?? 'the next song'}`
+        ? `${SEAM_LABEL}, mixing into ${entering?.title ?? 'the next song'}`
         : now.phase === 'paused'
           ? `Paused · ${mixName}`
           : mixName;
@@ -805,7 +711,8 @@ export function Now(props: ViewProps) {
 
           {!stage && (
             <>
-              <div className="transport">
+              {/* SF-0209-02: Previous, Play/Pause and Next are one named group; Play/Pause is its one primary */}
+              <div className="transport" role="group" aria-label="Song controls">
                 {withKey('Previous song (P)', <button aria-label="Previous song" title={keys ? undefined : 'Previous song'} disabled={idle} onClick={() => void player.previous()}><Icon name="previous" /></button>)}
                 <button className="primary big" disabled={now.phase === 'loading'} onClick={() => void player.togglePause()}>
                   {resumable ? `Resume from ${transportClock(now.songTime)}` : playLabel(now.phase)}
@@ -826,7 +733,8 @@ export function Now(props: ViewProps) {
           )}
 
           {shown && !stage && <Strip detail={shown} time={now.songTime} seamAt={now.seamAt} seekBlocked={now.inSeam} onSeek={(seconds) => void player.seek(seconds)} />}
-          {(on('listen.visualizers') && view.intensity !== 'quiet' && (stage || (spectrum && !lyricFocus))) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} intensity={view.intensity} spectrumShape={view.spectrumShape} />}
+          {!shown && item && !detailFailed && !stage && <StripPlaceholder />}
+          {(on('listen.visualizers') && view.intensity !== 'quiet' && (stage || (spectrum && !lyricFocus))) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} intensity={view.intensity} spectrumShape={view.spectrumShape} detail={shown} />}
           {detailFailed && !shown && <Problem retry={() => setDetailAttempt((attempt) => attempt + 1)}>{hasLyrics ? 'Couldn’t load lyrics and song details.' : 'Couldn’t load this song’s details.'} Playback controls are still available.</Problem>}
           {hasLyrics && (shown ? <Lyrics detail={shown} time={now.songTime} focus={lyricFocus && !stage} canBrowse /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" retry={() => setDetailAttempt((attempt) => attempt + 1)} />)}
         </div>
@@ -837,12 +745,12 @@ export function Now(props: ViewProps) {
               detail={shown}
               time={now.songTime}
               seamAt={now.seamAt}
-              nextTitle={next?.title}
-              currentTitle={item?.title}
+              nextTitle={entering?.title}
+              currentTitle={leaving?.title}
               ready={now.nextReady}
               inSeam={now.inSeam}
-              switchAt={seam?.switch_at}
-              phrase={on('listen.handoff_phrase') ? provenPhrase : undefined}
+              switchAt={tail ? undefined : seam?.switch_at}
+              phrase={on('listen.handoff_phrase') && !tail ? provenPhrase : undefined}
             />
           )}
 
@@ -933,7 +841,7 @@ export function Now(props: ViewProps) {
                 </div>
                 <details className="listen-visualizer-help">
                   <summary>About the visualizer</summary>
-                  <p className="hint">The visualizer follows the live mixed-audio analyser, not a simulated beat. Quiet visuals hide the spectrum without affecting playback.</p>
+                  <p className="hint">The visualizer follows the live mixed-audio analyser and this song’s analysed beats and sections, never a simulated beat. Each style reacts to something different: kicks, hi-hats, the bar, the stereo width or the waveform. Quiet visuals hide it without affecting playback.</p>
                 </details>
                 </>
                 )}

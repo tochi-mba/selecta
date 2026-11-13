@@ -30,7 +30,7 @@ test('over quota: the banner names the overage, uploads wait, listening and down
   await nav(page).getByRole('button', { name: 'Settings' }).click();
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download my data' }).click();
-  expect((await download).suggestedFilename()).toBe('selecta-account-export.zip');
+  expect((await download).suggestedFilename()).toBe('selectadj-account-export.zip');
 
   await nav(page).getByRole('button', { name: 'Plan & billing' }).click();
   await expect(page.getByRole('region', { name: 'Exports this month' })).toContainText('Paused while you are over your storage limit');
@@ -44,7 +44,7 @@ test('Download my data saves a ZIP with originals, settings.json and mixes.json'
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download my data' }).click();
   const saved = await download;
-  expect(saved.suggestedFilename()).toBe('selecta-account-export.zip');
+  expect(saved.suggestedFilename()).toBe('selectadj-account-export.zip');
   // A ZIP's central directory names every entry in plain bytes.
   const names = readFileSync(await saved.path()).toString('latin1');
   for (const entry of ['settings.json', 'mixes.json', 'manifest.json', 'assets.json', 'originals/']) expect(names).toContain(entry);
@@ -62,7 +62,7 @@ test('a refreshed browser carries on an upload from the parts already uploaded',
 
   await page.locator('input[type=file]').setInputFiles(file);
   await page.getByRole('button', { name: 'Start upload' }).click();
-  await expect(page.getByText('Needs attention')).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText('Needs attention', { exact: true })).toBeVisible({ timeout: 60_000 });
   const before = await r2Log(request);
   expect(before.filter((entry) => entry.method === 'PUT' && entry.status === 200).map((entry) => entry.part)).toEqual([1]);
 

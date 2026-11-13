@@ -28,6 +28,14 @@
       "surfaces": ["mine", "edit", "workshop"],
       "words": ["Render line"]
     },
+    "mymixes.lean_list": {
+      "label": "Lean draft list",
+      "about": "Pickers and shortcuts fetch only each draft's name, not its songs and readiness.",
+      "requires": ["drafts"],
+      "routes": ["GET /api/drafts/names"],
+      "surfaces": ["mine", "edit", "discover.words", "overlay.palette"],
+      "words": []
+    },
     "mymixes.continue_working": {
       "label": "Continue working",
       "about": "A shortcut back to the draft you last edited.",

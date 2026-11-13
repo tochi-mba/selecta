@@ -189,7 +189,12 @@ test('MI-0140-08 every route, dialog, sheet and the command palette leave one Au
   await expect.poll(() => page.evaluate(() => performance.now()), { timeout: 20_000 }).toBeGreaterThan(steps[0].wall + 11_000);
   await mark('Listen, after a while');
   const trace = await page.evaluate(() => window.audioTrace);
-  const firstRunning = trace.states.findIndex((entry) => entry.state === 'running');
+  // Player.prepare() is allowed to pre-open a browser AudioContext while idle:
+  // autoplay-enabled Edge may report running -> suspended before the first Play.
+  // Judge continuity from the first playing checkpoint, not that preparation.
+  const firstRunning = trace.states.findLastIndex(
+    (entry) => entry.state === 'running' && entry.wall <= steps[0].wall,
+  );
   const report = { steps, made: trace.made, states: trace.states, sources: trace.sources, samples: trace.samples.length };
   writeFileSync(info.outputPath('mi-0140-08-trace.json'), JSON.stringify(report, null, 2));
 

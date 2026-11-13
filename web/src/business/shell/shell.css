@@ -1,0 +1,76 @@
+/* The business shell (ADR-0453 D2, D5): the cloud shell's look, a rail on desktop and a tab bar
+   on phones. Tokens only. One nav element in both layouts, so keyboard order never changes. */
+
+.biz-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  grid-template-areas: 'top top' 'nav main';
+  background: var(--bg);
+}
+.biz-shell-bare { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'top' 'main'; }
+.biz-shell-top { grid-area: top; position: sticky; top: 0; z-index: 2; }
+.biz-shell-nav {
+  grid-area: nav;
+  position: sticky;
+  top: var(--control-height);
+  align-self: start;
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-3);
+  border-right: 1px solid var(--line);
+  background: var(--panel);
+  min-height: calc(100vh - var(--control-height));
+}
+.biz-shell-brand { display: flex; align-items: center; gap: var(--space-2); font-weight: 700; padding: 0 var(--space-2); }
+.biz-shell-nav ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); align-content: start; }
+.biz-shell-nav a {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--text-soft);
+  text-decoration: none;
+}
+.biz-shell-nav a:hover { color: var(--ink); background: var(--panel-2); }
+.biz-shell-nav a[aria-current='page'] { color: var(--ink); background: var(--panel-2); font-weight: 700; box-shadow: inset 3px 0 0 var(--ink); }
+.biz-shell-main {
+  grid-area: main;
+  width: min(var(--content-browse), 100%);
+  margin: 0 auto;
+  padding: var(--space-6) clamp(16px, 4vw, 48px);
+  display: grid;
+  gap: var(--space-5);
+  align-content: start;
+  min-width: 0;
+}
+.biz-shell[data-role] .biz-shell-main:has(.biz-hq) { width: min(var(--content-work), 100%); }
+.biz-shell-main:focus { outline: none; }
+.biz-page-loading { padding: var(--space-4) 0; }
+.biz-runtime { display: grid; gap: var(--space-3); place-content: center; min-height: 60vh; padding: var(--space-5) 16px; text-align: center; }
+
+@media (max-width: 850px) {
+  .biz-shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto; grid-template-areas: 'top' 'main' 'nav'; }
+  .biz-shell-nav {
+    position: sticky;
+    bottom: 0;
+    top: auto;
+    min-height: 0;
+    padding: var(--space-1) var(--space-2);
+    border-right: 0;
+    border-top: 1px solid var(--line);
+    z-index: 2;
+  }
+  .biz-shell-brand { display: none; }
+  .biz-shell-nav ul { grid-auto-flow: column; grid-auto-columns: minmax(84px, 1fr); overflow-x: auto; overscroll-behavior-x: contain; }
+  .biz-shell-nav a { justify-content: center; padding: 0 var(--space-2); font-size: var(--type-meta); }
+  .biz-shell-nav a[aria-current='page'] { box-shadow: inset 0 3px 0 var(--ink); }
+  .biz-shell-main { padding: var(--space-5) 16px; }
+}
+
+@media (forced-colors: active) {
+  .biz-shell-nav { border-color: CanvasText; }
+  .biz-shell-nav a[aria-current='page'] { outline: 2px solid CanvasText; }
+}

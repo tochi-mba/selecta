@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from difflib import SequenceMatcher
 from functools import lru_cache
 
@@ -29,6 +29,17 @@ def normalize_music(text: str) -> str:
     if text.isascii():
         # the same answer, quicker: plain ASCII has nothing to decompose, fold or translate
         plain = text.lower()
+        # letters and digits in single-spaced words, with no credit to rewrite, are already
+        # in their compared form; the three rewrites below would hand back the same string
+        if (
+            plain.replace(" ", "").isalnum()
+            and "  " not in plain
+            and plain[0] != " "
+            and plain[-1] != " "
+            and "ft" not in plain
+            and "feat" not in plain
+        ):
+            return plain
     else:
         decomposed = unicodedata.normalize("NFKD", text.casefold()).translate(_UNDECOMPOSED)
         plain = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
@@ -61,22 +72,28 @@ def relevance(query: str, song_id: int, artist: str | None, title: str | None) -
     return _ranker(query)(song_id, artist, title)
 
 
+def rank_songs(query: str, songs: Iterable[tuple[int, str | None, str | None]]) -> dict[int, int]:
+    """Rank a whole library at once: ``{song id: rank}`` for every (id, artist, title) that
+    matches, each rank exactly what ``relevance`` gives that song (MI-0162-04).
+
+    Ranking in one Python pass, rather than asking for it row by row from inside SQL, is what
+    makes a 20,000-song search quick; the database then only joins the matches."""
+    rank = _ranker(query)
+    found: dict[int, int] = {}
+    for song_id, artist, title in songs:
+        place = rank(song_id, artist, title)
+        if place is not None:
+            found[song_id] = place
+    return found
+
+
 @lru_cache(maxsize=131072)
-def _prepared(
-    title: str, artist: str
-) -> tuple[str, str, frozenset[str], dict[int, tuple[str, ...]]]:
+def _prepared(title: str, artist: str) -> tuple[str, str, frozenset[str]]:
     """One song's names as search compares them, worked out once per process, not per search:
-    the title, the artist, every word of either, and those words by length (MI-0162-04)."""
+    the title, the artist and every word of either (MI-0162-04)."""
     name = normalize_music(title)
     creator = normalize_music(artist)
-    tokens = frozenset((name + " " + creator).split())
-    by_length: dict[int, list[str]] = {}
-    for token in tokens:
-        if len(token) in by_length:
-            by_length[len(token)].append(token)
-        else:
-            by_length[len(token)] = [token]
-    return name, creator, tokens, by_length
+    return name, creator, frozenset((name + " " + creator).split())
 
 
 @lru_cache(maxsize=64)
@@ -101,8 +118,13 @@ def _ranker(query: str) -> Callable[[int, str | None, str | None], int | None]:
     # matches are not fuzzy-searched; a typo must not silently select a cover.
     size = len(needle)
     fuzzy = 4 <= size <= 72
-    lengths = range(size - 2, size + 3)
+    shortest, longest = size - 2, size + 2
     close: dict[str, float] = {}
+    # MI-0162-04: a library repeats the same words thousands of times, so each distinct word is
+    # compared once per search; ``near`` keeps the ones close enough to count (scores >= 0.84).
+    # The best of a song's words is then the best of its words in ``near``, as the rule says.
+    seen: set[str] = set()
+    near: dict[str, float] = {}
     letters = frozenset(needle)
 
     def closeness(candidate: str) -> float:
@@ -126,7 +148,7 @@ def _ranker(query: str) -> Callable[[int, str | None, str | None], int | None]:
     def rank(song_id: int, artist: str | None, title: str | None) -> int | None:
         if by_id and needle == str(song_id):
             return 0
-        name, creator, tokens, by_length = _prepared(title or "", artist or "")
+        name, creator, tokens = _prepared(title or "", artist or "")
         # every title or artist match below contains the query, so one test rules them all out
         in_name = needle in name
         in_creator = needle in creator
@@ -149,11 +171,17 @@ def _ranker(query: str) -> Callable[[int, str | None, str | None], int | None]:
             return None
         best = 0.0
         for candidate in (name, creator):
-            if candidate and abs(len(candidate) - size) <= 3:
+            if candidate and size - 3 <= len(candidate) <= size + 3:
                 best = max(best, closeness(candidate))
-        for length in lengths:
-            for token in by_length.get(length, ()):
-                best = max(best, closeness(token))
+        if not seen.issuperset(tokens):
+            for token in tokens.difference(seen):
+                seen.add(token)
+                if shortest <= len(token) <= longest:
+                    score = closeness(token)
+                    if score >= 0.84:
+                        near[token] = score
+        if near and not tokens.isdisjoint(near):
+            best = max(best, max(near[token] for token in tokens if token in near))
         if best >= 0.84:
             return 60 + int((1.0 - best) * 100)
         return None

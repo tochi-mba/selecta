@@ -182,6 +182,7 @@ def make_rooms(engine, **ports: Any) -> Rooms:
         speakers=ports.pop("speakers", FakeSpeakers()),
         now_playing=ports.pop("now_playing", FakeNowPlaying()),
         events=ports.pop("events", RecordingRoomEvents()),
+        started_at=ports.pop("started_at", None),
     )
 
 

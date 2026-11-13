@@ -39,6 +39,11 @@ from selecta.rooms.store import (
 )
 
 MY_REQUESTS_SHOWN = 20
+# Presence. An open guest page reads the room every 5 s and a big screen every 3 s, so a guest
+# not seen for a minute or a screen not seen for 30 s has gone (closed the tab, lost signal, or
+# the server restarted under them).
+GUEST_ONLINE_SECONDS = 60.0
+DISPLAY_ONLINE_SECONDS = 30.0
 
 STATUS_TEXT = {
     RequestStatus.SENT: "Sent",
@@ -100,6 +105,18 @@ class GuestSummary:
     status: GuestStatus
     joined_at: float
     last_seen_at: float
+    online: bool = False  # their page checked in within GUEST_ONLINE_SECONDS
+
+
+@dataclass(frozen=True)
+class ScreenSummary:
+    """A paired big screen, numbered in the order it was paired."""
+
+    display_id: str
+    label: str
+    paired_at: float | None
+    last_seen_at: float | None
+    online: bool
 
 
 @dataclass(frozen=True)
@@ -113,7 +130,18 @@ class HostView:
     unfit: tuple[UpcomingItem, ...]  # couldn't fit; the host may approve them again
     renders_left: int
     music_paused: bool
-    displays: int
+    displays: int  # paired screens, online or not
+    screens: tuple[ScreenSummary, ...] = ()
+    now: float = 0.0  # the server's clock, so "last seen 5 min ago" ignores the host's clock
+
+
+def is_online(
+    last_seen_at: float | None, now: float, window: float, started_at: float | None = None
+) -> bool:
+    """Seen within the window, and since this app instance came up (see `RoomContext`)."""
+    if last_seen_at is None or last_seen_at <= now - window:
+        return False
+    return started_at is None or last_seen_at >= started_at
 
 
 def now_playing_for(ctx: RoomContext, workspace_id: str) -> NowPlaying:
@@ -249,7 +277,14 @@ def host_view(
         now = resolve_now(conn, now)
         room = load_room(conn, workspace_id, room_id)
         guests = tuple(
-            GuestSummary(g.id, g.nickname, g.status, g.joined_at, g.last_seen_at)
+            GuestSummary(
+                g.id,
+                g.nickname,
+                g.status,
+                g.joined_at,
+                g.last_seen_at,
+                is_online(g.last_seen_at, now, GUEST_ONLINE_SECONDS, ctx.started_at),
+            )
             for g in (
                 guest_from_row(row)
                 for row in conn.execute(
@@ -265,15 +300,31 @@ def host_view(
         )
         unfit = room_requests_where(conn, room, [RequestStatus.UNFIT])
         left = renders_left(conn, room, now)
-        displays = conn.execute(
-            sa.select(sa.func.count())
-            .select_from(display_pairings)
-            .where(
-                display_pairings.c.workspace_id == workspace_id,
-                display_pairings.c.room_id == room.id,
-                display_pairings.c.expires_at > now,
+        screens = tuple(
+            ScreenSummary(
+                row.id,
+                f"Screen {number}",
+                row.paired_at,
+                row.last_seen_at,
+                is_online(row.last_seen_at, now, DISPLAY_ONLINE_SECONDS, ctx.started_at),
             )
-        ).scalar_one()
+            for number, row in enumerate(
+                conn.execute(
+                    sa.select(
+                        display_pairings.c.id,
+                        display_pairings.c.paired_at,
+                        display_pairings.c.last_seen_at,
+                    )
+                    .where(
+                        display_pairings.c.workspace_id == workspace_id,
+                        display_pairings.c.room_id == room.id,
+                        display_pairings.c.expires_at > now,
+                    )
+                    .order_by(display_pairings.c.paired_at, display_pairings.c.id)
+                ),
+                start=1,
+            )
+        )
         names = nickname_map(conn, room)
     songs = describe_songs(ctx, room, [*coming_up, *inbox, *unfit])
     return HostView(
@@ -286,5 +337,7 @@ def host_view(
         unfit=as_items(unfit, songs, names, show_names=True),
         renders_left=left,
         music_paused=room.live and not ctx.speakers.speaker_online(workspace_id),
-        displays=displays,
+        displays=len(screens),
+        screens=screens,
+        now=now,
     )

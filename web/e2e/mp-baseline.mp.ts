@@ -20,6 +20,13 @@ const ROOT = resolve(process.cwd(), process.cwd().replace(/\\/g, '/').endsWith('
 // outside every outputDir: Playwright empties those at the start of a run, and the register check
 // must be able to run on its own against the last full run
 const OUT = resolve(process.cwd(), 'mp-data/mp-0272');
+// S3-0075-01: MP_CANDIDATES=1 also saves a screenshot of every measured surface, fixture and viewport,
+// the P0132 way (polish-p0132-baselines.e2e.ts): review candidates only, never toHaveScreenshot, listed
+// in each fixture's JSON marked candidate-not-independently-verified. docs/adr/s3-0075-coverage-map.json
+// says which inventory state each candidate stands for; a person approves them before any baseline.
+const CANDIDATES = process.env.MP_CANDIDATES === '1' ? resolve(process.cwd(), 'mp-data/mp-0272-candidates') : null;
+const CANDIDATE_MASKS = ['canvas', 'time', '.tabular-time', '.mini-time', '[role="progressbar"]'];
+const taken = new Map<string, string[]>();
 type Viewport = { id: string; width: number; height: number };
 const INVENTORY = JSON.parse(readFileSync(resolve(ROOT, 'docs/adr/mp-0272-surface-inventory.json'), 'utf8')) as {
   viewports: Viewport[];
@@ -44,7 +51,22 @@ function save(fixture: string, observations: Observation[]) {
     browser: 'msedge headless', theme: 'light', motion: 'still/reduced',
     fixtureLibrary: 'tests/e2e_server.py SELECTA_E2E_STRESS=1',
     fixture, required: observations.length ? observations.length : 0, observations,
+    candidates: taken.get(fixture) ?? [],
   }, null, 2));
+}
+
+/** S3-0075-01: one review candidate of what is on screen now (only with MP_CANDIDATES=1). */
+async function candidate(page: Page, key: string, surface: string, fixture: string, viewport: Viewport) {
+  if (!CANDIDATES) return;
+  mkdirSync(CANDIDATES, { recursive: true });
+  const name = `candidate-${surface}--${fixture}--${viewport.id}.png`;
+  await page.screenshot({
+    path: resolve(CANDIDATES, name),
+    animations: 'disabled',
+    caret: 'hide',
+    mask: CANDIDATE_MASKS.map((selector) => page.locator(selector)),
+  });
+  taken.set(key, [...(taken.get(key) ?? []), name]);
 }
 
 async function prepare(page: Page) {
@@ -68,6 +90,7 @@ async function sweep(page: Page, fixture: string, surface: string, viewports = V
     await page.waitForTimeout(150);
     if (check) await check();
     observations.push({ fixture, surface, viewport, ...(await measure(page)) });
+    await candidate(page, fixture, surface, fixture, viewport);
   }
   expect(observations).toHaveLength(viewports.length);
   save(fixture, observations);
@@ -113,6 +136,7 @@ for (const route of INVENTORY.routes) {
       await settle(page);
       if (route.fixtureId === 'fx.route.missing') await expect(page.getByText(/nothing at this address/i)).toBeVisible();
       observations.push({ fixture: route.fixtureId, surface: route.id, viewport, ...(await measure(page)) });
+      await candidate(page, route.id, route.id, route.fixtureId, viewport);
     }
     save(route.id, observations);
   });
@@ -321,7 +345,8 @@ test("'fx.toast' over the playing mini-player", async ({ page, request }) => {
 
 test("dialogs 'fx.overlay.delete_mix' and 'fx.overlay.delete_draft'", async ({ page, request }) => {
   await resetMix(request, STRESS_MIX);
-  const name = 'A draft to delete, named long enough to wrap twice on a phone';
+  // within the 60 characters a draft name keeps (a longer one is cut, and the dialog title with it)
+  const name = 'A draft to delete, named long enough to wrap on a phone';
   const made = await request.post('/api/drafts', { data: { name, copy_current: true } });
   expect(made.ok()).toBe(true);
   const id = (await made.json()).id as number;

@@ -1,0 +1,78 @@
+- link "Skip to the page":
+  - /url: "#content"
+- navigation "Main":
+  - link "Selecta, go to Make a Mix":
+    - /url: /mixes
+    - text: Selecta
+  - list:
+    - listitem:
+      - link "Listen":
+        - /url: /listen
+    - listitem:
+      - link "Make a Mix":
+        - /url: /mixes
+    - listitem:
+      - link "My Mixes":
+        - /url: /mixes/mine
+    - listitem:
+      - link "Library":
+        - /url: /library
+    - listitem:
+      - link "Workspace":
+        - /url: /workshop
+    - listitem:
+      - link "Edit":
+        - /url: /mix/current/edit
+  - 'button "Requests: Request a song"': Request a song
+  - button "Collapse the side bar"
+- banner:
+  - navigation "Breadcrumb":
+    - list:
+      - listitem:
+        - link "Workspace":
+          - /url: /workshop
+      - listitem: /Sources
+  - button "Search Ctrl K"
+  - 'button "Theme: Match this computer"'
+  - button "Activity"
+  - link "Workspace, 1 item needs your attention":
+    - /url: /workshop
+    - text: "1"
+  - button "Keyboard shortcuts"
+- main:
+  - heading "Workspace" [level=1]
+  - navigation "Workspace":
+    - link "Overview":
+      - /url: /workshop
+    - link "Analysis":
+      - /url: /workshop/analysis
+    - link "Sources":
+      - /url: /workshop/sources
+    - link "Storage":
+      - /url: /workshop/storage
+    - link "Learning":
+      - /url: /workshop/learning
+    - link "Diagnostics":
+      - /url: /workshop/diagnostics
+  - heading "Your music folders" [level=2]
+  - list:
+    - listitem:
+      - text: <test library> 20 songs Watching
+      - button "Stop watching"
+  - text: New songs added to these show up by themselves within a minute or so. Selecta never changes or deletes your files.
+  - button "Check now"
+  - heading "Add another folder" [level=3]
+  - paragraph: Copy a folder address from File Explorer. Your audio stays on this PC. For lyric lookup, Selecta sends each song’s artist, title, album and duration to LRCLIB. That request does not upload the audio file. Selecta also communicates with its local server.
+  - paragraph:
+    - text: "Example folder paths: Windows"
+    - code: C:\\Users\\you\\Music
+    - text: ; macOS
+    - code: /Users/you/Music
+    - text: ; Linux
+    - code: /home/you/Music
+    - text: . Use a path on the computer running Selecta, not a website address.
+  - text: Music folder
+  - textbox "Music folder":
+    - /placeholder: C:\\Users\\you\\Music
+  - button "Read folder" [disabled]
+- status: "Workspace needs your attention: 1 song failed."

@@ -34,9 +34,8 @@ RUN /app/.venv/bin/python -m selecta.workers.model_lock fetch /opt/models/models
 
 RUN useradd --system --uid 10001 --home-dir /nonexistent --shell /usr/sbin/nologin selecta \
     && mkdir -p /scratch && chown selecta /scratch
-ENV SELECTA_WORKER_SCRATCH_ROOT=/scratch \
-    SELECTA_MODEL_LOCK=/opt/models/models.lock.json \
-    SELECTA_MODEL_ROOT=/opt/models
+# The model lock and root reach model_lock below as arguments, not settings.
+ENV SELECTA_WORKER_SCRATCH_ROOT=/scratch
 USER selecta
 
 # Refuse to start if a baked weight was changed after the build.

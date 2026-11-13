@@ -178,7 +178,14 @@ class ObjectClient(Protocol):
     ) -> str: ...
 
     def presign_upload_part(
-        self, bucket: str, key: str, upload_id: str, part_number: int, ttl: int
+        self,
+        bucket: str,
+        key: str,
+        upload_id: str,
+        part_number: int,
+        ttl: int,
+        *,
+        content_length: int | None = None,
     ) -> str: ...
 
     def list_parts(self, bucket: str, key: str, upload_id: str) -> list[Part]: ...

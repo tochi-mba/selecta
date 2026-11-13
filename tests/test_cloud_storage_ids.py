@@ -132,7 +132,7 @@ class Objects:
         self._touch(key)
         return "multipart-test"
 
-    def presign_upload_part(self, _bucket, key, *_args):
+    def presign_upload_part(self, _bucket, key, *_args, **_kwargs):
         self._touch(key)
         return "https://objects.test/part"
 

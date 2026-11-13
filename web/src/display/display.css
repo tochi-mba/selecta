@@ -18,4 +18,8 @@ h2 { font-size: 1em; color: var(--muted); margin: 1em 0 0.3em; letter-spacing: 0
 .d-list { margin: 0; padding-left: 1.2em; }
 .d-list li { margin: 0.2em 0; overflow-wrap: anywhere; }
 .d-banner { border: 2px solid var(--accent); border-radius: 0.5em; padding: 0.3em 0.6em; display: inline-block; }
+.d-disconnect { margin-top: 1.5em; font: inherit; font-size: 0.7em; color: var(--muted); background: transparent; border: 1px solid var(--muted); border-radius: 0.5em; padding: 0.4em 0.9em; cursor: pointer; }
+.d-disconnect:hover, .d-disconnect:focus-visible { color: var(--ink); border-color: var(--ink); }
+.d-disconnect:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.d-reconnecting { position: fixed; top: 2vmin; right: 2vmin; margin: 0; padding: 0.3em 0.8em; border-radius: 0.5em; background: color-mix(in srgb, var(--bg) 85%, transparent); border: 1px solid var(--muted); color: var(--muted); font-size: 0.8em; }
 @media (max-width: 700px) { .d-room { grid-template-columns: 1fr; } }

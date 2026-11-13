@@ -1,0 +1,597 @@
+{
+ "baseline": "9b663f9f10212619f27ce67ce82f602347065cbd",
+ "head": "b779bd3",
+ "files": [
+  {
+   "path": "tests/test_analysis.py",
+   "kind": "python",
+   "now": "tests/test_analysis.py",
+   "status": "same tests",
+   "kept": 11,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_api_contracts.py",
+   "kind": "python",
+   "now": "tests/test_api_contracts.py",
+   "status": "same tests",
+   "kept": 57,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_arrange.py",
+   "kind": "python",
+   "now": "tests/test_arrange.py",
+   "status": "same tests",
+   "kept": 91,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_audio.py",
+   "kind": "python",
+   "now": "tests/test_audio.py",
+   "status": "same tests",
+   "kept": 2,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_ci_sharding.py",
+   "kind": "python",
+   "now": "tests/test_ci_sharding.py",
+   "status": "same tests",
+   "kept": 2,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_dev_script.py",
+   "kind": "python",
+   "now": "tests/test_dev_script.py",
+   "status": "same tests",
+   "kept": 6,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_discovery_search.py",
+   "kind": "python",
+   "now": "tests/test_discovery_search.py",
+   "status": "same tests",
+   "kept": 12,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_discovery_sequence.py",
+   "kind": "python",
+   "now": "tests/test_discovery_sequence.py",
+   "status": "same tests",
+   "kept": 2,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_drafts.py",
+   "kind": "python",
+   "now": "tests/test_drafts.py",
+   "status": "same tests",
+   "kept": 81,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_eta.py",
+   "kind": "python",
+   "now": "tests/test_eta.py",
+   "status": "same tests",
+   "kept": 75,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_file_length.py",
+   "kind": "python",
+   "now": "tests/test_file_length.py",
+   "status": "same tests",
+   "kept": 3,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_first_reel_lessons.py",
+   "kind": "python",
+   "now": "tests/test_first_reel_lessons.py",
+   "status": "same tests",
+   "kept": 15,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_hearing.py",
+   "kind": "python",
+   "now": "tests/test_hearing.py",
+   "status": "same tests",
+   "kept": 13,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_homes.py",
+   "kind": "python",
+   "now": "tests/test_homes.py",
+   "status": "same tests",
+   "kept": 11,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_intertwine.py",
+   "kind": "python",
+   "now": "tests/test_intertwine.py",
+   "status": "same tests",
+   "kept": 8,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_library_edges.py",
+   "kind": "python",
+   "now": "tests/test_library_edges.py",
+   "status": "same tests",
+   "kept": 8,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_listening.py",
+   "kind": "python",
+   "now": "tests/test_listening.py",
+   "status": "same tests",
+   "kept": 5,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_lyrics.py",
+   "kind": "python",
+   "now": "tests/test_lyrics.py",
+   "status": "same tests",
+   "kept": 1,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_lyrics_align.py",
+   "kind": "python",
+   "now": "tests/test_lyrics_align.py",
+   "status": "same tests",
+   "kept": 2,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_mix.py",
+   "kind": "python",
+   "now": "tests/test_mix.py",
+   "status": "same tests",
+   "kept": 46,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_mix_mixes.py",
+   "kind": "python",
+   "now": "tests/test_mix_mixes.py",
+   "status": "same tests",
+   "kept": 45,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_mix_render.py",
+   "kind": "python",
+   "now": "tests/test_mix_render.py",
+   "status": "same tests",
+   "kept": 40,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_product.py",
+   "kind": "python",
+   "now": "tests/test_product.py",
+   "status": "same tests",
+   "kept": 14,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_recovery.py",
+   "kind": "python",
+   "now": "tests/test_recovery.py",
+   "status": "same tests",
+   "kept": 1,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_reel.py",
+   "kind": "python",
+   "now": "tests/test_reel.py",
+   "status": "same tests",
+   "kept": 3,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_render.py",
+   "kind": "python",
+   "now": "tests/test_render.py",
+   "status": "same tests",
+   "kept": 25,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_request_planner.py",
+   "kind": "python",
+   "now": "tests/test_request_planner.py",
+   "status": "same tests",
+   "kept": 10,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_request_routes.py",
+   "kind": "python",
+   "now": "tests/test_request_routes.py",
+   "status": "same tests",
+   "kept": 62,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_requests.py",
+   "kind": "python",
+   "now": "tests/test_requests.py",
+   "status": "same tests",
+   "kept": 15,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_requests_together.py",
+   "kind": "python",
+   "now": "tests/test_requests_together.py",
+   "status": "same tests",
+   "kept": 56,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_room_to_play.py",
+   "kind": "python",
+   "now": "tests/test_room_to_play.py",
+   "status": "same tests",
+   "kept": 33,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_scan.py",
+   "kind": "python",
+   "now": "tests/test_scan.py",
+   "status": "same tests",
+   "kept": 27,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_seam_correction_locks.py",
+   "kind": "python",
+   "now": "tests/test_seam_correction_locks.py",
+   "status": "same tests",
+   "kept": 2,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_selecta3_changes.py",
+   "kind": "python",
+   "now": "tests/test_selecta3_changes.py",
+   "status": "same tests",
+   "kept": 5,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_setmix.py",
+   "kind": "python",
+   "now": "tests/test_setmix.py",
+   "status": "same tests",
+   "kept": 2,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_spare_time.py",
+   "kind": "python",
+   "now": "tests/test_spare_time.py",
+   "status": "same tests",
+   "kept": 24,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_stem_windows.py",
+   "kind": "python",
+   "now": "tests/test_stem_windows.py",
+   "status": "same tests",
+   "kept": 14,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_studio.py",
+   "kind": "python",
+   "now": "tests/test_studio.py",
+   "status": "same tests",
+   "kept": 35,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_upgrade.py",
+   "kind": "python",
+   "now": "tests/test_upgrade.py",
+   "status": "same tests",
+   "kept": 3,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "tests/test_wordplay.py",
+   "kind": "python",
+   "now": "tests/test_wordplay.py",
+   "status": "same tests",
+   "kept": 51,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/bench/scale.bench.ts",
+   "kind": "bench",
+   "now": "web/bench/scale.bench.ts",
+   "status": "same tests",
+   "kept": 1,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/e2e/finishing.e2e.ts",
+   "kind": "browser",
+   "now": "web/e2e/finishing.e2e.ts",
+   "status": "tests not found",
+   "kept": 20,
+   "moved": {},
+   "not_found": [
+    "a chosen theme is there from the first paint, before any of the app has run"
+   ]
+  },
+  {
+   "path": "web/e2e/flows.e2e.ts",
+   "kind": "browser",
+   "now": "web/e2e/flows.e2e.ts",
+   "status": "same tests",
+   "kept": 17,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/e2e/integration.e2e.ts",
+   "kind": "browser",
+   "now": "web/e2e/integration.e2e.ts",
+   "status": "same tests",
+   "kept": 7,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/e2e/listen.e2e.ts",
+   "kind": "browser",
+   "now": "web/e2e/listen.e2e.ts",
+   "status": "same tests",
+   "kept": 17,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/e2e/pages.e2e.ts",
+   "kind": "browser",
+   "now": "web/e2e/pages.e2e.ts",
+   "status": "same tests",
+   "kept": 12,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/e2e/visual.e2e.ts",
+   "kind": "browser",
+   "now": "web/e2e/visual.e2e.ts",
+   "status": "same tests",
+   "kept": 1,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/src/App.test.tsx",
+   "kind": "web unit",
+   "now": "web/src/App.test.tsx",
+   "status": "same tests",
+   "kept": 11,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/src/audio/focus.test.tsx",
+   "kind": "web unit",
+   "now": "web/src/audio/focus.test.tsx",
+   "status": "same tests",
+   "kept": 10,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/src/lib.test.ts",
+   "kind": "web unit",
+   "now": "web/src/lib.test.ts",
+   "status": "same tests",
+   "kept": 24,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/src/player.test.ts",
+   "kind": "web unit",
+   "now": "web/src/player.test.ts",
+   "status": "same tests",
+   "kept": 24,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/src/router.test.tsx",
+   "kind": "web unit",
+   "now": "web/src/router.test.tsx",
+   "status": "same tests",
+   "kept": 6,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/src/shell/Shell.test.tsx",
+   "kind": "web unit",
+   "now": "web/src/shell/Shell.test.tsx",
+   "status": "same tests",
+   "kept": 18,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/src/ui/controls.test.tsx",
+   "kind": "web unit",
+   "now": "web/src/ui/controls.test.tsx",
+   "status": "same tests",
+   "kept": 28,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/src/views/Drafts.test.tsx",
+   "kind": "web unit",
+   "now": "web/src/views/Drafts.test.tsx",
+   "status": "tests not found",
+   "kept": 18,
+   "moved": {},
+   "not_found": [
+    "deleting asks nothing, and can be undone"
+   ]
+  },
+  {
+   "path": "web/src/views/Library.test.tsx",
+   "kind": "web unit",
+   "now": "web/src/views/Library.test.tsx",
+   "status": "same tests",
+   "kept": 18,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/src/views/Links.test.tsx",
+   "kind": "web unit",
+   "now": "web/src/views/Links.test.tsx",
+   "status": "same tests",
+   "kept": 22,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/src/views/Listening.test.tsx",
+   "kind": "web unit",
+   "now": "web/src/views/Listening.test.tsx",
+   "status": "same tests",
+   "kept": 5,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/src/views/Mix.test.tsx",
+   "kind": "web unit",
+   "now": "web/src/views/Mix.test.tsx",
+   "status": "same tests",
+   "kept": 49,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/src/views/Mixes.test.tsx",
+   "kind": "web unit",
+   "now": "web/src/views/Mixes.test.tsx",
+   "status": "same tests",
+   "kept": 16,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/src/views/Now.test.tsx",
+   "kind": "web unit",
+   "now": "web/src/views/Now.test.tsx",
+   "status": "same tests",
+   "kept": 6,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/src/views/Requests.test.tsx",
+   "kind": "web unit",
+   "now": "web/src/views/Requests.test.tsx",
+   "status": "same tests",
+   "kept": 51,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/src/views/RequestsJoining.test.tsx",
+   "kind": "web unit",
+   "now": "web/src/views/RequestsJoining.test.tsx",
+   "status": "tests not found",
+   "kept": 48,
+   "moved": {},
+   "not_found": [
+    "says when it\u2019s joining"
+   ]
+  },
+  {
+   "path": "web/src/views/Studio.test.tsx",
+   "kind": "web unit",
+   "now": "web/src/views/Studio.test.tsx",
+   "status": "same tests",
+   "kept": 25,
+   "moved": {},
+   "not_found": []
+  },
+  {
+   "path": "web/src/views/Workshop.test.tsx",
+   "kind": "web unit",
+   "now": "web/src/views/Workshop.test.tsx",
+   "status": "same tests",
+   "kept": 11,
+   "moved": {},
+   "not_found": []
+  }
+ ]
+}

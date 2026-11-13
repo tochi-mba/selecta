@@ -24,6 +24,16 @@ TARGET_LUFS = -14.0
 PEAK_CEILING_DB = -1.0
 VOCAL_MARGIN = 0.25
 HOOK_LEAD_BARS = (4, 8, 16)
+# r8d: what a SongInfo is built from. The raw beats and the waveform stay in the file unread.
+SONG_ARRAYS = (
+    "beats",
+    "bar_starts",
+    "energy_bars",
+    "low_share_bars",
+    "chroma_bars",
+    "rms_db_bars",
+    "mfcc_bars",
+)
 
 Family = Literal["hiphop", "rnb", "dance", "afro", "latin", "rock", "pop", "other"]
 
@@ -342,7 +352,7 @@ def load_song(conn: sqlite3.Connection, settings: Settings, song_id: int) -> Son
     ).fetchone()
     if row is None:
         raise KeyError(f"song {song_id} hasn't been analysed")
-    features = dict(load_features(settings, song_id))
+    features = dict(load_features(settings, song_id, SONG_ARRAYS))
     lyric = conn.execute("SELECT * FROM lyrics WHERE song_id = ?", (song_id,)).fetchone()
     corrected = conn.execute(
         "SELECT bpm, camelot FROM song_overrides WHERE song_id = ?", (song_id,)

@@ -118,6 +118,17 @@ describe('coming back from Checkout', () => {
     expect(result.current).toBe('slow');
   });
 
+  it('still confirms when the plan arrives after it said the payment was slow', async () => {
+    vi.useFakeTimers();
+    window.history.replaceState({}, '', '/account/billing?checkout=success');
+    const { result, rerender } = renderHook(({ account }) => useCheckoutReturn(account, async () => {}, { everyMs: 10, tries: 3 }), { initialProps: { account: cloudAccount() } });
+    await act(async () => { vi.advanceTimersByTime(100); });
+    expect(result.current).toBe('slow');
+    rerender({ account: cloudAccount({ plan: 'premium' }) });
+    expect(result.current).toBe('confirmed');
+    expect(window.location.search).toBe('');
+  });
+
   it('says a cancelled checkout changed nothing', () => {
     window.history.replaceState({}, '', '/account/billing?checkout=cancelled');
     const { result } = renderHook(() => useCheckoutReturn(cloudAccount(), async () => {}));

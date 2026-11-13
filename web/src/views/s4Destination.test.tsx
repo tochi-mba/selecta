@@ -11,7 +11,7 @@ import { Mixes } from './Mixes';
  * than a promise.
  */
 const card: VibeCard = {
-  key: 'pick', name: 'Selecta’s pick', group: '', family: null, blurb: 'words', songs: 40, ready: true, needs: 0,
+  key: 'pick', name: 'SelectaDJ’s pick', group: '', family: null, blurb: 'words', songs: 40, ready: true, needs: 0,
   artists: ['Someone'], tempo: [100, 124], moves: 'Long blends', seconds: 3900,
 };
 const row = (id: number, title: string, artist: string) => ({

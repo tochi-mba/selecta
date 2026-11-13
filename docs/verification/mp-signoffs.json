@@ -1,0 +1,4 @@
+{
+  "$comment": "Human sign-offs for MP person steps, kept apart from anything a test generates. Only a person adds records. Each record: task (an id in mp-session-kit.json), person (a real name, not an agent or tool), role, date (YYYY-MM-DD), commit (40 hex characters), outcome (pass, fail, accept, reject, GO or NO-GO), notes. Validated by python -m selecta.audit.mp_session_kit --check.",
+  "records": []
+}

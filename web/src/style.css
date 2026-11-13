@@ -106,7 +106,7 @@ legend { padding: 0; margin-bottom: var(--space-2); font-weight: 600; }
 .playhead, .seam-mark { position: absolute; top: 0; height: 68px; width: 2px; }
 .playhead { background: var(--ink); }
 .seam-mark { background: var(--playing); width: 3px; }
-.seam-mark::after { content: 'seam'; position: absolute; top: -16px; left: -12px; font: 0.68rem var(--mono); color: var(--playing); }
+.seam-mark::after { content: 'seam'; position: absolute; top: -16px; left: -12px; font: 0.68rem var(--mono); color: var(--playing); white-space: nowrap; }
 .lyrics { min-height: 7.5em; margin: var(--space-2) 0 var(--space-5); }
 .lyrics p { margin: 0 0 var(--space-dense); transition: color var(--motion-reveal) var(--motion-ease); }
 .lyrics .sung { font: 800 clamp(1.4rem, 4.4vw, 2.5rem) / 1.12 var(--display); letter-spacing: -0.02em; }
@@ -176,11 +176,13 @@ legend { padding: 0; margin-bottom: var(--space-2); font-weight: 600; }
 .seam-visual-bars { display: flex; gap: var(--grid-beat-gap); height: 17px; }
 .seam-visual-bars i { flex: 1 1 0; border-radius: var(--radius-hair); background: var(--motif); opacity: 0.48; }
 .seam-visual.ready .seam-visual-bars i { background: var(--ok); opacity: 0.72; }
-.seam-visual-caption { display: flex; align-items: center; gap: var(--space-dense); min-width: 0; font-size: 0.72rem; }
+.seam-visual-caption { display: flex; align-items: center; gap: var(--space-dense); min-width: 0; font-size: var(--text-xs); }
 .seam-visual-caption b { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); font-weight: 500; }
 .seam-visual-caption span { color: var(--motif); }
 .song-actions button { padding: var(--space-1) var(--space-snug); min-height: 34px; font-size: 0.86rem; }
-@media (max-width: 620px) {
+/* Up to tablet width the side rail leaves too little room for the title beside the actions, so the
+   actions take their own line under the song (found in the 2026-11-12 768px editor review). */
+@media (max-width: 1024px) {
   .song { grid-template-columns: auto auto minmax(0, 1fr); grid-template-areas: 'grip count name' 'grip count facts' 'actions actions actions'; }
   .song-actions { justify-content: flex-start; margin-top: var(--space-2); }
 }
@@ -312,6 +314,7 @@ legend { padding: 0; margin-bottom: var(--space-2); font-weight: 600; }
 .destination-results button { width: 100%; text-align: left; }
 .destination-selected { justify-content: space-between; align-items: center; }
 @media (max-width: 520px) { .mix-steering, .destination-control { grid-template-columns: 1fr; } .mix-steering .hint, .destination-control > .hint, .destination-selected, .destination-results { grid-column: auto; } .energy-arc-stops { grid-template-columns: 1fr; gap: var(--space-dense); } .energy-arc-stops label { grid-template-columns: 56px 1fr; align-items: center; } }
+:where(main p) { max-width: 100ch; } /* UF-0387-06: paragraphs keep a readable measure on wide screens; any class wins */
 .waiting ul { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-dense) var(--space-4); font-size: 0.92rem; }
 .nudge {
   margin-top: var(--space-6);

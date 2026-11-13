@@ -21,6 +21,23 @@ def test_the_registry_has_no_problems():
     assert flags.problems() == []
 
 
+
+def test_business_schedule_and_offline_routes_have_distinct_disabled_rollout_flags():
+    registry = flags.registry()
+    owners = flags.route_owners()
+    for flag_id, dependency in (
+        ("business.schedules", "business.orgs"),
+        ("business.offline", "business.schedules"),
+    ):
+        flag = registry[flag_id]
+        assert flag.default is False
+        assert flag.requires == (dependency,)
+        assert flag.routes
+        assert all(owners[route] == flag_id for route in flag.routes)
+    assert owners["GET /api/business/venues/{venue_id}/hours"] == "business.schedules"
+    assert owners["GET /api/business/zones/{zone_id}/offline-manifest"] == "business.offline"
+
+
 def test_every_core_flag_says_why_it_cant_be_turned_off():
     core = [flag for flag in flags.registry().values() if flag.core]
     assert core and all(len(flag.core) > 10 for flag in core)
@@ -74,7 +91,12 @@ def test_the_catalog_in_docs_is_up_to_date():
 
 
 def test_nothing_set_means_every_flag_is_on():
-    assert all(state.on for state in flags.resolve("").values())
+    """Except a flag the registry marks off by default (`"default": false`), which stays off."""
+    registry = flags.registry()
+    states = flags.resolve("")
+    assert all(state.on for flag_id, state in states.items() if registry[flag_id].default)
+    off = [flag_id for flag_id, state in states.items() if not state.on]
+    assert all(states[flag_id].why == "off by default" for flag_id in off)
 
 
 def test_turning_one_off_turns_off_what_needs_it():

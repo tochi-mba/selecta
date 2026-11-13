@@ -1,7 +1,7 @@
 # ADR-0132 - Responsive compositions, WCAG 2.2 AA and purposeful motion
 
 - **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation:** 4/5 Implemented; 1 Not started (2026-11-10).
+- **Implementation:** 5/5 Implemented (2026-11-12; EX-0132-05 code part only).
 - **Verification:** No (0/5 tasks independently Verified).
 - **Programme/date/baseline:** Experience-first UI/UX; 2026-11-07; `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e`, after merged PR #29.
 - **Priority / phase:** P0 / Quality.
@@ -34,7 +34,7 @@ One stacked layout for everything can destroy useful expert context; desktop-onl
 2. **EX-0132-02 - Ensure non-drag equivalents**. Acceptance: Reorder and grid changes possible without drag. Required verification: WCAG 2.5.7 pointer/keyboard checks. **Implementation: Implemented; Verified: Yes (2026-11-10).** Evidence: `web/src/views/Mix.test.tsx`, `Drafts.test.tsx`, `gp-0261-studio.test.tsx`.
 3. **EX-0132-03 - Audit composite ARIA behavior**. Acceptance: Focus, navigation and naming correct for all widgets. Required verification: APG pattern testing and NVDA. **Implementation: Implemented; Verified: No. Needs a person: APG pattern testing and NVDA.**
 4. **EX-0132-04 - Specify reduced-motion fidelity**. Acceptance: Same task feedback without decorative animation. Required verification: OS preference and performance tests. **Implementation: Implemented; Verified: No.** Open: `web/e2e/mp-0296-motion.e2e.ts` needs a green rerun.
-5. **EX-0132-05 - Conduct named human AT acceptance**. Acceptance: Essential listener/creator/expert tasks completed accessibly. Required verification: Recorded NVDA/Edge and available AT sessions. **Implementation: Not started; Verified: No. Needs a person: recorded NVDA/Edge sessions.**
+5. **EX-0132-05 - Conduct named human AT acceptance**. Acceptance: Essential listener/creator/expert tasks completed accessibly. Required verification: Recorded NVDA/Edge and available AT sessions. **Implementation: Implemented (2026-11-12; code part); Verified: No. Evidence: session script in Sitting 2 of `docs/verification/owner-runbook.md`; automated precursors are EX-0132-01 to EX-0132-04. Needs a person: recorded NVDA/Edge (and any available AT) sessions completing the essential listener, creator and expert tasks**
 
 ## Verification and sources
 

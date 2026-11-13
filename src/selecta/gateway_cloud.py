@@ -16,7 +16,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from selecta.admin.state import DbWorkControls
 from selecta.billing.plans import validate_catalogue
 from selecta.flags.rules import RulesCache
-from selecta.observability import metrics, tracing
+from selecta.observability import errors, metrics, tracing
 from selecta.persistence import make_engine
 from selecta.persistence.listen import PgListener
 from selecta.persistence.migrate import current as migration_current
@@ -72,11 +72,14 @@ def create_gateway_app(*, engine: Engine | None = None) -> FastAPI:
         if owns_engine:
             engine.dispose()
 
-    app = FastAPI(title="Selecta Worker Gateway", docs_url=None, redoc_url=None, lifespan=lifespan)
+    app = FastAPI(
+        title="SelectaDJ Worker Gateway", docs_url=None, redoc_url=None, lifespan=lifespan
+    )
     app.state.database_engine = engine
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(allowed_hosts))
     tracing.install(app, "gateway")
     tracing.configure_from_environment("gateway")
+    errors.configure_from_environment("gateway")
     metrics.configure_from_environment("gateway")
     app.state.flag_rules = rules
     store = JobStore(

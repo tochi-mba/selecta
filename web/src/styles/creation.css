@@ -26,6 +26,8 @@
 .editor-scope.is-draft { box-shadow: inset var(--marker) 0 0 var(--status-request); }
 .scope-badge { font-weight: 700; }
 .scope-words { color: var(--text-soft); overflow-wrap: anywhere; }
+/* S31-0083-09: a song name with no spaces wraps inside the export dialog instead of running off its edge */
+.export-ends b { overflow-wrap: anywhere; }
 .scope-revision { font: var(--type-counter); color: var(--text-soft); }
 /* MP-0287-07: Story, Arrange or Detail, named in the pinned bar beside current or draft */
 .scope-view { font-weight: 600; color: var(--text); }
@@ -125,6 +127,8 @@
 .timeline .add-gap button:hover, .timeline .add-gap button:focus-visible { color: var(--text); border-color: var(--border-strong); }
 @media (pointer: coarse) {
   .timeline .add-gap button { min-height: 44px; }
+  /* S4-0094-02: a song's name is a 44px target on a touch screen; a mouse keeps the 30px line */
+  .timeline .song-select { min-height: 44px; display: flex; align-items: center; gap: var(--space-1); }
 }
 
 /* A long mix skips drawing what's far off screen. An open menu has to be able to leave its row, so that
@@ -135,7 +139,7 @@
 .timeline.long > .song:has(.menu button[aria-expanded='true']), .timeline.long > .song:focus-within { content-visibility: visible; }
 .timeline .song:has(.menu button[aria-expanded='true']) { position: relative; z-index: calc(var(--layer-sticky) - 1); }
 
-@media (max-width: 620px) {
+@media (max-width: 1024px) {
   .timeline .song { grid-template-columns: var(--control-height) auto minmax(0, 1fr); }
 }
 
@@ -225,6 +229,8 @@
 .studio-ruler { position: sticky; top: 0; z-index: 3; background: var(--surface-raised); padding-block: var(--space-hair); }
 .studio-lane.studio-ruler .studio-name { position: sticky; left: 0; z-index: 4; display: block; min-height: 0; padding: var(--space-hair); background: var(--surface-raised); }
 .studio-ruler span.now { color: var(--text); font-weight: 700; text-decoration: underline; }
+/* S4-0102-03: the song group is as wide as its lanes, so its pinned name can follow the whole scroll */
+.studio-side { width: max-content; min-width: 100%; }
 .studio-side-name { position: sticky; left: 0; width: fit-content; max-width: min(100%, 70vw); }
 .studio-side-name h4 { white-space: normal; overflow-wrap: anywhere; margin: var(--space-2) 0 var(--space-1); unicode-bidi: plaintext; position: static; }
 .studio-side-name [role='gridcell'] { display: block; }

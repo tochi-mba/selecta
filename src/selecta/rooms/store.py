@@ -78,6 +78,9 @@ class RoomContext:
     speakers: SpeakerPort
     now_playing: NowPlayingPort = field(default_factory=NothingPlaying)
     events: RoomEventsPort = field(default_factory=NoRoomEvents)
+    # When this app instance came up. A guest or screen counts as here only after checking in
+    # since then, so the first look after a server restart never shows stale connections.
+    started_at: float | None = None
 
     def __post_init__(self) -> None:
         codes.check_pepper(self.pepper)

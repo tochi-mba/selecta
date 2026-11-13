@@ -36,9 +36,16 @@ describe('S3-0072-08 nothing the page ships reaches past this computer', () => {
     const local = Object.entries(sources).filter(([file]) => !/^\.\/(cloud|rooms|admin)\//.test(file));
     const calls = local.flatMap(([file, text]) =>
       [...text.matchAll(/\b(?:fetch|new EventSource|navigator\.sendBeacon)\(\s*([`'"])([^`'"]*)/g)].map((match) => ({ file, start: match[2] })));
-    expect(calls.length).toBeGreaterThan(8);
+    // T0068 moved the raw byte fetches (audio, seam clips, backups, listening events) behind api.ts's
+    // fetchBytes, which prefixes /api itself, so its callers must pass a rooted path
+    const viaHelper = local.flatMap(([file, text]) =>
+      [...text.matchAll(/\bfetchBytes\(\s*([`'"])([^`'"]*)/g)].map((match) => ({ file, start: match[2] })));
+    expect(calls.length + viaHelper.length).toBeGreaterThan(8);
+    expect(viaHelper.length).toBeGreaterThan(2);
+    expect(/fetchBytes = \(path: string, init\?: RequestInit\): Promise<Response> =>\s*init \? fetch\(`\/api\$\{path\}`, init\) : fetch\(`\/api\$\{path\}`\)/.test(local.find(([file]) => file === './api.ts')?.[1] ?? '')).toBe(true);
     const offsite = calls.filter(({ start }) => start !== '' && !start.startsWith('/') && !start.startsWith('${apiOrigin}'));
     expect(offsite).toEqual([]);
+    expect(viaHelper.filter(({ start }) => !start.startsWith('/'))).toEqual([]);
     // where an origin prefix is used, it defaults to this page's own origin unless a build sets it
     for (const [file, text] of local) {
       if (/\$\{apiOrigin\}/.test(text)) expect(text, file).toMatch(/apiOrigin = \(import\.meta\.env\.VITE_SELECTA_API_ORIGIN \?\? ''\)/);

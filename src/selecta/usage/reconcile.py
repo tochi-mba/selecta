@@ -29,6 +29,7 @@ from sqlalchemy.engine import Connection
 from selecta.storage.schema import assets
 from selecta.usage.ledger import Kind, day_bounds
 from selecta.usage.schema import quota_state, usage_daily, usage_ledger
+from selecta.work.schema import artifacts
 
 TOLERANCE = 1e-6
 
@@ -98,8 +99,10 @@ def rollup_drift(
         start, end = day_bounds(day)
         query = (
             sa.select(
-                usage_ledger.c.workspace_id, usage_ledger.c.kind,
-                sa.func.sum(usage_ledger.c.amount), sa.func.count(),
+                usage_ledger.c.workspace_id,
+                usage_ledger.c.kind,
+                sa.func.sum(usage_ledger.c.amount),
+                sa.func.count(),
             )
             .where(usage_ledger.c.occurred_at >= start, usage_ledger.c.occurred_at < end)
             .group_by(usage_ledger.c.workspace_id, usage_ledger.c.kind)
@@ -120,17 +123,42 @@ def rollup_drift(
             workspace, kind = key
             want, have = truth.get(key), stored.get(key)
             if have is None:
-                found.append(Drift("rollup", workspace, f"no {kind} rollup for ledger entries",
-                                   want[0], 0.0, day, kind))
+                found.append(
+                    Drift(
+                        "rollup",
+                        workspace,
+                        f"no {kind} rollup for ledger entries",
+                        want[0],
+                        0.0,
+                        day,
+                        kind,
+                    )
+                )
             elif want is None:
-                found.append(Drift("rollup", workspace, f"{kind} rollup has no ledger entries",
-                                   0.0, have[0], day, kind))
+                found.append(
+                    Drift(
+                        "rollup",
+                        workspace,
+                        f"{kind} rollup has no ledger entries",
+                        0.0,
+                        have[0],
+                        day,
+                        kind,
+                    )
+                )
             elif _differs(want[0], have[0]) or want[1] != have[1]:
-                found.append(Drift(
-                    "rollup", workspace,
-                    f"{kind} rollup is {have[0]:g} from {have[1]} entries; the ledger says "
-                    f"{want[0]:g} from {want[1]}", want[0], have[0], day, kind,
-                ))
+                found.append(
+                    Drift(
+                        "rollup",
+                        workspace,
+                        f"{kind} rollup is {have[0]:g} from {have[1]} entries; the ledger says "
+                        f"{want[0]:g} from {want[1]}",
+                        want[0],
+                        have[0],
+                        day,
+                        kind,
+                    )
+                )
         day += dt.timedelta(days=1)
     return found
 
@@ -147,16 +175,25 @@ def storage_drift(connection: Connection, workspace_id: str | None = None) -> li
         .where(assets.c.deleted_at.is_(None))
         .group_by(assets.c.workspace_id)
     )
+    # Kept exports count against storage too (ADR-0402), charged when they're written.
+    exports_q = (
+        sa.select(artifacts.c.workspace_id, sa.func.sum(artifacts.c.size_bytes))
+        .where(artifacts.c.kind == "export")
+        .group_by(artifacts.c.workspace_id)
+    )
     quota_q = sa.select(quota_state.c.workspace_id, quota_state.c.committed_bytes)
     if workspace_id is not None:
         ledger_q = ledger_q.where(usage_ledger.c.workspace_id == workspace_id)
         kept_q = kept_q.where(assets.c.workspace_id == workspace_id)
+        exports_q = exports_q.where(artifacts.c.workspace_id == workspace_id)
         quota_q = quota_q.where(quota_state.c.workspace_id == workspace_id)
     numbers: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
     for workspace, total in connection.execute(ledger_q):
         numbers[workspace]["ledger"] = float(total or 0)
     for workspace, total in connection.execute(kept_q):
         numbers[workspace]["kept"] = float(total or 0)
+    for workspace, total in connection.execute(exports_q):
+        numbers[workspace]["kept"] += float(total or 0)
     for workspace, committed in connection.execute(quota_q):
         numbers[workspace]["committed"] = float(committed)
     found: list[Drift] = []
@@ -165,17 +202,26 @@ def storage_drift(connection: Connection, workspace_id: str | None = None) -> li
         committed = numbers[workspace]["committed"]
         kept = numbers[workspace]["kept"]
         if _differs(ledger_bytes, committed):
-            found.append(Drift(
-                "storage", workspace,
-                f"the ledger records {ledger_bytes:.0f} bytes but {committed:.0f} are committed",
-                ledger_bytes, committed,
-            ))
+            found.append(
+                Drift(
+                    "storage",
+                    workspace,
+                    f"the ledger records {ledger_bytes:.0f} bytes but "
+                    f"{committed:.0f} are committed",
+                    ledger_bytes,
+                    committed,
+                )
+            )
         if _differs(committed, kept):
-            found.append(Drift(
-                "inventory", workspace,
-                f"{committed:.0f} bytes are committed but the kept originals are {kept:.0f}",
-                kept, committed,
-            ))
+            found.append(
+                Drift(
+                    "inventory",
+                    workspace,
+                    f"{committed:.0f} bytes are committed but the kept originals are {kept:.0f}",
+                    kept,
+                    committed,
+                )
+            )
     return found
 
 

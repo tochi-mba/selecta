@@ -85,6 +85,33 @@ Each width writes `paired-manifest-<w>x<h>.json` with: `status`
 and per image the fixture ID, path, theme, size and a SHA-256 of the accessible control semantics.
 It holds no file paths, user names or song metadata from a real library.
 
+## Deterministic baseline candidates (polish P0132)
+
+`web/e2e/polish-p0132-baselines.e2e.ts` captures every `helpers.ts` PAGES route plus Library
+loading, empty, failed and recovered, in light and dark, at 375px and 1440px. Controls: the synthetic
+library and a reset current mix, the page clock fixed at `harness.ts` `FIXED_NOW`, reduced motion with
+`animations: 'disabled'` and a hidden caret, and no playback. Masks (each hides only live or
+audio-derived pixels): `canvas` (spectrum, waveform, visualizer), `time` and `.tabular-time`
+(elapsed/remaining times) and `.toast-stack` (job-timed notices). Each test writes
+`candidate-p0132-*.png` and a `p0132-manifest-*.json` with `status`
+`candidate-not-independently-verified`, the fixture, fixed time, motion and masks; CI uploads the
+images as `selecta-3-1-visual-review-*`. Nothing is a golden baseline until a named person approves the
+set here with name, date, device and exact SHA and commits it (P0133 reviews the differences).
+
+## Coverage map of every state (S3-0075-01)
+
+`docs/adr/s3-0075-coverage-map.json` lists all 215 states of the 49 surfaces in
+`docs/adr/mp-0272-surface-inventory.json`. Each state names the candidates that capture it (spec and
+file pattern) or the written reason none does yet: `in-flight` (refreshing and saving, which need a
+held-request driver), `needs-driver`, or `outside-route-tree`. `web/src/shell/s3CoverageMap.test.ts`
+holds it to the inventory and the specs. The candidates come from the P0132 approach: P0132 itself,
+`fp-0271-paired-states.e2e.ts`, `s3-0075-visual-regression.e2e.ts` (overlays), the new
+`s3-0075-01-state-candidates.e2e.ts` (connection lost over every route that has that state, plus the
+draft, Lucy and missing-address pages), and `mp-baseline.mp.ts` with `MP_CANDIDATES=1`, which saves
+a screenshot of every measured surface, fixture and viewport into `web/mp-data/mp-0272-candidates/`
+and lists them in each fixture's JSON. None of them uses `toHaveScreenshot`, and a person still
+approves the baselines.
+
 ## Semantic parity
 
 For every fixture the dark capture's control semantics (role, label, pressed, selected, checked,

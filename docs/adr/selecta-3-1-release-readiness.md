@@ -1,6 +1,6 @@
 # Selecta 3.1 - release readiness and known evidence gaps
 
-**Disposition: NOT READY / NO-GO (as of 2026-11-07).** This is a candidate report template for unmerged [PR #25](https://github.com/tochi-mba/selecta/pull/25), **not** release approval or confirmation of a complete implementation.
+**Disposition: NOT READY / NO-GO (as of 2026-11-12; first written 2026-11-07).** Task state: 96 of 116 Implemented with automated evidence, 1 In progress, 19 need a person, 0 Verified. This is a candidate report for [PR #25](https://github.com/tochi-mba/selecta/pull/25) (since merged as `6d78cf4`) and later work, **not** release approval or confirmation of a complete implementation.
 
 ## Build and scope
 
@@ -29,8 +29,8 @@
 - **No human study or assistive-technology review** has been performed in this PR; source inspection, axe checks and screenshots cannot substitute.
 - Synthetic screenshots are *candidate* artifacts, not approved baselines or evidence that the interface works for real content, unreadable metadata or failed states.
 - Background audio, actual transitions and FLAC require real media tests and audible evaluation. CI's muted Edge runner is valuable for behaviour, **not** perceived sound quality.
-- The existing 3.0 task ledger contains historical status statements that predate PR #24's merge; the 258-item reconciliation is still incomplete. Do not infer 3.1 verification.
-- Some ADRs remain **Proposed**, all 116 S31 tasks are unchecked, and the P0/P1 defect register plus 20k/100-song scale are not signed off.
+- The existing 3.0 task ledger contains historical status statements that predate PR #24's merge; the 258-item reconciliation was done item by item on 2026-11-10 to 2026-11-12 (221 ticked with automated evidence, 0 Verified). Do not infer 3.1 verification.
+- All 11 ADRs are Accepted, but all 116 S31 tasks are unchecked (none independently Verified; 19 need a person), and the P0/P1 defect register plus 20k/100-song scale are not signed off.
 - A green Web build or even green aggregate CI never independently satisfies human release acceptance. The PR must remain unmerged until the owner reviews all applicable evidence.
 
 ## Decision record

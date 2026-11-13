@@ -1,5 +1,5 @@
 import { flagOn } from '../flags';
-import { DragEvent, FormEvent, KeyboardEvent, PointerEvent, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { DragEvent, FormEvent, KeyboardEvent, memo, PointerEvent, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, del, DraftList, MixData, MixItem, post, Suggestion } from '../api';
 import { etaRangeWords, runningTime } from '../lib';
 import { mixReadiness, occurrenceKeys, orderOf } from '../state/readiness';
@@ -18,7 +18,8 @@ import { ExportPanel } from './ExportPanel';
 import { MixScope, useMixPath } from './mixScope';
 import { ComingSongs } from './Requests';
 import { InspectorTab, SeamInspector } from './SeamInspector';
-import { draftShown, movedLocally } from './optimisticMove';
+import { draftShown, movedLocally, MoveQueue } from './optimisticMove';
+import { sameApartFromClock } from './clockMemo';
 import { ViewProps } from './shared';
 
 /** A transition is known by the two songs it's between, and a song by which time it appears in the mix,
@@ -86,7 +87,7 @@ function FragmentRow({ children }: { children: React.ReactNode }) {
 
 const seamKeyOf = (a: string, b: string) => `${a}>${b}`;
 
-export function Mix(props: ViewProps) {
+function MixView(props: ViewProps) {
   const { mix, mixName, refreshMix, setMixData, player, now, setView, notify, status, refreshStatus, mixEta, draftPlace, openDraft, closeDraft, playDraft, renamedDraft, canUndo, undo, currentMixName } = props;
   const draftId = useContext(MixScope);
   const inDraft = draftId !== null;
@@ -210,7 +211,7 @@ export function Mix(props: ViewProps) {
   };
 
   const readiness = useMemo(() => mixReadiness(mix), [mix]);
-  const total = runningTime(mix);
+  const total = useMemo(() => runningTime(mix), [mix]);
   const { ready, waiting, rendering, seams } = readiness;
 
   const selectedIndex = selected?.kind === 'seam' ? keys.findIndex((key, index) => index > 0 && key === selected.b && keys[index - 1] === selected.a) : -1;
@@ -384,31 +385,72 @@ export function Mix(props: ViewProps) {
     }
   };
 
+  // MI-0162-05: a draft shows each move at once and queues it behind any still on their way (see
+  // MoveQueue). Every request carries the order the server last confirmed, and a refusal puts the draft
+  // back as the server has it. The current mix waits for the server, because the player schedules its
+  // seams from it. One queue per draft, so a move never travels with another draft's order.
+  const draftMoves = useMemo(() => new MoveQueue(), [draftId]);
+  const draftNow = useRef<number | null | undefined>(draftId);
+  draftNow.current = draftId;
+  // The app opens each draft in a new editor (keyed by draft), so a closed editor's ref would still
+  // match its own draft. Once it is gone, its late answers must not reach the app's draft setter.
+  // Set again on mount, because StrictMode unmounts and remounts once without rendering in between.
+  useEffect(() => {
+    draftNow.current = draftId;
+    return () => { draftNow.current = undefined; };
+  }, [draftId]);
+  const moveInDraft = async (from: number, to: number, how: MoveHow, moved: MixItem, words: string, scope: number) => {
+    const rowKey = keys[from];
+    const shown = draftShown(mix, mixName, canUndo, scope, draftPlace, mixEta);
+    const path = at('/mix/move');
+    setMovingKey(rowKey);
+    if (how !== 'drag') focusAfter.current = { key: rowKey, how };
+    setMixData({ ...shown, mix: movedLocally(mix, from, to) });
+    announce(`Moved ${moved.title} to number ${to + 1} of ${mix.length}.`);
+    const result = await draftMoves.add(shown, (order) => post<MixData>(path, { source: from, target: to }, { 'x-mix-order': order }));
+    // another draft opened meanwhile: this answer is not about what's on screen
+    if (draftNow.current !== scope) return;
+    setDragOver(null);
+    setDragFrom(null);
+    if (result.last) setMovingKey(null);
+    if (result.kind === 'dropped') return;
+    if (result.kind === 'saved') {
+      // later moves are already on screen; the last answer is what the server has after all of them
+      if (result.last) {
+        setMixData(result.answer);
+        notify(words, true);
+      }
+      return;
+    }
+    if (how !== 'drag') focusAfter.current = { key: rowKey, how };
+    setMixData(result.restore);
+    announce(`${moved.title} couldn’t move, so the draft is back as it was saved.`);
+    const error = result.error;
+    if (how === 'up' || how === 'down') {
+      if (error instanceof ApiError && error.code === 'mix_changed') refreshMix();
+      throw error;
+    }
+    setProblem((error as Error).message);
+    refreshMix();
+  };
+
   const moveSong = async (from: number, to: number, how: MoveHow) => {
     const moved = mix[from];
     if (!moved || from === to || to < 0 || to >= mix.length) return;
+    const words = how === 'up' ? `Moved ${moved.title} up.` : how === 'down' ? `Moved ${moved.title} down.` : 'Moved that song.';
+    if (draftId !== null) return moveInDraft(from, to, how, moved, words, draftId);
     if (moving.current) {
       announce('A song is still moving. Try the next move when this one finishes.');
       return;
     }
     moving.current = true;
     setMovingKey(keys[from]);
-    const words = how === 'up' ? `Moved ${moved.title} up.` : how === 'down' ? `Moved ${moved.title} down.` : 'Moved that song.';
     if (how !== 'drag') focusAfter.current = { key: keys[from], how };
-    // MI-0162-05: a draft shows the move at once and keeps the server's answer when it comes. The request
-    // still carries the order the server knows (`guard`), and a refusal puts the draft back as it was.
-    // The current mix waits for the server, because the player schedules its seams from it.
-    const shownBefore = draftId !== null ? draftShown(mix, mixName, canUndo, draftId, draftPlace, mixEta) : null;
-    if (shownBefore) setMixData({ ...shownBefore, mix: movedLocally(mix, from, to) });
     try {
       await act(post<MixData>(at('/mix/move'), { source: from, target: to }, guard), words);
       announce(`Moved ${moved.title} to number ${to + 1} of ${mix.length}.`);
     } catch (error) {
       focusAfter.current = null;
-      if (shownBefore) {
-        if (how !== 'drag') focusAfter.current = { key: keys[from], how };
-        setMixData(shownBefore);
-      }
       if (how === 'up' || how === 'down') throw error;
       // the row goes back where it was, because nothing actually moved
       setProblem((error as Error).message);
@@ -643,7 +685,7 @@ export function Mix(props: ViewProps) {
     return (
       <main className="page" id="main">
         <h1 className="display small">Nothing here yet</h1>
-        <p className="lede">Start from one of Selecta’s mixes, or add songs yourself.</p>
+        <p className="lede">Start from one of SelectaDJ’s mixes, or add songs yourself.</p>
         <div className="row wrap">
           <button className="primary" onClick={() => setView('Mixes')}>See the mixes</button>
           <button onClick={() => setAdding('start')}>Add a song</button>
@@ -669,7 +711,8 @@ export function Mix(props: ViewProps) {
       autoPlay={hearNow}
       onClose={() => setSelected(null)}
       onListen={() => {
-        if (now.phase === 'playing') void player.togglePause();
+        // read live: the editor isn't redrawn for every tick of the clock (r8c)
+        if (player.state.phase === 'playing') void player.togglePause();
       }}
     />
   );
@@ -872,3 +915,7 @@ export function Mix(props: ViewProps) {
     </main>
   );
 }
+
+/** r8c: the editor shows which song is playing, never the time, so a tick of the music clock doesn't
+ * redraw a mix of a hundred songs. Only a change of song, or starting and stopping, does. */
+export const Mix = memo(MixView, sameApartFromClock<ViewProps>((now) => (now.phase === 'idle' ? -1 : now.position)));

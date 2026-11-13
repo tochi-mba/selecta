@@ -18,12 +18,16 @@ function clock(ms: number) {
 /** `remoteControl` off (the `devices.remote_control` flag): play, pause and skip are playback
  * commands, which the server then refuses, so they're gone; the bar still shows where the music
  * is and offers Play here, so each device plays on its own (docs/saas/11b-feature-flags.md). */
-export function PlayingBar({ api, workspaceId, source, songName, remoteControl = true }: { api: Api; workspaceId: string; source: (index: number) => Promise<string | null>; songName?: SongName; remoteControl?: boolean }) {
+/** `speakerFor` builds the speaker from the bar's element; the Cloud dock passes one that
+ * recovers from media failures (ADR-0419). Left out, it is the plain speaker, as before. */
+export function PlayingBar({ api, workspaceId, source, songName, remoteControl = true, speakerFor = audioSpeaker }: { api: Api; workspaceId: string; source: (index: number) => Promise<string | null>; songName?: SongName; remoteControl?: boolean; speakerFor?: (audio: HTMLAudioElement, source: (index: number) => Promise<string | null>) => Speaker }) {
   const audio = useRef<HTMLAudioElement>(null);
   const [speaker, setSpeaker] = useState<Speaker | null>(null);
-  useEffect(() => { if (audio.current) setSpeaker(audioSpeaker(audio.current, source)); }, [source]);
-  const pb = usePlaybackDevice({ api, workspaceId, speaker });
+  useEffect(() => { if (audio.current) setSpeaker(speakerFor(audio.current, source)); }, [source, speakerFor]);
+  const pb = usePlaybackDevice({ api, workspaceId, speaker, remoteControl });
   const [asking, setAsking] = useState(false);
+  const [observedOwner, setObservedOwner] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
   const [, tick] = useState(0);
   useEffect(() => { const t = window.setInterval(() => tick((n) => n + 1), 1000); return () => window.clearInterval(t); }, []);
 
@@ -43,10 +47,31 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
     return 'Nothing is playing';
   }, [here, view]);
 
-  const pressPlayHere = () => {
-    if (view?.ask_before_playing_here && !asking) { setAsking(true); return; }
-    setAsking(false);
-    void pb.playHere();
+  const pressPlayHere = async () => {
+    if (asking) {
+      setAsking(false);
+      // Transfer only the lease the listener actually confirmed. A third device may
+      // have become the speaker while the dialog was open.
+      await pb.playHere(observedOwner);
+      return;
+    }
+    // The other browser may have acquired the lease since our last poll. A click must
+    // check the server, not silently bypass the transfer confirmation with a stale view.
+    setChecking(true);
+    try {
+      const latest = await pb.refreshSession();
+      if (!latest) return; // The hook reports a connectivity or authorization problem.
+      if (latest.ask_before_playing_here) {
+        setObservedOwner(latest.speaker_device_id);
+        setAsking(true);
+        return;
+      }
+      // No remote owner was observed; reject an unexpected live owner under the
+      // backend's session lock instead of skipping the confirmation.
+      await pb.playHere(null);
+    } finally {
+      setChecking(false);
+    }
   };
   const remote = remoteControl && (view?.speaker === 'elsewhere' || (here && Boolean(session)));
 
@@ -65,13 +90,13 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
           </>
         )}
         {!here && !pb.starting && (
-          <button type="button" className="primary" onClick={pressPlayHere} disabled={!pb.device || !speaker}>Play here</button>
+          <button type="button" className="primary" onClick={() => void pressPlayHere()} disabled={!pb.device || !speaker || checking}>Play here</button>
         )}
       </div>
       {asking && (
         <div className="playing-bar-ask" role="alertdialog" aria-label="Move playback here?">
           <span>{`Playing on ${view?.speaker_name ?? 'another device'}. Play here instead?`}</span>
-          <button type="button" className="primary" onClick={pressPlayHere}>Play here instead</button>
+          <button type="button" className="primary" onClick={() => void pressPlayHere()}>Play here instead</button>
           <button type="button" onClick={() => setAsking(false)}>Cancel</button>
         </div>
       )}

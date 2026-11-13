@@ -13,12 +13,12 @@ Stages are dependency-oriented, not calendar promises. Each implementation PR mu
 | 2 | Navigation, shell and PWA | 0002,0024,0031 | Deep link, persistent player, mobile and standalone tests | In progress |
 | 3 | State, API and security | 0005,0025,0026,0028 | Old/new contracts, conflict, concurrency and localhost checks | In progress |
 | 4 | Listen, audio and lyrics | 0006,0007,0008,0009,0027 | Browser Web Audio timing and Stage/lyric tests | In progress |
-| 5 | Mix discovery and steering | 0010,0011 | Presets, duration scope, energy and destination tests | In progress |
-| 6 | Drafts, edit, seam and export | 0012,0013,0014,0022 | Draft isolation, editor/undo, render intent, FLAC decode | In progress |
-| 7 | Requests and bridges | 0015 | Atomic join, approval, late playhead and race tests | In progress |
+| 5 | Mix discovery and steering | 0010,0011 | Presets, duration scope, energy and destination tests | Implemented (every task ticked, 2026-11-12) |
+| 6 | Drafts, edit, seam and export | 0012,0013,0014,0022 | Draft isolation, editor/undo, render intent, FLAC decode | Implemented (every task ticked, 2026-11-12) |
+| 7 | Requests and bridges | 0015 | Atomic join, approval, late playhead and race tests | Implemented (every task ticked, 2026-11-12) |
 | 8 | Stem Studio | 0016 | Instant audio, 64 cells, AI restore, keyboard tests | In progress |
 | 9 | Library and Discover | 0017,0018,0019 | 20k songs, corrections, link and harmonic tests | In progress |
-| 10 | Workshop and evaluation | 0020,0021,0032 | Storage, worker, blind evaluation and privacy tests | In progress |
+| 10 | Workshop and evaluation | 0020,0021,0032 | Storage, worker, blind evaluation and privacy tests | Implemented (every task ticked, 2026-11-12) |
 | 11 | Integrated user journeys | 0005,0007,0013,0015,0029 | Playback/edit/request/studio interleaving and failure injection | In progress |
 | 12 | Accessibility and performance audit | 0023,0024,0029 | Manual screen readers, high zoom, load and visual regression | In progress |
 | 13 | Release and rollback | 0029,0030,0031 | Backup restore, CI, audio listening, security, release gates | In progress |

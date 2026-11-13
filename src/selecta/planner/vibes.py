@@ -171,7 +171,7 @@ COHESIVE_JOURNEYS = {"slow_burn", "lift_off", "cool_down", "no_dips", "wordplay"
 VIBES: tuple[Vibe, ...] = (
     Vibe(
         "pick",
-        "Selecta’s pick",
+        "SelectaDJ’s pick",
         "The strongest run it can find through your whole library, with a word hand-off or two.",
         _anything,
     ),
@@ -511,9 +511,7 @@ def candidate_vibes(songs: list[SongInfo], traits: dict[int, Traits]) -> tuple[V
     supported = [
         family
         for family in families
-        if sum(
-            song.family == family and not traits[song.id].seasonal for song in songs
-        )
+        if sum(song.family == family and not traits[song.id].seasonal for song in songs)
         >= MIN_SONGS
     ]
     cards: list[Vibe] = []

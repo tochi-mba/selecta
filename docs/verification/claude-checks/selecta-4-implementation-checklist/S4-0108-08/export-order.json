@@ -1,0 +1,69 @@
+{
+  "format": "FLAC",
+  "subtype": "PCM_16",
+  "samplerate": 44100,
+  "channels": 2,
+  "seconds": 240.509,
+  "songs": [
+    {
+      "song": "vb-song-1.flac",
+      "seconds": 89.5,
+      "score": 1.0,
+      "seconds_into_export": 32.0,
+      "seconds_into_song": 76.0
+    },
+    {
+      "song": "vb-song-2.flac",
+      "seconds": 88.77,
+      "score": 1.0,
+      "seconds_into_export": 113.93,
+      "seconds_into_song": 24.0
+    },
+    {
+      "song": "vb-song-3.flac",
+      "seconds": 90.24,
+      "score": 1.0,
+      "seconds_into_export": 141.43,
+      "seconds_into_song": 36.0
+    },
+    {
+      "song": "vb-song-4.flac",
+      "seconds": 88.06,
+      "score": 1.0,
+      "seconds_into_export": 215.47,
+      "seconds_into_song": 4.0
+    }
+  ],
+  "absent": [
+    {
+      "song": "vb-song-9.flac",
+      "seconds": 90.99,
+      "score": 0.5103,
+      "seconds_into_export": 233.65,
+      "seconds_into_song": 84.0
+    }
+  ],
+  "listening": {
+    "verdict": "not reviewed",
+    "decoded": true,
+    "in_order": true,
+    "transitions_to_hear": [
+      {
+        "from": "vb-song-1.flac",
+        "into": "vb-song-2.flac",
+        "listen_near_seconds": 89.93
+      },
+      {
+        "from": "vb-song-2.flac",
+        "into": "vb-song-3.flac",
+        "listen_near_seconds": 105.43
+      },
+      {
+        "from": "vb-song-3.flac",
+        "into": "vb-song-4.flac",
+        "listen_near_seconds": 211.47
+      }
+    ],
+    "note": "Decoding and order are measured; how each transition sounds is not."
+  }
+}

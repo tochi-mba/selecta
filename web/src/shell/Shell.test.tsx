@@ -183,11 +183,11 @@ describe('when the server goes away', () => {
       await nav();
       up = false;
       await act(async () => { await vi.advanceTimersByTimeAsync(4100); });
-      expect(await screen.findByText('Can’t reach Selecta.')).toBeInTheDocument();
+      expect(await screen.findByText('Can’t reach SelectaDJ.')).toBeInTheDocument();
       expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument();
       up = true;
       fireEvent.click(screen.getByRole('button', { name: 'Try now' }));
-      await waitFor(() => expect(screen.queryByText('Can’t reach Selecta.')).toBeNull());
+      await waitFor(() => expect(screen.queryByText('Can’t reach SelectaDJ.')).toBeNull());
     } finally {
       vi.useRealTimers();
     }
@@ -196,7 +196,7 @@ describe('when the server goes away', () => {
   it('says so plainly if it was never there at all', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch'); }));
     render(<App />);
-    expect(await screen.findByRole('heading', { name: 'Can’t reach Selecta.' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Can’t reach SelectaDJ.' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Try now' })).toBeInTheDocument();
   });
 });
@@ -290,9 +290,9 @@ describe('where you are, said three ways', () => {
     const crumbs = within(await screen.findByRole('navigation', { name: 'Breadcrumb' }));
     expect(crumbs.getByRole('link', { name: 'Make a Mix' })).toHaveAttribute('href', '/mixes');
     expect(crumbs.getByText('Harmonic matches')).toHaveAttribute('aria-current', 'page');
-    await waitFor(() => expect(document.title).toBe('Harmonic matches · Selecta'));
+    await waitFor(() => expect(document.title).toBe('Harmonic matches · SelectaDJ'));
     fireEvent.click((await nav()).getByRole('link', { name: 'Library' }));
-    await waitFor(() => expect(document.title).toBe('Library · Selecta'));
+    await waitFor(() => expect(document.title).toBe('Library · SelectaDJ'));
   });
 
   it('marks My Mixes as the parent while a mix is being edited', async () => {

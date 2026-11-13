@@ -27,6 +27,13 @@
       "surfaces": ["listening", "workshop.learning", "overlay.palette"],
       "words": ["Blind listening study", "Listening study"],
       "cli": ["listening-import", "listening-report"]
+    },
+    "listening_study.skip_and_stop": {
+      "label": "Skip and stop in the listening study",
+      "about": "Skip a comparison without answering, or stop for now and pick up later, with the skipped ones counted as unanswered.",
+      "requires": ["listening_study"],
+      "surfaces": ["listening"],
+      "words": ["Skip this comparison", "Stop for now"]
     }
   }
 }

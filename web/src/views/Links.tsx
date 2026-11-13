@@ -1,13 +1,15 @@
 import { flagOn } from '../flags';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
-import { ApiError, DraftList, get, Link, LinkList, MixData, post, SeamState } from '../api';
+import { ApiError, get, Link, LinkList, MixData, post, SeamState } from '../api';
 import { releaseAudio, takeAudio } from '../audio/focus';
 import { etaWords } from '../lib';
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
 import { exploreTabs } from '../shell/manifest';
 import { LinkIfThere } from '../shell/PageLink';
 import { operationId } from '../state/async';
+import { getDraftNames } from '../state/draftNames';
+import { keepIfSame, keepUnchangedItems } from '../state/keepUnchanged';
 import { orderOf } from '../state/readiness';
 import { AudioPreview } from '../ui/AudioPreview';
 import { Icon } from '../ui/Icon';
@@ -16,6 +18,7 @@ import { TermHint } from '../ui/Glossary';
 import { LinkTabs, SearchField } from '../ui/primitives';
 import { seamFacts } from '../ui/seam';
 import { RelationshipMap } from './RelationshipMap';
+import { sameApartFromClock } from './clockMemo';
 import { ViewProps } from './shared';
 
 const HARMONIC_OWNER = 'harmonic-discoveries';
@@ -85,7 +88,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
 
   const steps = item
     ? [
-        { key: 'chords', label: 'The chords Selecta heard' },
+        { key: 'chords', label: 'The chords SelectaDJ heard' },
         { key: 'a', label: `${item.title_a}, with those chords` },
         { key: 'b', label: `${item.title_b}, moved to the same key and speed` },
         { key: 'both', label: 'Both at once' },
@@ -191,7 +194,27 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   };
   const skip = (target: HarmonicDiscovery) => setSkipped((ids) => [...ids.filter((id) => id !== target.id), target.id]);
 
-  if (!loaded && !error) return <Skeleton variant="pairs" lines={1} label="Finding harmonic discoveries" />;
+  // P0036: the heading and what this is about are known before any pair arrives, so they stay real and
+  // only the pair itself is a placeholder, in a pair card's place
+  const harmonicIntro = (
+    <p className="hint">
+      SelectaDJ plays you the chords it heard, then each song with them underneath. If they fit both, you’ve got a connection. Your answer only teaches SelectaDJ what you hear. It never adds anything to a mix.<TermHint term="harmonic-match" />
+    </p>
+  );
+  if (!loaded && !error) {
+    return (
+      <section className="next-up discoveries">
+        <div className="row wrap discoveries-head"><h2>Songs that might share chords</h2></div>
+        {harmonicIntro}
+        <Skeleton
+          variant="pairs"
+          lines={1}
+          label="Finding harmonic discoveries"
+          retry={() => setAttempt((value) => value + 1)}
+        />
+      </section>
+    );
+  }
   if (!loaded && error) return <Problem retry={() => setAttempt((value) => value + 1)}>{error}</Problem>;
   // UF-0384-06: nothing found yet points at what would find more, rather than a dead end
   if (!items.length && !error) return <p className="lede">No chord matches to hear yet. They turn up as more of your library is analysed. <LinkIfThere to="/workshop">See analysis progress</LinkIfThere></p>;
@@ -202,9 +225,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
         <h2>Songs that might share chords</h2>
         {waiting.length > 0 && <span className="hint">{waiting.length} to hear</span>}
       </div>
-      <p className="hint">
-        Selecta plays you the chords it heard, then each song with them underneath. If they fit both, you’ve got a connection. Your answer only teaches Selecta what you hear. It never adds anything to a mix.<TermHint term="harmonic-match" />
-      </p>
+      {harmonicIntro}
       {error && <p role="alert" className="warn">{error}</p>}
       {unsaved && <button disabled={saving} onClick={() => void review(unsaved.target, unsaved.verdict)}>Try saving that again</button>}
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
@@ -243,7 +264,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
           </h3>
           <p className="hint">{item.artist_a} · {item.artist_b}</p>
           <button className="primary" disabled={getting} onClick={() => (listening ? (keepGoing.current = false, stop()) : void hear(item))}>
-            {getting ? `Getting it ready, ${etaWords(secondsToPrepare ?? 15)}` : listening ? <><Icon name="stop" /> Stop</> : <><Icon name="play" /> Hear what Selecta heard</>}
+            {getting ? `Getting it ready, ${etaWords(secondsToPrepare ?? 15)}` : listening ? <><Icon name="stop" /> Stop</> : <><Icon name="play" /> Hear what SelectaDJ heard</>}
           </button>
           <p className="discovery-now" role="status">{step !== null ? `Now playing: ${steps[step].label}` : requestedStep !== null ? `Loading stage ${requestedStep + 1}; no audio confirmed yet` : 'Nothing is playing'}</p>
           {audition && (
@@ -257,7 +278,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
                   </li>
                 ))}
               </ol>
-              <div className="chord-strip" role="img" aria-label={`The chords Selecta heard: ${audition.chords.join(', ')}`}>
+              <div className="chord-strip" role="img" aria-label={`The chords SelectaDJ heard: ${audition.chords.join(', ')}`}>
                 {audition.chords.map((chord, index) => (
                   <span key={index} className={index === bar ? 'now' : ''} aria-current={index === bar ? 'step' : undefined}>
                     <span className="visually-hidden">Bar {index + 1}: </span>{chord}
@@ -299,7 +320,8 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   );
 }
 
-function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: (link: Link, move: string, draft: number | null) => Promise<void>; names: Record<string, string>; onRated: () => void; drafts: { id: number; name: string }[] }) {
+/** Memoised (r8c): typing in the search or a poll that brings back the same link redraws no card. */
+const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: (link: Link, move: string, draft: number | null) => Promise<void>; names: Record<string, string>; onRated: () => void; drafts: { id: number; name: string }[] }) {
   const [move, setMove] = useState(link.move);
   const [cardError, setCardError] = useState('');
   const [rendering, setRendering] = useState(false);
@@ -315,20 +337,21 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
   const nameB = sameName ? `${link.title_b} (song ${link.b})` : link.title_b;
   const addId = `link-add-${link.a}-${link.b}-${link.phrase.replace(/\W+/g, '-')}`;
 
-  useEffect(() => {
-    if (!override || !['queued', 'rendering'].includes(override.status)) return;
-    const key = override.key;
-    const currentRequest = renderRequest.current;
-    let live = true;
-    const timer = window.setInterval(() => {
-      get<SeamState>(`/seams/${key}`).then((next) => {
-        if (!live || currentRequest !== renderRequest.current) return;
-        // A response for an older render key cannot replace the new result.
-        setOverride((current) => current?.key === key ? next : current);
-      }).catch(() => {});
-    }, 1500);
-    return () => { live = false; window.clearInterval(timer); };
-  }, [override?.key, override?.status]);
+  // r8c: a render on its way is followed only while the tab is visible, and a failed check waits
+  // longer each time instead of asking every 1.5 s
+  const following = override && ['queued', 'rendering'].includes(override.status) ? override.key : null;
+  const followFrom = useRef(0);
+  useEffect(() => { followFrom.current = renderRequest.current; }, [following, override?.status]);
+  useVisiblePoll(() => {
+    const key = following;
+    const currentRequest = followFrom.current;
+    if (!key) return;
+    return get<SeamState>(`/seams/${key}`).then((next) => {
+      if (currentRequest !== renderRequest.current) return;
+      // A response for an older render key cannot replace the new result.
+      setOverride((current) => current?.key === key && ['queued', 'rendering'].includes(current.status) ? next : current);
+    });
+  }, 1500, following !== null, { backoff: true });
 
   const render = async (name: string) => {
     const request = ++renderRequest.current;
@@ -414,7 +437,7 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
             ? state.passed === false ? 'The transition is rendered, with a rough spot.' : 'The transition is rendered and is what you’d hear.'
             : state.status === 'failed'
               ? 'This transition didn’t render, so for now the shared words are only a match to check.'
-              : 'The transition isn’t rendered yet: the shared words are a match to check, and Selecta renders it after they go in.'}
+              : 'The transition isn’t rendered yet: the shared words are a match to check, and SelectaDJ renders it after they go in.'}
         </span>
       </p>
       {state.status === 'ready' && playing && (
@@ -423,9 +446,9 @@ function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: 
       )}
     </article>
   );
-}
+});
 
-export function Links({ mix, setMixData, setView, notify, status, tab = 'words' }: ViewProps & { tab?: 'words' | 'harmonic' }) {
+function LinksView({ mix, setMixData, setView, notify, status, tab = 'words' }: ViewProps & { tab?: 'words' | 'harmonic' }) {
   // it's in the address, so a search survives a reload, a shared link and coming Back
   const addressQuery = useQueryParam('q') ?? '';
   const [query, setQuery] = useState(addressQuery);
@@ -450,7 +473,8 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
           setFailed(true);
           return;
         }
-        setData(next);
+        // r8c: the same answer keeps what's shown, and unchanged links keep their objects
+        setData((before) => (before ? keepIfSame(before, { ...next, links: keepUnchangedItems(before.links, next.links) }) : next));
         setFailed(false);
       })
       .catch(() => { if (mine === asked.current) setFailed(true); });
@@ -470,7 +494,7 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
   useVisiblePoll(load, 6000, tab === 'words');
 
   useEffect(() => {
-    if (flagOn('drafts')) get<DraftList>('/drafts').then((list) => setDrafts(list.drafts ?? [])).catch(() => {});
+    if (flagOn('drafts')) getDraftNames().then((list) => setDrafts(list.drafts)).catch(() => {});
   }, []);
 
   // Both songs and their transition must insert atomically. The mix-order
@@ -509,6 +533,12 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
     }
   };
 
+  // r8c: the cards are memoised, so they're handed callbacks that keep their identity
+  const latest = useRef({ add, load });
+  latest.current = { add, load };
+  const onAdd = useCallback((link: Link, move: string, draft: number | null) => latest.current.add(link, move, draft), []);
+  const onRated = useCallback(() => void latest.current.load(), []);
+
   const worked = data?.links.filter((link) => link.worked) ?? [];
   const didnt = data?.links.filter((link) => !link.worked) ?? [];
   const card = (link: Link) => (
@@ -517,8 +547,8 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
       link={link}
       names={status.moves}
       drafts={drafts}
-      onAdd={add}
-      onRated={() => void load()}
+      onAdd={onAdd}
+      onRated={onRated}
     />
   );
 
@@ -530,7 +560,7 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
       {tab === 'words' && (
         <>
           <p className="lede">
-            One song ends a line on these words, another opens a line with them, and the music fits too. Selecta prepares the
+            One song ends a line on these words, another opens a line with them, and the music fits too. SelectaDJ prepares the
             best ones in the background, so they’re ready to play.<TermHint term="word-link" />
           </p>
           {data && data.preparing > 0 && (
@@ -541,8 +571,15 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
           )}
           <SearchField label="Search shared words" value={query} onChange={setQuery} placeholder="Look for a word, like night or love" />
           {failed && data === null && <Problem retry={load}>Couldn’t search your lyrics. Nothing’s lost.</Problem>}
-          {failed && data !== null && <p className="warn" role="status">Can’t check for new ones right now, so what’s shown may be out of date.</p>}
-          {data === null && !failed && <Skeleton variant="pairs" lines={4} label="Searching your lyrics" />}
+          {failed && data !== null && (
+            <div className="row wrap" role="status">
+              <span className="warn">Can’t check for new ones right now, so what’s shown may be out of date.</span>
+              <Action working="Checking…" run={load}>Try again</Action>
+            </div>
+          )}
+          {data === null && !failed && (
+            <Skeleton variant="pairs" lines={4} label="Searching your lyrics" retry={() => void load()} />
+          )}
           {data?.links.length === 0 && (
             <p className="lede">
               {query ? `No links on “${query}” yet. ` : 'No links yet. Analysing more songs will find more. '}
@@ -563,3 +600,6 @@ export function Links({ mix, setMixData, setView, notify, status, tab = 'words' 
     </main>
   );
 }
+
+/** r8c: Discover never shows the music clock, so a tick of it doesn't redraw sixty cards. */
+export const Links = memo(LinksView, sameApartFromClock<ViewProps & { tab?: 'words' | 'harmonic' }>());

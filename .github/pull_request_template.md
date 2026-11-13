@@ -10,6 +10,9 @@
 
 <!-- SF-0239-08. Fill every line; "-" only where it truly doesn't apply. -->
 
+- **Owner:** <!-- EX-0114-05: who owns this slice and answers for it -->
+- **Verification:** <!-- the tests or checks that prove it, run on the tested SHA -->
+- **Rollback:** <!-- the flag to turn off, or the commit to revert, to undo it -->
 - **Tested SHA:** <!-- the exact commit the tests and screenshots ran on -->
 - **Fixture:** <!-- made-up library (tests/e2e_server.py), SELECTA_E2E_STRESS=1, scale_server.py size, or a named real folder -->
 - **Independent reviewer:** <!-- name and date, or "none yet": an implemented task is not Verified until someone else signs -->

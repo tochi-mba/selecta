@@ -74,6 +74,31 @@ def locate(song: Path, export: np.ndarray) -> dict:
     return {"song": song.name, "seconds": round(seconds, 2), **best}
 
 
+def listening_review(songs: list[dict]) -> dict:
+    """S4-0108-10: where a person should listen, kept apart from what was measured. A file that
+    decodes, with every song in order, says nothing about whether its handoffs sound good, so the
+    verdict always starts as not reviewed and only a listener changes it."""
+    places = [song["seconds_into_export"] for song in songs]
+    points = [
+        {
+            "from": one["song"],
+            "into": two["song"],
+            # where the second song's own audio would begin, the handoff is just before it
+            "listen_near_seconds": round(
+                max(two["seconds_into_export"] - two["seconds_into_song"], 0.0), 2
+            ),
+        }
+        for one, two in zip(songs, songs[1:], strict=False)
+    ]
+    return {
+        "verdict": "not reviewed",
+        "decoded": True,
+        "in_order": places == sorted(places) and len(set(places)) == len(places),
+        "transitions_to_hear": points,
+        "note": "Decoding and order are measured; how each transition sounds is not.",
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("report", type=Path)
@@ -93,6 +118,7 @@ def main() -> None:
         "songs": [locate(song, export) for song in args.songs],
         "absent": [locate(song, export) for song in args.absent],
     }
+    report["listening"] = listening_review(report["songs"])
     args.report.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
 

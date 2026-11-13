@@ -1,4 +1,4 @@
-import { FormEvent, ReactNode, useCallback, useEffect, useState } from 'react';
+import { FormEvent, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Status } from '../ui/controls';
 import { AdminError, age, Reading } from './adminApi';
 
@@ -47,11 +47,14 @@ export function Command({ label, run, danger, note }: { label: string; run: (rea
 export function useLoad<T>(load: () => Promise<T>, deps: unknown[]) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState('');
+  // Only the newest load may land: an older answer arriving late must not overwrite it.
+  const latest = useRef(0);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const reload = useCallback(async () => {
+    const mine = ++latest.current;
     setError('');
-    try { setData(await load()); }
-    catch (problem) { setError(problem instanceof AdminError ? problem.message : (problem as Error).message); }
+    try { const next = await load(); if (mine === latest.current) setData(next); }
+    catch (problem) { if (mine === latest.current) setError(problem instanceof AdminError ? problem.message : (problem as Error).message); }
   }, deps);
   useEffect(() => { void reload(); }, [reload]);
   return { data, error, reload };

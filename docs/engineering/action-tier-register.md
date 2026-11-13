@@ -44,8 +44,11 @@ ADR-0234 (themes), ADR-0257 to ADR-0259 (Library selection, Explore truthfulness
 | Listen | any | `DJ controls` | advanced | rare | discloses visualizer and view options | `web/src/views/Now.tsx` |
 | Listen | after a transition | `Rate that transition` | contextual | sometimes | records a rating; can be changed | `web/src/views/Now.tsx` |
 | Listen | playing | `Change what plays next` | advanced | rare | opens requests for the next song | `web/src/views/Now.tsx` |
-| My Mixes | current mix exists | `Edit` | primary | often | opens the current mix's editor | `web/src/views/CurrentMix.tsx` |
-| My Mixes | no current mix | `Find a mix` | primary | first visit | goes to Explore | `web/src/views/CurrentMix.tsx` |
+| My Mixes | continue shortcut | `Continue editing draft` | primary | sometimes | opens that draft's editor at its saved order; playback unchanged | `web/src/views/MyMixes.tsx` |
+| My Mixes | drafts listed | `Edit` | primary | often | the first draft's Edit leads; the others are plain; playback unchanged | `web/src/views/Drafts.tsx` |
+| My Mixes | no drafts | `Start your first draft` | primary | first visit | creates a draft and opens it; playback unchanged | `web/src/views/Drafts.tsx` |
+| My Mixes | current mix exists | `Edit` | contextual | often | opens the current mix's editor | `web/src/views/CurrentMix.tsx` |
+| My Mixes | no current mix | `Find a mix` | contextual | first visit | goes to Explore (primary only when drafts are off) | `web/src/views/CurrentMix.tsx` |
 | My Mixes | current mix exists | `Save current mix as a draft` | contextual | sometimes | copies the mix; playback unchanged | `web/src/views/Drafts.tsx` |
 | My Mixes | drafts listed | `Delete draft` | contextual | rare | destructive: confirmation, then Undo in the notice | `web/src/views/Drafts.tsx` |
 | My Mixes | any | `New draft` | contextual | sometimes | creates an empty draft | `web/src/views/Drafts.tsx` |

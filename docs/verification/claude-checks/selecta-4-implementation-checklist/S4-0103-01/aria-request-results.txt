@@ -1,0 +1,298 @@
+- dialog "Requests":
+  - banner:
+    - heading "Requests" [level=2]
+    - button "Close Requests"
+  - region "Song requests":
+    - heading "Requests" [level=2]
+    - text: 55 waiting Request a song
+    - combobox "Request a song": Same
+    - button "Done"
+    - status "Searching your library"
+    - paragraph:
+      - text: Requested means saved, not scheduled. Only a placed song is in your current mix. Waiting requests have no reliable play-time estimate or guaranteed queue order.
+      - button "What is request?"
+    - list "Your requests":
+      - listitem:
+        - heading "Needs your choice" [level=3]
+        - paragraph: Nothing joins until you approve or decline the proposed route.
+      - listitem:
+        - text: Broken File (31) Bad Rip Needs your choice
+        - button "Cancel request for Broken File (31)": Cancel
+        - paragraph: "Getting to it takes one extra song: Slow Tide."
+        - group "Approve the route to Broken File (31)":
+          - heading "Getting to Broken File (31)" [level=3]
+          - paragraph:
+            - text: Nothing joins until you say so. These 2 songs join together once every transition is ready, or none of them do. None of them can play before that.
+            - button "What is bridge?"
+          - list "Proposed route to Broken File (31)":
+            - listitem: Slow Tide Extra song, Bo Lindqvist
+            - listitem: Broken File Your request
+          - text: Morning Light → Slow Tide Not made yet
+          - button "Hear Morning Light into Slow Tide": Hear
+          - text: Slow Tide → Broken File Not made yet
+          - button "Hear Slow Tide into Broken File": Hear
+          - button "Add both"
+          - button "No, keep waiting"
+          - paragraph: "Add both: one extra song joins with Broken File (31), in the order above."
+          - paragraph: "No, keep waiting: nothing extra joins, and Broken File (31) keeps looking for a spot of its own."
+        - button "See other bridges"
+      - listitem:
+        - heading "Waiting" [level=3]
+        - paragraph: These are still looking for a safe place and are not a promise of strict order.
+      - listitem:
+        - text: שלום עולם (5) נועה לוי Requested · waiting
+        - button "Cancel request for שלום עולם (5)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: مرحبا بالعالم (6) ليلى حسن Requested · waiting
+        - button "Cancel request for مرحبا بالعالم (6)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: 日本語の歌 (7) 田中 葵 Requested · waiting
+        - button "Cancel request for 日本語の歌 (7)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix) (8) An Artist Whose Name Is Also Far Too Long To Fit On One Line Requested · waiting
+        - button "Cancel request for An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix) (8)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Déjà Vu (9) Zoë Müller Requested · waiting
+        - button "Cancel request for Déjà Vu (9)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Same Name (10) Hal Greene Requested · waiting
+        - button "Cancel request for Same Name (10)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Same Name (11) Iris Vale Requested · waiting
+        - button "Cancel request for Same Name (11)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Last Call (12) Jo Marsh Requested · waiting
+        - button "Cancel request for Last Call (12)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Broken File (13) Bad Rip Requested · waiting
+        - button "Cancel request for Broken File (13)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026 (14) Nospacesartistnamethatalsorefusestowrap Requested · waiting
+        - button "Cancel request for HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026 (14)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Same Name (15) Hal Greene Requested · waiting
+        - button "Cancel request for Same Name (15)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Remix של שלום (feat. ليلى) 2026 (16) Mixed Bidi Ensemble Requested · waiting
+        - button "Cancel request for Remix של שלום (feat. ليلى) 2026 (16)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: 夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル (17) 東京の夜の楽団と仲間たち Requested · waiting
+        - button "Cancel request for 夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル (17)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة (18) فرقة الليل الطويل Requested · waiting
+        - button "Cancel request for أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة (18)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: שלום עולם (23) נועה לוי Requested · waiting
+        - button "Cancel request for שלום עולם (23)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: مرحبا بالعالم (24) ليلى حسن Requested · waiting
+        - button "Cancel request for مرحبا بالعالم (24)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: 日本語の歌 (25) 田中 葵 Requested · waiting
+        - button "Cancel request for 日本語の歌 (25)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix) (26) An Artist Whose Name Is Also Far Too Long To Fit On One Line Requested · waiting
+        - button "Cancel request for An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix) (26)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Déjà Vu (27) Zoë Müller Requested · waiting
+        - button "Cancel request for Déjà Vu (27)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Same Name (28) Hal Greene Requested · waiting
+        - button "Cancel request for Same Name (28)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Same Name (29) Iris Vale Requested · waiting
+        - button "Cancel request for Same Name (29)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Last Call (30) Jo Marsh Requested · waiting
+        - button "Cancel request for Last Call (30)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026 (32) Nospacesartistnamethatalsorefusestowrap Requested · waiting
+        - button "Cancel request for HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026 (32)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Same Name (33) Hal Greene Requested · waiting
+        - button "Cancel request for Same Name (33)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Remix של שלום (feat. ليلى) 2026 (34) Mixed Bidi Ensemble Requested · waiting
+        - button "Cancel request for Remix של שלום (feat. ليلى) 2026 (34)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: 夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル (35) 東京の夜の楽団と仲間たち Requested · waiting
+        - button "Cancel request for 夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル (35)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة (36) فرقة الليل الطويل Requested · waiting
+        - button "Cancel request for أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة (36)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: שלום עולם (41) נועה לוי Requested · waiting
+        - button "Cancel request for שלום עולם (41)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: مرحبا بالعالم (42) ليلى حسن Requested · waiting
+        - button "Cancel request for مرحبا بالعالم (42)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: 日本語の歌 (43) 田中 葵 Requested · waiting
+        - button "Cancel request for 日本語の歌 (43)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix) (44) An Artist Whose Name Is Also Far Too Long To Fit On One Line Requested · waiting
+        - button "Cancel request for An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix) (44)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Déjà Vu (45) Zoë Müller Requested · waiting
+        - button "Cancel request for Déjà Vu (45)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Same Name (46) Hal Greene Requested · waiting
+        - button "Cancel request for Same Name (46)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Same Name (47) Iris Vale Requested · waiting
+        - button "Cancel request for Same Name (47)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Last Call (48) Jo Marsh Requested · waiting
+        - button "Cancel request for Last Call (48)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Broken File (49) Bad Rip Requested · waiting
+        - button "Cancel request for Broken File (49)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026 (50) Nospacesartistnamethatalsorefusestowrap Requested · waiting
+        - button "Cancel request for HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026 (50)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Same Name (51) Hal Greene Requested · waiting
+        - button "Cancel request for Same Name (51)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Remix של שלום (feat. ليلى) 2026 (52) Mixed Bidi Ensemble Requested · waiting
+        - button "Cancel request for Remix של שלום (feat. ليلى) 2026 (52)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: 夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル (53) 東京の夜の楽団と仲間たち Requested · waiting
+        - button "Cancel request for 夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル (53)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة (54) فرقة الليل الطويل Requested · waiting
+        - button "Cancel request for أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة (54)": Cancel
+        - paragraph: This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.
+        - button "Find a bridge"
+      - listitem:
+        - text: Morning Light (1) Ada Reyes In your mix
+        - button "Cancel request for Morning Light (1)": Cancel
+        - paragraph: This song is already in your mix.
+      - listitem:
+        - text: Slow Tide (2) Bo Lindqvist In your mix
+        - button "Cancel request for Slow Tide (2)": Cancel
+        - paragraph: This song is already in your mix.
+      - listitem:
+        - text: Paper Moon (3) Cass Okafor In your mix
+        - button "Cancel request for Paper Moon (3)": Cancel
+        - paragraph: This song is already in your mix.
+      - listitem:
+        - text: Neon Rain (4) Dev Patel In your mix
+        - button "Cancel request for Neon Rain (4)": Cancel
+        - paragraph: This song is already in your mix.
+      - listitem:
+        - text: Morning Light (19) Ada Reyes In your mix
+        - button "Cancel request for Morning Light (19)": Cancel
+        - paragraph: This song is already in your mix.
+      - listitem:
+        - text: Slow Tide (20) Bo Lindqvist In your mix
+        - button "Cancel request for Slow Tide (20)": Cancel
+        - paragraph: This song is already in your mix.
+      - listitem:
+        - text: Paper Moon (21) Cass Okafor In your mix
+        - button "Cancel request for Paper Moon (21)": Cancel
+        - paragraph: This song is already in your mix.
+      - listitem:
+        - text: Neon Rain (22) Dev Patel In your mix
+        - button "Cancel request for Neon Rain (22)": Cancel
+        - paragraph: This song is already in your mix.
+      - listitem:
+        - text: Morning Light (37) Ada Reyes In your mix
+        - button "Cancel request for Morning Light (37)": Cancel
+        - paragraph: This song is already in your mix.
+      - listitem:
+        - text: Slow Tide (38) Bo Lindqvist In your mix
+        - button "Cancel request for Slow Tide (38)": Cancel
+        - paragraph: This song is already in your mix.
+      - listitem:
+        - text: Paper Moon (39) Cass Okafor In your mix
+        - button "Cancel request for Paper Moon (39)": Cancel
+        - paragraph: This song is already in your mix.
+      - listitem:
+        - text: Neon Rain (40) Dev Patel In your mix
+        - button "Cancel request for Neon Rain (40)": Cancel
+        - paragraph: This song is already in your mix.
+      - listitem:
+        - text: Morning Light (55) Ada Reyes In your mix
+        - button "Cancel request for Morning Light (55)": Cancel
+        - paragraph: This song is already in your mix.

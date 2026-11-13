@@ -46,7 +46,8 @@ describe('numeric baselines (MP-0274-03)', () => {
   });
 
   it('reserves the clock its longest reading, so it never widens mid-song', () => {
-    const now = fs.readFileSync(`${SOURCE}views/Now.tsx`, 'utf8');
+    // the seek strip and its clock live in NowStrip.tsx (split out of Now.tsx)
+    const now = fs.readFileSync(`${SOURCE}views/NowStrip.tsx`, 'utf8');
     expect(now).toMatch(/className="time" style=\{\{ minWidth: `\$\{\(unavailable \? 0 : clock\(duration\)\.length \* 2\) \+ 3\}ch` \}\}/);
     expect(read('styles/listening.css')).toMatch(/\.strip \.time \{ text-align: end; \}/);
   });

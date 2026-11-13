@@ -1,0 +1,24 @@
+{
+  "about": "UF-0388-08: one row per critical journey done with assistive technology on a real device. Fill only from a real session. Checked by python -m selecta.audit.uf_human_logs.",
+  "tasks": [
+    "UF-0388-08"
+  ],
+  "key": "journey",
+  "required": [
+    "first-mix",
+    "library",
+    "lucy",
+    "editor",
+    "studio"
+  ],
+  "fields": [
+    "reviewer",
+    "date",
+    "device",
+    "os",
+    "browser",
+    "assistive_technology",
+    "outcome"
+  ],
+  "entries": []
+}

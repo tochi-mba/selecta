@@ -4,6 +4,7 @@ Original music, downloaded models, generated stems and audio caches are never
 bundled or modified. A restore is prepared while the app runs and activated
 before any connections/workers are started on its next launch.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -34,7 +35,14 @@ MAX_HISTORY_FILES = 10000
 MAX_HISTORY_ENTRY = 256 * 1024
 _HISTORY_FILE = re.compile(r"^seam-history/[A-Za-z0-9_-]{1,128}\.json$")
 _REQUIRED_TABLES = {
-    "songs", "analysis", "lyrics", "preferences", "queue", "drafts", "ratings", "seam_book"
+    "songs",
+    "analysis",
+    "lyrics",
+    "preferences",
+    "queue",
+    "drafts",
+    "ratings",
+    "seam_book",
 }
 
 
@@ -107,10 +115,12 @@ def export_backup(conn: sqlite3.Connection, settings: Settings) -> bytes:
                 raise BackupError("A transition history record has an invalid identity.")
             payload[name] = raw
         manifest = {
-            "format": FORMAT, "version": VERSION,
+            "format": FORMAT,
+            "version": VERSION,
             "created_utc": datetime.now(UTC).isoformat(),
-            "files": {name: {"sha256": _sha(data), "bytes": len(data)}
-                      for name, data in payload.items()},
+            "files": {
+                name: {"sha256": _sha(data), "bytes": len(data)} for name, data in payload.items()
+            },
             "excluded": ["original music", "audio caches", "generated stems", "models", "exports"],
         }
         out = io.BytesIO()
@@ -138,15 +148,21 @@ def validate_backup(data: bytes) -> tuple[dict, bytes, dict[str, int]]:
                 raise BackupError("Backup expands beyond the safe local-data limit.")
             if "manifest.json" not in names or "selecta.sqlite" not in names:
                 raise BackupError("Backup database or manifest is missing.")
-            if any(name not in ("manifest.json", "selecta.sqlite")
-                   and not _HISTORY_FILE.fullmatch(name) for name in names):
+            if any(
+                name not in ("manifest.json", "selecta.sqlite")
+                and not _HISTORY_FILE.fullmatch(name)
+                for name in names
+            ):
                 raise BackupError("Backup contains an unexpected or unsafe path.")
             if bundle.getinfo("selecta.sqlite").file_size > MAX_DATABASE:
                 raise BackupError("Backup database exceeds the supported size.")
             if bundle.getinfo("manifest.json").file_size > 1024 * 1024:
                 raise BackupError("Backup manifest is too large.")
-            if any(bundle.getinfo(name).file_size > MAX_HISTORY_ENTRY for name in names
-                   if name.startswith("seam-history/")):
+            if any(
+                bundle.getinfo(name).file_size > MAX_HISTORY_ENTRY
+                for name in names
+                if name.startswith("seam-history/")
+            ):
                 raise BackupError("Backup contains oversized transition history.")
             manifest = json.loads(bundle.read("manifest.json"))
             if (
@@ -154,7 +170,7 @@ def validate_backup(data: bytes) -> tuple[dict, bytes, dict[str, int]]:
                 or manifest.get("format") != FORMAT
                 or manifest.get("version") != VERSION
             ):
-                raise BackupError("This backup format is not supported by this Selecta version.")
+                raise BackupError("This backup format is not supported by this SelectaDJ version.")
             if not isinstance(manifest.get("created_utc"), str):
                 raise BackupError("Backup manifest is missing its creation date.")
             files = manifest.get("files")
@@ -174,8 +190,14 @@ def validate_backup(data: bytes) -> tuple[dict, bytes, dict[str, int]]:
                     if not isinstance(state, dict) or state.get("key") != Path(name).stem:
                         raise BackupError("Backup transition identity did not match its file.")
             db_bytes = bundle.read("selecta.sqlite")
-    except (zipfile.BadZipFile, RuntimeError, OSError, UnicodeError,
-            json.JSONDecodeError, KeyError) as problem:
+    except (
+        zipfile.BadZipFile,
+        RuntimeError,
+        OSError,
+        UnicodeError,
+        json.JSONDecodeError,
+        KeyError,
+    ) as problem:
         raise BackupError("Backup ZIP is corrupt or incomplete.") from problem
     with tempfile.TemporaryDirectory(prefix="selecta-check-") as tmp:
         path = Path(tmp) / "selecta.sqlite"
@@ -323,9 +345,10 @@ def activate_pending_restore(settings: Settings) -> bool:
                 shutil.rmtree(history_backup)
             os.replace(copy, history_backup)
     marker = home / ACTIVATING
-    _sync_bytes(marker, json.dumps({
-        "had_database": had_database, "had_history": had_history
-    }).encode("utf-8"))
+    _sync_bytes(
+        marker,
+        json.dumps({"had_database": had_database, "had_history": had_history}).encode("utf-8"),
+    )
     try:
         os.replace(incoming_db, current)
         retired = home / ".restore-replaced-seam-history"

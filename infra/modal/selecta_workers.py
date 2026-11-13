@@ -49,6 +49,10 @@ secrets = [modal.Secret.from_name(f"selecta-{ENVIRONMENT}-workers")]
 # Beta sizing from docs/saas/13-hosting-and-cost.md; scale to zero when idle.
 CPU_LIGHT = {"cpu": 1.0, "memory": 2048, "max_containers": 4 if ENVIRONMENT == "staging" else 20}
 CPU_HEAVY = {"cpu": 4.0, "memory": 8192, "max_containers": 2 if ENVIRONMENT == "staging" else 10}
+GPU_FALLBACK = {"cpu": 8.0, "memory": 16384, "max_containers": 1 if ENVIRONMENT == "staging" else 4}
+EXPORT = {"cpu": 4.0, "memory": 8192, "max_containers": 2 if ENVIRONMENT == "staging" else 8}
+# Function names are the ones `selecta.work.autoscale_leader.MODAL_FUNCTIONS` scales
+# (pool -> function, fallback function); tests/test_cloud_infra.py checks the two agree.
 
 
 def _serve(pool: str) -> None:
@@ -77,3 +81,15 @@ def cpu_heavy() -> None:
 def gpu_stems() -> None:
     """Stem separation. Blocked until the Demucs weights row leaves Review (ADR-0405)."""
     _serve("gpu")
+
+
+@app.function(region=REGION, secrets=secrets, timeout=3600, min_containers=0, **GPU_FALLBACK)
+def gpu_stems_fallback() -> None:
+    """The gpu pool's CPU fallback when Modal has no GPU capacity: the same jobs, slower."""
+    _serve("gpu")
+
+
+@app.function(region=REGION, secrets=secrets, timeout=3600, min_containers=0, **EXPORT)
+def export() -> None:
+    """Full-mix export renders."""
+    _serve("export")

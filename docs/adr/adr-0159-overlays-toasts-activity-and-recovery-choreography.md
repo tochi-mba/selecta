@@ -1,7 +1,7 @@
 # ADR-0159 - Dialogs, drawers, toasts, Activity and recoverable mistakes
 
 - **Decision:** Accepted by the repository owner on 2026-11-07; implementation and independent verification remain separately evidenced.
-- **Implementation:** 7/8 Implemented, 0/8 In progress, 1 Not started (source-level, PR #31).
+- **Implementation:** 7/8 Implemented, 1/8 In progress, 0 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P0 / Shared feedback.
@@ -41,7 +41,7 @@ Prefer semantic, truthful feedback over cosmetic animation; static UI is better 
 5. **MI-0159-05 - Choreograph async confirmation.** Acceptance: Pending vs successful mutation never visually indistinguishable. Required verification: Delayed action fixtures. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/toasts.tsx`, `web/src/ui/controls.tsx`; `web/src/ui/controls.test.tsx`; independent checks pending.**
 6. **MI-0159-06 - Protect Stage from noise.** Acceptance: No ordinary toasts disturb lyrics while critical failures remain reachable. Required verification: Stage and activity integration. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/toasts.tsx`, `web/src/ui/controls.tsx`; `web/src/ui/controls.test.tsx`; independent checks pending.**
 7. **MI-0159-07 - Handle disappearing invokers.** Acceptance: Focus falls back to meaningful page start when item deleted. Required verification: Deleted draft/seam overlay tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/ui/toasts.tsx`, `web/src/ui/controls.tsx`; `web/src/ui/controls.test.tsx`; independent checks pending.**
-8. **MI-0159-08 - Measure error recovery.** Acceptance: User can recover from failed create/move/export/request without coaching. Required verification: Injected fault study and raw counts. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: -; evidence: Needs a person: run an injected-fault study (create, move, export, request) and record raw recovery counts (checked 2026-11-10; no human evidence recorded yet).**
+8. **MI-0159-08 - Measure error recovery.** Acceptance: User can recover from failed create/move/export/request without coaching. Required verification: Injected fault study and raw counts. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: feat/finish-checklists-2 @ `b779bd3c` (WIP, 2026-11-12); evidence: code part built on 2026-11-12: an injected-fault sheet for create, move, export and request with raw recovery counts, coaching and time, in `src/selecta/audit/mi_study_kit.py` (`python -m selecta.audit.mi_study_kit sheet|check|summary MI-0159-08`) and the study kit section of `docs/adr/selecta-microinteraction-verification-protocols.md`; `tests/test_mi_study_kit.py` 33/33 passed on 2026-11-12. Left In progress and unticked: the acceptance is the people's result, which code cannot produce, and ticking would drop the task from the owner runbook. Needs a person: run an injected-fault study (create, move, export, request) and record raw recovery counts, recorded in a kit record that passes `check`.**
 
 ## Shared invariants and negative cases
 

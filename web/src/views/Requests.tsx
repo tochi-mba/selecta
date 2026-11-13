@@ -70,7 +70,7 @@ type RequestGroup = 'choice' | 'coming' | 'preparing' | 'waiting';
 const GROUP_WORDS: Record<RequestGroup, { title: string; detail: string }> = {
   choice: { title: 'Needs your choice', detail: 'Nothing joins until you approve or decline the proposed route.' },
   coming: { title: 'Coming up', detail: 'These routes are ready and will join when their guarded position is still valid.' },
-  preparing: { title: 'Preparing', detail: 'Selecta is analysing or rendering what these requests need.' },
+  preparing: { title: 'Preparing', detail: 'SelectaDJ is analysing or rendering what these requests need.' },
   waiting: { title: 'Waiting', detail: 'These are still looking for a safe place and are not a promise of strict order.' },
 };
 
@@ -122,13 +122,13 @@ export function requestWords(row: RequestRow, stage: Stage): { label: string; to
     case 'in_mix':
       return { label: 'In your mix', tone: 'quiet', detail: 'This song is already in your mix.' };
     case 'analysing':
-      return { label: 'Getting ready', tone: 'active', detail: `Selecta needs to listen to it first.${wait}` };
+      return { label: 'Getting ready', tone: 'active', detail: `SelectaDJ needs to listen to it first.${wait}` };
     case 'no_cues':
-      return { label: 'Needs attention', tone: 'stuck', detail: 'No lyrics were found for it, so Selecta can’t tell where the singing is and won’t risk cutting off a line.' };
+      return { label: 'Needs attention', tone: 'stuck', detail: 'No lyrics were found for it, so SelectaDJ can’t tell where the singing is and won’t risk cutting off a line.' };
     case 'no_mix':
-      return { label: 'Waiting for a mix', tone: 'quiet', detail: 'Start a mix and Selecta will find a spot.' };
+      return { label: 'Waiting for a mix', tone: 'quiet', detail: 'Start a mix and SelectaDJ will find a spot.' };
     case 'waiting':
-      return { label: 'Requested · waiting', tone: 'quiet', detail: 'This recording was requested, not scheduled. Selecta looks for a suitable opening while your mix plays; there is no known play time or queue position.' };
+      return { label: 'Requested · waiting', tone: 'quiet', detail: 'This recording was requested, not scheduled. SelectaDJ looks for a suitable opening while your mix plays; there is no known play time or queue position.' };
     case 'searching':
       return {
         label: 'Finding a place',
@@ -471,7 +471,7 @@ export function RequestTag({ item }: { item: Pick<MixItem, 'from_request'> }) {
   const mark = item.from_request;
   if (!mark || !on) return null;
   return mark.kind === 'bridge'
-    ? <span className="request-tag bridge" title="Selecta added this so your request would fit">{mark.for ? `Bridge to ${mark.for}` : 'Bridge to a request'}</span>
+    ? <span className="request-tag bridge" title="SelectaDJ added this so your request would fit">{mark.for ? `Bridge to ${mark.for}` : 'Bridge to a request'}</span>
     : <span className="request-tag" title="This song is here because it was requested">Requested</span>;
 }
 
@@ -617,7 +617,7 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
           {!found.options.length && (
             <p className="hint">
               {found.unsteady
-                ? 'Selecta can’t find a steady enough beat in this song to blend anything into it, so no bridge can help. You can still play it anyway.'
+                ? 'SelectaDJ can’t find a steady enough beat in this song to blend anything into it, so no bridge can help. You can still play it anyway.'
                 : 'No song makes a clean way there from this point in the mix. It rechecks every time the mix changes, or you can play it anyway.'}
             </p>
           )}
@@ -712,7 +712,7 @@ function TransitionPreviews({ request }: { request: RequestRow; playback?: Playb
           preview.play(wanted, `/api/seams/${wanted}/preview`, named(wanted));
         } else if (state.status === 'failed') {
           setWanted('');
-          setProblem('That transition didn’t work, so Selecta will find another way in.');
+          setProblem('That transition didn’t work, so SelectaDJ will find another way in.');
         }
       }).catch(() => {});
     }, WATCH_MS);
@@ -832,7 +832,14 @@ export function RequestsPanel() {
         {text && <button onClick={finish}>Done</button>}
       </div>
       {searchError && <Problem retry={() => setSearchAttempt((value) => value + 1)}>{searchError}</Problem>}
-      {text && matches === null && !searchError && <Skeleton variant="library" lines={2} label="Searching your library" />}
+      {text && matches === null && !searchError && (
+        <Skeleton
+          variant="library"
+          lines={2}
+          label="Searching your library"
+          retry={() => setSearchAttempt((value) => value + 1)}
+        />
+      )}
       {text && matches && !searchError && matches.length === 0 && <p className="hint">Nothing in your library matches that.</p>}
       {text && !!matches?.length && (
         <ul id="request-results" className="request-results" role="listbox" aria-label="Matching songs">
@@ -842,11 +849,13 @@ export function RequestsPanel() {
             const identity = `${song.title ?? 'Untitled'} - ${song.artist ?? 'Unknown artist'}${duplicate ? ` (song ${song.id})` : ''}`;
             return (
               <li key={song.id} id={`request-option-${song.id}`} role="option" aria-selected={activeMatch === index}>
-                <button aria-label={`${identity} - ${already || 'Request'}`} className={already === 'Requested' ? 'picked' : ''} disabled={!!already} onClick={() => pick(song)}>
+                {/* S4 (2026-11-12): the name is the visible words, so it starts with what is shown (axe
+                    label-content-name-mismatch, WCAG 2.5.3); the spaces keep them apart for a screen reader */}
+                <button className={already === 'Requested' ? 'picked' : ''} disabled={!!already} onClick={() => pick(song)} data-identity={identity}>
                   <span className="request-name">
-                    <b>{song.title ?? 'Untitled'}</b>
+                    <b>{song.title ?? 'Untitled'}</b>{' '}
                     <span>{song.artist ?? 'Unknown artist'}{duplicate ? ` · Song ${song.id}` : ''}</span>
-                  </span>
+                  </span>{' '}
                   <small>{already === 'Requested' ? <><Icon name="check" size="compact" /> Requested</> : already || <><Icon name="plus" size="compact" /> Request</>}</small>
                 </button>
               </li>
@@ -858,7 +867,7 @@ export function RequestsPanel() {
       {message && <p className="hint" role="status">{message}</p>}
       {requests === null && !error && <p className="hint">Loading your requests…</p>}
       {requests?.length === 0 && !text && (
-        <p className="hint">Ask for a song any time. Selecta finds a spot where it fits, without interrupting the mix.<TermHint term="request" /></p>
+        <p className="hint">Ask for a song any time. SelectaDJ finds a spot where it fits, without interrupting the mix.<TermHint term="request" /></p>
       )}
       {!!requests?.length && <p className="hint">Requested means saved, not scheduled. Only a placed song is in your current mix. Waiting requests have no reliable play-time estimate or guaranteed queue order.<TermHint term="request" /></p>}
        {!!requests?.length && (

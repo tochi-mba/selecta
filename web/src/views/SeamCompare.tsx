@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AudioPreview } from '../ui/AudioPreview';
+import { fetchBytes } from '../api';
 
 /** SF-0221-06: A/B only between two real, finished renders of the same transition. A render's key is
  * a hash of exactly what was made, so a key is an immutable clip. Each render this browser has seen
@@ -33,7 +34,7 @@ export function forgetRenders() {
 async function clipExists(key: string): Promise<boolean> {
   const stop = new AbortController();
   try {
-    const answer = await fetch(`/api/seams/${encodeURIComponent(key)}/preview`, { signal: stop.signal });
+    const answer = await fetchBytes(`/seams/${encodeURIComponent(key)}/preview`, { signal: stop.signal });
     stop.abort();
     return answer.ok;
   } catch {

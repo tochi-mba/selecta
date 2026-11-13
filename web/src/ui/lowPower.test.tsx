@@ -128,6 +128,24 @@ describe('SF-0235-08 automatic low-power motion', () => {
     expect(lowPowerActive()).toBe(false);
   });
 
+  it('asks for no frames while its flag is off or Still is chosen, and starts again when needed', () => {
+    setFlags({ 'app.auto_low_motion': false });
+    const fake = fakeClock();
+    watchLowPower(fake.clock);
+    fake.run(1, 16);
+    expect(fake.waiting()).toBe(false);
+    act(() => setFlags({}));
+    expect(fake.waiting()).toBe(true);
+
+    act(() => setPrefs({ motion: 'still' }));
+    fake.run(1, 16);
+    expect(fake.waiting()).toBe(false);
+    act(() => setPrefs({ motion: 'subtle' }));
+    expect(fake.waiting()).toBe(true);
+    fake.run(WINDOW_FRAMES * 2 + 1, 80);
+    expect(lowPowerActive()).toBe(true);
+  });
+
   it('gives full motion back on request, for the rest of the session', () => {
     const fake = fakeClock();
     render(<Probe />);

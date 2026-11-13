@@ -30,10 +30,10 @@ describe('GP-0263-03 offline is never an empty Library', () => {
   it.each([
     ['the server is not running', async () => { throw new TypeError('Failed to fetch'); }],
     ['the server answers with an error', async () => new Response('{}', { status: 500 })],
-  ])('when %s, the start says it can’t reach Selecta, not that there is no music', async (_why, answer) => {
+  ])('when %s, the start says it can’t reach SelectaDJ, not that there is no music', async (_why, answer) => {
     vi.stubGlobal('fetch', vi.fn(answer));
     render(<RuntimeApp />);
-    expect(await screen.findByRole('heading', { name: 'Can’t reach Selecta.' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Can’t reach SelectaDJ.' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Try now' })).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(EMPTY_WORDS);
   });

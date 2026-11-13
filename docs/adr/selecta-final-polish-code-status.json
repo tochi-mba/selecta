@@ -2,10 +2,10 @@
   "schema_version": 1,
   "programme": "Selecta final-polish incremental acceptance (FP)",
   "baseline_main_sha": "5347e7309c5ff8b2e2965c2194bf2089b6ad2721",
-  "as_of": "2026-11-08",
+  "as_of": "2026-11-12",
   "scope": "FP-0264-01 through FP-0271-08",
-  "decision_summary": "8 Proposed; owner decisions pending",
-  "implementation_status": "52 Implemented; 3 In progress; 9 Not started (2026-11-11)",
+  "decision_summary": "8 Accepted",
+  "implementation_status": "53 Implemented; 11 In progress (2026-11-12, recounted from the checklist task lines; the per-group lists below were synced to those lines the same day; needs_a_person lists every open task whose line names a person-only step, alongside its main list)",
   "independent_verification": "0 Verified",
   "scope_note": "New acceptance deltas only; old SF/GP tasks and working source features are not missing claims.",
   "groups": {
@@ -22,15 +22,18 @@
         "07"
       ],
       "in_progress": [
-        "06"
-      ],
-      "not_started": [
+        "06",
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
-      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md"
+      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "06",
+        "08"
+      ]
     },
     "0265": {
       "decision": "Accepted",
@@ -44,15 +47,19 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "02",
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
-      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md"
+      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "02",
+        "08"
+      ]
     },
     "0266": {
       "decision": "Accepted",
@@ -67,14 +74,17 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
-      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md"
+      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "08"
+      ]
     },
     "0267": {
       "decision": "Accepted",
@@ -89,15 +99,18 @@
         "07"
       ],
       "in_progress": [
-        "01"
-      ],
-      "not_started": [
+        "01",
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
-      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md"
+      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "01",
+        "08"
+      ]
     },
     "0268": {
       "decision": "Accepted",
@@ -109,18 +122,20 @@
         "03",
         "04",
         "05",
+        "06",
         "07"
       ],
       "in_progress": [
-        "06"
-      ],
-      "not_started": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
-      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md"
+      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "08"
+      ]
     },
     "0269": {
       "decision": "Accepted",
@@ -135,14 +150,17 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
-      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md"
+      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "08"
+      ]
     },
     "0270": {
       "decision": "Accepted",
@@ -157,14 +175,17 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
-      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md"
+      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "08"
+      ]
     },
     "0271": {
       "decision": "Accepted",
@@ -179,14 +200,17 @@
         "06",
         "07"
       ],
-      "in_progress": [],
-      "not_started": [
+      "in_progress": [
         "08"
       ],
+      "not_started": [],
       "independently_verified": [],
       "implementation_pr": "branch feat/finish-checklists (coordinator commits)",
       "implementation_sha": null,
-      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md"
+      "evidence": "see the Evidence field of each task in selecta-final-polish-implementation-checklist.md",
+      "needs_a_person": [
+        "08"
+      ]
     }
   }
 }

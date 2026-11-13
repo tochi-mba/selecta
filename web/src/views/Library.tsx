@@ -48,7 +48,10 @@ const pagesFrom = (text: string | null) => {
 
 export function Library({ mix, now, player, setMixData, setView, notify, status, refreshMix, refreshStatus }: ViewProps) {
   const query = useQueryParam('q') ?? '';
-  const filter = useQueryParam('show') ?? 'all';
+  // S4-0105-10: only filters the server supports count, so an old or hand-typed `?show=genre` (or
+  // tempo, key) never reads as a filter that exists; it shows everything instead.
+  const shown = useQueryParam('show') ?? 'all';
+  const filter = FILTERS.some((option) => option.name === shown) ? shown : 'all';
   const sort = useQueryParam('sort') ?? 'title';
   const pagesAsked = useQueryParam('pages');
   const pagesWanted = useRef(pagesFrom(pagesAsked));
@@ -64,7 +67,19 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   pagesWanted.current = pagesFrom(pagesAsked);
   const [typed, setTyped] = useState(query);
   const [searching, setSearching] = useState(true);
-  useEffect(() => setTyped(query), [query]);
+  // Ignore the echo of our own debounced URL update: a slow render can otherwise
+  // replace newer keystrokes with a shorter query while the user is still typing.
+  const ownSearchEcho = useRef<string | null>(null);
+  // S4-0111-05: a search typed here has already waited for the typing to pause, so it is asked for at once
+  const typedSearch = useRef<string | null>(null);
+  useEffect(() => {
+    if (ownSearchEcho.current === query) {
+      ownSearchEcho.current = null;
+      return;
+    }
+    ownSearchEcho.current = null;
+    setTyped(query);
+  }, [query]);
   const [rows, setRows] = useState<LibrarySong[] | null>(null);
   const [total, setTotal] = useState(0);
   const [next, setNext] = useState<string | null>(null);
@@ -137,7 +152,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       setConfirmBatch(null);
       return;
     }
-    await post('/library/batch', {
+    const done = await post<{ previous?: { id: number; priority: number }[] }>('/library/batch', {
       action: wanted.action,
       entries: wanted.songs.map((song) => ({
         id: song.id,
@@ -146,16 +161,27 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     });
     setConfirmBatch(null);
     setBatchSelection({ identity: selectionIdentity, ids: [] });
-    window.requestAnimationFrame(() => selectionEntryRef.current?.focus());
+    window.requestAnimationFrame(() => {
+      // The dialog button has gone away. Restore focus only if the user hasn't
+      // moved it elsewhere while this frame was pending (for example, to search).
+      if (document.activeElement === document.body) selectionEntryRef.current?.focus();
+    });
     // GP-0258-07: Undo is offered only for songs this batch really changed, and puts back exactly
     // those. The server refuses it whole if any of them has changed again since.
     const priority = wanted.action === 'prioritize' || wanted.action === 'deprioritize';
     const target = wanted.action === 'prioritize' || wanted.action === 'never';
     const changedSongs = wanted.songs.filter((song) => (priority ? song.priority : song.never) !== target);
     const inverse = { prioritize: 'deprioritize', deprioritize: 'prioritize', never: 'allow', allow: 'never' }[wanted.action];
+    // A priority batch puts back each song's own earlier priority, as the server reported it, so a
+    // value other than 0 or 100 isn't flattened to 0. A server that doesn't report it gets the inverse.
+    const before = new Map((done?.previous ?? []).map((entry) => [entry.id, entry.priority]));
+    const restore = priority && changedSongs.every((song) => before.has(song.id));
     notify(`Updated ${wanted.songs.length} precisely selected recordings.`, changedSongs.length ? async () => {
-      await post('/library/batch', { action: inverse, entries: changedSongs.map((song) => ({ id: song.id, expected: target })) });
-      await load();
+      await post('/library/batch', restore
+        ? { action: 'restore_priority', entries: changedSongs.map((song) => ({ id: song.id, expected: target, priority: before.get(song.id) })) }
+        : { action: inverse, entries: changedSongs.map((song) => ({ id: song.id, expected: target })) });
+      // the search on screen when Undo is pressed, which may be newer than the one the batch ran in
+      await loadNow.current();
     } : undefined);
     await load();
   };
@@ -204,6 +230,16 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       }
     }
   }, [url, query, filter, sort]);
+  // The server came back after an outage: a library that failed to load tries again by itself,
+  // rather than waiting for Try again (2026-11-12 flow walk, server loss).
+  useEffect(() => {
+    if (!failed) return;
+    const back = () => void load();
+    window.addEventListener('selecta:back', back);
+    return () => window.removeEventListener('selecta:back', back);
+  }, [failed, load]);
+  const loadNow = useRef(load);
+  loadNow.current = load;
 
   const more = async () => {
     const mine = asked.current;
@@ -305,7 +341,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     pagesJustAppended.current = null;
     pageCursors.current = [null];
     setSearching(true);
-    const wait = window.setTimeout(() => void load(), hasEarlyLibrary(url()) ? 0 : 120);
+    const typedNow = typedSearch.current === query;
+    typedSearch.current = null;
+    const wait = window.setTimeout(() => void load(), hasEarlyLibrary(url()) || typedNow ? 0 : 120);
     return () => { asked.current += 1; window.clearTimeout(wait); };
   }, [load, pagesAsked]);
 
@@ -315,7 +353,11 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
 
   useEffect(() => {
     if (typed === query) return;
-    const wait = window.setTimeout(() => setAddressQuery({ q: typed || null, pages: null }), 200);
+    const wait = window.setTimeout(() => {
+      ownSearchEcho.current = typed;
+      typedSearch.current = typed;
+      setAddressQuery({ q: typed || null, pages: null });
+    }, 200);
     return () => window.clearTimeout(wait);
   }, [typed, query]);
 
@@ -435,11 +477,19 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
     return () => { live = false; };
     // A refreshed row list does not need to refetch the same deep link.
   }, [songWanted, searchIdentity, resolvedIdentity, linkRetry]);
+  const lookedUpMissing = useRef<number | null>(null);
   // LX-0349-05: a change made in the open sheet can move its song out of the current view (This is
   // music, from Set aside). The sheet stays open on that same recording, read afresh by its ID, so
   // the way back (Let Selecta decide) is still right there.
+  const missingOpenSong = opened !== null && rows !== null && !rows.some((song) => song.id === opened);
   useEffect(() => {
-    if (opened === null || rows === null || rows.some((song) => song.id === opened) || linkedSong?.id === opened) return;
+    if (opened === null || !missingOpenSong) {
+      lookedUpMissing.current = null;
+      return;
+    }
+    if (linkedSong?.id === opened || lookedUpMissing.current === opened) return;
+    // Refreshing unrelated rows must not restart or cancel this exact-ID lookup.
+    lookedUpMissing.current = opened;
     let live = true;
     void get<LibraryPage>(`/library?q=${opened}&state=all&limit=1`)
       .then((page) => {
@@ -448,7 +498,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       })
       .catch(() => undefined);
     return () => { live = false; };
-  }, [rows, opened, linkedSong]);
+  }, [opened, missingOpenSong, linkedSong?.id]);
   const lastShown = useRef<LibrarySong | null>(null);
   const shownDetails = rows?.find((song) => song.id === opened)
     ?? (linkedSong?.id === opened ? linkedSong : null)
@@ -575,7 +625,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       )}
       {/* LX-0342-01: the count comes straight after the filters, ahead of the selection tools, so on a
           phone it is still on screen beside the search that changed it */}
-      {committedRows !== null && <p className="hint library-count" role="status">{committedRows.length < total ? `Showing ${committedRows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>}
+      {/* The status stays mounted while a new search or filter loads, so a screen reader hears the new
+          count: a live region that is removed and added again is never announced (NVDA, 2026-11-12). */}
+      <p className="hint library-count" role="status">{committedRows === null ? '' : committedRows.length < total ? `Showing ${committedRows.length} of ${total} songs.` : `${total} song${total === 1 ? '' : 's'}.`}</p>
       {batch && committedRows !== null && committedRows.length > 0 && filter !== 'set_aside' && (
         <section className="library-batch" aria-label="Select Library recordings">
           <div className="row wrap">
@@ -611,13 +663,17 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         </section>
       )}
       {searching && committedRows !== null && <p className="hint" role="status">Updating results…</p>}
-      {failed && committedRows === null && <Problem retry={load}><span>Couldn’t load your library. Your songs are fine.</span>{serverFault && <span className="library-fault"> Something went wrong inside Selecta, not your connection.</span>}</Problem>}
+      {failed && committedRows === null && <Problem retry={load}><span>Couldn’t load your library. Your songs are fine.</span>{serverFault && <span className="library-fault"> Something went wrong inside SelectaDJ, not your connection.</span>}</Problem>}
       {failed && committedRows !== null && <div className="row wrap" role="status"><span className="warn">Can’t check on your library right now, so what’s shown may be out of date.</span><Action working="Retrying…" run={load}>Retry loading</Action></div>}
       {committedRows === null && !failed && <Skeleton variant={cardLayout ? 'cards' : 'library'} lines={6} label="Loading your songs" retry={() => void load()} />}
       {committedRows?.length === 0 && !failed && (
         <section className="empty-state">
           <h2>{query ? `Nothing matches “${query}”.` : counts.music === 0 && filter === 'all' ? 'Your library is empty' : filter === 'ready' ? 'No songs are ready for mixes yet' : 'No songs in this view'}</h2>
-          <p>{counts.music === 0 && !query && filter === 'all' ? 'Add a folder with local music to begin. The original audio stays in place while Selecta scans and analyses it.' : filter === 'ready' && !query ? 'A song becomes ready for mixes once Selecta has analysed it. Show all songs to see how far each one has got.' : 'Try a different title, artist, recording ID or spelling, or show all songs to check their progress. Approximate matches must be checked before selecting a recording.'}</p>
+          <p>{counts.music === 0 && !query && filter === 'all' ? 'Add a folder with local music to begin. The original audio stays in place while SelectaDJ scans and analyses it.' : filter === 'ready' && !query ? 'A song becomes ready for mixes once SelectaDJ has analysed it. Show all songs to see how far each one has got.' : !query && filter !== 'all' ? `No song is in ${FILTERS.find((option) => option.name === filter)?.label ?? filter} right now. Show all songs to see the rest of your library.` : 'Try a different title, artist, recording ID or spelling, or show all songs to check their progress. Approximate matches must be checked before selecting a recording.'}</p>
+          {/* WP3 pilot: set-aside songs never appear under Everything, so a search there can miss them */}
+          {query && filter !== 'set_aside' && counts.set_aside > 0 && (
+            <p className="hint">Set-aside songs are only searched under Set aside.</p>
+          )}
           {/* LX-0343-07: say which constraints are hiding songs, so clearing them is a known step */}
           {(query || filter !== 'all') && (
             <p className="hint library-active-constraints">
@@ -657,7 +713,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       )}
       {songWanted !== null && linkProblem && (
         <p role="status" className="hint">
-          {linkProblem === 'missing' ? 'That exact recording is no longer available in your Library.' : 'Couldn’t open that recording. Check your connection to Selecta.'}
+          {linkProblem === 'missing' ? 'That exact recording is no longer available in your Library.' : 'Couldn’t open that recording. Check your connection to SelectaDJ.'}
           {' '}<button type="button" onClick={() => setLinkRetry((attempt) => attempt + 1)}>Try again</button>
           {' '}<button type="button" onClick={closeDetails}>Dismiss</button>
         </p>

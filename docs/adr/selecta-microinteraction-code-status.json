@@ -14,16 +14,21 @@
         "05",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "06",
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-final-contracts.md",
         "docs/adr/selecta-microinteraction-design-baselines.md",
         "web/src/views/Now.tsx",
-        "web/src/ui/toasts.tsx"
+        "web/src/ui/toasts.tsx",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
         "web/src/views/Now.test.tsx",
-        "web/src/ui/controls.test.tsx"
+        "web/src/ui/controls.test.tsx",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0136": {
@@ -158,18 +163,22 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-interaction-contracts.md",
         "web/src/views/Mixes.tsx",
         "web/src/views/WorkshopPanels.tsx",
         "web/src/views/Setup.tsx",
-        "web/src/views/Start.tsx"
+        "web/src/views/Start.tsx",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
         "web/src/views/Mixes.test.tsx",
         "web/src/views/Setup.test.tsx",
-        "web/e2e/mi-0141-first-screen-zoom.e2e.ts"
+        "web/e2e/mi-0141-first-screen-zoom.e2e.ts",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0142": {
@@ -182,13 +191,17 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-surface-contracts.md",
-        "web/src/views/Mixes.tsx"
+        "web/src/views/Mixes.tsx",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
-        "web/src/views/Mixes.test.tsx"
+        "web/src/views/Mixes.test.tsx",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0143": {
@@ -201,15 +214,19 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-surface-contracts.md",
         "web/src/views/MixSetup.tsx",
-        "web/src/styles/listening.css"
+        "web/src/styles/listening.css",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
         "web/src/views/MixSetup.test.tsx",
-        "web/src/views/Mixes.test.tsx"
+        "web/src/views/Mixes.test.tsx",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0144": {
@@ -222,14 +239,18 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-surface-contracts.md",
         "web/src/views/Now.tsx",
-        "web/src/styles/listening.css"
+        "web/src/styles/listening.css",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
-        "web/src/views/Now.test.tsx"
+        "web/src/views/Now.test.tsx",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0145": {
@@ -265,14 +286,18 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-surface-contracts.md",
         "web/src/views/Now.tsx",
-        "web/src/styles/listening.css"
+        "web/src/styles/listening.css",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
-        "web/src/views/Now.test.tsx"
+        "web/src/views/Now.test.tsx",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0147": {
@@ -285,15 +310,19 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-surface-contracts.md",
         "web/src/views/Now.tsx",
-        "web/src/player.ts"
+        "web/src/player.ts",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
         "web/src/views/Now.test.tsx",
-        "web/src/player.test.ts"
+        "web/src/player.test.ts",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0148": {
@@ -306,14 +335,18 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-surface-contracts.md",
-        "web/src/views/Requests.tsx"
+        "web/src/views/Requests.tsx",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
         "web/src/views/Requests.test.tsx",
-        "web/src/views/RequestsJoining.test.tsx"
+        "web/src/views/RequestsJoining.test.tsx",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0149": {
@@ -351,15 +384,19 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-surface-contracts.md",
         "web/src/views/EditorRows.tsx",
         "web/src/views/Mix.tsx",
-        "web/src/styles/creation.css"
+        "web/src/styles/creation.css",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
-        "web/src/views/Mix.test.tsx"
+        "web/src/views/Mix.test.tsx",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0151": {
@@ -372,15 +409,19 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-surface-contracts.md",
         "web/src/audio/focus.ts",
-        "web/src/views/SeamInspector.tsx"
+        "web/src/views/SeamInspector.tsx",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
         "web/src/audio/focus.test.tsx",
-        "web/src/views/Mix.test.tsx"
+        "web/src/views/Mix.test.tsx",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0152": {
@@ -393,14 +434,18 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-surface-contracts.md",
         "web/src/views/Studio.tsx",
-        "web/src/styles/creation.css"
+        "web/src/styles/creation.css",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
-        "web/src/views/Studio.test.tsx"
+        "web/src/views/Studio.test.tsx",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0153": {
@@ -413,15 +458,19 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-final-contracts.md",
         "web/src/views/Library.tsx",
         "web/src/styles/operations.css",
-        "tests/scale_server.py"
+        "tests/scale_server.py",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
-        "web/src/views/Library.test.tsx"
+        "web/src/views/Library.test.tsx",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0154": {
@@ -434,13 +483,17 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-final-contracts.md",
-        "web/src/views/SongDetails.tsx"
+        "web/src/views/SongDetails.tsx",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
-        "web/src/views/Library.test.tsx"
+        "web/src/views/Library.test.tsx",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0155": {
@@ -453,13 +506,17 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-final-contracts.md",
-        "web/src/views/Links.tsx"
+        "web/src/views/Links.tsx",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
-        "web/src/views/Links.test.tsx"
+        "web/src/views/Links.test.tsx",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0156": {
@@ -472,13 +529,17 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-final-contracts.md",
-        "web/src/views/WorkshopPanels.tsx"
+        "web/src/views/WorkshopPanels.tsx",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
-        "web/src/views/Workshop.test.tsx"
+        "web/src/views/Workshop.test.tsx",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0157": {
@@ -491,14 +552,18 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-final-contracts.md",
         "web/src/views/ExportPanel.tsx",
-        "web/src/views/ExportJobs.tsx"
+        "web/src/views/ExportJobs.tsx",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
-        "web/src/views/Mix.test.tsx"
+        "web/src/views/Mix.test.tsx",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0158": {
@@ -511,13 +576,17 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-final-contracts.md",
-        "web/src/views/Listening.tsx"
+        "web/src/views/Listening.tsx",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
-        "web/src/views/Listening.test.tsx"
+        "web/src/views/Listening.test.tsx",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0159": {
@@ -530,15 +599,19 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-final-contracts.md",
         "web/src/ui/toasts.tsx",
         "web/src/ui/controls.tsx",
-        "web/src/state/activity.ts"
+        "web/src/state/activity.ts",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
-        "web/src/ui/controls.test.tsx"
+        "web/src/ui/controls.test.tsx",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0160": {
@@ -551,16 +624,20 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-final-contracts.md",
         "web/src/styles/tokens.css",
         "web/src/views/EditorRows.tsx",
-        "web/src/shell/Shell.tsx"
+        "web/src/shell/Shell.tsx",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
         "web/src/views/Mix.test.tsx",
-        "web/src/shell/Shell.test.tsx"
+        "web/src/shell/Shell.test.tsx",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0161": {
@@ -573,16 +650,20 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-final-contracts.md",
         "web/src/ui/useReducedMotion.ts",
         "web/src/styles/polish.css",
-        "web/src/views/Now.tsx"
+        "web/src/views/Now.tsx",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
         "web/src/views/Now.test.tsx",
-        "web/src/ui/controls.test.tsx"
+        "web/src/ui/controls.test.tsx",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0162": {
@@ -622,17 +703,21 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-final-contracts.md",
         "docs/adr/selecta-microinteraction-verification-protocols.md",
         "web/src/views/Requests.tsx",
         "web/src/views/Mixes.tsx",
-        "web/src/views/WorkshopPanels.tsx"
+        "web/src/views/WorkshopPanels.tsx",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
         "web/src/views/Requests.test.tsx",
-        "web/src/views/Mixes.test.tsx"
+        "web/src/views/Mixes.test.tsx",
+        "tests/test_mi_study_kit.py"
       ]
     },
     "0164": {
@@ -644,14 +729,19 @@
         "06",
         "07"
       ],
-      "in_progress": [],
+      "in_progress": [
+        "05",
+        "08"
+      ],
       "source": [
         "docs/adr/selecta-microinteraction-verification-protocols.md",
         "docs/adr/selecta-microinteraction-evidence.md",
-        "docs/adr/selecta-microinteraction-implementation-checklist.md"
+        "docs/adr/selecta-microinteraction-implementation-checklist.md",
+        "src/selecta/audit/mi_study_kit.py"
       ],
       "tests": [
-        "docs/adr/selecta-microinteraction-verification-matrix.md"
+        "docs/adr/selecta-microinteraction-verification-matrix.md",
+        "tests/test_mi_study_kit.py"
       ]
     }
   }

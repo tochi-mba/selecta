@@ -117,7 +117,32 @@ test('T0263 Library: search with /, open a song’s menu and add it to the mix, 
   await expect.poll(() => order(page)).toContain('Last Call');
 });
 
-test('T0263 export: open the save dialog from Edit, reach Save, and close back to the button', async ({ page }) => {
+test('T0263 export: open the save dialog from Edit, start saving, cancel it and close back to the button', async ({ page }) => {
+  // A previous test may have exported the default mix on this shared server.
+  await resetMix(page.request, [1, 2, 3, 5]);
+  // The export job is held on this page's side. On the real server a job can only be cancelled while
+  // it waits on transitions, and once every transition of this mix has been rendered (the server
+  // renders the current mix by itself) that wait lasts a few milliseconds, so a keyboard walk to
+  // Cancel export loses the race and the server answers 409. Holding the job in "preparing" until
+  // the cancel arrives keeps this a keyboard question, not a render-speed one.
+  const mix = (await (await page.request.get('/api/mix')).json()).mix as { song_id: number; title: string; artist: string; seam?: { state: { key: string } } }[];
+  let held: Record<string, unknown> | null = null;
+  const job = (state: string) => ({
+    id: 'job-t0263', state, scope: 'current', draft: null, mix_name: 'Keyboard walk', revision: 'rev-t0263',
+    songs: mix.map((item) => ({ song_id: item.song_id, title: item.title, artist: item.artist })),
+    seams: mix.slice(1).map((item, index) => ({ key: item.seam?.state.key ?? `seam-${index}`, from: mix[index].title, to: item.title })),
+    seams_total: mix.length - 1, seams_ready: 1, seconds_estimate: 240, name: 'keyboard-walk.flac', seconds: null,
+    error: null, created_at: 1_794_000_000, can_cancel: state === 'preparing', quiet_seconds: 0,
+  });
+  await page.route('**/api/exports/jobs', (route) => {
+    if (route.request().method() === 'POST') held = job('preparing');
+    return route.fulfill({ json: route.request().method() === 'POST' ? held : { jobs: held ? [held] : [] } });
+  });
+  await page.route('**/api/exports/jobs/job-t0263', (route) => {
+    if (route.request().method() !== 'DELETE') return route.fallback();
+    held = job('cancelled');
+    return route.fulfill({ json: { ...job('cancelling'), can_cancel: false } });
+  });
   await page.goto('/mix/current/edit');
   const download = page.getByRole('button', { name: 'Download audio' });
   await tabTo(page, download);
@@ -129,8 +154,19 @@ test('T0263 export: open the save dialog from Edit, reach Save, and close back t
     await page.keyboard.press('Tab');
     expect(await dialog.evaluate((node) => node.contains(document.activeElement))).toBe(true);
   }
+  // no export of this mix exists yet, so Save it is offered
   const save = dialog.getByRole('button', { name: 'Save it', exact: true });
-  if (await save.count()) await tabTo(page, save, 20);
+  await expect(save).toBeEnabled();
+  await tabTo(page, save, 20);
+  await page.keyboard.press('Enter');
+  // the export has started on the server; how long the render takes is not a keyboard question,
+  // so the walk ends by cancelling it from the keyboard and getting Save it back
+  const cancel = dialog.getByRole('button', { name: 'Cancel export' });
+  await expect(cancel).toBeVisible({ timeout: 30_000 });
+  await tabTo(page, cancel, 20);
+  await page.keyboard.press('Enter');
+  await expect(cancel).toHaveCount(0, { timeout: 30_000 });
+  await expect(save).toBeEnabled();
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
   await expect(download).toBeFocused();
@@ -157,8 +193,20 @@ test('T0263 study: open a study, grade a version and answer, by keyboard to the 
   // a radio group takes its choice with the arrows
   for (let step = 0; step < 6 && !(await grade.isChecked()); step += 1) await page.keyboard.press('ArrowRight');
   await expect(grade).toBeChecked();
-  await tabTo(page, study.getByRole('button', { name: 'Cannot judge' }));
+  // a preference needs both versions heard: each player is reached with Tab and played with Space
+  const now = study.locator('.study-now');
+  for (const version of ['A', 'B']) {
+    await tabTo(page, study.getByLabel(`Version ${version}`, { exact: true }));
+    await page.keyboard.press('Space');
+    await expect(now).toHaveText(`Now playing: Version ${version}`);
+    // The preference is intentionally gated until actual audio crosses 0.5s.
+    await expect.poll(() => study.getByLabel(`Version ${version}`, { exact: true }).evaluate((node) => (node as HTMLAudioElement).currentTime), { timeout: 20_000 }).toBeGreaterThan(0.65);
+  }
+  const prefer = study.getByRole('button', { name: 'Prefer A' });
+  await expect(prefer).toBeEnabled({ timeout: 30_000 });
+  await tabTo(page, prefer);
   await page.keyboard.press('Enter');
   await expect(study.getByText('All responses saved. Thank you for listening.')).toBeVisible();
   expect(posted).toHaveLength(1);
+  expect(posted[0]).toMatchObject({ choice: 'a', quality: { a: { grade: 4 } } });
 });

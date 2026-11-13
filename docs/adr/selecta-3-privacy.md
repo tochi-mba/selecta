@@ -11,9 +11,35 @@ Covers S3-0072-01, S3-0072-02, S3-0072-03, S3-0072-05, S3-0072-06, S3-0072-07, S
 | Stem model | The Demucs model's own host, through `demucs` | Once, on first separation | A plain download. Nothing about your library is sent |
 | Lucy, with a remote provider (added later by the Lucy programme) | `api.anthropic.com` or `api.openai.com`, or a URL you set | Only after you choose a remote provider and give consent; the built-in provider sends nothing | The conversation and the song details Lucy needs. The key stays on the server (`src/selecta/lucy/settings.py`, ADR-0330) |
 
+Cloud-only transactional email can use `api.postmarkapp.com` or `api.resend.com`. These are configured by the cloud service and are never contacted by the local music server.
+
 Rechecked on 2026-11-11 against every remote address in `src/selecta` (`tests/test_s3_docs_contracts.py`); Cloud hosts belong to Cloud mode and its own docs. Nothing else goes anywhere: no analytics, telemetry, remote fonts, icons or scripts. Copy on the first screen and in Sources says the lyric lookup part out loud, and the wording matches the table above. An automated browser test records every request during navigation and fails on any that isn't to the local server.
 
 "Your audio stays on this PC" is the claim the app makes, and it's accurate. It deliberately doesn't claim "nothing leaves this PC", which wouldn't be.
+
+### Static references and test-only hosts
+
+The following hostnames occur as literal references in documentation, fixture data, and venue licensing guidance in the source tree. Their presence is **not** a network request made by local Selecta. The two invalid domains are intentionally non-resolving test fixtures.
+
+- `app.invalid`
+- `globalmusicrights.com`
+- `issuer.invalid`
+- `pplprs.co.uk`
+- `www.agedi.es`
+- `www.ascap.com`
+- `www.bmi.com`
+- `www.bumastemra.nl`
+- `www.gema.de`
+- `www.gvl.de`
+- `www.imro.ie`
+- `www.ppiltd.com`
+- `www.ppluk.com`
+- `www.prsformusic.com`
+- `www.sacem.fr`
+- `www.sena.nl`
+- `www.sesac.com`
+- `www.sgae.es`
+- `www.spre.fr`
 
 ## Who can reach the server
 

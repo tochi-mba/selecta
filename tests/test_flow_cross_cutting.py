@@ -250,8 +250,9 @@ def test_transport_and_routes_each_have_one_owner() -> None:
         name
         for name, text in sources.items()
         if ("history.pushState" in text or "history.replaceState" in text)
-        and not name.startswith(("cloud/", "admin/"))
+        and not name.startswith(("cloud/", "admin/", "business/"))
     }
+    # The business console has its own navigation and is loaded only in Cloud mode.
     assert local == {"router.ts"}
 
 

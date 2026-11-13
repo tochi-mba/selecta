@@ -386,14 +386,14 @@ describe('correcting a song', () => {
   it('double and half fill in what was measured', async () => {
     await open();
     await userEvent.click(screen.getByRole('button', { name: /Double measured tempo/ }));
-    expect(screen.getByRole('spinbutton')).toHaveValue(160);
+    expect(screen.getByRole('textbox', { name: /^Tempo/ })).toHaveValue('160');
     await userEvent.click(screen.getByRole('button', { name: /^Half measured/ }));
-    expect(screen.getByRole('spinbutton')).toHaveValue(40);
+    expect(screen.getByRole('textbox', { name: /^Tempo/ })).toHaveValue('40');
   });
 
   it('saves what was typed, and says what’ll be made again', async () => {
     const { sent, notify } = await open();
-    await userEvent.type(screen.getByRole('spinbutton'), '160');
+    await userEvent.type(screen.getByRole('textbox', { name: /^Tempo/ }), '160');
     await userEvent.click(screen.getByRole('button', { name: 'Save correction' }));
     await waitFor(() => expect(sent()).toEqual({ bpm: 160, clear: ['camelot'] }));
     await waitFor(() => expect(notify).toHaveBeenCalledWith('Saved your correction. 3 transitions with this song will be made again.'));
@@ -409,10 +409,10 @@ describe('correcting a song', () => {
   it('shows what’s wrong with a value that isn’t allowed, and keeps it there', async () => {
     const answer = () => { throw new ApiError('Tempo has to be between 40 and 240.', 400); };
     await open(measured, { 'POST /songs/1/correct': answer });
-    await userEvent.type(screen.getByRole('spinbutton'), '900');
+    await userEvent.type(screen.getByRole('textbox', { name: /^Tempo/ }), '900');
     await userEvent.click(screen.getByRole('button', { name: 'Save correction' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('between 40 and 240');
-    expect(screen.getByRole('spinbutton')).toHaveValue(900);
+    expect(screen.getByRole('textbox', { name: /^Tempo/ })).toHaveValue('900');
   });
 
   it('music and not music can be switched, without touching the file', async () => {

@@ -165,8 +165,16 @@ def analyse(
         stop_when_app_stops()
     settings, conn = _open()
     if song:
-        rows = [db.song_by_id(conn, song_id) for song_id in song]
-        songs = [row for row in rows if row is not None]
+        rows = [db.song_by_id(conn, song_id) for song_id in dict.fromkeys(song)]
+        # r8d: a song asked for by name may have been analysed by the library's own run since it
+        # was asked for. Leaving it out here, before the models load, saves starting a gigabyte of
+        # models only to skip every song
+        songs = [
+            row
+            for row in rows
+            if row is not None
+            and (refresh or not db.is_analysed(conn, row["id"], ANALYSIS_VERSION))
+        ]
     else:
         songs = db.songs_needing_analysis(conn, ANALYSIS_VERSION, folder, refresh)
     if sample:
@@ -459,7 +467,7 @@ def web(
     open_browser: bool = typer.Option(True, "--open/--no-open"),
     reload: bool = typer.Option(False, "--reload", help="Restart as the code changes."),
 ) -> None:
-    """Run Selecta in the selected mode (local app or Cloud API)."""
+    """Run SelectaDJ in the selected mode (local app or Cloud API)."""
     import webbrowser
 
     import uvicorn
@@ -478,7 +486,7 @@ def web(
         webbrowser.open(url)
     elif mode is Mode.CLOUD:
         console.print(
-            f"Starting Selecta Cloud API on port {port}; web assets are hosted separately."
+            f"Starting SelectaDJ Cloud API on port {port}; web assets are hosted separately."
         )
     uvicorn.run(
         "selecta.api:serve",
@@ -494,9 +502,7 @@ def web(
 @app.command()
 def gateway(
     port: int = typer.Option(8734),
-    host: str | None = typer.Option(
-        None, help="Defaults to SELECTA_GATEWAY_BIND_HOST or 0.0.0.0."
-    ),
+    host: str | None = typer.Option(None, help="Defaults to SELECTA_GATEWAY_BIND_HOST or 0.0.0.0."),
     reload: bool = typer.Option(False, "--reload", help="Restart as the code changes."),
 ) -> None:
     """Run the isolated Cloud worker gateway service."""
@@ -632,9 +638,7 @@ def account_deletion_maintenance(
             "Set SELECTA_STRIPE_SECRET_KEY before running deletion maintenance."
         )
     if not workos_key:
-        raise typer.BadParameter(
-            "Set SELECTA_WORKOS_API_KEY before running deletion maintenance."
-        )
+        raise typer.BadParameter("Set SELECTA_WORKOS_API_KEY before running deletion maintenance.")
     if not ledger_bucket:
         raise typer.BadParameter(
             "Set SELECTA_R2_BUCKET_DELETION_LEDGER to a dedicated private R2 bucket."
@@ -642,9 +646,7 @@ def account_deletion_maintenance(
 
     engine = _cloud_database_engine()
     client = storage_api.r2_client()
-    stripe = HttpStripeClient(
-        stripe_key, api_version=os.environ.get("SELECTA_STRIPE_API_VERSION")
-    )
+    stripe = HttpStripeClient(stripe_key, api_version=os.environ.get("SELECTA_STRIPE_API_VERSION"))
     effects = AccountDeletionEffects(
         engine,
         JobStore(engine),
@@ -797,7 +799,7 @@ def listening_report(study: str) -> None:
 
 @app.command("gather-data")
 def gather_data() -> None:
-    """Bring data from every older Selecta folder on this PC into the one in use. Safe to repeat."""
+    """Bring older SelectaDJ data folders into the active folder. Safe to repeat."""
     from selecta.homes import gather
 
     settings = load_settings()
@@ -826,9 +828,12 @@ def ratings(
         console.print(f"  {home}", highlight=False, soft_wrap=True)
     for item in sorted(rated, key=lambda r: (r.move, not r.good)):
         word = "GOOD" if item.good else "BAD "
+        apart = "tempo unknown" if item.gap is None else f"{item.gap:5.1%} apart"
         console.print(
-            f"{word} {item.move:16} {item.bars:2} bars, {item.gap:5.1%} apart, keys {item.keys}, "
-            f"{item.a[:30]} > {item.b[:30]}" + (f" ({item.note})" if item.note else ""),
+            f"{word} {item.move:16} {item.bars:2} bars, {apart}, "
+            + ("key unknown, " if item.keys is None else f"keys {item.keys}, ")
+            + f"{item.a[:30]} > {item.b[:30]}"
+            + (f" ({item.note})" if item.note else ""),
             highlight=False,
             soft_wrap=True,
         )
@@ -898,6 +903,30 @@ def stem_preview(
     output.parent.mkdir(parents=True, exist_ok=True)
     sf.write(output, result.audio, SAMPLE_RATE, subtype="PCM_16")
     console.print(f"Wrote {result.audio.shape[0] / SAMPLE_RATE:.1f}s to {output}.")
+
+
+@app.command("key-benchmark")
+def key_benchmark(
+    candidate: str = typer.Option("chroma", help="The key method to compare with S-KEY."),
+    limit: int | None = typer.Option(None, help="Only the first N analysed songs."),
+    threshold: float | None = typer.Option(None, help="Weighted score the candidate must reach."),
+    output: Path = typer.Option(Path("out/key-benchmark.json"), "--output", "-o"),
+) -> None:
+    """Score a replacement key method against S-KEY's stored keys (read-only, SC-0405-02)."""
+    from selecta.analysis import key_benchmark as bench
+
+    if candidate not in bench.CANDIDATES:
+        raise typer.BadParameter(f"Known methods: {', '.join(bench.CANDIDATES)}.")
+    conn = bench.open_read_only(load_settings().db_path)
+    report = bench.run(conn, bench.CANDIDATES[candidate], name=candidate, limit=limit)
+    bench.write(report, output, threshold)
+    score = report.against_skey.as_dict()
+    console.print(
+        f"{candidate} vs S-KEY on {score['songs']:,} songs: exact {score['exact']:.1%}, "
+        f"mixable {score['mixable']:.1%}, weighted {score['weighted']:.3f}. Report: {output}."
+    )
+    if threshold is not None:
+        console.print("Meets the threshold." if report.meets(threshold) else "Below the threshold.")
 
 
 if __name__ == "__main__":

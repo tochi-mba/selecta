@@ -1,6 +1,7 @@
 import { ChangeEvent, useEffect, useState } from 'react';
 import { Action, Dialog } from '../ui/controls';
 import { words } from '../copy';
+import { fetchBytes } from '../api';
 
 type Preview = {
   token: string;
@@ -12,7 +13,7 @@ type Preview = {
 type BackupStatus = { pending_restart: boolean; rollback_available: boolean; problem?: string | null };
 
 async function backupRequest(path: string, init?: RequestInit): Promise<Response> {
-  const response = await fetch('/api/backup' + path, init);
+  const response = await fetchBytes('/backup' + path, init);
   if (!response.ok) {
     let message = 'Could not work with this backup.';
     try {
@@ -51,7 +52,7 @@ export function LocalBackup() {
       try {
         const anchor = document.createElement('a');
         anchor.href = url;
-        anchor.download = 'selecta-local-backup.zip';
+        anchor.download = 'selectadj-local-backup.zip';
         document.body.appendChild(anchor);
         anchor.click();
         anchor.remove();
@@ -108,7 +109,7 @@ export function LocalBackup() {
     {status?.problem && <p className="warn" role="alert">Restore was not applied: {status.problem}. Your current database has been kept.</p>}
     <h3>Restore a backup</h3>
     <p className="hint">Restoring replaces the current local database at the next restart. It cannot reconstruct music files that have moved or vanished.</p>
-    <label>Choose a Selecta backup ZIP
+    <label>Choose a SelectaDJ backup ZIP
       <input type="file" accept=".zip,application/zip" onChange={selectFile} disabled={working} />
     </label>
     {/* MP-0293-06: `waiting`, not `disabled`, so the button keeps focus while it checks and the

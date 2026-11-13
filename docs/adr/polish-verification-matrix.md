@@ -1,6 +1,7 @@
 # Selecta UI/UX polish - verification matrix
 
-- **Status:** Proposed; no runtime checks completed by this planning PR.
+- **Status:** Proposed; no runtime checks completed by the 2026-11-06 planning PR.
+- **Status (2026-11-12):** automated checks are recorded for 115 of 143 P tasks in [the evidence ledger](polish-implementation-evidence.md); 0 are independently Verified, and the person-run checks (screen readers, listening, installed app, user tests) remain open.
 - **Date:** 2026-11-06
 - **Applies to:** every task in [the polish checklist](polish-implementation-checklist.md).
 

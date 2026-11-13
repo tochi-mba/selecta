@@ -1,0 +1,84 @@
+{
+ "mix": [
+  {
+   "position": 0,
+   "song_id": 1,
+   "artist": "Ada Reyes",
+   "title": "Morning Light",
+   "duration": 89.5,
+   "bpm": 120.0,
+   "key": "8A",
+   "locked": false,
+   "seam": null
+  },
+  {
+   "position": 1,
+   "song_id": 2,
+   "artist": "Bo Lindqvist",
+   "title": "Slow Tide",
+   "duration": 88.77272108843538,
+   "bpm": 121.0,
+   "key": "8A",
+   "locked": false,
+   "seam": {
+    "settings": {},
+    "state": {
+     "status": "none",
+     "key": "c9dbccae51a011224ec1",
+     "windows": 0,
+     "windows_total": 0,
+     "eta": 40
+    }
+   }
+  },
+  {
+   "position": 2,
+   "song_id": 3,
+   "artist": "Cass Okafor",
+   "title": "Paper Moon",
+   "duration": 90.23947845804989,
+   "bpm": 119.0,
+   "key": "9A",
+   "locked": false,
+   "seam": {
+    "settings": {},
+    "state": {
+     "status": "none",
+     "key": "947c53b0338e275a7d4a",
+     "windows": 0,
+     "windows_total": 0,
+     "eta": 80
+    }
+   }
+  },
+  {
+   "position": 3,
+   "song_id": 4,
+   "artist": "Dev Patel",
+   "title": "Neon Rain",
+   "duration": 88.05736961451247,
+   "bpm": 122.0,
+   "key": "7A",
+   "locked": false,
+   "seam": {
+    "settings": {},
+    "state": {
+     "status": "none",
+     "key": "64888040de407cc06b0a",
+     "windows": 0,
+     "windows_total": 0,
+     "eta": 120
+    }
+   }
+  }
+ ],
+ "name": "Your mix",
+ "can_undo": false,
+ "eta": {
+  "seconds": 120,
+  "low": 84,
+  "high": 189,
+  "late": false,
+  "seams": 3
+ }
+}

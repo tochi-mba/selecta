@@ -8,14 +8,27 @@ every revision one step at a time, so every `downgrade()` runs, not just the jum
 
 from __future__ import annotations
 
+import uuid
+
 import pytest
 import sqlalchemy as sa
+from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy.engine import Engine
 
-from selecta.persistence import migrate
+from selecta.business.schema import venues, zones
+from selecta.identity.schema import users, workspaces
+from selecta.persistence import metadata, migrate
+from selecta.persistence.registry import load_all_tables
+from selecta.playback.schema import playback_sessions
 
 VERSION_TABLE = "alembic_version"
+
+
+def current_heads(engine: Engine) -> set[str]:
+    """An Alembic branch point legitimately has more than one current head."""
+    with engine.connect() as connection:
+        return set(MigrationContext.configure(connection).get_current_heads())
 
 
 def revisions_oldest_first() -> list[str]:
@@ -29,6 +42,7 @@ def shape(engine: Engine) -> dict:
     """Everything a migration can change that the tests compare: tables, columns with their
     types and nullability, indexes, unique and check constraints, and on PostgreSQL the
     row-level security policies and enum types."""
+    load_all_tables()
     inspector = sa.inspect(engine)
     found: dict = {}
     for table in sorted(inspector.get_table_names()):
@@ -58,6 +72,21 @@ def shape(engine: Engine) -> dict:
                 for row in connection.execute(
                     sa.text("SELECT name FROM sqlite_master WHERE type = 'trigger'")
                 )
+            )
+            # SQLite's inspector omits expression indexes. Snapshot their actual
+            # DDL so the downgrade/re-upgrade test also compares their definitions.
+            expression_names = {
+                index.name
+                for table in metadata.tables.values()
+                for index in table.indexes
+                if any(not isinstance(expr, sa.Column) for expr in index.expressions)
+            }
+            found["@expression_indexes"] = sorted(
+                (row["name"], row["sql"])
+                for row in connection.exec_driver_sql(
+                    "SELECT name, sql FROM sqlite_master WHERE type = 'index'"
+                ).mappings()
+                if row["name"] in expression_names
             )
     if engine.dialect.name == "postgresql":
         with engine.connect() as connection:
@@ -151,13 +180,143 @@ def test_step_by_step_down_and_up_rebuilds_the_same_schema(cloud_engine):
 
     for target in reversed(chain[:-1]):
         migrate.downgrade(cloud_engine, target)
-        assert migrate.current(cloud_engine) == target
+        assert target in current_heads(cloud_engine)
     migrate.downgrade(cloud_engine, "base")
     assert leftovers(cloud_engine) == {}
 
     for target in chain:
         migrate.upgrade(cloud_engine, target)
-        assert migrate.current(cloud_engine) == target
+        assert target in current_heads(cloud_engine)
 
     assert shape(cloud_engine) == at_head
     assert migrate.pending_changes(cloud_engine) == []
+
+
+# SQLite's reflection warnings do not prove these indexes are missing: each
+# model and migration creates a UNIQUE expression index. PostgreSQL reflects
+# them, while SQLite requires direct sqlite_master inspection.
+EXPRESSION_INDEXES = (
+    ("zones", "uq_zones_venue_id_lower_name", "lower("),
+    ("playback_sessions", "uq_playback_sessions_workspace_id_zone", "coalesce("),
+)
+
+
+@pytest.mark.parametrize(("table", "index_name", "expression"), EXPRESSION_INDEXES)
+def test_expression_indexes_exist_and_are_unique(cloud_engine, table, index_name, expression):
+    with cloud_engine.connect() as connection:
+        if connection.dialect.name == "sqlite":
+            ddl = connection.execute(
+                sa.text(
+                    "SELECT sql FROM sqlite_master "
+                    "WHERE type = 'index' AND tbl_name = :table AND name = :index_name"
+                ),
+                {"table": table, "index_name": index_name},
+            ).scalar_one_or_none()
+        else:
+            ddl = connection.execute(
+                sa.text(
+                    "SELECT indexdef FROM pg_indexes "
+                    "WHERE schemaname = current_schema() "
+                    "AND tablename = :table AND indexname = :index_name"
+                ),
+                {"table": table, "index_name": index_name},
+            ).scalar_one_or_none()
+    assert ddl is not None, f"{table}: missing expression index {index_name}"
+    assert "create unique index" in ddl.lower(), ddl
+    assert expression in ddl.lower(), ddl
+
+
+@pytest.mark.parametrize(("table", "index_name", "_expression"), EXPRESSION_INDEXES)
+def test_sqlite_expression_index_drift_is_not_hidden(cloud_engine, table, index_name, _expression):
+    if cloud_engine.dialect.name != "sqlite":
+        pytest.skip("SQLite's expression-index reflection limitation only")
+    assert migrate.pending_changes(cloud_engine) == []
+    load_all_tables()
+    index = next(item for item in metadata.tables[table].indexes if item.name == index_name)
+    with cloud_engine.begin() as connection:
+        connection.exec_driver_sql(f'DROP INDEX "{index_name}"')
+    try:
+        assert ("missing_expression_index", table, index_name) in migrate.pending_changes(
+            cloud_engine
+        )
+    finally:
+        with cloud_engine.begin() as connection:
+            index.create(connection)
+    assert migrate.pending_changes(cloud_engine) == []
+
+
+def test_expression_index_uniqueness_rejects_duplicates_without_poisoning_transaction(
+    cloud_engine,
+):
+    """A failed insert must leave the transaction usable on SQLite and PostgreSQL."""
+    user_id, workspace_id, venue_id, zone_id = (str(uuid.uuid4()) for _ in range(4))
+    with cloud_engine.connect() as connection:
+        outer = connection.begin()
+        try:
+            connection.execute(
+                users.insert().values(
+                    id=user_id, auth_subject=f"migration-{user_id}", created_at=1.0
+                )
+            )
+            connection.execute(
+                workspaces.insert().values(
+                    id=workspace_id, name="Migration check", kind="business",
+                    owner_user_id=user_id, created_at=1.0,
+                )
+            )
+            connection.execute(
+                venues.insert().values(
+                    id=venue_id, workspace_id=workspace_id, name="Venue",
+                    country="GB", timezone="Europe/London", created_at=1.0,
+                )
+            )
+            connection.execute(
+                zones.insert().values(
+                    id=zone_id, workspace_id=workspace_id, venue_id=venue_id,
+                    name="Main", created_at=1.0,
+                )
+            )
+
+            def rejected(statement):
+                savepoint = connection.begin_nested()
+                try:
+                    with pytest.raises(sa.exc.IntegrityError):
+                        connection.execute(statement)
+                finally:
+                    savepoint.rollback()
+
+            rejected(
+                zones.insert().values(
+                    id=str(uuid.uuid4()), workspace_id=workspace_id,
+                    venue_id=venue_id, name="mAiN", created_at=1.0,
+                )
+            )
+            connection.execute(
+                zones.insert().values(
+                    id=str(uuid.uuid4()), workspace_id=workspace_id,
+                    venue_id=venue_id, name="Lounge", created_at=1.0,
+                )
+            )
+
+            def session(zone_id):
+                return playback_sessions.insert().values(
+                    id=str(uuid.uuid4()), workspace_id=workspace_id,
+                    zone_id=zone_id, updated_at=1.0,
+                )
+
+            connection.execute(session(None))
+            rejected(session(None))
+            connection.execute(session(zone_id))
+            rejected(session(zone_id))
+            assert connection.scalar(
+                sa.select(sa.func.count()).select_from(zones).where(
+                    zones.c.venue_id == venue_id
+                )
+            ) == 2
+            assert connection.scalar(
+                sa.select(sa.func.count()).select_from(playback_sessions).where(
+                    playback_sessions.c.workspace_id == workspace_id
+                )
+            ) == 2
+        finally:
+            outer.rollback()

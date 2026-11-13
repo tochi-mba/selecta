@@ -57,24 +57,25 @@ def ensure_head(connection: Connection, pool: str, lane: str, workspace_id: str,
 
 
 def ensure_clock(connection: Connection, pool: str, lane: str, now: float) -> Row:
-    insert_ignore(connection, lane_clock, {"pool": pool, "lane": str(lane), "updated_at": now},
-                  CLOCK_KEYS)
+    insert_ignore(
+        connection, lane_clock, {"pool": pool, "lane": str(lane), "updated_at": now}, CLOCK_KEYS
+    )
     query = sa.select(lane_clock).where(_where_clock(pool, lane))
     return connection.execute(locked(query)).one()
 
 
 def _update_head(connection: Connection, head: Row, **values) -> None:
     connection.execute(
-        fair_heads.update().where(_where_head(head.pool, head.lane, head.workspace_id)).values(
-            **values
-        )
+        fair_heads.update()
+        .where(_where_head(head.pool, head.lane, head.workspace_id))
+        .values(**values)
     )
 
 
 def _update_clock(connection: Connection, clock: Row, **values) -> None:
-    connection.execute(lane_clock.update().where(_where_clock(clock.pool, clock.lane)).values(
-        **values
-    ))
+    connection.execute(
+        lane_clock.update().where(_where_clock(clock.pool, clock.lane)).values(**values)
+    )
 
 
 def backlogged_floor(
@@ -93,9 +94,15 @@ def backlogged_lanes(connection: Connection, pool: str) -> set[str]:
     """Lanes in this pool where some workspace has queued work."""
     found = set()
     for lane in policy.LANES:
-        probe = sa.select(sa.literal(1)).where(
-            fair_heads.c.pool == pool, fair_heads.c.lane == str(lane), fair_heads.c.queued_count > 0
-        ).limit(1)
+        probe = (
+            sa.select(sa.literal(1))
+            .where(
+                fair_heads.c.pool == pool,
+                fair_heads.c.lane == str(lane),
+                fair_heads.c.queued_count > 0,
+            )
+            .limit(1)
+        )
         if connection.execute(probe).first() is not None:
             found.add(str(lane))
     return found
@@ -128,16 +135,25 @@ def create_lanes(connection: Connection, now: float) -> None:
             continue
         for lane in LANES:
             insert_ignore(
-                connection, lane_clock, {"pool": pool, "lane": str(lane), "updated_at": now},
+                connection,
+                lane_clock,
+                {"pool": pool, "lane": str(lane), "updated_at": now},
                 CLOCK_KEYS,
             )
 
 
-def lock_all_lanes(connection: Connection) -> None:
-    """The first lock of every transaction that may change a head (see the module notes)."""
-    connection.execute(
-        locked(sa.select(lane_clock.c.pool).order_by(lane_clock.c.pool, lane_clock.c.lane))
-    ).all()
+ALL_CLOCKS = sum(1 for pool in POOLS if pool != INTERNAL) * len(LANES)
+"""How many clock rows `create_lanes` makes, so a caller can tell when some are missing."""
+
+
+def lock_all_lanes(connection: Connection) -> int:
+    """The first lock of every transaction that may change a head (see the module notes).
+    Returns how many clocks it locked."""
+    return len(
+        connection.execute(
+            locked(sa.select(lane_clock.c.pool).order_by(lane_clock.c.pool, lane_clock.c.lane))
+        ).all()
+    )
 
 
 def lane_vtimes(connection: Connection, pool: str) -> dict[str, float]:

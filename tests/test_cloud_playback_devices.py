@@ -266,7 +266,7 @@ def test_an_ios_home_screen_app_is_told_to_keep_the_screen_on(engine):
     result = _register(engine, "iPhone", kind="phone", capabilities=HOME_SCREEN_APP)
     assert result.warnings == (SpeakerWarning.IOS_KEEP_SCREEN_ON,)
     assert WARNING_TEXT[SpeakerWarning.IOS_KEEP_SCREEN_ON] == (
-        "On iPhone, keep Selecta open with the screen on while it plays."
+        "On iPhone, keep SelectaDJ open with the screen on while it plays."
     )
     assert devices.is_poor_speaker(result.device)
 

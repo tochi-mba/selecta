@@ -27,12 +27,11 @@ describe('frontend import direction', () => {
     expect(offending).toEqual([]);
   });
 
-  it('only api.ts talks to the local server with fetch, apart from the listed byte streams', () => {
-    // These endpoints carry raw backup or audio bytes, which api.ts's JSON helpers do not carry.
-    const streams = ['views/LocalBackup.tsx', 'views/SeamCompare.tsx'];
-    const direct = [...SHARED, 'views'].flatMap(sources)
+  it('only api.ts talks to the local server with fetch; byte streams use its fetchBytes (T0068)', () => {
+    // Raw backup, audio and listening-report bytes go through api.ts's fetchBytes, not fetch.
+    const direct = [...SHARED, 'views', 'lucy'].flatMap(sources)
       .filter((file) => /\bfetch\(\s*[`'"]\/api\//.test(fs.readFileSync(`${SOURCE}${file}`, 'utf8')));
-    expect(direct).toEqual(streams);
+    expect(direct).toEqual([]);
   });
 
   it('the guard sees a real import line', () => {

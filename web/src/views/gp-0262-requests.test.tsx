@@ -20,11 +20,11 @@ describe('GP-0262-03 the exact requested recording', () => {
     });
     render(<Requests />);
     fireEvent.change(screen.getByRole('combobox', { name: 'Request a song' }), { target: { value: 'same' } });
-    const hal = await screen.findByRole('button', { name: /Same Name - Hal Greene/ });
+    const hal = await screen.findByRole('button', { name: /Same Name\s+Hal Greene/ });
     expect(hal.textContent).not.toMatch(/Song 10/);
     // the two Iris Vale recordings are told apart by their song number
-    expect(screen.getByRole('button', { name: /Same Name - Iris Vale \(song 11\)/ })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Same Name - Iris Vale \(song 12\)/ }));
+    expect(screen.getByRole('button', { name: /Same Name\s+Iris Vale · Song 11/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Same Name\s+Iris Vale · Song 12/ }));
     await waitFor(() => expect(calls.find((call) => call.path === '/requests' && call.method === 'POST')?.body).toEqual({ song_id: 12 }));
     const list = within(await screen.findByRole('list', { name: 'Your requests' }));
     expect(list.getByText('Same Name')).toBeInTheDocument();

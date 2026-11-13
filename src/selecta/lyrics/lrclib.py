@@ -21,6 +21,7 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import cached_property
 
 import httpx
 
@@ -125,8 +126,10 @@ class Line:
     end: float
     text: str
 
-    @property
+    @cached_property
     def words(self) -> list[str]:
+        """Found once per line (r8d): planning and the library's traits ask for them again and
+        again. Callers only read the list."""
         return _WORD.findall(self.text.lower())
 
 
@@ -173,6 +176,7 @@ class LrcLib:
             if wait > 0:
                 time.sleep(wait)
         for _ in range(5):
+
             def send() -> httpx.Response:
                 self._last_request = time.monotonic()
                 return self.client.get(f"{API}{path}", params=params)
@@ -224,7 +228,8 @@ def fetch_all(
         artist, title = clean_artist(row["artist"]), clean_title(row["title"])
         try:
             found = api.lookup(artist, title, row["album"], row["duration"])
-        except httpx.HTTPError:
+        except (httpx.HTTPError, ValueError):
+            # S4-0096-07: an outage answering with a non-JSON page fails one song, not the run
             counts["network error"] = counts.get("network error", 0) + 1
             continue
         if found is None:

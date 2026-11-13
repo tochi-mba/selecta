@@ -1,0 +1,184 @@
+- link "Skip to the page":
+  - /url: "#content"
+- navigation "Main":
+  - link "Selecta, go to Make a Mix":
+    - /url: /mixes
+    - text: Selecta
+  - list:
+    - listitem:
+      - link "Listen":
+        - /url: /listen
+    - listitem:
+      - link "Make a Mix":
+        - /url: /mixes
+    - listitem:
+      - link "My Mixes":
+        - /url: /mixes/mine
+    - listitem:
+      - link "Library":
+        - /url: /library
+    - listitem:
+      - link "Workspace":
+        - /url: /workshop
+    - listitem:
+      - link "Edit":
+        - /url: /mix/current/edit
+  - 'button "Requests: Request a song"': Request a song
+  - button "Collapse the side bar"
+- banner:
+  - navigation "Breadcrumb":
+    - list:
+      - listitem: Library
+  - button "Search Ctrl K"
+  - 'button "Theme: Match this computer"'
+  - button "Activity"
+  - link "Workspace, 1 item needs your attention":
+    - /url: /workshop
+    - text: "1"
+  - button "Keyboard shortcuts"
+- main:
+  - heading "Library" [level=1]
+  - paragraph:
+    - text: 18 ready for mixes 18 analysed 19 songs
+    - button "1 set aside"
+  - paragraph: Analysed means audio has been measured. Ready for mixes means a song has the cues needed to plan a mix; it does not mean transitions are already rendered.
+  - searchbox "Search your library"
+  - text: Sort by
+  - combobox "Sort by":
+    - option "Title" [selected]
+    - option "Artist"
+    - option "Tempo"
+    - option "Newest first"
+  - group "Row size":
+    - button "Comfortable" [pressed]
+    - button "Compact"
+  - group "Library layout":
+    - button "List view" [pressed]
+    - button "Card view"
+  - group "Filter Library recordings":
+    - button "Everything" [pressed]
+    - button "Ready"
+    - button "Not analysed yet"
+    - button "Needs attention"
+    - button "Priority list"
+    - button "Set aside"
+  - status: 19 songs.
+  - region "Select Library recordings":
+    - button "Select up to 200 loaded songs"
+    - text: Or use the checkboxes beside recordings to select them individually. Shift selects a range.
+  - list:
+    - listitem:
+      - checkbox "Select recording Untitled by Unknown artist, ID 15"
+      - button "Details for Untitled": Untitled
+      - text: Unknown artist 120 BPM 8A 1:30 Ready for mixes
+      - button "Start a mix"
+      - button "More actions for Untitled"
+    - listitem:
+      - checkbox "Select recording An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix) by An Artist Whose Name Is Also Far Too Long To Fit On One Line, ID 8"
+      - button "Details for An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix)": An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix)
+      - text: An Artist Whose Name Is Also Far Too Long To Fit On One Line 123 BPM 8A 1:27 lyrics Ready for mixes
+      - button "Start a mix"
+      - button "More actions for An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix)"
+    - listitem:
+      - checkbox "Select recording Broken File by Bad Rip, ID 14"
+      - button "Details for Broken File": Broken File
+      - text: Bad Rip Not analysed No key yet 1:20 Couldn’t be analysed Selecta couldn’t analyse this file.
+      - button "Try analysing again"
+      - button "More actions for Broken File"
+    - listitem:
+      - checkbox "Select recording Déjà Vu by Zoë Müller, ID 9"
+      - button "Details for Déjà Vu": Déjà Vu
+      - text: Zoë Müller 118 BPM 7A 1:31 Ready for mixes
+      - button "Start a mix"
+      - button "More actions for Déjà Vu"
+    - listitem:
+      - checkbox "Select recording HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026 by Nospacesartistnamethatalsorefusestowrap, ID 16"
+      - button "Details for HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026": HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026
+      - text: Nospacesartistnamethatalsorefusestowrap 121 BPM 8A 1:29 Ready for mixes
+      - button "Start a mix"
+      - button "More actions for HyperextendedunbrokentitlewithoutanyspacesthatcannotwrapanywhereatallMix2026"
+    - listitem:
+      - checkbox "Select recording Last Call by Jo Marsh, ID 12"
+      - button "Details for Last Call": Last Call
+      - text: Jo Marsh 120 BPM 8A 1:30 Ready for mixes
+      - button "Start a mix"
+      - button "More actions for Last Call"
+    - listitem:
+      - checkbox "Select recording Morning Light by Ada Reyes, ID 1"
+      - button "Details for Morning Light": Morning Light
+      - text: Ada Reyes 120 BPM 8A 1:30 lyrics Ready for mixes
+      - button "Start a mix"
+      - button "More actions for Morning Light"
+    - listitem:
+      - checkbox "Select recording Neon Rain by Dev Patel, ID 4"
+      - button "Details for Neon Rain": Neon Rain
+      - text: Dev Patel 122 BPM 7A 1:28 Ready for mixes
+      - button "Start a mix"
+      - button "More actions for Neon Rain"
+    - listitem:
+      - checkbox "Select recording Paper Moon by Cass Okafor, ID 3"
+      - button "Details for Paper Moon": Paper Moon
+      - text: Cass Okafor 119 BPM 9A 1:30 Ready for mixes
+      - button "Start a mix"
+      - button "More actions for Paper Moon"
+    - listitem:
+      - checkbox "Select recording Remix של שלום (feat. ليلى) 2026 by Mixed Bidi Ensemble, ID 18"
+      - button "Details for Remix של שלום (feat. ليلى) 2026": Remix של שלום (feat. ليلى) 2026
+      - text: Mixed Bidi Ensemble 120 BPM 9A 1:30 Ready for mixes
+      - button "Start a mix"
+      - button "More actions for Remix של שלום (feat. ليلى) 2026"
+    - listitem:
+      - checkbox "Select recording Same Name (song 10) by Hal Greene, ID 10"
+      - button "Details for Same Name (song 10)": Same Name
+      - text: Hal Greene Recording 10 120 BPM 8A 1:30 Ready for mixes
+      - button "Start a mix"
+      - button "More actions for Same Name (song 10)"
+    - listitem:
+      - checkbox "Select recording Same Name by Iris Vale, ID 11"
+      - button "Details for Same Name by Iris Vale": Same Name
+      - text: Iris Vale 124 BPM 8A 1:27 Ready for mixes
+      - button "Start a mix"
+      - button "More actions for Same Name by Iris Vale"
+    - listitem:
+      - checkbox "Select recording Same Name (song 17) by Hal Greene, ID 17"
+      - button "Details for Same Name (song 17)": Same Name
+      - text: Hal Greene Recording 17 120 BPM 8A 1:30 Ready for mixes
+      - button "Start a mix"
+      - button "More actions for Same Name (song 17)"
+    - listitem:
+      - checkbox "Select recording Slow Tide by Bo Lindqvist, ID 2"
+      - button "Details for Slow Tide": Slow Tide
+      - text: Bo Lindqvist 121 BPM 8A 1:29 Ready for mixes
+      - button "Start a mix"
+      - button "More actions for Slow Tide"
+    - listitem:
+      - checkbox "Select recording שלום עולם by נועה לוי, ID 5"
+      - button "Details for שלום עולם": שלום עולם
+      - text: נועה לוי 120 BPM 8B 1:30 Ready for mixes
+      - button "Start a mix"
+      - button "More actions for שלום עולם"
+    - listitem:
+      - checkbox "Select recording أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة by فرقة الليل الطويل, ID 20"
+      - button "Details for أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة": أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة
+      - text: فرقة الليل الطويل 122 BPM 8A 1:28 Ready for mixes
+      - button "Start a mix"
+      - button "More actions for أغنية طويلة جدا عن الليل والنهار والبحر والسماء والنجوم البعيدة"
+    - listitem:
+      - checkbox "Select recording مرحبا بالعالم by ليلى حسن, ID 6"
+      - button "Details for مرحبا بالعالم": مرحبا بالعالم
+      - text: ليلى حسن 121 BPM 8A 1:29 Ready for mixes
+      - button "Start a mix"
+      - button "More actions for مرحبا بالعالم"
+    - listitem:
+      - checkbox "Select recording 夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル by 東京の夜の楽団と仲間たち, ID 19"
+      - button "Details for 夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル": 夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル
+      - text: 東京の夜の楽団と仲間たち 119 BPM 8A 1:30 Ready for mixes
+      - button "Start a mix"
+      - button "More actions for 夜明けの街を歩きながら君のことを考えていた長い長い歌のタイトル"
+    - listitem:
+      - checkbox "Select recording 日本語の歌 by 田中 葵, ID 7"
+      - button "Details for 日本語の歌": 日本語の歌
+      - text: 田中 葵 120 BPM 9A 1:30 Ready for mixes
+      - button "Start a mix"
+      - button "More actions for 日本語の歌"
+- status: "Workspace needs your attention: 1 song failed."

@@ -40,9 +40,7 @@ import io
 import itertools
 import json
 import os
-import shutil
 import sys
-import tempfile
 import threading
 import time
 from html import escape
@@ -61,6 +59,7 @@ import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
 import uvicorn  # noqa: E402
 from cloud_world import CloudObjects, add_asset, add_playback_file  # noqa: E402
+from e2e_home import make_home  # noqa: E402
 from fastapi import Body, Request  # noqa: E402
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -99,7 +98,6 @@ PRICES = {
 }
 
 
-
 def same_server(url: str) -> str:
     """Only the path and query of a return URL, so the fake Stripe pages can only send the
     browser back to this server (the app gives https URLs; this server speaks http)."""
@@ -115,6 +113,14 @@ def wav(seconds: float, *, tone: float = 220.0, rate: int = 44_100) -> bytes:
     audio = np.stack([left, left], axis=1).astype(np.float32)
     out = io.BytesIO()
     sf.write(out, audio, rate, format="WAV", subtype="PCM_16")
+    return out.getvalue()
+
+
+def playback_flac(source: bytes) -> bytes:
+    """Encode the exact decoded source samples as the production 24-bit lossless proxy does."""
+    audio, rate = sf.read(io.BytesIO(source), dtype="float32", always_2d=True)
+    out = io.BytesIO()
+    sf.write(out, audio, rate, format="FLAC", subtype="PCM_24")
     return out.getvalue()
 
 
@@ -173,8 +179,7 @@ class E2EObjects(CloudObjects):
 
 def build(port: int):
     base = f"http://127.0.0.1:{port}"
-    home = Path(tempfile.mkdtemp(prefix="selecta-cloud-e2e-"))
-    atexit.register(shutil.rmtree, home, ignore_errors=True)
+    home = make_home("selecta-cloud-e2e-")
     server = cloud_db.postgres_url()
     if server:
         # A fresh schema and non-superuser role on the test PostgreSQL, so row-level security
@@ -232,9 +237,7 @@ def build(port: int):
         now_playing=FakeNowPlaying(),
     )
     authkit = e2e_cloud_authkit.FakeAuthKit(f"http://localhost:{port}")
-    app = create_cloud_app(
-        settings, engine=engine, verifier=E2EVerifier(authkit), room_ports=ports
-    )
+    app = create_cloud_app(settings, engine=engine, verifier=E2EVerifier(authkit), room_ports=ports)
     with TestClient(app, base_url=base) as client:
         for token, premium in PEOPLE.items():
             made = client.post(
@@ -254,6 +257,7 @@ def build(port: int):
                         expires_at=db_now(conn) + 86_400,
                     )
     songs = {index: quiet_song(index) for index in range(6)}
+    source_audio: dict[str, bytes] = {}
 
     def account_of(user: str) -> dict:
         # Legacy Rooms harnesses use bare tokens (e.g. "bob"), while the cloud
@@ -288,19 +292,37 @@ def build(port: int):
         if body.get("plan", "free") != "free":
             with transaction(engine) as conn:
                 stripe_sync.grant_override(
-                    conn, workspace_id=workspace_id, plan_id=str(body["plan"]),
-                    reason="browser tests", actor="e2e", expires_at=db_now(conn) + 86_400,
+                    conn,
+                    workspace_id=workspace_id,
+                    plan_id=str(body["plan"]),
+                    reason="browser tests",
+                    actor="e2e",
+                    expires_at=db_now(conn) + 86_400,
                 )
         ids = []
         for number in range(int(body.get("songs", 0))):
             audio = wav(float(body.get("seconds", 4.0)), tone=220.0 + 40 * number)
             asset_id = add_asset(
-                engine, objects, workspace_id, audio, name=f"Song {number + 1}.wav",
+                engine,
+                objects,
+                workspace_id,
+                audio,
+                name=f"Song {number + 1}.wav",
                 duration=float(body.get("seconds", 4.0)),
             )
-            add_playback_file(engine, objects, workspace_id, asset_id, audio)
+            source_audio[asset_id] = audio
+            proxy = playback_flac(audio) if body.get("real_proxy") else audio
+            add_playback_file(engine, objects, workspace_id, asset_id, proxy)
             ids.append(asset_id)
         return {"workspace_id": workspace_id, "assets": ids}
+
+    @app.get("/test/original-audio/{asset_id}")
+    def original_audio(asset_id: str):
+        """The uploaded source for the browser alignment check; never installed in production."""
+        audio = source_audio.get(asset_id)
+        if audio is None:
+            return Response(status_code=404)
+        return Response(audio, media_type="audio/wav")
 
     @app.post("/test/quota")
     def set_quota(body: dict = Body(default={})):  # noqa: B008
@@ -309,8 +331,9 @@ def build(port: int):
             usage = quota.set_limit(
                 conn, workspace_id, plan_for("free"), limit_bytes=int(body["limit_bytes"])
             )
-            outbox.emit(conn, "quota.changed", workspace_id, {"state": usage.state.value},
-                        db_now(conn))
+            outbox.emit(
+                conn, "quota.changed", workspace_id, {"state": usage.state.value}, db_now(conn)
+            )
         return {"state": usage.state.value, "over_by_bytes": usage.over_by_bytes}
 
     @app.post("/test/quota-silent")
@@ -330,7 +353,11 @@ def build(port: int):
         with transaction(engine, workspace_id) as conn:
             for kind, amount in body.get("amounts", {}).items():
                 taken = allowances.try_consume(
-                    conn, workspace_id, kind, float(amount), allowances.limit_for(plan, kind),
+                    conn,
+                    workspace_id,
+                    kind,
+                    float(amount),
+                    allowances.limit_for(plan, kind),
                     timezone=body.get("timezone", "Europe/London"),
                 )
                 assert taken.ok, kind
@@ -422,7 +449,10 @@ def build(port: int):
             objects.log.append({**entry, "status": 404})
             return Response(status_code=404)
         data = found.bytes()
-        headers = {"Accept-Ranges": "bytes", "Content-Type": "audio/wav"}
+        content_type = (
+            "audio/flac" if key.endswith(".flac") and data[:4] == b"fLaC" else "audio/wav"
+        )
+        headers = {"Accept-Ranges": "bytes", "Content-Type": content_type}
         wanted = request.headers.get("range", "")
         if wanted.startswith("bytes="):
             first, _, last = wanted[6:].partition("-")
@@ -446,9 +476,9 @@ def build(port: int):
         return (
             "<!doctype html><html lang=en><meta charset=utf-8><title>Test checkout</title>"
             f"<main><h1>Test checkout: {escape(plan)}</h1>"
-            f"<form method=post action=\"/fake-stripe/checkout/{escape(session_id)}/pay\">"
+            f'<form method=post action="/fake-stripe/checkout/{escape(session_id)}/pay">'
             "<button>Pay</button></form>"
-            f"<a href=\"{escape(same_server(fields['cancel_url']))}\">Cancel</a></main>"
+            f'<a href="{escape(same_server(fields["cancel_url"]))}">Cancel</a></main>'
         )
 
     @app.post("/fake-stripe/checkout/{session_id}/pay")
@@ -460,9 +490,12 @@ def build(port: int):
         def webhook():
             with transaction(engine, workspace_id) as conn:
                 decision = stripe_sync.SnapshotDecision(
-                    plan_id=price["plan"], plan_version=price["version"],
-                    source=stripe_sync.SnapshotSource.STRIPE, reason="active",
-                    subscription_id=f"sub_{session_id}", valid_until=db_now(conn) + 30 * 86_400,
+                    plan_id=price["plan"],
+                    plan_version=price["version"],
+                    source=stripe_sync.SnapshotSource.STRIPE,
+                    reason="active",
+                    subscription_id=f"sub_{session_id}",
+                    valid_until=db_now(conn) + 30 * 86_400,
                 )
                 stripe_sync.write_snapshot(conn, workspace_id, decision, db_now(conn))
                 quota.set_limit(conn, workspace_id, plan_for(price["plan"]))
@@ -476,7 +509,7 @@ def build(port: int):
         return (
             "<!doctype html><html lang=en><meta charset=utf-8><title>Test portal</title>"
             "<main><h1>Test billing portal</h1>"
-            f"<a href=\"{escape(same_server(back))}\">Return to Selecta</a></main>"
+            f'<a href="{escape(same_server(back))}">Return to SelectaDJ</a></main>'
         )
 
     # -- Rooms audio and pages -----------------------------------------------------------------
@@ -509,7 +542,8 @@ def build(port: int):
         if dist not in built_cache:
             built_cache[dist] = {
                 file.relative_to(dist).as_posix(): file
-                for file in dist.rglob("*") if file.is_file()
+                for file in dist.rglob("*")
+                if file.is_file()
             }
         return built_cache[dist]
 
@@ -522,8 +556,9 @@ def build(port: int):
         # http://localhost:<port> is the site with the real AuthKit library (the sign-in test).
         dist = DIST_AUTHKIT if request.url.hostname == "localhost" else DIST
         if not (dist / "index.html").is_file():
-            return Response("Build the cloud test sites first: pnpm build:cloud-e2e",
-                            status_code=503)
+            return Response(
+                "Build the cloud test sites first: pnpm build:cloud-e2e", status_code=503
+            )
         # The request only ever picks from the files the build made; it never becomes a path.
         built = built_files(dist)
         if path in built:

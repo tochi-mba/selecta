@@ -36,7 +36,11 @@ test('SF-0235-05 a 20,000-song library pages and searches quickly, and the heap 
 
   // the library is never asked for all at once: every request is one page
   expect(Math.max(...asked)).toBeLessThanOrEqual(100);
-  const more = page.getByRole('button', { name: 'Show more songs' });
+  // checked by its accessible name once; the timed loop finds it by class, because a role-and-name
+  // query makes Playwright work out the name of every button in every row on each try, which took
+  // over half of each timed page on a loaded laptop while the page's own work was about 80 ms
+  await expect(page.getByRole('button', { name: 'Show more songs' })).toBeVisible();
+  const more = page.locator('button.library-more');
   for (let round = 0; round < 5; round += 1) {
     const started = Date.now();
     await more.click();

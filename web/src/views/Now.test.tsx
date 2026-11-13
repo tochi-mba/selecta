@@ -292,7 +292,13 @@ describe('pointer seeking', () => {
         toggleStage={() => {}}
       />,
     );
-    const slider = await screen.findByRole('slider', { name: 'Where in the song' });
+    await screen.findByRole('slider', { name: 'Where in the song' });
+    // Let the view's follow-up fetches and effects settle, then take the slider that is actually
+    // mounted: on a slow CI runner a late re-render could swap the element under a stale reference.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const slider = screen.getByRole('slider', { name: 'Where in the song' });
     vi.spyOn(slider, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 200 } as DOMRect);
     fireEvent.pointerDown(slider, { pointerId: 3, isPrimary: true, button: 0, clientX: 100 });
     expect(slider.querySelector('.scrub-ghost')).toBeInTheDocument();
@@ -359,7 +365,7 @@ describe('creative Listen states grounded in audio and known timing', () => {
     await screen.findByText('Hello');
     fireEvent.change(screen.getByRole('combobox', { name: 'Audio visualizer style' }), { target: { value: 'ribbon' } });
     expect(JSON.parse(localStorage.getItem('selecta.listen') ?? '{}').spectrumShape).toBe('ribbon');
-    expect(screen.getByRole('img', { name: 'Frequency ribbon - actual mixed-audio frequency levels' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Bar ribbon - actual mixed-audio frequency levels' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Radial spectrum' })).toBeNull();
     expect(player.state.phase).toBe('idle');
     fireEvent.change(screen.getByRole('combobox', { name: 'Audio visualizer style' }), { target: { value: 'bars' } });
@@ -384,19 +390,19 @@ describe('creative Listen states grounded in audio and known timing', () => {
   });
 
   it.each([
-    ['aurora', 'Aurora contours'],
-    ['lanes', 'Spectral lanes'],
-    ['constellation', 'Frequency constellation'],
-    ['waterfall', 'Recent spectrum'],
-    ['skyline', 'Spectrum skyline'],
-    ['threads', 'Glass threads'],
-    ['pins', 'Signal pins'],
-    ['matrix', 'Spectrum mosaic'],
-    ['trails', 'Afterglow trails'],
-    ['dunes', 'Spectral dunes'],
-    ['candles', 'Signal ranges'],
-    ['mesh', 'Frequency mesh'],
-    ['split', 'Split flow'],
+    ['pulse', 'Kick pulse field'],
+    ['lanes', 'Drum lanes'],
+    ['horizon', 'Bass horizon'],
+    ['sparkle', 'Hi-hat sparkle'],
+    ['scope', 'Oscilloscope'],
+    ['stereo', 'Stereo field'],
+    ['waterfall', 'Scrolling spectrogram'],
+    ['bursts', 'Onset bursts'],
+    ['wash', 'Section wash'],
+    ['river', 'Energy streams'],
+    ['grid', 'Beat grid'],
+    ['shock', 'Snare shockwave'],
+    ['tracer', 'Brightness tracer'],
   ])('chooses and remembers %s without creating or starting audio', async (id, label) => {
     window.localStorage.removeItem('selecta.listen');
     fakeBackend({ 'GET /songs/1': detail });
@@ -452,7 +458,7 @@ describe('when there are no timed lyrics to follow', () => {
   it.each([
     ['instrumental', [], 'Instrumental'],
     [null, [], 'Lyrics haven’t been looked up yet.'],
-    ['failed', [], 'Looking up lyrics for this song didn’t work. Selecta will try again later.'],
+    ['failed', [], 'Looking up lyrics for this song didn’t work. SelectaDJ will try again later.'],
     ['missing', [], 'No lyrics found for this song.'],
   ])('says why for a %s song, and invents no timing', async (lyricStatus, lines, words) => {
     fakeBackend({ 'GET /songs/1': { ...detail, lines, lyric_status: lyricStatus } });

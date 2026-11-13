@@ -1,7 +1,7 @@
 # ADR-0118 - Recommendations: clear music-first cards and authentic previews
 
 - **Decision status:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
-- **Implementation status:** In progress (2026-11-11: EX-0118-01 to -04 Implemented, -05 Not started; evidence in the checklist). **Verified (automated):** EX-0118-02, -03 and -04 by 2026-11-11; -01 and -05 need a person.
+- **Implementation status:** Implemented (2026-11-12: EX-0118-01 to -05 Implemented, -05 as its code part only, the study tool; evidence in the checklist). **Verified (automated):** EX-0118-02, -03 and -04 by 2026-11-11; -01 and -05 need a person.
 - **Independent verification:** No (0/5).
 - **Programme/date:** Experience-first UI/UX; 2026-11-07; baseline `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e` (merged PR #29).
 - **Priority / phase:** P1 / Make a Mix.
@@ -34,7 +34,7 @@ No preview API/audio generator is approved by this proposal. Feasibility and con
 2. **EX-0118-02 - Check secondary action parity.** Acceptance: Play/Edit/Save accessible to keyboard and touch. Verification: Backend result and E2E mapping. **Implementation: Implemented (2026-11-10); Verified: Yes (automated, 2026-11-11).**
 3. **EX-0118-03 - Handle partial/unknown metadata.** Acceptance: Cards truthful on missing artists, no-ready suggestions and timing. Verification: Fixture and error-state review. **Implementation: Implemented (2026-11-10); Verified: Yes (automated, 2026-11-10).**
 4. **EX-0118-04 - Document preview feasibility gate.** Acceptance: Source audio and revision exact, or preview rejected. Verification: Code inspection and audio focus proof. **Implementation: Implemented (2026-11-10, gate rejects card previews; see below); Verified: Yes (automated, 2026-11-10).**
-5. **EX-0118-05 - Measure choice confidence.** Acceptance: Better task outcome than baseline, not just prettier layout. Verification: Counterbalanced uncoached selection study. **Implementation: Not started; Verified: No. Needs a person: counterbalanced uncoached selection study.**
+5. **EX-0118-05 - Measure choice confidence.** Acceptance: Better task outcome than baseline, not just prettier layout. Verification: Counterbalanced uncoached selection study. **Implementation: Implemented (2026-11-12; code part); Verified: No. Evidence: counterbalanced orders and raw-count scoring against the baseline in `src/selecta/audit/ex_study.py` (`tests/test_ex_study.py` 13/13 passed 2026-11-12). Needs a person: run the counterbalanced uncoached selection study against the baseline cards with real participants, record the sessions and score them with `python -m selecta.audit.ex_study score`, at one exact SHA**
 
 ## Preview feasibility gate (EX-0118-04, decided 2026-11-10)
 

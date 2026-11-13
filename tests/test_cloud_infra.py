@@ -77,14 +77,96 @@ def test_render_never_holds_a_secret_value_in_the_repo():
 def test_every_env_var_render_sets_is_one_the_code_reads():
     read = set()
     for path in (ROOT / "src" / "selecta").rglob("*.py"):
-        read |= set(re.findall(r'"((?:SELECTA|OTEL)_[A-Z0-9_]+)"', path.read_text("utf-8")))
+        read |= set(re.findall(r'"((?:SELECTA|OTEL|ANTHROPIC)_[A-Z0-9_]+)"',
+                               path.read_text("utf-8")))
     read.add("OTEL_EXPORTER_OTLP_HEADERS")  # read by the OpenTelemetry exporter itself
+    # storage.api._bucket constructs these four names from the bucket kind at runtime.
+    read.update(name for name in _R2 if name.startswith("SELECTA_R2_BUCKET_"))
     set_by_render = {item["key"] for group in blueprint()["envVarGroups"]
                      for item in group["envVars"]}
     for env in environments().values():
         for service in env["services"]:
             set_by_render |= {item["key"] for item in service["envVars"] if "key" in item}
     assert sorted(set_by_render - read) == []
+
+
+def render_service(env: dict, command: str) -> dict:
+    (service,) = [s for s in env["services"] if s["dockerCommand"].split()[1] == command]
+    return service
+
+
+def render_items(env: dict, command: str) -> list[dict]:
+    """Every variable a service gets: its own and those of the groups it pulls in."""
+    service = render_service(env, command)
+    groups = {group["name"]: group["envVars"] for group in blueprint()["envVarGroups"]}
+    found = []
+    for item in service["envVars"]:
+        found += groups[item["fromGroup"]] if "fromGroup" in item else [item]
+    return found
+
+
+def render_values(env: dict, command: str) -> dict[str, str]:
+    return {item["key"]: item["value"] for item in render_items(env, command) if "value" in item}
+
+
+_R2 = ("SELECTA_R2_ACCOUNT_ID", "SELECTA_R2_ACCESS_KEY_ID", "SELECTA_R2_SECRET_ACCESS_KEY",
+       "SELECTA_R2_JURISDICTION", "SELECTA_R2_BUCKET_ORIGINALS", "SELECTA_R2_BUCKET_DERIVED",
+       "SELECTA_R2_BUCKET_EXPORTS", "SELECTA_R2_BUCKET_STAGING")
+_OTEL = ("OTEL_EXPORTER_OTLP_ENDPOINT", "OTEL_EXPORTER_OTLP_HEADERS")
+
+
+def read_at_start() -> dict[str, set[str]]:
+    """What each Render service reads when it starts (docs/saas/launch-operator-checklist.md
+    Section 11, Required column, plus telemetry). Names come from the code where it has them."""
+    from selecta.admin import dmca
+    from selecta.observability.leader_metrics import BACKUP_ENV
+    from selecta.rooms.wiring import PEPPER_ENV
+    from selecta.work.autoscale_leader import MODAL_ENV
+
+    return {
+        "web": {
+            "SELECTA_MODE", "SELECTA_ENV", "SELECTA_DATABASE_URL", "SELECTA_ALLOWED_HOSTS",
+            "SELECTA_ALLOWED_ORIGINS", "SELECTA_WORKOS_CLIENT_ID", "SELECTA_AUTH_ISSUER",
+            "SELECTA_AUTH_AUDIENCE", "SELECTA_WORKOS_API_KEY", "SELECTA_WORKOS_WEBHOOK_SECRET",
+            PEPPER_ENV, "SELECTA_STRIPE_SECRET_KEY", "SELECTA_STRIPE_WEBHOOK_SECRETS",
+            "SELECTA_STRIPE_PRICES", "SELECTA_CHECKOUT_CONSENT_VERSION", "SELECTA_IP_HASH_KEY",
+            "ANTHROPIC_API_KEY", "SELECTA_STAFF_ORGANIZATION_ID", "SELECTA_CLIENT_IP_HEADER",
+            *_R2, *_OTEL,
+        },
+        "gateway": {
+            "SELECTA_MODE", "SELECTA_ENV", "SELECTA_GATEWAY_DATABASE_URL",
+            "SELECTA_GATEWAY_ALLOWED_HOSTS", "SELECTA_WORKER_TOKEN_SECRET",
+            "SELECTA_WORKER_BOOTSTRAP_TOKEN", *_R2, *_OTEL,
+        },
+        "maintain": {
+            "SELECTA_MODE", "SELECTA_ENV", "SELECTA_MAINTENANCE_DATABASE_URL",
+            "SELECTA_STRIPE_SECRET_KEY", "SELECTA_STRIPE_PRICES", "SELECTA_WORKOS_API_KEY",
+            "SELECTA_R2_BUCKET_DELETION_LEDGER", PEPPER_ENV, *BACKUP_ENV, *MODAL_ENV, dmca.ENV,
+            *_R2, *_OTEL,
+        },
+    }
+
+
+@pytest.mark.parametrize("name", ENVIRONMENTS)
+def test_every_variable_a_service_reads_at_start_is_declared_in_the_blueprint(name):
+    env = environments()[name]
+    for command, needed in read_at_start().items():
+        declared = {item["key"] for item in render_items(env, command)}
+        assert sorted(needed - declared) == [], (name, command)
+
+
+def test_the_checklist_lists_what_each_render_service_reads():
+    """The test's lists and the operator checklist's Required column name the same settings, so
+    a new one has to land in both (and so in the blueprint)."""
+    doc = (ROOT / "docs" / "saas" / "launch-operator-checklist.md").read_text("utf-8")
+    rows = {"web": "| Cloud API on Render", "gateway": "| Worker gateway on Render",
+            "maintain": "| Maintenance service"}
+    for command, start in rows.items():
+        (row,) = [line for line in doc.splitlines() if line.startswith(start)]
+        required = row.split("|")[2]
+        named = set(re.findall(r"(?:SELECTA|ANTHROPIC)_[A-Z0-9_]+", required))
+        fallbacks = {"SELECTA_DATABASE_URL"} if command != "web" else set()
+        assert sorted(named - fallbacks - read_at_start()[command]) == [], command
 
 
 # --- OpenTofu ---------------------------------------------------------------------------------
@@ -156,22 +238,114 @@ def test_no_secret_value_is_written_in_the_opentofu():
     assert not re.search(r'(token|secret|key)\s*=\s*"[^"$]', tofu(), re.I)
 
 
+def tofu_bucket_names(environment: str) -> dict[str, str]:
+    """The R2 bucket names main.tf creates for an environment, read from its locals."""
+    text = tofu()
+    (local,) = re.findall(r"^locals \{(.*?)\n\}", text, re.S | re.M)
+    (prefix,) = re.findall(r'prefix\s*=\s*"([^"]+)"', local)
+    (kinds,) = re.findall(r"buckets\s*=\s*\[([^\]]*)\]", local)
+    stem = prefix.replace("${var.environment}", environment)
+    names = {kind: f"{stem}-{kind}" for kind in re.findall(r'"([\w-]+)"', kinds)}
+    assert '"${local.prefix}-db-dumps"' in text
+    names["db-dumps"] = f"{stem}-db-dumps"
+    return names
+
+
+@pytest.mark.parametrize("name", ENVIRONMENTS)
+def test_storage_defaults_and_the_blueprint_name_the_buckets_opentofu_creates(name, monkeypatch):
+    from selecta.storage import api as storage_api
+
+    made = tofu_bucket_names(name)
+    for kind in ("originals", "derived", "exports", "staging"):
+        assert storage_api.default_bucket(kind, name) == made[kind]
+        monkeypatch.delenv(f"SELECTA_R2_BUCKET_{kind.upper()}", raising=False)
+    monkeypatch.setenv("SELECTA_ENV", name)
+    resolved = storage_api.buckets()
+    assert (resolved.originals, resolved.derived, resolved.exports, resolved.staging) == (
+        made["originals"], made["derived"], made["exports"], made["staging"])
+    env = environments()[name]
+    for command in ("web", "gateway", "maintain"):
+        values = render_values(env, command)
+        assert values["SELECTA_ENV"] == name, command
+        for kind in ("originals", "derived", "exports", "staging"):
+            assert values[f"SELECTA_R2_BUCKET_{kind.upper()}"] == made[kind], (command, kind)
+    maintain = render_values(env, "maintain")
+    assert maintain["SELECTA_R2_BUCKET_DELETION_LEDGER"] == made["deletion-ledger"]
+    assert maintain["SELECTA_BACKUP_BUCKET"] == made["db-dumps"]
+
+
+def test_r2_cors_allows_only_the_app_origin_to_get_put_and_read_etags():
+    (cors,) = resources("cloudflare_r2_bucket_cors").values()
+    assert 'toset(["originals", "derived", "exports", "staging"])' in cors
+    assert "deletion-ledger" not in cors
+    assert "cloudflare_r2_bucket.data[each.key].name" in cors
+    assert 'jurisdiction = "eu"' in cors
+    (origins,) = re.findall(r"origins\s*=\s*\[([^\]]*)\]", cors)
+    assert re.findall(r'"([^"]*)"', origins) == ["https://${var.web_hostname}"]
+    (methods,) = re.findall(r"methods\s*=\s*\[([^\]]*)\]", cors)
+    assert sorted(re.findall(r'"(\w+)"', methods)) == ["GET", "HEAD", "PUT"]
+    (exposed,) = re.findall(r"expose_headers\s*=\s*\[([^\]]*)\]", cors)
+    assert re.findall(r'"([^"]*)"', exposed) == ["ETag"]
+    assert "*" not in cors
+
+
 # --- Modal and the image ----------------------------------------------------------------------
+
+
+def modal_functions() -> dict[str, ast.FunctionDef]:
+    source = (INFRA / "modal" / "selecta_workers.py").read_text("utf-8")
+    return {node.name: node for node in ast.parse(source).body
+            if isinstance(node, ast.FunctionDef)
+            and any("app.function" in ast.unparse(d) for d in node.decorator_list)}
+
+
+def served_pool(node: ast.FunctionDef) -> str:
+    (pool,) = re.findall(r"_serve\('([\w-]+)'\)", ast.unparse(node))
+    return pool
 
 
 def test_the_modal_app_runs_every_pool_in_the_eu_and_scales_to_zero():
     source = (INFRA / "modal" / "selecta_workers.py").read_text("utf-8")
-    tree = ast.parse(source)
-    functions = {node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)
-                 and any("app.function" in ast.unparse(d) for d in node.decorator_list)}
-    assert set(functions) == {"cpu_light", "cpu_heavy", "gpu_stems"}
+    functions = modal_functions()
+    assert {"cpu_light", "cpu_heavy", "gpu_stems"} <= set(functions)
     for node in functions.values():
         (decorator,) = node.decorator_list
         text = ast.unparse(decorator)
         assert "region=REGION" in text and "min_containers=0" in text
     assert 'REGION = "eu"' in source
     pools = set(re.findall(r'_serve\("([\w-]+)"\)', source))
-    assert pools == {"cpu-light", "cpu-heavy", "gpu"}
+    assert pools == {"cpu-light", "cpu-heavy", "gpu", "export"}
+
+
+def test_the_autoscaler_scales_exactly_the_functions_the_modal_app_deploys():
+    """`MODAL_FUNCTIONS` is the one mapping; each name must be a deployed function serving that
+    pool, every pool in pools.json needs one, and a pool with a fallback launch needs both."""
+    import json
+
+    from selecta.work.autoscale_leader import MODAL_FUNCTIONS, POOLS_FILE
+
+    functions = modal_functions()
+    named = set()
+    for pool, (primary, fallback) in MODAL_FUNCTIONS.items():
+        for name in filter(None, (primary, fallback)):
+            assert name in functions, (pool, name)
+            assert served_pool(functions[name]) == pool, (pool, name)
+            named.add(name)
+    assert named == set(functions)
+    pools = json.loads(POOLS_FILE.read_text("utf-8"))["pools"]
+    assert set(MODAL_FUNCTIONS) == set(pools)
+    for pool, config in pools.items():
+        assert (MODAL_FUNCTIONS[pool][1] is not None) == bool(config.get("fallback")), pool
+    (gpu,) = [node for name, node in functions.items() if name == MODAL_FUNCTIONS["gpu"][0]]
+    assert "gpu='T4'" in ast.unparse(gpu.decorator_list[0])
+    assert "gpu=" not in ast.unparse(functions[MODAL_FUNCTIONS["gpu"][1]].decorator_list[0])
+
+
+def test_the_modal_app_name_is_the_one_maintenance_scales():
+    source = (INFRA / "modal" / "selecta_workers.py").read_text("utf-8")
+    assert 'modal.App(f"selecta-workers-{ENVIRONMENT}"' in source
+    for name, env in environments().items():
+        assert render_values(env, "maintain")["SELECTA_MODAL_APP"] == f"selecta-workers-{name}"
 
 
 def test_the_worker_reads_the_pool_the_modal_function_names(monkeypatch):
@@ -195,6 +369,21 @@ def test_the_service_image_can_install_every_index_the_lock_uses():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text("utf-8"))
     for index in project.get("tool", {}).get("uv", {}).get("index", []):
         assert f"--extra-index-url {index['url']}" in dockerfile, index["name"]
+
+
+def test_the_service_image_copies_every_file_the_package_build_reads():
+    """Building the package needs the readme (and any licence file) pyproject names; the deploy on
+    main failed with 'Readme file does not exist: README.md' when the image left it out."""
+    import tomllib
+
+    dockerfile = (INFRA / "docker" / "service.Dockerfile").read_text("utf-8")
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text("utf-8"))["project"]
+    copied = " ".join(re.findall(r"^COPY (.+)$", dockerfile, re.M))
+    needed = [project["readme"]] if isinstance(project.get("readme"), str) else []
+    needed += project.get("license-files", [])
+    for name in needed:
+        assert re.search(rf"(^|\s){re.escape(name)}(\s|$)", copied), name
+        assert (ROOT / name).exists(), name
 
 
 # --- Smoke test -------------------------------------------------------------------------------

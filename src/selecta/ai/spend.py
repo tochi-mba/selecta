@@ -117,7 +117,10 @@ class TurnGuard:
         return estimate
 
     def record_call(
-        self, tokens_in: int, tokens_out: int, cache_read_tokens: int = 0,
+        self,
+        tokens_in: int,
+        tokens_out: int,
+        cache_read_tokens: int = 0,
         cache_write_tokens: int = 0,
     ) -> float:
         cost = self.prices.cost(tokens_in, tokens_out, cache_read_tokens, cache_write_tokens)
@@ -150,8 +153,12 @@ def acquire_lease(
         )
         lease_id = new_id()
         values = {
-            "id": lease_id, "workspace_id": workspace_id, "slot": slot, "run_id": run_id,
-            "acquired_at": now, "expires_at": now + ttl_seconds,
+            "id": lease_id,
+            "workspace_id": workspace_id,
+            "slot": slot,
+            "run_id": run_id,
+            "acquired_at": now,
+            "expires_at": now + ttl_seconds,
         }
         if insert_ignore(conn, ai_concurrency, values, ["workspace_id", "slot"]):
             return lease_id
@@ -161,12 +168,17 @@ def acquire_lease(
 def renew_lease(conn: Connection, lease_id: str, ttl_seconds: float) -> bool:
     """Extend a live lease; False if it already expired and may belong to someone else."""
     now = db_now(conn)
-    result = conn.execute(
-        sa.update(ai_concurrency)
-        .where(ai_concurrency.c.id == lease_id, ai_concurrency.c.expires_at > now)
-        .values(expires_at=now + ttl_seconds)
+    # Whether a row changed is read from RETURNING, not `rowcount`, which psycopg can report as
+    # -1 (as `ai.schema.insert_ignore` found).
+    return (
+        conn.execute(
+            sa.update(ai_concurrency)
+            .where(ai_concurrency.c.id == lease_id, ai_concurrency.c.expires_at > now)
+            .values(expires_at=now + ttl_seconds)
+            .returning(ai_concurrency.c.id)
+        ).first()
+        is not None
     )
-    return result.rowcount == 1
 
 
 def release_lease(conn: Connection, lease_id: str) -> None:
@@ -175,7 +187,9 @@ def release_lease(conn: Connection, lease_id: str) -> None:
 
 def active_leases(conn: Connection, workspace_id: str) -> int:
     count = conn.execute(
-        sa.select(sa.func.count()).select_from(ai_concurrency).where(
+        sa.select(sa.func.count())
+        .select_from(ai_concurrency)
+        .where(
             ai_concurrency.c.workspace_id == workspace_id,
             ai_concurrency.c.expires_at > db_now(conn),
         )
@@ -197,8 +211,11 @@ class CircuitBreaker:
     `cooldown_seconds` lets one probe through, and closes again if that probe succeeds."""
 
     def __init__(
-        self, failure_threshold: int = 5, window_seconds: float = 60.0,
-        cooldown_seconds: float = 30.0, clock: Callable[[], float] = time.monotonic,
+        self,
+        failure_threshold: int = 5,
+        window_seconds: float = 60.0,
+        cooldown_seconds: float = 30.0,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self.failure_threshold = failure_threshold
         self.window_seconds = window_seconds
@@ -268,8 +285,12 @@ class ProviderGuard:
     """
 
     def __init__(
-        self, provider_limits: Mapping[str, int] | None = None, *, failure_threshold: int = 5,
-        window_seconds: float = 60.0, cooldown_seconds: float = 30.0,
+        self,
+        provider_limits: Mapping[str, int] | None = None,
+        *,
+        failure_threshold: int = 5,
+        window_seconds: float = 60.0,
+        cooldown_seconds: float = 30.0,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self.provider_limits = dict(provider_limits or {})
@@ -357,11 +378,10 @@ class PlatformPolicy:
         percents = env.get("SELECTA_AI_ALERT_PERCENTS")
         return cls(
             daily_cap_usd=float(env.get("SELECTA_AI_DAILY_CAP_USD", default.daily_cap_usd)),
-            monthly_cap_usd=float(
-                env.get("SELECTA_AI_MONTHLY_CAP_USD", default.monthly_cap_usd)
-            ),
+            monthly_cap_usd=float(env.get("SELECTA_AI_MONTHLY_CAP_USD", default.monthly_cap_usd)),
             alert_percents=tuple(sorted(int(p) for p in percents.split(",") if p.strip()))
-            if percents else default.alert_percents,
+            if percents
+            else default.alert_percents,
         )
 
 
@@ -404,10 +424,16 @@ def day_key(epoch: float) -> str:
 
 def _ensure_day(conn: Connection, day: str) -> None:
     insert_ignore(
-        conn, ai_spend_daily,
+        conn,
+        ai_spend_daily,
         {
-            "id": new_id(), "day": day, "spent_usd": 0.0, "reserved_usd": 0.0,
-            "alert_level": 0, "monthly_alert_level": 0, "updated_at": db_now(conn),
+            "id": new_id(),
+            "day": day,
+            "spent_usd": 0.0,
+            "reserved_usd": 0.0,
+            "alert_level": 0,
+            "monthly_alert_level": 0,
+            "updated_at": db_now(conn),
         },
         ["day"],
     )
@@ -441,15 +467,20 @@ def _alerts(conn: Connection, day: str, policy: PlatformPolicy) -> tuple[SpendAl
     no other server can raise the same level between the read below and the write.
     """
     other, other_level = _other_days(conn, day)
-    row = conn.execute(
-        sa.select(ai_spend_daily).where(ai_spend_daily.c.day == day)
-    ).mappings().one()
+    row = (
+        conn.execute(sa.select(ai_spend_daily).where(ai_spend_daily.c.day == day)).mappings().one()
+    )
     today = float(row["spent_usd"]) + float(row["reserved_usd"])
     alerts: list[SpendAlert] = []
     checks = (
         ("daily", "alert_level", today, policy.daily_cap_usd, row["alert_level"]),
-        ("monthly", "monthly_alert_level", other + today, policy.monthly_cap_usd,
-         max(row["monthly_alert_level"], other_level)),
+        (
+            "monthly",
+            "monthly_alert_level",
+            other + today,
+            policy.monthly_cap_usd,
+            max(row["monthly_alert_level"], other_level),
+        ),
     )
     for scope, column, total, cap, already in checks:
         if cap <= 0:
@@ -476,23 +507,31 @@ def reserve(
     _ensure_day(conn, day)
     other, _ = _other_days(conn, day)
     cap = min(policy.daily_cap_usd, policy.monthly_cap_usd - other)
-    result = conn.execute(
-        sa.update(ai_spend_daily)
-        .where(
-            ai_spend_daily.c.day == day,
-            ai_spend_daily.c.spent_usd + ai_spend_daily.c.reserved_usd + amount
-            <= cap + CAP_TOLERANCE_USD,
-        )
-        .values(reserved_usd=ai_spend_daily.c.reserved_usd + amount, updated_at=now)
+    # Whether a row changed is read from RETURNING, not `rowcount`, which psycopg can report as
+    # -1 (as `ai.schema.insert_ignore` found).
+    admitted = (
+        conn.execute(
+            sa.update(ai_spend_daily)
+            .where(
+                ai_spend_daily.c.day == day,
+                ai_spend_daily.c.spent_usd + ai_spend_daily.c.reserved_usd + amount
+                <= cap + CAP_TOLERANCE_USD,
+            )
+            .values(reserved_usd=ai_spend_daily.c.reserved_usd + amount, updated_at=now)
+            .returning(ai_spend_daily.c.day)
+        ).first()
+        is not None
     )
-    admitted = result.rowcount == 1
     reason = None
     if not admitted:
-        reason = "monthly_cap" if policy.monthly_cap_usd - other < policy.daily_cap_usd else (
-            "daily_cap"
+        reason = (
+            "monthly_cap"
+            if policy.monthly_cap_usd - other < policy.daily_cap_usd
+            else ("daily_cap")
         )
-    return Reservation(admitted, day, amount if admitted else 0.0, reason,
-                       _alerts(conn, day, policy))
+    return Reservation(
+        admitted, day, amount if admitted else 0.0, reason, _alerts(conn, day, policy)
+    )
 
 
 def reconcile(
@@ -518,12 +557,15 @@ def platform_totals(conn: Connection, now: float | None = None) -> PlatformTotal
     now = db_now(conn) if now is None else now
     day = day_key(now)
     rows = conn.execute(
-        sa.select(ai_spend_daily.c.day, ai_spend_daily.c.spent_usd, ai_spend_daily.c.reserved_usd)
-        .where(_same_month(day))
+        sa.select(
+            ai_spend_daily.c.day, ai_spend_daily.c.spent_usd, ai_spend_daily.c.reserved_usd
+        ).where(_same_month(day))
     ).all()
     today = next(((s, r) for d, s, r in rows if d == day), (0.0, 0.0))
     return PlatformTotals(
-        day=day, day_spent_usd=float(today[0]), day_reserved_usd=float(today[1]),
+        day=day,
+        day_spent_usd=float(today[0]),
+        day_reserved_usd=float(today[1]),
         month_spent_usd=float(sum(s for _, s, _ in rows)),
         month_reserved_usd=float(sum(r for _, _, r in rows)),
     )

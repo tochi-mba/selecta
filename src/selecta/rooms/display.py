@@ -8,6 +8,11 @@ last ten minutes and work once. The token lasts until the room ends, so a displa
 power reconnects by itself, and it's tied to the room rather than the code, so it stays paired
 when the host makes a new code.
 
+Each look by a paired screen records `last_seen_at` (at most every `SEEN_EVERY_SECONDS`), so the
+host's panel can tell a screen that's showing the room from one that went dark. A screen the host
+disconnects reads `unpaired` on its next look and shows a fresh pairing code; a screen can also
+disconnect itself with its own token (`disconnect`).
+
 An unpaired display belongs to no workspace yet, so these statements run without one; in the
 cloud that needs the lookup role described in `store`.
 """
@@ -37,13 +42,15 @@ from selecta.rooms.views import (
 
 PAIRING_SECONDS = 600.0
 PAIRING_ATTEMPTS = 8
+SEEN_EVERY_SECONDS = 10.0  # how often a paired screen's look is written down
 
 
 class DisplayState(StrEnum):
     WAITING = "waiting"  # showing its pairing code
     PAIRED = "paired"
     EXPIRED = "expired"  # the pairing code ran out before anyone typed it
-    ENDED = "ended"  # the room ended or the host turned the big screen off
+    ENDED = "ended"  # the room ended
+    UNPAIRED = "unpaired"  # the host disconnected this screen; it should pair again
 
 
 @dataclass(frozen=True)
@@ -140,24 +147,77 @@ def confirm_pairing(
 
 
 def unpair_displays(
-    ctx: RoomContext, workspace_id: str, room_id: str, *, now: float | None = None
+    ctx: RoomContext,
+    workspace_id: str,
+    room_id: str,
+    *,
+    display_id: str | None = None,
+    now: float | None = None,
 ) -> int:
-    """Disconnect every display from this room."""
+    """Disconnect every display from this room, or just the one named. The screen sees
+    `unpaired` on its next look and goes back to a pairing code."""
     with transaction(ctx.engine, workspace_id) as conn:
         now = resolve_now(conn, now)
-        load_room(conn, workspace_id, room_id)
-        return (
+        room = load_room(conn, workspace_id, room_id)
+        where = [
+            display_pairings.c.workspace_id == workspace_id,
+            display_pairings.c.room_id == room_id,
+            display_pairings.c.expires_at > now,
+        ]
+        if display_id is not None:
+            where.append(display_pairings.c.id == display_id)
+        count = (
             conn.execute(
-                sa.update(display_pairings)
-                .where(
-                    display_pairings.c.workspace_id == workspace_id,
-                    display_pairings.c.room_id == room_id,
-                    display_pairings.c.expires_at > now,
-                )
-                .values(expires_at=now)
+                sa.update(display_pairings).where(*where).values(expires_at=now)
             ).rowcount
             or 0
         )
+        if display_id is not None and not count:
+            raise RoomError(Refusal.NO_SUCH_PAIRING)
+        if count:
+            ctx.publish(conn, room, "room.display", {"paired": False})
+        return count
+
+
+def disconnect(ctx: RoomContext, display_token: str, *, now: float | None = None) -> None:
+    """The screen disconnects itself ("Disconnect this screen"): its pairing is deleted, so the
+    token no longer reads anything and the screen starts again with a new pairing code."""
+    if not display_token:
+        raise RoomError(Refusal.NO_SUCH_PAIRING)
+    digest = codes.token_hash(display_token)
+    with transaction(ctx.engine) as conn:
+        now = resolve_now(conn, now)
+        row = conn.execute(
+            sa.select(display_pairings.c.id, display_pairings.c.workspace_id).where(
+                display_pairings.c.token_hash == digest
+            )
+        ).first()
+        if row is None:
+            raise RoomError(Refusal.NO_SUCH_PAIRING)
+        if row.workspace_id is None:
+            conn.execute(sa.delete(display_pairings).where(display_pairings.c.id == row.id))
+            return
+    workspace_id = row.workspace_id
+    with transaction(ctx.engine, workspace_id) as conn:
+        room_id = conn.execute(
+            sa.select(display_pairings.c.room_id).where(
+                display_pairings.c.id == row.id, display_pairings.c.workspace_id == workspace_id
+            )
+        ).scalar()
+        conn.execute(
+            sa.delete(display_pairings).where(
+                display_pairings.c.id == row.id, display_pairings.c.workspace_id == workspace_id
+            )
+        )
+        if room_id is not None:
+            found = conn.execute(
+                sa.select(rooms.c.id).where(
+                    rooms.c.workspace_id == workspace_id, rooms.c.id == room_id
+                )
+            ).first()
+            if found is not None:
+                room = load_room(conn, workspace_id, room_id)
+                ctx.publish(conn, room, "room.display", {"paired": False})
 
 
 def display_view(ctx: RoomContext, display_token: str, *, now: float | None = None) -> DisplayView:
@@ -168,9 +228,11 @@ def display_view(ctx: RoomContext, display_token: str, *, now: float | None = No
         now = resolve_now(conn, now)
         row = conn.execute(
             sa.select(
+                display_pairings.c.id,
                 display_pairings.c.room_id,
                 display_pairings.c.workspace_id,
                 display_pairings.c.expires_at,
+                display_pairings.c.last_seen_at,
             ).where(display_pairings.c.token_hash == codes.token_hash(display_token))
         ).first()
     if row is None:
@@ -178,8 +240,6 @@ def display_view(ctx: RoomContext, display_token: str, *, now: float | None = No
     if row.room_id is None:
         state = DisplayState.WAITING if row.expires_at > now else DisplayState.EXPIRED
         return DisplayView(state)
-    if row.expires_at <= now:
-        return DisplayView(DisplayState.ENDED)
     workspace_id = row.workspace_id
     with transaction(ctx.engine, workspace_id) as conn:
         found = conn.execute(
@@ -190,8 +250,22 @@ def display_view(ctx: RoomContext, display_token: str, *, now: float | None = No
         if found is None:
             return DisplayView(DisplayState.ENDED)
         room = load_room(conn, workspace_id, row.room_id)
-        if not room.live:
+        if not room.live or room.ends_at <= now:
             return DisplayView(DisplayState.ENDED, room_name=room.name)
+        if row.expires_at <= now:
+            # The room is still on, so the host disconnected this screen.
+            return DisplayView(DisplayState.UNPAIRED)
+        stale = row.last_seen_at is None or now - row.last_seen_at >= SEEN_EVERY_SECONDS
+        # The first look after a restart always counts, so the panel flips back at once.
+        if stale or (ctx.started_at is not None and row.last_seen_at < ctx.started_at):
+            conn.execute(
+                sa.update(display_pairings)
+                .where(
+                    display_pairings.c.id == row.id,
+                    display_pairings.c.workspace_id == workspace_id,
+                )
+                .values(last_seen_at=now)
+            )
         coming_up = queue_order(conn, room, now)
         names = nickname_map(conn, room)
     songs = describe_songs(ctx, room, coming_up)

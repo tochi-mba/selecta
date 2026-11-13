@@ -1,8 +1,8 @@
 # Selecta - independent GO/NO-GO gates for new FP polish requirements
 
-**Current proposed-programme verdict: NO-GO for the *new FP enhancement set*.** The eight FP decisions are Proposed and none of their sixty-four new task acceptances has been documented as Implemented or independently Verified. This is **not** a finding that the current Selecta application is unsafe or unfit for use.
+**Current programme verdict (2026-11-12): NO-GO for the *new FP enhancement set*.** The eight FP decisions are Accepted; of their sixty-four task acceptances 53 are Implemented, 11 In progress and 0 Not started (each names a person-only step), and none is independently Verified (recounted from the task lines of the [checklist](selecta-final-polish-implementation-checklist.md)). This is **not** a finding that the current Selecta application is unsafe or unfit for use.
 
-**FP documentation proposal as of 2026-11-08:** baseline main `5347e7309c5ff8b2e2965c2194bf2089b6ad2721`. 8 Proposed ADRs (0264–0271), 64 task acceptances Not started, 0 In progress, 0 Implemented, 0 independently Verified. All owner decisions pending; no source change or human verification is claimed.
+**Historical baseline - FP documentation proposal as of 2026-11-08:** baseline main `5347e7309c5ff8b2e2965c2194bf2089b6ad2721`. 8 Proposed ADRs (0264–0271), 64 task acceptances Not started, 0 In progress, 0 Implemented, 0 independently Verified. All owner decisions pending; no source change or human verification is claimed.
 
 | Gate | Required independent proof | Current |
 |---|---|---|

@@ -1,4 +1,5 @@
-import { ButtonHTMLAttributes, cloneElement, Component, ErrorInfo, KeyboardEvent, ReactElement, ReactNode, useEffect, useId, useRef, useState } from 'react';
+import { ButtonHTMLAttributes, cloneElement, Component, ErrorInfo, KeyboardEvent, ReactElement, ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { returnFocus } from './focusReturn';
 import { createPortal } from 'react-dom';
 import { showProblem } from './toasts';
 import { Icon, IconName } from './Icon';
@@ -187,7 +188,10 @@ function Overlay({
   const panel = useRef<HTMLDivElement>(null);
   const holder = useRef<HTMLDivElement>(null);
   const titleId = useId();
-  useEffect(() => {
+  // A layout effect, so its clean-up runs while the overlay is still in the page (EX-0131-02). With a
+  // passive effect React removed the panel first: focus fell to the body for a moment while the app was
+  // made reachable again, and NVDA read the side rail at the top of the page before the opener.
+  useLayoutEffect(() => {
     const before = document.activeElement as HTMLElement | null;
     // A list can re-render while the overlay is open and replace the button that opened it.
     // `data-focus-key` names that button stably, so focus goes back to its replacement.
@@ -229,9 +233,9 @@ function Overlay({
       // opener ought to be. The sheet locks body scrolling while it is open;
       // a plain focus() after unlocking can scroll a long Library back to the
       // opener even though that row is already visible at the preserved place.
-      if (before?.isConnected && before !== document.body) before.focus({ preventScroll: true });
-      else if (replacement) replacement.focus({ preventScroll: true });
-      else document.getElementById('content')?.focus({ preventScroll: true });
+      // An overlay opened by a shortcut had nothing real behind it: back to the page's main heading,
+      // never the content container, which NVDA would read out in full (EX-0131-02).
+      returnFocus(before, replacement);
       // Unlocking body overflow must not reset the long Library's scroll position.
       // Route changes deliberately choose their own scroll position, so leave those alone.
       if (openOverlays === 0 && window.location.href === beforeScroll.url) {
@@ -245,7 +249,9 @@ function Overlay({
       onClose();
       return;
     }
-    if (event.key !== 'Tab' || !panel.current) return;
+    // A sheet that keeps the chrome (SF-0203-06) leaves the tab bar and mini-player reachable, so Tab
+    // may leave it for them; only the rest of the page is inert.
+    if (event.key !== 'Tab' || !panel.current || keepsChrome) return;
     const items = [...panel.current.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((node) => canFocusInOverlay(node, panel.current));
     if (!items.length) {
       event.preventDefault();
@@ -361,7 +367,7 @@ export function Menu({ label, children, className, title }: { label: ReactNode; 
       <button ref={opener} type="button" title={title} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => { firstOnOpen.current = 'first'; setOpen(!open); }}>{label}</button>
       {open && (
         // a press on anything inside closes it, because each item is the end of the job
-        <div id={menuId} role="menu" className="menu-list" onClick={() => { setOpen(false); if (opener.current?.isConnected) opener.current.focus(); else document.getElementById('content')?.focus({ preventScroll: true }); }}>{children}</div>
+        <div id={menuId} role="menu" className="menu-list" onClick={() => { setOpen(false); returnFocus(opener.current); }}>{children}</div>
       )}
     </div>
   );

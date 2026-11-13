@@ -1,0 +1,8 @@
+{
+  "about": "UF-0366-08 and the approval half of UF-0366-07: filled only by the named owner. Checked by python -m selecta.audit.uf_release_gate.",
+  "owner": null,
+  "date": null,
+  "rationale": null,
+  "rejected_decisions": [],
+  "dependency_graph_approved_by": null
+}

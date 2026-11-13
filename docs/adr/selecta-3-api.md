@@ -23,7 +23,7 @@ Stored additions: a preference key, `deleted_drafts`, with `last_deleted_draft` 
 
 ## Every call the frontend makes
 
-Reads, all retry-safe, with stale answers ignored by the caller: `/status`, `/mix`, `/mix/suggest`, `/mix/{n}/options`, `/drafts`, `/vibes`, `/songs`, `/songs/{id}`, `/library`, `/links`, `/discoveries`, `/seams/{key}`, `/requests`, `/jobs`, `/storage`, `/folders`, `/folders/check`, `/memory`, `/diagnostics`, `/listening`, `/exports/jobs`.
+Reads, all retry-safe, with stale answers ignored by the caller: `/status`, `/mix`, `/mix/suggest`, `/mix/{n}/options`, `/drafts`, `/drafts/names`, `/vibes`, `/songs`, `/songs/{id}`, `/library`, `/links`, `/discoveries`, `/seams/{key}`, `/requests`, `/jobs`, `/storage`, `/folders`, `/folders/check`, `/memory`, `/diagnostics`, `/listening`, `/exports/jobs`.
 
 ## How each kind of write stays safe
 

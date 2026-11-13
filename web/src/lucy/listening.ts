@@ -1,3 +1,4 @@
+import { fetchBytes } from '../api';
 import { flagOn } from '../flags';
 import type { ListeningEventKind } from './types';
 
@@ -20,7 +21,7 @@ const seconds = (value: number) => (Number.isFinite(value) ? Math.max(0, Math.ro
 export function recordListening(songId: number, event: ListeningEventKind, heard: number, position: number): void {
   try {
     if (typeof fetch !== 'function' || !Number.isFinite(songId) || !flagOn('lucy.listening_history')) return;
-    void fetch('/api/listening/events', {
+    void fetchBytes('/listening/events', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ song_id: songId, session: SESSION, source: 'player', event, heard: seconds(heard), position: seconds(position) }),

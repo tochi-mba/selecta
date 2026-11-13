@@ -18,6 +18,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import asdict, dataclass, field, replace
 from enum import StrEnum
 from typing import Any
+from urllib.parse import urlsplit
 
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection
@@ -92,7 +93,10 @@ class Prices:
     output_usd_per_mtok: float
 
     def cost(
-        self, tokens_in: int, tokens_out: int, cache_read_tokens: int = 0,
+        self,
+        tokens_in: int,
+        tokens_out: int,
+        cache_read_tokens: int = 0,
         cache_write_tokens: int = 0,
     ) -> float:
         """Dollars for one or more calls. `tokens_in` counts every input token, cached or not,
@@ -181,9 +185,17 @@ def _priced(model: str) -> Prices:
 _TOOLS = frozenset({"streaming", "tools", "structured_output"})
 
 BUILTIN = Deployment(
-    id=BUILTIN_ID, provider=Provider.BUILTIN, model_id="builtin", min_tier=Tier.FREE,
-    capabilities=frozenset({"streaming", "tools"}), max_input_tokens=0, max_output_tokens=4000,
-    max_tool_cycles=6, per_turn_cost_cap_usd=0.0, prices=Prices(0.0, 0.0), concurrency=64,
+    id=BUILTIN_ID,
+    provider=Provider.BUILTIN,
+    model_id="builtin",
+    min_tier=Tier.FREE,
+    capabilities=frozenset({"streaming", "tools"}),
+    max_input_tokens=0,
+    max_output_tokens=4000,
+    max_tool_cycles=6,
+    per_turn_cost_cap_usd=0.0,
+    prices=Prices(0.0, 0.0),
+    concurrency=64,
     data_region="selecta",
 )
 
@@ -192,32 +204,72 @@ BUILTIN = Deployment(
 DEFAULT_DEPLOYMENTS: tuple[Deployment, ...] = (
     BUILTIN,
     Deployment(
-        id="haiku-low", provider=Provider.ANTHROPIC, model_id="claude-haiku-5-5",
-        min_tier=Tier.FREE, capabilities=_TOOLS, max_input_tokens=60_000,
-        max_output_tokens=2_000, max_tool_cycles=4, per_turn_cost_cap_usd=0.01,
-        prices=_priced("claude-haiku-5-5"), concurrency=200, fallback_id=BUILTIN_ID,
-        secret_ref="env:ANTHROPIC_API_KEY", effort="low", data_region="anthropic-us",
+        id="haiku-low",
+        provider=Provider.ANTHROPIC,
+        model_id="claude-haiku-5-5",
+        min_tier=Tier.FREE,
+        capabilities=_TOOLS,
+        max_input_tokens=60_000,
+        max_output_tokens=2_000,
+        max_tool_cycles=4,
+        per_turn_cost_cap_usd=0.01,
+        prices=_priced("claude-haiku-5-5"),
+        concurrency=200,
+        fallback_id=BUILTIN_ID,
+        secret_ref="env:ANTHROPIC_API_KEY",
+        effort="low",
+        data_region="anthropic-us",
     ),
     Deployment(
-        id="haiku-medium", provider=Provider.ANTHROPIC, model_id="claude-haiku-5-5",
-        min_tier=Tier.STANDARD, capabilities=_TOOLS, max_input_tokens=80_000,
-        max_output_tokens=4_000, max_tool_cycles=6, per_turn_cost_cap_usd=0.02,
-        prices=_priced("claude-haiku-5-5"), concurrency=200, fallback_id=BUILTIN_ID,
-        secret_ref="env:ANTHROPIC_API_KEY", effort="medium", data_region="anthropic-us",
+        id="haiku-medium",
+        provider=Provider.ANTHROPIC,
+        model_id="claude-haiku-5-5",
+        min_tier=Tier.STANDARD,
+        capabilities=_TOOLS,
+        max_input_tokens=80_000,
+        max_output_tokens=4_000,
+        max_tool_cycles=6,
+        per_turn_cost_cap_usd=0.02,
+        prices=_priced("claude-haiku-5-5"),
+        concurrency=200,
+        fallback_id=BUILTIN_ID,
+        secret_ref="env:ANTHROPIC_API_KEY",
+        effort="medium",
+        data_region="anthropic-us",
     ),
     Deployment(
-        id="sonnet-medium", provider=Provider.ANTHROPIC, model_id="claude-sonnet-5-5",
-        min_tier=Tier.STANDARD, capabilities=_TOOLS, max_input_tokens=120_000,
-        max_output_tokens=8_000, max_tool_cycles=8, per_turn_cost_cap_usd=0.15,
-        prices=_priced("claude-sonnet-5-5"), concurrency=60, fallback_id="haiku-medium",
-        secret_ref="env:ANTHROPIC_API_KEY", effort="medium", data_region="anthropic-us",
+        id="sonnet-medium",
+        provider=Provider.ANTHROPIC,
+        model_id="claude-sonnet-5-5",
+        min_tier=Tier.STANDARD,
+        capabilities=_TOOLS,
+        max_input_tokens=120_000,
+        max_output_tokens=8_000,
+        max_tool_cycles=8,
+        per_turn_cost_cap_usd=0.15,
+        prices=_priced("claude-sonnet-5-5"),
+        concurrency=60,
+        fallback_id="haiku-medium",
+        secret_ref="env:ANTHROPIC_API_KEY",
+        effort="medium",
+        data_region="anthropic-us",
     ),
     Deployment(
-        id="opus-high", provider=Provider.ANTHROPIC, model_id="claude-opus-5-5",
-        min_tier=Tier.PREMIUM, capabilities=_TOOLS, max_input_tokens=150_000,
-        max_output_tokens=16_000, max_tool_cycles=10, per_turn_cost_cap_usd=0.60,
-        prices=_priced("claude-opus-5-5"), concurrency=20, fallback_id="sonnet-medium",
-        secret_ref="env:ANTHROPIC_API_KEY", effort="high", data_region="anthropic-us",
+        id="opus-high",
+        provider=Provider.ANTHROPIC,
+        model_id="claude-opus-5-5",
+        min_tier=Tier.PREMIUM,
+        capabilities=_TOOLS,
+        max_input_tokens=150_000,
+        max_output_tokens=16_000,
+        max_tool_cycles=10,
+        per_turn_cost_cap_usd=0.60,
+        prices=_priced("claude-opus-5-5"),
+        concurrency=20,
+        fallback_id="sonnet-medium",
+        secret_ref="env:ANTHROPIC_API_KEY",
+        effort="high",
+        data_region="anthropic-us",
     ),
 )
 
@@ -225,10 +277,16 @@ _Q, _E, _P, _D = (c.value for c in RequestClass)
 DEFAULT_ROUTING: dict[str, dict[str, list[str]]] = {
     "free": {_Q: ["haiku-low"], _E: ["haiku-low"], _P: ["haiku-low"], _D: ["haiku-low"]},
     "standard": {
-        _Q: ["haiku-medium"], _E: ["haiku-medium"], _P: ["sonnet-medium"], _D: ["sonnet-medium"],
+        _Q: ["haiku-medium"],
+        _E: ["haiku-medium"],
+        _P: ["sonnet-medium"],
+        _D: ["sonnet-medium"],
     },
     "premium": {
-        _Q: ["haiku-low"], _E: ["sonnet-medium"], _P: ["sonnet-medium"], _D: ["opus-high"],
+        _Q: ["haiku-low"],
+        _E: ["sonnet-medium"],
+        _P: ["sonnet-medium"],
+        _D: ["opus-high"],
     },
 }
 
@@ -262,16 +320,42 @@ def _from_row(row: Mapping[str, Any]) -> Deployment:
     caps = row["capabilities"] or {}
     names = [name for name, on in caps.items() if on] if isinstance(caps, dict) else list(caps)
     return Deployment(
-        id=row["id"], provider=Provider(row["provider"]), model_id=row["model_id"],
-        min_tier=Tier(row["min_tier"]), capabilities=frozenset(names),
-        max_input_tokens=row["max_input_tokens"], max_output_tokens=row["max_output_tokens"],
+        id=row["id"],
+        provider=Provider(row["provider"]),
+        model_id=row["model_id"],
+        min_tier=Tier(row["min_tier"]),
+        capabilities=frozenset(names),
+        max_input_tokens=row["max_input_tokens"],
+        max_output_tokens=row["max_output_tokens"],
         max_tool_cycles=row["max_tool_cycles"],
         per_turn_cost_cap_usd=float(row["per_turn_cost_cap_usd"]),
         prices=Prices(float(row["input_usd_per_mtok"]), float(row["output_usd_per_mtok"])),
-        concurrency=row["concurrency"], fallback_id=row["fallback_id"], base_url=row["base_url"],
-        secret_ref=row["secret_ref"], effort=row["effort"], data_region=row["data_region"],
-        rollout_percent=row["rollout_percent"], status=DeploymentStatus(row["status"]),
+        concurrency=row["concurrency"],
+        fallback_id=row["fallback_id"],
+        base_url=row["base_url"],
+        secret_ref=row["secret_ref"],
+        effort=row["effort"],
+        data_region=row["data_region"],
+        rollout_percent=row["rollout_percent"],
+        status=DeploymentStatus(row["status"]),
         eval_passed_at=row["eval_passed_at"],
+    )
+
+
+def _safe_base_url(url: str) -> bool:
+    """The provider key is sent to this URL, so it must be TLS unless it stays on this host
+    (SEC-AF-2), and it may not carry credentials that would end up in logs."""
+    try:
+        parts = urlsplit(url)
+        host = parts.hostname
+    except ValueError:
+        return False
+    loopback = host in {"localhost", "127.0.0.1", "::1"}
+    return (
+        bool(host)
+        and (parts.scheme == "https" or (parts.scheme == "http" and loopback))
+        and parts.username is None
+        and parts.password is None
     )
 
 
@@ -288,6 +372,9 @@ def validate_deployment(deployment: Deployment) -> None:
         return
     if deployment.provider is Provider.OPENAI and not deployment.base_url:
         raise RegistryError("An OpenAI-compatible deployment needs a base URL.")
+    if deployment.base_url and not _safe_base_url(deployment.base_url):
+        raise RegistryError("A model base URL must be https (or http on loopback), with a host "
+                            "and no credentials in it.")
     if not deployment.secret_ref and deployment.provider is Provider.ANTHROPIC:
         raise RegistryError("A hosted deployment needs a secret reference, never a key.")
     if deployment.prices.input_usd_per_mtok <= 0 or deployment.prices.output_usd_per_mtok <= 0:
@@ -333,9 +420,7 @@ def save_deployment(conn: Connection, deployment: Deployment) -> None:
             .values(**values, updated_at=now)
         )
     else:
-        conn.execute(
-            sa.insert(model_deployments).values(**values, created_at=now, updated_at=now)
-        )
+        conn.execute(sa.insert(model_deployments).values(**values, created_at=now, updated_at=now))
 
 
 def set_status(conn: Connection, deployment_id: str, status: DeploymentStatus | str) -> bool:
@@ -343,22 +428,30 @@ def set_status(conn: Connection, deployment_id: str, status: DeploymentStatus | 
     status = DeploymentStatus(status)
     if deployment_id == BUILTIN_ID and status is not DeploymentStatus.ACTIVE:
         raise RegistryError("The built-in planner is the last fallback and can't be turned off.")
-    result = conn.execute(
-        sa.update(model_deployments)
-        .where(model_deployments.c.id == deployment_id)
-        .values(status=status.value, updated_at=db_now(conn))
+    # Whether a row changed is read from RETURNING, not `rowcount`, which psycopg can report as
+    # -1 (as `ai.schema.insert_ignore` found).
+    return (
+        conn.execute(
+            sa.update(model_deployments)
+            .where(model_deployments.c.id == deployment_id)
+            .values(status=status.value, updated_at=db_now(conn))
+            .returning(model_deployments.c.id)
+        ).first()
+        is not None
     )
-    return result.rowcount == 1
 
 
 def record_eval_pass(conn: Connection, deployment_id: str, at: float | None = None) -> bool:
     """Note that the Lucy evaluation set passed for this deployment (§9.6)."""
-    result = conn.execute(
-        sa.update(model_deployments)
-        .where(model_deployments.c.id == deployment_id)
-        .values(eval_passed_at=at if at is not None else db_now(conn), updated_at=db_now(conn))
+    return (
+        conn.execute(
+            sa.update(model_deployments)
+            .where(model_deployments.c.id == deployment_id)
+            .values(eval_passed_at=at if at is not None else db_now(conn), updated_at=db_now(conn))
+            .returning(model_deployments.c.id)
+        ).first()
+        is not None
     )
-    return result.rowcount == 1
 
 
 def normalise_map(raw: Mapping[str, Any]) -> dict[str, dict[str, list[str]]]:
@@ -399,7 +492,9 @@ def validate_routing_map(
                         f"{tier.value}/{request_class.value}: {deployment_id} is above this tier"
                     )
                 elif (
-                    require_eval and position == 0 and not deployment.is_builtin
+                    require_eval
+                    and position == 0
+                    and not deployment.is_builtin
                     and deployment.eval_passed_at is None
                 ):
                     problems.append(f"{deployment_id} hasn't passed the evaluation set")
@@ -412,8 +507,13 @@ def validate_routing_map(
 
 
 def create_routing_version(
-    conn: Connection, routing: Mapping[str, Any], author: str, reason: str, *,
-    activate: bool = False, require_eval: bool = True,
+    conn: Connection,
+    routing: Mapping[str, Any],
+    author: str,
+    reason: str,
+    *,
+    activate: bool = False,
+    require_eval: bool = True,
 ) -> int:
     """Store a new, immutable routing version and return its number."""
     if not author or not reason:
@@ -423,8 +523,13 @@ def create_routing_version(
     version = (latest or 0) + 1
     conn.execute(
         sa.insert(model_routing_versions).values(
-            id=new_id(), version=version, map=checked, author=author, reason=reason,
-            created_at=db_now(conn), active=False,
+            id=new_id(),
+            version=version,
+            map=checked,
+            author=author,
+            reason=reason,
+            created_at=db_now(conn),
+            active=False,
         )
     )
     if activate:
@@ -432,13 +537,15 @@ def create_routing_version(
     return version
 
 
-def activate_routing_version(
-    conn: Connection, version: int, *, require_eval: bool = True
-) -> None:
+def activate_routing_version(conn: Connection, version: int, *, require_eval: bool = True) -> None:
     """Make `version` the one new runs use; the previous active version stops being active."""
-    row = conn.execute(
-        sa.select(model_routing_versions).where(model_routing_versions.c.version == version)
-    ).mappings().first()
+    row = (
+        conn.execute(
+            sa.select(model_routing_versions).where(model_routing_versions.c.version == version)
+        )
+        .mappings()
+        .first()
+    )
     if row is None:
         raise RegistryError(f"No routing version {version}.")
     validate_routing_map(row["map"], load_deployments(conn), require_eval=require_eval)
@@ -456,14 +563,21 @@ def activate_routing_version(
 
 def active_routing(conn: Connection) -> RoutingVersion:
     """The active routing version, or the starting map as version 0 when none is stored yet."""
-    row = conn.execute(
-        sa.select(model_routing_versions).where(model_routing_versions.c.active.is_(True))
-    ).mappings().first()
+    row = (
+        conn.execute(
+            sa.select(model_routing_versions).where(model_routing_versions.c.active.is_(True))
+        )
+        .mappings()
+        .first()
+    )
     if row is None:
         return RoutingVersion(version=0, map=normalise_map(DEFAULT_ROUTING), reason="default")
     return RoutingVersion(
-        version=row["version"], map=normalise_map(row["map"]), author=row["author"],
-        reason=row["reason"], active=True,
+        version=row["version"],
+        map=normalise_map(row["map"]),
+        author=row["author"],
+        reason=row["reason"],
+        active=True,
     )
 
 
@@ -485,9 +599,12 @@ def seed_defaults(conn: Connection, author: str = "system") -> SeedResult:
     any_version = conn.execute(sa.select(model_routing_versions.c.id).limit(1)).first()
     if any_version is None:
         version = create_routing_version(
-            conn, DEFAULT_ROUTING, author,
+            conn,
+            DEFAULT_ROUTING,
+            author,
             "Starting map from the proposal (§9.1); evaluation set still to run.",
-            activate=True, require_eval=False,
+            activate=True,
+            require_eval=False,
         )
         result = replace(result, routing_version=version)
     return result

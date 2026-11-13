@@ -107,8 +107,8 @@ def test_each_mi_has_one_coherent_implementation_and_verification_status():
     assert sum(counts.values()) == 240
     assert counts == {
         "Implemented": 213,
-        "In progress": 3,
-        "Not started": 24,
+        "In progress": 27,
+        "Not started": 0,
     }
     assert len(re.findall(r"^- \[x\] \*\*MI-", checklist, flags=re.MULTILINE)) == 213
     assert "**213/240 source implementation boxes checked" in checklist

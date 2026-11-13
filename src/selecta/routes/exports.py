@@ -128,11 +128,13 @@ def add_routes(app, ctx) -> None:
     # Used by the mix-order middleware to distinguish genuine lost replies from
     # new writes after a restart. This checks durable records, not memory alone.
     def has_export_operation(operation: str) -> bool:
-        return bool(operation) and any(
-            job.get("operation") == operation for job in every_job()
-        )
+        return bool(operation) and any(job.get("operation") == operation for job in every_job())
 
     ctx.has_export_operation = has_export_operation
+    # core.durable_local_jobs: the job store holds exports instead of these records (SC-0394-04)
+    durable = getattr(ctx, "durable_exports", None)
+    if durable is not None:
+        ctx.has_export_operation = durable.has_operation
 
     def forget_old_records() -> None:
         """The records, that is. The files they made are left alone."""
@@ -259,7 +261,9 @@ def add_routes(app, ctx) -> None:
             # Encoding finishing does not prove the frozen file is playable. Decode
             # every frame from the final path before it is ever reported as ready.
             try:
-                verify_export(exports / job["name"], made["seconds"])
+                # SF-0246-06: the decoded samples' checksum is kept with the frozen revision, so
+                # the file can be checked against exactly what this job froze
+                checksum = verify_export(exports / job["name"], made["seconds"])
             except (OSError, ValueError):
                 (exports / job["name"]).unlink(missing_ok=True)
                 raise ValueError(
@@ -269,7 +273,13 @@ def add_routes(app, ctx) -> None:
             store.clock.record(
                 "export_per_song", (time.monotonic() - started) / max(len(job["songs"]), 1)
             )
-            finish(job, "ready", seconds=made["seconds"], finished_at=time.time())
+            finish(
+                job,
+                "ready",
+                seconds=made["seconds"],
+                checksum=checksum or None,
+                finished_at=time.time(),
+            )
         except Exception as problem:  # noqa: BLE001 - it becomes the job's reason, not a lost thread
             finish(job, "failed", error=_words_for(problem))
         finally:
@@ -284,6 +294,15 @@ def add_routes(app, ctx) -> None:
         the original export already finished, failed, or was interrupted.
         """
         operation = request.headers.get("x-operation-id")
+        if durable is not None:
+            previous = durable.by_operation(operation or "")
+            if previous is not None and previous.input_ref.get("draft") != draft:
+                raise HTTPException(409, "That export operation belongs to a different mix.")
+            if previous is not None:
+                return durable.record(previous)
+            with connect() as conn:
+                snapshot = snapshot_of(conn, draft)
+            return durable.start(snapshot, operation)
         with lock:
             if operation:
                 previous = next(
@@ -314,6 +333,7 @@ def add_routes(app, ctx) -> None:
                     "created_at": now,
                     "last_progress_at": now,
                     "seconds": None,
+                    "checksum": None,
                     "error": None,
                 }
                 cancel = threading.Event()
@@ -325,6 +345,8 @@ def add_routes(app, ctx) -> None:
 
     @app.get("/api/exports/jobs")
     def list_exports() -> dict:
+        if durable is not None:
+            return {"jobs": [durable.record(job) for job in durable.every()]}
         return {"jobs": [as_shown(job) for job in every_job()]}
 
     def job_or_404(job_id: str) -> dict:
@@ -333,13 +355,26 @@ def add_routes(app, ctx) -> None:
             raise HTTPException(404, "There's no export like that.")
         return job
 
+    def durable_or_404(job_id: str):
+        job = durable.find(job_id) if JOB_ID.match(job_id) else None
+        if job is None:
+            raise HTTPException(404, "There's no export like that.")
+        return job
+
     @app.get("/api/exports/jobs/{job_id}")
     def one_export(job_id: str) -> dict:
+        if durable is not None:
+            return durable.record(durable_or_404(job_id))
         return as_shown(job_or_404(job_id))
 
     @app.delete("/api/exports/jobs/{job_id}")
     def cancel_export(job_id: str) -> dict:
         """Stop while it's waiting on transitions. Once the file is being written, it finishes."""
+        if durable is not None:
+            found = durable_or_404(job_id)
+            if durable.record(found)["state"] != "preparing":
+                raise HTTPException(409, "It's past the point where it can be cancelled.")
+            return durable.cancel(found)
         job = job_or_404(job_id)
         shown = as_shown(job)
         if shown["state"] != "preparing":

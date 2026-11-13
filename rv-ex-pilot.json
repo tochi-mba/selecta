@@ -1,0 +1,13 @@
+{
+  "status": "candidate-not-independently-verified",
+  "EX-0118-01": "light 1440: buttons [Play | Shape first | Save draft\nfor House party], facts \"8 matching songs, about 8 min of matching source audio\"; light 390: buttons [Play | Shape first | Save draft\nfor House party], facts \"8 matching songs, about 8 min of matching source audio\"; dark 1440: buttons [Play | Shape first | Save draft\nfor House party], facts \"8 matching songs, about 8 min of matching source audio\"; dark 390: buttons [Play | Shape first | Save draft\nfor House party], facts \"8 matching songs, about 8 min of matching source audio\"",
+  "EX-0115-01": "Listen: MISSING; Make a Mix: in navigation; My Mixes: in navigation; Library: in navigation; Workspace: in navigation",
+  "EX-0117-01": "first card \"House party\" offers Play: 1, Shape first: 1",
+  "EX-0116-01": "Play turned to Pause; Up Next visible: true; Pause changed to Resume without losing the song position",
+  "EX-0124-02": "Requests drawer opens: true",
+  "EX-0119-01": "drafts section: 1, render line: 0, draft \"Pilot later\" shown: true",
+  "EX-0120-01": "2-song mix: transition Change controls 1",
+  "EX-0122-02": "Studio tab: 1; Open the Studio missing",
+  "EX-0128-01": "What needs you: 1 song couldn’t be analysed. Look at those songs",
+  "EX-0126-01": "after a file address: SelectaDJ reads the folder, sets aside anything that isn’t music, and works out how your songs fit together. Your audio stays on this PC. Your original files are never moved or changed. Adding a folder starts lyric lookup: artist, title, album and duration are sent to LRCLIB to find lyrics. / Music folder"
+}

@@ -6,6 +6,9 @@ import { RoomPanel } from './RoomPanel';
 // Listen in the Cloud app: the "Playing on ..." bar and the host's room panel, ready to drop
 // into the Cloud shell as one page. Until Cloud builds mixes, the session's song index is a
 // position in the library (oldest first), and each song plays from its prepared playback file.
+// With `cloud.single_audio_owner` on, the bar lives in the Cloud transport dock instead (it keeps
+// playing across pages) and reads the whole library by asset id (cloud/cloudCatalogue.ts); off,
+// this page keeps its own bar and the one-page `librarySource` below, exactly as before.
 
 type Account = { workspace: { id: string }; features: Record<string, boolean>; feature_locks: Record<string, string> };
 type AssetPage = { assets: { id: string; name: string }[]; next_cursor: string | null };
@@ -38,9 +41,10 @@ export function CloudListen({ api, account }: { api: Api; account: Account }) {
   const library = useMemo(() => librarySource(api, workspaceId), [api, workspaceId]);
   const roomsHidden = account.features.rooms === false && !account.feature_locks.rooms;
   const devices = account.features.devices !== false;
+  const inDock = account.features['cloud.single_audio_owner'] !== false;
   return (
     <div className="cloud-listen">
-      {devices && <PlayingBar api={api} workspaceId={workspaceId} source={library.source} songName={library.name} remoteControl={account.features['devices.remote_control'] !== false} />}
+      {devices && !inDock && <PlayingBar api={api} workspaceId={workspaceId} source={library.source} songName={library.name} remoteControl={account.features['devices.remote_control'] !== false} />}
       {!roomsHidden && (
         <RoomPanel
           api={api}
@@ -49,6 +53,7 @@ export function CloudListen({ api, account }: { api: Api; account: Account }) {
           votesOn={account.features['rooms.votes'] !== false}
           displayOn={account.features['rooms.display'] !== false}
           playHereOn={devices}
+          freshOnly={account.features['rooms.nickname_confirm'] === true}
         />
       )}
     </div>

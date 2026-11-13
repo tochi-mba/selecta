@@ -1,0 +1,62 @@
+{
+  "about": "ADR-0439 AV-0439-01 critical task inventory. Read by tests/test_apb_staff.py and web/src/venueops/StaffDashboard.test.tsx. Each task must be doable by keyboard, at 320 CSS px and at 400% zoom, in both themes, with reduced motion and forced colours. The prose version is docs/autopilot/critical-task-inventory.md.",
+  "modes": [
+    {
+      "id": "local",
+      "label": "Local (no account)",
+      "tasks": [
+        {"id": "local-play", "task": "Play, pause, previous and next", "where": "/listen", "keyboard": "Tab to the transport, Space or Enter", "min_width_px": 320},
+        {"id": "local-make-mix", "task": "Make a mix from the library", "where": "/mixes", "keyboard": "Tab to Make a mix, Enter", "min_width_px": 320},
+        {"id": "local-edit-mix", "task": "Edit the current mix (reorder, remove, change a blend)", "where": "/mix/current/edit", "keyboard": "Tab to a song, the move and remove buttons, Enter", "min_width_px": 320},
+        {"id": "local-library", "task": "Find a song in the library", "where": "/library", "keyboard": "Tab to search, type, arrow through results", "min_width_px": 320},
+        {"id": "local-workshop", "task": "Check analysis, storage and diagnostics", "where": "/workshop", "keyboard": "Tab through the Workshop tabs, Enter", "min_width_px": 320}
+      ]
+    },
+    {
+      "id": "cloud",
+      "label": "Cloud (signed in)",
+      "tasks": [
+        {"id": "cloud-sign-in", "task": "Sign in and pick a workspace", "where": "cloud sign-in", "keyboard": "Tab through the sign-in form, Enter", "min_width_px": 320},
+        {"id": "cloud-play", "task": "Play on this device or move playback to another", "where": "Devices panel and playing bar", "keyboard": "Tab to the device list, Enter", "min_width_px": 320},
+        {"id": "cloud-upload", "task": "Upload music and resume an interrupted upload", "where": "Library upload", "keyboard": "Tab to Upload, Enter opens the file picker", "min_width_px": 320}
+      ]
+    },
+    {
+      "id": "room_host",
+      "label": "Room host",
+      "tasks": [
+        {"id": "host-open-room", "task": "Open, lock, unlock and end a room", "where": "Room panel", "keyboard": "Tab to the room buttons, Enter", "min_width_px": 320},
+        {"id": "host-moderate", "task": "Approve or pass a guest request", "where": "Room panel inbox", "keyboard": "Tab to a request's Approve or Pass, Enter", "min_width_px": 320},
+        {"id": "host-guests", "task": "Approve, remove or ban a guest", "where": "Room panel guests", "keyboard": "Tab to a guest's buttons, Enter", "min_width_px": 320}
+      ]
+    },
+    {
+      "id": "guest",
+      "label": "Guest",
+      "tasks": [
+        {"id": "guest-join", "task": "Join a room with a code", "where": "guest join page", "keyboard": "Tab to the code field, type, Enter", "min_width_px": 320},
+        {"id": "guest-request", "task": "Search and request a song", "where": "guest room page", "keyboard": "Tab to search, type, Tab to Request, Enter", "min_width_px": 320},
+        {"id": "guest-outcome", "task": "Read what happened to a request", "where": "guest room page", "keyboard": "Tab to the request list; status is in text", "min_width_px": 320}
+      ]
+    },
+    {
+      "id": "venue_staff",
+      "label": "Venue staff",
+      "tasks": [
+        {"id": "staff-glance", "task": "See now, next, the plan and health", "where": "Staff dashboard", "keyboard": "Read in order; headings h1 then h2", "min_width_px": 320},
+        {"id": "staff-steer", "task": "Send a steering command and see it go from waiting to done", "where": "Staff dashboard", "keyboard": "Tab to a steering button, Enter; the change is announced politely", "min_width_px": 320},
+        {"id": "staff-stop", "task": "Emergency Stop", "where": "Staff dashboard top bar", "keyboard": "Stop is the first button after the heading, Enter", "min_width_px": 320},
+        {"id": "staff-expert", "task": "Reach the expert controls", "where": "Staff dashboard, Expert controls", "keyboard": "Tab to the Expert controls links, Enter", "min_width_px": 320}
+      ]
+    }
+  ],
+  "expert_controls": [
+    {"id": "listen", "label": "Listen and transport", "path": "/listen"},
+    {"id": "edit_mix", "label": "Edit the mix", "path": "/mix/current/edit"},
+    {"id": "mixes", "label": "Mixes", "path": "/mixes"},
+    {"id": "library", "label": "Library", "path": "/library"},
+    {"id": "discover", "label": "Discover", "path": "/discover"},
+    {"id": "lucy", "label": "Lucy", "path": "/mixes/lucy"},
+    {"id": "workshop", "label": "Workshop", "path": "/workshop"}
+  ]
+}

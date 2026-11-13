@@ -31,9 +31,13 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.lucy.commit` | session | `web/src/views/LucyApprove.tsx` | A Lucy change waiting for approval in this tab | Lucy |
 | `selecta.study.<study>` | session | `web/src/views/Listening.tsx` | Progress through a blind listening study in this tab | Learning |
 | `selecta-full-motion` | session | `web/src/ui/lowPower.ts` | That the low-power motion notice was dismissed in this tab | Shared foundation |
+| `selecta.workspace.<user>` | local | `web/src/business/workspace.ts` | Last chosen workspace for each signed-in account, restored only for that account | Cloud workspace switcher |
+| `selecta.workspace.tab` | session | `web/src/business/workspace.ts` | Workspace chosen in this tab, scoped to the signed-in account | Cloud workspace switcher |
 | `selecta.device.<workspace>` | local | `web/src/devices/usePlaybackDevice.ts`, `web/src/devices/DevicesPanel.tsx` | This browser's playback device id (Cloud) | Cloud playback |
 | `selecta.cloud.last-event-id` | session | `web/src/cloud/events.ts` | The last Cloud event seen, to resume the stream (Cloud) | Cloud |
 | `selecta.guest.room.<code>` | local | `web/src/guest/main.ts` (through `store` in `web/src/rooms/dom.ts`) | The guest's room id for a party code (Cloud) | Requests (guest rooms) |
+| `selecta-cloud-dev:refresh` | local | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The local identity service's refresh token, so a reload signs back in; removed on sign-out or a failed refresh | Cloud (local dev stack) |
+| `selecta-cloud-dev:login` | session | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The PKCE verifier, CSRF state and return path of a sign-in in flight; removed when the code comes back | Cloud (local dev stack) |
 
 ## API side effects
 
@@ -257,3 +261,62 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /internal/workers/attempts/{attempt_id}/progress` | Reports progress |
 | `POST /internal/workers/attempts/{attempt_id}/complete` | Completes an attempt |
 | `POST /internal/workers/attempts/{attempt_id}/fail` | Fails an attempt |
+
+### Business venues and Autopilot (`src/selecta/routes/business_hours.py`, `src/selecta/routes/autopilot.py`) - Venue operations
+
+| Route | Side effect |
+|---|---|
+| `DELETE /api/autopilot/venues/{venue_id}/overrides/{override_id}` | Revokes an Autopilot override |
+| `DELETE /api/business/venues/{venue_id}/hour-exceptions/{exception_id}` | Removes one venue-hours exception |
+| `POST /api/autopilot/sessions` | Creates an Autopilot session |
+| `POST /api/autopilot/sessions/{session_id}/controls/{control}` | Issues a guarded session control, preserving staff takeover |
+| `POST /api/autopilot/sessions/{session_id}/transitions` | Records or starts an authorized session transition |
+| `POST /api/autopilot/venues/{venue_id}/candidates` | Sets candidates for the venue |
+| `POST /api/autopilot/venues/{venue_id}/overrides` | Adds a timed policy override |
+| `POST /api/autopilot/venues/{venue_id}/policies` | Creates a venue policy revision |
+| `POST /api/business/venues/{venue_id}/close-now` | Closes the venue early |
+| `POST /api/business/venues/{venue_id}/close-now/{override_id}/undo` | Undoes a close-now override |
+| `POST /api/business/venues/{venue_id}/hour-exceptions` | Adds an opening-hours exception |
+| `POST /api/business/venues/{venue_id}/stay-open-late` | Extends the current opening window |
+| `PUT /api/autopilot/venues/{venue_id}/setup/{step}` | Changes a specific venue setup step |
+| `PUT /api/business/venues/{venue_id}/hours` | Replaces the weekly opening hours |
+
+### Business, Autopilot, Cloud mixes and venue-room mutations (ADR-0418, ADR-0441-0454)
+
+These endpoints preserve separate Cloud, business and venue ownership. Each request still requires its feature gate, credentials and tenant scope; a route's presence here does not authorise a caller.
+
+| Route | Side effect |
+|---|---|
+| `DELETE /api/business/crates/{crate_id}` | Removes a venue crate belonging to an authorised organisation |
+| `DELETE /api/display/pairing` | Revokes the current display pairing |
+| `DELETE /api/rooms/{room_id}/displays/{display_id}` | Removes a paired room display |
+| `PATCH /api/business/venues/{venue_id}` | Updates a venue's saved details |
+| `PATCH /api/business/zones/{zone_id}` | Updates a zone's saved configuration |
+| `PATCH /api/zones/{zone_id}/room` | Updates a standing venue room |
+| `POST /api/autopilot/transitions/check` | Records or evaluates a proposed Autopilot transition |
+| `POST /api/business/crates` | Creates a venue crate |
+| `POST /api/business/orgs` | Creates a business organisation workspace |
+| `POST /api/business/venues` | Creates a venue in an organisation |
+| `POST /api/business/venues/{venue_id}/archive` | Archives a business venue |
+| `POST /api/business/zones` | Creates a playback zone |
+| `POST /api/business/zones/{zone_id}/archive` | Archives a zone |
+| `POST /api/business/zones/{zone_id}/commands` | Submits a zone playback control |
+| `POST /api/cloud-mixes` | Creates a Cloud mix |
+| `POST /api/cloud-mixes/{mix_id}/revisions` | Creates a revision of an existing Cloud mix |
+| `POST /api/venue-rooms/{code}/join` | Adds a guest to a venue room |
+| `POST /api/venue-rooms/{code}/requests` | Submits a guest song request |
+| `POST /api/venue-rooms/{code}/requests/{request_id}/vote` | Records a guest vote |
+| `POST /api/venue/staff/{session_id}/commands` | Issues a venue staff playback command |
+| `POST /api/venue/staff/{session_id}/stop` | Stops an authorised venue staff session |
+| `POST /api/zones/{zone_id}/requests/{request_id}/approve` | Approves a standing-room request |
+| `POST /api/zones/{zone_id}/requests/{request_id}/pass` | Passes over a standing-room request |
+| `POST /api/zones/{zone_id}/room/guests/{guest_id}/ban` | Bans a venue-room guest |
+| `POST /api/zones/{zone_id}/room/guests/{guest_id}/remove` | Removes a venue-room guest |
+| `POST /api/zones/{zone_id}/room/pause` | Pauses a standing room's requests |
+| `POST /api/zones/{zone_id}/room/resume` | Resumes a standing room's requests |
+| `POST /api/zones/{zone_id}/room/rotate` | Rotates a standing room's guest code |
+| `POST /api/zones/{zone_id}/venue-network` | Registers a venue network for abuse limits |
+| `PUT /api/business/crates/{crate_id}/songs` | Replaces a venue crate's song list |
+| `PUT /api/business/zones/{zone_id}/cache-report` | Updates a zone kiosk's cache readiness |
+| `PUT /api/business/zones/{zone_id}/programme` | Replaces a zone's scheduled programme |
+| `POST /api/admin/business/pilots` | Creates a staff-authorised time-limited business pilot |

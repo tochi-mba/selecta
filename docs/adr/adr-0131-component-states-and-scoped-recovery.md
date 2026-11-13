@@ -2,7 +2,7 @@
 
 - **Decision:** Accepted (owner accepted all proposed ADRs on 2026-11-08, [#37](https://github.com/tochi-mba/selecta/pull/37)).
 - **Implementation:** 5/5 Implemented (2026-11-10).
-- **Verification:** No (0/5 tasks independently Verified).
+- **Verification:** 3/5 Verified by automated runs (EX-0131-03 and EX-0131-04 by browser runs on 2026-11-12); no independent human verification.
 - **Programme/date/baseline:** Experience-first UI/UX; 2026-11-07; `main` `6638ec2313ce53843adfaf363306f8e79c4c8c7e`, after merged PR #29.
 - **Priority / phase:** P0 / Foundation.
 - **Related earlier ADRs:** ADR-0094, ADR-0095, ADR-0080. Historical decisions are preserved, not automatically superseded.
@@ -32,8 +32,8 @@ Undo cannot be described as durable after reload where underlying server guarant
 
 1. **EX-0131-01 - Write interaction state matrix**. Acceptance: Every shared component state has visuals, copy and ARIA meaning. Required verification: Gallery plus automated/manual check. **Implementation: Implemented; Verified: No.** Evidence: `docs/adr/completion/components.md`, `web/src/ui/ControlGallery.tsx`. Open: MP-0279 gallery spec not green on 2026-11-10; manual check needs a person.
 2. **EX-0131-02 - Validate overlay and focus behavior**. Acceptance: Nested overlays trap and restore focus correctly. Required verification: WAI-ARIA APG, keyboard and NVDA. **Implementation: Implemented; Verified: No. Needs a person: APG keyboard and NVDA on nested overlays.**
-3. **EX-0131-03 - Protect async consistency**. Acceptance: Old/failed responses never overwrite current revision. Required verification: Race, two-tab and slow-network E2E. **Implementation: Implemented; browser check pending (`web/e2e/ex-0131-async-consistency.e2e.ts`); Verified: No.** Open: the race, two-tab and slow-network E2E is written and not yet run.
-4. **EX-0131-04 - Improve loading/empty/error feedback**. Acceptance: No fake success, unreachable retry or loading-as-empty. Required verification: Deterministic visual fixtures. **Implementation: Implemented; Verified: No.** Open: deterministic visual fixtures (MP-0297) not run here.
+3. **EX-0131-03 - Protect async consistency**. Acceptance: Old/failed responses never overwrite current revision. Required verification: Race, two-tab and slow-network E2E. **Implementation: Implemented; Verified: Yes (automated, 2026-11-12).** Evidence: the race, two-tab and slow-network tests of `web/e2e/ex-0131-async-consistency.e2e.ts` passed (CI run 43119473767, Edge E2E (shard 1/2) job 130857753346, head f851f2b, recorded 2026-11-12) and rerun locally 2026-11-12 under the slot lock (Edge, web/dist-r6e).
+4. **EX-0131-04 - Improve loading/empty/error feedback**. Acceptance: No fake success, unreachable retry or loading-as-empty. Required verification: Deterministic visual fixtures. **Implementation: Implemented; Verified: Yes (automated, 2026-11-12).** Evidence: deterministic visual fixtures `web/e2e/mp-0297-loading-and-recovery.e2e.ts` MP-0297-01 to -05 passed (CI run 43119473767, Edge E2E (shard 2/2) job 130857753267, head f851f2b, recorded 2026-11-12).
 5. **EX-0131-05 - Preserve scoped Undo and recovery**. Acceptance: Recovery action remains discoverable and exact. Required verification: Toast burst, stale mix and failure tests. **Implementation: Implemented; Verified: Yes (2026-11-10).** Evidence: `web/src/ui/toastPriority.test.tsx`, `toastsCoalesce.test.tsx`, `polish-components.test.tsx`, `controls.test.tsx`, `web/src/views/Mix.test.tsx`.
 
 ## Verification and sources

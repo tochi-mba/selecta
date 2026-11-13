@@ -1,8 +1,8 @@
 import { flagOn, useFlags } from '../flags';
 import { listed } from '../shell/manifest';
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { Folders, get, post } from '../api';
-import { useJobsStatus } from '../state/jobs';
+import { refreshJobs, useJobsStatus } from '../state/jobs';
 import { analysisWords, estimateWords, etaRangeWords } from '../lib';
 import { useRoute, type WorkshopTab } from '../router';
 import { workspaceTabs } from '../shell/manifest';
@@ -16,6 +16,7 @@ import { LinkTabs } from '../ui/primitives';
 import { ExportJobs } from './ExportJobs';
 import { Listening } from './Listening';
 import { LocalBackup } from './LocalBackup';
+import { sameApartFromClock } from './clockMemo';
 import { ViewProps } from './shared';
 import { Diagnostics, FoldersPanel, JobsPanel, MemoryPanel, NeedsYou, StoragePanel } from './WorkshopPanels';
 import { words } from '../copy';
@@ -75,6 +76,7 @@ function Overview({ status }: { status: ViewProps['status'] }) {
   const { counts } = status;
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
   const { jobs, stale, unsupported } = useJobsStatus();
+  const unreachable = !jobs && stale && !unsupported;
   const [folders, setFolders] = useState<Folders | null>(null);
   useEffect(() => {
     let live = true;
@@ -88,7 +90,9 @@ function Overview({ status }: { status: ViewProps['status'] }) {
           place until the jobs answer arrives, so the metrics don't jump down under the reader. */}
       {jobs
         ? <NeedsYou jobs={jobs} readySongs={counts.ready ?? 0} folders={folders} />
-        : !stale && !unsupported && <section className="panel stack needs-you"><h2>What needs you</h2><Skeleton variant="metrics" lines={1} label="Checking what needs you" /></section>}
+        : !stale && !unsupported && <section className="panel stack needs-you"><h2>What needs you</h2><Skeleton variant="rows" lines={2} label="Checking what needs you" retry={refreshJobs} /></section>}
+      {/* S4 (2026-11-12): when the status can't be reached, saying so comes first, before the counts */}
+      {unreachable && <JobsPanel status={status} />}
       <div className="metrics">
         <div><strong>{counts.ready ?? 0}</strong><span>ready for mixes</span></div>
         <div><strong>{counts.analysed}</strong><span>audio analysed</span></div>
@@ -96,14 +100,18 @@ function Overview({ status }: { status: ViewProps['status'] }) {
         {flagOn('lyrics.lookup') && <div><strong>{counts.lyrics}</strong><span>with timed lyrics</span></div>}
         <div><strong>{counts.set_aside}</strong><span>set aside as not music</span></div>
       </div>
-      <JobsPanel status={status} />
+      {!unreachable && <JobsPanel status={status} />}
       {flagOn('export') && <ExportJobs always />}
       <InterfaceChoices />
+      <section className="panel stack about-app" aria-labelledby="about-app-title">
+        <h2 id="about-app-title">About</h2>
+        <p className="hint">SelectaDJ is a REX Technologies product.</p>
+      </section>
     </>
   );
 }
 
-export function Workshop({ status, refreshStatus, notify, tab = 'overview' }: ViewProps & { tab?: WorkshopTab }) {
+function WorkshopView({ status, refreshStatus, notify, tab = 'overview' }: ViewProps & { tab?: WorkshopTab }) {
   const { counts } = status;
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
   const route = useRoute();
@@ -135,13 +143,13 @@ export function Workshop({ status, refreshStatus, notify, tab = 'overview' }: Vi
                 : `Working through your songs at low priority, so you can keep using your PC. ${left} to go${estimates ? `, done in ${etaRangeWords(status.eta?.analysis)}` : ''}.`
               : left
                 ? `${left} song${left === 1 ? '' : 's'} left. ${analysisWords(status.eta?.analysis)}`
-                : `Audio analysis is complete. ${counts.ready ?? 0} songs currently have the cues Selecta needs to mix them.`}
+                : `Audio analysis is complete. ${counts.ready ?? 0} songs currently have the cues SelectaDJ needs to mix them.`}
           </p>
           {estimates && estimateWords(status.eta?.accuracy) && <p className="hint">{estimateWords(status.eta?.accuracy)}</p>}
           {estimates && <p className="hint">{words().workshopEstimates}</p>}
           {flagOn('render.spare_time') && (
             <p className="hint">
-              With nothing else to do, Selecta tries out the best transitions across your library, so they’re ready when you want them.
+              With nothing else to do, SelectaDJ tries out the best transitions across your library, so they’re ready when you want them.
               {status.transitions_ready ? ` ${status.transitions_ready} have come out clean so far.` : ''}
             </p>
           )}
@@ -174,3 +182,6 @@ export function Workshop({ status, refreshStatus, notify, tab = 'overview' }: Vi
     </main>
   );
 }
+
+/** r8c: the Workspace never shows the music clock, so a tick of it doesn't redraw the page. */
+export const Workshop = memo(WorkshopView, sameApartFromClock<ViewProps & { tab?: WorkshopTab }>());

@@ -222,7 +222,11 @@ a.button:hover { border-color: var(--text); }
 }
 .crumbs { min-width: 0; font-size: var(--text-sm); color: var(--text-soft); }
 .crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-hair) var(--space-2); }
-.crumbs li { min-width: 0; overflow-wrap: anywhere; }
+/* EX-0115-04 and S4 (2026-11-12): the page's name breaks only between words, or at a hyphen the browser
+   adds ("Work-space"), never inside a word ("Workspac/e", "connectio/ns"). The trail is never narrower
+   than its longest word; when that and the actions don't fit side by side, the actions wrap instead. */
+.crumbs { min-width: min-content; }
+.crumbs li { min-width: 0; overflow-wrap: normal; word-break: normal; hyphens: auto; }
 .crumbs li + li::before { content: '/'; margin-right: var(--space-2); color: var(--border-strong); }
 .crumbs [aria-current='page'] { unicode-bidi: plaintext; }
 .crumbs a { color: var(--text-soft); }
@@ -254,8 +258,28 @@ a.button:hover { border-color: var(--text); }
      digits even before one arrives (MP-0277-05) */
   .context-actions .context-counted { position: relative; padding-inline: calc(var(--space-4) + var(--space-hair)); }
   .context-actions .context-counted .count { position: absolute; top: 50%; translate: 0 -50%; inset-inline-start: calc(50% + var(--icon-size) / 2 + var(--icon-gap-dense)); font-size: var(--text-xs); }
-  /* and the name breaks between words wherever a word fits */
-  .crumbs li { overflow-wrap: break-word; }
+  /* the name breaks between words; the actions move under it before a word is split */
+  .context-bar { flex-wrap: wrap; }
+  .crumbs { flex: 1 1 min-content; }
+  .context-actions { margin-inline-start: auto; }
+}
+/* EX-0115-04: at 400% zoom or in a very short window the fixed bars took two thirds of the height. There
+   the page's bar scrolls away with the page, and on a narrow screen so do the tab bar (it sits at the
+   top, where it is in the page's order) and the mini-player (at the end, after the page). Shell.tsx
+   reports the bar's sticky height as 0 here, so nothing pins under a bar that has gone. */
+@media (max-height: 450px) {
+  .context-bar { position: static; }
+}
+@media (max-height: 450px) and (max-width: 760px) {
+  :root { --bottom-chrome: 0px; }
+  /* the shell's scope outranks the bars' own fixed rules later in this file; relative, not static, so
+     the progress line stays inside the mini-player */
+  .shell .nav, .shell .mini { position: relative; inset: auto; }
+}
+/* SF-0207-05: at 320px the four actions leave the name about 80px, so a one-word name ("Workspace",
+   "Diagnostics") still broke inside the word; the smaller step keeps every page name's words whole */
+@media (max-width: 360px) {
+  .crumbs { font-size: var(--text-xs); }
 }
 
 .mini {
@@ -336,6 +360,8 @@ button.icon { padding: var(--space-dense) var(--space-2); min-width: 40px; }
 }
 .toast-row.problem { background: var(--warn); color: var(--accent-ink); }
 .toast-row > span { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+/* UF-0380-07: which mix the change was in, beside the message it qualifies */
+.toast-row > .toast-where { flex: 0 1 auto; min-width: 0; max-width: 40%; overflow-wrap: anywhere; }
 .toast-row button { background: none; color: inherit; border-color: currentColor; min-height: 34px; padding: var(--space-1) var(--space-3); flex: none; }
 .toast-row .toast-close { border: 0; padding: var(--space-1) var(--space-2); min-width: 34px; }
 /* Only visual chrome yields here: the audio owner and saved Undo activity do not change. */
@@ -534,6 +560,9 @@ button.song-open:hover { text-decoration: underline; }
 .choice { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-dense) var(--space-snug); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; }
 .choice input { width: auto; min-height: 0; }
 .choice:has(input:checked) { border-color: var(--selected); }
+/* SF-0245-05: a choice answers the pointer as a button does (style.css button:hover), so the state grid is
+   the same for every shared primitive; a checked or disabled one keeps its own edge */
+.choice:hover:has(input:not(:checked):not(:disabled)) { border-color: var(--ink); }
 .choice:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 
 /* nothing on a phone should be wider than the phone */
@@ -599,5 +628,10 @@ button.song-open b { display: block; white-space: normal; overflow-wrap: anywher
 @media (max-width: 760px) {
   :root[data-keyboard='open'] .overlay {
     padding-bottom: max(var(--keyboard-inset), var(--safe-bottom));
+  }
+  /* UF-0383-08: a sheet lifted above the keyboard is capped to the space left, so its title and
+     Close stay on screen and only its body scrolls (owner-delegated check, 2026-11-12) */
+  :root[data-keyboard='open'] :is(.overlay-drawer, .overlay-sheet) .overlay-panel {
+    max-height: calc(100dvh - max(var(--keyboard-inset), var(--safe-bottom)) - var(--space-2));
   }
 }

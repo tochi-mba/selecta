@@ -21,7 +21,8 @@ from selecta.flags import cloud_gate
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
 from selecta.persistence import transaction
-from selecta.rooms.api_common import item_json, join_path, refusal
+from selecta.rooms import limits
+from selecta.rooms.api_common import item_json, join_path, refusal, too_many
 from selecta.rooms.errors import RoomError
 from selecta.rooms.service import Rooms
 from selecta.rooms.settings import RoomSettings
@@ -87,6 +88,7 @@ def host_json(view: HostView) -> dict[str, Any]:
                 "status": guest.status.value,
                 "joined_at": guest.joined_at,
                 "last_seen_at": guest.last_seen_at,
+                "online": guest.online,
             }
             for guest in view.guests
         ],
@@ -96,6 +98,17 @@ def host_json(view: HostView) -> dict[str, Any]:
         "renders_left": view.renders_left,
         "music_paused": view.music_paused,
         "displays": view.displays,
+        "screens": [
+            {
+                "id": screen.display_id,
+                "label": screen.label,
+                "paired_at": screen.paired_at,
+                "last_seen_at": screen.last_seen_at,
+                "online": screen.online,
+            }
+            for screen in view.screens
+        ],
+        "now": view.now,
     }
 
 
@@ -107,7 +120,10 @@ def install_routes(
     principal_for: Callable[..., Any],
     rules: RulesCache,
     rooms: Callable[[], Rooms],
+    limiter: limits.Limiter | None = None,
 ) -> None:
+    limiter = limiter or limits.Limiter()
+
     def workspace(request: Request, claims: Claims, gate: str | None = None) -> str:
         found = principal_for(engine, claims, request.headers.get("x-workspace-id"))
         if gate is not None:
@@ -259,6 +275,10 @@ def install_routes(
     ):
         workspace_id = workspace(request, claims, "rooms.display")
         try:
+            limiter.hit("display-confirm", workspace_id, limits.DISPLAY_CONFIRM_PER_WORKSPACE)
+        except limits.Limited as error:
+            raise too_many(error) from error
+        try:
             rooms().confirm_pairing(workspace_id, room_id, body.pairing_code)
         except RoomError as error:
             raise refusal(error) from error
@@ -269,6 +289,20 @@ def install_routes(
         room_id: str, request: Request, claims: Claims = Depends(current_claims)  # noqa: B008
     ):
         return act(request, claims, room_id, lambda r, ws: r.unpair_displays(ws, room_id))
+
+    @app.delete("/api/rooms/{room_id}/displays/{display_id}")
+    def unpair_display(
+        room_id: str,
+        display_id: str,
+        request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ):
+        return act(
+            request,
+            claims,
+            room_id,
+            lambda r, ws: r.unpair_displays(ws, room_id, display_id=display_id),
+        )
 
 
 __all__ = ["host_json", "install_routes", "room_json"]

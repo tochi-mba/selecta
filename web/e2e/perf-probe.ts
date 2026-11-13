@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { clsOf, inpOf, type Reading } from './vitals';
 
 /**
  * ADR-0162 performance probe, shared by web/e2e/mi-0162-performance.e2e.ts and
@@ -10,8 +11,22 @@ import type { Page } from '@playwright/test';
 
 export type LongTask = { start: number; duration: number };
 export type LongFrame = { start: number; duration: number; blocking: number; scripts: string[] };
-export type Interaction = { name: string; start: number; duration: number; target: string };
-export type Probe = { longTasks: LongTask[]; longFrames: LongFrame[]; events: Interaction[]; paints: Interaction[] };
+export type Interaction = { name: string; start: number; duration: number; target: string; id?: number };
+export type Shift = {
+  start: number;
+  value: number;
+  /** Layout Instability API attribution: which visible DOM nodes actually moved. */
+  sources?: { element: string; fromY: number; toY: number; fromX: number; toX: number }[];
+};
+export type Probe = {
+  longTasks: LongTask[];
+  longFrames: LongFrame[];
+  events: Interaction[];
+  paints: Interaction[];
+  /** P0136: layout shifts without recent input, and the latest largest-contentful-paint time. */
+  shifts: Shift[];
+  lcp: number;
+};
 export type FrameWindow = {
   frames: number;
   frameP50: number;
@@ -35,7 +50,7 @@ declare global {
 /** Installs the observers before any page script runs. Call before the first goto. */
 export async function installProbe(page: Page) {
   await page.addInitScript(() => {
-    const probe: Probe = { longTasks: [], longFrames: [], events: [], paints: [] };
+    const probe: Probe = { longTasks: [], longFrames: [], events: [], paints: [], shifts: [], lcp: 0 };
     window.mi0162 = probe;
     const label = (node: EventTarget | null) => {
       const element = node instanceof Element ? node : null;
@@ -64,10 +79,37 @@ export async function installProbe(page: Page) {
       new PerformanceObserver((list) => {
         for (const entry of list.getEntries() as (PerformanceEntry & { interactionId?: number; target?: Node | null })[]) {
           if (!entry.interactionId) continue;
-          probe.events.push({ name: entry.name, start: entry.startTime, duration: entry.duration, target: label(entry.target ?? null) });
+          probe.events.push({ name: entry.name, start: entry.startTime, duration: entry.duration, target: label(entry.target ?? null), id: entry.interactionId });
         }
       }).observe({ type: 'event', durationThreshold: 16, buffered: true } as PerformanceObserverInit);
     } catch { /* no Event Timing: the in-page paint times below still apply */ }
+    try {
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries() as (PerformanceEntry & {
+          value: number;
+          hadRecentInput: boolean;
+          sources?: { node: Node | null; previousRect: DOMRectReadOnly; currentRect: DOMRectReadOnly }[];
+        })[]) {
+          if (entry.hadRecentInput) continue;
+          const sources = entry.sources?.filter((source) => source.node instanceof Element).map((source) => {
+            const node = source.node as Element;
+            return {
+              element: `${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ''}${[...node.classList].slice(0, 3).map((name) => `.${name}`).join('')}`,
+              fromY: Math.round(source.previousRect.top),
+              toY: Math.round(source.currentRect.top),
+              fromX: Math.round(source.previousRect.left),
+              toX: Math.round(source.currentRect.left),
+            };
+          });
+          probe.shifts.push({ start: entry.startTime, value: entry.value, sources });
+        }
+      }).observe({ type: 'layout-shift', buffered: true });
+    } catch { /* no Layout Instability API */ }
+    try {
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) probe.lcp = Math.max(probe.lcp, entry.startTime);
+      }).observe({ type: 'largest-contentful-paint', buffered: true });
+    } catch { /* no largest-contentful-paint */ }
     // Input to the next paint, measured in the page: the event's own time stamp to a task queued right
     // after the next animation frame, which runs once that frame has been painted.
     for (const type of ['click', 'keydown']) {
@@ -157,6 +199,28 @@ export async function interactionsSince(page: Page, from: number) {
     nextPaintP50Ms: round(percentile(paints.map((paint) => paint.duration), 0.5)),
     nextPaintWorst: worstPaint ? `${worstPaint.name} on ${worstPaint.target}` : 'none',
     longTasks,
+  };
+}
+
+/** P0136 / SF-0235-02: the lab Web Vitals of everything since `from` (INP and CLS by the
+ * definitions in ./vitals), plus this page's largest contentful paint. Shared by
+ * web/e2e/p0136-responsiveness.e2e.ts and web/e2e/mp-0298-responsive-and-a11y.e2e.ts (MP-0298-06). */
+export async function vitalsSince(page: Page, from: number, surface: string): Promise<Reading> {
+  const raw = await page.evaluate((from) => ({
+    events: window.mi0162.events.filter((event) => event.start >= from),
+    shifts: window.mi0162.shifts.filter((shift) => shift.start >= from),
+    inputs: window.mi0162.paints.filter((paint) => paint.start >= from).length,
+    lcp: window.mi0162.lcp,
+  }), from);
+  const inp = inpOf(raw.events.map((event) => ({ id: event.id ?? 0, duration: event.duration, name: event.name, target: event.target })));
+  return {
+    surface,
+    inpMs: inp.inpMs,
+    interactions: inp.interactions,
+    inputs: raw.inputs,
+    worst: inp.worst ? `${inp.worst.name} on ${inp.worst.target}` : 'none at 16 ms or more',
+    cls: clsOf(raw.shifts),
+    lcpMs: Math.round(raw.lcp),
   };
 }
 

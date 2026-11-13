@@ -1,0 +1,101 @@
+{
+  "area": "Business",
+  "flags": {
+    "business.signups": {
+      "label": "SelectaDJ for Business sign-up",
+      "about": "Self-serve business sign-up and selling of business plans. Off until the legal review passes; pilots work without it.",
+      "default": false,
+      "modes": ["cloud"],
+      "scope": "global",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.orgs": {
+      "label": "Organisations, venues, zones and crates",
+      "about": "An organisation workspace with its venues, each venue's zones, and organisation and venue crates drawn from one shared library.",
+      "default": false,
+      "routes": [
+        "GET /api/business/orgs",
+        "POST /api/business/orgs",
+        "GET /api/business/orgs/{org_id}",
+        "GET /api/business/venues",
+        "POST /api/business/venues",
+        "GET /api/business/venues/{venue_id}",
+        "PATCH /api/business/venues/{venue_id}",
+        "POST /api/business/venues/{venue_id}/archive",
+        "GET /api/business/zones",
+        "POST /api/business/zones",
+        "PATCH /api/business/zones/{zone_id}",
+        "POST /api/business/zones/{zone_id}/archive",
+        "GET /api/business/crates",
+        "POST /api/business/crates",
+        "GET /api/business/crates/{crate_id}",
+        "PUT /api/business/crates/{crate_id}/songs",
+        "DELETE /api/business/crates/{crate_id}"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.schedules": {
+      "label": "Venue schedules and programmes",
+      "about": "Opening hours, holiday exceptions, stay-open-late and close-now overrides, plus zone programmes and state.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": [
+        "GET /api/business/venues/{venue_id}/hours",
+        "PUT /api/business/venues/{venue_id}/hours",
+        "POST /api/business/venues/{venue_id}/hour-exceptions",
+        "DELETE /api/business/venues/{venue_id}/hour-exceptions/{exception_id}",
+        "GET /api/business/venues/{venue_id}/holiday-suggestions",
+        "POST /api/business/venues/{venue_id}/stay-open-late",
+        "POST /api/business/venues/{venue_id}/close-now",
+        "POST /api/business/venues/{venue_id}/close-now/{override_id}/undo",
+        "GET /api/business/zones/{zone_id}/state",
+        "GET /api/business/zones/{zone_id}/programme",
+        "PUT /api/business/zones/{zone_id}/programme"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.offline": {
+      "label": "Offline zone controls",
+      "about": "Kiosk offline manifests, idempotent command resync and device cache reports for business zones.",
+      "default": false,
+      "requires": ["business.schedules"],
+      "routes": [
+        "GET /api/business/zones/{zone_id}/offline-manifest",
+        "POST /api/business/zones/{zone_id}/commands",
+        "PUT /api/business/zones/{zone_id}/cache-report"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.workspaces": {
+      "label": "Workspace switcher",
+      "about": "Switch between your personal SelectaDJ and the organisations you belong to. Personal and business data never mix.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": ["GET /api/workspaces"],
+      "modes": ["cloud"],
+      "scope": "user",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.pilots": {
+      "label": "Business pilots",
+      "about": "REX Technologies staff create free pilot organisations with their venues and zones, using the same model a paying venue will.",
+      "default": false,
+      "requires": ["admin.console", "business.orgs"],
+      "modes": ["cloud"],
+      "scope": "global",
+      "kind": "ops",
+      "owner": "business"
+    }
+  }
+}

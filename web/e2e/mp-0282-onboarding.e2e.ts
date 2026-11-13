@@ -204,7 +204,7 @@ test('MP-0282-06 a missing folder, a refused folder and a folder with no audio e
   await statusFrom(page, () => firstRun(status));
   const answers = {
     missing: ['That folder isn’t there.', /plug that in first/],
-    no_access: ['Selecta isn’t allowed to read that folder.', /Choose a folder your account can open/],
+    no_access: ['SelectaDJ isn’t allowed to read that folder.', /Choose a folder your account can open/],
     no_audio: ['No audio files in that folder.', /found no audio files, including in subfolders/],
     not_a_folder: ['That’s a file, not a folder.', /address of the folder it’s in/],
   } as const;

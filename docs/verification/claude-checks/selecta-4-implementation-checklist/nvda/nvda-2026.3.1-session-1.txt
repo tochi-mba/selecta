@@ -1,0 +1,155 @@
+NVDA 2026.3.1 portable (silent synth, speech log), Microsoft Edge 157 headed, Windows 11, 1280x860, made-up library (SELECTA_E2E_STRESS=1),
+commit 9af0eb13 plus working tree, 2026-11-12. Spec: web/e2e-vb/nvda.nvda.ts (temporary). 'VB MARK <section>' lines are markers the spec focused.
+
+'about:blank - Microsoft\u200b Edge', 'window', 
+'Loading page'
+CallbackCommand(name=say-all:lineReached), 'about:blank'
+CallbackCommand(name=say-all:stop)
+'Loading complete'
+'Selecta', 
+CallbackCommand(name=say-all:lineReached), 'clickable', 'main landmark', 'S', CallbackCommand(name=say-all:lineReached), 'heading', 'level 1', 'Starting Selecta', CallbackCommand(name=say-all:lineReached)
+'Connecting to your Selecta service…'
+CallbackCommand(name=say-all:stop)
+'Workspace needs your attention: 1 song failed. '
+'clickable', 'VB MARK song details', 'button'
+'clickable', 'main landmark', 'list', 'with 3 items', 'Details for Same Name by Iris Vale', 'button'
+'Same Name', 
+CallbackCommand(name=say-all:lineReached), 'banner landmark', 'heading', 'level 2', 'Same Name', CallbackCommand(name=say-all:lineReached)
+'button', 'Close Same Name', CallbackCommand(name=say-all:lineReached)
+'Iris Vale', CallbackCommand(name=say-all:lineReached)
+'Recording ID 11', CallbackCommand(name=say-all:lineReached)
+'Ready for mixes', CallbackCommand(name=say-all:lineReached)
+'What it’s ready for', 'list', 'with 8 items', 'Play', CallbackCommand(name=say-all:lineReached)
+'The file is here and can play', CallbackCommand(name=say-all:lineReached)
+'Mixes', CallbackCommand(name=say-all:lineReached)
+'Ready for mixes', CallbackCommand(name=say-all:lineReached)
+'Stems'
+'banner landmark', 'Close Same Name', 'button'
+'Tempo (measured 124)', 'spin button', 'editable', 'Between 40 and 240 BPM', '124', 'blank'
+'Double measured tempo to 248 BPM', 'button'
+'Half measured - set tempo to 62 BPM', 'button'
+'Key (measured 8A)', 'edit', 'Like 8A or 11B', '8A', 'blank'
+'Prioritize', 'toggle button', 'not pressed', 'Prioritized songs are analysed first and their stem windows are protected from cache cleanup'
+'Never play', 'toggle button', 'not pressed', 'Selecta won’t pick this when it builds a mix'
+'This isn’t music', 'button'
+'out of list', 'dialog', 'Same Name'
+'VB MARK song details escape', 'button'
+'Same Name', 'dialog', 
+'button', 'This isn’t music'
+'banner landmark', 'Close Same Name', 'button'
+'button', 'VB MARK song details escape'
+'clickable', 'main landmark', 'list', 'with 3 items', 'Details for Same Name by Iris Vale', 'button'
+'Loading page'
+'Selecta', 
+CallbackCommand(name=say-all:lineReached), 'clickable'
+CallbackCommand(name=say-all:stop)
+'Workspace needs your attention: 1 song failed. '
+'clickable', 'VB MARK inspector', 'button'
+'clickable', 'main landmark', 'Timeline', 'region', 'list', 'with 11 items', 'Change', 'button'
+'This transition', 'complementary landmark', 
+'This transition', 'tab control', 
+'Listen', 'tab', '1 of 4', 
+'Change', 'tab', 'selected', '2 of 4', 
+'Studio', 'tab', 'selected', '3 of 4', 
+'Studio', 'tab', 'selected', '3 of 4', 
+'Details', 'tab', 'selected', '4 of 4', 
+'Details', 'tab', 'selected', '4 of 4', 
+'Listen', 'tab', 'selected', '1 of 4', 
+'Listen', 'tab', 'selected', '1 of 4', 
+'VB MARK editor reorder', 'button'
+'clickable', 'main landmark', 'Timeline', 'region', 'list', 'with 11 items', 'Move Slow Tide up', 'button'
+'busy'
+'unavailable', 'busy'
+'Moved Slow Tide to number 1 of 4. '
+'Reorder Slow Tide', 'toggle button', 'not pressed', 'Song occurrence 1 of 4', 'Space ArrowUp ArrowDown'
+'Undo las', 'button'
+'Moved Slow Tide up.Undo Dismiss Dismiss '
+'Loading page'
+'Chrome Legacy Window'
+'Loading complete'
+'Edit current mix · Selecta', 
+CallbackCommand(name=say-all:stop)
+'Workspace needs your attention: 1 song failed. '
+'Edit current mix · Selecta', 'document', 
+'unknown', 
+'unknown', 
+'Morning Light into Slow Tide', 
+CallbackCommand(name=say-all:lineReached), 'banner landmark', 'heading', 'level 2', 'Morning Light into Slow Tide', CallbackCommand(name=say-all:lineReached)
+'button', 'Close Morning Light into Slow Tide', CallbackCommand(name=say-all:lineReached)
+'Stem studio', 'region', 'heading', 'level 3', 'Shape transition 1', CallbackCommand(name=say-all:lineReached)
+'Morning Light intoSlow Tide', CallbackCommand(name=say-all:lineReached)
+'button', 'Close', CallbackCommand(name=say-all:lineReached)
+'Loading the stems…'
+CallbackCommand(name=say-all:stop)
+'Stem studio', 'region', 'Studio editor mode', 'grouping', 'Detailed grid', 'toggle button', 'pressed'
+'clickable', 'dialog', 'Morning Light into Slow Tide'
+'VB MARK studio grid', 'button'
+'Morning Light into Slow Tide', 'dialog', 
+'toggle button', 'pressed', 'Detailed grid'
+'Stems for Morning Light and Slow Tide', 'table', 'with 11 rows and 9 columns', 'Hear only Morning Light voice', 'row 3', '1', 'column 2', 'Morning Light voice, bars 1–2, on', 'toggle button', 'pressed', 'bars 1–2'
+'3', 'column 3', 'Morning Light voice, bars 3–4, on', 'toggle button', 'pressed', 'bars 3–4'
+'5', 'column 4', 'Morning Light voice, bars 5–6, on', 'toggle button', 'pressed', 'bars 5–6'
+'Hear only Morning Light drums', 'row 4', 'Morning Light drums, bars 5–6, on', 'toggle button', 'pressed', 'bars 5–6'
+'15', 'column 9', 'Morning Light drums, bars 15–16, off', 'toggle button', 'not pressed', 'bars 15–16'
+'Unsaved changes - not applied to the mix. Your work is kept on this browser when you close Studio. '
+'Morning Light drums, bars 15–16, on'
+'pressed'
+'Showing the saved transition '
+'Morning Light drums, bars 15–16, off'
+'not pressed'
+'Detailed list controls. All eight lanes and every square are unchanged. '
+'Studio editor mode', 'grouping', 'Detailed list', 'toggle button', 'pressed'
+'button', 'VB MARK studio list'
+'VB MARK studio list', 'button'
+'Morning Light into Slow Tide', 'dialog', 
+'toggle button', 'pressed', 'Detailed list'
+'Morning Light', 'region', 'Voice', 'grouping', 'bars 1–2', 'check box', 'checked'
+'bars 3–4', 'check box', 'checked'
+'bars 5–6', 'check box', 'checked'
+'bars 7–8', 'check box', 'checked'
+'Unsaved changes - not applied to the mix. Your work is kept on this browser when you close Studio. '
+'not checked'
+'Loading page'
+'Loading complete'
+'Listen · Selecta', 
+CallbackCommand(name=say-all:lineReached), 'clickable', 'same page', 'link', 'Skip to the page', CallbackCommand(name=say-all:lineReached)
+'Main', 'navigation landmark', 'link', 'Selecta, go to Make a Mix', CallbackCommand(name=say-all:lineReached)
+'list', 'with 6 items', 'same page', 'link', 'current page', 'Listen', CallbackCommand(name=say-all:lineReached)
+'Workspace needs your attention: 1 song failed. '
+'link', 'Make a Mix', CallbackCommand(name=say-all:lineReached)
+'clickable', 'VB MARK requests', 'button'
+'Requests', 'dialog', 
+'Song requests', 'region', 
+'Requests', 'dialog', 
+'Song requests', 'region', 
+'Request a song', 'combo box', 'collapsed', 'has auto complete', 'editable', 'Request a song: search your library', 'blank'
+'expanded'
+'Matching songs', 'list', 
+'Same Name - Hal Greene (song 10) - Request', '1 of 3', 
+'Same Name - Hal Greene (song 17) - Request', '2 of 3', 
+'Request a song', 'combo box', 'collapsed', 'has auto complete', 'editable', 'Request a song: search your library', 'blank'
+'Loading page'
+'Loading complete'
+'Selecta', 
+CallbackCommand(name=say-all:lineReached), 'clickable'
+CallbackCommand(name=say-all:stop)
+'Workspace needs your attention: storage is full, 1 song failed. '
+'clickable', 'VB MARK attention', 'button'
+'clickable', 'banner landmark', 'Workspace, 2 items need your attention', 'link', 'Workspace needs your attention'
+'Workspace, 1 item needs your attention'
+'Loading page'
+'Loading complete'
+'Harmonic matches · Selecta', 
+CallbackCommand(name=say-all:lineReached), 'clickable', 'same page', 'link', 'Skip to the page', CallbackCommand(name=say-all:lineReached)
+'Workspace needs your attention: 1 song failed. '
+'clickable', 'VB MARK harmonic', 'button'
+'clickable', 'main landmark', 'Hear what Selecta heard', 'button'
+'Loading stage 1; no audio confirmed yet '
+'Now playing: The chords Selecta heard '
+'Four stages to hear', 'list', 'with 4 items', 'The chords Selecta heard', 'button', 'current step'
+'Paper Moon, with those chords', 'button'
+'Neon Rain, moved to the same key and speed', 'button'
+'Both at once', 'button'
+'Do Paper Moon and Neon Rain sound connected?', 'grouping', 'Yes', 'button'
+'No', 'button'
+'VB MARK end', 'button'

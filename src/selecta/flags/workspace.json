@@ -7,6 +7,14 @@
       "routes": ["GET /api/storage", "POST /api/storage"],
       "surfaces": ["workshop.storage", "workshop"]
     },
+    "workspace.cache_care": {
+      "label": "Cache tidying",
+      "about": "When the seam worker is idle it removes crash leftovers, caches of removed or changed songs, seams from an older engine and stems unused for two weeks, shares identical clips, and compacts the library file. The current mix is never touched."
+    },
+    "workspace.song_audio_cache": {
+      "label": "Song audio cache",
+      "about": "A whole song asked for on its own is decoded once into the render cache and served from there, with Range and a tag from its source file. It counts toward the cache limit and goes least recently used first; the current mix's seams are never pushed out for it. Off, each request decodes the song again."
+    },
     "workspace.backup": {
       "label": "Local backup",
       "about": "Back up the library's data and restore it on the next start.",

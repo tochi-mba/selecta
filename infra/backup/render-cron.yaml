@@ -1,0 +1,129 @@
+# The backup scheduler (ADR-0409 SC-0409-04; docs/saas/launch-operator-checklist.md section 9).
+#
+# Two Render cron jobs per environment run the nightly scripts in their own image
+# (infra/backup/Dockerfile). They are separate services on purpose: neither the API nor the
+# maintenance service ever holds the backup account's write keys, and each job holds only the
+# keys its script needs (docs/operations/backup-and-restore.md):
+#   - db-dump: a direct (non-pooled) DATABASE_URL and a write-only key for the dumps bucket;
+#   - originals: an RCLONE_CONFIG with a read-only `source` remote and a write-only `backup` one.
+# A script that fails exits non-zero, so Render marks the run failed and notifies; the
+# maintenance leader's `backup_freshness` series (observability/leader_metrics.py) alerts when
+# the dump's LATEST marker gets old, so a job that silently stops running is caught too.
+#
+# These entries belong under each environment's `services:` in infra/render/render.yaml; they
+# live here until that file is free to edit (tests/test_backup_scheduler.py checks both).
+# Times are UTC: the dump at 02:15, the originals copy at 03:15, after the night's purges.
+staging:
+  - type: cron
+    name: selecta-backup-db-staging
+    runtime: image
+    image: &backup_image
+      url: ghcr.io/tochi-mba/selecta-backup:main
+      creds:
+        fromRegistryCreds:
+          name: ghcr
+    region: frankfurt
+    plan: starter
+    schedule: "15 2 * * *"
+    dockerCommand: bash infra/backup/nightly_db_dump.sh
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: selecta-db-staging
+          property: connectionString
+      - key: BACKUP_S3_ENDPOINT
+        sync: false
+      - key: BACKUP_BUCKET
+        value: selecta-staging-db-dumps
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+  - type: cron
+    name: selecta-backup-originals-staging
+    runtime: image
+    image: *backup_image
+    region: frankfurt
+    plan: starter
+    schedule: "15 3 * * *"
+    dockerCommand: bash infra/backup/copy_originals.sh
+    envVars:
+      - key: SOURCE_BUCKET
+        value: selecta-staging-originals
+      - key: BACKUP_BUCKET
+        value: selecta-staging-originals-backup
+      - key: RCLONE_CONFIG_SOURCE_TYPE
+        value: s3
+      - key: RCLONE_CONFIG_SOURCE_PROVIDER
+        value: Cloudflare
+      - key: RCLONE_CONFIG_SOURCE_ENDPOINT
+        sync: false
+      - key: RCLONE_CONFIG_SOURCE_ACCESS_KEY_ID
+        sync: false
+      - key: RCLONE_CONFIG_SOURCE_SECRET_ACCESS_KEY
+        sync: false
+      - key: RCLONE_CONFIG_BACKUP_TYPE
+        value: s3
+      - key: RCLONE_CONFIG_BACKUP_PROVIDER
+        value: Cloudflare
+      - key: RCLONE_CONFIG_BACKUP_ENDPOINT
+        sync: false
+      - key: RCLONE_CONFIG_BACKUP_ACCESS_KEY_ID
+        sync: false
+      - key: RCLONE_CONFIG_BACKUP_SECRET_ACCESS_KEY
+        sync: false
+production:
+  - type: cron
+    name: selecta-backup-db-production
+    runtime: image
+    image: *backup_image
+    region: frankfurt
+    plan: starter
+    schedule: "15 2 * * *"
+    dockerCommand: bash infra/backup/nightly_db_dump.sh
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: selecta-db-production
+          property: connectionString
+      - key: BACKUP_S3_ENDPOINT
+        sync: false
+      - key: BACKUP_BUCKET
+        value: selecta-production-db-dumps
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+  - type: cron
+    name: selecta-backup-originals-production
+    runtime: image
+    image: *backup_image
+    region: frankfurt
+    plan: starter
+    schedule: "15 3 * * *"
+    dockerCommand: bash infra/backup/copy_originals.sh
+    envVars:
+      - key: SOURCE_BUCKET
+        value: selecta-production-originals
+      - key: BACKUP_BUCKET
+        value: selecta-production-originals-backup
+      - key: RCLONE_CONFIG_SOURCE_TYPE
+        value: s3
+      - key: RCLONE_CONFIG_SOURCE_PROVIDER
+        value: Cloudflare
+      - key: RCLONE_CONFIG_SOURCE_ENDPOINT
+        sync: false
+      - key: RCLONE_CONFIG_SOURCE_ACCESS_KEY_ID
+        sync: false
+      - key: RCLONE_CONFIG_SOURCE_SECRET_ACCESS_KEY
+        sync: false
+      - key: RCLONE_CONFIG_BACKUP_TYPE
+        value: s3
+      - key: RCLONE_CONFIG_BACKUP_PROVIDER
+        value: Cloudflare
+      - key: RCLONE_CONFIG_BACKUP_ENDPOINT
+        sync: false
+      - key: RCLONE_CONFIG_BACKUP_ACCESS_KEY_ID
+        sync: false
+      - key: RCLONE_CONFIG_BACKUP_SECRET_ACCESS_KEY
+        sync: false

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { audioClock, resetMix, spyOnAudio, soundsRestarted } from './helpers';
+import { SPECTRUM_MODES } from '../src/views/spectrumVisuals';
 
 test.beforeEach(async ({ request }) => {
   await resetMix(request);
@@ -21,7 +22,9 @@ test('measured energy bars use real varied heights rather than collapsing to ide
   await expect(selected).toHaveAttribute('aria-current', 'true');
 });
 
-test('all thirteen additional horizontal visualizers are selectable without restarting real audio', async ({ page }) => {
+test('all fourteen additional horizontal visualizers are selectable without restarting real audio', async ({ page }) => {
+  // fifteen styles in all (UF-0375-01): none may disappear without this journey changing too
+  expect(SPECTRUM_MODES.filter((mode) => mode.id !== 'bars')).toHaveLength(14);
   await spyOnAudio(page);
   await page.goto('/listen');
   await page.getByRole('button', { name: /^(Play|Resume from)/ }).click();
@@ -32,24 +35,10 @@ test('all thirteen additional horizontal visualizers are selectable without rest
     await dj.locator(':scope > summary').click();
   }
   const choose = page.getByRole('combobox', { name: 'Audio visualizer style' });
-  for (const [value, label] of [
-    ['aurora', 'Aurora contours'],
-    ['lanes', 'Spectral lanes'],
-    ['constellation', 'Frequency constellation'],
-    ['waterfall', 'Recent spectrum'],
-    ['skyline', 'Spectrum skyline'],
-    ['threads', 'Glass threads'],
-    ['pins', 'Signal pins'],
-    ['matrix', 'Spectrum mosaic'],
-    ['trails', 'Afterglow trails'],
-    ['dunes', 'Spectral dunes'],
-    ['candles', 'Signal ranges'],
-    ['mesh', 'Frequency mesh'],
-    ['split', 'Split flow'],
-  ]) {
-    await choose.selectOption(value);
+  for (const { id, label } of SPECTRUM_MODES.filter((mode) => mode.id !== 'bars')) {
+    await choose.selectOption(id);
     await expect(page.getByRole('img', { name: label + ' - actual mixed-audio frequency levels' })).toBeVisible();
-    await expect(choose).toHaveValue(value);
+    await expect(choose).toHaveValue(id);
   }
   expect(await soundsRestarted(page)).toBe(started);
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
@@ -86,17 +75,17 @@ test('the visualizer style is chosen by keyboard and remembered across a reload'
     await dj.locator(':scope > summary').click();
   }
   const choose = page.getByRole('combobox', { name: 'Audio visualizer style' });
-  await choose.selectOption('split');
+  await choose.selectOption('tracer');
   await choose.focus();
   await page.keyboard.press('ArrowUp');
-  await expect(choose).toHaveValue('mesh');
+  await expect(choose).toHaveValue('shock');
   await page.keyboard.press('ArrowUp');
-  await expect(choose).toHaveValue('candles');
+  await expect(choose).toHaveValue('grid');
   await page.reload();
   if (!await dj.evaluate((element) => (element as HTMLDetailsElement).open)) {
     await dj.locator(':scope > summary').click();
   }
-  await expect(page.getByRole('combobox', { name: 'Audio visualizer style' })).toHaveValue('candles');
+  await expect(page.getByRole('combobox', { name: 'Audio visualizer style' })).toHaveValue('grid');
 });
 
 test('each horizontal mode paints measured audio, goes blank on pause and stops while hidden', async ({ page }) => {
@@ -110,15 +99,14 @@ test('each horizontal mode paints measured audio, goes blank on pause and stops 
     await dj.locator(':scope > summary').click();
   }
   const choose = page.getByRole('combobox', { name: 'Audio visualizer style' });
-  for (const value of ['aurora', 'lanes', 'constellation', 'waterfall', 'skyline', 'threads', 'pins',
-    'matrix', 'trails', 'dunes', 'candles', 'mesh', 'split']) {
+  for (const { id: value } of SPECTRUM_MODES) {
     await choose.selectOption(value);
     await expect.poll(() => litPixels(page), { message: value }).toBeGreaterThan(0);
   }
-  // At most 15 frames a second: two seconds of playback is about 30 paints, never 120.
+  // At most 30 frames a second: two seconds of playback is about 60 paints, never 120.
   const before = await paints(page);
   await page.waitForTimeout(2000);
-  expect(await paints(page) - before).toBeLessThanOrEqual(34);
+  expect(await paints(page) - before).toBeLessThanOrEqual(64);
   // A background tab: the loop stops, the audio clock keeps running.
   const clock = (await audioClock(page))[0];
   await page.evaluate(() => {

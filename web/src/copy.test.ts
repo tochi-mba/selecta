@@ -3,7 +3,7 @@ import { copy, copyMode, setCopyMode, words } from './copy';
 import { GLOSSARY } from './ui/glossaryTerms';
 import { THEMES } from './ui/ThemeChoice';
 
-const MACHINE_WORDS = /this PC|this computer|File Explorer|Restart Selecta/i;
+const MACHINE_WORDS = /this PC|this computer|File Explorer|Restart SelectaDJ/i;
 
 afterEach(() => setCopyMode('local'));
 
@@ -17,7 +17,7 @@ describe('the copy layer', () => {
     expect(Object.keys(copy.cloud).sort()).toEqual(Object.keys(copy.local).sort());
   });
 
-  it('never tells a Cloud listener about their PC, File Explorer or restarting Selecta', () => {
+  it('never tells a Cloud listener about their PC, File Explorer or restarting SelectaDJ', () => {
     for (const [key, text] of Object.entries(copy.cloud)) expect([key, text]).not.toEqual([key, expect.stringMatching(MACHINE_WORDS)]);
   });
 
@@ -34,7 +34,7 @@ describe('the copy layer', () => {
     expect(rendered()).toMatch(/on this PC/);
     expect(system()).toBe('Match this computer');
     setCopyMode('cloud');
-    expect(rendered()).toMatch(/Selecta Cloud/);
+    expect(rendered()).toMatch(/SelectaDJ Cloud/);
     expect(system()).toBe('Match this device');
   });
 });

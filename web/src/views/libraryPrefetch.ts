@@ -17,9 +17,14 @@ let early: { url: string; at: number; answer: Promise<LibraryPage> } | null = nu
 export function prefetchLibrary(search: string) {
   const address = new URLSearchParams(search);
   const url = libraryUrl(address.get('q') ?? '', address.get('show') ?? 'all', address.get('sort') ?? 'title');
+  // S4-0111-05: asked for even earlier (before the app knew it was local), it isn't asked for twice
+  if (hasEarlyLibrary(url)) return;
   const answer = get<LibraryPage>(url);
-  answer.catch(() => undefined);
   early = { url, at: performance.now(), answer };
+  // a failed read (the server still starting) is dropped, so a later ask reads the rows again
+  answer.catch(() => {
+    if (early?.answer === answer) early = null;
+  });
 }
 
 /** Whether an early answer for this request is waiting. */

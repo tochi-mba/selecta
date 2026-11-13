@@ -177,7 +177,8 @@ test('functional edges reach 3:1 against their real surfaces in Light and Dark (
     for (const state of STATES) {
       await page.goto(state.path);
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
-      await expect(page.locator('main#main')).toBeVisible();
+      // the lazy page's loading fallback is also main#main (aria-busy), so wait for the real page
+      await expect(page.locator('main#main:not([aria-busy="true"])')).toBeVisible();
       await state.prepare?.(page);
       report.push(...await measure(page, state.id, theme));
     }

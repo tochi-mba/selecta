@@ -77,7 +77,7 @@ export function LucyMemory({ onStatus }: { onStatus: (status: LucyStatus) => voi
       setMemory(await lucy.memory());
       setProblem('');
     } catch (error) {
-      setProblem(problemKind(error) === 'offline' ? 'Can’t reach Selecta right now.' : (error as Error).message);
+      setProblem(problemKind(error) === 'offline' ? 'Can’t reach SelectaDJ right now.' : (error as Error).message);
     }
   }, []);
   useEffect(() => { void load(); }, [load]);

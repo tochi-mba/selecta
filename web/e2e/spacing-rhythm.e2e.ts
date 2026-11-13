@@ -165,10 +165,11 @@ test('MP-0273-03 label, control, help and error stay adjacent without overlap', 
     await page.getByRole('button', { name: /^Details for / }).first().click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
-    const tempo = dialog.getByRole('spinbutton', { name: /^Tempo/ });
+    const tempo = dialog.getByRole('textbox', { name: /^Tempo/ });
     await tempo.fill('999');
     await dialog.getByRole('button', { name: 'Save correction' }).click();
-    const field = dialog.locator('.correct-field:has(input[type="number"])');
+    // Tempo is a decimal text input so comma-decimal locales are handled without corruption.
+    const field = dialog.locator('.correct-field:has(input[inputmode="decimal"])');
     await expect(field.getByRole('alert')).toBeVisible();
     await expect(tempo).toHaveAttribute('aria-invalid', 'true');
     const parts = await fieldParts(page, field);

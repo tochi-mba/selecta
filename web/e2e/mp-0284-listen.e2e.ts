@@ -97,8 +97,10 @@ test('MP-0284-02 Previous, Play/Pause and Next share a centre line, stay put thr
 
 test('MP-0284-03 the clock, playhead and seam mark on the strip follow the real audio clock', async ({ page, request }) => {
   // the first test in this file to need rendered seams, so it waits out a fresh server's first renders
-  test.setTimeout(720_000);
-  await allRendered(request, 600_000);
+  // the first renders can outlast ten minutes on a loaded laptop (2026-11-12: two seams still
+  // rendering at 600s, ready seconds later), so allow a second round rather than measure the machine
+  test.setTimeout(1_380_000);
+  await allRendered(request, 600_000).catch(() => allRendered(request, 600_000));
   await listen(page);
   await play(page);
   const start = (await audioClock(page))[0];
@@ -122,11 +124,11 @@ test('MP-0284-03 the clock, playhead and seam mark on the strip follow the real 
   // the playhead sits where the shown time says, within a second of song
   expect(Math.abs(read.headPart * read.max - shown), 'playhead vs clock').toBeLessThanOrEqual(1.5);
   expect(read.shown).toContain(read.words!.split(' of ')[0]);
-  if (read.seamPart !== null) {
-    const match = /(\d+):(\d+)/.exec(read.seamTitle!)!;
-    const seamAt = Number(match[1]) * 60 + Number(match[2]);
-    expect(Math.abs(read.seamPart * read.max - seamAt), 'seam mark at its time').toBeLessThanOrEqual(1.5);
-  }
+  // every seam is rendered, so the first song carries its transition mark, placed at its own time
+  expect(read.seamPart, 'the transition mark is on the strip').not.toBeNull();
+  const match = /(\d+):(\d+)/.exec(read.seamTitle!)!;
+  const seamAt = Number(match[1]) * 60 + Number(match[2]);
+  expect(Math.abs(read.seamPart! * read.max - seamAt), 'seam mark at its time').toBeLessThanOrEqual(1.5);
   // and the clock keeps counting with the audio
   const later = await shownTime(page);
   await expect.poll(() => shownTime(page)).toBeGreaterThan(later);

@@ -21,12 +21,11 @@ from collections.abc import Callable, Iterable
 from dataclasses import asdict
 from pathlib import Path
 
-import soundfile as sf
-
 from selecta import db, flags, jobs
 from selecta.analysis.song import SongInfo, load_song
 from selecta.arrange import can_arrange
 from selecta.audit.checks import AuditReport
+from selecta.cache_care import write_flac_atomically
 from selecta.config import SAMPLE_RATE, Settings
 from selecta.eta import JobClock, combine
 from selecta.lyrics.align import Aligner
@@ -86,6 +85,7 @@ from selecta.seam_making import (
     tighten_beats,
     windows_for,
 )
+from selecta.seam_records import read_seam_record
 from selecta.stems import prune_cache, seconds_separating, window_is_ready
 from selecta.studio import LANES, SIDES, windows_to_separate
 
@@ -221,6 +221,7 @@ class SeamStore:
         self._records: dict[Path, tuple[tuple[int, int], dict]] = {}
         self._asked_by_requests: set[str] = set()
         self.next_idle_job: Callable[[], SeamRequest | None] = lambda: None
+        self.when_idle: Callable[[], None] = lambda: None  # tidying, once nothing waits
         self._worker: subprocess.Popen | None = None
         self.prepare_links = False
         self._cache = SongCache(capacity=7)
@@ -339,15 +340,13 @@ class SeamStore:
         return lambda key: self.status(key) if key in known else {"status": "none", "key": key}
 
     def _last_known(self, key: str) -> dict:
-        meta = self.folder(key) / "seam.json"
-        if meta.exists():
-            try:
-                state = json.loads(meta.read_text("utf-8"))
-                if _swapped_by_old_fallback(state):
-                    return {"status": "none", "key": key}
-                return state
-            except (OSError, ValueError):
-                pass  # mid-write: what we last knew will do for this moment
+        # r11: parsed again only once the file changes; missing or mid-write reads as None, and
+        # then what we last knew will do for this moment
+        state = read_seam_record(self.folder(key) / "seam.json")
+        if state is not None:
+            if _swapped_by_old_fallback(state):
+                return {"status": "none", "key": key}
+            return state
         with self._lock:
             state = self._states.get(key)
         if state is None:
@@ -507,9 +506,8 @@ class SeamStore:
             with self._memory_refresh_lock:
                 thread = self._memory_refresh
                 if (
-                    (thread is None or not thread.is_alive())
-                    and now - self._memory_refresh_started >= STATUS_MEMORY_SECONDS
-                ):
+                    thread is None or not thread.is_alive()
+                ) and now - self._memory_refresh_started >= STATUS_MEMORY_SECONDS:
                     self._memory_refresh_started = now
                     thread = threading.Thread(
                         target=self._refresh_memory, name="selecta-transition-memory", daemon=True
@@ -533,7 +531,9 @@ class SeamStore:
         snapshot = self._remembered
         now = time.monotonic()
         if (
-            not fresh and snapshot and now - snapshot[0] < MEMORY_SECONDS
+            not fresh
+            and snapshot
+            and now - snapshot[0] < MEMORY_SECONDS
             and self._history_stamp == self._current_history_stamp()
         ):
             return snapshot[1]
@@ -541,7 +541,9 @@ class SeamStore:
             snapshot = self._remembered
             now = time.monotonic()
             if (
-                not fresh and snapshot and now - snapshot[0] < MEMORY_SECONDS
+                not fresh
+                and snapshot
+                and now - snapshot[0] < MEMORY_SECONDS
                 and self._history_stamp == self._current_history_stamp()
             ):
                 return snapshot[1]
@@ -683,6 +685,7 @@ class SeamStore:
                 self._running_rank = PREPARING
                 return request
             jobs.mark_mix_rendering(self.settings.home, False)
+            self.when_idle()
             self._arrived.wait(IDLE_CHECK_SECONDS)
 
     def _give_way(self) -> bool:
@@ -944,9 +947,9 @@ class SeamStore:
         folder = self.folder(request.key)
         folder.mkdir(parents=True, exist_ok=True)
         script = rendered.script
-        sf.write(folder / "clip.flac", rendered.audio, SAMPLE_RATE, subtype="PCM_16")
+        write_flac_atomically(folder / "clip.flac", rendered.audio, SAMPLE_RATE)
         heard, clip_at = in_context(rendered, PREVIEW_SECONDS, PREVIEW_SECONDS, self._cache)
-        sf.write(folder / "preview.flac", heard, SAMPLE_RATE, subtype="PCM_16")
+        write_flac_atomically(folder / "preview.flac", heard, SAMPLE_RATE)
         result = {
             "status": "ready",
             "key": request.key,

@@ -219,9 +219,9 @@ def test_a_head_that_counts_work_nobody_can_find_is_corrected_by_the_claim(store
     claim_and_finish(store)
     with transaction(store.engine) as connection:
         connection.execute(
-            fair_heads.update().where(fair_heads.c.workspace_id == "w1").values(
-                queued_count=3, queued_est_s=120.0
-            )
+            fair_heads.update()
+            .where(fair_heads.c.workspace_id == "w1")
+            .values(queued_count=3, queued_est_s=120.0)
         )
     assert store.claim("cpu-heavy", worker()) is None
     assert (head(store, "w1").queued_count, head(store, "w1").queued_est_s) == (0, 0.0)
@@ -324,13 +324,13 @@ def test_interactive_and_standard_share_the_pool_four_to_one(store):
 # --- Deadline boosts ----------------------------------------------------------------------------
 
 
-def test_a_seam_about_to_miss_its_hand_off_goes_before_other_interactive_work(sqlite_engine,
-                                                                               clock):
+def test_a_seam_about_to_miss_its_hand_off_goes_before_other_interactive_work(sqlite_engine, clock):
     store = make_store(sqlite_engine)
     store.enqueue(JobSpec("w1", "seam.render", lane="interactive"))
     clock.advance(1.0)
-    due = store.enqueue(JobSpec("w2", "seam.render", lane="interactive",
-                                needed_by=clock.now + 90.0)).job
+    due = store.enqueue(
+        JobSpec("w2", "seam.render", lane="interactive", needed_by=clock.now + 90.0)
+    ).job
     claim = store.claim("cpu-heavy", worker())
     assert (claim.job.id, claim.boosted) == (due.id, True)
     assert store.job(due.id).boosted_at == clock.now
@@ -345,12 +345,14 @@ def test_a_deadline_with_enough_slack_is_not_boosted(sqlite_engine, clock):
     assert (claim.job.id, claim.boosted) == (first.id, False)
 
 
-def test_boosts_are_limited_to_three_per_ten_minutes_then_normal_order_resumes(sqlite_engine,
-                                                                               clock):
+def test_boosts_are_limited_to_three_per_ten_minutes_then_normal_order_resumes(
+    sqlite_engine, clock
+):
     store = make_store(sqlite_engine)
     due = [
-        store.enqueue(JobSpec("w2", "seam.render", lane="interactive",
-                              needed_by=clock.now + 50.0 + i)).job.id
+        store.enqueue(
+            JobSpec("w2", "seam.render", lane="interactive", needed_by=clock.now + 50.0 + i)
+        ).job.id
         for i in range(4)
     ]
     boosted = [claim_and_finish(store).boosted for _ in range(4)]
@@ -361,13 +363,20 @@ def test_boosts_are_limited_to_three_per_ten_minutes_then_normal_order_resumes(s
     assert len(due) == 4
 
 
-def test_a_boost_skips_jobs_this_worker_cannot_run_and_heads_that_are_missing(sqlite_engine,
-                                                                              clock):
+def test_a_boost_skips_jobs_this_worker_cannot_run_and_heads_that_are_missing(sqlite_engine, clock):
     store = make_store(sqlite_engine)
-    store.enqueue(JobSpec("w1", "seam.render", lane="interactive", needed_by=clock.now + 50.0,
-                          engine_version_required=9))
-    orphan = store.enqueue(JobSpec("w3", "seam.render", lane="interactive",
-                                   needed_by=clock.now + 51.0)).job
+    store.enqueue(
+        JobSpec(
+            "w1",
+            "seam.render",
+            lane="interactive",
+            needed_by=clock.now + 50.0,
+            engine_version_required=9,
+        )
+    )
+    orphan = store.enqueue(
+        JobSpec("w3", "seam.render", lane="interactive", needed_by=clock.now + 51.0)
+    ).job
     with transaction(store.engine) as connection:
         connection.execute(fair_heads.delete().where(fair_heads.c.workspace_id == "w3"))
     store.enqueue(JobSpec("w2", "seam.render", lane="interactive"))
@@ -446,3 +455,23 @@ def test_the_claim_index_keeps_only_queued_jobs(store):
     with transaction(store.engine) as connection:
         states = connection.execute(sa.select(jobs.c.state)).scalars().all()
     assert states == ["queued"]
+
+
+def test_lane_clocks_are_made_again_when_the_first_transaction_rolls_back(cloud_engine):
+    # `lock_all_lanes` orders nothing without clock rows, so a rolled-back first transaction
+    # must not leave the store believing they exist (`heads.py` lock order).
+    from selecta.work.schema import lane_clock
+
+    made = make_store(cloud_engine)
+
+    def clocks() -> int:
+        with transaction(cloud_engine) as connection:
+            return connection.execute(sa.select(sa.func.count()).select_from(lane_clock)).scalar()
+
+    with pytest.raises(RuntimeError):
+        with made._tx(heads_first=True):
+            raise RuntimeError("rolled back")
+    assert clocks() == 0
+    with made._tx(heads_first=True):
+        pass
+    assert clocks() > 0

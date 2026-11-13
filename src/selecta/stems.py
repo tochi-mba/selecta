@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 import sqlite3
 import subprocess
@@ -23,6 +24,24 @@ from selecta.eta import JobClock
 MIN_CACHE_BYTES = 512 * 1024**2
 FREE_SPACE_RESERVE = 2 * 1024**3
 """However high the limit is set, leave this much of the drive free."""
+HOLD_SECONDS = 30 * 60
+"""A window this process made or reused this recently is still in use: a seam needs both of its
+songs' windows, and making the second must never throw away the first."""
+
+_held: dict[str, float] = {}
+
+
+def _hold(name: str) -> None:
+    _held[name] = time.monotonic()
+
+
+def held_windows() -> set[str]:
+    """Stem windows this process is still working with (see `HOLD_SECONDS`)."""
+    now = time.monotonic()
+    for name, at in list(_held.items()):
+        if now - at > HOLD_SECONDS:
+            _held.pop(name, None)
+    return set(_held)
 
 
 @dataclass(frozen=True)
@@ -40,24 +59,83 @@ def band_of(stems: StemWindow) -> Path:
         drums = sf.read(stems.drums, dtype="float32")[0]
         bass = sf.read(stems.bass, dtype="float32")[0]
         other = sf.read(stems.other, dtype="float32")[0]
-        sf.write(path, drums + bass + other, SAMPLE_RATE, subtype="FLOAT")
+        # whole or not there: a crash mid-write must not leave a short band that looks finished
+        partial = path.with_name(path.name + ".part")
+        try:
+            sf.write(partial, drums + bass + other, SAMPLE_RATE, subtype="FLOAT", format="WAV")
+            os.replace(partial, path)
+        finally:
+            partial.unlink(missing_ok=True)
     return path
 
 
+def _file_stats(folder: Path) -> tuple[list[os.stat_result], os.stat_result | None]:
+    """Every file under `folder` (not following linked folders, as rglob doesn't), and its own
+    window.json, if there is one."""
+    top = os.fspath(folder)
+    stats: list[os.stat_result] = []
+    marker = None
+    pending = [top]
+    while pending:
+        place = pending.pop()
+        with os.scandir(place) as entries:
+            for entry in entries:
+                own_marker = place == top and entry.name == "window.json"
+                if entry.is_symlink() or (hasattr(entry, "is_junction") and entry.is_junction()):
+                    continue
+                if entry.is_file():
+                    stats.append(os.stat(entry.path))
+                    if own_marker:
+                        marker = stats[-1]
+                elif entry.is_dir(follow_symlinks=False):
+                    pending.append(entry.path)
+                    if own_marker:
+                        marker = os.stat(entry.path)
+    return stats, marker
+
+
 def _window_dirs(root: Path) -> list[tuple[Path, int, float]]:
+    """Each cached folder with its size and when it was last used.
+
+    A file shared with other folders by a hard link (`cache_care` links identical clips) counts
+    its share once per link, so the total is what the disk really holds. Another process may be
+    pruning at the same moment, so a folder that vanishes mid-look is simply left out.
+    """
     found = []
-    for folder in root.iterdir():
-        if not folder.is_dir():
+    with os.scandir(root) as entries:
+        folders = [
+            Path(entry.path) for entry in entries
+            if entry.is_dir() and not entry.is_symlink()
+            and not (hasattr(entry, "is_junction") and entry.is_junction())
+        ]
+    for folder in folders:
+        try:
+            # r11: one walk with scandir, whose entries already know what's a file, and one stat
+            # per file (for its links); rglob asked the disk twice per file
+            stats, marker = _file_stats(folder)
+            if not stats:
+                continue
+            size = sum(stat.st_size // max(stat.st_nlink, 1) for stat in stats)
+            if marker is not None:
+                touched = marker.st_mtime
+            else:
+                # last read (see `mark_used`) or last written, whichever is later
+                touched = max(max(stat.st_atime, stat.st_mtime) for stat in stats)
+        except OSError:
             continue
-        files = [p for p in folder.rglob("*") if p.is_file()]
-        if files:
-            size = sum(p.stat().st_size for p in files)
-            marker = folder / "window.json"
-            touched = marker.stat().st_mtime if marker.exists() else max(
-                p.stat().st_atime for p in files
-            )
-            found.append((folder, size, touched))
+        found.append((folder, size, touched))
     return found
+
+
+def mark_used(path: Path) -> None:
+    """Record that a cached file was just used, for the least-recently-used order. Windows
+    rarely updates access times on its own, so serving a clip sets it here. Only the access time
+    moves: the modified time, which browsers and the seam records compare, is left alone."""
+    try:
+        stat = path.stat()
+        os.utime(path, ns=(time.time_ns(), stat.st_mtime_ns))
+    except OSError:
+        pass
 
 
 def _prune(
@@ -87,11 +165,13 @@ def _prune(
 
 
 def cache_roots(settings: Settings) -> list[Path]:
-    """Everything Selecta can make again: separated stems and finished seams."""
+    """Everything Selecta can make again: separated stems, finished seams and (r10) whole songs
+    decoded for the song audio route."""
     return [
         settings.home / "stems",
         settings.renders_dir / "seams",
         settings.renders_dir / "auditions",
+        settings.renders_dir / "songs",
     ]
 
 
@@ -106,8 +186,15 @@ def cache_bytes(settings: Settings) -> int:
 
 def largest_cache_bytes(settings: Settings) -> int:
     """The most the cache may ever hold: what it holds now plus free space, less a safety margin."""
+    return cache_room(settings)[1]
+
+
+def cache_room(settings: Settings) -> tuple[int, int]:
+    """What the cache holds now, and the most it may ever hold, from one walk of it (r8d). Asking
+    `cache_bytes` and `largest_cache_bytes` one after the other walked every cached file twice."""
+    used = cache_bytes(settings)
     free = shutil.disk_usage(settings.home).free
-    return max(MIN_CACHE_BYTES, cache_bytes(settings) + free - FREE_SPACE_RESERVE)
+    return used, max(MIN_CACHE_BYTES, used + free - FREE_SPACE_RESERVE)
 
 
 def _priority_window_names(settings: Settings) -> set[str]:
@@ -138,9 +225,16 @@ def _priority_window_names(settings: Settings) -> set[str]:
 
 
 def prune_cache(settings: Settings, keep: set[str] | None = None) -> None:
-    """Keep the cache under the person's limit, and never let it fill the drive."""
+    """Keep the cache under the person's limit, and never let it fill the drive.
+
+    Whoever calls this, the current mix's seams survive it: the seam worker records them
+    (`cache_care.protected_keys`), and the stem windows this process is still using stay too.
+    """
+    from selecta import cache_care
+
     cap = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
-    _prune(cache_roots(settings), cap, keep, _priority_window_names(settings))
+    kept = set(keep or ()) | held_windows() | cache_care.protected_keys(settings)
+    _prune(cache_roots(settings), cap, kept, _priority_window_names(settings))
 
 
 def run_demucs(wav: Path, out_dir: Path) -> Path:
@@ -233,6 +327,7 @@ def separate_window(
     ).hexdigest()[:20]
     target = settings.home / "stems" / key
     paths = StemWindow(*(target / f"{name}.wav" for name in ("vocals", "drums", "bass", "other")))
+    _hold(target.name)
     if all(path.exists() for path in paths.__dict__.values()):
         marker = target / "window.json"
         if marker.exists():

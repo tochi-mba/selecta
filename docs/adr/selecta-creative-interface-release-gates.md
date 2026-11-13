@@ -1,6 +1,6 @@
 # Selecta - creative-interface independent NO-GO release gates
 
-**Current new-programme verdict: NO-GO / NOT IMPLEMENTED.** 20 Accepted decisions; 140 CI tasks Not started; 0 Implemented; 0 independently Verified. This is a future programme release status, **not** a finding that the current app is broken.
+**Current new-programme verdict: NO-GO / NOT VERIFIED.** 20 Accepted decisions; 2026-11-12, recounted from the [checklist](selecta-creative-interface-implementation-checklist.md) task lines: 106 Implemented, 1 In progress, 33 Need a person, 0 Not started; 0 independently Verified. This is a future programme release status, **not** a finding that the current app is broken.
 
 | Gate | Required proof | Current |
 |---|---|---|

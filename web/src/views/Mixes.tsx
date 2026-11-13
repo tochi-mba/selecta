@@ -11,6 +11,7 @@ import { Action, Dialog, Problem, Skeleton } from '../ui/controls';
 import { LinkTabs } from '../ui/primitives';
 import { CurrentMix } from './CurrentMix';
 import { buildSummary, MixSetup } from './MixSetup';
+import { MixIntentGuide, ScopeTag } from './MixIntent';
 import { LengthScale, VibeMotif } from '../ui/MusicObjects';
 import { Icon } from '../ui/Icon';
 import { askToAnalyse, hasStartedAMix, Preparing, READY_NEEDED, rememberStartedAMix, SetupSteps } from './Setup';
@@ -166,7 +167,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       <main className="page" id="main">
         <h1 className="display">Checking your song readiness.</h1>
         <p className="lede">
-          This running Selecta server hasn’t reported how many songs have the cues needed for mixes.
+          This running SelectaDJ server hasn’t reported how many songs have the cues needed for mixes.
           {' '}{words().mixesRestartToRefresh} Audio analysis is complete for {counts.analysed};
           {left > 0 ? ` ${left} still to analyse.` : ' there are no more songs waiting for audio analysis.'}
         </p>
@@ -186,21 +187,24 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       <h1 className="display small">Make a Mix</h1>
       <LinkTabs label="Make a Mix" items={exploreTabs()} current={exploreTabs().some((tab) => tab.path === here) ? here : '/mixes'} />
       {mix.length > 0 && <CurrentMix mix={mix} mixName={mixName} now={now} player={player} setView={setView} />}
+      {on('mixes.intent_language') && !firstMix && <MixIntentGuide replacing={replacing} mixName={mixName} />}
 
       <div className="mix-paths" role="group" aria-label="Ways to make a mix">
       <section className="hero mix-quick" aria-labelledby="mix-quick-title">
         {/* MP-0282-07: on the first run the notice under Play already says the library is ready */}
         {!firstMix && <p className="eyebrow">Quick Play · Tap and play</p>}
         <h2 id="mix-quick-title" className="mix-path-label">Listen now, shape later</h2>
-        <h3 className="display">{hero?.name ?? 'Selecta’s pick'}</h3>
+        <h3 className="display">{hero?.name ?? 'SelectaDJ’s pick'}</h3>
         {/* MP-0283-01: what the pick can draw on sits between its name and its description, on the same edge as Play */}
+        {/* P0032: until the pick's facts arrive their line is held by a bar, so the rest of the card stays put */}
+        {!cards && !cardsFailed && <p className="vibe-card-facts mix-quick-facts skeleton-facts" aria-hidden="true"><i /><i /></p>}
         {hero && hero.songs > 0 && (
           <p className="vibe-card-facts mix-quick-facts">
             <span>{hero.songs} matching songs</span>
             <span>About {length(hero.seconds)} of matching source songs</span>
           </p>
         )}
-        <p className="lede">{hero?.blurb ?? 'The strongest run it can find through your library.'}</p>
+        <p className="lede">{hero?.blurb ?? 'The strongest run it can find through your whole library, with a word hand-off or two.'}</p>
         <div className="row wrap">
           <Action
             className="primary big"
@@ -219,6 +223,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
               </button>
             ))}
             <LengthScale songs={songs} most={SET_LENGTHS[SET_LENGTHS.length - 1].songs} />
+            {on('mixes.intent_language') && <ScopeTag scope={on('mixes.shaping.remember_length') ? 'saved-default' : 'this-visit'} />}
           </div>
           {shaping && <button aria-label="Customize: Shape this mix (optional)" onClick={() => setCustomizing(true)}>Shape this mix <span className="soft">(optional)</span></button>}
         </div>
@@ -235,13 +240,14 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           {replacing ? ` Playing a new mix replaces ${mixName}, which you can undo.${on('drafts') ? ' To keep it playing, use Save as draft.' : ''}` : ''}
         </p>
       </section>
+      {on('mixes.intent_language') && firstMix && <MixIntentGuide replacing={replacing} mixName={mixName} />}
 
       {on('lucy') && (
       <section className="mix-create" aria-labelledby="mix-create-title">
         <p className="eyebrow">Create · Plan before listening</p>
         <h2 id="mix-create-title">Create with Lucy</h2>
         <p>Describe the mood, songs or journey you have in mind. Lucy proposes an exact order and transitions for you to review.</p>
-        <PageLink to="/mixes/lucy" className="button primary">Plan a mix with Lucy</PageLink>
+        <PageLink to="/mixes/lucy" className="button">Plan a mix with Lucy</PageLink>
         <p className="hint">Optional. Nothing is sent, saved or played until you choose to do it. Quick Play does not use Lucy.</p>
       </section>
       )}
@@ -257,10 +263,24 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
             <h2 className="section-title">Choose another feeling</h2>
             <p className="hint">
               {ready.length
-                ? `${ready.length} available ideas. These are planning preferences, not previews; Selecta builds a new actual mix after you choose.`
-                : 'Every mix is rebuilt from your own songs when you press play.'}
+                ? `${ready.length} available ideas. These are planning preferences, not previews; SelectaDJ builds a new actual mix after you choose.`
+                : !cards && !cardsFailed
+                  // P0032: while the ideas load, the same words in the same space, without a count it doesn't have yet
+                  ? 'Finding the ideas your songs support. These are planning preferences, not previews; SelectaDJ builds a new actual mix after you choose.'
+                  : 'Every mix is rebuilt from your own songs when you press play.'}
             </p>
           </div>
+          {/* P0032: the filter names are known before the ideas arrive, so they hold the filters' place,
+              unpressable and without counts, until there is something to filter */}
+          {!cards && !cardsFailed && (
+            <div className="chips vibe-filters vibe-filters-pending" aria-hidden="true">
+              {['All', ...GROUPS].map((group) => (
+                <button key={group} type="button" disabled tabIndex={-1}>
+                  {group}<span aria-hidden="true" style={{ visibility: 'hidden' }}> · {group === 'All' ? '00' : '0'}</span>
+                </button>
+              ))}
+            </div>
+          )}
           {!!ready.length && (
             <div className="chips vibe-filters" role="group" aria-label="Filter mix feelings">
               {['All', ...GROUPS].map((group) => {
@@ -275,7 +295,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
             </div>
           )}
         </div>
-        {cardsFailed && <Problem retry={() => setCardsAttempt((value) => value + 1)}>Couldn’t load mix suggestions. Try again when Selecta is available.</Problem>}
+        {cardsFailed && <Problem retry={() => setCardsAttempt((value) => value + 1)}>Couldn’t load mix suggestions. Try again when SelectaDJ is available.</Problem>}
         {!cards && !cardsFailed && <Skeleton variant="vibes" lines={6} label="Finding compatible mix candidates" retry={() => setCardsAttempt((value) => value + 1)} />}
         {visibleGroups.map((group) => {
           const inGroup = ready.filter((card) => card.group === group);

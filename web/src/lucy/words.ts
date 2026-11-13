@@ -141,6 +141,6 @@ export function countsWords(counts: Partial<Record<'added' | 'replaced' | 'moved
 
 export const EXAMPLE_PROMPTS = [
   '12 songs that build up slowly',
-  'Only transitions that are already ready - play-ready now',
+  'Only transitions that are already ready to play',
   'An hour of Afrobeats, no repeats',
 ];

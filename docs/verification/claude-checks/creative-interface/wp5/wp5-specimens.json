@@ -1,0 +1,561 @@
+{
+ "sha": "4e68d4e9",
+ "date": "2026-11-12",
+ "browser": "Microsoft Edge 157.0.4341.46 (headless)",
+ "library": "tests/e2e_server.py made-up library, SELECTA_E2E_STRESS=1",
+ "reducedMotion": "reduce (to settle entrance motion before capture)",
+ "shots": [
+  {
+   "file": "wp5-specimen-explore-phone-light.png",
+   "scene": "explore",
+   "route": "/mixes",
+   "size": "phone",
+   "viewport": "390x844",
+   "theme": "light",
+   "h1": "Make a Mix",
+   "bodyBg": "rgb(245, 242, 233)",
+   "hscroll": false,
+   "controlsInView": 6,
+   "largestControls": [
+    {
+     "name": "PlayBuilding…",
+     "area": 7934,
+     "top": 797,
+     "bottom": 849
+    },
+    {
+     "name": "Harmonic matches",
+     "area": 6859,
+     "top": 185,
+     "bottom": 229
+    },
+    {
+     "name": "Word connections",
+     "area": 6698,
+     "top": 138,
+     "bottom": 182
+    },
+    {
+     "name": "Mix ideas",
+     "area": 3985,
+     "top": 138,
+     "bottom": 182
+    }
+   ],
+   "controlsInMain": 72,
+   "advancedReachable": [
+    "Word connections",
+    "Harmonic matches",
+    "Customize: Shape this mix (optional)",
+    "Why House party? More details",
+    "Shape firstBuilding…",
+    "Why Peak time? More details",
+    "Shape firstBuilding…",
+    "Why Workout? More details"
+   ]
+  },
+  {
+   "file": "wp5-specimen-create-phone-light.png",
+   "scene": "create",
+   "route": "/mix/current/edit",
+   "size": "phone",
+   "viewport": "390x844",
+   "theme": "light",
+   "h1": "Your mix",
+   "bodyBg": "rgb(245, 242, 233)",
+   "hscroll": false,
+   "controlsInView": 9,
+   "largestControls": [
+    {
+     "name": "An Extraordinarily Long Song Title That ",
+     "area": 33116,
+     "top": 805,
+     "bottom": 949
+    },
+    {
+     "name": "Play from the top",
+     "area": 15092,
+     "top": 320,
+     "bottom": 364
+    },
+    {
+     "name": "Save a copy",
+     "area": 11055,
+     "top": 376,
+     "bottom": 442
+    },
+    {
+     "name": "Render every transition",
+     "area": 11055,
+     "top": 376,
+     "bottom": 442
+    }
+   ],
+   "controlsInMain": 77,
+   "advancedReachable": [
+    "Render every transition",
+    "Download audio",
+    "Ask Lucy about this mix",
+    "More for An Extraordinarily Long Song Ti",
+    "Let SelectaDJ pickNot rendered yet, unde",
+    "Render itAsking…",
+    "Change",
+    "More for Untitled"
+   ]
+  },
+  {
+   "file": "wp5-specimen-listen-phone-light.png",
+   "scene": "listen",
+   "route": "/listen",
+   "size": "phone",
+   "viewport": "390x844",
+   "theme": "light",
+   "h1": "An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix)",
+   "bodyBg": "rgb(245, 242, 233)",
+   "hscroll": false,
+   "controlsInView": 3,
+   "largestControls": [
+    {
+     "name": "Play",
+     "area": 11893,
+     "top": 726,
+     "bottom": 778
+    },
+    {
+     "name": "Previous song",
+     "area": 2200,
+     "top": 730,
+     "bottom": 774
+    },
+    {
+     "name": "Next song",
+     "area": 2200,
+     "top": 730,
+     "bottom": 774
+    }
+   ],
+   "controlsInMain": 26,
+   "advancedReachable": [
+    "Change the next song",
+    "DJ controls"
+   ]
+  },
+  {
+   "file": "wp5-specimen-explore-desktop-light.png",
+   "scene": "explore",
+   "route": "/mixes",
+   "size": "desktop",
+   "viewport": "1440x900",
+   "theme": "light",
+   "h1": "Make a Mix",
+   "bodyBg": "rgb(245, 242, 233)",
+   "hscroll": false,
+   "controlsInView": 11,
+   "largestControls": [
+    {
+     "name": "Customize: Shape this mix (optional)",
+     "area": 9018,
+     "top": 867,
+     "bottom": 911
+    },
+    {
+     "name": "PlayBuilding…",
+     "area": 7934,
+     "top": 803,
+     "bottom": 855
+    },
+    {
+     "name": "Plan a mix with Lucy",
+     "area": 7583,
+     "top": 582,
+     "bottom": 626
+    },
+    {
+     "name": "Harmonic matches",
+     "area": 6859,
+     "top": 169,
+     "bottom": 213
+    }
+   ],
+   "controlsInMain": 72,
+   "advancedReachable": [
+    "Word connections",
+    "Harmonic matches",
+    "Customize: Shape this mix (optional)",
+    "Why House party? More details",
+    "Shape firstBuilding…",
+    "Why Peak time? More details",
+    "Shape firstBuilding…",
+    "Why Workout? More details"
+   ]
+  },
+  {
+   "file": "wp5-specimen-create-desktop-light.png",
+   "scene": "create",
+   "route": "/mix/current/edit",
+   "size": "desktop",
+   "viewport": "1440x900",
+   "theme": "light",
+   "h1": "Your mix",
+   "bodyBg": "rgb(245, 242, 233)",
+   "hscroll": false,
+   "controlsInView": 23,
+   "largestControls": [
+    {
+     "name": "An Extraordinarily Long Song Title That ",
+     "area": 37885,
+     "top": 517,
+     "bottom": 565
+    },
+    {
+     "name": "Untitled",
+     "area": 23678,
+     "top": 807,
+     "bottom": 837
+    },
+    {
+     "name": "Let SelectaDJ pickNot rendered yet, unde",
+     "area": 16599,
+     "top": 664,
+     "bottom": 708
+    },
+    {
+     "name": "Measured song energy",
+     "area": 9504,
+     "top": 440,
+     "bottom": 484
+    }
+   ],
+   "controlsInMain": 77,
+   "advancedReachable": [
+    "Render every transition",
+    "Download audio",
+    "Ask Lucy about this mix",
+    "More for An Extraordinarily Long Song Ti",
+    "Let SelectaDJ pickNot rendered yet, unde",
+    "Render itAsking…",
+    "Change",
+    "More for Untitled"
+   ]
+  },
+  {
+   "file": "wp5-specimen-listen-desktop-light.png",
+   "scene": "listen",
+   "route": "/listen",
+   "size": "desktop",
+   "viewport": "1440x900",
+   "theme": "light",
+   "h1": "An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix)",
+   "bodyBg": "rgb(245, 242, 233)",
+   "hscroll": false,
+   "controlsInView": 14,
+   "largestControls": [
+    {
+     "name": "UntitledUnknown artistEdit upcoming song",
+     "area": 42863,
+     "top": 269,
+     "bottom": 382
+    },
+    {
+     "name": "Beat countdown",
+     "area": 15224,
+     "top": 855,
+     "bottom": 899
+    },
+    {
+     "name": "Play",
+     "area": 8383,
+     "top": 356,
+     "bottom": 409
+    },
+    {
+     "name": "Jump to the transition",
+     "area": 8154,
+     "top": 423,
+     "bottom": 467
+    }
+   ],
+   "controlsInMain": 26,
+   "advancedReachable": [
+    "Change the next song",
+    "DJ controls"
+   ]
+  },
+  {
+   "file": "wp5-specimen-explore-phone-dark.png",
+   "scene": "explore",
+   "route": "/mixes",
+   "size": "phone",
+   "viewport": "390x844",
+   "theme": "dark",
+   "h1": "Make a Mix",
+   "bodyBg": "rgb(16, 15, 12)",
+   "hscroll": false,
+   "controlsInView": 6,
+   "largestControls": [
+    {
+     "name": "PlayBuilding…",
+     "area": 7934,
+     "top": 797,
+     "bottom": 849
+    },
+    {
+     "name": "Harmonic matches",
+     "area": 6859,
+     "top": 185,
+     "bottom": 229
+    },
+    {
+     "name": "Word connections",
+     "area": 6698,
+     "top": 138,
+     "bottom": 182
+    },
+    {
+     "name": "Mix ideas",
+     "area": 3985,
+     "top": 138,
+     "bottom": 182
+    }
+   ],
+   "controlsInMain": 72,
+   "advancedReachable": [
+    "Word connections",
+    "Harmonic matches",
+    "Customize: Shape this mix (optional)",
+    "Why House party? More details",
+    "Shape firstBuilding…",
+    "Why Peak time? More details",
+    "Shape firstBuilding…",
+    "Why Workout? More details"
+   ]
+  },
+  {
+   "file": "wp5-specimen-create-phone-dark.png",
+   "scene": "create",
+   "route": "/mix/current/edit",
+   "size": "phone",
+   "viewport": "390x844",
+   "theme": "dark",
+   "h1": "Your mix",
+   "bodyBg": "rgb(16, 15, 12)",
+   "hscroll": false,
+   "controlsInView": 9,
+   "largestControls": [
+    {
+     "name": "An Extraordinarily Long Song Title That ",
+     "area": 33116,
+     "top": 805,
+     "bottom": 949
+    },
+    {
+     "name": "Play from the top",
+     "area": 15092,
+     "top": 320,
+     "bottom": 364
+    },
+    {
+     "name": "Save a copy",
+     "area": 11055,
+     "top": 376,
+     "bottom": 442
+    },
+    {
+     "name": "Render every transition",
+     "area": 11055,
+     "top": 376,
+     "bottom": 442
+    }
+   ],
+   "controlsInMain": 77,
+   "advancedReachable": [
+    "Render every transition",
+    "Download audio",
+    "Ask Lucy about this mix",
+    "More for An Extraordinarily Long Song Ti",
+    "Let SelectaDJ pickNot rendered yet, unde",
+    "Render itAsking…",
+    "Change",
+    "More for Untitled"
+   ]
+  },
+  {
+   "file": "wp5-specimen-listen-phone-dark.png",
+   "scene": "listen",
+   "route": "/listen",
+   "size": "phone",
+   "viewport": "390x844",
+   "theme": "dark",
+   "h1": "An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix)",
+   "bodyBg": "rgb(16, 15, 12)",
+   "hscroll": false,
+   "controlsInView": 3,
+   "largestControls": [
+    {
+     "name": "Play",
+     "area": 11893,
+     "top": 726,
+     "bottom": 778
+    },
+    {
+     "name": "Previous song",
+     "area": 2200,
+     "top": 730,
+     "bottom": 774
+    },
+    {
+     "name": "Next song",
+     "area": 2200,
+     "top": 730,
+     "bottom": 774
+    }
+   ],
+   "controlsInMain": 26,
+   "advancedReachable": [
+    "Change the next song",
+    "DJ controls"
+   ]
+  },
+  {
+   "file": "wp5-specimen-explore-desktop-dark.png",
+   "scene": "explore",
+   "route": "/mixes",
+   "size": "desktop",
+   "viewport": "1440x900",
+   "theme": "dark",
+   "h1": "Make a Mix",
+   "bodyBg": "rgb(16, 15, 12)",
+   "hscroll": false,
+   "controlsInView": 11,
+   "largestControls": [
+    {
+     "name": "Customize: Shape this mix (optional)",
+     "area": 9018,
+     "top": 867,
+     "bottom": 911
+    },
+    {
+     "name": "PlayBuilding…",
+     "area": 7934,
+     "top": 803,
+     "bottom": 855
+    },
+    {
+     "name": "Plan a mix with Lucy",
+     "area": 7583,
+     "top": 582,
+     "bottom": 626
+    },
+    {
+     "name": "Harmonic matches",
+     "area": 6859,
+     "top": 169,
+     "bottom": 213
+    }
+   ],
+   "controlsInMain": 72,
+   "advancedReachable": [
+    "Word connections",
+    "Harmonic matches",
+    "Customize: Shape this mix (optional)",
+    "Why House party? More details",
+    "Shape firstBuilding…",
+    "Why Peak time? More details",
+    "Shape firstBuilding…",
+    "Why Workout? More details"
+   ]
+  },
+  {
+   "file": "wp5-specimen-create-desktop-dark.png",
+   "scene": "create",
+   "route": "/mix/current/edit",
+   "size": "desktop",
+   "viewport": "1440x900",
+   "theme": "dark",
+   "h1": "Your mix",
+   "bodyBg": "rgb(16, 15, 12)",
+   "hscroll": false,
+   "controlsInView": 23,
+   "largestControls": [
+    {
+     "name": "An Extraordinarily Long Song Title That ",
+     "area": 37885,
+     "top": 517,
+     "bottom": 565
+    },
+    {
+     "name": "Untitled",
+     "area": 23678,
+     "top": 807,
+     "bottom": 837
+    },
+    {
+     "name": "Let SelectaDJ pickNot rendered yet, unde",
+     "area": 16599,
+     "top": 664,
+     "bottom": 708
+    },
+    {
+     "name": "Measured song energy",
+     "area": 9504,
+     "top": 440,
+     "bottom": 484
+    }
+   ],
+   "controlsInMain": 77,
+   "advancedReachable": [
+    "Render every transition",
+    "Download audio",
+    "Ask Lucy about this mix",
+    "More for An Extraordinarily Long Song Ti",
+    "Let SelectaDJ pickNot rendered yet, unde",
+    "Render itAsking…",
+    "Change",
+    "More for Untitled"
+   ]
+  },
+  {
+   "file": "wp5-specimen-listen-desktop-dark.png",
+   "scene": "listen",
+   "route": "/listen",
+   "size": "desktop",
+   "viewport": "1440x900",
+   "theme": "dark",
+   "h1": "An Extraordinarily Long Song Title That Goes On And On Without Any Regard For The Width Of A Phone Screen (Extended Club Remix)",
+   "bodyBg": "rgb(16, 15, 12)",
+   "hscroll": false,
+   "controlsInView": 14,
+   "largestControls": [
+    {
+     "name": "UntitledUnknown artistEdit upcoming song",
+     "area": 42863,
+     "top": 269,
+     "bottom": 382
+    },
+    {
+     "name": "Beat countdown",
+     "area": 15224,
+     "top": 855,
+     "bottom": 899
+    },
+    {
+     "name": "Play",
+     "area": 8383,
+     "top": 356,
+     "bottom": 409
+    },
+    {
+     "name": "Jump to the transition",
+     "area": 8154,
+     "top": 423,
+     "bottom": 467
+    }
+   ],
+   "controlsInMain": 26,
+   "advancedReachable": [
+    "Change the next song",
+    "DJ controls"
+   ]
+  }
+ ]
+}

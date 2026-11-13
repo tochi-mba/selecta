@@ -7,7 +7,7 @@ Generated from the Evidence fields of the [CI checklist](selecta-creative-interf
 - **Negative case:** a cited test whose name says what must not happen.
 - **Gaps:** a ticked task missing one of the three kinds. Open and needs-a-person tasks are listed for completeness and have no gaps column entry.
 
-**Totals:** 140 tasks; 106 ticked, of which 20 have all three kinds of coverage and 86 have a gap.
+**Totals:** 140 tasks; 108 ticked, of which 20 have all three kinds of coverage and 88 have a gap.
 
 | Task | Status | State | Browser | Negative case | Gaps |
 |---|---|---|---|---|---|
@@ -28,7 +28,7 @@ Generated from the Evidence fields of the [CI checklist](selecta-creative-interf
 | CI-0167-01 | ticked | `web/src/router.test.tsx`; `web/src/views/Library.test.tsx`; `web/src/views/Mix.test.tsx` | - | "never confuses two different drafts with identical songs and transition keys" | browser |
 | CI-0167-02 | ticked | `web/src/views/CreativeInterface.test.tsx`; `web/src/views/CurrentMix.test.tsx` | - | "names the idea with the server’s own song count, opens the editor, and claims nothing rendered"; "tracks the exact returned song order without adding an audio action" | browser |
 | CI-0167-03 | ticked | `web/src/views/Mix.test.tsx`; `web/src/views/Studio.test.tsx` | `web/e2e/finishing.e2e.ts` | "a mix that moved on refuses the shape, and it stays here to try again" | - |
-| CI-0167-04 | person | `web/src/App.test.tsx` | - | - | - |
+| CI-0167-04 | ticked | `web/src/App.test.tsx` | - | - | browser, negative |
 | CI-0167-05 | ticked | `web/src/views/Mix.test.tsx` | `web/e2e/finishing.e2e.ts`; `web/e2e/flows.e2e.ts` | - | negative |
 | CI-0167-06 | ticked | `web/src/audio/focus.test.tsx` | `web/e2e/listen.e2e.ts` | "only one tab plays at a time"; "never restarts the mix after someone has pressed something themselves" | - |
 | CI-0167-07 | ticked | `web/src/App.test.tsx`; `web/src/views/Library.test.tsx` | `web/e2e/flows.e2e.ts`; `web/e2e/pages.e2e.ts` | "never opens another song if a deep-link ID is missing, and can retry"; "only the newest search counts, however the answers arrive" | - |
@@ -54,7 +54,7 @@ Generated from the Evidence fields of the [CI checklist](selecta-creative-interf
 | CI-0170-06 | person | - | - | - | - |
 | CI-0170-07 | person | - | - | - | - |
 | CI-0171-01 | ticked | `web/src/views/CreativeInterface.test.tsx`; `web/src/views/Now.test.tsx` | - | "says what kind of lyrics a word-timed, line-timed, plain, missing and instrumental song has" | browser |
-| CI-0171-02 | person | - | - | - | - |
+| CI-0171-02 | person | - | - | "No links yet" | - |
 | CI-0171-03 | person | - | - | - | - |
 | CI-0171-04 | ticked | `web/src/views/Now.test.tsx` | - | "can read a full static lyric sheet and resume following without affecting audio" | browser |
 | CI-0171-05 | ticked | - | `web/e2e/finishing.e2e.ts` | "fullscreen refused: the lyrics still fill the page, Escape gets out, focus comes back, and the music never stops" | state |
@@ -67,7 +67,7 @@ Generated from the Evidence fields of the [CI checklist](selecta-creative-interf
 | CI-0172-05 | person | - | - | - | - |
 | CI-0172-06 | ticked | `web/src/audio/focus.test.tsx` | `web/e2e/listen.e2e.ts` | "two can’t play at once"; "only one tab plays at a time" | - |
 | CI-0172-07 | person | - | - | - | - |
-| CI-0173-01 | person | - | - | - | - |
+| CI-0173-01 | ticked | `web/src/views/Mix.test.tsx` | - | - | browser, negative |
 | CI-0173-02 | ticked | `web/src/views/Mix.test.tsx`; `web/src/views/dropPreview.test.tsx` | - | "names only the two seams around the song and the one it lands in"; "marks nothing over the song being carried, and nothing when the preview is turned off" | browser |
 | CI-0173-03 | ticked | `web/src/views/Mix.test.tsx` | `web/e2e/finishing.e2e.ts` | - | negative |
 | CI-0173-04 | ticked | `web/src/ui/MusicObjects.test.tsx` | `web/e2e/creative-visualizers.e2e.ts` | "keeps unknown song energy as an unknown gap and selects only the actual row" | - |

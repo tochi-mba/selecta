@@ -133,7 +133,7 @@ describe('LX-0348-02, LX-0348-06, LX-0349-01 the song sheet reads facts first, t
     await userEvent.click(await screen.findByRole('button', { name: 'Details for First' }));
     const sheet = screen.getByRole('dialog', { name: 'First' });
     const facts = sheet.querySelector('dl.song-facts:not(.song-capabilities)') as HTMLElement;
-    const firstField = within(sheet).getByRole('spinbutton', { name: /Tempo/ });
+    const firstField = within(sheet).getByRole('textbox', { name: /^Tempo/ });
     expect(facts.compareDocumentPosition(firstField) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(facts).getByText('Tempo in use')).toBeInTheDocument();
     const advanced = sheet.querySelector('details.song-advanced') as HTMLDetailsElement;
@@ -148,7 +148,7 @@ describe('LX-0348-02, LX-0348-06, LX-0349-01 the song sheet reads facts first, t
     show();
     await userEvent.click(await screen.findByRole('button', { name: 'Details for First' }));
     const sheet = screen.getByRole('dialog', { name: 'First' });
-    expect(within(sheet).getByRole('spinbutton', { name: /Tempo/ })).toHaveAccessibleDescription(/Between 40 and 240 BPM/);
+    expect(within(sheet).getByRole('textbox', { name: /^Tempo/ })).toHaveAccessibleDescription(/Between 40 and 240 BPM/);
     expect(within(sheet).getByRole('textbox', { name: /Key/ })).toHaveAccessibleDescription(/Like 8A or 11B/);
     expect(within(sheet).getByText(/160 BPM \(your correction\)/)).toBeInTheDocument();
     expect(within(sheet).getByText(/What it measured is kept, so this can be put back/)).toBeInTheDocument();
@@ -168,7 +168,7 @@ describe('LX-0349-03 rework is the server’s number, with no made-up progress o
     });
     const { notify } = show();
     await userEvent.click(await screen.findByRole('button', { name: 'Details for First' }));
-    await userEvent.type(screen.getByRole('spinbutton', { name: /Tempo/ }), '160');
+    await userEvent.type(screen.getByRole('textbox', { name: /^Tempo/ }), '160');
     await userEvent.click(screen.getByRole('button', { name: 'Save correction' }));
     await waitFor(() => expect(notify).toHaveBeenCalledWith(said));
     expect(String(notify.mock.calls[0][0])).not.toMatch(/%|minute|second|done|complete/i);

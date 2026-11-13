@@ -100,10 +100,10 @@ for (const display of DISPLAYS) {
     await page.goto('/library');
     await expect(page.locator('.library-rows .song-row').first()).toBeVisible();
     await page.route('**/api/**', (route) => route.abort());
-    await expect(page.getByRole('alert').filter({ hasText: 'Can’t reach Selecta' })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('alert').filter({ hasText: 'Can’t reach SelectaDJ' })).toBeVisible({ timeout: 15_000 });
     await capture('server-gone');
     await page.goto('/mixes').catch(() => {});
-    await expect(page.getByRole('heading', { name: 'Can’t reach Selecta.' })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('heading', { name: 'Can’t reach SelectaDJ.' })).toBeVisible({ timeout: 15_000 });
     await capture('server-never-reached');
     await page.unroute('**/api/**');
     await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible({ timeout: 15_000 });

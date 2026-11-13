@@ -19,6 +19,19 @@ MAX_SIGNED_IN_DEVICES = 10
 DEVICE_NAME_MAX = 60
 
 
+class Principal(StrEnum):
+    PERSON = "person"
+    KIOSK = "kiosk"
+
+
+@dataclass(frozen=True)
+class SessionKey:
+    """Which session: a personal workspace's one session (`zone_id` None) or a zone's (ADR-0443)."""
+
+    workspace_id: str
+    zone_id: str | None = None
+
+
 class DeviceKind(StrEnum):
     LAPTOP = "laptop"
     DESKTOP = "desktop"
@@ -57,10 +70,51 @@ class CommandUnavailable(PlaybackError):
     code = "command_unavailable"
 
 
+class OwnershipChanged(PlaybackError):
+    """An observed playback owner changed before a confirmed transfer could be applied."""
+
+    code = "playback_owner_changed"
+
+
 class IdempotencyConflict(PlaybackError):
     """The same idempotency key came back with a different command."""
 
     code = "idempotency_conflict"
+
+
+class UnknownZone(PlaybackError):
+    """No such zone in this workspace, or not one this person may see (both look the same)."""
+
+    code = "unknown_zone"
+
+
+class ZonePaused(PlaybackError):
+    """The zone is paused (over the paid count, or archived), so it plays nothing."""
+
+    code = "zone_paused"
+
+
+class DeviceInOtherZone(PlaybackError):
+    """This device is the live speaker of another zone; a device holds one zone lease at a time.
+    `zone_id` names the zone it is playing, so the caller can say "This player is playing Bar"."""
+
+    code = "device_in_other_zone"
+
+    def __init__(self, message: str, zone_id: str | None = None) -> None:
+        super().__init__(message)
+        self.zone_id = zone_id
+
+
+class PersonSpeakerOff(PlaybackError):
+    """The venue doesn't let staff phones be this zone's emergency speaker."""
+
+    code = "person_speaker_off"
+
+
+class HoldingZoneLease(PlaybackError):
+    """A phone holding a zone's lease must hand it back before playing personal music."""
+
+    code = "holding_zone_lease"
 
 
 @dataclass(frozen=True)
@@ -85,13 +139,20 @@ class Capabilities:
 class Device:
     id: str
     workspace_id: str
-    user_id: str
+    user_id: str | None  # None for a kiosk, which belongs to the organisation
     name: str
     kind: DeviceKind
     capabilities: Capabilities
     created_at: float
     last_seen_at: float
     signed_out_at: float | None
+    principal: Principal = Principal.PERSON
+    zone_id: str | None = None  # a kiosk's paired zone
+    machine_fingerprint: str | None = None
+
+    @property
+    def is_kiosk(self) -> bool:
+        return self.principal is Principal.KIOSK
 
     @property
     def signed_in(self) -> bool:
@@ -122,6 +183,13 @@ class Session:
     lease_expires_at: float | None
     seq: int
     updated_at: float
+    zone_id: str | None = None  # None: a personal workspace's one session
+    volume: int | None = None  # a zone's shared volume, 0 to 100; None keeps volume per device
+    hand_back_to_device_id: str | None = None  # the home kiosk waiting for the next song
+
+    @property
+    def key(self) -> SessionKey:
+        return SessionKey(self.workspace_id, self.zone_id)
 
     def lease_live(self, now: float) -> bool:
         """Is some device the speaker right now, with a lease that hasn't run out?"""

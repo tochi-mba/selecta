@@ -96,12 +96,12 @@ test('MP-0292-03 chords, song A, song B and both never claim audio that has not 
   await page.goto('/discover/harmonic');
   const now = page.locator('.discovery-now');
   await expect(now).toHaveText('Nothing is playing');
-  await page.getByRole('button', { name: 'Hear what Selecta heard' }).click();
+  await page.getByRole('button', { name: 'Hear what SelectaDJ heard' }).click();
   const stages = page.getByRole('list', { name: 'Four stages to hear' }).getByRole('button');
-  await expect(stages).toHaveText(['1 The chords Selecta heard', '2 Paper Moon, with those chords', '3 Glass Harbour, moved to the same key and speed', '4 Both at once']);
+  await expect(stages).toHaveText(['1 The chords SelectaDJ heard', '2 Paper Moon, with those chords', '3 Glass Harbour, moved to the same key and speed', '4 Both at once']);
   // only the media element saying it is playing moves the marker
-  await expect(now).toHaveText(/^(Loading stage 1; no audio confirmed yet|Now playing: The chords Selecta heard)$/);
-  await expect(now).toHaveText('Now playing: The chords Selecta heard', { timeout: 20_000 });
+  await expect(now).toHaveText(/^(Loading stage 1; no audio confirmed yet|Now playing: The chords SelectaDJ heard)$/);
+  await expect(now).toHaveText('Now playing: The chords SelectaDJ heard', { timeout: 20_000 });
   await expect(stages.nth(0)).toHaveAttribute('aria-current', 'step');
   await stages.nth(2).click();
   await expect(now).toHaveText('Now playing: Glass Harbour, moved to the same key and speed', { timeout: 20_000 });
@@ -115,7 +115,7 @@ test('MP-0292-03 a clip that cannot load is never shown as playing', async ({ pa
   await chords(page, [pair(7, 3, 4, 'Paper Moon', 'Glass Harbour')], 'broken');
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/discover/harmonic');
-  await page.getByRole('button', { name: 'Hear what Selecta heard' }).click();
+  await page.getByRole('button', { name: 'Hear what SelectaDJ heard' }).click();
   await expect(page.getByRole('alert')).toContainText(/unavailable|Couldn’t play/);
   await expect(page.locator('.discovery-now')).toHaveText('Nothing is playing');
   await expect(page.locator('.discovery-steps [aria-current="step"]')).toHaveCount(0);
@@ -129,7 +129,7 @@ test('MP-0292-04 Yes, No, Skip, Add both and Change move stay readable and in ti
     await page.goto('/discover/harmonic');
     const verdicts = page.getByRole('group', { name: 'Do Paper Moon and Glass Harbour sound connected?' }).getByRole('button');
     await expect(verdicts).toHaveText(['Yes', 'No', 'Skip for now']);
-    const hear = await box(page.getByRole('button', { name: 'Hear what Selecta heard' }));
+    const hear = await box(page.getByRole('button', { name: 'Hear what SelectaDJ heard' }));
     for (const index of [0, 1, 2]) {
       const verdict = await box(verdicts.nth(index));
       expect(verdict.height, `${width}px: a verdict is under 44px`).toBeGreaterThanOrEqual(44);
@@ -138,7 +138,7 @@ test('MP-0292-04 Yes, No, Skip, Add both and Change move stay readable and in ti
       expect(verdict.top).toBeGreaterThan(hear.top);
     }
     const fill = (locator: Locator) => locator.evaluate((element) => getComputedStyle(element).backgroundColor);
-    expect(await fill(page.getByRole('button', { name: 'Hear what Selecta heard' }))).not.toBe(await fill(verdicts.nth(0)));
+    expect(await fill(page.getByRole('button', { name: 'Hear what SelectaDJ heard' }))).not.toBe(await fill(verdicts.nth(0)));
 
     await page.goto('/discover');
     const card = page.locator('.link-card').first();

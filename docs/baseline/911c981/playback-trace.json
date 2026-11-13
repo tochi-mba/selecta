@@ -1,0 +1,65 @@
+{
+ "played_ms": 20000,
+ "mix": [
+  {
+   "song_id": 1,
+   "title": "Morning Light",
+   "seam": null
+  },
+  {
+   "song_id": 2,
+   "title": "Slow Tide",
+   "seam": {
+    "key": "c9dbccae51a011224ec1",
+    "status": "rendering",
+    "settings": {}
+   }
+  },
+  {
+   "song_id": 3,
+   "title": "Paper Moon",
+   "seam": {
+    "key": "947c53b0338e275a7d4a",
+    "status": "queued",
+    "settings": {}
+   }
+  },
+  {
+   "song_id": 4,
+   "title": "Neon Rain",
+   "seam": {
+    "key": "64888040de407cc06b0a",
+    "status": "queued",
+    "settings": {}
+   }
+  }
+ ],
+ "audio_context": [
+  {
+   "at": 3493.2000000029802,
+   "state": "running",
+   "sampleRate": 44100
+  },
+  {
+   "at": 3504.7000000029802,
+   "state": "running"
+  }
+ ],
+ "sounds_started": [
+  {
+   "wall_ms": 19527.800000000745,
+   "clock": 15.53124716553288,
+   "when": 15.581247165532881,
+   "offset": 0,
+   "duration": null,
+   "length": 89.5
+  }
+ ],
+ "audio_fetched": [
+  {
+   "ms": 15874,
+   "path": "/api/songs/1/audio",
+   "status": 200
+  }
+ ]
+}

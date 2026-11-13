@@ -13,6 +13,7 @@ from cloud_party import ALICE, BOB, CAROL, auth, made_up, party  # noqa: F401
 from test_cloud_playback_fakes import follow_clock
 
 from selecta import flags
+from selecta.business import device_cookie
 from selecta.persistence import transaction
 from selecta.playback.model import MAX_SIGNED_IN_DEVICES
 from selecta.work.schema import outbox_events
@@ -48,7 +49,8 @@ def test_registering_again_with_the_same_id_keeps_the_device(party):
 
 def test_the_cookie_names_the_device_when_the_body_does_not(party):
     device = party.register(ALICE)["device"]
-    assert party.client.cookies.get("selecta_device") == device["id"]
+    cookie = device_cookie.cookie_name(party.workspaces[ALICE])
+    assert party.client.cookies.get(cookie) == device["id"]
     view = party.client.get("/api/playback/session", headers=auth(ALICE))
     assert view.status_code == 200 and view.json()["speaker"] == "none"
 
@@ -72,7 +74,7 @@ def test_an_iphone_is_told_to_keep_the_screen_on(party):
     )["device"]
     assert phone["poor_speaker"] is True
     assert [w["code"] for w in phone["warnings"]] == ["ios_keep_screen_on"]
-    assert "keep Selecta open with the screen on" in phone["warnings"][0]["text"]
+    assert "keep SelectaDJ open with the screen on" in phone["warnings"][0]["text"]
 
 
 def test_play_here_moves_the_lease_and_names_the_old_speaker(party):
@@ -88,8 +90,11 @@ def test_play_here_moves_the_lease_and_names_the_old_speaker(party):
     assert body["session"]["active_device_id"] == phone
     assert body["session"]["seq"] == first.json()["session"]["seq"] + 1
 
-    old = client.post("/api/playback/heartbeat", headers=auth(ALICE), json={
-        "device_id": laptop, "song_index": 0, "offset_ms": 5000})
+    old = client.post(
+        "/api/playback/heartbeat",
+        headers=auth(ALICE),
+        json={"device_id": laptop, "song_index": 0, "offset_ms": 5000},
+    )
     assert old.json()["outcome"] == "refused"
     view = client.get(f"/api/playback/session?device_id={laptop}", headers=auth(ALICE)).json()
     assert view["speaker"] == "elsewhere" and view["speaker_name"] == "Phone"
@@ -98,16 +103,54 @@ def test_play_here_moves_the_lease_and_names_the_old_speaker(party):
     assert back.json()["action"] == "stop_moved" and back.json()["moved_to_name"] == "Phone"
 
     with transaction(party.engine) as conn:
-        topics = [row.topic for row in conn.execute(outbox_events.select().where(
-            outbox_events.c.workspace_id == party.workspaces[ALICE]))]
+        topics = [
+            row.topic
+            for row in conn.execute(
+                outbox_events.select().where(
+                    outbox_events.c.workspace_id == party.workspaces[ALICE]
+                )
+            )
+        ]
     assert "playback.moved" in topics and "playback.state" in topics
+
+
+def test_cloud_browser_takeover_rejects_an_unconfirmed_or_changed_live_owner(party):
+    client = party.client
+    laptop = party.register(ALICE, "Laptop")["device"]["id"]
+    phone = party.register(ALICE, "Phone")["device"]["id"]
+    tablet = party.register(ALICE, "Tablet")["device"]["id"]
+    client.post("/api/playback/take-over", headers=auth(ALICE), json={"device_id": laptop})
+    unconfirmed = client.post(
+        "/api/playback/take-over", headers=auth(ALICE),
+        json={"device_id": phone, "require_observed_owner": True},
+    )
+    assert unconfirmed.status_code == 409
+    assert unconfirmed.json()["detail"]["code"] == "playback_owner_changed"
+    confirmed = client.post(
+        "/api/playback/take-over", headers=auth(ALICE),
+        json={"device_id": phone, "require_observed_owner": True, "observed_owner_id": laptop},
+    )
+    assert confirmed.status_code == 200
+    assert confirmed.json()["session"]["active_device_id"] == phone
+    stale = client.post(
+        "/api/playback/take-over", headers=auth(ALICE),
+        json={"device_id": tablet, "require_observed_owner": True, "observed_owner_id": laptop},
+    )
+    assert stale.status_code == 409
+    assert stale.json()["detail"]["code"] == "playback_owner_changed"
+    assert client.get(
+        f"/api/playback/session?device_id={phone}", headers=auth(ALICE)
+    ).json()["speaker"] == "here"
 
 
 def test_heartbeat_renews_for_the_speaker_and_records_its_position(party):
     client = party.client
     device = party.speaker_on()
-    beat = client.post("/api/playback/heartbeat", headers=auth(ALICE), json={
-        "device_id": device, "song_index": 2, "offset_ms": 1234, "state": "playing"})
+    beat = client.post(
+        "/api/playback/heartbeat",
+        headers=auth(ALICE),
+        json={"device_id": device, "song_index": 2, "offset_ms": 1234, "state": "playing"},
+    )
     body = beat.json()
     assert body["outcome"] == "renewed" and body["position_accepted"] is True
     assert body["session"]["song_index"] == 2 and body["server_time"] > 0
@@ -118,9 +161,14 @@ def test_commands_apply_once_replay_by_key_and_refuse_stale_sequences(party):
     speaker = party.speaker_on()
     remote = party.register(ALICE, "Phone", kind="phone")["device"]["id"]
     seq = client.get(f"/api/playback/session?device_id={remote}", headers=auth(ALICE)).json()[
-        "session"]["seq"]
-    press = {"device_id": remote, "command": "pause", "based_on_seq": seq,
-             "idempotency_key": "press-1"}
+        "session"
+    ]["seq"]
+    press = {
+        "device_id": remote,
+        "command": "pause",
+        "based_on_seq": seq,
+        "idempotency_key": "press-1",
+    }
     first = client.post("/api/playback/commands", headers=auth(ALICE), json=press)
     assert first.status_code == 200, first.text
     assert first.json()["status"] == "applied" and first.json()["session"]["state"] == "paused"
@@ -128,15 +176,19 @@ def test_commands_apply_once_replay_by_key_and_refuse_stale_sequences(party):
     assert again.json()["replayed"] is True
     assert again.json()["command_id"] == first.json()["command_id"]
 
-    stale = client.post("/api/playback/commands", headers=auth(ALICE), json={
-        **press, "command": "play", "idempotency_key": "press-2"})
+    stale = client.post(
+        "/api/playback/commands",
+        headers=auth(ALICE),
+        json={**press, "command": "play", "idempotency_key": "press-2"},
+    )
     assert stale.status_code == 409
     detail = stale.json()["detail"]
     assert detail["code"] == "stale_command"
     assert detail["session"]["seq"] == first.json()["session"]["seq"]
 
-    conflict = client.post("/api/playback/commands", headers=auth(ALICE), json={
-        **press, "command": "play"})
+    conflict = client.post(
+        "/api/playback/commands", headers=auth(ALICE), json={**press, "command": "play"}
+    )
     assert conflict.status_code == 409
     assert conflict.json()["detail"]["code"] == "idempotency_conflict"
     assert speaker != remote
@@ -145,7 +197,8 @@ def test_commands_apply_once_replay_by_key_and_refuse_stale_sequences(party):
 def test_command_key_may_come_from_the_header(party):
     device = party.speaker_on()
     seq = party.client.get(f"/api/playback/session?device_id={device}", headers=auth(ALICE)).json()[
-        "session"]["seq"]
+        "session"
+    ]["seq"]
     headers = {**auth(ALICE), "Idempotency-Key": "header-key"}
     body = {"device_id": device, "command": "seek", "args": {"offset_ms": 10}, "based_on_seq": seq}
     answer = party.client.post("/api/playback/commands", headers=headers, json=body)
@@ -157,18 +210,30 @@ def test_command_key_may_come_from_the_header(party):
 def test_mix_commands_are_unavailable_until_the_cloud_has_a_mix(party):
     device = party.speaker_on()
     seq = party.client.get(f"/api/playback/session?device_id={device}", headers=auth(ALICE)).json()[
-        "session"]["seq"]
-    steer = party.client.post("/api/playback/commands", headers=auth(ALICE), json={
-        "device_id": device, "command": "steer", "args": {"direction": "calmer"},
-        "based_on_seq": seq, "idempotency_key": "steer-1"})
+        "session"
+    ]["seq"]
+    steer = party.client.post(
+        "/api/playback/commands",
+        headers=auth(ALICE),
+        json={
+            "device_id": device,
+            "command": "steer",
+            "args": {"direction": "calmer"},
+            "based_on_seq": seq,
+            "idempotency_key": "steer-1",
+        },
+    )
     assert steer.status_code == 409 and steer.json()["detail"]["code"] == "command_unavailable"
 
 
 def test_a_signed_out_device_is_refused(party):
     device = party.register(ALICE)["device"]["id"]
     party.client.post(f"/api/devices/{device}/sign-out", headers=auth(ALICE))
-    beat = party.client.post("/api/playback/heartbeat", headers=auth(ALICE), json={
-        "device_id": device, "song_index": 0, "offset_ms": 0})
+    beat = party.client.post(
+        "/api/playback/heartbeat",
+        headers=auth(ALICE),
+        json={"device_id": device, "song_index": 0, "offset_ms": 0},
+    )
     assert beat.status_code == 403 and beat.json()["detail"]["code"] == "device_signed_out"
 
 
@@ -179,8 +244,11 @@ ROUTES = [
     ("post", "/api/playback/heartbeat", {"device_id": "{id}", "song_index": 0, "offset_ms": 0}),
     ("post", "/api/playback/take-over", {"device_id": "{id}"}),
     ("post", "/api/playback/reconnect", {"device_id": "{id}"}),
-    ("post", "/api/playback/commands", {"device_id": "{id}", "command": "pause",
-                                        "based_on_seq": 0, "idempotency_key": "k"}),
+    (
+        "post",
+        "/api/playback/commands",
+        {"device_id": "{id}", "command": "pause", "based_on_seq": 0, "idempotency_key": "k"},
+    ),
 ]
 
 
@@ -208,7 +276,8 @@ def test_another_accounts_device_looks_exactly_like_a_missing_one(party, method,
     assert theirs.json() == missing.json()
     listed = party.client.get("/api/devices", headers=auth(ALICE)).json()["devices"]
     assert [(d["id"], d["name"], d["signed_in"]) for d in listed] == [
-        (alices, "Alice's laptop", True)]
+        (alices, "Alice's laptop", True)
+    ]
 
 
 def test_naming_another_workspace_is_refused(party):
@@ -221,8 +290,11 @@ def test_naming_another_workspace_is_refused(party):
 def test_the_features_follow_their_flags(party, monkeypatch):
     party.register(CAROL)  # every plan has devices
     flags.use("-devices.remote_control")
-    answer = party.client.post("/api/playback/commands", headers=auth(CAROL), json={
-        "command": "pause", "based_on_seq": 0, "idempotency_key": "x"})
+    answer = party.client.post(
+        "/api/playback/commands",
+        headers=auth(CAROL),
+        json={"command": "pause", "based_on_seq": 0, "idempotency_key": "x"},
+    )
     assert answer.status_code == 403 and answer.json()["code"] == "flag_off"
     flags.use("-devices")
     off = party.client.get("/api/devices", headers=auth(CAROL))
@@ -236,6 +308,9 @@ def test_a_lease_that_ran_out_is_taken_by_the_next_heartbeat(party, clock, monke
     new = party.register(ALICE, "Phone", kind="phone")["device"]["id"]
     view = party.client.get(f"/api/playback/session?device_id={new}", headers=auth(ALICE)).json()
     assert view["speaker"] == "offline" and view["ask_before_playing_here"] is False
-    beat = party.client.post("/api/playback/heartbeat", headers=auth(ALICE), json={
-        "device_id": new, "song_index": 0, "offset_ms": 0})
+    beat = party.client.post(
+        "/api/playback/heartbeat",
+        headers=auth(ALICE),
+        json={"device_id": new, "song_index": 0, "offset_ms": 0},
+    )
     assert beat.json()["outcome"] == "took_over" and beat.json()["previous_device_id"] == old

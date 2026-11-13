@@ -1,6 +1,6 @@
 # Selecta - LX proposed release NO-GO gates
 
-**Status:** 26 Proposed ADRs (0340–0365); 208 LX tasks Not started; 0 In progress; 0 Implemented; 0 independently Verified. Owner unassigned. Baseline `main` `da942863e9f57e45653cfc2fda35fe463477b8be` (2026-11-08). Documentation only.
+**Status:** 26 Proposed ADRs (0340–0365); 0 LX tasks Not started; 29 In progress; 179 Implemented; 0 independently Verified (recounted from the checklist task lines 2026-11-12). Owner unassigned. Baseline `main` `da942863e9f57e45653cfc2fda35fe463477b8be` (2026-11-08). Implementation candidate; independently unverified.
 
 **Applies only to a future Library + Lucy redesign implementation candidate.** A docs-only PR is not a failing product release and does not grant any release approval.
 
@@ -8,7 +8,7 @@
 |---|---|---|
 | Design decision | Each ADR explicitly accepted/rejected/superseded with named owner/date/reason | 26 Proposed |
 | Existing-source parity | Every LX task mapped to already present/new gap/exemption/duplicate and older owners | Pending |
-| Implementation integrity | Exact implementing PR/SHA for each implemented task; checks + rollback | 0 Implemented |
+| Implementation integrity | Exact implementing PR/SHA for each implemented task; checks + rollback | 179 Implemented, 29 In progress, 0 Not started (2026-11-12) |
 | Library critical UX | Search, exact ID, readiness, 200 loaded selection and 20k paging independently tested | Unverified |
 | Lucy critical UX | Conversation, current proposal, revision, ready-only K−1 and explicit approval independently tested | Unverified |
 | Visual | Matched before/after Light/Dark/System/forced-colours and 320px/400% screenshots reviewed | Unverified |

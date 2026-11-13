@@ -41,14 +41,10 @@ CONCRETE = re.compile(
 )
 VALID_STATUS = {"Done", "Partly", "Not done", "Needs a person", "Superseded"}
 
-# Done rows whose "How we know" was prose only when T0278 was audited (2026-11-11). Each needs a
-# concrete reference added to its own ledger row by that task's owner; this set may only shrink.
-PROSE_ONLY = frozenset(
-    {
-        "T0019", "T0027", "T0040", "T0049", "T0064",
-        "T0134", "T0173", "T0240", "T0259", "T0260",
-    }
-)
+# Done rows whose "How we know" is still prose only. The ten found when T0278 was audited
+# (2026-11-11) were each given file, test or CI-run citations on 2026-11-12, so the set is empty;
+# it may never grow.
+PROSE_ONLY: frozenset[str] = frozenset()
 
 
 @dataclass

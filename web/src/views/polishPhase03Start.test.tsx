@@ -30,7 +30,7 @@ describe('P0045 each reason a folder can’t be used is its own', () => {
   const cases = [
     ['invalid', 'That isn’t a full folder address.', /starts with the drive letter/],
     ['missing', 'That folder doesn’t exist on this PC.', /plug that in first/],
-    ['no_access', 'Selecta isn’t allowed to read that folder.', /folder your account can open/],
+    ['no_access', 'SelectaDJ isn’t allowed to read that folder.', /folder your account can open/],
     ['empty', 'That folder is empty.', /Nothing is in there yet/],
     ['no_audio', 'There are no audio files in that folder.', /found no audio files, including in subfolders/],
   ] as const;

@@ -1,0 +1,15 @@
+/* Venue setup (ADR-0425). Tokens only, from styles/tokens.css. */
+.venue-setup { display: grid; gap: var(--space-2); }
+.venue-setup h2, .venue-setup h3 { margin: 0; }
+.venue-setup-help, .venue-setup-version { margin: 0; color: var(--text-soft); }
+.venue-setup-steps { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.venue-setup-steps button[aria-current='step'] { border-color: var(--accent); }
+.venue-setup-form { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius); }
+.venue-setup-field { display: grid; gap: var(--space-1); }
+.venue-setup-field input, .venue-setup-field select { min-height: 44px; max-width: 100%; }
+.venue-setup-check { display: flex; gap: var(--space-2); align-items: center; min-height: 44px; }
+.venue-setup-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.venue-setup button { min-height: 44px; min-width: 44px; }
+.venue-setup-said { margin: 0; }
+.venue-setup-said:empty { display: none; }
+.venue-setup-error { margin: 0; color: var(--danger); }

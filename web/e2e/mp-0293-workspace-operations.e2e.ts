@@ -178,14 +178,14 @@ test('MP-0293-04 the GB amount, slider and saved or warning line share one edge 
     const amount = label.querySelector('span b')!.getBoundingClientRect();
     const words = label.querySelector('span')!.getBoundingClientRect();
     const slider = label.querySelector('input[type="range"]')!.getBoundingClientRect();
-    const line = [...document.querySelectorAll('main .panel p[role="status"], main .panel p[role="alert"]')].find((node) => /Saved:|Saving|limit is still/.test(node.textContent ?? ''))!;
+    const line = [...document.querySelectorAll('main .panel p[role="status"], main .panel p[role="alert"]')].find((node) => /Limit saved:|Saving|limit is still/.test(node.textContent ?? ''))!;
     const lineBox = line.getBoundingClientRect();
     return { amount: amount.toJSON(), words: words.toJSON(), slider: slider.toJSON(), line: lineBox.toJSON(), lineText: line.textContent, alert: line.getAttribute('role') === 'alert' };
   });
   for (const width of WIDTHS) {
     failing = false;
     await open(page, '/workshop/storage', width);
-    await expect(page.locator('main p[role="status"]').filter({ hasText: 'Saved: 5.0 GB' })).toBeVisible();
+    await expect(page.locator('main p[role="status"]').filter({ hasText: 'Limit saved: 5.0 GB' })).toBeVisible();
     const saved = await measure();
     const at = `${width}px`;
     expect(Math.abs(saved.words.left - saved.slider.left), `${at}: amount and slider start apart`).toBeLessThanOrEqual(1);

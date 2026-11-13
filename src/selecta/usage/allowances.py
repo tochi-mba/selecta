@@ -12,9 +12,10 @@ ordinary, and the caller says it plainly ("You've used today's 150 songs; more t
 limit comes from the plan (`limit_for`); `None` means fair use, which is counted but never
 refused here.
 
-The timezone is the workspace's IANA name, passed in by the caller. An unknown name counts in
-UTC rather than failing. Changing a workspace's timezone moves it to another period key, which can
-start a fresh day early, so how often it can change is for the account settings to limit.
+The timezone is the signed-in user's IANA name (`users.timezone`), passed in by the caller. An
+unknown name counts in UTC rather than failing. Changing the user's timezone moves it to another
+period key, which can start a fresh day early, so how often it can change is for the account
+settings to limit.
 """
 
 from __future__ import annotations

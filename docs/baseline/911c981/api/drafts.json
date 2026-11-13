@@ -1,0 +1,15 @@
+{
+ "drafts": [],
+ "current": {
+  "name": "Your mix",
+  "songs": 4,
+  "left": 3,
+  "eta": {
+   "seconds": 120,
+   "low": 84,
+   "high": 189,
+   "late": false
+  }
+ },
+ "out_of_room": false
+}

@@ -72,7 +72,12 @@ def staff_actor(engine: Engine, request: Request, claims: Claims) -> Actor:
     with transaction(engine) as conn:
         try:
             return privileged.actor_for(
-                conn, session_id, principal.user.id, request_id=request_id[:128]
+                conn,
+                session_id,
+                principal.user.id,
+                request_id=request_id[:128],
+                # Bound to the sign-in that started it; a sid-less token matches nothing.
+                token_sid=claims.session_id or "",
             )
         except privileged.PrivilegedSessionEnded as error:
             raise HTTPException(

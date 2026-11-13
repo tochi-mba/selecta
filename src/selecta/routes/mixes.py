@@ -82,6 +82,16 @@ def add_routes(app, ctx) -> None:
         with connect() as conn:
             return drafts_payload(conn)
 
+    @app.get("/api/drafts/names")
+    def get_draft_names() -> dict:
+        """mymixes.lean_list: each draft's id and name, in the order /api/drafts lists them, for
+        pickers and shortcuts that need nothing else. Reads no songs, seams or revisions."""
+        with connect() as conn:
+            return {
+                "drafts": [{"id": row["id"], "name": row["name"]} for row in mix.draft_names(conn)],
+                "current": {"name": mix.mix_name(conn)},
+            }
+
     @app.post("/api/drafts")
     def new_draft(body: DraftRequest) -> dict:
         with connect() as conn:

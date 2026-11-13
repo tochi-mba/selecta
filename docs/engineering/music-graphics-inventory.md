@@ -10,11 +10,11 @@ and contain its marker, and every CSS rule must exist and use only tokens or sys
 
 | Graphic | State | Source | CSS rule | Treatment | Without colour |
 |---|---|---|---|---|---|
-| Waveform | played | `views/Now.tsx` | `.peaks .played` in `style.css` | stroke `--ink` | position left of the playhead; elapsed time text |
-| Waveform | not yet played | `views/Now.tsx` | `.peaks .unplayed` in `style.css` | stroke `--line` (decorative) | position right of the playhead |
-| Waveform playhead | now | `views/Now.tsx` | `.playhead` in `style.css` | 2px bar `--ink` | a solid vertical line; time readout |
-| Seek marker | proposed seek, not yet heard | `views/Now.tsx` | `.strip .scrub-ghost` in `styles/listening.css` | 2px dashed `--focus` | dashed, unlike the solid playhead; the seek note text |
-| Seam on the waveform | next transition | `views/Now.tsx` | `.seam-mark` in `style.css` | 3px bar `--playing` | the word "seam" drawn above it |
+| Waveform | played | `views/NowStrip.tsx` | `.peaks .played` in `style.css` | stroke `--ink` | position left of the playhead; elapsed time text |
+| Waveform | not yet played | `views/NowStrip.tsx` | `.peaks .unplayed` in `style.css` | stroke `--line` (decorative) | position right of the playhead |
+| Waveform playhead | now | `views/NowStrip.tsx` | `.playhead` in `style.css` | 2px bar `--ink` | a solid vertical line; time readout |
+| Seek marker | proposed seek, not yet heard | `views/NowStrip.tsx` | `.strip .scrub-ghost` in `styles/listening.css` | 2px dashed `--focus` | dashed, unlike the solid playhead; the seek note text |
+| Seam on the waveform | next transition | `views/NowStrip.tsx` | `.seam-mark` in `style.css` | 3px bar `--playing` | the word "seam" drawn above it |
 | Transition countdown | time to the seam | `views/Now.tsx` | `.countdown-track span i` in `style.css` | fill `--playing` at 55% | filled segments count down; the number is written out |
 | Live spectrum (15 styles) | real mixed-audio levels | `views/Now.tsx`, `views/spectrumVisuals.ts` | `.music-visualizer` in `styles/listening.css` | canvas painted from computed `--accent` and `--ok`, re-read on every theme or forced-colours change | its label names the style and says the levels are measured; paused says paused |
 | Seam diagram | planned | `ui/MusicObjects.tsx` | `.music-seam-diagram.is-plan` in `styles/music-objects.css` | dashed border | dashed; "Planned, not rendered" in its label |

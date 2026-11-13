@@ -405,9 +405,9 @@ describe('LX-0362 approval', () => {
     render(<Approve {...props} revision={shown} />);
     await userEvent.click(screen.getByRole('button', { name: 'Save as draft' }));
     await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Save as draft' }));
-    expect(await screen.findByText('Selecta didn’t receive that, so nothing was saved.')).toBeInTheDocument();
+    expect(await screen.findByText('SelectaDJ didn’t receive that, so nothing was saved.')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
-    expect(await screen.findByText(/Couldn’t find out whether it was saved\. Selecta can’t be reached right now\. Nothing will be sent twice\./)).toBeInTheDocument();
+    expect(await screen.findByText(/Couldn’t find out whether it was saved\. SelectaDJ can’t be reached right now\. Nothing will be sent twice\./)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Check again' })).toBeInTheDocument();
     expect(result).toHaveBeenCalledTimes(2);
     // the same key both times: a retry looks up or repeats one operation, never a second draft

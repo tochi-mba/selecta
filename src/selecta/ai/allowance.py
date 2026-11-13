@@ -72,7 +72,7 @@ def _zone(timezone: str | None) -> dt.tzinfo:
 
 
 def month_key(epoch: float, timezone: str | None = "UTC") -> str:
-    """"2026-11": the calendar month at `epoch` in the account's time zone."""
+    """ "2026-11": the calendar month at `epoch` in the account's time zone."""
     return dt.datetime.fromtimestamp(epoch, _zone(timezone)).strftime("%Y-%m")
 
 
@@ -112,11 +112,19 @@ def _where(workspace_id: str, month: str, bucket: RequestClass):
 
 def _ensure_row(conn: Connection, workspace_id: str, month: str, bucket: RequestClass) -> None:
     insert_ignore(
-        conn, ai_usage,
+        conn,
+        ai_usage,
         {
-            "id": new_id(), "workspace_id": workspace_id, "month": month,
-            "request_class": bucket.value, "turns": 0, "tokens_in": 0, "tokens_out": 0,
-            "cache_read_tokens": 0, "cost_usd": 0.0, "updated_at": db_now(conn),
+            "id": new_id(),
+            "workspace_id": workspace_id,
+            "month": month,
+            "request_class": bucket.value,
+            "turns": 0,
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "cache_read_tokens": 0,
+            "cost_usd": 0.0,
+            "updated_at": db_now(conn),
         },
         ["workspace_id", "month", "request_class"],
     )
@@ -130,7 +138,10 @@ def _turns(conn: Connection, workspace_id: str, month: str, bucket: RequestClass
 
 
 def try_start_turn(
-    conn: Connection, workspace_id: str, tier: Tier | str, request_class: RequestClass | str,
+    conn: Connection,
+    workspace_id: str,
+    tier: Tier | str,
+    request_class: RequestClass | str,
     month: str,
 ) -> TurnStart:
     """Count one turn against the class's bucket if there is room. Call inside a transaction.
@@ -144,13 +155,19 @@ def try_start_turn(
     if limit <= 0:
         return TurnStart(False, bucket, month, 0, 0)
     _ensure_row(conn, workspace_id, month, bucket)
-    result = conn.execute(
-        sa.update(ai_usage)
-        .where(_where(workspace_id, month, bucket), ai_usage.c.turns < limit)
-        .values(turns=ai_usage.c.turns + 1, updated_at=db_now(conn))
+    # Whether a row changed is read from RETURNING, not `rowcount`, which psycopg can report as
+    # -1 (as `ai.schema.insert_ignore` found).
+    admitted = (
+        conn.execute(
+            sa.update(ai_usage)
+            .where(_where(workspace_id, month, bucket), ai_usage.c.turns < limit)
+            .values(turns=ai_usage.c.turns + 1, updated_at=db_now(conn))
+            .returning(ai_usage.c.turns)
+        ).first()
+        is not None
     )
     used = _turns(conn, workspace_id, month, bucket)
-    return TurnStart(result.rowcount == 1, bucket, month, used, limit)
+    return TurnStart(admitted, bucket, month, used, limit)
 
 
 def refund_turn(
@@ -158,17 +175,27 @@ def refund_turn(
 ) -> bool:
     """Give back a turn that never reached the person (refused later, or the provider failed)."""
     bucket = RequestClass(bucket)
-    result = conn.execute(
-        sa.update(ai_usage)
-        .where(_where(workspace_id, month, bucket), ai_usage.c.turns > 0)
-        .values(turns=ai_usage.c.turns - 1, updated_at=db_now(conn))
+    return (
+        conn.execute(
+            sa.update(ai_usage)
+            .where(_where(workspace_id, month, bucket), ai_usage.c.turns > 0)
+            .values(turns=ai_usage.c.turns - 1, updated_at=db_now(conn))
+            .returning(ai_usage.c.turns)
+        ).first()
+        is not None
     )
-    return result.rowcount == 1
 
 
 def record_usage(
-    conn: Connection, workspace_id: str, month: str, bucket: RequestClass | str, *,
-    tokens_in: int, tokens_out: int, cost_usd: float, cache_read_tokens: int = 0,
+    conn: Connection,
+    workspace_id: str,
+    month: str,
+    bucket: RequestClass | str,
+    *,
+    tokens_in: int,
+    tokens_out: int,
+    cost_usd: float,
+    cache_read_tokens: int = 0,
 ) -> None:
     """Add a finished turn's tokens and dollars. Never blocks or ends anything."""
     bucket = RequestClass(bucket)
@@ -197,7 +224,10 @@ def month_cost(conn: Connection, workspace_id: str, month: str) -> float:
 
 
 def remaining(
-    conn: Connection, workspace_id: str, tier: Tier | str, month: str,
+    conn: Connection,
+    workspace_id: str,
+    tier: Tier | str,
+    month: str,
     timezone: str | None = "UTC",
 ) -> list[BucketState]:
     """What the usage meter shows: each bucket's limit, turns used and turns left."""
@@ -215,8 +245,12 @@ def remaining(
         used = int(rows.get(bucket.value, 0))
         states.append(
             BucketState(
-                bucket=bucket, limit=limit, used=used, remaining=max(0, limit - used),
-                fair_use=bucket in FAIR_USE.get(tier, frozenset()), resets_at=resets_at,
+                bucket=bucket,
+                limit=limit,
+                used=used,
+                remaining=max(0, limit - used),
+                fair_use=bucket in FAIR_USE.get(tier, frozenset()),
+                resets_at=resets_at,
             )
         )
     return states

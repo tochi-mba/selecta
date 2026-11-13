@@ -80,3 +80,16 @@ export function jobAttention(jobs: Jobs | null): number {
     + jobs.failed_songs.length
     + Number(jobs.analysis.paused && jobs.analysis.left > 0);
 }
+
+/** S4-0092-09: the words a screen reader hears when Workspace starts needing attention, naming each
+ * blocker so nobody has to open Workspace to learn what stopped. Empty when nothing is wrong. */
+export function attentionWords(jobs: Jobs | null): string {
+  const count = jobAttention(jobs);
+  if (!jobs || count === 0) return '';
+  const parts: string[] = [];
+  if (jobs.storage_full) parts.push('storage is full');
+  if (jobs.analysis.paused && jobs.analysis.left > 0) parts.push(`analysis is paused with ${jobs.analysis.left} ${jobs.analysis.left === 1 ? 'song' : 'songs'} left`);
+  if (jobs.failed_songs.length) parts.push(`${jobs.failed_songs.length} ${jobs.failed_songs.length === 1 ? 'song' : 'songs'} failed`);
+  if (jobs.failed_seams.length) parts.push(`${jobs.failed_seams.length} ${jobs.failed_seams.length === 1 ? 'transition' : 'transitions'} failed`);
+  return `Workspace needs your attention: ${parts.join(', ')}.`;
+}

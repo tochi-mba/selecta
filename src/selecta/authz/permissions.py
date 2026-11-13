@@ -143,6 +143,11 @@ _DECLARED: tuple[Permission, ...] = (
         "Log and decide takedown notices, and restrict or restore a repeat infringer's uploads.",
         S,
     ),
+    Permission(
+        "business.pilots.create",
+        "Create a free pilot organisation with its venues and zones (ADR-0452).",
+        S,
+    ),
 )
 
 del R, C, S, D

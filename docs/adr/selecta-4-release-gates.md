@@ -4,7 +4,7 @@
 
 - **Proposed:** 2026-11-07.
 - **Baseline:** `main` `9b663f9f10212619f27ce67ce82f602347065cbd` (PR #25 and PR #26 already merged at review).
-- **Status:** 25 decisions **Proposed**; 250 tasks **Not started**; **0 Implemented / 0 Verified**.
+- **Status (2026-11-12, recounted from the [checklist](selecta-4-implementation-checklist.md) task lines):** 25 decisions **Accepted**; 250 tasks: **202 Implemented, 36 In progress, 12 Not started; 0 Verified**. Still NO-GO: every gate below is outstanding. (Created 2026-11-07 with 25 Proposed decisions and 250 Not started tasks.)
 - **Change scope:** Documentation only; no frontend, backend, audio, database, test or CI changes.
 - **History:** ADR-0001–0088, T/P/S3/S31 identities and their historical evidence remain unchanged.
 
@@ -39,7 +39,7 @@ Historical 3.1 status statements mentioning an open PR #25 are stale after its m
 
 **P2** secondary visual, alignment, wording or minor optimization: document disposition.
 
-**Decision Accepted** needs the actual owner decision; **Implemented** needs merged code with relevant automated tests; **Verified** needs real independently reviewed visual, AT, audio, user and performance evidence applicable to the task. A green CI or checkbox alone is never a release. All S4 work currently **Not started**.
+**Decision Accepted** needs the actual owner decision; **Implemented** needs merged code with relevant automated tests; **Verified** needs real independently reviewed visual, AT, audio, user and performance evidence applicable to the task. A green CI or checkbox alone is never a release. S4 work on 2026-11-12: 202 Implemented, 36 In progress, 12 Not started, 0 Verified.
 
 ## Release sign-off template
 
@@ -48,7 +48,7 @@ Historical 3.1 status statements mentioning an open PR #25 are stale after its m
 | Candidate commit | Not assigned |
 | Approved ADRs | None |
 | Implementing PRs | None |
-| 4.0 tasks Implemented / Verified | 0 / 0 |
+| 4.0 tasks Implemented / Verified | 202 / 0 (2026-11-12; 36 In progress, 12 Not started) |
 | CI and security | Not run for 4.0 |
 | Human/NVDA/audio acceptance | Not run |
 | Approved visual baselines | None |

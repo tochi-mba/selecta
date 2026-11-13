@@ -22,7 +22,8 @@ const PATHS = Object.fromEntries([...readFileSync('src/ui/Icon.tsx', 'utf8').mat
 async function open(page: Page, route: string, width: number, height = 900) {
   await page.setViewportSize({ width, height });
   await page.goto(route);
-  await expect(page.locator('main#main')).toBeVisible();
+  // a split route shows a busy loading shell first; measure the page once its own content has mounted
+  await expect(page.locator('main#main:not([aria-busy="true"])')).toBeVisible();
   await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
 }
 

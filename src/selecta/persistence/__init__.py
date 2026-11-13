@@ -25,7 +25,7 @@ import contextlib
 import os
 import secrets
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
@@ -110,16 +110,49 @@ def transaction(engine: Engine, workspace_id: str | None = None) -> Iterator[Con
     work (maintenance, the scheduler, webhooks, sign-in) passes `None`: the policy treats a
     transaction that names no workspace as a system transaction and lets it through. An empty
     id would read as "no workspace" too, so it is refused rather than widening the scope.
+
+    `after_commit(connection, callback)` runs `callback` once this transaction has committed, and
+    never if it rolls back: for caches that must only ever hold committed data.
     """
     if workspace_id is not None and not workspace_id:
         raise ValueError("workspace_id must be a workspace id or None, never empty")
+    callbacks: list[Callable[[], None]] = []
     with engine.begin() as connection:
-        if workspace_id is not None and is_postgres(connection):
-            connection.execute(
-                sa.text("SELECT set_config('app.workspace_id', :workspace, true)"),
-                {"workspace": workspace_id},
-            )
-        yield connection
+        connection.info[AFTER_COMMIT] = callbacks
+        connection.info[SCOPE] = {}
+        try:
+            if workspace_id is not None and is_postgres(connection):
+                connection.execute(
+                    sa.text("SELECT set_config('app.workspace_id', :workspace, true)"),
+                    {"workspace": workspace_id},
+                )
+            yield connection
+        finally:
+            # `info` lives with the pooled connection; this transaction's hooks end with it.
+            connection.info.pop(AFTER_COMMIT, None)
+            connection.info.pop(SCOPE, None)
+    for callback in callbacks:
+        callback()
+
+
+AFTER_COMMIT = "selecta.after_commit"
+SCOPE = "selecta.transaction_scope"
+
+
+def transaction_scope(connection: Connection) -> dict | None:
+    """A dict that lives exactly as long as `connection`'s `transaction()`, for values that
+    must not outlive it (uncommitted reads); None outside one."""
+    return connection.info.get(SCOPE)
+
+
+def after_commit(connection: Connection, callback: Callable[[], None]) -> bool:
+    """Run `callback` after `connection`'s `transaction()` commits. False (and nothing is
+    scheduled) when the connection isn't inside one."""
+    callbacks = connection.info.get(AFTER_COMMIT)
+    if callbacks is None:
+        return False
+    callbacks.append(callback)
+    return True
 
 
 def wall_clock() -> float:

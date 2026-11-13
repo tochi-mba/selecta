@@ -8,6 +8,7 @@ When the app stops, the input closes and this stops too, so nothing is left runn
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sys
 import threading
@@ -15,13 +16,14 @@ import time
 from collections import Counter
 from typing import TextIO
 
-from selecta import db, flags, mix
+from selecta import cache_care, db, flags, mix
 from selecta.config import load_settings
 from selecta.jobs import kill_tree_of_children, set_render_priority, take_app_input
 from selecta.seams import SeamRequest, SeamStore, request_from
-from selecta.stems import cache_bytes, largest_cache_bytes
+from selecta.stems import cache_room
 
 RELOAD_EVERY_SECONDS = 600.0
+TIDY_EVERY_SECONDS = 6 * 60 * 60.0
 
 
 def _mix_seams(store: SeamStore, settings):
@@ -41,9 +43,11 @@ def _mix_seams(store: SeamStore, settings):
     def next_seam() -> SeamRequest | None:
         mix.settle_chain(conn, store)
         waiting = next((request for request, status in pairs() if status == "none"), None)
+        if waiting is None:
+            return None  # r8d: nothing to make, so no need to walk the cache to measure it
         # a mix bigger than the limit would delete its own early seams to make room for later ones
-        limit = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
-        if waiting is not None and cache_bytes(settings) >= limit:
+        used, largest = cache_room(settings)
+        if used >= min(settings.effective_cache_cap_bytes, largest):
             return None
         return waiting
 
@@ -79,13 +83,15 @@ def _line_seams(store: SeamStore, settings):
         ]
 
     def next_seam() -> tuple[int, SeamRequest] | None:
-        limit = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
         for draft in mix.line_order(conn):
             mix.settle_chain(conn, store, draft)
             for request, status in pairs(draft):
                 if status == "none":
-                    # the same limit as the mix: it mustn't delete its own early seams to go on
-                    return None if cache_bytes(settings) >= limit else (draft, request)
+                    # the same limit as the mix: it mustn't delete its own early seams to go on.
+                    # r8d: measured only once there's something to make, in one walk of the cache
+                    used, largest = cache_room(settings)
+                    full = used >= min(settings.effective_cache_cap_bytes, largest)
+                    return None if full else (draft, request)
         return None
 
     def keep() -> set[str]:
@@ -147,11 +153,12 @@ def _preparer(store: SeamStore, settings):
     def next_job() -> SeamRequest | None:
         if state["ranked"] is None or time.monotonic() - state["at"] > RELOAD_EVERY_SECONDS:
             reload()
-        link = next_to_prepare(*state["ranked"], store.status, store.memory)
+        # r8d: one look at what's been rendered, not a disk check for every link and move
+        link = next_to_prepare(*state["ranked"], store.status_reader(), store.memory)
         if link is not None:
             return link
-        limit = min(settings.effective_cache_cap_bytes, largest_cache_bytes(settings))
-        if cache_bytes(settings) >= USE_OF_STORAGE * limit:
+        used, largest = cache_room(settings)
+        if used >= USE_OF_STORAGE * min(settings.effective_cache_cap_bytes, largest):
             return None
         request = next_transition(
             state["pairs"],
@@ -184,6 +191,49 @@ def _pinned_ready_seams(settings):
     return keys
 
 
+def _protecting(settings, keys):
+    """The seams the mix and the render line use, recorded each time they're asked for, so a prune
+    from any process (the app lowering the limit, a stem split) leaves them alone."""
+
+    def keep() -> set[str]:
+        found = keys()
+        cache_care.remember_protected(settings, found)
+        return found
+
+    return keep
+
+
+def _tidier(settings):
+    """Tidy the caches when the worker first has nothing to do, and every few hours after. It runs
+    beside the worker, never in its way: a seam the mix asks for meanwhile starts at once (a full
+    tidy of a library-sized home took about 16 s, mostly deleting and compacting)."""
+    state = {"at": float("-inf"), "thread": None}
+
+    def tidy() -> None:
+        running = state["thread"]
+        if running is not None and running.is_alive():
+            return
+        if time.monotonic() - state["at"] < TIDY_EVERY_SECONDS:
+            return
+        state["at"] = time.monotonic()
+        state["thread"] = threading.Thread(target=_tidy_once, args=(settings,), daemon=True)
+        state["thread"].start()
+
+    return tidy
+
+
+def _tidy_once(settings) -> None:
+    try:
+        swept = cache_care.tidy(settings)
+    except Exception:  # noqa: BLE001 - tidying must never stop the worker rendering
+        logging.getLogger(__name__).exception("Tidying the caches failed")
+        return
+    if swept.removed or swept.linked:
+        logging.getLogger(__name__).info(
+            "Tidied the caches: %s, %d clips shared", swept.removed, swept.linked
+        )
+
+
 def _read_requests(store: SeamStore, app_input: TextIO) -> None:
     for line in app_input:
         if line.strip():
@@ -203,16 +253,30 @@ def _read_requests(store: SeamStore, app_input: TextIO) -> None:
 def main() -> None:
     set_render_priority(False)
     settings = load_settings()
-    store = SeamStore(settings)
+    # with `core.durable_local_jobs` the app starts this with --durable: no input pipe, the
+    # work comes from the job store in the home, and it stops when the app's process does
+    durable = "--durable" in sys.argv
+    if durable:
+        from selecta.workers import local_host, local_seams
+
+        local_host.stop_with_parent()
+        store = local_seams.DurableSeamStore(settings, local_host.open_store(settings.home))
+    else:
+        store = SeamStore(settings)
     store.forget_unfinished()
     if "--prepare" in sys.argv and flags.on("render.spare_time"):
         store.next_idle_job = _preparer(store, settings)
-    app_input = take_app_input()
-    threading.Thread(target=_read_requests, args=(store, app_input), daemon=True).start()
+    if not durable:
+        app_input = take_app_input()
+        threading.Thread(target=_read_requests, args=(store, app_input), daemon=True).start()
     store.next_mix_seam, mix_keys, store.mix_moves = _mix_seams(store, settings)
     store.next_line_seam, line_keys, store.draft_moves = _line_seams(store, settings)
     pinned = _pinned_ready_seams(settings)
-    store.keep_for_now = lambda: mix_keys() | line_keys() | pinned()
+    store.keep_for_now = _protecting(settings, lambda: mix_keys() | line_keys() | pinned())
+    store.when_idle = _tidier(settings)
+    if durable:
+        local_seams.serve_worker(store)
+        return
     store.run_forever()
 
 

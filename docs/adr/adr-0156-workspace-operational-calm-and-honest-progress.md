@@ -1,7 +1,7 @@
 # ADR-0156 - Workspace calm: background progress, storage capacity and action-first status
 
 - **Decision:** Accepted by the repository owner on 2026-11-07; implementation and independent verification remain separately evidenced.
-- **Implementation:** 7/8 Implemented, 0/8 In progress, 1 Not started (source-level, PR #31).
+- **Implementation:** 7/8 Implemented, 1/8 In progress, 0 Not started (source-level, PR #31).
 - **Independent verification:** No (0/8).
 - **Programme/date/baseline:** Selecta immersive experience and microinteractions; 2026-11-07; main `525a49cee6b0a02cae7e71dbe3f336a0141ec2d7` (after merged PR #30).
 - **Priority / phase:** P1 / Workspace.
@@ -41,7 +41,7 @@ Prefer semantic, truthful feedback over cosmetic animation; static UI is better 
 5. **MI-0156-05 - Protect source-watch semantics.** Acceptance: Missing/unwatched folders never imply original file deletion. Required verification: Folder disconnect and re-add tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/WorkshopPanels.tsx`; `web/src/views/Workshop.test.tsx`; independent checks pending.**
 6. **MI-0156-06 - Specify diagnostics affordances.** Acceptance: Copy payload excludes names/paths and raw logs appear on demand. Required verification: Privacy allowlist and AT tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31 @ `89641b6a1b81`; evidence: `web/src/views/WorkshopPanels.tsx`; `web/src/views/Workshop.test.tsx`; independent checks pending.**
 7. **MI-0156-07 - Keep keyboard/mobile operations reachable.** Acceptance: Source forms and meters work under keyboard/zoom. Required verification: 320px and on-screen keyboard tests. **Implementation: Implemented; Verified: No; owner: Unassigned; PR/SHA: PR #31; evidence: runtime/source contract and mapped implementation evidence in `docs/adr/selecta-microinteraction-final-contracts.md`; applicable independent human/device/audio review remains open.**
-8. **MI-0156-08 - Measure operator recovery.** Acceptance: People resolve analysis/storage/source errors without coaching. Required verification: Injected error study with success denominator. **Implementation: Not started; Verified: No; owner: Unassigned; PR/SHA: -; evidence: Needs a person: run an injected-error study for analysis, storage and source errors with a success denominator (checked 2026-11-10; no human evidence recorded yet).**
+8. **MI-0156-08 - Measure operator recovery.** Acceptance: People resolve analysis/storage/source errors without coaching. Required verification: Injected error study with success denominator. **Implementation: In progress; Verified: No; owner: Unassigned; PR/SHA: feat/finish-checklists-2 @ `b779bd3c` (WIP, 2026-11-12); evidence: code part built on 2026-11-12: an injected-error sheet for analysis, storage and source errors with a success denominator, coaching and time, in `src/selecta/audit/mi_study_kit.py` (`python -m selecta.audit.mi_study_kit sheet|check|summary MI-0156-08`) and the study kit section of `docs/adr/selecta-microinteraction-verification-protocols.md`; `tests/test_mi_study_kit.py` 33/33 passed on 2026-11-12. Left In progress and unticked: the acceptance is the people's result, which code cannot produce, and ticking would drop the task from the owner runbook. Needs a person: run an injected-error study for analysis, storage and source errors with a success denominator, recorded in a kit record that passes `check`.**
 
 ## Shared invariants and negative cases
 

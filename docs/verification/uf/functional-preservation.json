@@ -1,0 +1,21 @@
+{
+  "about": "UF-0389-06: one row per preservation invariant after manual review of the candidate SHA. Checked by python -m selecta.audit.uf_human_logs.",
+  "tasks": [
+    "UF-0389-06"
+  ],
+  "key": "invariant",
+  "required": [
+    "no-unsolicited-pause",
+    "exact-ids",
+    "consent",
+    "ready-only",
+    "frozen-flac"
+  ],
+  "fields": [
+    "reviewer",
+    "date",
+    "sha",
+    "outcome"
+  ],
+  "entries": []
+}

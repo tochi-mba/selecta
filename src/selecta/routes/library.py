@@ -12,11 +12,9 @@ import threading
 import time
 from pathlib import Path
 
-import numpy as np
-from fastapi import HTTPException, Response
+from fastapi import HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
-from selecta import audio as audio_io
 from selecta import db, flags
 from selecta.api_common import (
     CAMELOT,
@@ -28,18 +26,20 @@ from selecta.api_common import (
     ScanRequest,
     SongCorrection,
     _counts,
-    _wav,
 )
 from selecta.config import ANALYSIS_VERSION
 from selecta.eta import analysis_line_left
-from selecta.library.relevance import match_label, relevance
+from selecta.library.relevance import match_label
 from selecta.library.scan import ScanStopped
+from selecta.library.search_cache import RankedSearches
 
 
 class BatchEntry(BaseModel):
     id: int
     # Snapshot visible when the action was offered; prevents stale edits.
     expected: bool
+    # restore_priority only: the processing priority this song had before the batch it undoes
+    priority: int | None = Field(default=None, ge=0, le=100)
 
 
 class BatchRequest(BaseModel):
@@ -55,6 +55,8 @@ def add_routes(app, ctx) -> None:
     settings = ctx.settings
     songs_in_line = ctx.songs_in_line
     store = ctx.store
+    # S4-0111-05: the same search over unchanged names is ranked once, not on every page or refresh
+    searches = RankedSearches()
 
     @app.post("/api/scan")
     def scan(body: ScanRequest) -> dict:
@@ -104,6 +106,12 @@ def add_routes(app, ctx) -> None:
         """Lyrics for every song that has none yet, unless lyric lookup is turned off, in which
         case nothing is sent anywhere."""
         if not flags.on("lyrics.lookup"):
+            return
+        work = getattr(ctx, "work", None)
+        if work is not None:  # core.durable_local_jobs: a job on the app's own thread
+            from selecta.workers.local_app import ask_for_lyrics
+
+            ask_for_lyrics(work)
             return
         subprocess.run(
             [sys.executable, "-m", "selecta.cli", "lyrics"],
@@ -229,12 +237,17 @@ def add_routes(app, ctx) -> None:
         All IDs and previously displayed values must still match. A concurrent
         scan, another tab or stale filtered list aborts the entire batch.
         """
-        if body.action not in {"prioritize", "deprioritize", "never", "allow"}:
+        actions = {"prioritize", "deprioritize", "restore_priority", "never", "allow"}
+        if body.action not in actions:
             raise HTTPException(400, "Unsupported batch action.")
         ids = [entry.id for entry in body.entries]
         if len(set(ids)) != len(ids) or any(song_id <= 0 for song_id in ids):
             raise HTTPException(400, "Select distinct valid song IDs.")
-        is_priority = body.action in {"prioritize", "deprioritize"}
+        # GP-0258-07: an Undo of a priority batch puts back each song's own earlier value
+        restoring = body.action == "restore_priority"
+        if restoring and any(entry.priority is None for entry in body.entries):
+            raise HTTPException(400, "Say which priority to put back for every song.")
+        is_priority = body.action in {"prioritize", "deprioritize", "restore_priority"}
         with connect() as conn:
             try:
                 conn.execute("BEGIN IMMEDIATE")
@@ -260,7 +273,16 @@ def add_routes(app, ctx) -> None:
                         raise HTTPException(
                             409, "A song changed since selection. Refresh and try again."
                         )
-                if is_priority:
+                previous = [
+                    {"id": song_id, "priority": by_id[song_id]["processing_priority"]}
+                    for song_id in ids
+                ]
+                if restoring:
+                    conn.executemany(
+                        "UPDATE songs SET processing_priority=? WHERE id=?",
+                        [(entry.priority, entry.id) for entry in body.entries],
+                    )
+                elif is_priority:
                     wanted = 100 if body.action == "prioritize" else 0
                     conn.executemany(
                         "UPDATE songs SET processing_priority=? WHERE id=?",
@@ -278,7 +300,10 @@ def add_routes(app, ctx) -> None:
                         (json.dumps(sorted(current_never)),),
                     )
                 conn.commit()
-                return {"updated": len(ids), "action": body.action, "ids": ids}
+                answer = {"updated": len(ids), "action": body.action, "ids": ids}
+                if is_priority:
+                    answer["previous"] = previous
+                return answer
             except Exception:
                 conn.rollback()
                 raise
@@ -329,7 +354,7 @@ def add_routes(app, ctx) -> None:
                 "reason": row["set_aside_reason"] or "Set aside as probably not music.",
             }
         if row["analysis_error"]:
-            return {"status": "needs_attention", "reason": "Selecta couldn’t analyse this file."}
+            return {"status": "needs_attention", "reason": "SelectaDJ couldn’t analyse this file."}
         if row["analysis_version"] != ANALYSIS_VERSION:
             if song in working:
                 return {"status": "processing", "reason": "Being analysed now."}
@@ -342,7 +367,7 @@ def add_routes(app, ctx) -> None:
             return {"status": "analysed_incomplete", "reason": "Still looking up its lyrics."}
         return {
             "status": "analysed_incomplete",
-            "reason": "No timed lyrics, so Selecta can’t tell where the singing is, "
+            "reason": "No timed lyrics, so SelectaDJ can’t tell where the singing is, "
             "and won’t risk cutting off a line.",
         }
 
@@ -367,18 +392,22 @@ def add_routes(app, ctx) -> None:
             # Search locally across exact recording IDs, titles, artist credits,
             # versions, accent variants and conservatively matched typos.
             # Keep explicit sort choices and cursor pagination intact.
-            ranking = "music_relevance(s.id,s.artist,s.title)"
+            ranking = "h.rank"
+            joins = ""
             if q:
-                # GP-0251-08: the count and page share one score per song.
-                scores: dict[int, int | None] = {}
-
-                def score(song_id: int, artist: str | None, title: str | None) -> int | None:
-                    if song_id not in scores:
-                        scores[song_id] = relevance(q, song_id, artist, title)
-                    return scores[song_id]
-
-                conn.create_function("music_relevance", 3, score, deterministic=True)
-                conditions = [f"{ranking} IS NOT NULL", "s.duplicate_of IS NULL"]
+                # GP-0251-08: the count and page share one score per song. MI-0162-04: every
+                # song is ranked in one pass and only the matches go to a table of this
+                # connection's own, so SQLite joins them instead of calling back per row.
+                # S4-0111-05: a ranking is kept while the library's names are exactly the same.
+                scores = searches.rank(conn, q)
+                conn.execute(
+                    "CREATE TEMP TABLE IF NOT EXISTS search_hits("
+                    "song_id INTEGER PRIMARY KEY, rank INTEGER NOT NULL)"
+                )
+                conn.execute("DELETE FROM temp.search_hits")
+                conn.executemany("INSERT INTO temp.search_hits VALUES(?,?)", scores.items())
+                joins = "JOIN temp.search_hits h ON h.song_id=s.id "
+                conditions = ["s.duplicate_of IS NULL"]
                 if sort == "title":
                     order = ranking
             else:
@@ -405,15 +434,25 @@ def add_routes(app, ctx) -> None:
                 conditions += ["s.is_music=1", "s.processing_priority=100"]
             else:
                 conditions.append("s.is_music=1")
+            search_join = joins
             joins = (
-                "FROM songs s LEFT JOIN analysis a ON a.song_id=s.id "
+                f"FROM songs s {joins}LEFT JOIN analysis a ON a.song_id=s.id "
                 "LEFT JOIN lyrics l ON l.song_id=s.id "
                 "LEFT JOIN song_overrides o ON o.song_id=s.id "
             )
             where = " AND ".join(conditions)
-            total = conn.execute(f"SELECT COUNT(*) {joins} WHERE {where}", params).fetchone()[0]  # noqa: S608
+            # SF-0235-05: only the analysis filters read the joined tables, so every other count
+            # is answered from the songs_listed index alone.
+            counted = (
+                joins
+                if state in {"ready", "not_yet", "attention"}
+                else (f"FROM songs s {search_join}")
+            )
+            total = conn.execute(f"SELECT COUNT(*) {counted} WHERE {where}", params).fetchone()[0]  # noqa: S608
             page_params = list(params)
-            page_where = where
+            # Nearly every song is music, so the is_music index narrows nothing; the unary plus
+            # keeps SQLite walking the sort-order index and stopping after one page instead.
+            page_where = where.replace("s.is_music=1", "+s.is_music=1")
             if after:
                 # Cursor values are made by this endpoint: [sort value, stable song ID].
                 # Reject malformed or wrong-sort markers instead of allowing a 500, a
@@ -437,8 +476,10 @@ def add_routes(app, ctx) -> None:
                     or (isinstance(value, float) and not math.isfinite(value))
                 ):
                     raise HTTPException(400, "That page marker isn't valid.")
-                page_where += f" AND ({order}, s.id) > (?, ?)"
-                page_params += [value, last]
+                # The same as ({order}, s.id) > (value, last), written so SQLite can seek the
+                # sort-order index to the marker instead of scanning every earlier song.
+                page_where += f" AND {order} >= ? AND ({order} > ? OR s.id > ?)"
+                page_params += [value, value, last]
             rows = conn.execute(
                 "SELECT s.id,s.artist,s.title,s.genre,s.duration,s.is_music,s.set_aside_reason,"  # noqa: S608
                 "s.path,s.processing_priority,s.music_override,"
@@ -549,7 +590,7 @@ def add_routes(app, ctx) -> None:
         with connect() as conn:
             song = analysed_or_404(conn, song_id)
             lyric = conn.execute("SELECT status FROM lyrics WHERE song_id=?", (song_id,)).fetchone()
-        peaks = load_features(settings, song_id)["peaks"].astype(float)
+        peaks = load_features(settings, song_id, ("peaks",))["peaks"].astype(float)
         bars = song.bar_times
         return {
             "id": song.id,
@@ -585,12 +626,37 @@ def add_routes(app, ctx) -> None:
         }
 
     @app.get("/api/songs/{song_id}/audio")
-    def song_audio(song_id: int) -> Response:
-        """The whole song, from the one decode path, at the level it plays at in a mix."""
+    def song_audio(song_id: int, request: Request) -> Response:
+        """The whole song, from the one decode path, at the level it plays at in a mix. Tagged by
+        its source file (r10), so a browser holding it gets a 304, and decoded once into the
+        render cache, so a repeat or a Range request is a file read (see `song_audio`)."""
+        from selecta import song_audio as cache
+        from selecta.routes.files import REVALIDATE, _matches, audio_file
+        from selecta.stems import mark_used
+
         with connect() as conn:
             song = analysed_or_404(conn, song_id)
-        audio = audio_io.decode(song.path) * float(10.0 ** (song.gain_db / 20.0))
-        return Response(_wav(np.clip(audio, -1.0, 1.0)), media_type="audio/wav")
+        try:
+            key = cache.song_key(song_id, song.path, song.gain_db)
+        except OSError as problem:
+            raise HTTPException(404, "That song's file can't be found.") from problem
+        etag = cache.etag_for(key)
+        if _matches(request.headers.get("if-none-match"), etag):
+            return Response(status_code=304, headers={"ETag": etag, "Cache-Control": REVALIDATE})
+        cached, data = cache.cached_file(settings, song_id, song.path, song.gain_db, key)
+        if cached is not None and (data is None or request.headers.get("range")):
+            try:
+                response = audio_file(request, cached, "audio/wav", etag=etag)
+                mark_used(cached)  # heard just now, so the cache keeps it over ones nobody plays
+                return response
+            except OSError:
+                pass  # pruned by another process a moment ago: decode it here instead
+        if data is None:
+            data = cache.wav_bytes(song.path, song.gain_db)
+        headers = {"ETag": etag, "Cache-Control": REVALIDATE}
+        if cached is not None:
+            headers["Accept-Ranges"] = "bytes"
+        return Response(data, media_type="audio/wav", headers=headers)
 
     @app.post("/api/songs/{song_id}/analyse")
     def analyse_one(song_id: int) -> dict:

@@ -45,7 +45,7 @@ export function FirstHandoff({ now, mix }: { now: NowState; mix: MixItem[] }) {
   return (
     <aside className="notice first-handoff" role="status" aria-label="Your first hand-off" data-first-handoff="">
       <p>
-        That was your first Selecta hand-off: <span dir="auto">{heard.from}</span> into <span dir="auto">{heard.into}</span>, joined
+        That was your first SelectaDJ hand-off: <span dir="auto">{heard.from}</span> into <span dir="auto">{heard.into}</span>, joined
         as one finished transition instead of a gap.
       </p>
       <button type="button" className="quiet" onClick={() => setGone(true)}>Got it</button>

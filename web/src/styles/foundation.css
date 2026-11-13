@@ -2,6 +2,8 @@
 
 /* the main action on any page, in the brand's lime in both themes */
 .primary, a.button.primary, button.primary[aria-pressed='true'] { background: var(--primary-fill); color: var(--primary-ink); border-color: var(--primary-edge); }
+/* P0022: hover reads in both themes; the light theme's edge is already ink, so the generic border hover showed nothing */
+button.primary:hover:not(:disabled), a.button.primary:hover { background: color-mix(in srgb, var(--primary-fill) 88%, var(--primary-ink)); }
 .lyrics .current-word { color: var(--word-ink); background: var(--word-fill); box-shadow: 0 0 0 0.08em var(--word-fill); border-radius: var(--radius-hair); text-shadow: 0 0 0.8em var(--word-glow); }
 
 /* a panel inside a drawer doesn't need a second frame or a second heading */

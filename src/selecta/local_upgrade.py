@@ -19,7 +19,8 @@ import threading
 from datetime import UTC, datetime
 from pathlib import Path
 
-LOCAL_SCHEMA_VERSION = 1
+# 3: the Library sort-order indexes and the My Mixes drafts_listed / drafts_in_line indexes
+LOCAL_SCHEMA_VERSION = 3
 FOLDER = "upgrade-backups"
 KEEP = 5
 
@@ -65,6 +66,9 @@ def backup_before_migrating(conn: sqlite3.Connection, path: Path) -> Path | None
                     raise UpgradeBackupError(f"The copy at {copy} failed its integrity check.")
             finally:
                 dest.close()
+        except UpgradeBackupError:
+            copy.unlink(missing_ok=True)  # a damaged copy must never count as a kept one
+            raise
         except (sqlite3.Error, OSError) as problem:
             copy.unlink(missing_ok=True)
             raise UpgradeBackupError(

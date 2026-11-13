@@ -42,7 +42,8 @@ GUEST: dict[tuple[str, str], dict | None] = {
 }
 # Reached with no cookie at all (joining) or with the display's own cookie.
 ANONYMOUS = {("POST", "/api/guest/join")}
-DISPLAY = {("POST", "/api/display/pairings"), ("GET", "/api/display/view")}
+DISPLAY = {("POST", "/api/display/pairings"), ("GET", "/api/display/view"),
+           ("DELETE", "/api/display/pairing")}
 
 
 def _join(party, code: str) -> tuple[TestClient, dict]:
@@ -158,6 +159,52 @@ def test_a_display_token_only_reads(two_rooms):
         screen.cookies.set("selecta_guest", token)
         answer = screen.get(f"/api/guest/rooms/{room_id}")
         assert answer.status_code == 401 and answer.json()["detail"]["code"] == "not_a_guest"
+
+
+def test_display_disconnect_requires_its_own_cookie_and_cannot_unpair_another_room(two_rooms):
+    party = two_rooms["party"]
+    alice_screen, bob_screen = party.guest_client(), party.guest_client()
+    alice_code = alice_screen.post("/api/display/pairings")
+    bob_code = bob_screen.post("/api/display/pairings")
+    assert alice_code.status_code == bob_code.status_code == 201
+
+    alice_pair = party.client.post(
+        f"/api/rooms/{two_rooms['alice_room']}/displays", headers=auth(ALICE),
+        json={"pairing_code": alice_code.json()["pairing_code"]},
+    )
+    bob_pair = party.client.post(
+        f"/api/rooms/{two_rooms['bob_room']}/displays", headers=auth(BOB),
+        json={"pairing_code": bob_code.json()["pairing_code"]},
+    )
+    assert alice_pair.status_code == bob_pair.status_code == 200
+    alice_display_id = alice_pair.json()["screens"][0]["id"]
+    assert alice_screen.get("/api/display/view").json()["state"] == "paired"
+    assert bob_screen.get("/api/display/view").json()["state"] == "paired"
+
+    # The host's individually-targeted DELETE remains workspace-scoped too.
+    foreign_host = party.client.delete(
+        f"/api/rooms/{two_rooms['alice_room']}/displays/{alice_display_id}",
+        headers=auth(BOB),
+    )
+    assert foreign_host.status_code == 404, foreign_host.text
+
+    stranger = party.guest_client()
+    no_cookie = stranger.delete("/api/display/pairing")
+    assert no_cookie.status_code == 404
+    assert no_cookie.json()["detail"]["code"] == "no_such_pairing"
+    bad_origin = alice_screen.delete(
+        "/api/display/pairing", headers={"Origin": "https://untrusted.test"},
+    )
+    assert bad_origin.status_code == 403
+    assert alice_screen.get("/api/display/view").json()["state"] == "paired"
+
+    # A screen can revoke only the token it holds, not the other screen's pairing.
+    disconnected = alice_screen.delete("/api/display/pairing")
+    assert disconnected.status_code == 200, disconnected.text
+    assert disconnected.json() == {"disconnected": True}
+    assert alice_screen.cookies.get("selecta_display") is None
+    assert alice_screen.get("/api/display/view").status_code == 404
+    assert bob_screen.get("/api/display/view").json()["state"] == "paired"
 
 
 def test_only_premium_opens_a_room(party):

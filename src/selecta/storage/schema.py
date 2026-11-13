@@ -77,6 +77,9 @@ assets = sa.Table(
     sa.Column("created_at", Epoch, nullable=False),
     sa.Column("deleted_at", Epoch),
     sa.Column("physical_delete_after", Epoch),
+    # Who uploaded it (ADR-0442): in an organisation, staff uploads keep their uploader; a person
+    # who has since left shows as "Former member". Empty for rows from before it was recorded.
+    sa.Column("uploaded_by", Id, nullable=True),
     sa.CheckConstraint("size > 0", name="size"),
     sa.Index(None, "workspace_id", "sha256"),
 )

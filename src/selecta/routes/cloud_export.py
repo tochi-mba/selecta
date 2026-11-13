@@ -103,7 +103,9 @@ def install_routes(
                         user_flag_preferences.c.enabled,
                         user_flag_preferences.c.updated_at,
                     ).where(user_flag_preferences.c.user_id == principal.user.id)
-                ).mappings().all()
+                )
+                .mappings()
+                .all()
                 if not str(row["flag_id"]).startswith(lucy_cloud.PREFIX)
             ]
             lucy_choices = lucy_cloud.choices(conn, principal.user.id)
@@ -122,20 +124,26 @@ def install_routes(
                     )
                     .where(devices.c.workspace_id == workspace.id)
                     .order_by(devices.c.created_at, devices.c.id)
-                ).mappings().all()
+                )
+                .mappings()
+                .all()
             ]
-            session = conn.execute(
-                select(
-                    playback_sessions.c.mix_revision_id,
-                    playback_sessions.c.song_index,
-                    playback_sessions.c.offset_ms,
-                    playback_sessions.c.state,
-                    playback_sessions.c.updated_at,
-                ).where(playback_sessions.c.workspace_id == workspace.id)
-            ).mappings().first()
+            session = (
+                conn.execute(
+                    select(
+                        playback_sessions.c.mix_revision_id,
+                        playback_sessions.c.song_index,
+                        playback_sessions.c.offset_ms,
+                        playback_sessions.c.state,
+                        playback_sessions.c.updated_at,
+                    ).where(playback_sessions.c.workspace_id == workspace.id)
+                )
+                .mappings()
+                .first()
+            )
 
         temp_dir = Path(tempfile.mkdtemp(prefix="selecta-account-export-"))
-        archive_path = temp_dir / "selecta-account-export.zip"
+        archive_path = temp_dir / "selectadj-account-export.zip"
         exported_assets: list[dict[str, Any]] = []
 
         @contextmanager
@@ -191,8 +199,7 @@ def install_routes(
                         )
 
                     archive_name = (
-                        f"originals/{asset_id}-"
-                        f"{_safe_filename(row['display_name'] or 'audio')}"
+                        f"originals/{asset_id}-{_safe_filename(row['display_name'] or 'audio')}"
                     )
                     archive.write(local_path, archive_name)
                     local_path.unlink(missing_ok=True)
@@ -265,7 +272,7 @@ def install_routes(
         return FileResponse(
             archive_path,
             media_type="application/zip",
-            filename="selecta-account-export.zip",
+            filename="selectadj-account-export.zip",
             background=BackgroundTask(shutil.rmtree, temp_dir, ignore_errors=True),
         )
 

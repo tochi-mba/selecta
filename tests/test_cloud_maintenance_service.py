@@ -52,6 +52,7 @@ def test_every_core_cloud_task_runs_cleanly_and_missing_secrets_are_named(sqlite
     plan = cloud_plan(sqlite_engine, env={})
     names = {task.name for task in plan.tasks}
     assert names == {
+        "business.zone_clock",
         "actions",
         "reservations",
         "lucy_runs",
@@ -71,7 +72,11 @@ def test_every_core_cloud_task_runs_cleanly_and_missing_secrets_are_named(sqlite
         "derived_eviction",
         "autoscale",
         "backup_freshness",
+        "dmca_renewal",
+        "emails",
     }
+    assert "SELECTA_EMAIL_PROVIDER" in plan.disabled["emails"]
+    assert "SELECTA_DMCA_AGENT_REGISTERED_ON" in plan.disabled["dmca_renewal"]
     assert "SELECTA_MODAL_APP" in plan.disabled["autoscale"]
     assert "SELECTA_STRIPE_SECRET_KEY" in plan.disabled["stripe_events"]
     copy = Service(sqlite_engine, None, plan, schedule=Schedule(**FAST))
@@ -97,6 +102,10 @@ def test_secrets_switch_the_external_tasks_on(sqlite_engine, monkeypatch):
         "SELECTA_BACKUP_BUCKET": "dumps",
         "SELECTA_BACKUP_ACCESS_KEY_ID": "rk",
         "SELECTA_BACKUP_SECRET_ACCESS_KEY": "rs",
+        "SELECTA_DMCA_AGENT_REGISTERED_ON": "2026-11-12",
+        "SELECTA_EMAIL_PROVIDER": "resend",
+        "SELECTA_EMAIL_API_KEY": "re_test_x",
+        "SELECTA_EMAIL_FROM": "hello@example.com",
     }
     plan = cloud_plan(sqlite_engine, env=env)
     assert plan.disabled == {}
@@ -109,6 +118,7 @@ def test_secrets_switch_the_external_tasks_on(sqlite_engine, monkeypatch):
         "derived_eviction",
         "export_expiry",
         "autoscale",
+        "dmca_renewal",
     } <= {task.name for task in plan.tasks}
 
 

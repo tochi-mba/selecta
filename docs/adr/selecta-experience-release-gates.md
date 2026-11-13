@@ -1,6 +1,6 @@
 # Selecta experience-first - independent release gates (NO-GO)
 
-**Decision:** NO-GO for release of proposed new experience. **21 Proposed decisions, 105 newly specified tasks Not started, 0 Implemented, 0 Verified.** This documents criteria only; no new runtime implementation or tests have run in this PR.
+**Decision:** NO-GO for release of proposed new experience. **Status 2026-11-12 (recounted from the [checklist](selecta-experience-implementation-checklist.md) task lines): 21 Accepted decisions; 105 tasks: 91 Implemented, 4 In progress, 7 Not started, 3 Superseded; 51 Verified.** Still NO-GO: the gates below are outstanding. (Created 2026-11-07 as criteria only, with 21 Proposed decisions and 105 tasks Not started.)
 
 | Gate | Required evidence | Status |
 |---|---|---|
@@ -24,4 +24,4 @@
 
 **Proposed usability research targets, not observed Selecta results:** ≥90% core task completion in representative uncoached trials (record numerator/denominator and limitations), clear current/draft/preview comprehension, responsiveness assessed with INP reference 200ms *where that metric is meaningful*, and audible quality reviewed by listeners. DSP latency is not the same as INP.
 
-**No-go is not an assertion that the existing app is broken.** This programme's new experience has not been implemented or evaluated. A docs merge, green CI or synthetic screenshot never proves it has shipped. [Evidence ledger](selecta-experience-evidence.md) · [status reconciliation](selecta-experience-status-reconciliation.md) · [Playwright visual guidance](https://playwright.dev/docs/test-snapshots) · [WCAG 2.2](https://www.w3.org/TR/WCAG22/).
+**No-go is not an assertion that the existing app is broken.** This programme's new experience is mostly implemented (91/105) but not yet evaluated by a person against these gates. A docs merge, green CI or synthetic screenshot never proves it has shipped. [Evidence ledger](selecta-experience-evidence.md) · [status reconciliation](selecta-experience-status-reconciliation.md) · [Playwright visual guidance](https://playwright.dev/docs/test-snapshots) · [WCAG 2.2](https://www.w3.org/TR/WCAG22/).

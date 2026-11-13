@@ -24,6 +24,8 @@
 .library-summary b { color: var(--text); font-variant-numeric: tabular-nums; }
 /* LX-0355-07: the set-aside count is a button, so it gets at least a 24px target like any other */
 .library-summary .library-summary-link { display: inline-flex; align-items: center; min-height: 24px; }
+/* a flex box drops the space after the count, so it read "1set aside" (owner-delegated visual check 2026-11-12) */
+.library-summary .library-summary-link b { margin-inline-end: var(--space-1); }
 .library-find { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
 .library-find .search-field { flex: 1 1 260px; }
 .library-density button { min-height: var(--control-height); padding-inline: var(--space-3); font-size: var(--text-sm); }
@@ -48,7 +50,47 @@
   padding: var(--row-pad) var(--space-hair);
   /* a long list only lays out what's near the screen, and stays one real list for screen readers */
   content-visibility: auto;
-  contain-intrinsic-size: auto 72px;
+  /* contain-intrinsic-size sizes the content box, so the row's padding and bottom rule come off the
+     estimate (style.css .song-row: 1px border-bottom) */
+  contain-intrinsic-size: auto calc(var(--library-row-estimate) - 2 * var(--row-pad) - 1px);
+}
+/* The height a row not drawn yet stands in at, as a whole row (border box). Compact list rows were
+   re-measured after their motif moved beside the title (88/131/175px against 126/169/221px comfortable,
+   22 to 30% shorter). Measured in Edge on
+   2026-11-12 (the median row of tests/e2e_server.py's library, e2e/library-row-estimate.e2e.ts) at each
+   breakpoint the row's layout changes (four columns over 1024px, name and actions side by side to 621px,
+   everything stacked at 620px and under), in both densities and both layouts. An estimate
+   far off the real height makes rows jump as they come into view, and scroll anchoring has to chase it.
+   `auto` keeps a drawn row's real size once it has been seen, so only rows never drawn use these.
+   Specificity: the compact and card selectors outrank the plain one, and the narrower media blocks come
+   later, so each pair below wins only where it should. */
+.library-rows, .skeleton-library { --library-row-estimate: 126px; }
+:root[data-density='compact'] :is(.library-rows, .skeleton-library) { --library-row-estimate: 88px; }
+.library-rows.library-cards { --library-row-estimate: 230px; }
+:root[data-density='compact'] .library-rows.library-cards { --library-row-estimate: 222px; }
+@media (max-width: 1024px) {
+  .library-rows, .skeleton-library { --library-row-estimate: 169px; }
+  :root[data-density='compact'] :is(.library-rows, .skeleton-library) { --library-row-estimate: 131px; }
+  .library-rows.library-cards { --library-row-estimate: 238px; }
+  :root[data-density='compact'] .library-rows.library-cards { --library-row-estimate: 230px; }
+}
+@media (max-width: 620px) {
+  .library-rows, .skeleton-library { --library-row-estimate: 221px; }
+  :root[data-density='compact'] :is(.library-rows, .skeleton-library) { --library-row-estimate: 175px; }
+  .library-rows.library-cards { --library-row-estimate: 234px; }
+  :root[data-density='compact'] .library-rows.library-cards { --library-row-estimate: 226px; }
+}
+/* Compact Library rows (finding 2026-11-12: compact was 118px against 126px, barely denser). The song's
+   motif sits beside its title instead of above it, a little smaller, so a one-line title takes one
+   line. Comfortable keeps the motif above the title. */
+:root[data-density='compact'] .library-rows:not(.library-cards) button.song-open { display: inline-flex; align-items: center; gap: var(--space-1); }
+:root[data-density='compact'] .library-rows:not(.library-cards) button.song-open .song-motif { width: 20px; height: 20px; margin: 0; }
+:root[data-density='compact'] .library-rows:not(.library-cards) button.song-open b { min-width: 0; }
+/* The compact density shrinks gaps, never the reachable touch targets of a song or its actions. */
+@media (pointer: coarse) {
+  .library-rows .song-row button.song-open,
+  .library-rows .song-row .song-actions button { min-height: 44px; }
+  .library-rows .song-row .song-actions button { min-width: 44px; }
 }
 /* a row with its menu open is lifted over the rows after it: each row is its own stacking context
    (content-visibility, and the dimmed Never play row's opacity), so without this the next row paints over the menu */

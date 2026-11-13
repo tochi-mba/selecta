@@ -36,8 +36,9 @@ class CommitError(Exception):
 
 
 def _conversation_of(conn: sqlite3.Connection, revision: dict) -> str | None:
-    row = conn.execute("SELECT conversation_id FROM lucy_proposals WHERE id=?",
-                       (revision["proposal"],)).fetchone()
+    row = conn.execute(
+        "SELECT conversation_id FROM lucy_proposals WHERE id=?", (revision["proposal"],)
+    ).fetchone()
     return row["conversation_id"] if row else None
 
 
@@ -80,11 +81,13 @@ def issue(conn: sqlite3.Connection, app: Any, revision_id: str, digest: str, act
     if action not in ACTIONS:
         raise CommitError("Choose to save as a draft, or to save and play.", "bad_action", 400)
     revision = proposals.get_revision(conn, revision_id)
-    current = conn.execute("SELECT current_revision FROM lucy_proposals WHERE id=?",
-                           (revision["proposal"],)).fetchone()
+    current = conn.execute(
+        "SELECT current_revision FROM lucy_proposals WHERE id=?", (revision["proposal"],)
+    ).fetchone()
     if current is None or current["current_revision"] != revision_id:
-        raise CommitError("Only the current revision can be approved. Make this one current "
-                          "first.", "not_current")
+        raise CommitError(
+            "Only the current revision can be approved. Make this one current first.", "not_current"
+        )
     if digest != revision["hash"]:
         raise CommitError("This revision changed since you looked at it.", "stale_revision")
     checked = preflight(conn, app, revision)
@@ -123,17 +126,21 @@ def _items_of(snap: dict) -> list[tuple[int, str | None, int]]:
         if index:
             settings = snap["seams"][index - 1].get("settings") or {}
             expected = snap["seams"][index - 1]["key"]
-            if request_from(snap["songs"][index - 1]["song_id"], song["song_id"],
-                            settings).key != expected:
-                raise CommitError("A transition's settings don't match what was reviewed.",
-                                  "seam_mismatch")
+            if (
+                request_from(snap["songs"][index - 1]["song_id"], song["song_id"], settings).key
+                != expected
+            ):
+                raise CommitError(
+                    "A transition's settings don't match what was reviewed.", "seam_mismatch"
+                )
             seam = json.dumps(settings) if settings else None
         items.append((song["song_id"], seam, 1 if song.get("locked") else 0))
     return items
 
 
-def commit(conn: sqlite3.Connection, app: Any, token: str, key: str,
-           confirm_play: bool = False) -> dict:
+def commit(
+    conn: sqlite3.Connection, app: Any, token: str, key: str, confirm_play: bool = False
+) -> dict:
     if not key or len(key) > 100:
         raise CommitError("A commit needs an idempotency key.", "bad_key", 400)
     known = conn.execute("SELECT * FROM lucy_commits WHERE idempotency_key=?", (key,)).fetchone()
@@ -154,15 +161,24 @@ def commit(conn: sqlite3.Connection, app: Any, token: str, key: str,
         conn.commit()
     conn.execute("BEGIN IMMEDIATE")
     try:
-        used = conn.execute("UPDATE lucy_approvals SET used=1 WHERE token=? AND used=0",
-                            (token,)).rowcount
+        used = conn.execute(
+            "UPDATE lucy_approvals SET used=1 WHERE token=? AND used=0", (token,)
+        ).rowcount
         if not used:
             raise CommitError("That approval was already used.", "used_token", 409)
         conn.execute(
             "INSERT INTO lucy_commits(idempotency_key,revision_id,hash,action,status,result,"
             "created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)",
-            (key, revision["id"], approval["hash"], approval["action"], "pending", "{}", stamp,
-             stamp),
+            (
+                key,
+                revision["id"],
+                approval["hash"],
+                approval["action"],
+                "pending",
+                "{}",
+                stamp,
+                stamp,
+            ),
         )
         conn.commit()
     except BaseException:
@@ -171,39 +187,56 @@ def commit(conn: sqlite3.Connection, app: Any, token: str, key: str,
     conversation = _conversation_of(conn, revision)
     snap = revision["snapshot"]
     checked = preflight(conn, app, revision)
-    current = conn.execute("SELECT current_revision FROM lucy_proposals WHERE id=?",
-                           (revision["proposal"],)).fetchone()
+    current = conn.execute(
+        "SELECT current_revision FROM lucy_proposals WHERE id=?", (revision["proposal"],)
+    ).fetchone()
     if current is None or current["current_revision"] != revision["id"]:
         checked["problems"].append("The proposal moved on to a newer revision.")
     if checked["problems"]:
-        return _finish(conn, key, conversation, "failed", None, {"problems":
-                                                                checked["problems"]})
+        return _finish(conn, key, conversation, "failed", None, {"problems": checked["problems"]})
     try:
         items = _items_of(snap)
     except CommitError as problem:
         return _finish(conn, key, conversation, "failed", None, {"problems": [str(problem)]})
     draft = mix.create_draft(conn, snap["title"], items)
-    conn.execute("UPDATE drafts SET ready_only=? WHERE id=?",
-                 (1 if snap.get("ready_only") else 0, draft))
+    conn.execute(
+        "UPDATE drafts SET ready_only=? WHERE id=?", (1 if snap.get("ready_only") else 0, draft)
+    )
     conn.commit()
     name = mix.mix_name(conn, draft)
     played = False
     if approval["action"] == "draft_and_play":
         problems = readiness.revalidate(conn, app.store, snap, catalog.load(conn, app).songs)
         if problems:
-            return _finish(conn, key, conversation, "committed", draft,
-                           {"name": name, "played": False,
-                            "problems": ["Saved, but not played: " + problems[0]]})
+            return _finish(
+                conn,
+                key,
+                conversation,
+                "committed",
+                draft,
+                {
+                    "name": name,
+                    "played": False,
+                    "problems": ["Saved, but not played: " + problems[0]],
+                },
+            )
         mix.play_draft(conn, draft)
         played = True
         if hasattr(app, "wake_the_worker"):
             app.wake_the_worker()
-    return _finish(conn, key, conversation, "committed", draft,
-                   {"name": name, "played": played, "items": [list(i) for i in items]})
+    return _finish(
+        conn,
+        key,
+        conversation,
+        "committed",
+        draft,
+        {"name": name, "played": played, "items": [list(i) for i in items]},
+    )
 
 
-def _finish(conn, key: str, conversation: str | None, status: str, draft: int | None,
-            result: dict) -> dict:
+def _finish(
+    conn, key: str, conversation: str | None, status: str, draft: int | None, result: dict
+) -> dict:
     conn.execute(
         "UPDATE lucy_commits SET status=?, draft_id=?, result=?, updated_at=? "
         "WHERE idempotency_key=?",
@@ -212,9 +245,18 @@ def _finish(conn, key: str, conversation: str | None, status: str, draft: int | 
     conn.commit()
     row = conn.execute("SELECT * FROM lucy_commits WHERE idempotency_key=?", (key,)).fetchone()
     if conversation:
-        events.append(conn, conversation, "commit.updated",
-                      {"key": key, "status": status, "draft_id": draft,
-                       "name": result.get("name"), "played": bool(result.get("played"))})
+        events.append(
+            conn,
+            conversation,
+            "commit.updated",
+            {
+                "key": key,
+                "status": status,
+                "draft_id": draft,
+                "name": result.get("name"),
+                "played": bool(result.get("played")),
+            },
+        )
     return _shape(row, False)
 
 
@@ -234,17 +276,34 @@ def reconcile(conn: sqlite3.Connection, row: sqlite3.Row) -> sqlite3.Row:
         wanted = json.dumps([list(item) for item in _items_of(revision["snapshot"])])
     except CommitError:
         wanted = None
-    found = conn.execute(
-        "SELECT id, name FROM drafts WHERE items=? ORDER BY id DESC LIMIT 1", (wanted,)
-    ).fetchone() if wanted else None
+    found = (
+        conn.execute(
+            "SELECT id, name FROM drafts WHERE items=? ORDER BY id DESC LIMIT 1", (wanted,)
+        ).fetchone()
+        if wanted
+        else None
+    )
     if found is not None:
-        _finish(conn, row["idempotency_key"], None, "committed", found["id"],
-                {"name": found["name"], "played": False, "reconciled": True})
+        _finish(
+            conn,
+            row["idempotency_key"],
+            None,
+            "committed",
+            found["id"],
+            {"name": found["name"], "played": False, "reconciled": True},
+        )
     else:
-        _finish(conn, row["idempotency_key"], None, "failed", None,
-                {"problems": ["Selecta stopped before saving; nothing was saved."]})
-    return conn.execute("SELECT * FROM lucy_commits WHERE idempotency_key=?",
-                        (row["idempotency_key"],)).fetchone()
+        _finish(
+            conn,
+            row["idempotency_key"],
+            None,
+            "failed",
+            None,
+            {"problems": ["SelectaDJ stopped before saving; nothing was saved."]},
+        )
+    return conn.execute(
+        "SELECT * FROM lucy_commits WHERE idempotency_key=?", (row["idempotency_key"],)
+    ).fetchone()
 
 
 def status_of(conn: sqlite3.Connection, key: str) -> dict | None:

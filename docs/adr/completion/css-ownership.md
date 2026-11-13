@@ -30,10 +30,20 @@ Feature-local sheets live beside the one component that imports them and style n
 |---|---|---|
 | `admin/admin.css` | the admin area | `admin/AdminArea.tsx` |
 | `cloud/cloud.css` | the cloud app | `cloud/CloudApp.tsx` |
+| `business/business.css` | business console shared surfaces, notices, statuses and controls | `cloud/CloudApp.tsx` |
 | `devices/devices.css` | device list and playing bar | `devices/DevicesPanel.tsx`, `devices/PlayingBar.tsx` |
 | `display/display.css` | the display page | `display/main.ts` |
 | `guest/guest.css` | the guest request page | `guest/main.ts` |
 | `rooms/rooms.css` | the rooms panel | `rooms/RoomPanel.tsx` |
+| `autopilot/autopilot.css` | venue setup instructions and autopilot guide controls | `autopilot/VenueSetup.tsx` |
+| `business/console/console.css` | headquarters venue management, status grids and dashboards | `business/console/HqConsole.tsx` |
+| `business/forms/forms.css` | labelled business onboarding and management form controls | `business/forms/LicenceAttestationForm.tsx` |
+| `business/shell/shell.css` | business shell navigation, page layouts and headers | `business/shell/BusinessShell.tsx` |
+| `business/staff/staff.css` | venue staff playback controls and zone selection | `business/staff/StaffControlDeck.tsx` |
+| `business/switcher/switcher.css` | workspace switcher menu and context display band | `business/switcher/WorkspaceSwitcher.tsx` |
+| `cloud/makeCloudMix.css` | Cloud mix creation interface layout and controls | `cloud/MakeCloudMix.tsx` |
+| `venueops/staffDashboard.css` | unattended playback dashboard and staff controls | `venueops/StaffDashboard.tsx` |
+| `views/mixIntent.css` | mix intent and setting-scope explanatory surfaces | `views/MixIntent.tsx` |
 
 Load order (`web/src/main.tsx`): tokens, style.css, shell, polish, foundation, listening, creation,
 operations, music-objects, glossary, palette, icons, depth, typography. Later files refine earlier
@@ -82,8 +92,12 @@ wins, and the row says which.
 | `max-width: 1040px` | `styles/listening.css` | vibe cards go to two columns; Listen side column stops sticking |
 | `max-width: 1040px` | `styles/polish.css` | vibe skeleton follows the two-column vibe cards |
 | `max-width: 1024px` | `styles/operations.css` | Library columns fold into name/facts/readiness with actions beside; column head hidden (wins over `style.css` `.song-row` by specificity) |
+| `max-width: 1024px` | `styles/polish.css` | Library row skeleton folds with the loaded rows (P0033): facts drop under the name, actions stay beside; must stay the same number as `styles/operations.css` |
+| `max-width: 1024px` | `style.css` | timeline rows put their actions on a line under the song, so the title keeps its width beside the rail (2026-11-12 tablet review) |
+| `max-width: 1024px` | `styles/creation.css` | timeline grip column follows the stacked timeline row in `style.css` |
 | `max-width: 850px` | `styles/polish.css` | Make a Mix paths stack |
 | `min-width: 768px` | `styles/listening.css` | render queue names and move buttons use consistent columns once the list has room |
+| `min-width: 761px` | `styles/listening.css` | Stage visualizer and lyrics fit shorter desktop windows without hiding controls |
 | `min-width: 761px` | `styles/shell.css` | the side rail |
 | `max-width: 760px` | `styles/tokens.css` | shell geometry: no rail offset, bottom bar and smaller header |
 | `max-width: 760px` | `styles/shell.css` | bottom bar, More drawer, context actions, overlays become sheets, keyboard yield |
@@ -96,7 +110,9 @@ wins, and the row says which.
 | `max-width: 620px` | `styles/listening.css` | vibe cards one column |
 | `max-width: 620px` | `styles/operations.css` | Library rows stack actions under readiness |
 | `max-width: 620px` | `styles/polish.css` | vibe skeleton one column |
+| `min-width: 621px` | `styles/polish.css` | vibe skeleton in the two-column band (621 to 1040px) stands as tall as the real cards, whose words wrap more there (P0032); pairs with the 620px rule above |
 | `max-width: 560px` | `style.css` | Listen handoff countdown stacks |
+| `max-width: 560px` | `styles/polish.css` | skeleton rows stack their name and details at phone widths |
 | `max-width: 560px` | `styles/shell.css` | job list one column, phone seam indent |
 | `max-width: 520px` | `style.css` | steering, destination and energy-arc stops one column; request rows |
 | `max-width: 520px` | `styles/foundation.css` | setup steps: a finished step shows only its tick, so the steps take one line (MP-0282-07) |
@@ -105,7 +121,9 @@ wins, and the row says which.
 | `max-width: 420px` | `styles/lucy.css` | Lucy song actions wrap |
 | `max-width: 420px` | `styles/polish.css` | Make a Mix path padding |
 | `max-width: 420px` | `styles/shell.css` | mini-player Request button tightens |
+| `max-width: 360px` | `styles/shell.css` | context-bar breadcrumb text shrinks at 320px so single-word page names remain intact (SF-0207-05) |
 | `max-height: 760px` | `styles/listening.css` | short Stage windows: visualiser and countdown give up height so the current lyric stays above the fold (MP-0285-01) |
+| `max-height: 450px` | `styles/shell.css` | very short windows: context bar enters normal flow and phone navigation stops covering content |
 | `max-height: 520px` | `styles/shell.css` | short landscape: dialogs scroll inside, title and actions stay |
 | `max-height: 420px` | `styles/typography.css` | 400% zoom: the editor scope bar stops sticking |
 

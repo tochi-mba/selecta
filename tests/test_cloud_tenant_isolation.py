@@ -15,6 +15,7 @@ matrix (or be named as public or as acting only on the caller) before it can shi
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import time
 
@@ -58,6 +59,7 @@ CAPABILITY_ONLY = {
     ("POST", "/api/guest/rooms/{room_id}/leave"),
     ("POST", "/api/display/pairings"),
     ("GET", "/api/display/view"),
+    ("DELETE", "/api/display/pairing"),
 }
 # Routes that act only on the signed-in person, whatever workspace a request names.
 SELF_ONLY = {
@@ -105,11 +107,73 @@ STAFF_ONLY = {
     ("POST", "/api/admin/takedowns"),
     ("POST", "/api/admin/takedowns/{notice_id}/{command}"),
     ("POST", "/api/admin/upload-restrictions/{workspace_id}/lift"),
+    ("POST", "/api/admin/business/pilots"),
 }
+# Business routes require an organisation workspace and membership, not merely a
+# personal library workspace. The dedicated Business tests exercise their tenant
+# checks and the flag-guard suite proves they are disabled before rollout.
+BUSINESS_SCOPED = {
+    ("GET", "/api/business/orgs"),
+    ("POST", "/api/business/orgs"),
+    ("GET", "/api/business/orgs/{org_id}"),
+    ("GET", "/api/business/venues"),
+    ("POST", "/api/business/venues"),
+    ("GET", "/api/business/venues/{venue_id}"),
+    ("PATCH", "/api/business/venues/{venue_id}"),
+    ("POST", "/api/business/venues/{venue_id}/archive"),
+    ("GET", "/api/business/zones"),
+    ("POST", "/api/business/zones"),
+    ("PATCH", "/api/business/zones/{zone_id}"),
+    ("POST", "/api/business/zones/{zone_id}/archive"),
+    ("GET", "/api/business/crates"),
+    ("POST", "/api/business/crates"),
+    ("GET", "/api/business/crates/{crate_id}"),
+    ("PUT", "/api/business/crates/{crate_id}/songs"),
+    ("DELETE", "/api/business/crates/{crate_id}"),
+    ("GET", "/api/business/venues/{venue_id}/hours"),
+    ("PUT", "/api/business/venues/{venue_id}/hours"),
+    ("POST", "/api/business/venues/{venue_id}/hour-exceptions"),
+    ("DELETE", "/api/business/venues/{venue_id}/hour-exceptions/{exception_id}"),
+    ("GET", "/api/business/venues/{venue_id}/holiday-suggestions"),
+    ("POST", "/api/business/venues/{venue_id}/stay-open-late"),
+    ("POST", "/api/business/venues/{venue_id}/close-now"),
+    ("POST", "/api/business/venues/{venue_id}/close-now/{override_id}/undo"),
+    ("GET", "/api/business/zones/{zone_id}/state"),
+    ("GET", "/api/business/zones/{zone_id}/programme"),
+    ("PUT", "/api/business/zones/{zone_id}/programme"),
+    ("GET", "/api/business/zones/{zone_id}/offline-manifest"),
+    ("POST", "/api/business/zones/{zone_id}/commands"),
+    ("PUT", "/api/business/zones/{zone_id}/cache-report"),
+    ("GET", "/api/workspaces"),
+    # Autopilot requires membership in a Business workspace. Stateful routes also
+    # check that each named venue actually belongs to that organisation.
+    ("GET", "/api/autopilot/availability"),
+    ("GET", "/api/autopilot/maturity"),
+    ("POST", "/api/autopilot/sessions"),
+    ("GET", "/api/autopilot/sessions/{session_id}"),
+    ("POST", "/api/autopilot/sessions/{session_id}/controls/{control}"),
+    ("POST", "/api/autopilot/sessions/{session_id}/transitions"),
+    ("GET", "/api/autopilot/venues/{venue_id}/setup"),
+    ("PUT", "/api/autopilot/venues/{venue_id}/setup/{step}"),
+    ("GET", "/api/autopilot/venues/{venue_id}/policies"),
+    ("POST", "/api/autopilot/venues/{venue_id}/policies"),
+    ("GET", "/api/autopilot/venues/{venue_id}/overrides"),
+    ("POST", "/api/autopilot/venues/{venue_id}/overrides"),
+    ("DELETE", "/api/autopilot/venues/{venue_id}/overrides/{override_id}"),
+    ("POST", "/api/autopilot/venues/{venue_id}/candidates"),
+}
+
 # Every route that can reach a workspace's data, with a body valid enough to get past
 # validation, so the refusal we see comes from the workspace check and not from a 422.
 SCOPED: dict[tuple[str, str], dict | None] = {
     ("GET", "/api/events"): None,
+    ("GET", "/api/cloud-mixes"): None,
+    ("GET", "/api/cloud-mixes/capabilities"): None,
+    ("POST", "/api/cloud-mixes"): {"name": "Tenant check", "asset_ids": []},
+    ("GET", "/api/cloud-mixes/{mix_id}"): None,
+    ("POST", "/api/cloud-mixes/{mix_id}/revisions"): {
+        "base_revision": "0" * 64, "name": "Tenant check",
+    },
     ("GET", "/api/account"): None,
     ("GET", "/api/account/labs"): None,
     ("PUT", "/api/account/labs/{flag_id}"): {"enabled": False},
@@ -175,6 +239,7 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/rooms/{room_id}/guests/{guest_id}/ban"): None,
     ("POST", "/api/rooms/{room_id}/displays"): {"pairing_code": "ABC-123"},
     ("DELETE", "/api/rooms/{room_id}/displays"): None,
+    ("DELETE", "/api/rooms/{room_id}/displays/{display_id}"): None,
 }
 # The scoped routes that name one resource. In his own workspace, Bob asking for Alice's
 # resource must get the same answer as asking for one that doesn't exist.
@@ -223,7 +288,7 @@ class Objects:
         self.touched.append(key)
         return "multipart-test"
 
-    def presign_upload_part(self, _bucket, key, _upload_id, part_number, _ttl):
+    def presign_upload_part(self, _bucket, key, _upload_id, part_number, _ttl, **_kwargs):
         self.touched.append(key)
         return f"https://objects.test/{key}/{part_number}"
 
@@ -316,6 +381,8 @@ def world(tmp_path, monkeypatch):
                 "flag_id": "lucy",
                 "device_id": new_id(),
                 "room_id": new_id(),
+                "mix_id": new_id(),
+                "display_id": new_id(),
                 "request_id": new_id(),
                 "guest_id": new_id(),
             },
@@ -367,7 +434,7 @@ def test_every_cloud_route_is_classified(world):
         if isinstance(route, APIRoute) and route.path.startswith("/api")
         for method in route.methods - {"HEAD"}
     }
-    classified = PUBLIC | CAPABILITY_ONLY | SELF_ONLY | STAFF_ONLY | set(SCOPED)
+    classified = PUBLIC | CAPABILITY_ONLY | SELF_ONLY | STAFF_ONLY | BUSINESS_SCOPED | set(SCOPED)
     assert routes - classified == set(), "new routes must join the tenant isolation matrix"
     assert classified - routes == set(), "the matrix names routes that no longer exist"
 
@@ -453,6 +520,12 @@ def test_lists_show_only_your_own_things(world):
 
 
 def test_the_event_stream_carries_only_your_own_events(world):
+    # Start the brief token's clock now: the fixture can take longer than its life on a busy
+    # machine, and an already expired stream ends before sending anything.
+    people = world["client"].app.state.token_verifier
+    people.claims[BOB_BRIEF] = dataclasses.replace(
+        people.claims[BOB_BRIEF], expires_at=time.time() + 1.5
+    )
     answer = world["client"].get("/api/events", headers=_auth(BOB_BRIEF))
     assert answer.status_code == 200
     assert "bob.own" in answer.text

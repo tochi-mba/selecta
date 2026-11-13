@@ -27,7 +27,7 @@ describe('words on screen', () => {
     expect(askedToAnalyse('Hello', 3)).toBe('Hello is in line, with 3 ahead of it.');
   });
 
-  it('separates what Selecta keeps from what it can make again', () => {
+  it('separates what SelectaDJ keeps from what it can make again', () => {
     const words = storageWords({
       used_bytes: 4.2 * 1024 ** 3,
       kept_bytes: 3.2 * 1024 ** 3,
@@ -38,7 +38,7 @@ describe('words on screen', () => {
       smallest_budget_bytes: 1024 ** 3,
       total_bytes: 1024 ** 4,
     });
-    expect(words.summary).toBe('Selecta is using 4.20 GB. Your drive has 13 GB free.');
+    expect(words.summary).toBe('SelectaDJ is using 4.20 GB. Your drive has 13 GB free.');
     expect(words.detail).toContain('1.00 GB of that is separated vocals');
     expect(words.detail).toContain('3.20 GB is saved data and models');
   });

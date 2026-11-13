@@ -74,7 +74,7 @@ export function GlossaryDialog({ initialTerm, onClose }: { initialTerm?: string 
   return (
     <Dialog title="Music terms" onClose={onClose} footer={<button onClick={onClose}>Close</button>}>
       <div className="glossary">
-        <p className="hint">What Selecta’s music words mean, what each one changes, and how to take it back. Reading these never changes anything.</p>
+        <p className="hint">What SelectaDJ’s music words mean, what each one changes, and how to take it back. Reading these never changes anything.</p>
         <Field label="Search music terms" help="Case and accents don’t matter.">
           {(field) => (
             <input

@@ -25,7 +25,7 @@ describe('UF-0385-04 storage budget', () => {
         refreshStatus={() => {}} player={player} now={player.state} setView={() => {}} notify={() => {}} stage={false} toggleStage={() => {}} />,
     );
     expect(await screen.findByText(/Priority-song stem windows are protected/)).toBeInTheDocument();
-    expect(screen.getByText(/Your music files aren’t counted here, because Selecta doesn’t copy them, and nothing here ever touches them\./)).toBeInTheDocument();
+    expect(screen.getByText(/Your music files aren’t counted here, because SelectaDJ doesn’t copy them, and nothing here ever touches them\./)).toBeInTheDocument();
   });
 });
 

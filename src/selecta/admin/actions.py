@@ -29,6 +29,7 @@ class Fence(Protocol):
 
     def check(self, connection: Connection) -> None: ...
 
+
 EXECUTORS: Mapping[delayed.ActionKind, delayed.Executor] = {
     delayed.ActionKind.EMERGENCY_CONTROL_DISABLE: emergency.release,
     delayed.ActionKind.FLAG_BROAD_RULE: flags_admin.execute_broad_rule,
@@ -46,12 +47,20 @@ def _json(result: Any) -> Any:
 
 def action_json(action: delayed.DangerousAction) -> dict[str, Any]:
     return {
-        "id": action.id, "kind": action.kind.value, "description": action.rule.description,
-        "payload": action.payload, "payload_hash": action.payload_hash, "reason": action.reason,
-        "proposer_id": action.proposer_id, "two_person": action.two_person,
-        "created_at": action.created_at, "execute_after": action.execute_after,
-        "expires_at": action.expires_at, "status": action.status.value,
-        "approver_id": action.approver_id, "note": action.note,
+        "id": action.id,
+        "kind": action.kind.value,
+        "description": action.rule.description,
+        "payload": action.payload,
+        "payload_hash": action.payload_hash,
+        "reason": action.reason,
+        "proposer_id": action.proposer_id,
+        "two_person": action.two_person,
+        "created_at": action.created_at,
+        "execute_after": action.execute_after,
+        "expires_at": action.expires_at,
+        "status": action.status.value,
+        "approver_id": action.approver_id,
+        "note": action.note,
     }
 
 
@@ -63,12 +72,9 @@ def listing(conn: Connection, actor: Actor) -> list[dict[str, Any]]:
 def _known(conn: Connection, actor: Actor, action_id: str) -> None:
     """A missing action is refused unless the actor may list actions anyway (which shows that it
     isn't there), so its id reveals nothing to anyone else."""
-    try:
-        delayed.get(conn, action_id)
-    except delayed.ActionNotFound:
-        authorize(conn, actor, "platform.dashboard.read", ResourceRef("dangerous_action",
-                                                                     action_id))
-        raise
+    # Check before looking up any action id, including an existing action.
+    authorize(conn, actor, "platform.dashboard.read", ResourceRef("dangerous_action", action_id))
+    delayed.get(conn, action_id)
 
 
 def approve(conn: Connection, actor: Actor, action_id: str, payload_hash: str) -> dict:
@@ -85,11 +91,15 @@ def cancel(conn: Connection, actor: Actor, action_id: str, *, reason: str) -> di
 
 def execute(conn: Connection, actor: Actor, action_id: str) -> dict[str, Any]:
     """Run one due action now, as the actor. Not yet due: `NotReady`, and nothing changes."""
+    _known(conn, actor, action_id)
     action = delayed.get(conn, action_id)
     authorize(conn, actor, action.rule.apply, action.resource)
     outcome = delayed.execute(conn, action_id, EXECUTORS[action.kind], executed_by=actor.user_id)
-    return {"action": action_json(outcome.action), "ok": outcome.ok,
-            "result": _json(outcome.result)}
+    return {
+        "action": action_json(outcome.action),
+        "ok": outcome.ok,
+        "result": _json(outcome.result),
+    }
 
 
 def run_due(engine: Engine, fence: Fence | None = None) -> list[dict[str, Any]]:

@@ -37,13 +37,18 @@ from selecta.admin import guard as admin_guard
 from selecta.admin import routes as admin_routes
 from selecta.admin import routes_controls as admin_control_routes
 from selecta.admin.state import EmergencyCache
+from selecta.autopilot import routes_autopilot as autopilot_routes
 from selecta.billing import api as billing_api
 from selecta.billing import plans, stripe_sync
+from selecta.business import admin_routes as business_admin_routes
+from selecta.business import routes as business_org_routes
+from selecta.devstack import guard as dev_guard
 from selecta.flags import cloud_gate, targeting
 from selecta.flags import guard as flag_guard
 from selecta.flags import rules as flag_rules
 from selecta.flags.matching import Context
 from selecta.flags.rules import RulesCache
+from selecta.identity import accounts as identity_accounts
 from selecta.identity import routes as identity_routes
 from selecta.identity.tokens import (
     Claims,
@@ -54,15 +59,18 @@ from selecta.identity.tokens import (
 )
 from selecta.identity.workos import WorkOSClient
 from selecta.lucy import cloud_settings as lucy_cloud_settings
-from selecta.observability import metrics, tracing
+from selecta.observability import errors, metrics, tracing
 from selecta.persistence import db_now, make_engine, transaction
 from selecta.persistence.listen import PgListener
 from selecta.persistence.migrate import current as migration_current
 from selecta.persistence.migrate import head as migration_head
 from selecta.rooms import wiring as rooms_wiring
 from selecta.rooms.cloud_ports import RoomPorts
+from selecta.routes import business_hours as business_hours_routes
+from selecta.routes import business_zones as business_zones_routes
 from selecta.routes import cloud_assets as cloud_assets_routes
 from selecta.routes import cloud_export as cloud_export_routes
+from selecta.routes import cloud_mixes as cloud_mix_routes
 from selecta.routes import cloud_proxy as cloud_proxy_routes
 from selecta.storage import api as storage_api
 from selecta.storage import playback_api as playback_api
@@ -98,6 +106,10 @@ class CloudSettings:
     @classmethod
     def from_environment(cls) -> CloudSettings:
         """Load production configuration and refuse to boot with a local or incomplete setup."""
+        # The local identity provider of `dev.cmd cloud` can never sign anyone in to a deployment.
+        identity_problem = dev_guard.production_identity_problem()
+        if identity_problem:
+            raise CloudConfigurationError(identity_problem)
         url = os.environ.get("SELECTA_DATABASE_URL", "").strip()
         if not url.startswith(("postgresql://", "postgresql+psycopg://")):
             raise CloudConfigurationError(
@@ -283,7 +295,7 @@ def create_cloud_app(
         if owns_engine:
             engine.dispose()
 
-    app = FastAPI(title="Selecta Cloud API", docs_url="/api/docs", lifespan=lifespan)
+    app = FastAPI(title="SelectaDJ API", docs_url="/api/docs", lifespan=lifespan)
     app.state.runtime_mode = "cloud"
     app.state.database_engine = engine
     app.state.token_verifier = verifier
@@ -346,6 +358,7 @@ def create_cloud_app(
     # One server span per request; job spans link to it (ADR-0410).
     tracing.install(app, "api")
     tracing.configure_from_environment("api")
+    errors.configure_from_environment("api")
     metrics.configure_from_environment("api")
 
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(settings.allowed_hosts))
@@ -444,15 +457,37 @@ def create_cloud_app(
             # The rules version too, so the stream can say when this page's flags may have changed.
             return batch, rule_snapshot().version
 
+        def still_signed_in() -> bool:
+            """Re-run the per-request check on every wake-up, so an open stream ends as soon as
+            its session is revoked ("sign out everywhere", a password reset, a WorkOS revocation),
+            the account starts deleting, or the person leaves the workspace (SC-0400-08)."""
+            with transaction(engine) as connection:
+                try:
+                    identity_accounts.resolve_principal(
+                        connection, claims, workspace_id, allow_suspended=True
+                    )
+                except identity_accounts.IdentityError:
+                    return False
+            return True
+
         async def frames():
             cursor = after
             heartbeat_at = time.monotonic()
             deadline = time.monotonic() + 600
             rules_seen: int | None = None
+            checked = False  # the request itself was just checked
             while time.monotonic() < deadline and time.time() < claims.expires_at:
                 if await request.is_disconnected():
                     break
                 waiter = fanout.arm()
+                if checked and not await asyncio.to_thread(still_signed_in):
+                    # No id, so the replay cursor stays put; the page asks /api/account, hears
+                    # `session_revoked` and shows "You were signed out".
+                    ended = {"topic": "session.revoked", "payload": {}}
+                    data = json.dumps(ended, separators=(",", ":"))
+                    yield f"event: selecta\ndata: {data}\n\n"
+                    break
+                checked = True
                 batch, rules_version = await asyncio.to_thread(fetch, cursor)
                 if rules_seen is not None and rules_version != rules_seen:
                     # The flag rules changed: the page asks /api/account for its own decisions.
@@ -479,7 +514,8 @@ def create_cloud_app(
                 if len(batch) >= 100:
                     await fanout.wait(waiter, 0)
                 else:
-                    await fanout.wait(waiter, fanout.poll_s())
+                    # Check revoked sessions promptly, even while PostgreSQL LISTEN is live.
+                    await fanout.wait(waiter, min(fanout.poll_s(), 2.0))
 
         return StreamingResponse(
             frames(),
@@ -664,6 +700,18 @@ def create_cloud_app(
         current_claims=current_claims,
         principal_for=_principal,
     )
+    # Cloud mixes in the shared mix contract (ADR-0418); refused while cloud.mix_create is off.
+    cloud_mix_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
+    business_org_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal,
+        rules=rule_cache,
+    )
+    for business_routes in (business_hours_routes, business_zones_routes):
+        business_routes.install_routes(
+            app, engine=engine, current_claims=current_claims, principal_for=_principal
+        )
     playback_api.install_routes(
         app,
         engine=engine,
@@ -684,6 +732,10 @@ def create_cloud_app(
     lucy_cloud_settings.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal
     )
+    # Autopilot venue mode and venue policy (ADR-0424, ADR-0425); refused while the flags are off.
+    autopilot_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
     cloud_proxy_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal,
         object_client_factory=storage_api.r2_client, buckets=storage_api.buckets(),
@@ -696,6 +748,9 @@ def create_cloud_app(
         rules=rule_cache, allowed_origins=settings.allowed_origins, ports=room_ports,
     )
 
+    business_admin_routes.install_routes(
+        app, engine=engine, current_claims=current_claims,
+    )
     admin_routes.install_routes(
         app,
         engine=engine,

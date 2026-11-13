@@ -142,13 +142,13 @@ test('the Library: search, song details, a correction that can be put back', asy
   await page.getByRole('button', { name: /^Details for Paper Moon/ }).click();
   const sheet = page.getByRole('dialog', { name: 'Paper Moon' });
   await expect(sheet).toBeVisible();
-  await sheet.getByRole('spinbutton').fill('238');
+  await sheet.getByRole('textbox', { name: /Tempo/ }).fill('238');
   await sheet.getByRole('button', { name: 'Save correction' }).click();
   await expect(sheet.getByText(/238/).first()).toBeVisible();
   await sheet.getByRole('button', { name: 'Use what was measured' }).click();
   // The measured number is visible even before this mutation finishes. Wait for
   // the server-confirmed undo before testing Escape and focus restoration.
-  await expect(page.getByText(/Back to what Selecta measured/)).toBeVisible();
+  await expect(page.getByText(/Back to what SelectaDJ measured/)).toBeVisible();
   await expect(sheet.getByText(/119/).first()).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(sheet).toHaveCount(0);
@@ -264,10 +264,10 @@ test.describe('when the server stops answering', () => {
     await page.goto('/mix/current/edit');
     await expect(editorSong(page, 'Paper Moon')).toBeVisible();
     await page.route('**/api/**', (route) => route.abort());
-    await expect(page.getByText('Can’t reach Selecta.')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Can’t reach SelectaDJ.')).toBeVisible({ timeout: 15_000 });
     await expect(editorSong(page, 'Paper Moon')).toBeVisible();
     await page.unroute('**/api/**');
-    await expect(page.getByText('Can’t reach Selecta.')).toHaveCount(0, { timeout: 15_000 });
+    await expect(page.getByText('Can’t reach SelectaDJ.')).toHaveCount(0, { timeout: 15_000 });
     await expect(editorSong(page, 'Paper Moon')).toBeVisible();
   });
 
@@ -289,7 +289,7 @@ test.describe('when the server stops answering', () => {
     await page.getByRole('button', { name: 'Play', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
     await page.route('**/api/**', (route) => route.abort());
-    await expect(page.getByText('Can’t reach Selecta.')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Can’t reach SelectaDJ.')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
     expect(await page.evaluate(() => window.audioSpy.contexts[0].state)).toBe('running');
   });

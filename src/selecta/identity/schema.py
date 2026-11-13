@@ -4,6 +4,7 @@
   sets `deleted_at` first; the deletion workflow erases the rest later.
 - `workspaces`: what a plan, a library and its usage belong to. Every user gets one personal
   workspace (enforced by a partial unique index); team workspaces come later.
+  A `business` workspace is an organisation (ADR-0442).
 - `workspace_members`: a user's role in a workspace, one row per pair.
 - `session_revocations`: tokens issued before `revoked_before` are refused, which signs a user out
   of every device within one access-token lifetime.
@@ -21,8 +22,8 @@ import sqlalchemy as sa
 
 from selecta.persistence import Epoch, Id, metadata
 
-WORKSPACE_KINDS = ("personal", "team")
-MEMBER_ROLES = ("owner", "editor", "viewer")
+WORKSPACE_KINDS = ("personal", "team", "business")
+MEMBER_ROLES = ("owner", "editor", "viewer", "business_member")
 
 
 def _one_of(column: str, values: tuple[str, ...]) -> str:
@@ -88,6 +89,10 @@ workspaces = sa.Table(
     sa.Column("kind", sa.String(16), nullable=False),
     sa.Column("owner_user_id", Id, sa.ForeignKey("users.id"), nullable=False),
     sa.Column("created_at", Epoch, nullable=False),
+    # A business pilot organisation's end (ADR-0442); empty for everything else.
+    sa.Column("pilot_until", Epoch, nullable=True),
+    # A business organisation's registered name, for invoices and terms (ADR-0442).
+    sa.Column("legal_name", sa.String(200), nullable=True),
     sa.CheckConstraint(_one_of("kind", WORKSPACE_KINDS), name="kind"),
     sa.Index("ix_workspaces_owner_user_id", "owner_user_id"),
     sa.Index(

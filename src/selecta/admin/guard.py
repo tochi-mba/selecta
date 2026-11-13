@@ -52,12 +52,10 @@ def refusal_for(state, method: str, path: str) -> JSONResponse | None:
     if not path.startswith("/api/") or method in READS:
         return None
     if state.read_only and not any(p.match(path) for p in ALWAYS_WRITABLE):
-        return _refuse("read_only", "Selecta is read-only for a short while. Try again soon.")
+        return _refuse("read_only", "SelectaDJ is read-only for a short while. Try again soon.")
     if method == "POST" and state.uploads_paused and any(p.match(path) for p in UPLOAD_STARTS):
         return _refuse("uploads_paused", "Uploads are paused for a short while.")
-    if method == "POST" and state.billing_safe_mode and any(
-        p.match(path) for p in BILLING_CHANGES
-    ):
+    if method == "POST" and state.billing_safe_mode and any(p.match(path) for p in BILLING_CHANGES):
         return _refuse("billing_safe_mode", "Billing changes are paused for a short while.")
     return None
 

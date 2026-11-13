@@ -354,9 +354,17 @@ class Uploads:
         if not 1 <= ttl <= MAX_URL_TTL:
             raise ValueError(f"Part URLs last 1 to {MAX_URL_TTL} seconds.")
         bucket = self.buckets.staging
+        plan = plan_parts(session.declared_size, session.part_size)
+        # Each URL signs its part's exact length: R2 can't cap a part's size any other way, and
+        # an unsigned length would let the holder park up to 5 GiB per part in staging.
         return {
             number: self.client.presign_upload_part(
-                bucket, session.staging_key, session.upload_id, number, ttl
+                bucket,
+                session.staging_key,
+                session.upload_id,
+                number,
+                ttl,
+                content_length=plan.last_part_size if number == count else plan.part_size,
             )
             for number in numbers
         }

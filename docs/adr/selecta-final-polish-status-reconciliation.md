@@ -1,6 +1,8 @@
 # Selecta - FP historical status reconciliation and acceptance provenance
 
-**FP documentation proposal as of 2026-11-08:** baseline main `5347e7309c5ff8b2e2965c2194bf2089b6ad2721`. 8 Proposed ADRs (0264–0271), 64 task acceptances Not started, 0 In progress, 0 Implemented, 0 independently Verified. All owner decisions pending; no source change or human verification is claimed.
+**Historical baseline - FP documentation proposal as of 2026-11-08:** baseline main `5347e7309c5ff8b2e2965c2194bf2089b6ad2721`. 8 Proposed ADRs (0264–0271), 64 task acceptances Not started, 0 In progress, 0 Implemented, 0 independently Verified. All owner decisions pending; no source change or human verification is claimed.
+
+**2026-11-12 status (recounted from the task lines of the [checklist](selecta-final-polish-implementation-checklist.md)):** 8 Accepted ADRs (0264-0271); 64 task acceptances: 53 Implemented, 11 In progress, 0 Not started (each names a person-only step; their code parts are built); **0 independently Verified**.
 
 ## Programme status must be kept separate
 
@@ -12,8 +14,8 @@
 | EX/MI (ADR-0114–0164) | Journey, motion and experience work | No change |
 | CI and spectrum (ADR-0165–0197) | Creative interface and 15 source-present spectrum modes | No change; modes must be preserved |
 | SF / Selecta Flow (ADR-0198–0247) | 50 Accepted ADR decisions, separate 400-task baseline ledger | No change; do not count its 400 as absent existing source |
-| GP / gap polish (ADR-0248–0263) | 16 Proposed ADR decisions, separate 128-task baseline ledger | No change; GP requirements are acceptance deltas, some code already exists |
-| **FP / final polish (ADR-0264–0271)** | **8 Proposed decisions, 64 Not started, 0 In progress, 0 Implemented, 0 Verified** | This PR creates a new independent docs ledger only |
+| GP / gap polish (ADR-0248–0263) | 16 Accepted ADR decisions (2026-11-08), separate 128-task ledger (2026-11-12: 111 Implemented, 17 Not started) | No change; GP requirements are acceptance deltas, some code already exists |
+| **FP / final polish (ADR-0264–0271)** | **8 Accepted decisions; 2026-11-12: 53 Implemented, 11 In progress, 0 Not started, 0 Verified** | This PR creates a new independent docs ledger only |
 
 **Baseline:** `main` `5347e7309c5ff8b2e2965c2194bf2089b6ad2721` on 2026-11-08. The FP roadmap and task IDs reference this baseline. Subsequent PRs must record their own exact SHA rather than treating this planning commit as implementation.
 

@@ -28,17 +28,17 @@ export const FAULT_CATALOGUE: Record<FaultId, FaultSpec> = {
   ffmpeg_missing: {
     area: 'environment', operation: 'Reading m4a and AAC songs, and separating stems', certainty: 'verified',
     cause: 'ffmpeg is not installed on this PC, or Windows can’t find it on its PATH.',
-    repair: 'Install ffmpeg, make sure the ffmpeg command works in a new terminal, then restart Selecta. Other songs keep working meanwhile.',
+    repair: 'Install ffmpeg, make sure the ffmpeg command works in a new terminal, then restart SelectaDJ. Other songs keep working meanwhile.',
   },
   data_readonly: {
-    area: 'environment', operation: 'Saving anything Selecta makes', certainty: 'verified',
-    cause: 'Selecta isn’t allowed to write to its data folder.',
-    repair: 'Give your account permission to change the Selecta data folder, then choose Check again.',
+    area: 'environment', operation: 'Saving anything SelectaDJ makes', certainty: 'verified',
+    cause: 'SelectaDJ isn’t allowed to write to its data folder.',
+    repair: 'Give your account permission to change the SelectaDJ data folder, then choose Check again.',
   },
   disk_low: {
     area: 'environment', operation: 'Rendering transitions and saving files', certainty: 'verified',
-    cause: 'The drive Selecta keeps its data on has less than 1 GB free.',
-    repair: 'Free some space on that drive, or lower Selecta’s cache limit.', to: '/workshop/storage', action: 'Open Storage',
+    cause: 'The drive SelectaDJ keeps its data on has less than 1 GB free.',
+    repair: 'Free some space on that drive, or lower SelectaDJ’s cache limit.', to: '/workshop/storage', action: 'Open Storage',
   },
   scan_failed: {
     area: 'scan', operation: 'Reading a music folder', certainty: 'verified',
@@ -48,21 +48,21 @@ export const FAULT_CATALOGUE: Record<FaultId, FaultSpec> = {
   folders_missing: {
     area: 'scan', operation: 'Finding new songs and playing songs in a missing folder', certainty: 'verified',
     cause: 'A music folder can’t be found right now, for example an unplugged drive. Its songs are kept.',
-    repair: 'Plug the drive back in, or point Selecta at where the folder moved.', to: '/workshop/sources', action: 'Open Sources',
+    repair: 'Plug the drive back in, or point SelectaDJ at where the folder moved.', to: '/workshop/sources', action: 'Open Sources',
   },
   storage_full: {
     area: 'worker', operation: 'Rendering transitions', certainty: 'verified',
-    cause: 'Selecta’s cache has reached its limit, so rendering waits.',
-    repair: 'Raise the cache limit or let Selecta clear old transitions. Your mixes are not changed.', to: '/workshop/storage', action: 'Open Storage',
+    cause: 'SelectaDJ’s cache has reached its limit, so rendering waits.',
+    repair: 'Raise the cache limit or let SelectaDJ clear old transitions. Your mixes are not changed.', to: '/workshop/storage', action: 'Open Storage',
   },
   worker_stopped: {
     area: 'worker', operation: 'Rendering drafts in the render line', certainty: 'possible',
     cause: 'The rendering worker isn’t running while drafts wait. It may simply not have started yet; the reason is not confirmed.',
-    repair: 'Wait a minute and choose Check again. If it still isn’t running, restart Selecta. Drafts stay in line.',
+    repair: 'Wait a minute and choose Check again. If it still isn’t running, restart SelectaDJ. Drafts stay in line.',
   },
   analysis_failed: {
     area: 'worker', operation: 'Analysing songs', certainty: 'possible',
-    cause: 'Some songs couldn’t be analysed. A damaged file or a format Selecta can’t read is likely, but not confirmed.',
+    cause: 'Some songs couldn’t be analysed. A damaged file or a format SelectaDJ can’t read is likely, but not confirmed.',
     repair: 'Look at those songs one at a time. Other songs are not affected.', to: '/library?show=attention', action: 'See those songs',
   },
   export_no_room: {
@@ -77,7 +77,7 @@ export const FAULT_CATALOGUE: Record<FaultId, FaultSpec> = {
   },
   export_interrupted: {
     area: 'export', operation: 'Saving a mix as a file', certainty: 'verified',
-    cause: 'Selecta stopped while a file was being saved, so no file was kept.',
+    cause: 'SelectaDJ stopped while a file was being saved, so no file was kept.',
     repair: 'Retry that export from your mix. It saves the same mix it was started with.',
   },
 };

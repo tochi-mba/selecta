@@ -26,7 +26,7 @@ afterEach(() => {
 });
 
 describe('what a failed request says', () => {
-  it('nothing answering says Selecta can’t be reached and to try again', async () => {
+  it('nothing answering says SelectaDJ can’t be reached and to try again', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch'); }));
     const error = await failure(() => get('/mix'));
     expect(error.message).toBe(OFFLINE_WORDS);
@@ -66,7 +66,7 @@ describe('what a failed request says', () => {
   });
 
   it('every built-in message names the cause and a safe next step in plain words', () => {
-    for (const words of [OFFLINE_WORDS, SERVER_FAILED_WORDS, 'Selecta couldn’t do that. Try again.', 'Selecta is taking too long to respond. Try again.']) {
+    for (const words of [OFFLINE_WORDS, SERVER_FAILED_WORDS, 'SelectaDJ couldn’t do that. Try again.', 'SelectaDJ is taking too long to respond. Try again.']) {
       expect(words).toMatch(NEXT_STEP);
       expect(words).not.toMatch(DEVELOPER);
     }

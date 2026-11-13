@@ -106,7 +106,10 @@ class ClaimSession:
             and not self.store.controls.speculative_off(self.connection)
             and self._speculative_ok()
         )
-        for lane in policy.choose_lanes(vtimes, backlogged, speculative_ok):
+        lanes = policy.choose_lanes(
+            vtimes, backlogged, speculative_ok, getattr(self.config, "strict_lanes", False)
+        )
+        for lane in lanes:
             claimed = self._try_lane(lane)
             if claimed is not None:
                 return claimed

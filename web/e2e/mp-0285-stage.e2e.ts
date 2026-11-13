@@ -202,13 +202,15 @@ test('MP-0285-06 loading, instrumental, untimed and unavailable lyrics each say 
   await expect(page.locator('.stage .problem, .stage [role="alert"]').first()).toContainText(/Couldn’t load lyrics/);
 });
 
-for (const how of ['the computer asks', 'Still is chosen in Selecta'] as const) {
+for (const how of ['the computer asks', 'Still is chosen in SelectaDJ'] as const) {
   test(`MP-0285-07 when ${how}, Stage graphics hold still while the lyric and clock keep time`, async ({ page }) => {
-    if (how === 'Still is chosen in Selecta') {
+    if (how === 'Still is chosen in SelectaDJ') {
       await page.emulateMedia({ reducedMotion: 'no-preference' });
       await page.addInitScript(() => localStorage.setItem('selecta.prefs', JSON.stringify({ motion: 'still' })));
     }
     await stage(page, 1280, 720);
+    // Wait for the first measured audio frame; the held bitmap must then remain unchanged.
+    await expect(page.locator('.stage canvas.music-visualizer')).toHaveAttribute('data-frozen', 'true', { timeout: 15_000 });
     const still = await page.evaluate(async () => {
       const canvas = document.querySelector('.stage canvas.music-visualizer') as HTMLCanvasElement | null;
       const first = canvas?.toDataURL() ?? '';

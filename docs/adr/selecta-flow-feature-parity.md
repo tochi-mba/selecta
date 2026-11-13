@@ -1,6 +1,8 @@
 # Selecta / Flow - non-regression and feature-preservation map
 
-**New programme: 50 Accepted ADRs, 400 Not started tasks and 0 independently Verified.** Source capability names below describe existing features to preserve, not newly performed source verification. The previous programme statuses are historical and unchanged.
+**2026-11-12 status (recounted from the task lines of the [checklist](selecta-flow-implementation-checklist.md)):** 50 Accepted ADRs; 400 SF tasks: 263 Implemented, 17 In progress, 70 Not started, 46 Needs a person, 4 Superseded; **0 independently Verified**.
+
+**Historical 2026-11-08 baseline:** new programme: 50 Accepted ADRs, 400 Not started tasks and 0 independently Verified. Source capability names below describe existing features to preserve, not newly performed source verification. The previous programme statuses are historical and unchanged.
 
 | Capability | Existing behavior contract | Current source touchpoints | New SF ADRs | Mandatory negative gate |
 |---|---|---|---|---|

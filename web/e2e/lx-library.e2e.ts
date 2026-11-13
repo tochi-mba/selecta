@@ -343,7 +343,7 @@ test('LX-0346-06 LX-0349-05 the More menu works by keyboard and touch, and Never
   await page.getByRole('button', { name: 'Details for Last Call' }).click();
   await expect(page.getByRole('dialog').getByText('Set aside', { exact: true }).first()).toBeVisible();
   await page.getByRole('button', { name: 'This is music' }).click();
-  await page.getByRole('button', { name: 'Let Selecta decide' }).click();
+  await page.getByRole('button', { name: 'Let SelectaDJ decide' }).click();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Everything' }).click();
   await expect(rows(page).filter({ hasText: 'Last Call' }).getByText('Ready for mixes')).toBeVisible();
@@ -404,7 +404,7 @@ test('LX-0348-05 LX-0348-07 the song sheet corrects with focus on errors, and cl
     return parts.every((part, index) => index === 0 || (parts[index - 1].compareDocumentPosition(part) & Node.DOCUMENT_POSITION_FOLLOWING));
   });
   expect(order).toBe(true);
-  const tempo = sheet.getByRole('spinbutton', { name: /Tempo/ });
+  const tempo = sheet.getByRole('textbox', { name: /^Tempo/ });
   await tempo.fill('999');
   await sheet.getByRole('button', { name: 'Save correction' }).click();
   await expect(sheet.getByText('Tempo has to be between 40 and 240.')).toBeVisible();

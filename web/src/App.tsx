@@ -1,5 +1,6 @@
 import { lazy, startTransition, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { ApiError, DraftList, get, MixData, MixItem, OFFLINE_WORDS, post, problemKind, Status } from './api';
+import { ApiError, get, MixData, MixItem, OFFLINE_WORDS, post, problemKind, Status } from './api';
+import { getDraftNames } from './state/draftNames';
 import { audioOwner, connectMainPlayer, mainPlayerTouched, stopPreviewsOnly } from './audio/focus';
 import { bindMediaSession, syncMediaSession } from './audio/mediaSession';
 import { setFlags, useFlags } from './flags';
@@ -10,7 +11,9 @@ import { buildCommands } from './shell/commands';
 import { describeRoute, shownRoute } from './shell/manifest';
 import { PageLink, Shell } from './shell/Shell';
 import { markNewestUndone } from './state/activity';
+import { keepIfSame, keepUnchangedMix } from './state/keepUnchanged';
 import { prefs, readFlagFromAddress, setPrefs, usePrefs } from './state/prefs';
+import { Links, Mix, MyMixes, warmRouteChunks, Workshop } from './routeChunks';
 import { watchLowPower } from './ui/lowPower';
 import { orderOf } from './state/readiness';
 import { shortcutFor, shortcutsOn } from './state/shortcuts';
@@ -24,17 +27,15 @@ import { setToastsQuiet, showProblem, showToast } from './ui/toasts';
 import { useVisiblePoll } from './ui/useVisiblePoll';
 import { ExportJobs } from './views/ExportJobs';
 import { Library } from './views/Library';
-import { Links } from './views/Links';
 import { ListenEmpty } from './views/ListenEmpty';
-import { Mix } from './views/Mix';
 import { Mixes } from './views/Mixes';
-import { MyMixes } from './views/MyMixes';
 import { Now } from './views/Now';
 import { RequestsContext, RequestsPanel, waitingRequestCount, useRequests } from './views/Requests';
 import { Start } from './views/Start';
-import { Workshop } from './views/Workshop';
 import { MixScope } from './views/mixScope';
 import { prefetchLibrary } from './views/libraryPrefetch';
+import { takeStartupStatus } from './startupStatus';
+import { draftMovesWaiting } from './views/optimisticMove';
 import type { Undo, View } from './views/shared';
 
 // Lucy is optional and only loaded when someone opens it, so it costs Make a Mix nothing.
@@ -71,15 +72,22 @@ const scopeKey = (scope: number | null) => (scope === null ? 'current' : `draft:
 
 const nameOfControl = (control: HTMLElement) => (control.getAttribute('aria-label') ?? control.textContent ?? '').trim();
 
-export function App() {
+export function App({ initialMix = null }: { initialMix?: MixData | null } = {}) {
   // a page whose feature is off in this build is Not Found, as if it had never been built
   const on = useFlags();
   const route = shownRoute(useRoute());
   const routeRef = useRef(route);
   routeRef.current = route;
+
+  // Keep the player and the first listening/browsing surfaces in the entry bundle. Once that
+  // first frame has painted, fetch the editor and secondary workspaces while the browser is idle.
+  // The route loaders contain page code only, so this can never delay or reschedule audio.
+  useEffect(() => warmRouteChunks(), []);
   const [status, setStatus] = useState<Status | null>(null);
   const [problem, setProblem] = useState('');
-  const [data, setData] = useState<MixData>({ mix: [], name: 'Your mix', can_undo: false });
+  // A fresh /mixes navigation can already have the authoritative mix from the parallel
+  // startup request. Never paint an empty mix as a first-run state while its GET is pending.
+  const [data, setData] = useState<MixData>(() => initialMix ?? { mix: [], name: 'Your mix', can_undo: false });
   const currentCanUndo = useRef(data.can_undo);
   currentCanUndo.current = data.can_undo;
   const [helping, setHelping] = useState(false);
@@ -97,6 +105,8 @@ export function App() {
   const mix = data.mix;
   const mixRef = useRef<MixItem[]>([]);
   mixRef.current = mix;
+  const shownData = useRef(data);
+  shownData.current = data;
 
   // an edit's answer is newer than a check that was already on its way, so that check is ignored
   const mixChanges = useRef(0);
@@ -109,7 +119,8 @@ export function App() {
     const seen = mixChanges.current;
     get<MixData>('/mix')
       .then((next) => {
-        if (seen === mixChanges.current) setMixData(next);
+        // r8c: an answer that changes nothing keeps what's shown, so a long editor doesn't redraw
+        if (seen === mixChanges.current) setMixData(keepUnchangedMix(shownData.current, next));
       })
       .catch((error: Error) => {
         // a stopped server is shown once, across the top, not as a stream of messages
@@ -125,7 +136,7 @@ export function App() {
     const work = get<Status>('/status')
       .then((next) => {
         setFlags(next.flags);
-        setStatus(next);
+        setStatus((before) => keepIfSame(before, next));
         setProblem('');
       })
       .catch((error: Error) => setProblem(error.message))
@@ -160,8 +171,12 @@ export function App() {
     const seen = draftChanges.current;
     get<MixData>(`/mix?draft=${asked}`)
       .then((next) => {
-        if (draftRef.current !== asked || seen !== draftChanges.current) return;
-        setDraftMix(next);
+        // MI-0162-05: nor while draft moves are on their way, which this read may predate. Only moves
+        // already on screen in this draft count: one not shown yet has none, and another draft's moves
+        // must not leave it on its loading skeleton.
+        const movesShown = draftMovesWaiting(asked) && draftDataRef.current?.draft?.id === asked;
+        if (draftRef.current !== asked || seen !== draftChanges.current || movesShown) return;
+        setDraftMix(keepUnchangedMix(draftDataRef.current?.draft?.id === asked ? draftDataRef.current : null, next));
         setDraftGone(false);
       })
       .catch((error: Error) => {
@@ -176,6 +191,10 @@ export function App() {
     refreshDraft();
   }, [draftId, refreshDraft]);
   const openDraft = useCallback((id: number) => navigate(`/mixes/drafts/${id}/edit`), []);
+  // r8c: pages are memoised, so what they're handed keeps its identity from one render to the next
+  const refreshStatusQuietly = useCallback(() => void refreshStatus(), [refreshStatus]);
+  const openRequests = useCallback(() => setRequesting(true), []);
+  const renamedDraft = useCallback((name: string) => setDraftData((before) => (before ? { ...before, name } : before)), []);
   const closeDraft = useCallback(() => {
     if (draftRef.current !== null) navigate('/mix/current/edit');
   }, []);
@@ -201,7 +220,9 @@ export function App() {
       // it undoes the mix this was said about, wherever you are when you press it
       const scope = draftRef.current;
       const order = orderOf(scope === null ? mixRef.current : draftMixRef.current);
-      showToast(message, { scope: scopeKey(scope), undo: () => undoIn(scope, order) });
+      // UF-0380-07: the toast itself names the mix that changed, not only Activity
+      const where = scope === null ? shownData.current.name : draftDataRef.current?.name;
+      showToast(message, { scope: scopeKey(scope), undo: () => undoIn(scope, order), where });
     } else {
       showToast(message);
     }
@@ -227,6 +248,14 @@ export function App() {
     });
     return () => connectMainPlayer(null);
   }, [player]);
+  // PF-21: on the pages with a Play button, open the sound device while the browser is idle, so the
+  // first Play only resumes it. Pages that never play never open it. It waits until the mix is on
+  // screen, so opening a slow device never holds back the page's first content. Not under unit
+  // tests, where a stray context would change what each test counts; player-prepare.test.ts covers it.
+  const playsHere = (route.page === 'listen' || route.page === 'edit') && mix.length > 0;
+  useEffect(() => {
+    if (playsHere && import.meta.env.MODE !== 'test') player.prepare();
+  }, [player, playsHere]);
   const [confirmDraft, setConfirmDraft] = useState<{ id: number; from: number; order: string; replacing: string } | null>(null);
   const activatingDraft = useRef(false);
   const activateDraft = useCallback(async (id: number, from: number, expectedOrder: string) => {
@@ -305,25 +334,39 @@ export function App() {
   useEffect(() => {
     // MI-0162-04: opened on the Library, its first rows are asked for now, not after status and the mix
     if (window.location.pathname === '/library') prefetchLibrary(window.location.search);
-    void refreshStatus();
-    const seen = mixChanges.current;
-    get<MixData>('/mix')
-      .then((next) => {
-        // A user may act before the first read returns, including from
-        // another tab. Do not replace that newer state with startup data.
-        if (seen !== mixChanges.current) return;
-        setMixData(next);
-        const resume = loadResume(next.mix);
-        if (resume) {
-          player.cue(resume.position, resume.time);
-          // an address that says where to go wins over where you were listening
-          if (window.location.pathname === '/') navigate('/listen', { replace: true });
-        }
-      })
-      .catch((error: Error) => {
-        if (problemKind(error) !== 'offline') showProblem(`Couldn’t read your mix: ${error.message}`);
-      });
-  }, [refreshStatus, setMixData, player]);
+    // S4-0111-05: the status read just before the app started is used, not asked for a second time
+    const handed = takeStartupStatus<Status>();
+    if (handed) {
+      setFlags(handed.flags);
+      setStatus(handed);
+    } else void refreshStatus();
+    const resumeFrom = (next: MixData) => {
+      const resume = loadResume(next.mix);
+      if (resume) {
+        player.cue(resume.position, resume.time);
+        // an address that says where to go wins over where you were listening
+        if (window.location.pathname === '/') navigate('/listen', { replace: true });
+      }
+    };
+    // Direct Make a Mix already fetched the authoritative mix alongside mode detection.
+    // Reusing it avoids a second GET and never paints a false onboarding state.
+    if (initialMix) {
+      resumeFrom(initialMix);
+    } else {
+      const seen = mixChanges.current;
+      get<MixData>('/mix')
+        .then((next) => {
+          // A user may act before the first read returns, including from
+          // another tab. Do not replace that newer state with startup data.
+          if (seen !== mixChanges.current) return;
+          setMixData(next);
+          resumeFrom(next);
+        })
+        .catch((error: Error) => {
+          if (problemKind(error) !== 'offline') showProblem(`Couldn’t read your mix: ${error.message}`);
+        });
+    }
+  }, [refreshStatus, setMixData, player, initialMix]);
   // A hidden tab stops asking the server and catches up the moment it's looked at again.
   useVisiblePoll(refreshStatus, 4000);
 
@@ -344,16 +387,19 @@ export function App() {
       wasAway.current = false;
       refreshMix();
       refreshDraft();
+      // a page showing "Couldn't load" tries again by itself (Library listens for this)
+      window.dispatchEvent(new Event('selecta:back'));
     }
   }, [problem, refreshMix, refreshDraft]);
 
   // A draft being rendered has to show that as it happens too.
   const draftBusy = !!draftData && (draftData.draft?.place != null || draftData.mix.some((item) => ['queued', 'rendering'].includes(item.seam?.state.status ?? '')));
-  useVisiblePoll(refreshDraft, 2000, draftBusy);
+  // r8c: while the server is away only the status check keeps trying; coming back reads both again
+  useVisiblePoll(refreshDraft, 2000, draftBusy && !problem);
 
   // Anything still rendering gets checked often, so its status changes on its own.
   const busy = mix.some((item) => ['none', 'queued', 'rendering'].includes(item.seam?.state.status ?? ''));
-  useVisiblePoll(refreshMix, 1500, busy);
+  useVisiblePoll(refreshMix, 1500, busy && !problem);
 
   const playing = mix[now.position];
   const active = now.phase !== 'idle';
@@ -365,7 +411,7 @@ export function App() {
 
   const pageTitle = describeRoute(route).title;
   useEffect(() => {
-    document.title = active && playing ? `${playing.title} · Selecta` : `${pageTitle} · Selecta`;
+    document.title = active && playing ? `${playing.title} · SelectaDJ` : `${pageTitle} · SelectaDJ`;
   }, [active, playing?.title, pageTitle]);
 
   // a library that exists means this person is set up, even if the server is away next time
@@ -548,14 +594,14 @@ export function App() {
   useEffect(() => {
     if (!commanding || !on('drafts')) return;
     let live = true;
-    get<DraftList>('/drafts').then((list) => { if (live) setCommandDrafts(list.drafts ?? []); }).catch(() => { if (live) setCommandDrafts([]); });
+    getDraftNames().then((list) => { if (live) setCommandDrafts(list.drafts); }).catch(() => { if (live) setCommandDrafts([]); });
     return () => { live = false; };
   }, [commanding]);
 
   if (problem && !status) {
     return (
       <main className="page" id="main">
-        <h1 className="display">Can’t reach Selecta.</h1>
+        <h1 className="display">Can’t reach SelectaDJ.</h1>
         <p className="lede">
           {problem === OFFLINE_WORDS ? '' : `${problem}. `}It may have stopped running. Start it again, and this page will pick up by itself.
           {hasBeenSetUp() ? ' Your library, mixes and ratings are safe, and you won’t have to set anything up again.' : ''}
@@ -576,7 +622,7 @@ export function App() {
     mixEta: data.eta,
     refreshMix,
     setMixData,
-    refreshStatus: () => void refreshStatus(),
+    refreshStatus: refreshStatusQuietly,
     player,
     now,
     setView: goTo,
@@ -587,7 +633,7 @@ export function App() {
     openDraft,
     closeDraft,
     playDraft,
-    openRequests: () => setRequesting(true),
+    openRequests,
     undo: undoNewest,
   };
   const nothingToHear = route.page === 'listen' && !mix.length;
@@ -650,12 +696,14 @@ export function App() {
         onActivity={() => setActivityOpen(true)}
         banner={problem ? (
           <div className="connection" role="alert">
-            <span><b>Can’t reach Selecta.</b> What’s on screen may be out of date, and anything already loaded keeps playing. Trying again every few seconds.</span>
+            <span><b>Can’t reach SelectaDJ.</b> What’s on screen may be out of date, and anything already loaded keeps playing. Trying again every few seconds.</span>
             <Action run={refreshStatus} working="Trying…">Try now</Action>
           </div>
         ) : undefined}
       >
         <Section name={pageTitle} key={route.page}>
+          {/* a split page names itself straight away, so the loading shell is never a page without a heading */}
+          <Suspense fallback={<main className="page" id="main" aria-busy="true"><h1 className="display small">{pageTitle}</h1><Skeleton label={`Opening ${pageTitle}`} /></main>}>
           {route.page === 'mixes' && route.tab === 'mine' && <MyMixes {...shared} />}
           {route.page === 'mixes' && route.tab === 'browse' && <Mixes {...shared} />}
           {nothingToHear && <ListenEmpty />}
@@ -681,7 +729,7 @@ export function App() {
                 draftPlace={draftData.draft?.place ?? null}
                 refreshMix={refreshDraft}
                 setMixData={setDraftMix}
-                renamedDraft={(name) => setDraftData((before) => (before ? { ...before, name } : before))}
+                renamedDraft={renamedDraft}
               />
             </MixScope.Provider>
           )}
@@ -689,11 +737,7 @@ export function App() {
           {route.page === 'discover' && <Links {...shared} tab={route.tab} />}
           {route.page === 'workshop' && <Workshop {...shared} tab={route.tab} />}
           {route.page === 'listening' && <Workshop {...shared} tab="learning" />}
-          {route.page === 'lucy' && (
-            <Suspense fallback={<main className="page" aria-busy="true"><Skeleton label="Opening Lucy" /></main>}>
-              <Lucy conversation={route.conversation} setMixData={setMixData} player={player} />
-            </Suspense>
-          )}
+          {route.page === 'lucy' && <Lucy conversation={route.conversation} setMixData={setMixData} player={player} />}
           {route.page === 'missing' && (
             <main className="page" id="main">
               <h1 className="display small">There’s nothing at this address.</h1>
@@ -701,6 +745,7 @@ export function App() {
               <PageLink to="/mixes" className="button primary">Go to Make a Mix</PageLink>
             </main>
           )}
+          </Suspense>
         </Section>
       </Shell>
       {confirmDraft && (

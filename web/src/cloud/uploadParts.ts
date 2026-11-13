@@ -1,4 +1,3 @@
-import { sha256 } from '@noble/hashes/sha2.js';
 import type { Api } from './api';
 
 // Uploads, the parts that aren't drawing (docs/saas/05-storage-uploads-playback.md §5.2).
@@ -18,6 +17,8 @@ export type UploadStatus = { upload: { id: string; name: string; size: number; s
 export const RESUMABLE = new Set(['planned', 'uploading']);
 
 export async function fileSha256(file: Blob) {
+  // r8c: the streaming hash is only needed once someone uploads, so it isn't in the first download.
+  const { sha256 } = await import('@noble/hashes/sha2.js');
   const hash = sha256.create();
   const chunkSize = 8 * 1024 * 1024;
   for (let offset = 0; offset < file.size; offset += chunkSize) {

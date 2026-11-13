@@ -56,26 +56,59 @@ def _rows(conn: sqlite3.Connection, draft: int | None = None) -> list:
             "LEFT JOIN song_overrides o ON o.song_id=s.id "
             "ORDER BY q.position"
         ).fetchall()
-    items = _stored(_draft_row(conn, draft))
+    items = _stored(_draft_items(conn, draft))
     if not items:
         return []
-    marks = ",".join("?" * len(items))
-    known = {
-        row["id"]: row
-        for row in conn.execute(
-            "SELECT s.id, s.artist, s.title, s.duration, s.genre, "  # noqa: S608
-            "COALESCE(o.bpm, a.bpm) bpm, COALESCE(o.camelot, a.camelot) camelot, a.energy "
-            "FROM songs s LEFT JOIN analysis a ON a.song_id=s.id "
-            f"LEFT JOIN song_overrides o ON o.song_id=s.id WHERE s.id IN ({marks})",
-            [item[0] for item in items],
-        )
-    }
+    return _draft_rows(items, _songs_by_id(conn, [item[0] for item in items]))
+
+
+def _draft_items(conn: sqlite3.Connection, draft: int) -> sqlite3.Row:
+    """Only the song order. A draft also keeps up to UNDO_DEPTH earlier versions of itself, and
+    reading a mix has no use for them."""
+    row = conn.execute("SELECT items FROM drafts WHERE id=?", (draft,)).fetchone()
+    if row is None:
+        raise NoSuchDraft(draft)
+    return row
+
+
+SONG_COLUMNS = (
+    "SELECT s.id, s.artist, s.title, s.duration, s.genre, "
+    "COALESCE(o.bpm, a.bpm) bpm, COALESCE(o.camelot, a.camelot) camelot, a.energy "
+    "FROM songs s LEFT JOIN analysis a ON a.song_id=s.id "
+    "LEFT JOIN song_overrides o ON o.song_id=s.id WHERE s.id IN "
+)
+IN_CHUNK = 900  # well under SQLite's smallest limit on bound parameters
+
+
+def _songs_by_id(conn: sqlite3.Connection, songs: Sequence[int]) -> dict[int, sqlite3.Row]:
+    wanted = list(dict.fromkeys(songs))
+    known: dict[int, sqlite3.Row] = {}
+    for start in range(0, len(wanted), IN_CHUNK):
+        chunk = wanted[start : start + IN_CHUNK]
+        marks = ",".join("?" * len(chunk))
+        for row in conn.execute(f"{SONG_COLUMNS}({marks})", chunk):  # noqa: S608
+            known[row["id"]] = row
+    return known
+
+
+def _draft_rows(items: list[Item], known: dict[int, sqlite3.Row]) -> list:
     # a song that has left the library since just drops out of the draft
     present = [item for item in items if item[0] in known]
     return [
         {**dict(known[song]), "position": index, "song_id": song, "seam": seam, "locked": locked}
         for index, (song, seam, locked) in enumerate(present)
     ]
+
+
+def rows_for_drafts(conn: sqlite3.Connection, stored: dict[int, str]) -> dict[int, list]:
+    """Many drafts' rows at once, from each one's stored `items`, with one look at the songs for
+    all of them instead of one per draft. Each is exactly what `_rows` gives for that draft."""
+    parsed = {
+        draft: [(item[0], item[1], item[2]) for item in json.loads(items)]
+        for draft, items in stored.items()
+    }
+    known = _songs_by_id(conn, [item[0] for items in parsed.values() for item in items])
+    return {draft: _draft_rows(items, known) for draft, items in parsed.items()}
 
 
 SHORTEST_STAY = 30.0
@@ -133,17 +166,27 @@ def chain_with_room(
     return settled
 
 
-def settle_chain(conn: sqlite3.Connection, store: SeamStore, draft: int | None = None) -> None:
+def settle_chain(
+    conn: sqlite3.Connection,
+    store: SeamStore,
+    draft: int | None = None,
+    rows: list | None = None,
+    status: Callable[[str], dict] | None = None,
+) -> bool:
     """Make sure every song in a mix gets played. Everything that reads a mix asks for this, so it
-    doesn't matter what changed: an edit, a request joining, or a seam finishing."""
-    rows = _rows(conn, draft)
+    doesn't matter what changed: an edit, a request joining, or a seam finishing. `rows` and
+    `status` are for reading many mixes at once. Says whether any seam had to change."""
+    rows = _rows(conn, draft) if rows is None else rows
     durations = {row["song_id"]: row["duration"] for row in rows}
     seams = [json.loads(row["seam"] or "{}") for row in rows[1:]]
     chain = [row["song_id"] for row in rows]
-    settled = chain_with_room(chain, seams, None, durations.get, store.status)
+    settled = chain_with_room(chain, seams, None, durations.get, status or store.status)
+    changed = False
     for index, (before, after) in enumerate(zip(seams, settled, strict=True), start=1):
         if before is not after:
             set_seam(conn, index, after, draft)
+            changed = True
+    return changed
 
 
 def add_pair(
@@ -174,9 +217,16 @@ def add_pair(
     return order.index(a), into
 
 
-def read_mix(conn: sqlite3.Connection, store: SeamStore, draft: int | None = None) -> list[dict]:
+def read_mix(
+    conn: sqlite3.Connection,
+    store: SeamStore,
+    draft: int | None = None,
+    rows: list | None = None,
+    status: Callable[[str], dict] | None = None,
+) -> list[dict]:
     """The songs in order. Each one after the first carries the seam that leads into it."""
-    rows = _rows(conn, draft)
+    rows = _rows(conn, draft) if rows is None else rows
+    status = status or store.status
     mix: list[dict] = []
     entered: float | None = 0.0
     for index, row in enumerate(rows):
@@ -195,7 +245,7 @@ def read_mix(conn: sqlite3.Connection, store: SeamStore, draft: int | None = Non
         if index:
             settings = usable_settings(json.loads(row["seam"] or "{}"))
             request = request_from(rows[index - 1]["song_id"], row["song_id"], settings)
-            state = store.status(request.key)
+            state = status(request.key)
             item["seam"] = {"settings": settings, "state": state}
             ready = state.get("status") == "ready"
             leaves = state.get("a_source_start")
@@ -209,7 +259,7 @@ def read_mix(conn: sqlite3.Connection, store: SeamStore, draft: int | None = Non
 def write_order(conn: sqlite3.Connection, items: list[Item], draft: int | None = None) -> None:
     """Replace the mix with (song, seam settings, locked) tuples."""
     if draft is not None:
-        _draft_row(conn, draft)
+        _draft_items(conn, draft)
         conn.execute(
             "UPDATE drafts SET items=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
             (json.dumps([list(item) for item in items]), draft),
@@ -265,9 +315,12 @@ def move_song(conn: sqlite3.Connection, source: int, target: int, draft: int | N
         return
     moving = items.pop(source)
     items.insert(target, (moving[0], None, moving[2]))
-    if source < len(items):
-        song, _, locked = items[source]
-        items[source] = (song, None, locked)
+    # When moved upward, the old successor shifts to source + 1; when moved
+    # downward, it shifts to source. Only the changed incoming pair resets.
+    old_successor = source if source < target else source + 1
+    if old_successor < len(items):
+        song, _, locked = items[old_successor]
+        items[old_successor] = (song, None, locked)
     if target + 1 < len(items):
         song, _, locked = items[target + 1]
         items[target + 1] = (song, None, locked)
@@ -456,7 +509,15 @@ def remember(conn: sqlite3.Connection, label: str, draft: int | None = None) -> 
 
 
 def can_undo(conn: sqlite3.Connection, draft: int | None = None) -> bool:
-    return bool(_history(conn, draft))
+    if draft is None:
+        return bool(_history(conn, draft))
+    # whether there is any history, without parsing every revision kept in it
+    row = conn.execute(
+        "SELECT json_array_length(history) > 0 FROM drafts WHERE id=?", (draft,)
+    ).fetchone()
+    if row is None:
+        raise NoSuchDraft(draft)
+    return bool(row[0])
 
 
 def undo(conn: sqlite3.Connection, draft: int | None = None) -> str | None:
@@ -475,7 +536,10 @@ def undo(conn: sqlite3.Connection, draft: int | None = None) -> str | None:
 
 def mix_name(conn: sqlite3.Connection, draft: int | None = None) -> str:
     if draft is not None:
-        return _draft_row(conn, draft)["name"]
+        row = conn.execute("SELECT name FROM drafts WHERE id=?", (draft,)).fetchone()
+        if row is None:
+            raise NoSuchDraft(draft)
+        return row["name"]
     return db.preference(conn, "mix_name", "Your mix")
 
 
@@ -492,11 +556,21 @@ def set_mix_name(conn: sqlite3.Connection, name: str, draft: int | None = None) 
 # ---- drafts
 
 
+# Everything a list of drafts shows. Not `history`: each draft keeps up to UNDO_DEPTH earlier
+# versions of itself, which is most of what is stored and none of what is listed.
+LISTED = "id, name, items, ready_only, line, created_at, updated_at"
+LISTED_ORDER = "ORDER BY line IS NULL, line, updated_at DESC, id DESC"
+
+
 def all_drafts(conn: sqlite3.Connection) -> list[sqlite3.Row]:
-    """Whatever's in the render line first, in its order, then the most recently changed."""
-    return conn.execute(
-        "SELECT * FROM drafts ORDER BY line IS NULL, line, updated_at DESC, id DESC"
-    ).fetchall()
+    """Whatever's in the render line first, in its order, then the most recently changed. Read
+    in that order straight from the drafts_listed index."""
+    return conn.execute(f"SELECT {LISTED} FROM drafts {LISTED_ORDER}").fetchall()  # noqa: S608
+
+
+def draft_names(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    """Only each draft's id and name, in the same order, for pickers and shortcuts."""
+    return conn.execute(f"SELECT id, name FROM drafts {LISTED_ORDER}").fetchall()  # noqa: S608
 
 
 def _clean_name(name: str) -> str:
@@ -533,9 +607,11 @@ def create_draft(
     already there is used rather than making another, so they can't pile up."""
     clean = _clean_name(name or "")
     if not clean and not items:
-        for row in all_drafts(conn):
-            if not _stored(row):
-                return row["id"]
+        empty = conn.execute(
+            f"SELECT id FROM drafts WHERE json_array_length(items)=0 {LISTED_ORDER} LIMIT 1"  # noqa: S608
+        ).fetchone()
+        if empty is not None:
+            return empty["id"]
     chosen = unique_name(conn, clean) if clean else _first_free_name(conn)
     cursor = conn.execute(
         "INSERT INTO drafts(name,items) VALUES(?,?)",
@@ -551,13 +627,15 @@ def copy_current(conn: sqlite3.Connection, name: str | None = None) -> int:
 
 
 def duplicate_draft(conn: sqlite3.Connection, draft: int) -> int:
-    row = _draft_row(conn, draft)
+    row = conn.execute("SELECT name, items FROM drafts WHERE id=?", (draft,)).fetchone()
+    if row is None:
+        raise NoSuchDraft(draft)
     return create_draft(conn, f"{row['name']} copy", _stored(row))
 
 
 def rename_draft(conn: sqlite3.Connection, draft: int, name: str) -> str:
     """Rename it, keeping the old name if there's nothing to go on."""
-    current = _draft_row(conn, draft)["name"]
+    current = mix_name(conn, draft)
     clean = _clean_name(name)
     if not clean or clean == current:
         return current
@@ -642,7 +720,8 @@ def play_draft(conn: sqlite3.Connection, draft: int) -> str:
     kept = None
     if before:
         same = json.dumps([list(item) for item in before])
-        if not any(other["items"] == same for other in all_drafts(conn)):
+        already = conn.execute("SELECT 1 FROM drafts WHERE items=? LIMIT 1", (same,)).fetchone()
+        if already is None:
             kept = create_draft(conn, before_name, before)
     history = _history(conn, None)
     history.append(
@@ -684,7 +763,9 @@ def line_order(conn: sqlite3.Connection) -> list[int]:
 
 
 def _set_line(conn: sqlite3.Connection, order: list[int]) -> None:
-    conn.execute("UPDATE drafts SET line=NULL")
+    # Only drafts already in line, found by the drafts_in_line index. Clearing every row rewrote
+    # every draft, revisions and all, on each delete, play and move.
+    conn.execute("UPDATE drafts SET line=NULL WHERE line IS NOT NULL")
     conn.executemany("UPDATE drafts SET line=? WHERE id=?", [(i, d) for i, d in enumerate(order)])
     conn.commit()
 

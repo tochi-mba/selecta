@@ -22,8 +22,15 @@ TABLE_MODULES: tuple[str, ...] = (
     "selecta.flags.rules",
     "selecta.lucy.schema",
     "selecta.playback.schema",
+    "selecta.playback.zone_schema",
     "selecta.rooms.schema",
     "selecta.admin.schema",
+    "selecta.business.schema",
+    "selecta.business.hours_schema",
+    "selecta.business.commercial_schema",
+    "selecta.business.content.schema",
+    "selecta.business.rooms.schema",
+    "selecta.business.people.schema",
 )
 
 

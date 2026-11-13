@@ -47,7 +47,9 @@ export const apiOrigin =(import.meta.env.VITE_SELECTA_API_ORIGIN ?? '').replace(
 export const OVER_QUOTA = 'over_quota_read_only';
 
 export class CloudError extends Error {
-  constructor(message: string, readonly status: number, readonly code?: string) { super(message); }
+  /** `payload` is the refusal's JSON body, for callers that read more than the message (a crate
+   * refused because schedules use it carries the list of uses). */
+  constructor(message: string, readonly status: number, readonly code?: string, readonly payload?: unknown) { super(message); }
 }
 
 export function idempotencyKey() {

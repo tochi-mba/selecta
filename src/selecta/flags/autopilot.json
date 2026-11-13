@@ -1,0 +1,160 @@
+{
+  "area": "Autopilot and venue",
+  "flags": {
+    "cloud.mix_create": {
+      "label": "Make a mix in the Cloud",
+      "about": "Create and edit planned mixes from Cloud Library songs, using the same mix contract as the local app. Seams are plain crossfades until songs have tempo and key facts.",
+      "surfaces": [
+        "cloud.listen",
+        "cloud.library"
+      ],
+      "routes": [
+        "GET /api/cloud-mixes/capabilities",
+        "GET /api/cloud-mixes",
+        "POST /api/cloud-mixes",
+        "GET /api/cloud-mixes/{mix_id}",
+        "POST /api/cloud-mixes/{mix_id}/revisions"
+      ],
+      "modes": [
+        "cloud"
+      ],
+      "kind": "release",
+      "owner": "autopilot"
+    },
+    "cloud.single_audio_owner": {
+      "label": "One Cloud player",
+      "about": "Cloud Library previews and Cloud Listen play through one persistent player that keeps playing across pages.",
+      "surfaces": [
+        "cloud.listen",
+        "cloud.library"
+      ],
+      "modes": [
+        "cloud"
+      ],
+      "kind": "release",
+      "owner": "autopilot"
+    },
+    "cloud.account_states": {
+      "label": "Clear Cloud account states",
+      "about": "Exact Cloud routes and distinct messages for signed-out, expired, suspended and unreachable accounts.",
+      "surfaces": [
+        "cloud.home",
+        "cloud.settings"
+      ],
+      "modes": [
+        "cloud"
+      ],
+      "kind": "release",
+      "owner": "autopilot"
+    },
+    "cloud.library_states": {
+      "label": "Truthful Cloud Library states",
+      "about": "Tell loading, failed, empty and ready apart, and report each uploaded file's own result.",
+      "surfaces": [
+        "cloud.library",
+        "cloud.uploads"
+      ],
+      "modes": [
+        "cloud"
+      ],
+      "kind": "release",
+      "owner": "autopilot"
+    },
+    "rooms.nickname_confirm": {
+      "label": "Confirmed guest nicknames",
+      "about": "Show a guest's nickname as saving, saved or not saved, and ignore older Room updates that arrive late.",
+      "kind": "release",
+      "owner": "autopilot"
+    },
+    "mixes.intent_language": {
+      "label": "Plain Make a mix choices",
+      "about": "Separate quick listen from a saved mix and say how long each setting lasts and what it applies to.",
+      "surfaces": [
+        "mixes"
+      ],
+      "kind": "release",
+      "owner": "autopilot"
+    },
+    "autopilot.venue_mode": {
+      "label": "Autopilot venue mode",
+      "about": "Night sessions for a venue with defined autonomy levels, and pause, stop and manual takeover always available.",
+      "default": false,
+      "routes": [
+        "GET /api/autopilot/availability",
+        "GET /api/autopilot/maturity",
+        "POST /api/autopilot/sessions",
+        "GET /api/autopilot/sessions/{session_id}",
+        "POST /api/autopilot/sessions/{session_id}/transitions",
+        "POST /api/autopilot/sessions/{session_id}/controls/{control}"
+      ],
+      "modes": [
+        "cloud"
+      ],
+      "kind": "experiment",
+      "when_off": "stop",
+      "owner": "autopilot"
+    },
+    "autopilot.venue_policy": {
+      "label": "Venue music identity",
+      "about": "Versioned venue music policies, schedules, hard limits and timed overrides for Autopilot.",
+      "default": false,
+      "requires": [
+        "autopilot.venue_mode"
+      ],
+      "routes": [
+        "GET /api/autopilot/venues/{venue_id}/setup",
+        "PUT /api/autopilot/venues/{venue_id}/setup/{step}",
+        "GET /api/autopilot/venues/{venue_id}/policies",
+        "POST /api/autopilot/venues/{venue_id}/policies",
+        "GET /api/autopilot/venues/{venue_id}/overrides",
+        "POST /api/autopilot/venues/{venue_id}/overrides",
+        "DELETE /api/autopilot/venues/{venue_id}/overrides/{override_id}",
+        "POST /api/autopilot/venues/{venue_id}/candidates"
+      ],
+      "modes": [
+        "cloud"
+      ],
+      "kind": "experiment",
+      "owner": "autopilot"
+    },
+    "autopilot.horizon": {
+      "label": "Rolling musical horizon",
+      "about": "Plan the next stretch of the evening ahead, rank songs deterministically and replan only at safe points.",
+      "default": false,
+      "requires": [
+        "autopilot.venue_mode"
+      ],
+      "kind": "experiment",
+      "owner": "autopilot",
+      "modes": [
+        "cloud"
+      ]
+    },
+    "autopilot.safe_transitions": {
+      "label": "Conservative Autopilot transitions",
+      "about": "Check every transition before it plays and fall back to simpler, safer blends when a check fails.",
+      "default": false,
+      "requires": [
+        "autopilot.venue_mode"
+      ],
+      "kind": "experiment",
+      "owner": "autopilot",
+      "modes": [
+        "cloud"
+      ]
+    },
+    "autopilot.ai_director": {
+      "label": "AI DJ director",
+      "about": "Let an AI suggest typed, bounded changes to the Autopilot plan that staff can inspect and undo.",
+      "default": false,
+      "requires": [
+        "autopilot.venue_mode"
+      ],
+      "kind": "experiment",
+      "owner": "autopilot",
+      "modes": [
+        "cloud"
+      ]
+    }
+  }
+}

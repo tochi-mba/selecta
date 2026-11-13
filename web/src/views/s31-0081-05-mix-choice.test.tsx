@@ -25,7 +25,7 @@ const card = (key: string, name: string, group: string): VibeCard => ({
 });
 
 function show() {
-  fakeBackend({ 'GET /vibes': [card('pick', 'Selecta’s pick', ''), card('slow_burn', 'Slow burn', 'The journey')] });
+  fakeBackend({ 'GET /vibes': [card('pick', 'SelectaDJ’s pick', ''), card('slow_burn', 'Slow burn', 'The journey')] });
   const player = new SetPlayer(() => [], () => {});
   return render(
     <Mixes
@@ -41,7 +41,7 @@ describe('S31-0081-05 featured mix and mood cards read without DJ terms', () => 
   it('the featured pick: one recommendation, what it draws on, one main action', async () => {
     show();
     const quick = screen.getByRole('region', { name: 'Listen now, shape later' });
-    await within(quick).findByText('Selecta’s pick');
+    await within(quick).findByText('SelectaDJ’s pick');
     expect(within(quick).getByText('40 matching songs')).toBeInTheDocument();
     expect(within(quick).getByText('Warm songs for a slow start')).toBeInTheDocument();
     const main = quick.querySelectorAll('.primary');
@@ -71,7 +71,7 @@ describe('S31-0081-05 featured mix and mood cards read without DJ terms', () => 
     expect(article.textContent ?? '').not.toMatch(DJ_WORDS);
   });
 
-  it('the whole Make a Mix page, in Selecta’s own words, uses no DJ terms', async () => {
+  it('the whole Make a Mix page, in SelectaDJ’s own words, uses no DJ terms', async () => {
     const { container } = show();
     await screen.findByRole('heading', { name: 'Slow burn' });
     for (const details of container.querySelectorAll('details')) details.setAttribute('open', '');

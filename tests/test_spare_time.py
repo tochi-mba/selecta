@@ -203,8 +203,7 @@ def preparer(tmp_path, monkeypatch, wired):
     monkeypatch.setattr("selecta.planner.reel.load_library", lambda _conn, _settings: songs)
     monkeypatch.setattr("selecta.discovery.search.lyric_links", lambda _conn: [])
     monkeypatch.setattr(prepare, "best_links", lambda _links, _songs: ([], {}, None))
-    monkeypatch.setattr(worker, "cache_bytes", lambda _settings: 0)
-    monkeypatch.setattr(worker, "largest_cache_bytes", lambda _settings: 1000)
+    monkeypatch.setattr(worker, "cache_room", lambda _settings: (0, 1000))
     store = SeamStore(settings)
     return settings, store
 
@@ -225,7 +224,7 @@ def test_word_links_still_come_first(preparer, monkeypatch):
 
 def test_it_leaves_room_for_what_is_being_played(preparer, monkeypatch):
     settings, store = preparer
-    monkeypatch.setattr(worker, "cache_bytes", lambda _settings: 900)
+    monkeypatch.setattr(worker, "cache_room", lambda _settings: (900, 1000))
     assert worker._preparer(store, settings)() is None
 
 

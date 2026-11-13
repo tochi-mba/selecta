@@ -1,0 +1,82 @@
+{
+  "about": "Venue rights action matrix (ADR-0434, AV-0434-01). For each media operation: the decision for each content licence state, and whether the operation runs a model (then the model's commercial decision applies too). The stricter decision wins: refuse over needs_review over allow. Used only in commercial venue mode under the venue.rights_gate flag; personal and local use is unchanged. Not legal advice: every 'allow' for cleared content still assumes a written, per-territory licence that lists the operation, and specialist commercial approval (AV-0434-05) is a person step.",
+  "decisions": ["allow", "needs_review", "refuse"],
+  "content_states": {
+    "cleared": "A written licence for this venue's territory that names the operation and has not expired.",
+    "personal_only": "A personal purchase or personal library file; no public performance or commercial copying right.",
+    "unknown": "No rights record yet.",
+    "expired": "A licence existed but its term ended.",
+    "blocked": "The rights holder or the owner withdrew it."
+  },
+  "operations": {
+    "play_in_venue": {
+      "about": "Public performance of the recording and composition through venue speakers.",
+      "uses_model": false,
+      "content": {"cleared": "allow", "personal_only": "refuse", "unknown": "needs_review", "expired": "refuse", "blocked": "refuse"}
+    },
+    "stream": {
+      "about": "Send the audio to another device or zone over the network.",
+      "uses_model": false,
+      "content": {"cleared": "allow", "personal_only": "refuse", "unknown": "needs_review", "expired": "refuse", "blocked": "refuse"}
+    },
+    "cache_offline": {
+      "about": "Keep a copy on the venue device so the night survives a network fault.",
+      "uses_model": false,
+      "content": {"cleared": "allow", "personal_only": "refuse", "unknown": "needs_review", "expired": "refuse", "blocked": "refuse"}
+    },
+    "render_seam": {
+      "about": "Render a transition that mixes two recordings into new audio.",
+      "uses_model": false,
+      "content": {"cleared": "allow", "personal_only": "refuse", "unknown": "refuse", "expired": "refuse", "blocked": "refuse"}
+    },
+    "stem_separate": {
+      "about": "Split a recording into stems with a separation model.",
+      "uses_model": true,
+      "content": {"cleared": "allow", "personal_only": "refuse", "unknown": "refuse", "expired": "refuse", "blocked": "refuse"}
+    },
+    "export": {
+      "about": "Write a mix or render to a file that leaves the venue device.",
+      "uses_model": false,
+      "content": {"cleared": "allow", "personal_only": "refuse", "unknown": "refuse", "expired": "refuse", "blocked": "refuse"}
+    },
+    "analyse_with_model": {
+      "about": "Run an analysis model (key, beats, lyrics) over the recording.",
+      "uses_model": true,
+      "content": {"cleared": "allow", "personal_only": "needs_review", "unknown": "needs_review", "expired": "refuse", "blocked": "refuse"}
+    }
+  },
+  "model_states": {
+    "allowed": "allow",
+    "review": "needs_review",
+    "blocked": "refuse",
+    "unlisted": "refuse"
+  },
+  "model_review": {
+    "skey": {
+      "licence": "Weights licensed for non-commercial research only (per docs/saas/licence-register.md and analysis/skey_model.py).",
+      "commercial": "refuse",
+      "fallback": "chroma_key",
+      "note": "ADR-0405. The venue gate refuses S-KEY in commercial venue mode; key detection falls back to the chroma template match in analysis/key.py."
+    },
+    "beat_this.small0": {
+      "licence": "MIT code and weights per the project; training data licences not stated.",
+      "commercial": "allow",
+      "note": "Register says allowed after confirming the LICENSE file and model card."
+    },
+    "beat_this.final0": {
+      "licence": "MIT code and weights per the project; training data licences not stated.",
+      "commercial": "allow",
+      "note": "Register says allowed after confirming the LICENSE file and model card."
+    },
+    "demucs.htdemucs": {
+      "licence": "Code MIT; weights licence not stated; trained partly on research datasets.",
+      "commercial": "needs_review",
+      "note": "Stem separation in a commercial venue waits for specialist review."
+    },
+    "torchaudio.wav2vec2_asr_base_960h": {
+      "licence": "fairseq code MIT; LibriSpeech training data CC BY 4.0.",
+      "commercial": "allow",
+      "note": "Allowed with attribution."
+    }
+  }
+}

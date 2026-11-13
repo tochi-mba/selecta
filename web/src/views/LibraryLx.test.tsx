@@ -102,7 +102,7 @@ describe('LX-0346-05 analyse buttons tell the truth about the job', () => {
         row(1, 'Asked'),
         row(2, 'Queued'),
         row(3, 'Running'),
-        row(4, 'Broke', { readiness: { status: 'needs_attention', reason: 'Selecta couldn’t analyse this file.' } }),
+        row(4, 'Broke', { readiness: { status: 'needs_attention', reason: 'SelectaDJ couldn’t analyse this file.' } }),
       )), { status: 200 }));
     }));
     const { notify } = show({ state: status({ analysing: [3, 9, 2] }) });
@@ -325,7 +325,7 @@ describe('LX-0348-03, LX-0348-04 the song sheet separates measured, corrected an
 
 describe('LX-0349-06 a failed save keeps what was typed and points at the problem', () => {
   const failures: [string, () => Promise<Response>][] = [
-    ['server error', async () => new Response(JSON.stringify({ detail: 'Selecta had a problem saving that.' }), { status: 500 })],
+    ['server error', async () => new Response(JSON.stringify({ detail: 'SelectaDJ had a problem saving that.' }), { status: 500 })],
     ['conflict', async () => new Response(JSON.stringify({ detail: 'That song changed. Refresh and try again.' }), { status: 409 })],
     ['validation', async () => new Response(JSON.stringify({ detail: 'Tempo has to be between 40 and 240.' }), { status: 400 })],
     ['network', async () => { throw new TypeError('Failed to fetch'); }],
@@ -336,7 +336,7 @@ describe('LX-0349-06 a failed save keeps what was typed and points at the proble
       : Promise.resolve(new Response(JSON.stringify(page(row(1, 'Song', { bpm: 120, detected_bpm: 120 }))), { status: 200 })))));
     const { notify } = show();
     await userEvent.click(await screen.findByRole('button', { name: 'Details for Song' }));
-    const tempo = screen.getByRole('spinbutton', { name: /Tempo/ });
+    const tempo = screen.getByRole('textbox', { name: /^Tempo/ });
     await userEvent.type(tempo, '128');
     await userEvent.click(screen.getByRole('button', { name: 'Save correction' }));
     const alert = await screen.findByRole('alert');
@@ -344,7 +344,7 @@ describe('LX-0349-06 a failed save keeps what was typed and points at the proble
     // default second to get there, and the requirement (the problem gets focus) is unchanged
     await waitFor(() => expect(alert).toHaveFocus(), { timeout: 3000 });
     expect(alert.textContent).not.toBe('');
-    expect(tempo).toHaveValue(128);
+    expect(tempo).toHaveValue('128');
     expect(notify).not.toHaveBeenCalled();
   });
 });
@@ -355,7 +355,7 @@ describe('LX-0340-07, LX-0352-03 first run, nothing ready and no match each say 
     fakeBackend({ 'GET /library': page() });
     show({ state: status({ counts: { total: 5, music: 5, set_aside: 0, analysed: 0, ready: 0, lyrics: 0 } }) });
     expect(await screen.findByRole('heading', { name: 'No songs are ready for mixes yet' })).toBeInTheDocument();
-    expect(screen.getByText(/becomes ready for mixes once Selecta has analysed it/)).toBeInTheDocument();
+    expect(screen.getByText(/becomes ready for mixes once SelectaDJ has analysed it/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Show all songs' })).toBeEnabled();
     expect(screen.queryByRole('button', { name: 'Start a mix' })).toBeNull();
     expect(screen.getByText('Looking in: Ready.')).toBeInTheDocument();
@@ -385,6 +385,21 @@ describe('LX-0340-07, LX-0352-03 first run, nothing ready and no match each say 
     await userEvent.click(screen.getByRole('button', { name: 'Clear search' }));
     // clearing the search keeps the filter that was chosen
     await waitFor(() => expect(window.location.search).toBe('?show=attention'));
+    // an empty filter with no search says what the view holds, not to try another spelling
+    expect(await screen.findByRole('heading', { name: 'No songs in this view' })).toBeInTheDocument();
+    expect(screen.getByText('No song is in Needs attention right now. Show all songs to see the rest of your library.')).toBeInTheDocument();
+    expect(screen.queryByText(/Try a different title/)).toBeNull();
+  });
+
+  it('a search with no match says set-aside songs are searched only under Set aside', async () => {
+    fakeBackend({ 'GET /library': page() });
+    show({ state: status({ counts: { total: 13, music: 12, set_aside: 1, analysed: 12, ready: 12, lyrics: 0 } }) });
+    act(() => {
+      window.history.pushState({}, '', '/library?q=Episode');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(await screen.findByRole('heading', { name: 'Nothing matches “Episode”.' })).toBeInTheDocument();
+    expect(screen.getByText('Set-aside songs are only searched under Set aside.')).toBeInTheDocument();
   });
 });
 

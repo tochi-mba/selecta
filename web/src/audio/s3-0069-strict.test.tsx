@@ -8,8 +8,10 @@ import { clearToasts } from '../ui/toasts';
 
 /**
  * ADR-0069 (S3-0069-06): React StrictMode mounts, unmounts and mounts again in development. That must
- * not leave a second sound source behind: nothing makes an AudioContext or an audio element until the
- * listener presses Play, and swapping between the phone and desk layouts adds none either.
+ * not leave a second sound source behind: mounting makes no AudioContext or audio element of its own,
+ * and swapping between the phone and desk layouts adds none either. (PF-21: in the browser the one
+ * player opens its single context ahead of Play while idle on Listen and Edit; App skips that under
+ * unit tests, and player.test.ts proves prepare() makes at most one.)
  */
 
 function phone(start: boolean) {
