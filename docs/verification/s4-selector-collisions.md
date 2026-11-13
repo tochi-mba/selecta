@@ -173,13 +173,14 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `select` | style.css, styles/polish.css | styles/polish.css |
 | `select:focus-visible` | style.css, styles/polish.css | styles/polish.css |
 
-## Classes styled by more than one sheet (216)
+## Classes styled by more than one sheet (217)
 
 | Class | Sheets, in load order | Proposed owner |
 |---|---|---|
 | `.action-labels` | styles/polish.css, styles/listening.css, styles/icons.css | styles/polish.css |
 | `.active` | style.css, styles/depth.css | style.css |
 | `.add-gap` | style.css, styles/creation.css | style.css |
+| `.adder` | style.css, styles/depth.css | style.css |
 | `.artist` | style.css, styles/shell.css, styles/listening.css | style.css |
 | `.artists` | style.css, styles/polish.css, styles/listening.css | style.css |
 | `.attention` | style.css, styles/polish.css | style.css |

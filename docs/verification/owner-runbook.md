@@ -274,11 +274,11 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 
 <!-- owner-runbook:generated:begin -->
 
-**Open person-only tasks: 763.**
+**Open person-only tasks: 762.**
 
 | Sitting | Tasks | Tracker |
 |---|---|---|
-| 1. Visual review and baseline approval | 97 | [tracker/visual-review.md](tracker/visual-review.md) |
+| 1. Visual review and baseline approval | 96 | [tracker/visual-review.md](tracker/visual-review.md) |
 | 2. Screen-reader and keyboard session | 86 | [tracker/screen-reader.md](tracker/screen-reader.md) |
 | 3. Phones, touch, zoom and hardware | 113 | [tracker/devices.md](tracker/devices.md) |
 | 4. Listening session | 86 | [tracker/listening.md](tracker/listening.md) |
@@ -297,7 +297,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 - `selecta-creative-interface-implementation-checklist.md` (1): CI-0171-02
 - `selecta-experience-implementation-checklist.md` (5): EX-0130-01, EX-0130-03, EX-0130-04, EX-0133-02, EX-0134-02
 - `selecta-final-polish-implementation-checklist.md` (4): FP-0264-08, FP-0265-02, FP-0265-08, FP-0266-08
-- `selecta-flow-implementation-checklist.md` (28): SF-0200-01, SF-0200-03, SF-0200-05, SF-0200-06, SF-0200-07, SF-0201-02, SF-0201-03, SF-0201-08, SF-0202-08, SF-0203-04, SF-0204-08, SF-0206-05, SF-0206-07, SF-0207-05, SF-0209-02, SF-0210-01, SF-0210-06, SF-0212-02, SF-0213-06, SF-0218-02, SF-0227-01, SF-0227-07, SF-0245-01, SF-0245-02, SF-0245-03, SF-0245-05, SF-0245-07, SF-0245-08
+- `selecta-flow-implementation-checklist.md` (27): SF-0200-01, SF-0200-03, SF-0200-05, SF-0200-06, SF-0200-07, SF-0201-02, SF-0201-03, SF-0201-08, SF-0202-08, SF-0203-04, SF-0204-08, SF-0206-05, SF-0206-07, SF-0207-05, SF-0210-01, SF-0210-06, SF-0212-02, SF-0213-06, SF-0218-02, SF-0227-01, SF-0227-07, SF-0245-01, SF-0245-02, SF-0245-03, SF-0245-05, SF-0245-07, SF-0245-08
 - `selecta-gap-polish-implementation-checklist.md` (1): GP-0257-04
 - `selecta-library-lucy-experience-implementation-checklist.md` (4): LX-0340-08, LX-0352-08, LX-0358-03, LX-0364-08
 - `selecta-measured-micro-polish-implementation-checklist.md` (3): MP-0279-08, MP-0295-08, MP-0299-02
