@@ -20,11 +20,11 @@ function speaker(): Speaker & { pause: ReturnType<typeof vi.fn<() => void>> } {
 
 function apiFor(remotePaused: () => boolean): Api {
   return (async (path: string) => {
-  if (path === '/devices') return { device: { id: 'laptop', name: 'Laptop', kind: 'laptop', signed_in: true, this_device: true, poor_speaker: false, last_seen_at: 0, warnings: [] }, notice: null };
-  if (path === '/playback/reconnect') return { action: 'continue', session: playing, message: null };
-  if (path.startsWith('/playback/session')) return { session: remotePaused() ? paused : playing, speaker: 'here', speaker_device_id: 'laptop', speaker_name: 'Laptop', ask_before_playing_here: false, server_time: 100 };
-  if (path === '/playback/heartbeat') return { outcome: 'ok', session: paused, server_time: 100 };
-  throw new Error(`unexpected ${path}`);
+    if (path === '/devices') return { device: { id: 'laptop', name: 'Laptop', kind: 'laptop', signed_in: true, this_device: true, poor_speaker: false, last_seen_at: 0, warnings: [] }, notice: null };
+    if (path === '/playback/reconnect') return { action: 'continue', session: playing, message: null };
+    if (path.startsWith('/playback/session')) return { session: remotePaused() ? paused : playing, speaker: 'here', speaker_device_id: 'laptop', speaker_name: 'Laptop', ask_before_playing_here: false, server_time: 100 };
+    if (path === '/playback/heartbeat') return { outcome: 'ok', session: paused, server_time: 100 };
+    throw new Error(`unexpected ${path}`);
   }) as Api;
 }
 
@@ -34,7 +34,8 @@ describe('a speaker with remote control off', () => {
   it('ignores a pause another device sent', async () => {
     let remotePaused = false;
     const quiet = speaker();
-    renderHook(() => usePlaybackDevice({ api: apiFor(() => remotePaused), workspaceId: 'ws', speaker: quiet, remoteControl: false }));
+    const api = apiFor(() => remotePaused);
+    renderHook(() => usePlaybackDevice({ api, workspaceId: 'ws', speaker: quiet, remoteControl: false }));
     await waitFor(() => expect(quiet.start).toHaveBeenCalled());
     remotePaused = true;
     await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -44,7 +45,8 @@ describe('a speaker with remote control off', () => {
   it('follows the same pause when remote control is on', async () => {
     let remotePaused = false;
     const following = speaker();
-    renderHook(() => usePlaybackDevice({ api: apiFor(() => remotePaused), workspaceId: 'ws', speaker: following }));
+    const api = apiFor(() => remotePaused);
+    renderHook(() => usePlaybackDevice({ api, workspaceId: 'ws', speaker: following }));
     await waitFor(() => expect(following.start).toHaveBeenCalled());
     remotePaused = true;
     await waitFor(() => expect(following.pause).toHaveBeenCalled(), { timeout: 4000 });
