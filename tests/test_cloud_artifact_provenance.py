@@ -6,6 +6,8 @@ migration `a3f8d2c61b97` rewrote the one older provenance shape into the shared 
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 import sqlalchemy as sa
 from alembic.runtime.migration import MigrationContext
@@ -302,3 +304,9 @@ def test_mix_revision_manifest_cannot_disagree_with_its_content_hash(corruption)
             "mix_revision", values["input_hash"], values["keys"],
             values["checksum"], values["size_bytes"], made
         ))
+
+
+def test_mix_revision_parent_must_be_a_content_hash():
+    contract = replace(sample_cloud_mix(), number=2, parent="not-a-revision-hash")
+    with pytest.raises(ProvenanceInvalid, match="parent hash"):
+        provenance.check("mix_revision", revision_provenance(contract, "user-1"))

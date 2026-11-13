@@ -203,17 +203,24 @@ def test_edited_mix_manifest_links_to_parent_without_overwriting_history(alice_m
     invariants.assert_clean(party.engine)
 
 
+@pytest.mark.parametrize("corruption", ["creator", "checksum", "keys"])
 @pytest.mark.invariants_off("deliberately corrupts a provenance row to test the read boundary")
-def test_a_tampered_revision_is_never_read_as_a_valid_mix(alice_mix):
+def test_a_tampered_revision_is_never_read_as_a_valid_mix(alice_mix, corruption):
     party = alice_mix["party"]
     workspace_id = party.workspaces[ALICE]
     row = _mix_artifacts(party.engine, workspace_id)[0]
-    bad = dict(row.provenance)
-    bad["settings"] = {**bad["settings"], "by": ""}
-    bad["settings_hash"] = provenance.settings_hash(bad["settings"])
+    if corruption == "creator":
+        bad = dict(row.provenance)
+        bad["settings"] = {**bad["settings"], "by": ""}
+        bad["settings_hash"] = provenance.settings_hash(bad["settings"])
+        updates = {"provenance": bad}
+    elif corruption == "checksum":
+        updates = {"checksum": "f" * 64}
+    else:
+        updates = {"keys": ["w/other/invalid-key"]}
     with transaction(party.engine, workspace_id) as conn:
         conn.execute(
-            artifacts.update().where(artifacts.c.id == row.id).values(provenance=bad)
+            artifacts.update().where(artifacts.c.id == row.id).values(**updates)
         )
     own = party.client.get(
         f"/api/cloud-mixes/{alice_mix['mix']['mix_id']}", headers=auth(ALICE)

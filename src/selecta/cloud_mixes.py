@@ -250,18 +250,16 @@ def _store(conn: Connection, workspace_id: str, contract: MixContract, user_id: 
 
 def _all_revisions(conn: Connection, workspace_id: str) -> list[tuple[MixContract, float]]:
     rows = conn.execute(
-        sa.select(
-            artifacts.c.input_hash, artifacts.c.provenance, artifacts.c.created_at
-        ).where(artifacts.c.workspace_id == workspace_id, artifacts.c.kind == KIND)
+        sa.select(artifacts).where(
+            artifacts.c.workspace_id == workspace_id, artifacts.c.kind == KIND
+        )
     ).all()
     found = []
-    for input_hash, record, created_at in rows:
+    for row in rows:
         try:
-            provenance.check(KIND, record)
-            contract = from_json(record["settings"]["contract"])
-            if contract.revision != input_hash:
-                continue
-            found.append((contract, float(created_at)))
+            provenance.check_output(row)
+            contract = from_json(row.provenance["settings"]["contract"])
+            found.append((contract, float(row.created_at)))
         except (provenance.ProvenanceInvalid, ContractError, KeyError, TypeError, ValueError):
             continue  # damaged or incorrectly attributed rows are never served as mixes
     return found

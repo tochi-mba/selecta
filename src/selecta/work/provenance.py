@@ -173,6 +173,8 @@ def _check_mix_revision(
         raise ProvenanceInvalid("The mix_revision artifact must reference song content hashes.")
     expected_inputs = {"songs": hashes}
     if contract.parent is not None:
+        if not isinstance(contract.parent, str) or not SHA256.fullmatch(contract.parent):
+            raise ProvenanceInvalid("The mix_revision artifact has an invalid parent hash.")
         expected_inputs["parent"] = contract.parent
     if dict(inputs) != expected_inputs:
         raise ProvenanceInvalid("The mix_revision artifact's inputs differ from its contract.")
