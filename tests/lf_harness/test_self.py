@@ -64,7 +64,7 @@ class AudioTests(unittest.TestCase):
 
 class FleetTests(unittest.TestCase):
     def test_five_of_eight_and_isolation(self):
-        with make_five_of_eight_fleet():
+        with make_five_of_eight_fleet() as fleet:
             a, b = fleet.devices["engine-a"], fleet.devices["engine-b"]
             self.assertEqual(len(a.inventory()), 5)
             self.assertEqual(len(b.inventory()), 8)
@@ -319,7 +319,7 @@ class SecurityTests(unittest.TestCase):
             assert_no_media_in_cloud_capture({"device_id": "opaque-1", "status": "ready"}, fixture)
 
     def test_cross_tenant_and_path_adversaries(self):
-        with make_five_of_eight_fleet() as fleet:
+        with make_five_of_eight_fleet():
             foreign = cross_tenant_command(
                 target_device_id="engine-a", foreign_workspace="workspace-b"
             )
