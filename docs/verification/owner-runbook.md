@@ -274,18 +274,18 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 
 <!-- owner-runbook:generated:begin -->
 
-**Open person-only tasks: 753.**
+**Open person-only tasks: 763.**
 
 | Sitting | Tasks | Tracker |
 |---|---|---|
 | 1. Visual review and baseline approval | 97 | [tracker/visual-review.md](tracker/visual-review.md) |
 | 2. Screen-reader and keyboard session | 86 | [tracker/screen-reader.md](tracker/screen-reader.md) |
-| 3. Phones, touch, zoom and hardware | 110 | [tracker/devices.md](tracker/devices.md) |
-| 4. Listening session | 85 | [tracker/listening.md](tracker/listening.md) |
+| 3. Phones, touch, zoom and hardware | 113 | [tracker/devices.md](tracker/devices.md) |
+| 4. Listening session | 86 | [tracker/listening.md](tracker/listening.md) |
 | 5. User-study sessions | 216 | [tracker/user-study.md](tracker/user-study.md) |
 | 6. Staging, drills and rollback | 16 | [tracker/staging.md](tracker/staging.md) |
-| 7. Legal and business list | 13 | [tracker/legal-business.md](tracker/legal-business.md) |
-| 8. Sign-off pass | 130 | [tracker/sign-off.md](tracker/sign-off.md) |
+| 7. Legal and business list | 14 | [tracker/legal-business.md](tracker/legal-business.md) |
+| 8. Sign-off pass | 135 | [tracker/sign-off.md](tracker/sign-off.md) |
 
 ### Task IDs closed by sitting 1: Visual review and baseline approval
 
@@ -327,6 +327,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 - `selecta-3-1-implementation-checklist.md` (17): S31-0080-03, S31-0080-10, S31-0081-03, S31-0081-09, S31-0082-07, S31-0082-08, S31-0083-04, S31-0084-07, S31-0085-10, S31-0086-03, S31-0086-07, S31-0086-10, S31-0086-11, S31-0087-06, S31-0087-07, S31-0087-08, S31-0087-10
 - `selecta-3-implementation-checklist.md` (6): S3-0067-04, S3-0072-04, S3-0073-01, S3-0073-04, S3-0073-05, S3-0073-08
 - `selecta-4-implementation-checklist.md` (26): S4-0091-08, S4-0092-03, S4-0092-06, S4-0092-10, S4-0093-06, S4-0093-10, S4-0094-02, S4-0094-06, S4-0098-04, S4-0098-05, S4-0100-03, S4-0100-09, S4-0101-09, S4-0102-02, S4-0105-01, S4-0105-08, S4-0106-08, S4-0107-03, S4-0107-10, S4-0110-09, S4-0111-05, S4-0111-06, S4-0111-07, S4-0111-08, S4-0112-08, S4-0113-03
+- `selecta-autopilot-implementation-checklist.md` (3): AV-0429-03, AV-0433-02, AV-0433-03
 - `selecta-business-implementation-checklist.md` (3): BZ-0445-12, BZ-0446-12, BZ-0454-12
 - `selecta-cloud-implementation-checklist.md` (5): SC-0399-02, SC-0415-03, SC-0415-04, SC-0415-05, SC-0416-02
 - `selecta-creative-interface-implementation-checklist.md` (4): CI-0170-06, CI-0171-03, CI-0174-07, CI-0183-05
@@ -346,6 +347,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 - `selecta-3-1-implementation-checklist.md` (10): S31-0082-01, S31-0082-10, S31-0083-12, S31-0084-04, S31-0084-08, S31-0085-07, S31-0085-08, S31-0086-09, S31-0087-09, S31-0088-06
 - `selecta-3-implementation-checklist.md` (3): S3-0059-09, S3-0065-08, S3-0074-05
 - `selecta-4-implementation-checklist.md` (15): S4-0090-07, S4-0098-01, S4-0101-10, S4-0102-04, S4-0102-05, S4-0103-06, S4-0104-05, S4-0104-09, S4-0108-10, S4-0109-03, S4-0109-08, S4-0109-09, S4-0109-10, S4-0112-04, S4-0113-07
+- `selecta-autopilot-implementation-checklist.md` (1): AV-0433-05
 - `selecta-cloud-implementation-checklist.md` (2): SC-0394-04, SC-0395-06
 - `selecta-creative-interface-implementation-checklist.md` (8): CI-0170-03, CI-0170-07, CI-0171-07, CI-0175-07, CI-0176-07, CI-0180-06, CI-0184-05, CI-0184-06
 - `selecta-experience-implementation-checklist.md` (9): EX-0115-05, EX-0116-05, EX-0121-01, EX-0122-05, EX-0124-05, EX-0125-02, EX-0127-04, EX-0129-02, EX-0129-05
@@ -381,6 +383,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 
 ### Task IDs closed by sitting 7: Legal and business list
 
+- `selecta-autopilot-implementation-checklist.md` (1): AV-0433-04
 - `selecta-business-implementation-checklist.md` (4): BZ-0441-09, BZ-0449-11, BZ-0451-11, BZ-0454-14
 - `selecta-cloud-implementation-checklist.md` (9): SC-0403-05, SC-0405-02, SC-0405-04, SC-0406-01, SC-0406-04, SC-0412-01, SC-0413-01, SC-0413-04, SC-0416-07
 
@@ -391,6 +394,7 @@ Tracker: [tracker/sign-off.md](tracker/sign-off.md)
 - `selecta-3-1-implementation-checklist.md` (46): S31-0078-01, S31-0078-02, S31-0078-03, S31-0078-07, S31-0078-08, S31-0078-09, S31-0078-10, S31-0079-03, S31-0080-04, S31-0080-06, S31-0080-07, S31-0080-08, S31-0081-02, S31-0081-04, S31-0081-08, S31-0082-11, S31-0083-02, S31-0083-07, S31-0083-08, S31-0083-09, S31-0083-10, S31-0083-11, S31-0084-05, S31-0084-06, S31-0084-09, S31-0085-01, S31-0085-02, S31-0085-04, S31-0085-05, S31-0085-09, S31-0086-01, S31-0086-04, S31-0086-05, S31-0086-06, S31-0086-08, S31-0087-01, S31-0087-05, S31-0087-11, S31-0088-03, S31-0088-04, S31-0088-07, S31-0088-08, S31-0088-09, S31-0088-10, S31-0088-11, S31-0088-12
 - `selecta-3-implementation-checklist.md` (7): S3-0047-03, S3-0047-06, S3-0074-09, S3-0074-10, S3-0075-08, S3-0076-04, S3-0076-08
 - `selecta-4-implementation-checklist.md` (23): S4-0089-01, S4-0089-02, S4-0089-03, S4-0089-06, S4-0089-07, S4-0089-08, S4-0089-10, S4-0090-01, S4-0100-02, S4-0103-02, S4-0104-02, S4-0105-05, S4-0105-10, S4-0106-03, S4-0108-02, S4-0108-05, S4-0109-01, S4-0109-02, S4-0112-05, S4-0112-10, S4-0113-01, S4-0113-06, S4-0113-09
+- `selecta-autopilot-implementation-checklist.md` (5): AV-0429-01, AV-0429-02, AV-0429-04, AV-0429-05, AV-0433-01
 - `selecta-business-implementation-checklist.md` (5): BZ-0441-07, BZ-0441-08, BZ-0448-10, BZ-0453-21, BZ-0454-13
 - `selecta-creative-interface-implementation-checklist.md` (5): CI-0172-05, CI-0182-05, CI-0184-02, CI-0184-03, CI-0184-07
 - `selecta-experience-implementation-checklist.md` (3): EX-0114-05, EX-0126-04, EX-0133-05
