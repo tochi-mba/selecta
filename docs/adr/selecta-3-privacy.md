@@ -17,6 +17,30 @@ Rechecked on 2026-11-11 against every remote address in `src/selecta` (`tests/te
 
 "Your audio stays on this PC" is the claim the app makes, and it's accurate. It deliberately doesn't claim "nothing leaves this PC", which wouldn't be.
 
+### Static references and test-only hosts
+
+The following hostnames occur as literal references in documentation, fixture data, and venue licensing guidance in the source tree. Their presence is **not** a network request made by local Selecta. The two invalid domains are intentionally non-resolving test fixtures.
+
+- `app.invalid`
+- `globalmusicrights.com`
+- `issuer.invalid`
+- `pplprs.co.uk`
+- `www.agedi.es`
+- `www.ascap.com`
+- `www.bmi.com`
+- `www.bumastemra.nl`
+- `www.gema.de`
+- `www.gvl.de`
+- `www.imro.ie`
+- `www.ppiltd.com`
+- `www.ppluk.com`
+- `www.prsformusic.com`
+- `www.sacem.fr`
+- `www.sena.nl`
+- `www.sesac.com`
+- `www.sgae.es`
+- `www.spre.fr`
+
 ## Who can reach the server
 
 | Check | Where | Effect |
