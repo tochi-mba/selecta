@@ -38,6 +38,44 @@
       "kind": "release",
       "owner": "business"
     },
+    "business.schedules": {
+      "label": "Venue schedules and programmes",
+      "about": "Opening hours, holiday exceptions, stay-open-late and close-now overrides, plus zone programmes and state.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": [
+        "GET /api/business/venues/{venue_id}/hours",
+        "PUT /api/business/venues/{venue_id}/hours",
+        "POST /api/business/venues/{venue_id}/hour-exceptions",
+        "DELETE /api/business/venues/{venue_id}/hour-exceptions/{exception_id}",
+        "GET /api/business/venues/{venue_id}/holiday-suggestions",
+        "POST /api/business/venues/{venue_id}/stay-open-late",
+        "POST /api/business/venues/{venue_id}/close-now",
+        "POST /api/business/venues/{venue_id}/close-now/{override_id}/undo",
+        "GET /api/business/zones/{zone_id}/state",
+        "GET /api/business/zones/{zone_id}/programme",
+        "PUT /api/business/zones/{zone_id}/programme"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.offline": {
+      "label": "Offline zone controls",
+      "about": "Kiosk offline manifests, idempotent command resync and device cache reports for business zones.",
+      "default": false,
+      "requires": ["business.schedules"],
+      "routes": [
+        "GET /api/business/zones/{zone_id}/offline-manifest",
+        "POST /api/business/zones/{zone_id}/commands",
+        "PUT /api/business/zones/{zone_id}/cache-report"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
     "business.workspaces": {
       "label": "Workspace switcher",
       "about": "Switch between your personal SelectaDJ and the organisations you belong to. Personal and business data never mix.",

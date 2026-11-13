@@ -276,5 +276,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 |---|---|---|
 | `business.signups` | **SelectaDJ for Business sign-up.** Self-serve business sign-up and selling of business plans. Off until the legal review passes; pilots work without it. |  |
 | `business.orgs` | **Organisations, venues, zones and crates.** An organisation workspace with its venues, each venue's zones, and organisation and venue crates drawn from one shared library. |  |
+| `business.schedules` | **Venue schedules and programmes.** Opening hours, holiday exceptions, stay-open-late and close-now overrides, plus zone programmes and state. | `business.orgs` |
+| `business.offline` | **Offline zone controls.** Kiosk offline manifests, idempotent command resync and device cache reports for business zones. | `business.schedules` |
 | `business.workspaces` | **Workspace switcher.** Switch between your personal SelectaDJ and the organisations you belong to. Personal and business data never mix. | `business.orgs` |
 | `business.pilots` | **Business pilots.** REX Technologies staff create free pilot organisations with their venues and zones, using the same model a paying venue will. | `business.orgs` |

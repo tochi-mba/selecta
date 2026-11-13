@@ -21,6 +21,23 @@ def test_the_registry_has_no_problems():
     assert flags.problems() == []
 
 
+
+def test_business_schedule_and_offline_routes_have_distinct_disabled_rollout_flags():
+    registry = flags.registry()
+    owners = flags.route_owners()
+    for flag_id, dependency in (
+        ("business.schedules", "business.orgs"),
+        ("business.offline", "business.schedules"),
+    ):
+        flag = registry[flag_id]
+        assert flag.default is False
+        assert flag.requires == (dependency,)
+        assert flag.routes
+        assert all(owners[route] == flag_id for route in flag.routes)
+    assert owners["GET /api/business/venues/{venue_id}/hours"] == "business.schedules"
+    assert owners["GET /api/business/zones/{zone_id}/offline-manifest"] == "business.offline"
+
+
 def test_every_core_flag_says_why_it_cant_be_turned_off():
     core = [flag for flag in flags.registry().values() if flag.core]
     assert core and all(len(flag.core) > 10 for flag in core)
