@@ -56,6 +56,8 @@ class Outcome(StrEnum):
     PLAYED = "played"
     UNFIT = "unfit"
     SONG_GONE = "song_gone"
+    EXPIRED = "expired"
+    BLOCKED = "blocked"
 
 
 @dataclass(frozen=True)
@@ -452,6 +454,16 @@ def record_outcome(
                     status=RequestStatus.WITHDRAWN,
                     reason="song_gone",
                     resolved_at=now,
+                )
+            elif outcome is Outcome.EXPIRED:
+                set_request(
+                    conn, target.id, status=RequestStatus.WITHDRAWN,
+                    reason="expired", resolved_at=now,
+                )
+            elif outcome is Outcome.BLOCKED:
+                set_request(
+                    conn, target.id, status=RequestStatus.UNFIT,
+                    reason="blocked", submitted_at=None,
                 )
             ctx.publish(conn, room, "room.request", {"request_id": target.id})
             done.append(load_request(conn, room, target.id))
