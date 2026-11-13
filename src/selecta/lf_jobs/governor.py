@@ -29,6 +29,10 @@ RENEW_SECONDS = 5.0
 DEADLINE_GUARD_SECONDS = 2.0
 
 
+class ReservationAlreadyHeld(RuntimeError):
+    """The exact attempt already has a live resource permit in another worker."""
+
+
 @dataclass(frozen=True)
 class DeviceResources:
     cpu_percent: float
@@ -285,7 +289,7 @@ class LocalResourceGovernor:
             if existing:
                 # Duplicate delivery of the *same* attempt must not execute twice.
                 # It may be retried once this holder expires after a process crash.
-                return None
+                raise ReservationAlreadyHeld(attempt_id)
             if not self._safe(conn, priority, memory, scratch, gpu, resources):
                 return None
             conn.execute(
