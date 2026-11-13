@@ -118,7 +118,7 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
         <p>Local-first paid plans cover recipe history, remote control, managed devices, collaboration, Rooms and hosted Lucy. Your device's music storage, local analysis, stems, renders and exports are not metered or sold by Selecta.</p>
         <p>New local-first prices are not displayed or charged until commercial terms and Stripe prices are approved.</p>
       </section>}
-      {blocked && !localFirst && (paid ? portal : checkout) && <p className="cloud-hint">Upgrading a legacy hosted plan lifts the pause on eligible cloud uploads and exports when confirmed; it does not change device-local playback.</p>
+      {blocked && !localFirst && (paid ? portal : checkout) && <p className="cloud-hint">Upgrading a legacy hosted plan lifts the pause on eligible cloud uploads and exports when confirmed; it does not change device-local playback.</p>}
     </div>
   );
 }
