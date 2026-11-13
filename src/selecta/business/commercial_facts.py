@@ -233,3 +233,55 @@ def is_open(hours_source: HoursSource, conn: Connection | None, venue: VenueFact
     return any(
         o.start - lead_s <= at and (o.end is None or o.end > at) for o in openings
     )
+
+
+class SqlFacts:
+    """Reads BZ-1's tables: the organisation is a `workspaces` row of kind `business`.
+
+    A pilot organisation (`pilot_until` set) is free, so all its venues count as pilot venues.
+    Archived venues and zones are left out. Venue-scoped roles (BZ-5) are not read here yet, so
+    every member is organisation-wide.
+    """
+
+    def organisation(self, conn: Connection, organisation_id: str) -> OrgFacts | None:
+        import sqlalchemy as sa
+
+        from selecta.business.schema import venues, zones
+        from selecta.identity.schema import workspace_members, workspaces
+
+        org = conn.execute(
+            sa.select(workspaces).where(workspaces.c.id == organisation_id)
+        ).mappings().first()
+        if org is None or org["kind"] != "business":
+            return None
+        pilot = org.get("pilot_until") is not None
+        venue_rows = conn.execute(
+            sa.select(venues).where(
+                venues.c.workspace_id == organisation_id, venues.c.status != "archived"
+            ).order_by(venues.c.created_at)
+        ).mappings().all()
+        zone_counts = dict(
+            conn.execute(
+                sa.select(zones.c.venue_id, sa.func.count())
+                .where(zones.c.workspace_id == organisation_id, zones.c.status != "archived")
+                .group_by(zones.c.venue_id)
+            ).all()
+        )
+        members = conn.execute(
+            sa.select(workspace_members.c.user_id, workspace_members.c.role).where(
+                workspace_members.c.workspace_id == organisation_id
+            )
+        ).all()
+        return OrgFacts(
+            organisation_id=organisation_id,
+            workspace_id=organisation_id,
+            name=org["name"],
+            venues=tuple(
+                VenueFacts(
+                    id=v["id"], name=v["name"], time_zone=v["timezone"],
+                    zones=int(zone_counts.get(v["id"], 0)), pilot=pilot, country=v["country"],
+                )
+                for v in venue_rows
+            ),
+            members=tuple(MemberFacts(user_id=u, role=r) for u, r in members),
+        )

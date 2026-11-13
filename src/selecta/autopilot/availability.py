@@ -59,7 +59,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         claims=(
             r"\bruns? unattended\b",
             r"\bunattended (?:evenings?|nights?) (?:is|are) (?:ready|available|live)\b",
-            r"\bleave (?:it|selectadj) running\b",
+            r"\bleave (?:it|selectadj) running (?:unattended|on its own|all night)\b",
         ),
     ),
     Capability(

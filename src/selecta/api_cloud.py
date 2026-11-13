@@ -37,6 +37,7 @@ from selecta.admin import guard as admin_guard
 from selecta.admin import routes as admin_routes
 from selecta.admin import routes_controls as admin_control_routes
 from selecta.admin.state import EmergencyCache
+from selecta.autopilot import routes_autopilot as autopilot_routes
 from selecta.billing import api as billing_api
 from selecta.billing import plans, stripe_sync
 from selecta.devstack import guard as dev_guard
@@ -63,8 +64,11 @@ from selecta.persistence.migrate import current as migration_current
 from selecta.persistence.migrate import head as migration_head
 from selecta.rooms import wiring as rooms_wiring
 from selecta.rooms.cloud_ports import RoomPorts
+from selecta.routes import business_hours as business_hours_routes
+from selecta.routes import business_zones as business_zones_routes
 from selecta.routes import cloud_assets as cloud_assets_routes
 from selecta.routes import cloud_export as cloud_export_routes
+from selecta.routes import cloud_mixes as cloud_mix_routes
 from selecta.routes import cloud_proxy as cloud_proxy_routes
 from selecta.storage import api as storage_api
 from selecta.storage import playback_api as playback_api
@@ -694,6 +698,14 @@ def create_cloud_app(
         current_claims=current_claims,
         principal_for=_principal,
     )
+    # Cloud mixes in the shared mix contract (ADR-0418); refused while cloud.mix_create is off.
+    cloud_mix_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
+    for business_routes in (business_hours_routes, business_zones_routes):
+        business_routes.install_routes(
+            app, engine=engine, current_claims=current_claims, principal_for=_principal
+        )
     playback_api.install_routes(
         app,
         engine=engine,
@@ -712,6 +724,10 @@ def create_cloud_app(
     )
 
     lucy_cloud_settings.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
+    # Autopilot venue mode and venue policy (ADR-0424, ADR-0425); refused while the flags are off.
+    autopilot_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal
     )
     cloud_proxy_routes.install_routes(

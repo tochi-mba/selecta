@@ -10,7 +10,6 @@ and playback don't need it.
 from __future__ import annotations
 
 import os
-import time
 from collections.abc import Callable, Iterable
 from typing import Any
 
@@ -19,6 +18,7 @@ from sqlalchemy.engine import Engine
 
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
+from selecta.persistence import db_now
 from selecta.playback import api as playback_routes
 from selecta.rooms import api_guest, api_host, codes
 from selecta.rooms.cloud_ports import (
@@ -36,6 +36,12 @@ PEPPER_ENV = "SELECTA_ROOMS_PEPPER"
 
 def pepper_from_environment() -> bytes:
     return os.environ.get(PEPPER_ENV, "").strip().encode()
+
+
+def _database_now(engine: Engine) -> float:
+    """When this instance came up, on the database's clock (the one presence is written with)."""
+    with engine.connect() as conn:
+        return db_now(conn)
 
 
 def install(
@@ -61,7 +67,7 @@ def install(
             speakers=CloudSpeakers(engine),
             now_playing=ports.now_playing,
             events=OutboxRoomEvents(),
-            started_at=time.time(),
+            started_at=_database_now(engine),
         )
     app.state.rooms = service
     limiter = Limiter()

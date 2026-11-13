@@ -18,10 +18,12 @@ function clock(ms: number) {
 /** `remoteControl` off (the `devices.remote_control` flag): play, pause and skip are playback
  * commands, which the server then refuses, so they're gone; the bar still shows where the music
  * is and offers Play here, so each device plays on its own (docs/saas/11b-feature-flags.md). */
-export function PlayingBar({ api, workspaceId, source, songName, remoteControl = true }: { api: Api; workspaceId: string; source: (index: number) => Promise<string | null>; songName?: SongName; remoteControl?: boolean }) {
+/** `speakerFor` builds the speaker from the bar's element; the Cloud dock passes one that
+ * recovers from media failures (ADR-0419). Left out, it is the plain speaker, as before. */
+export function PlayingBar({ api, workspaceId, source, songName, remoteControl = true, speakerFor = audioSpeaker }: { api: Api; workspaceId: string; source: (index: number) => Promise<string | null>; songName?: SongName; remoteControl?: boolean; speakerFor?: (audio: HTMLAudioElement, source: (index: number) => Promise<string | null>) => Speaker }) {
   const audio = useRef<HTMLAudioElement>(null);
   const [speaker, setSpeaker] = useState<Speaker | null>(null);
-  useEffect(() => { if (audio.current) setSpeaker(audioSpeaker(audio.current, source)); }, [source]);
+  useEffect(() => { if (audio.current) setSpeaker(speakerFor(audio.current, source)); }, [source, speakerFor]);
   const pb = usePlaybackDevice({ api, workspaceId, speaker, remoteControl });
   const [asking, setAsking] = useState(false);
   const [, tick] = useState(0);

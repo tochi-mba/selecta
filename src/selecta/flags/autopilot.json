@@ -3,10 +3,17 @@
   "flags": {
     "cloud.mix_create": {
       "label": "Make a mix in the Cloud",
-      "about": "Create and edit intelligent mixes from Cloud Library songs, using the same mix contract as the local app.",
+      "about": "Create and edit planned mixes from Cloud Library songs, using the same mix contract as the local app. Seams are plain crossfades until songs have tempo and key facts.",
       "surfaces": [
         "cloud.listen",
         "cloud.library"
+      ],
+      "routes": [
+        "GET /api/cloud-mixes/capabilities",
+        "GET /api/cloud-mixes",
+        "POST /api/cloud-mixes",
+        "GET /api/cloud-mixes/{mix_id}",
+        "POST /api/cloud-mixes/{mix_id}/revisions"
       ],
       "modes": [
         "cloud"
@@ -70,8 +77,19 @@
     },
     "autopilot.venue_mode": {
       "label": "Autopilot venue mode",
-      "about": "Let SelectaDJ plan and play a whole evening as a resident DJ, with pause, stop and manual takeover always available.",
+      "about": "Night sessions for a venue with defined autonomy levels, and pause, stop and manual takeover always available.",
       "default": false,
+      "routes": [
+        "GET /api/autopilot/availability",
+        "GET /api/autopilot/maturity",
+        "POST /api/autopilot/sessions",
+        "GET /api/autopilot/sessions/{session_id}",
+        "POST /api/autopilot/sessions/{session_id}/transitions",
+        "POST /api/autopilot/sessions/{session_id}/controls/{control}"
+      ],
+      "modes": [
+        "cloud"
+      ],
       "kind": "experiment",
       "when_off": "stop",
       "owner": "autopilot"
@@ -82,6 +100,19 @@
       "default": false,
       "requires": [
         "autopilot.venue_mode"
+      ],
+      "routes": [
+        "GET /api/autopilot/venues/{venue_id}/setup",
+        "PUT /api/autopilot/venues/{venue_id}/setup/{step}",
+        "GET /api/autopilot/venues/{venue_id}/policies",
+        "POST /api/autopilot/venues/{venue_id}/policies",
+        "GET /api/autopilot/venues/{venue_id}/overrides",
+        "POST /api/autopilot/venues/{venue_id}/overrides",
+        "DELETE /api/autopilot/venues/{venue_id}/overrides/{override_id}",
+        "POST /api/autopilot/venues/{venue_id}/candidates"
+      ],
+      "modes": [
+        "cloud"
       ],
       "kind": "experiment",
       "owner": "autopilot"

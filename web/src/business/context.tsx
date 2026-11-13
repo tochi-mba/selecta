@@ -3,6 +3,7 @@
 
 import { createContext, useContext } from 'react';
 import type { BusinessClient } from './client';
+import type { BusinessApi } from './api';
 import type { Health, Org, Venue, Device, ActivityEntry } from './types';
 
 export type BusinessCtx = {
@@ -22,6 +23,8 @@ export type BusinessCtx = {
   refresh: () => Promise<void>;
   /** Go to a business path (`/b/{org}/...`) without a page load. */
   go: (path: string) => void;
+  /** The BZ-1 typed routes (zones, crates) bound to this workspace, when the shell provides them. */
+  bizApi?: BusinessApi;
 };
 
 export const BusinessContext = createContext<BusinessCtx | null>(null);

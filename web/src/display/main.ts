@@ -4,7 +4,10 @@
 //
 // Its read-only token is an HttpOnly cookie; the page never sees it. The pairing is tied to the
 // room, not the code, so when the host makes a new code the next look shows the new QR. If the
-// power or network drops, the page keeps asking and picks up by itself.
+// power, the network or the server drops, the page shows a calm "Reconnecting..." and keeps
+// asking (backing off to 15 s), then picks up by itself with the same token: no new code.
+// When the host disconnects the screen, the next look says `unpaired` and a new code appears;
+// "Disconnect this screen" does the same from the screen's side.
 
 import { ApiError, call, h, replace, Song, songLine } from '../rooms/dom';
 import { qrSvg } from '../rooms/qr';
@@ -12,12 +15,13 @@ import './display.css';
 
 type Item = { request_id: string; song: Song | null; votes: number; nickname: string | null };
 type View = {
-  state: 'waiting' | 'paired' | 'expired' | 'ended';
+  state: 'waiting' | 'paired' | 'expired' | 'ended' | 'unpaired';
   room_name: string | null; code: string | null; join_path: string | null;
   now_playing: Song | null; up_next: Song[]; upcoming: Item[]; music_paused: boolean;
 };
 
 const POLL_MS = 3000;
+const MAX_WAIT_MS = 15_000;
 const root = document.getElementById('display') as HTMLElement;
 let pairingCode = '';
 let timer = 0;
@@ -27,7 +31,26 @@ let endedAt = 0;
 
 function schedule(ms = POLL_MS): void {
   window.clearTimeout(timer);
-  timer = window.setTimeout(() => void tick(), Math.min(30_000, ms * 2 ** failures));
+  timer = window.setTimeout(() => void tick(), Math.min(MAX_WAIT_MS, ms * 2 ** failures));
+}
+
+/** A quiet note over whatever is showing while the server can't be reached. */
+function reconnecting(on: boolean): void {
+  const note = document.getElementById('d-reconnecting');
+  if (!on) { note?.remove(); return; }
+  if (note) return;
+  document.body.append(h('p', { className: 'd-reconnecting', id: 'd-reconnecting', role: 'status' }, 'Reconnecting...'));
+}
+
+async function disconnect(button: HTMLButtonElement): Promise<void> {
+  button.disabled = true;
+  button.textContent = 'Disconnecting...';
+  try {
+    await call('/api/display/pairing', { method: 'DELETE' });
+  } catch { /* gone already, or unreachable: a new pairing replaces the old token either way */ }
+  shownCode = '';
+  try { await pair(); } catch { failures += 1; replace(root, h('p', {}, 'Reconnecting...')); }
+  schedule();
 }
 
 async function pair(): Promise<void> {
@@ -57,7 +80,8 @@ function drawRoom(view: View): void {
         h('div', { className: 'd-left' },
           h('p', { className: 'd-eyebrow' }, 'SCAN TO REQUEST A SONG'),
           h('div', { className: 'd-qr', id: 'd-qr' }),
-          h('p', { className: 'd-join', id: 'd-join' })),
+          h('p', { className: 'd-join', id: 'd-join' }),
+          h('button', { type: 'button', className: 'd-disconnect', id: 'd-disconnect', onclick: (event: Event) => void disconnect(event.currentTarget as HTMLButtonElement) }, 'Disconnect this screen')),
         h('div', { className: 'd-right', id: 'd-info' })));
     qr = document.getElementById('d-qr') as HTMLElement;
     qr.innerHTML = qrSvg(link, `QR code to join ${view.room_name ?? 'the room'}`); // our own SVG, no user text unescaped
@@ -82,7 +106,9 @@ async function tick(): Promise<void> {
   try {
     const view = await call<View>('/api/display/view');
     failures = 0;
-    if (view.state === 'paired') { endedAt = 0; drawRoom(view); }
+    reconnecting(false);
+    if (view.state === 'unpaired') { shownCode = ''; await pair(); }
+    else if (view.state === 'paired') { endedAt = 0; drawRoom(view); }
     else if (view.state === 'expired' || (view.state === 'waiting' && !pairingCode)) await pair();
     else if (view.state === 'waiting' && !document.getElementById('d-pairing')) drawPairing();
     else if (view.state === 'ended') {
@@ -101,7 +127,8 @@ async function tick(): Promise<void> {
       try { await pair(); } catch { failures += 1; }
     } else {
       failures += 1;
-      if (!root.querySelector('.d-room')) replace(root, h('p', {}, 'Reconnecting...'));
+      if (root.querySelector('.d-room, #d-pairing')) reconnecting(true);
+      else replace(root, h('p', {}, 'Reconnecting...'));
     }
   }
   schedule();

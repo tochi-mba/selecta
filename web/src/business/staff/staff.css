@@ -1,0 +1,72 @@
+/* S4 staff quick-control view (ADR-0453 D5, D10). Tokens only. BigActions are 64 px tall
+   (--control-height-big, defined on .biz) with 12 px (--space-3) between neighbours. The deck is
+   an auto-fit grid, so under 400% zoom it becomes one column of BigActions with no sideways
+   scroll. Nothing pulses or flashes. */
+
+.biz-staff { display: grid; gap: var(--space-4); padding: var(--space-4); min-width: 0; max-width: var(--content-browse); margin: 0 auto; color: var(--ink); background: var(--bg); }
+.biz-staff-head { display: grid; gap: var(--space-2); min-width: 0; }
+.biz-staff-head h1 { margin: 0; font-size: var(--type-page); }
+.biz-staff-layout { display: grid; gap: var(--space-4); min-width: 0; }
+.biz-staff-main { display: grid; gap: var(--space-4); min-width: 0; align-content: start; }
+.biz-staff-side { display: grid; gap: var(--space-3); min-width: 0; align-content: start; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: var(--space-4); }
+.biz-staff-side h2 { margin: 0; font-size: var(--type-section); }
+.biz-staff[data-wide] .biz-staff-layout { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+
+.biz-staff-now { display: grid; gap: var(--space-2); min-width: 0; }
+.biz-staff-now h2 { margin: 0; font-size: var(--type-meta); color: var(--text-soft); }
+.biz-staff-now .biz-now-title { font-size: var(--type-song); }
+.biz-staff-progress { width: 100%; height: var(--space-2); accent-color: var(--ink); }
+.biz-staff-next { margin: 0; color: var(--text-soft); overflow-wrap: anywhere; }
+
+.biz-deck { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: var(--space-3); min-width: 0; }
+.biz-deck .biz-volume { grid-column: 1 / -1; }
+.biz-deck .biz-deck-wide { grid-column: 1 / -1; }
+
+.biz-big-action {
+  display: inline-grid; align-content: center; justify-items: center; gap: var(--space-hair);
+  min-height: var(--control-height-big); min-width: 0; width: 100%; padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--edge-interactive); border-radius: var(--radius); background: var(--surface-control); color: var(--ink);
+  font: inherit; font-weight: 700; text-align: center; overflow-wrap: anywhere; touch-action: manipulation; cursor: pointer;
+}
+.biz-big-action[aria-pressed='true'] { background: var(--surface-selected); border-color: var(--edge-selected); }
+.biz-big-action:disabled, .biz-big-action[aria-disabled='true'] { cursor: not-allowed; color: var(--text-soft); }
+.biz-big-action:focus-visible { outline: 2px solid var(--edge-focus); outline-offset: 2px; }
+.biz-big-detail { font-weight: 400; font-size: var(--type-meta); color: var(--text-soft); }
+
+.biz-deck-skeleton { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: var(--space-3); }
+.biz-deck-skeleton i { display: block; min-height: var(--control-height-big); border-radius: var(--radius); background: var(--panel-2); }
+
+.biz-volume { display: grid; gap: var(--space-1); min-width: 0; }
+.biz-volume-head { display: flex; justify-content: space-between; gap: var(--space-2); font-weight: 700; }
+.biz-volume-track { position: relative; display: flex; align-items: center; min-height: var(--control-height-big); }
+.biz-volume-track input[type='range'] { width: var(--biz-cap, 100%); min-height: var(--control-height-big); margin: 0; accent-color: var(--ink); }
+.biz-volume-beyond { flex: 1 1 auto; height: var(--space-1); border-top: 2px dashed var(--line); }
+.biz-volume-mark { position: absolute; inset-inline-start: var(--biz-cap, 100%); top: var(--space-2); bottom: var(--space-2); border-inline-start: 2px solid var(--border-strong); }
+.biz-volume-cap { font-size: var(--type-meta); }
+
+.biz-requests { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
+.biz-request { display: grid; gap: var(--space-2); min-width: 0; padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); }
+.biz-request-meta { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); font-size: var(--type-meta); }
+.biz-request-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr)); gap: var(--space-3); }
+
+.biz-staff-line { margin: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.biz-staff-card { border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface-raised); padding: var(--space-4); display: grid; gap: var(--space-3); }
+.biz-staff-card p { margin: 0; }
+.biz-staff-silent { border-width: 2px; border-color: var(--status-blocked); }
+
+.biz-pin { display: grid; gap: var(--space-3); }
+.biz-pin-dots { margin: 0; font-size: var(--type-section); letter-spacing: var(--space-2); min-height: var(--control-height); text-align: center; }
+.biz-pin-pad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+.biz-pin-pad button { min-height: var(--control-height-big); border: 1px solid var(--edge-interactive); border-radius: var(--radius); background: var(--surface-control); color: var(--ink); font: inherit; font-size: var(--type-section); touch-action: manipulation; }
+.biz-pin-pad button:focus-visible { outline: 2px solid var(--edge-focus); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) { .biz-staff * { animation: none !important; transition: none !important; } }
+:root[data-motion='still'] .biz-staff * { animation: none !important; transition: none !important; }
+@media (forced-colors: active) {
+  .biz-big-action, .biz-pin-pad button, .biz-staff-card, .biz-staff-side { border-color: ButtonText; }
+  .biz-volume-mark { border-color: CanvasText; }
+  .biz-big-action[aria-pressed='true'] { outline: 2px solid Highlight; }
+}
+
+.biz-zone-switch { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr)); gap: var(--space-3); }
+.biz-zone-menu > button { min-height: var(--control-height-big); padding: 0 var(--space-4); border: 1px solid var(--edge-interactive); border-radius: var(--radius); background: var(--surface-control); color: var(--ink); font: inherit; font-weight: 700; }

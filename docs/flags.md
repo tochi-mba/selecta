@@ -221,6 +221,8 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `cloud.operations` | **Cloud operations.** Schema migrations, the worker gateway, and the maintenance and recovery commands that keep the service correct. **Core:** The cloud service can't run, recover or erase data on time without them. |  |
 | `cloud.tracing` | **Job tracing.** OpenTelemetry spans across the API, worker gateway, workers and storage, one trace per job with its id as a span attribute. |  |
 | `cloud.metrics` | **Service metrics.** OpenTelemetry metrics the SLOs and alerts read: lost jobs, webhook-to-entitlement time, queue age, quarantines, spend ceilings, audit writes, reconciliation drift, backups and the maintenance leader. |  |
+| `cloud.error_reporting` | **Error reporting.** Send API, gateway, maintenance and worker errors to Sentry, scrubbed of signed links, tokens and email addresses. Needs SELECTA_SENTRY_DSN; nothing is sent without it. |  |
+| `cloud.email` | **Transactional email.** Email people from SelectaDJ when a long job finishes or their storage goes over quota, through Postmark or Resend. Needs the SELECTA_EMAIL_* settings on the maintenance service. |  |
 | `cloud.export_expiry` | **Export expiry.** The maintenance leader deletes finished exports when their plan's retention runs out (Free 7 days, Standard 30, Premium 90) and gives their bytes back to the quota. |  |
 | `cloud.autoscale` | **Worker autoscaling.** The maintenance leader sizes each worker pool from the queue and asks the configured launcher (Modal) to start or stop workers. |  |
 | `cloud.dmca_renewal_reminder` | **DMCA agent renewal reminder.** The maintenance leader raises an owner alert from 90 days before the DMCA designated agent's three-year registration lapses, and daily once it has. |  |
@@ -239,13 +241,13 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 
 | Flag | What it is | Needs |
 |---|---|---|
-| `cloud.mix_create` | **Make a mix in the Cloud.** Create and edit intelligent mixes from Cloud Library songs, using the same mix contract as the local app. |  |
+| `cloud.mix_create` | **Make a mix in the Cloud.** Create and edit planned mixes from Cloud Library songs, using the same mix contract as the local app. Seams are plain crossfades until songs have tempo and key facts. |  |
 | `cloud.single_audio_owner` | **One Cloud player.** Cloud Library previews and Cloud Listen play through one persistent player that keeps playing across pages. |  |
 | `cloud.account_states` | **Clear Cloud account states.** Exact Cloud routes and distinct messages for signed-out, expired, suspended and unreachable accounts. |  |
 | `cloud.library_states` | **Truthful Cloud Library states.** Tell loading, failed, empty and ready apart, and report each uploaded file's own result. |  |
 | `rooms.nickname_confirm` | **Confirmed guest nicknames.** Show a guest's nickname as saving, saved or not saved, and ignore older Room updates that arrive late. |  |
 | `mixes.intent_language` | **Plain Make a mix choices.** Separate quick listen from a saved mix and say how long each setting lasts and what it applies to. |  |
-| `autopilot.venue_mode` | **Autopilot venue mode.** Let SelectaDJ plan and play a whole evening as a resident DJ, with pause, stop and manual takeover always available. |  |
+| `autopilot.venue_mode` | **Autopilot venue mode.** Night sessions for a venue with defined autonomy levels, and pause, stop and manual takeover always available. |  |
 | `autopilot.venue_policy` | **Venue music identity.** Versioned venue music policies, schedules, hard limits and timed overrides for Autopilot. | `autopilot.venue_mode` |
 | `autopilot.horizon` | **Rolling musical horizon.** Plan the next stretch of the evening ahead, rank songs deterministically and replan only at safe points. | `autopilot.venue_mode` |
 | `autopilot.safe_transitions` | **Conservative Autopilot transitions.** Check every transition before it plays and fall back to simpler, safer blends when a check fails. | `autopilot.venue_mode` |
@@ -267,3 +269,12 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `venue.health` | **Venue health and alerts.** Audio health signals, operator alert thresholds with runbook links, redacted logs and rehearsed recovery. | `autopilot.venue_mode` |
 | `venue.soak` | **Long-session soak tools.** Real venue workloads, gap and resource metrics and long soak and chaos runs that record their evidence. | `venue.continuity` |
 | `venue.rollout_gates` | **Venue rollout gates.** Phased rollout order, no-go gates for P0 blockers and a flag-off rollback check before any venue release. | `autopilot.venue_mode` |
+
+## Business
+
+| Flag | What it is | Needs |
+|---|---|---|
+| `business.signups` | **SelectaDJ for Business sign-up.** Self-serve business sign-up and selling of business plans. Off until the legal review passes; pilots work without it. |  |
+| `business.orgs` | **Organisations, venues, zones and crates.** An organisation workspace with its venues, each venue's zones, and organisation and venue crates drawn from one shared library. |  |
+| `business.workspaces` | **Workspace switcher.** Switch between your personal SelectaDJ and the organisations you belong to. Personal and business data never mix. | `business.orgs` |
+| `business.pilots` | **Business pilots.** REX Technologies staff create free pilot organisations with their venues and zones, using the same model a paying venue will. | `business.orgs` |

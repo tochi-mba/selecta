@@ -5,7 +5,8 @@ Revises: c5f08d3a71e2
 Create Date: 2026-11-12
 
 An organisation is an existing workspace with kind=business. This migration
-adds its physical venues, playback zones, crates and ordered crate songs.
+adds its physical venues, playback zones, crates and ordered crate songs, and
+`assets.uploaded_by` (songs are assets in the cloud).
 The DDL matches selecta.business.schema; all tables are workspace-scoped.
 """
 
@@ -128,6 +129,10 @@ def upgrade() -> None:
     _index("crate_songs", "workspace_id")
     _index("crate_songs", "workspace_id", "song_id")
 
+    # Songs are `assets` rows in the cloud: record who uploaded each one.
+    with op.batch_alter_table("assets") as batch:
+        batch.add_column(sa.Column("uploaded_by", ID, nullable=True))
+
     if op.get_bind().dialect.name == "postgresql":
         for table in TABLES:
             op.execute(f'ALTER TABLE "{table}" ENABLE ROW LEVEL SECURITY')
@@ -141,5 +146,7 @@ def downgrade() -> None:
     if op.get_bind().dialect.name == "postgresql":
         for table in TABLES:
             op.execute(f'DROP POLICY IF EXISTS workspace_isolation ON "{table}"')
+    with op.batch_alter_table("assets") as batch:
+        batch.drop_column("uploaded_by")
     for table in reversed(TABLES):
         op.drop_table(table)

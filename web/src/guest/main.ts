@@ -4,6 +4,12 @@
 // It's its own tiny bundle (no React) so it loads fast on old phones and weak signal; the build
 // fails if its JavaScript passes 100 KB. The guest token lives in an HttpOnly cookie the page
 // can't read; the page only remembers which room id its code opened, to find its way back.
+//
+// Each read of the room also tells the host this guest is here, so the page reads it every 5 s
+// while it's on screen. If the signal or the server drops, it says "Reconnecting..." and keeps
+// trying (backing off to 15 s, and at once when the phone comes back online), with the same
+// cookie, so the guest is back in the room by themselves. There's no leave-on-close beacon: a
+// reload or a phone switching apps fires the same events, and leaving would put them out.
 
 import { ApiError, call, h, replace, Song, songLength, songLine, store } from '../rooms/dom';
 import './guest.css';
@@ -14,9 +20,12 @@ type View = {
   room_name: string; room_status: string; guest_status: string; nickname: string;
   votes_on: boolean; requests_open: boolean; music_paused: boolean;
   now_playing: Song | null; up_next: Song[]; coming_up: Item[]; waiting: Item[]; my_requests: Mine[];
+  nickname_confirm?: boolean;
 };
 
 const POLL_MS = 5000;
+const MAX_WAIT_MS = 15_000;
+const RECONNECTING = 'Reconnecting...';
 const root = document.getElementById('guest') as HTMLElement;
 const code = (location.pathname.split('/r/')[1] ?? '').replace(/[^0-9A-Za-z]/g, '').toUpperCase().slice(0, 8);
 const roomKey = `selecta.guest.room.${code}`;
@@ -30,6 +39,22 @@ let searchSeq = 0;
 // than the one on screen is dropped, so a slow poll can't undo a vote that was answered after it left.
 let reads = 0;
 let shownRead = 0;
+
+// ADR-0422 (rooms.nickname_confirm, said by the server in each view): a nickname save shows as
+// saving, saved or not saved. `nameEpoch` goes up when a save goes out and when it's answered, so
+// a poll that overlapped a save is dropped (it can't know whether the new name was in yet), and a
+// write sent before the save was answered keeps the confirmed name rather than its stale copy.
+type NameSave = { state: 'saving' | 'saved' | 'failed'; name: string; error?: string };
+let nameSave: NameSave | null = null;
+let nameEpoch = 0;
+let savingName = false;
+let confirmedName: { name: string; epoch: number } | null = null;
+let picking = false;
+const confirming = () => view?.nickname_confirm === true;
+
+function adopt(fresh: View, epoch: number): View {
+  return confirmedName && epoch < confirmedName.epoch ? { ...fresh, nickname: confirmedName.name } : fresh;
+}
 
 function newer(ticket: number): boolean {
   if (ticket < shownRead) return false;
@@ -82,7 +107,7 @@ async function join(button: HTMLButtonElement): Promise<void> {
 
 function schedule(): void {
   window.clearTimeout(timer);
-  const wait = Math.min(30_000, POLL_MS * 2 ** failures);
+  const wait = Math.min(MAX_WAIT_MS, POLL_MS * 2 ** failures);
   timer = window.setTimeout(() => { if (document.visibilityState === 'visible') void refresh(); else schedule(); }, wait);
 }
 
@@ -90,11 +115,16 @@ async function refresh(): Promise<void> {
   if (!roomId) { joinScreen(); return; }
   const asked = roomId;
   const ticket = ++reads;
+  const epoch = nameEpoch;
+  const overlapped = savingName;
   try {
     const fresh = await call<View>(base());
     // the guest left (or rejoined elsewhere) while this read was on its way: it no longer applies
     if (roomId !== asked) return;
+    const wasDown = failures > 0;
     failures = 0;
+    if (wasDown && notice === RECONNECTING) say('Back in the room.');
+    if ((confirming() || fresh.nickname_confirm) && (overlapped || epoch !== nameEpoch)) { schedule(); return; }
     if (!newer(ticket)) { schedule(); return; }
     view = fresh;
     draw();
@@ -107,7 +137,7 @@ async function refresh(): Promise<void> {
     if (problem.code === 'banned') { store(roomKey, null); screen("You can't join this room", 'The host has removed you from this room.'); return; }
     if (problem.status === 410) { screen('This room has ended', 'Thanks for coming. The host has closed this room.'); return; }
     failures += 1;
-    if (view) { draw(); say('The signal is weak. Trying again...'); } else screen('Connecting...', problem.message);
+    if (view) { draw(); say(RECONNECTING); } else screen(RECONNECTING, problem.message);
     schedule();
   }
 }
@@ -131,10 +161,11 @@ function voteButton(item: Item): HTMLElement | null {
 
 async function act(path: string, method: string, body?: unknown, success = ''): Promise<void> {
   const ticket = ++reads;
+  const epoch = nameEpoch;
   try {
     const answer = await call<View | { room: View }>(path, { method, body: body ? JSON.stringify(body) : undefined });
     if (newer(ticket)) {
-      view = 'room' in answer ? answer.room : (answer as View);
+      view = adopt('room' in answer ? answer.room : (answer as View), epoch);
       draw();
     }
     say(success);
@@ -165,6 +196,8 @@ function shell(): Record<string, HTMLElement> {
 // Only the parts that change are redrawn, so a poll never takes focus or typing from the search.
 function draw(): void {
   if (!view) return;
+  // ADR-0422: a poll landing while the guest is picking a nickname mustn't close the picker
+  if (picking && confirming()) return;
   const v = view;
   if (v.room_status === 'ended') {
     screen('This room has ended', 'Thanks for coming. The host has closed this room.', v.my_requests.length ? myRequests(v) : null);
@@ -174,7 +207,8 @@ function draw(): void {
   replace(parts.head,
     h('p', { className: 'g-eyebrow' }, 'SELECTA ROOM'),
     h('h1', {}, v.room_name),
-    h('p', { className: 'g-muted' }, `You're ${v.nickname}. `, h('button', { type: 'button', className: 'g-link', onclick: () => void nicknames() }, 'Change nickname')));
+    v.nickname_confirm ? nameLine(v) : h('p', { className: 'g-muted' }, `You're ${v.nickname}. `, h('button', { type: 'button', className: 'g-link', onclick: () => void nicknames() }, 'Change nickname')),
+    v.nickname_confirm && nameSave?.state === 'failed' ? h('p', { className: 'g-error', role: 'alert' }, `${nameSave.name} wasn't saved. ${nameSave.error ?? ''}`.trim(), ' ', h('button', { type: 'button', className: 'g-link', onclick: () => void saveNickname(nameSave?.name ?? '') }, 'Try again')) : null);
   replace(parts.banners,
     v.guest_status === 'pending' ? h('p', { className: 'g-banner' }, "The host hasn't let you in yet. This page will update when they do.") : null,
     v.music_paused ? h('p', { className: 'g-banner' }, "The music's paused. Requests will wait until it starts again.") : null);
@@ -249,12 +283,56 @@ async function nicknames(): Promise<void> {
   try {
     const { nicknames: choices } = await call<{ nicknames: string[] }>(`${base()}/nicknames`);
     const close = () => { document.getElementById('g-shell')?.remove(); draw(); };
+    const confirm = confirming();
+    if (confirm) picking = true;
+    const pick = (name: string) => (confirm ? void saveNickname(name) : void act(`${base()}/nickname`, 'PUT', { nickname: name }, `You're ${name} now.`).then(schedule));
     screen('Pick a nickname', 'The host sees it. Other guests see it only if the host shows names.',
-      h('div', { className: 'g-choices' }, ...choices.map((name) => h('button', { type: 'button', className: 'g-choice', onclick: () => void act(`${base()}/nickname`, 'PUT', { nickname: name }, `You're ${name} now.`).then(schedule) }, name))),
-      h('button', { type: 'button', className: 'g-quiet', onclick: () => { close(); schedule(); } }, 'Keep my nickname'));
+      h('div', { className: 'g-choices' }, ...choices.map((name) => h('button', { type: 'button', className: 'g-choice', onclick: () => pick(name) }, name))),
+      h('button', { type: 'button', className: 'g-quiet', onclick: () => { picking = false; close(); schedule(); } }, 'Keep my nickname'));
     (root.querySelector('.g-choice') as HTMLElement | null)?.focus();
   } catch (error) {
     say((error as Error).message);
+  }
+}
+
+// ADR-0422: the name line says which nickname the server has, and whether a change is on its way.
+function nameLine(v: View): HTMLElement {
+  const change = h('button', { type: 'button', className: 'g-link', onclick: () => void nicknames(), disabled: nameSave?.state === 'saving' }, 'Change nickname');
+  if (nameSave?.state === 'saving') {
+    return h('p', { className: 'g-muted', 'aria-busy': 'true', 'data-nickname': 'saving' }, `You're ${v.nickname}. Saving ${nameSave.name}... `, change);
+  }
+  if (nameSave?.state === 'saved' && nameSave.name === v.nickname) {
+    return h('p', { className: 'g-muted', 'data-nickname': 'saved' }, `You're ${v.nickname}. Saved. `, change);
+  }
+  return h('p', { className: 'g-muted', 'data-nickname': nameSave?.state === 'failed' ? 'failed' : 'confirmed' }, `You're ${v.nickname}. `, change);
+}
+
+async function saveNickname(name: string): Promise<void> {
+  if (!name || savingName) return;
+  picking = false;
+  nameSave = { state: 'saving', name };
+  draw();
+  schedule();
+  const ticket = ++reads;
+  savingName = true;
+  nameEpoch += 1;
+  try {
+    const answer = await call<View>(`${base()}/nickname`, { method: 'PUT', body: JSON.stringify({ nickname: name }) });
+    savingName = false;
+    nameEpoch += 1;
+    confirmedName = { name: answer.nickname, epoch: nameEpoch };
+    // the save's own answer is the confirmed name, even if a newer read is already on screen
+    if (newer(ticket)) view = answer;
+    else if (view) view = { ...view, nickname: answer.nickname };
+    nameSave = answer.nickname === name ? { state: 'saved', name } : { state: 'failed', name, error: 'Pick another one.' };
+    draw();
+    say(nameSave.state === 'saved' ? `You're ${name} now.` : `${name} wasn't saved.`);
+  } catch (error) {
+    savingName = false;
+    nameEpoch += 1;
+    nameSave = { state: 'failed', name, error: (error as Error).message };
+    draw();
+    if ((error as ApiError).status === 401) void refresh();
   }
 }
 
@@ -269,4 +347,5 @@ async function leave(): Promise<void> {
 }
 
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && roomId) void refresh(); });
+window.addEventListener('online', () => { if (roomId) void refresh(); });
 void refresh();

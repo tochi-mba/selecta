@@ -1,0 +1,67 @@
+/* ADR-0423 (mixes.intent_language): the two intents, setting scopes and what plays next on Make a Mix. */
+.mix-intents {
+  display: grid;
+  gap: var(--space-3);
+  margin-block: var(--space-4);
+}
+
+.mix-intent-pair {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+}
+
+.mix-intent {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-panel);
+}
+
+.mix-intent h3 {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.mix-intent p {
+  margin: 0;
+}
+
+.mix-intent-detail summary {
+  cursor: pointer;
+  min-block-size: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.scope-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scope-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.scope-list .hint {
+  flex-basis: 100%;
+}
+
+.scope-tag {
+  display: inline-block;
+  padding: var(--space-hair) var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface-control);
+  color: var(--text-soft);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}

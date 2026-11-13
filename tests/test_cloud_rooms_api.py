@@ -164,8 +164,9 @@ def test_display_pairs_reads_and_is_ended_by_the_host(party):
 
     unpaired = party.client.delete(f"/api/rooms/{room_id}/displays", headers=auth(ALICE))
     assert unpaired.status_code == 200 and unpaired.json()["displays"] == 0
+    # the room is still on: the screen hears it was disconnected and shows a new code next look
     ended = display.get("/api/display/view")
-    assert ended.status_code == 200 and ended.json()["state"] == "ended"
+    assert ended.status_code == 200 and ended.json()["state"] == "unpaired"
 
 
 def test_cookie_authenticated_writes_reject_a_cross_site_origin(party):

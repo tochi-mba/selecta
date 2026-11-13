@@ -123,7 +123,11 @@ export function createWorkspaceStore(init: { userId: string | null; workspaces?:
     },
     /** A fresh list from the server; keeps the current workspace when it is still listed. */
     setWorkspaces(next: Workspace[]) {
-      const keep = state.currentId && next.some((w) => w.id === state.currentId) ? state.currentId : null;
+      // The store starts from personal alone, so a remembered business workspace is not listed
+      // yet; once the full list arrives, this tab's remembered choice wins (BZ-6 shell, D9).
+      const remembered = rememberedWorkspace(state.userId);
+      const listed = (id: string | null) => Boolean(id && next.some((w) => w.id === id));
+      const keep = listed(remembered) ? remembered : listed(state.currentId) ? state.currentId : null;
       set({ workspaces: next, currentId: keep ?? pickCurrent(next, rememberedWorkspace(state.userId)) });
     },
     /** What this device is doing, from the player and the playback session. */

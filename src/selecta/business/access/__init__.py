@@ -75,6 +75,13 @@ class BusinessActor:
     pin_person_id: str | None = None  # set when a shared tablet action was confirmed by a PIN
 
 
+def zone_in_scope(conn, workspace_id: str, user_id: str, venue_id: str, zone_id: str) -> bool:
+    """Whether a signed-in person may control this zone (BZ-2's `playback.zones` hook)."""
+    from selecta.business.access.guard import zone_in_scope as check
+
+    return check(conn, workspace_id, user_id, venue_id, zone_id)
+
+
 __all__ = [
     "BusinessActor",
     "BusinessConflict",

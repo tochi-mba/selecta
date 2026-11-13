@@ -11,6 +11,7 @@ import { Action, Dialog, Problem, Skeleton } from '../ui/controls';
 import { LinkTabs } from '../ui/primitives';
 import { CurrentMix } from './CurrentMix';
 import { buildSummary, MixSetup } from './MixSetup';
+import { MixIntentGuide, ScopeTag } from './MixIntent';
 import { LengthScale, VibeMotif } from '../ui/MusicObjects';
 import { Icon } from '../ui/Icon';
 import { askToAnalyse, hasStartedAMix, Preparing, READY_NEEDED, rememberStartedAMix, SetupSteps } from './Setup';
@@ -186,6 +187,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       <h1 className="display small">Make a Mix</h1>
       <LinkTabs label="Make a Mix" items={exploreTabs()} current={exploreTabs().some((tab) => tab.path === here) ? here : '/mixes'} />
       {mix.length > 0 && <CurrentMix mix={mix} mixName={mixName} now={now} player={player} setView={setView} />}
+      {on('mixes.intent_language') && <MixIntentGuide replacing={replacing} mixName={mixName} />}
 
       <div className="mix-paths" role="group" aria-label="Ways to make a mix">
       <section className="hero mix-quick" aria-labelledby="mix-quick-title">
@@ -221,6 +223,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
               </button>
             ))}
             <LengthScale songs={songs} most={SET_LENGTHS[SET_LENGTHS.length - 1].songs} />
+            {on('mixes.intent_language') && <ScopeTag scope={on('mixes.shaping.remember_length') ? 'saved-default' : 'this-visit'} />}
           </div>
           {shaping && <button aria-label="Customize: Shape this mix (optional)" onClick={() => setCustomizing(true)}>Shape this mix <span className="soft">(optional)</span></button>}
         </div>

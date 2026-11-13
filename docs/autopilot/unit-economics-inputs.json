@@ -1,0 +1,36 @@
+{
+  "schema": "selecta.unit-economics-inputs/1",
+  "status": "ASSUMPTIONS TO CONFIRM. Every number here is a placeholder for the model, not a quote, a measurement or a price anyone offered. Replace each with a sourced value and set its source before using the result for a decision. Licence costs are null on purpose: they must come from a rights holder or collecting society quote (ADR-0434).",
+  "updated": "2026-11-13",
+  "venue": {
+    "hours_per_month": {"value": 180, "unit": "playing hours per venue per month", "source": "assumption: six-hour nights, thirty nights"},
+    "zones": {"value": 1, "unit": "zones", "source": "assumption"},
+    "library_gb": {"value": 25, "unit": "GB of original songs held for the venue", "source": "assumption: about 2,500 songs"},
+    "render_cache_gb": {"value": 10, "unit": "GB of rendered seams and fallbacks", "source": "assumption"},
+    "stream_kbps": {"value": 256, "unit": "kbit/s delivered per zone when streaming from Cloud", "source": "assumption"},
+    "streamed_share": {"value": 1.0, "unit": "share of playing hours streamed from Cloud (0 when the venue box plays from local cache)", "source": "assumption"}
+  },
+  "compute": {
+    "cpu_hours_per_play_hour": {"value": 0.15, "unit": "reference CPU hours of analysis, seams and planning per playing hour", "source": "assumption: to measure in the first soak"},
+    "cpu_hour_price": {"value": 0.05, "unit": "currency per CPU hour", "source": "assumption: placeholder, not a provider price"}
+  },
+  "storage": {
+    "gb_month_price": {"value": 0.02, "unit": "currency per GB-month", "source": "assumption: placeholder, not a provider price"}
+  },
+  "egress": {
+    "gb_price": {"value": 0.08, "unit": "currency per GB delivered", "source": "assumption: placeholder, not a provider price"}
+  },
+  "licences": {
+    "music_supply_per_venue_month": {"value": null, "unit": "currency per venue per month", "source": "unknown: needs a rights holder quote (ADR-0434)"},
+    "public_performance_paid_by_selectadj": {"value": null, "unit": "currency per venue per month; 0 if the venue holds its own licence", "source": "unknown: depends on territory and contract"},
+    "model_licences_per_venue_month": {"value": null, "unit": "currency per venue per month for commercial model use", "source": "unknown: needs licence review (S-KEY blocked)"}
+  },
+  "support": {
+    "tickets_per_venue_month": {"value": 1.5, "unit": "support contacts per venue per month", "source": "assumption: to measure in pilots"},
+    "minutes_per_ticket": {"value": 20, "unit": "minutes", "source": "assumption"},
+    "cost_per_support_minute": {"value": 0.6, "unit": "currency per minute", "source": "assumption: placeholder"}
+  },
+  "price": {
+    "per_venue_month": {"value": null, "unit": "currency per venue per month", "source": "unknown: to set after interviews and the incumbent comparison"}
+  }
+}

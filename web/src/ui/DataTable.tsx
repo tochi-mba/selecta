@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { useMediaQuery } from './useMediaQuery';
 
 export type Column<T> = {
   key: string;
@@ -13,7 +14,7 @@ export type Column<T> = {
  * words. Rows are chosen with an optional button in the first cell, never by clicking a whole row,
  * so keyboard and screen-reader users get the same affordance.
  */
-export function DataTable<T>({ caption, columns, rows, rowKey, empty = 'Nothing to show.', onPick, pickLabel }: {
+export function DataTable<T>({ caption, columns, rows, rowKey, empty = 'Nothing to show.', onPick, pickLabel, stacked = false }: {
   caption: string;
   columns: Column<T>[];
   rows: T[];
@@ -21,7 +22,33 @@ export function DataTable<T>({ caption, columns, rows, rowKey, empty = 'Nothing 
   empty?: string;
   onPick?: (row: T) => void;
   pickLabel?: (row: T) => string;
+  /** Stacked mode (ADR-0453 D5): each row becomes a card with labelled values. `true` always,
+   * `'auto'` below 600 px, `false` (the default) never, so existing tables render as before. */
+  stacked?: boolean | 'auto';
 }) {
+  const narrow = useMediaQuery('(max-width: 599px)');
+  if (stacked === true || (stacked === 'auto' && narrow)) {
+    return (
+      <div className="data-table-wrap data-table-stacked-wrap" role="region" aria-label={`${caption} table`}>
+        <p className="data-table-stacked-caption">{caption}</p>
+        {rows.length === 0 ? <p className="data-table-empty">{empty}</p> : (
+          <ul className="data-table-stacked">
+            {rows.map((row) => (
+              <li key={rowKey(row)} className="data-table-card">
+                <dl>
+                  {columns.map((column, index) => {
+                    const value = column.render ? column.render(row) : String((row as Record<string, unknown>)[column.key] ?? '');
+                    const cell = index === 0 && onPick ? <button className="data-table-pick" onClick={() => onPick(row)} aria-label={pickLabel?.(row)}>{value}</button> : value;
+                    return <div key={column.key} className="data-table-field"><dt>{column.label}</dt><dd>{cell}</dd></div>;
+                  })}
+                </dl>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  }
   return (
     // Focusable and named, so a keyboard user can scroll a wide table sideways on a phone.
     <div className="data-table-wrap" role="region" aria-label={`${caption} table`} tabIndex={0}>

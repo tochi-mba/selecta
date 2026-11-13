@@ -1,0 +1,39 @@
+/* WorkspaceBand and WorkspaceSwitcher (ADR-0453 D9). Tokens only; the band uses
+   --surface-control so it reads as chrome, and the mark plus words carry the meaning. */
+
+.ws-band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  min-height: var(--control-height);
+  padding: var(--space-1) var(--space-4);
+  background: var(--surface-control);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  font-size: var(--type-meta);
+}
+.ws-band-name { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; overflow-wrap: anywhere; }
+.ws-band-kind { text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-soft); }
+.ws-band-role { color: var(--text-soft); }
+.ws-band-end { display: flex; align-items: center; gap: var(--space-2); }
+.ws-mark { flex: none; }
+
+.ws-switcher { position: relative; display: grid; gap: var(--space-1); justify-items: start; }
+.ws-switcher-menu > button { min-height: var(--control-height); }
+.ws-switcher-label { display: inline-flex; align-items: center; gap: var(--space-2); max-width: 22rem; overflow-wrap: anywhere; text-align: left; }
+.ws-switcher .menu-list { min-width: min(20rem, calc(100vw - 32px)); max-width: calc(100vw - 32px); }
+.ws-switcher-item { display: grid; gap: var(--space-1); text-align: left; min-height: var(--control-height); white-space: normal; }
+.ws-switcher-row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.ws-switcher-words { overflow-wrap: anywhere; }
+.ws-switcher-marks { display: flex; flex-wrap: wrap; gap: var(--space-2); font-size: var(--type-meta); }
+.ws-switcher-note { margin: 0; padding: var(--space-2) var(--space-3); color: var(--text-soft); font-size: var(--type-meta); }
+.ws-switcher-message { margin: 0; font-size: var(--type-meta); color: var(--ink); max-width: 28rem; }
+.ws-switcher-skeleton { padding: var(--space-2) var(--space-3); }
+.ws-switcher-skeleton i { display: block; height: 0.9em; width: 12rem; max-width: 100%; border-radius: var(--radius-sm); background: var(--line); }
+
+@media (forced-colors: active) {
+  .ws-band { border-bottom-color: CanvasText; }
+  .ws-switcher-skeleton i { background: GrayText; }
+}

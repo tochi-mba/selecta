@@ -88,6 +88,7 @@ def host_json(view: HostView) -> dict[str, Any]:
                 "status": guest.status.value,
                 "joined_at": guest.joined_at,
                 "last_seen_at": guest.last_seen_at,
+                "online": guest.online,
             }
             for guest in view.guests
         ],
@@ -97,6 +98,17 @@ def host_json(view: HostView) -> dict[str, Any]:
         "renders_left": view.renders_left,
         "music_paused": view.music_paused,
         "displays": view.displays,
+        "screens": [
+            {
+                "id": screen.display_id,
+                "label": screen.label,
+                "paired_at": screen.paired_at,
+                "last_seen_at": screen.last_seen_at,
+                "online": screen.online,
+            }
+            for screen in view.screens
+        ],
+        "now": view.now,
     }
 
 
@@ -277,6 +289,20 @@ def install_routes(
         room_id: str, request: Request, claims: Claims = Depends(current_claims)  # noqa: B008
     ):
         return act(request, claims, room_id, lambda r, ws: r.unpair_displays(ws, room_id))
+
+    @app.delete("/api/rooms/{room_id}/displays/{display_id}")
+    def unpair_display(
+        room_id: str,
+        display_id: str,
+        request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ):
+        return act(
+            request,
+            claims,
+            room_id,
+            lambda r, ws: r.unpair_displays(ws, room_id, display_id=display_id),
+        )
 
 
 __all__ = ["host_json", "install_routes", "room_json"]

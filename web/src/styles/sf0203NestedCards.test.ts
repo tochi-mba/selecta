@@ -6,7 +6,8 @@ import { describe, expect, it } from 'vitest';
  * Flow SF-0203-04, the part code can check: music objects keep their hierarchy without box clutter,
  * so a card surface (a rounded, bordered, filled and padded box) is not drawn inside another card
  * surface. The guard reads every stylesheet to find the card classes, then walks the JSX of every
- * component and fails on a card element nested inside another card element in the same file.
+ * component (a component whose root is a card counts as that card where it is used) and fails on
+ * a card element nested inside another one, unless a stylesheet flattens that pair.
  * Nestings that later work chose on purpose are allow-listed below with their reason. Whether the
  * result looks calm is the visual critique, which stays a person step.
  */
@@ -83,6 +84,27 @@ function cardClasses(): Set<string> {
     }
   }
   return new Set([...traits].filter(([, entry]) => entry.radius && entry.border && entry.fill && entry.padding).map(([name]) => name));
+}
+
+/**
+ * `outer > inner` pairs a stylesheet flattens: a descendant rule that takes the inner card's own fill
+ * away (background none) wherever it sits inside the outer card, so the two no longer stack as boxes.
+ */
+function flattenedPairs(cards: Set<string>): Set<string> {
+  const pairs = new Set<string>();
+  for (const file of CSS) {
+    const text = read(file).replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const match of text.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      if (drawn(match[2], 'background(?:-color)?') !== false) continue;
+      for (const selector of splitSelectors(match[1])) {
+        const last = selector.trim().match(/(?:^|[\s>])\.([\w-]+)$/);
+        if (!last || !cards.has(last[1])) continue;
+        const ancestor = selector.trim().slice(0, -last[0].length);
+        for (const outer of ancestor.matchAll(/\.([\w-]+)/g)) if (cards.has(outer[1])) pairs.add(`${outer[1]} > ${last[1]}`);
+      }
+    }
+  }
+  return pairs;
 }
 
 type Node = { type: string; start: number; [key: string]: unknown };
@@ -180,16 +202,24 @@ const nestings = (cards: Set<string>) => {
  * Card-in-card nestings that are deliberate. Key: `outer > inner`, value: why the inner box earns it.
  */
 const ALLOWED: Record<string, string> = {
-  'panel > card': 'ControlGallery is the dev-only specimen sheet; each specimen card sits on the gallery panel on purpose (not a product surface).',
-  'panel > problem': 'Storage, folder and specimen panels must show an actionable failure within their own context instead of hiding it elsewhere.',
-  'adder > problem': 'The add-song form displays its recoverable input error immediately beside the control the user can fix.',
-  'lucy-approve > problem': 'Lucy approvals surface refusal and retry guidance beside the decision without losing the pending proposal.',
-  'requests > problem': 'Song search failures appear beside the request field and its retry action, rather than in a distant page banner.',
+  'panel > card': 'ControlGallery is the development-only specimen sheet (DEV or VITE_SELECTA_GALLERY builds); it shows a card as a specimen on the gallery panel, not a product surface.',
+  'lucy-approve > problem': 'Library/Lucy (later work, ADR-0362 approval and commit UX): the refusal and retry note keeps its own warn box beside the pending decision; an older Flow task does not restyle it.',
 };
 
 describe('nested cards (SF-0203-04)', () => {
   const cards = cardClasses();
-  const found = nestings(cards);
+  const flattened = flattenedPairs(cards);
+  const all = nestings(cards);
+  const found = all.filter((item) => !flattened.has(`${item.outer} > ${item.inner}`));
+
+  it('flattens a failure note inside a panel, the add-song form and the request list to a warn rule', () => {
+    for (const pair of ['panel > problem', 'adder > problem', 'requests > problem']) {
+      expect(all.some((item) => `${item.outer} > ${item.inner}` === pair), `${pair} occurs`).toBe(true);
+      expect(flattened.has(pair), `${pair} is flattened`).toBe(true);
+    }
+    const depth = read('styles/depth.css');
+    expect(depth).toMatch(/:is\(\.panel, \.adder, \.requests\) \.problem \{[^}]*background: none;[^}]*border: 0;[^}]*border-inline-start: var\(--marker\) solid var\(--warn\);[^}]*border-radius: 0;/);
+  });
 
   it('finds the card surfaces the stylesheets define', () => {
     for (const name of ['panel', 'card', 'song', 'editor', 'lucy-card', 'edit-inspector']) expect(cards.has(name), name).toBe(true);

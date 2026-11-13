@@ -70,9 +70,17 @@ class NicknameBody(BaseModel):
     nickname: str = Field(max_length=40)
 
 
-def guest_json(view: GuestView, status: str, votes_allowed: bool | None = None) -> dict[str, Any]:
+def guest_json(
+    view: GuestView, status: str, votes_allowed: bool | None = None,
+    nickname_confirm: bool = False,
+) -> dict[str, Any]:
     allowed = flags.on("rooms.votes") if votes_allowed is None else votes_allowed
+    # ADR-0422 (rooms.nickname_confirm): the page shows saving / saved / not saved and drops
+    # reads that overlapped a nickname save. Only said when the flag is on, so the page is
+    # exactly as before with it off.
+    extra = {"nickname_confirm": True} if nickname_confirm else {}
     return {
+        **extra,
         "room_name": view.room_name,
         "room_status": view.room_status.value,
         "guest_status": status,
@@ -177,7 +185,8 @@ def install_routes(
     def view(token: str, ref: GuestRef) -> dict[str, Any]:
         try:
             return guest_json(rooms().guest_view(token), guest_status(ref),
-                              host_allows(ref, "rooms.votes"))
+                              host_allows(ref, "rooms.votes"),
+                              host_allows(ref, "rooms.nickname_confirm"))
         except RoomError as error:
             raise refusal(error) from error
 
@@ -318,6 +327,21 @@ def install_routes(
             samesite="strict",
         )
         return {"pairing_code": started.pairing_code, "expires_at": started.expires_at}
+
+    @app.delete("/api/display/pairing")
+    def display_disconnect(request: Request, response: Response) -> dict[str, Any]:
+        """"Disconnect this screen": the screen deletes its own pairing with its own token."""
+        check_origin(request, origins)
+        hit("display-pair", ip_hash(request), limits.DISPLAY_PAIRING_PER_IP)
+        token = request.cookies.get(DISPLAY_COOKIE, "")
+        try:
+            rooms().disconnect_display(token)
+        except RoomError as error:
+            raise refusal(error) from error
+        response.delete_cookie(
+            DISPLAY_COOKIE, path="/api/display", secure=True, httponly=True, samesite="strict"
+        )
+        return {"disconnected": True}
 
     @app.get("/api/display/view")
     def display_view(request: Request) -> dict[str, Any]:

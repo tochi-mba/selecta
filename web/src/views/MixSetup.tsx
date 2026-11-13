@@ -1,6 +1,7 @@
 import { type PointerEvent, useEffect, useRef, useState } from 'react';
 import { ApiError, get, MixItem, post, SongRow, Status } from '../api';
 import { flagOn, useFlags } from '../flags';
+import { ScopeTag } from './MixIntent';
 import { Action, Dialog, Problem } from '../ui/controls';
 import { EnergyHorizon, FeelDiagram, HORIZON_STOPS, measuredHorizon } from '../ui/MusicObjects';
 import { SET_LENGTHS } from '../lib';
@@ -258,7 +259,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
   const goal = on('mixes.shaping.destination');
   return (
     <Dialog title="Shape the next mix" onClose={onClose} footer={<button className="primary" onClick={onClose}>Done shaping</button>}>
-      <p className="eyebrow">Optional shape</p>
+      <p className="eyebrow">Optional shape{on('mixes.intent_language') && <> <ScopeTag scope="saved-default" /></>}</p>
       <p className="hint">These stay as your defaults for every new mix you build. They don’t change a mix you’ve already got or anything playing now. You can change any transition song by song later.</p>
       {problem && <p className="warn" role="alert">{problem}</p>}
 

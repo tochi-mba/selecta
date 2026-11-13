@@ -24,8 +24,8 @@ def _gb(size: int) -> str:
 
 
 def _day(epoch_s: float) -> str:
-    return datetime.fromtimestamp(epoch_s, UTC).strftime("%-d %B %Y").lstrip("0") \
-        if False else datetime.fromtimestamp(epoch_s, UTC).strftime("%d %B %Y").lstrip("0")
+    moment = datetime.fromtimestamp(epoch_s, UTC)
+    return f"{moment.day} {moment:%B %Y}"
 
 
 def _message(
@@ -61,7 +61,7 @@ def long_job_finished(
             f"Your {label} finished after about {minutes} minutes.",
             f"It is ready in {SENDER_NAME} whenever you are.",
         ],
-        action=(f"Open {SENDER_NAME}", _link(site_url, "/activity")),
+        action=(f"Open {SENDER_NAME}", _link(site_url, "/")),
     )
 
 
@@ -80,7 +80,7 @@ def over_quota(
             "Nothing has been deleted. You can still play, mix and download everything, "
             "but new uploads and exports wait until you free some space or change your plan.",
         ],
-        action=("Manage storage", _link(site_url, "/settings/storage")),
+        action=("Manage storage", _link(site_url, "/workshop/storage")),
     )
 
 
@@ -102,7 +102,7 @@ def storage_deletion_warning(
             f"{day} unless you free some space or choose a plan that fits.",
             "You can download everything before then.",
         ],
-        action=("Download or keep your music", _link(site_url, "/settings/storage")),
+        action=("Download or keep your music", _link(site_url, "/workshop/storage")),
     )
 
 
@@ -121,7 +121,7 @@ def silent_zone_alert(
             f"{silent_minutes} minutes.",
             "Check the player in that zone is on and connected.",
         ],
-        action=("Open the venue", _link(site_url, "/business")),
+        action=("Open the venue", _link(site_url, "/business/zones")),
     )
 
 

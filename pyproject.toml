@@ -34,11 +34,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Cloud services export OpenTelemetry traces only when this extra is installed (ADR-0410).
+# Cloud services export OpenTelemetry traces and Sentry errors only with this extra (ADR-0410).
 # The code itself needs only opentelemetry-api, which FastAPI and Anthropic already require.
 observability = [
     "opentelemetry-sdk>=1.45",
     "opentelemetry-exporter-otlp-proto-http>=1.45",
+    # Error reports to Sentry, only when SELECTA_SENTRY_DSN is set (observability/errors.py).
+    "sentry-sdk>=2.20",
 ]
 
 [project.scripts]

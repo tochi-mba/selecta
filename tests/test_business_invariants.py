@@ -123,7 +123,7 @@ def only(trace: BusinessTrace, invariant: str) -> list[BusinessViolation]:
 def test_names_are_exactly_b1_to_b9() -> None:
     assert list(NAMES) == [f"B{number}" for number in range(1, 10)]
     assert set(NOT_CHECKED_IN_DB) == set(NAMES)
-    assert all("—" not in sentence for sentence in NAMES.values())
+    assert all(chr(0x2014) not in sentence for sentence in NAMES.values())
 
 
 def test_clean_trace_has_no_violations() -> None:

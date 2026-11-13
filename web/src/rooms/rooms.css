@@ -21,3 +21,8 @@
 .room-banner { border: 1px solid var(--accent, #e8ff3a); border-radius: 10px; padding: 8px 12px; margin: 0; }
 .room-error { color: var(--danger, #ffb4a8); margin: 0; }
 .room-said { margin: 0; }
+/* presence: who is really here (ADR-0416); "here" reads by its words, the colour only echoes it */
+.room-here { color: var(--ok, #9ed46a); }
+.room-gone summary { cursor: pointer; color: var(--text-soft); padding: var(--space-2) 0; min-height: 44px; display: flex; align-items: center; }
+.room-gone summary:focus-visible { outline: 2px solid var(--accent, #e8ff3a); outline-offset: var(--space-hair); }
+.room-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

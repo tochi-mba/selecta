@@ -1,0 +1,64 @@
+{
+  "area": "Business",
+  "flags": {
+    "business.signups": {
+      "label": "SelectaDJ for Business sign-up",
+      "about": "Self-serve business sign-up and selling of business plans. Off until the legal review passes; pilots work without it.",
+      "default": false,
+      "modes": ["cloud"],
+      "scope": "global",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.orgs": {
+      "label": "Organisations, venues, zones and crates",
+      "about": "An organisation workspace with its venues, each venue's zones, and organisation and venue crates drawn from one shared library.",
+      "default": false,
+      "routes": [
+        "GET /api/business/orgs",
+        "POST /api/business/orgs",
+        "GET /api/business/orgs/{org_id}",
+        "GET /api/business/venues",
+        "POST /api/business/venues",
+        "GET /api/business/venues/{venue_id}",
+        "PATCH /api/business/venues/{venue_id}",
+        "POST /api/business/venues/{venue_id}/archive",
+        "GET /api/business/zones",
+        "POST /api/business/zones",
+        "PATCH /api/business/zones/{zone_id}",
+        "POST /api/business/zones/{zone_id}/archive",
+        "GET /api/business/crates",
+        "POST /api/business/crates",
+        "GET /api/business/crates/{crate_id}",
+        "PUT /api/business/crates/{crate_id}/songs",
+        "DELETE /api/business/crates/{crate_id}"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.workspaces": {
+      "label": "Workspace switcher",
+      "about": "Switch between your personal SelectaDJ and the organisations you belong to. Personal and business data never mix.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": ["GET /api/workspaces"],
+      "modes": ["cloud"],
+      "scope": "user",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.pilots": {
+      "label": "Business pilots",
+      "about": "REX Technologies staff create free pilot organisations with their venues and zones, using the same model a paying venue will.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": ["POST /api/admin/business/pilots"],
+      "modes": ["cloud"],
+      "scope": "global",
+      "kind": "ops",
+      "owner": "business"
+    }
+  }
+}

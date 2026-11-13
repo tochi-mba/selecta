@@ -43,9 +43,7 @@ NAMES: dict[str, str] = {
         "No manager state on customer screens. Kiosk, guest and display payloads contain only "
         "allowlisted fields."
     ),
-    "B5": (
-        "No cross-organisation or out-of-scope access succeeds, for people, kiosks or tablets."
-    ),
+    "B5": ("No cross-organisation or out-of-scope access succeeds, for people, kiosks or tablets."),
     "B6": (
         "Billing and pilots never stop music mid-service. Playback stops for billing or a pilot "
         "end only at a venue's closing time after the grace or end date, and only after the "
@@ -529,8 +527,9 @@ def no_manager_state_on_customer_screens(trace: BusinessTrace) -> list[BusinessV
             continue
         for problem in _scan(payload.surface, payload.body, "", allowed):
             found.append(
-                BusinessViolation("B4", f"{payload.surface} payload at {_when(payload.at)}: "
-                                  f"{problem}")
+                BusinessViolation(
+                    "B4", f"{payload.surface} payload at {_when(payload.at)}: {problem}"
+                )
             )
     return found
 
@@ -599,8 +598,8 @@ def billing_never_stops_mid_service(trace: BusinessTrace) -> list[BusinessViolat
         if not _near_close(trace, stop):
             window = _open_window_at(trace, stop)
             if window is not None:
-                closes = "no close (open 24 hours)" if window.closes is None else _when(
-                    window.closes
+                closes = (
+                    "no close (open 24 hours)" if window.closes is None else _when(window.closes)
                 )
                 fail(f"came inside an open window (opened {_when(window.opens)}, {closes})")
         org = trace.venue_orgs.get(stop.venue_id)
@@ -645,13 +644,15 @@ def play_log_exactly_once(trace: BusinessTrace) -> list[BusinessViolation]:
         how = " (played offline)" if play.offline else ""
         if logged == 0:
             found.append(
-                BusinessViolation("B7", f"play {play_id}{how} of song {play.song_id} is missing "
-                                  "from the play log")
+                BusinessViolation(
+                    "B7", f"play {play_id}{how} of song {play.song_id} is missing from the play log"
+                )
             )
         elif logged > 1:
             found.append(
-                BusinessViolation("B7", f"play {play_id}{how} appears {logged} times in the "
-                                  "play log")
+                BusinessViolation(
+                    "B7", f"play {play_id}{how} appears {logged} times in the play log"
+                )
             )
     for row in trace.play_log:
         play = by_id.get(row.play_id)

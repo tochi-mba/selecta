@@ -234,6 +234,20 @@ def run_queue(
     next_arrival = 0
     t = 0.0
     while t < night_s:
+        if not waiting and not running:
+            # Idle: jump to the next arrival, keeping the per-minute samples and ticks.
+            upcoming = (arrivals[next_arrival].job.arrived_s if next_arrival < len(arrivals)
+                        else night_s)
+            target = min(float(int(upcoming)), night_s)
+            while t < target:
+                if int(t) % 60 == 0:
+                    result.depth.append(0)
+                    if tick is not None:
+                        tick(t)
+                t = float(int(t) // 60 * 60 + 60) if int(t) % 60 else t + 60.0
+                t = min(t, target)
+            if t >= night_s:
+                break
         while next_arrival < len(arrivals) and arrivals[next_arrival].job.arrived_s <= t:
             work = arrivals[next_arrival]
             next_arrival += 1
@@ -298,8 +312,8 @@ def run_queue(
                 result.background_done[kind] = result.background_done.get(kind, 0) + 1
         if int(t) % 60 == 0:
             result.depth.append(len(waiting) + len(running))
-        if tick is not None:
-            tick(t)
+            if tick is not None:
+                tick(t)
         t += 1.0
     return result
 
@@ -408,7 +422,7 @@ def run(
     sampler = ResourceSampler(pid)
     sampler.sample(0.0)
     wall_start = time.monotonic()
-    sample_every = 3600.0 if not realtime else max(1.0, 30.0 * speed)
+    sample_every = 3600.0 if not realtime else max(60.0, 60.0 * round(30.0 * speed / 60.0))
 
     def tick(t: float) -> None:
         if realtime:
@@ -469,8 +483,10 @@ def run(
         "continuity": report.as_dict(),
         "resources": {"pid_is_harness": pid is None, **resources,
                       "series": sampler.samples, "limits": LIMITS},
-        "passed": report.passed and not queue.missed_seams and resources.get(
-            "within_limits", True),
+        # Without chaos a missed seam is a scheduling failure. Under chaos it is expected, and
+        # what counts is that the fallback kept the night inside the continuity targets.
+        "passed": report.passed and (bool(chaos_list) or not queue.missed_seams)
+        and resources.get("within_limits", True),
     }
     out_dir.mkdir(parents=True, exist_ok=True)
     stamp = dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")

@@ -12,6 +12,17 @@
    the second fill rather than stacking a box of the same colour inside another. */
 :is(.edit-inspector, .overlay-panel, .card, .panel) .music-seam-diagram { background: none; }
 
+/* SF-0203-04: a failure note inside a panel, the add-song form or the request list is already held
+   by that box, so it drops its own raised fill, ring and corners and keeps a warn rule on its start
+   edge. It still never looks like "nothing here", without a box stacked inside a box. */
+:is(.panel, .adder, .requests) .problem {
+  background: none;
+  border: 0;
+  border-inline-start: var(--marker) solid var(--warn);
+  border-radius: 0;
+  padding: var(--space-2) var(--space-4);
+}
+
 /* MP-0276-08: Windows High Contrast drops every box-shadow, and several states are drawn only with an
    inset marker bar or a ring of shadow. Each gets a real border or outline in system colours, so a
    selected, playing, current, requested or attention row still looks different from its neighbours. */

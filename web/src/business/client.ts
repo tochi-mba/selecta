@@ -41,6 +41,9 @@ export const ROUTES = {
   pinCheck: (org: string, venue: string) => `/orgs/${enc(org)}/venues/${enc(venue)}/pin`,
   adminPilots: '/admin/business/pilots',
   adminPilot: (id: string, action: 'extend' | 'allowance' | 'convert' | 'end') => `/admin/business/pilots/${enc(id)}/${action}`,
+  requestSettings: (org: string, venue: string) => `/orgs/${enc(org)}/venues/${enc(venue)}/request-settings`,
+  librarySongs: (org: string) => `/orgs/${enc(org)}/library/songs`,
+  explicitBulk: (org: string) => `/orgs/${enc(org)}/library/explicit`,
 } as const;
 
 function enc(value: string) { return encodeURIComponent(value); }
@@ -100,7 +103,24 @@ export function businessClient(api: Api, workspaceId?: string) {
     pilots: () => api<PilotRow[]>(ROUTES.adminPilots),
     createPilot: (body: { org_name: string; owner_email: string; allowance: { venues: number; zones: number }; ends_at: number; note?: string; reason: string }) => api<PilotRow>(ROUTES.adminPilots, json('POST', body)),
     pilotAction: (id: string, action: 'extend' | 'allowance' | 'convert' | 'end', body: { reason: string; ends_at?: number; allowance?: { venues: number; zones: number } }) => api<PilotRow>(ROUTES.adminPilot(id, action), json('POST', body)),
+    requestSettings: (org: string, venue: string) => call<RequestSettings | null>(ROUTES.requestSettings(org, venue)),
+    saveRequestSettings: (org: string, venue: string, settings: RequestSettings) => call<RequestSettings>(ROUTES.requestSettings(org, venue), json('PUT', settings)),
+    librarySongs: (org: string) => call<LibrarySong[] | null>(ROUTES.librarySongs(org)),
+    markExplicit: (org: string, body: { song_ids: string[]; explicit: 'explicit' | 'clean' }) => call<{ updated: number } | null>(ROUTES.explicitBulk(org), json('POST', body)),
   };
 }
 
 export type BusinessClient = ReturnType<typeof businessClient>;
+
+/** Rooms for Business settings for one venue (ADR-0451): request mode per zone, limits, guest page look. */
+export type RequestMode = 'approve' | 'auto' | 'off';
+export type RequestSettings = {
+  modes: Record<string, RequestMode>;
+  limits: { per_guest: number; per_guest_hour: number; cooldown_minutes: number; zone_pending: number; accepted_hour: number };
+  branding: { welcome: string; accent?: string | null; logo_url?: string | null };
+  /** Stable join codes per zone, for the print sheet. */
+  codes?: Record<string, string>;
+};
+
+/** A song in the organisation library as the explicit editor and blocklist read it (ADR-0450). */
+export type LibrarySong = { id: string; title: string; artist: string; explicit: 'explicit' | 'clean' | 'unknown' };

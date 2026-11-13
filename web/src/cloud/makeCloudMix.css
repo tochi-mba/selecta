@@ -1,0 +1,15 @@
+/* Make a mix in the Cloud (ADR-0418). Spacing from tokens.css. */
+.cloud-mix-maker{display:grid;gap:var(--space-3);margin-top:var(--space-4)}
+.cloud-mix-maker h2{margin:0}
+.cloud-mix-new,.cloud-mix-editor{display:grid;gap:var(--space-3)}
+.cloud-mix-new label,.cloud-mix-editor>label{display:grid;gap:var(--space-1);max-width:28rem}
+.cloud-mix-pick,.cloud-mix-list,.cloud-mix-songs,.cloud-mix-history{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-2)}
+.cloud-mix-pick{max-height:16rem;overflow:auto}
+.cloud-mix-pick label{display:flex;gap:var(--space-2);align-items:center;max-width:none}
+.cloud-mix-list li,.cloud-mix-history li{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center}
+.cloud-mix-list span,.cloud-mix-history span{color:var(--text-soft);font-size:.85rem}
+.cloud-mix-songs li{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center;border-top:1px solid var(--line);padding-top:var(--space-2)}
+.cloud-mix-songs li>span{flex:1 1 12rem;min-width:0;overflow-wrap:anywhere}
+.cloud-mix-seam{flex-basis:100%;margin:0;color:var(--text-soft);font-size:.8rem}
+.cloud-mix-seam[data-basis="unanalysed"]{font-style:italic}
+.cloud-mix-error{color:var(--danger, var(--text));margin:0}

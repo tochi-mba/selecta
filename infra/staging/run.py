@@ -144,6 +144,23 @@ def _room_fanout(env: Env, out: str) -> list[list[str]]:
     return [command]
 
 
+def _room_fanout_k6(env: Env, out: str) -> list[list[str]]:
+    command = [
+        env.get("K6_SSE", "./k6"),
+        "run",
+        "--summary-export",
+        f"{out}/room-fanout-k6.json",
+        "-e",
+        f"BASE_URL={env['STAGING_BASE_URL']}",
+        "-e",
+        f"HOSTS={env['HOST_TOKENS_TXT']}",
+    ]
+    for name in ("ROOMS", "LISTENERS", "ACTIONS", "INTERVAL_S", "CONNECT_S"):
+        if env.get(name):
+            command += ["-e", f"{name}={env[name]}"]
+    return [command + ["tests/load/k6/room_fanout.js"]]
+
+
 def _restore(env: Env, out: str) -> list[list[str]]:
     return [["bash", "infra/backup/restore_drill.sh"]]
 
@@ -228,6 +245,15 @@ TASKS = {
             ("STAGING_BASE_URL", "HOST_TOKENS_TXT"),
             _room_fanout,
             ("ROOMS", "LISTENERS", "ACTIONS", "RATE"),
+            ("STAGING_BASE_URL",),
+        ),
+        Task(
+            "room-fanout-k6",
+            ("SC-0407-04", "SC-0416-06"),
+            "The same 500 x 100 fan-out with k6 + xk6-sse, for runs past one Python process.",
+            ("STAGING_BASE_URL", "HOST_TOKENS_TXT"),
+            _room_fanout_k6,
+            ("K6_SSE", "ROOMS", "LISTENERS", "ACTIONS", "INTERVAL_S", "CONNECT_S"),
             ("STAGING_BASE_URL",),
         ),
         Task(

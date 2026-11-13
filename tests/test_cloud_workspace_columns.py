@@ -113,3 +113,17 @@ def test_workspace_id_is_the_same_id_type_everywhere():
         if "workspace_id" in table.c
     }
     assert set(widths.values()) == {36}, widths
+
+
+# Business tables named on purpose (ADR-0442, BZ-0442-08), so dropping one from the metadata, or
+# its workspace column, fails here by name rather than silently shrinking the checks above.
+BUSINESS_TENANT_TABLES = ("venues", "zones", "crates", "crate_songs")
+
+
+def test_business_tables_are_tenant_tables_with_an_indexed_workspace_id():
+    known = tables()
+    for name in BUSINESS_TENANT_TABLES:
+        assert name in known, f"{name} is not on the metadata"
+        column = known[name].c.workspace_id
+        assert not column.nullable, name
+        assert leads_an_index(known[name], column), name

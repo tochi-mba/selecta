@@ -80,6 +80,9 @@ def default_zone_source(connection: Connection) -> list[ZoneRef]:
     if closing is not None:
         columns.append(closing.label("closing_mode"))
     query = sa.select(*columns).select_from(zones.join(venues, zones.c.venue_id == venues.c.id))
+    for table in (zones, venues):
+        if "archived_at" in table.c:
+            query = query.where(table.c.archived_at.is_(None))
     refs = []
     for row in connection.execute(query).mappings():
         refs.append(

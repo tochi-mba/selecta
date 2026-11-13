@@ -64,11 +64,11 @@
 | AV-0428-03 | Not started | None | - | No |
 | AV-0428-04 | Not started | None | - | No |
 | AV-0428-05 | Not started | None | - | No |
-| AV-0429-01 | Not started | None | - | No |
-| AV-0429-02 | Not started | None | - | No |
-| AV-0429-03 | Not started | None | - | No |
-| AV-0429-04 | Not started | None | - | No |
-| AV-0429-05 | Not started | None | - | No |
+| AV-0429-01 | Implemented; needs a person | PR #56 (uncommitted); tests/test_apb_continuity.py (28 passed 2026-11-13) | - | No |
+| AV-0429-02 | Implemented; needs a person | PR #56 (uncommitted); tests/test_apb_continuity.py (28 passed 2026-11-13) | - | No |
+| AV-0429-03 | Implemented; needs a person | PR #56 (uncommitted); tests/test_apb_continuity.py (28 passed 2026-11-13) | - | No |
+| AV-0429-04 | Implemented; needs a person | PR #56 (uncommitted); tests/test_apb_continuity.py (28 passed 2026-11-13) | - | No |
+| AV-0429-05 | Implemented (tooling); needs a person | PR #56 (uncommitted); tests/test_apb_continuity.py (28 passed 2026-11-13) | - | No |
 | AV-0430-01 | Not started | None | - | No |
 | AV-0430-02 | Not started | None | - | No |
 | AV-0430-03 | Not started | None | - | No |
@@ -84,11 +84,11 @@
 | AV-0432-03 | Not started | None | - | No |
 | AV-0432-04 | Not started | None | - | No |
 | AV-0432-05 | Not started | None | - | No |
-| AV-0433-01 | Not started | None | - | No |
-| AV-0433-02 | Not started | None | - | No |
-| AV-0433-03 | Not started | None | - | No |
-| AV-0433-04 | Not started | None | - | No |
-| AV-0433-05 | Not started | None | - | No |
+| AV-0433-01 | Implemented (tooling); needs a person | PR #56 (uncommitted); tests/test_apb_speakers.py (28 passed 2026-11-13) | - | No |
+| AV-0433-02 | Implemented; needs a person | PR #56 (uncommitted); tests/test_apb_speakers.py (28 passed 2026-11-13) | - | No |
+| AV-0433-03 | Implemented; needs a person | PR #56 (uncommitted); tests/test_apb_speakers.py (28 passed 2026-11-13) | - | No |
+| AV-0433-04 | Implemented; needs a person | PR #56 (uncommitted); tests/test_apb_speakers.py (28 passed 2026-11-13) | - | No |
+| AV-0433-05 | Implemented (tooling); needs a person | PR #56 (uncommitted); tests/test_apb_speakers.py (28 passed 2026-11-13) | - | No |
 | AV-0434-01 | Not started | None | - | No |
 | AV-0434-02 | Not started | None | - | No |
 | AV-0434-03 | Not started | None | - | No |
