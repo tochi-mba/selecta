@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 from selecta.lf_ai import (
-    EngineScope, LocalPlanExecutor, VerifiedRecording, parse_model_plan,
+    EngineScope,
+    LocalPlanExecutor,
+    VerifiedRecording,
+    parse_model_plan,
 )
 
 
