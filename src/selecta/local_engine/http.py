@@ -1,24 +1,28 @@
-"""Installable engine's guarded ASGI factory; not a cloud route."""
+"""Guarded installable engine ASGI factory; no modification to legacy API routes."""
 
 from __future__ import annotations
 
+from fastapi import FastAPI
+
 from selecta.local_engine import MIN_PROTOCOL_VERSION, PROTOCOL_VERSION
 from selecta.local_engine.capabilities import capability_report
-from selecta.local_engine.config import load_config, state_directory
+from selecta.local_engine.config import EngineConfig, load_config, state_directory
 from selecta.local_engine.discovery import installation_id
 from selecta.local_engine.security import LoopbackGuard
 
 
-def application():
-    """Wrap the existing standalone Python DSP API, preserving its native algorithms."""
-    from selecta.api import serve
+def guarded_application(legacy_app, *, directory, config: EngineConfig):
+    """Route engine endpoints BEFORE the legacy root static mount.
 
-    directory = state_directory()
-    config = load_config(directory)
-    app = serve()
+    The standalone create_app() can mount "/" last. Registering additional
+    FastAPI routes after that mount makes them unreachable. An ASGI router
+    keeps local engine metadata separate while delegating all existing
+    routes and static content intact.
+    """
+    meta = FastAPI(openapi_url=None, docs_url=None, redoc_url=None)
     identifier = installation_id(directory)
 
-    @app.get("/api/local-engine/health", include_in_schema=False)
+    @meta.get("/api/local-engine/health")
     def health():
         report = capability_report()
         return {
@@ -31,8 +35,29 @@ def application():
             "output_state": report["output"]["state"],
         }
 
-    @app.get("/api/local-engine/capabilities", include_in_schema=False)
+    @meta.get("/api/local-engine/capabilities")
     def capabilities():
         return capability_report()
 
-    return LoopbackGuard(app, port=config.port, state_dir=directory)
+    class Dispatch:
+        async def __call__(self, scope, receive, send):
+            if (
+                scope["type"] == "http"
+                and scope.get("path") in (
+                    "/api/local-engine/health", "/api/local-engine/capabilities"
+                )
+            ):
+                await meta(scope, receive, send)
+            else:
+                await legacy_app(scope, receive, send)
+
+    return LoopbackGuard(Dispatch(), port=config.port, state_dir=directory)
+
+
+def application():
+    """Run Selecta's existing API in user-controlled local mode."""
+    from selecta.api import serve
+
+    directory = state_directory()
+    config = load_config(directory)
+    return guarded_application(serve(), directory=directory, config=config)
