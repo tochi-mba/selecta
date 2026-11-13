@@ -73,7 +73,9 @@ class TransferCoordinator:
             previous = self.ledger.attempt(db, request.operation_id)
             if previous:
                 if previous["request_json"] != raw:
-                    raise TransferRejected("idempotency_conflict", "Operation ID reused for a change")
+                    raise TransferRejected(
+                        "idempotency_conflict", "Operation ID reused for a change"
+                    )
                 return self.ledger.snapshot(db, previous)
             request.validate(self.clock())
             existing = db.execute(
@@ -86,7 +88,9 @@ class TransferCoordinator:
                 return self.ledger.snapshot(db, existing)
             owner = self.ledger.owner(db, request.scope)
             if owner is None:
-                raise TransferRejected("uninitialized", "Explicit local owner/silence setup required")
+                raise TransferRejected(
+                    "uninitialized", "Explicit local owner/silence setup required"
+                )
             if owner["generation"] != request.expected_generation:
                 raise TransferRejected("stale_generation", "Expected generation no longer current")
             if owner["device"] == request.target_device_id:
