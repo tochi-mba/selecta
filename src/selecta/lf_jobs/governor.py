@@ -14,9 +14,10 @@ import sqlite3
 import threading
 import time
 import uuid
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Iterator
 
 import psutil
 
@@ -168,8 +169,16 @@ class LocalResourceGovernor:
                 "deadline_at REAL, changed_at REAL NOT NULL)"
             )
 
-    def _db(self) -> sqlite3.Connection:
-        return sqlite3.connect(str(self.path), timeout=5.0)
+    @contextmanager
+    def _db(self) -> Iterator[sqlite3.Connection]:
+        # sqlite3.Connection.__exit__ commits but does not close the connection.
+        # Explicit close releases Windows filesystem handles promptly.
+        connection = sqlite3.connect(str(self.path), timeout=5.0)
+        try:
+            with connection:
+                yield connection
+        finally:
+            connection.close()
 
     def observe_zone(self, demand: ZoneDemand) -> None:
         """Agent 09 calls this on output start/stop/deadline updates."""
