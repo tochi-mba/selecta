@@ -66,7 +66,7 @@ const text = (value: unknown): string | undefined => {
   if (typeof value !== 'string') return undefined;
   const cleaned = value.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, MAX_TEXT);
   // A server mistake must not expose local media locations or diagnostic traces to guests.
-  if (/^(?:[A-Za-z]:[\\/]|file:\/\/|\\\\|\/(?:home|Users|media|mnt|Volumes|var|tmp|srv)\/)/i.test(cleaned)
+  if (/(?:^|\s)(?:[A-Za-z]:[\\/]|file:\/\/|\\\\|\/(?:home|Users|media|mnt|Volumes|var|tmp|srv)\/)/i.test(cleaned)
     || /(?:Traceback \(most recent call last\)|Exception:|stack trace)/i.test(cleaned)) return undefined;
   return cleaned;
 };
