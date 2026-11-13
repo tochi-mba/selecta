@@ -12,7 +12,6 @@ from urllib.parse import urlsplit
 from selecta.devstack.billing import same_site
 from selecta.devstack.redirects import safe_path, site_target
 
-
 UNTRUSTED_RETURNS = (
     "https://attacker.example/collect",
     "//attacker.example/collect",
