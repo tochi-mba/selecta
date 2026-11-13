@@ -132,7 +132,7 @@ def test_offline_six_hours_and_reconcile_deduplicates(fixture):
     assert len(service.prepare("w", "v", "bar")) >= 3
     assert service.start("w", "v", "bar")
     # Offline for SIX HOURS, including 36 *real* local track-end callbacks.
-    for tick in range(36):
+    for _ in range(36):
         clock[0] += 600
         assert service.tick("w", "v", "bar", position_s=599).actual_output == "audible_verified"
         generation = store.session("w", "v", "bar")["generation"]
