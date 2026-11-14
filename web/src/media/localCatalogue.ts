@@ -277,6 +277,28 @@ export class BrowserLocalCatalogue {
       throw e;
     }
   }
+  /** Link a newly imported, fully hashed local recording to an opaque metadata-only
+   * catalogue reference. Never use a raw digest or filename as the Cloud reference.
+   * The local recording ID remains private and is rechecked on each access. */
+  bindCanonical(recordingId: string, canonicalTrackId: string): void {
+    if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(canonicalTrackId) ||
+        /^[a-f0-9]{64}$/.test(canonicalTrackId)) throw new Error('Invalid opaque canonical ID');
+    const record = this.recordingsMap.get(recordingId);
+    if (!record || record.readiness !== 'ready' || !record.identity.exactSha256 ||
+        !this.bindings.has(recordingId)) {
+      throw new Error('Cannot link a missing or unverified local recording');
+    }
+    if (record.canonicalTrackId && record.canonicalTrackId !== canonicalTrackId) {
+      throw new Error('Recording is already linked to a different canonical reference');
+    }
+    if ([...this.recordingsMap.values()].some((other) => other.id !== recordingId &&
+      other.canonicalTrackId === canonicalTrackId && other.identity.exactSha256 !== record.identity.exactSha256)) {
+      throw new Error('A different master already owns this canonical reference');
+    }
+    record.canonicalTrackId = canonicalTrackId;
+    this.emit();
+    this.persist();
+  }
   /** Agent 01 and Agent 03 can stream a Blob without granting Cloud access. */
   async openBlob(recordingId: string): Promise<Blob> { return this.openRecording(recordingId); }
   markPermissionRequired(sourceId: string): void {
