@@ -6,6 +6,7 @@ No recordings are uploaded or copied into the test Cloud account.
 from __future__ import annotations
 
 from cloud_party import ALICE, BOB, auth
+
 from selecta import flags
 
 pytest_plugins = ("cloud_party",)
