@@ -93,8 +93,10 @@ export class BrowserVenueProgramme {
       id: ref.id, title: ref.id, artist: facts.artist, file,
       revision: ref.revision, permitted: true,
     });
-    this.facts.set(ref.id, facts);
+    // Preparation is the readiness boundary, not metadata eligibility. A
+    // failed decode must remain retryable during the preflight horizon.
     await this.adapters.audio.prepare(ref.id);
+    this.facts.set(ref.id, facts);
   }
 
   /** Must be invoked from an on-device user tap, never remote automatic autoplay. */
@@ -224,7 +226,7 @@ export class BrowserVenueProgramme {
           // Decoder work is asynchronous and capped; Agent 01 worker preflight will
           // replace this simple lookahead for production continuous DJ playback.
           if (next && !this.facts.has(next.id)) {
-            try { await this.bind(next); }
+            try { await this.bind(next); this.issue = null; }
             catch (error) { this.issue = errorMessage(error); }
           }
         }
