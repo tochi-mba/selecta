@@ -17,7 +17,7 @@ from sqlalchemy.engine import Connection, Engine
 from selecta.admin import state as emergency_state
 from selecta.billing import plans, stripe_sync
 from selecta.identity.tokens import Claims
-from selecta.lf_egress import AdmissionDenied, Phase, current_phase, require_upload_action
+from selecta.lf_egress import AdmissionDenied, Phase, current_phase
 from selecta.persistence import transaction
 from selecta.storage.artifacts import Buckets
 from selecta.storage.audio_check import Rejected
