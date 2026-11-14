@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { webcrypto } from "node:crypto";
 import {
   BrowserControlError,
@@ -43,8 +43,11 @@ const SIGNATURE = "f3b18f7e63028ddc959115b92b13c8fd94c0c7040cebb641cd772964ff0e4
 
 describe("browser Cloud signed command contract", () => {
   const previous = Object.getOwnPropertyDescriptor(globalThis, "crypto");
-  Object.defineProperty(globalThis, "crypto", { value: webcrypto, configurable: true });
+  beforeEach(() => {
+    Object.defineProperty(globalThis, "crypto", { value: webcrypto, configurable: true });
+  });
   afterEach(() => {
+    vi.useRealTimers();
     if (previous) Object.defineProperty(globalThis, "crypto", previous);
   });
 
