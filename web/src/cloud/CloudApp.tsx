@@ -313,14 +313,18 @@ function Feedback({ error, notice }: { error: string; notice: string }) {
 }
 
 function Overview({ account, go, localFirst }: { account: Account; go: (page: Page) => void; localFirst: boolean }) {
+  const openPersonalMode = (mode: 'play' | 'remote' | 'edit') => {
+    go('listen');
+    window.history.replaceState({}, '', `/listen?mode=${mode}`);
+  };
   if (localFirst) return <>
     <section className="cloud-hero br07-home" aria-labelledby="br07-home-title">
       <div><p className="cloud-eyebrow">SELECTA CLOUD · BROWSER FIRST</p>
         <h2 id="br07-home-title">{browserCloudCopy.tagline}</h2>
         <p>Keep the mix plan and its history in sync. Your music stays on the phone, tablet or computer you choose.</p>
-        <div className="cloud-actions"><button className="primary" onClick={() => go('listen')}>Play Here</button>
-          <button onClick={() => go('listen')}>Control Another Device</button>
-          <button onClick={() => go('listen')}>Edit Without Music</button></div>
+        <div className="cloud-actions"><button className="primary" onClick={() => openPersonalMode('play')}>Play Here</button>
+          <button onClick={() => openPersonalMode('remote')}>Control Another Device</button>
+          <button onClick={() => openPersonalMode('edit')}>Edit Without Music</button></div>
       </div>
     </section>
     <div className="cloud-cards">
