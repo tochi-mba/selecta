@@ -94,8 +94,12 @@ export class BrowserAudioRuntime implements AudioEngine {
     return () => { this.listeners.delete(listener); };
   };
   private readonly onVisibility = () => {
+    // Losing visibility does not mean the browser stopped producing sound. Desktop
+    // browsers can continue playing in another tab; mobile browsers may suspend.
+    // Preserve playback while the context is running, but never preserve a prior
+    // operator sound check across a potentially changed output/audio session.
     if (document.visibilityState === 'hidden' && this.state.phase === 'playing') {
-      void this.interrupt('Playback paused because this browser became hidden. Tap Play to resume; background playback is not guaranteed.');
+      this.invalidateSound('Browser is in the background. Playback may be interrupted; check the speaker when you return.');
     }
   };
   private readonly onPageHide = () => { void this.stop(); };
@@ -462,7 +466,10 @@ export class BrowserAudioRuntime implements AudioEngine {
     const playing = this.state.phase === 'playing';
     this.sequence++;
     this.haltSources();
-    this.patch({ index: previous, title: this.queue[previous].title, position: 0, duration: 0 });
+    // The source has been stopped; do not leave phase='playing' or play()
+    // will treat the request as already active and leave the speaker silent.
+    this.patch({ index: previous, title: this.queue[previous].title, position: 0, duration: 0,
+      phase: playing ? 'ready' : this.state.phase, pending: null });
     if (playing) await this.play();
   }
   setVolume(value: number) {
