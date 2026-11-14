@@ -78,11 +78,13 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
   const currentlyVerified = () => active && !dirty && ports.media
     ? checkedAvailability(active, availability, ports.media.deviceId, Date.now()) : null;
   const renderSupported = active && ports.renderer?.supported(active);
+  const playSupported = active && ports.playback?.supported?.(active);
   const allReady = verified?.allReady === true;
   const canRender = !!active && !dirty && allReady && renderSupported?.supported === true && !!ports.renderer;
   // The first sound check is performed AFTER user-activated local playback. Requiring
   // pre-existing physical audibility here creates a deadlock on a new browser.
-  const canPlay = !!active && !dirty && allReady && !!ports.playback;
+  const canPlay = !!active && !dirty && allReady && !!ports.playback &&
+    playSupported?.supported !== false;
 
   const refresh = useCallback(async () => {
     try {
@@ -282,8 +284,23 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
     finally { setBusy(false); if (importedRef.current) importedRef.current.value = ''; }
   };
 
+  const recheckLocal = async () => {
+    if (!active || !ports.media || busy || rendering) return;
+    setBusy(true); setError(''); setAvailability(null);
+    try {
+      const inspected = await ports.media.inspect(active);
+      setAvailability(inspected);
+      setReadinessTime(Date.now());
+      setMessage('Local recording permissions and exact versions rechecked on this browser.');
+    } catch (cause) {
+      setAvailability(null);
+      setError('Local readiness check failed: ' + humanError(cause));
+    } finally { setBusy(false); }
+  };
+
   const play = async () => {
-    if (!canPlay || !active || !ports.playback || !currentlyVerified()?.allReady) return;
+    if (!canPlay || !active || !ports.playback || !currentlyVerified()?.allReady ||
+      ports.playback.supported?.(active)?.supported === false) return;
     setBusy(true); setError('');
     try { await ports.playback.playHere(active); setMessage('Playback requested locally. Confirm sound at your actual speaker.'); }
     catch (cause) { setError(`Could not start local playback: ${humanError(cause)}`); }
@@ -440,13 +457,18 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
               verified?.outputVerified ? 'Recording and output preflight passed. Confirm sound at your actual speaker.' :
               'Recordings available; Output Unverified. Confirm real speaker output before playback.'}</p>
             <div className="br07-actions">
-              <button onClick={() => void prepare()} disabled={!allReady || dirty || busy || rendering || !ports.renderer?.prepare}>Prepare transitions locally</button>
+              <button type="button" onClick={() => void recheckLocal()} disabled={!ports.media || busy || rendering || dirty}>
+                Recheck music on this device
+              </button>
+              <button onClick={() => void prepare() disabled={!allReady || dirty || busy || rendering || !ports.renderer?.prepare}>Prepare transitions locally</button>
               <button onClick={() => void play()} disabled={!canPlay || busy || rendering}>Play Here</button>
               <button onClick={() => void render()} disabled={!canRender || busy || rendering}>{rendering ? 'Rendering locally…' : 'Render and export here'}</button>
               {rendering && <button onClick={() => renderAbort.current?.abort()}>Cancel render</button>}
               {exported && exported.revision === active.revision_id && !dirty &&
                 <button className="primary" onClick={downloadExport} disabled={busy || rendering}>Download local export</button>}
             </div>
+            {playSupported?.supported === false &&
+              <p className="br07-muted" role="status">Live playback unavailable: {playSupported.reason ?? 'This arrangement needs an offline render.'}</p>}
             {!ports.renderer ? <p className="br07-muted">Local render adapter not connected. Phone rendering is supported when device capabilities and renderer are verified; no Cloud fallback is used.</p> :
               !renderSupported?.supported && <p className="br07-muted">Unsupported Here: {renderSupported?.reason ?? 'This device cannot complete this render.'}</p>}
           </section>
@@ -462,14 +484,3 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
   </section>;
 }
 
-/** Persistent status surface for every personal Cloud destination. Never mount the
- * legacy hosted-audio transport when local_first.personal is enabled. */
-export function BrowserPlaybackDock({ openStudio }: { openStudio: () => void }) {
-  const ports = useBrowserStudioPorts();
-  const status = ports.playback?.status();
-  return <section className="br07-dock" aria-label="Browser player status" role="status">
-    <span><strong>{status?.deviceLabel ?? 'This browser'}</strong> · {status?.playing ? 'Player active' : 'No confirmed active playback'} · {status?.outputVerified ? 'Output checked' : 'Output Unverified'}</span>
-    <button onClick={openStudio}>Open Studio and player</button>
-    <small>{status?.detail ?? 'Choose Play Here, Control Another Device or Edit Without Music.'}</small>
-  </section>;
-}
