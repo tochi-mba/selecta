@@ -11,6 +11,7 @@ export type RenderOptions={ sampleRate?:number; windowStart?:number; duration?:n
 /** Prepares one bounded playback window. Consumers overlap adjacent window halos before playback/export. */
 export function renderTransitionWindow(script:TransitionScript,sources:SourceWindows,opts:RenderOptions={}):PreparedAudio {
   validateScript(script);
+  if(script.meta?.needsBeatPinnedWarp)throw new DSPUnsupported('Tempo-ramp requires a validated piecewise beat-pinned warp; unavailable in this DSP build');
   const sampleRate=opts.sampleRate??44100,budget=opts.budget??MOBILE_BUDGET,signal=opts.signal;
   const start=opts.windowStart??0,duration=opts.duration??script.duration,end=start+duration;
   if(!Number.isFinite(start)||!Number.isFinite(duration)||start<0||duration<=0||end>script.duration+1e-8)
@@ -18,6 +19,14 @@ export function renderTransitionWindow(script:TransitionScript,sources:SourceWin
   const frames=Math.round(duration*sampleRate);
   if(frames<1||frames>budget.maxFrames)throw new DSPUnsupported('Requested transition window exceeds device budget');
   const channelCount=Math.max(1,Math.min(2,...Object.values(sources).map(p=>p.channels.length)));
+  // Conservative working-set admission: decoder copies, filter bank, stretch, tails, limiter
+  // and worker clones may coexist. Caller must split advanced mobile seams into shorter chunks.
+  const parts=[script.a,script.b,...(script.extras??[])];
+  const complex=parts.some(p=>p.low||p.mid||p.high||p.lowpass||p.highpass);
+  const tails=parts.some(p=>p.echo||p.wash);
+  const buffers=8+(complex?8:0)+(tails?4:0);
+  if(frames*channelCount*4*buffers>budget.maxBytes)
+    throw new DSPUnsupported('Estimated DSP scratch memory exceeds device budget; prepare a smaller window');
   const mixed=allocatePCM(sampleRate,channelCount,frames,start,budget);
   const dry:PCM[]=[];const notes:string[]=[];
   for(const part of [script.a,script.b,...(script.extras??[])]) {

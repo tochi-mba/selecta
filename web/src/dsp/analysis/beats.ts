@@ -21,7 +21,7 @@ function nearestStrength(t:number,env:readonly number[],hop:number):{offset:numb
     if(env[i]>peak){peak=env[i];offset=i*hop-t;}
   return {strength:peak,offset};
 }
-export function fitBeatGrid(raw:readonly number[],env:readonly number[],hop=RATIO_HOP,downbeats:readonly number[]=[]):BeatGrid|null {
+export function fitBeatGrid(raw:readonly number[],env:readonly number[],hop=RATIO_HOP,downbeats:readonly number[]=[],origin=0):BeatGrid|null {
   const beats=regularize([...raw].filter(Number.isFinite).sort((a,b)=>a-b));
   if(beats.length<4)return null;
   const intervals=beats.slice(1).map((b,i)=>b-beats[i]),period=median(intervals);
@@ -32,7 +32,7 @@ export function fitBeatGrid(raw:readonly number[],env:readonly number[],hop=RATI
   const agreement=drift.filter(x=>Math.abs(x)<=0.03).length/drift.length;
   const constantTempo=agreement>=0.7 && beats.length>=16 && Math.sqrt(drift.reduce((s,x)=>s+x*x,0)/drift.length)<0.016;
   const grid=constantTempo?Array.from({length:indices[indices.length-1]+1},(_,i)=>initial+i*slope):beats;
-  const good=grid.map(t=>nearestStrength(t,env,hop)),strong=good.filter(v=>v.strength>0);
+  const good=grid.map(t=>nearestStrength(t-origin,env,hop)),strong=good.filter(v=>v.strength>0);
   const sorted=env.filter(x=>Number.isFinite(x)).sort((a,b)=>a-b),threshold=sorted[Math.floor(sorted.length*0.7)]??0;
   const offsets=good.filter(v=>v.strength>=threshold && v.strength>0).map(v=>v.offset);
   const nudge=offsets.length>=4?median(offsets):0;
@@ -75,7 +75,7 @@ export function detectBeats(env:readonly number[],hop=RATIO_HOP,origin=0):BeatGr
   }
   const raw:number[]=[];
   for(let t=origin+phase*hop;t<origin+env.length*hop;t+=period)raw.push(t);
-  const local=fitBeatGrid(raw,env,hop);
+  const local=fitBeatGrid(raw,env,hop,[],origin);
   if(!local)return null;
   return {...local,confidence:Math.min(0.49,local.confidence),provenance:'browser-autocorrelation'};
 }

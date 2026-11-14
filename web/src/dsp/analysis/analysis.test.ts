@@ -26,6 +26,9 @@ describe('Musical feature contracts',()=>{
     expect(result!.bpm).toBeLessThan(123);
     expect(result!.confidence).toBeLessThanOrEqual(0.49);
     expect(result!.beats.length).toBeGreaterThan(30);
+    const shifted=detectBeats(env,hop,20);
+    expect(shifted!.beats[0]).toBeGreaterThanOrEqual(20);
+    expect(shifted!.onsetAgreement).toBeGreaterThan(0);
   });
   it('ports the native constant-tempo fit path for supplied model beats',()=>{
     const beats=Array.from({length:40},(_,i)=>i*0.5+0.003*Math.sin(i));
