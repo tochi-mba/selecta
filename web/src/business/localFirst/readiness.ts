@@ -9,6 +9,8 @@ export type SourceState = 'connected' | 'disconnected' | 'permission_required' |
 export type OutputState = 'playing' | 'idle' | 'failed' | 'silent' | 'untested' | 'unknown';
 
 export type LocalZoneReport = {
+  /** Optional evidence from a browser-only venue player. Unknown is never healthy. */
+  browser?: { foreground: boolean; wake_lock_held?: boolean; platform?: string; interrupted?: boolean; battery_low?: boolean; permission_fresh?: boolean };
   /** Server-supplied, epoch seconds; not the time the browser fetched the overview. */
   verified_at: number | null;
   engine: { state: EngineState; version?: string; update_required?: boolean };
@@ -113,15 +115,15 @@ export function inspectZone(zone: Zone, venue: Venue, now: number, browserOfflin
     base.issues.push(recovery('verify', 'Zone is not ready for playback', 'Check pairing, zone availability and the latest local engine status.', 'devices'));
   }
   if (report.engine.state !== 'ready') {
-    base.issues.push(recovery('engine', 'Local engine not ready', 'Open the engine on the venue computer and check its service, then pair or restart it.', 'devices'));
+    base.issues.push(recovery('engine', 'Local player not ready', 'Open Selecta on the actual venue player (iPad, Android tablet or computer), tap to unlock audio and check its status.', 'devices'));
   }
   if (report.engine.update_required) {
     base.issues.push(recovery('update', 'Local agent needs updating', 'Schedule an engine update outside service hours; confirm playback again afterwards.', 'devices'));
   }
   if (report.source.state !== 'connected') {
-    const text = report.source.state === 'disconnected' ? 'Reconnect the authorised music drive on the venue computer.'
-      : report.source.state === 'permission_required' ? 'Grant the local engine permission to the music folder.'
-      : 'Connect an authorised local music source and rescan on the venue computer.';
+    const text = report.source.state === 'disconnected' ? 'Reconnect the authorised local music source on the venue device.'
+      : report.source.state === 'permission_required' ? 'Reauthorise the music files on the venue browser or its local player.'
+      : 'Select an authorised local music source and verify the exact recordings on the venue device.';
     base.issues.push(recovery('source', 'Local music source unavailable', text, 'devices'));
   }
 
@@ -135,10 +137,24 @@ export function inspectZone(zone: Zone, venue: Venue, now: number, browserOfflin
     base.issues.push(recovery('fallback', 'Not enough prepared music or fallback', 'Prepare more eligible music for this zone and verify the offline fallback before opening.', 'schedule'));
   }
   if (!report.output.physical_verified || report.output.state === 'unknown' || report.output.state === 'untested') {
-    base.issues.push(recovery('output', 'Physical speaker not verified', 'Test the real speaker output from the local engine. Unlocking a browser does not count.', 'devices'));
+    base.issues.push(recovery('output', 'Physical speaker not verified', 'Run a real speaker test on the venue browser player. Unlocking Web Audio alone does not count.', 'devices'));
   }
   if (report.output.state === 'failed' || report.output.state === 'silent') {
-    base.issues.push(recovery('output', 'Speaker has no confirmed audio', 'Check power, cabling, output selection and volume at the venue; test the real speaker.', 'devices'));
+    base.issues.push(recovery('output', 'Speaker has no confirmed audio', 'Check tablet power, OS speaker route, cabling and volume at the venue; test the real speaker.', 'devices'));
+  }
+  if (report.browser) {
+    if (!report.browser.foreground || report.browser.interrupted) {
+      base.issues.push(recovery('engine', 'Browser player is not in the foreground',
+        'Open Selecta on the venue tablet and tap to recover. iPad suspension, Android Doze and browser termination do not reliably resume themselves.', 'devices'));
+    }
+    if (report.browser.permission_fresh === false) {
+      base.issues.push(recovery('source', 'Local browser media permission needs checking',
+        'Re-select or reauthorise the venue music on the actual playing device.', 'devices'));
+    }
+    if (report.browser.battery_low) {
+      base.issues.push(recovery('engine', 'Venue player battery is low',
+        'Connect external power and confirm the speaker is still playing.', 'devices'));
+    }
   }
   if (report.policy_approved !== true) {
     base.issues.push(recovery('policy', 'Venue policy not confirmed', 'Review the venue music policy and permissions before activating.', 'rules'));
