@@ -158,11 +158,23 @@ export class LocalArtifactStore {
     await dir.removeEntry(name + '.json');
     await dir.removeEntry(name);
   }
-  /** Retry/cleanup never deletes originals, saved downloads or unrelated OPFS content. */
+  /** Remove only a corrupt generated cache pair. Never touches chosen source files,
+   * user-saved downloads, or unrelated OPFS content. */
+  async discardInvalid(identity: string, codec: 'wav' | 'flac'): Promise<void> {
+    const dir = await directory(CACHE);
+    const name = nameFor(identity, codec);
+    if (await optionalFile(dir, name + '.json')) await dir.removeEntry(name + '.json');
+    if (await optionalFile(dir, name)) await dir.removeEntry(name);
+  }
+
+  /** Remove interrupted/incomplete writes, including an orphan completion marker.
+   * A structurally complete cache pair is left alone until read-back validation
+   * determines whether its audio is actually valid. */
   async cleanupIncomplete(identity: string, codec: 'wav' | 'flac'): Promise<void> {
     const dir = await directory(CACHE);
     const name = nameFor(identity, codec);
-    if (await optionalFile(dir, name + '.json')) return;
+    if (await this.get(identity, codec)) return;
+    if (await optionalFile(dir, name + '.json')) await dir.removeEntry(name + '.json');
     if (await optionalFile(dir, name)) await dir.removeEntry(name);
   }
 }
