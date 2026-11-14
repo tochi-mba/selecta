@@ -1,5 +1,8 @@
 # ADR-0456 - Runtime topology and device capability model
 
+> **Controlling browser-first update — 2026-11-14:** [ADR-0485](adr-0485-browser-first-cloud-and-ipad-venue-runtime.md) supersedes any mandatory Python/FFmpeg installer, native agent, separate venue computer, or guaranteed background/reboot browser playback in this historical decision. **Cloud runs DSP and plays locally in the supported browser** (including a venue's sole Android tablet or iPad; capable phones also render). Standalone Python Selecta remains independent. [Device/DSP feasibility](selecta-browser-device-capability-matrix.md) · [Full product/repository plan](selecta-browser-first-master-plan.md). Implementation status counts below are an older snapshot and do not certify browser parity; tests and real-device verification remain required.
+
+
 - **Decision:** Accepted by owner (2026-11-13); implementation not started.
 - **Implementation:** 0/4 Implemented; 4/4 Not started.
 - **Independent verification:** 0/4 Verified.
@@ -14,10 +17,11 @@ A binary local/cloud execution mode cannot describe a connected PC that processe
 
 ## Decision and invariants
 
-1. Model independent dimensions: audio execution (local engine/controller-only), connectivity (offline/connecting/online/degraded), workspace (standalone/personal/business), and role/capability.
-2. Keep the public cloud API as a stateless control plane, never as an alternate DSP runner. Existing standalone local mode stays account-free.
-3. Capability negotiation is typed and versioned: supported codecs, analysis, stems, outputs, runtime version, background operation, storage and supported control actions. A capability claim is not evidence of media readiness.
-4. Unsupported device capabilities are reported with an actionable reason and never silently downgraded to fake success.
+1. Separate **browser player**, browser remote controller, browser editor, guest/staff, and separately deployed standalone native local app from workspace, online state and per-feature capabilities.
+2. iPads and Android tablets are first-class **sole-device venue players**. Phones also play and render when local media, codec, performance and output pass measured qualification; form factor alone never sets controller-only.
+3. Probe WebAudio/AudioWorklet, local file/permission scope, codec, per-model inference backend, storage/eviction, output route, foreground/wake lock, CPU/thermal and actual local media readiness. Version results by browser+OS+device+engine, not user agent alone.
+4. Cloud is the metadata/control plane, not a hidden Python service or hosted audio worker. On mobile, some features may be unsupported_here and recipes remain editable.
+5. A browser may be suspended, killed, locked or restarted. Do not advertise unattended service continuity or success on unverified physical outputs; use explicit unknown/interrupted states.
 
 ## Edge cases and rejection semantics
 

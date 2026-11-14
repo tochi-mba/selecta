@@ -1,5 +1,8 @@
 # ADR-0461 - Local engine packaging, update and platform support
 
+> **Controlling browser-first update — 2026-11-14:** [ADR-0485](adr-0485-browser-first-cloud-and-ipad-venue-runtime.md) supersedes any mandatory Python/FFmpeg installer, native agent, separate venue computer, or guaranteed background/reboot browser playback in this historical decision. **Cloud runs DSP and plays locally in the supported browser** (including a venue's sole Android tablet or iPad; capable phones also render). Standalone Python Selecta remains independent. [Device/DSP feasibility](selecta-browser-device-capability-matrix.md) · [Full product/repository plan](selecta-browser-first-master-plan.md). Implementation status counts below are an older snapshot and do not certify browser parity; tests and real-device verification remain required.
+
+
 - **Decision:** Accepted by owner (2026-11-13); implementation not started.
 - **Implementation:** 0/4 Implemented; 4/4 Not started.
 - **Independent verification:** 0/4 Verified.
@@ -14,10 +17,12 @@ Reliable multi-hour venue playback cannot depend on a developer command, browser
 
 ## Decision and invariants
 
-1. Package existing Python/FFmpeg DSP as a signed, supervised local engine; ship clear Windows primary, Linux venue and macOS target profiles; controllers on mobile first.
-2. Provide install, uninstall, upgrade, start-at-login/boot, paired-app discovery, loopback security, status, diagnostics, logs, model downloads and compatibility negotiation.
-3. Do not promise native background DSP parity on browsers or mobile without empirical platform tests. Browser UI is not the only venue audio process.
-4. Updates are signed, staged, version-compatible, can roll back, and are deferred outside live venue service except for approved urgent safety procedures.
+1. **Cloud is a no-install browser audio application.** The site and optional PWA execute local file selection, Web Audio/AudioWorklet DSP and permitted workers/WASM. No installed Python process, FFmpeg binary, local service or desktop is required.
+2. A venue may have **only an iPad or Android tablet**. It opens the website, chooses accessible licensed local music, taps Start, checks real output and remains foreground/awake while DJing. Phones can run local renders too when qualified.
+3. PWA installation may give an icon or separate window but **does not grant an always-on process**, guaranteed lock-screen audio or automatic restart after reboot. Wake lock can be rejected or revoked.
+4. Existing Python/FFmpeg packaging, native diagnostics, upgrades and services remain relevant for **standalone local mode or a separately evaluated optional unattended/kiosk edition**, not ordinary Cloud onboarding.
+5. Device-specific files, codecs, storage, power, model inference, Bluetooth/USB/HDMI outputs and render quality are independently tested on Safari, Chrome/Edge, Firefox, Samsung Internet and Android browsers. The browser engine is not a toy reduced replacement: retain native musical features as a porting/parity programme.
+6. If a customer requires guaranteed unattended 24/7, auto-reboot playback or certified multi-zone hardware, offer a **separate optional deployment** after qualification, not a hidden Cloud prerequisite.
 
 ## Edge cases and rejection semantics
 

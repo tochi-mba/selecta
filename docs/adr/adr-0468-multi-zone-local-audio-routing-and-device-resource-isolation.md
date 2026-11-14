@@ -1,5 +1,8 @@
 # ADR-0468 - Multi-zone local audio routing and device resource isolation
 
+> **Controlling browser-first update — 2026-11-14:** [ADR-0485](adr-0485-browser-first-cloud-and-ipad-venue-runtime.md) supersedes any mandatory Python/FFmpeg installer, native agent, separate venue computer, or guaranteed background/reboot browser playback in this historical decision. **Cloud runs DSP and plays locally in the supported browser** (including a venue's sole Android tablet or iPad; capable phones also render). Standalone Python Selecta remains independent. [Device/DSP feasibility](selecta-browser-device-capability-matrix.md) · [Full product/repository plan](selecta-browser-first-master-plan.md). Implementation status counts below are an older snapshot and do not certify browser parity; tests and real-device verification remain required.
+
+
 - **Decision:** Accepted by owner (2026-11-13), implementation not started.
 - **Implementation:** 0/4 Implemented; 4/4 Not started.
 - **Independent verification:** 0/4 Verified.
@@ -14,10 +17,11 @@ One physical venue computer may execute several independent zones; naive local p
 
 ## Accepted decision
 
-1. Represent each zone as a distinct audio session with explicit output binding and unique playback-generation authority.
-2. Admission-check sample rate, exclusive output modes, device load, output latency and aggregate resource budgets before adding zones.
-3. Priority scheduling guarantees near-term seams for every active zone while long stems, analysis and exports cannot cause audible underruns.
-4. Refuse accidental mappings to the same exclusive speaker; one shared amplifier serving two physical areas is generally one zone unless explicit multichannel routing is configured.
+1. One browser venue tablet generally controls **one system audio output / zone** unless multiple outputs are independently supported and physically verified.
+2. Different Android tablets/iPads, browsers, USB DACs, Bluetooth, AirPlay, HDMI and external mixers have different actual output routing behavior. `AudioContext.setSinkId` is not universal; do not promise multi-zone by default.
+3. Device load and browser DSP deadlines constrain simultaneous zones. Preempt background analysis/stems before audible sound fails; warn on thermal/battery/storage risk.
+4. Do not treat Chromecast/Sonos as a standard Web Audio sink without a separate receiver design and rights review. Multiple qualified tablets may each drive separate zones.
+5. Never map multiple venue zones silently to one shared exclusive speaker or use a cloud audio proxy.
 
 ## Operational edge cases
 

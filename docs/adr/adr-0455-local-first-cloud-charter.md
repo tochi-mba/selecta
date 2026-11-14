@@ -1,5 +1,8 @@
 # ADR-0455 - Local-first cloud charter and preservation boundary
 
+> **Controlling browser-first update — 2026-11-14:** [ADR-0485](adr-0485-browser-first-cloud-and-ipad-venue-runtime.md) supersedes any mandatory Python/FFmpeg installer, native agent, separate venue computer, or guaranteed background/reboot browser playback in this historical decision. **Cloud runs DSP and plays locally in the supported browser** (including a venue's sole Android tablet or iPad; capable phones also render). Standalone Python Selecta remains independent. [Device/DSP feasibility](selecta-browser-device-capability-matrix.md) · [Full product/repository plan](selecta-browser-first-master-plan.md). Implementation status counts below are an older snapshot and do not certify browser parity; tests and real-device verification remain required.
+
+
 - **Decision:** Accepted by owner (2026-11-13); implementation is not started.
 - **Implementation:** 0/4 Implemented; 4/4 Not started.
 - **Independent verification:** 0/4 Verified.
@@ -14,12 +17,14 @@ The previously accepted cloud plan assumes R2 originals, derived media, signed p
 
 ## Decision
 
-1. Cloud infrastructure shall not accept, store, transmit, relay, decode, render, transcode, stem-separate, stream or distribute user audio unless an independently approved, explicitly licensed future media product is designed and separately gated. No covert audio path through AI, logs, backups or diagnostics.
-2. Original music, stems, transition clips, exports, PCM, waveform reconstruction data and media caches remain under the authorised local engine's control.
-3. Cloud owns identity, subscriptions, workspace-scoped catalogue metadata, versioned mix instructions, device and zone coordination, schedules, moderated requests, permitted AI planning, audit and operational status.
-4. Preserve all current user-facing musical and UI capabilities unless an explicit parity record identifies a replacement, migration path, tests, and an approved retirement decision. An obsolete endpoint is not proof that its feature is obsolete.
-5. Standalone local mode continues to operate without sign-in, cloud connectivity or telemetry.
-6. No application or infrastructure change is authorised by this documentation-only PR. All implementation tasks begin Not started. Existing acceptance evidence and historical ADR statuses remain intact.
+1. Cloud is a **browser-native product**, with local media access, Web Audio/AudioWorklet playback, browser JS/WASM DSP and optional independently qualified WebGPU models. It must support real playing and rendering on capable phones/tablets and sole-iPad/sole-Android venue setups **without installing Python or owning a second computer**.
+2. Cloud does not accept, store, proxy, process, stream, derive or log original/derived user audio, stems, PCM, rendered exports or reconstructible samples.
+3. Cloud owns permitted metadata, identity, versioned recipes, billing, staff policy, Rooms, schedules, approved text/metadata AI planning, scoped browser control and audit.
+4. Standalone Python/FFmpeg local mode remains a **separate, account-free, independently installable product**. Preserve native DSP musical outcomes by porting/testing them, not by making Cloud silently depend on Python.
+5. Browser source access, codecs, model feasibility, storage eviction, battery/thermal throttling, user gesture, output routing, OS/browser background interruptions and foreground-only venue limitations are explicit device capability gates.
+6. Actual physical speaker success is never inferred merely from a running Web Audio context or Cloud command acknowledgement.
+7. No current Cloud customers need a speculative legacy audio-migration contract; retire obsolete hosted audio only after verifying repository/data/rights/security inventories and preserving existing standalone capability.
+8. Enforce [ADR-0485](adr-0485-browser-first-cloud-and-ipad-venue-runtime.md) and its full device matrix wherever historical provisions disagree.
 
 ## Non-negotiable invariants
 
