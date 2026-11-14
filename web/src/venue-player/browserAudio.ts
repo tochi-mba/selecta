@@ -27,12 +27,15 @@ export type PlayerSnapshot = {
   foreground: boolean;
   online: boolean;
   preparedMinutes: number;
+  /** AudioContext media clock, not a background timer guarantee. */
+  remainingSeconds?: number | null;
   lastError: string | null;
 };
 
 export interface VenueAudioPort {
   unlock(): Promise<boolean>;
   importLocal(records: readonly LocalRecording[]): void;
+  bindLocal(record: LocalRecording): void;
   prepare(trackId: string): Promise<void>;
   start(trackId: string, generation: number): Promise<void>;
   transition(trackId: string, fadeSeconds?: number): Promise<void>;
@@ -50,7 +53,7 @@ export interface VenueAudioPort {
 
 type WakeSentinel = { released: boolean; release(): Promise<void>; addEventListener?(event: 'release', cb: () => void): void };
 type WakeNavigator = Navigator & { wakeLock?: { request(type: 'screen'): Promise<WakeSentinel> } };
-type Deck = { node: AudioBufferSourceNode; gain: GainNode; id: string };
+type Deck = { node: AudioBufferSourceNode; gain: GainNode; id: string; endsAt: number };
 
 const MAX_FILE_BYTES = 150 * 1024 * 1024; // bounded decode; long files require Agent 01 streaming
 const MAX_PREPARED = 3;
@@ -138,6 +141,19 @@ export class BrowserVenueAudio implements VenueAudioPort {
     if (this.deck && !next.has(this.deck.id)) void this.stop();
   }
 
+  /** Incrementally bind the next exact recording without interrupting the live deck. */
+  bindLocal(record: LocalRecording): void {
+    this.assertOpen();
+    if (!record.id || !record.revision || !record.permitted || !(record.file instanceof File)
+      || record.file.size <= 0 || record.file.size > MAX_FILE_BYTES)
+      throw new Error('Next song needs an authorised local file, revision and valid size');
+    const previous = this.files.get(record.id);
+    if (previous && previous.revision !== record.revision && this.deck?.id === record.id)
+      throw new Error('Cannot silently replace the currently audible recording');
+    if (previous?.revision !== record.revision) this.buffers.delete(record.id);
+    this.files.set(record.id, record);
+  }
+
   async prepare(trackId: string): Promise<void> {
     this.assertOpen();
     if (this.buffers.has(trackId)) return;
@@ -175,7 +191,7 @@ export class BrowserVenueAudio implements VenueAudioPort {
     gain.gain.setValueAtTime(fadeIn ? 0 : 1, startAt);
     if (fadeIn) gain.gain.linearRampToValueAtTime(1, startAt + fadeIn);
     node.start(startAt);
-    const deck = { id: trackId, node, gain };
+    const deck = { id: trackId, node, gain, endsAt: startAt + buffer.duration };
     node.onended = () => {
       gain.disconnect();
       if (this.deck === deck) {
@@ -312,6 +328,7 @@ export class BrowserVenueAudio implements VenueAudioPort {
       foreground,
       online: typeof navigator === 'undefined' || navigator.onLine !== false,
       preparedMinutes: [...this.buffers.values()].reduce((sum, buffer) => sum + buffer.duration / 60, 0),
+      remainingSeconds: this.deck && this.context ? Math.max(0, this.deck.endsAt - this.context.currentTime) : null,
       lastError: this.error,
     };
   }
