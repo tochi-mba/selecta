@@ -153,6 +153,13 @@ export class BrowserVenueProgramme {
     try {
       const now = this.clock();
       const snapshot = this.adapters.audio.snapshot();
+      if (snapshot.phase === 'stopped' || snapshot.phase === 'failed' || snapshot.phase === 'locked') {
+        this.state = 'blocked';
+        this.issue = 'This browser stopped producing local audio. Recover on the venue device.';
+        if (this.timer) clearInterval(this.timer);
+        this.timer = null;
+        return;
+      }
       if (!snapshot.foreground || snapshot.phase === 'interrupted') {
         this.state = 'interrupted';
         this.issue = 'This venue browser was interrupted. Recover with an on-device tap.';
@@ -194,8 +201,9 @@ export class BrowserVenueProgramme {
             ...this.scope, generation: this.generation, phase: snapshot.phase,
             foreground: snapshot.foreground, sourceReady: true,
             outputOperatorCheckedAt: snapshot.operatorCheckedAt,
-            lastSeenEpochMs: now, committedMinutes: this.horizon!.committed.length,
-            preparedMinutes: snapshot.preparedMinutes, plannedMinutes: this.horizon!.planned.length,
+            lastSeenEpochMs: now,
+            // The port only knows canonical IDs; never report song counts as minutes.
+            committedMinutes: 0, preparedMinutes: snapshot.preparedMinutes, plannedMinutes: 0,
           });
         } catch { /* music is locally owned; network loss must not stop a live browser */ }
       }
@@ -213,6 +221,9 @@ export class BrowserVenueProgramme {
   async resume(): Promise<void> {
     if (this.state !== 'paused' && this.state !== 'interrupted')
       throw new Error('No paused browser session to resume');
+    if (!this.policy || !this.current ||
+      !recordingAllowed(this.policy, this.facts.get(this.current.id)!, this.clock()))
+      throw new Error('Cannot resume outside approved venue hours or music policy');
     await this.adapters.audio.resume();
     this.state = 'running';
   }
