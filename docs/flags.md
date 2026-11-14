@@ -229,6 +229,8 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `cloud.privacy_notice_draft` | **Privacy notice draft.** Shows the draft privacy notice, marked as a draft pending legal review, under Settings so the owner and a privacy adviser can read it in place. Off by default: it is not published. |  |
 | `cloud.device_check` | **Device check.** A checklist under Settings for the real-device checks (Play here, an offline speaker, the iPhone screen-on note, seam alignment) that reads what this browser supports and writes a copyable record. Off by default. |  |
 | `billing.webhooks` | **Billing updates.** Accept signed subscription state changes from Stripe. **Core:** Billing changes must be applied even when checkout is paused. |  |
+| `local_first.personal` | **Browser-native personal Cloud.** Use the local Selecta navigation and browser-owned media, playback and portable mixes in personal Cloud. Legacy hosted pages remain available when the flag is off. |  |
+| `local_first.browser_control` | **Authenticated browser speaker sessions.** Coordinate browser-owned audio in authorised zones using signed metadata-only commands. No audio is uploaded to Cloud. |  |
 | `devices` | **Playback devices.** Sign browsers in as devices, list, rename and sign them out, and move playback between them with Play here. |  |
 | `devices.remote_control` | **Remote playback control.** Control the account's active playback session from another device. | `devices` |
 | `rooms` | **Rooms.** Let Premium hosts share a request room with guests. |  |
