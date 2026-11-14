@@ -101,4 +101,71 @@ describe('BR64-08 foreground browser venue programme', () => {
       expect(f.transition).not.toHaveBeenCalled();
     } finally { await runner.dispose(); }
   });
+  it('serialises a manual skip against an in-flight browser transition', async () => {
+    const f = fixture();
+    let release!: () => void;
+    const hold = new Promise<void>((resolve) => { release = resolve; });
+    f.adapters.media.resolveFile = vi.fn(async (_zone: string, id: string) => {
+      if (id === 'b') await hold;
+      return new File(['locally granted'], id + '.wav');
+    });
+    const runner = new BrowserVenueProgramme(scope, f.adapters, () => NOW);
+    try {
+      await runner.start();
+      const first = runner.skip();
+      await vi.waitFor(() => expect(f.adapters.media.resolveFile).toHaveBeenCalledWith('z1', 'b', 'v1'));
+      await expect(runner.skip()).rejects.toThrow('already preparing');
+      release();
+      await first;
+      expect(f.transition).toHaveBeenCalledTimes(1);
+      expect(runner.status().current).toBe('b');
+    } finally { release(); await runner.dispose(); }
+  });
+
+  it('does not resurrect a speaker stopped during asynchronous source preparation', async () => {
+    const f = fixture();
+    let release!: () => void;
+    const hold = new Promise<void>((resolve) => { release = resolve; });
+    f.adapters.media.resolveFile = vi.fn(async (_zone: string, id: string) => {
+      if (id === 'b') await hold;
+      return new File(['locally granted'], id + '.wav');
+    });
+    const runner = new BrowserVenueProgramme(scope, f.adapters, () => NOW);
+    try {
+      await runner.start();
+      const pendingTick = runner.tick();
+      await vi.waitFor(() => expect(f.adapters.media.resolveFile).toHaveBeenCalledWith('z1', 'b', 'v1'));
+      await runner.stop();
+      release();
+      await pendingTick;
+      expect(f.transition).not.toHaveBeenCalled();
+      expect(runner.status().state).toBe('idle');
+    } finally { release(); await runner.dispose(); }
+  });
+
+  it('requires on-device Start instead of unsafe Resume after a browser interruption', async () => {
+    const f = fixture();
+    const runner = new BrowserVenueProgramme(scope, f.adapters, () => NOW);
+    try {
+      await runner.start();
+      f.snapshot.foreground = false;
+      await runner.tick();
+      await expect(runner.resume()).rejects.toThrow('Use Start');
+    } finally { await runner.dispose(); }
+  });
+
+  it('rejects unbounded noncommitted horizons before requesting a Cloud speaker lease', async () => {
+    const f = fixture();
+    f.adapters.programme.horizon = vi.fn(async () => ({
+      committed: [{ id: 'a', revision: 'v1' }],
+      prepared: Array.from({ length: 201 }, (_, i) => ({ id: 'extra' + i, revision: 'v1' })),
+      planned: [], fallback: [],
+    }));
+    const runner = new BrowserVenueProgramme(scope, f.adapters, () => NOW);
+    try {
+      await expect(runner.start()).rejects.toThrow('missing or unversioned');
+      expect(f.adapters.cloud.acquire).not.toHaveBeenCalled();
+    } finally { await runner.dispose(); }
+  });
+
 });
