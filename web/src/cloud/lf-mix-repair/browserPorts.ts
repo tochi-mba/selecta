@@ -81,6 +81,8 @@ export type BrowserMediaPort = {
 };
 export type BrowserPlaybackPort = {
   status(): { deviceLabel: string; playing: boolean; outputVerified: boolean; detail: string };
+  /** Explicitly describe unsupported live arrangements before exposing Play Here. */
+  supported?(recipe: PortableRecipe): { supported: boolean; reason?: string };
   playHere(recipe: PortableRecipe): Promise<void>;
   /** Local audition only; implementation must not route audio through Cloud. */
   previewTransition?(recipe: PortableRecipe, transitionIndex: number): Promise<void>;
