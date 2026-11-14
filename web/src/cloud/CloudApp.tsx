@@ -279,7 +279,7 @@ export function CloudApp() {
         {notFound && <NotFound path={path} go={choosePage} />}
         {account && !localFirst && singleAudioOwner(account) && <CloudTransportDock api={api} account={account} page={shown} reload={libraryVersion} />}
         {account && localFirst && <BrowserPlaybackDock openStudio={() => choosePage('listen')} />}
-        {view === 'home' && account && <Overview account={account} api={api} localFirst={localFirst} go={choosePage} />}
+        {view === 'home' && account && <Overview account={account} localFirst={localFirst} go={choosePage} />}
         {view === 'listen' && account && !localFirst && <CloudListen api={api} account={account} />}
         {view === 'listen' && account && !localFirst && <MakeCloudMix api={api} account={account} />}
         {view === 'listen' && account && localFirst && <BrowserStudio api={api} workspaceId={account.workspace.id} />}
@@ -311,7 +311,7 @@ function Feedback({ error, notice }: { error: string; notice: string }) {
   return <div className={error ? 'cloud-feedback error' : 'cloud-feedback'} role={error ? 'alert' : 'status'}>{error || notice}</div>;
 }
 
-function Overview({ account, go, api, localFirst }: { account: Account; go: (page: Page) => void; api: Api; localFirst: boolean }) {
+function Overview({ account, go, localFirst }: { account: Account; go: (page: Page) => void; localFirst: boolean }) {
   if (localFirst) return <>
     <section className="cloud-hero br07-home" aria-labelledby="br07-home-title">
       <div><p className="cloud-eyebrow">SELECTA CLOUD · BROWSER FIRST</p>
