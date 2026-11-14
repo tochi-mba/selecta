@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { browserEngine } from '../../engine/registry';
 import { probeBrowserAudio } from '../../engine/capabilities';
+import { advanceBrowserFence, browserFenceKey, restoreBrowserFence } from './fence';
 import {
   BrowserSessionClient,
-  type Action, type BrowserEnvelope, type CommandReceipt, type DeviceSummary, type Speaker,
+  type BrowserEnvelope, type CommandReceipt, type DeviceSummary, type Speaker,
 } from '../lf-session/client';
 
 /** Cloud remote controls and browser executor. Never share source files, handles, or PCM.
@@ -71,6 +72,9 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
       if (engine.snapshot().phase !== 'paused' || engine.snapshot().tracks < 1)
         throw new Error('Load and play a locally authorised recording, then pause and confirm silence before registering as a speaker.');
       if (!/^[A-Za-z0-9][A-Za-z0-9_.:\-]{0,127}$/.test(zone)) throw new Error('Choose a valid, authorised zone ID');
+      // Verify durable anti-replay storage *before* creating a Cloud session.
+      // If a browser clears or blocks localStorage, remote takeover must fail closed.
+      const savedFence = restoreBrowserFence(localStorage, browserFenceKey(workspaceId, zone));
       const device_id = 'browser_' + crypto.randomUUID().replaceAll('-', '');
       await client.register({
         device_id, zone_id: zone,
@@ -82,16 +86,8 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
           can_render: Boolean(navigator.storage?.getDirectory),
           mobile: false },
       });
-      // Never reset a durable local speaker fence just because this tab reopened.
-      try {
-        const previous = Number(localStorage.getItem('selecta:browser-fence:' + workspaceId + ':' + zone) ?? '0');
-        fence.current = Number.isSafeInteger(previous) && previous >= 0 ? previous : 0;
+      fence.current = savedFence;
       lastRefresh.current = Date.now();
-      } catch {
-        // Cannot safely restore stale-owner protection across restarts.
-        fence.current = 0;
-        setNotice('Durable local fencing is unavailable. Remote takeovers must be refused until fixed.');
-      }
       setRegistered(true);
       setSilenceConfirmed(false);
       setNotice('Browser registered for this zone. Keep it foregrounded and confirm real sound on-site; no music was uploaded.');
@@ -130,6 +126,15 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
       else if (cmd.action === 'skip') await engine.next();
       else if (cmd.action === 'seek') await engine.seek(Number(cmd.arguments.offset_ms) / 1000);
       else engine.setVolume(Number(cmd.arguments.volume) / 100);
+      const after = engine.snapshot();
+      // Engine operations can return normally after a decoding/transition failure.
+      // Never report a remote skip or pause as applied when nothing changed.
+      if ((cmd.action === 'skip' && after.index === before.index && after.phase === 'playing') ||
+          (cmd.action === 'pause' && after.phase !== 'paused')) {
+        await acknowledge(cmd, 'rejected');
+        setProblem('The browser could not complete ' + cmd.action + '; local playback state did not change.');
+        return;
+      }
       await acknowledge(cmd, 'applied', { executed: true });
       setNotice(cmd.action + ' applied locally. Physical output is not independently measured.');
       return;
@@ -234,11 +239,8 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
           return;
         }
         if (!silenceConfirmed) throw new Error('Physically confirm that the speaker is silent before releasing ownership.');
-        try { localStorage.setItem('selecta:browser-fence:' + workspaceId + ':' + zone,
-          String(cmd.expected_generation)); } catch {
-          throw new Error('Durable local fencing unavailable; cannot attest safe speaker release.');
-        }
-        fence.current = Math.max(fence.current, cmd.expected_generation);
+        fence.current = advanceBrowserFence(localStorage, browserFenceKey(workspaceId, zone),
+          fence.current, cmd.expected_generation);
         await acknowledge(cmd, 'applied', { outputSilent: true });
       } else if (cmd.action === 'activate_output' || cmd.action === 'play') {
         // User click is an explicit AudioContext activation gesture.
@@ -266,8 +268,11 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
     try {
       engine.confirmSound(true);
       setSilenceConfirmed(false);
+      // Persist the newly accepted owner generation *before* acknowledging
+      // audible ownership. Otherwise a browser reload resurrects a stale fence.
+      fence.current = advanceBrowserFence(localStorage, browserFenceKey(workspaceId, zone),
+        fence.current, cmd.expected_generation);
       await acknowledge(cmd, 'applied', { outputConfirmed: true, executed: true });
-      fence.current = Math.max(fence.current, cmd.expected_generation);
       setPending(null);
       setNotice('Operator-confirmed sound; command acknowledged by Cloud.');
     } catch (error) {
@@ -335,8 +340,14 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
       <button type="button" disabled={registered || busy} onClick={() => void register()}>Register this browser as a player</button>
       <button type="button" disabled={busy} onClick={() => void refresh().catch((error: Error) => setProblem(error.message))}>Refresh speakers</button>
       {registered && <button type="button" onClick={() => {
-        void client.revoke().then(() => { setRegistered(false); setPending(null); })
-          .catch((error: Error) => setProblem(error.message));
+        void (async () => {
+          try {
+            // Revoking speaker authority must also silence the local executor.
+            await engine.stop();
+            await client.revoke();
+            setRegistered(false); setPending(null);
+          } catch (error) { setProblem((error as Error).message); }
+        })();
       }}>Revoke this browser session</button>}
     </div>
     <p role="status">This device: {registered ? 'registered, foreground activity required' : 'not registered'}.
