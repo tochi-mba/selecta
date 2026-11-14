@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Api } from '../api';
+import { browserCloudCopy } from '../../copy';
 import {
   checkedAvailability, useBrowserStudioPorts,
   type BrowserAvailability, type PortableRecipe, type RecipeHistoryEntry,
@@ -302,7 +303,7 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
   return <section className="br07-studio" aria-label="Personal browser Studio">
     <div className="br07-intro">
       <div><p className="cloud-eyebrow">LOCAL MUSIC · PORTABLE MIXES</p><h2>Studio, on this device</h2>
-        <p>Mix plans and version history sync with Cloud. Your actual recordings, previews and exports stay on the device you authorise.</p></div>
+        <p>{browserCloudCopy.privacy}</p></div>
       <div className="br07-modes" role="group" aria-label="How to use Studio">
         <button type="button" aria-pressed={mode === 'play'} onClick={() => setMode('play')}>Play Here</button>
         <button type="button" aria-pressed={mode === 'remote'} onClick={() => setMode('remote')}>Control Another Device</button>
