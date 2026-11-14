@@ -82,11 +82,15 @@ export type BrowserMediaPort = {
 export type BrowserPlaybackPort = {
   status(): { deviceLabel: string; playing: boolean; outputVerified: boolean; detail: string };
   playHere(recipe: PortableRecipe): Promise<void>;
+  /** Local audition only; implementation must not route audio through Cloud. */
+  previewTransition?(recipe: PortableRecipe, transitionIndex: number): Promise<void>;
   controlAnotherDevice(): Promise<void>;
 };
 export type BrowserRenderPort = {
   /** Gate by live device capabilities; can be true on supported phones. */
   supported(recipe: PortableRecipe): { supported: boolean; reason?: string };
+  /** Optional bounded local seam preparation, guarded by source/capability checks. */
+  prepare?(recipe: PortableRecipe): Promise<void>;
   render(recipe: PortableRecipe, options: { signal: AbortSignal }): Promise<{
     filename: string; mimeType: string; blob: Blob;
   }>;
