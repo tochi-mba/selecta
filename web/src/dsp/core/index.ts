@@ -19,3 +19,6 @@ export { equalPowerFade, stepCurve, logarithmicSweep } from '../transitions/scri
 export type { Curve, TransitionPart, TransitionScript } from '../transitions/script';
 export { runDSPJob } from '../workers/client';
 export type { DSPRequest, DSPResult, DSPFailure } from '../workers/protocol';
+
+export { canBeatmatch, canIntertwine, choosePhraseCues, makeTransition } from '../transitions/recipes';
+export type { MusicalCue, TrackTiming, TransitionStyle, RecipeOptions } from '../transitions/recipes';
