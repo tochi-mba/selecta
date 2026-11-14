@@ -38,27 +38,33 @@ export async function decode(bytes) {
   } finally { await ctx.close(); }
 }
 export async function actualWorklet() {
-  const ctx = new AudioContext();
-  try {
-    if (!ctx.audioWorklet) throw new Error('AudioWorklet is unavailable');
-    await ctx.audioWorklet.addModule('/src/testsupport/browser/meter-worklet.js');
-    const node = new AudioWorkletNode(ctx, 'selecta-qa-meter');
-    const osc = ctx.createOscillator();
-    const mute = ctx.createGain();
-    mute.gain.value = 0;
-    osc.frequency.value = 400;
-    osc.connect(node); node.connect(mute); mute.connect(ctx.destination);
-    const observed = new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('No real render callbacks within 3 seconds')), 3000);
-      node.port.onmessage = ({ data }) => {
-        if (data.blocks >= 8 && data.peak > 0.01) {
-          clearTimeout(timeout); resolve({ ...data, contextState: ctx.state, ...marker });
-        }
-      };
-    });
-    await ctx.resume(); osc.start();
-    try { return await observed; } finally { osc.stop(); }
-  } finally { await ctx.close(); }
+  // OfflineAudioContext runs a real AudioWorkletProcessor without relying on an
+  // OS audio device or headless Firefox/CI's missing physical audio sink.
+  // This is genuine rendered PCM, NOT real-time output or speaker certification.
+  const ctx = new OfflineAudioContext(1, 24000, 48000);
+  if (!ctx.audioWorklet) throw new Error('Offline AudioWorklet is unavailable');
+  await ctx.audioWorklet.addModule('/src/testsupport/browser/meter-worklet.js');
+  const node = new AudioWorkletNode(ctx, 'selecta-qa-meter');
+  const source = ctx.createOscillator();
+  source.frequency.value = 400;
+  source.connect(node); node.connect(ctx.destination);
+  const activity = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('No real worklet render callback in 4 seconds')), 4000);
+    node.port.onmessage = ({ data }) => {
+      if (data.blocks >= 8 && data.peak > 0.01) {
+        clearTimeout(timeout);
+        resolve(data);
+      }
+    };
+  });
+  source.start(0); source.stop(0.3);
+  const [rendered, message] = await Promise.all([ctx.startRendering(), activity]);
+  let renderedPeak = 0;
+  for (const sample of rendered.getChannelData(0))
+    renderedPeak = Math.max(renderedPeak, Math.abs(sample));
+  if (renderedPeak < 0.01) throw new Error('Worklet rendered no audible-range digital PCM');
+  return { ...message, renderedFrames: rendered.length, renderedPeak,
+    renderMode: 'offline-worklet', physicalOutputVerified: false, testOnly: true };
 }
 export async function fileSelection() {
   const file = input.files?.[0];

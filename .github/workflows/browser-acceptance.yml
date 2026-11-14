@@ -74,6 +74,10 @@ jobs:
             ${{ matrix.browser == 'chromium' && '--project=phone-chromium-emulated' || '' }} \
             ${{ matrix.browser == 'webkit' && '--project=tablet-webkit-emulated' || '' }}
         working-directory: web
+      - name: Produce an evidence summary (not a hardware certificate)
+        if: always()
+        run: node ../tools/browser_test/summarise.mjs
+        working-directory: web
       - name: Publish raw test evidence, even on failure
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

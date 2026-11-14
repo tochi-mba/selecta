@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('heading', { name: /browser acceptance laboratory/i })).toBeVisible();
 });
 
-test('actual AudioWorklet executes render callbacks on the browser audio thread', async ({ page }) => {
+test('actual AudioWorklet processes real offline PCM', async ({ page }) => {
   const failures: string[] = [];
   page.on('pageerror', (error) => failures.push(error.message));
   await page.getByRole('button', { name: 'Unlock test audio' }).click();

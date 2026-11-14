@@ -13,12 +13,12 @@ export default defineConfig({
   reporter: [['list'], ['json', { outputFile: 'test-results/br64-10-results.json' }]],
   outputDir: 'test-results/br64-10',
   use: { baseURL, trace: 'retain-on-failure', screenshot: 'only-on-failure',
-    headless: true, launchOptions: { args: ['--mute-audio'] } },
+    headless: true },
   projects: [
-    { name: 'desktop-chromium', use: { ...devices['Desktop Chrome'], browserName: 'chromium' } },
+    { name: 'desktop-chromium', use: { ...devices['Desktop Chrome'], browserName: 'chromium', launchOptions: { args: ['--mute-audio'] } } },
     { name: 'desktop-firefox', use: { ...devices['Desktop Firefox'], browserName: 'firefox' } },
     { name: 'desktop-webkit', use: { ...devices['Desktop Safari'], browserName: 'webkit' } },
-    { name: 'phone-chromium-emulated', use: { ...devices['Pixel 7'], browserName: 'chromium' } },
+    { name: 'phone-chromium-emulated', use: { ...devices['Pixel 7'], browserName: 'chromium', launchOptions: { args: ['--mute-audio'] } } },
     { name: 'tablet-webkit-emulated', use: { ...devices['iPad (gen 7)'], browserName: 'webkit' } },
   ],
   webServer: {

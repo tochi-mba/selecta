@@ -27,7 +27,8 @@ ignored `web/node_modules/.cache/selecta-browser-qa` directory. No user music is
 
 The independent synthetic fixture HTTP server uses loopback port 5194 and exits when
 Playwright finishes. It is deliberately **not** the customer Cloud runtime. Test traces
-show actual Web Audio/AudioWorklet callbacks; the output path is digitally muted.
+show real **offline** Web Audio/AudioWorklet rendered PCM without any OS audio device.
+They do not demonstrate real-time scheduling or a physically connected speaker.
 A passing test does not assert that any physical speaker received sound.
 
 Existing `pnpm test`, `pnpm build`, `pnpm e2e`, `pnpm e2e:cloud`,
