@@ -292,7 +292,7 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
   const remote = async () => {
     if (!ports.playback) return;
     setBusy(true); setError('');
-    try { await ports.playback.controlAnotherDevice(); setMessage('Remote control requested. The other player must acknowledge commands.'); }
+    try { await ports.playback.controlAnotherDevice(); setMessage('Remote-control panel opened. Actual commands require authenticated speaker registration and an applied acknowledgement.'); }
     catch (cause) { setError(`Remote control unavailable: ${humanError(cause)}`); }
     finally { setBusy(false); }
   };
