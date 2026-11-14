@@ -1,8 +1,9 @@
-import { ChangeEvent, DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChangeEvent, DragEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { Page } from '../api';
 import { assessBrowserDevice, type BrowserCapabilityProfile } from '../../device-capabilities/profile';
 import { directoryFiles, localCatalogue, type LocalDirectoryHandle } from '../../media/localCatalogue';
 import { READINESS_LABELS, type LocalRecording, type MediaScanProgress } from '../../media/types';
+import { browserEngine, retainBrowserEngine } from '../../engine/registry';
 import './browserWorkspace.css';
 
 type Props = { workspaceId: string; go: (page: Page) => void };
@@ -54,7 +55,9 @@ export function BrowserConnectMusic({ workspaceId, go }: Props) {
   const [problem, setProblem] = useState('');
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState<'files' | 'folder'>('files');
-  const [soundConfirmed, setSoundConfirmed] = useState(false);
+  const engine = useMemo(() => browserEngine(workspaceId), [workspaceId]);
+  const playback = useSyncExternalStore(engine.subscribe, engine.snapshot, engine.snapshot);
+  const soundConfirmed = playback.soundCheck === 'user_confirmed';
   const input = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
   const controller = useRef<AbortController | null>(null);
@@ -64,7 +67,7 @@ export function BrowserConnectMusic({ workspaceId, go }: Props) {
   const startScan = async (items: File[], origin: 'file_input' | 'folder_input' | 'drop' | 'document_provider', label = 'Chosen music') => {
     if (!items.length) return;
     if (busy) { setProblem('Finish or cancel the previous scan first.'); return; }
-    setProblem(''); setBusy(true); setSoundConfirmed(false);
+    setProblem(''); setBusy(true);
     const abort = new AbortController(); controller.current = abort;
     try { await catalogue.scan(items, { origin, label, signal: abort.signal, onProgress: setProgress }); }
     catch (e) { setProblem((e as Error).name === 'AbortError' ? 'Scan cancelled; previously indexed recordings remain local.' : 'Some files could not be checked. Reconnect the source and try again.'); }
@@ -130,11 +133,13 @@ export function BrowserConnectMusic({ workspaceId, go }: Props) {
     </div>
     <div className="br64-panel"><h3>4. Choose output</h3>
       <p>Connect headphones or speakers and choose the system’s audio route. On iOS/iPadOS, output selection may only be available in system controls.</p>
-      <label><input type="checkbox" checked={soundConfirmed} onChange={(event) => setSoundConfirmed(event.target.checked)} />
-        I have heard audio through my intended speaker during a local sound check</label>
-      <p className="br64-muted">A browser heartbeat or audio meter cannot independently prove that sound is audible.</p>
+      <p role="status">{soundConfirmed
+        ? 'Output checked in the actual browser player. Recheck after switching speakers or browsers.'
+        : 'Output not yet verified. Load a local track, tap Start in the player, then confirm you can hear the intended speaker.'}</p>
+      <button type="button" onClick={() => go('library')}>Open local library and player</button>
+      <p className="br64-muted">A browser heartbeat or audio meter cannot independently prove that sound is audible. Checking a box without playing sound is not verification.</p>
     </div>
-    <div className="br64-panel"><h3>5. Tap Start</h3><p>Use a verified local track from your Library and tap its Play button to unlock browser audio. Keep the tab visible for venue operation.</p>
+    <div className="br64-panel"><h3>5. Tap Start</h3><p>Load a verified local track into the shared player from Library, then tap Start in the player. Keep the tab visible for venue operation.</p>
       <button className="primary" type="button" disabled={ready === 0} onClick={() => go('library')}>Open player and start</button>
     </div>
   </section>;
@@ -142,23 +147,26 @@ export function BrowserConnectMusic({ workspaceId, go }: Props) {
 export function BrowserDeviceLibrary({ workspaceId, go }: Props) {
   const { catalogue, sources, recordings } = useLocalMedia(workspaceId);
   const [problem, setProblem] = useState('');
-  const [playing, setPlaying] = useState<string | null>(null);
-  const urlRef = useRef<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  useEffect(() => () => { if (urlRef.current) URL.revokeObjectURL(urlRef.current); }, []);
-  const play = async (record: LocalRecording) => {
-    setProblem('');
+  const engine = useMemo(() => browserEngine(workspaceId), [workspaceId]);
+  useEffect(() => retainBrowserEngine(workspaceId, engine), [workspaceId, engine]);
+  const [loaded, setLoaded] = useState<string | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const load = async (record: LocalRecording) => {
+    setProblem(''); setLoadingId(record.id);
     try {
       const file = await catalogue.openRecording(record.id);
-      const url = URL.createObjectURL(file);
-      if (urlRef.current) URL.revokeObjectURL(urlRef.current);
-      urlRef.current = url;
-      if (!audioRef.current) return;
-      audioRef.current.src = url;
-      setPlaying(record.id);
-      await audioRef.current.play(); // Direct user action: unlock browser playback.
+      // Use the same browser-wide AudioWorklet player as the persistent
+      // transport. A separate <audio> preview bypassed the single-speaker
+      // lease and could play simultaneously with venue or Studio audio.
+      await engine.setQueue([{ id: record.id, title: record.title, file }]);
+      setLoaded(record.id);
+      // File permission revalidation is asynchronous: the user must tap Start
+      // in the player to retain iOS/Android transient audio activation.
     } catch {
-      setProblem('Playback could not start. Check permission, output, format and source connection; reimport if the recording changed.');
+      setProblem('The track could not be loaded. Check permission, output, format and source connection; reimport if the recording changed.');
+      setLoaded(null);
+    } finally {
+      setLoadingId(null);
     }
   };
   const duplicates = useMemo(() => {
@@ -181,7 +189,7 @@ export function BrowserDeviceLibrary({ workspaceId, go }: Props) {
     </div>
     <div className="br64-panel"><h3>Local recordings ({recordings.length})</h3>
       {problem && <p role="alert">{problem}</p>}
-      <audio ref={audioRef} controls aria-label="Local browser audio preview" onEnded={() => setPlaying(null)} />
+      {loaded && <p role="status">Track loaded in the shared browser player. Tap Start in the player controls to hear it.</p>}
       {recordings.length === 0 ? <p>Choose files to add recordings to this device’s browser session.</p> :
         <ul className="br64-recordings">{recordings.map((record) => <li key={record.id}>
           <div><strong>{record.title}</strong>{record.artist && <span> · {record.artist}</span>}
@@ -189,8 +197,9 @@ export function BrowserDeviceLibrary({ workspaceId, go }: Props) {
             <small data-state={record.readiness}>{READINESS_LABELS[record.readiness]} — {record.reason}</small>
             {(duplicates.get(record.identity.exactSha256 || '') || 0) > 1 && <small>Exact local duplicate (different source binding)</small>}
           </div>
-          <button type="button" disabled={record.readiness !== 'ready'} onClick={() => void play(record)}>
-            {playing === record.id ? 'Play again' : 'Play locally'}
+          <button type="button" disabled={record.readiness !== 'ready' || loadingId !== null}
+            onClick={() => void load(record)}>
+            {loadingId === record.id ? 'Loading…' : loaded === record.id ? 'Reload in player' : 'Load into player'}
           </button>
         </li>)}</ul>}
       <p className="br64-muted">Some codecs need a decoder even if their extension is supported. Playback and advanced DSP are separate validations. Changing a file invalidates its old recording identity.</p>
