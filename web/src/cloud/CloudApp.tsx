@@ -4,6 +4,7 @@ import { VenueSetup } from '../autopilot/VenueSetup';
 import { DevicesPanel } from '../devices/DevicesPanel';
 import { DeviceCheck, showsDeviceCheck } from '../devices/DeviceCheck';
 import { CloudListen } from '../rooms/CloudListen';
+import { browserCloudCopy } from '../copy';
 import { LucyCloudSettings } from '../views/LucyCloudSettings';
 import { AccountDanger, AccountData } from './AccountData';
 import { AccountProblem, accountProblem, blockedMessage } from './accountStates';
@@ -22,8 +23,8 @@ import { MakeCloudMix } from './MakeCloudMix';
 import { StorageMeter } from './Meters';
 import { blockedByQuota, OverQuotaBanner } from './OverQuota';
 import { UploadsPanel } from './Uploads';
-import { personalEnabled, LOCAL_ENGINE_URL } from './lf-personal/contract';
-import { DeviceHome } from './lf-personal/PersonalWorkspace';
+import { personalEnabled } from './lf-personal/contract';
+import { BrowserPlaybackDock, BrowserStudio } from './lf-mix-repair/BrowserStudio';
 import './cloud.css';
 // Shared business styles are scoped to .biz and loaded by the Cloud shell.
 import '../business/business.css';
@@ -41,7 +42,7 @@ export function showsAdmin(account: Account | null) {
 export function pageFor(pathname: string): Page {
   if (pathname.includes('/account/billing')) return 'billing';
   if (pathname.includes('/account')) return 'settings';
-  if (pathname.includes('/listen')) return 'listen';
+  if (pathname.includes('/listen') || pathname.includes('/studio') || pathname.includes('/mixes') || pathname.includes('/discover') || pathname.includes('/player')) return 'listen';
   if (pathname.includes('/library')) return 'library';
   if (pathname.includes('/upload')) return 'uploads';
   return 'home';
@@ -262,7 +263,7 @@ export function CloudApp() {
         <button className="cloud-brand" title="Return to Cloud home" onClick={() => choosePage('home')}><span className="cloud-mark" aria-hidden="true">S</span><span>SelectaDJ{' '}<span className="cloud-brand-sub">REX Technologies</span></span></button>
         <nav aria-label="Cloud workspace">
           {(Object.keys(LABELS) as Page[]).filter((target) => visiblePage(target)).map((target) => (
-            <button key={target} aria-current={view === target ? 'page' : undefined} onClick={() => choosePage(target)}>{localFirst && target === 'uploads' ? 'Connect local music' : localFirst && target === 'listen' ? 'Explore / Studio' : LABELS[target]}</button>
+            <button key={target} aria-current={view === target ? 'page' : undefined} onClick={() => choosePage(target)}>{localFirst && target === 'uploads' ? 'Connect local music' : localFirst && target === 'listen' ? 'My Mixes / Studio' : LABELS[target]}</button>
           ))}
         </nav>
         <div className="cloud-rail-bottom">{showsAdmin(account) && <button onClick={() => { setInAdmin(true); window.history.pushState({}, '', '/admin'); setPath('/admin'); }}>Staff console</button>}<span>{user.email}</span>{exact && <button onClick={signOutHere}>Sign out</button>}
@@ -270,7 +271,7 @@ export function CloudApp() {
           <button className="cloud-delete-account" onClick={() => void deleteAccount()} disabled={busy}>Delete account</button></div>
       </aside>
       <main className="cloud-main">
-        <header className="cloud-top"><div><p className="cloud-eyebrow">{account?.workspace.name ?? 'YOUR WORKSPACE'}</p><h1 ref={titleRef} tabIndex={exact ? -1 : undefined}>{notFound ? 'Page not found' : localFirst && shown === 'uploads' ? 'Connect local music' : TITLES[shown]}</h1></div><span className="cloud-plan-chip">{account ? planName(account) : 'Free'} plan</span></header>
+        <header className="cloud-top"><div><p className="cloud-eyebrow">{account?.workspace.name ?? 'YOUR WORKSPACE'}</p><h1 ref={titleRef} tabIndex={exact ? -1 : undefined}>{notFound ? 'Page not found' : localFirst && shown === 'uploads' ? 'Connect local music' : localFirst && shown === 'listen' ? 'My Mixes and Studio' : TITLES[shown]}</h1></div><span className="cloud-plan-chip">{account ? planName(account) : 'Free'} plan</span></header>
         {account?.user.suspended && (exact ? <SuspendedPanel go={choosePage} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>)}
         {exact && account && problem && <AccountProblemNote kind={problem.kind} onRetry={() => void retryAccount()} />}
         {!localFirst && <OverQuotaBanner account={account} go={choosePage} />}
@@ -278,10 +279,11 @@ export function CloudApp() {
         <Feedback error={exact && problem && error === problem.message ? '' : error} notice={notice} />
         {notFound && <NotFound path={path} go={choosePage} />}
         {account && !localFirst && singleAudioOwner(account) && <CloudTransportDock api={api} account={account} page={shown} reload={libraryVersion} />}
-        {view === 'home' && account && <Overview account={account} api={api} localFirst={localFirst} go={choosePage} />}
+        {account && localFirst && <BrowserPlaybackDock openStudio={() => choosePage('listen')} />}
+        {view === 'home' && account && <Overview account={account} localFirst={localFirst} go={choosePage} />}
         {view === 'listen' && account && !localFirst && <CloudListen api={api} account={account} />}
         {view === 'listen' && account && !localFirst && <MakeCloudMix api={api} account={account} />}
-        {view === 'listen' && account && localFirst && <section className="lf-personal" aria-label="Local-first listening"><div className="lf-panel"><h2>Explore and Studio on your local engine</h2><p>Saved recipes and editing do not require cloud-hosted audio. Until the new local playback/Studio bridge is connected, this web workspace will not request hosted audio or claim that another speaker is ready.</p><a href={LOCAL_ENGINE_URL} target="_blank" rel="noopener noreferrer">Open the local Selecta engine on this device</a><p>Pair another speaker from Devices and settings to control it when its capability has been verified.</p></div></section>}
+        {view === 'listen' && account && localFirst && <BrowserStudio api={api} workspaceId={account.workspace.id} />}
         {view === 'library' && account && <LibraryPanel api={api} workspaceId={account.workspace.id} setError={setError} refreshAccount={refreshAccount} go={choosePage} reload={libraryVersion} truthful={featureOn(account, LIBRARY_STATES_FLAG)} account={account} localFirst={localFirst} />}
         {view === 'uploads' && account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} perFile={featureOn(account, LIBRARY_STATES_FLAG)} localFirst={localFirst} go={choosePage} />}
         {view === 'billing' && account && <Billing account={account} busy={busy} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} />}
@@ -310,8 +312,34 @@ function Feedback({ error, notice }: { error: string; notice: string }) {
   return <div className={error ? 'cloud-feedback error' : 'cloud-feedback'} role={error ? 'alert' : 'status'}>{error || notice}</div>;
 }
 
-function Overview({ account, go, api, localFirst }: { account: Account; go: (page: Page) => void; api: Api; localFirst: boolean }) {
-  if (localFirst) return <><DeviceHome account={account} api={api} workspaceId={account.workspace.id} go={go} /><RoomsCard account={account} go={go} /></>;
+function Overview({ account, go, localFirst }: { account: Account; go: (page: Page) => void; localFirst: boolean }) {
+  const openPersonalMode = (mode: 'play' | 'remote' | 'edit') => {
+    go('listen');
+    window.history.replaceState({}, '', `/listen?mode=${mode}`);
+  };
+  if (localFirst) return <>
+    <section className="cloud-hero br07-home" aria-labelledby="br07-home-title">
+      <div><p className="cloud-eyebrow">SELECTA CLOUD · BROWSER FIRST</p>
+        <h2 id="br07-home-title">{browserCloudCopy.tagline}</h2>
+        <p>Keep the mix plan and its history in sync. Your music stays on the phone, tablet or computer you choose.</p>
+        <div className="cloud-actions"><button className="primary" onClick={() => openPersonalMode('play')}>Play Here</button>
+          <button onClick={() => openPersonalMode('remote')}>Control Another Device</button>
+          <button onClick={() => openPersonalMode('edit')}>Edit Without Music</button></div>
+      </div>
+    </section>
+    <div className="cloud-cards">
+      <section className="cloud-card"><p className="cloud-eyebrow">STUDIO</p><h2>My Mixes</h2>
+        <p>Open a saved recipe, work on cues and transitions, or recover missing local recordings.</p>
+        <button onClick={() => go('listen')}>Open Studio</button></section>
+      <section className="cloud-card"><p className="cloud-eyebrow">THIS DEVICE</p><h2>Local music</h2>
+        <p>Choose recordings through your browser. A file on another device is not automatically available here.</p>
+        <button onClick={() => go('uploads')}>Choose music</button></section>
+      <section className="cloud-card"><p className="cloud-eyebrow">CONNECTED DEVICES</p><h2>Output and control</h2>
+        <p>Check the active speaker and verify real output before playback or takeover.</p>
+        <button onClick={() => go('settings')}>Devices and settings</button></section>
+    </div>
+    <RoomsCard account={account} go={go} />
+  </>;
   const uploads = featureOn(account, 'cloud.uploads');
   return <>
     {uploads && <section className="cloud-hero"><div><p className="cloud-eyebrow">MADE FOR YOUR NEXT SET</p><h2>Your library starts here.</h2><p>Add your tracks and SelectaDJ will prepare them for your next mix.</p><button className="primary" onClick={() => go('uploads')}>Add music</button></div><div className="cloud-hero-art" aria-hidden="true"><span>♪</span><i /><b /><em /></div></section>}
