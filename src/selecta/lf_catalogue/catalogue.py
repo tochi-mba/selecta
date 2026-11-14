@@ -123,18 +123,36 @@ def _conflict(expected: Mapping[str, Any], actual: Mapping[str, Any]) -> bool:
 
 
 def _container_valid(path: Path) -> bool:
-    """Fail closed on malformed/unknown audio, without decoding or uploading bytes.
+    """Check a recognisable local container without copying audio to the cloud.
 
-    Engines may inject a stronger FFmpeg/capability-aware probe. This default only
-    verifies a recognisable container and stream; actual output is checked later.
+    Mutagen may not recognise small valid PCM WAV fixtures on every platform.
+    For WAV only, the standard library's RIFF/WAVE reader is a strict fallback;
+    a header without readable frame bytes is not accepted as valid media.
+    This is container evidence, not proof of physical playback capability.
     """
     try:
         from mutagen import File
 
         audio = File(path)
-        return audio is not None and getattr(audio, "info", None) is not None
+        if audio is not None and getattr(audio, "info", None) is not None:
+            return True
     except Exception:
-        return False
+        pass
+    if path.suffix.lower() == ".wav":
+        import wave
+
+        try:
+            with wave.open(str(path), "rb") as audio:
+                frame_width = audio.getnchannels() * audio.getsampwidth()
+                return (
+                    frame_width > 0
+                    and audio.getframerate() > 0
+                    and audio.getnframes() > 0
+                    and len(audio.readframes(1)) == frame_width
+                )
+        except (OSError, EOFError, ValueError, wave.Error):
+            return False
+    return False
 
 
 def _metadata(path: Path) -> dict[str, str]:
