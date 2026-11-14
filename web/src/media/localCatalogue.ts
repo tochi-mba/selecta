@@ -1,3 +1,4 @@
+import { readLocalIndex, writeLocalIndex } from './localIndex';
 import type {
   BrowserAvailabilitySummary, ExpectedRecording, LocalRecording, LocalSource,
   MediaOrigin, MediaReadiness, MediaResolution, MediaScanProgress,
@@ -9,7 +10,7 @@ const EXTENSIONS: Record<string, string> = {
   aif: 'audio/aiff', aiff: 'audio/aiff', ogg: 'audio/ogg', oga: 'audio/ogg',
   opus: 'audio/ogg', webm: 'audio/webm',
 };
-const EXACT_HASH_LIMIT = 32 * 1024 * 1024;
+const MAX_EXACT_FILE_BYTES = 1024 * 1024 * 1024; // bounded validation
 const MAX_FILES = 20000;
 const MAX_DIRECTORY_DEPTH = 12;
 const YIELD_EVERY = 12;
@@ -46,18 +47,25 @@ export function describeRecording(name: string): { title: string; artist: string
   return { title, artist: parts.length > 1 ? parts[0] : null, version: match ? match[1].toLowerCase() : null };
 }
 function makeId(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
-  // cryptographically random fallback for older secure-context WebKit
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  if (typeof crypto === 'undefined' || typeof crypto.getRandomValues !== 'function') throw new Error('Secure browser context required');
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
   return Array.from(bytes, (x) => x.toString(16).padStart(2, '0')).join('');
 }
 async function exactDigest(file: File, signal?: AbortSignal): Promise<string | null> {
-  if (!globalThis.crypto?.subtle || file.size > EXACT_HASH_LIMIT) return null;
+  if (file.size > MAX_EXACT_FILE_BYTES) return null;
   if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError');
-  const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+  const { sha256 } = await import('@noble/hashes/sha2.js');
+  const hash = sha256.create();
+  const CHUNK = 1024 * 1024;
+  for (let offset = 0; offset < file.size; offset += CHUNK) {
+    if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError');
+    hash.update(new Uint8Array(await file.slice(offset, Math.min(offset + CHUNK, file.size)).arrayBuffer()));
+    if (offset % (8 * CHUNK) === 0) await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  }
   if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError');
-  return Array.from(new Uint8Array(digest), (x) => x.toString(16).padStart(2, '0')).join('');
+  return Array.from(hash.digest(), (x) => x.toString(16).padStart(2, '0')).join('');
 }
 async function durationOf(file: File, mime: string, signal?: AbortSignal): Promise<{ duration: number | null; state: MediaReadiness }> {
   if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError');
@@ -135,7 +143,27 @@ export class BrowserLocalCatalogue {
   private bindings = new Map<string, Binding>();
   private listeners = new Set<() => void>();
   readonly workspaceId: string;
-  constructor(workspaceId: string) { this.workspaceId = workspaceId; }
+  private hydration: Promise<void>;
+  constructor(workspaceId: string) {
+    this.workspaceId = workspaceId;
+    this.hydration = this.restore();
+  }
+  private async restore(): Promise<void> {
+    const index = await readLocalIndex(this.workspaceId);
+    if (!index || this.sourcesMap.size || this.recordingsMap.size) return;
+    for (const source of index.sources) {
+      if (!source || typeof source.id !== 'string') continue;
+      this.sourcesMap.set(source.id, { ...source, state: 'permission_required' });
+    }
+    for (const record of index.recordings) {
+      if (!record || typeof record.id !== 'string' || !this.sourcesMap.has(record.sourceId)) continue;
+      this.recordingsMap.set(record.id, { ...record, readiness: 'permission_required', reason: 'Re-select files after browser restart' });
+    }
+    this.emit();
+  }
+  private persist(): void {
+    void writeLocalIndex(this.workspaceId, { schema: 1, sources: this.sources, recordings: this.recordings });
+  }
   subscribe = (listener: () => void): (() => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   private emit() { for (const fn of this.listeners) fn(); }
   get sources(): LocalSource[] { return [...this.sourcesMap.values()].map((s) => ({ ...s })); }
@@ -148,7 +176,9 @@ export class BrowserLocalCatalogue {
     onProgress?: (progress: MediaScanProgress) => void;
   }): Promise<LocalSource> {
     if (files.length > MAX_FILES) throw new Error('Select smaller batches of up to 20,000 files.');
-    const sourceId = options.sourceId || makeId();
+    await this.hydration;
+    const reusable = this.sources.find((source) => source.label === safeMediaLabel(options.label || 'Chosen music') && source.origin === options.origin);
+    const sourceId = options.sourceId || reusable?.id || makeId();
     const source = this.sourcesMap.get(sourceId) || {
       id: sourceId, label: safeMediaLabel(options.label || 'Chosen music'), origin: options.origin,
       count: 0, state: 'scanning' as const, checkedAt: null,
@@ -165,7 +195,7 @@ export class BrowserLocalCatalogue {
         if (!mime) { scanned += 1; options.onProgress?.({ scanned, total: files.length, sourceId, cancelled: false }); continue; }
         const description = describeRecording(file.name);
         const existing = [...this.recordingsMap.values()].find((r) => r.sourceId === sourceId && r.displayName === safeMediaLabel(file.name));
-        const id = existing?.id || makeId();
+        let id = existing?.id || makeId();
         let state: MediaReadiness = 'unknown';
         let duration: number | null = null;
         let digest: string | null = null;
@@ -178,8 +208,12 @@ export class BrowserLocalCatalogue {
           state = 'unknown';
         }
         if (existing && existing.identity.exactSha256 && digest && existing.identity.exactSha256 !== digest) {
-          // Never silently keep the old canonical binding after content changes.
-          state = 'version_mismatch';
+          // New content always gets a new local identity. Do not reuse stale canonical bindings.
+          existing.readiness = 'version_mismatch';
+          existing.canonicalTrackId = null;
+          existing.reason = 'File changed; previous recording invalidated';
+          this.bindings.delete(existing.id);
+          id = makeId();
         }
         this.recordingsMap.set(id, {
           id, sourceId, displayName: safeMediaLabel(file.name), title: description.title, artist: description.artist,
@@ -193,7 +227,7 @@ export class BrowserLocalCatalogue {
         });
         this.bindings.set(id, 'getFile' in input ? { handle: input, lastSeen: Date.now() } : { file, lastSeen: Date.now() });
         scanned += 1;
-        source.count = this.recordingsMap.size;
+        source.count = [...this.recordingsMap.values()].filter((r) => r.sourceId === sourceId).length;
         options.onProgress?.({ scanned, total: files.length, sourceId, cancelled: false });
         this.emit();
         // Bounded, cancellable cooperative yield for large mobile libraries.
@@ -201,10 +235,10 @@ export class BrowserLocalCatalogue {
       }
       source.state = 'ready'; source.checkedAt = Date.now();
       source.count = [...this.recordingsMap.values()].filter((r) => r.sourceId === sourceId).length;
-      this.emit();
+      this.emit(); this.persist();
       return { ...source };
     } catch (error) {
-      source.state = 'unknown'; source.checkedAt = Date.now(); this.emit();
+      source.state = 'unknown'; source.checkedAt = Date.now(); this.emit(); this.persist();
       options.onProgress?.({ scanned, total: files.length, sourceId, cancelled: true });
       throw error;
     }
@@ -255,7 +289,7 @@ export class BrowserLocalCatalogue {
     for (const [id, record] of this.recordingsMap) if (record.sourceId === sourceId) {
       this.recordingsMap.delete(id); this.bindings.delete(id);
     }
-    this.emit(); // NEVER delete original files; only forget browser bindings.
+    this.emit(); this.persist(); // NEVER delete original files; only forget browser bindings.
   }
 }
 export function localCatalogue(workspaceId: string): BrowserLocalCatalogue {
