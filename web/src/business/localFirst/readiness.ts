@@ -121,7 +121,7 @@ export function inspectZone(zone: Zone, venue: Venue, now: number, browserOfflin
     base.issues.push(recovery('update', 'Local agent needs updating', 'Schedule an engine update outside service hours; confirm playback again afterwards.', 'devices'));
   }
   if (report.source.state !== 'connected') {
-    const text = report.source.state === 'disconnected' ? 'Reconnect the authorised local music source on the venue device.'
+    const text = report.source.state === 'disconnected' ? 'Reconnect the authorised music drive or local file source on the venue device.'
       : report.source.state === 'permission_required' ? 'Reauthorise the music files on the venue browser or its local player.'
       : 'Select an authorised local music source and verify the exact recordings on the venue device.';
     base.issues.push(recovery('source', 'Local music source unavailable', text, 'devices'));
