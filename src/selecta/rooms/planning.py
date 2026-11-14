@@ -115,7 +115,15 @@ def pump(ctx: RoomContext, workspace_id: str, room_id: str, *, now: float | None
             set_request(conn, request.id, submitted_at=now)
     handed = 0
     for request in chosen:
-        if _hand_over(ctx, room, request, now=now):
+        # Legacy room handoff is time-independent; retain the original call
+        # contract for existing planner adapters. Local-first handoff needs the
+        # fenced clock to verify engine scheduling and expiry.
+        submitted = (
+            _hand_over(ctx, room, request, now=now)
+            if ctx.local_first is not None
+            else _hand_over(ctx, room, request)
+        )
+        if submitted:
             handed += 1
     return handed
 
