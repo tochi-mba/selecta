@@ -4,7 +4,13 @@ import { VenueSetup } from '../autopilot/VenueSetup';
 import { DevicesPanel } from '../devices/DevicesPanel';
 import { DeviceCheck, showsDeviceCheck } from '../devices/DeviceCheck';
 import { CloudListen } from '../rooms/CloudListen';
+import { RoomPanel } from '../rooms/RoomPanel';
 import { browserCloudCopy } from '../copy';
+import { BrowserListening } from './BrowserListening';
+import {
+  CloudPersonalNavigation, personalDescription, personalDestination,
+  personalTitle, PERSONAL_PAGE,
+} from './CloudPersonalNavigation';
 import { LucyCloudSettings } from '../views/LucyCloudSettings';
 import { AccountDanger, AccountData } from './AccountData';
 import { AccountProblem, accountProblem, blockedMessage } from './accountStates';
@@ -43,7 +49,9 @@ export function showsAdmin(account: Account | null) {
 export function pageFor(pathname: string): Page {
   if (pathname.includes('/account/billing')) return 'billing';
   if (pathname.includes('/account')) return 'settings';
-  if (pathname.includes('/listen') || pathname.includes('/studio') || pathname.includes('/mixes') || pathname.includes('/discover') || pathname.includes('/player')) return 'listen';
+  if (pathname.includes('/listen') || pathname.includes('/studio') || pathname.includes('/mixes') || pathname.includes('/discover') || pathname.includes('/player') || pathname.includes('/rooms')) return 'listen';
+  if (pathname.includes('/devices')) return 'settings';
+  if (pathname.includes('/workspace') || pathname.includes('/workshop')) return 'home';
   if (pathname.includes('/library')) return 'library';
   if (pathname.includes('/upload')) return 'uploads';
   return 'home';
@@ -208,6 +216,18 @@ export function CloudApp() {
     setPath(PATHS[next]);
     moved.current = true;
   };
+  const choosePersonalPath = (target: string) => {
+    const pathname = target.split('?')[0];
+    const destination = personalDestination(pathname);
+    if (!destination) return;
+    setPage(PERSONAL_PAGE[destination]); setNotice(''); setError('');
+    if (`${window.location.pathname}${window.location.search}` !== target) {
+      window.history.pushState({}, '', target);
+    }
+    setPath(pathname);
+    moved.current = true;
+  };
+  const activePersonalDestination = localFirst ? personalDestination(path) : null;
   const visiblePage = (target: Page) => localFirst && (target === 'library' || target === 'uploads') ? true : pageShown(account, target);
   const exact = featureOn(account, ACCOUNT_STATES_FLAG);
   const route = resolveRoute(path);
@@ -259,20 +279,28 @@ export function CloudApp() {
   const view: Page | null = notFound ? null : shown;
   const signOutHere = () => signOut({ returnTo: window.location.origin });
   return (
-    <div className="cloud-shell" data-stream={stream}>
+    <div className={localFirst ? 'cloud-shell cloud-shell-personal' : 'cloud-shell'} data-stream={stream}>
       <aside className="cloud-rail">
         <button className="cloud-brand" title="Return to Cloud home" onClick={() => choosePage('home')}><span className="cloud-mark" aria-hidden="true">S</span><span>SelectaDJ{' '}<span className="cloud-brand-sub">REX Technologies</span></span></button>
         <nav aria-label="Cloud workspace">
-          {(Object.keys(LABELS) as Page[]).filter((target) => visiblePage(target)).map((target) => (
-            <button key={target} aria-current={view === target ? 'page' : undefined} onClick={() => choosePage(target)}>{localFirst && target === 'uploads' ? 'Connect local music' : localFirst && target === 'listen' ? 'My Mixes / Studio' : LABELS[target]}</button>
-          ))}
+          {localFirst ? <CloudPersonalNavigation active={activePersonalDestination}
+            go={choosePersonalPath}
+            roomsAvailable={featureOn(account, 'rooms') || Boolean(lockedTo(account, 'rooms'))} /> :
+            (Object.keys(LABELS) as Page[]).filter((target) => visiblePage(target)).map((target) => (
+              <button key={target} aria-current={view === target ? 'page' : undefined}
+                onClick={() => choosePage(target)}>{LABELS[target]}</button>
+            ))}
         </nav>
         <div className="cloud-rail-bottom">{showsAdmin(account) && <button onClick={() => { setInAdmin(true); window.history.pushState({}, '', '/admin'); setPath('/admin'); }}>Staff console</button>}<span>{user.email}</span>{exact && <button onClick={signOutHere}>Sign out</button>}
           <button onClick={() => void signOutEverywhere()} disabled={busy}>Sign out everywhere</button>
           <button className="cloud-delete-account" onClick={() => void deleteAccount()} disabled={busy}>Delete account</button></div>
       </aside>
-      <main className="cloud-main">
-        <header className="cloud-top"><div><p className="cloud-eyebrow">{account?.workspace.name ?? 'YOUR WORKSPACE'}</p><h1 ref={titleRef} tabIndex={exact ? -1 : undefined}>{notFound ? 'Page not found' : localFirst && shown === 'uploads' ? 'Connect local music' : localFirst && shown === 'listen' ? 'My Mixes and Studio' : TITLES[shown]}</h1></div><span className="cloud-plan-chip">{account ? planName(account) : 'Free'} plan</span></header>
+      <main className="cloud-main" id="cloud-content">
+        <header className="cloud-top"><div><p className="cloud-eyebrow">{account?.workspace.name ?? 'YOUR WORKSPACE'}</p>
+          <h1 ref={titleRef} tabIndex={exact ? -1 : undefined}>{notFound ? 'Page not found' :
+            activePersonalDestination ? personalTitle(activePersonalDestination) : TITLES[shown]}</h1>
+          {activePersonalDestination && <p className="cloud-personal-subtitle">{personalDescription(activePersonalDestination)}</p>}
+        </div><span className="cloud-plan-chip">{account ? planName(account) : 'Free'} plan</span></header>
         {account?.user.suspended && (exact ? <SuspendedPanel go={choosePage} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>)}
         {exact && account && problem && <AccountProblemNote kind={problem.kind} onRetry={() => void retryAccount()} />}
         {!localFirst && <OverQuotaBanner account={account} go={choosePage} />}
@@ -281,14 +309,51 @@ export function CloudApp() {
         {notFound && <NotFound path={path} go={choosePage} />}
         {account && localFirst && <LiveBrowserIntegration workspaceId={account.workspace.id} />}
         {account && (localFirst || singleAudioOwner(account)) && <CloudTransportDock api={api} account={account} page={shown} reload={libraryVersion} accessToken={async () => (await getAccessToken()) ?? ''} />}
-        {view === 'home' && account && <Overview account={account} localFirst={localFirst} go={choosePage} />}
+        {view === 'home' && account && (!localFirst || activePersonalDestination === 'home') &&
+          <Overview account={account} localFirst={localFirst} go={choosePage} goPersonal={choosePersonalPath} />}
+        {account && localFirst && activePersonalDestination === 'workspace' &&
+          <PersonalWorkspace account={account} go={choosePersonalPath} />}
+        {account && localFirst && activePersonalDestination === 'devices' &&
+          <section className="cloud-personal-device-page" aria-label="Device and speaker controls">
+            <div className="cloud-card"><p className="cloud-eyebrow">ONE SPEAKER · EXPLICIT CONTROL</p>
+              <h2>Current browser and other speakers</h2>
+              <p>The persistent player is the only audio owner in this Cloud tab. For another
+                device, use authenticated control and wait for an applied acknowledgement;
+                a queued command does not mean audio has moved.</p>
+              <button className="primary" type="button"
+                onClick={() => window.dispatchEvent(new Event('selecta:open-remote-control'))}>
+                Show remote device controls
+              </button>
+              {account.features['local_first.browser_control'] !== true &&
+                <p role="status">Remote browser sessions are not enabled for this workspace.</p>}
+            </div>
+            {showsDeviceCheck(account.features) && <DeviceCheck />}
+          </section>}
+        {account && localFirst && activePersonalDestination === 'rooms' &&
+          <section className="cloud-personal-rooms" aria-label="Cloud Rooms">
+            <p>Guests can request music, but approval is not a guarantee of local speaker playback.
+              A verified device and permitted recordings are required.</p>
+            <RoomPanel api={api} workspaceId={account.workspace.id}
+              locked={lockedTo(account, 'rooms') ?? undefined}
+              votesOn={account.features['rooms.votes'] !== false}
+              displayOn={account.features['rooms.display'] !== false}
+              playHereOn={false} freshOnly={account.features['rooms.nickname_confirm'] === true} />
+          </section>}
         {view === 'listen' && account && !localFirst && <CloudListen api={api} account={account} />}
         {view === 'listen' && account && !localFirst && <MakeCloudMix api={api} account={account} />}
-        {view === 'listen' && account && localFirst && <BrowserStudio api={api} workspaceId={account.workspace.id} />}
+        {view === 'listen' && account && localFirst && activePersonalDestination === 'listen' &&
+          <BrowserListening workspaceId={account.workspace.id} go={choosePage}
+            openStudio={() => choosePersonalPath('/studio')} />}
+        {view === 'listen' && account && localFirst && activePersonalDestination === 'explore' &&
+          <BrowserStudio api={api} workspaceId={account.workspace.id} surface="create" />}
+        {view === 'listen' && account && localFirst && activePersonalDestination === 'mine' &&
+          <BrowserStudio api={api} workspaceId={account.workspace.id} surface="mine" />}
+        {view === 'listen' && account && localFirst && activePersonalDestination === 'studio' &&
+          <BrowserStudio api={api} workspaceId={account.workspace.id} />}
         {view === 'library' && account && <LibraryPanel api={api} workspaceId={account.workspace.id} setError={setError} refreshAccount={refreshAccount} go={choosePage} reload={libraryVersion} truthful={featureOn(account, LIBRARY_STATES_FLAG)} account={account} localFirst={localFirst} />}
         {view === 'uploads' && account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} perFile={featureOn(account, LIBRARY_STATES_FLAG)} localFirst={localFirst} go={choosePage} />}
         {view === 'billing' && account && <Billing account={account} busy={busy} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} />}
-        {view === 'settings' && account && <div className="cloud-settings"><AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} />{featureOn(account, 'devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{featureOn(account, 'lucy') && featureOn(account, 'account.lucy_settings') && <LucyCloudSettings request={lucyRequest} features={account.features} />}{showsDeviceCheck(account.features) && <DeviceCheck />}{showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />}{featureOn(account, 'autopilot.venue_mode') && featureOn(account, 'autopilot.venue_policy') && <VenueSetup api={api} workspaceId={account.workspace.id} />}{exact && <AccountDanger busy={busy} onSignOutEverywhere={() => void signOutEverywhere()} onDelete={() => void deleteAccount(true)} />}</div>}
+        {view === 'settings' && account && (!localFirst || activePersonalDestination === 'settings') && <div className="cloud-settings"><AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} />{featureOn(account, 'devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{featureOn(account, 'lucy') && featureOn(account, 'account.lucy_settings') && <LucyCloudSettings request={lucyRequest} features={account.features} />}{showsDeviceCheck(account.features) && <DeviceCheck />}{showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />}{featureOn(account, 'autopilot.venue_mode') && featureOn(account, 'autopilot.venue_policy') && <VenueSetup api={api} workspaceId={account.workspace.id} />}{exact && <AccountDanger busy={busy} onSignOutEverywhere={() => void signOutEverywhere()} onDelete={() => void deleteAccount(true)} />}</div>}
         <footer className="cloud-footer">{localFirst ? 'SelectaDJ Cloud · Recipes sync; recordings stay on authorised local devices.' : 'SelectaDJ Cloud · Your originals remain private to your workspace.'}<CloudCredit /></footer>
       </main>
     </div>
@@ -313,10 +378,13 @@ function Feedback({ error, notice }: { error: string; notice: string }) {
   return <div className={error ? 'cloud-feedback error' : 'cloud-feedback'} role={error ? 'alert' : 'status'}>{error || notice}</div>;
 }
 
-function Overview({ account, go, localFirst }: { account: Account; go: (page: Page) => void; localFirst: boolean }) {
+function Overview({ account, go, goPersonal, localFirst }: {
+  account: Account; go: (page: Page) => void;
+  goPersonal?: (path: string) => void; localFirst: boolean;
+}) {
   const openPersonalMode = (mode: 'play' | 'remote' | 'edit') => {
-    go('listen');
-    window.history.replaceState({}, '', `/listen?mode=${mode}`);
+    if (goPersonal) goPersonal(`/studio?mode=${mode}`);
+    else { go('listen'); window.history.replaceState({}, '', `/listen?mode=${mode}`); }
   };
   if (localFirst) return <>
     <section className="cloud-hero br07-home" aria-labelledby="br07-home-title">
@@ -331,15 +399,15 @@ function Overview({ account, go, localFirst }: { account: Account; go: (page: Pa
     <div className="cloud-cards">
       <section className="cloud-card"><p className="cloud-eyebrow">STUDIO</p><h2>My Mixes</h2>
         <p>Open a saved recipe, work on cues and transitions, or recover missing local recordings.</p>
-        <button onClick={() => go('listen')}>Open Studio</button></section>
+        <button onClick={() => goPersonal ? goPersonal('/studio') : go('listen')}>Open Studio</button></section>
       <section className="cloud-card"><p className="cloud-eyebrow">THIS DEVICE</p><h2>Local music</h2>
         <p>Choose recordings through your browser. A file on another device is not automatically available here.</p>
         <button onClick={() => go('uploads')}>Choose music</button></section>
       <section className="cloud-card"><p className="cloud-eyebrow">CONNECTED DEVICES</p><h2>Output and control</h2>
         <p>Check the active speaker and verify real output before playback or takeover.</p>
-        <button onClick={() => go('settings')}>Devices and settings</button></section>
+        <button onClick={() => goPersonal ? goPersonal('/devices') : go('settings')}>Devices and settings</button></section>
     </div>
-    <RoomsCard account={account} go={go} />
+    <RoomsCard account={account} go={go} goPersonal={goPersonal} />
   </>;
   const uploads = featureOn(account, 'cloud.uploads');
   return <>
@@ -351,12 +419,42 @@ function Overview({ account, go, localFirst }: { account: Account; go: (page: Pa
 
 /** Rooms on the overview: an invitation when the account has Rooms, a locked teaser naming the
  * plan when only a plan unlocks it, and nothing at all when it's switched off. */
-function RoomsCard({ account, go }: { account: Account; go: (page: Page) => void }) {
+function RoomsCard({ account, go, goPersonal }: {
+  account: Account; go: (page: Page) => void; goPersonal?: (path: string) => void;
+}) {
   const plan = lockedTo(account, 'rooms');
   if (plan) {
     const name = `${plan[0]?.toUpperCase() ?? ''}${plan.slice(1)}`;
     return <section className="cloud-card cloud-locked"><div><p className="cloud-eyebrow">{name.toUpperCase()} FEATURE</p><h2>Host a request room</h2><p>Share a QR code so guests can add requests to your set. Rooms are part of {name}.</p></div><button onClick={() => go('billing')}>Explore {name}</button></section>;
   }
   if (!featureOn(account, 'rooms')) return null;
-  return <section className="cloud-card cloud-locked"><div><p className="cloud-eyebrow">ROOMS</p><h2>Host a request room</h2><p>Share a QR code so guests can add requests to your set.</p></div><button onClick={() => go('listen')}>Open a room</button></section>;
+  return <section className="cloud-card cloud-locked"><div><p className="cloud-eyebrow">ROOMS</p><h2>Host a request room</h2><p>Share a QR code so guests can add requests to your set.</p></div><button onClick={() => goPersonal ? goPersonal('/rooms') : go('listen')}>Open a room</button></section>;
+}
+
+/** Workspace is a real local destination; Cloud augments it with account, device and
+ * room management without importing local application's SQLite-based workshop. */
+function PersonalWorkspace({ account, go }: {
+  account: Account; go: (path: string) => void;
+}) {
+  return <section className="cloud-personal-workspace" aria-label="Workspace overview">
+    <p>Local audio stays on authorised devices. Cloud synchronises the portable recipe,
+      account access and eligible collaboration metadata, not filesystem paths or PCM.</p>
+    <div className="cloud-cards">
+      <section className="cloud-card"><p className="cloud-eyebrow">YOUR MUSIC</p><h2>Sources and verification</h2>
+        <p>Connect files on this browser, check formats and permissions, and review which recordings are actually playable here.</p>
+        <button onClick={() => go('/upload')}>Connect and verify music</button>
+        <button onClick={() => go('/library')}>Review library</button></section>
+      <section className="cloud-card"><p className="cloud-eyebrow">YOUR SPEAKER</p><h2>Playback and devices</h2>
+        <p>Check the active local speaker, physical sound, foreground state and authenticated remote-control eligibility.</p>
+        <button onClick={() => go('/devices')}>Device controls</button></section>
+      <section className="cloud-card"><p className="cloud-eyebrow">CLOUD EXTRAS</p><h2>Plan and account</h2>
+        <p>{planName(account)} plan. Account, security, privacy and billing are separate from device-local music access.</p>
+        <button onClick={() => go('/account')}>Account settings</button>
+        <button onClick={() => go('/account/billing')}>Plan and billing</button></section>
+    </div>
+    <div className="cloud-personal-workspace-links">
+      <button onClick={() => go('/studio')}>Open Studio and recipe history</button>
+      {featureOn(account, 'rooms') && <button onClick={() => go('/rooms')}>Manage Rooms</button>}
+    </div>
+  </section>;
 }
