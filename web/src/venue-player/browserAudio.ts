@@ -409,12 +409,13 @@ export class BrowserVenueAudio implements VenueAudioPort {
     // and overlap another tab's venue or personal playback.
     const revision = this.playbackEpoch;
     const temporaryLease = !this.deck;
-    if (temporaryLease && await this.lease.acquire() === 'unsupported') {
-      throw new Error('Another Selecta browser player currently owns this speaker');
-    }
+    const ownership = temporaryLease ? await this.lease.acquire() : 'exclusive';
     if (this.disposed || revision !== this.playbackEpoch) {
       if (temporaryLease) this.lease.release();
       throw new Error('The sound check was cancelled by a newer playback action');
+    }
+    if (ownership === 'unsupported') {
+      throw new Error('Another Selecta browser player currently owns this speaker');
     }
     this.silenceTestTone();
     const osc = ctx.createOscillator();
