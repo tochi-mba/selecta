@@ -235,3 +235,5 @@
 @media(prefers-reduced-motion:reduce){
   .cloud-shell-personal *{scroll-behavior:auto}
 }
+
+.cloud-shell-personal .cloud-personal-nav-link{text-decoration:none}
