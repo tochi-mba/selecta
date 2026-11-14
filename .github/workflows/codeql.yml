@@ -12,7 +12,6 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
   # Weekly as well, so new CodeQL queries reach code that hasn't changed.
   schedule:
     - cron: "29 5 * * 1"
