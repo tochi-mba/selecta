@@ -7,6 +7,17 @@ import {
   type BrowserEnvelope, type CommandReceipt, type DeviceSummary, type Speaker,
 } from '../lf-session/client';
 
+/** A descriptive hint for fleet diagnostics, never a playback or rendering gate.
+ * Chrome on Android exposes userAgentData.mobile for phones but not all tablets;
+ * a coarse primary pointer also identifies most touch tablets without UA sniffing.
+ */
+function mobileDeviceHint(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const nav = navigator as Navigator & { userAgentData?: { mobile?: boolean } };
+  return nav.userAgentData?.mobile === true ||
+    (typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches === true);
+}
+
 /** Cloud remote controls and browser executor. Never share source files, handles, or PCM.
  * A remote queued receipt is NOT proof a speaker executed anything. */
 export function BrowserSessionPanel({ workspaceId, accessToken }: {
@@ -84,7 +95,7 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
           webgpu: Boolean((navigator as Navigator & { gpu?: unknown }).gpu),
           can_play: engine.snapshot().tracks > 0,
           can_render: Boolean(navigator.storage?.getDirectory),
-          mobile: false },
+          mobile: mobileDeviceHint() },
       });
       fence.current = savedFence;
       lastRefresh.current = Date.now();
@@ -175,7 +186,7 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
           wasm: typeof WebAssembly !== 'undefined',
           webgpu: Boolean((navigator as Navigator & { gpu?: unknown }).gpu),
           can_play: now.tracks > 0,
-          can_render: Boolean(navigator.storage?.getDirectory), mobile: false },
+          can_render: Boolean(navigator.storage?.getDirectory), mobile: mobileDeviceHint() },
         source_ready: now.tracks > 0 && (now.phase === 'playing' || now.phase === 'paused'),
         source_count: now.tracks,
         source_checked_at: current,
