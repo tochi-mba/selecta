@@ -219,6 +219,10 @@ export class BrowserAudioRuntime implements AudioEngine {
       let decoded: AudioBuffer;
       try { decoded = await this.decoder.decode(recording.file, context); }
       catch { throw new Error('This browser could not decode ' + recording.title + '. Check the format and reconnect the file.'); }
+      // A previous queue may finish decoding after a new import with the same
+      // recording ID. Never cache its PCM under the new user's source binding.
+      if (this.disposed || this.queue[index] !== recording || this.context !== context)
+        throw new Error('Local recording changed during decoding. Recheck the selected files.');
       if (!decoded || decoded.length <= 0 || decoded.duration <= 0 || decoded.numberOfChannels < 1) {
         throw new Error('The decoded audio is empty or invalid.');
       }
