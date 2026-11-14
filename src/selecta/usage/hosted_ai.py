@@ -10,7 +10,7 @@ ledger details.
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection
@@ -27,7 +27,7 @@ MARKER_PREFIX = "lf_ai_op_"
 @dataclass(frozen=True, slots=True)
 class AIApproval:
     allowed: bool
-    code: str
+    code: str = field(repr=False)
     remaining_micros: int
     resets_at: float
 
@@ -36,7 +36,7 @@ class AIApproval:
 class AICharge:
     charged: bool
     duplicate: bool
-    code: str
+    code: str = field(repr=False)
 
 
 def _limit(plan: PersonalBenefits) -> int:
