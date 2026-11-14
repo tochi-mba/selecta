@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { BrowserVenueSetup } from './BrowserVenueSetup';
 import type { Venue, Zone } from '../types';
 import {
   inspectFleet, inspectVenue, inspectZone, localFirstOn, READINESS_ORDER, READINESS_WORDS,
@@ -29,7 +30,7 @@ export function HqLocalReadiness({ venues, now, offline, onOpenVenue }: {
   const shown = expanded ? ordered : ordered.slice(0, 20);
   return <section className="biz-card lf13-hq" aria-labelledby="lf13-hq-title" data-testid="lf13-hq">
     <div className="biz-row lf13-hq-head">
-      <div><h2 id="lf13-hq-title">Local engine readiness</h2>
+      <div><h2 id="lf13-hq-title">Browser and local player readiness</h2>
         <p className="biz-quiet">Verified local music, actual speakers and offline fallback across your venues</p></div>
       <span role="status">{fleet.ready} of {venues.length} venues activation-ready</span>
     </div>
@@ -74,10 +75,10 @@ export function VenueLocalReadiness({ venue, now, offline, onOpenTab, onRefresh 
   const [rechecking, setRechecking] = useState(false);
   return <section className="biz-card lf13-detail" aria-labelledby={'lf13-' + venue.id}>
     <div className="biz-row">
-      <div><h2 id={'lf13-' + venue.id}>Local playback readiness</h2><p className="biz-quiet">Each zone needs its own authorised music and real speaker test.</p></div>
+      <div><h2 id={'lf13-' + venue.id}>Local playback readiness</h2><p className="biz-quiet">Each zone needs its own authorised music and real speaker test. An awake iPad or Android tablet can be the sole player.</p></div>
       <StateWord state={details.state} />
     </div>
-    {!details.activationReady && <p role="status">This venue is not verified for activation. Confirm all checks on the local engine before starting service.</p>}
+    {!details.activationReady && <p role="status">This venue is not verified for activation. Confirm on this device or the venue's actual browser player before starting service.</p>}
     {offline && <p role="status">Internet is unavailable. Existing local playback may continue, but HQ cannot verify or transfer it. Check on site.</p>}
     <div className="lf13-zones">
       {details.zones.map((item) => <article key={item.zoneId} className="lf13-zone" data-zone-readiness={item.state}>
@@ -95,7 +96,7 @@ export function VenueLocalReadiness({ venue, now, offline, onOpenTab, onRefresh 
         <RecoveryList issues={item.issues} onOpenTab={onOpenTab} />
       </article>)}
     </div>
-    {details.zones.length === 0 && <p>No zones yet. Add a zone and pair a local engine.</p>}
+    {details.zones.length === 0 && <p>No zones yet. Add a zone and start an authorised browser player on the venue device.</p>}
     <div className="biz-row">
       <button type="button" disabled={rechecking} onClick={() => {
         setRechecking(true);
@@ -112,11 +113,12 @@ export function LocalSetupGuide({ venue, now, offline, stage, onOpenTab, onRefre
 }) {
   return <div className="biz-stack lf13-setup" data-setup-stage={stage}>
     <p>{stage === 'music'
-      ? 'Connect authorised music folders or drives on the venue computer. Selecta Cloud stores the catalogue and controls, not the audio.'
+      ? 'Select local music on the venue iPad, Android tablet or computer. Selecta Cloud stores catalogue metadata and controls, never your music.'
       : stage === 'pair'
-        ? 'Install and pair the local engine for each zone. Test the selected physical speaker output; a tablet or unlocked browser is not a speaker.'
+        ? 'Open the player on this iPad or Android tablet, allow local music access, tap Start and test the actual speaker. No installed service or second computer is required.'
         : 'Before service: confirm approved music rules, prepared transitions, offline fallback and an on-site internet-disconnect rehearsal.'}</p>
     <VenueLocalReadiness venue={venue} now={now} offline={offline} onOpenTab={onOpenTab} onRefresh={onRefresh} />
+    {(stage === 'music' || stage === 'pair') && <BrowserVenueSetup venue={venue} />}
   </div>;
 }
 
