@@ -13,7 +13,12 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
   accessToken: () => Promise<string>;
 }) {
   const engine = useMemo(() => browserEngine(workspaceId), [workspaceId]);
-  const client = useMemo(() => new BrowserSessionClient(accessToken, fetch, workspaceId), [workspaceId, accessToken]);
+  // The authenticated caller can change identity after token refresh without
+  // discarding an active in-memory device session on routine React rerenders.
+  const tokenRef = useRef(accessToken);
+  tokenRef.current = accessToken;
+  const client = useMemo(() =>
+    new BrowserSessionClient(() => tokenRef.current(), fetch, workspaceId), [workspaceId]);
   const [zone, setZone] = useState('personal');
   const [registered, setRegistered] = useState(false);
   const [devices, setDevices] = useState<DeviceSummary[]>([]);
@@ -63,7 +68,15 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
           can_render: Boolean(navigator.storage?.getDirectory),
           mobile: false },
       });
-      fence.current = 0;
+      // Never reset a durable local speaker fence just because this tab reopened.
+      try {
+        const previous = Number(localStorage.getItem('selecta:browser-fence:' + workspaceId + ':' + zone) ?? '0');
+        fence.current = Number.isSafeInteger(previous) && previous >= 0 ? previous : 0;
+      } catch {
+        // Cannot safely restore stale-owner protection across restarts.
+        fence.current = 0;
+        setNotice('Durable local fencing is unavailable. Remote takeovers must be refused until fixed.');
+      }
       setRegistered(true);
       setNotice('Browser registered for this zone. Keep it foregrounded and confirm real sound on-site; no music was uploaded.');
       await refresh();
@@ -128,8 +141,8 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
       await client.presence({
         foreground: document.visibilityState === 'visible',
         runtime_state: document.visibilityState === 'hidden' ? 'hidden' :
-          now.phase === 'playing' ? 'active' :
-          now.phase === 'interrupted' ? 'interrupted' : 'suspended',
+          now.phase === 'interrupted' || now.phase === 'error' ? 'interrupted' :
+          now.tracks > 0 ? 'active' : 'suspended',
         capabilities: { audio_worklet: probeBrowserAudio().eligible,
           wasm: typeof WebAssembly !== 'undefined',
           webgpu: Boolean((navigator as Navigator & { gpu?: unknown }).gpu),
