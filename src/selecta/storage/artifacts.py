@@ -239,6 +239,7 @@ class R2ArtifactStore:
         self.client.delete_object(self.buckets.for_key(key), key)
 
     def presign_get(self, key: str, ttl: int, download_name: str | None = None) -> str:
+        require_media_write("presign_get")
         bucket = self.buckets.for_key(key)
         return self.client.presign_get(bucket, key, _check_ttl(ttl, self.max_ttl), download_name)
 
