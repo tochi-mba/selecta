@@ -89,6 +89,35 @@ describe('BrowserAudioRuntime', () => {
     expect(engine.snapshot().soundCheck).toBe('unverified');
     await engine.dispose();
   });
+  it('preserves the click-unlocked context when Studio replaces the local queue', async () => {
+    const engine = new BrowserAudioRuntime('studio-gesture', { decoder });
+    await engine.activate(); // Synchronously initiated by a user gesture in production.
+    const unlocked = Context.latest;
+    expect(unlocked.state).toBe('running');
+    await engine.setQueue([music('studio-track')]);
+    expect(unlocked.state).toBe('running');
+    expect(engine.snapshot().phase).toBe('ready');
+    await engine.play();
+    expect(engine.snapshot()).toMatchObject({ phase: 'playing', title: 'studio-track' });
+    expect(unlocked.state).toBe('running');
+    await engine.dispose();
+  });
+
+  it('replacing a playing queue releases old playback without suspending an activated context', async () => {
+    const engine = new BrowserAudioRuntime('studio-replace', { decoder });
+    await engine.setQueue([music('first')]);
+    await engine.play();
+    const context = Context.latest;
+    await engine.setQueue([music('replacement')]);
+    expect(context.state).toBe('running');
+    expect(engine.snapshot()).toMatchObject({
+      phase: 'ready', title: 'replacement', ownership: 'none', soundCheck: 'unverified',
+    });
+    await engine.play();
+    expect(engine.snapshot()).toMatchObject({ phase: 'playing', title: 'replacement' });
+    await engine.dispose();
+  });
+
   it('supports pause, resume, seek and repeated play idempotently', async () => {
     const engine = new BrowserAudioRuntime('two', { decoder });
     await engine.setQueue([music('a'), music('b')]);
