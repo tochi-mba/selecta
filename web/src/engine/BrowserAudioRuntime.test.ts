@@ -91,13 +91,29 @@ describe('BrowserAudioRuntime', () => {
     expect(Context.latest.sources).toHaveLength(1);
     Context.latest.currentTime += 8;
     await engine.pause();
-    expect(engine.snapshot()).toMatchObject({ phase: 'paused', position: 8, ownership: 'none' });
+    expect(engine.snapshot()).toMatchObject({ phase: 'paused', ownership: 'none' });
+    // The scheduled source starts 20ms after the WebAudio clock: elapsed
+    // audio is 7.98s when the mock context advances exactly eight seconds.
+    expect(engine.snapshot().position).toBeCloseTo(7.98, 2);
     await engine.seek(21);
     expect(engine.snapshot().position).toBe(21);
     await engine.play();
     expect(Context.latest.sources.at(-1)?.starts[0]?.[1]).toBe(21);
     await engine.previous();
     expect(engine.snapshot().index).toBe(0);
+    await engine.dispose();
+  });
+  it('restarts the preceding track after a crossfade rather than leaving the speaker silent', async () => {
+    const engine = new BrowserAudioRuntime('previous-regression', { decoder });
+    await engine.setQueue([music('first'), music('second')]);
+    await engine.play();
+    await engine.next();
+    expect(engine.snapshot().index).toBe(1);
+    const sourcesBefore = Context.latest.sources.length;
+    await engine.previous();
+    expect(engine.snapshot()).toMatchObject({ phase: 'playing', index: 0, title: 'first' });
+    expect(Context.latest.sources).toHaveLength(sourcesBefore + 1);
+    expect(Context.latest.sources.at(-1)?.starts).toHaveLength(1);
     await engine.dispose();
   });
   it('preserves an active track when a later local recording fails decode', async () => {
