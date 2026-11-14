@@ -1,5 +1,6 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { ENGINE_INSTALL_GUIDE, LOCAL_ENGINE_URL } from './contract';
+import { localFolderExample } from '../../copy';
 import { localWatchRequest } from './watchClient';
 import './folderWatches.css';
 
@@ -12,7 +13,7 @@ export type WatchedFolder = {
 };
 export type WatchSnapshot = { device: string; everySeconds: number; sources: WatchedFolder[] };
 
-const LOOPBACK = new Set(['localhost', '127.0.0.1']);
+const LOOPBACK = new Set(['localhost', new URL(LOCAL_ENGINE_URL).hostname]);
 const STATUS: Record<string, string> = {
   ready: 'Watching', scanning: 'Scanning', stale: 'Checking for changes',
   offline: 'Drive disconnected', degraded: 'Needs attention', cancelled: 'Scan stopped',
@@ -52,7 +53,7 @@ export function parseWatchedFolders(data: unknown): WatchSnapshot {
     };
   }).filter((item): item is WatchedFolder => item !== null);
   return {
-    device: typeof raw.device === 'string' ? raw.device.slice(0, 80) : 'This computer',
+    device: typeof raw.device === 'string' ? raw.device.slice(0, 80) : 'This device',
     everySeconds: cleanCount(raw.watch_every_seconds), sources,
   };
 }
@@ -154,7 +155,7 @@ export function FolderWatches({ compact = false }: { compact?: boolean }) {
       }
       await localWatchRequest(ROOT, { method: 'POST', body: JSON.stringify({ folder: path }) });
       setFolder(''); setAddOpen(false);
-      setNotice('Folder added. Indexing is queued on this computer; it does not upload music.');
+      setNotice('Folder added. Indexing is queued on this device; it does not upload music.');
       await refresh();
     } catch (error) {
       setProblem(error instanceof Error ? error.message : 'Could not add that folder.');
@@ -191,7 +192,7 @@ export function FolderWatches({ compact = false }: { compact?: boolean }) {
       </div>
     </div>}
 
-    {phase === 'loading' && <p className="lfw-load" role="status">Checking folder watches on this computer…</p>}
+    {phase === 'loading' && <p className="lfw-load" role="status">Checking folder watches on this device…</p>}
     {phase === 'error' && <div className="lfw-warning" role="alert">The latest local folder status could not be read. Previous counts may be stale. <button onClick={() => void refresh(true)}>Retry</button></div>}
     {notice && <p className="lfw-notice" role="status">{notice}</p>}
     {problem && <p className="lfw-warning" role="alert">{problem}</p>}
@@ -209,11 +210,11 @@ export function FolderWatches({ compact = false }: { compact?: boolean }) {
 
       <div id="lfw-add" hidden={!addOpen} className="lfw-add">
         <form onSubmit={(event) => void add(event)}>
-          <label htmlFor="lfw-path">Folder address on this computer</label>
+          <label htmlFor="lfw-path">Folder address on this device</label>
           <div className="lfw-add-row">
             <input id="lfw-path" autoComplete="off" spellCheck={false} value={folder}
               onChange={(e) => { setFolder(e.target.value); setProblem(''); }}
-              placeholder="C:\\Users\\you\\Music" required maxLength={2048} />
+              placeholder={localFolderExample} required maxLength={2048} />
             <button type="submit" className="primary" disabled={pending !== '' || !folder.trim()}>
               {pending === 'add' ? 'Checking…' : 'Watch folder'}
             </button>
@@ -272,7 +273,7 @@ export function FolderWatches({ compact = false }: { compact?: boolean }) {
           </div>}
         </li>;
       })}</ul>}
-      {updatedAt && <p className="lfw-footnote">Status updated {new Date(updatedAt).toLocaleTimeString('en-GB', { timeStyle: 'short' })}. Indexing happens on this computer; these counts do not describe hosted assets.</p>}
+      {updatedAt && <p className="lfw-footnote">Status updated {new Date(updatedAt).toLocaleTimeString('en-GB', { timeStyle: 'short' })}. Indexing happens on this device; these counts do not describe hosted assets.</p>}
     </>}
     <p className="lfw-privacy">Your audio never leaves this device through folder watching. When using Selecta Cloud on another computer, you must manage its folders on that computer.</p>
   </section>;
@@ -285,7 +286,7 @@ export function LegacyFolderWatchEntry() {
     <div>
       <p className="cloud-eyebrow">ALSO AVAILABLE · DEVICE-LOCAL MUSIC</p>
       <h2>Prefer to watch a music folder?</h2>
-      <p>Connect several folders or drives, and Selecta checks them for new recordings automatically. This is separate from your existing Cloud uploads: originals stay on this computer.</p>
+      <p>Connect several folders or drives, and Selecta checks them for new recordings automatically. This is separate from your existing Cloud uploads: originals stay on this device.</p>
     </div>
     <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
       {open ? 'Hide folder watches' : 'Manage folder watches'}
