@@ -108,8 +108,8 @@ export function VenueLocalReadiness({ venue, now, offline, onOpenTab, onRefresh 
   </section>;
 }
 
-export function LocalSetupGuide({ venue, now, offline, stage, onOpenTab, onRefresh }: {
-  venue: Venue; now: number; offline: boolean; stage: 'music' | 'pair' | 'service';
+export function LocalSetupGuide({ venue, now, offline, stage, authorised = true, onOpenTab, onRefresh }: {
+  venue: Venue; now: number; offline: boolean; stage: 'music' | 'pair' | 'service'; authorised?: boolean;
   onOpenTab: (tab: Recovery['tab']) => void; onRefresh: () => void | Promise<void>;
 }) {
   return <div className="biz-stack lf13-setup" data-setup-stage={stage}>
@@ -119,7 +119,7 @@ export function LocalSetupGuide({ venue, now, offline, stage, onOpenTab, onRefre
         ? 'Open the player on this iPad or Android tablet, allow local music access, tap Start and test the actual speaker. No installed service or second computer is required.'
         : 'Before service: confirm approved music rules, prepared transitions, offline fallback and an on-site internet-disconnect rehearsal.'}</p>
     <VenueLocalReadiness venue={venue} now={now} offline={offline} onOpenTab={onOpenTab} onRefresh={onRefresh} />
-    {(stage === 'music' || stage === 'pair') && <BrowserVenueSetup venue={venue} />}
+    {(stage === 'music' || stage === 'pair') && <BrowserVenueSetup venue={venue} authorised={authorised} />}
   </div>;
 }
 
