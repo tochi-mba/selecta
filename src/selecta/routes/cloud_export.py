@@ -84,7 +84,7 @@ def install_routes(
     buckets: Buckets = DEFAULT_BUCKETS,
     legacy_retrieval_grant_factory: Callable[[str], RetrievalGrant | None] | None = None,
 ) -> None:
-    """Install a personal-workspace export with integrity-checked original audio files."""
+    """Install authenticated, metadata-only personal account export."""
 
     @app.get("/api/account/export")
     def export_account(
