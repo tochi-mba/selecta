@@ -34,7 +34,7 @@ function stubApi(status = 201) {
         revision: original.revision_id, revision_number: 3, occurrences: 2 }],
     } as T;
     if (path === '/cloud-mixes/saved_mix?schema_version=2') return {
-      recipe: original, history, legacy_read_only_view: false,
+      recipe: original, head_revision: original.revision_id, history, legacy_read_only_view: false,
     } as T;
     if (path === '/cloud-mixes/saved_mix/revisions') {
       if (status === 409) throw Object.assign(new Error('Stale revision'), { status: 409 });
