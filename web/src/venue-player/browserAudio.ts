@@ -184,6 +184,11 @@ export class BrowserVenueAudio implements VenueAudioPort {
       if (this.files.get(trackId) !== rec) throw new Error('Local music source changed');
       if (!Number.isFinite(buffer.duration) || buffer.duration <= 0)
         throw new Error('Recording could not be decoded');
+      // A small compressed file can decode to hundreds of megabytes of PCM.
+      // Reject a large completed buffer before retaining it on a venue tablet.
+      const decodedBytes = buffer.length * buffer.numberOfChannels * 4;
+      if (!Number.isFinite(decodedBytes) || decodedBytes <= 0 || decodedBytes > 128 * 1024 * 1024)
+        throw new Error('Decoded recording exceeds the browser memory budget');
       this.buffers.set(trackId, buffer);
       if (!this.deck) this.phase = 'ready';
     } catch (error) {
@@ -322,6 +327,12 @@ export class BrowserVenueAudio implements VenueAudioPort {
   /** Real locally routed test signal; a person MUST confirm they heard the speaker. */
   async soundCheck(): Promise<void> {
     const ctx = this.contextReady();
+    // The test tone is real audio. It must not bypass browser-wide ownership
+    // and overlap another tab's venue or personal playback.
+    const temporaryLease = !this.deck;
+    if (temporaryLease && await this.lease.acquire() === 'unsupported') {
+      throw new Error('Another Selecta browser player currently owns this speaker');
+    }
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
@@ -332,9 +343,18 @@ export class BrowserVenueAudio implements VenueAudioPort {
     gain.gain.linearRampToValueAtTime(0, now + 0.5);
     osc.connect(gain);
     gain.connect(this.master!);
-    osc.onended = () => gain.disconnect();
-    osc.start(now);
-    osc.stop(now + 0.52);
+    osc.onended = () => {
+      gain.disconnect();
+      if (temporaryLease && !this.deck) this.lease.release();
+    };
+    try {
+      osc.start(now);
+      osc.stop(now + 0.52);
+    } catch (error) {
+      gain.disconnect();
+      if (temporaryLease && !this.deck) this.lease.release();
+      throw error;
+    }
     this.testAt = Date.now();
     this.checkedAt = null;
   }
