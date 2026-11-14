@@ -48,6 +48,7 @@ export class BrowserAudioRuntime implements AudioEngine {
   private readonly session: BrowserAudioSessionPort | undefined;
   private queue: LocalRecording[] = [];
   private cache = new Map<string, AudioBuffer>();
+  private inFlight = new Map<string, Promise<AudioBuffer>>();
   private context: AudioContext | null = null;
   private graphReady: Promise<void> | null = null;
   private mixer: AudioWorkletNode | null = null;
@@ -113,6 +114,7 @@ export class BrowserAudioRuntime implements AudioEngine {
     this.sequence++;
     const position = this.positionNow();
     this.haltSources();
+    this.lease.release();
     try { await this.context?.suspend(); } catch { /* can already be interrupted */ }
     this.patch({ phase: 'interrupted', position, pending: null, context: this.context?.state ?? 'unavailable',
       soundCheck: 'unverified', confirmationTime: null, error: reason });
@@ -181,6 +183,8 @@ export class BrowserAudioRuntime implements AudioEngine {
     if (!recording) throw new Error('The next recording is missing from this browser.');
     const previous = this.cache.get(recording.id);
     if (previous) return previous;
+    const inFlight = this.inFlight.get(recording.id);
+    if (inFlight) return inFlight;
     if (!recording.file || !recording.file.size) throw new Error('Select a nonempty local music file.');
     const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
     const cap = memory && memory <= 4 ? MAX_MOBILE_FILE : MAX_DESKTOP_FILE;
@@ -188,18 +192,23 @@ export class BrowserAudioRuntime implements AudioEngine {
       throw new Error('This recording exceeds the safe in-memory decode limit (' +
         Math.round(cap / 1024 / 1024) + ' MiB). Use a smaller file on this device.');
     }
-    let decoded: AudioBuffer;
-    try { decoded = await this.decoder.decode(recording.file, context); }
-    catch { throw new Error('This browser could not decode ' + recording.title + '. Check the format and reconnect the file.'); }
-    if (!decoded || decoded.length <= 0 || decoded.duration <= 0 || decoded.numberOfChannels < 1) {
-      throw new Error('The decoded audio is empty or invalid.');
-    }
-    // Bound decoded cache to the active track and its successor.
-    this.cache.set(recording.id, decoded);
-    for (const id of this.cache.keys()) {
-      if (id !== recording.id && id !== this.queue[this.state.index]?.id) this.cache.delete(id);
-    }
-    return decoded;
+    const operation = (async () => {
+      let decoded: AudioBuffer;
+      try { decoded = await this.decoder.decode(recording.file, context); }
+      catch { throw new Error('This browser could not decode ' + recording.title + '. Check the format and reconnect the file.'); }
+      if (!decoded || decoded.length <= 0 || decoded.duration <= 0 || decoded.numberOfChannels < 1) {
+        throw new Error('The decoded audio is empty or invalid.');
+      }
+      // At most the active track plus the next decoded buffer are retained.
+      this.cache.set(recording.id, decoded);
+      for (const id of this.cache.keys()) {
+        if (id !== recording.id && id !== this.queue[this.state.index]?.id) this.cache.delete(id);
+      }
+      return decoded;
+    })();
+    this.inFlight.set(recording.id, operation);
+    try { return await operation; }
+    finally { if (this.inFlight.get(recording.id) === operation) this.inFlight.delete(recording.id); }
   }
   private beginSource(index: number, buffer: AudioBuffer, deck: number, when: number, offset: number): RunningSource {
     if (!this.context || !this.decks) throw new Error('Audio graph not prepared.');
@@ -290,7 +299,7 @@ export class BrowserAudioRuntime implements AudioEngine {
   async setQueue(files: readonly LocalRecording[]): Promise<void> {
     await this.stop();
     this.queue = [...files];
-    this.cache.clear();
+    this.cache.clear(); this.inFlight.clear();
     this.patch({ tracks: files.length, index: files.length ? 0 : -1,
       title: files[0]?.title ?? null, phase: files.length ? 'ready' : 'idle',
       position: 0, duration: 0, error: null, generation: this.state.generation + 1 });
@@ -319,17 +328,17 @@ export class BrowserAudioRuntime implements AudioEngine {
     const mine = ++this.sequence;
     // Capture user activation before await/lock/decode, essential for iOS Safari.
     let activation: Promise<void>;
-    try { activation = this.activate(); }
+    try { activation = this.activate(); void activation.catch(() => {}); }
     catch (error) { this.patch({ phase: 'error', pending: null, error: (error as Error).message }); return; }
     this.patch({ phase: 'starting', pending: 'Preparing local recording', error: null });
     try {
       const ownership = await this.lease.acquire();
       if (ownership === 'unsupported') throw new Error('Audio is owned by another tab, or this browser cannot safely coordinate tabs.');
-      if (mine !== this.sequence || this.disposed) return;
+      if (mine !== this.sequence || this.disposed) { this.lease.release(); return; }
       await activation;
       if (!this.context || !this.decks) throw new Error('Audio output is not available.');
       const buffer = await this.decode(index, this.context);
-      if (mine !== this.sequence || this.disposed) return;
+      if (mine !== this.sequence || this.disposed) { this.lease.release(); return; }
       const offset = boundedPosition(this.state.position, buffer.duration);
       const t = this.context.currentTime + 0.02;
       this.haltSources();
@@ -339,6 +348,7 @@ export class BrowserAudioRuntime implements AudioEngine {
       this.patch({ phase: 'playing', index, title: this.queue[index].title, duration: buffer.duration, position: offset,
         pending: null, context: this.context.state, ownership, error: null });
       this.bindSession(); this.updateClock(); this.planAdvance();
+      if (index + 1 < this.queue.length) void this.decode(index + 1, this.context).catch(() => {});
     } catch (error) {
       if (mine !== this.sequence || this.disposed) return;
       this.haltSources(); this.lease.release();
@@ -350,7 +360,8 @@ export class BrowserAudioRuntime implements AudioEngine {
     this.sequence++;
     const position = this.positionNow();
     this.haltSources();
-    this.patch({ phase: 'paused', position, pending: null });
+    this.lease.release();
+    this.patch({ phase: 'paused', position, ownership: 'none', pending: null });
     this.syncSession();
     try { await this.context?.suspend(); }
     catch { this.patch({ error: 'Browser refused to suspend the audio context; output may be interrupted.' }); }
@@ -424,6 +435,7 @@ export class BrowserAudioRuntime implements AudioEngine {
       this.patch({ index: next, title: this.queue[next].title, duration: buffer.duration, position: 0,
         pending: null, error: null });
       this.syncSession(); this.planAdvance();
+      if (next + 1 < this.queue.length) void this.decode(next + 1, context).catch(() => {});
     } catch (error) {
       if (mine !== this.sequence) return;
       this.patch({ pending: null, error: 'Next track unavailable; current playback preserved if still active. ' +
@@ -477,7 +489,7 @@ export class BrowserAudioRuntime implements AudioEngine {
       window.removeEventListener('pagehide', this.onPageHide);
       window.removeEventListener('blur', this.onBlur);
     }
-    navigator.mediaDevices?.removeEventListener?.('devicechange', this.onDeviceChange);
+    if (typeof navigator !== 'undefined') navigator.mediaDevices?.removeEventListener?.('devicechange', this.onDeviceChange);
     this.listeners.clear();
     this.cache.clear(); this.queue = [];
     await this.context?.close().catch(() => {});
