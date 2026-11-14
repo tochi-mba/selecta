@@ -322,9 +322,16 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
     } catch (error) {
       // Cloud may have timed out, rejected, or been partitioned. Never leave
       // a newly activated target audibly running without acknowledged ownership.
-      if (pendingStarted || cmd.action === 'activate_output') await engine.stop();
+      let silenceVerified = true;
+      if (pendingStarted || cmd.action === 'activate_output') {
+        try { await engine.stop(); }
+        catch { silenceVerified = false; }
+      }
       setPendingStarted(false);
-      setProblem('Speaker acknowledgement could not be verified; local output stopped. ' + (error as Error).message);
+      setProblem((silenceVerified
+        ? 'Speaker acknowledgement failed; local output stopped. '
+        : 'URGENT: speaker stop failed. Physically disconnect or mute the output and reconcile ownership. ') +
+        (error as Error).message);
     } finally { setBusy(false); }
   };
   const rejectPending = async () => {
@@ -410,7 +417,7 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
           } catch (error) {
             // Client.revoke discards its in-memory secret even when offline.
             // Never leave the UI registered with no usable credentials.
-            setProblem('Remote revocation could not be confirmed. Local output stopped; the server may display this device until its session expires. ' +
+            setProblem('Remote revocation or physical silence could not be confirmed. Check the speaker locally; the server may display this device until its session expires. ' +
               (error as Error).message);
           } finally {
             setRegistered(false); setPending(null); setPendingStarted(false);
