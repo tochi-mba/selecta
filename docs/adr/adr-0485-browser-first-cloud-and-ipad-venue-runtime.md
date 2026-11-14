@@ -58,4 +58,4 @@ The Cloud player cannot be called production-ready before:
 
 ## Implementation tasks
 
-Track the browser/device-specific tasks as **LF-0485-01 through LF-0485-12** in the authoritative local-first checklist. All remain unticked until cited implementation, automated tests and independent real-device evidence exist. This ADR supersedes contradictory mandatory native Cloud runtime goals; it does **not** mark any implementation complete.
+Track the browser/device-specific tasks as **LF-0485-01 through LF-0485-16** in the authoritative local-first checklist. All remain unticked until cited implementation, automated tests and independent real-device evidence exist. This ADR supersedes contradictory mandatory native Cloud runtime goals; it does **not** mark any implementation complete.

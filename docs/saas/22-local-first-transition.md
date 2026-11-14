@@ -1,4 +1,6 @@
-# Hosted-audio migration, infrastructure exit and commercial gate
+# Browser Cloud hosted-audio retirement, rights and commercial gate
+
+**2026-11-14:** [ADR-0485](../adr/adr-0485-browser-first-cloud-and-ipad-venue-runtime.md) supersedes mandatory native engines and hardware-only venues. The replacement is **real browser DSP and audio playback**, including phones rendering locally and iPad/Android tablets as sole venue players. [Master repository/UX plan](../adr/selecta-browser-first-master-plan.md).
 
 **Accepted target:** 2026-11-13. **Implementation:** Not started. No services or customer files are changed by this documentation PR.
 
@@ -18,7 +20,7 @@ Hosted control API, Postgres/RLS/Alembic, WorkOS identity, Stripe billing/reconc
 
 3. Introduce canonical track references, device-local bindings, immutable recipe schema and old asset-to-catalogue migration. Preserve unresolved references and historical mix versions.
 
-4. Pair supported local agents, verify actual analysis/seam/export and 5/8 missing media repair, and migrate clients/plan copy to device-first UI.
+4. Qualify **browser** player sessions with local file permissions, actual WebAudio playback, browser-ported analysis/seam/render/export and 5/8 missing media repair on desktop, phones, iPad and Android tablets. No Python local agent is required.
 
 5. Add new versioned plans without processing/storage quotas; keep old customer billing contracts reconciled and AI meter correctly bounded.
 

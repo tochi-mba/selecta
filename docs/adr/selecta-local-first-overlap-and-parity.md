@@ -1,4 +1,6 @@
-# LF supersession map and feature-preservation contract
+# LF browser-first supersession and feature parity
+
+**2026-11-14 architecture override:** [ADR-0485](adr-0485-browser-first-cloud-and-ipad-venue-runtime.md) rules out mandatory native Cloud engines. A sole iPad or Android tablet must be a browser venue player; a capable phone browser must play and **render** locally. All existing native audio algorithms become **quality references** needing browser ports/benchmark evidence, not automatic Cloud parity. [Full UI/source map](selecta-browser-first-master-plan.md).
 
 **Authority:** ADR-0455 through ADR-0484 accepted 2026-11-13. Existing accepted ADRs document historical intent and remain unchanged until implementation evidence is independently reconciled. A later local-first decision supersedes only a conflicting hosted-audio assumption, not the user's completed functionality.
 
@@ -43,3 +45,14 @@
 "Remove upload route" means replace media import with local source selection, not remove adding music. "Remove render quota" means unmetered local work with device resource controls, not unlimited parallel RAM. "Remove cloud exports" means preserve local validated exports, not remove export buttons. "Remove worker" means keep the music algorithms locally, not delete the DSP engine.
 
 **Auditor procedure:** For each existing test/route/feature flag and UX action, record old behavior, replacement source, new evidence, accessibility outcome, migration and explicit decision. Mark a capability **At risk** until a real end-to-end replacement passes. No functionality is retired solely on documentation claims.
+
+## Browser parity evidence extension
+
+| Existing Python capability | Browser target | Mandatory proof |
+|---|---|---|
+| Two-deck, EQ, crossfade, filter, limiter | AudioWorklet playback on phone/tablet/desktop | Actual output, realtime glitches, golden audio |
+| Beat This, PyTorch key, librosa features | Validated WASM/JS and optional browser-ML | Model conversion, confidence/musical tolerance and performance |
+| Pedalboard time stretch, seam scripts, stem interplay | Port advanced seams with core fallback clearly differentiated | Musical parity, bounded deadline, safe fallback |
+| Demucs stems and wav2vec2 lyric alignment | Optional advanced browser feature per measured device | Licence/model/operator/RAM/thermal and real media tests |
+| SoundFile FLAC export, long mixes | Phone and desktop local chunked render/export | Verified encoded file, disk/eviction/cancel, no Cloud PCM |
+| Native venue autoplay/offline | Foreground/awake tablet venue browser | Six-hour real audible output and honest app-kill/lock limitations |
