@@ -323,12 +323,23 @@ export class BrowserAudioRuntime implements AudioEngine {
     try { navigator.mediaSession.playbackState = 'none'; navigator.mediaSession.metadata = null; } catch { /* optional */ }
   }
   async setQueue(files: readonly LocalRecording[]): Promise<void> {
-    await this.stop();
+    // Replacing the queue must silence old sources and release their ownership,
+    // but MUST NOT suspend an AudioContext already unlocked by a user tap.
+    // Studio activates it before awaiting local file verification; suspending
+    // here would require a second gesture on Safari/iPadOS and silently fail Play.
+    this.sequence++;
+    this.haltSources();
+    if (this.clock) clearInterval(this.clock);
+    this.clock = null;
+    this.lease.release();
+    this.clearSession();
     this.queue = [...files];
     this.cache.clear(); this.inFlight.clear();
     this.patch({ tracks: files.length, index: files.length ? 0 : -1,
       title: files[0]?.title ?? null, phase: files.length ? 'ready' : 'idle',
-      position: 0, duration: 0, error: null, generation: this.state.generation + 1 });
+      position: 0, duration: 0, pending: null, ownership: 'none',
+      soundCheck: 'unverified', confirmationTime: null,
+      error: null, generation: this.state.generation + 1 });
   }
   async activate(): Promise<void> {
     // Only call directly from user interaction. A passive effect cannot unlock Safari audio.
