@@ -20,6 +20,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Engine
 
 from selecta.lf_control.protocol import ActorScope, ControlError, _id, _integer
+from selecta.persistence import transaction
 
 from . import schema
 from .protocol import (
@@ -111,11 +112,10 @@ class BrowserControlService:
         schema.metadata.create_all(self.engine)
 
     @contextmanager
-    def _tx(self):
-        with self.engine.begin() as db:
-            # SQLite serialises control mutations; PostgreSQL uses FOR UPDATE row locks.
-            if self.engine.dialect.name == "sqlite":
-                db.exec_driver_sql("BEGIN IMMEDIATE")
+    def _tx(self, workspace_id: str):
+        # The real Cloud transaction establishes tenant-scoped PostgreSQL RLS context.
+        # Production uses FOR UPDATE on fenced state rows; no unscoped connection here.
+        with transaction(self.engine, workspace_id) as db:
             yield db
 
     def _row(self, db, table: sa.Table, **where):
@@ -189,7 +189,7 @@ class BrowserControlService:
         now = self.clock()
         token = secrets.token_urlsafe(48)
         sid = secrets.token_urlsafe(24)
-        with self._tx() as db:
+        with self._tx(actor.workspace_id) as db:
             device = self._row(db, schema.devices, workspace=actor.workspace_id, device=device_id)
             if device:
                 if device["revoked"]:
@@ -224,7 +224,7 @@ class BrowserControlService:
 
     def refresh(self, actor: ActorScope, session: str, token: str) -> dict:
         now = self.clock()
-        with self._tx() as db:
+        with self._tx(actor.workspace_id) as db:
             self._session(db, actor, session, token, now=now)
             fresh = secrets.token_urlsafe(48)
             db.execute(schema.sessions.update().where(
@@ -256,7 +256,7 @@ class BrowserControlService:
         clean_caps = _caps(capabilities)
         src_at = _timestamp(source_checked_at, now=now)
         out_at = _timestamp(output_checked_at, now=now)
-        with self._tx() as db:
+        with self._tx(actor.workspace_id) as db:
             row = self._session(db, actor, session, token, now=now)
             # A browser cannot silently downgrade its observed durable owner fence.
             if generation < row["generation"]:
@@ -275,7 +275,7 @@ class BrowserControlService:
 
     def revoke(self, actor: ActorScope, session: str, token: str | None = None) -> dict:
         now = self.clock()
-        with self._tx() as db:
+        with self._tx(actor.workspace_id) as db:
             row = self._row(db, schema.sessions, session=_required_id(session))
             if row is None or row["workspace"] != actor.workspace_id:
                 raise ControlError("unknown_session")
@@ -316,7 +316,7 @@ class BrowserControlService:
     def devices(self, actor: ActorScope, zone: str) -> dict:
         self._scope(actor, zone)
         now = self.clock()
-        with self.engine.connect() as db:
+        with transaction(self.engine, actor.workspace_id) as db:
             rows = db.execute(
                 sa.select(schema.sessions, schema.devices.c.label)
                 .join(schema.devices, sa.and_(
@@ -349,7 +349,7 @@ class BrowserControlService:
     def speaker(self, actor: ActorScope, zone: str) -> dict:
         self._scope(actor, zone)
         now = self.clock()
-        with self.engine.connect() as db:
+        with transaction(self.engine, actor.workspace_id) as db:
             owner = self._row(db, schema.owners, workspace=actor.workspace_id, zone=zone)
             if owner is None:
                 return {"schema_version": 1, "zone_id": zone, "generation": 0,
@@ -459,7 +459,7 @@ class BrowserControlService:
         _integer(policy_version)
         _id(recipe_revision, optional=True)
         now = self.clock()
-        with self._tx() as db:
+        with self._tx(actor.workspace_id) as db:
             owner = self._row(db, schema.owners, workspace=actor.workspace_id, zone=zone)
             target = self._row(db, schema.sessions, session=target_session)
             if owner is None or target is None or target["workspace"] != actor.workspace_id:
@@ -500,7 +500,7 @@ class BrowserControlService:
         if type(initial_silence_confirmed) is not bool:
             raise ControlError("invalid_initial_silence")
         now = self.clock()
-        with self._tx() as db:
+        with self._tx(actor.workspace_id) as db:
             old = db.execute(sa.select(schema.transfers).where(
                 sa.or_(schema.transfers.c.transfer == operation_id,
                        sa.and_(schema.transfers.c.workspace == actor.workspace_id,
@@ -606,7 +606,7 @@ class BrowserControlService:
 
     def poll(self, actor: ActorScope, session: str, token: str) -> dict:
         now = self.clock()
-        with self._tx() as db:
+        with self._tx(actor.workspace_id) as db:
             s = self._session(db, actor, session, token, now=now)
             if not self._online(s, now):
                 raise ControlError("browser_not_running")
@@ -641,7 +641,7 @@ class BrowserControlService:
                    (output_confirmed, output_silent, execution_verified))
         ):
             raise ControlError("invalid_ack")
-        with self._tx() as db:
+        with self._tx(actor.workspace_id) as db:
             self._session(db, actor, session, token, now=now)
             row = self._row(db, schema.commands, operation=operation_id)
             if row is None or row["workspace"] != actor.workspace_id or row["session"] != session:
@@ -765,7 +765,7 @@ class BrowserControlService:
         if actor.role not in {"owner", "admin"}:
             raise ControlError("role_denied")
         _required_id(device_id)
-        with self._tx() as db:
+        with self._tx(actor.workspace_id) as db:
             device = self._row(db, schema.devices, workspace=actor.workspace_id,
                                device=device_id)
             if device is None or not set(json.loads(device["zones"])) <= actor.zones:
@@ -801,7 +801,7 @@ class BrowserControlService:
     def recovery(self, actor: ActorScope, session: str, token: str) -> dict:
         """Metadata-only reconciliation, never automatic re-execution after a dropped ACK."""
         now = self.clock()
-        with self._tx() as db:
+        with self._tx(actor.workspace_id) as db:
             record = self._session(db, actor, session, token, now=now)
             self._expire(db, session=session, now=now)
             outstanding = db.execute(sa.select(schema.commands).where(
@@ -828,7 +828,7 @@ class BrowserControlService:
         self._scope(actor, zone)
         _required_id(operation_id)
         now = self.clock()
-        with self._tx() as db:
+        with self._tx(actor.workspace_id) as db:
             row = self._row(db, schema.commands, operation=operation_id)
             if row is None or row["workspace"] != actor.workspace_id or row["zone"] != zone:
                 raise ControlError("unknown_operation")
@@ -838,7 +838,7 @@ class BrowserControlService:
 
     def transfer_status(self, actor: ActorScope, zone: str, transfer_id: str) -> dict:
         self._scope(actor, zone)
-        with self.engine.connect() as db:
+        with transaction(self.engine, actor.workspace_id) as db:
             row = self._row(db, schema.transfers, transfer=_required_id(transfer_id))
             if row is None or row["workspace"] != actor.workspace_id or row["zone"] != zone:
                 raise ControlError("unknown_transfer")
