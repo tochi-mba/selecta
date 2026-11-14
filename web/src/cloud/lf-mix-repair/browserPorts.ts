@@ -132,7 +132,7 @@ export function checkedAvailability(
       availability.deviceId !== deviceId ||
       !Number.isFinite(availability.verifiedAt) ||
       !Number.isFinite(availability.expiresAt) ||
-      availability.verifiedAt > now + 5000 || availability.expiresAt <= now ||
+      availability.verifiedAt > now + 5000 || now - availability.verifiedAt > 120_000 || availability.expiresAt <= now ||
       availability.tracks.length !== recipe.occurrences.length) {
     return { ready: 0, total: recipe.occurrences.length, allReady: false, outputVerified: false, rows: recipe.occurrences.map(
       (r) => ({ occurrenceId: r.occurrence_id, canonicalTrackId: null, recordingVersion: null, state: 'unknown' as BrowserMediaState, exactIdentityVerified: false }),
@@ -143,7 +143,7 @@ export function checkedAvailability(
     return report && report.occurrenceId === occurrence.occurrence_id &&
       report.canonicalTrackId === occurrence.canonical_track_id &&
       report.recordingVersion === occurrence.recording_version &&
-      occurrence.canonical_track_id !== null &&
+      occurrence.canonical_track_id !== null && occurrence.recording_version !== null &&
       report.verifiedAt !== undefined && Number.isFinite(report.verifiedAt) &&
       report.verifiedAt <= now + 5000 && report.verifiedAt >= availability.verifiedAt - 120000
       ? report : { occurrenceId: occurrence.occurrence_id, canonicalTrackId: null, recordingVersion: null, state: 'unknown' as BrowserMediaState, exactIdentityVerified: false };
