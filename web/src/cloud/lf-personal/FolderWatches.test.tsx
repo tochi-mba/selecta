@@ -8,7 +8,7 @@ const record = (id: string, state: string, enabled = true) => ({
   enabled, available: state !== 'offline', state, indexed: 8, discovered: 10,
   last_scanned_at: 1_730_000_000, last_attempt_at: 1_730_000_200, problem: null,
 });
-const response = (sources = [record('one', 'ready'), record('two', 'offline')]) =>
+const response = (sources: Record<string, unknown>[] = [record('one', 'ready'), record('two', 'offline')]) =>
   ({ schema_version: 1, device: 'This computer', watch_every_seconds: 300, sources });
 const json = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), { status, headers: { 'content-type': 'application/json' } });
