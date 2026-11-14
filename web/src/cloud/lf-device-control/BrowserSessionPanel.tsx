@@ -40,11 +40,16 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
   const fence = useRef(0);
   const processing = useRef(false);
   const alive = useRef(true);
+  const registeredRef = useRef(registered);
+  registeredRef.current = registered;
 
   useEffect(() => {
     alive.current = true;
     return () => {
       alive.current = false;
+      // The Cloud session must not disappear while its browser keeps sounding.
+      // A hidden/unmounted executor cannot safely promise remote commands.
+      if (registeredRef.current) void engine.stop();
       void client.revoke().catch(() => {});
     };
   }, [client]);
@@ -320,7 +325,8 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
   return <section className="cloud-card" aria-label="Authenticated browser speaker control">
     <h3>Browser speaker session and remote</h3>
     <p>Cloud carries signed metadata-only commands. Only this device has its recordings.
-      A queued command never proves that another speaker produced sound.</p>
+      A queued command never proves that another speaker produced sound.
+      Hiding this panel ends its active registration and stops the local output for safety.</p>
     <label>Authorised zone ID
       <input aria-label="Speaker zone ID" value={zone} onChange={(event) => setZone(event.target.value)}
         disabled={registered || busy} maxLength={128} />
