@@ -31,8 +31,10 @@ test('phone portrait provides accessible order/cue controls and local rendering 
   await expect(page.getByRole('button', { name: 'Preview transition into Synthetic Track 2' })).toBeEnabled();
   await page.getByRole('button', { name: 'Preview transition into Synthetic Track 2' }).click();
   expect(await page.evaluate(() => window.br64Fixture?.counts().preview)).toBe(1);
-  const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Render and export here' }).click();
+  await expect(page.getByRole('button', { name: 'Download local export' })).toBeVisible();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download local export' }).click();
   expect((await download).suggestedFilename()).toBe('synthetic-fixture.wav');
   expect(await page.evaluate(() => window.br64Fixture?.counts().render)).toBe(1);
   await expect(page.getByRole('button', { name: 'Move Synthetic Track 2 earlier' })).toBeVisible();
