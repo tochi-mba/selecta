@@ -91,10 +91,11 @@ describe('BR64-08 foreground browser venue programme', () => {
     } finally { await runner.dispose(); }
   });
   it('refuses browser suspension as grounds to claim continuous local playback', async () => {
-    const f = fixture({ foreground: false });
+    const f = fixture();
     const runner = new BrowserVenueProgramme(scope, f.adapters, () => NOW);
     try {
       await runner.start();
+      f.snapshot.foreground = false;
       await runner.tick();
       expect(runner.status().state).toBe('interrupted');
       expect(f.transition).not.toHaveBeenCalled();
