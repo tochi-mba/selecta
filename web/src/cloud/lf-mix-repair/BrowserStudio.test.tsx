@@ -76,6 +76,21 @@ describe('portable browser Studio', () => {
       .map((row) => row.occurrence_id)).toEqual(['second', 'first']);
     expect(requests.every(({ path }) => !path.includes('/assets') && !path.includes('/upload'))).toBe(true);
   });
+  it('retains an older unsaved draft when Cloud has a new head revision', async () => {
+    const { api } = stubApi();
+    const key = 'br64-07:draft:workspace_1:saved_mix';
+    window.sessionStorage.setItem(key, JSON.stringify({
+      base: 'f'.repeat(64), edit: {
+        name: 'Offline revision', draft: true, occurrences: [...original.occurrences].reverse(),
+        cues: [], transitions: [],
+      },
+    }));
+    window.history.replaceState({}, '', '/studio?mix=saved_mix');
+    render(<BrowserStudio api={api} workspaceId="workspace_1" />);
+    expect(await screen.findByText('Review recoverable earlier draft (metadata only)')).toBeInTheDocument();
+    expect(window.sessionStorage.getItem(key)).toContain('Offline revision');
+    expect(screen.getByRole('button', { name: 'Save new version' })).toBeDisabled();
+  });
   it('keeps draft and disables file upload/render when local adapters are absent', async () => {
     const { api } = stubApi(409);
     render(<BrowserStudio api={api} workspaceId="workspace_1" />);
