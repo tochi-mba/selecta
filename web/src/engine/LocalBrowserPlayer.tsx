@@ -42,7 +42,7 @@ export function LocalBrowserPlayer({ workspaceId }: { workspaceId: string }) {
   const play = async () => {
     if (now.phase === 'playing') { await engine.pause(); return; }
     if (now.phase === 'starting') return;
-    if (now.ownership === 'unsupported' && now.phase === 'interrupted') {
+    if (now.error?.includes('another tab') || now.error?.includes('coordinate tabs')) {
       setConfirmTakeover(true); return;
     }
     await engine.play();
@@ -135,7 +135,7 @@ export function LocalBrowserPlayer({ workspaceId }: { workspaceId: string }) {
       </div>}
       {confirmTakeover && <div role="alertdialog" aria-label="Confirm tab audio takeover" className="browser-player-dialog">
         <p>Only one tab can play on this browser profile. This action will request ownership; do not assume a remote or offline speaker has stopped.</p>
-        <button type="button" onClick={() => { setConfirmTakeover(false); void engine.play(); }}>Confirm Play Here</button>
+        <button type="button" onClick={() => { setConfirmTakeover(false); sayThisTabIsPlaying(); window.setTimeout(() => { void engine.play(); }, 130); }}>Request safe local handoff</button>
         <button type="button" onClick={() => setConfirmTakeover(false)}>Cancel</button>
       </div>}
       {now.error && <p role="alert" className="cloud-feedback error" data-testid="br64-01-error">{now.error}</p>}
