@@ -48,6 +48,7 @@ export class BrowserVenueProgramme {
   private lastReportAt = 0;
   private runningTick = false;
   private transitionInFlight = false;
+  private startInFlight = false;
   private playbackEpoch = 0;
   private disposed = false;
   private issue: string | null = null;
@@ -99,32 +100,48 @@ export class BrowserVenueProgramme {
   /** Must be invoked from an on-device user tap, never remote automatic autoplay. */
   async start(): Promise<void> {
     this.check();
+    if (this.startInFlight) throw new Error('Venue start is already preparing');
     if (this.state === 'running') throw new Error('This speaker already owns a programme');
-    if (!await this.adapters.audio.unlock())
-      throw new Error('The browser requires a tap and a permitted audio output');
-    if (!this.adapters.audio.snapshot().foreground)
-      throw new Error('The venue browser must remain visible to start playback');
-    await this.load();
-    const policy = this.policy!;
-    if (!venueOpen(policy, this.clock())) throw new Error('The venue is currently closed');
-    if (await this.adapters.media.sourceState(this.scope.zoneId) !== 'connected')
-      throw new Error('Authorised local music source is not accessible on this device');
-    const lease = await this.adapters.cloud.acquire(this.scope);
-    if (!Number.isSafeInteger(lease.generation) || lease.generation <= this.generation ||
-      lease.expiresAt <= this.clock())
-      throw new Error('Unverified, expired or stale Cloud speaker ownership');
-    const selected = this.horizon!.committed[0];
-    await this.bind(selected);
-    await this.adapters.audio.start(selected.id, lease.generation);
-    this.generation = lease.generation;
-    this.current = selected;
-    this.index = 0;
-    this.state = 'running';
-    this.issue = null;
-    if (this.timer) clearInterval(this.timer);
-    this.timer = setInterval(() => void this.tick(), 1000);
+    const revision = ++this.playbackEpoch;
+    this.startInFlight = true;
+    try {
+      // This must be initiated within the actual on-device tap gesture.
+      const activation = this.adapters.audio.unlock();
+      if (!await activation)
+        throw new Error('The browser requires a tap and a permitted audio output');
+      if (!this.adapters.audio.snapshot().foreground)
+        throw new Error('The venue browser must remain visible to start playback');
+      await this.load();
+      const policy = this.policy!;
+      if (!venueOpen(policy, this.clock())) throw new Error('The venue is currently closed');
+      if (await this.adapters.media.sourceState(this.scope.zoneId) !== 'connected')
+        throw new Error('Authorised local music source is not accessible on this device');
+      if (revision !== this.playbackEpoch || this.disposed)
+        throw new Error('Venue start cancelled by Stop or device shutdown');
+      const lease = await this.adapters.cloud.acquire(this.scope);
+      if (!Number.isSafeInteger(lease.generation) || lease.generation <= this.generation
+        || lease.expiresAt <= this.clock())
+        throw new Error('Unverified, expired or stale Cloud speaker ownership');
+      const selected = this.horizon!.committed[0];
+      await this.bind(selected);
+      if (revision !== this.playbackEpoch || this.disposed)
+        throw new Error('Venue start cancelled during local music preparation');
+      await this.adapters.audio.start(selected.id, lease.generation);
+      if (revision !== this.playbackEpoch || this.disposed) {
+        await this.adapters.audio.stop();
+        throw new Error('Venue start cancelled during audio activation');
+      }
+      this.generation = lease.generation;
+      this.current = selected;
+      this.index = 0;
+      this.state = 'running';
+      this.issue = null;
+      if (this.timer) clearInterval(this.timer);
+      this.timer = setInterval(() => void this.tick(), 1000);
+    } finally {
+      this.startInFlight = false;
+    }
   }
-
   private nextCandidate(): CanonicalTrack | null {
     if (!this.horizon) return null;
     const committedNext = this.horizon.committed[this.index + 1];
@@ -242,8 +259,9 @@ export class BrowserVenueProgramme {
       throw new Error('This browser lost its playback session. Use Start on the venue device to recheck sources and speaker ownership.');
     if (this.state !== 'paused')
       throw new Error('No paused browser session to resume');
-    if (!this.policy || !this.current ||
-      !recordingAllowed(this.policy, this.facts.get(this.current.id)!, this.clock()))
+    const facts = this.current && this.facts.get(this.current.id);
+    if (!this.policy || !this.current || !facts ||
+      !recordingAllowed(this.policy, facts, this.clock()))
       throw new Error('Cannot resume outside approved venue hours or music policy');
     await this.adapters.audio.resume();
     this.state = 'running';
