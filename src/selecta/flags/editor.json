@@ -89,6 +89,7 @@
         "POST /api/exports/jobs",
         "GET /api/exports/jobs",
         "GET /api/exports/jobs/{job_id}",
+        "GET /api/exports/local-artifacts/{artifact_id}",
         "DELETE /api/exports/jobs/{job_id}"
       ],
       "surfaces": ["edit", "overlay.export", "overlay.activity", "workshop", "cloud.billing"],
