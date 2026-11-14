@@ -1,5 +1,6 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { ENGINE_INSTALL_GUIDE, LOCAL_ENGINE_URL } from './contract';
+import { localWatchRequest } from './watchClient';
 import './folderWatches.css';
 
 /** These routes exist only in the loopback Cloud development companion.
@@ -56,23 +57,6 @@ export function parseWatchedFolders(data: unknown): WatchSnapshot {
   };
 }
 
-async function localRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    ...init,
-    headers: {
-      'X-Selecta-Local-Watch': '1',
-      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
-    },
-    credentials: 'same-origin',
-  });
-  const payload: unknown = await response.json().catch(() => null);
-  if (!response.ok) {
-    const reason = object(payload).detail;
-    throw new Error(typeof reason === 'string' ? reason : 'The local source manager did not accept this request.');
-  }
-  if (payload === null) throw new Error('The local source manager is not available.');
-  return payload as T;
-}
 const ROOT = '/dev/local-watches';
 
 function lastChecked(epoch: number | null): string {
@@ -113,7 +97,7 @@ export function FolderWatches({ compact = false }: { compact?: boolean }) {
     const current = ++sequence.current;
     if (showLoading) setPhase('loading');
     try {
-      const next = parseWatchedFolders(await localRequest<unknown>(ROOT));
+      const next = parseWatchedFolders(await localWatchRequest<unknown>(ROOT));
       if (current !== sequence.current) return;
       setSnapshot(next);
       setPhase('ready');
@@ -163,12 +147,12 @@ export function FolderWatches({ compact = false }: { compact?: boolean }) {
     if (!path || pending) return;
     setPending('add'); setProblem(''); setNotice('');
     try {
-      const check = await localRequest<{ ok: boolean; reason?: string }>(ROOT + '/check?folder=' + encodeURIComponent(path));
+      const check = await localWatchRequest<{ ok: boolean; reason?: string }>(ROOT + '/check?folder=' + encodeURIComponent(path));
       if (!check.ok) {
         setProblem(check.reason ?? 'This folder cannot be watched.');
         return;
       }
-      await localRequest(ROOT, { method: 'POST', body: JSON.stringify({ folder: path }) });
+      await localWatchRequest(ROOT, { method: 'POST', body: JSON.stringify({ folder: path }) });
       setFolder(''); setAddOpen(false);
       setNotice('Folder added. Indexing is queued on this computer; it does not upload music.');
       await refresh();
@@ -266,9 +250,9 @@ export function FolderWatches({ compact = false }: { compact?: boolean }) {
             </div>
             <div className="lfw-item-actions">
               <button type="button" disabled={!source.enabled || pending !== '' || !source.available || source.state === 'scanning'}
-                onClick={() => void change(key, () => localRequest(ROOT + '/' + encodeURIComponent(key) + '/scan', { method: 'POST' }), 'A local scan was requested. Counts update after the engine reports progress.')}>Scan now</button>
+                onClick={() => void change(key, () => localWatchRequest(ROOT + '/' + encodeURIComponent(key) + '/scan', { method: 'POST' }), 'A local scan was requested. Counts update after the engine reports progress.')}>Scan now</button>
               <button type="button" disabled={pending !== ''}
-                onClick={() => void change(key, () => localRequest(ROOT + '/' + encodeURIComponent(key), { method: 'PATCH', body: JSON.stringify({ enabled: !source.enabled }) }),
+                onClick={() => void change(key, () => localWatchRequest(ROOT + '/' + encodeURIComponent(key), { method: 'PATCH', body: JSON.stringify({ enabled: !source.enabled }) }),
                   source.enabled ? 'Watching paused. Files and indexed recordings have been kept.' : 'Watching resumed. A scan has been queued on this device.')}>
                 {source.enabled ? 'Pause' : 'Resume'}
               </button>
@@ -282,7 +266,7 @@ export function FolderWatches({ compact = false }: { compact?: boolean }) {
             <div className="lfw-actions">
               <button type="button" onClick={() => setConfirmStop(null)}>Keep folder</button>
               <button type="button" className="lfw-danger" disabled={pending !== ''} onClick={() => void change(key,
-                () => localRequest(ROOT + '/' + encodeURIComponent(key), { method: 'DELETE' }).then(() => setConfirmStop(null)),
+                () => localWatchRequest(ROOT + '/' + encodeURIComponent(key), { method: 'DELETE' }).then(() => setConfirmStop(null)),
                 'Folder removed from the watch list. No recordings were deleted.')}>Stop watching this folder</button>
             </div>
           </div>}
