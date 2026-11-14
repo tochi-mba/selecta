@@ -7,9 +7,7 @@
 // web/src/business/offline is reached only through an implementation of this interface that
 // lives outside the business folder (or a kiosk-side copy of its rules).
 //
-// Legacy stubAudio below is retained only for older screen-contract tests; it resumes a silent AudioContext and
-// plays one silent buffer. If the context stays suspended, the browser wants a tap first.
-// Unlocking the browser NEVER proves a physical speaker played user music.
+// Unlocking a browser context never proves its speaker is physically audible.
 
 import { BrowserVenueAudio, type LocalRecording, type PlayerSnapshot, type VenueAudioPort } from '../venue-player/browserAudio';
 
@@ -20,46 +18,6 @@ export interface KioskAudio {
   playing(): boolean;
   /** Hours of music saved on this player ahead of now (0 when nothing is saved). */
   savedHoursAhead(): number;
-}
-
-type AudioContextLike = {
-  state: string;
-  resume(): Promise<void>;
-  createBuffer(channels: number, length: number, rate: number): unknown;
-  createBufferSource(): { buffer: unknown; connect(target: unknown): void; start(when?: number): void };
-  destination: unknown;
-};
-
-export function stubAudio(make: () => AudioContextLike | null = defaultContext): KioskAudio {
-  let context: AudioContextLike | null = null;
-  let unlocked = false;
-  return {
-    async unlock() {
-      if (unlocked) return true;
-      try {
-        context = context ?? make();
-        if (!context) return false;
-        const source = context.createBufferSource();
-        source.buffer = context.createBuffer(1, 1, 22050);
-        source.connect(context.destination);
-        source.start(0);
-        await Promise.race([context.resume(), new Promise((resolve) => setTimeout(resolve, 500))]);
-        unlocked = context.state === 'running';
-      } catch {
-        unlocked = false;
-      }
-      return unlocked;
-    },
-    // A silent unlock probe cannot count as playback or a positive heartbeat.
-    playing: () => false,
-    savedHoursAhead: () => 0,
-  };
-}
-
-function defaultContext(): AudioContextLike | null {
-  const Ctor = (globalThis as { AudioContext?: new () => AudioContextLike; webkitAudioContext?: new () => AudioContextLike }).AudioContext
-    ?? (globalThis as { webkitAudioContext?: new () => AudioContextLike }).webkitAudioContext;
-  return Ctor ? new Ctor() : null;
 }
 
 /** Production browser player: actual decoded File audio routed to the OS default output.

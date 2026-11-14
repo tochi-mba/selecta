@@ -43,7 +43,7 @@ function startBrowserKiosk(mount: HTMLElement): void {
   element(heading, 'h1', 'Play music from this device');
   element(heading, 'p',
     'Works on a supported iPad, Android tablet or laptop without installing Python. Keep the browser foreground, awake and powered for supervised venue use.');
-  const warning = element(mount, 'p',
+  element(mount, 'p',
     'This page provides local, supervised playback only. Cloud schedules, guest Rooms and remote staff controls are not connected here. Background and reboot recovery are not guaranteed.',
     'kiosk-warning');
 
@@ -211,7 +211,6 @@ function startBrowserKiosk(mount: HTMLElement): void {
     void player.dispose();
   }, { once: true });
   refresh();
-  void warning; // kept visible as a deliberate reliability disclosure
 }
 
 if (root) startBrowserKiosk(root);

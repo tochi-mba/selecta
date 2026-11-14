@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { stubAudio } from './audio';
 import { kioskScreen, LOCAL_CODES } from './state';
 import { sanitiseKioskView } from './view';
 import type { KioskFacts } from './state';
@@ -10,18 +9,6 @@ const facts: KioskFacts = {
 const view = { state: 'open' as const, now: { title: 'Local Song', artist: 'Test Artist' } };
 
 describe('LF13 kiosk truthful playback', () => {
-  it('an unlocked AudioContext cannot prove music is playing', async () => {
-    const audio = stubAudio(() => ({
-      state: 'running',
-      resume: async () => {},
-      createBuffer: () => ({}),
-      createBufferSource: () => ({ buffer: null, connect: () => {}, start: () => {} }),
-      destination: {},
-    }));
-    expect(await audio.unlock()).toBe(true);
-    expect(audio.playing()).toBe(false);
-    expect(audio.savedHoursAhead()).toBe(0);
-  });
   it('does not show Playing from an open server view without confirmed speaker output', () => {
     expect(kioskScreen(view, facts)).toEqual({ kind: 'problem', code: LOCAL_CODES.silent });
     expect(kioskScreen(view, { ...facts, playingConfirmed: true })).toEqual({ kind: 'playing', saved: false });
