@@ -88,7 +88,8 @@ export function VenueLocalReadiness({ venue, now, offline, onOpenTab, onRefresh 
           <Fact label="Prepared horizon" value={numberWords(item.preparedMinutes, ' min')} />
           <Fact label="Committed / planned" value={numberWords(item.committedMinutes, ' min') + ' / ' + numberWords(item.plannedMinutes, ' min')} />
           <Fact label="Fallback" value={numberWords(item.fallbackMinutes, ' min')} />
-          <Fact label="Real speaker" value={item.speaker ?? 'Not confirmed'} />
+          <Fact label="Speaker device" value={item.speaker ?? 'Not confirmed'} />
+          <Fact label="Speaker evidence" value={item.speakerEvidence === 'operator-heard' ? 'Heard by staff (not a meter)' : item.speakerEvidence === 'measured' ? 'Physically monitored' : 'Not verified'} />
           <Fact label="Actual output" value={item.output ?? 'Unknown'} />
           <Fact label="Ownership generation" value={numberWords(item.generation)} />
           <Fact label="Last verified" value={timeWords(item.verifiedAt)} />
