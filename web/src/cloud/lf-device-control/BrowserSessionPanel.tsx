@@ -173,6 +173,18 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
     if (!client.registered || processing.current || !alive.current) return;
     processing.current = true;
     try {
+      // A signed action is never authority to keep an unacknowledged target
+      // sounding beyond its absolute expiry. The browser may have been asleep
+      // or the human may have left without completing physical confirmation.
+      if (pending && Date.now() / 1000 >= pending.expires_at) {
+        if (pendingStarted || pending.action === 'activate_output') await engine.stop();
+        setPending(null);
+        setPendingStarted(false);
+        setReleaseStopped(false);
+        setSilenceConfirmed(false);
+        setProblem('The on-site speaker command expired. Unacknowledged local output was stopped; refresh before trying again.');
+        return;
+      }
       const now = engine.snapshot();
       if (Date.now() - lastRefresh.current > 30 * 60_000) {
         await client.refresh();
@@ -222,7 +234,7 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
     } catch (error) {
       if (alive.current) setProblem('Browser session needs attention: ' + (error as Error).message);
     } finally { processing.current = false; }
-  }, [client, engine, pending, operation, processCommand, zone, silenceConfirmed, transferId]);
+  }, [client, engine, pending, pendingStarted, operation, processCommand, zone, silenceConfirmed, transferId]);
 
   useEffect(() => {
     if (localState.phase === 'playing' || localState.phase === 'interrupted' || localState.phase === 'error')
