@@ -66,7 +66,8 @@ describe('BR64-07 Cloud flag combinations and route continuity', () => {
     account.features['local_first.player_v1'] = true;
     account.features['cloud.single_audio_owner'] = true;
     render(<CloudApp />);
-    await waitFor(() => expect(requests).toContain('/api/account'));
+    await screen.findByText('CURRENT PLAN'); // Wait for hosted-account render, not just the fetch request.
+    expect(requests).toContain('/api/account');
     expect(screen.queryByTestId('br64-01-browser-player')).not.toBeInTheDocument();
   });
 
