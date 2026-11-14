@@ -103,6 +103,7 @@ describe("browser Cloud signed command contract", () => {
       browser_version: "safari17", dsp_version: "browser1",
     });
     // Client reads a signed command but never applies it or sends an ACK itself.
+    vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
     expect((await client.next())?.action).toBe("pause");
     expect(requests.some((r) => r.path.endsWith("/ack"))).toBe(false);
