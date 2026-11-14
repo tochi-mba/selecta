@@ -279,6 +279,12 @@ class BrowserControlService:
             row = self._row(db, schema.sessions, session=_required_id(session))
             if row is None or row["workspace"] != actor.workspace_id:
                 raise ControlError("unknown_session")
+            device = self._row(db, schema.devices, workspace=row["workspace"],
+                               device=row["device"])
+            if device is None:
+                raise ControlError("scope_denied")
+            for zone in json.loads(device["zones"]):
+                self._scope(actor, zone, action="revoke_session", mutate=True)
             if actor.actor_id != row["actor"]:
                 if actor.role not in {"owner", "admin"}:
                     raise ControlError("scope_denied")
@@ -293,11 +299,18 @@ class BrowserControlService:
                 for owner in db.execute(sa.select(schema.owners).where(
                     schema.owners.c.workspace == actor.workspace_id,
                     schema.owners.c.speaker_session == session,
-                )).mappings():
+                )).mappings().all():
                     db.execute(schema.owners.update().where(
                         schema.owners.c.workspace == owner["workspace"],
                         schema.owners.c.zone == owner["zone"],
                     ).values(state="unknown"))
+                for tr in db.execute(sa.select(schema.transfers).where(
+                    schema.transfers.c.workspace == actor.workspace_id,
+                    sa.or_(schema.transfers.c.source_session == session,
+                           schema.transfers.c.target_session == session),
+                    schema.transfers.c.stage.not_in(("started", "blocked")),
+                )).mappings().all():
+                    self._block_transfer(db, {"transfer": tr["transfer"]}, now)
         return {"schema_version": 1, "session_id": session, "revoked": True}
 
     def devices(self, actor: ActorScope, zone: str) -> dict:
@@ -563,6 +576,13 @@ class BrowserControlService:
         tr = self._row(db, schema.transfers, transfer=transfer_id)
         if tr is None or tr["stage"] in {"started", "blocked"}:
             return
+        # Undelivered transfer steps are cancelled; a delivered step is *uncertain*
+        # and cannot be recalled over a partition. Never activate after this point.
+        for cmd in db.execute(sa.select(schema.commands).where(
+            schema.commands.c.transfer == transfer_id,
+            schema.commands.c.state.in_(("created", "authorised", "queued")),
+        )).mappings().all():
+            self._change(db, cmd, "superseded", now)
         db.execute(schema.transfers.update().where(
             schema.transfers.c.transfer == transfer_id
         ).values(stage="blocked", updated=now))
@@ -769,6 +789,13 @@ class BrowserControlService:
                     schema.owners.c.workspace == actor.workspace_id,
                     schema.owners.c.speaker_session.in_(affected),
                 ).values(state="unknown"))
+                for tr in db.execute(sa.select(schema.transfers).where(
+                    schema.transfers.c.workspace == actor.workspace_id,
+                    sa.or_(schema.transfers.c.source_session.in_(affected),
+                           schema.transfers.c.target_session.in_(affected)),
+                    schema.transfers.c.stage.not_in(("started", "blocked")),
+                )).mappings().all():
+                    self._block_transfer(db, {"transfer": tr["transfer"]}, self.clock())
         return {"schema_version": 1, "device_id": device_id, "revoked": True}
 
     def recovery(self, actor: ActorScope, session: str, token: str) -> dict:
