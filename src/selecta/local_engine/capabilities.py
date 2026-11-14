@@ -72,6 +72,7 @@ def ffmpeg_probe() -> dict[str, Any]:
             if any(
                 name == prefix
                 or name.startswith(prefix + "_")
+                or (codec == "wav" and name in {"pcm_s16le", "pcm_s16be"})
                 or (prefix == "mp3" and name.startswith("mp3"))
                 for name in decoders
             ):
