@@ -14,7 +14,7 @@ function fixture(options: { offline?: boolean; foreground?: boolean; rights?: bo
   const source = vi.fn(async () => new File(['locally granted'], 'local.wav'));
   const play = vi.fn(async () => undefined);
   const transition = vi.fn(async () => undefined);
-  const report = vi.fn(async () => undefined);
+  const report = vi.fn(async (_payload: Parameters<BrowserVenueIntegrations['cloud']['report']>[0]) => undefined);
   const snapshot: PlayerSnapshot = {
     phase: 'playing', currentId: 'a', generation: 1, output: 'unverified',
     operatorCheckedAt: null, contextRunning: true, wakeLockHeld: false,
@@ -32,7 +32,7 @@ function fixture(options: { offline?: boolean; foreground?: boolean; rights?: bo
       dispose: vi.fn(async () => undefined),
     },
     media: {
-      eligible: vi.fn(async (_zone, id) => ({
+      eligible: vi.fn(async (_zone: string, id: string) => ({
         id, artist: 'Clean artist', explicit: false as const,
         locallyAuthorised: true, exactRevisionVerified: true, blocked: false,
       })),
