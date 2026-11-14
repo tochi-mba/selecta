@@ -144,3 +144,6 @@
   .br07-track-controls input,.br07-seam input{width:100%}
 }
 @media(prefers-reduced-motion:reduce){.br07-studio *{scroll-behavior:auto;transition:none!important}}
+
+.br07-recovery-json{white-space:pre-wrap;overflow-wrap:anywhere;max-height:14rem;overflow:auto;
+  border:1px solid var(--line);border-radius:8px;padding:10px;font-size:.76rem;background:var(--panel)}
