@@ -398,9 +398,14 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
         void (async () => {
           setBusy(true); setProblem('');
           try {
-            // Revoking speaker authority must also silence the local executor.
-            await engine.stop();
+            // Always attempt Cloud revocation even if stopping the local graph
+            // throws. Never leave a remotely addressable session alive solely
+            // because the audio driver refused a local Stop.
+            let stopError: unknown = null;
+            try { await engine.stop(); }
+            catch (error) { stopError = error; }
             await client.revoke();
+            if (stopError) throw new Error('Remote session revoked, but physical silence was not verified.');
             setNotice('This browser session was revoked and the local output stopped.');
           } catch (error) {
             // Client.revoke discards its in-memory secret even when offline.
