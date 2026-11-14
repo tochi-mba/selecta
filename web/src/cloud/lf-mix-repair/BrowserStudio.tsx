@@ -8,7 +8,7 @@ import {
 } from './browserPorts';
 
 type Edit = Pick<PortableRecipe, 'name' | 'occurrences' | 'cues' | 'transitions' | 'draft'>;
-type OpenRecipe = { recipe: PortableRecipe; history: RecipeHistoryEntry[]; legacy: boolean };
+type OpenRecipe = { recipe: PortableRecipe; headRevision: string; history: RecipeHistoryEntry[]; legacy: boolean };
 type Mode = 'play' | 'remote' | 'edit';
 const LABELS = {
   available: 'Available', preparing: 'Preparing', unsupported_here: 'Unsupported Here',
@@ -91,7 +91,7 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
   const openRecipe = useCallback(async (id: string, discardDraft = false) => {
     try {
       const response = await api<{
-        recipe: PortableRecipe; history: RecipeHistoryEntry[]; legacy_read_only_view: boolean;
+        recipe: PortableRecipe; head_revision: string; history: RecipeHistoryEntry[]; legacy_read_only_view: boolean;
       }>(`/cloud-mixes/${encodeURIComponent(id)}?schema_version=2`, {}, workspaceId);
       if (response.recipe?.schema_version !== 2) throw new Error('Unsupported portable recipe revision.');
       const recipe = response.recipe;
@@ -118,7 +118,7 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
       } else {
         try { window.sessionStorage.removeItem(localKey(workspaceId, id)); } catch { /* optional local recovery */ }
       }
-      setOpened({ recipe, history: response.history ?? [], legacy: !!response.legacy_read_only_view });
+      setOpened({ recipe, headRevision: response.head_revision || recipe.revision_id, history: response.history ?? [], legacy: !!response.legacy_read_only_view });
       setEdit(next); setUndo([]); setRedo([]); setAvailability(null);
       setSavedConflictDraft(olderDraft); setConflict(!!olderDraft); setError('');
       const url = new URL(window.location.href);
@@ -214,7 +214,7 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
       await api(`/cloud-mixes/${encodeURIComponent(active.recipe_id)}/revisions`, {
         method: 'POST',
         body: JSON.stringify({
-          schema_version: 2, base_revision: active.revision_id,
+          schema_version: 2, base_revision: opened!.headRevision,
           changes: edit,
         }),
       }, workspaceId);
@@ -236,7 +236,7 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
     try {
       await api(`/cloud-mixes/${encodeURIComponent(active.recipe_id)}/revisions`, {
         method: 'POST',
-        body: JSON.stringify({ schema_version: 2, base_revision: active.revision_id, restore: revision }),
+        body: JSON.stringify({ schema_version: 2, base_revision: opened!.headRevision, restore: revision }),
       }, workspaceId);
       await openRecipe(active.recipe_id, true);
       await refresh();
@@ -440,7 +440,7 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
           <details className="br07-history"><summary>Version history ({opened.history.length})</summary>
             <ol>{opened.history.map((version) => <li key={version.revision}>
               <span>Revision {version.number} · {version.name} · schema v{version.schema_version}</span>
-              <button disabled={busy || dirty || version.revision === opened.recipe.revision_id}
+              <button disabled={busy || dirty || version.revision === opened.headRevision}
                 onClick={() => void restore(version.revision)}>Restore as new version</button></li>)}</ol>
           </details>
         </>}
