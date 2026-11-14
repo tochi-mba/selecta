@@ -58,7 +58,7 @@ def _decode_cursor(cursor: str | None) -> tuple[float, str] | None:
 def _asset_json(row: Any) -> dict[str, Any]:
     return {
         "id": row.id,
-        "name": (row.display_name or "Untitled").replace("\\\\", "/").rsplit("/", 1)[-1],
+        "name": (row.display_name or "Untitled").replace(chr(92), "/").rsplit("/", 1)[-1],
         "size": int(row.size),
         
         "format": row.format,
