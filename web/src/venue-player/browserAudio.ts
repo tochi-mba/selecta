@@ -209,10 +209,10 @@ export class BrowserVenueAudio implements VenueAudioPort {
         if (retainedBytes + decodedBytes > 192 * 1024 * 1024)
           throw new Error('Prepared recordings exceed the aggregate browser memory budget');
         this.buffers.set(trackId, buffer);
-        if (!this.deck) this.phase = 'ready';
+        if (!this.deck && this.phase === 'preparing') this.phase = 'ready';
       } catch (error) {
         this.error = errorText(error);
-        if (!this.deck) this.phase = 'failed';
+        if (!this.deck && this.phase === 'preparing') this.phase = 'failed';
         throw error;
       }
     })();
