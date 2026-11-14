@@ -41,7 +41,16 @@ function adjacentTransitions(ordered: StudioRecording[], old: StudioTransition[]
  * Missing media never prevents reading history, changing cues or saving a recipe. */
 export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: string }) {
   const ports = useBrowserStudioPorts();
-  const [mode, setMode] = useState<Mode>('edit');
+  const [mode, setMode] = useState<Mode>(() => {
+    const requested = new URLSearchParams(window.location.search).get('mode');
+    return requested === 'play' || requested === 'remote' ? requested : 'edit';
+  });
+  const selectMode = (next: Mode) => {
+    setMode(next);
+    const url = new URL(window.location.href);
+    url.searchParams.set('mode', next);
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+  };
   const [list, setList] = useState<RecipeSummary[] | null>(null);
   const [opened, setOpened] = useState<OpenRecipe | null>(null);
   const [edit, setEdit] = useState<Edit | null>(null);
@@ -291,7 +300,10 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
       if (!(artifact.blob instanceof Blob) || !artifact.blob.size) throw new Error('The renderer returned no downloadable audio.');
       const url = URL.createObjectURL(artifact.blob);
       const anchor = document.createElement('a');
-      anchor.href = url; anchor.download = artifact.filename; anchor.click();
+      anchor.href = url;
+      anchor.download = artifact.filename.replace(/[\\/]/g, '_').slice(0, 128) || 'selecta-mix-export';
+      if (!artifact.mimeType.startsWith('audio/')) throw new Error('The renderer returned a non-audio export.');
+      anchor.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
       setMessage('Browser render completed. Export was started on this device.');
     } catch (cause) {
@@ -305,9 +317,9 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
       <div><p className="cloud-eyebrow">LOCAL MUSIC · PORTABLE MIXES</p><h2>Studio, on this device</h2>
         <p>{browserCloudCopy.privacy}</p></div>
       <div className="br07-modes" role="group" aria-label="How to use Studio">
-        <button type="button" aria-pressed={mode === 'play'} onClick={() => setMode('play')}>Play Here</button>
-        <button type="button" aria-pressed={mode === 'remote'} onClick={() => setMode('remote')}>Control Another Device</button>
-        <button type="button" aria-pressed={mode === 'edit'} onClick={() => setMode('edit')}>Edit Without Music</button>
+        <button type="button" aria-pressed={mode === 'play'} onClick={() => selectMode('play')}>Play Here</button>
+        <button type="button" aria-pressed={mode === 'remote'} onClick={() => selectMode('remote')}>Control Another Device</button>
+        <button type="button" aria-pressed={mode === 'edit'} onClick={() => selectMode('edit')}>Edit Without Music</button>
       </div>
     </div>
     {mode === 'play' && <div className="br07-callout" role="status">Choose files on this phone, tablet or computer, check exact recording readiness and confirm physical output. No installer is required. {ports.media ? 'Browser media adapter connected.' : 'Browser media integration is not connected yet.'}</div>}
