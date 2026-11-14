@@ -42,6 +42,17 @@ describe('Cloud local folder watches', () => {
     expect(requests.every((path) => path.startsWith('/dev/local-watches'))).toBe(true);
   });
 
+  it('distinguishes discovered candidates from verified tracks during the first scan', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json(response([{
+      ...record('one', 'scanning'), indexed: 0, discovered: 5, last_scanned_at: null,
+    }]))));
+    render(<FolderWatches />);
+    expect(await screen.findByText(/5 audio candidates found so far/)).toBeInTheDocument();
+    expect(screen.getByText(/zero verified does not mean an empty folder/i)).toBeInTheDocument();
+    expect(screen.getByText(/not the standalone Selecta library/)).toBeInTheDocument();
+    expect(screen.queryByText(/Your library is empty/)).not.toBeInTheDocument();
+  });
+
   it('preflights new folders and queues a local scan without uploading audio', async () => {
     const calls: { path: string; method: string; body?: string }[] = [];
     let folders = [record('one', 'ready')];
