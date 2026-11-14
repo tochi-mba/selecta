@@ -1,9 +1,7 @@
-"""Authenticated account data archive for Selecta Cloud.
+"""Metadata-only personal account data export for browser-first Selecta Cloud.
 
-The ZIP holds every original (checked against its stored size and SHA-256), `settings.json` (the
-account, workspace, plan, feature opt-outs, Lucy choices and signed-in devices), `assets.json`,
-`mixes.json` and a manifest. Cloud doesn't store mix revisions yet, so `mixes.json` says so and
-carries what Cloud does keep about mixes: the workspace's playback session.
+Archive settings, billing and safe historical recipe references; never fetch,
+download, sign or package original music, stems, renders or source paths.
 """
 
 from __future__ import annotations
