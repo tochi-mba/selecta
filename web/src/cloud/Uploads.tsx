@@ -1,6 +1,6 @@
 import { ChangeEvent, useCallback, useEffect, useState } from 'react';
 import type { Api, Page } from './api';
-import { ConnectLocalMusic } from './lf-personal/PersonalWorkspace';
+import { BrowserConnectMusic } from './lf-personal/BrowserWorkspace';
 import { LegacyFolderWatchEntry } from './lf-personal/FolderWatches';
 import { completeOutcome, completeStatusWords, uploadSummary, UploadResult, withUnreached } from './libraryState';
 import { fileSha256, resumableFor, sendParts, unfinishedUploads, UploadEntry, UploadSession, UploadStatus } from './uploadParts';
@@ -27,7 +27,7 @@ export function UploadsPanel(props: {
   localFirst?: boolean;
   go?: (page: Page) => void;
 }) {
-  if (props.localFirst) return <ConnectLocalMusic api={props.api} workspaceId={props.workspaceId}
+  if (props.localFirst) return <BrowserConnectMusic workspaceId={props.workspaceId}
     go={props.go ?? (() => { window.location.assign('/library'); })} />;
   return <LegacyUploadsPanel {...props} />;
 }

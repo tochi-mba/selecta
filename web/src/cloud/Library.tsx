@@ -4,7 +4,7 @@ import { INITIAL_LIBRARY, isBusy, libraryReducer, overviewOf, songWords } from '
 import { unfinishedUploads } from './uploadParts';
 import { useSharedLibraryPlayer } from './cloudTransport';
 import { useCloudPlayer } from './useCloudPlayer';
-import { DeviceLibrary } from './lf-personal/PersonalWorkspace';
+import { BrowserDeviceLibrary } from './lf-personal/BrowserWorkspace';
 import { LegacyFolderWatchEntry } from './lf-personal/FolderWatches';
 
 // The Cloud library: private originals, played from prepared playback files. Listening starts a
@@ -27,7 +27,7 @@ export function LibraryPanel(props: {
   account?: Account | null;
   localFirst?: boolean;
 }) {
-  if (props.localFirst) return <DeviceLibrary api={props.api} workspaceId={props.workspaceId} go={props.go} revision={props.reload} />;
+  if (props.localFirst) return <BrowserDeviceLibrary workspaceId={props.workspaceId} go={props.go} />;
   return <LegacyLibraryPanel {...props} />;
 }
 
