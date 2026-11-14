@@ -62,6 +62,12 @@ class CloudSpeakers:
     def speaker_online(self, workspace_id: str) -> bool:
         return playback_session.speaker_online(self.engine, workspace_id)
 
+    def speaker_online_in_tx(
+        self, conn: Connection, workspace_id: str, *, now: float | None = None
+    ) -> bool:
+        """Use the Rooms claim transaction instead of acquiring a second SQLite writer."""
+        return playback_session.speaker_online_in(conn, workspace_id, now=now)
+
 
 class OutboxRoomEvents:
     """The room id rides in the payload so the room panel can tell which room changed."""
