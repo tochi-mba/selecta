@@ -42,7 +42,10 @@ sessions = sa.Table(
     sa.Column("recipe_revision", sa.String(128), nullable=True),
     sa.Column("policy_version", sa.Integer, nullable=False),
     sa.Column("sequence", sa.Integer, nullable=False),
-    sa.ForeignKeyConstraint(["workspace", "device"], ["lf_browser_devices.workspace", "lf_browser_devices.device"]),
+    sa.ForeignKeyConstraint(
+        ["workspace", "device"],
+        ["lf_browser_devices.workspace", "lf_browser_devices.device"],
+    ),
     sa.Index("ix_lf_browser_sessions_workspace_device", "workspace", "device"),
 )
 owners = sa.Table(
