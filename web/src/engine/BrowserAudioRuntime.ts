@@ -155,6 +155,9 @@ export class BrowserAudioRuntime implements AudioEngine {
       const mixer = new AudioWorkletNode(context, 'selecta-browser-mixer-v1', {
         numberOfInputs: 2, numberOfOutputs: 1, outputChannelCount: [2],
       });
+      mixer.onprocessorerror = () => {
+        void this.interrupt('The audio processor stopped unexpectedly. Tap Play to retry after checking your speaker.');
+      };
       const limiter = context.createDynamicsCompressor();
       limiter.threshold.value = -6; limiter.knee.value = 4;
       limiter.ratio.value = 12; limiter.attack.value = 0.003; limiter.release.value = 0.15;
@@ -394,6 +397,7 @@ export class BrowserAudioRuntime implements AudioEngine {
     this.syncSession();
   }
   async next(): Promise<void> {
+    if (this.state.pending === 'Preparing next local track') return;
     const next = this.state.index + 1;
     if (!this.queue[next]) { await this.stop(); return; }
     const mine = ++this.sequence;
@@ -440,7 +444,11 @@ export class BrowserAudioRuntime implements AudioEngine {
       if (mine !== this.sequence) return;
       this.patch({ pending: null, error: 'Next track unavailable; current playback preserved if still active. ' +
         (error as Error).message });
-      if (!this.active || this.active.buffer.duration <= this.positionNow()) await this.stop();
+      const old = this.active;
+      if (!old || (this.context &&
+        old.offset + Math.max(0, this.context.currentTime - old.startTime) >= old.buffer.duration - 0.01)) {
+        await this.stop();
+      }
     }
   }
   async previous(): Promise<void> {
