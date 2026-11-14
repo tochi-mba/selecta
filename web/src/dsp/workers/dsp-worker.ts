@@ -20,7 +20,7 @@ scope.onmessage=(event:MessageEvent<DSPRequest>)=>{
         {sampleRate:request.sampleRate,windowStart:request.windowStart,duration:request.duration,budget:request.budget})};
     } else throw new DSPUnsupported('Unknown job operation');
     if(result.kind==='render') {
-      const transfer=result.artifact.pcm.channels.map(ch=>ch.buffer);
+      const transfer=result.artifact.pcm.channels.map(ch=>ch.buffer).filter((buffer):buffer is ArrayBuffer=>buffer instanceof ArrayBuffer);
       scope.postMessage(result,transfer);
     } else scope.postMessage(result);
   } catch(error) {
