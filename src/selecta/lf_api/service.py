@@ -386,7 +386,7 @@ class BrowserControlService:
             "expected_generation": expected_generation,
             "expected_recipe_revision": recipe_revision, "policy_version": policy_version,
             "sequence": sequence, "action": action, "arguments": args,
-            "created_at": now, "expires_at": now + ttl,
+            "created_at": int(now), "expires_at": int(now + ttl),
             "idempotency_key": idempotency_key,
         }, now=now)
         db.execute(schema.commands.insert().values(
