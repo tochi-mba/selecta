@@ -197,6 +197,30 @@
       "modes": ["cloud"],
       "owner": "billing"
     },
+    "local_first.browser_control": {
+      "label": "Authenticated browser speaker sessions",
+      "about": "Coordinate browser-owned audio in authorised zones using signed metadata-only commands. No audio is uploaded to Cloud.",
+      "default": false,
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "playback",
+      "routes": [
+        "POST /api/lf/v1/devices",
+        "GET /api/lf/v1/zones/{zone_id}/devices",
+        "GET /api/lf/v1/zones/{zone_id}/speaker",
+        "POST /api/lf/v1/devices/{device_id}/revoke",
+        "POST /api/lf/v1/sessions/{session_id}/refresh",
+        "POST /api/lf/v1/sessions/{session_id}/presence",
+        "GET /api/lf/v1/sessions/{session_id}/recovery",
+        "POST /api/lf/v1/sessions/{session_id}/revoke",
+        "POST /api/lf/v1/zones/{zone_id}/commands",
+        "POST /api/lf/v1/zones/{zone_id}/takeovers",
+        "GET /api/lf/v1/sessions/{session_id}/commands/next",
+        "POST /api/lf/v1/sessions/{session_id}/commands/{operation_id}/ack",
+        "GET /api/lf/v1/zones/{zone_id}/commands/{operation_id}",
+        "GET /api/lf/v1/zones/{zone_id}/takeovers/{transfer_id}"
+      ]
+    },
     "devices": {
       "label": "Playback devices",
       "about": "Sign browsers in as devices, list, rename and sign them out, and move playback between them with Play here.",
