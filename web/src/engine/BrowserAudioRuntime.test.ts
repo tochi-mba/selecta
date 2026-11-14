@@ -150,6 +150,32 @@ describe('BrowserAudioRuntime', () => {
     expect(Context.latest.sources.at(-1)?.starts).toHaveLength(1);
     await engine.dispose();
   });
+  it('cannot cache stale PCM from an old queue under the new file with the same ID', async () => {
+    let releaseFirst!: (value: AudioBuffer) => void;
+    let decodeCalls = 0;
+    const delayed: BrowserAudioSourcePort = {
+      decode: vi.fn(async () => {
+        decodeCalls++;
+        if (decodeCalls === 1)
+          return new Promise<AudioBuffer>(resolve => { releaseFirst = resolve; });
+        return buffer(55);
+      }),
+    };
+    const engine = new BrowserAudioRuntime('rebind-same-id', { decoder: delayed });
+    const old = { ...music('same'), title: 'old version' };
+    const newer = { ...music('same'), title: 'new version' };
+    await engine.setQueue([old]);
+    const oldPlay = engine.play();
+    await vi.waitFor(() => expect(decodeCalls).toBe(1));
+    await engine.setQueue([newer]);
+    await engine.play();
+    releaseFirst(buffer(12));
+    await oldPlay;
+    expect(engine.snapshot()).toMatchObject({ phase: 'playing', title: 'new version', duration: 55 });
+    expect(Context.latest.sources).toHaveLength(1);
+    await engine.dispose();
+  });
+
   it('preserves an active track when a later local recording fails decode', async () => {
     const badDecoder: BrowserAudioSourcePort = {
       decode: vi.fn(async (file) => {
