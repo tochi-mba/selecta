@@ -1,6 +1,7 @@
 import { allocatePCM, assertPCM, checkCancelled, DSP_VERSION, DSPUnsupported, type PCM, type PreparedAudio, type ProcessingBudget, MOBILE_BUDGET } from '../core/types';
 import { resample, sincAt } from '../core/resample';
 import { limitPCM, peakReport } from '../core/dynamics';
+import { integratedLoudness } from '../core/loudness';
 import { splitBands, sweepFilter } from '../effects/filters';
 import { echoTail,reverbTail } from '../effects/tails';
 import { stretchWarp,warpAt } from '../time-stretch/vocoder';
@@ -84,10 +85,11 @@ export function renderTransitionWindow(script:TransitionScript,sources:SourceWin
     dry.push(gained);
   }
   const limited=limitPCM(mixed,opts.limiterCeilingDb??-1.1,80,budget,signal),peaks=peakReport(limited);
+  const lufs=frames>=Math.round(sampleRate*.4)?integratedLoudness(limited,signal).integratedLufs:null;
   return {version:DSP_VERSION,kind:'prepared-seam',source:'local-pcm',quality:'approximate',sampleRate,
     channels:channelCount,startSeconds:start,durationSeconds:frames/sampleRate,notes:
     ['Offline prepared PCM only; never render synchronously in AudioWorklet','Native time-stretch/transient/reverb/limiter parity pending',...notes],
-    pcm:limited,...peaks};
+    pcm:limited,integratedLufs:lufs,...peaks};
 }
 function withCurve(pcm:PCM,curve:TransitionPart['gain'],start:number,gain:number):PCM {
   const n=pcm.channels[0].length, out=allocatePCM(pcm.sampleRate,pcm.channels.length,n,pcm.originSeconds,

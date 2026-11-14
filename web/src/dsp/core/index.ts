@@ -22,3 +22,6 @@ export type { DSPRequest, DSPResult, DSPFailure } from '../workers/protocol';
 
 export { canBeatmatch, canIntertwine, choosePhraseCues, makeTransition } from '../transitions/recipes';
 export type { MusicalCue, TrackTiming, TransitionStyle, RecipeOptions } from '../transitions/recipes';
+
+export { integratedLoudness,loudnessGainDb } from './loudness';
+export type { LoudnessReport } from './loudness';

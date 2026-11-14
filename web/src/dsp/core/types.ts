@@ -13,7 +13,7 @@ export type DSPArtifact = {
   channels: number;
   notes: string[];
 };
-export type PreparedAudio = DSPArtifact & { kind: 'prepared-seam'; pcm: PCM; peakDb: number; truePeakDb: number };
+export type PreparedAudio = DSPArtifact & { kind: 'prepared-seam'; pcm: PCM; peakDb: number; truePeakDb: number; integratedLufs: number | null };
 export type ProcessingBudget = { maxFrames: number; maxBytes: number; maxChannels: number; fftSize: number; hop: number };
 export const MOBILE_BUDGET: ProcessingBudget = { maxFrames: 48_000 * 8, maxBytes: 32 * 1024 * 1024, maxChannels: 2, fftSize: 1024, hop: 256 };
 export const DESKTOP_BUDGET: ProcessingBudget = { maxFrames: 48_000 * 24, maxBytes: 128 * 1024 * 1024, maxChannels: 2, fftSize: 2048, hop: 512 };
