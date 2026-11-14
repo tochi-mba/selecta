@@ -334,11 +334,17 @@ export class BrowserSessionClient {
   }
 
   async register(body: Registration): Promise<void> {
-    // Discard old session; no secret is written to browser persistence.
     const result = await this.request<RegisteredSession>("/devices", "POST", body);
-    if (result.schema_version !== 1 || !IDENT.test(result.session_id)) {
+    if (result.schema_version !== 1 || !IDENT.test(result.session_id)
+      || result.device_id !== body.device_id || result.zone_id !== body.zone_id
+      || !IDENT.test(result.workspace_id)
+      || (this.workspaceId && result.workspace_id !== this.workspaceId)
+      || typeof result.session_token !== "string" || result.session_token.length < 32
+      || typeof result.command_key !== "string" || !/^[a-f0-9]{64}$/.test(result.command_key)
+      || !Number.isFinite(result.expires_at) || result.expires_at <= Date.now() / 1000) {
       throw new BrowserControlError(422, "invalid_registration");
     }
+    // Session credentials and signing key are kept only in memory.
     this.credentials = result;
     this.highestSequence = 0;
   }
@@ -349,6 +355,12 @@ export class BrowserSessionClient {
       "session_id" | "session_token" | "command_key" | "expires_at">>(
       "/sessions/" + this.credentials.session_id + "/refresh", "POST", {}, true,
     );
+    if (updated.session_id !== this.credentials.session_id
+      || typeof updated.session_token !== "string" || updated.session_token.length < 32
+      || typeof updated.command_key !== "string" || !/^[a-f0-9]{64}$/.test(updated.command_key)
+      || !Number.isFinite(updated.expires_at) || updated.expires_at <= Date.now() / 1000) {
+      throw new BrowserControlError(422, "invalid_session_refresh");
+    }
     this.credentials = { ...this.credentials, ...updated };
   }
 
