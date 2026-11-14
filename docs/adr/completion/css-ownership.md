@@ -34,6 +34,7 @@ Feature-local sheets live beside the one component that imports them and style n
 | `devices/devices.css` | device list and playing bar | `devices/DevicesPanel.tsx`, `devices/PlayingBar.tsx` |
 | `display/display.css` | the display page | `display/main.ts` |
 | `guest/guest.css` | the guest request page | `guest/main.ts` |
+| `kiosk/browserKiosk.css` | supervised, first-party browser-only kiosk setup, local transport controls and speaker recovery | `kiosk/main.ts` |
 | `rooms/rooms.css` | the rooms panel | `rooms/RoomPanel.tsx` |
 | `autopilot/autopilot.css` | venue setup instructions and autopilot guide controls | `autopilot/VenueSetup.tsx` |
 | `business/console/console.css` | headquarters venue management, status grids and dashboards | `business/console/HqConsole.tsx` |

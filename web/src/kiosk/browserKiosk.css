@@ -1,0 +1,45 @@
+.selecta-browser-kiosk {
+  box-sizing: border-box;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: clamp(1rem, 4vw, 3rem);
+  display: grid;
+  gap: 1.2rem;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+  color: CanvasText;
+  background: Canvas;
+}
+.selecta-browser-kiosk *,
+.selecta-browser-kiosk *::before,
+.selecta-browser-kiosk *::after { box-sizing: inherit; }
+.selecta-browser-kiosk .kiosk-heading h1 { font-size: clamp(1.6rem, 4vw, 2.7rem); margin: .2em 0; }
+.selecta-browser-kiosk .kiosk-eyebrow { font-weight: 800; letter-spacing: .12em; font-size: .8rem; }
+.selecta-browser-kiosk .kiosk-card,
+.selecta-browser-kiosk .kiosk-warning {
+  border: 1px solid currentColor;
+  border-radius: .9rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
+}
+.selecta-browser-kiosk .kiosk-warning { border-style: dashed; }
+.selecta-browser-kiosk .kiosk-card h2 { margin-top: 0; }
+.selecta-browser-kiosk input[type="file"] { display: block; max-width: 100%; margin: .75rem 0; }
+.selecta-browser-kiosk .kiosk-rights { display: block; margin-top: .75rem; }
+.selecta-browser-kiosk .kiosk-actions { display: flex; flex-wrap: wrap; gap: .65rem; }
+.selecta-browser-kiosk button {
+  border: 1px solid currentColor;
+  border-radius: .6rem;
+  padding: .75rem 1rem;
+  min-height: 44px;
+  background: Canvas;
+  color: CanvasText;
+  font: inherit;
+  cursor: pointer;
+}
+.selecta-browser-kiosk button:hover:not(:disabled) { text-decoration: underline; }
+.selecta-browser-kiosk button:focus-visible,
+.selecta-browser-kiosk input:focus-visible,
+.selecta-browser-kiosk a:focus-visible { outline: 3px solid Highlight; outline-offset: 3px; }
+.selecta-browser-kiosk button:disabled { opacity: .48; cursor: not-allowed; }
+.selecta-browser-kiosk .kiosk-error:not(:empty) { font-weight: 700; }
+.selecta-browser-kiosk .kiosk-muted { opacity: .83; }
