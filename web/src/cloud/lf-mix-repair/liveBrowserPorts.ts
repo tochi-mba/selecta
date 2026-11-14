@@ -22,6 +22,16 @@ function allowedRecipe(recipe: PortableRecipe): string | null {
   if (recipe.cues.some((cue) => cue.timebase !== 'source_seconds' || !Number.isFinite(cue.at) || cue.at < 0)) {
     return 'Beat-based cues need a verified beat grid before local rendering or playback.';
   }
+  if (recipe.transitions.length !== recipe.occurrences.length - 1) {
+    return 'Each adjacent recording needs an explicit saved transition before playback or rendering.';
+  }
+  for (let index = 0; index < recipe.transitions.length; index++) {
+    const transition = recipe.transitions[index];
+    if (transition.from_occurrence_id !== recipe.occurrences[index].occurrence_id
+      || transition.to_occurrence_id !== recipe.occurrences[index + 1].occurrence_id) {
+      return 'The saved transition order does not match this mix. Save and verify the arrangement.';
+    }
+  }
   if (recipe.transitions.some((step) =>
     step.type !== 'cut' && step.type !== 'crossfade')) {
     return 'Beatmatched and planned seams require validated browser DSP. Choose Cut or Crossfade.';
@@ -129,6 +139,16 @@ export function liveBrowserStudioPorts(workspaceId: string): BrowserStudioPorts 
     async playHere(recipe) {
       const problem = allowedRecipe(recipe);
       if (problem) throw new Error(problem);
+      // The live two-deck player currently starts full recordings at offset 0.
+      // Rendering honours source-second cues, but live playback must not silently
+      // ignore them or claim it is performing the saved arrangement.
+      if (recipe.cues.some((cue) => cue.at > 0)) {
+        throw new Error('Non-zero source cues require local rendering; live cue-accurate playback is not yet qualified.');
+      }
+      const fades = recipe.transitions.map((step) => step.type === 'cut' ? 0 : step.duration_seconds);
+      if (fades.length && fades.some((fade) => fade !== fades[0])) {
+        throw new Error('Per-transition fade durations are not yet supported by live playback; render the saved mix instead.');
+      }
       if (!probeBrowserAudio().eligible) throw new Error('Browser audio capability or tab ownership is unavailable.');
       // Initiate AudioContext.resume from the actual click, before any asynchronous
       // source verification. This is essential to user-gesture restrictions on iPadOS.
@@ -136,10 +156,6 @@ export function liveBrowserStudioPorts(workspaceId: string): BrowserStudioPorts 
       await activation;
       const selected = await filesFor(recipe);
       await engine.setQueue(selected);
-      const fades = recipe.transitions.map((step) => step.type === 'cut' ? 0 : step.duration_seconds);
-      if (fades.length && fades.some((fade) => fade !== fades[0])) {
-        throw new Error('Per-transition fade durations are not yet supported by live playback; render the saved mix instead.');
-      }
       engine.setFade(fades[0] ?? 0);
       await engine.play();
       if (engine.snapshot().phase !== 'playing') {
