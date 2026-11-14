@@ -141,10 +141,12 @@ def test_ipad_is_a_real_player_phone_controls_without_media_access(rig):
     verify_command(env, signed["signature"], ipad["command_key"])
     assert ack(client, ipad, "pause1", "accepted").json()["state"] == "accepted"
     assert (
-        ack(client, ipad, "pause1", "applied", execution_verified=True).json()["state"] == "acknowledged"
+        ack(client, ipad, "pause1", "applied", execution_verified=True).json()["state"]
+        == "acknowledged"
     )
     assert (
-        req(client, "GET", "/zones/z1/commands/pause1", actor="staff").json()["state"] == "acknowledged"
+        req(client, "GET", "/zones/z1/commands/pause1", actor="staff").json()["state"]
+        == "acknowledged"
     )
     assert (
         req(client, "POST", "/zones/z1/commands", actor="staff", payload=command).json()["replayed"]
