@@ -55,9 +55,9 @@ describe('BR64-07 Cloud flag combinations and route continuity', () => {
     render(<CloudApp />);
     expect(await screen.findByRole('heading', { name: 'Your music workspace, on any device.' })).toBeInTheDocument();
     const navigation = screen.getByRole('navigation', { name: 'Cloud workspace' });
-    expect(within(navigation).getByRole('button', { name: 'My Mixes' })).toBeInTheDocument();
+    expect(within(navigation).getByRole('link', { name: 'My Mixes' })).toBeInTheDocument();
     await userEvent.click(within(navigation).getByText('Cloud & account'));
-    expect(within(navigation).getByRole('button', { name: 'Connect Music' })).toBeInTheDocument();
+    expect(within(navigation).getByRole('link', { name: 'Connect Music' })).toBeInTheDocument();
     await userEvent.click(within(navigation).getByRole('button', { name: 'My Mixes / Studio' }));
     await waitFor(() => expect(window.location.pathname).toBe('/mixes/mine'));
     expect(screen.getByRole('region', { name: 'Browser-local music player' })).toBeInTheDocument();
