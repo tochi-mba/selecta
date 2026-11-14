@@ -102,3 +102,16 @@ the seeded historic Cloud assets are browser-authorised files:
 implemented on PR #64. This document does **not** certify pixel-for-pixel UI
 parity, complete native-to-browser music DSP parity, or physical hardware
 verification; see `release-gates.md` and outstanding acceptance evidence.
+
+### Late audit follow-ups: progress and mobile account safety
+
+- The *legacy development* folder watcher now displays two distinct quantities
+  during its first scan: **audio candidates discovered so far** and **recordings
+  verified in that watcher's own local catalogue**. It no longer presents
+  "not scanned yet" as if no files were found while a scan is active.
+  `FolderWatches.test.tsx` covers a synthetic 5-discovered/0-ready case.
+- A personal Cloud account can sign out from its Account page even on mobile
+  devices, where the rail footer is intentionally hidden behind the primary
+  bottom navigation. An explicit keyboard skip link targets the music workspace.
+- A disabled Rooms feature cannot be opened directly by typing `/rooms`.
+  Room moderation remains separate from proof of physical speaker playback.
