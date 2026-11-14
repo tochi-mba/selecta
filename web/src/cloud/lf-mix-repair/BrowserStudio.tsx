@@ -39,7 +39,9 @@ function adjacentTransitions(ordered: StudioRecording[], old: StudioTransition[]
 
 /** Browser-native, metadata-only mix editor. Files are never passed to Cloud API.
  * Missing media never prevents reading history, changing cues or saving a recipe. */
-export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: string }) {
+export function BrowserStudio({ api, workspaceId, surface = 'studio' }: {
+  api: Api; workspaceId: string; surface?: 'studio' | 'create' | 'mine';
+}) {
   const ports = useBrowserStudioPorts();
   const [mode, setMode] = useState<Mode>(() => {
     const requested = new URLSearchParams(window.location.search).get('mode');
@@ -363,8 +365,13 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
 
   return <section className="br07-studio" aria-label="Personal browser Studio">
     <div className="br07-intro">
-      <div><p className="cloud-eyebrow">LOCAL MUSIC · PORTABLE MIXES</p><h2>Studio, on this device</h2>
-        <p>{browserCloudCopy.privacy}</p></div>
+      <div><p className="cloud-eyebrow">LOCAL MUSIC · PORTABLE MIXES</p>
+        <h2>{surface === 'create' ? 'Make a Mix' : surface === 'mine' ? 'My Mixes' : 'Studio, on this device'}</h2>
+        <p>{surface === 'create'
+          ? 'Start from verified local recordings, arrange a set and save a portable recipe. Edit a saved mix to continue it.'
+          : surface === 'mine'
+            ? 'Your saved mixes and revisions follow your account. Playback requires the exact authorised recordings on this device.'
+            : browserCloudCopy.privacy}</p></div>
       <div className="br07-modes" role="group" aria-label="How to use Studio">
         <button type="button" aria-pressed={mode === 'play'} onClick={() => selectMode('play')}>Play Here</button>
         <button type="button" aria-pressed={mode === 'remote'} onClick={() => selectMode('remote')}>Control Another Device</button>
@@ -380,14 +387,15 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
     {message && <p className="cloud-feedback" role="status">{message}</p>}
     <div className="br07-workspace">
       <aside className="br07-recipes" aria-label="Saved portable mixes">
-        <div className="br07-heading"><h3>My Mixes</h3><button onClick={() => void refresh()} disabled={busy}>Refresh</button></div>
+        <div className="br07-heading"><h3>{surface === 'create' ? 'Choose or create a mix' : 'My Mixes'}</h3>
+          <button onClick={() => void refresh()} disabled={busy}>Refresh</button></div>
         {list === null ? <p>Loading saved recipes…</p> : list.length === 0 ? <p>No saved mixes yet. Select local files to create one once browser music access is connected.</p> :
           <ul>{list.map((item) => <li key={item.recipe_id}><button
             className={opened?.recipe.recipe_id === item.recipe_id ? 'br07-current' : ''}
             aria-current={opened?.recipe.recipe_id === item.recipe_id ? 'true' : undefined}
             onClick={() => void openRecipe(item.recipe_id)}><strong>{item.name}</strong>
             <small>{item.occurrences} tracks · revision {item.revision_number}</small></button></li>)}</ul>}
-        <label className="br07-import">Choose music files on this device
+        <label className="br07-import">{surface === 'create' ? 'Start a mix from this device’s music' : 'Add locally verified music files'}
           <input ref={importedRef} type="file" accept="audio/*" multiple disabled={!ports.media || busy}
             onChange={(event) => void chooseFiles(event.target.files)} />
         </label>
