@@ -2,7 +2,7 @@ import { FormEvent, useState } from 'react';
 import type { Account, Api, Page } from '../api';
 import { bytes } from '../api';
 import {
-  claimSpeaker, ENGINE_INSTALL_GUIDE, LOCAL_ENGINE_URL, MEDIA_EXPLANATIONS, PersonalDevice,
+  claimSpeaker, MEDIA_EXPLANATIONS, PersonalDevice,
   PersonalSnapshot, requestLocalScan, recentCheck, verificationWords,
 } from './contract';
 import { usePersonalRead, usePersonalSelection } from './state';
@@ -46,7 +46,7 @@ function ReadFeedback({ read }: { read: ReturnType<typeof usePersonalRead> }) {
 }
 
 function LocalEngineLink({ children = 'Open the local engine' }: { children?: string }) {
-  return <a href={LOCAL_ENGINE_URL} target="_blank" rel="noopener noreferrer">{children}</a>;
+  return <a href="/uploads">{children}</a>;
 }
 
 function SetupJourney({ api, workspaceId, refresh, devices, onController }: {
@@ -77,15 +77,17 @@ function SetupJourney({ api, workspaceId, refresh, devices, onController }: {
       <label><input type="radio" name="lf-setup-mode" checked={mode === 'controller'} onChange={() => { setMode('controller'); setMessage(''); onController(); }} /> Controller only</label>
     </fieldset>
     {mode === 'computer' && <div className="lf-next">
-      <h3>Prepare this device</h3>
+      <h3>Start directly in this browser</h3>
+      <p>Phones, tablets and laptops can be actual players when this browser passes its local checks. No native engine installation or second computer is required.</p>
       <ol>
-        <li><a href={ENGINE_INSTALL_GUIDE} target="_blank" rel="noopener noreferrer">Read local engine installation guidance</a> (Windows-first; other platforms may differ)</li>
-        <li><LocalEngineLink>Open the engine on this device</LocalEngineLink> and grant access to your music folders there</li>
-        <li>Scan the library locally; wait for supported files to finish indexing and analysis</li>
-        <li>Test a real speaker or headphones in the engine; an online status alone does not confirm sound</li>
-        <li>Return here and check this device’s verified status</li>
+        <li>Connect Music — select local files or a supported folder</li>
+        <li>Check Device — measure browser playback and rendering capabilities</li>
+        <li>Verify Music — review exact recordings and any missing media</li>
+        <li>Choose Output — select your system speaker and listen to a test</li>
+        <li>Tap Start — unlock audio in the foreground and begin locally</li>
       </ol>
-      <p className="lf-muted">The engine link opens on the device running this browser, never on a remote speaker.</p>
+      <a href="/uploads">Open browser music setup</a>
+      <p className="lf-muted">File and folder permissions depend on the browser. Keeping an iPad awake does not guarantee unattended playback.</p>
     </div>}
     {mode === 'pair' && <form className="lf-next" onSubmit={(event) => void submit(event)}>
       <h3>Pair a speaker already running Selecta</h3>
@@ -182,7 +184,7 @@ export function ConnectLocalMusic({ api, workspaceId, go }: Props) {
   const devices = read.snapshot?.devices ?? NO_DEVICES;
   const selection = usePersonalSelection(workspaceId, devices);
   return <div className="lf-personal">
-    <div className="lf-hero"><p className="cloud-eyebrow">DEVICE-LOCAL SOURCE SETUP</p><h2>Connect local music</h2><p>Choose a local folder or drive in the installed engine. Selecta Cloud never receives your audio, folder paths or raw fingerprints.</p></div>
+    <div className="lf-hero"><p className="cloud-eyebrow">DEVICE-LOCAL SOURCE SETUP</p><h2>Connect local music</h2><p>Choose local files or a supported folder in this browser. Selecta Cloud never receives your audio, folder paths or raw fingerprints.</p></div>
     <ReadFeedback read={read} />
     <FolderWatches />
     <SetupJourney api={api} workspaceId={workspaceId} refresh={read.refresh} devices={devices} onController={selection.chooseControllerOnly} />
@@ -193,8 +195,8 @@ export function ConnectLocalMusic({ api, workspaceId, go }: Props) {
 
 const SOURCE_WORDS: Record<string, string> = {
   ready: 'Indexed locally', scanning: 'Local scan in progress', source_disconnected: 'Drive disconnected — reconnect and rescan',
-  permission_required: 'Folder permission required — reauthorise in the local engine',
-  needs_analysis: 'Analysis is incomplete — prepare on the local engine',
+  permission_required: 'Folder permission required — choose your files again in the browser',
+  needs_analysis: 'Analysis is incomplete — prepare in this browser',
   unsupported: 'Unsupported media present — review locally', unknown: 'Source has not been verified',
 };
 
@@ -214,7 +216,7 @@ export function DeviceLibrary({ api, workspaceId, go, revision = 0 }: Props) {
       setScanMessage('Scan requested. Files will be verified by the local engine; refresh to check actual progress.');
       read.refresh();
     } catch {
-      setScanMessage('The scan could not be requested. Open the local engine to scan this source directly.');
+      setScanMessage('The scan could not be requested. Reconnect this music source in the browser.');
     } finally { setScanBusy(false); }
   };
   return <section className="lf-personal" aria-label="Per-device music library">
