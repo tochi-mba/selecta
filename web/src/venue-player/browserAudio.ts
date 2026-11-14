@@ -286,9 +286,8 @@ export class BrowserVenueAudio implements VenueAudioPort {
     }
     const ownership = await this.lease.acquire();
     if (revision !== this.playbackEpoch || this.disposed) {
-      // A Stop can happen while Web Locks waits to grant the speaker.
-      // Never launch stale audio or keep ownership after cancellation.
-      this.lease.release();
+      // Stop already released the old lease. A newer Start may now own this
+      // browser speaker; an obsolete callback must not release its lock.
       throw new Error('Venue start was superseded by a newer playback action');
     }
     if (ownership === 'unsupported') {
@@ -304,7 +303,7 @@ export class BrowserVenueAudio implements VenueAudioPort {
       if (revision !== this.playbackEpoch || this.disposed)
         throw new Error('Venue start was superseded while requesting the screen wake lock');
     } catch (error) {
-      this.lease.release();
+      if (revision === this.playbackEpoch) this.lease.release();
       throw error;
     }
   }
@@ -386,7 +385,8 @@ export class BrowserVenueAudio implements VenueAudioPort {
       throw new Error(this.error ?? 'Tap to resume audio');
     }
     if (revision !== this.playbackEpoch || this.disposed) {
-      this.lease.release();
+      // Stop has already invalidated this attempt; do not release a newer
+      // attempt that acquired the same shared speaker lease.
       throw new Error('Resume was superseded by another playback action');
     }
     if (this.context && this.master)
@@ -445,7 +445,7 @@ export class BrowserVenueAudio implements VenueAudioPort {
     const temporaryLease = !this.deck;
     const ownership = temporaryLease ? await this.lease.acquire() : 'exclusive';
     if (this.disposed || revision !== this.playbackEpoch) {
-      if (temporaryLease) this.lease.release();
+      // Stop or the replacing action owns any lease cleanup.
       throw new Error('The sound check was cancelled by a newer playback action');
     }
     if (ownership === 'unsupported') {
