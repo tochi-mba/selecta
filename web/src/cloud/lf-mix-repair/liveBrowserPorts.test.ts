@@ -23,6 +23,36 @@ describe('BR64 cross-agent production browser Studio port composition', () => {
     expect(status.outputVerified).toBe(false);
     expect(ports.playback!.status().playing).toBe(false);
   });
+  it('refuses to play or render an arrangement with missing or misordered transitions', async () => {
+    const ports = liveBrowserStudioPorts('br64-transition-order');
+    const second = {
+      ...recipe.occurrences[0], occurrence_id: 'second', canonical_track_id: 'track_2',
+      recording_version: 'version_2', title: 'Second recording',
+    };
+    const missing: PortableRecipe = { ...recipe, occurrences: [...recipe.occurrences, second] };
+    expect(ports.renderer!.supported(missing)).toMatchObject({ supported: false });
+    await expect(ports.playback!.playHere(missing)).rejects.toThrow(/explicit saved transition/);
+    const wrong: PortableRecipe = {
+      ...missing, transitions: [{
+        from_occurrence_id: 'second', to_occurrence_id: 'missing_1',
+        type: 'crossfade', duration_seconds: 3, requires_rebuild: false,
+      }],
+    };
+    expect(ports.renderer!.supported(wrong)).toMatchObject({ supported: false });
+    await expect(ports.playback!.playHere(wrong)).rejects.toThrow(/transition order/);
+  });
+
+  it('never pretends the live browser player honours nonzero source cues', async () => {
+    const ports = liveBrowserStudioPorts('br64-cue-accuracy');
+    const cued: PortableRecipe = {
+      ...recipe, cues: [{
+        occurrence_id: 'missing_1', at: 12.5,
+        timebase: 'source_seconds', requires_revalidation: false,
+      }],
+    };
+    await expect(ports.playback!.playHere(cued)).rejects.toThrow(/cue-accurate playback/);
+  });
+
   it('rejects unqualified beatmatch and beat cues without doing hosted processing', async () => {
     const ports = liveBrowserStudioPorts('br64-advanced-deny');
     const unsafe: PortableRecipe = {
