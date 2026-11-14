@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { RoomPanel } from './RoomPanel';
+import type { Api } from '../cloud/api';
 
 const stageItem = (stage: string) => ({
   request_id: 'req-1', song: { song_id: 3, title: 'Synthetic Tune', artist: 'Artist', length_s: 180 },
@@ -25,7 +26,7 @@ function panel(override: Record<string, unknown> = {}) {
 
 describe('LF14 device-owned room UX', () => {
   it('says acceptance is not local playback when the zone speaker is offline', async () => {
-    const api = vi.fn(async () => ({ room: panel() }));
+    const api = vi.fn(async <T,>() => ({ room: panel() }) as T) as Api;
     render(<RoomPanel api={api} workspaceId="ws-1" />);
     expect(await screen.findByText(/local venue speaker is offline or not verified/i)).toBeInTheDocument();
     expect(screen.getByText(/Local speaker zone: front/)).toBeInTheDocument();
@@ -35,8 +36,8 @@ describe('LF14 device-owned room UX', () => {
   });
 
   it('sends clean-only setting without changing the bound zone', async () => {
-    const api = vi.fn(async (path: string) =>
-      path === '/rooms/current' ? { room: panel() } : panel());
+    const api = vi.fn(async <T,>(path: string) =>
+      (path === '/rooms/current' ? { room: panel() } : panel()) as T) as Api;
     render(<RoomPanel api={api} workspaceId="ws-1" />);
     const checkbox = await screen.findByRole('checkbox', { name: /Clean recordings only/ });
     fireEvent.click(checkbox);
@@ -48,8 +49,8 @@ describe('LF14 device-owned room UX', () => {
   });
 
   it('includes selected zone in opening a room, without needing audio uploads', async () => {
-    const api = vi.fn(async (path: string) =>
-      path === '/rooms/current' ? { room: null } : panel());
+    const api = vi.fn(async <T,>(path: string) =>
+      (path === '/rooms/current' ? { room: null } : panel()) as T) as Api;
     render(<RoomPanel api={api} workspaceId="ws-1" zoneId="front" />);
     fireEvent.click(await screen.findByRole('button', { name: 'Open room' }));
     await waitFor(() => {
