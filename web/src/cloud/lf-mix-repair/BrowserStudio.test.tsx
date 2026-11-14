@@ -76,6 +76,26 @@ describe('portable browser Studio', () => {
       .map((row) => row.occurrence_id)).toEqual(['second', 'first']);
     expect(requests.every(({ path }) => !path.includes('/assets') && !path.includes('/upload'))).toBe(true);
   });
+  it('uses the real immutable head when editing a legacy recipe through the v2 view', async () => {
+    const base = stubApi();
+    const legacyHead = 'f'.repeat(64);
+    const api: Api = async <T,>(path: string, init?: RequestInit, workspace?: string): Promise<T> => {
+      if (path === '/cloud-mixes/saved_mix?schema_version=2') return {
+        recipe: original, head_revision: legacyHead, history: [{
+          revision: legacyHead, number: 3, name: original.name,
+          schema_version: 1, parent_revision: original.parent_revision,
+        }], legacy_read_only_view: true,
+      } as T;
+      return base.api<T>(path, init, workspace);
+    };
+    render(<BrowserStudio api={api} workspaceId="workspace_1" />);
+    await userEvent.click(await screen.findByRole('button', { name: /Weekend set/i }));
+    await userEvent.clear(screen.getByRole('textbox', { name: 'Mix name' }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Mix name' }), 'Legacy remix');
+    await userEvent.click(screen.getByRole('button', { name: 'Save new version' }));
+    const write = base.requests.find((request) => request.path.endsWith('/revisions'));
+    expect(write?.body?.base_revision).toBe(legacyHead);
+  });
   it('retains an older unsaved draft when Cloud has a new head revision', async () => {
     const { api } = stubApi();
     const key = 'br64-07:draft:workspace_1:saved_mix';
