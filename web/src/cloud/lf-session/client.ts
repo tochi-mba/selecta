@@ -155,6 +155,53 @@ const FIELDS = [
   "policy_version", "sequence", "action", "arguments", "created_at", "expires_at",
   "idempotency_key",
 ] as const;
+const ROLES: ReadonlySet<string> = new Set(["owner", "admin", "dj", "staff", "viewer"]);
+const INTERNAL_ACTIONS: ReadonlySet<string> = new Set([
+  "prepare_output", "release_output", "activate_output",
+]);
+const EPHEMERAL_ACTIONS: ReadonlySet<string> = new Set(["play", "pause", "skip", "seek"]);
+const ARG_KEYS: Record<Action, readonly string[]> = {
+  play: [], pause: [], skip: ["song_index"], seek: ["song_index", "offset_ms"],
+  set_volume: ["volume"], steer: ["direction"], reorder: ["occurrence_ids"],
+  approve_request: ["request_id"], set_policy: ["revision", "enabled"],
+  set_schedule: ["schedule_id", "revision", "enabled"],
+  prepare_output: ["transfer_id"], release_output: ["transfer_id"],
+  activate_output: ["transfer_id"],
+};
+const ARG_REQUIRED: Partial<Record<Action, readonly string[]>> = {
+  seek: ["offset_ms"], set_volume: ["volume"], steer: ["direction"],
+  reorder: ["occurrence_ids"], approve_request: ["request_id"],
+  set_policy: ["revision", "enabled"],
+  set_schedule: ["schedule_id", "revision", "enabled"],
+  prepare_output: ["transfer_id"], release_output: ["transfer_id"],
+  activate_output: ["transfer_id"],
+};
+
+function validCommandArguments(action: Action, args: unknown): boolean {
+  if (!args || typeof args !== "object" || Array.isArray(args)) return false;
+  const values = args as Record<string, unknown>;
+  const keys = Object.keys(values);
+  if (keys.some((key) => !ARG_KEYS[action].includes(key))) return false;
+  if (ARG_REQUIRED[action]?.some((key) => !Object.hasOwn(values, key))) return false;
+  if (JSON.stringify(values).length > 4096) return false;
+  for (const [key, value] of Object.entries(values)) {
+    if (key === "song_index" || key === "offset_ms" || key === "volume") {
+      if (!Number.isSafeInteger(value) || (value as number) < 0
+        || (value as number) > (key === "volume" ? 100 : 2 ** 31 - 1)) return false;
+    } else if (key === "enabled") {
+      if (typeof value !== "boolean") return false;
+    } else if (key === "direction") {
+      if (!["bigger", "calmer", "something_else"].includes(value as string)) return false;
+    } else if (key === "occurrence_ids") {
+      if (!Array.isArray(value) || value.length < 1 || value.length > 500
+        || value.some((id) => typeof id !== "string" || !IDENT.test(id))
+        || new Set(value).size !== value.length) return false;
+    } else if (typeof value !== "string" || !IDENT.test(value)) {
+      return false;
+    }
+  }
+  return true;
+}
 const BASE = apiOrigin + "/api/lf/v1";
 
 export class BrowserControlError extends Error {
@@ -182,7 +229,7 @@ function canonical(value: unknown): string {
 
 export async function verifyDeliveredCommand(
   packet: DeliveredCommand,
-  expected: Pick<RegisteredSession, "session_id" | "device_id" | "workspace_id" | "command_key">,
+  expected: Pick<RegisteredSession, "session_id" | "device_id" | "workspace_id" | "zone_id" | "command_key">,
   nowSeconds = Date.now() / 1000,
 ): Promise<BrowserEnvelope | null> {
   if (packet.schema_version !== 1) throw new BrowserControlError(422, "unsupported_protocol");
@@ -194,16 +241,30 @@ export async function verifyDeliveredCommand(
   const envelope = packet.command;
   if (
     envelope.schema_version !== 1 || !IDENT.test(envelope.operation_id)
-    || !IDENT.test(envelope.actor_id) || !IDENT.test(envelope.zone_id)
+    || !IDENT.test(envelope.actor_id) || !ROLES.has(envelope.actor_role)
+    || !IDENT.test(envelope.zone_id) || envelope.zone_id !== expected.zone_id
     || envelope.session_id !== expected.session_id
     || envelope.target_device_id !== expected.device_id
     || envelope.workspace_id !== expected.workspace_id
+    || !IDENT.test(envelope.idempotency_key)
+    || (envelope.expected_recipe_revision !== null
+      && (typeof envelope.expected_recipe_revision !== "string"
+        || !IDENT.test(envelope.expected_recipe_revision)))
     || !ACTIONS.has(envelope.action)
     || !Number.isSafeInteger(envelope.sequence) || envelope.sequence < 1
     || !Number.isSafeInteger(envelope.expected_generation)
     || envelope.expected_generation < 0
-    || !Number.isFinite(envelope.created_at) || !Number.isFinite(envelope.expires_at)
+    || !Number.isSafeInteger(envelope.policy_version) || envelope.policy_version < 0
+    || !validCommandArguments(envelope.action, envelope.arguments)
+    || !Number.isSafeInteger(envelope.created_at)
+    || !Number.isSafeInteger(envelope.expires_at)
+    || envelope.created_at <= 0 || envelope.expires_at >= 10 ** 11
     || envelope.created_at > nowSeconds + 30 || envelope.expires_at <= nowSeconds
+    || envelope.expires_at <= envelope.created_at
+    || envelope.expires_at - envelope.created_at > (
+      INTERNAL_ACTIONS.has(envelope.action) ? 120
+        : EPHEMERAL_ACTIONS.has(envelope.action) ? 60 : 86400
+    )
     || typeof packet.signature !== "string" || !/^[a-f0-9]{64}$/.test(packet.signature)
   ) throw new BrowserControlError(422, "invalid_or_expired_command");
   if (!globalThis.crypto?.subtle) throw new BrowserControlError(503, "webcrypto_unavailable");
