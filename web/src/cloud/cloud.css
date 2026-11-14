@@ -237,3 +237,9 @@
 }
 
 .cloud-shell-personal .cloud-personal-nav-link{text-decoration:none}
+
+/* Keyboard path to the same content focus target as the local app shell. */
+.cloud-skip-link{position:fixed;left:10px;top:10px;z-index:1000;
+  transform:translateY(-200%);padding:10px 14px;border-radius:8px;
+  background:var(--panel);color:var(--ink);border:2px solid var(--accent)}
+.cloud-skip-link:focus{transform:none}
