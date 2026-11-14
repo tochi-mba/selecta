@@ -157,3 +157,15 @@ The active `BrowserStudio.tsx` transition-preparation button contained an unterm
 Source file deletion and reference checks were performed through the connected GitHub repository. Full `pnpm build`, Vitest, Playwright, Python tests, CodeQL, actual speaker output and hardware/device verification **were not run by this pass**; deletion of an unmounted UI is not evidence that cross-device operations work. The current local-first feature gates and hardware acceptance gates remain in force. The original LF12 handoff document was explicitly archived and BR64-02/05 handoffs were amended to avoid stale commands.
 
 **Release judgment remains unchanged:** targeted source-level problems were fixed, but this PR is not evidence that every supported mobile/desktop device or production venue programme has been tested or certified. Merge to `main` has not been performed.
+
+
+## Follow-up cleanup: redundant browser API alias and retired personal snapshot (14 November 2026)
+
+This focused branch-only pass followed the 17-file deletion audit above. It reviewed the browser-first and hosted Cloud shell, all 41 current non-test modules in `web/src/cloud/**`, the current device modules and the associated Python Cloud API route/import entry points. These are **source reference checks**, not a complete build or a complete graph of all 705 web source files.
+
+- **Deleted** `src/selecta/routes/lf_v1_api.py`, a 162-byte unused re-export of `lf_api.routes.make_router`. Actual Cloud integration mounts the router from `selecta.lf_api.integration`; tests import the real route module directly. No endpoint or migration was deleted.
+- **Pruned** `web/src/cloud/lf-personal/contract.ts` from 10,001 bytes to 589 bytes. Its provisional native-engine `/local-first/personal/snapshot`, pairing and scan API functions, detached response parser, and stale status models were only exercised by tests after the superseded `PersonalWorkspace` UI was removed. The live `local_first.personal` opt-in and folder-watch setup link exports remain unchanged.
+- **Replaced** `web/src/cloud/lf-personal/contract.test.ts` legacy parser tests with checks for the retained opt-in decision and legacy setup links. This avoids keeping tests that solely certify a retired, unmounted contract.
+- **Kept intentionally** `DeviceMixRepair` (still used by `MakeCloudMix`), `FolderWatches` and its loopback companion (still used by legacy Uploads/Library), the actual browser session service and player, migrations, render codecs, native standalone, and historic hosted customer paths.
+
+These changes do not imply the browser implementation passes TypeScript checks, all test suites, or real mobile/audio certification; the GitHub connector was used for edits and there was no runnable repository checkout in this session. They also do not authorise production data deletion or a merge to `main`.
