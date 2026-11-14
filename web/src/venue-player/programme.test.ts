@@ -90,6 +90,24 @@ describe('BR64-08 foreground browser venue programme', () => {
       expect(f.play).not.toHaveBeenCalled();
     } finally { await runner.dispose(); }
   });
+  it('retries failed next-track preparation instead of marking a failed decode ready', async () => {
+    const f = fixture();
+    f.snapshot.remainingSeconds = 20;
+    let attempts = 0;
+    f.adapters.audio.prepare = vi.fn(async (id: string) => {
+      if (id === 'b' && ++attempts === 1) throw new Error('Temporary local decode failure');
+    });
+    const runner = new BrowserVenueProgramme(scope, f.adapters, () => NOW);
+    try {
+      await runner.start();
+      await runner.tick();
+      expect(runner.status().issue).toMatch(/Temporary local decode failure/);
+      await runner.tick();
+      expect(attempts).toBe(2);
+      expect(runner.status().issue).toBeNull();
+    } finally { await runner.dispose(); }
+  });
+
   it('refuses browser suspension as grounds to claim continuous local playback', async () => {
     const f = fixture();
     const runner = new BrowserVenueProgramme(scope, f.adapters, () => NOW);
