@@ -97,3 +97,6 @@ export function words(): Record<CopyKey, string> {
 // They are not fetched or loaded automatically by standalone Selecta.
 export const localEngineUrl = 'http://127.0.0.1:8733/';
 export const localEngineSetupGuide = 'https://github.com/tochi-mba/selecta/blob/main/README.md';
+
+/** Desktop file-picker example, kept in the mode-aware copy layer. */
+export const localFolderExample = 'C:\\Users\\you\\Music';
