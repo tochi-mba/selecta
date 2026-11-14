@@ -77,3 +77,29 @@ The Playwright command above checks Agent 10's lab harness only; run additional 
 **Source integration:** merged and repaired inside PR #64.  
 **Release status:** **NO-GO** for claiming a fully portable, unattended, premium-parity Cloud/venue DJ product. Basic supported browser-local playback and a limited Studio/WAV path have a genuine implementation; all unverified features must remain correctly gated/degraded.  
 **Merge to main:** intentionally **not performed**.
+
+
+## Follow-up source audit — browser safety, obsolete UI and export recovery (2026-11-14)
+
+The owner requested an additional implementation audit and removal of unused code on **this same PR #64 branch**, without using CI failures as the work queue. These changes are code-level fixes and regression tests, **not execution evidence** or device certification.
+
+### Fixes committed
+
+1. **Venue start/stop and skip races:** venue programme transitions now serialize and carry invalidation epochs; late source preparation cannot silently restart a stopped venue, double-Start is rejected, and interrupted sessions require a fresh on-device Start instead of an unsafe Resume. The audio adapter rejects stale async starts/transitions and File replacement with the same recording ID.
+2. **Decoded PCM memory:** browser venue preparation deduplicates in-flight decodes and counts their resources against an aggregate PCM budget. Stale decoder completions cannot turn a stopped player back into a Ready state.
+3. **Browser control fencing:** browser speaker generation is restored from writable persistent local storage and persisted **before** acknowledging newly audible ownership, not only release. The browser fails closed if the fence cannot be persisted, and does not claim a failed remote skip/pause was applied. Mobile/tablet capability hints no longer always say desktop.
+4. **Personal audio graph:** Studio queue replacement preserves an AudioContext unlocked in a genuine user click, preventing a second unprompted Safari gesture requirement. Old queue decodes cannot contaminate replacement media with an identical recording ID; a rapid third-track skip stops a previously fading source before reusing that deck.
+5. **Mixing sound quality:** the AudioWorklet no longer hard-clips crossfade samples to ±1 **before** the existing compressor/master. The downstream stage controls peaks; premature clipping had irreversibly distorted overlaps.
+6. **Export recovery:** a damaged generated render-cache WAV/FLAC is discarded and rebuilt after verification fails. Orphan cache markers and partial files are removed without touching original local recordings, other artifacts or user-saved exports.
+7. **Studio recipe truthfulness:** live playback now rejects nonzero source-second cues that its simple two-deck player would ignore, plus missing or misordered transition sequences. Basic rendering can continue using its separate cue-aware pipeline; unsupported live DJ parity is not misrepresented.
+8. **Dead-code removal:** removed the disconnected LF10 native-engine-oriented `PersonalWorkspace.tsx`, its retired test, its private React state hooks and obsolete `personal.css`. The actual browser-first `BrowserWorkspace.tsx` used by Uploads/Library and the legacy standalone/development folder-watch code remain intact.
+
+Regression cases were added for the relevant audio, venue, Studio, persistent-fence and cache scenarios. This report does **not** assert that Vitest, browser CI, real iPad/Android hardware, output measurement, Cloud migrations or full integration tests were run.
+
+### Remaining cautions
+
+- **Release remains NO-GO for general unattended venue operation** until real iPadOS/Android interruption, Bluetooth, six-hour continuous output, zone-policy and remote takeover hardware trials are passed.
+- The bounded whole-file decoder and baseline Studio transport still do **not** provide mobile long-mix streaming, complete beatmatch/stem/neural parity or fully cue-accurate live performance. Do not claim those features are complete.
+- The legacy unflagged Cloud Uploads/Listen screens remain routed for compatibility even though old hosted-audio endpoints return authenticated HTTP 410. Before user-facing rollout, resolve the feature flag/default path and retire misleading legacy purchase/upload copy deliberately, without deleting the separate standalone local product.
+- Final integration still needs dependency/build, security, browser regression, route migration and physical-device testing. User asked not to prioritise CI failures during this specific source audit; that is not a waiver for production release.
+
