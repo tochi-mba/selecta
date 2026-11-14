@@ -280,6 +280,7 @@ export function CloudApp() {
   const signOutHere = () => signOut({ returnTo: window.location.origin });
   return (
     <div className={localFirst ? 'cloud-shell cloud-shell-personal' : 'cloud-shell'} data-stream={stream}>
+      {localFirst && <a className="cloud-skip-link" href="#cloud-content">Skip to content</a>}
       <aside className="cloud-rail">
         <button className="cloud-brand" title="Return to Cloud home" onClick={() => choosePage('home')}><span className="cloud-mark" aria-hidden="true">S</span><span>SelectaDJ{' '}<span className="cloud-brand-sub">REX Technologies</span></span></button>
         <nav aria-label="Cloud workspace">
@@ -295,7 +296,7 @@ export function CloudApp() {
           <button onClick={() => void signOutEverywhere()} disabled={busy}>Sign out everywhere</button>
           <button className="cloud-delete-account" onClick={() => void deleteAccount()} disabled={busy}>Delete account</button></div>
       </aside>
-      <main className="cloud-main" id="cloud-content">
+      <main className="cloud-main" id="cloud-content" tabIndex={localFirst ? -1 : undefined}>
         <header className="cloud-top"><div><p className="cloud-eyebrow">{account?.workspace.name ?? 'YOUR WORKSPACE'}</p>
           <h1 ref={titleRef} tabIndex={exact ? -1 : undefined}>{notFound ? 'Page not found' :
             activePersonalDestination ? personalTitle(activePersonalDestination) : TITLES[shown]}</h1>
@@ -330,6 +331,7 @@ export function CloudApp() {
             {showsDeviceCheck(account.features) && <DeviceCheck />}
           </section>}
         {account && localFirst && activePersonalDestination === 'rooms' &&
+          (featureOn(account, 'rooms') || Boolean(lockedTo(account, 'rooms'))) &&
           <section className="cloud-personal-rooms" aria-label="Cloud Rooms">
             <p>Guests can request music, but approval is not a guarantee of local speaker playback.
               A verified device and permitted recordings are required.</p>
@@ -338,6 +340,12 @@ export function CloudApp() {
               votesOn={account.features['rooms.votes'] !== false}
               displayOn={account.features['rooms.display'] !== false}
               playHereOn={false} freshOnly={account.features['rooms.nickname_confirm'] === true} />
+          </section>}
+        {account && localFirst && activePersonalDestination === 'rooms' &&
+          !featureOn(account, 'rooms') && !lockedTo(account, 'rooms') &&
+          <section className="cloud-card" role="status">
+            <h2>Rooms are unavailable for this workspace</h2>
+            <p>Rooms are not enabled here. Nothing has been sent to a venue speaker.</p>
           </section>}
         {view === 'listen' && account && !localFirst && <CloudListen api={api} account={account} />}
         {view === 'listen' && account && !localFirst && <MakeCloudMix api={api} account={account} />}
@@ -353,7 +361,7 @@ export function CloudApp() {
         {view === 'library' && account && <LibraryPanel api={api} workspaceId={account.workspace.id} setError={setError} refreshAccount={refreshAccount} go={choosePage} reload={libraryVersion} truthful={featureOn(account, LIBRARY_STATES_FLAG)} account={account} localFirst={localFirst} />}
         {view === 'uploads' && account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} perFile={featureOn(account, LIBRARY_STATES_FLAG)} localFirst={localFirst} go={choosePage} />}
         {view === 'billing' && account && <Billing account={account} busy={busy} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} />}
-        {view === 'settings' && account && (!localFirst || activePersonalDestination === 'settings') && <div className="cloud-settings"><AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} />{featureOn(account, 'devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{featureOn(account, 'lucy') && featureOn(account, 'account.lucy_settings') && <LucyCloudSettings request={lucyRequest} features={account.features} />}{showsDeviceCheck(account.features) && <DeviceCheck />}{showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />}{featureOn(account, 'autopilot.venue_mode') && featureOn(account, 'autopilot.venue_policy') && <VenueSetup api={api} workspaceId={account.workspace.id} />}{exact && <AccountDanger busy={busy} onSignOutEverywhere={() => void signOutEverywhere()} onDelete={() => void deleteAccount(true)} />}</div>}
+        {view === 'settings' && account && (!localFirst || activePersonalDestination === 'settings') && <div className="cloud-settings"><AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} />{featureOn(account, 'devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{featureOn(account, 'lucy') && featureOn(account, 'account.lucy_settings') && <LucyCloudSettings request={lucyRequest} features={account.features} />}{showsDeviceCheck(account.features) && <DeviceCheck />}{showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />}{featureOn(account, 'autopilot.venue_mode') && featureOn(account, 'autopilot.venue_policy') && <VenueSetup api={api} workspaceId={account.workspace.id} />}{exact && <AccountDanger busy={busy} onSignOutEverywhere={() => void signOutEverywhere()} onDelete={() => void deleteAccount(true)} />}{localFirst && <section className="cloud-card"><p className="cloud-eyebrow">THIS BROWSER SESSION</p><h2>Sign out</h2><p>Sign out of this browser without making assumptions about audio on other devices.</p><button type="button" onClick={signOutHere}>Sign out of this browser</button></section>}</div>}
         <footer className="cloud-footer">{localFirst ? 'SelectaDJ Cloud · Recipes sync; recordings stay on authorised local devices.' : 'SelectaDJ Cloud · Your originals remain private to your workspace.'}<CloudCredit /></footer>
       </main>
     </div>
