@@ -8,7 +8,6 @@ import { recoveringSpeaker } from './recoveringSpeaker';
 import { useCloudPlayer } from './useCloudPlayer';
 import { BrowserSessionPanel } from './lf-device-control/BrowserSessionPanel';
 import { LocalBrowserPlayer } from '../engine/LocalBrowserPlayer';
-import { browserEngine } from '../engine/registry';
 import { LOCAL_FIRST_PLAYER_FLAG } from './lf-device-control/contracts';
 import { personalEnabled } from './lf-personal/contract';
 
@@ -107,10 +106,7 @@ export function CloudTransportDock({ api, account, page, reload = 0, accessToken
     <div className="cloud-browser-first-dock">
       <LocalBrowserPlayer workspaceId={workspaceId} />
       <button type="button" aria-expanded={showRemoteControl}
-        onClick={() => {
-          if (!showRemoteControl) void browserEngine(workspaceId).stop();
-          setShowRemoteControl((visible) => !visible);
-        }}>
+        onClick={() => setShowRemoteControl((visible) => !visible)}>
         {showRemoteControl ? 'Hide remote device controls' : 'Control an existing speaker'}
       </button>
       {showRemoteControl && accessToken && account.features['local_first.browser_control'] === true &&
