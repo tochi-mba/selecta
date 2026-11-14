@@ -124,7 +124,7 @@ class BrowserEnvelope:
     idempotency_key: str
 
     @classmethod
-    def parse(cls, raw: Any, *, now: float | None = None) -> "BrowserEnvelope":
+    def parse(cls, raw: Any, *, now: float | None = None) -> BrowserEnvelope:
         if type(raw) is not dict or set(raw) != set(cls.__dataclass_fields__):
             raise ControlError("invalid_envelope_fields")
         if type(raw["schema_version"]) is not int or raw["schema_version"] != VERSION:
