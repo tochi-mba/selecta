@@ -23,25 +23,57 @@ export function singleAudioOwner(account: Pick<Account, 'features'> | null) {
   return featureOn(account, SINGLE_AUDIO_OWNER);
 }
 
-export function CloudTransportDock({ api, account, page, reload = 0, accessToken }: {
+/** Split the browser-first route from the historical hosted transport so
+ * local-only accounts never mount a hosted audio hook, player, or asset catalogue.
+ * React hooks remain unconditional within their respective mounted component. */
+type DockProps = {
   api: Api; account: Account; page: Page; reload?: number;
   accessToken?: () => Promise<string>;
+};
+
+export function CloudTransportDock({ api, account, page, reload = 0, accessToken }: DockProps) {
+  if (personalEnabled(account) || account.features[LOCAL_FIRST_PLAYER_FLAG] === true) {
+    return <BrowserFirstDock workspaceId={account.workspace.id} account={account} accessToken={accessToken} />;
+  }
+  return <HostedTransportDock api={api} account={account} page={page} reload={reload} />;
+}
+
+function BrowserFirstDock({ workspaceId, account, accessToken }: {
+  workspaceId: string; account: Account; accessToken?: () => Promise<string>;
 }) {
-  const workspaceId = account.workspace.id;
-  const localFirst = personalEnabled(account) || account.features[LOCAL_FIRST_PLAYER_FLAG] === true;
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const deviceBox = useRef<HTMLDivElement>(null);
-  const deviceSpeaker = useRef<Speaker | null>(null);
-  const [error, setError] = useState('');
-  const [deviceProblem, setDeviceProblem] = useState('');
-  const [armed, setArmed] = useState(page === 'listen');
   const [showRemoteControl, setShowRemoteControl] = useState(false);
   useEffect(() => {
     const open = () => setShowRemoteControl(true);
     window.addEventListener('selecta:open-remote-control', open);
     return () => window.removeEventListener('selecta:open-remote-control', open);
   }, []);
-  const player = useCloudPlayer({ api, workspaceId, audio: audioRef, setError, skipOnFailure: true, localFirstMode: localFirst });
+  return (
+    <div className="cloud-browser-first-dock">
+      <LocalBrowserPlayer workspaceId={workspaceId} />
+      <button type="button" aria-expanded={showRemoteControl}
+        onClick={() => setShowRemoteControl((visible) => !visible)}>
+        {showRemoteControl ? 'Hide remote device controls' : 'Control an existing speaker'}
+      </button>
+      {showRemoteControl && accessToken && account.features['local_first.browser_control'] === true &&
+        <BrowserSessionPanel workspaceId={workspaceId} accessToken={accessToken} />}
+      {showRemoteControl && account.features['local_first.browser_control'] !== true &&
+        <p role="status">Authenticated remote browser control is not enabled for this workspace.
+          Local playback still works here. No previous speaker is assumed silent.</p>}
+    </div>
+  );
+}
+
+function HostedTransportDock({ api, account, page, reload = 0 }: {
+  api: Api; account: Account; page: Page; reload?: number;
+}) {
+  const workspaceId = account.workspace.id;
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const deviceBox = useRef<HTMLDivElement>(null);
+  const deviceSpeaker = useRef<Speaker | null>(null);
+  const [error, setError] = useState('');
+  const [deviceProblem, setDeviceProblem] = useState('');
+  const [armed, setArmed] = useState(page === 'listen');
+  const player = useCloudPlayer({ api, workspaceId, audio: audioRef, setError, skipOnFailure: true });
   const transport = useTransport();
 
   useEffect(() => { if (page === 'listen') setArmed(true); }, [page]);
@@ -55,7 +87,7 @@ export function CloudTransportDock({ api, account, page, reload = 0, accessToken
   }, [workspaceId]);
 
   const library = useMemo(() => catalogueSource(api, workspaceId), [api, workspaceId]);
-  useEffect(() => { if (reload && !localFirst) library.catalogue.refresh(); }, [library, reload, localFirst]);
+  useEffect(() => { if (reload) library.catalogue.refresh(); }, [library, reload]);
   const speakerFor = useCallback((audio: HTMLAudioElement, source: (index: number) => Promise<string | null>): Speaker => {
     const made = recoveringSpeaker(audio, source, { onProblem: setDeviceProblem, songName: library.name });
     deviceSpeaker.current = made;
@@ -98,24 +130,6 @@ export function CloudTransportDock({ api, account, page, reload = 0, accessToken
     if (!player.upNext) releaseFocus('library');
     player.advance();
   };
-
-  // Browser-first playback uses the user's selected File objects, never Cloud playback URLs.
-  // Remote device metadata is mounted only when requested, so Play Here works without
-  // a Python process, API control bridge or another paired computer.
-  if (localFirst) return (
-    <div className="cloud-browser-first-dock">
-      <LocalBrowserPlayer workspaceId={workspaceId} />
-      <button type="button" aria-expanded={showRemoteControl}
-        onClick={() => setShowRemoteControl((visible) => !visible)}>
-        {showRemoteControl ? 'Hide remote device controls' : 'Control an existing speaker'}
-      </button>
-      {showRemoteControl && accessToken && account.features['local_first.browser_control'] === true &&
-        <BrowserSessionPanel workspaceId={workspaceId} accessToken={accessToken} />}
-      {showRemoteControl && account.features['local_first.browser_control'] !== true &&
-        <p role="status">Authenticated remote browser control is not enabled for this workspace.
-          Local playback still works here. No previous speaker is assumed silent.</p>}
-    </div>
-  );
 
   const track = player.track;
   const devices = featureOn(account, 'devices');
