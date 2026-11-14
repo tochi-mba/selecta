@@ -50,6 +50,8 @@ export type BrowserMediaState =
   | 'permission_required' | 'alternative_master' | 'cache_invalid' | 'unknown';
 export type LocalRecordingStatus = {
   occurrenceId: string;
+  canonicalTrackId: string | null;
+  recordingVersion: string | null;
   state: BrowserMediaState;
   reason?: string;
   exactIdentityVerified: boolean;
@@ -129,15 +131,18 @@ export function checkedAvailability(
       availability.verifiedAt > now + 5000 || availability.expiresAt <= now ||
       availability.tracks.length !== recipe.occurrences.length) {
     return { ready: 0, total: recipe.occurrences.length, allReady: false, outputVerified: false, rows: recipe.occurrences.map(
-      (r) => ({ occurrenceId: r.occurrence_id, state: 'unknown' as BrowserMediaState, exactIdentityVerified: false }),
+      (r) => ({ occurrenceId: r.occurrence_id, canonicalTrackId: null, recordingVersion: null, state: 'unknown' as BrowserMediaState, exactIdentityVerified: false }),
     ) };
   }
   const rows = recipe.occurrences.map((occurrence, index) => {
     const report = availability.tracks[index];
     return report && report.occurrenceId === occurrence.occurrence_id &&
+      report.canonicalTrackId === occurrence.canonical_track_id &&
+      report.recordingVersion === occurrence.recording_version &&
+      occurrence.canonical_track_id !== null &&
       report.verifiedAt !== undefined && Number.isFinite(report.verifiedAt) &&
       report.verifiedAt <= now + 5000 && report.verifiedAt >= availability.verifiedAt - 120000
-      ? report : { occurrenceId: occurrence.occurrence_id, state: 'unknown' as BrowserMediaState, exactIdentityVerified: false };
+      ? report : { occurrenceId: occurrence.occurrence_id, canonicalTrackId: null, recordingVersion: null, state: 'unknown' as BrowserMediaState, exactIdentityVerified: false };
   });
   const ready = rows.filter((row) => row.state === 'available' && row.exactIdentityVerified).length;
   return {
