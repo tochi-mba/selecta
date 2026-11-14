@@ -72,6 +72,23 @@ describe('BR64-07 Cloud flag combinations and route continuity', () => {
     expect(screen.queryByTestId('br64-01-browser-player')).not.toBeInTheDocument();
   });
 
+  it('keeps account sign-out and a content skip link available without the mobile rail footer', async () => {
+    window.history.replaceState({}, '', '/account');
+    render(<CloudApp />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Account settings' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveAttribute('href', '#cloud-content');
+    expect(screen.getByRole('button', { name: 'Sign out of this browser' })).toBeInTheDocument();
+  });
+
+  it('does not mount Rooms controls when the workspace feature is disabled', async () => {
+    account.features.rooms = false;
+    window.history.replaceState({}, '', '/rooms');
+    render(<CloudApp />);
+    expect(await screen.findByText('Rooms are unavailable for this workspace')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open room' })).toBeNull();
+    expect(requests.every((url) => !url.includes('/api/rooms'))).toBe(true);
+  });
+
   it('still exposes account settings and avoids turning the old hosted dock back on', async () => {
     window.history.replaceState({}, '', '/account');
     render(<CloudApp />);
