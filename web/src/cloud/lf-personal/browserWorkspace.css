@@ -1,0 +1,22 @@
+.br64-local { max-width: 78rem; margin-inline: auto; padding: clamp(1rem, 3vw, 2rem); display: grid; gap: 1rem; }
+.br64-local header { display: grid; gap: .65rem; }
+.br64-local h2, .br64-local h3 { margin: 0; }
+.br64-local p { max-width: 78ch; }
+.br64-panel { border: 1px solid var(--line, #8885); border-radius: 1rem; padding: clamp(1rem, 2vw, 1.5rem); display: grid; gap: .8rem; min-width: 0; }
+.br64-actions { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
+.br64-local button { min-height: 2.75rem; cursor: pointer; }
+.br64-local button:disabled { cursor: not-allowed; }
+.br64-local [role="alert"] { color: var(--danger, #b34141); }
+.br64-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .4rem; padding: 0; list-style: none; }
+.br64-steps li { border: 1px solid var(--line, #8885); border-radius: .5rem; padding: .7rem; font-size: .88rem; }
+.br64-steps li[data-complete="true"] { border-color: currentColor; }
+.br64-capabilities { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: .5rem; }
+.br64-capabilities li { display: grid; gap: .25rem; min-width: 0; padding: .8rem; border: 1px solid var(--line, #8885); border-radius: .5rem; }
+.br64-capabilities small, .br64-recordings small { display: block; overflow-wrap: anywhere; }
+.br64-capabilities span { text-transform: capitalize; }
+.br64-recordings { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.br64-recordings li { display: flex; gap: 1rem; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line, #8885); padding: .7rem 0; }
+.br64-recordings li > div { min-width: 0; overflow-wrap: anywhere; }
+.br64-muted { opacity: .8; font-size: .9rem; }
+@media (max-width: 680px) { .br64-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } .br64-recordings li { align-items: flex-start; flex-direction: column; } }
+@media (prefers-reduced-motion: reduce) { .br64-local * { scroll-behavior: auto; } }
