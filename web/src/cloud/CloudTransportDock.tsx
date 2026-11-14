@@ -7,6 +7,8 @@ import { claimFocus, clearNotice, releaseFocus, shareLibraryPlayer, useTransport
 import { recoveringSpeaker } from './recoveringSpeaker';
 import { useCloudPlayer } from './useCloudPlayer';
 import { LocalFirstPlayer } from './lf-device-control/LocalFirstPlayer';
+import { LocalBrowserPlayer } from '../engine/LocalBrowserPlayer';
+import { browserEngine } from '../engine/registry';
 import { LOCAL_FIRST_PLAYER_FLAG } from './lf-device-control/contracts';
 
 // The one Cloud player (ADR-0419, flag `cloud.single_audio_owner`). CloudApp mounts this dock
@@ -30,6 +32,7 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
   const [error, setError] = useState('');
   const [deviceProblem, setDeviceProblem] = useState('');
   const [armed, setArmed] = useState(page === 'listen');
+  const [showRemoteControl, setShowRemoteControl] = useState(false);
   const player = useCloudPlayer({ api, workspaceId, audio: audioRef, setError, skipOnFailure: true, localFirstMode: localFirst });
   const transport = useTransport();
 
@@ -88,9 +91,22 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
     player.advance();
   };
 
-  // Local-first renders no browser media element and never invokes R2 playback proxies.
-  // The legacy path is retained only for workspaces not yet migrated to the new protocol.
-  if (localFirst) return <LocalFirstPlayer api={api} workspaceId={workspaceId} actorId={account.user.id} />;
+  // Browser-first playback uses the user's selected File objects, never Cloud playback URLs.
+  // Remote device metadata is mounted only when requested, so Play Here works without
+  // a Python process, API control bridge or another paired computer.
+  if (localFirst) return (
+    <div className="cloud-browser-first-dock">
+      <LocalBrowserPlayer workspaceId={workspaceId} />
+      <button type="button" aria-expanded={showRemoteControl}
+        onClick={() => {
+          if (!showRemoteControl) void browserEngine(workspaceId).stop();
+          setShowRemoteControl((visible) => !visible);
+        }}>
+        {showRemoteControl ? 'Hide remote device controls' : 'Control an existing speaker'}
+      </button>
+      {showRemoteControl && <LocalFirstPlayer api={api} workspaceId={workspaceId} actorId={account.user.id} />}
+    </div>
+  );
 
   const track = player.track;
   const devices = featureOn(account, 'devices');
