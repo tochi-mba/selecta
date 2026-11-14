@@ -109,6 +109,9 @@ Only these modules may open outbound connections:
 | Cloud image build only: `src/selecta/workers/model_lock.py` | The pinned model URLs in `services/worker/models.lock.json` | Nothing but the download request; each file is checked against its SHA-256 | Only when the Cloud worker image is built (ADR-0396); never at run time or in local mode |
 | Dev-only: `src/selecta/devstack/identity.py` | The locally configured Cloud API webhook endpoint | Signed identity events; no external identity provider is contacted | Only in the guarded local development identity service; never in production |
 | Dev-only: `src/selecta/devstack/launcher.py` | `127.0.0.1` only: the services `dev.cmd cloud` itself started | Health and readiness requests; nothing about the developer | Only while `dev.cmd cloud` starts and watches its own loopback services |
+| Installed local engine: `src/selecta/local_engine/discovery.py` | Local loopback health port only | Capability and installation handshake; no music files | Only while checking the installed engine on the same computer |
+| Installed local engine: `src/selecta/local_engine/supervisor.py` | Local loopback server and process controls | Health probes, not user audio or workspace files | Only while supervising its own local engine process |
+| Local-first control: `src/selecta/lf_control/http_transport.py` | Operator-authorised HTTPS control-plane endpoint | Signed metadata-only commands, acknowledgements and device status; no audio, paths or fingerprints | Only for a paired, authorised engine's outbound control channel |
 
 Local files: original music is only read; analysis, stems, renders and exports go under the Selecta
 home (`SELECTA_HOME`, default `~/.selecta`). No module changes file permissions.
