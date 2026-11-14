@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BrowserVenueAudio, type LocalRecording } from './browserAudio';
 
 const started: string[] = [];
@@ -45,7 +45,18 @@ const makeRec = (id: string): LocalRecording => ({
   id, title: id, artist: 'Test', revision: 'v1', permitted: true,
   file: Object.assign(new File(['test'], id + '.wav'), { arrayBuffer: async () => new ArrayBuffer(4) }),
 });
-afterEach(() => { vi.unstubAllGlobals(); started.length = 0; });
+beforeEach(() => {
+  Object.defineProperty(navigator, 'locks', { configurable: true, value: {
+    request: async (_key: string, _options: unknown,
+      callback: (lock: object | null) => Promise<void>) => {
+      await callback({});
+    },
+  } });
+});
+afterEach(() => {
+  vi.unstubAllGlobals(); started.length = 0;
+  delete (navigator as Navigator & { locks?: LockManager }).locks;
+});
 
 describe('BR64-08 device-local WebAudio execution (simulated nodes, never hardware proof)', () => {
   it('decodes locally granted files and starts an actual Web Audio source', async () => {
@@ -77,6 +88,21 @@ describe('BR64-08 device-local WebAudio execution (simulated nodes, never hardwa
       await expect(audio.start('unknown', 1)).rejects.toThrow(/authorised/);
       await audio.start('a', 5);
       await expect(audio.start('a', 4)).rejects.toThrow(/generation/);
+    } finally { await audio.dispose(); }
+  });
+  it('refuses an already-owned output rather than layering another physical player', async () => {
+    vi.stubGlobal('AudioContext', FakeContext);
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: {
+      request: async (_key: string, _options: unknown,
+        callback: (lock: object | null) => Promise<void>) => callback(null),
+    } });
+    const audio = new BrowserVenueAudio();
+    try {
+      audio.importLocal([makeRec('a')]);
+      await audio.unlock();
+      await audio.prepare('a');
+      await expect(audio.start('a', 1)).rejects.toThrow(/owns this output/);
+      expect(started).not.toContain('buffer');
     } finally { await audio.dispose(); }
   });
   it('does not promise wake lock, hidden iPad play or reboot recovery', async () => {
