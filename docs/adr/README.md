@@ -22,16 +22,16 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 | [Selecta Cloud (SC)](selecta-cloud-implementation-checklist.md) | 136 | 93 | 38 | 5 | 0 | 0 | 91 | 0 |
 | [selecta-autopilot-implementation-checklist.md](selecta-autopilot-implementation-checklist.md) | 120 | 10 | 0 | 110 | 0 | 0 | 0 | 0 |
 | [selecta-business-implementation-checklist.md](selecta-business-implementation-checklist.md) | 179 | 0 | 0 | 179 | 0 | 0 | 0 | 0 |
-| [selecta-local-first-implementation-checklist.md](selecta-local-first-implementation-checklist.md) | 120 | 0 | 0 | 120 | 0 | 0 | 0 | 0 |
+| [selecta-local-first-implementation-checklist.md](selecta-local-first-implementation-checklist.md) | 136 | 0 | 0 | 136 | 0 | 0 | 0 | 0 |
 <!-- checklist-summary:end -->
 
 ---
 
 ## Local-first cloud refactor (accepted 2026-11-13)
 
-**Decision:** ADR-0455 through ADR-0484 accepted; **120 implementation tasks Not started; zero independently verified**. This is a documentation-only change on top of PR #56's merged main baseline. The accepted target moves all user-audio operations to supported local engines; hosted cloud remains for accounts, metadata-only recipes, Rooms, device control, venue schedules, billing and approved AI. Historic cloud ADRs retain their statuses and evidence, while conflicting hosted-music assumptions are superseded for new work.
+**2026-11-14 decision:** [ADR-0485](adr-0485-browser-first-cloud-and-ipad-venue-runtime.md) supersedes mandatory native Cloud engine and requires **real no-install browser playback on iPad and Android tablets**, including sole-device venues. The checklist has **136 tasks**, including 16 browser/device acceptance gates. Native-oriented implementation in PR #64 is not proof of browser parity or real sound; every task still needs validation. The accepted target moves all user-audio operations to supported local engines; hosted cloud remains for accounts, metadata-only recipes, Rooms, device control, venue schedules, billing and approved AI. Historic cloud ADRs retain their statuses and evidence, while conflicting hosted-music assumptions are superseded for new work.
 
-**Start here:** [Roadmap](selecta-local-first-roadmap.md) · [Source map](selecta-local-first-source-map.md) · [Parity](selecta-local-first-overlap-and-parity.md) · [120-task checklist](selecta-local-first-implementation-checklist.md) · [UX state matrix](selecta-local-first-ui-state-matrix.md) · [Edge cases](selecta-local-first-edge-case-catalog.md) · [Release gates](selecta-local-first-release-gates.md) · [New SaaS chapters](../saas/20-local-first-cloud-architecture.md).
+**Start here:** [Roadmap](selecta-local-first-roadmap.md) · [Source map](selecta-local-first-source-map.md) · [Parity](selecta-local-first-overlap-and-parity.md) · [136-task checklist](selecta-local-first-implementation-checklist.md) · [Browser/device feasibility](selecta-browser-device-capability-matrix.md) · [UX state matrix](selecta-local-first-ui-state-matrix.md) · [Edge cases](selecta-local-first-edge-case-catalog.md) · [Release gates](selecta-local-first-release-gates.md) · [New SaaS chapters](../saas/20-local-first-cloud-architecture.md).
 
 ---
 

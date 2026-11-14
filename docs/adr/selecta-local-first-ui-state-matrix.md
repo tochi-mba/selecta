@@ -1,4 +1,6 @@
-# LF full UI/UX state and route contract
+# LF browser-first UI/UX state and route contract
+
+**2026-11-14:** ADR-0485 governs: Cloud browser on **iPad or Android tablet is a first-class local player**, not a mandatory desktop-engine remote. See [device feasibility](selecta-browser-device-capability-matrix.md).
 
 **Status:** Accepted design, not built. **Owners:** ADR-0476,0477,0478. Existing UI, accessibility, visual language and creative controls remain parity requirements. Avoid an app-wide hardware dashboard: device truth must be compact, contextual and actionable.
 
@@ -7,7 +9,7 @@
 | Journey / route | Current assumption | Replacement and required behaviour |
 |---|---|---|
 | Welcome and sign-in `CloudApp.tsx` | "Your music, ready to move", private cloud storage | "Your music stays on your device; sync plans, not recordings." Sign in remains optional for standalone |
-| Onboarding | 10 GB workspace + upload audio | Choose this computer/remote player/controller-only; install/pair engine; grant folders; output test; privacy/sync choice |
+| Onboarding | 10 GB workspace + upload audio | Choose Play on this browser / Control another device / Edit without music; choose local files, check codec/DSP/storage, tap Start, verify sound; no installation |
 | Home | GB meter, upload card and current plan | Selected device, playing elsewhere, library readiness, recent mixes and action to resume/setup; no artificial DSP quotas |
 | Explore | Suggestions assumed to have cloud asset | Suggestions explicitly bound to selected device; show preview availability and missing media |
 | My Mixes | A cloud revision exists so it appears runnable | Recipe exists everywhere; per-device N/M exact/verified, candidate/blocked/missing, revision, ready transitions and repair |
@@ -15,7 +17,7 @@
 | Studio and seam inspector | Can render/preview from any cloud asset | Editing available without media; preview/render disabled accurately when device has no audio; preserve every current manual edit and undo |
 | Stem Studio | Cloud processing allowance for preview | Local capability/model rights/memory status, safe progress and local artifact; never count paid stem previews |
 | Listen and transport dock | Signed playback URL and cloud proxy poll | Explicit speaker and output; local/remote control; prepared horizon; failure recovery; no cloud stream |
-| Devices | "Play here" moves music | Preflight required exact recordings/output, prepare/stop/ack/fence/start; unsafe partition case requires operator resolution |
+| Devices | "Play here" moves music | Preflight source + supported browser DSP + output, foreground/awake status; tablet and phone can play; fenced takeover only after user confirmation where unsafe |
 | Requests/Rooms | Request any cloud library asset | Request only locally eligible catalogue; requested is not scheduled; guest no audio |
 | Plan & billing | 10/50/100 GB, renders, analysis | Feature value, devices, rooms, Lucy, support, venues/zones/seats; hosted AI usage only |
 | Account export/delete | Cloud ZIP with originals | Cloud metadata ZIP; separate local archive/cache controls; original files unaffected |
@@ -34,10 +36,10 @@
 | `unsupported` | Codec/model/output unsupported | Explain format/hardware support | Ready after waiting |
 | `version_mismatch` | Different master/radio/clean/revision than expected | Review substitution, invalidate cues | Compatible seam |
 | `policy_blocked` | Venue/rights hard rule refuses recording | Pick authorised alternative | Flexible rule under pressure |
-| `engine_offline` | Local process not communicating | Start/reconnect engine, optionally control another player | Cloud broken necessarily |
+| `engine_offline` | Local process not communicating | Reopen/foreground browser and re-authorise audio/media, optionally control another player | Cloud broken necessarily |
 | `device_unknown` | No timely availability verification | Refresh/check device | Missing or ready |
 | `cache_invalid` | Render checksum/input version stale | Rebuild locally | Reusable transition |
-| `cloud_offline` | Control service unreachable | Local music keeps playing; remote management unavailable | Music stopped |
+| `cloud_offline` | Control service unreachable | Current foreground browser may keep playing from prepared local files; app termination is not survivable | Music stopped |
 | `output_silent` | Output measurements indicate scheduled audio missing | Staff alert, safe recovery | Player Ready despite heartbeat |
 
 ## Missing media interaction
@@ -77,3 +79,18 @@ A mix can be editable, not auditionable, and not playable. UI and screen readers
 - Personal: computer fully ready; laptop missing 3/8; phone controller-only; machine with disconnected external drive; cloud-only outage; paused offline editing; two active tabs.
 - Business: 20-venue HQ with 17 ready; multi-zone output failure; licensing expired; staff phone emergency speaker; blackout restore; customer kiosk with no manager data.
 - Test routes/feature flags against each state under screen-reader, keyboard, touch, 320/375/768/1280 widths and high zoom.
+
+## Additional browser-specific UI states
+
+| State | Meaning | Recovery |
+|---|---|---|
+| `audio_activation_required` | Browser requires user gesture to unlock AudioContext | Tap Start/Resume and sound check |
+| `foreground_required` | Venue browser hidden/locked; continuity cannot be promised | Bring tablet app foreground, keep powered/awake |
+| `unsupported_here` | Codec/model/CPU/output not qualified on this exact device/browser | Explain limitation; permit editing or control different speaker |
+| `thermal_or_memory_limited` | Current hardware cannot prepare advanced seam/stem safely | Reduce work, use explicitly supported transition |
+| `source_permission_lost` | File picker/OPFS binding expired/evicted | Reconnect local files without changing recipe |
+| `output_unverified` | Audio graph active but physical speaker not independently confirmed | Operator sound check; do not report audible success |
+| `android_audio_focus_lost` | Call, assistant, notification, other media or output removal interrupted audio | Revalidate output and require safe resume |
+| `browser_session_discarded` | OS/browser killed tab or suspended workers | Mark remotely uncertain; reopen and preflight; no auto restart |
+
+Separate Chrome Android, Samsung Internet, Firefox Android and iPadOS Safari browser behavior; use device probes rather than branding. The player must work without installation or pairing a computer.
