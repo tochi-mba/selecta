@@ -43,6 +43,22 @@ function allowedRecipe(recipe: PortableRecipe): string | null {
   return null;
 }
 
+/** Exact live support is narrower than the offline chunked renderer: it must
+ * not advertise cue-accurate or variable-seam playback that the two-deck graph
+ * cannot currently perform. */
+function livePlaybackProblem(recipe: PortableRecipe): string | null {
+  const invalid = allowedRecipe(recipe);
+  if (invalid) return invalid;
+  if (recipe.cues.some((cue) => cue.at > 0))
+    return 'Non-zero source cues require local rendering; live cue-accurate playback is not yet qualified.';
+  const fades = recipe.transitions.map((step) => step.type === 'cut' ? 0 : step.duration_seconds);
+  if (fades.length && fades.some((fade) => fade !== fades[0]))
+    return 'Per-transition fade durations are not yet supported by live playback; render the saved mix instead.';
+  const browser = probeBrowserAudio();
+  if (!browser.eligible) return browser.reason ?? 'Browser audio capability or tab ownership is unavailable.';
+  return null;
+}
+
 export function liveBrowserStudioPorts(workspaceId: string): BrowserStudioPorts {
   const catalogue = localCatalogue(workspaceId);
   const engine = browserEngine(workspaceId);
@@ -126,6 +142,10 @@ export function liveBrowserStudioPorts(workspaceId: string): BrowserStudioPorts 
   };
 
   const playback: NonNullable<BrowserStudioPorts['playback']> = {
+    supported(recipe) {
+      const reason = livePlaybackProblem(recipe);
+      return { supported: reason === null, ...(reason ? { reason } : {}) };
+    },
     status() {
       const state = engine.snapshot();
       return {
@@ -137,19 +157,9 @@ export function liveBrowserStudioPorts(workspaceId: string): BrowserStudioPorts 
       };
     },
     async playHere(recipe) {
-      const problem = allowedRecipe(recipe);
+      const problem = livePlaybackProblem(recipe);
       if (problem) throw new Error(problem);
-      // The live two-deck player currently starts full recordings at offset 0.
-      // Rendering honours source-second cues, but live playback must not silently
-      // ignore them or claim it is performing the saved arrangement.
-      if (recipe.cues.some((cue) => cue.at > 0)) {
-        throw new Error('Non-zero source cues require local rendering; live cue-accurate playback is not yet qualified.');
-      }
       const fades = recipe.transitions.map((step) => step.type === 'cut' ? 0 : step.duration_seconds);
-      if (fades.length && fades.some((fade) => fade !== fades[0])) {
-        throw new Error('Per-transition fade durations are not yet supported by live playback; render the saved mix instead.');
-      }
-      if (!probeBrowserAudio().eligible) throw new Error('Browser audio capability or tab ownership is unavailable.');
       // Initiate AudioContext.resume from the actual click, before any asynchronous
       // source verification. This is essential to user-gesture restrictions on iPadOS.
       const activation = engine.activate();
