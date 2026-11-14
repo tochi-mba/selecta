@@ -145,6 +145,19 @@ From [Cloud checklist](../adr/selecta-cloud-implementation-checklist.md) and [li
 
 ## 11. Environment variables / credentials inventory
 
+Local-first integration introduces additional settings read by the runtime.
+These names are recorded for audit; **none enables production rollout by itself**.
+Keep audio exceptions denied and local-first rollout gated until the signed
+approval, metadata-egress and real-device acceptance checks have passed.
+
+| Local-first control | Default deployment guidance |
+|---|---|
+| `SELECTA_WORKSPACE_KIND`, `SELECTA_ENGINE_ROLE`, `SELECTA_CONNECTIVITY` | Runtime identity and role hints; validate against the actual workspace, local engine and connection state. Never use a client environment value as authorization. |
+| `SELECTA_ENGINE_STATE_DIR` | Device-local supervisor state only. Never put engine credentials or local paths in a hosted Cloud data directory. |
+| `SELECTA_LOCAL_FIRST_ARTIFACTS` | Explicit local audio-derived artifact path; gated to authorised local execution and should not enable hosted audio processing. |
+| `SELECTA_LF_AUDIO_ROLLOUT_PHASE`, `SELECTA_LF_LEGACY_RETRIEVAL` | Migration/rollout controls: preserve historical recovery only under the approved phase; do not reactivate hosted uploads for migrated accounts. |
+| `SELECTA_LF_AUDIO_EXCEPTION_APPROVED`, `SELECTA_LF_AUDIO_EXCEPTION_UNTIL` | Narrow, time-bounded audio egress exception controls. Leave approval unset unless independently authorized and documented; never use exceptions for routine uploads. |
+
 Values below are *names*, **not** instructions to publish secrets. Cross-checked against the code on 12 November 2026; `tests/test_launch_operator_checklist.py` fails when a `SELECTA_*` variable the code reads is missing here, or when this page names one the code no longer reads. "Blueprint" means [`infra/render/render.yaml`](../../infra/render/render.yaml) already declares it.
 
 | Component | Required | Optional (code default) |
