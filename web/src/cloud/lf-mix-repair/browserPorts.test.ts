@@ -39,6 +39,10 @@ describe('browser Studio exact-media admission', () => {
     expect(checkedAvailability({ ...recipe, revision_id: 'b'.repeat(64) }, availability, 'phone_1', now).ready).toBe(0);
     expect(checkedAvailability(recipe, availability, 'phone_1', now + 30_000).ready).toBe(0);
   });
+  it('expires old evidence even if an adapter provides an excessively distant expiry', () => {
+    const tooOld = { ...availability, verifiedAt: now - 121_000, expiresAt: now + 60_000 };
+    expect(checkedAvailability(recipe, tooOld, 'phone_1', now).ready).toBe(0);
+  });
   it('never counts an alternate master or missing recording identity', () => {
     const bad: BrowserAvailability = {
       ...availability,
