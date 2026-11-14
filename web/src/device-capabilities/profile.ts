@@ -17,7 +17,7 @@ const degraded = (reason: string): CapabilityResult => ({ decision: 'degraded', 
 function simdSupported(): boolean {
   if (typeof WebAssembly === 'undefined' || typeof WebAssembly.validate !== 'function') return false;
   // Minimal valid SIMD module: func returns v128 via v128.const then drops it.
-  const bytes = new Uint8Array([0,97,115,109,1,0,0,0,1,4,1,96,0,0,3,2,1,0,10,26,1,24,0,253,12,
+  const bytes = new Uint8Array([0,97,115,109,1,0,0,0,1,4,1,96,0,0,3,2,1,0,10,23,1,21,0,253,12,
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,26,11]);
   try { return WebAssembly.validate(bytes); } catch { return false; }
 }
