@@ -53,6 +53,33 @@ describe('BR64 cross-agent production browser Studio port composition', () => {
     await expect(ports.playback!.playHere(cued)).rejects.toThrow(/cue-accurate playback/);
   });
 
+  it('gates unsupported live arrangements before showing the Play Here action', () => {
+    const ports = liveBrowserStudioPorts('br64-live-support');
+    const cue: PortableRecipe = {
+      ...recipe, cues: [{
+        occurrence_id: 'missing_1', at: 5, timebase: 'source_seconds',
+        requires_revalidation: false,
+      }],
+    };
+    expect(ports.playback!.supported!(cue)).toMatchObject({
+      supported: false, reason: expect.stringMatching(/cue-accurate/),
+    });
+    const second = { ...recipe.occurrences[0], occurrence_id: 'second',
+      canonical_track_id: 'track_2', recording_version: 'master_2' };
+    const third = { ...second, occurrence_id: 'third', canonical_track_id: 'track_3' };
+    const mixedFades: PortableRecipe = {
+      ...recipe, occurrences: [recipe.occurrences[0], second, third], transitions: [
+        { from_occurrence_id: 'missing_1', to_occurrence_id: 'second',
+          type: 'crossfade', duration_seconds: 4, requires_rebuild: false },
+        { from_occurrence_id: 'second', to_occurrence_id: 'third',
+          type: 'crossfade', duration_seconds: 8, requires_rebuild: false },
+      ],
+    };
+    expect(ports.playback!.supported!(mixedFades)).toMatchObject({
+      supported: false, reason: expect.stringMatching(/Per-transition fade durations/),
+    });
+  });
+
   it('rejects unqualified beatmatch and beat cues without doing hosted processing', async () => {
     const ports = liveBrowserStudioPorts('br64-advanced-deny');
     const unsafe: PortableRecipe = {
