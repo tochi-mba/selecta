@@ -219,4 +219,17 @@ describe('BR64-08 foreground browser venue programme', () => {
       await expect(runner.resume()).rejects.toThrow('Use Start');
     } finally { await runner.dispose(); }
   });
+  it('does not falsely report source readiness after the music device disconnects', async () => {
+    const f = fixture();
+    f.snapshot.remainingSeconds = 90;
+    const runner = new BrowserVenueProgramme(scope, f.adapters, () => NOW);
+    try {
+      await runner.start();
+      f.adapters.media.sourceState = vi.fn(async () => 'disconnected' as const);
+      await runner.tick();
+      expect(f.report).toHaveBeenCalledTimes(1);
+      expect(f.report.mock.calls[0][0].sourceReady).toBe(false);
+      expect(runner.status().issue).toMatch(/source is unavailable/);
+    } finally { await runner.dispose(); }
+  });
 });

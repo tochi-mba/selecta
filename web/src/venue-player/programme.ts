@@ -238,11 +238,18 @@ export class BrowserVenueProgramme {
       }
       if (snapshot.online && now - this.lastReportAt >= REPORT_INTERVAL_MS) {
         this.lastReportAt = now;
+        // Being able to play a previously decoded buffer does not prove the
+        // authorised file source is still connected for upcoming songs.
+        let sourceReady = false;
+        try {
+          sourceReady = await this.adapters.media.sourceState(this.scope.zoneId) === 'connected';
+        } catch { /* disconnected or revoked sources are never reported ready */ }
+        if (!sourceReady) this.issue = 'Local music source is unavailable; reconnect it before upcoming transitions.';
         // Cloud receives only metadata: no File, local path, PCM or source handle.
         try {
           await this.adapters.cloud.report({
             ...this.scope, generation: this.generation, phase: snapshot.phase,
-            foreground: snapshot.foreground, sourceReady: true,
+            foreground: snapshot.foreground, sourceReady,
             outputOperatorCheckedAt: snapshot.operatorCheckedAt,
             lastSeenEpochMs: now,
             // The port only knows canonical IDs; never report song counts as minutes.

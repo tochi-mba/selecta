@@ -205,4 +205,74 @@ describe('BR64-08 device-local WebAudio execution (simulated nodes, never hardwa
       expect(audio.confirmHeard()).toBe(false);
     } finally { await audio.dispose(); stop.mockRestore(); }
   });
+  it('does not restore Ready after Stop while AudioContext unlock is pending', async () => {
+    vi.stubGlobal('AudioContext', FakeContext);
+    let unlock!: () => void;
+    const pending = new Promise<void>((resolve) => { unlock = resolve; });
+    const resume = vi.spyOn(FakeContext.prototype, 'resume').mockImplementation(async function (this: FakeContext) {
+      await pending;
+      this.state = 'running';
+    });
+    const audio = new BrowserVenueAudio();
+    try {
+      const unlocking = audio.unlock();
+      await audio.stop();
+      unlock();
+      expect(await unlocking).toBe(false);
+      expect(audio.snapshot().phase).toBe('stopped');
+    } finally { unlock(); await audio.dispose(); resume.mockRestore(); }
+  });
+
+  it('releases a Wake Lock granted after playback was stopped', async () => {
+    vi.stubGlobal('AudioContext', FakeContext);
+    let grant!: () => void;
+    const wait = new Promise<void>((resolve) => { grant = resolve; });
+    const release = vi.fn(async () => undefined);
+    const request = vi.fn(async () => {
+      await wait;
+      return { released: false, release };
+    });
+    Object.defineProperty(navigator, 'wakeLock', {
+      configurable: true, value: { request },
+    });
+    const audio = new BrowserVenueAudio();
+    try {
+      const unlocking = audio.unlock();
+      await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+      await audio.stop();
+      grant();
+      expect(await unlocking).toBe(false);
+      expect(release).toHaveBeenCalledTimes(1);
+      expect(audio.snapshot().wakeLockHeld).toBe(false);
+      expect(audio.snapshot().phase).toBe('stopped');
+    } finally {
+      grant();
+      await audio.dispose();
+      delete (navigator as Navigator & { wakeLock?: unknown }).wakeLock;
+    }
+  });
+
+  it('does not play a delayed sound-check tone after Stop cancels ownership', async () => {
+    vi.stubGlobal('AudioContext', FakeContext);
+    let grant!: () => void;
+    const wait = new Promise<void>((resolve) => { grant = resolve; });
+    const request = vi.fn(async (_key: string, _options: unknown,
+      callback: (lock: object | null) => Promise<void>) => {
+      await wait;
+      await callback({});
+    });
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: { request } });
+    const audio = new BrowserVenueAudio();
+    try {
+      await audio.unlock();
+      const checking = audio.soundCheck();
+      const rejection = expect(checking).rejects.toThrow('cancelled');
+      await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+      await audio.stop();
+      grant();
+      await rejection;
+      expect(started).not.toContain('tone');
+      expect(audio.snapshot().phase).toBe('stopped');
+    } finally { grant(); await audio.dispose(); }
+  });
 });

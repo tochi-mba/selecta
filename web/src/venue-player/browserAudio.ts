@@ -78,6 +78,7 @@ export class BrowserVenueAudio implements VenueAudioPort {
   private testTone: OscillatorNode | null = null;
   private testGain: GainNode | null = null;
   private wake: WakeSentinel | null = null;
+  private wakeRequest: Promise<void> | null = null;
   private disposed = false;
   private error: string | null = null;
   private volume = 0.45;
@@ -118,6 +119,9 @@ export class BrowserVenueAudio implements VenueAudioPort {
 
   async unlock(): Promise<boolean> {
     this.assertOpen();
+    // AudioContext.resume() and Wake Lock are asynchronous. Stop or a replacement
+    // playback action must never be undone by a late browser permission response.
+    const revision = this.playbackEpoch;
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return false;
     try {
       if (!this.context) {
@@ -130,12 +134,16 @@ export class BrowserVenueAudio implements VenueAudioPort {
         this.master.connect(this.context.destination); // actual OS-selected local output
       }
       await this.context.resume();
+      if (this.disposed || revision !== this.playbackEpoch) return false;
       if (this.context.state !== 'running') throw new Error('Audio remains blocked; tap Start again');
       this.error = null;
-      this.phase = this.deck ? 'playing' : 'ready';
+      // Unlocking a paused deck does not authorise it to claim audible
+      // playback before the exclusive browser speaker lease is reacquired.
+      this.phase = this.deck && this.phase === 'paused' ? 'paused' : this.deck ? 'playing' : 'ready';
       await this.requestWake();
-      return true;
+      return !this.disposed && revision === this.playbackEpoch;
     } catch (error) {
+      if (this.disposed || revision !== this.playbackEpoch) return false;
       this.phase = 'failed';
       this.error = errorText(error);
       return false;
@@ -326,11 +334,13 @@ export class BrowserVenueAudio implements VenueAudioPort {
   async pause(): Promise<void> {
     const revision = ++this.playbackEpoch;
     if (this.context && this.deck) {
+      this.silenceTestTone();
       await this.context.suspend();
       if (revision !== this.playbackEpoch || this.disposed) return;
       this.lease.release();
       this.phase = 'paused';
       this.checkedAt = null;
+      await this.releaseWake();
     }
   }
 
@@ -397,9 +407,14 @@ export class BrowserVenueAudio implements VenueAudioPort {
     const ctx = this.contextReady();
     // The test tone is real audio. It must not bypass browser-wide ownership
     // and overlap another tab's venue or personal playback.
+    const revision = this.playbackEpoch;
     const temporaryLease = !this.deck;
     if (temporaryLease && await this.lease.acquire() === 'unsupported') {
       throw new Error('Another Selecta browser player currently owns this speaker');
+    }
+    if (this.disposed || revision !== this.playbackEpoch) {
+      if (temporaryLease) this.lease.release();
+      throw new Error('The sound check was cancelled by a newer playback action');
     }
     this.silenceTestTone();
     const osc = ctx.createOscillator();
@@ -450,11 +465,31 @@ export class BrowserVenueAudio implements VenueAudioPort {
   }
 
   private async requestWake(): Promise<void> {
-    if (typeof navigator === 'undefined' || this.wake || (typeof document !== 'undefined' && document.visibilityState !== 'visible')) return;
-    try {
-      this.wake = await (navigator as WakeNavigator).wakeLock?.request('screen') ?? null;
-      this.wake?.addEventListener?.('release', () => { this.wake = null; });
-    } catch { this.wake = null; } // iOS Safari may not support it
+    if (typeof navigator === 'undefined' || this.disposed ||
+        (typeof document !== 'undefined' && document.visibilityState !== 'visible')) return;
+    if (this.wake && !this.wake.released) return;
+    if (this.wakeRequest) return this.wakeRequest;
+    const revision = this.playbackEpoch;
+    const requested = (async () => {
+      let acquired: WakeSentinel | null = null;
+      try { acquired = await (navigator as WakeNavigator).wakeLock?.request('screen') ?? null; }
+      catch { return; } // Wake Lock is optional and unsupported on some browsers.
+      if (!acquired) return;
+      if (this.disposed || revision !== this.playbackEpoch ||
+          (typeof document !== 'undefined' && document.visibilityState !== 'visible')) {
+        // Stop may have released the previous wake sentinel while the browser
+        // was still deciding whether to grant this request.
+        if (!acquired.released) await acquired.release().catch(() => undefined);
+        return;
+      }
+      this.wake = acquired;
+      acquired.addEventListener?.('release', () => {
+        if (this.wake === acquired) this.wake = null;
+      });
+    })();
+    this.wakeRequest = requested;
+    try { await requested; }
+    finally { if (this.wakeRequest === requested) this.wakeRequest = null; }
   }
 
   private async releaseWake(): Promise<void> {
