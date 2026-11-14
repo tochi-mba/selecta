@@ -1,0 +1,21 @@
+{
+  "status": "blocked",
+  "device_class": "ipad-venue",
+  "model": "not-tested",
+  "os_version": "not-tested",
+  "browser_version": "not-tested",
+  "chipset": "not-measured",
+  "ram_gb": null,
+  "source_type": "owned-local-files",
+  "codec": "not-tested",
+  "dsp_revision": "not-available",
+  "speaker_route": "not-verified",
+  "emulated": false,
+  "real_hardware": false,
+  "foreground_powered_awake_hours": 0,
+  "measured": null,
+  "output_validation": "not-performed",
+  "observed_result": "not-run",
+  "blocker": "No physical iPad venue test performed",
+  "notes": "Example is not a certification result"
+}

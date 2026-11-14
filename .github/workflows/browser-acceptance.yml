@@ -1,0 +1,88 @@
+name: browser-acceptance
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-qa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  policy-and-evidence:
+    name: Browser Cloud / source egress and evidence schema
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Reject newly introduced hosted-audio and installer flows
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ -n "$BASE" ]; then
+            python tools/browser_test/policy_gate.py --base "$BASE"
+          else
+            python tools/browser_test/policy_gate.py --base HEAD^
+          fi
+      - name: Validate certification rules (no emulation as hardware proof)
+        run: python -m unittest discover -s tests/browser_acceptance -p 'test_*.py' -v
+
+  browser-audio:
+    name: Browser audio / ${{ matrix.browser }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          version: 10
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - name: Install locked browser test dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: web
+      - name: Prepare owned synthetic codec fixtures (developer CI only)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          node ../tools/browser_test/generate-fixtures.mjs
+        working-directory: web
+      - name: Install actual Playwright browser and OS dependencies
+        run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
+        working-directory: web
+      - name: Execute browser AudioWorklet and local-file contracts
+        env:
+          CI: "true"
+        run: |
+          pnpm exec playwright test -c br64-10.playwright.config.ts \
+            --project=desktop-${{ matrix.browser }} \
+            ${{ matrix.browser == 'chromium' && '--project=phone-chromium-emulated' || '' }} \
+            ${{ matrix.browser == 'webkit' && '--project=tablet-webkit-emulated' || '' }}
+        working-directory: web
+      - name: Produce an evidence summary (not a hardware certificate)
+        if: always()
+        run: node ../tools/browser_test/summarise.mjs
+        working-directory: web
+      - name: Publish raw test evidence, even on failure
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: browser-qa-${{ matrix.browser }}
+          path: web/test-results
+          if-no-files-found: warn
+          retention-days: 14
