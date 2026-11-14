@@ -20,7 +20,7 @@
     "anthropic": {
       "licence": "Apache Software License",
       "status": "allowed",
-      "version": "2.6.0"
+      "version": "2.8.0"
     },
     "anyio": {
       "licence": "MIT",
@@ -87,7 +87,7 @@
     "fastapi": {
       "licence": "MIT",
       "status": "allowed",
-      "version": "0.162.1"
+      "version": "0.162.4"
     },
     "filelock": {
       "licence": "MIT",
@@ -484,7 +484,7 @@
     "typer": {
       "licence": "MIT",
       "status": "allowed",
-      "version": "0.28.0"
+      "version": "0.29.0"
     },
     "typing-extensions": {
       "licence": "PSF-2.0",
