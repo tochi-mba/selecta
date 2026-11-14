@@ -29,6 +29,7 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
   const [pending, setPending] = useState<BrowserEnvelope | null>(null);
   const [receipt, setReceipt] = useState<CommandReceipt | null>(null);
   const [silenceConfirmed, setSilenceConfirmed] = useState(false);
+  const [releaseStopped, setReleaseStopped] = useState(false);
   const [initialSilence, setInitialSilence] = useState(false);
   const [transferId, setTransferId] = useState<string | null>(null);
   const [transferStage, setTransferStage] = useState('');
@@ -133,6 +134,7 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
     if (['play', 'prepare_output', 'release_output', 'activate_output'].includes(cmd.action)) {
       await acknowledge(cmd, 'accepted');
       setPending(cmd);
+      setReleaseStopped(false);
       setNotice(cmd.action + ' is pending confirmation at the actual browser speaker.');
       return;
     }
@@ -205,9 +207,14 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
           throw new Error('Local recordings must be loaded and output must be silent before preparing.');
         await acknowledge(cmd, 'applied', { outputSilent: true });
       } else if (cmd.action === 'release_output') {
-        await engine.stop();
-        setSilenceConfirmed(false);
-        if (!silenceConfirmed) throw new Error('On-site operator must confirm the old output became physically silent before fencing release.');
+        if (!releaseStopped) {
+          await engine.stop();
+          setReleaseStopped(true);
+          setSilenceConfirmed(false);
+          setNotice('The browser source has stopped. Check the actual output and confirm silence before completing release.');
+          return;
+        }
+        if (!silenceConfirmed) throw new Error('Physically confirm that the speaker is silent before releasing ownership.');
         try { localStorage.setItem('selecta:browser-fence:' + workspaceId + ':' + zone,
           String(cmd.expected_generation)); } catch {
           throw new Error('Durable local fencing unavailable; cannot attest safe speaker release.');
@@ -223,6 +230,8 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
         return;
       }
       setPending(null);
+      setReleaseStopped(false);
+      setSilenceConfirmed(false);
       setNotice(cmd.action + ' acknowledged after local operator confirmation.');
     } catch (error) {
       setProblem((error as Error).message);
@@ -252,6 +261,7 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
     try { await acknowledge(cmd, 'rejected'); }
     catch (error) { setProblem((error as Error).message); }
     setPending(null);
+    setReleaseStopped(false);
   };
 
   const takeOver = async () => {
@@ -312,7 +322,8 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
     <p role="status">This device: {registered ? 'registered, foreground activity required' : 'not registered'}.
       Actual speaker: {speaker?.speaker_session_id ?? 'none'} · {speaker?.state ?? 'unverified'} · generation {speaker?.generation ?? 0}.</p>
     {devices.length > 0 && <p>Known browser sessions in this zone: {devices.length}. Remote music is never downloaded here.</p>}
-    {registered && engine.snapshot().phase === 'paused' && <label>
+    {registered && (engine.snapshot().phase === 'paused' ||
+      (pending?.action === 'release_output' && releaseStopped)) && <label>
       <input type="checkbox" checked={silenceConfirmed} onChange={(event) => setSilenceConfirmed(event.target.checked)} />
       I am physically beside this speaker and confirm that this device's actual audio output is silent
     </label>}
@@ -344,8 +355,9 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
       <p>Pending signed {pending.action} for this browser. A physical operator must verify the actual device output.
         Do not confirm silence if an older/offline speaker may still be sounding.</p>
       <button type="button" disabled={busy} onClick={() => void confirmPending()}>
-        {pending.action === 'release_output' || pending.action === 'prepare_output'
-          ? 'Confirm local speaker is silent' : 'Tap to activate sound here'}
+        {pending.action === 'release_output'
+          ? releaseStopped ? 'Confirm physical silence and release ownership' : 'Stop this browser speaker'
+          : pending.action === 'prepare_output' ? 'Confirm local speaker is silent' : 'Tap to activate sound here'}
       </button>
       {(pending.action === 'play' || pending.action === 'activate_output') &&
         <button type="button" disabled={busy || engine.snapshot().phase !== 'playing'}
