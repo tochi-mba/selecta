@@ -7,7 +7,7 @@ export async function saveArtifactFromUserGesture(
     showSaveFilePicker?: (options: { suggestedName: string }) => Promise<FileSystemFileHandle>;
   }).showSaveFilePicker;
   if (picker) {
-    const handle = await picker({ suggestedName: name });
+    const handle = await picker.call(window, { suggestedName: name });
     const writable = await handle.createWritable();
     try {
       for (let pos = 0; pos < artifact.size; pos += 65536) {

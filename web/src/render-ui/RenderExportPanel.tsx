@@ -24,7 +24,10 @@ export function RenderExportPanel({ request, filename }: RenderExportPanelProps)
       }).catch(() => setAvailable(null));
     }
   }, []);
-  const estimate = estimatedOutputBytes(request.recipe, codec);
+  let estimate: number;
+  let unsupported = '';
+  try { estimate = estimatedOutputBytes(request.recipe, codec); }
+  catch (e) { estimate = 0; unsupported = e instanceof Error ? e.message : 'Unsupported output'; }
   const begin = async () => {
     const abort = new AbortController();
     setController(abort); setArtifact(null); setError('');
@@ -57,9 +60,9 @@ export function RenderExportPanel({ request, filename }: RenderExportPanelProps)
         <div role="status" aria-live="polite">{state.state}: {progress}% {state.message ?? ''}</div>
         <progress max={100} value={progress} aria-label="Render progress" style={{ width: '100%' }} />
       </>}
-      {error && <p role="alert">{error}</p>}
+      {(error || unsupported) && <p role="alert">{error || unsupported}</p>}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        <button type="button" onClick={() => void begin()} disabled={working || request.livePlaybackActive()}>Render locally</button>
+        <button type="button" onClick={() => void begin()} disabled={working || !!unsupported || request.livePlaybackActive()}>Render locally</button>
         {working && <button type="button" onClick={() => controller?.abort()}>Cancel render</button>}
         {artifact && !working && <button type="button" onClick={() => void save()}>Save or share verified file</button>}
       </div>

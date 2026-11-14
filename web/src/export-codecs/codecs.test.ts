@@ -5,7 +5,7 @@ import { FlacWriter, validateFlac } from './flac';
 class Sink implements ByteSink {
   chunks: Uint8Array[] = [];
   async write(bytes: Uint8Array) { this.chunks.push(bytes.slice()); }
-  blob() { return new Blob(this.chunks.map(b => b.slice().buffer)); }
+  blob() { return new Blob(this.chunks.map(b => new Uint8Array(b).buffer)); }
 }
 describe('genuine local PCM formats', () => {
   it('encodes, validates and detects truncated WAV', async () => {
@@ -39,7 +39,6 @@ describe('genuine local PCM formats', () => {
     await expect(validateFlac(wav.blob(), 64, 1, 44100)).rejects.toThrow();
   });
   it('rejects unsafe WAV >4GiB and FLAC impossible header counts', async () => {
-    expect(() => WavWriter.open(new Sink(), 0x80000000, 2, 44100)).not.toThrow(); // asynchronous validation
     await expect(WavWriter.open(new Sink(), 0x80000000, 2, 44100)).rejects.toThrow(/4 GiB/);
     await expect(FlacWriter.open(new Sink(), 5, 1, 44100)).rejects.toThrow(/duration/);
   });

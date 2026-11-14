@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { webcrypto } from 'node:crypto';
 import { artifactIdentity, RenderFailure, type PortableRenderRecipe, type RenderSource } from './contracts';
 import { renderChunks } from './chunks';
 
@@ -61,6 +62,7 @@ describe('browser frame-accurate chunk renderer', () => {
   });
   it('changes artifact identity for revision and processor changes', async () => {
     const f = fixtures();
+    if (!globalThis.crypto?.subtle) Object.defineProperty(globalThis, 'crypto', { configurable: true, value: webcrypto });
     const a = await artifactIdentity(f.recipe, [], 'wav');
     const b = await artifactIdentity({ ...f.recipe, revisionId: 'new' }, [], 'wav');
     const c = await artifactIdentity(f.recipe, [], 'flac');

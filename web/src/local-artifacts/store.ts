@@ -42,6 +42,9 @@ async function optionalFile(dir: FileSystemDirectoryHandle, name: string): Promi
  * reserve is needed because OPFS has no portable atomic rename. */
 export async function storagePreflight(expectedBytes: number): Promise<{ available: number | null; needed: number; persistent: boolean }> {
   if (!Number.isSafeInteger(expectedBytes) || expectedBytes < 1) throw new Error('Invalid size estimate');
+  if (typeof navigator === 'undefined' || !navigator.storage?.estimate || !navigator.storage?.getDirectory) {
+    throw new RenderFailure('storage_pressure', 'Browser temporary filesystem is unavailable');
+  }
   const estimate = await navigator.storage.estimate();
   const available = estimate.quota === undefined || estimate.usage === undefined
     ? null : Math.max(0, estimate.quota - estimate.usage);
@@ -67,7 +70,7 @@ export class ArtifactStage implements ByteSink {
   }
   async write(bytes: Uint8Array): Promise<void> {
     if (this.closed) throw new Error('Artifact stage closed');
-    await this.writer.write(bytes);
+    await this.writer.write(bytes.slice().buffer as ArrayBuffer);
   }
   async finish(): Promise<File> {
     if (this.closed) throw new Error('Artifact stage already closed');
@@ -126,7 +129,7 @@ export class LocalArtifactStore {
       const blockSize = 65536;
       for (let pos = 0; pos < stagedFile.size; pos += blockSize) {
         interrupted(signal);
-        await writer.write(new Uint8Array(await stagedFile.slice(pos, pos + blockSize).arrayBuffer()));
+        await writer.write(await stagedFile.slice(pos, pos + blockSize).arrayBuffer());
       }
       await writer.close();
     } catch (error) {

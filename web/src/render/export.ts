@@ -22,9 +22,11 @@ function report(req: RenderRequest, state: RenderProgress['state'], framesDone: 
   req.onProgress?.({ state, framesDone, totalFrames: req.recipe.totalFrames, bytesWritten, message });
 }
 export function estimatedOutputBytes(recipe: PortableRenderRecipe, codec: Codec): number {
-  const pcmBytes = wavExpectedBytes(recipe.totalFrames, recipe.channels);
-  if (codec === 'wav') return pcmBytes + 44;
-  // Raw verbatim FLAC worst case includes headers/subframe bytes per 4096-sample block.
+  const pcmBytes = recipe.totalFrames * recipe.channels * 2;
+  if (!Number.isSafeInteger(pcmBytes) || pcmBytes < 1) throw new RenderFailure('codec_unsupported', 'Output duration is outside browser integer limits');
+  if (codec === 'wav') return wavExpectedBytes(recipe.totalFrames, recipe.channels) + 44;
+  if (recipe.totalFrames < 16 || recipe.totalFrames > 0xfffffffff) throw new RenderFailure('codec_unsupported', 'FLAC duration must be 16 to 2^36-1 frames');
+  // FLAC verbatim frames can exceed RIFF's 4 GiB cap; check OPFS quota separately.
   return pcmBytes + 42 + Math.ceil(recipe.totalFrames / 4096) * (32 + recipe.channels);
 }
 
@@ -38,7 +40,6 @@ export async function renderMixLocally(req: RenderRequest) {
   let stage: ArtifactStage | undefined;
   try {
     report(req, 'preparing', 0, 0, 'Checking local space and recording access');
-    await storagePreflight(estimatedOutputBytes(req.recipe, req.codec));
     const store = req.store ?? new LocalArtifactStore();
     const existing = await store.get(identity, req.codec);
     if (existing) {
@@ -48,6 +49,7 @@ export async function renderMixLocally(req: RenderRequest) {
       report(req, 'completed', req.recipe.totalFrames, existing.file.size);
       return existing;
     }
+    await storagePreflight(estimatedOutputBytes(req.recipe, req.codec));
     stage = await ArtifactStage.open();
     const encoder = req.codec === 'wav'
       ? await WavWriter.open(stage, req.recipe.totalFrames, req.recipe.channels, req.recipe.sampleRate)
