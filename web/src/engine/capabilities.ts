@@ -37,9 +37,12 @@ export function probeBrowserAudio(): BrowserAudioEligibility {
   } catch { /* private or restricted browsing */ }
   return evaluateBrowserAudioFeatures({
     webAudio: Boolean(window.AudioContext || legacy.webkitAudioContext),
-    worklet: typeof AudioWorkletNode !== 'undefined' && Boolean(window.AudioContext?.prototype.audioWorklet ||
-      // Some WebKit builds expose only instance.audioWorklet, not prototype access.
-      typeof AudioWorkletNode !== 'undefined'),
+    // audioWorklet is an instance accessor on AudioContext, not a static or prototype
+    // field that can safely be read. Reading AudioContext.prototype.audioWorklet
+    // invokes the native getter with the wrong receiver in Chrome/WebKit and throws
+    // "Illegal invocation", crashing the entire Cloud player before it mounts.
+    // The real context's audioWorklet.addModule is validated when starting audio.
+    worklet: typeof AudioWorkletNode !== 'undefined',
     fileInput: typeof File !== 'undefined',
     webLocks: Boolean(navigator.locks?.request),
     broadcastChannel: typeof BroadcastChannel !== 'undefined',
