@@ -35,7 +35,7 @@ class FakeContext {
   createBufferSource(): AudioBufferSourceNode { return new FakeSource() as unknown as AudioBufferSourceNode; }
   createOscillator(): OscillatorNode { return new FakeOscillator() as unknown as OscillatorNode; }
   async decodeAudioData(): Promise<AudioBuffer> {
-    return { duration: 60 } as AudioBuffer;
+    return { duration: 60, length: 60 * 44_100, numberOfChannels: 2 } as AudioBuffer;
   }
   async resume(): Promise<void> { this.state = 'running'; }
   async suspend(): Promise<void> { this.state = 'suspended'; }
