@@ -197,6 +197,15 @@
       "modes": ["cloud"],
       "owner": "billing"
     },
+    "local_first.personal": {
+      "label": "Browser-native personal Cloud",
+      "about": "Use the local Selecta navigation and browser-owned media, playback and portable mixes in personal Cloud. Legacy hosted pages remain available when the flag is off.",
+      "default": false,
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "playback",
+      "surfaces": ["cloud.home", "cloud.listen", "cloud.library", "cloud.uploads", "cloud.settings"]
+    },
     "local_first.browser_control": {
       "label": "Authenticated browser speaker sessions",
       "about": "Coordinate browser-owned audio in authorised zones using signed metadata-only commands. No audio is uploaded to Cloud.",
