@@ -79,13 +79,21 @@ export function CloudPersonalNavigation({
   roomsAvailable: boolean;
 }) {
   const button = (item: NavigationItem) => (
-    <button type="button" key={item.id} className="cloud-personal-nav-link"
+    <a href={item.path} key={item.id} className="cloud-personal-nav-link"
       data-destination={item.id}
       aria-current={active === item.id ? 'page' : undefined}
-      title={item.description} onClick={() => go(item.path)}>
+      title={item.description} onClick={(event) => {
+        // Match local PageLink semantics: open-in-new-tab and copy-link still work.
+        if (event.button !== 0 || event.ctrlKey || event.metaKey ||
+            event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        const menu = event.currentTarget.closest('details');
+        if (menu) menu.open = false;
+        go(item.path);
+      }}>
       <Icon name={item.icon} />
       <span className="cloud-personal-nav-label">{item.label}</span>
-    </button>
+    </a>
   );
   return <>
     <div className="cloud-personal-primary" aria-label="Local Selecta destinations">
