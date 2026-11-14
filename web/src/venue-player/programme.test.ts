@@ -143,6 +143,27 @@ describe('BR64-08 foreground browser venue programme', () => {
     } finally { release(); await runner.dispose(); }
   });
 
+  it('does not start the venue after Stop cancels pending Cloud ownership acquisition', async () => {
+    const f = fixture();
+    let release!: () => void;
+    const hold = new Promise<void>((resolve) => { release = resolve; });
+    f.adapters.cloud.acquire = vi.fn(async () => {
+      await hold;
+      return { generation: 1, expiresAt: NOW + 120_000 };
+    });
+    const runner = new BrowserVenueProgramme(scope, f.adapters, () => NOW);
+    try {
+      const start = runner.start();
+      await vi.waitFor(() => expect(f.adapters.cloud.acquire).toHaveBeenCalledTimes(1));
+      await expect(runner.start()).rejects.toThrow('already preparing');
+      await runner.stop();
+      release();
+      await expect(start).rejects.toThrow('cancelled');
+      expect(f.play).not.toHaveBeenCalled();
+      expect(runner.status().state).toBe('idle');
+    } finally { release(); await runner.dispose(); }
+  });
+
   it('requires on-device Start instead of unsafe Resume after a browser interruption', async () => {
     const f = fixture();
     const runner = new BrowserVenueProgramme(scope, f.adapters, () => NOW);
