@@ -59,7 +59,7 @@ describe('Cloud local folder watches', () => {
     render(<FolderWatches />);
     await screen.findByText('Music');
     await user.click(screen.getByRole('button', { name: '+ Add folder' }));
-    await user.type(screen.getByRole('textbox', { name: 'Folder address on this computer' }), 'C:\\DJ Sets');
+    await user.type(screen.getByRole('textbox', { name: 'Folder address on this device' }), 'C:\\DJ Sets');
     await user.click(screen.getByRole('button', { name: 'Watch folder' }));
     expect(await screen.findByText(/Folder added. Indexing is queued/)).toBeInTheDocument();
     expect(screen.getByText('DJ Sets')).toBeInTheDocument();
