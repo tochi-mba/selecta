@@ -17,7 +17,10 @@ export class BrowserAudioLease {
     if (!this.ownsStorage()) this.lost();
   };
   constructor(workspaceId: string, onLost: () => void) {
-    this.key = 'selecta:br64:audio:' + workspaceId;
+    // One physical browser-profile output regardless of workspace, Studio or venue route.
+    // A separate workspace must not bypass local speaker exclusivity.
+    void workspaceId;
+    this.key = 'selecta:br64:audio:global-v1';
     this.onLost = onLost;
     if (typeof BroadcastChannel !== 'undefined') {
       this.channel = new BroadcastChannel(this.key);
