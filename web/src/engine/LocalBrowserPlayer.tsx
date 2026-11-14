@@ -3,6 +3,7 @@ import { claimFocus, releaseFocus } from '../cloud/cloudTransport';
 import { sayThisTabIsPlaying, whenAnotherTabPlays } from '../state/tabs';
 import { browserEngine, retainBrowserEngine } from './registry';
 import { probeBrowserAudio } from './capabilities';
+import { localCatalogue } from '../media/localCatalogue';
 import type { EngineSnapshot } from './contracts';
 import './localBrowserPlayer.css';
 
@@ -14,11 +15,15 @@ const isOutputReady = (state: EngineSnapshot) => state.phase === 'playing' || st
 
 export function LocalBrowserPlayer({ workspaceId }: { workspaceId: string }) {
   const engine = useMemo(() => browserEngine(workspaceId), [workspaceId]);
+  const catalogue = useMemo(() => localCatalogue(workspaceId), [workspaceId]);
+  const [libraryRevision, setLibraryRevision] = useState(0);
+  useEffect(() => catalogue.subscribe(() => setLibraryRevision((old) => old + 1)), [catalogue]);
   const now = useSyncExternalStore(engine.subscribe, engine.snapshot, engine.snapshot);
   const compatibility = useMemo(() => probeBrowserAudio(), []);
   const [showSettings, setShowSettings] = useState(false);
   const [status, setStatus] = useState('');
   const [confirmTakeover, setConfirmTakeover] = useState(false);
+  const connected = useMemo(() => catalogue.recordings.filter((entry) => entry.readiness === 'ready'), [catalogue, libraryRevision]);
 
   useEffect(() => retainBrowserEngine(workspaceId, engine), [workspaceId, engine]);
   useEffect(() => whenAnotherTabPlays(() => {
@@ -34,12 +39,30 @@ export function LocalBrowserPlayer({ workspaceId }: { workspaceId: string }) {
   }, [engine, now.phase]);
   const choose = async (files: FileList | null) => {
     if (!files?.length) return;
-    await engine.setQueue(Array.from(files).map((file, index) => ({
+    const chosen = Array.from(files);
+    await engine.setQueue(chosen.map((file, index) => ({
       id: String(index) + ':' + file.name + ':' + file.size + ':' + file.lastModified,
       title: file.name.replace(/\.[^.]+$/, ''),
       file,
     })));
-    setStatus(String(files.length) + ' local file(s) selected. They stay in this browser; no music is uploaded.');
+    setStatus(String(chosen.length) + ' local file(s) selected. They stay in this browser; no music is uploaded.');
+    // Keep the Connect Music and player surfaces on one local catalogue.
+    void catalogue.scan(chosen, { origin: 'file_input', label: 'Player selection' })
+      .catch(() => setStatus('Music plays locally; indexing needs another permission check.'));
+  };
+  const loadConnected = async () => {
+    if (!connected.length) return;
+    try {
+      const queue = [];
+      for (const row of connected) {
+        const file = await catalogue.openRecording(row.id);
+        queue.push({ id: row.id, title: row.title, file });
+      }
+      await engine.setQueue(queue);
+      setStatus(queue.length + ' verified local recording(s) loaded from Connect Music.');
+    } catch {
+      setStatus('A connected recording has changed or lost permission. Reconnect local music before playback.');
+    }
   };
   const play = async () => {
     if (now.phase === 'playing') { await engine.pause(); return; }
@@ -79,6 +102,10 @@ export function LocalBrowserPlayer({ workspaceId }: { workspaceId: string }) {
           multiple onChange={(event) => { void choose(event.target.files); event.target.value = ''; }}
           data-testid="br64-01-files" />
       </label>
+      <button type="button" onClick={() => void loadConnected()} disabled={!connected.length}
+        data-testid="br64-connected-music">
+        Load connected music ({connected.length} ready here)
+      </button>
       <p className="browser-player-help">Files stay local. Chrome, Firefox, Safari, Android and iPad may decode different formats. A file selection is required again after a page reload.</p>
       <div className="browser-player-now">
         <strong data-testid="br64-01-track">{now.title ?? 'No music selected'}</strong>
