@@ -1,5 +1,8 @@
 # ADR-0467 - Offline-first venue execution and restart recovery
 
+> **Controlling browser-first update — 2026-11-14:** [ADR-0485](adr-0485-browser-first-cloud-and-ipad-venue-runtime.md) supersedes any mandatory Python/FFmpeg installer, native agent, separate venue computer, or guaranteed background/reboot browser playback in this historical decision. **Cloud runs DSP and plays locally in the supported browser** (including a venue's sole Android tablet or iPad; capable phones also render). Standalone Python Selecta remains independent. [Device/DSP feasibility](selecta-browser-device-capability-matrix.md) · [Full product/repository plan](selecta-browser-first-master-plan.md). Implementation status counts below are an older snapshot and do not certify browser parity; tests and real-device verification remain required.
+
+
 - **Decision:** Accepted by owner (2026-11-13), implementation not started.
 - **Implementation:** 0/4 Implemented; 4/4 Not started.
 - **Independent verification:** 0/4 Verified.
@@ -14,10 +17,12 @@ The old venue design downloads four hours of R2 audio into browser cache; the ne
 
 ## Accepted decision
 
-1. Keep committed/current plus next two, prepared future, and planned future horizon stages. Target sufficient near-term audio readiness and progressively precompute local transitions; no R2 streaming required.
-2. Persist venue-specific schedules, IANA timezone, content policy, eligible sources, plan/rights permit, current programme and playback checkpoints locally.
-3. After internet loss, honour cached authorised programme, local skip/request rules and safe fallback; reconnect via ordered idempotent journal, never replay stale transport commands.
-4. After power failure, restore only when opening hours, rights, policy, output, current owner and file integrity checks all pass; defer updates until safe service windows.
+1. **A sole iPad or sole Android tablet is a supported venue player** using authorised local files, browser DSP, a verified system output and an active foreground/awake browser. No Python service or dedicated computer can be required.
+2. Maintain a compact prepared/committed/planned musical horizon with browser workers and locally cached source material where permitted. Prioritise real-time sound against heavy stem/analysis tasks.
+3. When Wi-Fi fails, current active tab may continue from locally prepared audio/schedule/policy and journal permitted changes as storage permits. **A closed, suspended or killed browser cannot promise scheduled playback**.
+4. Screen Wake Lock, Home Screen installation or guided/kiosk mode improve usability but do not guarantee indefinite locked-screen audio, background execution, recovery from power loss or automatic reopening.
+5. Require explicit tap-to-activate audio, operator sound check, local-source/rights verification, Bluetooth/USB output test, six-hour powered/awake real iPad and Android tablet soaks, and honest interruption/recovery status.
+6. Native unattended 24/7 and reboot-autoresume remain a **separately evaluated optional product capability**, never a prerequisite for a browser-only venue.
 
 ## Operational edge cases
 

@@ -1,5 +1,8 @@
 # ADR-0476 - Personal cloud UX and device-aware information architecture
 
+> **Browser-first controlling update (2026-11-14):** [ADR-0485](adr-0485-browser-first-cloud-and-ipad-venue-runtime.md) supersedes mandatory installed Python Cloud engines or a separate venue computer. Cloud playback and rendering target the supported **browser** on desktop, iPhone, Android phone, iPad and Android tablet; sole-tablet venues work while foreground/awake with authorised local sources and output verification. Native standalone mode remains separate. Do not claim background/reboot guarantees, multi-zone or neural DSP parity without real tests. [Full implementation/UI plan](selecta-browser-first-master-plan.md) · [device research](selecta-browser-device-capability-matrix.md). Original task-status figures are a historical documentation snapshot, not evidence that the browser implementation is complete.
+
+
 - **Decision:** Accepted by owner (2026-11-13); not implemented.
 - **Implementation:** 0/4 Implemented; 4/4 Not started.
 - **Independent verification:** 0/4 Verified.

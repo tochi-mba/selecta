@@ -1,10 +1,12 @@
-# LF source map and replacement ownership
+# LF browser-first source map and replacement ownership
+
+**2026-11-14:** [ADR-0485](adr-0485-browser-first-cloud-and-ipad-venue-runtime.md) is controlling. The table below documents historic owners; **native Python/FFmpeg components are standalone/reference only**. Real Cloud playback and render must run in the supported browser, including sole-iPad/Android venue and capable phones. [Complete new source/UI delivery map](selecta-browser-first-master-plan.md).
 
 **Baseline:** `main` `bfb2bd27938ac8b67e7d3e17125779cb092a8a3d`, source inspected 2026-11-13. This is a design inventory, not proof of runtime behavior. No code in this PR changes.
 
 | Existing owner | Existing behavior or assumption | Future owner / disposition | Cross-check |
 |---|---|---|---|
-| `src/selecta/api.py`, `api_common.py` | Standalone local API, folder watch, analysis, playback | Keep as local engine core | 0455,0456,0461 |
+| `src/selecta/api.py`, `api_common.py` | Standalone local API, folder watch, analysis, playback | Retain **separate standalone product/reference**, never Cloud browser dependency | 0455,0456,0461,0485 |
 | `src/selecta/api_cloud.py` | Cloud identities, routes, uploads, billing | Keep control plane, remove hosted media routes | 0455,0457,0469 |
 | `src/selecta/modes/core.py` | local/cloud process selector | Retain startup selector; add capability+connectivity+workspace axes | 0456 |
 | `src/selecta/storage/api.py` | Multipart audio R2 upload and quota reservations | Sunset after data/compatibility gates; new local source registration | 0457,0480 |
@@ -31,7 +33,7 @@
 | `web/src/cloud/useCloudPlayer.ts` | Remote proxy polling and signed URL refresh | Local speaker controls and per-device readiness | 0466,0476 |
 | `web/src/cloud/CloudTransportDock.tsx` | Shared player/media focus | Preserve single audio focus, add remote-vs-local control distinction | 0466 |
 | `web/src/cloud/MakeCloudMix.tsx` | Cloud mix from hosted asset IDs | Portable recipe + missing-media repair | 0459,0477 |
-| `web/src/kiosk/audio.ts` | `stubAudio()` unlock test; `savedHoursAhead() = 0` | Replace with real supervised local zone engine and truthful output state | 0467,0478 |
+| `web/src/kiosk/audio.ts` | `stubAudio()` unlock test; `savedHoursAhead() = 0` | Replace with actual **tablet browser Web Audio** venue player and truthful output state | 0467,0478,0485 |
 | `web/src/business/library/OrgLibrary.tsx` | Organisation's remotely available songs | Catalogue metadata and per-venue inventory/readiness | 0474,0478 |
 | `web/src/business/console/`, `staff/` | HQ and staff remote views | Keep and add hardware/source readiness/recovery | 0478,0479 |
 | `infra/modal/selecta_workers.py` | Hosted CPU/GPU and export functions | Retire after cutover | 0481 |
@@ -50,3 +52,16 @@
 ## Audit tasks
 
 Missing source files, live route inventories and third-party services must be verified during LF-0455-01 before implementation. Do not assume this table is a complete automated call graph. [Parity](selecta-local-first-overlap-and-parity.md) · [Service retirements](selecta-local-first-service-retirement.md).
+
+## New browser Cloud code owners
+
+| Owner (proposed) | Contract |
+|---|---|
+| `web/src/engine/**` | Browser AudioWorklet real-time mixer and player; no Python/runtime installer |
+| `web/src/media/**` | User-mediated file/folder selection, codec decode, device-local source bindings |
+| `web/src/dsp/**` | WASM/JS DSP golden-fixture parity and optional benchmarked on-device ML |
+| `web/src/render/**` | Browser chunked render, local exports, verified encoding, no remote PCM |
+| `web/src/device-capabilities/**` | Live per-device/browser/OS feature qualification, hardware/thermal/source/output readiness |
+| `web/src/venue-player/**` | Android/iPad-only browser venue controls, schedule/outage behavior, foreground/awake and physical sound check |
+
+**No hidden Cloud engine dependency:** existing `src/selecta/local_engine/**`, `src/selecta/lf_jobs/**`, `src/selecta/lf_artifacts/**`, `src/selecta/playback/**` and worker Python internals may provide standalone/reference contracts but do not themselves implement browser DSP. Preserve their algorithm quality; do not reuse a Python local HTTP service as required Cloud transport.

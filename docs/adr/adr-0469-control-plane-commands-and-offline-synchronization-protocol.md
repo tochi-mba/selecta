@@ -1,5 +1,8 @@
 # ADR-0469 - Control-plane commands and offline synchronization protocol
 
+> **Controlling browser-first update — 2026-11-14:** [ADR-0485](adr-0485-browser-first-cloud-and-ipad-venue-runtime.md) supersedes any mandatory Python/FFmpeg installer, native agent, separate venue computer, or guaranteed background/reboot browser playback in this historical decision. **Cloud runs DSP and plays locally in the supported browser** (including a venue's sole Android tablet or iPad; capable phones also render). Standalone Python Selecta remains independent. [Device/DSP feasibility](selecta-browser-device-capability-matrix.md) · [Full product/repository plan](selecta-browser-first-master-plan.md). Implementation status counts below are an older snapshot and do not certify browser parity; tests and real-device verification remain required.
+
+
 - **Decision:** Accepted by owner (2026-11-13), implementation not started.
 - **Implementation:** 0/4 Implemented; 4/4 Not started.
 - **Independent verification:** 0/4 Verified.
@@ -14,10 +17,11 @@ Separate cloud authority and local execution require an explicit data ownership 
 
 ## Accepted decision
 
-1. Every command has operation ID, workspace/zone scope, actor, expected generation/revision, TTL, schema version and idempotency key; cloud queued does not mean locally applied.
-2. Local engine is authoritative for playback position, verified media and local artifacts; cloud is authoritative for identity, billing and approved programme definitions.
-3. Differentiate ephemeral transport commands from durable settings/schedules; discard expired commands and reconcile immutable revision DAGs safely.
-4. Offline event outbox is durable, bounded, replay-safe and tenant-isolated; cloud responses distinguish accepted, delivered, applied, rejected, expired and conflicted.
+1. Every browser Cloud command has actor, workspace, zone, target browser session, operation, expected revision/generation, TTL, idempotency key and version; metadata Cloud authority does not imply physical audio authority.
+2. The active browser acknowledges applied operations only after its local Web Audio/source checks; if hidden, killed, sleeping, output-lost or unreachable it becomes uncertain, interrupted or rejected.
+3. Browser local outbox/checkpoints survive only according to actual IndexedDB/OPFS durability and active execution; Service Workers are not guaranteed audio engines.
+4. Expire transport commands rather than replaying them after mobile OS suspension; preserve immutable recipe/settings edits and explicit conflict resolution.
+5. Controller-only phones have no file privileges over an iPad/Android speaker; phones with own recordings may independently be players and renderers.
 
 ## Operational edge cases
 

@@ -1,65 +1,36 @@
-# Selecta Local-First Cloud architecture
+# Selecta Cloud — browser-native local-first architecture
 
-**Accepted owner decision:** 2026-11-13. **Implementation:** Not started. Baseline main at bfb2bd27938ac8b67e7d3e17125779cb092a8a3d. This chapter supersedes conflicting hosted-user-audio target assumptions in previous SaaS chapters. Historical implementation evidence is preserved.
+**Owner correction accepted 2026-11-14:** [ADR-0485](../adr/adr-0485-browser-first-cloud-and-ipad-venue-runtime.md) supersedes the prior **mandatory native local-engine** design. The Cloud experience runs directly in supported browsers including **iPad-only and Android-tablet-only venues**. No installed Python/FFmpeg process, companion computer or local API is required. [Full device/browser/DSP feasibility research](../adr/selecta-browser-device-capability-matrix.md). **Implementation not verified** on actual browsers yet.
 
 ## Product contract
 
-Selecta becomes an intelligent local engine that DJs authorised recordings, connected to a cloud platform for accounts, metadata, saved mix recipes, AI planning, Rooms, remote device commands, venue scheduling, subscriptions and audit. Original files, audio bytes, stems, rendered transitions, PCM, exports, playback proxies and raw local media paths do not go to hosted systems.
+Selecta Cloud authenticates a browser-based DJ that processes **the user's locally accessible and authorised recordings** without uploading music or derived audio. Cloud retains identity, tenancy, metadata, immutable recipes, schedules, policy, Rooms/requests, bounded metadata-only Lucy AI, Stripe and remote control. The existing standalone Python/FFmpeg Selecta is a separate installable product. No browser Cloud endpoint may decode, stream, store or proxy user PCM, stems, entire waveforms or raw source files.
 
-Moving processing locally reduces Selecta's direct audio custody but does not automatically authorise copies, stems, exports or public performances. Specialist UK music/IP and software/model distribution review is an independent launch gate.
+## Execution and deployment
 
-## Deployment map
-
-| Unit | Audio ownership | Functions |
-
+| Component | Where it runs | What it does |
 |---|---|---|
+| Browser real-time player | Desktop Chrome/Edge/Safari/Firefox; qualified iPad/iPhone; Android Chrome/Samsung Internet/Firefox | Web Audio, AudioWorklet transport, gain, EQ, mixes and time-critical output; active browser owns audible speaker |
+| Browser offline DSP workers | Same actual playing device | WASM/JS analysis and transitions, cache, optional model inference, local export and FLAC encoder if implemented |
+| Browser local media and artifacts | User selected File handles/files, safe OPFS/IndexedDB cache | Actual source permission and per-device media binding; immutable user originals remain local |
+| Browser remote controller | Staff phone, personal browser or guest UI | Reads authorised metadata, sends scoped command to actual online speaker, **no access to other device's music** |
+| Cloud control API/Postgres | Hosted | Workspace identity, catalogue/recipe/zone metadata, policies, command state, guest requests, billing, audit |
+| Approved hosted AI | Hosted | Bounded *metadata/text-only* planning; no user audio, reconstructible features, raw local paths, protected lyrics |
+| Separate standalone local app | User installs independently if desired | Existing Python/FFmpeg full engine; **not Cloud runtime prerequisite** |
+| Optional future unattended/kiosk product | Separate approval only | May support hard always-on/multi-zone/reboot requirements browser cannot guarantee; never silently required |
 
-| Selecta Local Engine on Windows/Linux/macOS target hardware | User-controlled local files and caches | Indexing, analysis, beats, stems, seams, exports, audio output, local jobs, offline venue scheduling |
+## Browser and device behavior
 
-| Personal/browser/venue UI | None unless actual local engine attached | Browse catalogue, edit recipes, pair speaker, control output, manage venues |
+**iPad venue:** Safari or Home Screen browser, user-selected local music, tap Start, output test, foreground/awake and power recommended; browser/DSP qualifications for exact model. **Android tablet venue:** same, additionally Android Doze, Chrome vs Samsung Internet vs Firefox, OEM battery management and USB/BT output qualification. **Phones:** full controller/editor; local player when codec/source/DSP/thermal tests allow. **Desktop:** richer DSP target; not a prerequisite to run the tablet venue.
 
-| Hosted control API | No music or audio processing | Auth, tenancy, recipes, AI plan routing, business policy, rooms, device commands, billing, audit |
+Unsupported heavy neural features are explicit. Current PyTorch Beat This, neural key, torchaudio wav2vec2 and Demucs/HTDemucs cannot simply run as Python in browser; need independent model conversion/quality/performance benchmarks. Port SciPy/librosa, pedalboard stretch/FX, soxr and soundfile/FLAC behavior where possible using JS/WASM. A GPU API existing is not proof a model can run.
 
-| PostgreSQL metadata DB | No original or derived audio | Tenant-scoped catalogue IDs, immutable recipe revisions, device registration, commands, schedules, play logs |
+On tablet browser, *offline while page active* can continue prepared local playback. Screen lock, app switch, tab discard, process kill, OS update or restart may stop it. Do **not** claim 24/7 unattended or automatic restart. Output metering and AudioContext running never independently prove speakers audible; operator sound check required where it matters. Output routing/multi-zone/Chromecast require special tests and cannot be inferred from system Bluetooth.
 
-| WorkOS, Stripe, approved hosted AI | No audio | Identity, billing and bounded metadata-only intelligence |
+## Canonical recording and recipe safety
 
-| Optional non-audio object storage | No music | DB backups, audit retention and approved venue logos |
+A Cloud recipe references canonical catalogue recording IDs and immutable occurrences, not hosted original URLs. A destination browser resolves exact local recordings independently. Different master, clean edit, wrong codec, permission revoked and missing media remain explicit. Browser storage quotas/eviction can lose cached analysis and demand file reauthorisation, **not** erase original user files. Remote controllers cannot play another device's music just by signing in.
 
-## Runtime dimensions
+## Release gates
 
-Separate audio capability (local engine or controller-only), network state (online/degraded/offline), and workspace (standalone personal, connected personal or organisation). Do not imply that cloud mode executes DSP on the server. Standalone local mode remains login-free.
-
-## Canonical recordings and portable mix recipes
-
-Cloud recipe references workspace-scoped canonical recording IDs and stable occurrence IDs, never filesystem paths or R2 audio objects. Every device independently maps a reference to an exact verified local recording. Same artist/title or ISRC alone is not sufficient. Alternate remasters, clean edits and radio edits require verification and may invalidate every dependent cue/seam.
-
-Each recipe is an immutable version with parent history, ordered occurrences, requested transition techniques, timebase, engine requirements and policy. Local assets are recorded with content revisions, analysis/render/model versions and checksums.
-
-Availability is per target device, recipe revision and policy, with last-verification freshness. Ready, needs-analysis, candidate-match, missing, source-disconnected, permission-required, unsupported, version-mismatch, policy-blocked, engine-offline, unknown and cache-invalid are distinct. A cloud-saved recipe is not proof it can play anywhere.
-
-Repair actions: control a device that already has audio, locate local files, reauthorise source, approve verified equivalent, create a temporary variation or save a new revision without touching original history.
-
-## Local execution and audio reliability
-
-Keep the existing planner, seam repair, manual timeline, stem studio, requests/bridges, drafts and render line, valid FLAC export and blind listening features. Local priority protects imminent audio, then near-term seams, requests, editing, analysis and speculative discovery. Safety limits arise from actual CPU, GPU, RAM, disk, thermal state and multi-zone output, not from cloud processing tier.
-
-Local venue players use the existing committed/prepared/planned horizon idea, but prepare seams locally from locally authorised files instead of downloading four-hour R2 audio bundles. They cache schedules, time-zone rules, content policy, rights permits, playback checkpoints, prepared transitions and offline play logs. Actual output monitoring, not browser AudioContext unlock, determines readiness.
-
-## Device control and takeover
-
-Agent establishes outbound authenticated control channel, avoiding public filesystem APIs. Commands carry actor/tenant/zone scope, operation ID, expected generation/revision, expiry and stable acknowledgement states. Cloud queued does not mean local executed.
-
-Takeover must preflight current and near-future recordings and audio output, prepare destination, fence old owner, confirm safe release and only then start new speaker. An offline venue speaker may remain audible despite stale cloud lease; unsafe remote takeover is refused unless confirmed physical isolation resolves the partition.
-
-## Plans and services
-
-New plan versions remove hosted music GB, upload-size limits, daily analysis, cloud render concurrency and CPU weights, local stem-preview/export caps and cloud media retention. Preserve subscriptions to remote devices, synced recipes, Rooms, business venues/zones/seats, support and metered hosted AI.
-
-Retire Modal DSP functions, worker gateway, R2 originals/derived/exports/staging and music backups only after successor parity, user-data retrieval, retention, backups and legal sign-offs. Keep API, Postgres/RLS, identity, billing, email, control events, hosted AI and non-audio backups.
-
-## Hard gates
-
-No cloud-audio egress; two isolated devices with a saved eight-track recipe and three missing/alternate recordings; safe playback takeover; local audio-engine and editor parity; six-hour offline real venue test; security, billing, migrations, human usability, licensing and independent review.
-
-**Navigation:** [Roadmap](../adr/selecta-local-first-roadmap.md) · [Source map](../adr/selecta-local-first-source-map.md) · [UX matrix](../adr/selecta-local-first-ui-state-matrix.md) · [API contract](../adr/selecta-local-first-api-contracts.md) · [Migration](22-local-first-transition.md).
+Browser JS/WASM/WebAudio engine, audible source-local transitions on iPad and Android, music analysis/quality parity, controller-to-player authenticated fencing, local media privacy and negative Cloud audio egress, real six-hour powered/awake tablet venue soak, Android OEM/Samsung Internet/Firefox and iPadOS/Safari state matrix, rights/model-licence checks, remote controls, billing, accessibility, and safe rollback. See [checklist](../adr/selecta-local-first-implementation-checklist.md) and [gates](../adr/selecta-local-first-release-gates.md).

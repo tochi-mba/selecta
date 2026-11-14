@@ -1,5 +1,8 @@
 # ADR-0463 - Device-local job scheduler and resource safety
 
+> **Controlling browser-first update — 2026-11-14:** [ADR-0485](adr-0485-browser-first-cloud-and-ipad-venue-runtime.md) supersedes any mandatory Python/FFmpeg installer, native agent, separate venue computer, or guaranteed background/reboot browser playback in this historical decision. **Cloud runs DSP and plays locally in the supported browser** (including a venue's sole Android tablet or iPad; capable phones also render). Standalone Python Selecta remains independent. [Device/DSP feasibility](selecta-browser-device-capability-matrix.md) · [Full product/repository plan](selecta-browser-first-master-plan.md). Implementation status counts below are an older snapshot and do not certify browser parity; tests and real-device verification remain required.
+
+
 - **Decision:** Accepted by owner (2026-11-13); implementation not started.
 - **Implementation:** 0/4 Implemented; 4/4 Not started.
 - **Independent verification:** 0/4 Verified.
@@ -14,10 +17,11 @@ Cloud compute weights and worker autoscalers are no longer relevant to DSP, but 
 
 ## Decision and invariants
 
-1. Keep durable local job semantics, checkpoints, idempotency, provenance, retry, cancellation and dependency ordering; replace remote claims with local ownership and process supervision.
-2. Prioritise active audio and next transition, imminent requests, current horizon, requested editing, analysis, then speculative discovery.
-3. Use measured device CPU/RAM/GPU/disk and per-output audio deadlines. No subscriber-specific daily render, analysis, stem-preview or export quotas for local work.
-4. Manage simultaneous zones fairly; protect real-time audio from expensive stems; preempt/cooperatively cancel or sandbox and terminate runaway jobs.
+1. All Cloud audio jobs execute **inside an active browser** with AudioWorklet realtime processing, JS/WASM workers for analysis/render/export and optionally benchmarked local ML inference. The existing Python workers are a parity reference, **not** a requirement for Cloud.
+2. Protect active output and imminent seams ahead of heavy analysis, stems and speculative work. No model downloads/ML inference, unbounded allocation or blocking I/O in the audio callback.
+3. Device capability and pressure gates cover Android OEM thermal/battery behavior, iOS memory limits, codecs, storage eviction, web worker termination and app visibility. A phone is allowed to render when actual benchmarks pass.
+4. Model conversions (Beat This, neural key, Demucs, wav2vec2 alignment) require separate licences, quality/latency/RAM checks and end-to-end tests. An unported model is explicitly `unsupported_here`, never hosted audio.
+5. No subscriber plan taxes device-owned local CPU/DSP. Browser checkpoints/caches require quota and eviction tests; stale work is invalidated.
 
 ## Edge cases and rejection semantics
 

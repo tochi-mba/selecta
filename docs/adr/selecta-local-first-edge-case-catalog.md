@@ -1,4 +1,6 @@
-# LF exhaustive edge-case and negative-behaviour catalogue
+# LF browser-first device and negative-behaviour catalogue
+
+**ADR-0485 override:** iPad and Android tablet browsers are real venue players, phones can play/render; no required installed native engine. Prior native-agent edge cases below are historical and are interpreted under the [full device matrix](selecta-browser-device-capability-matrix.md) and [master implementation plan](selecta-browser-first-master-plan.md). In particular LF-E37 **must not promise** music continues after closing the *playing* browser.
 
 **Status:** Accepted contract, tests not implemented. Each scenario must map to a test ID in [verification matrix](selecta-local-first-verification-matrix.md), not remain only prose.
 
@@ -52,7 +54,7 @@
 | LF-E34 | User switches personal/business workspace | Correct authority; no cross-workspace media |
 | LF-E35 | Paused local player loses cloud | Pause locally; no unexpected Play after reconnection |
 | LF-E36 | Bluetooth output disconnects | Safe route/fallback, bounded volume and actual output alert |
-| LF-E37 | Browser tab closes but venue agent running | Audio service keeps running if configured |
+| LF-E37 | The **playing** iPad/Android/desktop browser tab closes or is killed | Music continuity **not guaranteed**; remotely mark interrupted/unknown, safely require restart in foreground; optional independently certified native edition separate |
 | LF-E38 | Local agent update during venue hours | Defer or explicitly controlled urgent mitigation |
 
 ## Venue scheduling and rights
@@ -95,3 +97,21 @@
 ## Review protocol
 
 Every row needs named happy/failure tests, source owner, expected telemetry, screen text, migration consideration and independent evidence. A release cannot downgrade critical missing-media, playback partition, copying rights or privacy cases to unverified assumptions.
+
+## Additional browser, iPad, Android and phone cases
+
+| ID | Trigger | Required behavior |
+|---|---|---|
+| LF-E70 | Android venue phone/tablet receives call or loses audio focus | Report interruption, protect output, safe user reactivation |
+| LF-E71 | Android Doze/OEM battery policy pauses browser or network | Mark remote player uncertain, do not replay stale commands or promise background DSP |
+| LF-E72 | iPad Safari AudioContext says running but external speaker silent | Do not falsely certify sound; operator test or external audio monitor required |
+| LF-E73 | iPad/Android browser screen locks despite Wake Lock | Mark foreground/realtime readiness at risk, safe recovery; no unattended promise |
+| LF-E74 | Phone renders 60-minute mix, temp storage/RAM nearly exhausted | Chunked local export, preflight, atomic output, fail without corrupt result |
+| LF-E75 | Samsung Internet vs Chrome Android vs Firefox directory picker differs | Feature detection, files-only fallback and local relinking; no unsupported claim |
+| LF-E76 | User switches speakers BT/USB/HDMI mid-set | Output route uncertainty, bounded volume, physical sound recheck |
+| LF-E77 | Browser PWA is uninstalled/evicted, cache wiped | Keep immutable Cloud recipes; no originals deleted; require local music import again |
+| LF-E78 | WebGPU available but neural model unsupported by inference runtime | Explicit unsupported_here; do not upload model input audio |
+| LF-E79 | Venue uses only Android tablet with one Bluetooth speaker | Full one-zone browser setup without mandatory laptop/Python |
+| LF-E80 | Streaming platform DRM song offered as source | Do not promise extraction, stem analysis or mixing without permitted raw media/rights |
+| LF-E81 | Cast speaker selected as browser output without local PCM receiver | Explain unsupported casting path; no Cloud proxy |
+| LF-E82 | Two tabs/PWAs on same Android/iPad device both try audio | Single owner, local focus coordination and fenced status |

@@ -1,4 +1,6 @@
-# Selecta Cloud: SaaS proposal
+# Selecta Cloud — historical SaaS proposal (hosted-audio plan superseded)
+
+**2026-11-14 current Cloud direction:** [ADR-0485](../adr/adr-0485-browser-first-cloud-and-ipad-venue-runtime.md), [browser/device research](../adr/selecta-browser-device-capability-matrix.md), and the [complete product/UI/repository plan](../adr/selecta-browser-first-master-plan.md) supersede the 2026-11-09 hosted-audio and later mandatory native engine proposals. **No-install browser-native audio** is the target for qualified laptops, phones, iPads and Android tablets, including **sole-tablet venues**; phones can render. No Cloud music upload, hosting, cloud audio DSP or server-side playback proxy. The following chapters below document historical decisions and should not be treated as the active product plan where conflicting.
 
 *Prepared 9 November 2026 for Tochi Mba. Grounded in the `tochi-mba/selecta` repo at `main` (3c2f1eb, including the feature-flag work merged today), three code maps of the backend, frontend and docs/CI, and web research on hosting, queues, billing, AI pricing, licensing and music-locker law. Prices are from public pages and third-party summaries as of Oct–Nov 2026 and must be re-checked before any spend decision.*
 

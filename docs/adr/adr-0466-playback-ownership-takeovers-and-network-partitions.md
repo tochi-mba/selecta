@@ -1,5 +1,8 @@
 # ADR-0466 - Playback ownership, takeovers and network partitions
 
+> **Controlling browser-first update — 2026-11-14:** [ADR-0485](adr-0485-browser-first-cloud-and-ipad-venue-runtime.md) supersedes any mandatory Python/FFmpeg installer, native agent, separate venue computer, or guaranteed background/reboot browser playback in this historical decision. **Cloud runs DSP and plays locally in the supported browser** (including a venue's sole Android tablet or iPad; capable phones also render). Standalone Python Selecta remains independent. [Device/DSP feasibility](selecta-browser-device-capability-matrix.md) · [Full product/repository plan](selecta-browser-first-master-plan.md). Implementation status counts below are an older snapshot and do not certify browser parity; tests and real-device verification remain required.
+
+
 - **Decision:** Accepted by owner (2026-11-13), implementation not started.
 - **Implementation:** 0/4 Implemented; 4/4 Not started.
 - **Independent verification:** 0/4 Verified.
@@ -14,10 +17,11 @@ A cloud lease does not prove that a new device has music or that a disconnected 
 
 ## Accepted decision
 
-1. Prepare destination media, transitions, output, permissions and engine before changing owner; failure leaves current speaker playing.
-2. Execute fenced prepare/stop-confirm/acquire/start transition with unique attempt ID and deadlines. Prevent two tabs or repeated commands from creating duplicate ownership.
-3. Business offline designated speaker retains local authority; refuse unsafe takeover while it cannot be fenced or physically isolated. Use an explicit emergency/manual isolation path.
-4. On reconnection reject stale generations, reconcile old speaker, report any audible handoff gap honestly; never claim inherently gapless cross-hardware takeover.
+1. The actual player is a **browser session** on a desktop, phone, iPad or Android tablet with verified local source, audio context/output, current foreground readiness and a fenced generation.
+2. Preflight the destination's files, codec, prepared transitions, output and hardware before moving ownership; missing media leaves old player active.
+3. Use unique command/attempt IDs, expected generation, TTL and source-release confirmation. During a partition, a lost heartbeat does not prove the previous speaker is silent; refuse unsafe takeover or require explicit physical isolation.
+4. Browser tab close, PWA relaunch, Android Doze, iOS interruption or OS kill are uncertain states. A Cloud ACK is not actual sound and a physical handoff cannot promise gapless cross-device audio.
+5. Phones can control other players or be selected as local players, with identical safety requirements.
 
 ## Operational edge cases
 

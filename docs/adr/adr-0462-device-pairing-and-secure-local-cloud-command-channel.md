@@ -1,5 +1,8 @@
 # ADR-0462 - Device pairing and secure local/cloud command channel
 
+> **Controlling browser-first update — 2026-11-14:** [ADR-0485](adr-0485-browser-first-cloud-and-ipad-venue-runtime.md) supersedes any mandatory Python/FFmpeg installer, native agent, separate venue computer, or guaranteed background/reboot browser playback in this historical decision. **Cloud runs DSP and plays locally in the supported browser** (including a venue's sole Android tablet or iPad; capable phones also render). Standalone Python Selecta remains independent. [Device/DSP feasibility](selecta-browser-device-capability-matrix.md) · [Full product/repository plan](selecta-browser-first-master-plan.md). Implementation status counts below are an older snapshot and do not certify browser parity; tests and real-device verification remain required.
+
+
 - **Decision:** Accepted by owner (2026-11-13); implementation not started.
 - **Implementation:** 0/4 Implemented; 4/4 Not started.
 - **Independent verification:** 0/4 Verified.
@@ -14,10 +17,11 @@ Cloud must address a player behind NAT without opening filesystem-capable HTTP s
 
 ## Decision and invariants
 
-1. Local agent initiates an outbound authenticated control channel; provision device identity using short-lived pairing and rotatable, scoped credentials.
-2. Cloud authorises workspace/actor/role; agent independently validates command schema, expected generation, resource scope and safety. Commands cannot specify arbitrary file paths or execute shell.
-3. Maintain created, delivered, accepted, applied, acknowledged, rejected, superseded and expired states with idempotency and explicit TTL.
-4. Reject unpaired origins and protect loopback API against CSRF, DNS rebinding and unauthenticated local-network access. Controller devices never gain source-folder privileges.
+1. Each **browser player** (desktop, phone, iPad, Android tablet) establishes an authenticated outbound HTTPS/WSS session; no native pairing agent or localhost server is necessary.
+2. Cloud authorises actor/workspace/role/zone, target browser session, operation ID, generation, recipe revision, TTL and idempotency; browser independently enforces source availability, policy, local output and command scope.
+3. Differentiate queued/delivered/accepted/applied/rejected/expired/uncertain. A command accepted by Cloud is **not** proof that the browser rendered sound.
+4. Remote controllers cannot read source files or send filesystem paths. Lost/stolen tablets, tokens, duplicated tabs, stale sessions and browser termination require revocation and fencing.
+5. Optional standalone/native engine adapters may share a versioned envelope where appropriate but are not mandatory Cloud dependencies.
 
 ## Edge cases and rejection semantics
 
