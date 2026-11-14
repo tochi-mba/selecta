@@ -137,6 +137,20 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/folders/relink/preview` | Shows what relinking a moved folder would change |
 | `POST /api/folders/relink` | Points songs at their moved folder |
 | `POST /api/folders/stop-watching` | Stops watching a folder; nothing is deleted |
+
+### Local device watches (`src/selecta/devstack/local_watches.py`) - development only
+
+These routes are available only through the guarded local development companion,
+not through the hosted Cloud API. A browser on another device cannot supply
+filesystem paths and no audio data is uploaded.
+
+| Route | Side effect |
+|---|---|
+| `POST /dev/local-watches` | Locally authorizes a music folder and queues an incremental source scan; private path stays on this device |
+| `POST /dev/local-watches/{source_id}/scan` | Queues a device-local rescan, without moving recordings or claiming immediate readiness |
+| `PATCH /dev/local-watches/{source_id}` | Pauses or resumes an existing device-local watch without changing source files |
+| `DELETE /dev/local-watches/{source_id}` | Removes a local watch registration; preserves files and indexed recording identities |
+
 | `POST /api/steer` | Steers the live mix (Listen DJ controls) |
 | `POST /api/plan` | Builds a new mix (older entry point to `POST /api/mix/build`) (Listen) |
 
