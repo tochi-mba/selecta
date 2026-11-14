@@ -71,6 +71,9 @@ export class BrowserVenueAudio implements VenueAudioPort {
   // Fences a delayed decode against Stop, source replacement and another transition.
   private playbackEpoch = 0;
   private deck: Deck | null = null;
+  // The outgoing deck remains audible until its scheduled fade finishes.
+  // Keep it reachable for Stop, source replacement and rapid consecutive Skip.
+  private leaving: Deck | null = null;
   private phase: PlayerPhase = 'locked';
   private generation = 0;
   private checkedAt: number | null = null;
@@ -247,6 +250,7 @@ export class BrowserVenueAudio implements VenueAudioPort {
     const deck = { id: trackId, node, gain, endsAt: startAt + buffer.duration };
     node.onended = () => {
       gain.disconnect();
+      if (this.leaving === deck) this.leaving = null;
       if (this.deck === deck) {
         this.deck = null;
         this.phase = 'stopped';
@@ -316,6 +320,17 @@ export class BrowserVenueAudio implements VenueAudioPort {
       || this.phase !== 'playing')
       throw new Error('Transition cancelled because the active speaker changed');
     const now = ctx.currentTime + 0.03;
+    // A second Skip must not leave three sources on the same physical output.
+    // The previous outgoing source can still be fading even after the new deck
+    // became current. End that old fade before reusing the output.
+    const previousLeaving = this.leaving;
+    if (previousLeaving) {
+      previousLeaving.node.onended = null;
+      try { previousLeaving.node.stop(now); } catch { /* already ended */ }
+      try { previousLeaving.node.disconnect(); } catch { /* already detached */ }
+      try { previousLeaving.gain.disconnect(); } catch { /* already detached */ }
+      this.leaving = null;
+    }
     const fade = Math.min(fadeSeconds, this.buffers.get(old.id)?.duration ?? fadeSeconds);
     const next = this.launch(trackId, now, fade);
     old.gain.gain.cancelScheduledValues(now);
@@ -325,7 +340,14 @@ export class BrowserVenueAudio implements VenueAudioPort {
     // immediately dispatched onended callback must never release the new
     // owner's lease or mark the fresh track stopped.
     this.deck = next;
-    try { old.node.stop(now + Math.max(0.02, fade)); } catch { /* old source already ended */ }
+    this.leaving = old;
+    try { old.node.stop(now + Math.max(0.02, fade)); } catch {
+      // Even if scheduling fails, do not keep an untracked outgoing node.
+      old.node.onended = null;
+      try { old.node.disconnect(); } catch { /* already detached */ }
+      try { old.gain.disconnect(); } catch { /* already detached */ }
+      this.leaving = null;
+    }
     if (old.id !== trackId) this.buffers.delete(old.id); // do not evict the new active buffer
     this.checkedAt = null; // changing song doesn't certify the physical output
     this.phase = 'playing';
@@ -391,10 +413,16 @@ export class BrowserVenueAudio implements VenueAudioPort {
     // Stop must silence the actual speaker, including an outstanding test tone.
     this.silenceTestTone();
     const old = this.deck;
+    const leaving = this.leaving;
     this.deck = null;
-    if (old) {
-      try { old.node.stop(); } catch { /* node already ended */ }
-      old.gain.disconnect();
+    this.leaving = null;
+    // Stop means silence, including any old source still in a crossfade.
+    for (const source of [old, leaving]) {
+      if (!source) continue;
+      source.node.onended = null;
+      try { source.node.stop(); } catch { /* node already ended */ }
+      try { source.node.disconnect(); } catch { /* already detached */ }
+      try { source.gain.disconnect(); } catch { /* already detached */ }
     }
     this.checkedAt = null;
     this.phase = 'stopped';

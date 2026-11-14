@@ -17,7 +17,7 @@ class FakeSource extends FakeNode {
   buffer: AudioBuffer | null = null;
   onended: (() => void) | null = null;
   start(): void { started.push('buffer'); }
-  stop(): void { this.onended?.(); }
+  stop(_when?: number): void { this.onended?.(); }
 }
 class FakeOscillator extends FakeNode {
   type: OscillatorType = 'sine';
@@ -274,5 +274,61 @@ describe('BR64-08 device-local WebAudio execution (simulated nodes, never hardwa
       expect(started).not.toContain('tone');
       expect(audio.snapshot().phase).toBe('stopped');
     } finally { grant(); await audio.dispose(); }
+  });
+  it('Stop also stops the outgoing track during an unfinished crossfade', async () => {
+    vi.stubGlobal('AudioContext', FakeContext);
+    const issued: FakeSource[] = [];
+    const create = vi.spyOn(FakeContext.prototype, 'createBufferSource').mockImplementation(() => {
+      const node = new FakeSource();
+      issued.push(node);
+      return node as unknown as AudioBufferSourceNode;
+    });
+    const immediate: FakeSource[] = [];
+    const stop = vi.spyOn(FakeSource.prototype, 'stop').mockImplementation(function (this: FakeSource, when?: number) {
+      // A future stop does not call onended until the real audio clock reaches it.
+      if (when !== undefined) return;
+      immediate.push(this);
+      this.onended?.();
+    });
+    const audio = new BrowserVenueAudio();
+    try {
+      audio.importLocal([makeRec('a'), makeRec('b')]);
+      await audio.unlock();
+      await audio.start('a', 1);
+      await audio.transition('b', 2);
+      expect(issued).toHaveLength(2);
+      expect(immediate).toHaveLength(0);
+      await audio.stop();
+      expect(immediate).toContain(issued[0]);
+      expect(immediate).toContain(issued[1]);
+      expect(audio.snapshot().phase).toBe('stopped');
+    } finally { await audio.dispose(); create.mockRestore(); stop.mockRestore(); }
+  });
+
+  it('a rapid second Skip silences the old outgoing deck instead of creating a triple overlap', async () => {
+    vi.stubGlobal('AudioContext', FakeContext);
+    const issued: FakeSource[] = [];
+    const create = vi.spyOn(FakeContext.prototype, 'createBufferSource').mockImplementation(() => {
+      const node = new FakeSource();
+      issued.push(node);
+      return node as unknown as AudioBufferSourceNode;
+    });
+    const immediate: FakeSource[] = [];
+    const stop = vi.spyOn(FakeSource.prototype, 'stop').mockImplementation(function (this: FakeSource, when?: number) {
+      if (when !== undefined) return;
+      immediate.push(this);
+      this.onended?.();
+    });
+    const audio = new BrowserVenueAudio();
+    try {
+      audio.importLocal([makeRec('a'), makeRec('b'), makeRec('c')]);
+      await audio.unlock();
+      await audio.start('a', 1);
+      await audio.transition('b', 2);
+      await audio.transition('c', 2);
+      expect(issued).toHaveLength(3);
+      expect(immediate).toContain(issued[0]);
+      expect(audio.snapshot()).toMatchObject({ currentId: 'c', phase: 'playing' });
+    } finally { await audio.dispose(); create.mockRestore(); stop.mockRestore(); }
   });
 });
