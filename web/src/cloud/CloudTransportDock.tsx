@@ -8,7 +8,6 @@ import { recoveringSpeaker } from './recoveringSpeaker';
 import { useCloudPlayer } from './useCloudPlayer';
 import { BrowserSessionPanel } from './lf-device-control/BrowserSessionPanel';
 import { LocalBrowserPlayer } from '../engine/LocalBrowserPlayer';
-import { LOCAL_FIRST_PLAYER_FLAG } from './lf-device-control/contracts';
 import { personalEnabled } from './lf-personal/contract';
 
 // The one Cloud player (ADR-0419, flag `cloud.single_audio_owner`). CloudApp mounts this dock
@@ -32,7 +31,9 @@ type DockProps = {
 };
 
 export function CloudTransportDock({ api, account, page, reload = 0, accessToken }: DockProps) {
-  if (personalEnabled(account) || account.features[LOCAL_FIRST_PLAYER_FLAG] === true) {
+  // Use the same authoritative mode flag as CloudApp; legacy native-engine
+  // experiments must not turn the hosted page shell into a mismatched browser player.
+  if (personalEnabled(account)) {
     return <BrowserFirstDock workspaceId={account.workspace.id} account={account} accessToken={accessToken} />;
   }
   return <HostedTransportDock api={api} account={account} page={page} reload={reload} />;
