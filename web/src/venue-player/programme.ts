@@ -197,9 +197,14 @@ export class BrowserVenueProgramme {
         this.timer = null;
         return;
       }
-      if (!snapshot.foreground || snapshot.phase === 'interrupted') {
+      if (!snapshot.foreground || !snapshot.contextRunning ||
+          snapshot.phase !== 'playing') {
         this.state = 'interrupted';
         this.issue = 'This venue browser was interrupted. Recover with an on-device tap.';
+        // No recurring work must continue after the browser stops being a
+        // qualified local audio executor.
+        if (this.timer) clearInterval(this.timer);
+        this.timer = null;
         return;
       }
       const currentFacts = this.current && this.facts.get(this.current.id);

@@ -75,6 +75,8 @@ export class BrowserVenueAudio implements VenueAudioPort {
   private generation = 0;
   private checkedAt: number | null = null;
   private testAt: number | null = null;
+  private testTone: OscillatorNode | null = null;
+  private testGain: GainNode | null = null;
   private wake: WakeSentinel | null = null;
   private disposed = false;
   private error: string | null = null;
@@ -270,6 +272,12 @@ export class BrowserVenueAudio implements VenueAudioPort {
       return;
     }
     const ownership = await this.lease.acquire();
+    if (revision !== this.playbackEpoch || this.disposed) {
+      // A Stop can happen while Web Locks waits to grant the speaker.
+      // Never launch stale audio or keep ownership after cancellation.
+      this.lease.release();
+      throw new Error('Venue start was superseded by a newer playback action');
+    }
     if (ownership === 'unsupported') {
       this.error = 'Another Selecta browser player owns this output; stop it before starting the venue.';
       throw new Error(this.error);
@@ -342,16 +350,36 @@ export class BrowserVenueAudio implements VenueAudioPort {
       if (revision === this.playbackEpoch) this.lease.release();
       throw new Error(this.error ?? 'Tap to resume audio');
     }
-    if (revision !== this.playbackEpoch || this.disposed)
+    if (revision !== this.playbackEpoch || this.disposed) {
+      this.lease.release();
       throw new Error('Resume was superseded by another playback action');
+    }
     if (this.context && this.master)
       this.master.gain.setTargetAtTime(this.volume, this.context.currentTime, 0.02);
     this.phase = 'playing';
     this.checkedAt = null;
   }
 
+  private silenceTestTone(): void {
+    const tone = this.testTone;
+    const gain = this.testGain;
+    this.testTone = null;
+    this.testGain = null;
+    this.testAt = null;
+    if (tone) {
+      tone.onended = null;
+      try { tone.stop(); } catch { /* test signal already ended */ }
+      try { tone.disconnect(); } catch { /* audio graph already detached */ }
+    }
+    if (gain) {
+      try { gain.disconnect(); } catch { /* audio graph already detached */ }
+    }
+  }
+
   async stop(): Promise<void> {
     ++this.playbackEpoch;
+    // Stop must silence the actual speaker, including an outstanding test tone.
+    this.silenceTestTone();
     const old = this.deck;
     this.deck = null;
     if (old) {
@@ -373,8 +401,11 @@ export class BrowserVenueAudio implements VenueAudioPort {
     if (temporaryLease && await this.lease.acquire() === 'unsupported') {
       throw new Error('Another Selecta browser player currently owns this speaker');
     }
+    this.silenceTestTone();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
+    this.testTone = osc;
+    this.testGain = gain;
     osc.type = 'sine';
     osc.frequency.value = 440;
     const now = ctx.currentTime;
@@ -385,13 +416,17 @@ export class BrowserVenueAudio implements VenueAudioPort {
     gain.connect(this.master!);
     osc.onended = () => {
       gain.disconnect();
+      if (this.testTone === osc) {
+        this.testTone = null;
+        this.testGain = null;
+      }
       if (temporaryLease && !this.deck) this.lease.release();
     };
     try {
       osc.start(now);
       osc.stop(now + 0.52);
     } catch (error) {
-      gain.disconnect();
+      this.silenceTestTone();
       if (temporaryLease && !this.deck) this.lease.release();
       throw error;
     }

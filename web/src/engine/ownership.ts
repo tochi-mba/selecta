@@ -10,6 +10,9 @@ export class BrowserAudioLease {
   private releaseLock: (() => void) | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   private held = false;
+  private disposed = false;
+  private attemptGeneration = 0;
+  private acquiring: Promise<LeaseStrength> | null = null;
   private strength: LeaseStrength = 'unsupported';
   private readonly onLost: () => void;
   private readonly onStorage = (event: StorageEvent) => {
@@ -49,13 +52,26 @@ export class BrowserAudioLease {
     return entry?.owner === this.owner && entry.expires > Date.now();
   }
   async acquire(): Promise<LeaseStrength> {
+    if (this.disposed) return 'unsupported';
     if (this.held) return this.strength;
+    // A second Start must not issue another competing Web Lock request while
+    // the first is pending, nor turn a cancelled attempt back into an owner.
+    if (this.acquiring) return this.acquiring;
+    const attempt = this.attemptGeneration;
+    const work = this.acquireOnce(attempt);
+    this.acquiring = work;
+    try { return await work; }
+    finally { if (this.acquiring === work) this.acquiring = null; }
+  }
+  private async acquireOnce(attempt: number): Promise<LeaseStrength> {
     if (typeof navigator !== 'undefined' && navigator.locks?.request) {
       let completed = false;
       const status = new Promise<boolean>((resolve) => {
         void navigator.locks.request(this.key, { mode: 'exclusive', ifAvailable: true }, async (lock) => {
           completed = true;
-          if (!lock) { resolve(false); return; }
+          if (!lock || this.disposed || attempt !== this.attemptGeneration) {
+            resolve(false); return;
+          }
           let release!: () => void;
           const hold = new Promise<void>((done) => { release = done; });
           this.releaseLock = release;
@@ -65,10 +81,13 @@ export class BrowserAudioLease {
           await hold;
         }).catch(() => { if (!completed) resolve(false); });
       });
-      return await status ? 'exclusive' : 'unsupported';
+      const granted = await status;
+      return granted && !this.disposed && attempt === this.attemptGeneration && this.held
+        ? 'exclusive' : 'unsupported';
     }
     // Cooperative fallback for older browsers: if storage is disabled, no playback.
-    if (!this.channel || typeof localStorage === 'undefined') return 'unsupported';
+    if (this.disposed || attempt !== this.attemptGeneration ||
+      !this.channel || typeof localStorage === 'undefined') return 'unsupported';
     try {
       const previous = this.storageRead();
       if (previous && previous.expires > Date.now() && previous.owner !== this.owner) return 'unsupported';
@@ -84,6 +103,9 @@ export class BrowserAudioLease {
       }, 700);
       // Give competing newly-opened tabs time to dispute a simultaneous claim.
       await new Promise<void>((resolve) => setTimeout(resolve, 90));
+      // Stop/dispose may have happened during the 90 ms arbitration delay.
+      // Never release a newer owner's lock from an obsolete attempt.
+      if (this.disposed || attempt !== this.attemptGeneration) return 'unsupported';
       if (!this.held || !this.ownsStorage()) { this.release(); return 'unsupported'; }
       return 'cooperative';
     } catch { this.release(); return 'unsupported'; }
@@ -94,6 +116,7 @@ export class BrowserAudioLease {
     this.onLost();
   }
   release() {
+    this.attemptGeneration++;
     this.held = false;
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
@@ -104,6 +127,7 @@ export class BrowserAudioLease {
     this.strength = 'unsupported';
   }
   dispose() {
+    this.disposed = true;
     this.release();
     this.channel?.close(); this.channel = null;
     if (typeof window !== 'undefined') window.removeEventListener('storage', this.onStorage);

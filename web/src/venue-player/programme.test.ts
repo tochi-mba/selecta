@@ -207,4 +207,16 @@ describe('BR64-08 foreground browser venue programme', () => {
     } finally { await runner.dispose(); }
   });
 
+  it('does not keep a false running venue when AudioContext stops although page is visible', async () => {
+    const f = fixture();
+    const runner = new BrowserVenueProgramme(scope, f.adapters, () => NOW);
+    try {
+      await runner.start();
+      f.snapshot.contextRunning = false;
+      await runner.tick();
+      expect(runner.status().state).toBe('interrupted');
+      expect(f.transition).not.toHaveBeenCalled();
+      await expect(runner.resume()).rejects.toThrow('Use Start');
+    } finally { await runner.dispose(); }
+  });
 });

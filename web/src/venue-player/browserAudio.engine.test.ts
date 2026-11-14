@@ -165,4 +165,44 @@ describe('BR64-08 device-local WebAudio execution (simulated nodes, never hardwa
     } finally { await audio.dispose(); }
   });
 
+  it('does not start audio when Stop cancels a pending browser speaker lock', async () => {
+    vi.stubGlobal('AudioContext', FakeContext);
+    let grant!: () => void;
+    const pendingLock = new Promise<void>((resolve) => { grant = resolve; });
+    const request = vi.fn(async (_key: string, _options: unknown,
+      callback: (lock: object | null) => Promise<void>) => {
+      await pendingLock;
+      await callback({});
+    });
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: { request } });
+    const audio = new BrowserVenueAudio();
+    try {
+      audio.importLocal([makeRec('a')]);
+      await audio.unlock();
+      await audio.prepare('a');
+      const start = audio.start('a', 1);
+      const rejection = expect(start).rejects.toThrow('superseded');
+      await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+      await audio.stop();
+      grant();
+      await rejection;
+      expect(started).not.toContain('buffer');
+      expect(audio.snapshot().phase).toBe('stopped');
+    } finally { grant(); await audio.dispose(); }
+  });
+
+  it('Stop also silences an active sound-check tone', async () => {
+    vi.stubGlobal('AudioContext', FakeContext);
+    const stop = vi.spyOn(FakeOscillator.prototype, 'stop');
+    const audio = new BrowserVenueAudio();
+    try {
+      await audio.unlock();
+      await audio.soundCheck();
+      expect(started).toContain('tone');
+      const before = stop.mock.calls.length;
+      await audio.stop();
+      expect(stop.mock.calls.length).toBeGreaterThan(before);
+      expect(audio.confirmHeard()).toBe(false);
+    } finally { await audio.dispose(); stop.mockRestore(); }
+  });
 });

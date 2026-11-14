@@ -296,14 +296,14 @@ export class BrowserAudioRuntime implements AudioEngine {
       ['pause', () => { void this.pause(); }],
       ['nexttrack', () => { void this.next(); }],
       ['previoustrack', () => { void this.previous(); }],
-      ['seekto', (/* browser supplies details through wrapper below */) => {}],
     ];
     for (const [action, handler] of commands) {
-      try {
-        if (action === 'seekto') media.setActionHandler(action, (details) => { void this.seek(details.seekTime ?? 0); });
-        else media.setActionHandler(action, handler);
-      } catch { /* unsupported hardware key */ }
+      try { media.setActionHandler(action, handler); }
+      catch { /* unsupported hardware key */ }
     }
+    try {
+      media.setActionHandler('seekto', (details) => { void this.seek(details.seekTime ?? 0); });
+    } catch { /* unsupported hardware key */ }
     this.syncSession();
   }
   private syncSession() {
