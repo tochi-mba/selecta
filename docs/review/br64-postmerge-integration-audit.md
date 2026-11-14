@@ -103,3 +103,30 @@ Regression cases were added for the relevant audio, venue, Studio, persistent-fe
 - The legacy unflagged Cloud Uploads/Listen screens remain routed for compatibility even though old hosted-audio endpoints return authenticated HTTP 410. Before user-facing rollout, resolve the feature flag/default path and retire misleading legacy purchase/upload copy deliberately, without deleting the separate standalone local product.
 - Final integration still needs dependency/build, security, browser regression, route migration and physical-device testing. User asked not to prioritise CI failures during this specific source audit; that is not a waiver for production release.
 
+
+
+## Additional focused audit — current PR #64, browser controls and Cloud shell (2026-11-14)
+
+**Scope:** Browser-first Cloud render/player composition, signed browser speaker command life cycle, legacy mode drift, and reachable Studio actions, based on the GitHub branch content after the earlier safety pass. These changes are committed to the same PR #64 head branch, not a new PR and not `main`.
+
+### Bugs fixed
+
+- **Expired/declined speaker commands:** A pending on-site speaker confirmation no longer blocks Cloud transfer/operation status polling. A newly started target speaker must persist its fence before sounding, stops if a signed command expires unacknowledged, and stops on rejection or acknowledgement failure. If stopping physically fails, the interface reports the output as **unverified** instead of falsely saying silent. Remote revocation is attempted even if local Stop fails, and UI/session state does not remain falsely registered after a transport failure.
+- **False browser capabilities:** The Studio used to expose `Play Here` for live arrangements that the engine predictably refused (source-second cue offsets and differing crossfade lengths). The playback port now provides an explicit `supported(recipe)` capability with a human-readable reason. Rendering remains a separate capability and is not mistakenly disabled where it can honour a source-second cue.
+- **Expired media verification:** Exact local recording reports expire after 30 seconds. Studio now exposes **Recheck music on this device** so a long editing session can reauthorize/rehash permitted local sources without reopening the recipe. Actions still check freshness and exact recording versions immediately before running.
+- **Hosted/local audio entanglement:** The browser-first Cloud dock and hosted legacy dock now mount as separate React components. Local-only workspaces never initialise the old Cloud playback hook, signed R2 playback URL catalogue or hosted HTMLAudio player. The abandoned `local_first.player_v1` flag no longer forces a browser player into an otherwise hosted Cloud shell.
+- **Obsolete source removed:** The unmounted, status-only `BrowserPlaybackDock` component in `BrowserStudio.tsx` was deleted. The actual local player and Studio remain available. No historical customer data, uploaded recordings, migration tools, compatibility-denial endpoints, native standalone mode or safety-relevant tests were destructively removed.
+
+### Additional regression sources
+
+- `web/src/cloud/lf-mix-repair/liveBrowserPorts.test.ts` checks refusal of unqualified live source-second cues and variable live fade times.
+- `web/src/cloud/lf-mix-repair/CloudShell.test.tsx` checks that the old native-engine flag cannot silently flip hosted Cloud into browser-first mode.
+- Earlier speaker fencing and venue safety tests are preserved.
+
+### Verification and limitations
+
+- **Checked:** GitHub PR head and branch, affected TypeScript files, existing browser service/API contracts, route feature flags, relevant test source imports, and the diff of commits in this repair pass.
+- **Not checked by execution:** Vitest, Playwright, typecheck, Python unit tests, PostgreSQL migrations, actual sound on a speaker or a real-device session transfer. Attempting to access `github.com` from the local command environment failed DNS resolution, so no reliable local clone/test execution occurred. User requested CI failures not block the code audit.
+- **Still out of scope/limited:** full streaming/windowed mobile decode; heavy/neural DSP and long-set memory/performance parity; real hardware/background audio/Doze certification; production Cloud signing secrets/RLS migration and cross-machine transfer soak; complete legacy hosted-audio data retirement. Unused compatibility modules with dedicated test and fixture dependencies were retained rather than indiscriminately deleting code and breaking rollback semantics.
+
+**Release judgment remains unchanged:** targeted source-level problems were fixed, but this PR is not evidence that every supported mobile/desktop device or production venue programme has been tested or certified. Merge to `main` has not been performed.
