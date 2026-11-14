@@ -181,33 +181,47 @@ export class BrowserVenueAudio implements VenueAudioPort {
   async prepare(trackId: string): Promise<void> {
     this.assertOpen();
     if (this.buffers.has(trackId)) return;
+    const pending = this.preparing.get(trackId);
+    if (pending) return pending;
     const rec = this.files.get(trackId);
     if (!rec?.permitted) throw new Error('This exact authorised recording is unavailable here');
     const ctx = this.contextReady();
-    if (this.buffers.size >= MAX_PREPARED) throw new Error('Prepared track memory limit reached');
+    // Concurrent decodes also consume memory; count them before starting work.
+    if (this.buffers.size + this.preparing.size >= MAX_PREPARED)
+      throw new Error('Prepared track memory limit reached');
     this.phase = this.deck ? 'playing' : 'preparing';
-    try {
-      // Browser-granted File is never uploaded or serialized to Cloud.
-      const bytes = await rec.file.arrayBuffer();
-      if (this.files.get(trackId) !== rec) throw new Error('Local music permission changed during preparation');
-      const buffer = await ctx.decodeAudioData(bytes);
-      if (this.files.get(trackId) !== rec) throw new Error('Local music source changed');
-      if (!Number.isFinite(buffer.duration) || buffer.duration <= 0)
-        throw new Error('Recording could not be decoded');
-      // A small compressed file can decode to hundreds of megabytes of PCM.
-      // Reject a large completed buffer before retaining it on a venue tablet.
-      const decodedBytes = buffer.length * buffer.numberOfChannels * 4;
-      if (!Number.isFinite(decodedBytes) || decodedBytes <= 0 || decodedBytes > 128 * 1024 * 1024)
-        throw new Error('Decoded recording exceeds the browser memory budget');
-      this.buffers.set(trackId, buffer);
-      if (!this.deck) this.phase = 'ready';
-    } catch (error) {
-      this.error = errorText(error);
-      if (!this.deck) this.phase = 'failed';
-      throw error;
+    const work = (async () => {
+      try {
+        const bytes = await rec.file.arrayBuffer();
+        if (this.files.get(trackId) !== rec || this.disposed)
+          throw new Error('Local music permission changed during preparation');
+        const buffer = await ctx.decodeAudioData(bytes);
+        if (this.files.get(trackId) !== rec || this.disposed || this.context !== ctx)
+          throw new Error('Local music source changed');
+        if (!Number.isFinite(buffer.duration) || buffer.duration <= 0)
+          throw new Error('Recording could not be decoded');
+        const decodedBytes = buffer.length * buffer.numberOfChannels * 4;
+        if (!Number.isFinite(decodedBytes) || decodedBytes <= 0 || decodedBytes > 128 * 1024 * 1024)
+          throw new Error('Decoded recording exceeds the browser memory budget');
+        const retainedBytes = [...this.buffers.values()].reduce(
+          (total, item) => total + item.length * item.numberOfChannels * 4, 0,
+        );
+        if (retainedBytes + decodedBytes > 192 * 1024 * 1024)
+          throw new Error('Prepared recordings exceed the aggregate browser memory budget');
+        this.buffers.set(trackId, buffer);
+        if (!this.deck) this.phase = 'ready';
+      } catch (error) {
+        this.error = errorText(error);
+        if (!this.deck) this.phase = 'failed';
+        throw error;
+      }
+    })();
+    this.preparing.set(trackId, work);
+    try { await work; }
+    finally {
+      if (this.preparing.get(trackId) === work) this.preparing.delete(trackId);
     }
   }
-
   private launch(trackId: string, startAt: number, fadeIn: number): Deck {
     const ctx = this.contextReady();
     const buffer = this.buffers.get(trackId);
