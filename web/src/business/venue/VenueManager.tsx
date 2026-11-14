@@ -34,7 +34,7 @@ export function VenueManager({ venueId, tab }: { venueId: string; tab?: string }
     {chosen === 'people' && <PeoplePage venueId={venue.id} />}
     {chosen === 'devices' && <section className="biz-card"><h2>Players and tablets</h2>
       <ul>{ctx.devices.filter((d) => !d.zone_id || venue.zones.some((z) => z.id === d.zone_id)).map((device) => <li key={device.id}>{device.name} ({device.online ? 'online' : 'offline'})</li>)}</ul>
-      {localFirstOn(ctx.org.features) && <BrowserVenueSetup venue={venue} />}
+      {localFirstOn(ctx.org.features) && <BrowserVenueSetup venue={venue} authorised={!disabled && ['owner', 'admin', 'venue_manager'].includes(ctx.org.role)} />}
       {!disabled && <PairingCodeEntry zones={venue.zones} onPair={async (code, zone_id, name) => {
         const device = await ctx.client.pair({ code, zone_id, name });
         await ctx.refresh();
