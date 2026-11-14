@@ -10,6 +10,7 @@ import { LocalFirstPlayer } from './lf-device-control/LocalFirstPlayer';
 import { LocalBrowserPlayer } from '../engine/LocalBrowserPlayer';
 import { browserEngine } from '../engine/registry';
 import { LOCAL_FIRST_PLAYER_FLAG } from './lf-device-control/contracts';
+import { personalEnabled } from './lf-personal/contract';
 
 // The one Cloud player (ADR-0419, flag `cloud.single_audio_owner`). CloudApp mounts this dock
 // above the pages, so the Library's song player and this browser as the session's speaker keep
@@ -25,7 +26,7 @@ export function singleAudioOwner(account: Pick<Account, 'features'> | null) {
 
 export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Api; account: Account; page: Page; reload?: number }) {
   const workspaceId = account.workspace.id;
-  const localFirst = account.features[LOCAL_FIRST_PLAYER_FLAG] === true;
+  const localFirst = personalEnabled(account) || account.features[LOCAL_FIRST_PLAYER_FLAG] === true;
   const audioRef = useRef<HTMLAudioElement>(null);
   const deviceBox = useRef<HTMLDivElement>(null);
   const deviceSpeaker = useRef<Speaker | null>(null);
