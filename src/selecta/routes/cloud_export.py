@@ -9,7 +9,6 @@ carries what Cloud does keep about mixes: the workspace's playback session.
 from __future__ import annotations
 
 import json
-import re
 import shutil
 import tempfile
 import zipfile
@@ -36,13 +35,45 @@ from selecta.storage.objects import ObjectClient
 from selecta.storage.schema import assets, upload_sessions
 from selecta.work.schema import artifacts
 
-MIXES_UNAVAILABLE = "Cloud mix revisions are not yet stored by this application version."
+
+# Historical recipe provenance is untrusted: never forward arbitrary JSON
+# settings, diagnostic payloads, source paths, raw hashes or embedded audio.
+_RECIPE_FIELDS = frozenset({
+    "recipe_id", "revision_id", "parent_revision_id", "recording_ref",
+    "occurrences", "occurrence_id", "position", "cue_in_ms", "cue_out_ms",
+    "transition_ms", "transition_kind", "title", "artist", "status",
+    "bpm", "key", "confidence", "notes",
+})
 
 
-def _safe_filename(name: str) -> str:
-    leaf = name.replace("\\", "/").rsplit("/", 1)[-1]
-    cleaned = re.sub(r"[^A-Za-z0-9._ -]", "_", leaf).strip(" .")[:180]
-    return cleaned or "audio"
+def _recipe_metadata(value: Any, *, depth: int = 0) -> dict[str, Any] | None:
+    import math
+    from selecta.lf_egress.contract import PayloadRejected, _check_text
+
+    if not isinstance(value, dict) or depth > 5:
+        return None
+    clean: dict[str, Any] = {}
+    for key, item in value.items():
+        if key not in _RECIPE_FIELDS:
+            continue
+        if key == "occurrences":
+            if not isinstance(item, list) or len(item) > 128:
+                continue
+            clean[key] = [
+                candidate for entry in item
+                if (candidate := _recipe_metadata(entry, depth=depth + 1))
+            ]
+        elif isinstance(item, str):
+            try:
+                _check_text(item)
+            except PayloadRejected:
+                continue
+            clean[key] = item
+        elif isinstance(item, (int, float)) and not isinstance(item, bool):
+            if math.isfinite(item) and abs(item) <= 10**15:
+                clean[key] = item
+    return clean
+
 
 
 def install_routes(
@@ -220,69 +251,54 @@ def install_routes(
                     "lucy": lucy_choices,
                     "devices": device_rows,
                 }
+                preserved: list[dict[str, Any]] = []
+                for revision in revision_rows:
+                    provenance = revision.get("provenance") or {}
+                    revision_settings = (
+                        provenance.get("settings") if isinstance(provenance, dict) else {}
+                    ) or {}
+                    raw_contract = (
+                        revision_settings.get("contract")
+                        if isinstance(revision_settings, dict) else None
+                    )
+                    contract = _recipe_metadata(raw_contract)
+                    preserved.append({
+                        "id": revision["id"],
+                        "revision": revision["input_hash"],
+                        "created_at": revision["created_at"],
+                        "protected": bool(revision["protected"]),
+                        "contract": contract,
+                        "requires_review": (
+                            not isinstance(raw_contract, dict)
+                            or raw_contract.get("revision") != revision["input_hash"]
+                            or contract is None
+                        ),
+                    })
                 mixes = {
-                    "available": False,
-                    "reason": MIXES_UNAVAILABLE,
-                    "mixes": [],
-                    # What was last playing, so the export holds every mix fact Cloud keeps.
+                    "schema_version": 2,
+                    "available": True,
+                    "mixes": preserved,
+                    "historical_revisions_immutable": True,
                     "playback_session": dict(session) if session else None,
                 }
-                if True:  # Every export is metadata-only.
-                    # Every historical virtual revision is retained verbatim, even
-                    # when its media is missing or its provenance needs repair.
-                    preserved = []
-                    for revision in revision_rows:
-                        provenance = revision.get("provenance") or {}
-                        revision_settings = provenance.get("settings") or {}
-                        contract = revision_settings.get("contract")
-                        preserved.append({
-                            "id": revision["id"],
-                            "revision": revision["input_hash"],
-                            "created_at": revision["created_at"],
-                            "protected": bool(revision["protected"]),
-                            "contract": contract,
-                            "requires_review": not isinstance(contract, dict)
-                                or contract.get("revision") != revision["input_hash"],
-                        })
-                    mixes = {
-                        "schema_version": 2,
-                        "available": True,
-                        "mixes": preserved,
-                        "historical_revisions_immutable": True,
-                        "playback_session": dict(session) if session else None,
-                    }
                 manifest = {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "workspace_id": workspace.id,
+                    "mode": "metadata_only",
                     "asset_count": len(exported_assets),
-                    "originals": "not included: local music remains on user devices",
-                    "settings": "included in settings.json",
-                    "mixes": {
-                        "available": False,
-                        "reason": MIXES_UNAVAILABLE,
-                        "playback_session": "included in mixes.json",
-                    },
+                    "originals": "never included: user recordings remain on their devices",
+                    "mixes": {"available": True, "revision_count": len(preserved)},
+                    "local_recordings": "never collected or deleted by Cloud",
                 }
-                if True:
-                    manifest = {
-                        "schema_version": 2,
-                        "workspace_id": workspace.id,
-                        "mode": "metadata_only",
-                        "asset_count": len(exported_assets),
-                        "originals": "not included: local music remains on user devices",
-                        "mixes": {"available": True, "revision_count": len(mixes["mixes"])},
-                        "local_recordings": "never collected or deleted by account archive",
-                    }
                 archive.writestr("manifest.json", json.dumps(manifest, indent=2))
                 archive.writestr("settings.json", json.dumps(settings, indent=2))
                 archive.writestr("assets.json", json.dumps(exported_assets, indent=2))
                 archive.writestr("mixes.json", json.dumps(mixes, indent=2, default=str))
-                if True:
-                    archive.writestr("billing.json", json.dumps({
-                        "subscriptions": billing_rows,
-                        "entitlement_history": plan_history,
-                        "stripe_payment_details": "not included",
-                    }, indent=2, default=str))
+                archive.writestr("billing.json", json.dumps({
+                    "subscriptions": billing_rows,
+                    "entitlement_history": plan_history,
+                    "stripe_payment_details": "not included",
+                }, indent=2, default=str))
         except Exception:
             shutil.rmtree(temp_dir, ignore_errors=True)
             raise
