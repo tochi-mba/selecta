@@ -103,8 +103,18 @@ def pump(ctx: RoomContext, workspace_id: str, room_id: str, *, now: float | None
                 return 0
             if not ready_speaker(speaker, workspace_id, room.settings.zone_id, now):
                 return 0  # Host approval remains pending while venue is offline.
-        elif not ctx.speakers.speaker_online(workspace_id):
-            return 0
+        else:
+            # The Cloud lease adapter can share the active Rooms transaction.
+            # Opening a nested BEGIN IMMEDIATE deadlocks on SQLite while a
+            # guest request or room sweep already holds the writer lock.
+            check_in_tx = getattr(ctx.speakers, "speaker_online_in_tx", None)
+            online = (
+                check_in_tx(conn, workspace_id, now=now)
+                if check_in_tx is not None
+                else ctx.speakers.speaker_online(workspace_id)
+            )
+            if not online:
+                return 0
         held, waiting = split(room_requests_where(conn, room, [RequestStatus.ACCEPTED]), now)
         slots = min(PLANNER_WINDOW - len(held), renders_left(conn, room, now))
         if slots <= 0 or not waiting:
