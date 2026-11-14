@@ -47,6 +47,8 @@ export class BrowserVenueProgramme {
   private timer: ReturnType<typeof setInterval> | null = null;
   private lastReportAt = 0;
   private runningTick = false;
+  private transitionInFlight = false;
+  private playbackEpoch = 0;
   private disposed = false;
   private issue: string | null = null;
 
@@ -68,9 +70,10 @@ export class BrowserVenueProgramme {
     ]);
     if (!policy.revision || !policy.rightsAttested)
       throw new Error('A current approved venue policy is required');
-    if (!horizon.committed.length || horizon.committed.length > MAX_HORIZON ||
-      [...horizon.committed, ...horizon.prepared, ...horizon.planned, ...horizon.fallback]
-        .some((ref) => !ref.id || !ref.revision))
+    const sections = [horizon.committed, horizon.prepared, horizon.planned, horizon.fallback];
+    if (!horizon.committed.length || sections.some((part) => !Array.isArray(part)
+      || part.length > MAX_HORIZON) ||
+      sections.flat().some((ref) => !ref || !ref.id || !ref.revision))
       throw new Error('Programme has missing or unversioned local music');
     // Committed order is immutable on this browser until a fenced plan revision arrives.
     this.policy = policy;
@@ -141,11 +144,24 @@ export class BrowserVenueProgramme {
   }
 
   private async transitionTo(next: CanonicalTrack): Promise<void> {
-    await this.bind(next);
-    await this.adapters.audio.transition(next.id, 2);
-    this.current = next;
-    if (this.horizon?.committed[this.index + 1]?.id === next.id) this.index++;
-    this.issue = null;
+    if (this.transitionInFlight) throw new Error('Another venue transition is already preparing');
+    const previous = this.current;
+    const revision = this.playbackEpoch;
+    this.transitionInFlight = true;
+    try {
+      await this.bind(next);
+      if (this.disposed || this.playbackEpoch !== revision || this.state !== 'running'
+        || this.current !== previous)
+        throw new Error('Venue transition cancelled because playback state changed');
+      await this.adapters.audio.transition(next.id, 2);
+      if (this.disposed || this.playbackEpoch !== revision || this.state !== 'running')
+        throw new Error('Venue transition superseded during audio output');
+      this.current = next;
+      if (this.horizon?.committed[this.index + 1]?.id === next.id) this.index++;
+      this.issue = null;
+    } finally {
+      this.transitionInFlight = false;
+    }
   }
 
   /** UI ticks are best-effort. The browser must remain foreground/awake. */
@@ -167,9 +183,10 @@ export class BrowserVenueProgramme {
         this.issue = 'This venue browser was interrupted. Recover with an on-device tap.';
         return;
       }
-      if (!this.policy || !this.current ||
+      const currentFacts = this.current && this.facts.get(this.current.id);
+      if (!this.policy || !this.current || !currentFacts ||
         !venueOpen(this.policy, now) ||
-        !recordingAllowed(this.policy, this.facts.get(this.current.id)!, now)) {
+        !recordingAllowed(this.policy, currentFacts, now)) {
         await this.stop();
         this.state = 'blocked';
         this.issue = 'Venue hours, rights or music policy do not allow playback';
@@ -221,7 +238,9 @@ export class BrowserVenueProgramme {
 
   /** On-device interaction required. Never resumes automatically after OS suspension. */
   async resume(): Promise<void> {
-    if (this.state !== 'paused' && this.state !== 'interrupted')
+    if (this.state === 'interrupted')
+      throw new Error('This browser lost its playback session. Use Start on the venue device to recheck sources and speaker ownership.');
+    if (this.state !== 'paused')
       throw new Error('No paused browser session to resume');
     if (!this.policy || !this.current ||
       !recordingAllowed(this.policy, this.facts.get(this.current.id)!, this.clock()))
@@ -231,6 +250,7 @@ export class BrowserVenueProgramme {
   }
 
   async stop(): Promise<void> {
+    ++this.playbackEpoch;
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
     await this.adapters.audio.stop();
