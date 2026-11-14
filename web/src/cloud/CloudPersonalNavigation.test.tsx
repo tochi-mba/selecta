@@ -53,12 +53,12 @@ describe('browser-first Cloud parity navigation', () => {
     render(<nav aria-label="Cloud workspace"><CloudPersonalNavigation
       active="mine" go={go} roomsAvailable={false} /></nav>);
     const navigation = screen.getByRole('navigation', { name: 'Cloud workspace' });
-    expect(within(navigation).getByRole('button', { name: 'My Mixes' })).toHaveAttribute('aria-current', 'page');
-    await user.click(within(navigation).getByRole('button', { name: 'Make a Mix' }));
+    expect(within(navigation).getByRole('link', { name: 'My Mixes' })).toHaveAttribute('aria-current', 'page');
+    await user.click(within(navigation).getByRole('link', { name: 'Make a Mix' }));
     expect(go).toHaveBeenCalledWith('/mixes');
     await user.click(within(navigation).getByText('Cloud & account'));
-    expect(within(navigation).getByRole('button', { name: 'Workspace' })).toBeInTheDocument();
-    expect(within(navigation).getByRole('button', { name: 'Plan & billing' })).toBeInTheDocument();
+    expect(within(navigation).getByRole('link', { name: 'Workspace' })).toBeInTheDocument();
+    expect(within(navigation).getByRole('link', { name: 'Plan & billing' })).toBeInTheDocument();
     expect(within(navigation).queryByRole('button', { name: 'Rooms' })).toBeNull();
     expect(CLOUD_PERSONAL_DESTINATIONS.some((item) => item.path === '/rooms')).toBe(true);
   });
