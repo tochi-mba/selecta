@@ -297,6 +297,9 @@ export class BrowserVenueAudio implements VenueAudioPort {
     try {
       this.generation = generation;
       this.checkedAt = null;
+      // The sound-check oscillator must never overlap actual venue music.
+      // Its temporary speaker lease becomes the playback lease here.
+      this.silenceTestTone();
       this.deck = this.launch(trackId, this.contextReady().currentTime + 0.03, 0.04);
       this.phase = 'playing';
       await this.requestWake();
@@ -376,6 +379,8 @@ export class BrowserVenueAudio implements VenueAudioPort {
     if (this.master) this.master.gain.value = 0;
     const activation = this.unlock();
     const ownership = await this.lease.acquire();
+    if (revision !== this.playbackEpoch || this.disposed)
+      throw new Error('Resume was superseded while acquiring the speaker');
     if (ownership === 'unsupported') {
       await this.context?.suspend().catch(() => {});
       throw new Error('Another browser window owns audio; stop it before resuming this venue.');
