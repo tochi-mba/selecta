@@ -1,7 +1,7 @@
 # Selecta Cloud browser-first product and repository delivery plan
 
 **Architecture owner correction:** 2026-11-14. **Authority:** [ADR-0485](adr-0485-browser-first-cloud-and-ipad-venue-runtime.md); [cross-device feasibility research](selecta-browser-device-capability-matrix.md); [136-task implementation checklist](selecta-local-first-implementation-checklist.md).
-**Baseline reviewed:** PR #64 \`docs/local-first-cloud-rearchitecture-20261113\` at \`f6ed738af07f3532635c0135a6f4fe39c01d44a0\`.
+**Baseline reviewed:** PR #64 `docs/local-first-cloud-rearchitecture-20261113` at `f6ed738af07f3532635c0135a6f4fe39c01d44a0`.
 **State:** delivery proposal, not a claim that browser DSP or real tablet audio has been implemented or certified.
 
 ## One product promise
@@ -25,7 +25,7 @@
 ### B. Personal browser player and mobile render
 
 - Two-deck streaming decoder + bounded source windows, Web Audio/AudioWorklet for real-time gain, mixing, beat-sync/filters, limiter and output; workers/WASM for analysis, stretch, seams, stem inference and export. **No model inference, file/network I/O, unbounded allocation or UI updates inside audio callback.**
-- Render button on phone is real: local chunked rendering to OPFS or verified temporary storage, with checkpoint strategy if feasible, memory/thermal/battery admission, cancellation and resume only after validation, progress per stage, format/space estimates and user-initiated download/share. \`OfflineAudioContext\` can render graphs but does not solve whole-mix streaming/export memory constraints by itself.
+- Render button on phone is real: local chunked rendering to OPFS or verified temporary storage, with checkpoint strategy if feasible, memory/thermal/battery admission, cancellation and resume only after validation, progress per stage, format/space estimates and user-initiated download/share. `OfflineAudioContext` can render graphs but does not solve whole-mix streaming/export memory constraints by itself.
 - Support real features when qualified: transition/seam rendering, cue sync, EQ, filters, echo/reverb, precise time-stretch, beat/key/features, LUFS/limiter, stem-based techniques, word cuts/lyric timing, frozen exports. **Separate quality gates** for advanced ML. A lightweight beat detector is not equivalent to Beat This.
 - Processing presets: **Automatic** (default: benchmark and choose safe model/quality), **Battery Saver** (bounded CPU), **Best Quality** (only if actually qualified), **Prepare Ahead** (no audible starvation). These are processing strategies, **not paid DSP quotas**.
 
@@ -42,7 +42,7 @@
 - Runtime: Now Playing, next transition, local prepared horizon, staff controls, guest QR requests and policy/status. Priority is **continuous, physically audible music**, not a heavyweight neural stem task.
 - Internet outage: currently active browser continues from locally authorised media and cached schedule/policy where available; command sync/Rooms/hosted AI unavailable and queued durable edits reconcile later. If browser is killed/backgrounded/locks, make state **interrupted/unknown**, never lie that it is still playing.
 - App switching, incoming phone calls (phones), Android audio focus/Doze, iPadOS Safari suspension, OS update, screen lock, wake lock rejection, Bluetooth disconnect, USB-C DAC/HDMI, AirPlay, battery drain, heating and storage eviction need explicit tests and operator guidance. **Wake Lock keeps a visible screen awake where supported; it is not a generic background service.**
-- Default **one actual output/zone per mobile browser player**. Multi-zone through \`AudioContext.setSinkId\`, exclusive DAC hardware, or casting cannot be inferred; require physical output test. Multiple tablets are valid multiple player devices. Chromecast/Sonos require a dedicated lawful receiver architecture and are not trivial Web Audio sinks.
+- Default **one actual output/zone per mobile browser player**. Multi-zone through `AudioContext.setSinkId`, exclusive DAC hardware, or casting cannot be inferred; require physical output test. Multiple tablets are valid multiple player devices. Chromecast/Sonos require a dedicated lawful receiver architecture and are not trivial Web Audio sinks.
 - Optional future **Selecta Venue Pro** native/kiosk/reliable appliance edition may satisfy genuinely unattended 24/7, reboot auto-start, lock-screen or multi-zone requirements, but **must not block or contaminate no-install Cloud venue**.
 
 ### E. Guest, staff, business and accessibility
@@ -53,7 +53,7 @@
 
 ## Audio architecture and modules to build
 
-\`\`\`text
+```text
 HTTPS Cloud (identity, metadata, recipes, schedules, rooms, commands, AI planning)
   ├─ Browser shell (auth, account, navigation, responsive views)
   ├─ Browser player session (roles, commands, owner generation, output state)
@@ -65,7 +65,7 @@ HTTPS Cloud (identity, metadata, recipes, schedules, rooms, commands, AI plannin
   ├─ Browser mix/Studio/visuals (web UI, gestures, timeline, export, failure states)
   └─ Browser venue controller (schedules, Rooms requests, offline while alive)
 Dedicated local Python/FFmpeg standalone mode = independent retained product.
-\`\`\`
+```
 
 ### Technical concerns that must be engineered, not assumed
 
@@ -75,9 +75,9 @@ Dedicated local Python/FFmpeg standalone mode = independent retained product.
 | Sample-rate/precision | Canonical render timebase, resampling and deterministic versions; test 44.1/48 kHz and device route changes |
 | Beat grids and key | Port or replace PyTorch Beat This/key models with measured, versioned JS/WASM or converted browser models; compare confidence and musical error |
 | Spectral features, MFCC, chroma | Test FFT/mel/section calculations against Python fixtures, avoid sending reconstructible features Cloud |
-| Time stretch and seam warp | Browser DSP port with pitch preservation, bounded memory/latency; compare sound quality and drift against \`pedalboard\` reference |
+| Time stretch and seam warp | Browser DSP port with pitch preservation, bounded memory/latency; compare sound quality and drift against `pedalboard` reference |
 | Stem separation | Demucs/HTDemucs conversion is optional until weights/licence/operators/peak RAM/thermal and latency pass per device; no hidden hosted-audio alternative |
-| Lyric word alignment | \`wav2vec2\` browser model conversion + rights/quality gate; no unsafe guessed cut confidence |
+| Lyric word alignment | `wav2vec2` browser model conversion + rights/quality gate; no unsafe guessed cut confidence |
 | Export formats | Streaming/chunk render + actual encoder (e.g. vetted WASM FLAC) + checksum/duration verification; never label a WAV as FLAC |
 | Local storage | Never rely on permanent OPFS/IndexedDB. Respect quota/eviction, versioned artifacts, cache accounting and explicit reimport; protect originals |
 | Local source types | Files picker baseline; directories/USB/SD/cloud-backed Files providers where explicitly accessible; do not assume arbitrary NAS paths or streaming DRM libraries can be opened |
@@ -93,20 +93,20 @@ The following targets are **informed by PR #64 source inspection**; use new file
 
 | Current area | Concrete repository files | Required change |
 |---|---|---|
-| Cloud app shell and nav | \`web/src/cloud/CloudApp.tsx\`, \`CloudRoot.tsx\`, \`cloudRoutes.ts\`, \`cloud.css\`, \`web/src/copy.ts\` | Unified browser-first destinations; remove hosted-audio and native-install assumptions; fix mount conflict hiding player/Studio when local-first flags enabled |
-| First-run and device setup | \`web/src/cloud/lf-personal/PersonalWorkspace.tsx\`, \`contract.ts\`, \`FolderWatches.tsx\` | Replace install Python/local HTTP onboarding with Pick Music → Scan → Capability Probe → Output Test → Tap Start → optional PWA |
-| Music import, catalogue, source state | \`web/src/cloud/Uploads.tsx\`, \`uploadParts.ts\`, \`Library.tsx\` | Remove Cloud upload UI; build browser file/directory picker, drag/drop, permissions, reimport, source change, mobile Files, devices and local index |
-| Persistent player | \`web/src/cloud/CloudTransportDock.tsx\`, \`useCloudPlayer.ts\`, \`lf-device-control/**\`, \`web/src/audio/**\` | Real AudioWorklet transport, one audio owner, browser player sessions, true output state, foreground/interruptions and remote command ACK; don't use signed Cloud audio URLs |
-| Studio and mix repair | \`web/src/cloud/MakeCloudMix.tsx\`, \`lf-mix-repair/**\`, \`web/src/views/**\` | Open any recipe even without audio; responsive timeline, local seam renderer, optional stems, mobile touch, 5/8 missing media, export workflow and version history |
-| Player/device browser runtime | **New** \`web/src/engine/**\`, \`web/src/media/**\`, \`web/src/dsp/**\`, \`web/src/device-capabilities/**\`, \`web/src/render/**\`, \`web/src/venue-player/**\` | Build typed, browser-exclusive local media/DSP/adapters, with worker/WASM artifacts, real codecs, caching, model gating, source/format provenance and platform tests |
-| Browser/cloud bridge | \`src/selecta/lf_control/**\`, \`src/selecta/lf_api/**\`, \`src/selecta/routes/lf_v1_api.py\`, \`web/src/cloud/api.ts\` | Register browsers as real player devices; unify envelope, role, expiry, idempotency/ACK, per-device capability and availability; Cloud never asks for source paths |
-| Business HQ | \`web/src/business/console/**\`, \`venue/**\`, \`localFirst/**\`, \`onboarding/**\` | Sole-iPad/Android setup, per-venue readiness and browser state, licenses, sound check, offline/lock warning and staff control |
-| Staff, kiosk and guests | \`web/src/business/staff/**\`, \`web/src/kiosk/audio.ts\`, \`web/src/rooms/**\`, \`web/src/guest/**\` | Replace stub audio with real browser speaker; distinguish guest screen from player; Rooms readiness and accepted/applied reporting; never assume a second computer |
-| AI/Lucy | \`src/selecta/ai/**\`, \`src/selecta/lucy/**\`, \`web/src/views/Lucy*.tsx\` | Cloud metadata-only planning; browser-authorised tool executions constrained by local models, sources and policies |
-| Business plans/exports | \`src/selecta/billing/**\`, \`src/selecta/usage/**\`, \`web/src/cloud/Billing.tsx\`, \`Meters.tsx\`, \`AccountData.tsx\` | Remove hosted-storage/daily-local-DSP sales copy; metadata ZIP excludes media; local download/export separate; ensure legacy account-settings export bug fixed |
-| Feature flags/registration | \`src/selecta/flags/**\`, \`src/selecta/api_cloud.py\`, \`web/src/business/client.ts\` | Real browser feature/capability flags; compose routes centrally in integration branch; no flags yielding a missing player |
-| Old hosted music infrastructure | \`src/selecta/storage/**\`, \`src/selecta/routes/cloud_proxy.py\`, \`infra/modal/**\`, \`services/worker/**\`, R2 configs | Remove hosted-media upload, original/derived signing/proxies and audio workers when no-media regression gates pass, retaining metadata infra |
-| Dev tool and docs | \`dev.cmd\`, \`src/selecta/devstack/**\`, \`README.md\`, \`docs/adr/**\`, \`docs/saas/**\` | Developers still may install Node/Python to work on source; **end users do not**. Document standalone vs browser Cloud vs optional future kiosk. Maintain checklist and CI evidence |
+| Cloud app shell and nav | `web/src/cloud/CloudApp.tsx`, `CloudRoot.tsx`, `cloudRoutes.ts`, `cloud.css`, `web/src/copy.ts` | Unified browser-first destinations; remove hosted-audio and native-install assumptions; fix mount conflict hiding player/Studio when local-first flags enabled |
+| First-run and device setup | `web/src/cloud/lf-personal/PersonalWorkspace.tsx`, `contract.ts`, `FolderWatches.tsx` | Replace install Python/local HTTP onboarding with Pick Music → Scan → Capability Probe → Output Test → Tap Start → optional PWA |
+| Music import, catalogue, source state | `web/src/cloud/Uploads.tsx`, `uploadParts.ts`, `Library.tsx` | Remove Cloud upload UI; build browser file/directory picker, drag/drop, permissions, reimport, source change, mobile Files, devices and local index |
+| Persistent player | `web/src/cloud/CloudTransportDock.tsx`, `useCloudPlayer.ts`, `lf-device-control/**`, `web/src/audio/**` | Real AudioWorklet transport, one audio owner, browser player sessions, true output state, foreground/interruptions and remote command ACK; don't use signed Cloud audio URLs |
+| Studio and mix repair | `web/src/cloud/MakeCloudMix.tsx`, `lf-mix-repair/**`, `web/src/views/**` | Open any recipe even without audio; responsive timeline, local seam renderer, optional stems, mobile touch, 5/8 missing media, export workflow and version history |
+| Player/device browser runtime | **New** `web/src/engine/**`, `web/src/media/**`, `web/src/dsp/**`, `web/src/device-capabilities/**`, `web/src/render/**`, `web/src/venue-player/**` | Build typed, browser-exclusive local media/DSP/adapters, with worker/WASM artifacts, real codecs, caching, model gating, source/format provenance and platform tests |
+| Browser/cloud bridge | `src/selecta/lf_control/**`, `src/selecta/lf_api/**`, `src/selecta/routes/lf_v1_api.py`, `web/src/cloud/api.ts` | Register browsers as real player devices; unify envelope, role, expiry, idempotency/ACK, per-device capability and availability; Cloud never asks for source paths |
+| Business HQ | `web/src/business/console/**`, `venue/**`, `localFirst/**`, `onboarding/**` | Sole-iPad/Android setup, per-venue readiness and browser state, licenses, sound check, offline/lock warning and staff control |
+| Staff, kiosk and guests | `web/src/business/staff/**`, `web/src/kiosk/audio.ts`, `web/src/rooms/**`, `web/src/guest/**` | Replace stub audio with real browser speaker; distinguish guest screen from player; Rooms readiness and accepted/applied reporting; never assume a second computer |
+| AI/Lucy | `src/selecta/ai/**`, `src/selecta/lucy/**`, `web/src/views/Lucy*.tsx` | Cloud metadata-only planning; browser-authorised tool executions constrained by local models, sources and policies |
+| Business plans/exports | `src/selecta/billing/**`, `src/selecta/usage/**`, `web/src/cloud/Billing.tsx`, `Meters.tsx`, `AccountData.tsx` | Remove hosted-storage/daily-local-DSP sales copy; metadata ZIP excludes media; local download/export separate; ensure legacy account-settings export bug fixed |
+| Feature flags/registration | `src/selecta/flags/**`, `src/selecta/api_cloud.py`, `web/src/business/client.ts` | Real browser feature/capability flags; compose routes centrally in integration branch; no flags yielding a missing player |
+| Old hosted music infrastructure | `src/selecta/storage/**`, `src/selecta/routes/cloud_proxy.py`, `infra/modal/**`, `services/worker/**`, R2 configs | Remove hosted-media upload, original/derived signing/proxies and audio workers when no-media regression gates pass, retaining metadata infra |
+| Dev tool and docs | `dev.cmd`, `src/selecta/devstack/**`, `README.md`, `docs/adr/**`, `docs/saas/**` | Developers still may install Node/Python to work on source; **end users do not**. Document standalone vs browser Cloud vs optional future kiosk. Maintain checklist and CI evidence |
 
 ### New app information architecture
 
@@ -120,9 +120,9 @@ On mobile, use bottom navigation, gesture-safe full-width controls and compact N
 
 ## Critical end-user states / failure experience
 
-Every main surface understands: \`no_source\`, \`permission_required\`, \`media_missing\`, \`candidate_match\`, \`version_mismatch\`, \`codec_unsupported\`, \`model_unavailable\`, \`processing_limited\`, \`preparing\`, \`ready_to_play\`, \`audio_activation_required\`, \`output_unverified\`, \`playing_confirmed_by_operator\`, \`foreground_required\`, \`interrupted\`, \`remote_unreachable\`, \`takeover_unsafe\`, \`cloud_offline\`, \`storage_pressure\`, \`export_failed\`, \`policy_blocked\`.
+Every main surface understands: `no_source`, `permission_required`, `media_missing`, `candidate_match`, `version_mismatch`, `codec_unsupported`, `model_unavailable`, `processing_limited`, `preparing`, `ready_to_play`, `audio_activation_required`, `output_unverified`, `playing_confirmed_by_operator`, `foreground_required`, `interrupted`, `remote_unreachable`, `takeover_unsafe`, `cloud_offline`, `storage_pressure`, `export_failed`, `policy_blocked`.
 
-A successful \`AudioContext.resume()\`, nonzero analyser waveform, green WebSocket or accepted Cloud operation must **not** be presented as proven physical audibility. Only a user sound check or independent physical instrumentation supports a stronger claim. Explain the next action inline.
+A successful `AudioContext.resume()`, nonzero analyser waveform, green WebSocket or accepted Cloud operation must **not** be presented as proven physical audibility. Only a user sound check or independent physical instrumentation supports a stronger claim. Explain the next action inline.
 
 ## Implementation roadmap / work packages
 
@@ -141,7 +141,7 @@ A successful \`AudioContext.resume()\`, nonzero analyser waveform, green WebSock
 | 10 | Hosted media retirement | Retire Cloud audio API/worker/R2 and quotas, update account export and billing; no Cloud audio egress |
 | 11 | Reliability, CI and device certification | Full Playwright/unit/WebAudio synthetic test harness, real hardware six-hour tablet tests, security/legal, rollback and independent GO/NO-GO |
 
-**Parallel implementation ownership:** browser core, DSP/analysis, models, file/cache/export, Cloud control/API, personal shell, Studio, device UI, business/Rooms, security/billing/infra, test harness, ADR reconciliation. Use isolated branches from current PR #64 HEAD, non-overlapping files, named interfaces and one integration owner for \`api_cloud.py\`, flags, shared API client and bundler. Do not merge agents' pre-browser-install assumptions unchecked. Integration PR targets PR #64 branch, **not main** until explicitly approved.
+**Parallel implementation ownership:** browser core, DSP/analysis, models, file/cache/export, Cloud control/API, personal shell, Studio, device UI, business/Rooms, security/billing/infra, test harness, ADR reconciliation. Use isolated branches from current PR #64 HEAD, non-overlapping files, named interfaces and one integration owner for `api_cloud.py`, flags, shared API client and bundler. Do not merge agents' pre-browser-install assumptions unchecked. Integration PR targets PR #64 branch, **not main** until explicitly approved.
 
 ## Device certification strategy
 
