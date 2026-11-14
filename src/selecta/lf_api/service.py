@@ -326,9 +326,14 @@ class BrowserControlService:
                 speaker = self._row(db, schema.sessions, session=owner["speaker_session"])
             fresh = bool(speaker is not None and self._online(speaker, now))
             # A heartbeat / network lease is NEVER proof of physical silence or audio.
-            status = owner["state"] if fresh else (
-                "unknown" if owner["speaker_session"] else owner["state"]
+            # Liveness alone never proves sound; a current output observation is required.
+            confirmed_output = bool(
+                speaker is not None and 0 <= now - speaker["output_checked"] <= PREFLIGHT_TTL
+                and speaker["output_state"] in {"audible", "operator_confirmed"}
             )
+            status = owner["state"] if (
+                not owner["speaker_session"] or (fresh and confirmed_output)
+            ) else "unknown"
             return {
                 "schema_version": 1, "zone_id": zone, "generation": owner["generation"],
                 "speaker_session_id": owner["speaker_session"],
@@ -707,6 +712,61 @@ class BrowserControlService:
         db.execute(schema.transfers.update().where(
             schema.transfers.c.transfer == tr["transfer"]
         ).values(stage=stage, updated=now))
+
+    def revoke_device(self, actor: ActorScope, device_id: str) -> dict:
+        """Admin/owner revocation invalidates all of this device's browser sessions."""
+        if actor.role not in {"owner", "admin"}:
+            raise ControlError("role_denied")
+        _required_id(device_id)
+        with self._tx() as db:
+            device = self._row(db, schema.devices, workspace=actor.workspace_id,
+                               device=device_id)
+            if device is None or not set(json.loads(device["zones"])) <= actor.zones:
+                raise ControlError("scope_denied")
+            db.execute(schema.devices.update().where(
+                schema.devices.c.workspace == actor.workspace_id,
+                schema.devices.c.device == device_id
+            ).values(revoked=True))
+            affected = db.execute(sa.select(schema.sessions.c.session).where(
+                schema.sessions.c.workspace == actor.workspace_id,
+                schema.sessions.c.device == device_id
+            )).scalars().all()
+            db.execute(schema.sessions.update().where(
+                schema.sessions.c.workspace == actor.workspace_id,
+                schema.sessions.c.device == device_id,
+            ).values(revoked=True, runtime_state="closed"))
+            if affected:
+                db.execute(schema.owners.update().where(
+                    schema.owners.c.workspace == actor.workspace_id,
+                    schema.owners.c.speaker_session.in_(affected),
+                ).values(state="unknown"))
+        return {"schema_version": 1, "device_id": device_id, "revoked": True}
+
+    def recovery(self, actor: ActorScope, session: str, token: str) -> dict:
+        """Metadata-only reconciliation, never automatic re-execution after a dropped ACK."""
+        now = self.clock()
+        with self._tx() as db:
+            record = self._session(db, actor, session, token, now=now)
+            self._expire(db, session=session, now=now)
+            outstanding = db.execute(sa.select(schema.commands).where(
+                schema.commands.c.workspace == actor.workspace_id,
+                schema.commands.c.session == session,
+                schema.commands.c.state.in_(("queued", "delivered", "accepted", "applied"))
+            ).order_by(schema.commands.c.updated).limit(100)).mappings().all()
+            return {
+                "schema_version": 1, "session_id": session,
+                "online": self._online(record, now),
+                "generation": record["generation"],
+                "last_issued_sequence": record["sequence"],
+                "outstanding": [
+                    {"operation_id": item["operation"], "state": item["state"]}
+                    for item in outstanding
+                ],
+                "replay_is_unsafe": any(
+                    item["state"] in {"delivered", "accepted", "applied"}
+                    for item in outstanding
+                ),
+            }
 
     def status(self, actor: ActorScope, zone: str, operation_id: str) -> dict:
         _role(actor, zone)
