@@ -225,7 +225,7 @@ class BrowserControlService:
     def refresh(self, actor: ActorScope, session: str, token: str) -> dict:
         now = self.clock()
         with self._tx() as db:
-            old = self._session(db, actor, session, token, now=now)
+            self._session(db, actor, session, token, now=now)
             fresh = secrets.token_urlsafe(48)
             db.execute(schema.sessions.update().where(
                 schema.sessions.c.session == session
