@@ -11,7 +11,7 @@ describe('BR64-08 kiosk browser adapter', () => {
     };
     const start = vi.fn(async () => { s.phase = 'playing'; s.currentId = 'a'; });
     const port: VenueAudioPort = {
-      unlock: vi.fn(async () => true), importLocal: vi.fn(), prepare: vi.fn(async () => undefined),
+      unlock: vi.fn(async () => true), importLocal: vi.fn(), bindLocal: vi.fn(), prepare: vi.fn(async () => undefined),
       start, transition: vi.fn(async () => undefined), pause: vi.fn(async () => undefined),
       resume: vi.fn(async () => undefined), stop: vi.fn(async () => undefined),
       soundCheck: vi.fn(async () => undefined), confirmHeard: vi.fn(() => false),
