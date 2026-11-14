@@ -457,6 +457,16 @@ export class BrowserAudioRuntime implements AudioEngine {
       );
       const t = context.currentTime + 0.035;
       const nextDeck = 1 - previous.deck;
+      // A rapid second Skip can reuse a deck whose old source is still fading.
+      // Stop that source before repurposing the deck, otherwise three recordings
+      // overlap and the old onended can race the newly selected track.
+      const staleLeaving = this.leaving;
+      if (staleLeaving) {
+        staleLeaving.node.onended = null;
+        try { staleLeaving.node.stop(t); } catch { /* already ended */ }
+        try { staleLeaving.node.disconnect(); } catch { /* already disconnected */ }
+        this.leaving = null;
+      }
       const incoming = this.decks[nextDeck].input.gain;
       const outgoing = this.decks[previous.deck].input.gain;
       incoming.cancelScheduledValues(t); outgoing.cancelScheduledValues(t);
