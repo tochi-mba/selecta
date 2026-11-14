@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import copy
-from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 import sqlalchemy as sa
