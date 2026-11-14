@@ -27,7 +27,7 @@ function policyForVenue(venue: Venue): VenuePolicy {
   };
 }
 
-export function BrowserVenueSetup({ venue }: { venue: Venue }) {
+export function BrowserVenueSetup({ venue, nowEpochMs, authorised = true }: { venue: Venue; nowEpochMs?: number; authorised?: boolean }) {
   const [audio] = useState(() => new BrowserVenueAudio());
   const [snapshot, setSnapshot] = useState<PlayerSnapshot>(() => audio.snapshot());
   const [files, setFiles] = useState<File[]>([]);
@@ -39,6 +39,16 @@ export function BrowserVenueSetup({ venue }: { venue: Venue }) {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const policy = useMemo(() => policyForVenue(venue), [venue]);
+  const now = nowEpochMs ?? Date.now();
+  const localDate = (() => {
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', { timeZone: venue.time_zone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
+      const part = (key: string) => parts.find((item) => item.type === key)?.value ?? '';
+      return part('year') + '-' + part('month') + '-' + part('day');
+    } catch { return ''; }
+  })();
+  const licenceCurrent = Boolean(venue.licence?.attested_at) && Boolean(venue.licence?.expires_on)
+    && venue.licence!.expires_on >= localDate && Boolean(localDate);
   const records = useMemo<LocalRecording[]>(() => files.map((file, index) => ({
     id: 'selected_' + index,
     title: file.name.replace(/\.[^.]+$/, '').slice(0, 100),
@@ -65,12 +75,12 @@ export function BrowserVenueSetup({ venue }: { venue: Venue }) {
   };
   const zone = venue.zones.find((candidate) => candidate.id === zoneId);
   const sourceReady = rights && clean && records.length > 0;
-  const localWindowOpen = (() => { try { return venueOpen(policy, Date.now()); } catch { return false; } })();
-  const allowed = sourceReady && policy.rightsAttested && localWindowOpen && zone?.paid === true
+  const localWindowOpen = (() => { try { return venueOpen(policy, now); } catch { return false; } })();
+  const allowed = authorised && sourceReady && licenceCurrent && policy.rightsAttested && localWindowOpen && zone?.paid === true
     && records.every((rec) => recordingAllowed(policy, {
       id: rec.id, artist: rec.artist, explicit: false, locallyAuthorised: true,
       exactRevisionVerified: true, blocked: false,
-    }, Date.now()));
+    }, now));
   const start = async () => {
     if (!allowed) throw new Error('Opening hours, licensing, verified local music and the chosen zone must all allow playback');
     audio.importLocal(records);
@@ -107,21 +117,22 @@ export function BrowserVenueSetup({ venue }: { venue: Venue }) {
     <label><input type="checkbox" checked={clean} onChange={(event) => setClean(event.target.checked)} />
       I have personally reviewed the selected recordings for the venue's content restrictions; treat them as clean-only for this check.
     </label>
-    {!policy.rightsAttested && <p role="alert">Venue music licensing has not been attested in HQ.</p>}
+    {!authorised && <p role="alert">This account cannot start venue audio. Ask an authorised venue manager.</p>}
+    {!licenceCurrent && <p role="alert">Venue music licence is missing, expired or unverified in HQ.</p>}
     {!localWindowOpen && <p role="status">Outside configured venue hours. Playback for service is blocked; check the schedule.</p>}
     <div className="biz-row br64-actions">
       <button type="button" disabled={busy || !allowed} onClick={() => doAction(start)}>Tap to start here</button>
-      <button type="button" disabled={busy || !snapshot.contextRunning} onClick={() => doAction(async () => { await audio.soundCheck(); return 'Listen at the venue speaker, then choose “I heard it”.'; })}>Test speaker</button>
-      <button type="button" disabled={busy || !snapshot.contextRunning} onClick={() => {
+      <button type="button" disabled={busy || !authorised || !snapshot.contextRunning} onClick={() => doAction(async () => { await audio.soundCheck(); return 'Listen at the venue speaker, then choose “I heard it”.'; })}>Test speaker</button>
+      <button type="button" disabled={busy || !authorised || !snapshot.contextRunning} onClick={() => {
         const heard = audio.confirmHeard(); setSnapshot(audio.snapshot());
         setMessage(heard ? 'Operator confirmed the local speaker test. This is not a continuous hardware meter.' : 'Run a fresh test, then confirm within two minutes.');
       }}>I heard it</button>
     </div>
     <div className="biz-row br64-actions">
-      <button type="button" disabled={busy || snapshot.phase !== 'playing'} onClick={() => doAction(async () => { await audio.pause(); return 'Paused locally.'; })}>Pause</button>
-      <button type="button" disabled={busy || snapshot.phase !== 'paused'} onClick={() => doAction(async () => { await audio.resume(); return 'Resumed here; recheck the speaker.'; })}>Resume</button>
+      <button type="button" disabled={busy || !authorised || snapshot.phase !== 'playing'} onClick={() => doAction(async () => { await audio.pause(); return 'Paused locally.'; })}>Pause</button>
+      <button type="button" disabled={busy || !authorised || snapshot.phase !== 'paused'} onClick={() => doAction(async () => { await audio.resume(); return 'Resumed here; recheck the speaker.'; })}>Resume</button>
       <button type="button" disabled={busy || snapshot.phase !== 'playing' || !records[position + 1]} onClick={() => doAction(next)}>Next</button>
-      <button type="button" disabled={busy || !['playing', 'paused', 'interrupted'].includes(snapshot.phase)} onClick={() => doAction(async () => { await audio.stop(); return 'Local playback stopped.'; })}>Stop</button>
+      <button type="button" disabled={busy || !authorised || !['playing', 'paused', 'interrupted'].includes(snapshot.phase)} onClick={() => doAction(async () => { await audio.stop(); return 'Local playback stopped.'; })}>Stop</button>
     </div>
     <label htmlFor="br64-volume">Safe device gain (maximum 75%)</label>
     <input id="br64-volume" type="range" min="0" max="75" defaultValue="45" aria-label="Venue device gain" onChange={(event) => audio.setVolume(Number(event.target.value) / 100)} />
