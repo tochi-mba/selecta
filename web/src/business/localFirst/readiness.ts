@@ -10,7 +10,7 @@ export type OutputState = 'playing' | 'idle' | 'failed' | 'silent' | 'untested' 
 
 export type LocalZoneReport = {
   /** Optional evidence from a browser-only venue player. Unknown is never healthy. */
-  browser?: { foreground: boolean; wake_lock_held?: boolean; platform?: string; interrupted?: boolean; battery_low?: boolean; permission_fresh?: boolean };
+  browser?: { foreground: boolean; wake_lock_held?: boolean; platform?: string; interrupted?: boolean; battery_low?: boolean; permission_fresh?: boolean; operator_heard_at?: number | null };
   /** Server-supplied, epoch seconds; not the time the browser fetched the overview. */
   verified_at: number | null;
   engine: { state: EngineState; version?: string; update_required?: boolean };
@@ -53,6 +53,7 @@ export type ZoneReadiness = {
   speaker: string | null;
   generation: number | null;
   output: OutputState | null;
+  speakerEvidence: 'measured' | 'operator-heard' | 'unverified';
   issues: Recovery[];
   /** Activation requires all gates, including a real physical output and offline rehearsal. */
   activationReady: boolean;
@@ -87,7 +88,7 @@ export function inspectZone(zone: Zone, venue: Venue, now: number, browserOfflin
     fallbackMinutes: report?.horizon?.fallback_minutes ?? null,
     speaker: typeof report?.output?.device_name === 'string' && !/[\\/]/.test(report.output.device_name) ? report.output.device_name : null,
     generation: Number.isSafeInteger(report?.output?.generation) ? report!.output.generation! : null, output: report?.output?.state ?? null,
-    issues: [], activationReady: false,
+    speakerEvidence: 'unverified', issues: [], activationReady: false,
   };
   if (!report || !report.engine || !report.source || !report.inventory || !report.horizon || !report.output
     || at == null || at > now + 30 || now - at > TELEMETRY_STALE_SECONDS) {
@@ -136,7 +137,13 @@ export function inspectZone(zone: Zone, venue: Venue, now: number, browserOfflin
     || horizon.prepared_minutes < MIN_PREPARED_MINUTES || horizon.fallback_minutes < MIN_FALLBACK_MINUTES) {
     base.issues.push(recovery('fallback', 'Not enough prepared music or fallback', 'Prepare more eligible music for this zone and verify the offline fallback before opening.', 'schedule'));
   }
-  if (!report.output.physical_verified || report.output.state === 'unknown' || report.output.state === 'untested') {
+  const operatorAt = report.browser?.operator_heard_at;
+  const operatorHeardRecently = typeof operatorAt === 'number' && Number.isFinite(operatorAt)
+    && operatorAt <= now + 30 && now - operatorAt <= 120 && report.browser?.foreground === true
+    && report.browser.interrupted !== true;
+  const outputChecked = report.browser ? operatorHeardRecently : report.output.physical_verified;
+  base.speakerEvidence = outputChecked ? (report.browser ? 'operator-heard' : 'measured') : 'unverified';
+  if (!outputChecked || report.output.state === 'unknown' || report.output.state === 'untested') {
     base.issues.push(recovery('output', 'Physical speaker not verified', 'Run a real speaker test on the venue browser player. Unlocking Web Audio alone does not count.', 'devices'));
   }
   if (report.output.state === 'failed' || report.output.state === 'silent') {
