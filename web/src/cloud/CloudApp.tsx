@@ -280,7 +280,7 @@ export function CloudApp() {
         <Feedback error={exact && problem && error === problem.message ? '' : error} notice={notice} />
         {notFound && <NotFound path={path} go={choosePage} />}
         {account && localFirst && <LiveBrowserIntegration workspaceId={account.workspace.id} />}
-        {account && (localFirst || singleAudioOwner(account)) && <CloudTransportDock api={api} account={account} page={shown} reload={libraryVersion} />}
+        {account && (localFirst || singleAudioOwner(account)) && <CloudTransportDock api={api} account={account} page={shown} reload={libraryVersion} accessToken={async () => (await getAccessToken()) ?? ''} />}
         {view === 'home' && account && <Overview account={account} localFirst={localFirst} go={choosePage} />}
         {view === 'listen' && account && !localFirst && <CloudListen api={api} account={account} />}
         {view === 'listen' && account && !localFirst && <MakeCloudMix api={api} account={account} />}
