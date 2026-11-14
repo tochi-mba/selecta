@@ -5,6 +5,8 @@
  * Agent 01 can replace its decoder/transition implementation behind VenueAudioPort.
  * Browser resume, an AudioContext meter and a cloud heartbeat are NOT physical proof.
  */
+import { BrowserAudioLease } from '../engine/ownership';
+
 export type LocalRecording = {
   id: string;
   title: string;
@@ -74,17 +76,28 @@ export class BrowserVenueAudio implements VenueAudioPort {
   private disposed = false;
   private error: string | null = null;
   private volume = 0.45;
+  private readonly lease: BrowserAudioLease;
 
   private readonly interrupted = () => {
     // We cannot rely on iPad Safari, Android Doze or a PWA running when hidden.
     if (typeof document === 'undefined' || document.visibilityState !== 'visible') {
       this.checkedAt = null;
       this.phase = 'interrupted';
-      void this.releaseWake();
+      this.lease.release();
+      // A hidden mobile browser cannot promise to keep the source executing.
+      void this.stop().then(() => { if (!this.disposed) this.phase = 'interrupted'; })
+        .catch(() => { this.phase = 'interrupted'; });
+      void this.context?.suspend().catch(() => {});
     }
   };
 
   constructor() {
+    this.lease = new BrowserAudioLease('all-browser-outputs', () => {
+      this.checkedAt = null;
+      void this.stop().then(() => { if (!this.disposed) this.phase = 'interrupted'; })
+        .catch(() => { this.phase = 'interrupted'; });
+      this.error = 'Another Selecta tab took this speaker. Recheck the physical output before resuming.';
+    });
     if (typeof document !== 'undefined') document.addEventListener('visibilitychange', this.interrupted);
     if (typeof window !== 'undefined') window.addEventListener('pagehide', this.interrupted);
   }
@@ -211,6 +224,11 @@ export class BrowserVenueAudio implements VenueAudioPort {
     this.contextReady();
     await this.prepare(trackId);
     if (this.deck) await this.stop();
+    const ownership = await this.lease.acquire();
+    if (ownership === 'unsupported') {
+      this.error = 'Another Selecta browser player owns this output; stop it before starting the venue.';
+      throw new Error(this.error);
+    }
     this.generation = generation;
     this.checkedAt = null;
     this.deck = this.launch(trackId, this.contextReady().currentTime + 0.03, 0.04);
@@ -242,6 +260,7 @@ export class BrowserVenueAudio implements VenueAudioPort {
   async pause(): Promise<void> {
     if (this.context && this.deck) {
       await this.context.suspend();
+      this.lease.release();
       this.phase = 'paused';
       this.checkedAt = null;
     }
@@ -249,7 +268,21 @@ export class BrowserVenueAudio implements VenueAudioPort {
 
   async resume(): Promise<void> {
     if (!this.deck) throw new Error('No local song is ready to resume');
-    if (!await this.unlock()) throw new Error(this.error ?? 'Tap to resume audio');
+    // Invoke AudioContext.resume directly in the user gesture, but keep gain muted
+    // until an exclusive browser-wide owner is confirmed.
+    if (this.master) this.master.gain.value = 0;
+    const activation = this.unlock();
+    const ownership = await this.lease.acquire();
+    if (ownership === 'unsupported') {
+      await this.context?.suspend().catch(() => {});
+      throw new Error('Another browser window owns audio; stop it before resuming this venue.');
+    }
+    if (!await activation) {
+      this.lease.release();
+      throw new Error(this.error ?? 'Tap to resume audio');
+    }
+    if (this.context && this.master)
+      this.master.gain.setTargetAtTime(this.volume, this.context.currentTime, 0.02);
     this.phase = 'playing';
     this.checkedAt = null;
   }
@@ -263,6 +296,7 @@ export class BrowserVenueAudio implements VenueAudioPort {
     }
     this.checkedAt = null;
     this.phase = 'stopped';
+    this.lease.release();
     await this.releaseWake();
   }
 
@@ -345,6 +379,7 @@ export class BrowserVenueAudio implements VenueAudioPort {
     if (this.disposed) return;
     await this.stop();
     this.disposed = true;
+    this.lease.dispose();
     this.buffers.clear();
     this.files.clear();
     await this.context?.close();
