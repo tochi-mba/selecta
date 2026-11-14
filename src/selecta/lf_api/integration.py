@@ -115,7 +115,7 @@ def mount_browser_control(
                 entitlement.plan_id, entitlement.plan_version
             )
             if action in {"control", "takeover"}:
-                return plan.has("devices.remote_control")
+                return plan.includes("devices.remote_control")
             return True
 
     service = BrowserControlService(
