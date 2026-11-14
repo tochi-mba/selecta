@@ -131,4 +131,38 @@ describe('BR64-08 device-local WebAudio execution (simulated nodes, never hardwa
       expect(audio.playing()).toBe(false);
     } finally { await audio.dispose(); }
   });
+  it('rejects a delayed transition after Stop without starting a hidden second source', async () => {
+    vi.stubGlobal('AudioContext', FakeContext);
+    const audio = new BrowserVenueAudio();
+    let releaseDecode!: (buffer: AudioBuffer) => void;
+    try {
+      audio.importLocal([makeRec('a'), makeRec('b')]);
+      await audio.unlock();
+      await audio.start('a', 1);
+      const decoder = vi.spyOn(FakeContext.prototype, 'decodeAudioData').mockImplementation(
+        () => new Promise<AudioBuffer>((resolve) => { releaseDecode = resolve; }),
+      );
+      const pending = audio.transition('b', 2);
+      const rejected = expect(pending).rejects.toThrow('Transition cancelled');
+      await vi.waitFor(() => expect(decoder).toHaveBeenCalledTimes(1));
+      await audio.stop();
+      releaseDecode({ duration: 60, length: 60 * 44_100, numberOfChannels: 2 } as AudioBuffer);
+      await rejected;
+      expect(audio.snapshot().phase).toBe('stopped');
+      expect(started.filter((entry) => entry === 'buffer')).toHaveLength(1);
+    } finally { await audio.dispose(); vi.restoreAllMocks(); }
+  });
+
+  it('does not replace an active source with another File using the same revision string', async () => {
+    vi.stubGlobal('AudioContext', FakeContext);
+    const audio = new BrowserVenueAudio();
+    try {
+      audio.importLocal([makeRec('a')]);
+      await audio.unlock();
+      await audio.start('a', 1);
+      expect(() => audio.bindLocal(makeRec('a'))).toThrow('currently audible');
+      expect(audio.snapshot().currentId).toBe('a');
+    } finally { await audio.dispose(); }
+  });
+
 });
