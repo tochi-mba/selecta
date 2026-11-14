@@ -60,6 +60,8 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [conflict, setConflict] = useState(false);
+  const [savedConflictDraft, setSavedConflictDraft] = useState<{ base: string; edit: Edit } | null>(null);
+  const [readinessTime, setReadinessTime] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
   const [rendering, setRendering] = useState(false);
   const renderAbort = useRef<AbortController | null>(null);
@@ -69,7 +71,11 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
   const active = opened?.recipe ?? null;
   // An unsaved edit is not the exact recipe revision that local verification covered.
   const verified = active && !dirty && ports.media
-    ? checkedAvailability(active, availability, ports.media.deviceId) : null;
+    ? checkedAvailability(active, availability, ports.media.deviceId, readinessTime) : null;
+  // Never rely solely on the last rendered button state for an audio action:
+  // freshness is rechecked synchronously at the user gesture.
+  const currentlyVerified = () => active && !dirty && ports.media
+    ? checkedAvailability(active, availability, ports.media.deviceId, Date.now()) : null;
   const renderSupported = active && ports.renderer?.supported(active);
   const allReady = verified?.allReady === true;
   const canRender = !!active && !dirty && allReady && renderSupported?.supported === true && !!ports.renderer;
@@ -90,25 +96,31 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
       if (response.recipe?.schema_version !== 2) throw new Error('Unsupported portable recipe revision.');
       const recipe = response.recipe;
       const next = makeEdit(recipe);
+      let olderDraft: { base: string; edit: Edit } | null = null;
       if (!discardDraft) {
         try {
           const raw = window.sessionStorage.getItem(localKey(workspaceId, id));
           if (raw) {
             const recovered = JSON.parse(raw) as { base: string; edit: Edit };
-            if (recovered.base === recipe.revision_id &&
-              recovered.edit && typeof recovered.edit.name === 'string' &&
+            if (recovered.edit && typeof recovered.edit.name === 'string' &&
               Array.isArray(recovered.edit.occurrences) &&
               Array.isArray(recovered.edit.cues) && Array.isArray(recovered.edit.transitions)) {
-              Object.assign(next, recovered.edit);
-              setMessage('Recovered an unsaved local editing session. Nothing was overwritten in Cloud.');
-            } else setMessage('The saved mix changed since this browser draft. Your earlier draft was not applied automatically.');
+              if (recovered.base === recipe.revision_id) {
+                Object.assign(next, recovered.edit);
+                setMessage('Recovered an unsaved local editing session. Nothing was overwritten in Cloud.');
+              } else {
+                olderDraft = recovered;
+                setMessage('A saved revision changed while this browser was away. The earlier unsaved draft remains recoverable below.');
+              }
+            } else setMessage('The stored editing draft was invalid; the Cloud revision remains intact.');
           }
         } catch { setMessage('Saved local editing state could not be recovered; the Cloud revision remains intact.'); }
       } else {
         try { window.sessionStorage.removeItem(localKey(workspaceId, id)); } catch { /* optional local recovery */ }
       }
       setOpened({ recipe, history: response.history ?? [], legacy: !!response.legacy_read_only_view });
-      setEdit(next); setUndo([]); setRedo([]); setAvailability(null); setConflict(false); setError('');
+      setEdit(next); setUndo([]); setRedo([]); setAvailability(null);
+      setSavedConflictDraft(olderDraft); setConflict(!!olderDraft); setError('');
       const url = new URL(window.location.href);
       url.searchParams.set('mix', id);
       window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
@@ -122,13 +134,22 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
   }, [refresh, openRecipe]);
 
   useEffect(() => {
-    if (!opened || !edit) return;
+    if (!opened || !edit || savedConflictDraft) return; // Preserve older revision drafts explicitly.
     try {
       const key = localKey(workspaceId, opened.recipe.recipe_id);
       if (sameEdit(edit, makeEdit(opened.recipe))) window.sessionStorage.removeItem(key);
       else window.sessionStorage.setItem(key, JSON.stringify({ base: opened.recipe.revision_id, edit }));
     } catch { /* No storage permission: edits still work until this tab closes. */ }
-  }, [opened, edit, workspaceId]);
+  }, [opened, edit, workspaceId, savedConflictDraft]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setReadinessTime(Date.now()), 5000);
+    const update = () => setReadinessTime(Date.now());
+    window.addEventListener('focus', update);
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', update); };
+  }, []);
+
+  useEffect(() => () => { renderAbort.current?.abort(); }, []);
 
   useEffect(() => {
     if (!active || !ports.media) { setAvailability(null); return; }
@@ -258,7 +279,7 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
   };
 
   const play = async () => {
-    if (!canPlay || !active || !ports.playback) return;
+    if (!canPlay || !active || !ports.playback || !currentlyVerified()?.allReady || !currentlyVerified()?.outputVerified) return;
     setBusy(true); setError('');
     try { await ports.playback.playHere(active); setMessage('Playback requested locally. Confirm sound at your actual speaker.'); }
     catch (cause) { setError(`Could not start local playback: ${humanError(cause)}`); }
@@ -273,14 +294,14 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
   };
 
   const prepare = async () => {
-    if (!active || !allReady || dirty || !ports.renderer?.prepare) return;
+    if (!active || !currentlyVerified()?.allReady || dirty || !ports.renderer?.prepare) return;
     setBusy(true); setError('');
     try { await ports.renderer.prepare(active); setMessage('Local transition preparation requested. Recheck the seams before playing.'); }
     catch (cause) { setError(`Preparing failed: ${humanError(cause)}`); }
     finally { setBusy(false); }
   };
   const preview = async (index: number) => {
-    if (!active || !allReady || dirty || !ports.playback?.previewTransition) return;
+    if (!active || !currentlyVerified()?.allReady || dirty || !ports.playback?.previewTransition) return;
     setBusy(true); setError('');
     try {
       await ports.playback.previewTransition(active, index);
@@ -290,7 +311,7 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
   };
 
   const render = async () => {
-    if (!canRender || !active || !ports.renderer) return;
+    if (!canRender || !active || !ports.renderer || !currentlyVerified()?.allReady || !ports.renderer.supported(active).supported) return;
     const abort = new AbortController();
     renderAbort.current = abort;
     setRendering(true); setError('');
@@ -298,11 +319,11 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
       const artifact = await ports.renderer.render(active, { signal: abort.signal });
       if (abort.signal.aborted) return;
       if (!(artifact.blob instanceof Blob) || !artifact.blob.size) throw new Error('The renderer returned no downloadable audio.');
+      if (!artifact.mimeType.startsWith('audio/')) throw new Error('The renderer returned a non-audio export.');
       const url = URL.createObjectURL(artifact.blob);
       const anchor = document.createElement('a');
       anchor.href = url;
       anchor.download = artifact.filename.replace(/[\\/]/g, '_').slice(0, 128) || 'selecta-mix-export';
-      if (!artifact.mimeType.startsWith('audio/')) throw new Error('The renderer returned a non-audio export.');
       anchor.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
       setMessage('Browser render completed. Export was started on this device.');
@@ -352,9 +373,15 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
               <button onClick={() => step('redo')} disabled={!redo.length}>Redo</button>
               <button className="primary" onClick={() => void save()} disabled={!dirty || busy}>Save new version</button></div>
           </header>
-          {conflict && <div className="br07-callout" role="alert"><p>A newer revision exists. Your draft remains in this tab; no automatic overwrite or recording substitution occurred.</p>
+          {conflict && <div className="br07-callout" role="alert">
+            <p>A newer revision exists. Your draft is not merged or overwritten automatically. Check the earlier changes before discarding them.</p>
+            {savedConflictDraft && <details>
+              <summary>Review recoverable earlier draft (metadata only)</summary>
+              <p>Based on revision {savedConflictDraft.base.slice(0, 12)}. Copy the relevant changes and reapply them deliberately to the current revision.</p>
+              <pre className="br07-recovery-json">{JSON.stringify(savedConflictDraft.edit, null, 2)}</pre>
+            </details>}
             <button onClick={() => {
-              if (window.confirm('Discard this local draft and load the latest saved revision?')) void openRecipe(opened.recipe.recipe_id, true);
+              if (window.confirm('Discard the saved local draft and load the latest Cloud revision?')) void openRecipe(opened.recipe.recipe_id, true);
             }}>Discard draft and load latest</button></div>}
           <label className="br07-name">Mix name <input value={edit.name} maxLength={60}
             onChange={(event) => change({ ...edit, name: event.target.value })} /></label>
