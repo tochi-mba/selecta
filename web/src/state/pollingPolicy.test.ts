@@ -26,6 +26,7 @@ const TIMER = /window\.setInterval\(|\buseVisiblePoll\(|\bevery:\s*[\w\d]/;
 const OWN_CLIENTS = [
   'RuntimeApp.tsx', 'admin/adminApi.ts', 'api.ts', 'cloud/CloudApp.tsx',
   'cloud/devAuthKit.tsx',
+  'cloud/lf-personal/watchClient.ts', // loopback-only dev folder manager; not the hosted Cloud API
   'devcloud/authkit.tsx',
   'devices/audioSpeaker.ts', 'harness/main.tsx', 'rooms/dom.ts', 'studio.ts',
   'venueops/staffApi.ts',
