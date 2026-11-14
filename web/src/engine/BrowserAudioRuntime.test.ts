@@ -46,7 +46,12 @@ class Context {
   async close() { this.state = 'closed'; }
 }
 class WorkletNode extends Node {
-  constructor(_context: unknown, _name: string, _options: unknown) { super(); }
+  static latest: WorkletNode;
+  onprocessorerror: (() => void) | null = null;
+  constructor(_context: unknown, _name: string, _options: unknown) {
+    super();
+    WorkletNode.latest = this;
+  }
 }
 const music = (name: string): LocalRecording => ({
   id: name, title: name, file: new File(['some local bytes'], name + '.wav', { type: 'audio/wav' }),
@@ -150,6 +155,20 @@ describe('BrowserAudioRuntime', () => {
     await Promise.resolve();
     expect(engine.snapshot().phase).toBe('interrupted');
     expect(engine.snapshot().soundCheck).toBe('unverified');
+    await engine.dispose();
+  });
+  it('discards a failed worklet graph instead of resuming permanently silent audio', async () => {
+    const engine = new BrowserAudioRuntime('worklet-crash', { decoder });
+    await engine.setQueue([music('a')]);
+    await engine.play();
+    const failedContext = Context.latest;
+    WorkletNode.latest.onprocessorerror?.();
+    expect(engine.snapshot()).toMatchObject({
+      phase: 'interrupted', ownership: 'none', soundCheck: 'unverified',
+    });
+    await engine.play();
+    expect(Context.latest).not.toBe(failedContext);
+    expect(engine.snapshot()).toMatchObject({ phase: 'playing', ownership: 'exclusive' });
     await engine.dispose();
   });
   it('reports AudioWorklet absence rather than pretending a MediaElement is a mixer', async () => {
