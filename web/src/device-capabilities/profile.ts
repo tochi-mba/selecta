@@ -75,7 +75,7 @@ export async function assessBrowserDevice(signal?: AbortSignal): Promise<Browser
     !workers ? degraded('Main-thread rendering only; long jobs must be deferred or disabled') :
     syntheticMs == null ? unverified('Worker throughput not confirmed; run a local render qualification') :
     syntheticMs > 60 ? degraded('Synthetic worker throughput is limited; prefer shorter chunked renders') :
-    available('Local worker probe completed; actual codec/DSP render still requires preflight');
+    unverified('Worker probe completed; a real render and codec/DSP parity check are still required');
   const sink = typeof HTMLMediaElement !== 'undefined' && 'setSinkId' in HTMLMediaElement.prototype;
   const wake = nav && 'wakeLock' in nav;
   return {

@@ -73,7 +73,8 @@ export function BrowserConnectMusic({ workspaceId, go }: Props) {
   const selected = (event: ChangeEvent<HTMLInputElement>, folder: boolean) => {
     const items = Array.from(event.target.files || []);
     event.target.value = '';
-    void startScan(items, folder ? 'folder_input' : 'file_input', folder ? 'Chosen folder' : 'Selected files');
+    const folderName = folder ? items[0]?.webkitRelativePath?.split('/')[0] || 'Chosen folder' : 'Selected files';
+    void startScan(items, folder ? 'folder_input' : 'file_input', folderName);
   };
   const dropped = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
