@@ -6,6 +6,9 @@ No import-time database creation, feature-flag edit or api_cloud.py modification
 """
 from __future__ import annotations
 
+# FastAPI dependency defaults are intentional, as in api_cloud.py.
+# ruff: noqa: B008
+
 from collections.abc import Callable
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
