@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { browserEngine } from '../../engine/registry';
 import { probeBrowserAudio } from '../../engine/capabilities';
 import {
@@ -19,6 +19,8 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
   tokenRef.current = accessToken;
   const client = useMemo(() =>
     new BrowserSessionClient(() => tokenRef.current(), fetch, workspaceId), [workspaceId]);
+  const localState = useSyncExternalStore(engine.subscribe, engine.snapshot, engine.snapshot);
+  const lastRefresh = useRef(Date.now());
   const [zone, setZone] = useState('personal');
   const [registered, setRegistered] = useState(false);
   const [devices, setDevices] = useState<DeviceSummary[]>([]);
@@ -79,6 +81,7 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
       try {
         const previous = Number(localStorage.getItem('selecta:browser-fence:' + workspaceId + ':' + zone) ?? '0');
         fence.current = Number.isSafeInteger(previous) && previous >= 0 ? previous : 0;
+      lastRefresh.current = Date.now();
       } catch {
         // Cannot safely restore stale-owner protection across restarts.
         fence.current = 0;
@@ -107,7 +110,9 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
         (cmd.expected_recipe_revision !== null && cmd.action !== 'release_output')) {
       await acknowledge(cmd, 'rejected'); return;
     }
-    if (cmd.expected_generation < fence.current) {
+    if ((['prepare_output', 'release_output', 'activate_output'].includes(cmd.action)
+      ? cmd.expected_generation < fence.current
+      : cmd.expected_generation !== fence.current)) {
       await acknowledge(cmd, 'conflicted'); return;
     }
     const before = engine.snapshot();
@@ -146,6 +151,10 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
     processing.current = true;
     try {
       const now = engine.snapshot();
+      if (Date.now() - lastRefresh.current > 30 * 60_000) {
+        await client.refresh();
+        lastRefresh.current = Date.now();
+      }
       const current = Date.now() / 1000;
       await client.presence({
         foreground: document.visibilityState === 'visible',
@@ -187,6 +196,11 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
       if (alive.current) setProblem('Browser session needs attention: ' + (error as Error).message);
     } finally { processing.current = false; }
   }, [client, engine, pending, operation, processCommand, zone, silenceConfirmed, transferId]);
+
+  useEffect(() => {
+    if (localState.phase === 'playing' || localState.phase === 'interrupted' || localState.phase === 'error')
+      setSilenceConfirmed(false);
+  }, [localState.phase]);
 
   useEffect(() => {
     if (!registered) return;
@@ -322,7 +336,7 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
     <p role="status">This device: {registered ? 'registered, foreground activity required' : 'not registered'}.
       Actual speaker: {speaker?.speaker_session_id ?? 'none'} · {speaker?.state ?? 'unverified'} · generation {speaker?.generation ?? 0}.</p>
     {devices.length > 0 && <p>Known browser sessions in this zone: {devices.length}. Remote music is never downloaded here.</p>}
-    {registered && (engine.snapshot().phase === 'paused' ||
+    {registered && (localState.phase === 'paused' ||
       (pending?.action === 'release_output' && releaseStopped)) && <label>
       <input type="checkbox" checked={silenceConfirmed} onChange={(event) => setSilenceConfirmed(event.target.checked)} />
       I am physically beside this speaker and confirm that this device's actual audio output is silent
@@ -360,7 +374,7 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
           : pending.action === 'prepare_output' ? 'Confirm local speaker is silent' : 'Tap to activate sound here'}
       </button>
       {(pending.action === 'play' || pending.action === 'activate_output') &&
-        <button type="button" disabled={busy || engine.snapshot().phase !== 'playing'}
+        <button type="button" disabled={busy || localState.phase !== 'playing'}
           onClick={() => void confirmSound()}>I hear the intended speaker</button>}
       <button type="button" disabled={busy} onClick={() => void rejectPending()}>Reject command</button>
     </div>}
