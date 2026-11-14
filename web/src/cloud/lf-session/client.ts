@@ -5,6 +5,8 @@
  * Tokens and HMAC keys live in memory; never put them into localStorage or URL params.
  */
 
+import { apiOrigin } from "../api";
+
 export type Role = "owner" | "admin" | "dj" | "staff" | "viewer";
 export type OutputState = "unknown" | "silent" | "audible" | "operator_confirmed";
 export type RuntimeState = "active" | "hidden" | "suspended" | "interrupted" | "closed";
@@ -153,7 +155,7 @@ const FIELDS = [
   "policy_version", "sequence", "action", "arguments", "created_at", "expires_at",
   "idempotency_key",
 ] as const;
-const BASE = "/api/lf/v1";
+const BASE = apiOrigin + "/api/lf/v1";
 
 export class BrowserControlError extends Error {
   constructor(readonly status: number, readonly code: string) {
@@ -228,6 +230,7 @@ export class BrowserSessionClient {
   constructor(
     private readonly accessToken: () => Promise<string>,
     private readonly fetcher: BrowserFetch = fetch,
+    private readonly workspaceId?: string,
   ) {}
 
   get registered(): boolean { return this.credentials !== null; }
@@ -244,6 +247,7 @@ export class BrowserSessionClient {
       Accept: "application/json",
       "Cache-Control": "no-store",
     };
+    if (this.workspaceId) headers["X-Workspace-ID"] = this.workspaceId;
     if (sessionToken) {
       if (!this.credentials) throw new BrowserControlError(401, "session_required");
       headers["X-Selecta-Session-Token"] = this.credentials.session_token;
