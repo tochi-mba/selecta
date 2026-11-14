@@ -6,7 +6,7 @@
       "about": "The server on this computer: its status, the local-only checks and the one data folder.",
       "core": "Everything else talks to it.",
       "routes": ["GET /api/status", "GET /api/ready", "GET /api/health"],
-      "cli": ["web", "gather-data", "flags"]
+      "cli": ["web", "gather-data", "flags", "engine"]
     },
     "core.upgrade_backup": {
       "label": "Backup before upgrade",
