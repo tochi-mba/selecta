@@ -25,6 +25,7 @@ import { blockedByQuota, OverQuotaBanner } from './OverQuota';
 import { UploadsPanel } from './Uploads';
 import { personalEnabled } from './lf-personal/contract';
 import { BrowserStudio } from './lf-mix-repair/BrowserStudio';
+import { LiveBrowserIntegration } from './lf-mix-repair/LiveBrowserIntegration';
 import './cloud.css';
 // Shared business styles are scoped to .biz and loaded by the Cloud shell.
 import '../business/business.css';
@@ -278,6 +279,7 @@ export function CloudApp() {
         {stream === 'polling' && <p className="cloud-stream-note" role="status">Live updates are paused on this network, so this page checks for changes every few seconds.</p>}
         <Feedback error={exact && problem && error === problem.message ? '' : error} notice={notice} />
         {notFound && <NotFound path={path} go={choosePage} />}
+        {account && localFirst && <LiveBrowserIntegration workspaceId={account.workspace.id} />}
         {account && (localFirst || singleAudioOwner(account)) && <CloudTransportDock api={api} account={account} page={shown} reload={libraryVersion} />}
         {view === 'home' && account && <Overview account={account} localFirst={localFirst} go={choosePage} />}
         {view === 'listen' && account && !localFirst && <CloudListen api={api} account={account} />}
