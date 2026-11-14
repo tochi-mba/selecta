@@ -136,7 +136,10 @@ class BrowserEnvelope:
             raise ControlError("unsupported_command")
         created = _number(raw["created_at"])
         expires = _number(raw["expires_at"])
-        max_ttl = 120 if action in INTERNAL_ACTIONS else (60 if action in {"play", "pause", "skip", "seek"} else 86400)
+        max_ttl = (
+            120 if action in INTERNAL_ACTIONS
+            else 60 if action in {"play", "pause", "skip", "seek"} else 86400
+        )
         if not 0 < expires - created <= max_ttl:
             raise ControlError("invalid_expiry")
         if now is not None and (created > now + 30 or expires <= now):
