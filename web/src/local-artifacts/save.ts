@@ -1,6 +1,6 @@
 /** Explicit, local user-initiated save. No Cloud URL, fetch, or upload path. */
 export async function saveArtifactFromUserGesture(
-  artifact: File, name: string, maxBlobDownload = 64 * 1024 * 1024,
+  artifact: File, name: string,
 ): Promise<'saved' | 'shared' | 'downloaded'> {
   if (!/^[-_. a-zA-Z0-9]{1,128}\.(wav|flac)$/.test(name)) throw new Error('Unsafe export filename');
   const picker = (window as Window & {
@@ -17,10 +17,9 @@ export async function saveArtifactFromUserGesture(
     } catch (error) { await writable.abort(); throw error; }
     return 'saved';
   }
-  if (artifact.size > maxBlobDownload) {
-    throw new Error('Browser has no streaming Save picker. Large export remains in local OPFS; use a capable browser/device to save it.');
-  }
-  if (navigator.share && navigator.canShare?.({ files: [artifact] })) {
+  // File-backed object URLs permit user-initiated downloads without constructing
+  // a whole-mix PCM ArrayBuffer in JS; browser-side buffering still varies.
+  if (artifact.size <= 64 * 1024 * 1024 && navigator.share && navigator.canShare?.({ files: [artifact] })) {
     await navigator.share({ files: [artifact], title: name });
     return 'shared';
   }
@@ -29,6 +28,6 @@ export async function saveArtifactFromUserGesture(
     const link = document.createElement('a');
     link.href = url; link.download = name;
     document.body.appendChild(link); link.click(); link.remove();
-  } finally { setTimeout(() => URL.revokeObjectURL(url), 30000); }
+  } finally { setTimeout(() => URL.revokeObjectURL(url), 300000); }
   return 'downloaded';
 }

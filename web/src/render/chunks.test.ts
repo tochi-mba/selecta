@@ -68,4 +68,27 @@ describe('browser frame-accurate chunk renderer', () => {
     const c = await artifactIdentity(f.recipe, [], 'flac');
     expect(new Set([a, b, c]).size).toBe(3);
   });
+  it('streams a synthetic five-minute mobile-size mix without long-lived PCM buffers', async () => {
+    const total = 8000 * 300;
+    const source: RenderSource = {
+      recordingId: 'long', sourceRevision: 'v1', durationFrames: total,
+      async read(_start, length) { return [new Float32Array(length)]; },
+    };
+    const recipe: PortableRenderRecipe = {
+      recipeId: 'five-min', revisionId: 'v1', schemaVersion: 1,
+      sampleRate: 8000, channels: 1, totalFrames: total,
+      clips: [{ occurrenceId: 'one', recordingId: 'long', sourceRevision: 'v1',
+        startFrame: 0, sourceStartFrame: 0, durationFrames: total }],
+    };
+    let count = 0, chunks = 0;
+    for await (const frame of renderChunks({
+      recipe, sources: new Map([['long', source]]), signal: new AbortController().signal, chunkFrames: 8192,
+    })) {
+      count += frame.frames;
+      chunks++;
+      expect(frame.channels[0].length).toBeLessThanOrEqual(8192);
+    }
+    expect(count).toBe(total);
+    expect(chunks).toBeGreaterThan(200);
+  });
 });
