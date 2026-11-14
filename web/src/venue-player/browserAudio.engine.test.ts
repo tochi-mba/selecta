@@ -90,6 +90,22 @@ describe('BR64-08 device-local WebAudio execution (simulated nodes, never hardwa
       await expect(audio.start('a', 4)).rejects.toThrow(/generation/);
     } finally { await audio.dispose(); }
   });
+  it('starts another prepared recording without stopping the audible venue or losing ownership', async () => {
+    vi.stubGlobal('AudioContext', FakeContext);
+    const audio = new BrowserVenueAudio();
+    try {
+      audio.importLocal([makeRec('a'), makeRec('b')]);
+      await audio.unlock();
+      await audio.start('a', 1);
+      await expect(audio.start('missing', 2)).rejects.toThrow(/authorised/);
+      expect(audio.snapshot()).toMatchObject({ currentId: 'a', phase: 'playing', generation: 1 });
+      await audio.start('b', 2);
+      // FakeSource.stop() invokes onended synchronously: the outgoing callback
+      // must not clear the replacement or release its browser ownership.
+      expect(audio.snapshot()).toMatchObject({ currentId: 'b', phase: 'playing', generation: 2 });
+      expect(started.filter((item) => item === 'buffer')).toHaveLength(2);
+    } finally { await audio.dispose(); }
+  });
   it('refuses an already-owned output rather than layering another physical player', async () => {
     vi.stubGlobal('AudioContext', FakeContext);
     Object.defineProperty(navigator, 'locks', { configurable: true, value: {
