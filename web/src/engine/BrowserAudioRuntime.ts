@@ -19,6 +19,7 @@ interface RunningSource {
 }
 const MAX_DESKTOP_FILE = 96 * 1024 * 1024;
 const MAX_MOBILE_FILE = 48 * 1024 * 1024;
+const MAX_SAFE_PCM = 128 * 1024 * 1024;
 const DEFAULT_OUTPUT = 'System-selected speaker or headphones (physical sound unverified)';
 
 function initial(): EngineSnapshot {
@@ -202,6 +203,9 @@ export class BrowserAudioRuntime implements AudioEngine {
       if (!decoded || decoded.length <= 0 || decoded.duration <= 0 || decoded.numberOfChannels < 1) {
         throw new Error('The decoded audio is empty or invalid.');
       }
+      if (decoded.length * decoded.numberOfChannels * 4 > MAX_SAFE_PCM) {
+        throw new Error('Decoded audio exceeds the safe memory budget on this browser. Choose a shorter recording.');
+      }
       // At most the active track plus the next decoded buffer are retained.
       this.cache.set(recording.id, decoded);
       for (const id of this.cache.keys()) {
@@ -322,7 +326,7 @@ export class BrowserAudioRuntime implements AudioEngine {
     }
   }
   async play(): Promise<void> {
-    if (this.state.phase === 'playing') return;
+    if (this.state.phase === 'playing' || this.state.phase === 'starting') return;
     const index = this.state.index >= 0 ? this.state.index : 0;
     if (!this.queue[index]) {
       this.patch({ error: 'Choose music stored on this device before pressing Play.' });
