@@ -95,7 +95,9 @@ def install_routes(
         principal = allowed(request, claims, WorkspaceAction.MIXES_EDIT)
         if body.get("schema_version", 1) == 2:
             try:
-                recipe = recipe_store.create(
+                # Call the recipe writer explicitly; this is not a SQLAlchemy Table.create.
+                recipe_creator = recipe_store.create
+                recipe = recipe_creator(
                     engine, principal.workspace.id, principal.user.id,
                     name=_text(body, "name") or "",
                     occurrences=body.get("occurrences"),
