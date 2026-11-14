@@ -23,7 +23,7 @@ const exactKeys = (value: Record<string, unknown>, names: readonly string[]) =>
   Object.keys(value).length === names.length &&
   Object.keys(value).every(key => names.includes(key));
 const idPattern = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,79}$/;
-const unsafeText = (text: string) => /(?:<|>|https?:\\/\\/|file:\\/\\/|[A-Za-z]:[\\\\/]|\\/(?:home|Users|mnt|tmp|var|media)\\/|\\bignore\\s+(?:all\\s+)?(?:previous|system)\\s+instructions|[A-Za-z0-9+/]{160,})/i.test(text);
+const unsafeText = (text: string) => /(?:<|>|https?:\/\/|file:\/\/|[A-Za-z]:[\\/]|\/(?:home|Users|mnt|tmp|var|media)\/|\bignore\s+(?:all\s+)?(?:previous|system)\s+instructions|[A-Za-z0-9+/]{160,})/i.test(text);
 const transitions = ["cut", "beatmatch", "blend", "fade", "echo_out"];
 const operations = ["suggest_order", "suggest_transition", "explain"];
 const isObject = (v: unknown): v is Record<string, unknown> =>

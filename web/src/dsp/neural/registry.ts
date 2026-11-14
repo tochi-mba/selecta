@@ -17,7 +17,7 @@ export interface ModelAudit {
   readonly preprocessing: string;
   readonly output: string;
   readonly nativeLicenseStatus: "allowed" | "review" | "blocked";
-  readonly browserDistributionStatus: "review" | "blocked";
+  readonly browserDistributionStatus: "allowed" | "review" | "blocked";
   readonly status: Portability;
   readonly browserBackends: readonly Backend[];
   readonly benchmarkedBackends: readonly Backend[];
@@ -91,7 +91,7 @@ export const modelAudit = (id: ModelId): ModelAudit => MODEL_AUDIT[id];
 export function browserShippingReady(id: ModelId): boolean {
   const item = MODEL_AUDIT[id];
   return item.status === "browser-implemented-tested" &&
-    item.browserDistributionStatus !== "blocked" &&
+    item.browserDistributionStatus === "allowed" &&
     item.checkpointSha256 !== null && item.cacheBytes !== null &&
     item.peakMemoryBytes !== null && item.qualityEvidence !== null &&
     item.benchmarkedBackends.length > 0;
