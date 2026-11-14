@@ -57,6 +57,10 @@ def assert_no_media_in_cloud_capture(capture: Any, fixture: AudioFixture) -> Non
         base64.b64encode(data),
         base64.b64encode(pcm),
         str(fixture.path).encode("utf-8"),
+        # Windows separators are escaped when a path is nested in JSON.
+        # Treat that serialized form as forbidden too; raw string checks alone
+        # miss a pathname leaked as a JSON event field on Windows.
+        json.dumps(str(fixture.path))[1:-1].encode("utf-8"),
     )
     if any(sig and sig in wire for sig in forbidden_signatures):
         raise AssertionError(
