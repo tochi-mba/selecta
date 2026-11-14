@@ -67,6 +67,9 @@ export class BrowserVenueAudio implements VenueAudioPort {
   private master: GainNode | null = null;
   private files = new Map<string, LocalRecording>();
   private buffers = new Map<string, AudioBuffer>();
+  private preparing = new Map<string, Promise<void>>();
+  // Fences a delayed decode against Stop, source replacement and another transition.
+  private playbackEpoch = 0;
   private deck: Deck | null = null;
   private phase: PlayerPhase = 'locked';
   private generation = 0;
@@ -148,11 +151,16 @@ export class BrowserVenueAudio implements VenueAudioPort {
       if (next.has(rec.id)) throw new Error('Duplicate recording identity');
       next.set(rec.id, rec);
     }
-    // Any new user grant invalidates cached buffers/output evidence.
+    // Do not associate an audible deck with a different File/revision using the same ID.
+    const active = this.deck && next.get(this.deck.id);
+    const prior = this.deck && this.files.get(this.deck.id);
+    ++this.playbackEpoch;
+    if (this.deck && (!active || !prior || active.revision !== prior.revision || active.file !== prior.file)) {
+      void this.stop().catch(() => {});
+    }
     this.files = next;
     this.buffers.clear();
     this.checkedAt = null;
-    if (this.deck && !next.has(this.deck.id)) void this.stop();
   }
 
   /** Incrementally bind the next exact recording without interrupting the live deck. */
@@ -162,9 +170,11 @@ export class BrowserVenueAudio implements VenueAudioPort {
       || record.file.size <= 0 || record.file.size > MAX_FILE_BYTES)
       throw new Error('Next song needs an authorised local file, revision and valid size');
     const previous = this.files.get(record.id);
-    if (previous && previous.revision !== record.revision && this.deck?.id === record.id)
+    if (previous && (previous.revision !== record.revision || previous.file !== record.file)
+      && this.deck?.id === record.id)
       throw new Error('Cannot silently replace the currently audible recording');
-    if (previous?.revision !== record.revision) this.buffers.delete(record.id);
+    if (previous && (previous.revision !== record.revision || previous.file !== record.file))
+      this.buffers.delete(record.id);
     this.files.set(record.id, record);
   }
 
@@ -228,8 +238,11 @@ export class BrowserVenueAudio implements VenueAudioPort {
     this.assertOpen();
     if (!Number.isSafeInteger(generation) || generation < this.generation)
       throw new Error('Stale or unsafe speaker generation');
+    const revision = ++this.playbackEpoch;
     this.contextReady();
     await this.prepare(trackId);
+    if (revision !== this.playbackEpoch || this.disposed)
+      throw new Error('Venue start was superseded by a newer playback action');
     if (this.deck) {
       // Never silence a running venue before the replacement is ready. A
       // transition within this browser retains the existing exclusive lease.
@@ -237,6 +250,8 @@ export class BrowserVenueAudio implements VenueAudioPort {
         throw new Error('Resume or stop the paused venue output before starting another recording');
       }
       await this.transition(trackId, 0.05);
+      if (this.deck?.id !== trackId || this.phase !== 'playing')
+        throw new Error('Venue replacement was interrupted');
       this.generation = generation;
       return;
     }
@@ -263,10 +278,15 @@ export class BrowserVenueAudio implements VenueAudioPort {
     if (!this.deck) throw new Error('No active browser output to transition');
     if (!Number.isFinite(fadeSeconds) || fadeSeconds < 0 || fadeSeconds > 10)
       throw new Error('Unsupported transition duration');
-    await this.prepare(trackId);
-    const now = ctx.currentTime + 0.03;
-    const fade = Math.min(fadeSeconds, this.buffers.get(this.deck.id)?.duration ?? fadeSeconds);
     const old = this.deck;
+    const revision = ++this.playbackEpoch;
+    await this.prepare(trackId);
+    // Stop, another Skip, import or a natural source end may have changed the deck.
+    if (revision !== this.playbackEpoch || this.deck !== old || this.disposed || this.context !== ctx
+      || this.phase !== 'playing')
+      throw new Error('Transition cancelled because the active speaker changed');
+    const now = ctx.currentTime + 0.03;
+    const fade = Math.min(fadeSeconds, this.buffers.get(old.id)?.duration ?? fadeSeconds);
     const next = this.launch(trackId, now, fade);
     old.gain.gain.cancelScheduledValues(now);
     old.gain.gain.setValueAtTime(1, now);
@@ -275,15 +295,17 @@ export class BrowserVenueAudio implements VenueAudioPort {
     // immediately dispatched onended callback must never release the new
     // owner's lease or mark the fresh track stopped.
     this.deck = next;
-    old.node.stop(now + Math.max(0.02, fade));
-    this.buffers.delete(old.id); // retain only bounded locally decoded horizon
+    try { old.node.stop(now + Math.max(0.02, fade)); } catch { /* old source already ended */ }
+    if (old.id !== trackId) this.buffers.delete(old.id); // do not evict the new active buffer
     this.checkedAt = null; // changing song doesn't certify the physical output
     this.phase = 'playing';
   }
 
   async pause(): Promise<void> {
+    const revision = ++this.playbackEpoch;
     if (this.context && this.deck) {
       await this.context.suspend();
+      if (revision !== this.playbackEpoch || this.disposed) return;
       this.lease.release();
       this.phase = 'paused';
       this.checkedAt = null;
@@ -291,6 +313,7 @@ export class BrowserVenueAudio implements VenueAudioPort {
   }
 
   async resume(): Promise<void> {
+    const revision = ++this.playbackEpoch;
     if (!this.deck) throw new Error('No local song is ready to resume');
     // Invoke AudioContext.resume directly in the user gesture, but keep gain muted
     // until an exclusive browser-wide owner is confirmed.
@@ -302,9 +325,11 @@ export class BrowserVenueAudio implements VenueAudioPort {
       throw new Error('Another browser window owns audio; stop it before resuming this venue.');
     }
     if (!await activation) {
-      this.lease.release();
+      if (revision === this.playbackEpoch) this.lease.release();
       throw new Error(this.error ?? 'Tap to resume audio');
     }
+    if (revision !== this.playbackEpoch || this.disposed)
+      throw new Error('Resume was superseded by another playback action');
     if (this.context && this.master)
       this.master.gain.setTargetAtTime(this.volume, this.context.currentTime, 0.02);
     this.phase = 'playing';
@@ -312,6 +337,7 @@ export class BrowserVenueAudio implements VenueAudioPort {
   }
 
   async stop(): Promise<void> {
+    ++this.playbackEpoch;
     const old = this.deck;
     this.deck = null;
     if (old) {
