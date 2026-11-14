@@ -6,10 +6,10 @@ source bindings, actor permission and live playback ownership when applying.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
-from selecta.lf_ai.contract import LucyPlan, PlanError, TRANSITIONS
+from selecta.lf_ai.contract import TRANSITIONS, LucyPlan, PlanError
 from selecta.lf_ai.execution import EngineScope
 
 CAPABILITIES = frozenset({"metadata", "beat_grid", "time_stretch", "blend", "echo"})

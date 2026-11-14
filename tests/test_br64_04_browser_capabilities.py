@@ -2,7 +2,14 @@
 import pytest
 
 from selecta.lf_ai.browser_capabilities import inspect_browser_plan, required_capabilities
-from selecta.lf_ai.contract import BoundaryError, LucyPlan, PlanError, Suggestion, parse_model_plan, safe_catalogue
+from selecta.lf_ai.contract import (
+    BoundaryError,
+    LucyPlan,
+    PlanError,
+    Suggestion,
+    parse_model_plan,
+    safe_catalogue,
+)
 from selecta.lf_ai.execution import EngineScope
 
 
@@ -65,7 +72,8 @@ def test_invalid_generated_status_or_feature_is_never_trusted():
     unsafe = LucyPlan(1, "workspace1", "ipad1", "Plan", plan().steps,
                       availability="ready")
     assert inspect(unsafe).status == "invalid_plan"
-    assert inspect(local_capabilities=frozenset({"metadata", "gpu_magic"})).status == "capability_missing"
+    unexpected = inspect(local_capabilities=frozenset({"metadata", "gpu_magic"}))
+    assert unexpected.status == "capability_missing"
     invalid = LucyPlan(1, "workspace1", "ipad1", "Plan", (Suggestion(
         "run_shell", (), None, "execute"),))
     with pytest.raises(PlanError):
