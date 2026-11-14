@@ -261,6 +261,24 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
     catch (cause) { setError(`Remote control unavailable: ${humanError(cause)}`); }
     finally { setBusy(false); }
   };
+
+  const prepare = async () => {
+    if (!active || !allReady || dirty || !ports.renderer?.prepare) return;
+    setBusy(true); setError('');
+    try { await ports.renderer.prepare(active); setMessage('Local transition preparation requested. Recheck the seams before playing.'); }
+    catch (cause) { setError(`Preparing failed: ${humanError(cause)}`); }
+    finally { setBusy(false); }
+  };
+  const preview = async (index: number) => {
+    if (!active || !allReady || dirty || !ports.playback?.previewTransition) return;
+    setBusy(true); setError('');
+    try {
+      await ports.playback.previewTransition(active, index);
+      setMessage('Preview requested in this browser. Check actual output before playing the full mix.');
+    } catch (cause) { setError(`Preview unavailable: ${humanError(cause)}`); }
+    finally { setBusy(false); }
+  };
+
   const render = async () => {
     if (!canRender || !active || !ports.renderer) return;
     const abort = new AbortController();
@@ -357,6 +375,9 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
                     if (Number.isFinite(next) && next >= 0 && next <= 604800) updateTransition(index - 1, { duration_seconds: next });
                   }} /></label>
                 <span>{edit.transitions[index - 1].requires_rebuild ? 'Preview needs local preparation' : 'Saved transition intention'}</span>
+                <button disabled={!allReady || dirty || busy || !ports.playback?.previewTransition}
+                  aria-label={`Preview transition into ${row.title}`}
+                  onClick={() => void preview(index - 1)}>Preview seam here</button>
               </div>}
             </li>;
           })}</ol>
@@ -368,6 +389,7 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
               verified?.outputVerified ? 'Recording and output preflight passed. Confirm sound at your actual speaker.' :
               'Recordings available; Output Unverified. Confirm real speaker output before playback.'}</p>
             <div className="br07-actions">
+              <button onClick={() => void prepare()} disabled={!allReady || dirty || busy || rendering || !ports.renderer?.prepare}>Prepare transitions locally</button>
               <button onClick={() => void play()} disabled={!canPlay || busy || rendering}>Play Here</button>
               <button onClick={() => void render()} disabled={!canRender || busy || rendering}>{rendering ? 'Rendering locally…' : 'Render and export here'}</button>
               {rendering && <button onClick={() => renderAbort.current?.abort()}>Cancel render</button>}
