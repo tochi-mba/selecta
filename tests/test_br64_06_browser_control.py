@@ -140,9 +140,15 @@ def test_ipad_is_a_real_player_phone_controls_without_media_access(rig):
     assert sign_command(env, ipad["command_key"]) == signed["signature"]
     verify_command(env, signed["signature"], ipad["command_key"])
     assert ack(client, ipad, "pause1", "accepted").json()["state"] == "accepted"
-    assert ack(client, ipad, "pause1", "applied", execution_verified=True).json()["state"] == "acknowledged"
-    assert req(client, "GET", "/zones/z1/commands/pause1", actor="staff").json()["state"] == "acknowledged"
-    assert req(client, "POST", "/zones/z1/commands", actor="staff", payload=command).json()["replayed"]
+    assert (
+        ack(client, ipad, "pause1", "applied", execution_verified=True).json()["state"] == "acknowledged"
+    )
+    assert (
+        req(client, "GET", "/zones/z1/commands/pause1", actor="staff").json()["state"] == "acknowledged"
+    )
+    assert (
+        req(client, "POST", "/zones/z1/commands", actor="staff", payload=command).json()["replayed"]
+    )
 
 
 def test_cross_tenant_token_role_and_payload_defences(rig):
@@ -177,7 +183,9 @@ def test_cross_tenant_token_role_and_payload_defences(rig):
     item["actor"] = {"kind": "user", "id": "owner"}
     assert req(client, "POST", "/zones/z1/commands", payload=item).status_code == 422
     item.pop("actor")
-    assert req(client, "POST", "/zones/z1/commands", actor="viewer", payload=item).status_code == 403
+    assert (
+        req(client, "POST", "/zones/z1/commands", actor="viewer", payload=item).status_code == 403
+    )
 
 
 def test_stale_or_missing_media_blocks_handoff_before_touching_source(rig):
@@ -190,7 +198,9 @@ def test_stale_or_missing_media_blocks_handoff_before_touching_source(rig):
         "idempotency_key": "take2", "expected_generation": 1,
     }
     assert req(client, "POST", "/zones/z1/takeovers", payload=body).status_code == 409
-    assert req(client, "GET", "/zones/z1/speaker").json()["speaker_session_id"] == ipad["session_id"]
+    assert (
+        req(client, "GET", "/zones/z1/speaker").json()["speaker_session_id"] == ipad["session_id"]
+    )
     assert presence(client, target).status_code == 200
     clock[0] += 21
     assert req(client, "POST", "/zones/z1/takeovers", payload=body).status_code == 409
@@ -218,16 +228,22 @@ def test_release_requires_physical_silence_and_fenced_generation(rig):
     assert ack(client, source, release["operation_id"], "applied", generation=1,
                output_silent=True).status_code == 409
     assert ack(client, source, release["operation_id"], "applied", generation=2).status_code == 409
-    assert req(client, "GET", "/zones/z1/speaker").json()["speaker_session_id"] == source["session_id"]
+    assert (
+        req(client, "GET", "/zones/z1/speaker").json()["speaker_session_id"] == source["session_id"]
+    )
     assert ack(client, source, release["operation_id"], "applied",
                generation=2, output_silent=True).status_code == 200
     assert req(client, "GET", "/zones/z1/speaker").json()["speaker_session_id"] is None
     activate = poll(client, target)["command"]
     assert activate["action"] == "activate_output"
-    assert ack(client, target, activate["operation_id"], "accepted", generation=2).status_code == 200
+    assert (
+        ack(client, target, activate["operation_id"], "accepted", generation=2).status_code == 200
+    )
     assert ack(client, target, activate["operation_id"], "applied",
                generation=2, output_confirmed=True).status_code == 200
-    assert req(client, "GET", "/zones/z1/speaker").json()["speaker_session_id"] == target["session_id"]
+    assert (
+        req(client, "GET", "/zones/z1/speaker").json()["speaker_session_id"] == target["session_id"]
+    )
 
 
 def test_missing_ack_cannot_manufacture_playback_and_expires(rig):
@@ -245,7 +261,9 @@ def test_missing_ack_cannot_manufacture_playback_and_expires(rig):
     assert req(client, "GET", "/zones/z1/commands/play1").json()["state"] == "delivered"
     clock[0] += 31
     assert req(client, "GET", "/zones/z1/commands/play1").json()["state"] == "expired"
-    assert ack(client, ipad, "play1", "applied", execution_verified=True).json()["state"] == "expired"
+    assert (
+        ack(client, ipad, "play1", "applied", execution_verified=True).json()["state"] == "expired"
+    )
 
 
 def test_token_rotation_and_session_revocation(rig):
