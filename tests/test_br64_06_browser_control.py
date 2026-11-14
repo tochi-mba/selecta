@@ -32,7 +32,10 @@ ACTORS = {
 def rig(tmp_path):
     clock = [NOW]
     engine = sa.create_engine("sqlite:///" + str(tmp_path / "cloud.sqlite"))
-    service = BrowserControlService(engine, signing_key=b"e" * 32, clock=lambda: clock[0])
+    service = BrowserControlService(
+        engine, signing_key=b"e" * 32, clock=lambda: clock[0],
+        authorise_entitlement=lambda actor, zone, action: True,
+    )
     service.create_test_schema()
     app = FastAPI()
 
