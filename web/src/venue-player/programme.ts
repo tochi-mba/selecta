@@ -99,6 +99,8 @@ export class BrowserVenueProgramme {
     if (this.state === 'running') throw new Error('This speaker already owns a programme');
     if (!await this.adapters.audio.unlock())
       throw new Error('The browser requires a tap and a permitted audio output');
+    if (!this.adapters.audio.snapshot().foreground)
+      throw new Error('The venue browser must remain visible to start playback');
     await this.load();
     const policy = this.policy!;
     if (!venueOpen(policy, this.clock())) throw new Error('The venue is currently closed');
