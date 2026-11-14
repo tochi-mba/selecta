@@ -86,3 +86,61 @@
 .lucy-cloud-meter p{margin:0 0 6px}
 @media(max-width:1100px){.cloud-meters{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.cloud-meters{grid-template-columns:1fr}.cloud-over-quota-actions{width:100%}.cloud-over-quota-actions button{flex:1}}
+
+/* BR64-07: browser-first personal shell, reusable on phone, tablet and desktop. */
+.br07-home .cloud-actions{display:flex;flex-wrap:wrap;gap:10px}
+.br07-dock{display:flex;align-items:center;flex-wrap:wrap;gap:8px 18px;position:sticky;top:0;z-index:5;
+  border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:10px 14px;margin-bottom:16px}
+.br07-dock span{flex:1 1 200px}.br07-dock small{flex:1 1 100%;color:var(--text-soft)}
+.br07-studio{display:grid;gap:16px;min-width:0}
+.br07-intro{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.br07-intro h2{margin:0 0 4px}.br07-intro p{max-width:56ch}
+.br07-modes{display:flex;gap:6px;flex-wrap:wrap}
+.br07-modes button[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.br07-callout{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--panel-2);margin:0}
+.br07-callout p{margin-top:0}.br07-callout small{display:block;margin-top:6px}
+.br07-workspace{display:grid;grid-template-columns:minmax(200px,270px) minmax(0,1fr);gap:16px;align-items:start}
+.br07-recipes,.br07-editor{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:16px;min-width:0}
+.br07-recipes ul,.br07-history ol{list-style:none;padding:0;margin:0}
+.br07-recipes li{margin:4px 0}
+.br07-recipes li button{width:100%;text-align:left;display:grid;gap:4px;white-space:normal;overflow-wrap:anywhere}
+.br07-recipes li button.br07-current{border-color:var(--accent)}
+.br07-recipes li small,.br07-muted{color:var(--text-soft);font-size:.85rem}
+.br07-import{display:grid;gap:6px;font-weight:600;margin-top:16px}
+.br07-import input{max-width:100%;font-weight:400;font-size:.85rem}
+.br07-heading{display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:8px}
+.br07-heading h3,.br07-heading h4{margin:0}.br07-heading p{margin:3px 0;color:var(--text-soft)}
+.br07-name{display:grid;gap:6px;margin:14px 0}
+.br07-name input{max-width:100%}
+.br07-timeline{list-style:none;padding:0;margin:12px 0;display:grid;gap:12px}
+.br07-track{border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}
+.br07-track-head{display:flex;align-items:start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.br07-track-head div{min-width:0;flex:1 1 160px}
+.br07-track-head strong{overflow-wrap:anywhere}.br07-track-head small{display:block;color:var(--text-soft);margin-top:4px}
+.br07-state{font-size:.8rem;border:1px solid var(--line);border-radius:20px;padding:4px 8px;max-width:100%}
+.br07-state[data-state="available"]{border-color:var(--accent)}
+.br07-track-controls,.br07-seam,.br07-actions{display:flex;align-items:end;flex-wrap:wrap;gap:8px;margin-top:10px}
+.br07-track-controls label,.br07-seam label{display:grid;gap:4px;font-size:.82rem;min-width:110px}
+.br07-track-controls input,.br07-seam input{width:110px;max-width:100%}
+.br07-seam{padding:12px 0 0;border-top:1px dashed var(--line);align-items:end}
+.br07-seam strong{flex-basis:100%;font-size:.85rem}
+.br07-seam span{color:var(--text-soft);font-size:.78rem}
+.br07-readiness{border-top:1px solid var(--line);padding-top:12px}
+.br07-readiness h4{margin:0}
+.br07-history{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+.br07-history summary{cursor:pointer;font-weight:600;min-height:36px}
+.br07-history li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+@media(max-width:760px){
+  .br07-workspace{grid-template-columns:minmax(0,1fr)}
+  .br07-recipes ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px}
+  .br07-track-controls button{flex:1 1 120px}
+  .br07-actions button{min-height:44px}
+  .br07-dock{top:0}
+}
+@media(max-width:400px){
+  .br07-intro,.br07-modes{display:grid;grid-template-columns:minmax(0,1fr);width:100%}
+  .br07-recipes,.br07-editor{padding:12px}
+  .br07-track-controls label,.br07-seam label{width:100%}
+  .br07-track-controls input,.br07-seam input{width:100%}
+}
+@media(prefers-reduced-motion:reduce){.br07-studio *{scroll-behavior:auto;transition:none!important}}
