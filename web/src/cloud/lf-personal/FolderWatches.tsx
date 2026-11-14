@@ -244,10 +244,12 @@ export function FolderWatches({ compact = false }: { compact?: boolean }) {
             <div className="lfw-folder-main">
               <div className="lfw-name"><h3>{source.name}</h3><span className={'lfw-pill lfw-' + state.kind}>{state.label}</span></div>
               <p className="lfw-path" title={source.path}>{source.path}</p>
-              <p className="lfw-detail">{source.indexed.toLocaleString()} indexed recordings · {lastChecked(source.lastScannedAt)}</p>
+              <p className="lfw-detail">{source.indexed.toLocaleString()} locally verified recordings · {source.state === 'scanning'
+                ? `Scan in progress · ${source.discovered.toLocaleString()} audio candidates found so far`
+                : lastChecked(source.lastScannedAt)}</p>
               {!source.available && source.enabled && <p className="lfw-hint">Reconnect the drive or restore folder permissions. Previously indexed recordings are kept; availability is not verified.</p>}
               {source.problem && <p className="lfw-hint">{source.problem} Try a rescan after checking this device.</p>}
-              {source.state === 'scanning' && <p className="lfw-hint" role="status">Reading this folder locally. Files are not copied to Cloud.</p>}
+              {source.state === 'scanning' && <p className="lfw-hint" role="status">Reading and verifying files locally. A first scan can take time; zero verified does not mean an empty folder. Files are not copied to Cloud.</p>}
             </div>
             <div className="lfw-item-actions">
               <button type="button" disabled={!source.enabled || pending !== '' || !source.available || source.state === 'scanning'}
@@ -275,7 +277,7 @@ export function FolderWatches({ compact = false }: { compact?: boolean }) {
       })}</ul>}
       {updatedAt && <p className="lfw-footnote">Status updated {new Date(updatedAt).toLocaleTimeString('en-GB', { timeStyle: 'short' })}. Indexing happens on this device; these counts do not describe hosted assets.</p>}
     </>}
-    <p className="lfw-privacy">Your audio never leaves this device through folder watching. When using Selecta Cloud on another computer, you must manage its folders on that computer.</p>
+    <p className="lfw-privacy">These counts belong to the development folder watcher, not the standalone Selecta library or the browser’s private index. Each has separate permissions and verification. Your audio never leaves this device through folder watching; other devices need their own source access.</p>
   </section>;
 }
 
