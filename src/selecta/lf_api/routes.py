@@ -138,6 +138,10 @@ def make_router(
     def selected_speaker(request: Request, zone_id: str, actor: ActorScope = Depends(identity)):
         return _call(request, service.speaker, actor=actor, zone=zone_id)
 
+    @router.post("/devices/{device_id}/revoke")
+    def revoke_device(request: Request, device_id: str, actor: ActorScope = Depends(identity)):
+        return _call(request, service.revoke_device, actor=actor, device_id=device_id)
+
     @router.post("/sessions/{session_id}/refresh")
     def refresh(
         request: Request, session_id: str,
@@ -156,6 +160,14 @@ def make_router(
             request, service.presence, actor=actor, session=session_id, token=token,
             **body.model_dump(),
         )
+
+    @router.get("/sessions/{session_id}/recovery")
+    def recover(
+        request: Request, session_id: str,
+        token: str = Header(alias="X-Selecta-Session-Token"),
+        actor: ActorScope = Depends(identity),
+    ):
+        return _call(request, service.recovery, actor=actor, session=session_id, token=token)
 
     @router.post("/sessions/{session_id}/revoke")
     def revoke(
