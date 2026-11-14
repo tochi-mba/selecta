@@ -262,7 +262,9 @@ class LocalArtifactStore:
                 byte_checksum = sha256_file(stage)
                 if cancel is not None and cancel.is_set():
                     raise ArtifactCancelled("Cancelled before publication.")
-                with stage.open("rb") as handle:
+                # Windows _commit requires a writable handle; fsync on a read-only
+                # CRT descriptor raises EBADF even when the staged file is valid.
+                with stage.open("r+b") as handle:
                     os.fsync(handle.fileno())
                 if permanent:
                     # Linking is an atomic no-clobber publish on NTFS/ext4/APFS.
