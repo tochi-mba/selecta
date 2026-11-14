@@ -209,7 +209,7 @@ export async function verifyDeliveredCommand(
   if (!globalThis.crypto?.subtle) throw new BrowserControlError(503, "webcrypto_unavailable");
   const hmacKey = await crypto.subtle.importKey(
     "raw", new TextEncoder().encode(expected.command_key),
-    { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+    { name: "HMAC", hash: "SHA-256" }, false, ["verify"],
   );
   const signatureBytes = Uint8Array.from(
     packet.signature.match(/.{2}/g) ?? [], (hex) => Number.parseInt(hex, 16),
