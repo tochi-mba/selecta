@@ -1,4 +1,4 @@
-/* A tiny bounded two-input stereo sum. All decoding, envelope scheduling, effects,
+/* A tiny allocation-free two-input stereo sum. All decoding, envelope scheduling, effects,
  * I/O and state mutation live outside process(). No allocations in the audio callback. */
 class SelectaBrowserMixer extends AudioWorkletProcessor {
   process(inputs, outputs) {
@@ -13,9 +13,11 @@ class SelectaBrowserMixer extends AudioWorkletProcessor {
     for (let i = 0; i < left.length; i++) {
       const l = (aLeft ? aLeft[i] : 0) + (bLeft ? bLeft[i] : 0);
       const r = (aRight ? aRight[i] : 0) + (bRight ? bRight[i] : 0);
-      // Bound output; DynamicsCompressorNode after this also provides peak safety.
-      left[i] = Math.max(-1, Math.min(1, l));
-      if (right !== left) right[i] = Math.max(-1, Math.min(1, r));
+      // Preserve headroom and waveform shape through overlapping crossfades.
+      // Hard-clipping here causes irreversible distortion before the downstream
+      // dynamics compressor/master gain can control the mixed peaks.
+      left[i] = l;
+      if (right !== left) right[i] = r;
     }
     return true;
   }
