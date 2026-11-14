@@ -17,13 +17,20 @@ export type CloudRoute = { path: string; page: Page };
 export const CLOUD_ROUTES: readonly CloudRoute[] = [
   { path: '/', page: 'home' },
   { path: '/listen', page: 'listen' },
-  // Browser-first deep links land in the same Studio workspace without making a
-  // second player. The recipe identity is passed via ?mix=<opaque id>.
+  // Browser-first deep links select distinct music surfaces while preserving
+  // one persistent browser player. Recipes remain metadata-only (?mix=<opaque id>).
   { path: '/studio', page: 'listen' },
   { path: '/mixes', page: 'listen' },
+  { path: '/mixes/mine', page: 'listen' },
   { path: '/player', page: 'listen' },
   { path: '/discover', page: 'listen' },
+  { path: '/discover/words', page: 'listen' },
+  { path: '/discover/harmonic', page: 'listen' },
   { path: '/library', page: 'library' },
+  { path: '/workshop', page: 'home' },
+  { path: '/workspace', page: 'home' },
+  { path: '/devices', page: 'settings' },
+  { path: '/rooms', page: 'listen' },
   { path: '/upload', page: 'uploads' },
   { path: '/uploads', page: 'uploads' },
   { path: '/account', page: 'settings' },
