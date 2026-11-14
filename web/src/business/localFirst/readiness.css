@@ -28,3 +28,22 @@
 @media(max-width:360px){.lf13-facts{grid-template-columns:1fr}.lf13-hq{padding:var(--space-3)}.lf13-venue-list li button,.lf13-recovery li button{width:100%}}
 @media(forced-colors:active){.lf13-state,.lf13-zone,.lf13-staff-line{border-color:CanvasText}}
 @media(prefers-reduced-motion:reduce){.lf13-hq *,.lf13-detail *{animation:none;transition:none}}
+
+/* BR64-08: busy venue touch targets, iPad landscape and 320 px staff recovery. */
+.br64-venue-setup{display:grid;gap:var(--space-3,12px);min-width:0}
+.br64-venue-setup>h3,.br64-venue-setup>p{margin-block:0}
+.br64-venue-setup label{display:flex;gap:var(--space-2,8px);align-items:flex-start;max-width:100%;overflow-wrap:anywhere}
+.br64-venue-setup label[for]{font-weight:600}
+.br64-venue-setup :is(button,input[type=file],select){min-height:48px;max-width:100%}
+.br64-venue-setup button{touch-action:manipulation;min-width:130px}
+.br64-venue-setup input[type=file]{width:100%;white-space:normal}
+.br64-venue-setup input[type=range]{width:100%;min-height:44px}
+.br64-actions{display:flex;flex-wrap:wrap;gap:var(--space-2,8px)}
+.br64-actions button{flex:1 1 150px}
+@media(min-width:800px) and (orientation:landscape){
+ .br64-venue-setup{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .br64-venue-setup>h3,.br64-venue-setup>.br64-actions{grid-column:1/-1}
+}
+@media(max-width:400px){.br64-venue-setup{padding:var(--space-3,12px)}.br64-actions button{flex-basis:100%}}
+@media(forced-colors:active){.br64-venue-setup :focus-visible{outline:3px solid Highlight}}
+@media(prefers-reduced-motion:reduce){.br64-venue-setup *{scroll-behavior:auto;transition:none;animation:none}}

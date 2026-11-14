@@ -79,6 +79,25 @@ describe('LF13 local-first readiness safety', () => {
     expect(result.activationReady).toBe(false);
     expect(result.issues[0].action).toContain('last confirmed');
   });
+  it('supports a single-iPad venue only with fresh operator-heard evidence, never unlock alone', () => {
+    const at = NOW - 10;
+    const recent = inspect({
+      output: { state: 'playing', physical_verified: false, device_name: 'Venue iPad' },
+      browser: { foreground: true, operator_heard_at: at },
+    });
+    expect(recent.state).toBe('healthy');
+    expect(recent.speakerEvidence).toBe('operator-heard');
+    expect(inspect({
+      output: { state: 'playing', physical_verified: false },
+      browser: { foreground: true, operator_heard_at: NOW - 200 },
+    }).activationReady).toBe(false);
+    const hidden = inspect({
+      output: { state: 'playing', physical_verified: false },
+      browser: { foreground: false, operator_heard_at: at },
+    });
+    expect(hidden.activationReady).toBe(false);
+    expect(hidden.issues.some((issue) => issue.title.includes('foreground'))).toBe(true);
+  });
   it('requires ALL zones at a venue to be ready', () => {
     const v = scene();
     v.zones.push(zone(v.id, 'side', 'Side', { local_first: localReport({ source: { state: 'missing' } }) }));
