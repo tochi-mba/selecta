@@ -241,7 +241,20 @@ def install_routes(
             return HTTPException(status_code=410, detail={"code": error.code})
         if isinstance(error, SessionNotFound):
             return HTTPException(status_code=404, detail=dict(UPLOAD_NOT_FOUND))
-        if isinstance(error, (InvalidState, ValueError)):
+        if isinstance(error, InvalidState):
+            # A completed upload cannot be cancelled. This fixed, public recovery
+            # message tells users to delete its library asset instead; never
+            # reflect arbitrary provider errors, paths or credentials.
+            if "already accepted" in str(error):
+                return HTTPException(
+                    status_code=400,
+                    detail={
+                        "code": "invalid_upload",
+                        "message": "This upload was already accepted; delete the song instead.",
+                    },
+                )
+            return HTTPException(status_code=400, detail={"code": "invalid_upload"})
+        if isinstance(error, ValueError):
             return HTTPException(status_code=400, detail={"code": "invalid_upload"})
         if isinstance(error, R2Error):
             return HTTPException(
