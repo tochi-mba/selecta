@@ -86,13 +86,25 @@ class BrowserControlService:
     """Cloud-side state machine. HTTP routers and real player/audio ports are external."""
 
     def __init__(
-        self, engine: Engine, *, signing_key: bytes, clock: Callable[[], float] = time.time
+        self, engine: Engine, *, signing_key: bytes,
+        authorise_entitlement: Callable[[ActorScope, str, str], bool] | None = None,
+        clock: Callable[[], float] = time.time,
     ):
         if not isinstance(signing_key, bytes) or len(signing_key) < 32:
             raise ValueError("A persistent server-only 32-byte signing key is required")
         self.engine = engine
         self._key = signing_key
         self.clock = clock
+        # No plan/policy authority is available inside this isolated branch.
+        # The production integration must inject the actual entitlement resolver.
+        # With no resolver all API operations fail closed.
+        self._entitlement = authorise_entitlement
+
+    def _scope(self, actor: ActorScope, zone: str, *, action: str = "read",
+               mutate: bool = False) -> None:
+        _role(actor, zone, mutate=mutate)
+        if self._entitlement is None or self._entitlement(actor, zone, action) is not True:
+            raise ControlError("plan_or_policy_denied")
 
     def create_test_schema(self) -> None:
         """Only for disposable test databases; production uses reviewed migrations."""
@@ -130,6 +142,12 @@ class BrowserControlService:
         device = self._row(db, schema.devices, workspace=row["workspace"], device=row["device"])
         if device is None or device["revoked"]:
             raise ControlError("device_revoked")
+        if not any(
+            zone in actor.zones and self._entitlement is not None
+            and self._entitlement(actor, zone, "session") is True
+            for zone in json.loads(device["zones"])
+        ):
+            raise ControlError("plan_or_policy_denied")
         return row
 
     def _signing_secret(self, session: Mapping[str, Any]) -> str:
@@ -157,7 +175,7 @@ class BrowserControlService:
         self, actor: ActorScope, *, device_id: str, zone_id: str, label: str,
         capabilities: dict, browser_version: str, dsp_version: str
     ) -> dict:
-        _role(actor, zone_id)
+        self._scope(actor, zone_id, action="register")
         _required_id(device_id)
         if type(label) is not str or not 1 <= len(label) <= 64 or any(ord(c) < 32 for c in label):
             raise ControlError("invalid_label")
@@ -281,7 +299,7 @@ class BrowserControlService:
         return {"schema_version": 1, "session_id": session, "revoked": True}
 
     def devices(self, actor: ActorScope, zone: str) -> dict:
-        _role(actor, zone)
+        self._scope(actor, zone)
         now = self.clock()
         with self.engine.connect() as db:
             rows = db.execute(
@@ -314,7 +332,7 @@ class BrowserControlService:
             return {"schema_version": 1, "devices": result}
 
     def speaker(self, actor: ActorScope, zone: str) -> dict:
-        _role(actor, zone)
+        self._scope(actor, zone)
         now = self.clock()
         with self.engine.connect() as db:
             owner = self._row(db, schema.owners, workspace=actor.workspace_id, zone=zone)
@@ -416,10 +434,11 @@ class BrowserControlService:
         operation_id: str, idempotency_key: str, action: str, arguments: dict,
         expected_generation: int, recipe_revision: str | None, policy_version: int,
     ) -> dict:
-        _role(actor, zone, mutate=True)
+        self._scope(actor, zone, action="control", mutate=True)
         if action not in PUBLIC_ACTIONS:
             raise ControlError("unsupported_command")
         _public_role(actor, action)
+        self._scope(actor, zone, action=action, mutate=True)
         _required_id(target_session)
         _integer(expected_generation)
         _integer(policy_version)
@@ -456,9 +475,10 @@ class BrowserControlService:
         operation_id: str, idempotency_key: str, expected_generation: int,
         initial_silence_confirmed: bool = False,
     ) -> dict:
-        _role(actor, zone, mutate=True)
+        self._scope(actor, zone, action="control", mutate=True)
         if actor.role not in {"owner", "admin", "dj"}:
             raise ControlError("role_denied")
+        self._scope(actor, zone, action="takeover", mutate=True)
         for item in (target_session, operation_id, idempotency_key):
             _required_id(item)
         _integer(expected_generation)
@@ -723,6 +743,8 @@ class BrowserControlService:
                                device=device_id)
             if device is None or not set(json.loads(device["zones"])) <= actor.zones:
                 raise ControlError("scope_denied")
+            for zone in json.loads(device["zones"]):
+                self._scope(actor, zone, action="revoke_device", mutate=True)
             db.execute(schema.devices.update().where(
                 schema.devices.c.workspace == actor.workspace_id,
                 schema.devices.c.device == device_id
@@ -769,7 +791,7 @@ class BrowserControlService:
             }
 
     def status(self, actor: ActorScope, zone: str, operation_id: str) -> dict:
-        _role(actor, zone)
+        self._scope(actor, zone)
         _required_id(operation_id)
         now = self.clock()
         with self._tx() as db:
@@ -781,7 +803,7 @@ class BrowserControlService:
             return {"schema_version": 1, "operation_id": operation_id, "state": row["state"]}
 
     def transfer_status(self, actor: ActorScope, zone: str, transfer_id: str) -> dict:
-        _role(actor, zone)
+        self._scope(actor, zone)
         with self.engine.connect() as db:
             row = self._row(db, schema.transfers, transfer=_required_id(transfer_id))
             if row is None or row["workspace"] != actor.workspace_id or row["zone"] != zone:
