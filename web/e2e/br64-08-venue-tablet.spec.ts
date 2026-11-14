@@ -5,21 +5,40 @@ import { expect, test } from '@playwright/test';
 
 const FLEET = '/business-harness.html?scenario=lf13_fleet';
 
+// Generated synthetic PCM, no copyrighted media and no hardware-output claim.
+function silentWav(): Buffer {
+  const sampleRate = 22050;
+  const samples = Math.round(sampleRate / 2);
+  const bytes = Buffer.alloc(44 + samples * 2);
+  bytes.write('RIFF', 0); bytes.writeUInt32LE(bytes.length - 8, 4);
+  bytes.write('WAVE', 8); bytes.write('fmt ', 12); bytes.writeUInt32LE(16, 16);
+  bytes.writeUInt16LE(1, 20); bytes.writeUInt16LE(1, 22);
+  bytes.writeUInt32LE(sampleRate, 24); bytes.writeUInt32LE(sampleRate * 2, 28);
+  bytes.writeUInt16LE(2, 32); bytes.writeUInt16LE(16, 34);
+  bytes.write('data', 36); bytes.writeUInt32LE(samples * 2, 40);
+  return bytes;
+}
+
 test('manager has browser-native tablet setup and accurate speaker limitations', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 1024, height: 768 } });
   const page = await context.newPage();
   try {
     await page.goto(FLEET);
     await page.getByRole('button', { name: 'Review Demo venue 1 readiness' }).click();
-    await page.getByRole('button', { name: /Open devices for/ }).first().click().catch(() => undefined);
-    // When the devices route is present, ensure the local on-site experience cannot
-    // silently present remote Cloud readiness as a real sound test.
     const setup = page.getByTestId('br64-08-tablet-setup');
-    if (await setup.count()) {
-      await expect(setup.getByText(/iPad, Android tablet or laptop/)).toBeVisible();
-      await expect(setup.getByRole('button', { name: 'Tap to start here' })).toBeDisabled();
-      await expect(setup.getByText(/not yet Cloud programme activation/i)).toHaveCount(1);
-    }
+    await expect(setup).toBeVisible();
+    await expect(setup.getByText(/iPad, Android tablet or laptop/)).toBeVisible();
+    await expect(setup.getByRole('button', { name: 'Tap to start here' })).toBeDisabled();
+    await expect(setup.getByText(/does not register a Cloud playback session/i)).toBeVisible();
+    await setup.getByLabel('Select music from this device (no upload)')
+      .setInputFiles({ name: 'synthetic.wav', mimeType: 'audio/wav', buffer: silentWav() });
+    await setup.getByLabel(/I have permission to use these local recordings/).check();
+    await setup.getByLabel(/I have personally reviewed the selected recordings/).check();
+    await expect(setup.getByRole('button', { name: 'Tap to start here' })).toBeEnabled();
+    await setup.getByRole('button', { name: 'Tap to start here' }).click();
+    await expect(setup.getByText(/Audio started on this device/)).toBeVisible();
+    // A real source node ran, but automation cannot confirm audible venue speakers.
+    await expect(setup.getByText(/Speaker test: Not verified/)).toBeVisible();
   } finally { await context.close(); }
 });
 
