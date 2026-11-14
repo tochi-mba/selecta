@@ -45,7 +45,7 @@ describe('BR64-07 Cloud flag combinations and route continuity', () => {
     window.history.replaceState({}, '', '/studio');
     render(<CloudApp />);
     expect(await screen.findByRole('heading', { level: 1, name: 'My Mixes and Studio' })).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: 'Browser player status' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Browser-local music player' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Personal browser Studio' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit Without Music' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /local engine/i })).not.toBeInTheDocument();
@@ -59,13 +59,13 @@ describe('BR64-07 Cloud flag combinations and route continuity', () => {
     expect(within(navigation).getByRole('button', { name: 'Connect local music' })).toBeInTheDocument();
     await userEvent.click(within(navigation).getByRole('button', { name: 'My Mixes / Studio' }));
     await waitFor(() => expect(window.location.pathname).toBe('/listen'));
-    expect(screen.getByRole('status', { name: 'Browser player status' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Browser-local music player' })).toBeInTheDocument();
   });
   it('still exposes account settings and avoids turning the old hosted dock back on', async () => {
     window.history.replaceState({}, '', '/account');
     render(<CloudApp />);
     await screen.findByRole('heading', { level: 1, name: 'Account settings' });
-    expect(screen.getByRole('status', { name: 'Browser player status' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Browser-local music player' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /local engine/i })).not.toBeInTheDocument();
   });
 });
