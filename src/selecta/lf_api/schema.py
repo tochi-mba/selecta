@@ -7,7 +7,9 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 
-metadata = sa.MetaData()
+from selecta.persistence import metadata
+
+# Use the same schema registry as Cloud migrations, not a disposable isolated metadata.
 
 devices = sa.Table(
     "lf_browser_devices", metadata,
