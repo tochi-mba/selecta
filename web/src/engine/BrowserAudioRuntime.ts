@@ -441,9 +441,12 @@ export class BrowserAudioRuntime implements AudioEngine {
         incoming.setValueAtTime(1, t);
         outgoing.setValueAtTime(0, t);
       }
-      try { previous.node.stop(t + fade + 0.002); } catch { /* already ended */ }
+      // Publish ownership before stopping the old source. onended may fire
+      // promptly on some engines and must not skip another track or stop the
+      // newly active source because it still sees the outgoing deck as active.
       this.leaving = previous;
       this.active = source;
+      try { previous.node.stop(t + fade + 0.002); } catch { /* already ended */ }
       this.patch({ index: next, title: this.queue[next].title, duration: buffer.duration, position: 0,
         pending: null, error: null });
       this.syncSession(); this.planAdvance();
