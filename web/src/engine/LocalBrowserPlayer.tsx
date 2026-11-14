@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore, type KeyboardEvent 
 import { claimFocus, releaseFocus } from '../cloud/cloudTransport';
 import { sayThisTabIsPlaying, whenAnotherTabPlays } from '../state/tabs';
 import { browserEngine, retainBrowserEngine } from './registry';
+import { probeBrowserAudio } from './capabilities';
 import type { EngineSnapshot } from './contracts';
 import './localBrowserPlayer.css';
 
@@ -14,6 +15,7 @@ const isOutputReady = (state: EngineSnapshot) => state.phase === 'playing' || st
 export function LocalBrowserPlayer({ workspaceId }: { workspaceId: string }) {
   const engine = useMemo(() => browserEngine(workspaceId), [workspaceId]);
   const now = useSyncExternalStore(engine.subscribe, engine.snapshot, engine.snapshot);
+  const compatibility = useMemo(() => probeBrowserAudio(), []);
   const [showSettings, setShowSettings] = useState(false);
   const [status, setStatus] = useState('');
   const [confirmTakeover, setConfirmTakeover] = useState(false);
@@ -70,6 +72,7 @@ export function LocalBrowserPlayer({ workspaceId }: { workspaceId: string }) {
         </div>
         <strong role="status" aria-live="polite" data-testid="br64-01-phase">{now.pending ?? now.phase}</strong>
       </div>
+      {compatibility.reason && <p role="alert" className="cloud-feedback error">This browser cannot safely play here: {compatibility.reason} You can still control an authorised speaker remotely.</p>}
       <label className="browser-player-import">
         Select music from this device
         <input type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.opus"
@@ -89,7 +92,7 @@ export function LocalBrowserPlayer({ workspaceId }: { workspaceId: string }) {
       <div className="browser-player-controls" role="group" aria-label="Local playback controls">
         <button type="button" onClick={() => void engine.previous()} disabled={!now.tracks || now.index < 0}>Previous</button>
         <button className="primary" type="button" onClick={() => void play()} data-testid="br64-01-play"
-          disabled={!now.tracks || now.phase === 'starting'}>
+          disabled={!compatibility.eligible || !now.tracks || now.phase === 'starting'}>
           {now.phase === 'playing' ? 'Pause' : now.phase === 'paused' || now.phase === 'interrupted' ? 'Tap to resume' : 'Tap to start audio'}
         </button>
         <button type="button" onClick={() => void engine.next()} data-testid="br64-01-next"
