@@ -1,11 +1,41 @@
-import { describe, expect, it } from 'vitest';
-import { evaluateBrowserAudioFeatures, type BrowserAudioFeatures } from './capabilities';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { evaluateBrowserAudioFeatures, probeBrowserAudio, type BrowserAudioFeatures } from './capabilities';
+
+afterEach(() => { vi.unstubAllGlobals(); });
 
 const baseline: BrowserAudioFeatures = {
   webAudio: true, worklet: true, fileInput: true,
   webLocks: true, broadcastChannel: true, originStorage: true,
 };
 describe('capability adapters (simulated API surfaces, NOT physical devices)', () => {
+  it('does not invoke the native AudioContext.prototype.audioWorklet getter', () => {
+    // Chrome/WebKit expose audioWorklet as an AudioContext instance accessor.
+    // Looking it up on the prototype itself throws TypeError: Illegal invocation.
+    class NativeLikeAudioContext {}
+    let getterCalls = 0;
+    Object.defineProperty(NativeLikeAudioContext.prototype, 'audioWorklet', {
+      get() {
+        getterCalls += 1;
+        throw new TypeError('Illegal invocation');
+      },
+    });
+    vi.stubGlobal('AudioContext', NativeLikeAudioContext);
+    vi.stubGlobal('AudioWorkletNode', class NativeLikeWorkletNode {});
+    expect(() => probeBrowserAudio()).not.toThrow();
+    expect(getterCalls).toBe(0);
+  });
+
+  it('can probe WebKit-only AudioContext without reading its prototype accessor', () => {
+    class WebkitAudioContext {}
+    Object.defineProperty(WebkitAudioContext.prototype, 'audioWorklet', {
+      get() { throw new TypeError('Illegal invocation'); },
+    });
+    vi.stubGlobal('AudioContext', undefined);
+    vi.stubGlobal('webkitAudioContext', WebkitAudioContext);
+    vi.stubGlobal('AudioWorkletNode', class WorkletNode {});
+    expect(() => probeBrowserAudio()).not.toThrow();
+  });
+
   it('accepts a fully featured Chrome-like API surface', () => {
     expect(evaluateBrowserAudioFeatures(baseline)).toEqual({
       eligible: true, ownership: 'exclusive', reason: null,
