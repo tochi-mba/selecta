@@ -43,12 +43,27 @@ export async function renderMixLocally(req: RenderRequest) {
     const store = req.store ?? new LocalArtifactStore();
     const existing = await store.get(identity, req.codec);
     if (existing) {
-      await (req.codec === 'wav'
-        ? validateWav(existing.file, req.recipe.totalFrames, req.recipe.channels, req.recipe.sampleRate, existing.record.checksum)
-        : validateFlac(existing.file, req.recipe.totalFrames, req.recipe.channels, req.recipe.sampleRate, existing.record.checksum));
-      report(req, 'completed', req.recipe.totalFrames, existing.file.size);
-      return existing;
+      try {
+        await (req.codec === 'wav'
+          ? validateWav(existing.file, req.recipe.totalFrames, req.recipe.channels, req.recipe.sampleRate, existing.record.checksum)
+          : validateFlac(existing.file, req.recipe.totalFrames, req.recipe.channels, req.recipe.sampleRate, existing.record.checksum));
+      } catch {
+        // A stale/truncated browser cache must never be served as a completed
+        // export or permanently block a fresh render of the same recipe.
+        if (req.signal.aborted) throw new RenderFailure('cancelled', 'Render cancelled');
+        await store.discardInvalid(identity, req.codec);
+        report(req, 'preparing', 0, 0, 'Corrupt local render cache discarded; rebuilding');
+      }
+      if (await store.get(identity, req.codec)) {
+        report(req, 'completed', req.recipe.totalFrames, existing.file.size);
+        return existing;
+      }
+    } else {
+      // Interrupted copies can leave a .json marker without its audio, or vice
+      // versa. Only clean generated cache files for this exact render identity.
+      await store.cleanupIncomplete(identity, req.codec);
     }
+    if (req.signal.aborted) throw new RenderFailure('cancelled', 'Render cancelled');
     await storagePreflight(estimatedOutputBytes(req.recipe, req.codec));
     stage = await ArtifactStage.open();
     const encoder = req.codec === 'wav'
