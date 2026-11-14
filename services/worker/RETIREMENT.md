@@ -1,11 +1,18 @@
-# Historical hosted worker — do not remove yet
+# Hosted DSP worker retirement — source-only, no remote deletion
 
-services/worker/Dockerfile and models.lock.json define an existing cloud worker
-runtime with model weight and licence dependencies. The new local-first architecture
-targets retirement of remote CPU/GPU/export DSP after real-device parity, retrieval,
-job drainage, model distribution rights and rollback gates are independently proved.
+PR64 Agent 09 has disabled worker entrypoints and removed the Modal deployment
+step from the release script. This does **not** delete or scale down any live
+Modal app, remove its historical credentials, or clean its R2 inputs/outputs.
 
-This branch only inventories these files. No image, model, deployment, gateway or
-customer job is disabled. The future local installer is owned by Agent 01 and the
-local DSP scheduler by Agent 05; no worker model should be moved into a local
-distribution until the licence register and territory rights have been reviewed.
+The historical Dockerfile, model lock, licence data and standalone DSP
+implementation are retained for developer-data recovery, reproducibility and
+an audited teardown. No new Cloud job may fetch, decode, analyse, separate stems
+or render a user's recording. For browser Cloud the work executes on the
+authorised device, not in this worker.
+
+Before manual retirement: check GitHub/Render/Modal/R2 live inventory using
+read-only tools; confirm no pending developer jobs, legitimate source records,
+backups or retention obligations; record last signed-URL expiry; verify the
+Cloud egress capture and endpoint regression suite; obtain separate approval;
+then scale down/revoke only the isolated hosted-media resources. Do not run
+`tofu destroy` or remove buckets from the active Terraform state automatically.
