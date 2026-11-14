@@ -44,6 +44,7 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
   const [receipt, setReceipt] = useState<CommandReceipt | null>(null);
   const [silenceConfirmed, setSilenceConfirmed] = useState(false);
   const [releaseStopped, setReleaseStopped] = useState(false);
+  const [pendingStarted, setPendingStarted] = useState(false);
   const [initialSilence, setInitialSilence] = useState(false);
   const [transferId, setTransferId] = useState<string | null>(null);
   const [transferStage, setTransferStage] = useState('');
@@ -161,6 +162,7 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
       await acknowledge(cmd, 'accepted');
       setPending(cmd);
       setReleaseStopped(false);
+      setPendingStarted(false);
       setNotice(cmd.action + ' is pending confirmation at the actual browser speaker.');
       return;
     }
@@ -195,9 +197,13 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
         output_checked_at: current,
         generation: fence.current, policy_version: 0, recipe_revision: null,
       });
-      if (document.visibilityState !== 'visible' || pending) return;
-      const next = await client.next();
-      if (next) await processCommand(next);
+      // A command waiting for physical operator confirmation must not hide
+      // Cloud transfer expiry or an already-rejected remote operation.
+      // Poll *new* commands only when visible and no confirmation is active.
+      if (document.visibilityState === 'visible' && !pending) {
+        const next = await client.next();
+        if (next) await processCommand(next);
+      }
       if (transferId) {
         const currentTransfer = await client.transfer(zone, transferId);
         if (alive.current) {
@@ -254,8 +260,18 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
           fence.current, cmd.expected_generation);
         await acknowledge(cmd, 'applied', { outputSilent: true });
       } else if (cmd.action === 'activate_output' || cmd.action === 'play') {
+        // Fencing must be durable BEFORE any new speaker becomes audible.
+        // Persisting only at ACK time permits a reload to resurrect the old
+        // generation while a new, unacknowledged source is still sounding.
+        if (cmd.action === 'activate_output') {
+          fence.current = advanceBrowserFence(localStorage, browserFenceKey(workspaceId, zone),
+            fence.current, cmd.expected_generation);
+        }
         // User click is an explicit AudioContext activation gesture.
-        if (engine.snapshot().phase !== 'playing') await engine.play();
+        if (engine.snapshot().phase !== 'playing') {
+          await engine.play();
+          if (engine.snapshot().phase === 'playing') setPendingStarted(true);
+        }
         if (engine.snapshot().phase !== 'playing')
           throw new Error(engine.snapshot().error ?? 'Browser refused playback activation.');
         setNotice('Audio started; confirm physically hearing the intended speaker, then complete the pending command.');
@@ -263,6 +279,7 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
       }
       setPending(null);
       setReleaseStopped(false);
+      setPendingStarted(false);
       setSilenceConfirmed(false);
       setNotice(cmd.action + ' acknowledged after local operator confirmation.');
     } catch (error) {
@@ -285,18 +302,30 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
         fence.current, cmd.expected_generation);
       await acknowledge(cmd, 'applied', { outputConfirmed: true, executed: true });
       setPending(null);
+      setPendingStarted(false);
       setNotice('Operator-confirmed sound; command acknowledged by Cloud.');
     } catch (error) {
-      setProblem((error as Error).message);
+      // Cloud may have timed out, rejected, or been partitioned. Never leave
+      // a newly activated target audibly running without acknowledged ownership.
+      if (pendingStarted || cmd.action === 'activate_output') await engine.stop();
+      setPendingStarted(false);
+      setProblem('Speaker acknowledgement could not be verified; local output stopped. ' + (error as Error).message);
     } finally { setBusy(false); }
   };
   const rejectPending = async () => {
     const cmd = pending;
     if (!cmd) return;
-    try { await acknowledge(cmd, 'rejected'); }
-    catch (error) { setProblem((error as Error).message); }
-    setPending(null);
-    setReleaseStopped(false);
+    try {
+      // Rejecting after activation must silence the unacknowledged speaker.
+      if (pendingStarted || cmd.action === 'activate_output') await engine.stop();
+      setPendingStarted(false);
+      await acknowledge(cmd, 'rejected');
+      setPending(null);
+      setReleaseStopped(false);
+      setSilenceConfirmed(false);
+    } catch (error) {
+      setProblem('Could not complete rejection; verify this speaker is silent. ' + (error as Error).message);
+    }
   };
 
   const takeOver = async () => {
