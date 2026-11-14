@@ -68,6 +68,7 @@ function defaultContext(): AudioContextLike | null {
  */
 export type BrowserKioskAudio = KioskAudio & {
   importLocal(records: readonly LocalRecording[]): void;
+  bindLocal(record: LocalRecording): void;
   prepare(trackId: string): Promise<void>;
   start(trackId: string, generation: number): Promise<void>;
   transition(trackId: string, fadeSeconds?: number): Promise<void>;
@@ -87,6 +88,7 @@ export function browserKioskAudio(player: VenueAudioPort = new BrowserVenueAudio
     playing: () => player.playing(),
     savedHoursAhead: () => player.savedHoursAhead(),
     importLocal: (records) => player.importLocal(records),
+    bindLocal: (record) => player.bindLocal(record),
     prepare: (id) => player.prepare(id),
     start: (id, generation) => player.start(id, generation),
     transition: (id, seconds) => player.transition(id, seconds),
