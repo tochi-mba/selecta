@@ -26,7 +26,8 @@ class Source extends Node {
   onended: (() => void) | null = null;
   starts: Array<[number, number]> = [];
   start(time: number, offset: number) { this.starts.push([time, offset]); }
-  stop() { /* avoids firing synchronously in test; browsers fire onended on render */ }
+  stops = 0;
+  stop() { this.stops++; /* onended is asynchronous on real browsers */ }
 }
 class Context {
   static latest: Context;
@@ -115,6 +116,20 @@ describe('BrowserAudioRuntime', () => {
     });
     await engine.play();
     expect(engine.snapshot()).toMatchObject({ phase: 'playing', title: 'replacement' });
+    await engine.dispose();
+  });
+
+  it('stops the previous fading source before a rapid third-track skip', async () => {
+    const engine = new BrowserAudioRuntime('rapid-skips', { decoder });
+    await engine.setQueue([music('first'), music('second'), music('third')]);
+    await engine.play();
+    await engine.next();
+    const outgoing = Context.latest.sources[0];
+    await engine.next();
+    expect(engine.snapshot()).toMatchObject({ phase: 'playing', index: 2, title: 'third' });
+    // An earlier crossfading deck cannot keep sounding beneath the third track.
+    expect(outgoing.stops).toBeGreaterThanOrEqual(2);
+    expect(Context.latest.sources).toHaveLength(3);
     await engine.dispose();
   });
 
