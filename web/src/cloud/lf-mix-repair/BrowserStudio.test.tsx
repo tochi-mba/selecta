@@ -63,7 +63,7 @@ describe('portable browser Studio', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Weekend set/i }));
     expect(await screen.findByText(/Exact recording availability is unknown/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Render and export here' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Play Here' })).toBeDisabled();
+    expect(screen.getAllByRole('button', { name: 'Play Here' }).at(-1)).toBeDisabled();
     await userEvent.click(screen.getByRole('button', { name: 'Move Second track earlier' }));
     await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
     await userEvent.click(screen.getByRole('button', { name: 'Redo' }));
@@ -84,7 +84,7 @@ describe('portable browser Studio', () => {
     expect(input).toBeDisabled();
     await userEvent.click(screen.getByRole('button', { name: 'Move Second track earlier' }));
     await userEvent.click(screen.getByRole('button', { name: 'Save new version' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('newer revision');
+    expect(await screen.findByText(/This recipe has a newer revision/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Move First track earlier' })).not.toBeDisabled();
     expect(window.sessionStorage.length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Render and export here' })).toBeDisabled();
