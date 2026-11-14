@@ -147,7 +147,7 @@ export function liveBrowserStudioPorts(workspaceId: string): BrowserStudioPorts 
       }
     },
     async controlAnotherDevice() {
-      throw new Error('A remotely registered, authorised zone is required. Open Devices to pair the speaker; this browser never streams its recordings to another device.');
+      window.dispatchEvent(new Event('selecta:open-remote-control'));
     },
   };
 
@@ -161,7 +161,7 @@ export function liveBrowserStudioPorts(workspaceId: string): BrowserStudioPorts 
       return { supported: true };
     },
     async render(recipe, { signal }) {
-      const supported = this.supported(recipe);
+      const supported = renderer.supported(recipe);
       if (!supported.supported) throw new Error(supported.reason ?? 'Local render unavailable.');
       if (engine.snapshot().phase === 'playing' || engine.snapshot().phase === 'starting') {
         throw new Error('Stop live playback before rendering; real-time sound has priority.');
