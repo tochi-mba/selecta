@@ -100,3 +100,16 @@ export const localEngineSetupGuide = 'https://github.com/tochi-mba/selecta/blob/
 
 /** Desktop file-picker example, kept in the mode-aware copy layer. */
 export const localFolderExample = 'C:\\Users\\you\\Music';
+
+/** ADR-0485 copy for the opt-in browser-first Cloud workspace.
+ * Do not replace legacy standalone text or imply that Cloud processes audio.
+ */
+export const browserCloudCopy = {
+  tagline: 'Your music workspace, on any device.',
+  noInstall: 'Selecta Cloud runs in this browser. No Python service, FFmpeg installer or second computer is required for ordinary use.',
+  privacy: 'Mix recipes and permitted metadata can sync. Recordings, stems, previews and renders remain on the browser or device that owns them.',
+  source: 'Choose music on this device. Access to files on another device does not transfer automatically.',
+  status: 'An active session or a running audio graph does not prove the speaker is audible. Check the actual output.',
+  recovery: 'Lost file permission, source access or a browser session? Reconnect your local recordings. Your saved mix revision is retained.',
+  output: 'Mobile browsers can render where their codecs, storage and processing checks pass. Unsupported features show why instead of sending audio to Cloud.',
+} as const;
