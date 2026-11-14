@@ -103,7 +103,10 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
       setRegistered(true);
       setSilenceConfirmed(false);
       setNotice('Browser registered for this zone. Keep it foregrounded and confirm real sound on-site; no music was uploaded.');
-      await refresh();
+      // The status list may fail independently after registration succeeded.
+      // It must not turn a live, in-memory session into a misleading failure.
+      try { await refresh(); }
+      catch { setProblem('Browser registration succeeded, but the device list could not be refreshed.'); }
     } catch (error) {
       setProblem('Registration refused: ' + (error as Error).message);
     } finally { setBusy(false); }
@@ -391,14 +394,23 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
     <div className="browser-player-controls">
       <button type="button" disabled={registered || busy} onClick={() => void register()}>Register this browser as a player</button>
       <button type="button" disabled={busy} onClick={() => void refresh().catch((error: Error) => setProblem(error.message))}>Refresh speakers</button>
-      {registered && <button type="button" onClick={() => {
+      {registered && <button type="button" disabled={busy} onClick={() => {
         void (async () => {
+          setBusy(true); setProblem('');
           try {
             // Revoking speaker authority must also silence the local executor.
             await engine.stop();
             await client.revoke();
-            setRegistered(false); setPending(null);
-          } catch (error) { setProblem((error as Error).message); }
+            setNotice('This browser session was revoked and the local output stopped.');
+          } catch (error) {
+            // Client.revoke discards its in-memory secret even when offline.
+            // Never leave the UI registered with no usable credentials.
+            setProblem('Remote revocation could not be confirmed. Local output stopped; the server may display this device until its session expires. ' +
+              (error as Error).message);
+          } finally {
+            setRegistered(false); setPending(null); setPendingStarted(false);
+            setSilenceConfirmed(false); setReleaseStopped(false); setBusy(false);
+          }
         })();
       }}>Revoke this browser session</button>}
     </div>
