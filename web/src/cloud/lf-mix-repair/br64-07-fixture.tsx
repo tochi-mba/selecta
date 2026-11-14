@@ -37,7 +37,7 @@ const api: Api = async <T,>(path: string, init?: RequestInit): Promise<T> => {
       revision_number: saved.revision_number, occurrences: saved.occurrences.length }],
   } as T;
   if (path === '/cloud-mixes/synthetic_mix?schema_version=2') return {
-    recipe: saved, history, legacy_read_only_view: false,
+    recipe: saved, head_revision: saved.revision_id, history, legacy_read_only_view: false,
   } as T;
   if (path === '/cloud-mixes/synthetic_mix/revisions' && body) {
     if (shouldConflict || body.base_revision !== saved.revision_id) {
