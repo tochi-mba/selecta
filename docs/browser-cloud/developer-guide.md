@@ -57,3 +57,31 @@ python tools/browser_test/policy_gate.py --full
 A complete passing production build audit, network trace and integration-level
 tests are mandatory after Agent 09 removes hosted paths. A patch-scoped pass does
 not confer production privacy compliance. See release-gates.md.
+
+## Browser-first Cloud UI parity in `dev.cmd cloud`
+
+The development launcher selects the registered `local_first.personal`
+feature for child processes (production remains opt-in), including the seeded
+Premium test account. On Windows:
+
+```bat
+git switch docs/local-first-cloud-rearchitecture-20261113
+git pull --ff-only
+dev.cmd cloud --seed
+```
+
+The authenticated Cloud navigation shares the standalone UI's main destination
+metadata: **Listen, Make a Mix, My Mixes, Library, Workspace**. On small screens
+these become a bottom navigation with **More** for Workspace and Cloud
+services. Cloud extras include Studio, Connect Music, Devices, Rooms, billing,
+privacy, account settings and staff controls where authorised.
+
+To test the historical Cloud UX without destroying any data, set
+`SELECTA_FLAGS=-local_first.personal` before starting the launcher. It takes
+precedence over the development default.
+
+**Source expectations:** `dev.cmd cloud --seed` preserves historic synthetic
+hosted assets for migration tests, but these are not automatically accessible
+to the browser's device-local player. Use Connect Music to authorise actual
+device files. The loopback development folder watch and the standalone native
+app have separate SQLite/permission stores; see `parity.md`.
