@@ -178,10 +178,6 @@ function canonical(value: unknown): string {
   return encoded;
 }
 
-function bytesToHex(buffer: ArrayBuffer): string {
-  return Array.from(new Uint8Array(buffer), (b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 export async function verifyDeliveredCommand(
   packet: DeliveredCommand,
   expected: Pick<RegisteredSession, "session_id" | "device_id" | "workspace_id" | "command_key">,
@@ -189,7 +185,7 @@ export async function verifyDeliveredCommand(
 ): Promise<BrowserEnvelope | null> {
   if (packet.schema_version !== 1) throw new BrowserControlError(422, "unsupported_protocol");
   if (packet.command === null) return null;
-  const cmd = packet.command as Record<string, unknown>;
+  const cmd = packet.command as unknown as Record<string, unknown>;
   if (Object.keys(cmd).sort().join("|") !== [...FIELDS].sort().join("|")) {
     throw new BrowserControlError(422, "invalid_envelope_fields");
   }
@@ -213,11 +209,13 @@ export async function verifyDeliveredCommand(
     "raw", new TextEncoder().encode(expected.command_key),
     { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
   );
-  const mac = bytesToHex(await crypto.subtle.sign(
-    "HMAC", hmacKey, new TextEncoder().encode(canonical(envelope)),
-  ));
-  // WebCrypto HMAC verification is preferable to string comparisons for the raw MAC.
-  if (mac !== packet.signature) throw new BrowserControlError(403, "bad_signature");
+  const signatureBytes = Uint8Array.from(
+    packet.signature.match(/.{2}/g) ?? [], (hex) => Number.parseInt(hex, 16),
+  );
+  const valid = await crypto.subtle.verify(
+    "HMAC", hmacKey, signatureBytes, new TextEncoder().encode(canonical(envelope)),
+  );
+  if (!valid) throw new BrowserControlError(403, "bad_signature");
   return envelope;
 }
 
@@ -304,6 +302,26 @@ export class BrowserSessionClient {
       this.credentials = null;
       this.highestSequence = 0;
     }
+  }
+
+  async recovery(): Promise<{
+    schema_version: 1;
+    session_id: string;
+    online: boolean;
+    generation: number;
+    last_issued_sequence: number;
+    outstanding: Array<{ operation_id: string; state: CommandState }>;
+    replay_is_unsafe: boolean;
+  }> {
+    if (!this.credentials) throw new BrowserControlError(401, "session_required");
+    return this.request(
+      "/sessions/" + this.credentials.session_id + "/recovery", "GET", undefined, true,
+    );
+  }
+
+  async revokeDevice(deviceId: string): Promise<void> {
+    await this.request("/devices/" + encodeURIComponent(deviceId) + "/revoke", "POST", {});
+    if (this.credentials?.device_id === deviceId) this.credentials = null;
   }
 
   async devices(zone: string): Promise<DeviceSummary[]> {
