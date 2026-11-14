@@ -225,7 +225,16 @@ export class BrowserVenueAudio implements VenueAudioPort {
       throw new Error('Stale or unsafe speaker generation');
     this.contextReady();
     await this.prepare(trackId);
-    if (this.deck) await this.stop();
+    if (this.deck) {
+      // Never silence a running venue before the replacement is ready. A
+      // transition within this browser retains the existing exclusive lease.
+      if (this.phase !== 'playing') {
+        throw new Error('Resume or stop the paused venue output before starting another recording');
+      }
+      await this.transition(trackId, 0.05);
+      this.generation = generation;
+      return;
+    }
     const ownership = await this.lease.acquire();
     if (ownership === 'unsupported') {
       this.error = 'Another Selecta browser player owns this output; stop it before starting the venue.';
@@ -257,8 +266,11 @@ export class BrowserVenueAudio implements VenueAudioPort {
     old.gain.gain.cancelScheduledValues(now);
     old.gain.gain.setValueAtTime(1, now);
     old.gain.gain.linearRampToValueAtTime(0, now + fade);
-    old.node.stop(now + Math.max(0.02, fade));
+    // Publish the new deck *before* requesting the old source stop: an
+    // immediately dispatched onended callback must never release the new
+    // owner's lease or mark the fresh track stopped.
     this.deck = next;
+    old.node.stop(now + Math.max(0.02, fade));
     this.buffers.delete(old.id); // retain only bounded locally decoded horizon
     this.checkedAt = null; // changing song doesn't certify the physical output
     this.phase = 'playing';
