@@ -56,10 +56,10 @@ EXPORT = {"cpu": 4.0, "memory": 8192, "max_containers": 2 if ENVIRONMENT == "sta
 
 
 def _serve(pool: str) -> None:
-    os.environ["SELECTA_WORKER_POOL"] = pool
-    from selecta.workers.cloud import main
-
-    main()
+    # Historical functions are retained only for reviewable teardown. Even if
+    # a stale scheduler or manual invocation calls them, hosted DSP must not
+    # retrieve or process user recordings.
+    raise RuntimeError("hosted_audio_workers_retired")
 
 
 @app.function(region=REGION, secrets=secrets, timeout=3600, min_containers=0, **CPU_LIGHT)

@@ -59,6 +59,12 @@ PERIODS = {
 def limit_for(plan: Plan, kind: str) -> float | None:
     """A plan's limit for one allowance. `None` is fair use (counted, never refused); 0 means
     the plan doesn't include it."""
+    # Device-local DSP is never charged to a Cloud allowance. Legacy v1
+    # counters remain available solely for historical hosted-job accounting.
+    if plan.version >= 2 and kind in {
+        "analysis_song", "speculative_cpu_seconds", "stem_preview_window", "export"
+    }:
+        return None
     if kind == "analysis_song":
         return plan.analysis_songs_per_day
     if kind == "speculative_cpu_seconds":

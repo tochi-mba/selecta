@@ -58,9 +58,9 @@ def _decode_cursor(cursor: str | None) -> tuple[float, str] | None:
 def _asset_json(row: Any) -> dict[str, Any]:
     return {
         "id": row.id,
-        "name": row.display_name or "Untitled",
+        "name": (row.display_name or "Untitled").replace(chr(92), "/").rsplit("/", 1)[-1],
         "size": int(row.size),
-        "sha256": row.sha256,
+        
         "format": row.format,
         "duration_seconds": row.duration_s,
         "sample_rate": row.sample_rate,

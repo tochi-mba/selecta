@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One release of Selecta Cloud to one environment (ADR-0409): expand migrations, then services,
-# then workers, then the edge. Old workers keep working through it because migrations only
+# then the edge. Historical hosted workers are NOT deployed; migrations only
 # expand; contracting migrations ship in a later release.
 #
 # Needs (from oidc_credentials.sh): DATABASE_URL, RENDER_API_KEY, RENDER_SERVICE_IDS,
@@ -32,8 +32,10 @@ for service in ${RENDER_SERVICE_IDS}; do
     --data '{"clearCache": "do_not_clear"}' >/dev/null
 done
 
-echo "3. Modal workers from the same commit"
-uv tool run --from modal modal deploy infra/modal/selecta_workers.py --env "${SELECTA_ENVIRONMENT}"
+echo "3. Hosted audio workers retired: no Modal deployment or scaling"
+# Deliberately retain any existing Modal applications and credentials untouched.
+# Do not invoke 'modal deploy': removal is a separate audited, manual action.
+# The Cloud API is sealed even if older workers still exist.
 
 echo "4. Cloudflare (OpenTofu)"
 export TF_VAR_cloudflare_api_token="${CLOUDFLARE_API_TOKEN}"

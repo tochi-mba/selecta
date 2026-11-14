@@ -35,6 +35,12 @@ def current_phase(env: Mapping[str, str] | None = None, *, now: datetime | None 
     immediately. The browser cannot extend the exception or downgrade the stage.
     """
     env = os.environ if env is None else env
+    # Browser Cloud and hosted workers are permanently sealed. Rollout flags,
+    # local development mode and old approval tokens cannot reopen media egress.
+    if env.get("SELECTA_MODE", "").strip().lower() in {
+        "cloud", "cloud-worker", "gateway"
+    }:
+        return Phase.SEALED
     environment = env.get("SELECTA_ENV", "").strip().lower()
     deployed = environment not in {"", "local", "development", "dev", "test", "testing"}
     requested = env.get("SELECTA_LF_AUDIO_ROLLOUT_PHASE", "").strip().lower()
@@ -96,4 +102,4 @@ def require_proxy_job(*, phase: Phase | None = None) -> None:
 def legacy_retrieval_enabled(env: Mapping[str, str] | None = None) -> bool:
     """Explicit separate migration gate; never delete or revoke old objects here."""
     env = os.environ if env is None else env
-    return env.get("SELECTA_LF_LEGACY_RETRIEVAL", "enabled") == "enabled"
+    return env.get("SELECTA_LF_LEGACY_RETRIEVAL", "disabled") == "enabled"

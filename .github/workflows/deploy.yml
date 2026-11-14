@@ -20,6 +20,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  # Force-seal legacy media even if older runtime configuration requests drain.
+  SELECTA_LF_AUDIO_ROLLOUT_PHASE: sealed
   IMAGE: ghcr.io/${{ github.repository_owner }}/selecta-service
   BACKUP_IMAGE: ghcr.io/${{ github.repository_owner }}/selecta-backup
 

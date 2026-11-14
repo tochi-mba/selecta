@@ -1,9 +1,8 @@
 import { KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { apiOrigin, CloudError, messageOf } from './api';
 
-// Download my data (docs/saas/11-ui-ux.md §11.1, ADR-0412): one ZIP with the original files,
-// settings.json and mixes.json. It is a download, so it keeps working while the account is over
-// quota or suspended.
+// Account ZIP contains Cloud metadata (settings, recipe revisions and billing).
+// Local audio never travels to Cloud and is not part of an account export.
 
 export const EXPORT_FILE = 'selectadj-account-export.zip';
 
@@ -42,7 +41,7 @@ export function AccountData({ token, workspaceId, features }: { token: () => Pro
     setBusy(true); setProblem(''); setNotice('Preparing your export…');
     try {
       await downloadExport(await token(), workspaceId);
-      setNotice('Your export has downloaded. It holds your original files, settings.json and mixes.json.');
+      setNotice('Your Cloud metadata export has downloaded. Local recordings remain on your device.');
     } catch (error) { setProblem((error as Error).message); setNotice(''); }
     finally { setBusy(false); }
   };
@@ -50,7 +49,7 @@ export function AccountData({ token, workspaceId, features }: { token: () => Pro
     <section className="cloud-card" aria-labelledby="cloud-data-title">
       <p className="cloud-eyebrow">YOUR DATA</p>
       <h2 id="cloud-data-title">Download a copy</h2>
-      <p>One ZIP file with your original audio, your settings ({settingsWords(features)}) as settings.json, and what Cloud keeps about your mixes as mixes.json. Mix revisions themselves aren’t stored in Cloud yet.</p>
+      <p>One ZIP of your Cloud account settings ({settingsWords(features)}), synced mix metadata and billing records. Original music, stems and rendered audio remain on your device and are never included.</p>
       <button className="primary" disabled={busy} onClick={() => void start()} aria-busy={busy || undefined}>{busy ? 'Preparing export…' : 'Download my data'}</button>
       {notice && <p role="status">{notice}</p>}
       {problem && <p className="cloud-inline-error" role="alert">{problem}</p>}
@@ -92,12 +91,12 @@ export function AccountDanger({ busy, onSignOutEverywhere, onDelete }: {
       </div>
       {confirming === 'everywhere' && (
         <div className="cloud-confirm" role="group" aria-label="Confirm signing out everywhere" onKeyDown={escape}>
-          <p>Every device will need to sign in again. Music playing on another device stops.</p>
+          <p>Every device will need to sign in again. Device-local playback depends on that device and its offline permissions.</p>
           <div className="cloud-actions"><button ref={keep} onClick={back}>Stay signed in</button><button className="cloud-danger-action" disabled={busy} onClick={() => { back(); onSignOutEverywhere(); }}>Sign out everywhere</button></div>
         </div>
       )}
       <div className="cloud-danger-row">
-        <div><h3>Delete account</h3><p>Hides your account and signs you out at once. Final erasure happens after a 30-day recovery window.</p></div>
+        <div><h3>Delete account</h3><p>Hides your account and signs you out at once. Cloud records are removed after the recovery window; recordings on your devices are never deleted by Cloud.</p></div>
         <button ref={remove} className="cloud-quiet cloud-danger-text" disabled={busy} aria-expanded={confirming === 'delete'} onClick={() => setConfirming('delete')}>Delete account…</button>
       </div>
       {confirming === 'delete' && (

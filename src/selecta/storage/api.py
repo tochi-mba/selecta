@@ -104,10 +104,10 @@ class _DuplicateAdapter(DuplicatePort):
 def _session_json(session: UploadSession) -> dict[str, Any]:
     return {
         "id": session.id,
-        "name": session.display_name,
+        "name": session.display_name.replace("\\\\", "/").rsplit("/", 1)[-1],
         "size": session.declared_size,
         "content_type": session.content_type,
-        "sha256": session.sha256 if current_phase() is Phase.LEGACY else None,
+        "sha256": None,
         "part_size": session.part_size,
         "part_count": session.part_count,
         "status": session.status.value,
@@ -232,7 +232,8 @@ def install_routes(
 
     def guard_upload(action: str) -> None:
         try:
-            require_upload_action(action)
+            # Never resume hosted audio from stale clients or rollout overrides.
+            raise AdmissionDenied("cloud_audio_upload_retired")
         except AdmissionDenied as error:
             raise HTTPException(status_code=410, detail={"code": error.code}) from None
 
@@ -314,6 +315,7 @@ def install_routes(
     ):
         require_id(session_id, UPLOAD_NOT_FOUND)
         workspace_id = workspace(request, claims)
+        guard_upload("lookup")
         try:
             with service() as (uploads, _client):
                 with transaction(engine, workspace_id) as conn:

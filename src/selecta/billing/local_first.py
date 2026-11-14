@@ -105,7 +105,7 @@ class EffectiveContract:
                 "plan": self.plan_id,
                 "plan_version": self.plan_version,
                 "migration_required": True,
-                "storage": "legacy_hosted_subscription",
+                "storage": "historical_plan_metadata_only",
                 "local_audio": "device_owned",
             }
         benefits = self.benefits

@@ -119,12 +119,16 @@ def install_routes(
         if origin is None:
             raise HTTPException(status_code=400, detail={"code": "untrusted_origin"})
         principal = billing_principal(claims, request)
+        # Existing v1 Stripe mappings remain for event replay and the portal,
+        # but no new customer may buy legacy hosted music allocations.
+        if os.environ.get("SELECTA_LOCAL_FIRST_CHECKOUT_APPROVED") != "yes":
+            raise HTTPException(status_code=503, detail={"code": "new_checkout_not_available"})
         prices = _checkout_prices()
         price_id = next(
             (
                 key
                 for key, value in prices.items()
-                if value.plan_id == body.plan and value.interval == body.interval
+                if value.plan_id == body.plan and value.interval == body.interval and value.plan_version == 2
             ),
             None,
         )

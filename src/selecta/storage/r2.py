@@ -300,7 +300,8 @@ class R2Client:
         return PutResult(size=size, sha256=digest, etag=response.headers.get("etag", "").strip('"'))
 
     def get_object(self, bucket: str, key: str, dest: Path) -> Downloaded:
-        """Stream an object to `dest`, hashing as it goes. The file appears only when complete."""
+        """Stream only in authorised standalone/migration contexts, not Cloud workers."""
+        require_media_write("read")
         dest = Path(dest)
         partial = dest.with_name(dest.name + ".part")
         operation = f"GetObject {bucket}/{key}"
@@ -605,7 +606,8 @@ class R2Client:
             token = following
 
     def presign_get(self, bucket: str, key: str, ttl: int, download_name: str | None = None) -> str:
-        """A presigned `GET`. With `download_name`, the browser saves the file under that name."""
+        """No Cloud-hosted media URLs, even with old retrieval flags or credentials."""
+        require_media_write("presign_get")
         if not legacy_retrieval_enabled():
             from selecta.lf_egress import AdmissionDenied
             raise AdmissionDenied("legacy_audio_retrieval_disabled")
