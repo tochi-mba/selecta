@@ -6,7 +6,7 @@ import { catalogueSource } from './cloudCatalogue';
 import { claimFocus, clearNotice, releaseFocus, shareLibraryPlayer, useTransport } from './cloudTransport';
 import { recoveringSpeaker } from './recoveringSpeaker';
 import { useCloudPlayer } from './useCloudPlayer';
-import { LocalFirstPlayer } from './lf-device-control/LocalFirstPlayer';
+import { BrowserSessionPanel } from './lf-device-control/BrowserSessionPanel';
 import { LocalBrowserPlayer } from '../engine/LocalBrowserPlayer';
 import { browserEngine } from '../engine/registry';
 import { LOCAL_FIRST_PLAYER_FLAG } from './lf-device-control/contracts';
@@ -24,7 +24,10 @@ export function singleAudioOwner(account: Pick<Account, 'features'> | null) {
   return featureOn(account, SINGLE_AUDIO_OWNER);
 }
 
-export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Api; account: Account; page: Page; reload?: number }) {
+export function CloudTransportDock({ api, account, page, reload = 0, accessToken }: {
+  api: Api; account: Account; page: Page; reload?: number;
+  accessToken?: () => Promise<string>;
+}) {
   const workspaceId = account.workspace.id;
   const localFirst = personalEnabled(account) || account.features[LOCAL_FIRST_PLAYER_FLAG] === true;
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -34,6 +37,11 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
   const [deviceProblem, setDeviceProblem] = useState('');
   const [armed, setArmed] = useState(page === 'listen');
   const [showRemoteControl, setShowRemoteControl] = useState(false);
+  useEffect(() => {
+    const open = () => setShowRemoteControl(true);
+    window.addEventListener('selecta:open-remote-control', open);
+    return () => window.removeEventListener('selecta:open-remote-control', open);
+  }, []);
   const player = useCloudPlayer({ api, workspaceId, audio: audioRef, setError, skipOnFailure: true, localFirstMode: localFirst });
   const transport = useTransport();
 
@@ -105,7 +113,11 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
         }}>
         {showRemoteControl ? 'Hide remote device controls' : 'Control an existing speaker'}
       </button>
-      {showRemoteControl && <LocalFirstPlayer api={api} workspaceId={workspaceId} actorId={account.user.id} />}
+      {showRemoteControl && accessToken && account.features['local_first.browser_control'] === true &&
+        <BrowserSessionPanel workspaceId={workspaceId} accessToken={accessToken} />}
+      {showRemoteControl && account.features['local_first.browser_control'] !== true &&
+        <p role="status">Authenticated remote browser control is not enabled for this workspace.
+          Local playback still works here. No previous speaker is assumed silent.</p>}
     </div>
   );
 
