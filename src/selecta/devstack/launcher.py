@@ -232,6 +232,11 @@ def run_cloud(options, ops) -> int:
             **settings.environment(),
             "SELECTA_MODE": "cloud",
             "SELECTA_DEV_STARTUP": "1",
+            # Prefer browser-first personal Cloud in local development without
+            # changing production rollouts. Explicit -local_first.personal wins.
+            "SELECTA_FLAGS": (
+                "+local_first.personal " + os.environ.get("SELECTA_FLAGS", "")
+            ).strip(),
         }
         problems = guard.problems(env)
         if problems:
