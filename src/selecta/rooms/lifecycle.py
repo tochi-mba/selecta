@@ -331,7 +331,15 @@ def expire_rooms(ctx: RoomContext, *, now: float | None = None) -> list[EndedRoo
             if not room.live:
                 continue
             if ctx.local_first is None:
-                online = ctx.speakers.speaker_online(workspace_id)
+                # A sweep already holds the room's write transaction. Read the
+                # speaker lease through that connection when the Cloud port
+                # supports it, avoiding a nested SQLite BEGIN IMMEDIATE.
+                check_in_tx = getattr(ctx.speakers, "speaker_online_in_tx", None)
+                online = (
+                    check_in_tx(conn, workspace_id, now=now)
+                    if check_in_tx is not None
+                    else ctx.speakers.speaker_online(workspace_id)
+                )
             else:
                 from selecta.rooms.local_first import ready_speaker
 
