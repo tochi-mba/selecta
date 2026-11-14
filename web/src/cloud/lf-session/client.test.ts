@@ -76,6 +76,24 @@ describe("browser Cloud signed command contract", () => {
     }, SESSION, NOW)).rejects.toThrow("invalid_envelope_fields");
   });
 
+  it("refuses signed commands for the wrong zone, excessive expiry or unsafe arguments", async () => {
+    // Validation must happen before any browser audio action is dispatched.
+    const rejected = async (command: BrowserEnvelope, reason: string) => {
+      await expect(verifyDeliveredCommand({
+        schema_version: 1, command, signature: SIGNATURE,
+      }, SESSION, NOW)).rejects.toThrow(reason);
+    };
+    await rejected({ ...COMMAND, zone_id: "another-zone" }, "invalid_or_expired_command");
+    await rejected({ ...COMMAND, expires_at: NOW + 86_400 }, "invalid_or_expired_command");
+    await rejected({ ...COMMAND, actor_role: "viewer2" as BrowserEnvelope["actor_role"] },
+      "invalid_or_expired_command");
+    await rejected({ ...COMMAND, idempotency_key: "../unsafe" }, "invalid_or_expired_command");
+    await rejected({ ...COMMAND, arguments: { local_path: "/private/music.flac" } },
+      "invalid_or_expired_command");
+    await rejected({ ...COMMAND, action: "set_volume", arguments: { volume: 101 } },
+      "invalid_or_expired_command");
+  });
+
   it("does not auto-ack a received command or include any local audio", async () => {
     const requests: Array<{ path: string; method?: string; body?: string }> = [];
     const fetcher = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
