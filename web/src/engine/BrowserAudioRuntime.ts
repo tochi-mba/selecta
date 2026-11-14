@@ -161,7 +161,22 @@ export class BrowserAudioRuntime implements AudioEngine {
         numberOfInputs: 2, numberOfOutputs: 1, outputChannelCount: [2],
       });
       mixer.onprocessorerror = () => {
-        void this.interrupt('The audio processor stopped unexpectedly. Tap Play to retry after checking your speaker.');
+        if (this.disposed || this.context !== context) return;
+        // AudioWorkletProcessor errors can permanently silence their node.
+        // Reusing the graph after pressing Play would report success while
+        // actually producing no sound. Discard it and require a new gesture.
+        const position = this.positionNow();
+        this.sequence++;
+        this.haltSources();
+        this.lease.release();
+        this.clearSession();
+        this.graphReady = null;
+        this.mixer = null; this.master = null; this.decks = null;
+        this.context = null;
+        this.patch({ phase: 'interrupted', position, ownership: 'none', context: 'closed',
+          soundCheck: 'unverified', confirmationTime: null, pending: null,
+          error: 'The audio processor failed. Tap Play to rebuild the local audio graph and check your speaker.' });
+        void context.close().catch(() => {});
       };
       const limiter = context.createDynamicsCompressor();
       limiter.threshold.value = -6; limiter.knee.value = 4;
