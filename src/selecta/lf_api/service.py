@@ -151,7 +151,9 @@ class BrowserControlService:
         return row
 
     def _signing_secret(self, session: Mapping[str, Any]) -> str:
-        input_bytes = f"{session['workspace']}:{session['session']}:{session['token_digest']}".encode()
+        input_bytes = (
+            f"{session['workspace']}:{session['session']}:{session['token_digest']}"
+        ).encode()
         return hmac.new(self._key, input_bytes, hashlib.sha256).hexdigest()
 
     def _online(self, s: Mapping[str, Any], now: float) -> bool:
@@ -495,7 +497,8 @@ class BrowserControlService:
             if old:
                 if (
                     old["transfer"] != operation_id or old["target_session"] != target_session
-                    or old["actor"] != actor.actor_id or old["generation"] != expected_generation + 1
+                    or old["actor"] != actor.actor_id
+                    or old["generation"] != expected_generation + 1
                 ):
                     raise ControlError("idempotency_conflict")
                 return {"schema_version": 1, "transfer_id": operation_id,
@@ -572,7 +575,9 @@ class BrowserControlService:
     def _expire(self, db, *, session: str, now: float) -> None:
         rows = db.execute(sa.select(schema.commands).where(
             schema.commands.c.session == session,
-            schema.commands.c.state.in_(("created", "authorised", "queued", "delivered", "accepted")),
+            schema.commands.c.state.in_(
+                ("created", "authorised", "queued", "delivered", "accepted")
+            ),
             schema.commands.c.expires <= now,
         )).mappings().all()
         for row in rows:
@@ -590,7 +595,9 @@ class BrowserControlService:
                 schema.commands.c.workspace == actor.workspace_id,
                 schema.commands.c.session == session,
                 schema.commands.c.state == "queued",
-            ).order_by(schema.commands.c.updated, schema.commands.c.operation).limit(1)).mappings().first()
+            ).order_by(
+                schema.commands.c.updated, schema.commands.c.operation
+            ).limit(1)).mappings().first()
             if command is None:
                 return {"schema_version": 1, "command": None}
             env = BrowserEnvelope.parse(json.loads(command["envelope"]), now=now)
