@@ -61,6 +61,15 @@ describe('BR64-07 Cloud flag combinations and route continuity', () => {
     await waitFor(() => expect(window.location.pathname).toBe('/listen'));
     expect(screen.getByRole('region', { name: 'Browser-local music player' })).toBeInTheDocument();
   });
+  it('does not confuse the obsolete native-engine experiment flag with browser-first mode', async () => {
+    account.features['local_first.personal'] = false;
+    account.features['local_first.player_v1'] = true;
+    account.features['cloud.single_audio_owner'] = true;
+    render(<CloudApp />);
+    await waitFor(() => expect(requests).toContain('/api/account'));
+    expect(screen.queryByTestId('br64-01-browser-player')).not.toBeInTheDocument();
+  });
+
   it('still exposes account settings and avoids turning the old hosted dock back on', async () => {
     window.history.replaceState({}, '', '/account');
     render(<CloudApp />);
