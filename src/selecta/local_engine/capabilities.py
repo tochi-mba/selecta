@@ -50,6 +50,18 @@ def ffmpeg_probe() -> dict[str, Any]:
             capture_output=True, text=True, timeout=3, check=False,
         )
         lines = listing.stdout if listing.returncode == 0 else ""
+        # FFmpeg flags occupy six columns; the leading A marks an audio decoder.
+        # Parse columns so Windows CRLF / decoder descriptions cannot affect detection.
+        decoders = set()
+        for line in lines.splitlines():
+            columns = line.split()
+            if (
+                len(columns) < 2
+                or not re.fullmatch(r"[A-Z.]{6}", columns[0])
+                or columns[0][0] != "A"
+            ):
+                continue
+            decoders.add(columns[1])
         supported = []
         for codec, prefix in (
             ("aac", "aac"),
@@ -57,7 +69,12 @@ def ffmpeg_probe() -> dict[str, Any]:
             ("mp3", "mp3"),
             ("wav", "pcm_s16"),
         ):
-            if re.search(rf"(?m)^\s*[A-Z.]{6}\s+{prefix}\w*\s+", lines):
+            if any(
+                name == prefix
+                or name.startswith(prefix + "_")
+                or (prefix == "mp3" and name.startswith("mp3"))
+                for name in decoders
+            ):
                 supported.append(codec)
         return {
             "available": True,
