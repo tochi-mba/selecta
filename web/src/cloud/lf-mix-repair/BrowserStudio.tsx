@@ -460,7 +460,7 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
               <button type="button" onClick={() => void recheckLocal()} disabled={!ports.media || busy || rendering || dirty}>
                 Recheck music on this device
               </button>
-              <button onClick={() => void prepare() disabled={!allReady || dirty || busy || rendering || !ports.renderer?.prepare}>Prepare transitions locally</button>
+              <button onClick={() => void prepare()} disabled={!allReady || dirty || busy || rendering || !ports.renderer?.prepare}>Prepare transitions locally</button>
               <button onClick={() => void play()} disabled={!canPlay || busy || rendering}>Play Here</button>
               <button onClick={() => void render()} disabled={!canRender || busy || rendering}>{rendering ? 'Rendering locally…' : 'Render and export here'}</button>
               {rendering && <button onClick={() => renderAbort.current?.abort()}>Cancel render</button>}
