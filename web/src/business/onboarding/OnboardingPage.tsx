@@ -27,7 +27,7 @@ export function OnboardingPage() {
   const localFirst = localFirstOn(org.features);
   const activationReady = venue ? inspectVenue(venue, now, offline).activationReady : false;
   const localGuide = (stage: 'music' | 'pair' | 'service') => venue ? <LocalSetupGuide venue={venue} now={now} offline={offline} stage={stage}
-    onOpenTab={(tab) => go(PATHS.venue(org.id, venue.id, tab))} onRefresh={refresh} /> : <p>Add the venue before connecting its music.</p>;
+    onOpenTab={(tab) => go(PATHS.venue(org.id, venue.id, tab))} onRefresh={refresh} authorised={!readOnly} /> : <p>Add the venue before connecting its music.</p>;
   const advance = async (done: boolean, venueId?: string) => {
     setError(''); setBusy(true);
     try {
