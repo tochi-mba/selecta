@@ -80,7 +80,9 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
   const renderSupported = active && ports.renderer?.supported(active);
   const allReady = verified?.allReady === true;
   const canRender = !!active && !dirty && allReady && renderSupported?.supported === true && !!ports.renderer;
-  const canPlay = !!active && !dirty && allReady && verified?.outputVerified === true && !!ports.playback;
+  // The first sound check is performed AFTER user-activated local playback. Requiring
+  // pre-existing physical audibility here creates a deadlock on a new browser.
+  const canPlay = !!active && !dirty && allReady && !!ports.playback;
 
   const refresh = useCallback(async () => {
     try {
@@ -281,7 +283,7 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
   };
 
   const play = async () => {
-    if (!canPlay || !active || !ports.playback || !currentlyVerified()?.allReady || !currentlyVerified()?.outputVerified) return;
+    if (!canPlay || !active || !ports.playback || !currentlyVerified()?.allReady) return;
     setBusy(true); setError('');
     try { await ports.playback.playHere(active); setMessage('Playback requested locally. Confirm sound at your actual speaker.'); }
     catch (cause) { setError(`Could not start local playback: ${humanError(cause)}`); }
