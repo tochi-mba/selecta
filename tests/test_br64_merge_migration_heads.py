@@ -61,6 +61,9 @@ def test_cloud_clean_install_applies_both_branches(tmp_path):
         migrate.upgrade(engine)
         assert migrate.current(engine) == MERGED
         tables = set(sa.inspect(engine).get_table_names())
-        assert {"lf_browser_sessions", "lf_browser_commands", "business_members", "business_sso_connections"} <= tables
+        assert {
+            "lf_browser_sessions", "lf_browser_commands",
+            "business_members", "business_sso_connections",
+        } <= tables
     finally:
         engine.dispose()
