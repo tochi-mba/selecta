@@ -1,5 +1,6 @@
 """Metadata-only cloud boundary and server-controlled hosted-audio migration gates."""
 
+from selecta.lf_egress.admission import admit_cloud_metadata
 from selecta.lf_egress.contract import (
     PayloadKind,
     PayloadRejected,
@@ -18,6 +19,7 @@ from selecta.lf_egress.policy import (
 
 __all__ = [
     "AdmissionDenied",
+    "admit_cloud_metadata",
     "PayloadKind",
     "PayloadRejected",
     "Phase",
