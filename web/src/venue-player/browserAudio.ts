@@ -100,6 +100,7 @@ export class BrowserVenueAudio implements VenueAudioPort {
 
   async unlock(): Promise<boolean> {
     this.assertOpen();
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return false;
     try {
       if (!this.context) {
         const Ctor = (globalThis as typeof globalThis & { webkitAudioContext?: typeof AudioContext }).AudioContext
