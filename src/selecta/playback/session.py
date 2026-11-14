@@ -526,14 +526,26 @@ def is_reporting_device(
         return device is not None and device.signed_in
 
 
+def speaker_online_in(
+    conn: Connection, workspace_id: str, *, zone_id: str | None = None,
+    now: float | None = None,
+) -> bool:
+    """Read a speaker lease using the caller's already-active transaction.
+
+    Rooms must not open another SQLite BEGIN IMMEDIATE inside their request
+    transaction, or the first transaction deadlocks with itself.
+    """
+    now = resolve_now(conn, now)
+    session = load_session(conn, workspace_id, zone_id)
+    return session is not None and session.lease_live(now)
+
+
 def speaker_online(
     engine: Engine, workspace_id: str, *, zone_id: str | None = None, now: float | None = None
 ) -> bool:
     """Is some device the speaker with a live lease? Rooms use this to say the music's paused."""
     with transaction(engine, workspace_id) as conn:
-        now = resolve_now(conn, now)
-        session = load_session(conn, workspace_id, zone_id)
-        return session is not None and session.lease_live(now)
+        return speaker_online_in(conn, workspace_id, zone_id=zone_id, now=now)
 
 
 def session_view(
