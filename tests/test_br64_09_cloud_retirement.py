@@ -170,3 +170,28 @@ def test_future_plans_do_not_meter_local_work_and_legacy_prices_remain_parseable
     })
     assert old["price_historical"].plan_version == 1
     assert old["price_future"].plan_version == 2
+
+
+def test_old_signed_url_routes_are_retired_even_when_retrieval_requested(tmp_path, monkeypatch):
+    monkeypatch.setenv("SELECTA_LF_LEGACY_RETRIEVAL", "enabled")
+    with signed_up(tmp_path, monkeypatch) as world:
+        song = add_asset(world.engine, world.objects, world.workspace_id, b"synthetic")
+        old = world.client.get(
+            f"/api/assets/{song}/playback-url?download=true", headers=HEADERS
+        )
+        assert old.status_code == 410
+        assert old.json()["detail"]["code"] == "cloud_audio_retrieval_retired"
+        derived = world.client.post("/api/storage/derived-playback-url",
+            headers=HEADERS, json={"key": "some/derived/key", "ttl": 300})
+        assert derived.status_code == 410
+        assert derived.json()["detail"]["code"] == "cloud_audio_retrieval_retired"
+
+
+def test_deleting_cloud_record_never_touches_a_device_owned_file(tmp_path, monkeypatch):
+    local_recording = tmp_path / "device-only.flac"
+    local_recording.write_bytes(b"device-owned-synthetic-sound")
+    with signed_up(tmp_path, monkeypatch) as world:
+        song = add_asset(world.engine, world.objects, world.workspace_id, b"historical")
+        deletion = world.client.delete(f"/api/assets/{song}", headers=HEADERS)
+        assert deletion.status_code == 200
+    assert local_recording.read_bytes() == b"device-owned-synthetic-sound"
