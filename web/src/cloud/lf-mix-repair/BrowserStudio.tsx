@@ -64,6 +64,7 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
   const [readinessTime, setReadinessTime] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
   const [rendering, setRendering] = useState(false);
+  const [exported, setExported] = useState<{ revision: string; filename: string; mimeType: string; blob: Blob } | null>(null);
   const renderAbort = useRef<AbortController | null>(null);
   const importedRef = useRef<HTMLInputElement>(null);
   const baseline = opened ? makeEdit(opened.recipe) : null;
@@ -119,7 +120,7 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
         try { window.sessionStorage.removeItem(localKey(workspaceId, id)); } catch { /* optional local recovery */ }
       }
       setOpened({ recipe, headRevision: response.head_revision || recipe.revision_id, history: response.history ?? [], legacy: !!response.legacy_read_only_view });
-      setEdit(next); setUndo([]); setRedo([]); setAvailability(null);
+      setEdit(next); setUndo([]); setRedo([]); setAvailability(null); setExported(null);
       setSavedConflictDraft(olderDraft); setConflict(!!olderDraft); setError('');
       const url = new URL(window.location.href);
       url.searchParams.set('mix', id);
@@ -172,6 +173,7 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
     setUndo((stack) => [...stack.slice(-39), edit]);
     setRedo([]);
     setEdit(next);
+    setExported(null);
     setMessage('');
   };
   const step = (direction: 'undo' | 'redo') => {
@@ -320,17 +322,24 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
       if (abort.signal.aborted) return;
       if (!(artifact.blob instanceof Blob) || !artifact.blob.size) throw new Error('The renderer returned no downloadable audio.');
       if (!artifact.mimeType.startsWith('audio/')) throw new Error('The renderer returned a non-audio export.');
-      const url = URL.createObjectURL(artifact.blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = artifact.filename.replace(/[\\/]/g, '_').slice(0, 128) || 'selecta-mix-export';
-      anchor.click();
-      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-      setMessage('Browser render completed. Export was started on this device.');
+      setExported({ revision: active.revision_id, filename: artifact.filename, mimeType: artifact.mimeType, blob: artifact.blob });
+      setMessage('Render ready on this device. Tap Download local export to save the audio.');
     } catch (cause) {
       if (!abort.signal.aborted) setError(`Render Failed: ${humanError(cause)}`);
       else setMessage('Local render cancelled. No saved recipe revision was changed.');
     } finally { renderAbort.current = null; setRendering(false); }
+  };
+
+  const downloadExport = () => {
+    // A new direct user gesture is necessary for some iOS/Safari download flows.
+    if (!exported || !active || exported.revision !== active.revision_id || dirty || busy) return;
+    const url = URL.createObjectURL(exported.blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = exported.filename.replace(/[\\/]/g, '_').slice(0, 128) || 'selecta-mix-export';
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    setMessage('Local export download requested. Check your browser downloads or share sheet.');
   };
 
   return <section className="br07-studio" aria-label="Personal browser Studio">
@@ -433,6 +442,8 @@ export function BrowserStudio({ api, workspaceId }: { api: Api; workspaceId: str
               <button onClick={() => void play()} disabled={!canPlay || busy || rendering}>Play Here</button>
               <button onClick={() => void render()} disabled={!canRender || busy || rendering}>{rendering ? 'Rendering locally…' : 'Render and export here'}</button>
               {rendering && <button onClick={() => renderAbort.current?.abort()}>Cancel render</button>}
+              {exported && exported.revision === active.revision_id && !dirty &&
+                <button className="primary" onClick={downloadExport} disabled={busy || rendering}>Download local export</button>}
             </div>
             {!ports.renderer ? <p className="br07-muted">Local render adapter not connected. Phone rendering is supported when device capabilities and renderer are verified; no Cloud fallback is used.</p> :
               !renderSupported?.supported && <p className="br07-muted">Unsupported Here: {renderSupported?.reason ?? 'This device cannot complete this render.'}</p>}
