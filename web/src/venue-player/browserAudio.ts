@@ -212,6 +212,8 @@ export class BrowserVenueAudio implements VenueAudioPort {
         this.deck = null;
         this.phase = 'stopped';
         this.checkedAt = null;
+        this.lease.release();
+        void this.releaseWake();
       }
     };
     return deck;
@@ -229,11 +231,16 @@ export class BrowserVenueAudio implements VenueAudioPort {
       this.error = 'Another Selecta browser player owns this output; stop it before starting the venue.';
       throw new Error(this.error);
     }
-    this.generation = generation;
-    this.checkedAt = null;
-    this.deck = this.launch(trackId, this.contextReady().currentTime + 0.03, 0.04);
-    this.phase = 'playing';
-    await this.requestWake();
+    try {
+      this.generation = generation;
+      this.checkedAt = null;
+      this.deck = this.launch(trackId, this.contextReady().currentTime + 0.03, 0.04);
+      this.phase = 'playing';
+      await this.requestWake();
+    } catch (error) {
+      this.lease.release();
+      throw error;
+    }
   }
 
   async transition(trackId: string, fadeSeconds = 2): Promise<void> {
