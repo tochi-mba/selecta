@@ -109,7 +109,12 @@ class BrowserControlService:
 
     def create_test_schema(self) -> None:
         """Only for disposable test databases; production uses reviewed migrations."""
-        schema.metadata.create_all(self.engine)
+        # Only the six disposable browser-control tables, never the complete
+        # production Cloud schema now shared by the Alembic registry.
+        schema.metadata.create_all(self.engine, tables=[
+            schema.devices, schema.sessions, schema.owners,
+            schema.transfers, schema.commands, schema.history,
+        ])
 
     @contextmanager
     def _tx(self, workspace_id: str):
