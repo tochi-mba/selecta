@@ -8,6 +8,7 @@ import { businessClient } from '../client';
 import { BusinessContext } from '../context';
 import { StaffControl } from '../staff/StaffControl';
 import { HqLocalReadiness, VenueLocalReadiness } from '../localFirst/ReadinessPanel';
+import { BrowserVenueSetup } from '../localFirst/BrowserVenueSetup';
 import '../business.css';
 
 const CASES: Scenario[] = [
@@ -51,8 +52,8 @@ function BusinessHarness() {
           client: businessClient(demoApi('lf13_fleet'), data.org.workspace_id),
           refresh: async () => {}, go: () => {},
         }}><StaffControl venueId={openVenue.id} /></BusinessContext.Provider></div>
-          : <VenueLocalReadiness venue={openVenue} now={NOW} offline={false}
-            onOpenTab={() => {}} onRefresh={() => {}} />}
+          : <><VenueLocalReadiness venue={openVenue} now={NOW} offline={false}
+            onOpenTab={() => {}} onRefresh={() => {}} /><BrowserVenueSetup venue={openVenue} nowEpochMs={NOW * 1000} /></>}
       </div> : <HqLocalReadiness venues={data.venues} now={NOW} offline={false} onOpenVenue={setOpenVenueId} />)}
       <section aria-label="Organisation" className="biz-card">
         <h2>{data.org.name}</h2>
