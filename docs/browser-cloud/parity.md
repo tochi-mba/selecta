@@ -13,7 +13,7 @@ Agent 01-09 own actual browser DSP and UI implementations; Agent 10 owns verific
 | Accurate multi-deck seams and playback underruns | Audio engine parity fixtures from Agent 01 | Integration request, blocked |
 | Beat/key, stems, time-stretch and neural DSP | Agent 04 quality/cost benchmarks | Integration request, blocked |
 | Local source picker, permissions and exact master | br64-10 selection smoke + Agent 02 contract | Source smoke only; canonical ID blocked |
-| Local short/long FLAC/other export | Agent 05 renderer and phone hardware matrix | Not automated against product, blocked |
+| Local short/long FLAC/other export | br64-10-render synthetic offline PCM chunks + Agent 05 product renderer/hardware matrix | Synthetic browser export only; not automated against product, blocked |
 | Local-only originals, stems, exports and no egress | policy_gate diff; full audit + network trace | Patch enforcement added; full audit blocked |
 | Cloud speaker ownership, device transfer | Agent 06 contract, real two-device hardware | Blocked |
 | Personal Cloud UX, Rooms and iPad sole venue | Agents 07/08, six-hour physical endurance | Blocked |

@@ -98,3 +98,52 @@ unlock.addEventListener('click', async () => {
   try { const evidence = await actualWorklet(); put('AudioWorklet callbacks: ' + evidence.blocks); }
   catch (error) { put('AudioWorklet failed: ' + String(error)); }
 });
+
+/** Real browser OfflineAudioContext -> owned local PCM WAV (test-only).
+ * Not Selecta's production renderer or proof of mobile temperature, storage or speakers.
+ */
+export async function renderSyntheticWav({ seconds = 2, chunkSeconds = 3, sampleRate = 24000,
+  cancelAfterChunks = null } = {}) {
+  const frames = Math.round(seconds * sampleRate);
+  const bytes = new ArrayBuffer(44 + frames * 2);
+  const view = new DataView(bytes);
+  const word = (offset, value) => {
+    for (let i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i));
+  };
+  word(0, 'RIFF'); view.setUint32(4, bytes.byteLength - 8, true); word(8, 'WAVE');
+  word(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true); view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true); view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true); word(36, 'data'); view.setUint32(40, frames * 2, true);
+  const started = performance.now();
+  const chunkFrames = Math.round(sampleRate * chunkSeconds);
+  let chunks = 0;
+  let peak = 0;
+  for (let offset = 0; offset < frames; offset += chunkFrames) {
+    if (cancelAfterChunks !== null && chunks >= cancelAfterChunks) {
+      return { status: 'cancelled', completedChunks: chunks, artifact: null,
+        physicalOutputVerified: false, testOnly: true };
+    }
+    const count = Math.min(chunkFrames, frames - offset);
+    const context = new OfflineAudioContext(1, count, sampleRate);
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.frequency.value = 330;
+    gain.gain.value = 0.3;
+    oscillator.connect(gain); gain.connect(context.destination);
+    oscillator.start(0); oscillator.stop(count / sampleRate);
+    const rendered = await context.startRendering();
+    const samples = rendered.getChannelData(0);
+    for (let i = 0; i < count; i++) {
+      const clamped = Math.max(-1, Math.min(1, samples[i]));
+      peak = Math.max(peak, Math.abs(clamped));
+      view.setInt16(44 + (offset + i) * 2, Math.round(clamped * 32767), true);
+    }
+    chunks += 1;
+  }
+  return { status: 'completed', completedChunks: chunks, seconds,
+    renderingMs: performance.now() - started, peak,
+    artifact: new Blob([bytes], { type: 'audio/wav' }),
+    physicalOutputVerified: false, testOnly: true };
+}
+window.__selectaBrowserQA.renderSyntheticWav = renderSyntheticWav;
