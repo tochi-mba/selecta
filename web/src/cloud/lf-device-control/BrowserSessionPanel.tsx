@@ -28,6 +28,10 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
   const [notice, setNotice] = useState('');
   const [pending, setPending] = useState<BrowserEnvelope | null>(null);
   const [receipt, setReceipt] = useState<CommandReceipt | null>(null);
+  const [silenceConfirmed, setSilenceConfirmed] = useState(false);
+  const [initialSilence, setInitialSilence] = useState(false);
+  const [transferId, setTransferId] = useState<string | null>(null);
+  const [transferStage, setTransferStage] = useState('');
   const [targetSession, setTargetSession] = useState('');
   const [operation, setOperation] = useState<string | null>(null);
   const fence = useRef(0);
@@ -56,6 +60,8 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
     try {
       const capabilities = probeBrowserAudio();
       if (!capabilities.eligible) throw new Error(capabilities.reason ?? 'AudioWorklet unavailable');
+      if (engine.snapshot().phase !== 'paused' || engine.snapshot().tracks < 1)
+        throw new Error('Load and play a locally authorised recording, then pause and confirm silence before registering as a speaker.');
       if (!/^[A-Za-z0-9][A-Za-z0-9_.:\-]{0,127}$/.test(zone)) throw new Error('Choose a valid, authorised zone ID');
       const device_id = 'browser_' + crypto.randomUUID().replaceAll('-', '');
       await client.register({
@@ -78,6 +84,7 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
         setNotice('Durable local fencing is unavailable. Remote takeovers must be refused until fixed.');
       }
       setRegistered(true);
+      setSilenceConfirmed(false);
       setNotice('Browser registered for this zone. Keep it foregrounded and confirm real sound on-site; no music was uploaded.');
       await refresh();
     } catch (error) {
@@ -152,13 +159,20 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
         source_count: now.tracks,
         source_checked_at: current,
         output_state: now.phase === 'playing' && now.soundCheck === 'user_confirmed'
-          ? 'operator_confirmed' : 'unknown',
+          ? 'operator_confirmed' : silenceConfirmed && now.phase === 'paused' ? 'silent' : 'unknown',
         output_checked_at: current,
         generation: fence.current, policy_version: 0, recipe_revision: null,
       });
       if (document.visibilityState !== 'visible' || pending) return;
       const next = await client.next();
       if (next) await processCommand(next);
+      if (transferId) {
+        const currentTransfer = await client.transfer(zone, transferId);
+        if (alive.current) {
+          setTransferStage(currentTransfer.stage);
+          if (['started', 'blocked'].includes(currentTransfer.stage)) setTransferId(null);
+        }
+      }
       if (operation) {
         const currentReceipt = await client.operation(zone, operation);
         if (alive.current) {
@@ -170,7 +184,7 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
     } catch (error) {
       if (alive.current) setProblem('Browser session needs attention: ' + (error as Error).message);
     } finally { processing.current = false; }
-  }, [client, engine, pending, operation, processCommand, zone]);
+  }, [client, engine, pending, operation, processCommand, zone, silenceConfirmed, transferId]);
 
   useEffect(() => {
     if (!registered) return;
@@ -185,11 +199,15 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
     setBusy(true); setProblem('');
     try {
       if (cmd.action === 'prepare_output') {
+        if (!silenceConfirmed || engine.snapshot().phase !== 'paused' || engine.snapshot().tracks < 1)
+          throw new Error('The operator must first verify the physical output is silent and decoded local music is ready.');
         if (engine.snapshot().tracks < 1 || engine.snapshot().phase === 'playing')
           throw new Error('Local recordings must be loaded and output must be silent before preparing.');
         await acknowledge(cmd, 'applied', { outputSilent: true });
       } else if (cmd.action === 'release_output') {
         await engine.stop();
+        setSilenceConfirmed(false);
+        if (!silenceConfirmed) throw new Error('On-site operator must confirm the old output became physically silent before fencing release.');
         try { localStorage.setItem('selecta:browser-fence:' + workspaceId + ':' + zone,
           String(cmd.expected_generation)); } catch {
           throw new Error('Durable local fencing unavailable; cannot attest safe speaker release.');
@@ -219,6 +237,7 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
     setBusy(true);
     try {
       engine.confirmSound(true);
+      setSilenceConfirmed(false);
       await acknowledge(cmd, 'applied', { outputConfirmed: true, executed: true });
       fence.current = Math.max(fence.current, cmd.expected_generation);
       setPending(null);
@@ -235,6 +254,24 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
     setPending(null);
   };
 
+  const takeOver = async () => {
+    if (!targetSession || busy) return;
+    if (speaker?.state === 'unknown' || speaker?.pending_transfer) {
+      setProblem('Current speaker ownership is uncertain. Reconnect or physically isolate it before transfer.'); return;
+    }
+    setBusy(true); setProblem(''); setNotice('');
+    try {
+      const operation_id = crypto.randomUUID().replaceAll('-', '');
+      const transfer = await client.takeover(zone, {
+        target_session_id: targetSession, operation_id, idempotency_key: operation_id,
+        expected_generation: speaker?.generation ?? 0,
+        initial_silence_confirmed: initialSilence && speaker?.state === 'unprovisioned',
+      });
+      setTransferId(transfer.transfer_id); setTransferStage(transfer.stage);
+      setNotice('Takeover requested; speaker release/activation must each be confirmed by the actual operator.');
+    } catch (error) { setProblem((error as Error).message); }
+    finally { setBusy(false); }
+  };
   const send = async (action: 'pause' | 'skip' | 'play') => {
     if (!speaker?.speaker_session_id || !speaker.online || speaker.state !== 'audible' ||
         speaker.pending_transfer || busy) {
@@ -275,6 +312,28 @@ export function BrowserSessionPanel({ workspaceId, accessToken }: {
     <p role="status">This device: {registered ? 'registered, foreground activity required' : 'not registered'}.
       Actual speaker: {speaker?.speaker_session_id ?? 'none'} · {speaker?.state ?? 'unverified'} · generation {speaker?.generation ?? 0}.</p>
     {devices.length > 0 && <p>Known browser sessions in this zone: {devices.length}. Remote music is never downloaded here.</p>}
+    {registered && engine.snapshot().phase === 'paused' && <label>
+      <input type="checkbox" checked={silenceConfirmed} onChange={(event) => setSilenceConfirmed(event.target.checked)} />
+      I am physically beside this speaker and confirm that this device's actual audio output is silent
+    </label>}
+    <div role="group" aria-label="Safe playback transfer">
+      <label>Destination browser session
+        <select aria-label="Destination speaker session" value={targetSession} onChange={(event) => setTargetSession(event.target.value)}>
+          <option value="">Choose a verified online destination</option>
+          {devices.filter((device) => device.online && device.source_ready && device.output_state === 'silent')
+            .map((device) => <option key={device.session_id} value={device.session_id}>{device.label}</option>)}
+        </select>
+      </label>
+      {speaker?.state === 'unprovisioned' && <label>
+        <input type="checkbox" checked={initialSilence} onChange={(event) => setInitialSilence(event.target.checked)} />
+        I am on site and independently confirmed no existing zone speaker is audible
+      </label>}
+      <button type="button" disabled={!targetSession || busy ||
+        Boolean(speaker?.pending_transfer) || speaker?.state === 'unknown' ||
+        (speaker?.state === 'unprovisioned' && !initialSilence)}
+        onClick={() => void takeOver()}>Request fenced speaker transfer</button>
+      {transferStage && <p role="status">Speaker transfer stage: {transferStage}. Pending is not audible.</p>}
+    </div>
     {speaker?.state === 'audible' && speaker.online &&
       <div className="browser-player-controls">
         <button type="button" disabled={busy || !!operation} onClick={() => void send('pause')}>Request pause</button>
