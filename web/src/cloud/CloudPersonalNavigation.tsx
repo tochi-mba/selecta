@@ -89,11 +89,12 @@ export function CloudPersonalNavigation({
   );
   return <>
     <div className="cloud-personal-primary" aria-label="Local Selecta destinations">
-      {PRIMARY_PERSONAL_DESTINATIONS.map(button)}
+      {PRIMARY_PERSONAL_DESTINATIONS.filter((item) => item.id !== 'workspace').map(button)}
     </div>
     <details className="cloud-personal-more">
       <summary><Icon name="more" /><span>Cloud & account</span></summary>
       <div className="cloud-personal-secondary">
+        {PRIMARY_PERSONAL_DESTINATIONS.filter((item) => item.id === 'workspace').map(button)}
         {CLOUD_PERSONAL_DESTINATIONS
           .filter((item) => item.id !== 'rooms' || roomsAvailable)
           .map(button)}
