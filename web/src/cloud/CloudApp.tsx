@@ -4,6 +4,7 @@ import { VenueSetup } from '../autopilot/VenueSetup';
 import { DevicesPanel } from '../devices/DevicesPanel';
 import { DeviceCheck, showsDeviceCheck } from '../devices/DeviceCheck';
 import { CloudListen } from '../rooms/CloudListen';
+import { browserCloudCopy } from '../copy';
 import { LucyCloudSettings } from '../views/LucyCloudSettings';
 import { AccountDanger, AccountData } from './AccountData';
 import { AccountProblem, accountProblem, blockedMessage } from './accountStates';
@@ -315,7 +316,7 @@ function Overview({ account, go, localFirst }: { account: Account; go: (page: Pa
   if (localFirst) return <>
     <section className="cloud-hero br07-home" aria-labelledby="br07-home-title">
       <div><p className="cloud-eyebrow">SELECTA CLOUD · BROWSER FIRST</p>
-        <h2 id="br07-home-title">Your music workspace, on any device.</h2>
+        <h2 id="br07-home-title">{browserCloudCopy.tagline}</h2>
         <p>Keep the mix plan and its history in sync. Your music stays on the phone, tablet or computer you choose.</p>
         <div className="cloud-actions"><button className="primary" onClick={() => go('listen')}>Play Here</button>
           <button onClick={() => go('listen')}>Control Another Device</button>
