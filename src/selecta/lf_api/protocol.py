@@ -58,10 +58,15 @@ REQUIRED: dict[str, frozenset[str]] = {
 SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:\-]{0,127}$")
 
 
-def _number(value: Any) -> float:
-    if type(value) not in (int, float) or not 0 < value < 10**11:
+def _number(value: Any) -> int:
+    # Integer Unix seconds are a cross-language HMAC requirement: Python encodes
+    # 1800000000.0 differently from JavaScript's JSON.stringify(1800000000).
+    if (
+        type(value) not in (int, float) or not 0 < value < 10**11
+        or not float(value).is_integer()
+    ):
         raise ControlError("invalid_timestamp")
-    return float(value)
+    return int(value)
 
 
 def safe_arguments(action: str, args: Any) -> dict[str, Any]:
