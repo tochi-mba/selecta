@@ -375,6 +375,7 @@ def create_cloud_app(
             "X-Workspace-ID",
             "X-Operation-ID",
             "X-Admin-Session",
+            "X-Selecta-Session-Token",
         ],
         expose_headers=["X-Request-ID"],
         max_age=600,
@@ -764,6 +765,29 @@ def create_cloud_app(
         emergency_cache=emergency_cache,
         rule_cache=rule_cache,
     )
+
+    # Browser-first control is explicitly opt-in and never starts a Python audio engine.
+    # A stable deployment secret is mandatory for signed per-device commands; absent
+    # configuration keeps routes unmounted rather than generating an ephemeral key.
+    browser_key_hex = os.environ.get("SELECTA_BROWSER_CONTROL_SIGNING_KEY", "").strip()
+    if browser_key_hex:
+        try:
+            browser_key = bytes.fromhex(browser_key_hex)
+        except ValueError as exc:
+            raise CloudConfigurationError(
+                "SELECTA_BROWSER_CONTROL_SIGNING_KEY must be 64+ hexadecimal characters."
+            ) from exc
+        if len(browser_key) < 32:
+            raise CloudConfigurationError(
+                "SELECTA_BROWSER_CONTROL_SIGNING_KEY must hold at least 32 random bytes."
+            )
+        from selecta.lf_api.integration import mount_browser_control
+
+        mount_browser_control(
+            app, engine=engine, current_claims=current_claims,
+            principal_for=_principal, signing_key=browser_key,
+            require_https=settings.require_workos,
+        )
 
     flag_guard.assert_cloud_api_routes_owned(app)
 
