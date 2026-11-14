@@ -17,6 +17,12 @@ export type CloudRoute = { path: string; page: Page };
 export const CLOUD_ROUTES: readonly CloudRoute[] = [
   { path: '/', page: 'home' },
   { path: '/listen', page: 'listen' },
+  // Browser-first deep links land in the same Studio workspace without making a
+  // second player. The recipe identity is passed via ?mix=<opaque id>.
+  { path: '/studio', page: 'listen' },
+  { path: '/mixes', page: 'listen' },
+  { path: '/player', page: 'listen' },
+  { path: '/discover', page: 'listen' },
   { path: '/library', page: 'library' },
   { path: '/upload', page: 'uploads' },
   { path: '/uploads', page: 'uploads' },
