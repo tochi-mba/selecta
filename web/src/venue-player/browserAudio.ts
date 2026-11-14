@@ -143,7 +143,8 @@ export class BrowserVenueAudio implements VenueAudioPort {
       // Unlocking a paused deck does not authorise it to claim audible
       // playback before the exclusive browser speaker lease is reacquired.
       this.phase = this.deck && this.phase === 'paused' ? 'paused' : this.deck ? 'playing' : 'ready';
-      await this.requestWake();
+      // Do not keep a tablet screen awake merely because the user unlocked
+      // audio while choosing tracks. Start/Resume own the wake request.
       return !this.disposed && revision === this.playbackEpoch;
     } catch (error) {
       if (this.disposed || revision !== this.playbackEpoch) return false;
@@ -300,6 +301,8 @@ export class BrowserVenueAudio implements VenueAudioPort {
       this.deck = this.launch(trackId, this.contextReady().currentTime + 0.03, 0.04);
       this.phase = 'playing';
       await this.requestWake();
+      if (revision !== this.playbackEpoch || this.disposed)
+        throw new Error('Venue start was superseded while requesting the screen wake lock');
     } catch (error) {
       this.lease.release();
       throw error;
@@ -390,6 +393,9 @@ export class BrowserVenueAudio implements VenueAudioPort {
       this.master.gain.setTargetAtTime(this.volume, this.context.currentTime, 0.02);
     this.phase = 'playing';
     this.checkedAt = null;
+    await this.requestWake();
+    if (revision !== this.playbackEpoch || this.disposed)
+      throw new Error('Resume was superseded while requesting the screen wake lock');
   }
 
   private silenceTestTone(): void {

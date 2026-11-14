@@ -237,11 +237,14 @@ describe('BR64-08 device-local WebAudio execution (simulated nodes, never hardwa
     });
     const audio = new BrowserVenueAudio();
     try {
-      const unlocking = audio.unlock();
+      audio.importLocal([makeRec('a')]);
+      await audio.unlock();
+      const starting = audio.start('a', 1);
+      const rejection = expect(starting).rejects.toThrow('superseded');
       await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(1));
       await audio.stop();
       grant();
-      expect(await unlocking).toBe(false);
+      await rejection;
       expect(release).toHaveBeenCalledTimes(1);
       expect(audio.snapshot().wakeLockHeld).toBe(false);
       expect(audio.snapshot().phase).toBe('stopped');
