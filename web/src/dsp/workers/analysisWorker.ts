@@ -62,14 +62,8 @@ type WorkerScope = {
 
 const scope = globalThis as unknown as Partial<WorkerScope> & { window?: unknown };
 
-/** Whether a message is a well-formed AnalysisRequest from this worker's own page.
- *
- * A dedicated worker only ever hears the page that spawned it, and such messages carry an
- * empty origin; an event bearing any origin, or a body that is not an AnalysisRequest, is
- * dropped unanswered rather than analysed.
- */
+/** The message body as an AnalysisRequest, or null when it is not a well-formed one. */
 export function trustedRequest(event: MessageEvent<AnalysisRequest>): AnalysisRequest | null {
-  if (event.origin) return null;
   const request: unknown = event.data;
   if (typeof request !== 'object' || request === null) return null;
   const { id, sampleRate, pcm } = request as Partial<AnalysisRequest>;
@@ -83,6 +77,9 @@ export function trustedRequest(event: MessageEvent<AnalysisRequest>): AnalysisRe
 // the page (or from tests) must stay side-effect free.
 if (typeof scope.postMessage === 'function' && scope.window === undefined) {
   (scope as WorkerScope).onmessage = (event) => {
+    // A dedicated worker only hears the page that spawned it, and those messages carry an
+    // empty origin; anything bearing an origin did not come from that page.
+    if (event.origin !== '') return;
     const request = trustedRequest(event);
     if (request) (scope as WorkerScope).postMessage(analyse(request));
   };
