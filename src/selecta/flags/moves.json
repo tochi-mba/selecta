@@ -4,7 +4,10 @@
     "stems": {
       "label": "Stems",
       "about": "Splitting songs into voice, drums, bass and melody, which stem moves and the Studio need.",
-      "surfaces": ["overlay.shaping", "overlay.inspector"]
+      "surfaces": [
+        "overlay.shaping",
+        "overlay.inspector"
+      ]
     },
     "move.cut": {
       "label": "Cut",
@@ -18,7 +21,9 @@
     "move.vocal_ride": {
       "label": "Vocal ride",
       "about": "The next song's band comes in under the voice, before it starts singing.",
-      "requires": ["stems"]
+      "requires": [
+        "stems"
+      ]
     },
     "move.filter_sweep": {
       "label": "Filter sweep",
@@ -43,32 +48,48 @@
     "move.word_cut": {
       "label": "Word cut",
       "about": "One song sets a phrase up, and the next one sings it.",
-      "requires": ["stems", "lyrics.word_timing"]
+      "requires": [
+        "stems",
+        "lyrics.word_timing"
+      ]
     },
     "move.word_blend": {
       "label": "Word blend",
       "about": "A vocal ride that hands over on a phrase both songs share.",
-      "requires": ["stems", "lyrics.word_timing"]
+      "requires": [
+        "stems",
+        "lyrics.word_timing"
+      ]
     },
     "move.phrase_roll": {
       "label": "Phrase roll",
       "about": "A phrase repeats, faster and faster, into the next song singing it.",
-      "requires": ["stems", "lyrics.word_timing"]
+      "requires": [
+        "stems",
+        "lyrics.word_timing"
+      ]
     },
     "move.call_and_response": {
       "label": "Call and response",
       "about": "The voices trade a phrase over the next song's band until it keeps it.",
-      "requires": ["stems", "lyrics.word_timing"]
+      "requires": [
+        "stems",
+        "lyrics.word_timing"
+      ]
     },
     "move.strip_and_land": {
       "label": "Strip and land",
       "about": "One song strips down to its melody, the next is teased, then its bass and drums land.",
-      "requires": ["stems"]
+      "requires": [
+        "stems"
+      ]
     },
     "move.intertwined_stems": {
       "label": "Intertwined stems",
       "about": "Drums, bass and harmony trade over sixteen bars, with the vocals taking turns.",
-      "requires": ["stems"]
+      "requires": [
+        "stems"
+      ]
     },
     "render.repair": {
       "label": "Second takes",
@@ -77,6 +98,33 @@
     "render.spare_time": {
       "label": "Spare-time transitions",
       "about": "With nothing else to do, the best transitions across the library are tried out ahead of time."
+    },
+    "analysis.phrases": {
+      "label": "Phrase lines",
+      "about": "Transitions land on 8-bar phrase lines instead of any 4-bar mark, the way a DJ counts a song."
+    },
+    "analysis.vocal_sense": {
+      "label": "Hear the voices",
+      "about": "When a song has no synced lyrics, listen to its separated voice to tell when someone sings, so it can still earn long blends and clashing voices are caught.",
+      "requires": [
+        "stems"
+      ]
+    },
+    "planner.true_key": {
+      "label": "Heard harmony",
+      "about": "Key scoring also hears the measured chroma of the exact bars that will play together, not just the two key labels."
+    },
+    "planner.arrival": {
+      "label": "Rolls land on arrivals",
+      "about": "A phrase roll promises a drop, so the next song has to arrive on one: a chorus coming in, or its energy stepping up."
+    },
+    "planner.motivated_punctuation": {
+      "label": "Motivated punctuation",
+      "about": "An echo, cut or wash needs an audible reason - a line just finished or the song's structure turned - or it scores far lower."
+    },
+    "planner.energy_intent": {
+      "label": "No unintended drops",
+      "about": "A punchy move from a hot exit into a much colder landing is refused unless the landing is a chorus."
     }
   }
 }

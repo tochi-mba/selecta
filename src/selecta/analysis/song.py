@@ -16,6 +16,7 @@ from typing import Literal
 
 import numpy as np
 
+from selecta import flags
 from selecta.analysis.pipeline import load_features
 from selecta.config import Settings
 from selecta.lyrics.lrclib import Line, parse_lrc
@@ -95,6 +96,7 @@ class SongInfo:
     rms_db_bars: np.ndarray | None = None
     mfcc_bars: np.ndarray | None = None
     _line_index: tuple | None = field(default=None, repr=False, compare=False)
+    _phrases: dict[int, float] | None = field(default=None, repr=False, compare=False)
 
     @property
     def name(self) -> str:
@@ -167,6 +169,43 @@ class SongInfo:
         bar_length = self.period * self.beats_per_bar
         return int(max(seconds, 0.0) / bar_length)
 
+    def phrase_starts(self) -> dict[int, float]:
+        """Bars where a musical phrase begins, and how sure each one is. Listeners count in
+        phrases of eight bars from wherever a section starts, so a transition that lands between
+        phrase lines feels bumpy however clean the beatmatch. Section starts are the surest lines
+        (1.0), every eighth bar inside a section is next (0.6), and a four-bar leftover at the end
+        of an odd-length section gets a weak line (0.3) so long sections still offer a late exit."""
+        if self._phrases is None:
+            found: dict[int, float] = {}
+            for section in self.sections:
+                start, end = section["start_bar"], section["end_bar"]
+                found[start] = 1.0
+                for bar in range(start + 8, end, 8):
+                    found[bar] = max(found.get(bar, 0.0), 0.6)
+                if (end - start) % 8 == 4 and end - 4 > start:
+                    found[end - 4] = max(found.get(end - 4, 0.0), 0.3)
+            self._phrases = found
+        return self._phrases
+
+    def section_label_at(self, bar: int) -> str | None:
+        for section in self.sections:
+            if section["start_bar"] <= bar < section["end_bar"]:
+                return section["label"]
+        return None
+
+    def arrival_at(self, time: float, slack_bars: int = 1) -> bool:
+        """Whether this moment lands on something: a chorus coming in, or the energy stepping
+        up. A roll or build promises an arrival, and the next song has to deliver one."""
+        bar = self.bar_at(time)
+        if any(abs(bar - start) <= slack_bars for start in self.chorus_start_bars()):
+            return True
+        energy = self.energy_bars
+        if energy is None or energy.size == 0 or bar >= energy.size:
+            return False
+        before = float(energy[max(bar - 4, 0) : bar].mean()) if bar > 0 else 0.0
+        after = float(energy[bar : min(bar + 2, energy.size)].mean())
+        return after - before >= 0.12
+
     def chorus_end_bars(self) -> list[int]:
         return [s["end_bar"] for s in self.sections if s["label"] == "chorus"]
 
@@ -183,21 +222,40 @@ class SongInfo:
         floor = min_played
         if first_chorus_end is not None:
             floor = max(self.bar_time(first_chorus_end), min_played)
-        cues = self._exit_cues_after(floor, party)
-        return cues or self._exit_cues_after(min_played, party)
+        phrases = flags.on("analysis.phrases")
+        cues = self._exit_cues_after(floor, party, phrases)
+        cues = cues or self._exit_cues_after(min_played, party, phrases)
+        # a short song may have no phrase line left after the floor; leaving mid-phrase still
+        # beats having no way out at all
+        return cues or (self._exit_cues_after(min_played, party, False) if phrases else cues)
 
-    def _exit_cues_after(self, floor: float, party: bool) -> list[Cue]:
+    def _exit_cues_after(self, floor: float, party: bool, phrases: bool = False) -> list[Cue]:
         bars = self.bar_times
         choruses = set(self.chorus_end_bars())
         cues: list[Cue] = []
         seen: set[int] = set()
 
-        candidates = [(s["end_bar"], s) for s in self.sections]
-        for section in self.sections:
-            candidates += [
-                (bar, section) for bar in range(section["start_bar"] + 4, section["end_bar"], 4)
-            ]
-        for bar, section in candidates:
+        candidates: list[tuple[int, dict, float | None]] = [
+            (s["end_bar"], s, None) for s in self.sections
+        ]
+        if phrases:
+            # only phrase lines offer an exit: an 8-bar line inside a section, or the weak 4-bar
+            # leftover at the end of an odd-length one, never any mid-phrase bar
+            phrases = self.phrase_starts()
+            for section in self.sections:
+                for bar in range(section["start_bar"] + 4, section["end_bar"], 4):
+                    strength = phrases.get(bar, 0.0)
+                    if strength >= 0.6:
+                        candidates.append((bar, section, 0.55))
+                    elif strength > 0.0:
+                        candidates.append((bar, section, 0.4))
+        else:
+            for section in self.sections:
+                candidates += [
+                    (bar, section, None)
+                    for bar in range(section["start_bar"] + 4, section["end_bar"], 4)
+                ]
+        for bar, section, base in candidates:
             if bar in seen or bar >= bars.size or bar < 4:
                 continue
             seen.add(bar)
@@ -207,7 +265,7 @@ class SongInfo:
             if self.vocals_known and self.mid_line(time):
                 continue
             is_section_end = bar == section["end_bar"]
-            quality = 0.45
+            quality = base if base is not None else 0.45
             kind = "phrase"
             if bar in choruses:
                 quality, kind = 0.9, "after chorus"
