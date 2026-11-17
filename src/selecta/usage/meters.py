@@ -32,6 +32,20 @@ def lucy_tier(plan: Plan) -> str:
     return LUCY_TIERS.get(plan.lucy_capability, "Lucy")
 
 
+def storage_mode(hosted_media_granted: bool | None, used_bytes: int) -> str:
+    """The truthful storage state the meters report (ADR-0464, BF-0456-06).
+
+    "hosted" when the account holds the `cloud.hosted_media` grant or has bytes stored or
+    reserved (grandfathered media keeps its meter); "none" when the caller consulted the grant,
+    it's off and nothing is stored, so there is no hosted storage to meter and the page must not
+    invent a zero-byte quota warning. `None` means the caller didn't consult the grant, which
+    keeps today's hosted presentation until the integration pass wires the grant through.
+    """
+    if hosted_media_granted or hosted_media_granted is None or used_bytes > 0:
+        return "hosted"
+    return "none"
+
+
 def _allowance(allowance: allowances.Allowance) -> dict[str, Any]:
     used = allowance.used
     return {
@@ -76,9 +90,19 @@ def lucy_turns(
 
 
 def meters(
-    connection: Connection, workspace_id: str, plan: Plan, timezone: str | None
+    connection: Connection,
+    workspace_id: str,
+    plan: Plan,
+    timezone: str | None,
+    *,
+    hosted_media_granted: bool | None = None,
 ) -> dict[str, Any]:
-    """Every meter for one workspace, ready for `/api/account`."""
+    """Every meter for one workspace, ready for `/api/account`.
+
+    `hosted_media_granted` is whether the account holds the `cloud.hosted_media` grant
+    (ADR-0456); it decides `storage_mode` (ADR-0464). The default `None` leaves today's
+    payload unchanged for callers that don't consult the grant yet.
+    """
     storage = quota.usage(connection, workspace_id)
 
     def allowance(kind: str) -> dict[str, Any]:
@@ -93,6 +117,9 @@ def meters(
         )
 
     return {
+        # "hosted" or "none"; top-level, beside the storage block, so the exact shape of
+        # `storage` stays what the Plan & billing page and its tests already pin.
+        "storage_mode": storage_mode(hosted_media_granted, storage.used_bytes),
         "storage": {
             "used_bytes": storage.used_bytes,
             "committed_bytes": storage.committed_bytes,
@@ -112,4 +139,4 @@ def meters(
     }
 
 
-__all__ = ["LUCY_TIERS", "lucy_tier", "lucy_turns", "meters"]
+__all__ = ["LUCY_TIERS", "lucy_tier", "lucy_turns", "meters", "storage_mode"]

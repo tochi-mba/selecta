@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import enum
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 
 from selecta import flags
@@ -216,13 +216,34 @@ PREMIUM_1 = Plan(
     flags=EVERY_PLAN | PREMIUM_ONLY,
 )
 
+# --- v2: the Browser-first, local-first catalogue (ADR-0464) -----------------------------------
+#
+# From v2 on, `storage_bytes`, `max_upload_bytes`, `max_upload_seconds`, `exports_per_month`,
+# `export_retention_days`, `analysis_songs_per_day` and `speculative_cpu_minutes_per_day` are
+# HOSTED-ONLY semantics: they keep exactly their v1 values, and they bind only for accounts
+# holding the `cloud.hosted_media` grant (ADR-0456). The binding change lives in `usage.quota`
+# and `usage.meters`, not in the plan shape; the fields stay here so hosted-grant accounts keep
+# today's enforcement unchanged and `validate_catalogue()` keeps checking them.
+#
+# The differentiating axes a member actually buys are unchanged from v1: Lucy allowances,
+# Rooms (Premium only), devices and discovery. `library_soft_cap_songs` rises, because local
+# analysis is the member's own compute: the cap is a UI sanity bound only, never a priced quota.
+#
+# The hosted grant is rules-based (ADR-0414 targeting), never a plan entitlement, so no plan
+# version lists `cloud.hosted_media` or any other BF flag; `plan_gated_flags()` reads latest
+# versions only, and v2 keeps the gated set identical to `PREMIUM_ONLY`.
+
+FREE_2 = replace(FREE_1, version=2, library_soft_cap_songs=10_000)
+STANDARD_2 = replace(STANDARD_1, version=2, library_soft_cap_songs=40_000)
+PREMIUM_2 = replace(PREMIUM_1, version=2, library_soft_cap_songs=100_000)
+
 # Every version of every plan, oldest first. Add a version; never change or remove one, because
 # subscriptions point at it.
 CATALOGUE: Mapping[str, tuple[Plan, ...]] = MappingProxyType(
     {
-        "free": (FREE_1,),
-        "standard": (STANDARD_1,),
-        "premium": (PREMIUM_1,),
+        "free": (FREE_1, FREE_2),
+        "standard": (STANDARD_1, STANDARD_2),
+        "premium": (PREMIUM_1, PREMIUM_2),
     }
 )
 

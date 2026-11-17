@@ -60,6 +60,18 @@ Inputs: R2 Standard $0.015/GB-month; Modal CPU ≈ $0.047/physical-core-hour + $
 
 **Takeaways.** A fully used Premium account costs a few dollars a month in steady state, dominated by Lucy and spare-time preparation, both of which are allowance-bounded. The one-time import of a huge library is the largest single cost, so imports run at plan weight and Free imports are paced by daily caps. A Free account costs cents unless abused, which is why new-account limits and abuse signals ([§12.6](12-security-privacy-legal.md#126-abuse-controls-for-the-free-tier)) matter more than the storage number.
 
+### 3.4 Update 2026-11-17: plan v2 under Browser-first Cloud (ADR-0464)
+
+*Added for the Browser-first Cloud programme. §3.1 to §3.3 above are the accepted v1 text and stay as written; existing subscriptions keep v1 semantics until a notified change at renewal (ADR-0402 versioning). This section records what v2 changes.*
+
+**What the tiers sell in v2 (the local-first axes).** Lucy allowances and model classes, Rooms (Premium only), playing devices and zones, and discovery sweeps. Explicitly not paid axes for default accounts: storage, daily analysis caps, speculative CPU minutes, export counts and upload sizes. The member's own device does that work, and SelectaDJ does not charge for permission to use it.
+
+**Storage and analysis caps are now hosted-only.** `storage_bytes`, upload sizes, export counts and retention, `analysis_songs_per_day` and `speculative_cpu_minutes_per_day` keep their v1 values in the v2 plan entries, but from v2 they bind only for accounts holding the `cloud.hosted_media` grant (ADR-0456; the grant is rules-based, never a plan line). Everyone else sees a truthful "no hosted storage" meter state instead of a quota. The library soft cap rises to 10,000 / 40,000 / 100,000 songs as a UI sanity bound only.
+
+**Prices hold.** £0 / £6.99 / £12.99 monthly, £59 / £109 annual, re-anchored against the 2026 consumer market researched in ADR-0464: djay Pro about $6.99/month, Serato DJ Pro about $11.99/month, rekordbox tiers about $120-360/year, VirtualDJ Pro $19/month. Standard sits in the djay band and Premium in the Serato band; SelectaDJ sells automatic mixing plus Rooms, not a performance deck, so the band is an anchor rather than a ceiling. Falling costs widen margin; they do not cut prices (owner decision, ADR-0464).
+
+**Marginal cost shifts.** A default (local-first) account costs roughly zero outside Lucy: metadata rows, SSE traffic and Lucy turns, with the 40% Lucy rule unchanged from §3.1. A hosted-grant account carries today's stack, dominated by storage at R2's $0.015/GB-month: about $0.75/month for a full Standard quota (50 GB) and about $1.50/month for a full Premium quota (100 GB), plus roughly two thirds again for the Infrequent Access backup copy. The hosted population is grandfathered and only shrinks. Sources and re-verification notes are in ADR-0464.
+
 ---
 
 [← 01-current-state.md](01-current-state.md) · [Contents](README.md#chapters) · [03-architecture.md →](03-architecture.md)

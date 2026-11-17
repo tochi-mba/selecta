@@ -26,6 +26,7 @@ reservation is made in the same transaction as the upload session it belongs to.
 from __future__ import annotations
 
 import enum
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import sqlalchemy as sa
@@ -37,6 +38,33 @@ from selecta.usage import ledger
 from selecta.usage.schema import insert_ignore, quota_state, storage_reservations
 
 RESERVATION_TTL = 2 * 24 * 60 * 60
+
+# How enforcement learns about the hosted-media grant (ADR-0456, ADR-0464). The grant is a
+# targeting rule, never a plan field, so quota can't read it from the plan row: a caller that
+# knows the account's flags passes a predicate answering "does this workspace hold
+# `cloud.hosted_media`?". `None` everywhere below means the caller didn't consult the grant,
+# which keeps today's behaviour exactly.
+HostedMediaGranted = Callable[[Connection, str], bool]
+
+
+def storage_binds(
+    connection: Connection,
+    workspace_id: str,
+    hosted_media: HostedMediaGranted | None = None,
+) -> bool:
+    """Whether storage limits bind this workspace (ADR-0464: storage binds only where it costs).
+
+    Yes when the hosted-media grant is on, or when any bytes are already stored or reserved
+    (grandfathered media keeps today's enforcement). No only when the caller consulted the grant
+    (`hosted_media` given), it answered no, and nothing is stored. With no predicate the answer
+    is always yes, so nothing changes until the integration pass wires the grant through the
+    callers (`api_cloud` and the storage routes).
+    """
+    if hosted_media is None:
+        return True
+    if hosted_media(connection, workspace_id):
+        return True
+    return usage(connection, workspace_id).used_bytes > 0
 
 
 class QuotaStatus(enum.StrEnum):
@@ -236,9 +264,23 @@ def set_limit(
     return _store(connection, held, limit=limit, plan=plan)
 
 
-def require_writable(connection: Connection, workspace_id: str) -> Usage:
-    """Refuse a storage-growing action (a new export, say) while the workspace is over quota."""
+def require_writable(
+    connection: Connection,
+    workspace_id: str,
+    *,
+    hosted_media: HostedMediaGranted | None = None,
+) -> Usage:
+    """Refuse a storage-growing action (a new export, say) while the workspace is over quota.
+
+    Pass `hosted_media` (ADR-0464) from callers whose action stores hosted bytes only for
+    hosted-grant accounts: a workspace without the grant and without a single stored or reserved
+    byte provably has no hosted bytes for this action to grow, so a quota refusal there would be
+    a lie. Any stored byte, or no predicate, keeps today's enforcement unchanged; `reserve` is
+    deliberately not skippable, because a reservation is by definition bytes.
+    """
     current = usage(connection, workspace_id)
+    if current.used_bytes == 0 and not storage_binds(connection, workspace_id, hosted_media):
+        return current
     if current.read_only:
         raise QuotaExceeded(current, 0)
     return current
@@ -266,6 +308,9 @@ def reserve(
     ).first()
     if existing is not None:
         return _reservation(existing)
+    # ADR-0464: no hosted-grant skip here, on purpose. A reservation is by definition hosted
+    # bytes, and a workspace without the grant never reaches this path at all: the upload routes
+    # sit behind `cloud.uploads`, which requires `cloud.hosted_media` (ADR-0456).
     if held.read_only or held.used_bytes + size_bytes > held.limit_bytes:
         raise QuotaExceeded(held, size_bytes)
     now = persistence.db_now(connection)
