@@ -264,7 +264,10 @@
     "devices.remote_control": {
       "label": "Remote playback control",
       "about": "Control the account's active playback session from another device.",
-      "routes": ["POST /api/playback/commands"],
+      "routes": [
+        "POST /api/playback/commands",
+        "POST /api/playback/commands/{command_id}/ack"
+      ],
       "requires": ["devices"],
       "surfaces": ["cloud.listen"],
       "modes": ["cloud"],
@@ -419,6 +422,7 @@
           "POST /api/admin/emergency/{control}/{command}",
           "GET /api/admin/flags",
           "GET /api/admin/flags/history",
+          "GET /api/admin/flags/cloud.hosted_media/grandfather-audit",
           "POST /api/admin/flags/rollback",
           "GET /api/admin/flags/explain/{user_id}",
           "POST /api/admin/flags/{flag_id}/impact",

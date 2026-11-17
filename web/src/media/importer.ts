@@ -24,7 +24,7 @@ export type SongRegistration = {
   title: string;
   artist: string;
   album?: string;
-  duration_s: number;
+  duration_s?: number;
   codec?: string;
   sample_rate?: number;
 };
@@ -65,6 +65,14 @@ export type ImportOptions = {
   readTags?: TagReader;
   batchSize?: number;
 };
+
+/** Metadata-only JSON mutation through the injected client. FastAPI must see JSON; relying on
+ * the browser's text/plain default would turn an otherwise valid import into a 422. */
+const postJson = <T>(request: Request, path: string, body: unknown): Promise<T> => request<T>(path, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify(body),
+});
 
 function extensionOf(name: string): string {
   const dot = name.lastIndexOf('.');
@@ -191,7 +199,7 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
     for (const item of sending) emit({ kind: 'file', name: item.name, stage: 'registering' });
     const payload = { songs: sending.map((item) => item.entry) };
     assertNoPath(payload);
-    const reply = await request<{ songs: RegisteredSong[] }>('/api/local-media/songs', { method: 'POST', body: JSON.stringify(payload) });
+    const reply = await postJson<{ songs: RegisteredSong[] }>(request, '/api/local-media/songs', payload);
     const byHash = new Map(reply.songs.map((song) => [song.content_sha256, song]));
     const present: number[] = [];
     for (const item of sending) {
@@ -225,7 +233,7 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
     if (present.length) {
       const availability = { device_id: deviceId, present, absent: [] as number[] };
       assertNoPath(availability);
-      await request('/api/local-media/availability', { method: 'POST', body: JSON.stringify(availability) });
+      await postJson(request, '/api/local-media/availability', availability);
     }
   };
 
@@ -241,12 +249,30 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
         const file = await candidate.open();
         const content_sha256 = await fileSha256(file, { signal });
         const tags = await readTags(file);
-        const names = normalise({ title: tags.title ?? stemOf(candidate.name), artist: tags.artist ?? 'Unknown artist', album: tags.album });
+        const normalised = normalise({
+          title: tags.title ?? stemOf(candidate.name),
+          artist: tags.artist ?? 'Unknown artist',
+          album: tags.album,
+        });
+        // Tag readers are allowed to return blank or whitespace-only values. Cloud requires
+        // non-empty display metadata, so recover locally instead of turning a readable file
+        // into a 422 that rejects its whole registration batch.
+        const names = {
+          ...normalised,
+          title: normalised.title || stemOf(candidate.name) || 'Untitled track',
+          artist: normalised.artist || 'Unknown artist',
+        };
         const codec = tags.codec ?? (extensionOf(candidate.name) || undefined);
+        const duration = tags.duration_s;
         entry = {
           content_sha256,
           ...names,
-          duration_s: tags.duration_s ?? 0,
+          // A codec the browser cannot probe has an unknown duration, represented by an
+          // omitted field. Sending zero would violate the API/DB > 0 invariant and make the
+          // otherwise valid import fail.
+          ...(duration !== undefined && Number.isFinite(duration) && duration > 0
+            ? { duration_s: duration }
+            : {}),
           ...(codec ? { codec } : {}),
           ...(tags.sample_rate ? { sample_rate: tags.sample_rate } : {}),
         };

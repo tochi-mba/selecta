@@ -15,7 +15,7 @@ import { holdWakeLock, WakeLockHold } from './wakeLock';
 export type Api = <T>(path: string, init?: RequestInit, workspaceId?: string) => Promise<T>;
 export type Warning = { code: string; text: string };
 export type Device = { id: string; name: string; kind: string; signed_in: boolean; this_device: boolean; poor_speaker: boolean; last_seen_at: number; warnings: Warning[] };
-export type SessionState = { mix_revision_id: string | null; song_index: number; offset_ms: number; anchor_at: number | null; state: 'playing' | 'paused' | 'stopped'; active_device_id: string | null; lease_expires_at: number | null; seq: number };
+export type SessionState = { mix_revision_id: string | null; song_index: number; offset_ms: number; anchor_at: number | null; state: 'playing' | 'paused' | 'stopped'; active_device_id: string | null; lease_expires_at: number | null; seq: number; fence?: number; state_confidence?: 'fresh' | 'uncertain' };
 export type SessionView = { session: SessionState | null; speaker: 'here' | 'elsewhere' | 'offline' | 'none'; speaker_device_id: string | null; speaker_name: string | null; ask_before_playing_here: boolean; server_time: number };
 export type Position = { song_index: number; offset_ms: number; state: 'playing' | 'paused' };
 
@@ -319,7 +319,15 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     try {
       await api('/playback/commands', {
         method: 'POST',
-        body: JSON.stringify({ device_id: deviceId, command: name, args, based_on_seq: view.session.seq, idempotency_key: newKey() }),
+        body: JSON.stringify({
+          device_id: deviceId,
+          command: name,
+          args,
+          based_on_seq: view.session.seq,
+          fence: view.session.fence,
+          ttl_seconds: 60,
+          idempotency_key: newKey(),
+        }),
       }, workspaceId);
       setError('');
     } catch (problem) {

@@ -44,6 +44,24 @@ STORED_MEDIA_ROUTES = (
     "POST /api/storage/derived-playback-url",
 )
 
+UPLOAD_REQUESTS = (
+    ("POST", "/api/uploads/plan"),
+    ("GET", "/api/uploads"),
+    ("GET", "/api/uploads/session-that-does-not-exist"),
+    ("POST", "/api/uploads/session-that-does-not-exist/parts"),
+    ("POST", "/api/uploads/session-that-does-not-exist/complete"),
+    ("DELETE", "/api/uploads/session-that-does-not-exist"),
+)
+STORED_MEDIA_REQUESTS = (
+    ("GET", "/api/assets"),
+    ("GET", "/api/assets/asset-that-does-not-exist"),
+    ("DELETE", "/api/assets/asset-that-does-not-exist"),
+    ("GET", "/api/assets/asset-that-does-not-exist/playback-url"),
+    ("POST", "/api/assets/asset-that-does-not-exist/playback-proxy"),
+    ("GET", "/api/assets/asset-that-does-not-exist/playback-proxy"),
+    ("POST", "/api/storage/derived-playback-url"),
+)
+
 
 @pytest.fixture
 def local_media_on():
@@ -348,3 +366,35 @@ def test_stored_media_reads_stay_open_while_hosted_media_is_ruled_off(party):
         json={"files": [{"name": "a.wav", "size": 4}]},
     )
     assert allowed.status_code == 201, allowed.text
+
+
+@pytest.mark.parametrize(("method", "path"), UPLOAD_REQUESTS)
+def test_every_upload_route_is_refused_when_the_hosted_grant_is_off(
+    party, method: str, path: str
+):
+    """The exhaustive write side of BF-0456-02: the flag gate runs before body/session
+    validation, so even deliberately nonexistent sessions must answer the same refusal."""
+    _rules(
+        party,
+        "cloud.hosted_media",
+        [Rule(RuleKind.USERS, {"ids": [_user_id(party, CAROL)], "on": False})],
+    )
+    answer = party.client.request(method, path, headers=auth(CAROL), json={})
+    assert answer.status_code == 403, (method, path, answer.text)
+    assert answer.json()["detail"]["code"] == "flag_off"
+    assert answer.json()["detail"]["flag"] == "cloud.uploads"
+
+
+@pytest.mark.parametrize(("method", "path"), STORED_MEDIA_REQUESTS)
+def test_every_stored_media_route_reaches_its_handler_when_hosted_writes_are_off(
+    party, method: str, path: str
+):
+    """The exhaustive read/preserve side of BF-0456-02. Missing assets and incomplete request
+    bodies may be 404/422, but they must never be hidden by the hosted-write grant."""
+    _rules(
+        party,
+        "cloud.hosted_media",
+        [Rule(RuleKind.USERS, {"ids": [_user_id(party, CAROL)], "on": False})],
+    )
+    answer = party.client.request(method, path, headers=auth(CAROL), json={})
+    assert answer.status_code != 403, (method, path, answer.text)

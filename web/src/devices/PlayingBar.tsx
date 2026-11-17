@@ -41,11 +41,14 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
 
   const where = useMemo(() => {
     if (!view) return 'Connecting...';
+    if (session?.state_confidence === 'uncertain') {
+      return `${view.speaker_name ?? 'The speaker'} has not checked in recently and may still be playing`;
+    }
     if (here || view.speaker === 'here') return 'Playing here';
     if (view.speaker === 'elsewhere') return `Playing on ${view.speaker_name ?? 'another device'}`;
     if (view.speaker === 'offline') return `${view.speaker_name ?? 'The speaker'} is offline and may still be playing`;
     return 'Nothing is playing';
-  }, [here, view]);
+  }, [here, session?.state_confidence, view]);
 
   const pressPlayHere = async () => {
     if (asking) {

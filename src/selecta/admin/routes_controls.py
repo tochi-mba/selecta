@@ -17,9 +17,11 @@ from selecta.admin import actions, emergency, flags_admin, http, takedowns
 from selecta.admin import state as emergency_state
 from selecta.authz.check import Actor, authorize
 from selecta.authz.scopes import ResourceRef
+from selecta.flags import rules as flag_rules
 from selecta.flags.matching import Rule
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
+from selecta.lf_migration.grandfather import audit_grandfather_rules
 from selecta.persistence import db_now
 
 
@@ -146,6 +148,22 @@ def install_routes(
         return run(
             request, claims, lambda conn, actor: flags_admin.explain_user(conn, actor, user_id)
         )
+
+    @app.get("/api/admin/flags/cloud.hosted_media/grandfather-audit")
+    def admin_hosted_media_grandfather_audit(request: Request, claims: SignedIn):
+        """The enumerable completed-upload population compared with the live grant rules.
+
+        This is deliberately read-only. Operators build and save rules through the existing
+        reviewed flag-change path; this view supplies the BF-0465 evidence before the flip guard
+        may accept the recorded grandfather marker.
+        """
+
+        def read(conn: Connection, actor: Actor) -> dict[str, Any]:
+            authorize(conn, actor, "flags.read")
+            rules = flag_rules.current_rules(conn, "cloud.hosted_media")
+            return audit_grandfather_rules(conn, rules).as_dict()
+
+        return {"audit": run(request, claims, read)}
 
     @app.post("/api/admin/flags/{flag_id}/impact")
     def admin_flag_impact(flag_id: str, body: FlagChange, request: Request, claims: SignedIn):

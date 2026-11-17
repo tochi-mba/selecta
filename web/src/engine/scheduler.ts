@@ -194,8 +194,8 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
   }
 
   /** Begin a track; `mine` ties every await back to the start that asked. */
-  async function begin(index: number, offsetMs: number, playing: boolean, mine: number): Promise<void> {
-    deps.store.set({ phase: 'loading', notice: '' });
+  async function begin(index: number, offsetMs: number, playing: boolean, mine: number, clearNotice = true): Promise<void> {
+    deps.store.set(clearNotice ? { phase: 'loading', notice: '' } : { phase: 'loading' });
     if (playing) {
       const woken = await deps.wake();
       if (mine !== generation || disposed) return;
@@ -212,7 +212,7 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     }
     if (loaded.kind === 'failed') {
       deps.store.set({ notice: 'That song could not be read, so SelectaDJ skipped it.' });
-      return begin(index + 1, 0, playing, mine);
+      return begin(index + 1, 0, playing, mine, false);
     }
     const buffer = loaded.buffer;
     const offset = Math.min(Math.max(offsetMs / 1000, 0), Math.max(buffer.duration - 0.05, 0));

@@ -44,7 +44,7 @@ export function fakeDirectory(name: string, entries: (FileHandleLike | Directory
   };
 }
 
-export type CapturedCall = { path: string; method: string; body?: unknown };
+export type CapturedCall = { path: string; method: string; body?: unknown; headers?: HeadersInit };
 
 export type CaptureOptions = {
   /** Mark a registration as a likely duplicate by its title: title -> duplicate_of id. */
@@ -62,7 +62,7 @@ export function captureRequest(options: CaptureOptions = {}): { request: Request
   let nextId = 1;
   const request = (async (path: string, init?: RequestInit) => {
     const body = init?.body ? (JSON.parse(String(init.body)) as unknown) : undefined;
-    calls.push({ path, method: init?.method ?? 'GET', body });
+    calls.push({ path, method: init?.method ?? 'GET', body, headers: init?.headers });
     if (options.respond) return options.respond(path, body);
     if (path === '/api/local-media/songs' && init?.method === 'POST') {
       const { songs } = body as { songs: SongRegistration[] };

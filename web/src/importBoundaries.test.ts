@@ -37,4 +37,16 @@ describe('frontend import direction', () => {
   it('the guard sees a real import line', () => {
     expect(importsOf('views/Studio.tsx')).toContain('../audio/focus');
   });
+
+  it('shared destination views use the injected request boundary, never local request functions', () => {
+    const sharedViews = ['Library.tsx', 'Lucy.tsx', 'Mix.tsx', 'Mixes.tsx', 'MyMixes.tsx', 'Now.tsx', 'Studio.tsx', 'Workshop.tsx'];
+    const offending = sharedViews.flatMap((name) => {
+      const source = fs.readFileSync(`${SOURCE}views/${name}`, 'utf8');
+      const apiImports = [...source.matchAll(/import\s*\{([^}]*)\}\s*from\s*['"]\.\.\/api['"]/g)]
+        .flatMap((match) => match[1].split(',').map((part) => part.trim().replace(/^type\s+/, '')))
+        .filter((name) => ['get', 'post', 'del'].includes(name));
+      return apiImports.map((name) => `views/${name}: ${name}`);
+    });
+    expect(offending).toEqual([]);
+  });
 });

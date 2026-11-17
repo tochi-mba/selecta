@@ -335,3 +335,22 @@ test('a feature switched off while its page is open closes up at once, without a
   await expect(page.locator('.room-panel').getByRole('heading', { name: 'Big screen' })).toBeVisible({ timeout: 10_000 });
   expect(await page.evaluate(() => (window as unknown as { stayed?: boolean }).stayed)).toBe(true);
 });
+
+test('hosted media is an account grant: revoking it hides uploads but keeps stored-library access', async ({ page, request }) => {
+  const user = await person(page, request, 'premium', '/library');
+  const menu = page.getByRole('navigation', { name: 'Cloud workspace' });
+  await expect(menu.getByRole('button', { name: 'Add music' })).toBeVisible();
+  await expect(menu.getByRole('button', { name: 'Library' })).toBeVisible();
+
+  // cloud.uploads requires this umbrella grant. The live flag event must remove every upload
+  // entry without reloading, while cloud.stored_media remains independently reachable so an
+  // existing customer's library never goes dark (ADR-0456).
+  await switchOff(request, user, ['cloud.hosted_media']);
+  await expect(menu.getByRole('button', { name: 'Add music' })).toHaveCount(0, { timeout: 10_000 });
+  await page.goto('/library');
+  await expect(page.getByRole('heading', { name: 'Your library' })).toBeVisible();
+  await expect(page.getByText(/upload tracks|add music/i)).toHaveCount(0);
+
+  await switchOff(request, user, []);
+  await expect(menu.getByRole('button', { name: 'Add music' })).toBeVisible({ timeout: 10_000 });
+});

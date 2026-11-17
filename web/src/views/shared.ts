@@ -24,7 +24,7 @@ export type ViewProps = {
   /** How this view talks to the server (ADR-0462): the local client here, the authenticated
    * Cloud client there. Views never import get/post/del from api.ts; they wrap this with
    * getVia/postVia/delVia instead, so the same page renders against either server. */
-  request: Request;
+  request?: Request;
   player: PlayerLike;
   now: NowState;
   setView: (view: View) => void;

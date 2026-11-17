@@ -402,7 +402,8 @@ def submit_command_in(
         )
     ttl = fencing.clean_ttl(ttl_seconds)
     expires_at = now + ttl
-    if fence is not None and fence != session.fence:
+    issued_fence = session.fence if fence is None else fence
+    if issued_fence != session.fence:
         status = CommandStatus.SUPERSEDED
     elif expires_at <= now:
         status = CommandStatus.EXPIRED
@@ -435,7 +436,9 @@ def submit_command_in(
             applied_seq=applied_seq,
             ttl_seconds=ttl,
             expires_at=expires_at,
-            fence=session.fence,
+            # Preserve what the controller actually issued. Storing the current fence here
+            # would let a stale command masquerade as current when the speaker ACKs it later.
+            fence=issued_fence,
             created_at=now,
         )
     )

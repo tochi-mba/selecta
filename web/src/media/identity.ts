@@ -61,7 +61,15 @@ export function assertNoPath(payload: unknown, at = 'payload'): void {
   }
   if (payload && typeof payload === 'object') {
     for (const [key, value] of Object.entries(payload as Record<string, unknown>)) {
-      if (PATH_KEYS.has(key.toLowerCase())) throw new Error(`A local path must never leave this device: found "${key}" at ${at}`);
+      const compact = key.toLowerCase().replace(/[^a-z]/g, '');
+      if (
+        PATH_KEYS.has(key.toLowerCase())
+        || compact.includes('path')
+        || compact.includes('directory')
+        || compact.includes('folder')
+      ) {
+        throw new Error(`A local path must never leave this device: found "${key}" at ${at}`);
+      }
       assertNoPath(value, `${at}.${key}`);
     }
   }
