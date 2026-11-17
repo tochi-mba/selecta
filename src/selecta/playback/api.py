@@ -79,6 +79,9 @@ class HeartbeatBody(DeviceBody):
     state: PlayState | None = None
     mix_revision_id: str | None = Field(default=None, max_length=64)
     seq: int | None = Field(default=None, ge=0)
+    # ADR-0461: the fence this device last saw. A device claiming a lapsed lease with an older
+    # one is refused; None keeps the old behaviour for clients that don't send it.
+    fence: int | None = Field(default=None, ge=0)
 
 
 class TakeOverBody(DeviceBody):
@@ -100,6 +103,24 @@ class CommandBody(DeviceBody):
 
 class AckBody(DeviceBody):
     result: str = Field(max_length=32)  # "applied" or "unavailable_here"
+
+
+# Refused presses the controller must hear about loudly, with the current state to redraw from.
+# "no_speaker" stays a 200: the client answers it by offering "Play here".
+COMMAND_REFUSALS = {
+    session.CommandStatus.STALE: (
+        "stale_command",
+        "Something changed since you pressed that. Here's where it is now.",
+    ),
+    session.CommandStatus.SUPERSEDED: (
+        "superseded_command",
+        "Playback moved to another device since you pressed that. Here's where it is now.",
+    ),
+    session.CommandStatus.EXPIRED: (
+        "expired_command",
+        "That press waited too long, so it was dropped. Here's where it is now.",
+    ),
+}
 
 
 def device_json(device: Device, *, this_device: str | None = None) -> dict[str, Any]:
@@ -324,7 +345,9 @@ def install_routes(
             seq=body.seq,
         )
         try:
-            result = session.heartbeat(engine, found.workspace.id, here, position, events=events)
+            result = session.heartbeat(
+                engine, found.workspace.id, here, position, fence=body.fence, events=events
+            )
         except PlaybackError as error:
             raise refused(error) from error
         now = server_time()
@@ -355,13 +378,14 @@ def install_routes(
         except PlaybackError as error:
             raise refused(error) from error
         previous = result.previous_device
+        now = server_time()
         return {
-            "session": session_json(result.session),
+            "session": session_json(result.session, now),
             "previous_device": None
             if previous is None
             else {"id": previous.id, "name": previous.name},
             "message": result.message,
-            "server_time": server_time(),
+            "server_time": now,
         }
 
     @app.post("/api/playback/reconnect")
@@ -375,7 +399,9 @@ def install_routes(
         result = session.on_reconnect(engine, found.workspace.id, here)
         return {
             "action": result.action.value,
-            "session": session_json(result.session),
+            # Judged at the moment of answering: a device coming back to a speaker whose lease
+            # has lapsed must see "uncertain", not the confidence of the session's last write.
+            "session": session_json(result.session, server_time()),
             "moved_to_device_id": result.moved_to_device_id,
             "moved_to_name": result.moved_to_name,
             "reason": result.reason,
@@ -408,19 +434,18 @@ def install_routes(
             raise refused(error) from error
         answer = {
             "status": result.status.value,
-            "session": session_json(result.session),
+            "session": session_json(result.session, server_time()),
             "applied_seq": result.applied_seq,
             "command_id": result.command_id,
             "replayed": result.replayed,
+            "fence": result.fence,
+            "expires_at": result.expires_at,
         }
-        if result.status is session.CommandStatus.STALE:
+        refusal = COMMAND_REFUSALS.get(result.status)
+        if refusal is not None:
+            code, message = refusal
             raise HTTPException(
-                status_code=409,
-                detail={
-                    "code": "stale_command",
-                    "message": "Something changed since you pressed that. Here's where it is now.",
-                    **answer,
-                },
+                status_code=409, detail={"code": code, "message": message, **answer}
             )
         return answer
 

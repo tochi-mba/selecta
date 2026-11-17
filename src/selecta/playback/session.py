@@ -109,6 +109,10 @@ class CommandResult:
     applied_seq: int | None
     command_id: str
     replayed: bool = False
+    # The ADR-0461 envelope as recorded: the fence the press was issued under and when it
+    # stops being executable (server time). None only on rows from before fencing existed.
+    fence: int | None = None
+    expires_at: float | None = None
 
 
 @dataclass(frozen=True)
@@ -153,6 +157,7 @@ def heartbeat(
     device_id: str,
     position: Position,
     *,
+    fence: int | None = None,
     zone_id: str | None = None,
     now: float | None = None,
     events: PlaybackEvents = NO_EVENTS,
@@ -165,7 +170,7 @@ def heartbeat(
         require_signed_in(conn, workspace_id, device_id)
         touch_device(conn, device_id, now)
         session = lock_session(conn, workspace_id, now, zone_id)
-        return heartbeat_in(conn, session, device_id, position, now, events)
+        return heartbeat_in(conn, session, device_id, position, now, events, fence=fence)
 
 
 def heartbeat_in(
@@ -177,21 +182,32 @@ def heartbeat_in(
     events: PlaybackEvents,
     *,
     may_take_over: bool = True,
+    fence: int | None = None,
 ) -> HeartbeatResult:
     """`heartbeat` on a locked session. `may_take_over` False (a zone's standby while its home
-    kiosk is still around) refuses instead of taking a lapsed lease."""
+    kiosk is still around) refuses instead of taking a lapsed lease.
+
+    `fence` is the one the device last saw (ADR-0461). The lease holder always renews and
+    adopts the current fence from the answer, so a lost response never strands it. A device
+    claiming a lapsed lease with an older fence is a stale speaker resurrecting after a
+    take-over: it is refused, and learns the current fence, instead of overwriting the new
+    owner's position with its own."""
     workspace_id = session.workspace_id
     previous = None
     if session.active_device_id == device_id:
         outcome = HeartbeatOutcome.RENEWED
-    elif not session.lease_live(now) and may_take_over:
+    elif (
+        not session.lease_live(now)
+        and may_take_over
+        and not fencing.stale_fence(session, fence)
+    ):
         outcome = HeartbeatOutcome.TOOK_OVER
         previous = session.active_device_id
         session = replace(
             session,
             active_device_id=device_id,
             seq=session.seq + 1,
-            fence=fencing.next_fence(session),  # ownership moved, so the fence moves
+            fence=fencing.fence_after(session, device_id),  # ownership moved to this device
             hand_back_to_device_id=None,
         )
     else:
@@ -282,7 +298,8 @@ def take_over_in(
         active_device_id=device_id,
         lease_expires_at=now + LEASE_SECONDS,
         seq=session.seq + 1,
-        fence=fencing.next_fence(session),  # a successful transfer; a refused one bumps nothing
+        # Moves only if the lease changes hands; a refused take-over raised above bumps nothing.
+        fence=fencing.fence_after(session, device_id),
         updated_at=now,
         hand_back_to_device_id=None,
     )
@@ -399,11 +416,13 @@ def submit_command_in(
             earlier["applied_seq"],
             earlier["id"],
             replayed=True,
+            fence=earlier["fence"],
+            expires_at=earlier["expires_at"],
         )
     ttl = fencing.clean_ttl(ttl_seconds)
-    expires_at = now + ttl
+    expires_at = now + ttl  # `now` is the database clock, never the controller's
     issued_fence = session.fence if fence is None else fence
-    if issued_fence != session.fence:
+    if fencing.stale_fence(session, issued_fence):
         status = CommandStatus.SUPERSEDED
     elif expires_at <= now:
         status = CommandStatus.EXPIRED
@@ -436,13 +455,14 @@ def submit_command_in(
             applied_seq=applied_seq,
             ttl_seconds=ttl,
             expires_at=expires_at,
-            # Preserve what the controller actually issued. Storing the current fence here
-            # would let a stale command masquerade as current when the speaker ACKs it later.
+            # What the controller actually issued, so a superseded row stays visibly so.
             fence=issued_fence,
             created_at=now,
         )
     )
     if status is CommandStatus.APPLIED:
+        # The envelope the speaker verifies before touching local state, and acks by id.
+        # Metadata only: no audio, no path (ADR-0461).
         events.publish(
             conn,
             workspace_id,
@@ -454,11 +474,16 @@ def submit_command_in(
                     "command": name.value,
                     "args": clean,
                     "seq": session.seq,
+                    "command_id": command_id,
+                    "fence": issued_fence,
+                    "expires_at": expires_at,
                 },
             ),
         )
         events.publish(conn, workspace_id, ports.STATE, session_payload(session, now))
-    return CommandResult(status, session, applied_seq, command_id)
+    return CommandResult(
+        status, session, applied_seq, command_id, fence=issued_fence, expires_at=expires_at
+    )
 
 
 def on_reconnect(

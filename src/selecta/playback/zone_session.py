@@ -215,10 +215,12 @@ def zone_heartbeat(
     device_id: str,
     position: Position,
     *,
+    fence: int | None = None,
     now: float | None = None,
     events: PlaybackEvents = NO_EVENTS,
 ) -> ZoneHeartbeatResult:
-    """A zone speaker's (or would-be speaker's) regular check-in."""
+    """A zone speaker's (or would-be speaker's) regular check-in. `fence` is the one the device
+    last saw: a stale one can't claim a lapsed lease (ADR-0461, via `heartbeat_in`)."""
     with transaction(engine, workspace_id) as conn:
         now = resolve_now(conn, now)
         zone = require_zone(conn, zones, workspace_id, zone_id)
@@ -252,6 +254,7 @@ def zone_heartbeat(
             now,
             events,
             may_take_over=_may_pick_up(conn, workspace_id, zone, device, now),
+            fence=fence,
         )
         session = result.session
         if (
@@ -309,7 +312,7 @@ def _hand_back_in(
         active_device_id=home,
         lease_expires_at=now + LEASE_SECONDS,
         seq=session.seq + 1,
-        fence=fencing.next_fence(session),  # the lease moves home, so the fence moves
+        fence=fencing.fence_after(session, home),  # the lease moves home, so the fence moves
         hand_back_to_device_id=None,
         updated_at=now,
     )

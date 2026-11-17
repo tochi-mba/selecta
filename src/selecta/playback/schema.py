@@ -18,7 +18,9 @@ DEVICE_PRINCIPALS = ("person", "kiosk")
 PLAY_STATES = ("playing", "paused", "stopped")
 # "superseded" and "expired" are ADR-0461 refusals: the fence moved, or the TTL ran out.
 COMMAND_STATUSES = ("applied", "stale", "no_speaker", "superseded", "expired")
-COMMAND_ACK_RESULTS = ("applied", "unavailable_here", "superseded")
+# What an ack recorded: the speaker's claim ("applied", "unavailable_here"), or the server's
+# verdict when the claim came from an older fence ("superseded") or after the TTL ("expired").
+COMMAND_ACK_RESULTS = ("applied", "unavailable_here", "superseded", "expired")
 
 
 def _one_of(column: str, values: tuple[str, ...]) -> str:
@@ -106,7 +108,7 @@ playback_commands = sa.Table(
     sa.Column("status", sa.String(16), nullable=False),
     sa.Column("applied_seq", sa.BigInteger, nullable=True),
     # ADR-0461: how long the press stays executable (server time), the session fence it was
-    # issued under, and what the speaker said it did with it. Old rows keep all five empty.
+    # issued under, and when and how its ack was recorded. Old rows keep all five empty.
     sa.Column("ttl_seconds", sa.Integer, nullable=True),
     sa.Column("expires_at", Epoch, nullable=True),
     sa.Column("fence", sa.BigInteger, nullable=True),
