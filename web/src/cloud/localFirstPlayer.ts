@@ -204,16 +204,17 @@ export class LocalFirstPlayer implements PlayerLike {
 }
 
 /** Opens the engine from a press and makes this device's speaker. Injectable for tests. */
-export type EngineStarter = (resolve: (index: number) => Promise<{ id: number; data: () => Promise<ArrayBuffer> } | null>) => Promise<{ speaker: BrowserSpeaker; refusal: string | null } | { speaker: null; refusal: string }>;
+export type EngineStarter = (resolve: (index: number) => Promise<{ id: number; data: () => Promise<ArrayBuffer> } | null>, queueLength?: () => number) => Promise<{ speaker: BrowserSpeaker; refusal: string | null } | { speaker: null; refusal: string }>;
 
 /** The real starter: AudioContext from the press, the measured probe, then the speaker. */
-export const startBrowserEngine: EngineStarter = async (resolve) => {
+export const startBrowserEngine: EngineStarter = async (resolve, queueLength) => {
   const { createEngine } = await import('../engine');
   const engine: Engine = createEngine();
   const opened = engine.openContext({ fromUserGesture: true });
   if ('state' in opened) return { speaker: null, refusal: opened.reason };
   const probe = await engine.probe(opened.context);
-  const speaker = engine.createSpeaker({ audio: opened, probe, resolve });
+  // queueLength lets an unavailable track skip with a notice instead of ending the set (ADR-0458)
+  const speaker = engine.createSpeaker({ audio: opened, probe, resolve, queueLength });
   return { speaker, refusal: probe.ok ? null : probe.reason };
 };
 
@@ -269,7 +270,7 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     if (owner.current === undefined) owner.current = null;
     if (!speaker) {
       wantHere.current = true;
-      const made = await starter(resolve);
+      const made = await starter(resolve, () => songs.current.length);
       if (made.refusal) setRefusal(made.refusal);
       if (made.speaker) setSpeaker(made.speaker);
       return '';
