@@ -23,7 +23,8 @@ from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import SongInfo
 from selecta.library.scan import identity
 from selecta.lyrics.lrclib import clean_artist
-from selecta.planner import beam, choose
+from selecta.planner import beam, choose, fit, wordreel
+from selecta.styles import blend, timing
 from selecta.planner.beam import _Cues, _Riders, handoff_quality
 from selecta.planner.choose import enumerate_candidates
 from selecta.planner.memory import RULES_VERSION, SeamMemory
@@ -32,7 +33,7 @@ from selecta.requests import Slot, custom_seam, find_slot, open_spots
 from selecta.seam_kinds import move_on
 from selecta.seams import request_from
 
-QUICK_BLENDS = ("bass_swap_blend", "filter_sweep", "tempo_ramp")
+QUICK_BLENDS = ("bass_swap_blend", "filter_sweep")
 EFFECTS = ("delay_throw", "echo_out")
 GOOD_ENOUGH = 0.5
 RIDE_SCORE = 0.7
@@ -54,8 +55,11 @@ _VERSION_NOTES = re.compile(r"[(\[].*?[)\]]")
 
 
 def _rules() -> str:
-    """Anything that decides what a pair can do. If it changes, nothing known about pairs stands."""
-    sources = b"".join(Path(module.__file__).read_bytes() for module in (beam, choose))
+    """Anything that decides what a pair can do. If it changes, nothing known about pairs stands.
+    The fit limits, word rules and blend timing decide as much as the scorers, so they count too:
+    editing any of them used to leave the book quietly stale."""
+    deciders = (beam, choose, fit, wordreel, timing, blend)
+    sources = b"".join(Path(module.__file__).read_bytes() for module in deciders)
     return hashlib.sha1(sources + str(RULES_VERSION).encode()).hexdigest()[:16]
 
 

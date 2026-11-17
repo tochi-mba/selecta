@@ -465,7 +465,7 @@ def repair(shape: Shape, failed: list[str], hearing: Hearing) -> Shape | None:
         fixed[B, VOICE] = False
     if {"phrase integrity"} & set(failed):
         fixed = _voice_moved_to_a_gap(fixed, hearing)
-    if {"quiet time", "level fall", "seam energy"} & set(failed):
+    if {"quiet time", "level fall"} & set(failed):
         _fill_the_thinnest_square(fixed, hearing)
     if "entry level" in failed:
         # the landing jumps out: let the first song's melody thin out before it

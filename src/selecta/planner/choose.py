@@ -431,14 +431,16 @@ def _key(candidate: Candidate) -> tuple:
 
 
 def fallback_candidate(a: SongInfo, b: SongInfo) -> Candidate:
-    """A deliberate echo out. It needs no beatmatch and no key match, so it always works."""
+    """A deliberate cut on the downbeat. It needs no beatmatch and no key match, so it always
+    works, and the listener rated every clean cut well while a reasonless echo rated badly. One
+    last resort for the whole engine, so the fallback heard is the same everywhere."""
     recipes = all_recipes()
     exits = a.exit_cues() or [
         Cue(a.bar_at(a.duration * 0.7), a.bar_time(a.bar_at(a.duration * 0.7)), "fallback", 0.2, 0)
     ]
     entries = b.entry_cues() or [Cue(0, b.bar_time(0), "song start", 0.5, 0)]
     return Candidate(
-        recipes["echo_out"], exits[0], entries[0], 0, 0.0, ("nothing else cleared the bar",)
+        recipes["cut_on_one"], exits[0], entries[0], 0, 0.0, ("nothing else cleared the bar",)
     )
 
 
