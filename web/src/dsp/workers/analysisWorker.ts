@@ -62,10 +62,28 @@ type WorkerScope = {
 
 const scope = globalThis as unknown as Partial<WorkerScope> & { window?: unknown };
 
+/** Whether a message is a well-formed AnalysisRequest from this worker's own page.
+ *
+ * A dedicated worker only ever hears the page that spawned it, and such messages carry an
+ * empty origin; an event bearing any origin, or a body that is not an AnalysisRequest, is
+ * dropped unanswered rather than analysed.
+ */
+export function trustedRequest(event: MessageEvent<AnalysisRequest>): AnalysisRequest | null {
+  if (event.origin) return null;
+  const request: unknown = event.data;
+  if (typeof request !== 'object' || request === null) return null;
+  const { id, sampleRate, pcm } = request as Partial<AnalysisRequest>;
+  if (typeof id !== 'number' || typeof sampleRate !== 'number' || !(pcm instanceof Float32Array)) {
+    return null;
+  }
+  return request as AnalysisRequest;
+}
+
 // Only wire the message loop when actually running as a worker; importing this module from
 // the page (or from tests) must stay side-effect free.
 if (typeof scope.postMessage === 'function' && scope.window === undefined) {
   (scope as WorkerScope).onmessage = (event) => {
-    (scope as WorkerScope).postMessage(analyse(event.data));
+    const request = trustedRequest(event);
+    if (request) (scope as WorkerScope).postMessage(analyse(request));
   };
 }
