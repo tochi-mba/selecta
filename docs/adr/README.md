@@ -26,6 +26,14 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 
 ---
 
+# SelectaDJ - Browser-first Cloud ADR set (2026-11-17)
+
+**Strictly additive docs-only set, accepted by the owner on 2026-11-17:** 13 ADRs, [ADR-0455](adr-0455-browser-first-cloud-goal-and-two-cloud-modes.md) to [ADR-0467](adr-0467-rollout-order-refactor-sequence-and-governance.md), programme prefix BF, baseline `main` at `7d7f7932`. The local-first personal Cloud becomes the default Cloud experience: the browser owns audio (import, playback, DSP, render, export) and Cloud holds metadata, portable recipes, Rooms, billing and signed commands, receiving audio only from hosted-flag accounts. The existing hosted media plane is kept, admin-granted per account behind a new `cloud.hosted_media` flag (gating new uploads and processing only; stored media stays playable); every account that ever uploaded is grandfathered before the default flips; nothing is retired, deleted or repriced. Phones remote-control a playing browser device with signed, fenced, TTL-limited metadata commands. Standalone local SelectaDJ is unchanged. All ADR decisions Accepted; all 95 BF tasks Not started; 0 independently Verified; checklists are inline in the ADRs (no separate checklist file, so this programme does not appear in the table above). ADR numbers 0455 to 0485 used on the abandoned, never-merged PR #64 branch are superseded by this set.
+
+**Start here:** [goal and two Cloud modes (0455)](adr-0455-browser-first-cloud-goal-and-two-cloud-modes.md), [hosted-media gating (0456)](adr-0456-hosted-media-mode-preservation-and-flag-gating.md), [remote-control fencing (0461)](adr-0461-remote-control-protocol-commands-fencing-takeover.md), [release gates (0466)](adr-0466-release-gates-tests-and-independent-verification.md).
+
+---
+
 # Selecta - proposed Autopilot and full-product UX integration (2026-11-12)
 
 **Strictly additive docs-only proposal:** [24 ADRs, ADR-0417–0440](selecta-autopilot-roadmap.md), [120 implementation checklist items](selecta-autopilot-implementation-checklist.md), [feature-preservation map](selecta-autopilot-feature-parity.md), [evidence ledger](selecta-autopilot-implementation-evidence.md), [release gates](selecta-autopilot-release-gates.md). All new ADRs Proposed, all new tasks Not started, 0 Independently Verified. Existing functionality, code, audio, historic ADRs and previous project statuses remain unchanged. No existing feature is authorized for removal.
