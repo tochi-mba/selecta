@@ -114,6 +114,27 @@ def _accounts(engine, *pairs: tuple[str, str]) -> None:
             ))
 
 
+class _Decided:
+    """The real CloudJobFlags answers, decided before the claim opens its transaction.
+
+    CloudJobFlags reads through a second connection. Inside a claim's write transaction SQLite's
+    single writer lock blocks that read ("database is locked"); PostgreSQL, where claims run in
+    production, does not. Deciding every catalogue flag up front through the real port keeps the
+    real rule layers under test on both engines.
+    """
+
+    def __init__(self, flags: CloudJobFlags, workspace_ids: tuple[str, ...]):
+        flag_ids = {job.flag_id for job in catalogue.CATALOGUE.values() if job.flag_id}
+        self.answers = {
+            (workspace, flag): flags.is_on(workspace, flag)
+            for workspace in workspace_ids
+            for flag in flag_ids
+        }
+
+    def is_on(self, workspace_id: str, flag_id: str) -> bool:
+        return self.answers[(workspace_id, flag_id)]
+
+
 @pytest.fixture
 def ruled(cloud_engine):
     """ws-granted holds the grant by a WORKSPACES rule; ws-ruled-off is caught by the trailing
@@ -123,7 +144,11 @@ def ruled(cloud_engine):
         flag_rules.save(
             conn, HOSTED, build_grandfather_rules(["ws-granted"]), author="test", reason="jobs"
         )
-    return make_store(cloud_engine, flags=CloudJobFlags(cloud_engine, RulesCache(cloud_engine)))
+    real = CloudJobFlags(cloud_engine, RulesCache(cloud_engine))
+    decided = _Decided(real, ("ws-granted", "ws-ruled-off"))
+    assert decided.answers[("ws-granted", HOSTED)] is True
+    assert decided.answers[("ws-ruled-off", HOSTED)] is False
+    return make_store(cloud_engine, flags=decided)
 
 
 @pytest.mark.parametrize(("job_type", "pool"), HOSTED_JOBS)

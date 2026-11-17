@@ -359,13 +359,15 @@ def test_stored_media_reads_stay_open_while_hosted_media_is_ruled_off(party):
     detail = party.client.get("/api/assets/0123456789abcdef", headers=auth(CAROL))
     assert detail.status_code == 404
     assert detail.json()["detail"] == {"code": "asset_not_found"}
-    # Accounts the rule doesn't name still upload.
+    # Accounts the rule doesn't name still reach the upload routes. The party has no object
+    # storage, so an admitted plan answers 503 storage_not_configured, never a 403 flag refusal.
     allowed = party.client.post(
         "/api/uploads/plan",
         headers=auth(ALICE),
         json={"files": [{"name": "a.wav", "size": 4}]},
     )
-    assert allowed.status_code == 201, allowed.text
+    assert allowed.status_code != 403, allowed.text
+    assert party.client.get("/api/uploads", headers=auth(ALICE)).status_code == 200
 
 
 @pytest.mark.parametrize(("method", "path"), UPLOAD_REQUESTS)

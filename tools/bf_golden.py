@@ -50,7 +50,9 @@ OUTPUT = Path(__file__).resolve().parent.parent / "web" / "src" / "dsp" / "golde
 # --- Synthesis: the shared contract with web/src/dsp/golden.ts (same formulas) -----------------
 
 
-def _add_tone(output: np.ndarray, sr: int, freq_hz: float, amplitude: float, start_s: float, dur_s: float) -> None:
+def _add_tone(
+    output: np.ndarray, sr: int, freq_hz: float, amplitude: float, start_s: float, dur_s: float
+) -> None:
     first = round(start_s * sr)
     count = round(dur_s * sr)
     index = np.arange(min(count, output.size - first))

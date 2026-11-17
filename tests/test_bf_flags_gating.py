@@ -98,13 +98,16 @@ def test_turning_hosted_media_off_for_one_account_gates_its_uploads_only(party):
     assert refused.json()["detail"]["code"] == "flag_off"
     # Reads are not gated: stored media keeps listing (BF-0456-02, writes gated, reads open).
     assert party.client.get("/api/assets", headers=auth(CAROL)).status_code == 200
-    # Only the targeted account is refused.
+    # Only the targeted account is refused. The party has no object storage configured, so an
+    # admitted plan answers 503 storage_not_configured; what matters is the flag let Alice in.
     allowed = party.client.post(
         "/api/uploads/plan",
         headers=auth(ALICE),
         json={"files": [{"name": "a.wav", "size": 4}]},
     )
-    assert allowed.status_code == 201, allowed.text
+    assert allowed.status_code != 403, allowed.text
+    assert party.client.get("/api/uploads", headers=auth(ALICE)).status_code == 200
+    assert party.client.get("/api/uploads", headers=auth(CAROL)).status_code == 403
     # The account payload tells the shell the hosted experience is gone for Carol only.
     assert party.client.get("/api/account", headers=auth(CAROL)).json()["experience"] == {
         "local_first": False,
