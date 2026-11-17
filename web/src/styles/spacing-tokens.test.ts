@@ -12,7 +12,8 @@ const node = (globalThis as unknown as { process: { cwd(): string; getBuiltinMod
 const fs = node.getBuiltinModule('node:fs') as Fs;
 const SOURCE = `${node.cwd()}/src/`;
 const doc = fs.readFileSync(`${SOURCE}../../docs/engineering/spacing-token-map.md`, 'utf8');
-const FILES = ['style.css', ...fs.readdirSync(`${SOURCE}styles/`).filter((name) => name.endsWith('.css') && name !== 'tokens.css').map((name) => `styles/${name}`)];
+// The Cloud, Rooms and Devices sheets are under the same rule (ADR-0462 BF-0462-07).
+const FILES = ['style.css', ...fs.readdirSync(`${SOURCE}styles/`).filter((name) => name.endsWith('.css') && name !== 'tokens.css').map((name) => `styles/${name}`), 'cloud/cloud.css', 'rooms/rooms.css', 'devices/devices.css'];
 
 /** 0 and a 1px hairline (border compensation) are always allowed. */
 const ALWAYS = new Set(['0px', '1px', '-1px']);
@@ -57,6 +58,7 @@ describe('spacing tokens (MP-0273-01)', () => {
   it('finds the stylesheets it guards', () => {
     expect(FILES).toContain('style.css');
     expect(FILES).toContain('styles/shell.css');
+    for (const sheet of ['cloud/cloud.css', 'rooms/rooms.css', 'devices/devices.css']) expect(FILES).toContain(sheet);
     expect(FILES.length).toBeGreaterThanOrEqual(10);
   });
 

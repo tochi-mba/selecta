@@ -16,6 +16,62 @@ const PLANS: { id: Paid; name: string; storage: string; month: string; year: str
   { id: 'premium', name: 'Premium', storage: '100 GB', month: '£12.99 / month', year: '£109 / year', about: 'Priority processing and guest request rooms.', featured: true },
 ];
 
+/** What each paid plan sells to a local-first account (ADR-0464, plan catalogue v2): Rooms, Lucy,
+ * devices and discovery. Storage is not a plan line for these accounts, because their music stays
+ * on their own devices; prices are the same as the hosted cards. `flag` hides an axis whose
+ * feature is off for this account, and Rooms shows only where it is on or a plan-locked teaser. */
+type Axis = { name: string; words: string; flag?: string };
+const LOCAL_FIRST_AXES: Record<Paid, { headline: string; eyebrow: string; axes: Axis[] }> = {
+  standard: {
+    headline: 'More from Lucy',
+    eyebrow: 'FOR EVERYDAY MIXING',
+    axes: [
+      { name: 'Lucy', words: 'Lucy Standard: 400 everyday turns and 40 planning turns a month.', flag: 'lucy' },
+      { name: 'Discovery', words: 'Scheduled discovery sweeps for new links between your songs.' },
+      { name: 'Devices', words: 'Sign in on up to 10 devices and play on one at a time.' },
+    ],
+  },
+  premium: {
+    headline: 'Rooms and Lucy Advanced',
+    eyebrow: 'FOR HOSTING',
+    axes: [
+      { name: 'Rooms', words: 'Open a room for up to 100 guests, for up to 12 hours, with song requests.', flag: 'rooms' },
+      { name: 'Lucy', words: 'Lucy Advanced: 150 everyday turns, 25 deep plans a month, and quick turns on fair use.', flag: 'lucy' },
+      { name: 'Discovery', words: 'Larger scheduled discovery sweeps.' },
+      { name: 'Devices', words: 'Sign in on up to 10 devices and play on one at a time.' },
+    ],
+  },
+};
+
+/** Whether this account's Cloud experience is local-first only, so storage is no part of its plan. */
+export function sellsLocalFirst(account: Pick<Account, 'experience'>) {
+  return account.experience?.local_first === true && account.experience?.hosted !== true;
+}
+
+function axisShown(axis: Axis, account: Account) {
+  if (!axis.flag) return true;
+  if (axis.flag === 'rooms') return featureOn(account, 'rooms') || Boolean(lockedTo(account, 'rooms'));
+  return featureOn(account, axis.flag);
+}
+
+function LocalFirstPlan({ plan, account }: { plan: Paid; account: Account }) {
+  const sells = LOCAL_FIRST_AXES[plan];
+  const axes = sells.axes.filter((axis) => axisShown(axis, account));
+  const rooms = axes.some((axis) => axis.name === 'Rooms');
+  const lucy = axes.some((axis) => axis.name === 'Lucy');
+  const headline = plan === 'premium'
+    ? (rooms && lucy ? sells.headline : rooms ? 'Rooms' : lucy ? 'Lucy Advanced' : 'Bigger discovery')
+    : (lucy ? sells.headline : 'Scheduled discovery');
+  return (
+    <>
+      <strong>{headline}</strong>
+      <ul className="cloud-plan-axes">
+        {axes.map((axis) => <li key={axis.name}><b>{axis.name}</b> {axis.words}</li>)}
+      </ul>
+    </>
+  );
+}
+
 /** What a plan card says it includes, without naming a feature that's switched off for this
  * account (a plan-locked teaser still names it: that's what the plan unlocks). */
 function aboutPlan(plan: (typeof PLANS)[number], account: Account) {
@@ -51,8 +107,10 @@ export function ConsentForm({ consent, onChange, version }: { consent: Consent; 
   );
 }
 
-export function Billing({ account, busy, phase, consentVersion, onCheckout, onPortal, blocked }: {
+export function Billing({ account, busy, phase, consentVersion, onCheckout, onPortal, blocked, localFirst }: {
   account: Account;
+  /** Sell the local-first axes instead of storage. Read from the account's experience when left out. */
+  localFirst?: boolean;
   busy: boolean;
   phase: CheckoutPhase;
   consentVersion: string;
@@ -68,6 +126,7 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
   const portal = featureOn(account, 'billing.portal');
   const ready = consentComplete(consent) && Boolean(consentVersion) && !busy;
   const confirming = phase === 'confirming';
+  const local = localFirst ?? sellsLocalFirst(account);
   return (
     <div className="cloud-billing">
       <CheckoutStatus phase={phase} account={account} />
@@ -82,7 +141,9 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
       <h2 className="cloud-section-title">This period’s usage</h2>
       <Meters account={account} />
       {paid
-        ? portal && <section className="cloud-card"><p className="cloud-eyebrow">UPGRADE OR DOWNGRADE</p><p>Upgrades start now and are prorated. Downgrades take effect at the end of the period; if your library is then bigger than the new plan, it stays playable and nothing is deleted. Payment details and invoices are in the same secure Stripe portal.</p></section>
+        ? portal && <section className="cloud-card"><p className="cloud-eyebrow">UPGRADE OR DOWNGRADE</p><p>{local
+          ? 'Upgrades start now and are prorated. Downgrades take effect at the end of the period, and your music and mixes stay exactly as they are. Payment details and invoices are in the same secure Stripe portal.'
+          : 'Upgrades start now and are prorated. Downgrades take effect at the end of the period; if your library is then bigger than the new plan, it stays playable and nothing is deleted. Payment details and invoices are in the same secure Stripe portal.'}</p></section>
         : checkout && !confirming && <>
           <ConsentForm consent={consent} onChange={setConsent} version={consentVersion} />
           <div className="cloud-interval" role="group" aria-label="Billing interval">
@@ -92,10 +153,13 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
           <div className="cloud-plan-grid">
             {PLANS.map((plan) => (
               <section key={plan.id} className={`cloud-plan-card ${plan.featured ? 'featured' : ''}`} aria-label={plan.name}>
-                <p className="cloud-eyebrow">{plan.featured ? 'MOST ROOM TO PLAY' : 'FOR YOUR GROWING LIBRARY'}</p>
-                <h2>{plan.name}</h2><strong>{plan.storage}</strong>
-                <p className="cloud-price">{interval === 'month' ? plan.month : plan.year}</p>
-                <p>{aboutPlan(plan, account)}</p>
+                <p className="cloud-eyebrow">{local ? LOCAL_FIRST_AXES[plan.id].eyebrow : plan.featured ? 'MOST ROOM TO PLAY' : 'FOR YOUR GROWING LIBRARY'}</p>
+                <h2>{plan.name}</h2>
+                {local
+                  ? <><p className="cloud-price">{interval === 'month' ? plan.month : plan.year}</p><LocalFirstPlan plan={plan.id} account={account} /></>
+                  : <><strong>{plan.storage}</strong>
+                    <p className="cloud-price">{interval === 'month' ? plan.month : plan.year}</p>
+                    <p>{aboutPlan(plan, account)}</p></>}
                 <button className={plan.featured ? 'primary' : ''} disabled={!ready} onClick={() => onCheckout(plan.id, interval, consent)}>Choose {plan.name}</button>
               </section>
             ))}
@@ -104,7 +168,7 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
           {/* a slow checkout answer otherwise looks like nothing happened (2026-11-12 flow walk) */}
           {busy && consentComplete(consent) && <p className="cloud-hint" role="status">Opening secure checkout…</p>}
         </>}
-      {blocked && (paid ? portal : checkout) && <p className="cloud-hint">Upgrading lifts the pause on uploads and exports as soon as your new plan is confirmed.</p>}
+      {blocked && !local && (paid ? portal : checkout) && <p className="cloud-hint">Upgrading lifts the pause on uploads and exports as soon as your new plan is confirmed.</p>}
     </div>
   );
 }

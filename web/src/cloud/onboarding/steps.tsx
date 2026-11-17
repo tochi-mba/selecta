@@ -1,0 +1,365 @@
+import { ChangeEvent, useEffect, useId, useState } from 'react';
+import { playbackStatusText } from '../../copy';
+import type { ImportSource } from '../../media';
+import { Icon } from '../../ui/Icon';
+import type { AudioSession, SpineDeps, WakeSentinel } from './deps';
+import { forkToController, OutputRoute, settle, skipPlayback, SpineState } from './state';
+
+/** The steps of the onboarding spine (ADR-0463). Each one says plainly what is happening and
+ * what is not, and records its own outcome through `onChange`. No step says install, upload or
+ * wait for processing: the music stays on this device and is checked here. */
+
+export type ImportProgress = {
+  running: boolean;
+  current?: string;
+  done: number;
+  duplicates: number;
+  failures: { name: string; reason: string }[];
+  paused: boolean;
+  error?: string;
+};
+
+export type StepProps = {
+  state: SpineState;
+  onChange: (next: SpineState) => void;
+  deps: SpineDeps;
+  /** The audio session opened by a press in an earlier step, if any. */
+  session: () => AudioSession | null;
+  /** Opens audio from inside the current press; a string is why this device cannot. */
+  openSession: () => AudioSession | string;
+};
+
+function SkipButton({ children, onClick }: { children: string; onClick: () => void }) {
+  return <button type="button" className="cloud-spine-skip" onClick={onClick}>{children}</button>;
+}
+
+/* ---------- connect ---------- */
+
+export function ConnectStep({ state, onChange, deps, onPick }: StepProps & { onPick: (source: ImportSource) => void }) {
+  const id = useId();
+  const picker = deps.pickers.dirPicker();
+  const folderInput = deps.pickers.directoryInput();
+  const [problem, setProblem] = useState('');
+  const fromInput = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files.length) onPick(Array.from(files));
+  };
+  const pickFolder = async () => {
+    setProblem('');
+    try {
+      const folder = await deps.pickers.pickDirectory?.();
+      if (folder) onPick(folder);
+    } catch (error) {
+      if ((error as Error)?.name === 'AbortError') return;
+      setProblem('SelectaDJ could not open that folder. Try choosing your music files instead.');
+    }
+  };
+  return (
+    <>
+      <p>Choose the music you want to mix. It stays on this device: SelectaDJ reads it here and keeps only its details, like titles and lengths, in your account.</p>
+      <div className="cloud-actions">
+        <label className="cloud-spine-pick primary" htmlFor={`${id}-files`}>
+          <Icon name="music" size="toolbar" /> Choose music files
+          <input id={`${id}-files`} type="file" multiple accept="audio/*" onChange={fromInput} />
+        </label>
+        {picker.supported
+          ? <button type="button" onClick={() => void pickFolder()}><Icon name="folder" size="toolbar" /> Choose a folder</button>
+          : folderInput.supported && (
+            <label className="cloud-spine-pick" htmlFor={`${id}-folder`}>
+              <Icon name="folder" size="toolbar" /> Choose a folder
+              <input id={`${id}-folder`} type="file" multiple onChange={fromInput} {...{ webkitdirectory: '' }} />
+            </label>
+          )}
+      </div>
+      {!picker.supported && !folderInput.supported && picker.reason && <p className="cloud-hint">{picker.reason}</p>}
+      {problem && <p className="cloud-inline-error" role="alert">{problem}</p>}
+      <SkipButton onClick={() => onChange({ ...settle(state, 'connect', 'skipped'), outcomes: { ...state.outcomes, connect: 'skipped', verify: 'skipped' }, step: 'capability' })}>
+        Look around first, connect music later
+      </SkipButton>
+    </>
+  );
+}
+
+/* ---------- verify ---------- */
+
+export function VerifyStep({ state, onChange, progress, onStop }: StepProps & { progress: ImportProgress | null; onStop: () => void }) {
+  const summary = state.imported;
+  if (progress?.running) {
+    const counted = progress.done + progress.duplicates;
+    return (
+      <>
+        <p>SelectaDJ is reading each song on this device to recognise it by its contents. Your files are not changed or moved.</p>
+        <progress className="cloud-spine-progress" aria-label="Checking your music" />
+        <p role="status">{counted === 1 ? '1 song checked' : `${counted} songs checked`}{progress.current ? `. Now: ${progress.current}` : ''}</p>
+        <button type="button" onClick={onStop}>Stop here</button>
+      </>
+    );
+  }
+  if (progress?.error) {
+    return (
+      <>
+        <p className="cloud-inline-error" role="alert">{progress.error}</p>
+        <p>Anything already checked is in your library.</p>
+        <div className="cloud-actions">
+          <button type="button" className="primary" onClick={() => onChange({ ...state, step: 'connect' })}>Try again</button>
+          <SkipButton onClick={() => onChange(settle(state, 'verify', 'skipped'))}>Carry on without it</SkipButton>
+        </div>
+      </>
+    );
+  }
+  if (!summary) {
+    return (
+      <>
+        <p>Nothing is being checked right now.</p>
+        <div className="cloud-actions">
+          <button type="button" className="primary" onClick={() => onChange({ ...state, step: 'connect' })}>Choose music</button>
+          <SkipButton onClick={() => onChange(settle(state, 'verify', 'skipped'))}>Carry on without music</SkipButton>
+        </div>
+      </>
+    );
+  }
+  const added = summary.imported + summary.duplicates;
+  return (
+    <>
+      <p role="status">
+        {added === 0 ? 'No songs were added.' : added === 1 ? '1 song is in your library.' : `${added} songs are in your library.`}
+        {summary.duplicates ? ` ${summary.duplicates} of them were already there.` : ''}
+        {summary.failed ? ` ${summary.failed} could not be read.` : ''}
+        {summary.skipped ? ` ${summary.skipped} files were not music and were left alone.` : ''}
+      </p>
+      {summary.cancelled && <p>You stopped part way. Everything checked before that is in your library.</p>}
+      {summary.paused && <p>This browser ran out of room for its notes about your music. Everything checked so far is in your library; free some space and add the rest later.</p>}
+      {!!progress?.failures.length && (
+        <ul className="cloud-spine-failures">
+          {progress.failures.slice(0, 20).map((failure) => <li key={failure.name}><b>{failure.name}</b> <span>{failure.reason}</span></li>)}
+        </ul>
+      )}
+      <div className="cloud-actions">
+        {added > 0
+          ? <button type="button" className="primary" onClick={() => onChange(settle(state, 'verify', 'done'))}>Continue</button>
+          : <button type="button" className="primary" onClick={() => onChange({ ...state, step: 'connect' })}>Choose other music</button>}
+        {added === 0 && <SkipButton onClick={() => onChange(settle(state, 'verify', 'skipped'))}>Carry on without music</SkipButton>}
+      </div>
+    </>
+  );
+}
+
+/* ---------- capability ---------- */
+
+export function CapabilityStep({ state, onChange, openSession }: StepProps) {
+  const [checking, setChecking] = useState(false);
+  const check = () => {
+    const opened = openSession();
+    if (typeof opened === 'string') {
+      onChange(forkToController(state, opened));
+      return;
+    }
+    setChecking(true);
+    void opened.probe().then((answer) => {
+      setChecking(false);
+      if (answer.ok) onChange(settle(state, 'capability', 'done', { capability: { ok: true } }));
+      else onChange(forkToController(state, answer.reason ?? 'this device did not pass the check.'));
+    }, (error: unknown) => {
+      setChecking(false);
+      onChange(forkToController(state, (error as Error)?.message || 'the check stopped part way.'));
+    });
+  };
+  return (
+    <>
+      <p>SelectaDJ mixes right here in your browser. This checks that this device can really run the mixer. It takes a couple of seconds and makes no sound.</p>
+      {checking
+        ? <p role="status" aria-busy="true">Checking this device…</p>
+        : <button type="button" className="primary" onClick={check}>Check this device</button>}
+      {!checking && <SkipButton onClick={() => onChange(skipPlayback(state))}>Not on this device</SkipButton>}
+    </>
+  );
+}
+
+/* ---------- output ---------- */
+
+export const OUTPUT_ROUTES: { id: OutputRoute; label: string; about: string }[] = [
+  { id: 'built_in', label: 'This device’s own speaker', about: 'Fine for checking. Usually too quiet for a room.' },
+  { id: 'headphones', label: 'Headphones, or a cable to a speaker', about: '3.5 mm or USB-C. Plug it in before you start sound.' },
+  { id: 'bluetooth', label: 'A Bluetooth speaker', about: 'Pair it in this device’s settings first. If it drops, SelectaDJ stops calling the sound confirmed until you check again.' },
+  { id: 'hdmi_dock', label: 'HDMI or a dock', about: 'The sound goes wherever the screen or dock sends it, so check that end isn’t muted.' },
+  { id: 'system', label: 'Whatever this device is set to', about: 'SelectaDJ uses the device’s own choice. Change it in the device’s sound settings.' },
+];
+
+export function OutputStep({ state, onChange }: StepProps) {
+  const id = useId();
+  const [route, setRoute] = useState<OutputRoute | undefined>(state.output);
+  return (
+    <>
+      <p>SelectaDJ plays through whichever output this device is using. Set it up in the device’s own settings, then tell SelectaDJ what you chose so the sound check can help if nothing comes out.</p>
+      <fieldset className="cloud-spine-routes">
+        <legend>Where should the sound go?</legend>
+        {OUTPUT_ROUTES.map((option) => (
+          <label key={option.id} className="cloud-check">
+            <input type="radio" name={`${id}-route`} value={option.id} checked={route === option.id} onChange={() => setRoute(option.id)} />
+            <span><b>{option.label}</b><small>{option.about}</small></span>
+          </label>
+        ))}
+      </fieldset>
+      <div className="cloud-actions">
+        <button type="button" className="primary" disabled={!route} onClick={() => route && onChange(settle(state, 'output', 'done', { output: route }))}>Continue</button>
+        <SkipButton onClick={() => onChange(settle(state, 'output', 'skipped'))}>Use whatever is set</SkipButton>
+      </div>
+    </>
+  );
+}
+
+/* ---------- start ---------- */
+
+export function StartStep({ state, onChange, session, openSession }: StepProps) {
+  const [problem, setProblem] = useState('');
+  const [starting, setStarting] = useState(false);
+  const start = () => {
+    const opened = session() ?? openSession();
+    if (typeof opened === 'string') {
+      onChange(forkToController(state, opened));
+      return;
+    }
+    setProblem('');
+    setStarting(true);
+    void opened.wake().then((running) => {
+      setStarting(false);
+      if (running) onChange(settle(state, 'start', 'done'));
+      else setProblem('The browser did not let sound start. Make sure this tab is in front, then press Start sound again.');
+    }, () => {
+      setStarting(false);
+      setProblem('The browser did not let sound start. Make sure this tab is in front, then press Start sound again.');
+    });
+  };
+  return (
+    <>
+      <p>Browsers only let a page make sound after a press. Press Start sound and SelectaDJ gets ready to play. Nothing plays yet.</p>
+      <button type="button" className="primary cloud-spine-start" onClick={start} aria-busy={starting || undefined}>
+        <Icon name="play" /> {starting ? 'Starting…' : 'Start sound'}
+      </button>
+      {problem && <p className="cloud-inline-error" role="alert">{problem}</p>}
+    </>
+  );
+}
+
+/* ---------- sound check ---------- */
+
+const ROUTE_CHECKS: Record<OutputRoute | 'any', string[]> = {
+  any: ['Turn the volume up on this device, and check it isn’t muted or on silent.', 'Check this tab isn’t muted in the browser.'],
+  built_in: ['Unplug any headphones, so the sound comes out of the device itself.'],
+  headphones: ['Push the plug all the way in, or try the other port.', 'Check the speaker at the other end is on and turned up.'],
+  bluetooth: ['Check the speaker shows as connected in this device’s Bluetooth settings.', 'Turn the speaker itself up; it has its own volume.'],
+  hdmi_dock: ['Check the screen or dock isn’t muted and is on the right input.'],
+  system: ['Open the device’s sound settings and check which output it uses.'],
+};
+
+export function SoundcheckStep({ state, onChange, deps, session, openSession }: StepProps) {
+  const [phase, setPhase] = useState<'ready' | 'playing' | 'asking' | 'heard_nothing'>('ready');
+  const [problem, setProblem] = useState('');
+  const play = () => {
+    const opened = session() ?? openSession();
+    if (typeof opened === 'string') {
+      onChange(forkToController(state, opened));
+      return;
+    }
+    setProblem('');
+    setPhase('playing');
+    void opened.playTone().then(() => setPhase('asking'), () => {
+      setPhase('asking');
+      setProblem('The tone may not have played. Press Play the check tone again, or say what you heard.');
+    });
+  };
+  const heard = () => {
+    const at = deps.now();
+    session()?.confirmHeard(at);
+    onChange(settle(state, 'soundcheck', 'done', { heardAt: at }));
+  };
+  const heardNothing = () => {
+    session()?.markUnverified();
+    setPhase('heard_nothing');
+  };
+  const checks = [...ROUTE_CHECKS.any, ...ROUTE_CHECKS[state.output ?? 'system']];
+  return (
+    <>
+      <p>Play a short, quiet tone, then say whether you heard it. Only a person can tell: SelectaDJ can’t hear the room, so it never marks this done by itself.</p>
+      <p className="cloud-spine-status" role="status">{playbackStatusText({ state: 'output_unverified' })}</p>
+      {phase === 'playing'
+        ? <p aria-busy="true">Playing the check tone…</p>
+        : <button type="button" className={phase === 'ready' ? 'primary' : ''} onClick={play}><Icon name="volume" size="toolbar" /> {phase === 'ready' ? 'Play the check tone' : 'Play the tone again'}</button>}
+      {problem && <p className="cloud-inline-error" role="alert">{problem}</p>}
+      {phase === 'asking' && (
+        <div className="cloud-actions" role="group" aria-label="Did you hear the tone?">
+          <button type="button" className="primary" onClick={heard}><Icon name="check" size="toolbar" /> I heard it</button>
+          <button type="button" onClick={heardNothing}>I heard nothing</button>
+        </div>
+      )}
+      {phase === 'heard_nothing' && (
+        <section className="cloud-spine-routes-help" aria-label="Find the sound">
+          <h3>Let’s find the sound</h3>
+          <ol>{checks.map((check) => <li key={check}>{check}</li>)}</ol>
+          <p>Then play the tone again. If it still doesn’t come through, you can carry on: SelectaDJ will keep saying the sound isn’t confirmed until someone hears it.</p>
+          <SkipButton onClick={() => onChange(settle(state, 'soundcheck', 'unverified'))}>Carry on without a confirmed sound</SkipButton>
+        </section>
+      )}
+    </>
+  );
+}
+
+/* ---------- keep awake ---------- */
+
+export function KeepAwakeStep({ state, onChange, deps, session }: StepProps) {
+  const [answer, setAnswer] = useState<'held' | 'unsupported' | 'refused' | undefined>();
+  const [reason, setReason] = useState('');
+  const [held, setHeld] = useState<WakeSentinel | null>(null);
+  useEffect(() => () => { void held?.release().catch(() => undefined); }, [held]);
+  const ask = async () => {
+    const got = await deps.requestWakeLock();
+    setAnswer(got.result);
+    if (got.result === 'held') {
+      setHeld(got.sentinel);
+      session()?.watchWakeLock?.(got.sentinel);
+    }
+    if (got.result === 'refused') setReason(got.reason);
+  };
+  const words = {
+    held: 'The browser agreed to keep the screen on while this page is open and in front. It can still change its mind, for example on low battery, and SelectaDJ will say so.',
+    unsupported: 'This browser can’t keep the screen on by itself. Turn off auto-lock in the device’s settings instead.',
+    refused: `The browser said no${reason ? `: ${reason}` : '.'} Turn off auto-lock in the device’s settings instead.`,
+  };
+  return (
+    <>
+      <p>A browser can only play while it’s open and in front. For a long session:</p>
+      <ul className="cloud-spine-guidance">
+        <li>Plug this device into power.</li>
+        <li>Keep SelectaDJ open and in front. If you switch apps or the screen locks, the music stops.</li>
+        <li>Turn off auto-lock in the device’s settings, or ask the browser below.</li>
+      </ul>
+      {answer
+        ? <p role="status">{words[answer]}</p>
+        : <button type="button" onClick={() => void ask()}>Ask to keep the screen on</button>}
+      <div className="cloud-actions">
+        <button type="button" className="primary" onClick={() => onChange(settle(state, 'keepawake', answer === 'held' ? 'done' : 'skipped', answer ? { wakeLock: answer } : {}))}>Continue</button>
+      </div>
+    </>
+  );
+}
+
+/* ---------- remote ---------- */
+
+export function RemoteStep({ state, onChange }: StepProps) {
+  const failed = state.capability?.ok === false;
+  return (
+    <>
+      {failed && (
+        <section className="cloud-spine-fork" aria-label="This device can be your controller">
+          <h3><Icon name="warning" size="toolbar" /> This device can’t play the mix</h3>
+          <p>{state.capability?.reason}</p>
+          <p>You can still use it to look through your library, make mixes and control a player on another device. A tablet or computer whose browser passes this check can be the player; opening SelectaDJ in the browser itself, rather than inside another app, often helps.</p>
+        </section>
+      )}
+      <p>Want to control the music from your phone? Open Devices from More, then pair your phone there. It’s optional, and you can do it any time.</p>
+      <div className="cloud-actions">
+        <button type="button" className="primary" onClick={() => onChange(settle(state, 'remote', 'skipped'))}>Finish</button>
+      </div>
+    </>
+  );
+}

@@ -1,6 +1,6 @@
 # CSS ownership and cascade order
 
-Who owns which rules in the app's own stylesheets, the order they load in, and the few places where a rule wins by force. Owner: ADR-0368 (UF-0368-01, -02, -07). The selector-level register (repeated shared class names, breakpoints and the PR review rules) is ADR-0278's `docs/adr/completion/css-ownership.md`, checked by `web/src/styles/css-ownership.test.ts`; this page adds the load-order owners, token ownership and the `!important` exceptions. `web/src/styles/uf-cascade.test.ts` fails when `web/src/main.tsx` loads a sheet in a different order from the table below, when a stylesheet exists that this page does not list, when a `!important` appears that is not in the exceptions table (or one listed here has gone), when a raw colour appears outside `tokens.css`, or when a sheet other than `tokens.css` defines a semantic token. The separate surfaces (`web/src/cloud`, `guest`, `rooms`, `display`, `devices`, `admin`) keep their own stylesheets and are outside this page.
+Who owns which rules in the app's own stylesheets, the order they load in, and the few places where a rule wins by force. Owner: ADR-0368 (UF-0368-01, -02, -07). The selector-level register (repeated shared class names, breakpoints and the PR review rules) is ADR-0278's `docs/adr/completion/css-ownership.md`, checked by `web/src/styles/css-ownership.test.ts`; this page adds the load-order owners, token ownership and the `!important` exceptions. `web/src/styles/uf-cascade.test.ts` fails when `web/src/main.tsx` loads a sheet in a different order from the table below, when a stylesheet exists that this page does not list, when a `!important` appears that is not in the exceptions table (or one listed here has gone), when a raw colour appears outside `tokens.css`, or when a sheet other than `tokens.css` defines a semantic token. The separate surfaces (`guest`, `display`, `admin`) keep their own stylesheets and are outside this page. The Cloud, Rooms and Devices sheets are not: they come under `tokens.css` (ADR-0462, BF-0462-07) and are listed under [Feature sheets under the tokens](#feature-sheets-under-the-tokens).
 
 ## Load order
 
@@ -24,6 +24,18 @@ Later sheets win ties of equal specificity. A sheet only refines what an earlier
 | 14 | `styles/typography.css` | Type roles applied where an earlier rule left a gap; loaded last so it owns type (ADR-0275). |
 
 `styles/lucy.css` is not loaded by `main.tsx`: `views/Lucy.tsx` and `views/LucyCloudSettings.tsx` import it, so it only exists once Lucy is on screen. It owns the Lucy page and uses only meanings from `tokens.css`.
+
+## Feature sheets under the tokens
+
+These sheets load with their own components rather than from `main.tsx`, so they are outside the load order above, but every colour and role in them comes from `tokens.css`. `uf-cascade.test.ts` checks them for raw colours, role definitions and `!important`; `spacing-tokens.test.ts` and `motion-tokens.test.ts` check their spacing and durations (ADR-0462, BF-0462-07).
+
+| Sheet | Loaded by | Owns |
+| --- | --- | --- |
+| `cloud/cloud.css` | `cloud/CloudApp.tsx` | The Cloud shell, account, billing and meters, uploads, the local-first onboarding spine, the cutover notice and the reconciliation report. |
+| `rooms/rooms.css` | `rooms/RoomPanel.tsx` | Rooms hosting: the room panel, its share code and QR, settings, guests and presence. |
+| `devices/devices.css` | `devices/DevicesPanel.tsx`, `devices/PlayingBar.tsx` | The devices list and the "playing on" bar. |
+
+The QR code's white quiet zone is the one colour these sheets needed that had no meaning yet; it is `--surface-scan` (palette `--scan-white`), white in both themes on purpose.
 
 ## Rules for a new rule
 

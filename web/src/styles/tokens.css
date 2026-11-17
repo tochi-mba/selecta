@@ -21,6 +21,8 @@
   --warn: #ff7a4d;
   --ok: #9ed46a;
   --request: #6fd3ff;
+  /* a QR code's quiet zone is white in either theme, or phones cannot read it (rooms, display) */
+  --scan-white: #fff;
 
   /* what things mean */
   /* Surface roles (MP-0276-01), from the page up. A background says which one it is, never which
@@ -41,6 +43,8 @@
   --surface-overlay: color-mix(in srgb, var(--ink) 6%, var(--panel));
   --surface-scrim: color-mix(in srgb, var(--bg) 72%, transparent);
   --surface-selected: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  /* scan: behind a code a camera must read (the Room QR); white in both themes on purpose */
+  --surface-scan: var(--scan-white);
   --border: var(--line);
   --border-strong: var(--soft);
   /* Decorative dividers may be quiet; controls and state markers must read against real surfaces. */

@@ -156,3 +156,51 @@ describe('Plan & billing with a way to change plan switched off', () => {
     expect(document.body.textContent).not.toMatch(/Lucy|Exports this month|request rooms/);
   });
 });
+
+describe('Plan & billing for a local-first account (BF-0464-03)', () => {
+  const localFirst = (features: Record<string, boolean> = {}, locks: Record<string, string> = {}) =>
+    ({ ...cloudAccount(), experience: { local_first: true, hosted: false }, features, feature_locks: locks });
+
+  it('sells Rooms, Lucy, devices and discovery with no storage headline, at the same prices', async () => {
+    render(<Billing account={localFirst()} busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
+    const standard = screen.getByRole('region', { name: 'Standard' });
+    const premium = screen.getByRole('region', { name: 'Premium' });
+    expect(standard).toHaveTextContent('£6.99 / month');
+    expect(premium).toHaveTextContent('£12.99 / month');
+    for (const card of [standard, premium]) {
+      expect(card).not.toHaveTextContent(/\bGB\b|storage|library/i);
+      expect(card).toHaveTextContent('Lucy');
+      expect(card).toHaveTextContent('Discovery');
+      expect(card).toHaveTextContent('Devices');
+    }
+    expect(premium).toHaveTextContent('Rooms');
+    expect(standard).not.toHaveTextContent('Rooms');
+    await userEvent.click(screen.getByRole('button', { name: 'Annual' }));
+    expect(standard).toHaveTextContent('£59 / year');
+    expect(premium).toHaveTextContent('£109 / year');
+  });
+
+  it('keeps the hosted cards for a hosted account, and for one that holds both', () => {
+    const both = { ...cloudAccount(), experience: { local_first: true, hosted: true } };
+    render(<Billing account={both} busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
+    expect(screen.getByRole('region', { name: 'Standard' })).toHaveTextContent('50 GB');
+  });
+
+  it('an explicit localFirst prop wins over the account read', () => {
+    render(<Billing account={cloudAccount()} localFirst busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
+    expect(screen.getByRole('region', { name: 'Standard' })).not.toHaveTextContent('50 GB');
+  });
+
+  it('never names Lucy or Rooms when they are off, and shows Rooms as a teaser when plan-locked', () => {
+    const { unmount } = render(<Billing account={localFirst({ lucy: false, rooms: false })} busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
+    expect(document.body.textContent).not.toMatch(/Lucy|Rooms/);
+    unmount();
+    render(<Billing account={localFirst({ rooms: false }, { rooms: 'premium' })} busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
+    expect(screen.getByRole('region', { name: 'Premium' })).toHaveTextContent('Rooms');
+  });
+
+  it('does not tie a paid downgrade or a pause to library size', () => {
+    render(<Billing account={{ ...localFirst(), entitlement: { ...cloudAccount({ plan: 'standard' }).entitlement } }} blocked busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
+    expect(document.body.textContent).not.toMatch(/bigger than the new plan|lifts the pause on uploads/);
+  });
+});

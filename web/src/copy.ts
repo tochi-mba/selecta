@@ -92,3 +92,92 @@ export function copyMode(): Mode {
 export function words(): Record<CopyKey, string> {
   return copy[mode];
 }
+
+/* ------------------------------------------------------------------------------------------------
+ * Playback status, one vocabulary (ADR-0463 BF-0463-03; states from ADR-0457, ADR-0460, ADR-0461).
+ *
+ * Every surface that says whether music is playing, local or remote, takes its words from here, so
+ * the same state reads the same everywhere. 'playing' always carries the time a person last
+ * confirmed they heard the sound check: it is a record of when, never a standing promise. Nothing
+ * here can say a sound is audible without that confirmation.
+ * ---------------------------------------------------------------------------------------------- */
+
+export type PlaybackState = 'playing' | 'output_unverified' | 'interrupted' | 'uncertain' | 'unsupported_here';
+
+export type PlaybackStatus =
+  | { state: 'playing'; verifiedAt: number }
+  | { state: 'output_unverified' }
+  | { state: 'interrupted' }
+  | { state: 'uncertain' }
+  | { state: 'unsupported_here'; reason: string };
+
+/** The short label and the plain sentence for each state. */
+export const PLAYBACK_STATUS: Readonly<Record<PlaybackState, { label: string; detail: string }>> = {
+  playing: {
+    label: 'Playing',
+    detail: 'Sound last confirmed by a person at {time}.',
+  },
+  output_unverified: {
+    label: 'Sound not confirmed',
+    detail: 'Nobody has confirmed hearing this device yet. Play the check tone and say whether you heard it.',
+  },
+  interrupted: {
+    label: 'Interrupted',
+    detail: 'Something else took the sound, like a call or another app. Press play to carry on.',
+  },
+  uncertain: {
+    label: 'Not sure',
+    detail: 'SelectaDJ cannot tell whether sound is reaching the speakers right now. Bring the tab to the front and check the device.',
+  },
+  unsupported_here: {
+    label: 'Cannot play here',
+    detail: 'This device cannot play: {reason}',
+  },
+};
+
+/** "21:04", in the listener's own clock (seconds since epoch in). */
+export function clockTime(seconds: number, timeZone?: string): string {
+  try {
+    return new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone }).format(new Date(seconds * 1000));
+  } catch {
+    return new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' }).format(new Date(seconds * 1000));
+  }
+}
+
+/** The full sentence a surface shows for a playback status. */
+export function playbackStatusText(status: PlaybackStatus, options: { timeZone?: string } = {}): string {
+  const words = PLAYBACK_STATUS[status.state];
+  if (status.state === 'playing') return `${words.label}. ${words.detail.replace('{time}', clockTime(status.verifiedAt, options.timeZone))}`;
+  if (status.state === 'unsupported_here') return `${words.label}. ${words.detail.replace('{reason}', status.reason)}`;
+  return `${words.label}. ${words.detail}`;
+}
+
+/** Just the label, for a chip or a compact row. */
+export function playbackStatusLabel(status: PlaybackStatus): string {
+  return PLAYBACK_STATUS[status.state].label;
+}
+
+/** Promises SelectaDJ cannot keep in a browser (ADR-0460 explicit non-promises, BF-0460-08). No
+ * user-facing string may contain one; copyAudit.test.ts scans for them, together with the DSP
+ * honesty list in dsp/honesty.ts. Matched case-insensitively. */
+export const BANNED_CLAIMS: readonly string[] = [
+  'same as the native engine',
+  'works on every phone',
+  'works on any phone',
+  'works on every device',
+  'runs unattended 24/7',
+  'unattended 24/7',
+  'background playback guaranteed',
+  'guaranteed background playback',
+  'keeps playing in the background',
+  'keeps playing when the screen is locked',
+  'keeps playing with the screen locked',
+  'resumes automatically after a restart',
+  'resumes automatically after a reboot',
+  'multiple zones from one tablet',
+  'multi-zone from one tablet',
+  'plays your spotify',
+  'plays music from spotify',
+  'plays your apple music',
+  'sound is guaranteed',
+];
