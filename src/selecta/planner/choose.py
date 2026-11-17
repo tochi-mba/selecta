@@ -14,7 +14,7 @@ from selecta import flags
 from selecta.analysis import vocal_sense
 from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import Cue, SongInfo
-from selecta.audit.checks import AuditReport, audit
+from selecta.audit.checks import HARMONY_LIMIT, AuditReport, audit, excess_roughness
 from selecta.planner.fit import (
     CLOSE_TEMPO,
     COLD_ENTRY_DB,
@@ -141,6 +141,22 @@ def _style_fit(recipe: Recipe, a: SongInfo, b: SongInfo, bars: int, gap: float) 
     if recipe.name == "reverb_wash":
         return 0.3
     return 0.5
+
+
+def _predicted_clash(
+    a: SongInfo, b: SongInfo, exit_bar: int, entry_bar: int, bars: int
+) -> float | None:
+    """The overlap's excess roughness guessed from each song's stored bar chroma, before any
+    render. Key labels are one number per song; this hears the actual bars that will play
+    together, so a 'compatible' pair whose sections still grind is caught early."""
+    if a.chroma_bars is None or b.chroma_bars is None:
+        return None
+    b_bars = max(int(round(bars * fold_ratio(a, b))), 1)
+    chroma_a = a.chroma_bars[max(exit_bar - bars, 0) : exit_bar]
+    chroma_b = b.chroma_bars[entry_bar : entry_bar + b_bars]
+    if chroma_a.size == 0 or chroma_b.size == 0:
+        return None
+    return excess_roughness(chroma_a.mean(axis=0), chroma_b.mean(axis=0))
 
 
 def _hook_in_fade(a: SongInfo, b: SongInfo, entry_cue: Cue, bars: int) -> float:
@@ -323,6 +339,13 @@ def _score(
     key_penalty = _key_penalty(a, b, bars)
     if key_penalty >= 0.75:
         return None
+    if recipe.beatmatched and bars >= 4 and flags.on("planner.true_key"):
+        # hear the overlap's harmony from the stored chroma, not just the key labels
+        excess = _predicted_clash(a, b, exit_cue.bar, entry_cue.bar, bars)
+        if excess is not None:
+            key_penalty = max(key_penalty, min(max(excess, 0.0) / HARMONY_LIMIT, 1.0))
+            if key_penalty >= 0.75:
+                return None
     energy_step = _energy_step(a, b, exit_cue, entry_cue)
     energy_term = max(0.0, 1.0 - energy_step / 0.35)
     fit = _style_fit(recipe, a, b, bars, blend_gap if recipe.beatmatched else gap)

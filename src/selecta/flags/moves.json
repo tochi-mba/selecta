@@ -109,6 +109,10 @@
       "requires": [
         "stems"
       ]
+    },
+    "planner.true_key": {
+      "label": "Heard harmony",
+      "about": "Key scoring also hears the measured chroma of the exact bars that will play together, not just the two key labels."
     }
   }
 }
