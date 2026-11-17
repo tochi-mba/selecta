@@ -23,7 +23,7 @@ from selecta.planner.choose import enumerate_candidates, fallback_candidate
 from selecta.planner.fit import CLOSE_TEMPO, fold_ratio, folded_gap
 from selecta.planner.memory import _traits_of_pair
 from selecta.planner.wordreel import roll_suits
-from selecta.seams import _pair_facts
+from selecta.seam_context import pair_facts as _pair_facts
 from selecta.stems import StemWindow
 from selecta.styles.timing import beat_lock
 
