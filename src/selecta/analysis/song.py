@@ -222,10 +222,14 @@ class SongInfo:
         floor = min_played
         if first_chorus_end is not None:
             floor = max(self.bar_time(first_chorus_end), min_played)
-        cues = self._exit_cues_after(floor, party)
-        return cues or self._exit_cues_after(min_played, party)
+        phrases = flags.on("analysis.phrases")
+        cues = self._exit_cues_after(floor, party, phrases)
+        cues = cues or self._exit_cues_after(min_played, party, phrases)
+        # a short song may have no phrase line left after the floor; leaving mid-phrase still
+        # beats having no way out at all
+        return cues or (self._exit_cues_after(min_played, party, False) if phrases else cues)
 
-    def _exit_cues_after(self, floor: float, party: bool) -> list[Cue]:
+    def _exit_cues_after(self, floor: float, party: bool, phrases: bool = False) -> list[Cue]:
         bars = self.bar_times
         choruses = set(self.chorus_end_bars())
         cues: list[Cue] = []
@@ -234,7 +238,7 @@ class SongInfo:
         candidates: list[tuple[int, dict, float | None]] = [
             (s["end_bar"], s, None) for s in self.sections
         ]
-        if flags.on("analysis.phrases"):
+        if phrases:
             # only phrase lines offer an exit: an 8-bar line inside a section, or the weak 4-bar
             # leftover at the end of an odd-length one, never any mid-phrase bar
             phrases = self.phrase_starts()
