@@ -18,7 +18,9 @@ What it checks, and why, in ADR-0414 terms (`flags/targeting.py`):
   a human act recorded in the flag's own change history: the rules are saved with a reason
   containing `GRANDFATHER_MARKER` once the comparison passed (docs/operations/
   bf-rollout-runbook.md). `grandfather_marker_recorded` reads it from `rules.history` rows;
-  `check_flip` takes the answer as a bool so it stays pure.
+  `check_flip` takes the answer as a bool so it stays pure. The mechanical half of that
+  comparison (`hosted_coexistence.grandfather.audit_grandfather_rules`, ADR-0465) is passed in
+  as `grandfather_missing`; `check_flip_now` computes it from the database.
 - The gates answer (`gates_green`) comes from the human-maintained register,
   docs/verification/bf-gate-register.md: every release-critical row GO. No code can know that.
 
@@ -89,14 +91,18 @@ def check_flip(
     *,
     grandfather_verified: bool,
     gates_green: bool,
+    grandfather_missing: Sequence[str] = (),
 ) -> list[str]:
     """Every reason turning `cloud.local_first` default on must be refused right now.
 
     `rules` is a `RuleSnapshot` (or a flag-to-rules mapping, or `cloud.hosted_media`'s own rule
     list); `flags_effective` is `flags.effective()` unless the caller holds another build's
     states; `grandfather_verified` is whether the BF-0465-01 verification is recorded (see
-    `grandfather_marker_recorded`); `gates_green` is the gate register's answer. Empty means the
-    flip may proceed - subject, always, to the owner's recorded decision (BF-0467-06)."""
+    `grandfather_marker_recorded`); `gates_green` is the gate register's answer;
+    `grandfather_missing` is the audit's missing workspace ids
+    (`hosted_coexistence.grandfather.audit_grandfather_rules(...).missing`), so a marker recorded
+    before a later miss still refuses. Empty means the flip may proceed - subject, always, to the
+    owner's recorded decision (BF-0467-06)."""
     refusals: list[str] = []
 
     states = flags.effective() if flags_effective is None else flags_effective
@@ -143,6 +149,15 @@ def check_flip(
             f" the grants, then save the rules with a reason containing {GRANDFATHER_MARKER}"
             " (docs/operations/bf-rollout-runbook.md, step 4)"
         )
+    missing = sorted(set(grandfather_missing))
+    if missing:
+        more = len(missing) - 5
+        shown = ", ".join(missing[:5]) + (f" and {more} more" if more > 0 else "")
+        refusals.append(
+            f"the grandfather audit finds {len(missing)} workspace(s) with a completed upload"
+            f" that {HOSTED_MEDIA}'s rules do not grant ({shown}): add them to a WORKSPACES"
+            " grant above the catch-all"
+        )
     if not gates_green:
         refusals.append(
             "the ADR-0466 release-critical gates are not green:"
@@ -171,15 +186,20 @@ def check_flip_now(
     history_limit: int = 500,
 ) -> list[str]:
     """`check_flip` against the stored rules: loads the snapshot and the flag's change history
-    through `conn` and derives `grandfather_verified` from the recorded marker. `gates_green`
-    stays a human answer, read from the gate register."""
+    through `conn`, derives `grandfather_verified` from the recorded marker, and re-runs the
+    BF-0465-01 audit (detection query against the stored rules) for `grandfather_missing`.
+    `gates_green` stays a human answer, read from the gate register. Run it in a system
+    transaction (no workspace scope) so the detection query sees every workspace."""
     from selecta.flags import rules as rule_store
+    from selecta.hosted_coexistence.grandfather import audit_grandfather_rules
 
     snapshot = rule_store.load_snapshot(conn)
     history = rule_store.history(conn, HOSTED_MEDIA, limit=history_limit)
+    audit = audit_grandfather_rules(conn, snapshot.for_flag(HOSTED_MEDIA))
     return check_flip(
         snapshot,
         flags_effective,
         grandfather_verified=grandfather_marker_recorded(history),
         gates_green=gates_green,
+        grandfather_missing=audit.missing,
     )

@@ -18,8 +18,12 @@ the repeatable half of that procedure:
    (content-hash identities and display metadata, never paths or audio; ADR-0458), and read the
    account back.
 4. It asserts over the recorded log: zero requests whose content type is ``audio/*`` or
-   ``multipart/*``, and zero request bodies over the byte threshold. It writes the full JSONL
-   log and a pass/fail artifact into ``--out`` and exits nonzero on failure.
+   ``multipart/*``, and zero request bodies over the byte threshold; and that every account
+   read answered ``cloud.hosted_media`` off, so the run really was a no-grant account. It writes
+   the full JSONL log and a pass/fail artifact into ``--out`` and exits nonzero on failure.
+
+Dependencies: the standard library plus the repo's own modules (``tests/e2e_cloud_server.py``
+and ``selecta``) and ``uvicorn``, which that server already serves with.
 
 The ``/api/local-media/songs`` route ships with BF-0458-03; until it exists the registration
 step records its 404 in the artifact and the capture still stands, because the assertion is
@@ -61,6 +65,7 @@ from selecta import flags  # noqa: E402
 # in its content type.
 DEFAULT_MAX_BODY = 256 * 1024
 BAD_TYPES = ("audio/", "multipart/")
+HOSTED_MEDIA = "cloud.hosted_media"
 
 
 class RecordingASGI:
@@ -147,7 +152,12 @@ def call(base: str, method: str, path: str, token: str, payload: dict | None = N
         request.add_header("Content-Type", "application/json")
     try:
         with urllib.request.urlopen(request, timeout=30) as answer:
-            return {"method": method, "path": path, "status": answer.status}
+            step = {"method": method, "path": path, "status": answer.status}
+            if path == "/api/account":
+                # Only the grant's answer is kept for the artifact, never the account payload.
+                features = json.loads(answer.read() or b"{}").get("features", {})
+                step["hosted_media"] = features.get(HOSTED_MEDIA)
+            return step
     except urllib.error.HTTPError as refused:
         return {"method": method, "path": path, "status": refused.code}
 
@@ -183,14 +193,16 @@ def scripted_actions(base: str, songs: int) -> tuple[str, list[dict]]:
             token,
             {"age_confirmed": True, "timezone": "Europe/London"},
         ),
-        # The production cutover uses the same USERS rule. This test-only endpoint installs it
-        # after onboarding, when the principal has an id.
+        # Rule the grant off for this account through the real rule layer. The cutover shape
+        # (WORKSPACES grants then a percentage-0 catch-all, docs/operations/bf-rollout-runbook.md)
+        # answers off for an unnamed account the same way this test-only USERS off rule does;
+        # the endpoint needs the principal's id, so it runs after onboarding.
         call(
             base,
             "POST",
             "/test/flags/off",
             token,
-            {"user": account, "flags": ["cloud.hosted_media"]},
+            {"user": account, "flags": [HOSTED_MEDIA]},
         ),
         call(base, "GET", "/api/account", token),
         call(base, "POST", "/api/local-media/songs", token, {"songs": metadata_songs(songs)}),
@@ -252,13 +264,18 @@ def main() -> int:
     with recorder.lock:
         records = list(recorder.records)
     bad = offending(records, options.max_body_bytes)
-    verdict = "PASS" if not bad else "FAIL"
+    # The assertion is about a no-grant account: every account read must say the grant is off,
+    # or the run proves nothing and fails.
+    grant_answers = [step.get("hosted_media") for step in steps if step["path"] == "/api/account"]
+    no_grant = bool(grant_answers) and all(answer is False for answer in grant_answers)
+    verdict = "PASS" if not bad and no_grant else "FAIL"
     result = {
         "verdict": verdict,
         "gate": "4 (no audio egress), docs/verification/bf-gate-register.md",
         "ran_at": datetime.now(UTC).isoformat(),
         "account": account,
-        "account_has_hosted_grant": False,
+        "account_has_hosted_grant": not no_grant,
+        "hosted_media_answers": grant_answers,
         "requests_recorded": len(records),
         "max_body_bytes": options.max_body_bytes,
         "banned_content_types": list(BAD_TYPES),
@@ -280,6 +297,8 @@ def main() -> int:
     thread.join(timeout=15)
 
     print(f"{verdict}: {len(records)} requests recorded, {len(bad)} offending.")
+    if not no_grant:
+        print(f"  the account was not ruled off {HOSTED_MEDIA}: {grant_answers}")
     for record in bad:
         print(f"  {record['method']} {record['path']}: {record['why']}")
     print(f"Artifacts: {out / 'egress-capture.jsonl'} and {out / 'egress-capture-result.json'}")

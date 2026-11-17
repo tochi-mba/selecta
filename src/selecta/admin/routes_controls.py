@@ -20,8 +20,8 @@ from selecta.authz.scopes import ResourceRef
 from selecta.flags import rules as flag_rules
 from selecta.flags.matching import Rule
 from selecta.flags.rules import RulesCache
+from selecta.hosted_coexistence.grandfather import HOSTED_MEDIA, audit_grandfather_rules
 from selecta.identity.tokens import Claims
-from selecta.lf_migration.grandfather import audit_grandfather_rules
 from selecta.persistence import db_now
 
 
@@ -151,16 +151,17 @@ def install_routes(
 
     @app.get("/api/admin/flags/cloud.hosted_media/grandfather-audit")
     def admin_hosted_media_grandfather_audit(request: Request, claims: SignedIn):
-        """The enumerable completed-upload population compared with the live grant rules.
+        """The completed-upload population compared with the live grant rules (ADR-0465,
+        BF-0465-01): who is grandfathered, which rule decided each, what is missing or stale.
 
-        This is deliberately read-only. Operators build and save rules through the existing
-        reviewed flag-change path; this view supplies the BF-0465 evidence before the flip guard
-        may accept the recorded grandfather marker.
+        Read-only, `flags.read`, ids and counts only. Operators save rules through the reviewed
+        flag-change path; this view is the runbook step 4 evidence before the
+        `[grandfather-verified]` marker is recorded (`flags.flip_guard` re-checks it).
         """
 
         def read(conn: Connection, actor: Actor) -> dict[str, Any]:
             authorize(conn, actor, "flags.read")
-            rules = flag_rules.current_rules(conn, "cloud.hosted_media")
+            rules = flag_rules.current_rules(conn, HOSTED_MEDIA)
             return audit_grandfather_rules(conn, rules).as_dict()
 
         return {"audit": run(request, claims, read)}

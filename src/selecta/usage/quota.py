@@ -43,7 +43,9 @@ RESERVATION_TTL = 2 * 24 * 60 * 60
 # targeting rule, never a plan field, so quota can't read it from the plan row: a caller that
 # knows the account's flags passes a predicate answering "does this workspace hold
 # `cloud.hosted_media`?". `None` everywhere below means the caller didn't consult the grant,
-# which keeps today's behaviour exactly.
+# which keeps today's behaviour exactly. The concrete predicate is
+# `selecta.hosted_coexistence.grant.hosted_media_granted` (or `hosted_media_predicate(rules)` to
+# bind a `RulesCache`); quota never imports it, so usage stays below flags in the layering.
 HostedMediaGranted = Callable[[Connection, str], bool]
 
 
@@ -57,8 +59,8 @@ def storage_binds(
     Yes when the hosted-media grant is on, or when any bytes are already stored or reserved
     (grandfathered media keeps today's enforcement). No only when the caller consulted the grant
     (`hosted_media` given), it answered no, and nothing is stored. With no predicate the answer
-    is always yes, so nothing changes until the integration pass wires the grant through the
-    callers (`api_cloud` and the storage routes).
+    is always yes, so nothing changes for callers that do not pass the predicate (see
+    docs/integration-notes-bf.md for the `api_cloud` wiring).
     """
     if hosted_media is None:
         return True
@@ -279,7 +281,12 @@ def require_writable(
     deliberately not skippable, because a reservation is by definition bytes.
     """
     current = usage(connection, workspace_id)
-    if current.used_bytes == 0 and not storage_binds(connection, workspace_id, hosted_media):
+    # The same answer as `storage_binds`, without reading usage a second time.
+    if (
+        hosted_media is not None
+        and current.used_bytes == 0
+        and not hosted_media(connection, workspace_id)
+    ):
         return current
     if current.read_only:
         raise QuotaExceeded(current, 0)
