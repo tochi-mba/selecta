@@ -1,5 +1,5 @@
 import { KeyboardEvent, PointerEvent, ReactElement, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ApiError, get, MixData, post, SongDetail } from '../api';
+import { ApiError, getVia, MixData, postVia, SongDetail } from '../api';
 import { flagOn, useFlags } from '../flags';
 import { listed } from '../shell/manifest';
 import { clock } from '../lib';
@@ -539,7 +539,10 @@ function TransitionTruth({ seam, ready, names }: { seam: ViewProps['mix'][number
 }
 
 export function Now(props: ViewProps) {
-  const { mix, mixName, now, player, setView, refreshMix, setMixData, notify, stage, stageFallback, toggleStage, status, openRequests } = props;
+  const { mix, mixName, now, player, setView, refreshMix, setMixData, notify, stage, stageFallback, toggleStage, status, openRequests, request } = props;
+  // ADR-0462: the song detail read and the rating/swap writes go through the injected request.
+  const get = getVia(request);
+  const post = postVia(request);
   const requests = useContext(RequestsContext);
   const item = mix[now.position];
   const next = mix[now.position + 1];

@@ -24,7 +24,7 @@ from selecta.flags import cloud_gate
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, transaction
-from selecta.playback import devices, session
+from selecta.playback import devices, fencing, session
 from selecta.playback.model import (
     MAX_SIGNED_IN_DEVICES,
     Capabilities,
@@ -34,11 +34,13 @@ from selecta.playback.model import (
     DeviceSignedOut,
     IdempotencyConflict,
     InvalidCommand,
+    NotTheSpeaker,
     OwnershipChanged,
     PlaybackError,
     PlayState,
     Position,
     Session,
+    UnknownCommand,
     UnknownDevice,
 )
 from selecta.playback.ports import PlaybackEvents
@@ -90,6 +92,14 @@ class CommandBody(DeviceBody):
     args: dict[str, Any] | None = None
     based_on_seq: int = Field(ge=0)
     idempotency_key: str | None = Field(default=None, max_length=128)
+    # ADR-0461: the fence the press was issued under (None: checked by sequence alone, as
+    # before), and how long it stays executable, from server time.
+    fence: int | None = Field(default=None, ge=0)
+    ttl_seconds: int | None = Field(default=None, ge=0, le=fencing.MAX_TTL_SECONDS)
+
+
+class AckBody(DeviceBody):
+    result: str = Field(max_length=32)  # "applied" or "unavailable_here"
 
 
 def device_json(device: Device, *, this_device: str | None = None) -> dict[str, Any]:
@@ -110,8 +120,10 @@ def device_json(device: Device, *, this_device: str | None = None) -> dict[str, 
     }
 
 
-def session_json(value: Session | None) -> dict[str, Any] | None:
-    return None if value is None else session_payload(value)
+def session_json(value: Session | None, now: float | None = None) -> dict[str, Any] | None:
+    """Give `now` (server time) where the route has it, so `state_confidence` is judged
+    against the moment of the answer rather than the session's last write."""
+    return None if value is None else session_payload(value, now)
 
 
 def install_routes(
@@ -156,6 +168,17 @@ def install_routes(
     def refused(error: PlaybackError) -> HTTPException:
         if isinstance(error, UnknownDevice):
             return HTTPException(status_code=404, detail=NOT_FOUND)
+        if isinstance(error, UnknownCommand):
+            # Someone else's command id answers exactly like one that never existed.
+            return HTTPException(
+                status_code=404,
+                detail={"code": error.code, "message": "No such command here."},
+            )
+        if isinstance(error, NotTheSpeaker):
+            return HTTPException(
+                status_code=403,
+                detail={"code": error.code, "message": str(error)},
+            )
         if isinstance(error, DeviceSignedOut):
             return HTTPException(
                 status_code=403,
@@ -270,10 +293,11 @@ def install_routes(
     ) -> dict[str, Any]:
         found = principal(request, claims)
         here = mine(found, device_id, request)
-        view = session.session_view(engine, found.workspace.id, here)
+        now = server_time()
+        view = session.session_view(engine, found.workspace.id, here, now=now)
         position = view.position
         return {
-            "session": session_json(view.session),
+            "session": session_json(view.session, now),
             "position": None
             if position is None
             else {"song_index": position.song_index, "offset_ms": position.offset_ms},
@@ -281,7 +305,7 @@ def install_routes(
             "speaker_device_id": view.speaker_device_id,
             "speaker_name": view.speaker_name,
             "ask_before_playing_here": view.ask_before_playing_here,
-            "server_time": server_time(),
+            "server_time": now,
         }
 
     @app.post("/api/playback/heartbeat")
@@ -303,12 +327,13 @@ def install_routes(
             result = session.heartbeat(engine, found.workspace.id, here, position, events=events)
         except PlaybackError as error:
             raise refused(error) from error
+        now = server_time()
         return {
             "outcome": result.outcome.value,
             "position_accepted": result.position_accepted,
             "previous_device_id": result.previous_device_id,
-            "session": session_json(result.session),
-            "server_time": server_time(),
+            "session": session_json(result.session, now),
+            "server_time": now,
         }
 
     @app.post("/api/playback/take-over")

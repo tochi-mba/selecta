@@ -28,7 +28,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
 from selecta.persistence import new_id, transaction
-from selecta.playback import commands, ports
+from selecta.playback import commands, fencing, ports
 from selecta.playback.model import (
     LEASE_SECONDS,
     Device,
@@ -71,6 +71,8 @@ class CommandStatus(StrEnum):
     APPLIED = "applied"
     STALE = "stale"  # based on an old sequence; here's the current state
     NO_SPEAKER = "no_speaker"  # play with no speaker online; offer "Play here"
+    SUPERSEDED = "superseded"  # fenced to an owner that has since been replaced (ADR-0461)
+    EXPIRED = "expired"  # outlived its TTL; dropped, never executed late (ADR-0461)
 
 
 class ReconnectAction(StrEnum):
@@ -189,6 +191,7 @@ def heartbeat_in(
             session,
             active_device_id=device_id,
             seq=session.seq + 1,
+            fence=fencing.next_fence(session),  # ownership moved, so the fence moves
             hand_back_to_device_id=None,
         )
     else:
@@ -206,7 +209,7 @@ def heartbeat_in(
     if previous is not None:
         _announce_move(conn, session, previous, device_id, events)
     if outcome is HeartbeatOutcome.TOOK_OVER or _visibly_changed(before, session):
-        events.publish(conn, workspace_id, ports.STATE, session_payload(session))
+        events.publish(conn, workspace_id, ports.STATE, session_payload(session, now))
     return HeartbeatResult(outcome, session, accepted, previous)
 
 
@@ -279,6 +282,7 @@ def take_over_in(
         active_device_id=device_id,
         lease_expires_at=now + LEASE_SECONDS,
         seq=session.seq + 1,
+        fence=fencing.next_fence(session),  # a successful transfer; a refused one bumps nothing
         updated_at=now,
         hand_back_to_device_id=None,
     )
@@ -287,7 +291,7 @@ def take_over_in(
     message = None
     if previous_id is not None:
         message = _announce_move(conn, session, previous_id, device_id, events)
-    events.publish(conn, workspace_id, ports.STATE, session_payload(session))
+    events.publish(conn, workspace_id, ports.STATE, session_payload(session, now))
     return TakeOverResult(session, previous, message)
 
 
@@ -300,6 +304,8 @@ def submit_command(
     based_on_seq: int,
     idempotency_key: str,
     *,
+    fence: int | None = None,
+    ttl_seconds: int | None = None,
     mix: MixControl | None = None,
     zone_id: str | None = None,
     volume_cap: int = 100,
@@ -307,7 +313,9 @@ def submit_command(
     events: PlaybackEvents = NO_EVENTS,
 ) -> CommandResult:
     """A button pressed on any device. A press based on an old sequence is refused with the
-    current state; a retried press (same idempotency key) gets the first answer again."""
+    current state; a retried press (same idempotency key) gets the first answer again. A press
+    fenced to an owner that has since been replaced, or one past its TTL, is refused and never
+    applied (ADR-0461)."""
     key = _clean_key(idempotency_key)
     with transaction(engine, workspace_id) as conn:
         now = resolve_now(conn, now)
@@ -325,6 +333,8 @@ def submit_command(
             key,
             now,
             events,
+            fence=fence,
+            ttl_seconds=ttl_seconds,
             mix=mix,
             volume_cap=volume_cap,
         )
@@ -348,11 +358,19 @@ def submit_command_in(
     now: float,
     events: PlaybackEvents,
     *,
+    fence: int | None = None,
+    ttl_seconds: int | None = None,
     mix: MixControl | None = None,
     volume_cap: int = 100,
 ) -> CommandResult:
     """`submit_command` on a locked session. Idempotency keys stay unique per workspace, so a
-    key retried on another zone is a conflict, never a silent replay (ADR-0443)."""
+    key retried on another zone is a conflict, never a silent replay (ADR-0443).
+
+    Commands apply synchronously under the session lock, so the ADR-0461 fence and TTL are
+    checked right here, before anything changes: a press carrying a fence other than the
+    session's current one is refused "superseded" (ownership moved since it was issued), and
+    one already past its expiry is refused "expired". A press carrying no fence is checked by
+    sequence alone, as before."""
     workspace_id = session.workspace_id
     key = _clean_key(idempotency_key)
     earlier = (
@@ -382,7 +400,13 @@ def submit_command_in(
             earlier["id"],
             replayed=True,
         )
-    if based_on_seq != session.seq:
+    ttl = fencing.clean_ttl(ttl_seconds)
+    expires_at = now + ttl
+    if fence is not None and fence != session.fence:
+        status = CommandStatus.SUPERSEDED
+    elif expires_at <= now:
+        status = CommandStatus.EXPIRED
+    elif based_on_seq != session.seq:
         status = CommandStatus.STALE
     elif (
         name is commands.Command.PLAY
@@ -409,6 +433,9 @@ def submit_command_in(
             idempotency_key=key,
             status=status.value,
             applied_seq=applied_seq,
+            ttl_seconds=ttl,
+            expires_at=expires_at,
+            fence=session.fence,
             created_at=now,
         )
     )
@@ -427,7 +454,7 @@ def submit_command_in(
                 },
             ),
         )
-        events.publish(conn, workspace_id, ports.STATE, session_payload(session))
+        events.publish(conn, workspace_id, ports.STATE, session_payload(session, now))
     return CommandResult(status, session, applied_seq, command_id)
 
 

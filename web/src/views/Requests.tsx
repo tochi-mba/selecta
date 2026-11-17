@@ -2,10 +2,10 @@ import { Icon } from '../ui/Icon';
 import { RouteDiagram, SongMotif } from '../ui/MusicObjects';
 import { Problem, Skeleton } from '../ui/controls';
 import { createContext, Fragment, KeyboardEvent, useContext, useEffect, useRef, useState } from 'react';
-import { ApiError, SERVER_FAILED_WORDS, del, get, MixData, MixItem, post, SongRow } from '../api';
+import { ApiError, SERVER_FAILED_WORDS, delVia, getVia, MixData, MixItem, postVia, Request, request as localRequest, SongRow } from '../api';
 import { usePreview } from '../audio/focus';
 import { etaWords } from '../lib';
-import { SetPlayer } from '../player';
+import { PlayerLike } from '../playerContract';
 import { operationId } from '../state/async';
 import { orderOf } from '../state/readiness';
 import { AudioPreview } from '../ui/AudioPreview';
@@ -42,7 +42,7 @@ export type BridgeOption = {
   transitions: Transition[];
 };
 export type BridgeSearch = { options: BridgeOption[]; looked_at: number; direct: boolean; unsteady?: boolean };
-type Playback = { mix: MixItem[]; player: SetPlayer; onMix: (data: MixData) => void };
+type Playback = { mix: MixItem[]; player: PlayerLike; onMix: (data: MixData) => void };
 type Notify = (message: string, undo?: boolean | (() => Promise<void>)) => void;
 
 const WORKING = new Set<Stage>(['adding', 'preparing', 'ready', 'analysing']);
@@ -166,6 +166,8 @@ export type RequestsState = {
   error: string;
   message: string;
   playback?: Playback;
+  /** ADR-0462: the client every requests surface shares, so previews and searches use the same one. */
+  request: Request;
   add: (song: SongRow) => Promise<void>;
   cancel: (request: RequestRow) => Promise<void>;
   chooseBridge: (request: RequestRow, allow: boolean) => Promise<void>;
@@ -179,7 +181,12 @@ export const RequestsContext = createContext<RequestsState | null>(null);
 /** Requests stay separate from the playing order until a safe place is ready. This keeps watching
  * for one on every page, while the panel only shows on the pages where it's useful. Everything a
  * person presses shows straight away and is put right if the server says no. */
-export function useRequests(playback?: Playback, notify?: Notify): RequestsState {
+export function useRequests(playback?: Playback, notify?: Notify, request: Request = localRequest): RequestsState {
+  // ADR-0462: all reads and writes go through the injected request; standalone local mounts
+  // (and the existing tests) keep the local client by default.
+  const get = getVia(request);
+  const post = postVia(request);
+  const del = delVia(request);
   // without requests in this build, nothing here asks the server anything
   const on = useFlagHeard('requests');
   const [requests, setRequests] = useState<RequestRow[] | null>(null);
@@ -462,7 +469,7 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
     }
   };
 
-  return { requests, error, message, playback, add, cancel, chooseBridge, addAnyway, findBridges, pickBridge };
+  return { requests, error, message, playback, request, add, cancel, chooseBridge, addAnyway, findBridges, pickBridge };
 }
 
 /** The tag on a song a request put in the mix, wherever that song is shown. */
@@ -671,6 +678,11 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
 /** Hear what you'd be agreeing to. Pressing shows straight away, renders if it has to, and plays by
  * itself as soon as it's ready. */
 function TransitionPreviews({ request }: { request: RequestRow; playback?: Playback }) {
+  // ADR-0462: previews ask the server through the shared requests client.
+  const state = useContext(RequestsContext);
+  const via = state?.request ?? localRequest;
+  const get = getVia(via);
+  const post = postVia(via);
   const preview = usePreview();
   const [wanted, setWanted] = useState('');
   const [problem, setProblem] = useState('');
@@ -740,6 +752,8 @@ function TransitionPreviews({ request }: { request: RequestRow; playback?: Playb
 export function RequestsPanel() {
   const bridges = useFlag('requests.bridges');
   const state = useContext(RequestsContext);
+  // ADR-0462: the song search goes through the shared requests client.
+  const get = getVia(state?.request ?? localRequest);
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState<SongRow[] | null>(null);
   const [searchError, setSearchError] = useState('');
@@ -961,8 +975,8 @@ export function RequestsPanel() {
 }
 
 /** The panel with its own connection, for showing it on its own. */
-export function Requests({ playback, notify }: { playback?: Playback; notify?: Notify }) {
-  const state = useRequests(playback, notify);
+export function Requests({ playback, notify, request }: { playback?: Playback; notify?: Notify; request?: Request }) {
+  const state = useRequests(playback, notify, request);
   return (
     <RequestsContext.Provider value={state}>
       <RequestsPanel />

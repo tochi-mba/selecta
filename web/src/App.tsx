@@ -1,5 +1,5 @@
 import { lazy, startTransition, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { ApiError, get, MixData, MixItem, OFFLINE_WORDS, post, problemKind, Status } from './api';
+import { ApiError, get, MixData, MixItem, OFFLINE_WORDS, post, problemKind, request, Status } from './api';
 import { getDraftNames } from './state/draftNames';
 import { audioOwner, connectMainPlayer, mainPlayerTouched, stopPreviewsOnly } from './audio/focus';
 import { bindMediaSession, syncMediaSession } from './audio/mediaSession';
@@ -285,7 +285,7 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
     }
     return activateDraft(id, from, order);
   }, [activateDraft, data.name, player]);
-  const requests = useRequests({ mix, player, onMix: setMixData }, notify);
+  const requests = useRequests({ mix, player, onMix: setMixData }, notify, request);
   const foundAt = useRef<number | null>(null);
   useEffect(() => {
     const found = status?.new_songs;
@@ -623,6 +623,8 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
     refreshMix,
     setMixData,
     refreshStatus: refreshStatusQuietly,
+    // ADR-0462: views reach the server only through this; locally it is the relative /api client
+    request,
     player,
     now,
     setView: goTo,
@@ -737,7 +739,7 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
           {route.page === 'discover' && <Links {...shared} tab={route.tab} />}
           {route.page === 'workshop' && <Workshop {...shared} tab={route.tab} />}
           {route.page === 'listening' && <Workshop {...shared} tab="learning" />}
-          {route.page === 'lucy' && <Lucy conversation={route.conversation} setMixData={setMixData} player={player} />}
+          {route.page === 'lucy' && <Lucy conversation={route.conversation} setMixData={setMixData} player={player} request={request} />}
           {route.page === 'missing' && (
             <main className="page" id="main">
               <h1 className="display small">There’s nothing at this address.</h1>

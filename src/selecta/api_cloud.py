@@ -58,6 +58,8 @@ from selecta.identity.tokens import (
     authkit_verifier,
 )
 from selecta.identity.workos import WorkOSClient
+from selecta.local_media import api as local_media_routes
+from selecta.local_media.catalog import LocalMediaCatalog
 from selecta.lucy import cloud_settings as lucy_cloud_settings
 from selecta.observability import errors, metrics, tracing
 from selecta.persistence import db_now, make_engine, transaction
@@ -279,6 +281,10 @@ def create_cloud_app(
     verifier = verifier or settings.verifier()
     owns_workos = workos is None
     workos = workos or settings.workos_client()
+    # Without explicit ports, Rooms read the metadata-only local media catalogue (ADR-0458), so
+    # a local-first account can host a Room from its device-available tracks. The pepper still
+    # comes from `rooms.wiring.pepper_from_environment` when the ports carry none.
+    room_ports = room_ports or RoomPorts(catalog=LocalMediaCatalog(engine))
 
     # One LISTEN connection per instance wakes event streams and reloads flag rules the moment
     # another instance commits (ADR-0407, ADR-0414). None on SQLite, which keeps polling.
@@ -707,6 +713,10 @@ def create_cloud_app(
     )
     # Cloud mixes in the shared mix contract (ADR-0418); refused while cloud.mix_create is off.
     cloud_mix_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
+    # The metadata-only song catalogue (ADR-0458); refused while cloud.local_media is off.
+    local_media_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal
     )
     business_org_routes.install_routes(

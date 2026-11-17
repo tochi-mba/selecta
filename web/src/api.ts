@@ -310,6 +310,34 @@ export async function send<T>(path: string, init?: RequestInit): Promise<T> {
   }
 }
 
+/** How a view asks the server for anything (ADR-0462): the exact shape of the injected client.
+ * Locally it is `send` over the relative `/api`; in Cloud it is the authenticated client with the
+ * bearer token and workspace header. Views receive one on `ViewProps.request` and never import the
+ * local client directly (importBoundaries.test.ts holds them to it). */
+export type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
+
+/** The local client as a `Request`: what App injects, and what standalone local surfaces default to. */
+export const request: Request = (path, init) => send(path, init);
+
+/** `get` over an injected request, with the local `get`'s exact semantics. */
+export const getVia = (via: Request) => <T,>(path: string): Promise<T> => via<T>(path);
+
+/** `post` over an injected request. The operation-id behaviour is identical to the local `post`:
+ * every change carries one (T0094), and an id made up here is remembered so an ApiError does not
+ * present it as something Diagnostics could look up (T0244). */
+export const postVia = (via: Request) => <T,>(path: string, body?: unknown, headers?: Record<string, string>): Promise<T> => {
+  const init: RequestInit = {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-operation-id': newOperationId(), ...headers },
+    body: JSON.stringify(body ?? {}),
+  };
+  if (!headers || !('x-operation-id' in headers)) madeUpIds.add(init);
+  return via<T>(path, init);
+};
+
+/** `del` over an injected request, with the local `del`'s exact semantics. */
+export const delVia = (via: Request) => <T,>(path: string, headers?: Record<string, string>): Promise<T> => via<T>(path, { method: 'DELETE', headers });
+
 export const get = <T,>(path: string) => send<T>(path);
 
 /** T0068: raw bytes from the local server (song and stem audio, seam clips, backups), which the JSON
@@ -320,18 +348,10 @@ export const fetchBytes = (path: string, init?: RequestInit): Promise<Response> 
 /** Requests whose operation id post() made up, rather than the page choosing it. */
 const madeUpIds = new WeakSet<RequestInit>();
 
-export const post = <T,>(path: string, body?: unknown, headers?: Record<string, string>) => {
-  const init: RequestInit = {
-    method: 'POST',
-    // T0094: every change carries an operation id, so resending it after a lost answer is safe
-    headers: { 'content-type': 'application/json', 'x-operation-id': newOperationId(), ...headers },
-    body: JSON.stringify(body ?? {}),
-  };
-  if (!headers || !('x-operation-id' in headers)) madeUpIds.add(init);
-  return send<T>(path, init);
-};
+// T0094: every change carries an operation id, so resending it after a lost answer is safe.
+export const post = postVia(request);
 
-export const del = <T,>(path: string, headers?: Record<string, string>) => send<T>(path, { method: 'DELETE', headers });
+export const del = delVia(request);
 
 export type LibrarySong = {
   id: number;

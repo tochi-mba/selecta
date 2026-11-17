@@ -1,5 +1,6 @@
-import { MixEta, MixData, MixItem, Status } from '../api';
-import { NowState, SetPlayer } from '../player';
+import { MixEta, MixData, MixItem, Request, Status } from '../api';
+import { NowState } from '../player';
+import { PlayerLike } from '../playerContract';
 
 export type View = 'Mixes' | 'Now' | 'Edit' | 'Library' | 'Words' | 'Workshop';
 
@@ -20,7 +21,11 @@ export type ViewProps = {
   refreshMix: () => void;
   setMixData: (data: MixData) => void;
   refreshStatus: () => void;
-  player: SetPlayer;
+  /** How this view talks to the server (ADR-0462): the local client here, the authenticated
+   * Cloud client there. Views never import get/post/del from api.ts; they wrap this with
+   * getVia/postVia/delVia instead, so the same page renders against either server. */
+  request: Request;
+  player: PlayerLike;
   now: NowState;
   setView: (view: View) => void;
   notify: (message: string, undo?: Undo) => void;

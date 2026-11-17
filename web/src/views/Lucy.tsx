@@ -1,5 +1,5 @@
 import { KeyboardEvent, memo, RefObject, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import { ApiError, get, MixData, problemKind, ProblemKind } from '../api';
+import { ApiError, getVia, MixData, problemKind, ProblemKind, request as localRequest } from '../api';
 import { lucy, newId } from '../lucy/client';
 import { isRunActive } from '../lucy/reducer';
 import type { ConversationScope, LucyStatus, Selection } from '../lucy/types';
@@ -86,9 +86,12 @@ function savedHistoryOpen(): boolean {
 
 /** Only what Lucy needs from the app, all of it stable, so the player's once-a-second updates don't
  * redraw the conversation. */
-export type LucyProps = { conversation: string | null; setMixData: ViewProps['setMixData']; player: ViewProps['player'] };
+export type LucyProps = { conversation: string | null; setMixData: ViewProps['setMixData']; player: ViewProps['player']; request?: ViewProps['request'] };
 
-export function Lucy({ conversation, setMixData, player }: LucyProps) {
+export function Lucy({ conversation, setMixData, player, request = localRequest }: LucyProps) {
+  // ADR-0462: this page's own mix read goes through the injected request; standalone local mounts
+  // (and the existing tests) keep the local client by default.
+  const get = getVia(request);
   const page = useRef<HTMLElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
   const tabsId = useId();
