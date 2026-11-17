@@ -215,7 +215,10 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `account.data_export` | **Account data export.** Download a portable copy of available account data and original files. **Core:** People must be able to take a copy of their personal data. |  |
 | `account.lucy_settings` | **Lucy settings in Cloud.** Choose whether to use Lucy, its phases and what it may share; see this month's Lucy turns. | `lucy` |
 | `cloud.signups` | **New accounts.** Allow new Cloud users to complete account onboarding. |  |
-| `cloud.uploads` | **Cloud uploads.** Upload private audio files to a Cloud workspace. |  |
+| `cloud.hosted_media` | **Hosted media.** The umbrella grant for uploading and processing audio in Cloud (ADR-0456). The build ships on; per-account gating is a cutover allowlist rule followed by a catch-all off rule, since rules can never grant what the build denies (ADR-0414). |  |
+| `cloud.uploads` | **Cloud uploads.** Upload private audio files to a Cloud workspace. | `cloud.hosted_media` |
+| `cloud.local_first` | **Browser-first personal Cloud.** Selects the local-first navigation and browser-owned playback in personal Cloud; the legacy pages remain when off (ADR-0455). |  |
+| `cloud.local_media` | **Local media catalogue.** The metadata-only catalogue of songs on the member's own devices; no audio is uploaded (ADR-0458). |  |
 | `billing.checkout` | **Plan checkout.** Start or change a paid Selecta Cloud subscription. |  |
 | `billing.portal` | **Subscription portal.** Manage or cancel an existing paid Selecta Cloud subscription. |  |
 | `cloud.operations` | **Cloud operations.** Schema migrations, the worker gateway, and the maintenance and recovery commands that keep the service correct. **Core:** The cloud service can't run, recover or erase data on time without them. |  |
@@ -231,6 +234,10 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `billing.webhooks` | **Billing updates.** Accept signed subscription state changes from Stripe. **Core:** Billing changes must be applied even when checkout is paused. |  |
 | `devices` | **Playback devices.** Sign browsers in as devices, list, rename and sign them out, and move playback between them with Play here. |  |
 | `devices.remote_control` | **Remote playback control.** Control the account's active playback session from another device. | `devices` |
+| `devices.browser_player` | **Browser player.** The in-browser audio engine registered as a playback device (ADR-0457). | `devices` |
+| `cloud.browser_dsp` | **Browser DSP.** The browser player's mixing DSP tiers, labelled honestly where they differ musically (ADR-0459). | `devices.browser_player` |
+| `cloud.venue_tablet` | **Venue tablet posture.** The single-tablet venue posture: capability checks and readiness guidance for a browser device playing a venue (ADR-0460). | `devices.browser_player` |
+| `cloud.local_export` | **Local export.** Render a mix to a file in the browser player and save it on the member's own device; nothing is uploaded. | `devices.browser_player` |
 | `rooms` | **Rooms.** Let Premium hosts share a request room with guests. |  |
 | `rooms.votes` | **Room votes.** Let room guests vote on song requests. | `rooms` |
 | `rooms.display` | **Room display.** Pair a screen to show the room QR code and playback queue. | `rooms` |

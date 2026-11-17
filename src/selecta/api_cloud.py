@@ -582,6 +582,11 @@ def create_cloud_app(
             },
             "lucy": {"tier": meters.lucy_tier(plan)},
             "features": decisions.snapshot(),
+            # BF-0455-03: the decided Cloud experience, so the web shell renders from one answer.
+            "experience": {
+                "local_first": decisions.snapshot().get("cloud.local_first") is not False,
+                "hosted": decisions.snapshot().get("cloud.hosted_media") is not False,
+            },
             "feature_locks": dict(decisions.locks),
             "feature_rule_version": decisions.version,
         }
