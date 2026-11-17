@@ -154,15 +154,44 @@ def test_a_clean_take_beats_a_near_miss(tmp_path, monkeypatch):
     assert report.passed
 
 
-def test_a_planned_near_miss_is_kept_if_nothing_comes_out_cleaner(tmp_path, monkeypatch):
+def _cut_that(monkeypatch, report):
+    """Stand in for the last-resort cut, so a test decides whether it comes out clean."""
+    from types import SimpleNamespace
+
+    from selecta import seams
+
+    choice = SimpleNamespace(
+        rendered="take of cut_on_one",
+        report=report,
+        candidate=SimpleNamespace(reasons=("nothing else cleared the bar",)),
+    )
+    monkeypatch.setattr(seams, "choose_transition", lambda *_args, **_kwargs: choice)
+
+
+def test_a_planned_near_miss_is_kept_if_not_even_the_cut_comes_out_clean(tmp_path, monkeypatch):
     store = SeamStore(Settings(tmp_path))
     a, b = _two_songs(tmp_path)
     _takes(store, monkeypatch, {})
+    _cut_that(monkeypatch, _report(("level fall", 6.0, 3.5)))
     held = ("take of tempo_ramp", _report(("level fall", 5.0, 3.5)), "why", "tempo_ramp")
     tried: list[dict] = []
     rendered, _report_kept, _why, fell_back = store._best_move(a, b, tried, "tempo_ramp", held)
     assert rendered == "take of tempo_ramp"
     assert not fell_back, "it's the move that was asked for"
+
+
+def test_a_clean_cut_beats_a_planned_near_miss(tmp_path, monkeypatch):
+    """Every rated seam that shipped with a warning was disliked (0 of 4)."""
+    from selecta.audit.checks import AuditReport
+
+    store = SeamStore(Settings(tmp_path))
+    a, b = _two_songs(tmp_path)
+    _takes(store, monkeypatch, {})
+    _cut_that(monkeypatch, AuditReport([]))
+    held = ("take of tempo_ramp", _report(("level fall", 5.0, 3.5)), "why", "tempo_ramp")
+    rendered, report, _why, fell_back = store._best_move(a, b, [], "tempo_ramp", held)
+    assert rendered == "take of cut_on_one"
+    assert report.passed and fell_back
 
 
 def test_a_steady_beat_gap_is_closed_with_a_second_take(tmp_path):
@@ -253,9 +282,13 @@ def test_suggestions_say_what_will_happen(tmp_path):
     from selecta.planner.beam import rank_candidates
 
     now = _song(tmp_path, "now", "Now", bpm=120.0, camelot="8A")
-    ramp = _song(tmp_path, "ramp", "Ramp", bpm=100.0, camelot="8A")
-    ranked = rank_candidates(now, None, [now, ramp], {now.id})
-    assert ranked[0].reason == "A tempo ramp gets there"
+    apart = _song(tmp_path, "apart", "Apart", bpm=100.0, camelot="8A")
+    ranked = rank_candidates(now, None, [now, apart], {now.id})
+    # tempo ramps are no longer planned, so a gap this wide is carried by a tempo-free move
+    assert ranked[0].reason == "An echo or a cut carries it"
+    double = _song(tmp_path, "double", "Double", bpm=240.0, camelot="8A")
+    ranked = rank_candidates(now, None, [now, double], {now.id})
+    assert ranked[0].reason.startswith("Same pulse at half or double time")
 
 
 def test_what_went_well_is_wanted_more_and_what_didnt_not_at_all():
@@ -548,16 +581,29 @@ def test_a_clean_effect_beats_a_near_miss_blend(tmp_path, monkeypatch):
     assert report.passed
 
 
-def test_a_near_miss_is_kept_over_a_cut(tmp_path, monkeypatch):
+def test_a_near_miss_is_kept_only_over_a_cut_that_also_warns(tmp_path, monkeypatch):
     store = SeamStore(Settings(tmp_path))
     a, b = _two_songs(tmp_path)
     near = _report(("beat alignment", 30.0, 20.0))
     _takes(store, monkeypatch, {"filter_sweep": near})
+    _cut_that(monkeypatch, _report(("level fall", 6.0, 3.5)))
     tried: list[dict] = []
     rendered, report, *_ = store._best_move(a, b, tried)
     assert rendered == "take of filter_sweep"
     assert not report.passed
     assert "filter_sweep" not in {attempt["move"] for attempt in tried}
+
+
+def test_a_clean_cut_is_kept_over_a_near_miss(tmp_path, monkeypatch):
+    from selecta.audit.checks import AuditReport
+
+    store = SeamStore(Settings(tmp_path))
+    a, b = _two_songs(tmp_path)
+    _takes(store, monkeypatch, {"filter_sweep": _report(("beat alignment", 30.0, 20.0))})
+    _cut_that(monkeypatch, AuditReport([]))
+    rendered, report, *_ = store._best_move(a, b, [])
+    assert rendered == "take of cut_on_one"
+    assert report.passed
 
 
 def test_the_ratings_steer_what_gets_planned(tmp_path):

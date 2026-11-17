@@ -121,6 +121,12 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `move.intertwined_stems` | **Intertwined stems.** Drums, bass and harmony trade over sixteen bars, with the vocals taking turns. | `stems` |
 | `render.repair` | **Second takes.** A transition that fails a check is tried again, or with another move, before you hear it. |  |
 | `render.spare_time` | **Spare-time transitions.** With nothing else to do, the best transitions across the library are tried out ahead of time. |  |
+| `analysis.phrases` | **Phrase lines.** Transitions land on 8-bar phrase lines instead of any 4-bar mark, the way a DJ counts a song. |  |
+| `analysis.vocal_sense` | **Hear the voices.** When a song has no synced lyrics, listen to its separated voice to tell when someone sings, so it can still earn long blends and clashing voices are caught. | `stems` |
+| `planner.true_key` | **Heard harmony.** Key scoring also hears the measured chroma of the exact bars that will play together, not just the two key labels. |  |
+| `planner.arrival` | **Rolls land on arrivals.** A phrase roll promises a drop, so the next song has to arrive on one: a chorus coming in, or its energy stepping up. |  |
+| `planner.motivated_punctuation` | **Motivated punctuation.** An echo, cut or wash needs an audible reason - a line just finished or the song's structure turned - or it scores far lower. |  |
+| `planner.energy_intent` | **No unintended drops.** A punchy move from a hot exit into a much colder landing is refused unless the landing is a chorus. |  |
 
 ## Requests
 
