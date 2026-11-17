@@ -187,6 +187,12 @@ class SongInfo:
             self._phrases = found
         return self._phrases
 
+    def section_label_at(self, bar: int) -> str | None:
+        for section in self.sections:
+            if section["start_bar"] <= bar < section["end_bar"]:
+                return section["label"]
+        return None
+
     def arrival_at(self, time: float, slack_bars: int = 1) -> bool:
         """Whether this moment lands on something: a chorus coming in, or the energy stepping
         up. A roll or build promises an arrival, and the next song has to deliver one."""

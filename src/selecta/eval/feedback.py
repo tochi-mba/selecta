@@ -42,6 +42,9 @@ class Rated:
     grid: float
     note: str
     home: str
+    folded_gap: float | None = None  # the gap after half and double time, where recorded
+    energy_step: float | None = None  # B's landing energy minus A's exit energy
+    entry_section: str | None = None  # what B's landing was: chorus, verse, instrumental...
 
 
 def known_homes(current: Path) -> list[Path]:
@@ -80,8 +83,12 @@ def read_rated(home: Path) -> list[Rated]:
     songs = {
         row["id"]: row
         for row in conn.execute(
-            "SELECT s.id,s.artist,s.title,a.bpm,a.camelot,a.grid_confidence "
-            "FROM songs s JOIN analysis a ON a.song_id=s.id"
+            # a person's own tempo and key corrections are the truth about a song, so they
+            # count here too; reading the raw analysis used to report the wrong gap
+            "SELECT s.id, s.artist, s.title, COALESCE(o.bpm, a.bpm) AS bpm, "
+            "COALESCE(o.camelot, a.camelot) AS camelot, a.grid_confidence "
+            "FROM songs s JOIN analysis a ON a.song_id=s.id "
+            "LEFT JOIN song_overrides o ON o.song_id=s.id"
         )
     }
     conn.close()
@@ -101,6 +108,9 @@ def read_rated(home: Path) -> list[Rated]:
         a, b = songs.get(request.get("a")), songs.get(request.get("b"))
         if a is None or b is None:
             continue
+        # measurements stored with the seam beat a fresh database join: they say what was true
+        # when the listener heard it, and they survive later corrections and re-analysis
+        pair = state.get("pair") or {}
         found.append(
             Rated(
                 a=f"{a['artist'] or '?'} - {a['title'] or '?'}",
@@ -109,18 +119,26 @@ def read_rated(home: Path) -> list[Rated]:
                 asked=request.get("move") or "?",
                 good=state["rating"] == "good",
                 # a song with no measured tempo (or 0) has no gap to report, rather than a crash
-                gap=abs(a["bpm"] / b["bpm"] - 1.0) if a["bpm"] and b["bpm"] else None,
-                keys=(
+                gap=pair.get(
+                    "gap", abs(a["bpm"] / b["bpm"] - 1.0) if a["bpm"] and b["bpm"] else None
+                ),
+                keys=pair.get(
+                    "keys",
                     camelot_distance(a["camelot"], b["camelot"])
                     if a["camelot"] and b["camelot"]
-                    else None
+                    else None,
                 ),
                 bars=int(state.get("bars") or 0),
                 seconds=float(state.get("duration") or 0.0),
                 passed=bool(state.get("passed")),
-                grid=min(a["grid_confidence"] or 0.0, b["grid_confidence"] or 0.0),
+                grid=pair.get(
+                    "grid", min(a["grid_confidence"] or 0.0, b["grid_confidence"] or 0.0)
+                ),
                 note=state.get("note") or "",
                 home=str(home),
+                folded_gap=pair.get("folded_gap"),
+                energy_step=pair.get("energy_step"),
+                entry_section=pair.get("entry_section"),
             )
         )
     return found
@@ -164,6 +182,8 @@ def patterns(rated: list[Rated]) -> dict[str, dict[str, tuple[int, int]]]:
         "overlap length": ("4 bars", "8 bars", "12 bars", "16 bars"),
         "overlap tempo gap": ("within 4%", "within 8%", "over 8%"),
         "phrase roll tempo gap": ("within 10%", "over 10%"),
+        "energy step": ("lift", "level", "drop"),
+        "landing": ("chorus", "verse", "instrumental", "elsewhere"),
     }.items():
         for bucket in buckets:
             tables[category][bucket]
@@ -183,6 +203,16 @@ def patterns(rated: list[Rated]) -> dict[str, dict[str, tuple[int, int]]]:
                 note("overlap tempo gap", _bucket_gap(item.gap), item)
         if item.move == "phrase_roll" and item.gap is not None:
             note("phrase roll tempo gap", "within 10%" if item.gap <= 0.1 else "over 10%", item)
+        if item.energy_step is not None:
+            step = "lift" if item.energy_step > 0.05 else "drop" if item.energy_step < -0.05 else "level"
+            note("energy step", step, item)
+        if item.entry_section is not None:
+            landing = (
+                item.entry_section
+                if item.entry_section in {"chorus", "verse", "instrumental"}
+                else "elsewhere"
+            )
+            note("landing", landing, item)
     return {
         table: {row: (counts[0], counts[1]) for row, counts in sorted(rows.items())}
         for table, rows in tables.items()
