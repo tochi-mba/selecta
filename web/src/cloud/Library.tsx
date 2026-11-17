@@ -1,3 +1,4 @@
+// Hosted mode only (ADR-0462): local-first accounts get the shared views and shell player instead.
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { Account, Api, Asset, bytes, Page } from './api';
 import { INITIAL_LIBRARY, isBusy, libraryReducer, overviewOf, songWords } from './libraryState';

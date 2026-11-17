@@ -1,7 +1,8 @@
 import { flagOn, useFlags } from '../flags';
 import { listed } from '../shell/manifest';
 import { memo, useEffect, useState } from 'react';
-import { Folders, getVia, postVia, Request } from '../api';
+import { Folders, Request } from '../api';
+import { useApi } from '../requestContext';
 import { refreshJobs, useJobsStatus } from '../state/jobs';
 import { analysisWords, estimateWords, etaRangeWords } from '../lib';
 import { useRoute, type WorkshopTab } from '../router';
@@ -74,7 +75,7 @@ function InterfaceChoices() {
 /** How much is ready, what's running, what's stuck and what needs someone, in that order. */
 function Overview({ status, request }: { status: ViewProps['status']; request?: Request }) {
   // ADR-0462: the folders read goes through the injected request.
-  const get = getVia(request);
+  const { get } = useApi(request);
   const { counts } = status;
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
   const { jobs, stale, unsupported } = useJobsStatus();
@@ -115,7 +116,7 @@ function Overview({ status, request }: { status: ViewProps['status']; request?: 
 
 function WorkshopView({ status, refreshStatus, notify, request, tab = 'overview' }: ViewProps & { tab?: WorkshopTab }) {
   // ADR-0462: this page's own writes go through the injected request.
-  const post = postVia(request);
+  const { post } = useApi(request);
   const { counts } = status;
   const left = Math.max((counts.music ?? 0) - (counts.analysed ?? 0), 0);
   const route = useRoute();

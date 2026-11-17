@@ -1,4 +1,7 @@
-import { get, LibraryPage } from '../api';
+import { clientFor, LibraryPage } from '../api';
+
+// local-only: the early read runs before the app knows its mode, and only in a local-only build
+const { get } = clientFor();
 
 /** The Library's page request, built one way for the page and for the early read below. */
 export function libraryUrl(query: string, filter: string, sort: string, after?: string | null, limit = 100) {

@@ -1,5 +1,6 @@
 import { DragEvent, KeyboardEvent, memo, MouseEvent, PointerEvent, RefObject, useEffect, useRef, useState } from 'react';
-import { MixItem, post } from '../api';
+import { MixItem } from '../api';
+import { useApi } from '../requestContext';
 import { flagOn, useFlags } from '../flags';
 import { clock, etaWords, seamStatusWords } from '../lib';
 import { Action, announce, Menu } from '../ui/controls';
@@ -54,6 +55,7 @@ type SeamRowProps = {
 /** A transition isn't a song, so it doesn't look like one: it hangs between two songs, with its own
  * state, and selecting it opens it beside the timeline. Nothing here plays unless Hear it is pressed. */
 const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, names, guard, actions, affected = false }: SeamRowProps) {
+  const { post } = useApi();
   const seam = item.seam!;
   const state = seam.state;
   const chosen = seam.settings.move ?? 'auto';

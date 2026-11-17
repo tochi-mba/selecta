@@ -1,5 +1,6 @@
 import { useContext, useRef, useState } from 'react';
-import { ApiError, ExportJob, get, MixData, MixItem } from '../api';
+import { ApiError, ExportJob, MixData, MixItem } from '../api';
+import { useApi } from '../requestContext';
 import { length, runningTime } from '../lib';
 import { PageLink } from '../shell/PageLink';
 import { Action, Dialog, Status } from '../ui/controls';
@@ -29,6 +30,7 @@ export function ExportPanel(props: {
   names: Record<string, string>;
   onClose: () => void;
 }) {
+  const { get } = useApi();
   const { mix, mixName, inDraft, guard, setMixData, names, onClose } = props;
   const at = useMixPath();
   const draftId = useContext(MixScope);

@@ -1,5 +1,6 @@
 import { KeyboardEvent, memo, PointerEvent, RefObject, useEffect, useMemo, useRef, useState } from 'react';
-import { ApiError, Eta, MixData, MixItem, postVia, Request, request as localRequest } from '../api';
+import { ApiError, Eta, MixData, MixItem, Request } from '../api';
+import { useApi } from '../requestContext';
 import { flagOn } from '../flags';
 import { mainPlayerTouched, releaseAudio, takeAudio } from '../audio/focus';
 import { etaRangeWords } from '../lib';
@@ -202,8 +203,8 @@ export function Studio(props: {
   /** ADR-0462: the injected client; standalone local mounts (and tests) default to the local one. */
   request?: Request;
 }) {
-  const { position, item, previous, names, onClose, onUsed, onConflict, notify, guard, request = localRequest } = props;
-  const post = postVia(request);
+  const { position, item, previous, names, onClose, onUsed, onConflict, notify, guard, request } = props;
+  const { post } = useApi(request);
   const [session, setSession] = useState<Session | null>(null);
   const [shape, setShape] = useState<Shape | null>(null);
   const [problem, setProblem] = useState('');

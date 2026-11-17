@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { ApiError, get, post } from '../api';
+import { ApiError } from '../api';
+import { useApi } from '../requestContext';
 import { operationId } from '../state/async';
 import { mainPlayerTouched, releaseAudio, takeAudio } from '../audio/focus';
 import { useFlag } from '../flags';
@@ -24,6 +25,7 @@ const strings = (value: unknown) => (Array.isArray(value) ? value.filter((item):
  * save stays on screen with everything still filled in, ready to send again. Nothing on this page, in
  * its words or its names for things, says how either version was made. */
 export function Listening() {
+  const { get, post } = useApi();
   const skipAndStop = useFlag('listening_study.skip_and_stop');
   const [study, setStudy] = useState('');
   const [listener, setListener] = useState('');

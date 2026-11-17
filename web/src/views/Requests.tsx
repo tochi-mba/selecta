@@ -2,7 +2,8 @@ import { Icon } from '../ui/Icon';
 import { RouteDiagram, SongMotif } from '../ui/MusicObjects';
 import { Problem, Skeleton } from '../ui/controls';
 import { createContext, Fragment, KeyboardEvent, useContext, useEffect, useRef, useState } from 'react';
-import { ApiError, SERVER_FAILED_WORDS, delVia, getVia, MixData, MixItem, postVia, Request, request as localRequest, SongRow } from '../api';
+import { ApiError, SERVER_FAILED_WORDS, clientFor, MixData, MixItem, Request, SongRow } from '../api';
+import { useRequest } from '../requestContext';
 import { usePreview } from '../audio/focus';
 import { etaWords } from '../lib';
 import { PlayerLike } from '../playerContract';
@@ -181,12 +182,11 @@ export const RequestsContext = createContext<RequestsState | null>(null);
 /** Requests stay separate from the playing order until a safe place is ready. This keeps watching
  * for one on every page, while the panel only shows on the pages where it's useful. Everything a
  * person presses shows straight away and is put right if the server says no. */
-export function useRequests(playback?: Playback, notify?: Notify, request: Request = localRequest): RequestsState {
+export function useRequests(playback?: Playback, notify?: Notify, override?: Request): RequestsState {
   // ADR-0462: all reads and writes go through the injected request; standalone local mounts
   // (and the existing tests) keep the local client by default.
-  const get = getVia(request);
-  const post = postVia(request);
-  const del = delVia(request);
+  const request = useRequest(override);
+  const { get, post, del } = clientFor(request);
   // without requests in this build, nothing here asks the server anything
   const on = useFlagHeard('requests');
   const [requests, setRequests] = useState<RequestRow[] | null>(null);
@@ -680,9 +680,8 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
 function TransitionPreviews({ request }: { request: RequestRow; playback?: Playback }) {
   // ADR-0462: previews ask the server through the shared requests client.
   const state = useContext(RequestsContext);
-  const via = state?.request ?? localRequest;
-  const get = getVia(via);
-  const post = postVia(via);
+  const provided = useRequest();
+  const { get, post } = clientFor(state?.request ?? provided);
   const preview = usePreview();
   const [wanted, setWanted] = useState('');
   const [problem, setProblem] = useState('');
@@ -753,7 +752,8 @@ export function RequestsPanel() {
   const bridges = useFlag('requests.bridges');
   const state = useContext(RequestsContext);
   // ADR-0462: the song search goes through the shared requests client.
-  const get = getVia(state?.request ?? localRequest);
+  const provided = useRequest();
+  const { get } = clientFor(state?.request ?? provided);
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState<SongRow[] | null>(null);
   const [searchError, setSearchError] = useState('');

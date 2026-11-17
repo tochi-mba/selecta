@@ -1,7 +1,8 @@
 import { flagOn } from '../flags';
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
-import { ApiError, get, Link, LinkList, MixData, post, SeamState } from '../api';
+import { ApiError, Link, LinkList, MixData, SeamState } from '../api';
+import { useApi } from '../requestContext';
 import { releaseAudio, takeAudio } from '../audio/focus';
 import { etaWords } from '../lib';
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
@@ -35,6 +36,7 @@ type Audition = { chords: string[]; bar_starts: number[]; seconds: number; semit
  * the chords it read, each song with those chords underneath, then both at once. Answering moves on
  * to the next pair by itself, so there's nothing to line up and nothing to remember. */
 export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => void; secondsToPrepare?: number }) {
+  const { get, post } = useApi();
   const [items, setItems] = useState<HarmonicDiscovery[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -322,6 +324,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
 
 /** Memoised (r8c): typing in the search or a poll that brings back the same link redraws no card. */
 const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: (link: Link, move: string, draft: number | null) => Promise<void>; names: Record<string, string>; onRated: () => void; drafts: { id: number; name: string }[] }) {
+  const { get, post } = useApi();
   const [move, setMove] = useState(link.move);
   const [cardError, setCardError] = useState('');
   const [rendering, setRendering] = useState(false);
@@ -449,6 +452,7 @@ const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts }:
 });
 
 function LinksView({ mix, setMixData, setView, notify, status, tab = 'words' }: ViewProps & { tab?: 'words' | 'harmonic' }) {
+  const { get, post } = useApi();
   // it's in the address, so a search survives a reload, a shared link and coming Back
   const addressQuery = useQueryParam('q') ?? '';
   const [query, setQuery] = useState(addressQuery);

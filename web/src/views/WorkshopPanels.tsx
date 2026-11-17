@@ -1,7 +1,8 @@
 import { flagOn } from '../flags';
 import { LinkIfThere } from '../shell/PageLink';
 import { FormEvent, useCallback, useEffect, useId, useRef, useState } from 'react';
-import { ApiError, FolderCheck, Folders, get, Jobs, post, Storage } from '../api';
+import { ApiError, clientFor, FolderCheck, Folders, Jobs, Storage } from '../api';
+import { useApi } from '../requestContext';
 import { gb, storageWords } from '../lib';
 import { PageLink } from '../shell/PageLink';
 import { Action, Dialog, Problem, Skeleton, Status } from '../ui/controls';
@@ -19,6 +20,7 @@ type Memory = { tried: number; clean: number; warned: number; failed: number; li
 /** What Selecta has measured from rendering, kept apart from what a person thinks of it. A clean check
  * means nothing went wrong that a check can find, which isn't the same as sounding good. */
 export function MemoryPanel() {
+  const { get } = useApi();
   const [memory, setMemory] = useState<Memory | null>(null);
   const [failed, setFailed] = useState(false);
   const load = useCallback(() => get<Memory>('/memory').then((value) => { setMemory(value); setFailed(false); }).catch(() => setFailed(true)), []);
@@ -43,6 +45,7 @@ export function MemoryPanel() {
 }
 
 export function StoragePanel() {
+  const { get, post } = useApi();
   const [storage, setStorage] = useState<Storage | null>(null);
   const [limit, setLimit] = useState<number | null>(null);
   const wait = useRef<number | undefined>(undefined);
@@ -333,7 +336,8 @@ export function JobsPanel({ status, onJobs }: { status: ViewProps['status']; onJ
 /** Whether a folder would work, or null if this server can't say, which isn't a reason to stop. */
 async function checkFolder(folder: string): Promise<FolderCheck | null> {
   try {
-    return await get<FolderCheck>(`/folders/check?path=${encodeURIComponent(folder)}`);
+    // local-only: checking a folder path is a question for this computer's own server
+    return await clientFor().get<FolderCheck>(`/folders/check?path=${encodeURIComponent(folder)}`);
   } catch (error) {
     if (error instanceof ApiError && (error.status === 404 || error.status === 405)) return null;
     throw error;
@@ -374,6 +378,7 @@ export function relinkReferenceWords(references: NonNullable<RelinkPreview['refe
 export const WINDOWS_EXAMPLE_FOLDER = 'C:\\Users\\you\\Music';
 
 export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 'status' | 'refreshStatus' | 'notify'>) {
+  const { get, post } = useApi();
   const [folder, setFolder] = useState('');
   const [problem, setProblem] = useState('');
   const [list, setList] = useState<Folders | null>(null);
@@ -659,6 +664,7 @@ export function safeDiagnostics(info: Record<string, unknown>): Record<string, u
 /** What's useful for working out a problem, with no paths or song names. It stays here unless you
  * copy it somewhere yourself. */
 export function Diagnostics() {
+  const { get } = useApi();
   const [info, setInfo] = useState<Record<string, unknown> | null>(null);
   const [failed, setFailed] = useState(false);
   const [copied, setCopied] = useState(false);

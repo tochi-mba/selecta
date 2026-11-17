@@ -1,6 +1,7 @@
 import { flagOn } from '../flags';
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { ApiError, FolderCheck, get, post, Status } from '../api';
+import { ApiError, FolderCheck, Status } from '../api';
+import { useApi } from '../requestContext';
 import { Action } from '../ui/controls';
 import { Field } from '../ui/primitives';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
@@ -50,6 +51,7 @@ function keepInView(form: HTMLFormElement | null) {
  * folder picker can't help here, because what it hands back isn't an address the Selecta server can
  * read, so the address is pasted in and checked by the server before anything happens. */
 export function Start({ status, onChange }: { status: Status; onChange: () => void }) {
+  const { get, post } = useApi();
   const [folder, setFolder] = useState('');
   const [problem, setProblem] = useState('');
   const [advice, setAdvice] = useState('');

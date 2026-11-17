@@ -1,5 +1,6 @@
 import { KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react';
-import { get, post, Suggestion } from '../api';
+import { Suggestion } from '../api';
+import { useApi } from '../requestContext';
 import { analysingWords, askedToAnalyse } from '../lib';
 import { Action, Problem, Skeleton } from '../ui/controls';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
@@ -15,6 +16,7 @@ export function Adder(props: {
   line: number[];
   refreshStatus: () => void;
 }) {
+  const { get, post } = useApi();
   const { position, onAdd, onClose, notify, line, refreshStatus } = props;
   const [query, setQuery] = useState('');
   const [songs, setSongs] = useState<Suggestion[] | null>(null);

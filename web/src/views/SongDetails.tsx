@@ -1,6 +1,7 @@
 import { flagOn } from '../flags';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { LibrarySong, post } from '../api';
+import { LibrarySong } from '../api';
+import { useApi } from '../requestContext';
 import { clock } from '../lib';
 import { capabilities } from '../state/capabilities';
 import { trackReadiness } from '../state/readiness';
@@ -68,6 +69,7 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
   onPriority: (song: LibrarySong) => Promise<void>;
   onNever: (song: LibrarySong) => Promise<void>;
 }) {
+  const { post } = useApi();
   const savedBpm = song.override_bpm ? localDecimal(song.override_bpm) : '';
   const savedKey = song.override_camelot ?? '';
   const [bpm, setBpm] = useState(savedBpm);

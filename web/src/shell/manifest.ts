@@ -1,4 +1,4 @@
-import { flagOn, Gate, gateOpen, visible } from '../flags';
+import { flagOn, Gate, gateOpen, visible, type FlagId } from '../flags';
 import type { IconName } from '../ui/Icon';
 import { pathOf, type Route, type WorkshopTab } from '../router';
 
@@ -7,42 +7,76 @@ import { pathOf, type Route, type WorkshopTab } from '../router';
  * The older addresses stay the real ones. `router.ts` holds the friendlier aliases. */
 
 export type DestinationId = 'listen' | 'explore' | 'mine' | 'library' | 'workspace';
-export type MoreDestinationId = 'account' | 'billing' | 'devices' | 'rooms' | 'uploads';
+export type MoreDestinationId = 'account' | 'billing' | 'devices' | 'rooms' | 'workspace' | 'uploads';
 
 export type ShellMode = 'local' | 'cloud';
+/** A Cloud-only page in More, by its address. Local addresses stay `Route`s, untouched. */
+export type MoreRoute = { page: 'more'; id: MoreDestinationId };
+/** Every page the shell can be on, in either mode. */
+export type ShellRoute = Route | MoreRoute;
+/** The two independent Cloud grants the server decides per account (`experience` on /api/account). */
+export type Experience = { local_first: boolean; hosted: boolean };
+
+/** What a destination needs to be there at all (ADR-0462, BF-0462-01). Every part must hold.
+ * `flag` is a registry flag id, `experience` one of the account's Cloud grants, `capability` a
+ * measured device capability (the ADR-0460 probe), never a guess from the user agent. */
 export type DestinationRequirements = {
   modes?: readonly ShellMode[];
-  flag?: string;
+  flag?: FlagId;
+  experience?: keyof Experience;
   capability?: string;
 };
 export type Destination = { id: DestinationId; label: string; path: string; icon: IconName; about: string; requires?: DestinationRequirements };
-export type MoreDestination = { id: MoreDestinationId; label: string; path: string; requires: DestinationRequirements };
-export type DestinationContext = { mode: ShellMode; feature: (id: string) => boolean; capability: (id: string) => boolean };
+export type MoreDestination = { id: MoreDestinationId; label: string; path: string; about: string; requires: DestinationRequirements };
+export type DestinationContext = {
+  mode: ShellMode;
+  feature: (id: FlagId) => boolean;
+  /** The account's decided experience; absent before the account is read, which grants nothing. */
+  experience?: Experience | null;
+  /** Measured capabilities; absent means none has been measured, which grants nothing. */
+  capability?: (id: string) => boolean;
+};
 
-/** One requirement evaluator for local and personal Cloud navigation (ADR-0462). */
+/** One requirement evaluator for local and personal Cloud navigation (ADR-0462).
+ *
+ * Local mode is the reference and stays exactly as it was: past the mode check a requirement is
+ * permissive there, because the local shell's flags already reflow through its own Gate lists
+ * (`visible`, `routeOn`) and the flag sweep is the oracle for them. Cloud checks every part. */
 export function destinationVisible<T extends { requires?: DestinationRequirements }>(destination: T, context: DestinationContext): boolean {
   const needs = destination.requires;
   if (!needs) return true;
   if (needs.modes && !needs.modes.includes(context.mode)) return false;
+  if (context.mode === 'local') return true;
   if (needs.flag && !context.feature(needs.flag)) return false;
-  return !needs.capability || context.capability(needs.capability);
+  if (needs.experience && context.experience?.[needs.experience] !== true) return false;
+  return !needs.capability || context.capability?.(needs.capability) === true;
 }
 
 export function destinationsFor(context: DestinationContext): Destination[] {
   return DESTINATIONS.filter((destination) => destinationVisible(destination, context));
 }
 
-/** Cloud-only account surfaces live behind More, not in a second primary navigation. */
+/** Cloud's own surfaces live behind More, inside the one manifest, never in a second navigation
+ * (ADR-0463). Uploads are a granted hosted mode, never a step: they appear only for an account
+ * with the hosted experience and the uploads flag. */
 export const MORE_DESTINATIONS: readonly MoreDestination[] = [
-  { id: 'account', label: 'Account', path: '/account', requires: { modes: ['cloud'] } },
-  { id: 'billing', label: 'Plan & billing', path: '/account/billing', requires: { modes: ['cloud'], flag: 'billing.portal' } },
-  { id: 'devices', label: 'Devices', path: '/account/devices', requires: { modes: ['cloud'], flag: 'devices' } },
-  { id: 'rooms', label: 'Rooms', path: '/rooms', requires: { modes: ['cloud'], flag: 'rooms' } },
-  { id: 'uploads', label: 'Add music', path: '/upload', requires: { modes: ['cloud'], flag: 'cloud.uploads' } },
+  { id: 'account', label: 'Account', path: '/account', about: 'Your sign-in, data and Lucy settings', requires: { modes: ['cloud'] } },
+  { id: 'billing', label: 'Plan & billing', path: '/account/billing', about: 'Your plan, usage and payments', requires: { modes: ['cloud'] } },
+  { id: 'devices', label: 'Devices', path: '/account/devices', about: 'The browsers signed in to play, and which one is the speaker', requires: { modes: ['cloud'], flag: 'devices' } },
+  { id: 'rooms', label: 'Rooms', path: '/rooms', about: 'Host a request room for your guests', requires: { modes: ['cloud'], flag: 'rooms' } },
+  { id: 'workspace', label: 'This device', path: '/workshop', about: 'The music connected on this device and the storage it uses', requires: { modes: ['cloud'], experience: 'local_first' } },
+  { id: 'uploads', label: 'Add music', path: '/upload', about: 'Upload tracks to your SelectaDJ Cloud library', requires: { modes: ['cloud'], flag: 'cloud.uploads', experience: 'hosted' } },
 ];
 
 export function moreDestinationsFor(context: DestinationContext): MoreDestination[] {
   return MORE_DESTINATIONS.filter((destination) => destinationVisible(destination, context));
+}
+
+/** A More destination opened by its address, for the Cloud shell; null for any other address. */
+export function moreRouteOf(pathname: string): MoreRoute | null {
+  const path = pathname.replace(/\/+$/, '') || '/';
+  const found = MORE_DESTINATIONS.find((destination) => destination.path === path);
+  return found ? { page: 'more', id: found.id } : null;
 }
 
 /** A list in words, `a, b and c`, of whichever parts are there. */
@@ -63,11 +97,12 @@ export function aboutOf(id: DestinationId): string {
 }
 
 export const DESTINATIONS: Destination[] = [
-  { id: 'listen', label: 'Listen', path: '/listen', icon: 'music', about: "What's playing, what's next and the lyrics", requires: { modes: ['local', 'cloud'] } },
-  { id: 'explore', label: 'Make a Mix', path: '/mixes', icon: 'explore', about: 'Choose an idea, shape the journey, then play, edit or save it', requires: { modes: ['local', 'cloud'] } },
-  { id: 'mine', label: 'My Mixes', path: '/mixes/mine', icon: 'mixes', about: 'Your current mix, your drafts and the render line', requires: { modes: ['local', 'cloud'] } },
-  { id: 'library', label: 'Library', path: '/library', icon: 'library', about: 'Every song, with its details and corrections', requires: { modes: ['local', 'cloud'] } },
-  { id: 'workspace', label: 'Workspace', path: '/workshop', icon: 'settings', about: 'Analysis, folders, storage, learning and diagnostics', requires: { modes: ['local', 'cloud'] } },
+  { id: 'listen', label: 'Listen', path: '/listen', icon: 'music', about: 'What’s playing, what’s next and the lyrics' },
+  { id: 'explore', label: 'Make a Mix', path: '/mixes', icon: 'explore', about: 'Choose an idea, shape the journey, then play, edit or save it' },
+  { id: 'mine', label: 'My Mixes', path: '/mixes/mine', icon: 'mixes', about: 'Your current mix, your drafts and the render line' },
+  { id: 'library', label: 'Library', path: '/library', icon: 'library', about: 'Every song, with its details and corrections' },
+  // Analysis, folders and diagnostics are this computer's server; Cloud keeps its device extras in More.
+  { id: 'workspace', label: 'Workspace', path: '/workshop', icon: 'settings', about: 'Analysis, folders, storage, learning and diagnostics', requires: { modes: ['local'] } },
 ];
 
 /** The kill switch's navigation: the older labels, over the very same pages. */
@@ -129,8 +164,9 @@ export function routeOn(route: Route): boolean {
   }
 }
 
-export function destinationOf(route: Route): DestinationId | null {
+export function destinationOf(route: ShellRoute): DestinationId | null {
   switch (route.page) {
+    case 'more': return null;
     case 'listen': return 'listen';
     case 'mixes': return route.tab === 'mine' ? 'mine' : 'explore';
     case 'discover':
@@ -146,7 +182,7 @@ export function destinationOf(route: Route): DestinationId | null {
 export type Crumb = { label: string; path?: string };
 
 /** What this page is called, and how it fits under where it belongs. */
-export function describeRoute(route: Route): { title: string; crumbs: Crumb[] } {
+export function describeRoute(route: ShellRoute): { title: string; crumbs: Crumb[] } {
   const explore: Crumb = { label: 'Make a Mix', path: '/mixes' };
   const mine: Crumb = { label: 'My Mixes', path: '/mixes/mine' };
   const workspace: Crumb = { label: 'Workspace', path: '/workshop' };
@@ -170,5 +206,9 @@ export function describeRoute(route: Route): { title: string; crumbs: Crumb[] } 
     case 'listening': return { title: 'Listening study', crumbs: [workspace, { label: 'Listening study' }] };
     case 'lucy': return { title: 'Lucy', crumbs: [explore, { label: 'Lucy' }] };
     case 'missing': return { title: 'Not found', crumbs: [{ label: 'Not found' }] };
+    case 'more': {
+      const label = MORE_DESTINATIONS.find((item) => item.id === route.id)?.label ?? 'More';
+      return { title: label, crumbs: [{ label }] };
+    }
   }
 }

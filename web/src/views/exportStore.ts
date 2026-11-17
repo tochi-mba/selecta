@@ -1,5 +1,8 @@
 import { useSyncExternalStore } from 'react';
-import { ApiError, del, ExportJob, get, post } from '../api';
+import { ApiError, clientFor, ExportJob } from '../api';
+
+// local-only: exports are jobs on this computer's own server (ADR-0462 lists them as mode-specific)
+const { get, post, del } = clientFor();
 
 /** What's known about exports, shared by whatever is showing them. The work itself happens on the
  * server, so closing a panel or reloading loses nothing: this only has to ask again. It only asks

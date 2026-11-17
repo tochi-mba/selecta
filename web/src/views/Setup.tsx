@@ -1,6 +1,6 @@
 import { flagOn } from '../flags';
 import { LinkIfThere } from '../shell/PageLink';
-import { post, Status } from '../api';
+import { clientFor, Status } from '../api';
 import { analysisWords } from '../lib';
 import { PageLink } from '../shell/PageLink';
 import { Action, Status as StatusMark } from '../ui/controls';
@@ -106,4 +106,5 @@ export function Preparing({ status, onAnalyse }: { status: Status; onAnalyse: ()
   );
 }
 
-export const askToAnalyse = () => post('/analysis/start');
+// local-only: analysis runs on this computer's own server
+export const askToAnalyse = () => clientFor().post('/analysis/start');

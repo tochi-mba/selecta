@@ -18,6 +18,26 @@ export type Device = { id: string; name: string; kind: string; signed_in: boolea
 export type SessionState = { mix_revision_id: string | null; song_index: number; offset_ms: number; anchor_at: number | null; state: 'playing' | 'paused' | 'stopped'; active_device_id: string | null; lease_expires_at: number | null; seq: number; fence?: number; state_confidence?: 'fresh' | 'uncertain' };
 export type SessionView = { session: SessionState | null; speaker: 'here' | 'elsewhere' | 'offline' | 'none'; speaker_device_id: string | null; speaker_name: string | null; ask_before_playing_here: boolean; server_time: number };
 export type Position = { song_index: number; offset_ms: number; state: 'playing' | 'paused' };
+/** The ADR-0461 envelope a speaker receives as a `playback.command` event and checks before acking. */
+export type CommandEvent = { device_id: string | null; command: string; args?: Record<string, unknown>; seq: number; command_id: string; fence?: number | null; expires_at?: number | null };
+export type AckResult = 'applied' | 'unavailable_here';
+
+/** Fired on window by the Cloud event stream for each `playback.command` event, so the speaker
+ * hook hears commands without owning a second stream. `detail` is the event payload. */
+export const PLAYBACK_COMMAND_EVENT = 'selecta-playback-command';
+/** Commands the speaker carries out itself by following the session; anything else (volume,
+ * mix steering, requests) is the server's to apply, so the speaker says unavailable_here. */
+export const SPEAKER_COMMANDS = new Set(['play', 'pause', 'skip', 'seek']);
+/** A refused press the controller answers by redrawing from where the music is now. */
+export const RETRY_CODES = new Set(['stale_command', 'superseded_command', 'expired_command']);
+
+/** Whether a delivered command may still be acted on here: same or newer fence than this speaker
+ * has seen, and not past its expiry by the server's clock (ADR-0461). */
+export function commandStillValid(event: Pick<CommandEvent, 'fence' | 'expires_at'>, knownFence: number | null, serverNow: number): boolean {
+  if (event.expires_at != null && serverNow >= event.expires_at) return false;
+  if (event.fence != null && knownFence != null && event.fence < knownFence) return false;
+  return true;
+}
 
 /** What actually makes sound on this device. */
 export interface Speaker {
@@ -75,6 +95,12 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const claiming = useRef(false);
   const speaking = useRef(false);
   const appliedSeq = useRef(-1);
+  // ADR-0461: the newest fence this device has seen, sent with heartbeats and checked on commands.
+  const fence = useRef<number | null>(null);
+  const acked = useRef(new Set<string>());
+  const adopt = (session: SessionState | null | undefined) => {
+    if (session && typeof session.fence === 'number' && (fence.current === null || session.fence >= fence.current)) fence.current = session.fence;
+  };
   const wake = useRef<WakeLockHold | null>(null);
   const deviceId = device?.id ?? null;
 
@@ -117,6 +143,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     if (!speaker) return;
     speaking.current = true;
     expiredSpeaker.current = false;
+    adopt(session);
     leaseDeadline.current = session.lease_expires_at;
     appliedSeq.current = session.seq;
     if (!wake.current) wake.current = holdWakeLock();
@@ -174,6 +201,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       // taking an existing lease. Only the most recent response changes shared state.
       if (requestId !== latestPoll.current) return forDecision ? next : null;
       learnClock(sentAt, next.server_time);
+      adopt(next.session);
       setView(next);
       setError('');
       if (expiredSpeaker.current) {
@@ -255,10 +283,13 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       const sentAt = Date.now();
       try {
         const answer = await api<{ outcome: string; session: SessionState; server_time: number }>('/playback/heartbeat', {
-          method: 'POST', body: JSON.stringify({ device_id: deviceId, ...at, seq: appliedSeq.current }),
+          method: 'POST', body: JSON.stringify({ device_id: deviceId, ...at, seq: appliedSeq.current, ...(fence.current === null ? {} : { fence: fence.current }) }),
         }, workspaceId);
         learnClock(sentAt, answer.server_time);
-        if (answer.outcome !== 'refused') leaseDeadline.current = answer.session.lease_expires_at;
+        if (answer.outcome !== 'refused') {
+          leaseDeadline.current = answer.session.lease_expires_at;
+          adopt(answer.session);
+        }
         if (answer.outcome === 'refused') {
           // Another device took over: the session says which, so the message can name it.
           await poll();
@@ -292,6 +323,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
         }),
       }, workspaceId);
       learnClock(sentAt, moved.server_time);
+      adopt(moved.session);
       if (moved.previous_device) await new Promise((resolve) => window.setTimeout(resolve, START_DELAY_MS));
       // A rapid second takeover (or a reload) can happen during the old speaker's
       // fade. Verify current ownership before producing audio: an old response does
@@ -332,11 +364,48 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       setError('');
     } catch (problem) {
       const code = (problem as { code?: string }).code;
-      setError(code === 'stale_command' ? "Something changed just then. Here's where it is now; try again." : (problem as Error).message);
+      setError(code && RETRY_CODES.has(code) ? "Something changed just then. Here's where it is now; try again." : (problem as Error).message);
     } finally {
       void poll();
     }
   }, [api, deviceId, poll, view?.session, workspaceId]);
 
-  return { device, notice, view, message, starting, error, playHere, refreshSession: () => poll(true), command, serverNow, isSpeaker: () => speaking.current };
+  // ADR-0461: the speaker checks each delivered command against its own fence and the server's
+  // clock, carries it out by following the session, then acks what it actually did. A command
+  // for another device, an expired or superseded one, or one heard while not the speaker is
+  // never acked: the server records its own verdict for those.
+  const handleCommand = useCallback(async (event: CommandEvent): Promise<AckResult | null> => {
+    if (!deviceId || !speaker || !remoteControl || event.device_id !== deviceId) return null;
+    if (!speaking.current || acked.current.has(event.command_id)) return null;
+    if (!commandStillValid(event, fence.current, serverNow())) return null;
+    let result: AckResult = 'unavailable_here';
+    if (SPEAKER_COMMANDS.has(event.command)) {
+      const now = await poll(true);
+      // Applied only when this device is still the speaker and has followed the session to (or
+      // past) the command; otherwise it says it could not, never that it did.
+      if (!now || now.speaker !== 'here' || !now.session || !speaking.current) return null;
+      if (now.session.seq >= event.seq) {
+        await follow(now.session);
+        if (appliedSeq.current >= event.seq) result = 'applied';
+      }
+    }
+    acked.current.add(event.command_id);
+    try {
+      await api(`/playback/commands/${encodeURIComponent(event.command_id)}/ack`, {
+        method: 'POST', body: JSON.stringify({ device_id: deviceId, result }),
+      }, workspaceId);
+    } catch {
+      // A lost ack is retried on the next delivery of the same id; the server replays the first.
+      acked.current.delete(event.command_id);
+    }
+    return result;
+  }, [api, deviceId, follow, poll, remoteControl, speaker, workspaceId]);
+
+  useEffect(() => {
+    const hear = (event: Event) => { void handleCommand((event as CustomEvent<CommandEvent>).detail); };
+    window.addEventListener(PLAYBACK_COMMAND_EVENT, hear);
+    return () => window.removeEventListener(PLAYBACK_COMMAND_EVENT, hear);
+  }, [handleCommand]);
+
+  return { device, notice, view, message, starting, error, playHere, handleCommand, knownFence: () => fence.current, refreshSession: () => poll(true), command, serverNow, isSpeaker: () => speaking.current };
 }

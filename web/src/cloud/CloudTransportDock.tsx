@@ -1,3 +1,4 @@
+// Hosted mode only (ADR-0462): local-first accounts get the shared views and shell player instead.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PlayingBar } from '../devices/PlayingBar';
 import type { Speaker } from '../devices/usePlaybackDevice';

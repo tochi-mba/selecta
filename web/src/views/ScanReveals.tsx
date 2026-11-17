@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { get, type Link, type LinkList } from '../api';
+import { type Link, type LinkList } from '../api';
+import { useApi } from '../requestContext';
 import { flagOn } from '../flags';
 
 /** CI-0178-04: while the first songs are being prepared, name the newest musical possibilities the
@@ -12,6 +13,7 @@ const SHOWN = 3;
 const keyOf = (link: Link) => `${link.a}>${link.b}:${link.phrase}`;
 
 export function ScanReveals({ ready, lyrics }: { ready: number; lyrics: number | undefined }) {
+  const { get } = useApi();
   const [found, setFound] = useState<Link[]>([]);
   const seen = useRef(new Set<string>());
   const on = flagOn('discover.scan_reveals') && flagOn('discover.word_links');

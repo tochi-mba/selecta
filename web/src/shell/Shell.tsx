@@ -3,7 +3,7 @@ import { MixItem } from '../api';
 import { useFlags } from '../flags';
 import { NowState } from '../player';
 import { PlayerLike } from '../playerContract';
-import { Route, savedScroll, useLocationText } from '../router';
+import { savedScroll, useLocationText } from '../router';
 import { setPrefs, usePrefs } from '../state/prefs';
 import { useUnseenActivity } from '../state/activity';
 import { attentionWords, jobAttention, useJobsStatus } from '../state/jobs';
@@ -12,7 +12,7 @@ import { Icon } from '../ui/Icon';
 import { playLabel, SEAM_LABEL, songArtist, songTitle, timeLabel, transportClock } from '../audio/transportWords';
 import { ThemeMenu } from '../ui/ThemeChoice';
 import { Toaster } from '../ui/toasts';
-import { aboutOf, classicDestinations, describeRoute, DESTINATIONS, destinationOf, workspaceTabs } from './manifest';
+import { aboutOf, classicDestinations, describeRoute, destinationOf, destinationsFor, type MoreDestination, type ShellMode, type ShellRoute, workspaceTabs } from './manifest';
 import { PageLink } from './PageLink';
 
 export { PageLink };
@@ -77,7 +77,7 @@ function MiniPlayer({ player, now, song, hasNext, onRequests, waiting }: { playe
 }
 
 /** Where this page sits, and the things you can reach from anywhere. */
-function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting, palette }: { route: Route; onCommands: () => void; onActivity: () => void; onHelp: () => void; onRequests: () => void; waiting: number; palette: boolean }) {
+function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting, palette }: { route: ShellRoute; onCommands: () => void; onActivity: () => void; onHelp: () => void; onRequests: () => void; waiting: number; palette: boolean }) {
   const { crumbs } = describeRoute(route);
   const unseen = useUnseenActivity();
   const { jobs } = useJobsStatus();
@@ -229,8 +229,10 @@ export function Shell({
   onActivity = () => {},
   banner,
   children,
+  mode = 'local',
+  more = [],
 }: {
-  route: Route;
+  route: ShellRoute;
   player: PlayerLike;
   now: NowState;
   song?: MixItem;
@@ -245,6 +247,10 @@ export function Shell({
   onActivity?: () => void;
   banner?: ReactNode;
   children: ReactNode;
+  /** ADR-0462: which world this shell serves. Local is the default and renders exactly as before. */
+  mode?: ShellMode;
+  /** Cloud only: the account-shaped places the manifest puts behind More (ADR-0463). */
+  more?: readonly MoreDestination[];
 }) {
   const place = useLocationText().split('?')[0];
   const content = useRef<HTMLDivElement>(null);
@@ -289,8 +295,12 @@ export function Shell({
   const editing = route.page === 'edit';
   const here = destinationOf(route);
   const collapsed = prefs.railCollapsed;
-  const primaryDestinations = DESTINATIONS.filter((item) => item.id !== 'workspace');
-  const workspace = DESTINATIONS.find((item) => item.id === 'workspace');
+  // One manifest for both modes: in local mode every requirement is permissive, so this is the
+  // same list as before; in Cloud the requirements decide (Workspace moves into More).
+  const destinations = destinationsFor({ mode, feature: on });
+  const primaryDestinations = destinations.filter((item) => item.id !== 'workspace');
+  const workspace = destinations.find((item) => item.id === 'workspace');
+  const cloudMore = mode === 'cloud' && more.length > 0;
   const classic = prefs.classicNav && on('app.classic_nav');
   return (
     <div className={`shell ${stage ? 'on-stage' : ''} ${withPlayer ? 'with-player' : ''}`}>
@@ -302,7 +312,7 @@ export function Shell({
             {classic
               ? classicDestinations().map((item) => (
                   <li key={item.path}>
-                    <PageLink to={item.path} data-tip={item.label} aria-label={item.label} aria-current={item.pages.includes(route.page) && !editing ? 'page' : undefined}>
+                    <PageLink to={item.path} data-tip={item.label} aria-label={item.label} aria-current={(item.pages as string[]).includes(route.page) && !editing ? 'page' : undefined}>
                       <Icon name={item.icon} />
                       <span className="nav-label">{item.label}</span>
                     </PageLink>
@@ -325,6 +335,18 @@ export function Shell({
                 <button className="nav-more-mobile" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={here === workspace.id ? 'page' : undefined} aria-description={attention > 0 ? 'Workspace needs your attention' : undefined} onClick={() => setMoreOpen(true)}>
                   <Icon name={workspace.icon} />
                   {attention > 0 && <span className="nav-attention" aria-hidden="true" />}
+                  <span className="nav-label">More</span>
+                </button>
+              </li>
+            )}
+            {!classic && cloudMore && (
+              <li className="nav-more">
+                <button className="nav-more-desktop" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={route.page === 'more' ? 'page' : undefined} data-tip="More" aria-label="More" onClick={() => setMoreOpen(true)}>
+                  <Icon name="settings" />
+                  <span className="nav-label">More</span>
+                </button>
+                <button className="nav-more-mobile" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={route.page === 'more' ? 'page' : undefined} onClick={() => setMoreOpen(true)}>
+                  <Icon name="settings" />
                   <span className="nav-label">More</span>
                 </button>
               </li>
@@ -362,7 +384,21 @@ export function Shell({
         {children}
       </div>
       {withPlayer && song && <MiniPlayer player={player} now={now} song={song} hasNext={hasNext ?? true} onRequests={onRequests} waiting={waitingRequests} />}
-      {moreOpen && (
+      {moreOpen && cloudMore && (
+        <Drawer title="More" onClose={() => setMoreOpen(false)}>
+          <nav className="more-nav" aria-label="More">
+            <ul>
+              {more.map((item) => (
+                <li key={item.id}>
+                  <PageLink to={item.path} aria-current={route.page === 'more' && route.id === item.id ? 'page' : undefined} onClick={() => setMoreOpen(false)}>{item.label}</PageLink>
+                  <p className="hint">{item.about}.</p>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </Drawer>
+      )}
+      {moreOpen && !cloudMore && (
         <Drawer title="More" onClose={() => setMoreOpen(false)}>
           <nav className="more-nav" aria-label="Workspace">
             <p className="eyebrow">Workspace</p>

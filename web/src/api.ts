@@ -319,24 +319,48 @@ export type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
 /** The local client as a `Request`: what App injects, and what standalone local surfaces default to. */
 export const request: Request = (path, init) => send(path, init);
 
-/** `get` over an injected request, with the local `get`'s exact semantics. */
-export const getVia = (via: Request = request) => <T,>(path: string): Promise<T> => via<T>(path);
-
-/** `post` over an injected request. The operation-id behaviour is identical to the local `post`:
- * every change carries one (T0094), and an id made up here is remembered so an ApiError does not
- * present it as something Diagnostics could look up (T0244). */
-export const postVia = (via: Request = request) => <T,>(path: string, body?: unknown, headers?: Record<string, string>): Promise<T> => {
-  const init: RequestInit = {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-operation-id': newOperationId(), ...headers },
-    body: JSON.stringify(body ?? {}),
-  };
-  if (!headers || !('x-operation-id' in headers)) madeUpIds.add(init);
-  return via<T>(path, init);
+export type Client = {
+  get: <T>(path: string) => Promise<T>;
+  post: <T>(path: string, body?: unknown, headers?: Record<string, string>) => Promise<T>;
+  del: <T>(path: string, headers?: Record<string, string>) => Promise<T>;
 };
 
+/** One client per request, made once: a view calling `getVia(request)` on every render gets the
+ * same function back, so it is as stable in hook dependencies as the old module-level `get`. */
+const clients = new WeakMap<Request, Client>();
+
+/** get/post/del over an injected request, with the local helpers' exact semantics. */
+export function clientFor(via: Request = request): Client {
+  const known = clients.get(via);
+  if (known) return known;
+  const made: Client = {
+    get: <T,>(path: string): Promise<T> => via<T>(path),
+    // The operation-id behaviour is identical to the local `post`: every change carries one
+    // (T0094), and an id made up here is remembered so an ApiError does not present it as
+    // something Diagnostics could look up (T0244).
+    post: <T,>(path: string, body?: unknown, headers?: Record<string, string>): Promise<T> => {
+      const init: RequestInit = {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-operation-id': newOperationId(), ...headers },
+        body: JSON.stringify(body ?? {}),
+      };
+      if (!headers || !('x-operation-id' in headers)) madeUpIds.add(init);
+      return via<T>(path, init);
+    },
+    del: <T,>(path: string, headers?: Record<string, string>): Promise<T> => via<T>(path, { method: 'DELETE', headers }),
+  };
+  clients.set(via, made);
+  return made;
+}
+
+/** `get` over an injected request, with the local `get`'s exact semantics. */
+export const getVia = (via: Request = request) => clientFor(via).get;
+
+/** `post` over an injected request, with the local `post`'s exact semantics. */
+export const postVia = (via: Request = request) => clientFor(via).post;
+
 /** `del` over an injected request, with the local `del`'s exact semantics. */
-export const delVia = (via: Request = request) => <T,>(path: string, headers?: Record<string, string>): Promise<T> => via<T>(path, { method: 'DELETE', headers });
+export const delVia = (via: Request = request) => clientFor(via).del;
 
 export const get = <T,>(path: string) => send<T>(path);
 
@@ -349,9 +373,9 @@ export const fetchBytes = (path: string, init?: RequestInit): Promise<Response> 
 const madeUpIds = new WeakSet<RequestInit>();
 
 // T0094: every change carries an operation id, so resending it after a lost answer is safe.
-export const post = postVia(request);
+export const post = <T,>(path: string, body?: unknown, headers?: Record<string, string>) => clientFor(request).post<T>(path, body, headers);
 
-export const del = delVia(request);
+export const del = <T,>(path: string, headers?: Record<string, string>) => clientFor(request).del<T>(path, headers);
 
 export type LibrarySong = {
   id: number;

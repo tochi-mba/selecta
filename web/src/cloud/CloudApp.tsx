@@ -1,14 +1,17 @@
 import { useAuth } from '@workos-inc/authkit-react';
-import { FormEvent, lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, lazy, ReactNode, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { VenueSetup } from '../autopilot/VenueSetup';
 import { DevicesPanel } from '../devices/DevicesPanel';
 import { DeviceCheck, showsDeviceCheck } from '../devices/DeviceCheck';
+import { PLAYBACK_COMMAND_EVENT } from '../devices/usePlaybackDevice';
 import { CloudListen } from '../rooms/CloudListen';
+import { RoomPanel } from '../rooms/RoomPanel';
 import { LucyCloudSettings } from '../views/LucyCloudSettings';
-import { DESTINATIONS } from '../shell/manifest';
+import { flagOn, setAccountFeatures, useFlags } from '../flags';
+import { DESTINATIONS, type MoreDestinationId } from '../shell/manifest';
 import { AccountDanger, AccountData } from './AccountData';
 import { AccountProblem, accountProblem, blockedMessage } from './accountStates';
-import { Account, apiOrigin, CloudError, featureOn, idempotencyKey, isOverQuota, lockedTo, messageOf, Page, pageShown, planName } from './api';
+import { Account, apiOrigin, CloudError, idempotencyKey, isOverQuota, lockedTo, messageOf, Page, pageShown, planName } from './api';
 import { BlockedCode, blockedCode, callbackProblem, refusalMessage, SUSPENDED_NOTICE, withoutCallbackError } from './authConfig';
 import { Billing } from './Billing';
 import { PrivacyNoticeDraft, showsPrivacyDraft } from './PrivacyNoticeDraft';
@@ -23,12 +26,16 @@ import { MakeCloudMix } from './MakeCloudMix';
 import { StorageMeter } from './Meters';
 import { blockedByQuota, OverQuotaBanner } from './OverQuota';
 import { UploadsPanel } from './Uploads';
+import { showsLocalFirst } from './localFirstGate';
 import './cloud.css';
 // Shared business styles are scoped to .biz and loaded by the Cloud shell.
 import '../business/business.css';
 
 // The staff console is its own bundle, loaded only when a staff member opens it.
 const AdminArea = lazy(() => import('../admin/AdminArea'));
+// The local-first shell (ADR-0462/0463) and the browser engine it carries load only for an account
+// that has the local-first experience with `cloud.local_first` on; everyone else never fetches it.
+const LocalFirstShell = lazy(() => import('./LocalFirstShell').then((module) => ({ default: module.LocalFirstShell })));
 
 /** Whether this account may see the staff console link: staff, with the console flag on. */
 export function showsAdmin(account: Account | null) {
@@ -98,12 +105,15 @@ export function CloudApp() {
     if (!user) return;
     try {
       const next = await api<Account>('/account');
+      // ADR-0462 one flag read: every account load and refresh feeds flagOn before the redraw.
+      setAccountFeatures(next.features);
       setAccount(next);
       setNeedsOnboarding(false);
       setProblem(null);
     } catch (problem) {
       if (problem instanceof CloudError && problem.status === 409 && problem.code === 'not_onboarded') {
         setNeedsOnboarding(true);
+        setAccountFeatures(null);
         setAccount(null);
       } else {
         setError((problem as Error).message);
@@ -113,6 +123,9 @@ export function CloudApp() {
   }, [api, user]);
 
   useEffect(() => { void refreshAccount(); }, [refreshAccount]);
+  // The account's features leave with the app, so nothing after it gates on a stale account.
+  useEffect(() => () => setAccountFeatures(null), []);
+  useFlags();
 
   // After sign-in, AuthKit's redirect callback moves to the page the person started from.
   useEffect(() => {
@@ -128,6 +141,8 @@ export function CloudApp() {
     // `session.revoked`: the server ended this stream because the sign-in was revoked; asking
     // for the account hears `session_revoked` and shows "You were signed out" (SC-0400-08).
     if (event.topic.startsWith('entitlement.') || event.topic.startsWith('quota.') || event.topic.startsWith('account.') || event.topic.startsWith('flags.') || event.topic.startsWith('session.')) void refreshAccount();
+    // ADR-0461: commands reach the speaker hook (usePlaybackDevice), which checks and acks them.
+    if (event.topic === 'playback.command') window.dispatchEvent(new CustomEvent(PLAYBACK_COMMAND_EVENT, { detail: event.payload }));
     if (event.topic.startsWith('upload.') || event.topic.startsWith('asset.')) { void refreshAccount(); setLibraryVersion((value) => value + 1); }
   }, [refreshAccount]);
   const refreshAll = useCallback(async () => { await refreshAccount(); }, [refreshAccount]);
@@ -205,7 +220,7 @@ export function CloudApp() {
     setPath(PATHS[next]);
     moved.current = true;
   };
-  const exact = featureOn(account, ACCOUNT_STATES_FLAG);
+  const exact = flagOn(ACCOUNT_STATES_FLAG);
   const route = resolveRoute(path);
   // With exact routes, an address whose page is switched off shows the overview and says so in
   // the address too, never a page that doesn't match it.
@@ -246,6 +261,27 @@ export function CloudApp() {
   }
 
   const quotaBlock = blockedByQuota(account);
+  const settingsPanel = account ? <div className="cloud-settings"><AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} />{flagOn('devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{flagOn('lucy') && flagOn('account.lucy_settings') && <LucyCloudSettings request={lucyRequest} features={account.features} />}{showsDeviceCheck(account.features) && <DeviceCheck />}{showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />}{flagOn('autopilot.venue_mode') && flagOn('autopilot.venue_policy') && <VenueSetup api={api} workspaceId={account.workspace.id} />}{exact && <AccountDanger busy={busy} onSignOutEverywhere={() => void signOutEverywhere()} onDelete={() => void deleteAccount(true)} />}</div> : null;
+
+  // ADR-0462/0463: an account with the local-first experience, and `cloud.local_first` on, gets the
+  // shared shell. With either off, everything below renders exactly as before.
+  if (account && showsLocalFirst(account)) {
+    const morePanel = (id: MoreDestinationId): ReactNode => {
+      switch (id) {
+        case 'account': return settingsPanel;
+        case 'billing': return <Billing account={account} busy={busy} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} />;
+        case 'devices': return <DevicesPanel api={api} workspaceId={account.workspace.id} />;
+        case 'rooms': return <RoomPanel api={api} workspaceId={account.workspace.id} locked={account.feature_locks.rooms} votesOn={flagOn('rooms.votes')} displayOn={flagOn('rooms.display')} playHereOn={flagOn('devices')} freshOnly={account.features['rooms.nickname_confirm'] === true} />;
+        case 'uploads': return <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} perFile={flagOn(LIBRARY_STATES_FLAG)} />;
+        case 'workspace': return null;
+      }
+    };
+    return (
+      <Suspense fallback={<main className="cloud-runtime-message"><span className="cloud-mark">S</span><p>Opening SelectaDJ…</p></main>}>
+        <LocalFirstShell api={api} account={account} more={morePanel} feedback={<Feedback error={error} notice={notice} />} />
+      </Suspense>
+    );
+  }
   // A page whose feature is off isn't there: its address shows the overview instead.
   const wanted: Page = exact ? routedPage ?? 'home' : page;
   const shown: Page = pageShown(account, wanted) ? wanted : 'home';
@@ -279,10 +315,10 @@ export function CloudApp() {
         {view === 'home' && account && <Overview account={account} go={choosePage} />}
         {view === 'listen' && account && <CloudListen api={api} account={account} />}
         {view === 'listen' && account && <MakeCloudMix api={api} account={account} />}
-        {view === 'library' && account && <LibraryPanel api={api} workspaceId={account.workspace.id} setError={setError} refreshAccount={refreshAccount} go={choosePage} reload={libraryVersion} truthful={featureOn(account, LIBRARY_STATES_FLAG)} account={account} />}
-        {view === 'uploads' && account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} perFile={featureOn(account, LIBRARY_STATES_FLAG)} />}
+        {view === 'library' && account && <LibraryPanel api={api} workspaceId={account.workspace.id} setError={setError} refreshAccount={refreshAccount} go={choosePage} reload={libraryVersion} truthful={flagOn(LIBRARY_STATES_FLAG)} account={account} />}
+        {view === 'uploads' && account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} perFile={flagOn(LIBRARY_STATES_FLAG)} />}
         {view === 'billing' && account && <Billing account={account} busy={busy} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} />}
-        {view === 'settings' && account && <div className="cloud-settings"><AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} />{featureOn(account, 'devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{featureOn(account, 'lucy') && featureOn(account, 'account.lucy_settings') && <LucyCloudSettings request={lucyRequest} features={account.features} />}{showsDeviceCheck(account.features) && <DeviceCheck />}{showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />}{featureOn(account, 'autopilot.venue_mode') && featureOn(account, 'autopilot.venue_policy') && <VenueSetup api={api} workspaceId={account.workspace.id} />}{exact && <AccountDanger busy={busy} onSignOutEverywhere={() => void signOutEverywhere()} onDelete={() => void deleteAccount(true)} />}</div>}
+        {view === 'settings' && settingsPanel}
         <footer className="cloud-footer">SelectaDJ Cloud · Your originals remain private to your workspace.<CloudCredit /></footer>
       </main>
     </div>
@@ -308,7 +344,7 @@ function Feedback({ error, notice }: { error: string; notice: string }) {
 }
 
 function Overview({ account, go }: { account: Account; go: (page: Page) => void }) {
-  const uploads = featureOn(account, 'cloud.uploads');
+  const uploads = flagOn('cloud.uploads');
   return <>
     {uploads && <section className="cloud-hero"><div><p className="cloud-eyebrow">MADE FOR YOUR NEXT SET</p><h2>Your library starts here.</h2><p>Add your tracks and SelectaDJ will prepare them for your next mix.</p><button className="primary" onClick={() => go('uploads')}>Add music</button></div><div className="cloud-hero-art" aria-hidden="true"><span>♪</span><i /><b /><em /></div></section>}
     <div className="cloud-cards"><StorageMeter account={account} /><section className="cloud-card"><p className="cloud-eyebrow">CURRENT PLAN</p><h2>{planName(account)}</h2><p>Storage and processing limits are managed with your plan.</p><button onClick={() => go('billing')}>Manage plan</button></section>{uploads && <section className="cloud-card"><p className="cloud-eyebrow">YOUR MUSIC</p><h2>Library and uploads</h2><p>Browse private files or add tracks to your workspace.</p><button onClick={() => go('library')}>Open library</button><button onClick={() => go('uploads')}>Upload tracks</button></section>}</div>
@@ -324,6 +360,6 @@ function RoomsCard({ account, go }: { account: Account; go: (page: Page) => void
     const name = `${plan[0]?.toUpperCase() ?? ''}${plan.slice(1)}`;
     return <section className="cloud-card cloud-locked"><div><p className="cloud-eyebrow">{name.toUpperCase()} FEATURE</p><h2>Host a request room</h2><p>Share a QR code so guests can add requests to your set. Rooms are part of {name}.</p></div><button onClick={() => go('billing')}>Explore {name}</button></section>;
   }
-  if (!featureOn(account, 'rooms')) return null;
+  if (!flagOn('rooms')) return null;
   return <section className="cloud-card cloud-locked"><div><p className="cloud-eyebrow">ROOMS</p><h2>Host a request room</h2><p>Share a QR code so guests can add requests to your set.</p></div><button onClick={() => go('listen')}>Open a room</button></section>;
 }

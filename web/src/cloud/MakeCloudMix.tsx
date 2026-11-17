@@ -1,3 +1,4 @@
+// Hosted mode only (ADR-0462): local-first accounts get the shared views and shell player instead.
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { CloudError, featureOn, type Account, type Api, type Asset } from './api';
 import './makeCloudMix.css';

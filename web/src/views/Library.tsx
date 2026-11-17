@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
-import { ApiError, getVia, LibraryPage, LibrarySong, MixData, postVia, problemKind } from '../api';
+import { ApiError, LibraryPage, LibrarySong, MixData, problemKind } from '../api';
+import { useApi } from '../requestContext';
 import { Gate, useFlags, visible } from '../flags';
 import { analysisWords, askedToAnalyse } from '../lib';
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
@@ -48,8 +49,7 @@ const pagesFrom = (text: string | null) => {
 
 export function Library({ mix, now, player, setMixData, setView, notify, status, refreshMix, refreshStatus, request }: ViewProps) {
   // ADR-0462: every read and write on this page goes through the injected request.
-  const get = getVia(request);
-  const post = postVia(request);
+  const { get, post } = useApi(request);
   const query = useQueryParam('q') ?? '';
   // S4-0105-10: only filters the server supports count, so an old or hand-typed `?show=genre` (or
   // tempo, key) never reads as a filter that exists; it shows everything instead.

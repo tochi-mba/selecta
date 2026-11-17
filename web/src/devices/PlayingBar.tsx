@@ -41,10 +41,13 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
 
   const where = useMemo(() => {
     if (!view) return 'Connecting...';
+    // This device knows its own speaker is running; anyone else only knows what the server last
+    // heard, so a lapsed lease (state_confidence uncertain, ADR-0461) is never shown as playing.
+    if (here) return 'Playing here';
     if (session?.state_confidence === 'uncertain') {
       return `${view.speaker_name ?? 'The speaker'} has not checked in recently and may still be playing`;
     }
-    if (here || view.speaker === 'here') return 'Playing here';
+    if (view.speaker === 'here') return 'Playing here';
     if (view.speaker === 'elsewhere') return `Playing on ${view.speaker_name ?? 'another device'}`;
     if (view.speaker === 'offline') return `${view.speaker_name ?? 'The speaker'} is offline and may still be playing`;
     return 'Nothing is playing';

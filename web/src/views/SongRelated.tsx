@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { get, LibrarySong, LinkList } from '../api';
+import { LibrarySong, LinkList } from '../api';
+import { useApi } from '../requestContext';
 import { Status } from '../ui/controls';
 
 /** CI-0177-05: the word connections Selecta has actually found for this one song, from the server's
  * own link list. Each says whether it has been heard and kept or is still only a candidate; nothing is
  * guessed, and a song whose lyrics aren't timed yet says so rather than claiming it has no connections. */
 export function SongRelated({ song }: { song: Pick<LibrarySong, 'id' | 'lyric_status'> }) {
+  const { get } = useApi();
   const [found, setFound] = useState<LinkList['links'] | null>(null);
   const [failed, setFailed] = useState(false);
   const timed = song.lyric_status === 'synced';

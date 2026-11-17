@@ -10,7 +10,9 @@ type Fs = { readFileSync(path: string, encoding: 'utf8'): string; readdirSync(pa
 const node = (globalThis as unknown as { process: { cwd(): string; getBuiltinModule(id: string): unknown } }).process;
 const fs = node.getBuiltinModule('node:fs') as Fs;
 const SOURCE = `${node.cwd()}/src/`;
-const SHARED = ['ui', 'state', 'audio'];
+// engine, media and dsp are the browser runtime (ADR-0457/0458/0459): shared by every Cloud
+// surface, so they may never reach up into a page or the app shell either.
+const SHARED = ['ui', 'state', 'audio', 'engine', 'media', 'dsp'];
 
 const sources = (folder: string) => fs.readdirSync(`${SOURCE}${folder}/`)
   .filter((name) => /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name))
@@ -20,7 +22,7 @@ const importsOf = (file: string) => [...fs.readFileSync(`${SOURCE}${file}`, 'utf
   .matchAll(/(?:^|\n)\s*(?:import|export)[^'"]*?from\s+['"]([^'"]+)['"]/g)].map((match) => match[1]);
 
 describe('frontend import direction', () => {
-  it('shared ui, state and audio modules never import a page view or the app shell', () => {
+  it('shared ui, state, audio and browser-runtime modules never import a page view or the app shell', () => {
     const offending = SHARED.flatMap(sources).flatMap((file) => importsOf(file)
       .filter((path) => /(^|\/)views\//.test(path) || /\.\.\/(App|RuntimeApp)$/.test(path))
       .map((path) => `${file} -> ${path}`));
@@ -38,15 +40,21 @@ describe('frontend import direction', () => {
     expect(importsOf('views/Studio.tsx')).toContain('../audio/focus');
   });
 
-  it('shared destination views use the injected request boundary, never local request functions', () => {
-    const sharedViews = ['Library.tsx', 'Lucy.tsx', 'Mix.tsx', 'Mixes.tsx', 'MyMixes.tsx', 'Now.tsx', 'Studio.tsx', 'Workshop.tsx'];
-    const offending = sharedViews.flatMap((name) => {
-      const source = fs.readFileSync(`${SOURCE}views/${name}`, 'utf8');
-      const apiImports = [...source.matchAll(/import\s*\{([^}]*)\}\s*from\s*['"]\.\.\/api['"]/g)]
-        .flatMap((match) => match[1].split(',').map((part) => part.trim().replace(/^type\s+/, '')))
-        .filter((name) => ['get', 'post', 'del'].includes(name));
-      return apiImports.map((name) => `views/${name}: ${name}`);
+  it('views reach the server only through the injected request, never get, post or del (ADR-0462)', () => {
+    const offending = sources('views').flatMap((file) => {
+      const source = fs.readFileSync(`${SOURCE}${file}`, 'utf8');
+      const named = [...source.matchAll(/import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*['"]\.\.\/api['"]/g)]
+        .flatMap((match) => match[1].split(',').map((part) => part.trim().replace(/^type\s+/, '').split(/\s+as\s+/)[0]))
+        .filter((imported) => ['get', 'post', 'del'].includes(imported))
+        .map((imported) => `${file}: imports ${imported}`);
+      // a namespace import would hide the same call behind api.get(...)
+      const namespace = /import\s*\*\s*as\s+\w+\s+from\s*['"]\.\.\/api['"]/.test(source) ? [`${file}: imports the whole local client`] : [];
+      return [...named, ...namespace];
     });
     expect(offending).toEqual([]);
+  });
+
+  it('the request guard reads every view, not a hand-kept list', () => {
+    expect(sources('views')).toEqual(expect.arrayContaining(['views/Library.tsx', 'views/Drafts.tsx', 'views/libraryPrefetch.ts']));
   });
 });

@@ -60,16 +60,31 @@ export const FLAG_IDS = Object.keys(REGISTRY) as FlagId[];
 let current: Readonly<Record<string, boolean>> | null = null;
 /** Whether the server has said yet. Until it has, anything that would ask it about a feature waits. */
 let heard = false;
+/** Cloud only (ADR-0462, BF-0462-03): this account's decided features from /api/account, or null.
+ * Local mode never sets it, so local flags read exactly as before. */
+let account: Readonly<Record<string, boolean>> | null = null;
 const listeners = new Set<() => void>();
 
 /** From `/api/status`. Only a real change tells anyone, so the 4-second poll doesn't re-render.
  * `null` forgets what was heard, for tests; `undefined` is an older server that doesn't say. */
 export function setFlags(next: Record<string, boolean> | undefined | null) {
   const value = next ?? null;
-  const nowHeard = next !== null;
+  // an account's features (Cloud) still count as heard when the status source forgets
+  const nowHeard = next !== null || account !== null;
   if (JSON.stringify(value) === JSON.stringify(current) && nowHeard === heard) return;
   current = value ? { ...value } : null;
   heard = nowHeard;
+  for (const listener of listeners) listener();
+}
+
+/** One flag read in both modes (ADR-0462): Cloud feeds the account's features snapshot here on
+ * every account load and refresh (after each `flags.changed`), and `flagOn`, `Gate`, `useFlags`
+ * and the shell then gate on it exactly as they gate on /api/status locally. A flag the account
+ * does not mention is on, as `featureOn` always read it. `null` forgets them (sign-out, unmount). */
+export function setAccountFeatures(features: Record<string, boolean> | null) {
+  if (JSON.stringify(features) === JSON.stringify(account)) return;
+  account = features ? { ...features } : null;
+  heard = current !== null || account !== null;
   for (const listener of listeners) listener();
 }
 
@@ -80,7 +95,7 @@ export function useFlagHeard(id: FlagId): boolean {
 }
 
 export function flagOn(id: FlagId): boolean {
-  return current?.[id] !== false;
+  return current?.[id] !== false && account?.[id] !== false;
 }
 
 function subscribe(listener: () => void) {
@@ -93,7 +108,13 @@ function subscribe(listener: () => void) {
 /** Told whenever the flags change, for work outside React. Returns a way to stop being told. */
 export const onFlagsChange = subscribe;
 
-const snapshot = () => current;
+// a new object on every change of either source, so React re-renders on either
+type Sources = { current: Readonly<Record<string, boolean>> | null; account: Readonly<Record<string, boolean>> | null };
+let both: Sources = { current: null, account: null };
+const snapshot = () => {
+  if (both.current !== current || both.account !== account) both = { current, account };
+  return both;
+};
 
 /** Re-renders when the flags change, which only happens when the server restarts with others. */
 export function useFlags(): (id: FlagId) => boolean {

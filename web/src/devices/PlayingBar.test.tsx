@@ -114,7 +114,7 @@ describe('overlapping device polls (AV-0419-05)', () => {
 });
 
 describe('the playing bar on a phone (SC-0415-05)', () => {
-  it('calls a stale speaker uncertain instead of claiming it is playing', async () => {
+  it('calls a lapsed remote speaker uncertain instead of claiming it is playing (ADR-0461)', async () => {
     const api = (async (path: string) => {
       if (path === '/devices') return { device: {
         id: 'phone', name: 'Phone', kind: 'phone', signed_in: true,
