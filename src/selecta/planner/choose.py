@@ -195,6 +195,12 @@ def _tempo_free_landing(
         and exit_level >= COLD_ENTRY_DB
     ):
         return None
+    if flags.on("planner.energy_intent") and entry_cue.kind != "chorus":
+        # a hot exit into a much colder landing is an unintended drop, not a transition
+        before = a.energy_bars[max(exit_cue.bar - 4, 0) : exit_cue.bar]
+        after = b.energy_bars[entry_cue.bar : entry_cue.bar + 4]
+        if before.size and after.size and float(before.mean()) - float(after.mean()) > 0.25:
+            return None
     wait = b.vocal_free_after(entry_cue.time) if b.vocals_known and not b.instrumental else 0.0
     beat = b.period
     quality = {"chorus": 0.85, "verse": 0.7, "before chorus": 0.5, "song start": 0.4}.get(
@@ -328,6 +334,7 @@ def _score(
         if landing in b.chorus_start_bars():
             entry_quality = min(1.0, entry_quality + 0.25)
             reasons.append("B's chorus lands as A leaves")
+    motivation = 1.0
     if not recipe.beatmatched:
         landing = _tempo_free_landing(a, b, exit_cue, entry_cue, gap)
         if landing is None:
@@ -335,6 +342,20 @@ def _score(
         entry_quality, vocal_term = landing
         if vocal_term > 0.9:
             reasons.append("one voice hands straight to the next")
+        if flags.on("planner.motivated_punctuation") and recipe.name != "delay_throw":
+            # punctuation needs an audible reason: a thought just finished, or the song's own
+            # structure turned. Without one, a cut or echo reads as a mistake, not a moment.
+            # (delay_throw already demands a line ending at the exit.)
+            structural = exit_cue.kind in {"after chorus", "after section", "outro"}
+            line_done = (
+                a.vocals_known
+                and not a.instrumental
+                and a.vocal_free_before(exit_cue.time) <= 2.0 * a.period
+            )
+            if structural or line_done:
+                reasons.append("a moment worth marking")
+            else:
+                motivation = 0.35
 
     key_penalty = _key_penalty(a, b, bars)
     if key_penalty >= 0.75:
@@ -356,7 +377,7 @@ def _score(
         + 0.15 * energy_term
         + 0.10 * (1.0 - key_penalty)
         + 0.10 * vocal_term
-    ) * (0.7 + 0.3 * _level_term(a, b, exit_cue, entry_cue, bars))
+    ) * (0.7 + 0.3 * _level_term(a, b, exit_cue, entry_cue, bars)) * motivation
     if recipe.beatmatched and bars <= SHORT_OVERLAP_BARS:
         # all six rated overlaps this short were disliked, against 13 of 16 liked at 8 bars or more
         score *= SHORT_OVERLAP_COST

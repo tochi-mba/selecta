@@ -24,6 +24,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from selecta import flags
 from selecta.analysis.song import SongInfo
 from selecta.lyrics.align import Word
 from selecta.render.script import Curve, Echo, Part, TransitionScript, Warp, fade_in, sweep
@@ -50,6 +51,8 @@ _MAX_ANSWERS = 3
 _ANSWER_REACH = 24.0
 _CALL_LEVELS = (0.85, 0.65, 0.5)
 _MAX_FAST_HITS = 8
+_ARRIVAL_DROP = -0.12
+"""A roll may land softer than it left only when B has an arrival of its own there."""
 _MAX_PHRASE_PULSES = 8
 _TIGHT_STEP = 0.45
 _HIT_ATTACK = 0.006
@@ -512,6 +515,13 @@ def phrase_roll(
     grid = _quick_steps(b, enter_b)
     shape = roll_shape(a, b, phrase_a, phrase_b[0].start, grid.size)
     if following.size == 0 or shape.fast_hits < 2:
+        return None
+    if (
+        flags.on("planner.arrival")
+        and shape.energy_lift < _ARRIVAL_DROP
+        and not b.arrival_at(phrase_b[0].start)
+    ):
+        # a roll promises a drop; B landing colder with nothing arriving breaks the promise
         return None
     fast = grid[-shape.fast_hits :]
     roll_start = to_output(float(following[0]))

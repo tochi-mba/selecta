@@ -113,6 +113,18 @@
     "planner.true_key": {
       "label": "Heard harmony",
       "about": "Key scoring also hears the measured chroma of the exact bars that will play together, not just the two key labels."
+    },
+    "planner.arrival": {
+      "label": "Rolls land on arrivals",
+      "about": "A phrase roll promises a drop, so the next song has to arrive on one: a chorus coming in, or its energy stepping up."
+    },
+    "planner.motivated_punctuation": {
+      "label": "Motivated punctuation",
+      "about": "An echo, cut or wash needs an audible reason - a line just finished or the song's structure turned - or it scores far lower."
+    },
+    "planner.energy_intent": {
+      "label": "No unintended drops",
+      "about": "A punchy move from a hot exit into a much colder landing is refused unless the landing is a chorus."
     }
   }
 }

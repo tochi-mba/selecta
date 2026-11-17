@@ -187,6 +187,19 @@ class SongInfo:
             self._phrases = found
         return self._phrases
 
+    def arrival_at(self, time: float, slack_bars: int = 1) -> bool:
+        """Whether this moment lands on something: a chorus coming in, or the energy stepping
+        up. A roll or build promises an arrival, and the next song has to deliver one."""
+        bar = self.bar_at(time)
+        if any(abs(bar - start) <= slack_bars for start in self.chorus_start_bars()):
+            return True
+        energy = self.energy_bars
+        if energy is None or energy.size == 0 or bar >= energy.size:
+            return False
+        before = float(energy[max(bar - 4, 0) : bar].mean()) if bar > 0 else 0.0
+        after = float(energy[bar : min(bar + 2, energy.size)].mean())
+        return after - before >= 0.12
+
     def chorus_end_bars(self) -> list[int]:
         return [s["end_bar"] for s in self.sections if s["label"] == "chorus"]
 
