@@ -202,6 +202,9 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
     const reply = await postJson<{ songs: RegisteredSong[] }>(request, '/api/local-media/songs', payload);
     const byHash = new Map(reply.songs.map((song) => [song.content_sha256, song]));
     const present: number[] = [];
+    // A full store stops the batch, but what was recorded before it is still reported as
+    // present on this device, so Cloud's availability matches the local index.
+    let stopped: unknown = null;
     for (const item of sending) {
       const song = byHash.get(item.entry.content_sha256);
       if (!song) {
@@ -209,18 +212,23 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
         emit({ kind: 'file', name: item.name, stage: 'failed', reason: 'SelectaDJ could not register this track. Try the import again.' });
         continue;
       }
-      await store.put({
-        songId: song.song_id,
-        identity: {
-          content_sha256: item.entry.content_sha256,
-          title: item.entry.title,
-          artist: item.entry.artist,
-          ...(item.entry.album ? { album: item.entry.album } : {}),
-          duration_s: item.entry.duration_s,
-        },
-        ref: item.ref,
-        importedAt: Date.now(),
-      });
+      try {
+        await store.put({
+          songId: song.song_id,
+          identity: {
+            content_sha256: item.entry.content_sha256,
+            title: item.entry.title,
+            artist: item.entry.artist,
+            ...(item.entry.album ? { album: item.entry.album } : {}),
+            duration_s: item.entry.duration_s,
+          },
+          ref: item.ref,
+          importedAt: Date.now(),
+        });
+      } catch (error) {
+        stopped = error;
+        break;
+      }
       present.push(song.song_id);
       if (song.duplicate_of !== undefined) {
         summary.duplicates += 1;
@@ -235,6 +243,7 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
       assertNoPath(availability);
       await postJson(request, '/api/local-media/availability', availability);
     }
+    if (stopped !== null) throw stopped;
   };
 
   try {

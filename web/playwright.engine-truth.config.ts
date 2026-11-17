@@ -1,7 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// BF-0466-03: run the unmocked AudioWorklet tripwire in all three browser engines. This is a
-// logic/scheduling gate only; every project is muted and therefore makes no audibility claim.
+// BF-0466-03 (gate 2): run the engine's real probe and limiter worklets (the exact processor
+// source the app ships) in all three browser engines: `pnpm e2e:engine-truth`. This is a
+// processing and scheduling gate only and makes no audibility claim: Chromium and Firefox are
+// muted, WebKit has no mute switch and the graph ends in a zero gain anyway. Firefox and WebKit
+// browsers must be installed (`pnpm exec playwright install firefox webkit`).
 const python = process.env.SELECTA_PYTHON ?? 'uv run python';
 const port = process.env.SELECTA_ENGINE_TRUTH_PORT ?? '8814';
 const dist = process.env.SELECTA_ENGINE_TRUTH_DIST ?? 'dist-engine-truth';
@@ -30,7 +33,19 @@ export default defineConfig({
         launchOptions: { args: ['--mute-audio', '--autoplay-policy=no-user-gesture-required'] },
       },
     },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    {
+      name: 'firefox',
+      use: {
+        ...devices['Desktop Firefox'],
+        launchOptions: {
+          firefoxUserPrefs: {
+            'media.autoplay.default': 0,
+            'media.autoplay.block-webaudio': false,
+            'media.volume_scale': '0.0',
+          },
+        },
+      },
+    },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ],
   webServer: {

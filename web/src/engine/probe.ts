@@ -1,4 +1,6 @@
 import type { UnsupportedHere } from './state';
+import { PROBE_PROCESSOR, PROBE_PROCESSOR_SOURCE } from './worklet/probeProcessor';
+import { loadWorkletModule, MODULE_WAIT_MS } from './worklet/scope';
 
 /** The capability probe (ADR-0457, BF-0457-02; ADR-0460 "capability by measured probe").
  *
@@ -12,8 +14,7 @@ import type { UnsupportedHere } from './state';
  * the output status, and that lives in state.ts, deliberately out of reach from here.
  */
 
-/** Must match the registerProcessor name in worklet/probeProcessor.ts. */
-export const PROBE_PROCESSOR = 'selecta-probe';
+export { PROBE_PROCESSOR } from './worklet/probeProcessor';
 /** How long to wait for the processor's report before calling the device unable. */
 export const PROBE_WAIT_MS = 2000;
 
@@ -34,11 +35,13 @@ type ProbeNode = {
 };
 
 export type ProbeOptions = {
-  /** Where the probe worklet lives; the bundled processor by default, a stub in tests. */
+  /** A module URL to load instead of the bundled processor source (a stub in tests). */
   moduleUrl?: string | URL;
   /** The real AudioWorkletNode by default; a fake in tests. */
   makeNode?: (context: AudioContext, name: string) => ProbeNode;
   waitMs?: number;
+  /** How long the module load may take (MODULE_WAIT_MS by default). */
+  moduleWaitMs?: number;
 };
 
 const refuse = (reason: string): ProbeFailure => ({ ok: false, state: 'unsupported_here', reason });
@@ -49,9 +52,35 @@ export async function probeCapability(context: AudioContext, options: ProbeOptio
   if (!('audioWorklet' in context) || !context.audioWorklet) {
     return refuse('This browser has no AudioWorklet, so SelectaDJ cannot mix audio here.');
   }
-  const moduleUrl = options.moduleUrl ?? new URL('./worklet/probeProcessor.ts', import.meta.url);
+  // A processor only runs on a running context; one that is suspended would fail the probe for
+  // the wrong reason. The caller wakes it inside the gesture; nudge once more, never forever.
+  if (context.state !== 'running') {
+    await Promise.race([
+      context.resume().catch(() => undefined),
+      new Promise((settled) => setTimeout(settled, options.waitMs ?? PROBE_WAIT_MS)),
+    ]);
+    if ((context.state as AudioContextState) !== 'running') {
+      return refuse('Sound has not been allowed to start yet, so SelectaDJ could not check this device. Press play to try again.');
+    }
+  }
+  const worklet = context.audioWorklet;
   try {
-    await context.audioWorklet.addModule(moduleUrl as string);
+    if (options.moduleUrl !== undefined) {
+      // Some browsers never settle addModule; bound the wait either way.
+      let wait: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([
+          worklet.addModule(String(options.moduleUrl)),
+          new Promise<never>((_, reject) => {
+            wait = setTimeout(() => reject(new Error('the module did not load in time')), options.moduleWaitMs ?? MODULE_WAIT_MS);
+          }),
+        ]);
+      } finally {
+        clearTimeout(wait);
+      }
+    } else {
+      await loadWorkletModule(worklet, PROBE_PROCESSOR_SOURCE, options.moduleWaitMs ?? MODULE_WAIT_MS);
+    }
   } catch (error) {
     return refuse(`The audio worklet would not load: ${(error as Error).message ?? 'unknown reason'}.`);
   }

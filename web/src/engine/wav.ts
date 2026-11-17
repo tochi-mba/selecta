@@ -66,6 +66,8 @@ export function encodeWav(chunks: PcmChunk[], bits: WavBits = 16): EncodedWav {
   const bytesPerSample = bits / 8;
   const blockAlign = channels * bytesPerSample;
   const dataBytes = frames * blockAlign;
+  // RIFF sizes are 32-bit: a longer file would wrap its header and read back as garbage.
+  if (HEADER_BYTES - 8 + dataBytes > 0xffffffff) throw new Error('The mix is too long for one WAV file.');
   const bytes = new Uint8Array(HEADER_BYTES + dataBytes);
   const view = new DataView(bytes.buffer);
 

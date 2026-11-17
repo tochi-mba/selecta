@@ -156,6 +156,24 @@ describe('runImport', () => {
     expect(events).toContainEqual({ kind: 'paused', paused: 'storage_full' });
   });
 
+  it('still reports the songs recorded before the store filled up as present on this device', async () => {
+    const { request, calls } = captureRequest();
+    const store = await MediaStore.open();
+    const put = store.put.bind(store);
+    let room = 1;
+    store.put = async (song) => {
+      if (room <= 0) throw new DOMException('No room.', 'QuotaExceededError');
+      room -= 1;
+      await put(song);
+    };
+    const files = [bytesFile('one', 'a.mp3'), bytesFile('two', 'b.mp3')];
+    const summary = await runImport({ source: files, request, store, deviceId: 'dev-1', readTags: tagsFromName });
+    expect(summary).toMatchObject({ paused: true, imported: 1 });
+    const availability = availabilityPosts(calls);
+    expect(availability).toHaveLength(1);
+    expect((availability[0].body as { present: number[] }).present).toHaveLength(1);
+  });
+
   it('reports an unreadable file as failed and carries on with the rest', async () => {
     const { request } = captureRequest();
     const store = await MediaStore.open();

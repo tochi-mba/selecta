@@ -99,4 +99,20 @@ describe('the capability probe', () => {
     // The shape itself has no output status; only a person can verify audibility (ADR-0460).
     expect(Object.keys(result)).toEqual(['ok', 'sampleRate', 'schedulingMisses', 'blocks']);
   });
+
+  it('wakes a suspended context before probing, and says so plainly when it will not run', async () => {
+    const context = new FakeAudioContext();
+    context.audioWorklet = { addModule: async () => {} };
+    context.state = 'suspended';
+    context.resume = async () => {}; // the browser holds the sound back
+    const result = await probeCapability(context as unknown as AudioContext, { moduleUrl: 'x', waitMs: 20 });
+    expect(result).toMatchObject({ ok: false, reason: expect.stringMatching(/not been allowed to start/) });
+  });
+
+  it('gives up on a module load that never settles instead of hanging the device check', async () => {
+    const context = new FakeAudioContext();
+    context.audioWorklet = { addModule: () => new Promise<void>(() => {}) };
+    const result = await probeCapability(context as unknown as AudioContext, { moduleUrl: 'x', waitMs: 20, moduleWaitMs: 20 });
+    expect(result).toMatchObject({ ok: false, reason: expect.stringMatching(/did not load in time/) });
+  });
 });

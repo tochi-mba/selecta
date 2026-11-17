@@ -57,6 +57,17 @@ function settled<T>(request: IDBRequest<T>): Promise<T> {
   });
 }
 
+/** A write is only durable once its transaction commits. A full disk is reported at commit
+ * (the transaction aborts with QuotaExceededError), after the request itself has succeeded, so
+ * writes wait for this instead of the request. */
+function committed(transaction: IDBTransaction): Promise<void> {
+  return new Promise((resolve, reject) => {
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error ?? new Error('IndexedDB transaction failed'));
+    transaction.onabort = () => reject(transaction.error ?? new Error('IndexedDB transaction aborted'));
+  });
+}
+
 export class MediaStore {
   /** True where IndexedDB would not open or stopped taking writes: the index lives only in
    * memory for this visit, and the UI should say a re-import will be needed next time. */
@@ -92,12 +103,21 @@ export class MediaStore {
   }
 
   async put(song: StoredSong): Promise<void> {
+    const previous = this.memory.get(song.songId);
     this.memory.set(song.songId, song);
     if (!this.db) return;
     try {
-      await settled(this.db.transaction(SONGS, 'readwrite').objectStore(SONGS).put(song));
+      const transaction = this.db.transaction(SONGS, 'readwrite');
+      const done = committed(transaction);
+      transaction.objectStore(SONGS).put(song);
+      await done;
     } catch (error) {
-      if (isQuotaError(error)) throw new StorageFullError();
+      if (isQuotaError(error)) {
+        // Not recorded, so not claimed: the mirror goes back to what is really stored.
+        if (previous) this.memory.set(song.songId, previous);
+        else this.memory.delete(song.songId);
+        throw new StorageFullError();
+      }
       this.degraded = true;
     }
   }
@@ -115,7 +135,10 @@ export class MediaStore {
     this.session.delete(songId);
     if (!this.db) return;
     try {
-      await settled(this.db.transaction(SONGS, 'readwrite').objectStore(SONGS).delete(songId));
+      const transaction = this.db.transaction(SONGS, 'readwrite');
+      const done = committed(transaction);
+      transaction.objectStore(SONGS).delete(songId);
+      await done;
     } catch {
       this.degraded = true;
     }

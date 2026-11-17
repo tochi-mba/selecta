@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
+import { equalPowerIn } from '../dsp/crossfade';
+import { scheduleSeam, SeamSchedule } from '../dsp/seams';
 import { buildGraph } from './graph';
-import { createScheduler, END_FADE, LoadedTrack, SEAM_FADE } from './scheduler';
+import { createScheduler, END_FADE, LoadedTrack, SEAM_FADE, SeamProvider } from './scheduler';
 import { createEngineStore } from './state';
 import { bufferOfSeconds, FakeAudioContext, manualTimers, settle } from './testAudio';
 
 /** A scheduler over fakes: tracks[index] seconds each, 'failed' for a bad file, the end past
  * the list. With delayLoads every load waits until the test releases it in call order. */
-const rig = (tracks: (number | 'failed')[], options: { delayLoads?: boolean } = {}) => {
+const rig = (
+  tracks: (number | 'failed')[],
+  options: { delayLoads?: boolean; seam?: SeamProvider; holdDelay?: () => Promise<void> } = {},
+) => {
   const context = new FakeAudioContext();
   const graph = buildGraph(context as unknown as BaseAudioContext);
   const store = createEngineStore();
@@ -24,11 +29,15 @@ const rig = (tracks: (number | 'failed')[], options: { delayLoads?: boolean } = 
     load: (index) => (options.delayLoads
       ? new Promise((settled) => pending.push(() => settled(loaded(index))))
       : Promise.resolve(loaded(index))),
-    hold: () => context.suspend(),
+    hold: async () => {
+      await options.holdDelay?.();
+      await context.suspend();
+    },
     wake: async () => {
       await context.resume();
       return true;
     },
+    seam: options.seam,
     timers,
   });
   return { context, graph, store, timers, scheduler, pending };
@@ -95,11 +104,13 @@ describe('the tick and the seam', () => {
     const seamAt = startedAt + 10 - SEAM_FADE;
     expect(next.started[0].when).toBeCloseTo(seamAt, 5);
     const nextGain = context.madeGains.at(-1)!;
-    expect(nextGain.events).toEqual([
-      { type: 'set', value: 0, at: expect.closeTo(seamAt, 5) },
-      { type: 'ramp', value: 1, at: expect.closeTo(seamAt + SEAM_FADE, 5) },
-    ]);
+    // Equal-power, not linear: silent just before the seam, full at its end, sin() between.
+    expect(nextGain.events[0]).toEqual({ type: 'set', value: 0, at: expect.closeTo(seamAt, 5) });
+    expect(nextGain.events.at(-1)).toEqual({ type: 'ramp', value: expect.closeTo(1, 9), at: expect.closeTo(seamAt + SEAM_FADE, 5) });
+    const quarter = nextGain.events.find((event) => Math.abs(event.at - (seamAt + SEAM_FADE / 4)) < 1e-9);
+    expect(quarter?.value).toBeCloseTo(equalPowerIn(0.25), 9);
     expect(first.stopped[0]).toBeCloseTo(seamAt + SEAM_FADE + 0.02, 5);
+    expect(scheduler.lastTransition()).toMatchObject({ kind: 'boundary', implementation: 'equal-power-crossfade-v1' });
   });
 
   it('fades the next song in rather than leaving a gap when it decodes too late', async () => {
@@ -117,11 +128,12 @@ describe('the tick and the seam', () => {
     const next = context.madeSources[1];
     expect(next.started[0].when).toBeCloseTo(context.currentTime + 0.05, 5);
     const nextGain = context.madeGains.at(-1)!;
-    expect(nextGain.events[1]).toEqual({
+    expect(nextGain.events.at(-1)).toEqual({
       type: 'ramp',
-      value: 1,
+      value: expect.closeTo(1, 9),
       at: expect.closeTo(context.currentTime + 0.05 + END_FADE, 5),
     });
+    expect(scheduler.lastTransition()?.kind).toBe('late_fade');
   });
 
   it('becomes the next song once the seam passes, and ends idle after the last', async () => {
@@ -185,5 +197,145 @@ describe('stopping', () => {
     scheduler.stop(1000);
     expect(context.madeSources[0].stopped).toHaveLength(1); // stopped now, not on a fade
     expect(scheduler.position()).toBeNull();
+  });
+});
+
+/** A confident beat grid at 120 bpm over the whole song. */
+const grid = (seconds: number) => ({
+  beats: Array.from({ length: Math.floor(seconds * 2) }, (_, beat) => beat / 2),
+  tempo: { bpm: 120, confidence: 0.9, ambiguous: false },
+  durationSeconds: seconds,
+});
+
+describe('seam schedules from dsp/seams.ts', () => {
+  it('consumes a beatmatched schedule: entry, equal-power gains on both decks and the exit stop', async () => {
+    const asked: { fromIndex: number; toIndex: number }[] = [];
+    const made: SeamSchedule[] = [];
+    const seam: SeamProvider = (request) => {
+      asked.push({ fromIndex: request.fromIndex, toIndex: request.toIndex });
+      const schedule = scheduleSeam(grid(request.from.duration), grid(request.to.duration), { exitSeconds: 40, entrySeconds: 2, windowSeconds: 8 });
+      made.push(schedule);
+      return schedule;
+    };
+    const { context, scheduler, timers } = rig([60, 50], { seam });
+    await scheduler.start(0, 0, true);
+    context.advance(20); // the next song is now inside LOAD_NEXT_WITHIN
+    timers.tick();
+    await settle();
+    expect(asked).toEqual([{ fromIndex: 0, toIndex: 1 }]);
+    expect(made[0].kind).toBe('beatmatch');
+    const base = context.madeSources[0].started[0].when; // song A's 0 s on the context clock
+    const next = context.madeSources[1];
+    expect(next.started[0]).toEqual({ when: expect.closeTo(base + 40, 9), offset: 2, duration: undefined });
+    // The outgoing gain follows the schedule's equal-power fall and stops after the window.
+    const outgoing = context.madeGains[context.madeGains.length - 2];
+    const falls = outgoing.events.filter((event) => event.type === 'ramp');
+    expect(falls.at(-1)).toEqual({ type: 'ramp', value: 0, at: expect.closeTo(base + 48, 5) });
+    expect(context.madeSources[0].stopped[0]).toBeCloseTo(base + 48 + 0.02, 4);
+    const incoming = context.madeGains.at(-1)!;
+    expect(incoming.events.at(-1)?.value).toBeCloseTo(1, 9);
+    expect(scheduler.lastTransition()).toMatchObject({ kind: 'seam_schedule', seamKind: 'beatmatch' });
+    // Promotion happens at the seam's entry, with position inside song B from its entry point.
+    context.advance(base + 41 - context.currentTime);
+    timers.tick();
+    expect(scheduler.position()).toEqual({ index: 1, offsetMs: 3000, paused: false });
+  });
+
+  it('carries a low-confidence schedule as its own 3 s fade, reason intact', async () => {
+    const seam: SeamProvider = (request) => scheduleSeam(
+      { ...grid(request.from.duration), tempo: { bpm: 120, confidence: 0.1, ambiguous: false } },
+      grid(request.to.duration),
+      { exitSeconds: 40 },
+    );
+    const { context, scheduler, timers } = rig([60, 50], { seam });
+    await scheduler.start(0, 0, true);
+    context.advance(20); // the next song is now inside LOAD_NEXT_WITHIN
+    timers.tick();
+    await settle();
+    const base = context.madeSources[0].started[0].when;
+    expect(context.madeSources[1].started[0].when).toBeCloseTo(base + 40, 9);
+    expect(context.madeGains.at(-1)!.events.at(-1)?.at).toBeCloseTo(base + 40 + END_FADE, 5);
+    expect(scheduler.lastTransition()).toMatchObject({ kind: 'seam_schedule', seamKind: 'fade', reason: expect.stringMatching(/confidence/) });
+  });
+
+  it('falls back to a 3 s equal-power fade into the end when the provider has no schedule', async () => {
+    const { context, scheduler, timers } = rig([60, 50], { seam: () => null });
+    await scheduler.start(0, 0, true);
+    context.advance(20); // the next song is now inside LOAD_NEXT_WITHIN
+    timers.tick();
+    await settle();
+    const endAt = context.madeSources[0].started[0].when + 60;
+    expect(context.madeSources[1].started[0].when).toBeCloseTo(endAt - END_FADE, 9);
+    expect(context.madeGains.at(-1)!.events.at(-1)?.at).toBeCloseTo(endAt, 5);
+    expect(scheduler.lastTransition()).toMatchObject({ kind: 'fallback_fade', reason: expect.stringMatching(/no seam/) });
+  });
+
+  it('refuses a schedule whose start has already passed and fades instead, never a double schedule', async () => {
+    const { context, scheduler, timers } = rig([60, 50], {
+      seam: (request) => scheduleSeam(grid(request.from.duration), grid(request.to.duration), { exitSeconds: 30 }),
+    });
+    await scheduler.start(0, 0, true);
+    context.advance(35); // past the scheduled exit at 30 s
+    timers.tick();
+    await settle();
+    expect(context.madeSources).toHaveLength(2);
+    expect(scheduler.lastTransition()).toMatchObject({ kind: 'fallback_fade', reason: expect.stringMatching(/too late/) });
+    timers.tick();
+    await settle();
+    expect(context.madeSources).toHaveLength(2);
+  });
+
+  it('a provider that throws becomes a named fallback, not a crash', async () => {
+    const { context, scheduler, timers } = rig([60, 50], { seam: () => { throw new Error('analysis missing'); } });
+    await scheduler.start(0, 0, true);
+    context.advance(20); // the next song is now inside LOAD_NEXT_WITHIN
+    timers.tick();
+    await settle();
+    expect(scheduler.lastTransition()).toMatchObject({ kind: 'fallback_fade', reason: expect.stringMatching(/analysis missing/) });
+  });
+});
+
+describe('pause truth across awaits', () => {
+  it('a start paused holds the context before anything is scheduled', async () => {
+    const { context, scheduler } = rig([10]);
+    const order: string[] = [];
+    const suspend = context.suspend.bind(context);
+    context.suspend = async () => {
+      order.push(`suspend with ${context.madeSources.length} sources`);
+      await suspend();
+    };
+    await scheduler.start(0, 0, false);
+    expect(order).toEqual(['suspend with 0 sources']);
+  });
+
+  it('a pause asked for while loading wins: the song lands paused', async () => {
+    const { scheduler, store, pending, context } = rig([10], { delayLoads: true });
+    void scheduler.start(0, 0, true);
+    await settle();
+    expect(store.get().phase).toBe('loading');
+    await scheduler.pause();
+    pending.shift()?.();
+    await settle(40);
+    expect(store.get().phase).toBe('paused');
+    expect(context.state).toBe('suspended');
+  });
+
+  it('a pause overtaken by a new start does not mark the new song paused', async () => {
+    let release: () => void = () => {};
+    let delaying = true;
+    const { scheduler, store, context } = rig([10, 10], {
+      holdDelay: () => (delaying ? new Promise<void>((settled) => { release = settled; }) : Promise.resolve()),
+    });
+    await scheduler.start(0, 0, true);
+    const pausing = scheduler.pause();
+    delaying = false;
+    const starting = scheduler.start(1, 0, true);
+    release();
+    await pausing;
+    await starting;
+    expect(store.get().phase).toBe('playing');
+    expect(scheduler.position()?.index).toBe(1);
+    // The new start waited for the stale suspend, so the context runs under the new song.
+    expect(context.state).toBe('running');
   });
 });

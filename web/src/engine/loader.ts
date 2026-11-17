@@ -44,19 +44,25 @@ export function createLoader(
         held.set(id, found);
         return found;
       }
-      found = (async (): Promise<DecodeResult> => {
+      // Assigned before the read runs (the read waits a microtask), so the catch below always
+      // compares against this attempt's own entry.
+      let made: Promise<DecodeResult> | null = null;
+      made = (async (): Promise<DecodeResult> => {
         try {
-          const raw = await bytes();
+          // Read in a later microtask, so even a synchronous throw lands after the entry exists.
+          const raw = await Promise.resolve().then(bytes);
           const buffer = await decode(raw);
           return { ok: true, id, buffer };
         } catch (error) {
           failures += 1;
-          // A failed decode is not kept: a corrupt download may succeed on the next try.
-          held.delete(id);
+          // A failed decode is not kept: a corrupt download may succeed on the next try. Only
+          // this attempt is dropped; a newer load of the same id keeps its own entry.
+          if (held.get(id) === made) held.delete(id);
           const why = (error as Error | null)?.message;
           return { ok: false, id, error: why || 'That song’s audio could not be read.' };
         }
       })();
+      found = made as Promise<DecodeResult>;
       held.set(id, found);
       while (held.size > keep) {
         const stalest = held.keys().next().value as TrackId;

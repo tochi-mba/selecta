@@ -2,9 +2,11 @@
  *
  * Two deck gains feed a master, the master feeds a safety limiter, then an analyser for the
  * interface, then the volume gain, then the destination. The volume comes after the analyser so
- * turning it down does not flatten the visualizer (mirrors player.ts). The limiter here is a
- * DynamicsCompressorNode set up as a hard safety stage; the DSP agent replaces it with a
- * worklet-based true-peak limiter later through `insertLimiter`, which is the seam for that.
+ * turning it down does not flatten the visualizer (mirrors player.ts). The graph starts with a
+ * DynamicsCompressorNode set up as a hard safety stage. That compressor is only the fallback:
+ * engine/limiter.ts `installLimiter` swaps in the worklet true-peak limiter (built from
+ * dsp/limiter.ts) through `insertLimiter` whenever the capability probe passed, and keeps the
+ * compressor, named as a reduced implementation, only when the probe or the worklet failed.
  */
 
 export type EngineGraph = {
@@ -63,6 +65,7 @@ export function buildGraph(context: BaseAudioContext): EngineGraph {
     volume,
     get limiter() { return limiter; },
     insertLimiter(node) {
+      if (node === limiter) return;
       master.disconnect();
       limiter.disconnect();
       master.connect(node);

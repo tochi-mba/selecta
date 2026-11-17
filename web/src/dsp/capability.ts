@@ -10,6 +10,15 @@
  * another device can never be served as this device's own capability.
  */
 
+import { KEY_IMPLEMENTATION } from './analysis/key';
+import { ONSETS_IMPLEMENTATION } from './analysis/onsets';
+import { TEMPO_IMPLEMENTATION } from './analysis/tempo';
+import { CROSSFADE_IMPLEMENTATION } from './crossfade';
+import { LIMITER_IMPLEMENTATION } from './limiter';
+import { LOUDNESS_IMPLEMENTATION, TRUE_PEAK_IMPLEMENTATION } from './loudness';
+import { SEAMS_IMPLEMENTATION } from './seams';
+import { STRETCH_IMPLEMENTATION } from './stretch';
+
 export type Tier = 1 | 2 | 3;
 
 export type CapabilityStatus = 'ready' | 'unsupported_here';
@@ -84,26 +93,69 @@ export class CapabilityRegistry {
   }
 }
 
-/** The shared registry most callers use; tests may build their own. */
+/** The shared registry most callers use; tests may build their own. Empty until evidence is
+ * registered: importing this module claims nothing. */
 export const capabilities = new CapabilityRegistry();
 
-/** The capabilities this build actually contains. This is code rather than marketing copy:
- * result producers name these implementation ids, and unsupported stretch stays explicit. */
-export function registerBrowserDspCapabilities(registry: CapabilityRegistry = capabilities): CapabilityRegistry {
-  for (const record of [
-    { feature: 'crossfade', tier: 1, implementation: 'equal-power-crossfade-v1', status: 'ready' },
-    { feature: 'loudness', tier: 1, implementation: 'ebu-r128-loudness-v1', status: 'ready' },
-    { feature: 'true_peak', tier: 1, implementation: 'oversampled-true-peak-v1', status: 'ready' },
-    { feature: 'limiter', tier: 1, implementation: 'lookahead-limiter-v1', status: 'ready' },
-    { feature: 'onsets', tier: 2, implementation: 'spectral-flux-onsets-v1', status: 'ready' },
-    { feature: 'tempo', tier: 2, implementation: 'lightweight-tempo-v1', status: 'ready' },
-    { feature: 'key', tier: 2, implementation: 'lightweight-chroma-v1', status: 'ready' },
-  ] as const) registry.register(record);
-  registry.markUnsupported(
-    'time_stretch', 2, 'time-stretch-unsupported-v0',
-    'no vetted pitch-preserving stretch is bundled',
-  );
-  return registry;
+/** What this device has shown, which is all a capability may rest on (ADR-0459, ADR-0460). */
+export interface DspEvidence {
+  /** The ADR-0457 capability probe: a real worklet processed audio, or the reason it did not. */
+  probe: { ok: true } | { ok: false; reason: string };
+  /** The limiter actually installed in the playback graph. A fallback is a different, reduced
+   * implementation and is recorded under its own id. Defaults to the worklet limiter. */
+  limiter?: { kind: 'worklet' } | { kind: 'compressor_fallback'; implementation: string };
+  /** Tier 2 needs a measured device: a benchmark-calibrated worker budget (budget.ts) that has
+   * not collapsed to its floor. Absent means not measured, so Tier 2 is unsupported_here. */
+  workerBudget?: { atFloor: boolean } | null;
 }
 
-registerBrowserDspCapabilities();
+/** Tier 3 features: none may be ready in this release (no benchmark or licence evidence). */
+export const TIER3_FEATURES = ['neural_beats', 'neural_key', 'stem_separation', 'lyric_alignment'] as const;
+
+const TIER3_REASON = 'needs per-device benchmark evidence and a model licence review, which do not exist yet';
+const NOT_A_PLAYER = (reason: string) => `this device cannot play here: ${reason}`;
+
+/** Register this device's DSP capabilities from evidence, never from hope.
+ *  - Tier 1 is ready only when the probe passed; otherwise every Tier 1 feature is
+ *    unsupported_here with the probe's reason (the device is a controller, ADR-0460).
+ *  - Tier 2 is ready only on a measured device (probe passed and a calibrated budget exists and
+ *    is not at its floor); time-stretch stays unsupported_here everywhere (stretch.ts).
+ *  - Tier 3 is always unsupported_here. */
+export function registerBrowserDspCapabilities(
+  registry: CapabilityRegistry = capabilities,
+  evidence: DspEvidence = { probe: { ok: false, reason: 'the capability probe has not run' } },
+): CapabilityRegistry {
+  const player = evidence.probe.ok;
+  const playerReason = evidence.probe.ok ? '' : NOT_A_PLAYER(evidence.probe.reason);
+  const tier1 = (feature: string, implementation: string) => (player
+    ? registry.register({ feature, tier: 1, implementation, status: 'ready' })
+    : registry.markUnsupported(feature, 1, implementation, playerReason));
+  tier1('two_deck_playback', 'web-audio-two-deck-v1');
+  tier1('crossfade', CROSSFADE_IMPLEMENTATION);
+  tier1('prepared_fades', CROSSFADE_IMPLEMENTATION);
+  tier1('loudness', LOUDNESS_IMPLEMENTATION);
+  tier1('true_peak', TRUE_PEAK_IMPLEMENTATION);
+  const limiter = evidence.limiter ?? { kind: 'worklet' };
+  tier1('limiter', limiter.kind === 'worklet' ? LIMITER_IMPLEMENTATION : limiter.implementation);
+  registry.markUnsupported('eq_filters', 1, 'eq-filters-unbuilt-v0', 'SelectaDJ has no browser EQ or filters yet');
+
+  const budget = evidence.workerBudget ?? null;
+  const tier2Reason = !player
+    ? playerReason
+    : !budget
+      ? 'this device has not been measured yet, so lightweight analysis stays off'
+      : budget.atFloor
+        ? 'this device is out of headroom, so lightweight analysis is paused'
+        : '';
+  const tier2 = (feature: string, implementation: string) => (tier2Reason
+    ? registry.markUnsupported(feature, 2, implementation, tier2Reason)
+    : registry.register({ feature, tier: 2, implementation, status: 'ready' }));
+  tier2('onsets', ONSETS_IMPLEMENTATION);
+  tier2('tempo', TEMPO_IMPLEMENTATION);
+  tier2('key', KEY_IMPLEMENTATION);
+  tier2('beatmatch', SEAMS_IMPLEMENTATION);
+  registry.markUnsupported('time_stretch', 2, STRETCH_IMPLEMENTATION, 'no vetted pitch-preserving stretch is bundled');
+
+  for (const feature of TIER3_FEATURES) registry.markUnsupported(feature, 3, `${feature.replace(/_/g, '-')}-unavailable-v0`, TIER3_REASON);
+  return registry;
+}

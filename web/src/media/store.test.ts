@@ -47,6 +47,54 @@ describe('MediaStore without usable IndexedDB', () => {
   });
 });
 
+/** An IndexedDB whose requests succeed but whose write transactions abort at commit, the way a
+ * full disk is really reported. */
+const quotaAtCommit = () => {
+  const transaction = () => {
+    const made = {
+      oncomplete: null as (() => void) | null,
+      onerror: null as (() => void) | null,
+      onabort: null as (() => void) | null,
+      error: null as DOMException | null,
+      objectStore: () => ({
+        put: () => {
+          const request = { onsuccess: null as (() => void) | null, onerror: null, result: undefined };
+          setTimeout(() => {
+            request.onsuccess?.();
+            made.error = new DOMException('No room.', 'QuotaExceededError');
+            made.onabort?.();
+          }, 0);
+          return request;
+        },
+        getAll: () => {
+          const request = { onsuccess: null as (() => void) | null, onerror: null, result: [] as unknown[] };
+          setTimeout(() => request.onsuccess?.(), 0);
+          return request;
+        },
+      }),
+    };
+    return made;
+  };
+  const db = { transaction };
+  return {
+    open: () => {
+      const request = { onsuccess: null as (() => void) | null, onerror: null, onupgradeneeded: null, onblocked: null, result: db };
+      setTimeout(() => request.onsuccess?.(), 0);
+      return request;
+    },
+  };
+};
+
+describe('MediaStore writes', () => {
+  it('waits for the commit, so a disk that fills at commit pauses the import instead of claiming the song', async () => {
+    vi.stubGlobal('indexedDB', quotaAtCommit());
+    const store = await MediaStore.open();
+    expect(store.degraded).toBe(false);
+    await expect(store.put(song(9))).rejects.toBeInstanceOf(StorageFullError);
+    expect(await store.get(9)).toBeNull();
+  });
+});
+
 describe('session files', () => {
   it('keeps a picked file reachable for the visit without writing it anywhere', async () => {
     const store = await MediaStore.open();

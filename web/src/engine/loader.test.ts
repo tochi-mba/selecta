@@ -82,4 +82,25 @@ describe('the decoded-PCM loader', () => {
     loader.clear();
     expect(loader.stats().held).toBe(0);
   });
+
+  it('a read that throws synchronously is a failure value and is not kept', async () => {
+    const loader = createLoader(async () => decoded());
+    const result = await loader.load('a', () => { throw new Error('handle lapsed'); });
+    expect(result).toEqual({ ok: false, id: 'a', error: 'handle lapsed' });
+    expect(loader.stats()).toMatchObject({ held: 0, failures: 1 });
+  });
+
+  it('a late failure never evicts a newer load of the same song', async () => {
+    let fail: (error: Error) => void = () => {};
+    const loader = createLoader(async () => decoded());
+    const first = loader.load('a', () => new Promise<ArrayBuffer>((_, reject) => { fail = reject; }));
+    loader.forget('a');
+    const second = loader.load('a', bytes);
+    await new Promise((settled) => setTimeout(settled, 0)); // the reads run a microtask later
+    fail(new Error('corrupt'));
+    expect((await first).ok).toBe(false);
+    expect((await second).ok).toBe(true);
+    expect(loader.stats().held).toBe(1);
+  });
 });
+

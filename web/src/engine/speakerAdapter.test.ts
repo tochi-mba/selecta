@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import type { ResolvedTrack } from '../media/resolve';
 import type { ProbeResult } from './probe';
 import { BrowserSpeaker, TrackSource } from './speakerAdapter';
 import { createEngineStore } from './state';
-import { bufferOfSeconds, FakeAudioContext, manualTimers, settle } from './testAudio';
+import { bufferOfSeconds, FakeAudioContext, FakeNode, manualTimers, settle } from './testAudio';
 
 const passed: ProbeResult = { ok: true, sampleRate: 44100, schedulingMisses: 0, blocks: 32 };
 const failed: ProbeResult = { ok: false, state: 'unsupported_here', reason: 'This browser has no AudioWorklet, so SelectaDJ cannot mix audio here.' };
@@ -121,3 +122,62 @@ describe('the Speaker contract', () => {
     expect(speaker.position()?.song_index).toBe(1);
   });
 });
+
+describe('the media resolver contract', () => {
+  it('accepts media/resolve.ts ResolvedTrack as a TrackSource (checked by the compiler)', () => {
+    const resolved: ResolvedTrack = { id: 7, data: async () => new ArrayBuffer(8) };
+    const source: TrackSource = resolved;
+    expect(source.id).toBe(7);
+  });
+
+  it('skips an unavailable song inside the queue with a notice, instead of ending the set', async () => {
+    const context = new FakeAudioContext();
+    const store = createEngineStore();
+    const tracks: (number | null)[] = [null, 8];
+    const speaker = new BrowserSpeaker({
+      audio: { context: context as unknown as AudioContext, wake: async () => { await context.resume(); return true; }, hold: () => context.suspend() },
+      probe: passed,
+      resolve: async (index) => {
+        const seconds = tracks[index];
+        return seconds === null || seconds === undefined ? null : { id: index, data: async () => new ArrayBuffer(seconds * 1000) };
+      },
+      queueLength: () => tracks.length,
+      store,
+      timers: manualTimers(),
+    });
+    await speaker.start(0, 0, true);
+    expect(store.get().notice).toMatch(/not on this device/);
+    expect(speaker.position()?.song_index).toBe(1);
+    // Past the queue a null is still the end of the set.
+    await speaker.start(2, 0, true);
+    expect(store.get().phase).toBe('idle');
+  });
+});
+
+describe('the limiter stage', () => {
+  it('installs the worklet limiter before the first note and reports position net of its lookahead', async () => {
+    const context = new FakeAudioContext();
+    const node = new FakeNode();
+    const speaker = new BrowserSpeaker({
+      audio: { context: context as unknown as AudioContext, wake: async () => { await context.resume(); return true; }, hold: () => context.suspend() },
+      probe: passed,
+      resolve: async () => ({ id: 1, data: async () => new ArrayBuffer(30000) }),
+      timers: manualTimers(),
+      limiter: { load: async () => {}, makeNode: () => node as unknown as AudioNode },
+    });
+    await speaker.start(0, 5000, true);
+    const installed = await speaker.limiter();
+    expect(installed.kind).toBe('worklet');
+    expect(node.connections).toHaveLength(1); // wired into the analyser before playback began
+    context.advance(0.05 + 1);
+    const latencyMs = Math.round(installed.latencySeconds * 1000);
+    expect(latencyMs).toBeGreaterThan(0);
+    expect(speaker.position()).toEqual({ song_index: 0, offset_ms: 6000 - latencyMs, state: 'playing' });
+  });
+
+  it('names the compressor fallback when the probe failed', async () => {
+    const { speaker } = rig([10], failed);
+    expect(await speaker.limiter()).toMatchObject({ kind: 'compressor_fallback' });
+  });
+});
+
