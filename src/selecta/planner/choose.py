@@ -14,9 +14,12 @@ from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import Cue, SongInfo
 from selecta.audit.checks import AuditReport, audit
 from selecta.planner.fit import (
+    CLOSE_TEMPO,
     COLD_ENTRY_DB,
+    FAR_KEYS,
     MAX_FOLDED_GAP,
     MAX_LEVEL_STEP_DB,
+    STEADY_GRID,
     folded_gap,
     level_step,
     relative_level,
@@ -27,19 +30,20 @@ from selecta.styles import Recipe, all_recipes
 
 MAX_REPAIRS = 4
 
-BLEND_MIN_CONFIDENCE = 0.55
+BLEND_MIN_CONFIDENCE = STEADY_GRID
+"""Beat-locking needs a sure grid: every rated seam whose grid sat below this was disliked."""
 HOOK_IN_FADE_PENALTY = 0.7
-BLEND_MAX_GAP = 0.05
-SHORT_BLEND_MAX_GAP = 0.08
+BLEND_MAX_GAP = CLOSE_TEMPO
 
+# No family gets 4-bar overlaps: every rated one was disliked, in every genre.
 _BLEND_BARS_BY_FAMILY = {
     "dance": (16, 32),
     "afro": (8, 16),
     "pop": (8, 16),
-    "rnb": (4, 8),
-    "hiphop": (4, 8),
-    "latin": (4, 8),
-    "rock": (4, 8),
+    "rnb": (8, 16),
+    "hiphop": (8, 16),
+    "latin": (8, 16),
+    "rock": (8, 16),
     "other": (8,),
 }
 
@@ -227,9 +231,7 @@ def enumerate_candidates(
             continue
         for bars in _lengths_for(recipe, a, b):
             if recipe.beatmatched:
-                if not can_beatmatch or gap > (recipe.max_gap or SHORT_BLEND_MAX_GAP):
-                    continue
-                if gap > BLEND_MAX_GAP and bars > 8:
+                if not can_beatmatch or gap > (recipe.max_gap or BLEND_MAX_GAP):
                     continue
                 if not (a.vocals_known and b.vocals_known) and bars > 4:
                     continue
@@ -269,6 +271,9 @@ def _score(
     bars: int,
     gap: float,
 ) -> Candidate | None:
+    if camelot_distance(a.camelot, b.camelot) >= FAR_KEYS:
+        # five or more steps apart was liked twice in 11, even on cuts and echoes
+        return None
     reasons = [f"{exit_cue.kind} into {entry_cue.kind}"]
     vocal_term = 1.0
     entry_quality = entry_cue.quality

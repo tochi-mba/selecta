@@ -16,7 +16,7 @@ from selecta.analysis.song import SongInfo
 from selecta.lyrics.lrclib import clean_artist
 from selecta.planner.arc import target_energy
 from selecta.planner.choose import enumerate_candidates, styles_for_language
-from selecta.planner.fit import TimbreSpace, folded_gap
+from selecta.planner.fit import CLOSE_TEMPO, FAR_KEYS, STEADY_GRID, TimbreSpace, folded_gap
 from selecta.planner.memory import SeamMemory
 from selecta.planner.wordreel import (
     BLEND_MAX_GAP,
@@ -42,9 +42,7 @@ MEMORY_WEIGHT = 0.5
 ORDER_PASSES = 2
 ORDER_REACH = 6
 ORDER_MUST_GAIN = 0.01
-CLOSE_TEMPO = 0.045
-FAR_KEYS = 5
-SHAKY_GRID = 0.8
+SHAKY_GRID = STEADY_GRID
 TOO_FAR_APART = 0.3
 """Past this, even at half or double time, nothing can carry two songs but an effect or a cut."""
 MOVE_NAMES = {

@@ -897,10 +897,10 @@ class SeamStore:
         leave_after: float | None = None,
     ):
         """The move that best suits these two and the rest of the mix, taken clean if at all
-        possible. None of the seams rated so far with a warning were liked, so any clean take beats
-        a near miss, and a near miss is only kept when nothing comes out clean. A cut only if
-        nothing else can work, since it's the one the listener likes least. `near` is a near miss
-        already in hand."""
+        possible. None of the seams rated so far with a warning were liked, so any clean take
+        beats a near miss - including a clean cut, which the listener likes little but a warned
+        seam even less. A near miss only plays when not even the cut comes out clean. `near` is
+        a near miss already in hand."""
         can_ride = "word_blend" in modes_for(a, b) and ride_lines(a, b) is not None
         draft = self._running_draft
         used = self.mix_moves() if draft is None else self.draft_moves(draft)
@@ -925,15 +925,15 @@ class SeamStore:
             if held is None and good_enough(report):
                 held = (rendered, report, why, move)
             tried.append({"move": move, "why": _what_failed(report)})
-        if held is not None:
-            rendered, report, why, move = held
-            tried[:] = [attempt for attempt in tried if attempt["move"] != move]
-            return rendered, report, why, asked not in {"auto", move}
         choice = choose_transition(
             a, b, "cut_on_one", cache=self._cache, exits=_exits_after(a, leave_after) or None
         )
-        why = "; ".join(choice.candidate.reasons)
-        return choice.rendered, choice.report, why, True
+        if choice.report.passed or held is None:
+            why = "; ".join(choice.candidate.reasons)
+            return choice.rendered, choice.report, why, True
+        rendered, report, why, move = held
+        tried[:] = [attempt for attempt in tried if attempt["move"] != move]
+        return rendered, report, why, asked not in {"auto", move}
 
     def _save(
         self,

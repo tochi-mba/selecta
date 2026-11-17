@@ -192,7 +192,8 @@ def fallback_order(
     Reverb stays last of the effects, because the listener doesn't care for it."""
     total = sum(used.values())
     rides_full = used["vocal_ride"] >= max(1.0, RIDES_BEFORE_OTHERS * total)
-    blends = sorted(("filter_sweep", "bass_swap_blend", "tempo_ramp"), key=lambda move: used[move])
+    # tempo_ramp is not a fallback: every rated one was disliked
+    blends = sorted(("filter_sweep", "bass_swap_blend"), key=lambda move: used[move])
     effects = sorted(
         ("delay_throw", "echo_out"),
         key=lambda move: (used[move], hashlib.sha1(f"{a}{b}{move}".encode()).digest()),
@@ -204,9 +205,10 @@ def fallback_order(
 
 
 def good_enough(report: AuditReport) -> bool:
-    """Passed, or only a near miss on checks that have proved stricter than the ear. None of the
-    measurements told good seams from bad on the listening reels, and the beat check misreads
-    syncopated drums, so a near miss is worth far more than falling back to a cut."""
+    """Passed, or only a near miss on checks that have proved stricter than the ear. The beat
+    check misreads syncopated drums, so a near miss still beats going silent - but of the rated
+    seams, every one that shipped with a warning was disliked, so a near miss is only played
+    when not even a clean cut can be had."""
     for check in report.failures:
         slack = NEAR_MISS.get(check.name)
         if slack is None or check.value > check.limit + slack:

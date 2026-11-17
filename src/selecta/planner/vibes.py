@@ -34,6 +34,7 @@ from selecta.planner.beam import (
     ratings_lean,
 )
 from selecta.planner.choose import enumerate_candidates
+from selecta.planner.fit import ROLL_MAX_GAP
 from selecta.planner.memory import SeamMemory
 from selecta.planner.moods import THEMES, is_english, is_seasonal, read_lyrics
 from selecta.planner.wordreel import modes_for, ride_lines
@@ -49,20 +50,21 @@ WORD_MOVES = ("word_blend", "word_exchange", "phrase_roll", "word_cut")
 PLAYED_SHARE = 0.65
 """A mix plays about two thirds of each song, which is what a card's length is worked out from."""
 
-# Weights follow the listening reels: rides and filter sweeps were loved, blends mostly liked, ramps
-# mixed, effects mostly not. They say what to reach for first, and MAX_SHARE stops any one of them
+# Weights follow the listening reels: rides and filter sweeps were loved, blends mostly liked,
+# effects mostly not. They say what to reach for first, and MAX_SHARE stops any one of them
 # taking over, however well it scores, so a mix never settles into one trick.
+# tempo_ramp is no longer planned: every rated one was disliked, and its design forces the
+# 4-bar overlap the ratings also ruled out. The move stays available when a person asks for it.
 MOVE_WEIGHTS: dict[str, dict[str, float]] = {
     "balanced": {
         "bass_swap_blend": 2.5,
         "filter_sweep": 2.0,
-        "tempo_ramp": 0.4,
         "delay_throw": 0.3,
         "echo_out": 0.5,
     },
-    "seamless": {"bass_swap_blend": 2.5, "filter_sweep": 2.0, "tempo_ramp": 0.5},
+    "seamless": {"bass_swap_blend": 2.5, "filter_sweep": 2.0},
     "punchy": {"cut_on_one": 1.0, "echo_out": 1.2, "delay_throw": 0.6, "bass_swap_blend": 1.0},
-    "wordplay": {"bass_swap_blend": 2.0, "filter_sweep": 1.5, "tempo_ramp": 0.3},
+    "wordplay": {"bass_swap_blend": 2.0, "filter_sweep": 1.5},
 }
 RIDE_WEIGHT = {"balanced": 3.0, "seamless": 3.0, "wordplay": 1.5, "punchy": 1.5}
 MAX_SHARE = {
@@ -87,7 +89,7 @@ FAMILIES = {
     "vocal_ride": "voice",
     "stem_intertwine": "blend",
 }
-ROLL_GAP = 0.1
+ROLL_GAP = ROLL_MAX_GAP
 ROLL_SHOWCASE_GAP = 0.5
 BLEND_SHOWCASE_GAP = 0.08
 ARRANGE_WEIGHT = 1.5
@@ -761,9 +763,9 @@ def build_vibe(
 
 
 def _word_move_suits(name: str, a: SongInfo, b: SongInfo, showcase: bool) -> bool:
-    """What the ratings showed: rolls were liked 3 in 4 within 10% of each other's tempo and 4 in 14
-    beyond it, and only once in six across five or more keys. Word blends overlap, so they need
-    tempos as close as any overlap does. A mix all about wordplay can stretch further."""
+    """What the ratings showed: rolls were liked 4 in 5 within 15% of each other's tempo and close
+    keys, and 4 in 14 beyond that. Word blends overlap, so they need tempos as close as any
+    overlap does. A mix all about wordplay can stretch further."""
     gap = abs(a.bpm / b.bpm - 1.0)
     if camelot_distance(a.camelot, b.camelot) >= FAR_KEYS:
         return False
