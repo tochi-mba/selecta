@@ -5,6 +5,7 @@ from __future__ import annotations
 import numpy as np
 
 from selecta.analysis.song import Cue, SongInfo
+from selecta.planner.fit import fold_ratio
 from selecta.render.script import Curve, Part, TransitionScript, fade_in, fade_out, sweep
 from selecta.styles.timing import BlendTiming, blend_timing, tempo_gap
 
@@ -54,7 +55,7 @@ def bass_swap_blend(
     swap_at: float | None = None,
     **options,
 ) -> TransitionScript | None:
-    timing = blend_timing(a, b, exit_cue.bar, entry_cue.bar, bars)
+    timing = blend_timing(a, b, exit_cue.bar, entry_cue.bar, bars, fold=fold_ratio(a, b))
     if timing is None:
         return None
     start, end = timing.overlap_start, timing.overlap_end
@@ -115,7 +116,7 @@ def filter_sweep(
     swap_at: float | None = None,
     **options,
 ) -> TransitionScript | None:
-    timing = blend_timing(a, b, exit_cue.bar, entry_cue.bar, bars)
+    timing = blend_timing(a, b, exit_cue.bar, entry_cue.bar, bars, fold=fold_ratio(a, b))
     if timing is None:
         return None
     start, end = timing.overlap_start, timing.overlap_end

@@ -20,6 +20,7 @@ from selecta.planner.fit import (
     MAX_FOLDED_GAP,
     MAX_LEVEL_STEP_DB,
     STEADY_GRID,
+    fold_ratio,
     folded_gap,
     level_step,
     relative_level,
@@ -215,6 +216,8 @@ def enumerate_candidates(
     can pass in a few cues per song, which is far quicker than working them out each time."""
     recipes = recipes or all_recipes()
     gap = tempo_gap(a, b)
+    # beat-locking folds half and double time: an 87 and a 174 BPM song share one pulse
+    blend_gap = folded_gap(a, b)
     exits = a.exit_cues()[:8] if exits is None else exits
     entries = b.entry_cues()[:10] if entries is None else entries
     can_beatmatch = (
@@ -231,7 +234,8 @@ def enumerate_candidates(
             continue
         for bars in _lengths_for(recipe, a, b):
             if recipe.beatmatched:
-                if not can_beatmatch or gap > (recipe.max_gap or BLEND_MAX_GAP):
+                effective = gap if recipe.max_gap is not None else blend_gap
+                if not can_beatmatch or effective > (recipe.max_gap or BLEND_MAX_GAP):
                     continue
                 if not (a.vocals_known and b.vocals_known) and bars > 4:
                     continue
@@ -239,7 +243,7 @@ def enumerate_candidates(
                 if recipe.beatmatched and exit_cue.bar < bars + 4:
                     continue
                 for entry_cue in entries:
-                    candidate = _score(recipe, a, b, exit_cue, entry_cue, bars, gap)
+                    candidate = _score(recipe, a, b, exit_cue, entry_cue, bars, gap, blend_gap)
                     if candidate is not None:
                         candidates.append(candidate)
     return sorted(candidates, key=lambda c: -c.score)
@@ -270,10 +274,12 @@ def _score(
     entry_cue: Cue,
     bars: int,
     gap: float,
+    blend_gap: float | None = None,
 ) -> Candidate | None:
     if camelot_distance(a.camelot, b.camelot) >= FAR_KEYS:
         # five or more steps apart was liked twice in 11, even on cuts and echoes
         return None
+    blend_gap = gap if blend_gap is None else blend_gap
     reasons = [f"{exit_cue.kind} into {entry_cue.kind}"]
     vocal_term = 1.0
     entry_quality = entry_cue.quality
@@ -287,9 +293,12 @@ def _score(
             reasons.append("vocals take turns")
         share = _hook_in_fade(a, b, entry_cue, bars)
         vocal_term *= 1.0 - HOOK_IN_FADE_PENALTY * share
-    if recipe.beatmatched and entry_cue.bar + bars in b.chorus_start_bars():
-        entry_quality = min(1.0, entry_quality + 0.25)
-        reasons.append("B's chorus lands as A leaves")
+    if recipe.beatmatched:
+        # B walks `fold` of its own bars for each of A's, so the landing bar scales with it
+        landing = entry_cue.bar + round(bars * fold_ratio(a, b))
+        if landing in b.chorus_start_bars():
+            entry_quality = min(1.0, entry_quality + 0.25)
+            reasons.append("B's chorus lands as A leaves")
     if not recipe.beatmatched:
         landing = _tempo_free_landing(a, b, exit_cue, entry_cue, gap)
         if landing is None:
@@ -303,7 +312,7 @@ def _score(
         return None
     energy_step = _energy_step(a, b, exit_cue, entry_cue)
     energy_term = max(0.0, 1.0 - energy_step / 0.35)
-    fit = _style_fit(recipe, a, b, bars, gap)
+    fit = _style_fit(recipe, a, b, bars, blend_gap if recipe.beatmatched else gap)
     score = (
         0.25 * exit_cue.quality
         + 0.20 * entry_quality

@@ -132,11 +132,11 @@ def can_ride(a: SongInfo, b: SongInfo, riders: _Riders) -> bool:
 
 
 def ratings_lean(a: SongInfo, b: SongInfo, overlapping: bool = True) -> float:
-    """How these two look against what 52 rated seams had in common, up to 1. Overlaps within 4% of
-    each other's tempo were liked 11 times in 13, and 2 in 9 beyond that. Songs five or more keys
-    apart were liked 2 in 10, and a beat grid under 0.8 was liked 3 in 13."""
+    """How these two look against what the rated seams had in common, up to 1. Overlaps within
+    4.5% of each other's felt tempo were liked 16 times in 19, and once in 10 beyond that. Songs
+    five or more keys apart were liked 2 in 11, and a beat grid under 0.8 was liked 4 in 15."""
     lean = 1.0
-    if overlapping and abs(a.bpm / b.bpm - 1.0) > CLOSE_TEMPO:
+    if overlapping and folded_gap(a, b) > CLOSE_TEMPO:
         lean *= 0.3
     if camelot_distance(a.camelot, b.camelot) >= FAR_KEYS:
         lean *= 0.35
@@ -154,7 +154,7 @@ def handoff_quality(a: SongInfo, b: SongInfo, riders: _Riders) -> float:
         or min(a.grid_confidence, b.grid_confidence) < BLEND_MIN_GRID
     ):
         return 0.1
-    gap = abs(a.bpm / b.bpm - 1.0)
+    gap = folded_gap(a, b)
     if can_ride(a, b, riders):
         return ratings_lean(a, b)
     if gap <= BLEND_MAX_GAP:
@@ -462,12 +462,14 @@ def _why_it_fits(
         return f"Shares “{shares}”"
     if can_ride(a, b, riders):
         return "A voice can ride across"
-    gap = abs(a.bpm / b.bpm - 1.0)
+    raw = abs(a.bpm / b.bpm - 1.0)
+    gap = folded_gap(a, b)
     if gap > 0.3:
         return "A big tempo jump, so an echo"
     if gap > BLEND_MAX_GAP:
-        return "A tempo ramp gets there"
-    parts = ["Same tempo" if gap <= 0.02 else "Close tempo"]
+        return "An echo or a cut carries it"
+    first = "Same pulse at half or double time" if raw > BLEND_MAX_GAP else None
+    parts = [first or ("Same tempo" if gap <= 0.02 else "Close tempo")]
     distance = camelot_distance(a.camelot, b.camelot)
     if distance == 0:
         parts.append("same key")

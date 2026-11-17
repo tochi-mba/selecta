@@ -49,8 +49,28 @@ def _pinned_every_bar(output: np.ndarray, source: np.ndarray, bar: int) -> Warp:
     return Warp(output[keep], source[keep])
 
 
+def _b_grid(b: SongInfo, start: int, count: int, fold: float) -> np.ndarray | None:
+    """Beat times for B every `fold` beats from `start`: B's own beats against an equal-tempo
+    song, every other one against a double-time B, midpoints against a half-time one. `count + 1`
+    points, or None where B's grid runs out."""
+    positions = start + fold * np.arange(count + 1)
+    floor = np.floor(positions + 1e-9).astype(int)
+    fraction = positions - floor
+    last = floor[-1] + (1 if fraction[-1] > 1e-9 else 0)
+    if floor[0] < 0 or last >= b.beats.size:
+        return None
+    upper = np.minimum(floor + 1, b.beats.size - 1)
+    return b.beats[floor] * (1.0 - fraction) + b.beats[upper] * fraction
+
+
 def blend_timing(
-    a: SongInfo, b: SongInfo, exit_bar: int, entry_bar: int, bars: int, ramp_beats: int = RAMP_BEATS
+    a: SongInfo,
+    b: SongInfo,
+    exit_bar: int,
+    entry_bar: int,
+    bars: int,
+    ramp_beats: int = RAMP_BEATS,
+    fold: float = 1.0,
 ) -> BlendTiming | None:
     """Work out where every beat lands, or None if the grids don't allow this overlap."""
     if a.beats_per_bar != b.beats_per_bar or exit_bar < bars:
@@ -59,27 +79,37 @@ def blend_timing(
     a_end = a.beat_index_of_bar(exit_bar)
     if a_end - a_start != bars * a.beats_per_bar:
         return None
-    return beat_lock(a, b, a_start, a_end, b.beat_index_of_bar(entry_bar), ramp_beats)
+    return beat_lock(a, b, a_start, a_end, b.beat_index_of_bar(entry_bar), ramp_beats, fold)
 
 
 def beat_lock(
-    a: SongInfo, b: SongInfo, a_start: int, a_end: int, b_start: int, ramp_beats: int = RAMP_BEATS
+    a: SongInfo,
+    b: SongInfo,
+    a_start: int,
+    a_end: int,
+    b_start: int,
+    ramp_beats: int = RAMP_BEATS,
+    fold: float = 1.0,
 ) -> BlendTiming | None:
     """Play A's beats from `a_start` to `a_end` against B's from `b_start`, or None if they don't
-    both exist. The numbers are positions in each song's list of beats."""
+    both exist. The numbers are positions in each song's list of beats. With `fold`, every A beat
+    carries `fold` of B's beats, so a half- or double-time pair locks without racing anyone."""
     beat_count = a_end - a_start
     if beat_count <= 0 or b_start < 0:
         return None
 
-    gap = tempo_gap(a, b)
+    folded_bpm = b.bpm / fold
+    gap = abs(a.bpm / folded_bpm - 1.0)
     a_native = gap <= A_NATIVE_MAX_GAP
     pre_beats = a.beats_per_bar if a_native else ramp_beats
     post_beats = SETTLE_BEATS if gap <= SETTLED_GAP else ramp_beats
-    if a_start - pre_beats < 0 or b_start + beat_count + post_beats >= b.beats.size:
+    if a_start - pre_beats < 0:
         return None
 
     a_beats = a.beats[a_start - pre_beats : a_end + 1]
-    b_beats = b.beats[b_start : b_start + beat_count + post_beats + 1]
+    b_beats = _b_grid(b, b_start, beat_count + post_beats, fold)
+    if b_beats is None:
+        return None
 
     if a_native:
         lead = np.diff(a.beats[a_start - pre_beats : a_start + 1])
@@ -87,14 +117,14 @@ def beat_lock(
         shared_times = a.beats[a_start : a_end + 1] - a.beats[a_start] + lead_times[-1]
         master_tempo = a.bpm
     else:
-        master_tempo = float(np.sqrt(a.bpm * b.bpm))
+        master_tempo = float(np.sqrt(a.bpm * folded_bpm))
         lead = np.diff(a.beats[a_start - pre_beats : a_start + 1])
         lead_times = _ramped_times(lead, 1.0, master_tempo / a.bpm)
         period = 60.0 / master_tempo
         shared_times = lead_times[-1] + np.arange(beat_count + 1) * period
 
     tail_intervals = np.diff(b_beats[beat_count:])
-    tail_times = shared_times[-1] + _ramped_times(tail_intervals, master_tempo / b.bpm, 1.0)
+    tail_times = shared_times[-1] + _ramped_times(tail_intervals, master_tempo / folded_bpm, 1.0)
 
     a_output = np.concatenate((lead_times[:-1], shared_times))
     b_output = np.concatenate((shared_times[:-1], tail_times))

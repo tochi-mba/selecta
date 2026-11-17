@@ -46,6 +46,13 @@ def folded_gap(a: SongInfo, b: SongInfo) -> float:
     return min(abs(a.bpm * ratio / b.bpm - 1.0) for ratio in (0.5, 1.0, 2.0))
 
 
+def fold_ratio(a: SongInfo, b: SongInfo) -> float:
+    """How many of B's beats pass for each of A's: 2 against a double-time B, 0.5 against a
+    half-time one, 1 otherwise. An 87 BPM song and a 174 BPM one share a single pulse, which is
+    how a DJ crosses from hip-hop to drum and bass without touching the pitch."""
+    return min((1.0, 2.0, 0.5), key=lambda ratio: abs(a.bpm * ratio / b.bpm - 1.0))
+
+
 def relative_level(song: SongInfo, first_bar: int, last_bar: int) -> float | None:
     """How loud these bars are against the song's own usual level, in dB."""
     if song.rms_db_bars is None or song.rms_db_bars.size == 0:
