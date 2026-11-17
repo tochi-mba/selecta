@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 
+from selecta import flags
 from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import Cue, SongInfo
 from selecta.audit.checks import AuditReport, audit
@@ -283,6 +284,12 @@ def _score(
     reasons = [f"{exit_cue.kind} into {entry_cue.kind}"]
     vocal_term = 1.0
     entry_quality = entry_cue.quality
+    exit_quality = exit_cue.quality
+    if recipe.beatmatched and flags.on("analysis.phrases"):
+        # B's first downbeat lands where A starts a phrase, so the join reads as intended
+        if a.phrase_starts().get(exit_cue.bar - bars, 0.0) >= 0.6:
+            exit_quality = min(1.0, exit_quality + 0.1)
+            reasons.append("B enters on A's phrase line")
     if recipe.beatmatched and a.vocals_known and b.vocals_known:
         clash = _vocal_clash_seconds(a, b, exit_cue, entry_cue, bars)
         limit = 1.5 if (a.family == "hiphop" or b.family == "hiphop") else 2.5
@@ -314,7 +321,7 @@ def _score(
     energy_term = max(0.0, 1.0 - energy_step / 0.35)
     fit = _style_fit(recipe, a, b, bars, blend_gap if recipe.beatmatched else gap)
     score = (
-        0.25 * exit_cue.quality
+        0.25 * exit_quality
         + 0.20 * entry_quality
         + 0.20 * fit
         + 0.15 * energy_term
