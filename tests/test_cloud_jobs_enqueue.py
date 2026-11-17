@@ -83,7 +83,7 @@ def test_a_unique_conflict_that_is_not_a_live_twin_is_raised(store, monkeypatch)
 def test_lane_urgency_cost_and_flag_come_from_the_server_catalogue(store):
     job = store.enqueue(JobSpec("w1", "analyse.song")).job
     assert (job.pool, job.lane, job.urgency, job.est_cost_s) == ("cpu-heavy", "standard", 4, 40.0)
-    assert (job.base_lane, job.base_urgency, job.flag_id) == ("standard", 4, "core.analysis")
+    assert (job.base_lane, job.base_urgency, job.flag_id) == ("standard", 4, "cloud.hosted_media")
     assert (job.max_attempts, job.max_run_s, job.state) == (6, 1_200.0, JobState.QUEUED)
     assert job.queued_at is not None
 
