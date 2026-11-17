@@ -43,24 +43,29 @@ local_songs = sa.Table(
     sa.CheckConstraint("sample_rate IS NULL OR sample_rate > 0", name="sample_rate"),
     # The same file imported on two devices resolves to one entry per workspace.
     sa.UniqueConstraint("workspace_id", "content_sha256"),
-    sa.Index(None, "workspace_id", "deleted_at"),
+    # The target of the availability table's workspace-scoped foreign key.
+    sa.UniqueConstraint("workspace_id", "id"),
+    sa.Index("ix_local_songs_workspace_id_deleted_at", "workspace_id", "deleted_at"),
 )
 
 local_song_availability = sa.Table(
     "local_song_availability",
     metadata,
     sa.Column("workspace_id", Id, nullable=False),
-    sa.Column(
-        "song_id",
-        sa.Integer,
-        sa.ForeignKey("local_songs.id", ondelete="CASCADE"),
-        nullable=False,
-    ),
+    sa.Column("song_id", sa.Integer, nullable=False),
     sa.Column("device_id", Id, nullable=False),
     sa.Column("present", sa.Boolean, nullable=False),
     sa.Column("reported_at", Epoch, nullable=False),
     # One report per device per song; `workspace_id` leads the key, so it leads an index.
     sa.PrimaryKeyConstraint("workspace_id", "song_id", "device_id"),
+    # Workspace-scoped, so a report row can never point at another workspace's song, even from a
+    # system transaction that row-level security doesn't bind.
+    sa.ForeignKeyConstraint(
+        ["workspace_id", "song_id"],
+        ["local_songs.workspace_id", "local_songs.id"],
+        name="fk_local_song_availability_song",
+        ondelete="CASCADE",
+    ),
 )
 
 # The migration (`bf0458media01`) checks this list, so a schema change must add a new migration.

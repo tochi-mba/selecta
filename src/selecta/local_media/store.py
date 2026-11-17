@@ -59,49 +59,52 @@ def register_songs(
 ) -> list[dict[str, Any]]:
     """Upsert each song by `(workspace_id, content_sha256)` and answer, in order, with
     `{"song_id", "content_sha256"}` plus `"duplicate_of"` where a different hash already holds
-    the same normalised title and artist. Re-registering a soft-deleted hash restores it."""
-    now = db_now(conn)
-    answers: list[dict[str, Any]] = []
+    the same normalised title and artist. Re-registering a soft-deleted hash restores it.
+
+    Two devices importing the same file at once both land on the one entry: a losing insert is
+    rolled back to its savepoint and read again, so the request never fails on the unique key."""
     for song in songs:
         _refuse_paths(song)
+    now = db_now(conn)
+    earliest = _earliest_by_name(conn, workspace_id)
+    answers: list[dict[str, Any]] = []
+    for song in songs:
         sha = str(song["content_sha256"]).lower()
+        title, artist = str(song["title"]), str(song["artist"])
         fields = {name: song.get(name) for name in OPTIONAL_FIELDS}
-        existing = conn.execute(
-            sa.select(local_songs.c.id, local_songs.c.duplicate_of)
-            .where(local_songs.c.workspace_id == workspace_id)
-            .where(local_songs.c.content_sha256 == sha)
-        ).first()
+        existing = _by_hash(conn, workspace_id, sha)
+        if existing is None:
+            key = (normalised(title), normalised(artist))
+            duplicate_of = earliest.get(key)
+            try:
+                with conn.begin_nested():
+                    made = conn.execute(
+                        local_songs.insert().values(
+                            workspace_id=workspace_id,
+                            content_sha256=sha,
+                            title=title,
+                            artist=artist,
+                            duplicate_of=duplicate_of,
+                            created_at=now,
+                            updated_at=now,
+                            **fields,
+                        )
+                    )
+            except sa.exc.IntegrityError:
+                existing = _by_hash(conn, workspace_id, sha)
+                if existing is None:
+                    raise
+            else:
+                song_id = int(made.inserted_primary_key[0])
+                earliest.setdefault(key, song_id)
         if existing is not None:
             conn.execute(
                 local_songs.update()
                 .where(local_songs.c.workspace_id == workspace_id)
                 .where(local_songs.c.id == existing.id)
-                .values(
-                    title=song["title"],
-                    artist=song["artist"],
-                    deleted_at=None,
-                    updated_at=now,
-                    **fields,
-                )
+                .values(title=title, artist=artist, deleted_at=None, updated_at=now, **fields)
             )
             song_id, duplicate_of = int(existing.id), existing.duplicate_of
-        else:
-            duplicate_of = _likely_duplicate(
-                conn, workspace_id, sha, str(song["title"]), str(song["artist"])
-            )
-            made = conn.execute(
-                local_songs.insert().values(
-                    workspace_id=workspace_id,
-                    content_sha256=sha,
-                    title=song["title"],
-                    artist=song["artist"],
-                    duplicate_of=duplicate_of,
-                    created_at=now,
-                    updated_at=now,
-                    **fields,
-                )
-            )
-            song_id = int(made.inserted_primary_key[0])
         answer = {"song_id": song_id, "content_sha256": sha}
         if duplicate_of is not None:
             answer["duplicate_of"] = int(duplicate_of)
@@ -109,22 +112,29 @@ def register_songs(
     return answers
 
 
-def _likely_duplicate(
-    conn: Connection, workspace_id: str, sha: str, title: str, artist: str
-) -> int | None:
-    """The earliest other entry (a different hash) with the same normalised title and artist."""
-    wanted_title, wanted_artist = normalised(title), normalised(artist)
+def _by_hash(conn: Connection, workspace_id: str, sha: str) -> Any:
+    return conn.execute(
+        sa.select(local_songs.c.id, local_songs.c.duplicate_of)
+        .where(local_songs.c.workspace_id == workspace_id)
+        .where(local_songs.c.content_sha256 == sha)
+    ).first()
+
+
+def _earliest_by_name(conn: Connection, workspace_id: str) -> dict[tuple[str, str], int]:
+    """The earliest live entry for each normalised (title, artist), read once per registration
+    batch so a 5,000-track import does not rescan the library for every song. A new hash whose
+    key is here is a likely duplicate of that entry; hashes always differ, because a matching
+    hash is the same entry and never reaches duplicate marking."""
+    earliest: dict[tuple[str, str], int] = {}
     rows = conn.execute(
         sa.select(local_songs.c.id, local_songs.c.title, local_songs.c.artist)
         .where(local_songs.c.workspace_id == workspace_id)
-        .where(local_songs.c.content_sha256 != sha)
         .where(local_songs.c.deleted_at.is_(None))
         .order_by(local_songs.c.id)
     )
     for row in rows:
-        if normalised(row.title) == wanted_title and normalised(row.artist) == wanted_artist:
-            return int(row.id)
-    return None
+        earliest.setdefault((normalised(row.title), normalised(row.artist)), int(row.id))
+    return earliest
 
 
 def list_songs(

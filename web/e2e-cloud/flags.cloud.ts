@@ -35,7 +35,7 @@ const SURFACES: Record<string, { at: string; title: string }> = {
 const EVERYWHERE = Object.keys(SURFACES);
 
 /** Menu entries that are whole pages, and the flag each needs (web/src/cloud/api.ts PAGE_FLAGS). */
-const MENU: Record<string, FlagId> = { Library: 'cloud.uploads', 'Add music': 'cloud.uploads' };
+const MENU: Record<string, FlagId> = { Library: 'cloud.stored_media', 'Add music': 'cloud.uploads' };
 
 /** Parts of a page that belong to one feature: with it off (and not teased), they're gone. Words
  * can't say this for every feature, since the local site uses some of the same words. */
@@ -327,7 +327,8 @@ test('a feature switched off while its page is open closes up at once, without a
   await expect(menu.getByRole('button', { name: 'Add music' })).toBeVisible();
   await switchOff(request, user, ['cloud.uploads']);
   await expect(menu.getByRole('button', { name: 'Add music' })).toHaveCount(0, { timeout: 10_000 });
-  await expect(menu.getByRole('button', { name: 'Library' })).toHaveCount(0);
+  // The Library reads stored media (cloud.stored_media, ADR-0456), so it stays.
+  await expect(menu.getByRole('button', { name: 'Library' })).toBeVisible();
 
   // Back on: everything comes back the same way.
   await switchOff(request, user, []);

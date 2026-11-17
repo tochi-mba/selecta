@@ -15,6 +15,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.engine import Engine
 
+from selecta.authz.roles import WorkspaceAction
 from selecta.identity.tokens import Claims
 from selecta.local_media import store
 from selecta.persistence import transaction
@@ -55,10 +56,14 @@ def install_routes(
     current_claims: Callable[..., Claims],
     principal_for: Callable[..., Any],
 ) -> None:
-    """Install the catalogue routes. Every query is scoped by workspace."""
+    """Install the catalogue routes. Every query is scoped by workspace, and every route checks
+    the member's role: reads need `library.read`, registration, deletion and availability
+    reports need `library.write` (a viewer can browse the catalogue but not change it)."""
 
-    def workspace(request: Request, claims: Claims) -> str:
+    def workspace(request: Request, claims: Claims, action: WorkspaceAction) -> str:
         principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
+        if not principal.can(action):
+            raise HTTPException(status_code=403, detail={"code": "not_allowed"})
         return principal.workspace.id
 
     @app.post("/api/local-media/songs")
@@ -67,7 +72,7 @@ def install_routes(
         request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
     ) -> dict[str, Any]:
-        workspace_id = workspace(request, claims)
+        workspace_id = workspace(request, claims, WorkspaceAction.LIBRARY_WRITE)
         with transaction(engine, workspace_id) as conn:
             answers = store.register_songs(
                 conn, workspace_id, [song.model_dump() for song in body.songs]
@@ -81,7 +86,7 @@ def install_routes(
         after: int = Query(default=0, ge=0),
         limit: int = Query(default=50, ge=1, le=_MAX_PAGE_SIZE),
     ) -> dict[str, Any]:
-        workspace_id = workspace(request, claims)
+        workspace_id = workspace(request, claims, WorkspaceAction.LIBRARY_READ)
         with transaction(engine, workspace_id) as conn:
             songs, next_after = store.list_songs(conn, workspace_id, after=after, limit=limit)
             counts = store.availability_counts(conn, workspace_id, [s["id"] for s in songs])
@@ -98,7 +103,7 @@ def install_routes(
         request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
     ) -> dict[str, Any]:
-        workspace_id = workspace(request, claims)
+        workspace_id = workspace(request, claims, WorkspaceAction.LIBRARY_READ)
         with transaction(engine, workspace_id) as conn:
             song = store.get_song(conn, workspace_id, song_id)
             if song is None:
@@ -113,7 +118,7 @@ def install_routes(
         request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
     ) -> dict[str, Any]:
-        workspace_id = workspace(request, claims)
+        workspace_id = workspace(request, claims, WorkspaceAction.LIBRARY_WRITE)
         with transaction(engine, workspace_id) as conn:
             if not store.exists(conn, workspace_id, song_id):
                 raise HTTPException(status_code=404, detail={"code": "song_not_found"})
@@ -126,7 +131,7 @@ def install_routes(
         request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
     ) -> dict[str, Any]:
-        workspace_id = workspace(request, claims)
+        workspace_id = workspace(request, claims, WorkspaceAction.LIBRARY_WRITE)
         with transaction(engine, workspace_id) as conn:
             written = store.set_availability(
                 conn, workspace_id, body.device_id, body.present, body.absent

@@ -73,11 +73,13 @@ class LocalMediaCatalog:
     ) -> list[SongSummary]:
         wanted = _requestable().where(local_songs.c.workspace_id == workspace_id)
         for word in query.split():
-            like = f"%{word.casefold()}%"
+            # A guest's "%" or "_" is a character to find, never a wildcard.
+            escaped = word.lower().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            like = f"%{escaped}%"
             wanted = wanted.where(
                 sa.or_(
-                    sa.func.lower(local_songs.c.title).like(like),
-                    sa.func.lower(local_songs.c.artist).like(like),
+                    sa.func.lower(local_songs.c.title).like(like, escape="\\"),
+                    sa.func.lower(local_songs.c.artist).like(like, escape="\\"),
                 )
             )
         if crate is not None:
