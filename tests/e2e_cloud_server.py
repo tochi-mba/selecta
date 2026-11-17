@@ -75,6 +75,7 @@ from selecta.billing import api as billing_api  # noqa: E402
 from selecta.billing import stripe_sync  # noqa: E402
 from selecta.billing.plans import plan_for  # noqa: E402
 from selecta.identity.tokens import BadSignature, Claims  # noqa: E402
+from selecta.local_media import store as local_media_store  # noqa: E402
 from selecta.persistence import db_now, make_engine, migrate, transaction  # noqa: E402
 from selecta.playback.schema import playback_sessions  # noqa: E402
 from selecta.rooms.cloud_ports import RoomPorts  # noqa: E402
@@ -279,7 +280,9 @@ def build(port: int):
     @app.post("/test/seed")
     def seed(body: dict = Body(default={})):  # noqa: B008
         """Sign up `user` and give them `songs` ready-to-play songs of `seconds` each, on
-        `plan` (free unless it names a paid plan, given as an expiring override)."""
+        `plan` (free unless it names a paid plan, given as an expiring override). With
+        `local_songs`, also register that many metadata-only catalogue songs (ADR-0458),
+        reported present on the seeding device id "e2e-device"."""
         user = str(body["user"])
         auth = {"Authorization": f"Bearer e2e:{user}", "Origin": base}
         made = httpx.post(
@@ -314,7 +317,26 @@ def build(port: int):
             proxy = playback_flac(audio) if body.get("real_proxy") else audio
             add_playback_file(engine, objects, workspace_id, asset_id, proxy)
             ids.append(asset_id)
-        return {"workspace_id": workspace_id, "assets": ids}
+        local_song_ids: list[int] = []
+        if int(body.get("local_songs", 0)):
+            entries = [
+                {
+                    "content_sha256": hashlib.sha256(
+                        f"{workspace_id}:local:{number}".encode()
+                    ).hexdigest(),
+                    "title": f"Local song {number + 1}",
+                    "artist": "E2E Local",
+                    "duration_s": float(body.get("seconds", 4.0)),
+                }
+                for number in range(int(body["local_songs"]))
+            ]
+            with transaction(engine, workspace_id) as conn:
+                made_songs = local_media_store.register_songs(conn, workspace_id, entries)
+                local_song_ids = [entry["song_id"] for entry in made_songs]
+                local_media_store.set_availability(
+                    conn, workspace_id, "e2e-device", local_song_ids, []
+                )
+        return {"workspace_id": workspace_id, "assets": ids, "local_songs": local_song_ids}
 
     @app.get("/test/original-audio/{asset_id}")
     def original_audio(asset_id: str):

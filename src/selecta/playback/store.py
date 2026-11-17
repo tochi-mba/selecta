@@ -28,6 +28,7 @@ from selecta.playback.model import (
     Session,
     UnknownDevice,
     frozen,
+    state_confidence,
 )
 from selecta.playback.ports import PlaybackEvents
 from selecta.playback.schema import devices, playback_sessions
@@ -70,6 +71,7 @@ def session_from_row(row: Mapping[str, Any]) -> Session:
         zone_id=row.get("zone_id"),
         volume=row.get("volume"),
         hand_back_to_device_id=row.get("hand_back_to_device_id"),
+        fence=row.get("fence") or 0,
     )
 
 
@@ -155,6 +157,7 @@ def lock_session(
                         offset_ms=0,
                         state=PlayState.STOPPED.value,
                         seq=0,
+                        fence=0,
                         updated_at=now,
                     )
                 )
@@ -204,6 +207,7 @@ def save_session(conn: Connection, session: Session) -> None:
             active_device_id=session.active_device_id,
             lease_expires_at=session.lease_expires_at,
             seq=session.seq,
+            fence=session.fence,
             updated_at=session.updated_at,
             volume=session.volume,
             hand_back_to_device_id=session.hand_back_to_device_id,
@@ -211,9 +215,14 @@ def save_session(conn: Connection, session: Session) -> None:
     )
 
 
-def session_payload(session: Session) -> dict[str, Any]:
+def session_payload(session: Session, now: float | None = None) -> dict[str, Any]:
     """The session as every device sees it on its event stream. A zone session also names its
-    zone and carries the zone's shared volume; a personal one looks exactly as before."""
+    zone and carries the zone's shared volume; a personal one looks exactly as before.
+
+    `fence` and `state_confidence` are the ADR-0461 truth: which ownership regime commands
+    must be fenced to, and whether the lease backs what's shown ("fresh") or lapsed
+    ("uncertain"). Give `now` (server time) when you have it; without one, confidence is as
+    of the session's last write."""
     payload: dict[str, Any] = {
         "mix_revision_id": session.mix_revision_id,
         "song_index": session.song_index,
@@ -223,6 +232,8 @@ def session_payload(session: Session) -> dict[str, Any]:
         "active_device_id": session.active_device_id,
         "lease_expires_at": session.lease_expires_at,
         "seq": session.seq,
+        "fence": session.fence,
+        "state_confidence": state_confidence(session, now),
     }
     if session.zone_id is not None:
         payload["zone_id"] = session.zone_id
@@ -262,7 +273,7 @@ def stop_playback(
             {"device_id": session.active_device_id, "reason": reason, "seq": stopped.seq},
         ),
     )
-    events.publish(conn, session.workspace_id, ports.STATE, session_payload(stopped))
+    events.publish(conn, session.workspace_id, ports.STATE, session_payload(stopped, now))
     return stopped
 
 

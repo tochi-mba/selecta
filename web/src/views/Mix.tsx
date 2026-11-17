@@ -1,6 +1,6 @@
 import { flagOn } from '../flags';
 import { DragEvent, FormEvent, KeyboardEvent, memo, PointerEvent, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ApiError, del, DraftList, MixData, MixItem, post, Suggestion } from '../api';
+import { ApiError, delVia, DraftList, MixData, MixItem, postVia, Suggestion } from '../api';
 import { etaRangeWords, runningTime } from '../lib';
 import { mixReadiness, occurrenceKeys, orderOf } from '../state/readiness';
 import { Action, announce, Dialog, Sheet } from '../ui/controls';
@@ -88,7 +88,10 @@ function FragmentRow({ children }: { children: React.ReactNode }) {
 const seamKeyOf = (a: string, b: string) => `${a}>${b}`;
 
 function MixView(props: ViewProps) {
-  const { mix, mixName, refreshMix, setMixData, player, now, setView, notify, status, refreshStatus, mixEta, draftPlace, openDraft, closeDraft, playDraft, renamedDraft, canUndo, undo, currentMixName } = props;
+  const { mix, mixName, refreshMix, setMixData, player, now, setView, notify, status, refreshStatus, mixEta, draftPlace, openDraft, closeDraft, playDraft, renamedDraft, canUndo, undo, currentMixName, request } = props;
+  // ADR-0462: every editor write goes through the injected request, never the local client.
+  const post = postVia(request);
+  const del = delVia(request);
   const draftId = useContext(MixScope);
   const inDraft = draftId !== null;
   const selectionScope = inDraft ? `draft:${draftId}` : 'current';

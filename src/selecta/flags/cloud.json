@@ -80,7 +80,19 @@
         "GET /api/uploads/{session_id}",
         "POST /api/uploads/{session_id}/parts",
         "POST /api/uploads/{session_id}/complete",
-        "DELETE /api/uploads/{session_id}",
+        "DELETE /api/uploads/{session_id}"
+      ],
+      "requires": ["cloud.hosted_media"],
+      "surfaces": ["cloud.home", "cloud.library", "cloud.uploads"],
+      "words": ["Upload tracks"],
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "storage"
+    },
+    "cloud.stored_media": {
+      "label": "Stored media",
+      "about": "List, play, export and delete audio already stored in Cloud. Reads of stored media stay open without the hosted media grant, so nobody's library goes dark (ADR-0456).",
+      "routes": [
         "GET /api/assets",
         "GET /api/assets/{asset_id}",
         "DELETE /api/assets/{asset_id}",
@@ -89,9 +101,7 @@
         "GET /api/assets/{asset_id}/playback-proxy",
         "POST /api/storage/derived-playback-url"
       ],
-      "requires": ["cloud.hosted_media"],
-      "surfaces": ["cloud.home", "cloud.library", "cloud.uploads"],
-      "words": ["Upload tracks"],
+      "surfaces": ["cloud.library", "cloud.listen"],
       "modes": ["cloud"],
       "kind": "release",
       "owner": "storage"

@@ -6,9 +6,11 @@
 - `OutboxRoomEvents` and `OutboxPlaybackEvents`: every change is written to the outbox in the
   same transaction, so the workspace's event stream (`GET /api/events`) carries it.
 
-The song library, the request planner and the mix's now-playing list don't exist in the cloud
-yet (the cloud library holds uploaded files, not analysed songs). Until they do,
-`NoCloudLibrary` reports no requestable songs, so opening a room is refused with `no_songs`
+The cloud app's default song catalogue is the metadata-only local media catalogue
+(`selecta.local_media.catalog.LocalMediaCatalog`, ADR-0458), wired in `api_cloud.create_cloud_app`
+when no explicit ports are passed, so a local-first account can host a Room from its
+device-available tracks. `NoCloudLibrary` remains here for callers that pass their own
+`RoomPorts`: it reports no requestable songs, so opening a room is refused with `no_songs`
 rather than letting guests ask for songs nothing can play. `RoomPorts` lets the app (and tests,
 and the browser-test server) supply a real library when one exists.
 """

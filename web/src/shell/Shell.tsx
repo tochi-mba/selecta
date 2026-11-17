@@ -1,7 +1,8 @@
 import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { MixItem } from '../api';
 import { useFlags } from '../flags';
-import { NowState, SetPlayer } from '../player';
+import { NowState } from '../player';
+import { PlayerLike } from '../playerContract';
 import { Route, savedScroll, useLocationText } from '../router';
 import { setPrefs, usePrefs } from '../state/prefs';
 import { useUnseenActivity } from '../state/activity';
@@ -20,7 +21,7 @@ export { PageLink };
 // into the fixed mini-player or alter the transport's layout.
 export const clock = transportClock;
 
-export function VolumeControl({ player, now }: { player: SetPlayer; now: NowState }) {
+export function VolumeControl({ player, now }: { player: PlayerLike; now: NowState }) {
   return (
     <div className="volume">
       <button
@@ -48,7 +49,7 @@ export function VolumeControl({ player, now }: { player: SetPlayer; now: NowStat
 /** The song that's playing, on every page but the one that's all about it. It only presents the
  * player. The player itself lives above every page, so nothing here can start or stop the music by
  * appearing or going away. */
-function MiniPlayer({ player, now, song, hasNext, onRequests, waiting }: { player: SetPlayer; now: NowState; song: MixItem; hasNext: boolean; onRequests: () => void; waiting: number }) {
+function MiniPlayer({ player, now, song, hasNext, onRequests, waiting }: { player: PlayerLike; now: NowState; song: MixItem; hasNext: boolean; onRequests: () => void; waiting: number }) {
   const progress = now.duration > 0 && Number.isFinite(now.songTime) ? Math.min(Math.max(now.songTime / now.duration, 0), 1) : 0;
   const on = useFlags();
   return (
@@ -230,7 +231,7 @@ export function Shell({
   children,
 }: {
   route: Route;
-  player: SetPlayer;
+  player: PlayerLike;
   now: NowState;
   song?: MixItem;
   showPlayer: boolean;

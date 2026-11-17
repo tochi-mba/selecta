@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { get, MixData, MixItem } from '../api';
+import { getVia, MixData, MixItem } from '../api';
 import { useFlags } from '../flags';
 import { getDraftNames } from '../state/draftNames';
 import { occurrenceKeys, orderOf } from '../state/readiness';
@@ -38,7 +38,9 @@ export function transitionsWaiting(mix: MixItem[]): WaitingTransition[] {
 
 /** An optional return shortcut. Trust the server's exact order, never a stored title,
  * selected transition, or optimistic snapshot from a previous browser session. */
-export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft, playDraft }: ViewProps) {
+export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft, playDraft, request }: ViewProps) {
+  // ADR-0462: reads go through the injected request, never the local client.
+  const get = getVia(request);
   const [recent, setRecent] = useState<RecentDraft | null>(null);
   const [checking, setChecking] = useState(false);
   const [problem, setProblem] = useState('');

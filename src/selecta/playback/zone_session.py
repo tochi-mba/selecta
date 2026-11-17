@@ -34,7 +34,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
 from selecta.persistence import transaction
-from selecta.playback import ports
+from selecta.playback import fencing, ports
 from selecta.playback.model import (
     LEASE_SECONDS,
     Device,
@@ -289,7 +289,7 @@ def _ask_for_hand_back(
             },
         ),
     )
-    events.publish(conn, session.workspace_id, ports.STATE, session_payload(session))
+    events.publish(conn, session.workspace_id, ports.STATE, session_payload(session, now))
     return session
 
 
@@ -309,6 +309,7 @@ def _hand_back_in(
         active_device_id=home,
         lease_expires_at=now + LEASE_SECONDS,
         seq=session.seq + 1,
+        fence=fencing.next_fence(session),  # the lease moves home, so the fence moves
         hand_back_to_device_id=None,
         updated_at=now,
     )
@@ -329,7 +330,7 @@ def _hand_back_in(
             },
         ),
     )
-    events.publish(conn, session.workspace_id, ports.STATE, session_payload(handed))
+    events.publish(conn, session.workspace_id, ports.STATE, session_payload(handed, now))
     return handed
 
 
@@ -432,13 +433,17 @@ def zone_submit_command(
     based_on_seq: int,
     idempotency_key: str,
     *,
+    fence: int | None = None,
+    ttl_seconds: int | None = None,
     user_id: str | None = None,
     mix: MixControl | None = None,
     now: float | None = None,
     events: PlaybackEvents = NO_EVENTS,
 ) -> CommandResult:
     """A remote's button press for the zone it is looking at. The zone is in the path, so a
-    stale screen can't steer the wrong zone; `set_volume` is clamped to the zone's cap."""
+    stale screen can't steer the wrong zone; `set_volume` is clamped to the zone's cap. The
+    ADR-0461 fence and TTL pass through unchanged: each zone's session carries its own fence,
+    checked exactly as a personal one's."""
     with transaction(engine, workspace_id) as conn:
         now = resolve_now(conn, now)
         zone = require_zone(conn, zones, workspace_id, zone_id, user_id=user_id)
@@ -455,6 +460,8 @@ def zone_submit_command(
             idempotency_key,
             now,
             events,
+            fence=fence,
+            ttl_seconds=ttl_seconds,
             mix=mix,
             volume_cap=zones.volume_cap(conn, zone, now),
         )
@@ -653,7 +660,7 @@ def _move_now(
                     },
                 ),
             )
-            events.publish(conn, workspace_id, ports.STATE, session_payload(released))
+            events.publish(conn, workspace_id, ports.STATE, session_payload(released, now))
         home, standby = source.home_device_id, source.standby_device_id
         if home == device.id:
             home, standby = standby, None

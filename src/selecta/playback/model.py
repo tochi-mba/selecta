@@ -18,6 +18,9 @@ HEARTBEAT_SECONDS = 5.0  # how often the speaker sends one
 MAX_SIGNED_IN_DEVICES = 10
 DEVICE_NAME_MAX = 60
 
+STATE_FRESH = "fresh"  # the speaker's lease is live; the reported state is current
+STATE_UNCERTAIN = "uncertain"  # the lease lapsed; the speaker may still play, or may be dead
+
 
 class Principal(StrEnum):
     PERSON = "person"
@@ -80,6 +83,18 @@ class IdempotencyConflict(PlaybackError):
     """The same idempotency key came back with a different command."""
 
     code = "idempotency_conflict"
+
+
+class NotTheSpeaker(PlaybackError):
+    """Only the device holding the speaker lease may acknowledge a command (ADR-0461)."""
+
+    code = "not_the_speaker"
+
+
+class UnknownCommand(PlaybackError):
+    """No such command in this workspace. Another account's looks exactly the same."""
+
+    code = "unknown_command"
 
 
 class UnknownZone(PlaybackError):
@@ -186,6 +201,9 @@ class Session:
     zone_id: str | None = None  # None: a personal workspace's one session
     volume: int | None = None  # a zone's shared volume, 0 to 100; None keeps volume per device
     hand_back_to_device_id: str | None = None  # the home kiosk waiting for the next song
+    # Moves only when ownership of the lease moves (ADR-0461). A command stamped with an
+    # older fence is superseded; a failed take-over leaves the old fence valid.
+    fence: int = 0
 
     @property
     def key(self) -> SessionKey:
@@ -215,6 +233,19 @@ def position_at(session: Session, now: float) -> Position:
         mix_revision_id=session.mix_revision_id,
         seq=session.seq,
     )
+
+
+def state_confidence(session: Session, now: float | None) -> str:
+    """How much the reported state is worth (ADR-0461). A speaker whose lease lapsed may have
+    kept playing offline or died; until it is heard from again, every controller is shown
+    "uncertain" and extrapolation stays on the client. With no speaker at all there is nothing
+    to doubt. Without a `now` (an event payload read back later), the answer is as of the
+    moment the session was last written, when its lease had just been renewed."""
+    if now is None:
+        now = session.updated_at
+    if session.active_device_id is None or session.lease_live(now):
+        return STATE_FRESH
+    return STATE_UNCERTAIN
 
 
 def frozen(session: Session, now: float) -> Session:
