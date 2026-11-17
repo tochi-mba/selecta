@@ -108,6 +108,7 @@ STAFF_ONLY = {
     ("POST", "/api/admin/takedowns/{notice_id}/{command}"),
     ("POST", "/api/admin/upload-restrictions/{workspace_id}/lift"),
     ("POST", "/api/admin/business/pilots"),
+    ("GET", "/api/admin/flags/cloud.hosted_media/grandfather-audit"),
 }
 # Business routes require an organisation workspace and membership, not merely a
 # personal library workspace. The dedicated Business tests exercise their tenant
@@ -161,6 +162,18 @@ BUSINESS_SCOPED = {
     ("POST", "/api/autopilot/venues/{venue_id}/overrides"),
     ("DELETE", "/api/autopilot/venues/{venue_id}/overrides/{override_id}"),
     ("POST", "/api/autopilot/venues/{venue_id}/candidates"),
+}
+
+# The local-media catalogue ships dark (`cloud.local_media` is off in the build), so the build
+# guard answers 403 before any workspace check can. Its tenant checks are proved with the flag
+# forced on in `test_bf_local_media.py` (Bob cannot read, delete or report availability on
+# Alice's songs), the same arrangement the Business routes have.
+FLAG_DARK = {
+    ("POST", "/api/local-media/songs"),
+    ("GET", "/api/local-media/songs"),
+    ("GET", "/api/local-media/songs/{song_id}"),
+    ("DELETE", "/api/local-media/songs/{song_id}"),
+    ("POST", "/api/local-media/availability"),
 }
 
 # Every route that can reach a workspace's data, with a body valid enough to get past
@@ -223,6 +236,10 @@ SCOPED: dict[tuple[str, str], dict | None] = {
         "command": "pause",
         "based_on_seq": 0,
         "idempotency_key": "tenant-matrix",
+    },
+    ("POST", "/api/playback/commands/{command_id}/ack"): {
+        "device_id": "missing",
+        "result": "applied",
     },
     ("POST", "/api/rooms"): {"name": "Party", "settings": {}},
     ("GET", "/api/rooms/current"): None,
@@ -385,6 +402,8 @@ def world(tmp_path, monkeypatch):
                 "display_id": new_id(),
                 "request_id": new_id(),
                 "guest_id": new_id(),
+                "command_id": new_id(),
+                "song_id": 1,
             },
             "derived": derived,
             "alice_keys": {original_key(alice_ws, asset_id), derived, f"s/{session_id}/object"},
@@ -434,7 +453,10 @@ def test_every_cloud_route_is_classified(world):
         if isinstance(route, APIRoute) and route.path.startswith("/api")
         for method in route.methods - {"HEAD"}
     }
-    classified = PUBLIC | CAPABILITY_ONLY | SELF_ONLY | STAFF_ONLY | BUSINESS_SCOPED | set(SCOPED)
+    classified = (
+        PUBLIC | CAPABILITY_ONLY | SELF_ONLY | STAFF_ONLY | BUSINESS_SCOPED | FLAG_DARK
+        | set(SCOPED)
+    )
     assert routes - classified == set(), "new routes must join the tenant isolation matrix"
     assert classified - routes == set(), "the matrix names routes that no longer exist"
 

@@ -36,6 +36,9 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.device.<workspace>` | local | `web/src/devices/usePlaybackDevice.ts`, `web/src/devices/DevicesPanel.tsx` | This browser's playback device id (Cloud) | Cloud playback |
 | `selecta.cloud.last-event-id` | session | `web/src/cloud/events.ts` | The last Cloud event seen, to resume the stream (Cloud) | Cloud |
 | `selecta.guest.room.<code>` | local | `web/src/guest/main.ts` (through `store` in `web/src/rooms/dom.ts`) | The guest's room id for a party code (Cloud) | Requests (guest rooms) |
+| `selecta.cutover-notice.<account>` | local | `web/src/cloud/migration/CutoverNotice.tsx` | That this account dismissed the hosted-media cutover notice on this browser (Cloud, ADR-0465) | Cloud |
+| `selecta.media-profile.<workspace>` | local | `web/src/cloud/ConnectMusic.tsx` | The workspace's chosen media profile (local-first or hosted), so the shell draws the right home (Cloud, ADR-0463) | Cloud |
+| `selecta.onboarding.<workspace>` | local | `web/src/cloud/onboarding/state.ts` | How far local-first Cloud onboarding got, so an interrupted step resumes (Cloud, ADR-0463) | Cloud |
 | `selecta-cloud-dev:refresh` | local | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The local identity service's refresh token, so a reload signs back in; removed on sign-out or a failed refresh | Cloud (local dev stack) |
 | `selecta-cloud-dev:login` | session | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The PKCE verifier, CSRF state and return path of a sign-in in flight; removed when the code comes back | Cloud (local dev stack) |
 
@@ -191,6 +194,7 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/playback/take-over` | Moves playback to this device |
 | `POST /api/playback/reconnect` | Reclaims playback after a drop |
 | `POST /api/playback/commands` | Sends a transport command to the playing device |
+| `POST /api/playback/commands/{command_id}/ack` | Records that the playing device received a command, never that it was audible (ADR-0461) |
 | `POST /api/uploads/plan` | Plans an upload |
 | `POST /api/uploads/{session_id}/parts` | Signs upload parts |
 | `POST /api/uploads/{session_id}/complete` | Finishes an upload |
@@ -198,6 +202,16 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/storage/derived-playback-url` | Signs a playback URL |
 | `DELETE /api/assets/{asset_id}` | Deletes an uploaded asset |
 | `POST /api/assets/{asset_id}/playback-proxy` | Asks for a playback proxy to be made |
+
+### Local media catalogue (`src/selecta/local_media/api.py`) - Cloud library (ADR-0458)
+
+Metadata only: no audio leaves the member's devices. Dark in the build until `cloud.local_media` ships.
+
+| Route | Side effect |
+|---|---|
+| `POST /api/local-media/songs` | Registers songs on the member's own devices in the workspace catalogue |
+| `DELETE /api/local-media/songs/{song_id}` | Soft-deletes a catalogue entry |
+| `POST /api/local-media/availability` | Reports which catalogue songs a device holds right now |
 
 ### Rooms (`src/selecta/rooms/api_host.py`, `src/selecta/rooms/api_guest.py`) - Requests (guest rooms)
 
