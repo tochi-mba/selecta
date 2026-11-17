@@ -102,6 +102,13 @@
     "analysis.phrases": {
       "label": "Phrase lines",
       "about": "Transitions land on 8-bar phrase lines instead of any 4-bar mark, the way a DJ counts a song."
+    },
+    "analysis.vocal_sense": {
+      "label": "Hear the voices",
+      "about": "When a song has no synced lyrics, listen to its separated voice to tell when someone sings, so it can still earn long blends and clashing voices are caught.",
+      "requires": [
+        "stems"
+      ]
     }
   }
 }

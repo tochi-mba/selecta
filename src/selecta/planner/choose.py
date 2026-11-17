@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 
 from selecta import flags
+from selecta.analysis import vocal_sense
 from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import Cue, SongInfo
 from selecta.audit.checks import AuditReport, audit
@@ -238,7 +239,12 @@ def enumerate_candidates(
                 effective = gap if recipe.max_gap is not None else blend_gap
                 if not can_beatmatch or effective > (recipe.max_gap or BLEND_MAX_GAP):
                     continue
-                if not (a.vocals_known and b.vocals_known) and bars > 4:
+                if (
+                    not (a.vocals_known and b.vocals_known)
+                    and bars > 4
+                    and not vocal_sense.sense_on()
+                ):
+                    # without lyrics or ears, a long overlap can't be checked for two voices
                     continue
             for exit_cue in exits:
                 if recipe.beatmatched and exit_cue.bar < bars + 4:
