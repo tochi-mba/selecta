@@ -204,8 +204,8 @@ def patterns(rated: list[Rated]) -> dict[str, dict[str, tuple[int, int]]]:
         if item.move == "phrase_roll" and item.gap is not None:
             note("phrase roll tempo gap", "within 10%" if item.gap <= 0.1 else "over 10%", item)
         if item.energy_step is not None:
-            step = "lift" if item.energy_step > 0.05 else "drop" if item.energy_step < -0.05 else "level"
-            note("energy step", step, item)
+            lifted, dropped = item.energy_step > 0.05, item.energy_step < -0.05
+            note("energy step", "lift" if lifted else "drop" if dropped else "level", item)
         if item.entry_section is not None:
             landing = (
                 item.entry_section

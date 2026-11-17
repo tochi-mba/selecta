@@ -254,6 +254,8 @@ def enumerate_candidates(
     for recipe in recipes.values():
         if style and recipe.name != style:
             continue
+        if recipe.on_request and recipe.name != style:
+            continue
         if recipe.needs_vocal_info and not a.vocals_known:
             continue
         for bars in _lengths_for(recipe, a, b):
