@@ -30,7 +30,7 @@ The box and stroke live in `ICON_SLOTS` and `ICON_STROKES` (`web/src/ui/Icon.tsx
 | `mixes` | My Mixes and classic Mixes destination | standard | `shell/manifest.ts` | The destination label |
 | `library` | Library destination | standard | `shell/manifest.ts` | The destination label |
 | `discover` | Classic Discover destination | standard | `shell/manifest.ts` | The destination label |
-| `settings` | Workspace destination; Lucy settings | standard, toolbar | `shell/manifest.ts`, `views/Lucy.tsx` | The destination label; the button's words |
+| `settings` | Workspace destination; Lucy settings; the Cloud More menu | standard, toolbar | `shell/manifest.ts`, `shell/Shell.tsx`, `views/Lucy.tsx` | The destination label; the button's words |
 | `edit` | Open the editor or edit one part | standard, toolbar | `shell/Shell.tsx`, `views/EditorStory.tsx`, `ui/ControlGallery.tsx` | The link or button words; gallery `aria-label` |
 | `close` | Close, dismiss, cancel or remove; a failed status mark | standard, toolbar, compact | `ui/controls.tsx`, `ui/primitives.tsx`, `ui/toasts.tsx`, `views/Lucy.tsx`, `views/LucyDialog.tsx`, `views/LucyProposal.tsx`, `views/Mix.tsx`, `views/Requests.tsx` | `aria-label` and `title`, or the status words |
 | `check` | Done, passed or ready | compact, toolbar | `ui/controls.tsx`, `views/LucyProposal.tsx`, `views/LucySongs.tsx`, `views/Requests.tsx`, `views/SeamInspector.tsx` | The words beside it |

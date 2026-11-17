@@ -41,7 +41,9 @@ function offences(file: string, source: string): string[] {
   const out: string[] = [];
   for (const piece of literals(source)) {
     const lowered = piece.toLowerCase().replace(/[’‘]/g, "'");
-    for (const claim of ALL_CLAIMS) if (lowered.includes(claim)) out.push(`${file}: "${piece.slice(0, 100)}" says "${claim}"`);
+    // Overlapping phrases ("unattended 24/7" inside "runs unattended 24/7") count once per string.
+    const claim = ALL_CLAIMS.find((banned) => lowered.includes(banned));
+    if (claim) out.push(`${file}: "${piece.slice(0, 100)}" says "${claim}"`);
   }
   return out;
 }

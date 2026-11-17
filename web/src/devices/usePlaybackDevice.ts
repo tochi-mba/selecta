@@ -84,6 +84,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const [message, setMessage] = useState('');
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
+  // A refused press explains itself; the follow-up poll must not wipe that answer.
+  const commandRefused = useRef(false);
   const clockOffset = useRef(0);
   // A slow poll must never overwrite a newer ownership decision.
   const latestPoll = useRef(0);
@@ -203,7 +205,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       learnClock(sentAt, next.server_time);
       adopt(next.session);
       setView(next);
-      setError('');
+      if (!commandRefused.current) setError('');
       if (expiredSpeaker.current) {
         if (next.speaker === 'here') void recoverExpired();
         else {
@@ -311,6 +313,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     if (!deviceId || !speaker || claiming.current) return;
     expiredSpeaker.current = false;
     claiming.current = true;
+    commandRefused.current = false;
     setStarting(true); setMessage('Starting here...'); setError('');
     try {
       const sentAt = Date.now();
@@ -361,9 +364,11 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
           idempotency_key: newKey(),
         }),
       }, workspaceId);
+      commandRefused.current = false;
       setError('');
     } catch (problem) {
       const code = (problem as { code?: string }).code;
+      commandRefused.current = true;
       setError(code && RETRY_CODES.has(code) ? "Something changed just then. Here's where it is now; try again." : (problem as Error).message);
     } finally {
       void poll();

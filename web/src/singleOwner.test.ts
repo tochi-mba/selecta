@@ -24,7 +24,8 @@ describe('one player and one edit model', () => {
 
   it('previews share one audio element, and only the player and the Studio open an audio context', () => {
     expect(makers(/new Audio\(/)).toEqual(['audio/focus.ts']);
-    expect(makers(/new AudioContext\(/)).toEqual(['player.ts', 'studio.ts']);
+    // engine/context.ts is the browser-first Cloud player (ADR-0457); local mode never loads it.
+    expect(makers(/new AudioContext\(/)).toEqual(['engine/context.ts', 'player.ts', 'studio.ts']);
   });
 
   it('no page keeps a second writable copy of the mix: changes are sent to the server through api.ts', () => {

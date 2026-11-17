@@ -100,7 +100,8 @@ describe('the Cloud app', () => {
   });
 
   it('closes up around a feature switched off for this account: no menu entry, page or button', async () => {
-    account = { ...cloudAccount(), features: { 'cloud.uploads': false } };
+    // Library belongs to cloud.stored_media (reads stay open when uploads are off, ADR-0456).
+    account = { ...cloudAccount(), features: { 'cloud.uploads': false, 'cloud.stored_media': false } };
     window.history.replaceState({}, '', '/library');
     render(<CloudApp />);
     const menu = await screen.findByRole('navigation', { name: 'Cloud workspace' });

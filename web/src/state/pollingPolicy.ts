@@ -46,6 +46,8 @@ export const POLLING: readonly PollRule[] = [
   { file: 'devices/PlayingBar.tsx', reads: null, everyMs: 1000, hidden: 'continues', why: 'clock text only' },
   { file: 'devices/audioSpeaker.ts', reads: null, everyMs: 'fade steps', hidden: 'continues', why: 'volume fade' },
   { file: 'rooms/RoomPanel.tsx', reads: 'room state', everyMs: 3000, hidden: 'continues', why: 'Cloud programme' },
+  { file: 'cloud/localFirstPlayer.ts', reads: null, everyMs: 500, hidden: 'continues', why: 'redraws the browser player position only; never reads the server (ADR-0457)' },
+  { file: 'engine/scheduler.ts', reads: null, everyMs: 'audio clock tick', hidden: 'continues', why: 'schedules the next song and seam on the audio clock while music plays in a hidden tab (ADR-0457)' },
 ];
 
 /** Who keeps each shared piece of server data. Anything else is read by the page that shows it. */
