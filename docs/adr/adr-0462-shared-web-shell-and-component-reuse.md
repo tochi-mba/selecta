@@ -1,0 +1,60 @@
+# ADR-0462 - Shared web shell and component reuse across local and Cloud
+
+- **Decision:** Accepted (owner, 2026-11-17).
+- **Implementation:** 0/8 Not started.
+- **Independent verification:** 0/8 Verified.
+- **Programme/date/baseline:** Browser-first Cloud (BF); 2026-11-17; `main` at `7d7f7932`.
+- **Priority / phase:** P1 / Phase BF4 (UX). **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
+- **Existing ADR owners:** ADR-0368 (CSS ownership): unchanged, its regime extended to the cloud surfaces here. ADR-0001 (product contract and parity): unchanged; this ADR adds local-to-Cloud sharing, which ADR-0001 never covered. Sibling BF ADRs: ADR-0457, ADR-0463.
+- **Source touchpoints:** `web/src/shell/manifest.ts` and `web/src/shell/Shell.tsx` (become the one shell); `web/src/views/*` (data access refactor); `web/src/views/shared.ts` (`ViewProps`); `web/src/api.ts` (local client, wrapped); `web/src/cloud/CloudApp.tsx`, `web/src/cloud/cloudRoutes.ts` (converge into the shared shell); `web/src/cloud/Library.tsx`, `web/src/cloud/MakeCloudMix.tsx`, `web/src/cloud/CloudTransportDock.tsx`, `web/src/cloud/useCloudPlayer.ts` (duplicates retired for local-first accounts); `web/src/ui/`, `web/src/state/`, `web/src/styles/tokens.css` (shared foundation); `web/src/styles/` ownership tests.
+- **Proposal chapter:** [docs/engineering/css-ownership.md](../engineering/css-ownership.md), [docs/saas/11-ui-ux.md](../saas/11-ui-ux.md).
+
+## Context and evidence boundary
+
+Local and Cloud share one bundle and one entry (`RuntimeApp.tsx` picks by `/api/status` mode) but almost no screens. There are three shells (`shell/Shell.tsx` with `manifest.ts`, `cloud/CloudApp.tsx` with its own PATHS/LABELS/TITLES maps, `business/shell/BusinessShell.tsx`), two routers (`router.ts`, `cloudRoutes.ts` with a legacy substring `pageFor`), two flag readers (`flags.ts` vs `featureOn`), and parallel implementations of Library (755-line local vs 137-line cloud), Make a Mix, player transport and settings. Cloud reuses only leaf pieces: `ui/DataTable`, `ui/controls`, toasts, `state/*` and one injected-request component, `views/LucyCloudSettings.tsx`. The design system's enforcement (tokens cascade, spacing, motion, icon geometry tests) explicitly excludes `cloud`, `rooms`, `devices`, `admin`: `rooms.css` has 9 raw hex colours and `devices.css` 5. The local `views/*` pages receive shared `ViewProps` but also call the local `api.ts` directly (Library 10 call sites, Requests 6, Mix 5, Lucy 5), which is the one structural blocker to rendering them against Cloud.
+
+These counts were verified on `main` at the baseline SHA. Nothing below is implemented.
+
+## Decision
+
+- **One shell, one manifest.** `shell/manifest.ts` and `Shell.tsx` become the navigation for local-first Cloud as well as local mode. The `DESTINATIONS` labels, routes, icons and `describeRoute` breadcrumbs are the product's names everywhere: Listen, Make a Mix, My Mixes, Library, Workspace. The manifest grows mode awareness: per-destination requirements (flag, mode, capability) decide presence, so Cloud-only destinations and local-only tabs live in the same table instead of three. `CloudApp.tsx`'s private maps and `cloudRoutes.ts`'s legacy `pageFor` retire.
+- **Views get data through an interface, not an import.** The `views/*` pages' direct `get/post/del` calls move behind an injected request layer carried on `ViewProps`, following `LucyCloudSettings.tsx`, which already works in both worlds. Local injects the relative `/api` client; Cloud injects the authenticated client (bearer token, `X-Workspace-ID`). A page neither knows nor cares which mode it renders in; mode-specific wording keeps flowing through the existing `copy.ts` layer.
+- **One flag read.** The `Gate`/`flagOn` surface and Cloud's `featureOn` converge on one interface fed by mode-appropriate sources (`/api/status` flags locally, the account features snapshot in Cloud), so a component gates itself the same way everywhere.
+- **The duplicates retire for local-first accounts.** `cloud/Library.tsx`, `cloud/MakeCloudMix.tsx` and the transport pair (`CloudTransportDock.tsx`, `useCloudPlayer.ts`) are replaced by the real `views/Library.tsx`, `views/Mixes.tsx`/`MixSetup` and the shell player driven by the ADR-0457 runtime. The hosted mode keeps the old pages behind `cloud.hosted_media` until ADR-0465 coexistence decides their final shape; nothing is deleted while a flagged account needs it.
+- **Cloud joins the design system.** `cloud.css`, `rooms.css` and `devices.css` come under `tokens.css` and the css-ownership, spacing, motion and icon test regime; the 14 raw hex colours move to tokens; cloud components adopt `ui/Icon` and the shared primitives. `admin/` and `business/` may follow later; they are out of this ADR's scope.
+- **What stays separate, deliberately:** `CloudRoot.tsx` (AuthKit), `accountStates.ts` and the account-state pages, `admin/*`, `business/*`, the `guest/`, `kiosk/` and `display/` entry points, and `player.ts`/`audio/focus.ts`, which remain local mode's own (the Cloud player is ADR-0457's runtime, and `cloud-media-contexts` rules keep holding).
+
+## User outcome and acceptance contract
+
+A member who knows local SelectaDJ opens Cloud and is already home: same names, same places, same player feel, with the Cloud-only things (account, billing, devices, Rooms hosting) where the manifest puts them. Nothing looks like a second, cheaper app. A change to a shared screen lands in both modes from one edit.
+
+## Edge cases
+
+- **A view's API shape differs by mode.** The injected layer adapts shapes at the boundary (one adapter per route family), never inside the view; a view with an irreconcilable dependency stays mode-specific and is listed as such rather than half-shared.
+- **Flag-off reflow in a shared shell.** The manifest's requirement model must reproduce today's reflow exactly in local mode (the flag sweep e2e suite is the oracle) while adding Cloud gating; any difference is a regression.
+- **Deep links across modes.** A local-only route opened in Cloud (or the reverse) lands on a polite explanation with the nearest destination, never a blank page; `describeRoute` covers both modes.
+- **The kill-switch CLASSIC nav.** The fallback navigation keeps working in both modes; the shared shell cannot make the kill switch weaker.
+- **Keyboard and command palette.** `shell/commands.ts` and the palette work identically in Cloud; commands that need a missing capability show disabled with the reason.
+- **Business shell.** `BusinessShell.tsx` stays its own shell this programme; the manifest convergence stops at personal Cloud to keep the change bounded.
+
+## Rejected alternatives
+
+- **Rebuilding Cloud screens to visually match.** Parallel implementations are how the drift happened; parity by duplication rots. Reuse is the decision.
+- **Forking the manifest per mode.** Two manifests with the same labels is the current three-shells problem minus one; requirements-in-one-table is strictly simpler.
+- **Moving local views to Cloud's shapes.** Local mode is the reference experience (owner's standing direction); Cloud adapts to it, not the reverse.
+- **Sharing `player.ts` with Cloud.** The local player is driven by the local server's state model; wrapping it for Cloud would couple the two engines. The ADR-0457 runtime is Cloud's player.
+
+## Implementation checklist - 0/8 Not started; 0/8 independently Verified
+
+1. **BF-0462-01 - Manifest requirements model.** **Acceptance:** `manifest.ts` carries per-destination requirements (mode, flag, capability); local rendering is pixel-identical before and after (flag sweep green); unit tests cover requirement evaluation. **Required verification:** Vitest, `pnpm e2e:flags` sweep. **Implementation:** Not started. **Independently Verified:** No.
+2. **BF-0462-02 - Injected request layer.** **Acceptance:** `ViewProps` carries the request interface; all direct `api.ts` imports in `views/*` are gone (import-boundary test enforces it); local behaviour unchanged (e2e green). **Required verification:** `web/src/importBoundaries.test.ts` extension, full local e2e. **Implementation:** Not started. **Independently Verified:** No.
+3. **BF-0462-03 - Unified flag read.** **Acceptance:** One gating interface with two sources; `Gate` works in Cloud; `featureOn` call sites migrate; flag changes reflow live in both modes (SSE in Cloud). **Required verification:** Vitest, `flags.cloud.ts`. **Implementation:** Not started. **Independently Verified:** No.
+4. **BF-0462-04 - Shared Library in Cloud.** **Acceptance:** `views/Library.tsx` renders in local-first Cloud against the metadata catalogue (ADR-0458) with availability states; `cloud/Library.tsx` unmounts for local-first accounts. **Required verification:** Vitest, a new Playwright cloud spec. **Implementation:** Not started. **Independently Verified:** No.
+5. **BF-0462-05 - Shared Make a Mix and My Mixes.** **Acceptance:** `views/Mixes.tsx`, `MixSetup` and `MyMixes.tsx` render in Cloud against the recipe store; `cloud/MakeCloudMix.tsx` unmounts for local-first accounts; drafts survive mode-appropriate storage. **Required verification:** Vitest, Playwright cloud specs. **Implementation:** Not started. **Independently Verified:** No.
+6. **BF-0462-06 - Shell player on the runtime.** **Acceptance:** The shell mini-player and Listen surface drive the ADR-0457 runtime in Cloud with the same controls and states as local; the transport-dock pair unmounts for local-first accounts. **Required verification:** Playwright playback spec against the runtime. **Implementation:** Not started. **Independently Verified:** No.
+7. **BF-0462-07 - Design-system adoption.** **Acceptance:** `cloud.css`, `rooms.css`, `devices.css` define no raw colours (tokens only), pass the cascade, spacing, motion and icon tests, and the ownership doc's exclusion list shrinks accordingly. **Required verification:** The styles test suite extended to the three sheets. **Implementation:** Not started. **Independently Verified:** No.
+8. **BF-0462-08 - Parity review.** **Acceptance:** A side-by-side review of every shared destination in both modes, both themes, 320 px and desktop, recorded with screenshots in `docs/verification/`; differences are either fixed or listed as deliberate. **Required verification:** Recorded review; the owner accepts the deliberate-differences list. **Implementation:** Not started. Needs a person: the owner reviews. **Independently Verified:** No.
+
+## Governance
+
+Accepted by the owner on 2026-11-17. Local mode is the reference: any conflict between sharing and local behaviour resolves in local's favour, and the flag sweep plus full local e2e suite guard every step of the convergence.
