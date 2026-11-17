@@ -23,8 +23,9 @@ from selecta.business import device_cookie
 from selecta.flags import cloud_gate
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
-from selecta.persistence import db_now, transaction
+from selecta.persistence import transaction
 from selecta.playback import devices, fencing, session
+from selecta.playback import store as playback_store
 from selecta.playback.model import (
     MAX_SIGNED_IN_DEVICES,
     Capabilities,
@@ -183,8 +184,10 @@ def install_routes(
         return device_id
 
     def server_time() -> float:
+        # through the store module, which holds playback's one reference to database time, so a
+        # test clock pointed there moves every view of a lease at once
         with transaction(engine) as conn:
-            return db_now(conn)
+            return playback_store.db_now(conn)
 
     def refused(error: PlaybackError) -> HTTPException:
         if isinstance(error, UnknownDevice):
