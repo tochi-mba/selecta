@@ -386,7 +386,15 @@ def test_pause_freezes_the_position_where_the_music_was(engine, clock, laptop, p
     assert paused.state is PlayState.PAUSED
     assert paused.offset_ms == 9500 and paused.anchor_at == clock.now
     command = events.of(ports.COMMAND)[0]
-    assert command == {"device_id": laptop.id, "command": "pause", "args": {}, "seq": 2}
+    assert command == {
+        "device_id": laptop.id,
+        "command": "pause",
+        "args": {},
+        "seq": 2,
+        "command_id": result.command_id,
+        "fence": 1,
+        "expires_at": result.expires_at,
+    }
     assert events.kinds() == [ports.COMMAND, ports.STATE]
 
 

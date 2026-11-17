@@ -544,7 +544,6 @@ def create_cloud_app(
             entitlement = stripe_sync.effective_entitlement(conn, principal.workspace.id)
             plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
             storage = quota.usage(conn, principal.workspace.id)
-            usage = meters.meters(conn, principal.workspace.id, plan, principal.user.timezone)
             now = db_now(conn)
             preferences = flag_rules.user_preferences(conn, principal.user.id)
             decisions = targeting.decide_all(
@@ -556,6 +555,15 @@ def create_cloud_app(
                 user_prefs=preferences,
                 now=now,
                 lock_plans=plans.unlocking_plans(),
+            )
+            # The meter and the shell read one hosted decision (BF-0456-06, BF-0464-02).
+            hosted = decisions.snapshot().get("cloud.hosted_media") is not False
+            usage = meters.meters(
+                conn,
+                principal.workspace.id,
+                plan,
+                principal.user.timezone,
+                hosted_media_granted=hosted,
             )
         return {
             "user": {
@@ -591,7 +599,7 @@ def create_cloud_app(
             # BF-0455-03: the decided Cloud experience, so the web shell renders from one answer.
             "experience": {
                 "local_first": decisions.snapshot().get("cloud.local_first") is not False,
-                "hosted": decisions.snapshot().get("cloud.hosted_media") is not False,
+                "hosted": hosted,
             },
             "feature_locks": dict(decisions.locks),
             "feature_rule_version": decisions.version,
