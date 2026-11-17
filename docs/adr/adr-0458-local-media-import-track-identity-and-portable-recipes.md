@@ -1,0 +1,62 @@
+# ADR-0458 - Local media import, track identity and portable recipes
+
+- **Decision:** Accepted (owner, 2026-11-17).
+- **Implementation:** 0/7 Not started.
+- **Independent verification:** 0/7 Verified.
+- **Programme/date/baseline:** Browser-first Cloud (BF); 2026-11-17; `main` at `7d7f7932`.
+- **Priority / phase:** P1 / Phase BF1. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
+- **Existing ADR owners:** ADR-0397 (object storage layout) and ADR-0398 (upload protocol): unchanged, hosted mode only. ADR-0418 (cloud intelligent mixing parity): superseded in part for default accounts by ADR-0459; its recipe store (`cloud_mixes.py`, `mix_contract.py`) is relied on here. Sibling BF ADRs: ADR-0457, ADR-0459, ADR-0465.
+- **Source touchpoints:** new `web/src/media/` (import, identity, cache, reauthorisation); `src/selecta/cloud_mixes.py` and `src/selecta/mix_contract.py` (portable recipe store, reused); `src/selecta/storage/schema.py` (`assets` table requires `original_key` and `sha256` non-null: metadata-only songs need a schema change or a new table); `src/selecta/rooms/cloud_ports.py` (`NoCloudLibrary` replaced by a metadata catalogue); `src/selecta/flags/cloud.json` (new `cloud.local_media`).
+- **Proposal chapter:** [docs/saas/05-storage-uploads-playback.md](../saas/05-storage-uploads-playback.md) (hosted mode only after this ADR).
+
+## Context and evidence boundary
+
+Cloud's catalogue today is the `assets` table: a row exists because an original was uploaded to R2, and `original_key` and `sha256` are non-null by schema. Rooms production code injects `NoCloudLibrary`, which refuses to open a room with `no_songs`, because without uploads Cloud knows no music. The recipe store (`cloud_mixes.py`, `mix_contract.py`, immutable revisions) is already metadata-only and carries no audio; it is the one piece of today's catalogue machinery that ports unchanged.
+
+Browser file access facts (checked 2026-11-14, re-verify on hardware): plain file inputs work everywhere; `webkitdirectory` arrived on iPadOS and iOS Safari 18.4; Chrome Android supports File System Access pickers from 132 where available; Samsung Internet does not generally have directory support; Firefox lacks `showDirectoryPicker`. Handles and permissions are not durable: a browser may ask again, and site-data cleanup can clear caches. OPFS, IndexedDB and Cache Storage quotas and eviction differ per browser and private mode is ephemeral.
+
+Nothing here is implemented; no metadata-only catalogue exists on `main`.
+
+## Decision
+
+- **Import, flag `cloud.local_media`.** The browser imports music the member can reach: file input always, directory input and pickers only where capability-tested, never hard-coded per browser. Import parses bounded metadata locally and registers metadata-only catalogue entries with Cloud; the files themselves never leave the device. No claim of OS-wide folder watching or permanent access is made; re-authorisation is a first-class, polite flow when handles lapse.
+- **Canonical track identity.** A track's identity is a content hash plus normalised metadata, computed locally. The same file imported on two devices resolves to one catalogue entry, so a recipe made on the laptop finds its tracks on the tablet holding copies of the same files. Identity never includes raw paths; Cloud stores the identity, the display metadata and which devices report having the track available.
+- **Metadata-only catalogue entries.** The `assets` schema requirement that every row has an `original_key` and `sha256` upload is not bent: metadata-only songs get their own table (or a schema migration making hosted columns optional, decided at implementation with a reversible migration). Rooms' `NoCloudLibrary` is replaced by this catalogue, so a local-first account can host a Room whose requestable songs are its device-available tracks.
+- **Portable recipes.** Mixes stay immutable, versioned, metadata-only revisions in the existing recipe store. A recipe is editable with sources missing: the editor shows which tracks are unavailable on this device and what re-import or re-authorisation would recover them. Opening a recipe where 5 of 8 tracks are missing is a repair flow, not an error page.
+- **Cache, not a second library.** OPFS and IndexedDB hold decoded analysis results, prepared seams and import indexes under quota and eviction handling. Loss of the cache loses time, never music: source files are never deleted, moved or relied on as cache. Private-mode and cleared-storage sessions degrade to re-import, with the member told why.
+
+## User outcome and acceptance contract
+
+A member picks a folder (or files, on browsers without folder pickers), sees their library appear with honest progress, and finds the same library identity on their other devices for anything they also hold there. A recipe follows them. When the browser forgets permission or evicts the cache, SelectaDJ explains and re-imports; it never silently loses a mix or touches the source files.
+
+## Edge cases
+
+- **Permission revoked mid-session.** Reads fail: playback finishes the decoded buffer, upcoming tracks mark unavailable, the member gets the re-authorisation flow; no crash, no silent skip.
+- **Same track, different encodings.** Two files of the same song with different codecs hash differently: they are two entries with a metadata-level "likely duplicate" marker, never silently merged.
+- **Metadata lies.** Wrong or missing tags: identity still works through the content hash; display metadata is editable without changing identity.
+- **Quota exceeded during import.** The import pauses with a clear message and what to free; partial indexes are valid; nothing claims to be imported that is not.
+- **5 of 8 tracks missing on this device.** The repair flow lists the missing tracks, offers re-import, and the recipe still opens read-only for the parts that resolve; verification of this exact case is an ADR-0466 two-device gate.
+- **A Room request for a track that just became unavailable.** The request surface re-checks availability at queue time; unavailable tracks leave the requestable list on the next sync.
+- **Cleared site data.** Everything local except the files is gone: sign-in restores the catalogue identities and recipes from Cloud, availability shows empty until re-import, and the flow says exactly that.
+- **Huge libraries.** Import of 5,000+ tracks is incremental and cancellable; the catalogue pages; memory stays inside the ADR-0457 budget.
+
+## Rejected alternatives
+
+- **Uploading fingerprint audio excerpts to aid matching.** Even short derived audio breaks the no-audio contract; identity uses hashes and metadata only.
+- **Treating OPFS as the library.** Copies of whole libraries into browser storage collide with quotas and eviction and double disk use; storage is cache only.
+- **Raw paths as identity.** Paths differ per device, leak private structure and break the moment a file moves. Rejected outright; Cloud never sees them.
+- **Bending the `assets` table with dummy keys.** Fake `original_key` values would poison every storage invariant and test; metadata-only entries get their own honest shape.
+
+## Implementation checklist - 0/7 Not started; 0/7 independently Verified
+
+1. **BF-0458-01 - Import surfaces.** **Acceptance:** File input everywhere; directory input and pickers behind capability tests on iPadOS 18.4+, Chrome Android 132+, desktop Chromium; a pick-files fallback on every supported browser; honest progress and cancel; behind `cloud.local_media` (registered, `docs/flags.md` regenerated). **Required verification:** Vitest, Playwright in three engines, device-lab import runs. **Implementation:** Not started. **Independently Verified:** No.
+2. **BF-0458-02 - Identity.** **Acceptance:** Content-hash plus normalised-metadata identity; the same file on two simulated devices resolves to one entry; different encodings stay distinct with a duplicate marker; no raw path in any payload (asserted by test). **Required verification:** Unit tests both sides, a payload-audit test. **Implementation:** Not started. **Independently Verified:** No.
+3. **BF-0458-03 - Metadata-only catalogue.** **Acceptance:** A reversible migration adds the metadata-only song shape; availability per device is tracked from device reports with staleness; the no-audio egress check (BF-0455-04) covers the new routes. **Required verification:** Alembic up and down tests, `tests/test_cloud_*` catalogue suites. **Implementation:** Not started. **Independently Verified:** No.
+4. **BF-0458-04 - Rooms on the metadata catalogue.** **Acceptance:** `NoCloudLibrary` replaced: a local-first account opens a Room whose requestable songs are its available tracks; guests see metadata only; request planning consumes availability. **Required verification:** `tests/test_cloud_rooms_*.py` extensions, `test_room_to_play.py`. **Implementation:** Not started. **Independently Verified:** No.
+5. **BF-0458-05 - Recipe portability and repair.** **Acceptance:** A recipe created on device A opens on device B; missing tracks show the repair flow; the 5-of-8 case opens, lists, repairs after re-import; revisions stay immutable through repair. **Required verification:** Vitest, Playwright, and the ADR-0466 real two-device gate. **Implementation:** Not started. **Independently Verified:** No.
+6. **BF-0458-06 - Cache under pressure.** **Acceptance:** OPFS and IndexedDB usage is quota-aware; simulated eviction and private mode degrade to re-import with the member told; source files are proven untouched (no delete or move call exists in the import code path, asserted by test). **Required verification:** Vitest with storage fakes, Playwright storage-pressure spec. **Implementation:** Not started. **Independently Verified:** No.
+7. **BF-0458-07 - Re-authorisation flow.** **Acceptance:** Lapsed handles and revoked permissions produce one consistent flow (what lapsed, what tapping re-grant does); after re-grant the library reconciles without duplicate identities. **Required verification:** Playwright with permission simulation, device-lab evidence. **Implementation:** Not started. **Independently Verified:** No.
+
+## Governance
+
+Accepted by the owner on 2026-11-17. The identity and catalogue design must be reviewed against the privacy pages before BF-0458-03 ships; any change to what Cloud stores for a local-first account routes back through BF-0455-07.
