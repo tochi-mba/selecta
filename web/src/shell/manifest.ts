@@ -7,8 +7,43 @@ import { pathOf, type Route, type WorkshopTab } from '../router';
  * The older addresses stay the real ones. `router.ts` holds the friendlier aliases. */
 
 export type DestinationId = 'listen' | 'explore' | 'mine' | 'library' | 'workspace';
+export type MoreDestinationId = 'account' | 'billing' | 'devices' | 'rooms' | 'uploads';
 
-export type Destination = { id: DestinationId; label: string; path: string; icon: IconName; about: string };
+export type ShellMode = 'local' | 'cloud';
+export type DestinationRequirements = {
+  modes?: readonly ShellMode[];
+  flag?: string;
+  capability?: string;
+};
+export type Destination = { id: DestinationId; label: string; path: string; icon: IconName; about: string; requires?: DestinationRequirements };
+export type MoreDestination = { id: MoreDestinationId; label: string; path: string; requires: DestinationRequirements };
+export type DestinationContext = { mode: ShellMode; feature: (id: string) => boolean; capability: (id: string) => boolean };
+
+/** One requirement evaluator for local and personal Cloud navigation (ADR-0462). */
+export function destinationVisible<T extends { requires?: DestinationRequirements }>(destination: T, context: DestinationContext): boolean {
+  const needs = destination.requires;
+  if (!needs) return true;
+  if (needs.modes && !needs.modes.includes(context.mode)) return false;
+  if (needs.flag && !context.feature(needs.flag)) return false;
+  return !needs.capability || context.capability(needs.capability);
+}
+
+export function destinationsFor(context: DestinationContext): Destination[] {
+  return DESTINATIONS.filter((destination) => destinationVisible(destination, context));
+}
+
+/** Cloud-only account surfaces live behind More, not in a second primary navigation. */
+export const MORE_DESTINATIONS: readonly MoreDestination[] = [
+  { id: 'account', label: 'Account', path: '/account', requires: { modes: ['cloud'] } },
+  { id: 'billing', label: 'Plan & billing', path: '/account/billing', requires: { modes: ['cloud'], flag: 'billing.portal' } },
+  { id: 'devices', label: 'Devices', path: '/account/devices', requires: { modes: ['cloud'], flag: 'devices' } },
+  { id: 'rooms', label: 'Rooms', path: '/rooms', requires: { modes: ['cloud'], flag: 'rooms' } },
+  { id: 'uploads', label: 'Add music', path: '/upload', requires: { modes: ['cloud'], flag: 'cloud.uploads' } },
+];
+
+export function moreDestinationsFor(context: DestinationContext): MoreDestination[] {
+  return MORE_DESTINATIONS.filter((destination) => destinationVisible(destination, context));
+}
 
 /** A list in words, `a, b and c`, of whichever parts are there. */
 export function listed(parts: (string | false)[]): string {
@@ -28,11 +63,11 @@ export function aboutOf(id: DestinationId): string {
 }
 
 export const DESTINATIONS: Destination[] = [
-  { id: 'listen', label: 'Listen', path: '/listen', icon: 'music', about: 'What’s playing, what’s next and the lyrics' },
-  { id: 'explore', label: 'Make a Mix', path: '/mixes', icon: 'explore', about: 'Choose an idea, shape the journey, then play, edit or save it' },
-  { id: 'mine', label: 'My Mixes', path: '/mixes/mine', icon: 'mixes', about: 'Your current mix, your drafts and the render line' },
-  { id: 'library', label: 'Library', path: '/library', icon: 'library', about: 'Every song, with its details and corrections' },
-  { id: 'workspace', label: 'Workspace', path: '/workshop', icon: 'settings', about: 'Analysis, folders, storage, learning and diagnostics' },
+  { id: 'listen', label: 'Listen', path: '/listen', icon: 'music', about: "What's playing, what's next and the lyrics", requires: { modes: ['local', 'cloud'] } },
+  { id: 'explore', label: 'Make a Mix', path: '/mixes', icon: 'explore', about: 'Choose an idea, shape the journey, then play, edit or save it', requires: { modes: ['local', 'cloud'] } },
+  { id: 'mine', label: 'My Mixes', path: '/mixes/mine', icon: 'mixes', about: 'Your current mix, your drafts and the render line', requires: { modes: ['local', 'cloud'] } },
+  { id: 'library', label: 'Library', path: '/library', icon: 'library', about: 'Every song, with its details and corrections', requires: { modes: ['local', 'cloud'] } },
+  { id: 'workspace', label: 'Workspace', path: '/workshop', icon: 'settings', about: 'Analysis, folders, storage, learning and diagnostics', requires: { modes: ['local', 'cloud'] } },
 ];
 
 /** The kill switch's navigation: the older labels, over the very same pages. */

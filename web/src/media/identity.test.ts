@@ -60,7 +60,7 @@ describe('assertNoPath', () => {
   });
 
   it('catches the whole family of path-shaped keys regardless of case', () => {
-    for (const key of ['Path', 'file_path', 'fullPath', 'relativePath', 'directory', 'folder']) {
+    for (const key of ['Path', 'file_path', 'fullPath', 'relativePath', 'sourcePath', 'musicDirectory', 'sourceFolder']) {
       expect(() => assertNoPath({ [key]: 'x' })).toThrow(/never leave this device/);
     }
   });

@@ -21,6 +21,7 @@ describe('runImport', () => {
     expect(summary).toMatchObject({ imported: 3, duplicates: 0, failed: 0, cancelled: false, paused: false });
     const posts = songsPosts(calls);
     expect(posts).toHaveLength(2);
+    expect(posts[0].headers).toEqual({ 'content-type': 'application/json' });
     expect((posts[0].body as { songs: unknown[] }).songs).toHaveLength(2);
     expect((posts[1].body as { songs: unknown[] }).songs).toHaveLength(1);
     const availability = availabilityPosts(calls);
@@ -39,6 +40,40 @@ describe('runImport', () => {
     await runImport({ source: fakeDirectory('Music', handles), request, store, deviceId: 'dev-1', readTags: tagsFromName });
     expect(calls.length).toBeGreaterThan(0);
     for (const call of calls) expect(() => assertNoPath(call.body)).not.toThrow();
+  });
+
+  it('only reads source handles; importing never moves or deletes the member\'s files', async () => {
+    const { request } = captureRequest();
+    const store = await MediaStore.open();
+    const file = bytesFile('owned audio', 'mine.flac');
+    const touched = { reads: 0, destructive: 0 };
+    const handle = {
+      kind: 'file' as const,
+      name: file.name,
+      async getFile() { touched.reads += 1; return file; },
+      async remove() { touched.destructive += 1; throw new Error('must not run'); },
+      async move() { touched.destructive += 1; throw new Error('must not run'); },
+    };
+    const summary = await runImport({
+      source: [handle], request, store, deviceId: 'dev-owned', readTags: tagsFromName,
+    });
+    expect(summary.imported).toBe(1);
+    expect(touched).toEqual({ reads: 1, destructive: 0 });
+  });
+
+  it('omits an unknown duration and repairs blank tags before registration', async () => {
+    const { request, calls } = captureRequest();
+    const store = await MediaStore.open();
+    await runImport({
+      source: [bytesFile('one', 'Fallback title.flac')],
+      request,
+      store,
+      deviceId: 'dev-1',
+      readTags: async () => ({ title: '   ', artist: '\t', duration_s: 0 }),
+    });
+    const [entry] = (songsPosts(calls)[0].body as { songs: Record<string, unknown>[] }).songs;
+    expect(entry).toMatchObject({ title: 'Fallback title', artist: 'Unknown artist' });
+    expect(entry).not.toHaveProperty('duration_s');
   });
 
   it('skips files that are not audio, counting them honestly', async () => {

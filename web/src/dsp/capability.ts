@@ -86,3 +86,24 @@ export class CapabilityRegistry {
 
 /** The shared registry most callers use; tests may build their own. */
 export const capabilities = new CapabilityRegistry();
+
+/** The capabilities this build actually contains. This is code rather than marketing copy:
+ * result producers name these implementation ids, and unsupported stretch stays explicit. */
+export function registerBrowserDspCapabilities(registry: CapabilityRegistry = capabilities): CapabilityRegistry {
+  for (const record of [
+    { feature: 'crossfade', tier: 1, implementation: 'equal-power-crossfade-v1', status: 'ready' },
+    { feature: 'loudness', tier: 1, implementation: 'ebu-r128-loudness-v1', status: 'ready' },
+    { feature: 'true_peak', tier: 1, implementation: 'oversampled-true-peak-v1', status: 'ready' },
+    { feature: 'limiter', tier: 1, implementation: 'lookahead-limiter-v1', status: 'ready' },
+    { feature: 'onsets', tier: 2, implementation: 'spectral-flux-onsets-v1', status: 'ready' },
+    { feature: 'tempo', tier: 2, implementation: 'lightweight-tempo-v1', status: 'ready' },
+    { feature: 'key', tier: 2, implementation: 'lightweight-chroma-v1', status: 'ready' },
+  ] as const) registry.register(record);
+  registry.markUnsupported(
+    'time_stretch', 2, 'time-stretch-unsupported-v0',
+    'no vetted pitch-preserving stretch is bundled',
+  );
+  return registry;
+}
+
+registerBrowserDspCapabilities();

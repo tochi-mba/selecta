@@ -72,7 +72,7 @@ function InterfaceChoices() {
 }
 
 /** How much is ready, what's running, what's stuck and what needs someone, in that order. */
-function Overview({ status, request }: { status: ViewProps['status']; request: Request }) {
+function Overview({ status, request }: { status: ViewProps['status']; request?: Request }) {
   // ADR-0462: the folders read goes through the injected request.
   const get = getVia(request);
   const { counts } = status;

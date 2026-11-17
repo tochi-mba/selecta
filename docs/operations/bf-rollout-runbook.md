@@ -131,3 +131,25 @@ enter until green again.
   evidence is recorded.
 - Flip guard: `src/selecta/flags/flip_guard.py` (unit tests in `tests/test_bf_flip_guard.py`).
 - Egress capture (gate 4): `tools/bf_egress_capture.py`.
+
+## Voluntary migration and reconciliation questions (ADR-0465)
+
+Migration is never a support-side flag change and never authorises deletion. If a member asks to
+move from hosted playback to device-local playback, establish these facts in order:
+
+1. **Which export?** Confirm the account export completed and record its manifest/checksum. An
+   incomplete archive is not a migration input.
+2. **Which device and files?** Ask which device performed the local import and whether browser
+   file permission is still live. "Imported" does not mean "available on every device".
+3. **What matched exactly?** Reconciliation matches content identity, not title/artist. Report
+   matched, unmatched and likely-duplicate recordings separately; never merge a re-encode by
+   metadata.
+4. **Do recipes resolve?** For each affected recipe, report which recording references resolve
+   locally, which remain hosted-only, and which are unavailable. A partial result is not called
+   complete.
+5. **Is the hosted library untouched?** Verify stored assets still list and play. Do not revoke
+   `cloud.hosted_media`, delete objects, or alter retention as part of reconciliation.
+
+If the member stops, the safe outcome is coexistence: device-local files play where available and
+stored originals remain readable. Actual deletion stays a separate member-initiated operation
+under ADR-0412 and its deletion ledger.

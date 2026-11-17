@@ -55,6 +55,8 @@ sys.path.insert(0, str(ROOT / "tests"))
 import e2e_cloud_server  # noqa: E402  (the repo's own e2e server; pulls the repo's deps)
 import uvicorn  # noqa: E402  (already a repo dependency; e2e_cloud_server serves with it)
 
+from selecta import flags  # noqa: E402
+
 # Metadata-only registrations are small JSON; anything near this is suspicious whatever it says
 # in its content type.
 DEFAULT_MAX_BODY = 256 * 1024
@@ -158,10 +160,10 @@ def metadata_songs(count: int) -> list[dict]:
         identity = hashlib.sha256(f"bf-egress-capture-song-{number}".encode()).hexdigest()
         songs.append(
             {
-                "sha256": identity,
+                "content_sha256": identity,
                 "title": f"Capture song {number + 1}",
                 "artist": "Egress Capture",
-                "duration_seconds": 180.0 + number,
+                "duration_s": 180.0 + number,
             }
         )
     return songs
@@ -180,6 +182,15 @@ def scripted_actions(base: str, songs: int) -> tuple[str, list[dict]]:
             "/api/onboarding/complete",
             token,
             {"age_confirmed": True, "timezone": "Europe/London"},
+        ),
+        # The production cutover uses the same USERS rule. This test-only endpoint installs it
+        # after onboarding, when the principal has an id.
+        call(
+            base,
+            "POST",
+            "/test/flags/off",
+            token,
+            {"user": account, "flags": ["cloud.hosted_media"]},
         ),
         call(base, "GET", "/api/account", token),
         call(base, "POST", "/api/local-media/songs", token, {"songs": metadata_songs(songs)}),
@@ -222,6 +233,9 @@ def main() -> int:
     port = options.port or free_port()
     base = f"http://127.0.0.1:{port}"
 
+    # The metadata catalogue ships dark. Turn it on at the build layer for this isolated process;
+    # the hosted-media grant is still revoked per account through the real rule layer below.
+    flags.use("+cloud.local_media")
     print(f"Building the e2e cloud server (fresh database) for {base} ...")
     app = e2e_cloud_server.build(port)
     recorder = RecordingASGI(app, out / "egress-capture.jsonl")

@@ -114,6 +114,25 @@ describe('overlapping device polls (AV-0419-05)', () => {
 });
 
 describe('the playing bar on a phone (SC-0415-05)', () => {
+  it('calls a stale speaker uncertain instead of claiming it is playing', async () => {
+    const api = (async (path: string) => {
+      if (path === '/devices') return { device: {
+        id: 'phone', name: 'Phone', kind: 'phone', signed_in: true,
+        this_device: true, poor_speaker: false, last_seen_at: 0, warnings: [],
+      }, notice: null };
+      if (path === '/playback/reconnect') return {
+        action: 'stop_moved', session: { ...session, state_confidence: 'uncertain' }, message: null,
+      };
+      if (path.startsWith('/playback/session')) return {
+        ...elsewhere, session: { ...session, state_confidence: 'uncertain' },
+      };
+      throw new Error(`unexpected ${path}`);
+    }) as Api;
+    render(<PlayingBar api={api} workspaceId="ws-uncertain" source={source} />);
+    expect(await screen.findByText(/has not checked in recently and may still be playing/)).toBeVisible();
+    expect(screen.queryByText(/^Playing on /)).toBeNull();
+  });
+
   it('warns an iPhone to keep the screen on when it is asked to play here', async () => {
     render(<PlayingBar api={fakeApi([{ code: 'ios_keep_screen_on', text: IOS_WARNING }])} workspaceId="ws" source={source} />);
     expect(await screen.findByText('Playing on Living-room laptop', {}, { timeout: 8000 })).toBeTruthy();

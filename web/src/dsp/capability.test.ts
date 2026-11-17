@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { CapabilityError, CapabilityRegistry } from './capability';
+import { CapabilityError, CapabilityRegistry, registerBrowserDspCapabilities } from './capability';
 
 describe('capability registry', () => {
+  it('registers implemented tiers and keeps time-stretch honestly unavailable', () => {
+    const registry = registerBrowserDspCapabilities(new CapabilityRegistry());
+    expect(registry.get('crossfade')).toMatchObject({ tier: 1, status: 'ready', implementation: 'equal-power-crossfade-v1' });
+    expect(registry.get('tempo')).toMatchObject({ tier: 2, status: 'ready', implementation: 'lightweight-tempo-v1' });
+    expect(registry.get('time_stretch')).toMatchObject({
+      tier: 2, status: 'unsupported_here', implementation: 'time-stretch-unsupported-v0',
+    });
+  });
   it('round-trips a record through register, get and list', () => {
     const registry = new CapabilityRegistry();
     registry.register({

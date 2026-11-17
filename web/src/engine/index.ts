@@ -45,13 +45,27 @@ export type Engine = {
 export function createEngine(options: { onState?: (state: EngineState) => void } = {}): Engine {
   const store = createEngineStore();
   const unsubscribe = options.onState ? store.subscribe(options.onState) : null;
+  const contexts = new Set<EngineContext>();
+  const speakers = new Set<BrowserSpeaker>();
   return {
     store,
     state: () => store.get(),
-    openContext: (opened) => createEngineContext({ ...opened, store }),
+    openContext: (opened) => {
+      const made = createEngineContext({ ...opened, store });
+      if (!isUnsupported(made)) contexts.add(made);
+      return made;
+    },
     probe: probeCapability,
-    createSpeaker: (made) => new BrowserSpeaker({ ...made, store }),
+    createSpeaker: (made) => {
+      const speaker = new BrowserSpeaker({ ...made, store });
+      speakers.add(speaker);
+      return speaker;
+    },
     dispose() {
+      for (const speaker of speakers) speaker.dispose();
+      speakers.clear();
+      for (const context of contexts) context.dispose();
+      contexts.clear();
       unsubscribe?.();
     },
   };

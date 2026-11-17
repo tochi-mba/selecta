@@ -1,10 +1,10 @@
 # ADR-0467 - Rollout order, refactor sequence and programme governance
 
 - **Decision:** Accepted (owner, 2026-11-17).
-- **Implementation:** 0/6 Not started.
+- **Implementation:** 3/6 Implemented; 3/6 Not started.
 - **Independent verification:** 0/6 Verified.
 - **Programme/date/baseline:** Browser-first Cloud (BF); 2026-11-17; `main` at `7d7f7932`.
-- **Priority / phase:** P1 / spans BF0 to BF6. **Owner:** Unassigned. **Implementing PR/SHA:** None yet.
+- **Priority / phase:** P1 / spans BF0 to BF6. **Owner:** Unassigned. **Implementing PR:** #96.
 - **Existing ADR owners:** ADR-0414 (targeting: rules, percentage rollout, Labs): unchanged, supplies the mechanics. The SC (Cloud implementation), AV (Autopilot) and BZ (Business) programmes: unchanged; they consume the browser player once qualified and nothing here blocks them. Sibling BF ADRs: all.
 - **Source touchpoints:** `src/selecta/flags/cloud.json` and `src/selecta/flags/rules.py` (flag choreography); `web/src/` refactor areas named in ADR-0462; `src/selecta/` gating areas named in ADR-0456; `docs/adr/README.md` (programme index).
 - **Proposal chapter:** [docs/saas/17-roadmap-and-risks.md](../saas/17-roadmap-and-risks.md).
@@ -13,7 +13,8 @@
 
 Twelve ADRs define what; this one fixes in which order, because two orderings are load-bearing: the grandfather rule must exist before the default flips (ADR-0465), and shared-shell refactors must prove local mode unchanged before Cloud consumes them (ADR-0462). The flag mechanics for staged rollout (rules, percentage with stable hashing, Labs beta for `kind: beta`, admin preview) are built and tested on `main`; this programme only choreographs them.
 
-Nothing below is implemented; dates are deliberately absent because gates, not dates, advance phases.
+The dark-step ledger, flip guard and CI oracle are implemented on PR #96. The rollout itself has
+not advanced: dates are deliberately absent because gates, not dates, advance phases.
 
 ## Decision
 
@@ -53,11 +54,11 @@ Members experience this as nothing, then an invitation, then a better default th
 - **Feature-branch integration of all BF work** (the PR #64 pattern): one giant unreviewable branch is what this set replaces; work lands dark on `main` behind flags, step by step.
 - **Governance by checklist file alone.** Inline ADR checklists plus the README section and the gate register keep decision, tasks and release truth each in one place; a parallel tracker would drift.
 
-## Implementation checklist - 0/6 Not started; 0/6 independently Verified
+## Implementation checklist - 3/6 Implemented; 3/6 Not started; 0/6 independently Verified
 
-1. **BF-0467-01 - Flip guard.** **Acceptance:** A release-gate check refuses turning `cloud.local_first` default on unless the grandfather rule exists, is verified against the detection query, and the register's release-critical gates are green; the refusal names what is missing. **Required verification:** Unit test of the guard, one rehearsed refused flip. **Implementation:** Not started. **Independently Verified:** No.
-2. **BF-0467-02 - Step ledger.** **Acceptance:** The rollout step, its entry evidence and its rollback are recorded per step in `docs/verification/` as they happen; the current step is always answerable. **Required verification:** Ledger review at each step. **Implementation:** Not started. **Independently Verified:** No.
-3. **BF-0467-03 - Local-unchanged oracle in CI.** **Acceptance:** The flag sweep plus full local e2e run as the explicit merge bar for every ADR-0462 refactor PR, called out in the PR template for BF work. **Required verification:** CI configuration review, one refactor PR exercising it. **Implementation:** Not started. **Independently Verified:** No.
+1. **BF-0467-01 - Flip guard.** **Acceptance:** A release-gate check refuses turning `cloud.local_first` default on unless the grandfather rule exists, is verified against the detection query, and the register's release-critical gates are green; the refusal names what is missing. **Required verification:** Unit test of the guard, one rehearsed refused flip. **Implementation:** Implemented in `src/selecta/flags/flip_guard.py` with refusal and success coverage in `tests/test_bf_flip_guard.py`. **Independently Verified:** No.
+2. **BF-0467-02 - Step ledger.** **Acceptance:** The rollout step, its entry evidence and its rollback are recorded per step in `docs/verification/` as they happen; the current step is always answerable. **Required verification:** Ledger review at each step. **Implementation:** Implemented in `docs/verification/bf-step-ledger.md`; it truthfully remains at Step 1 - dark. **Independently Verified:** No.
+3. **BF-0467-03 - Local-unchanged oracle in CI.** **Acceptance:** The flag sweep plus full local e2e run as the explicit merge bar for every ADR-0462 refactor PR, called out in the PR template for BF work. **Required verification:** CI configuration review, one refactor PR exercising it. **Implementation:** Implemented by the existing required flag-sweep and browser jobs in `.github/workflows/test.yml`, with the BF-specific obligation now explicit in `.github/pull_request_template.md`; the PR's green run is still required verification. **Independently Verified:** No.
 4. **BF-0467-04 - Dashboards before percentage.** **Acceptance:** The per-mode cost dashboard (BF-0464-05) and an error-rate view per flag cohort exist before step 4 begins; the step ledger links them. **Required verification:** Dashboards live with real data. **Implementation:** Not started. **Independently Verified:** No.
 5. **BF-0467-05 - Labs opening.** **Acceptance:** The Labs opt-in path for the beta cohort works end to end (opt in, truthful experience, opt out, feedback captured) and respects every layer (plan, rules, kill switch). **Required verification:** `tests/test_cloud_flag_*` Labs cases, Playwright opt-in spec. **Implementation:** Not started. **Independently Verified:** No.
 6. **BF-0467-06 - Owner flip decision.** **Acceptance:** The owner reviews the register and the step ledger and records the decision to flip the default (or not yet); the flip itself happens only after that record. **Required verification:** Owner's recorded decision. **Implementation:** Not started. Needs a person: the owner. **Independently Verified:** No.

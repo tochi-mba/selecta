@@ -400,6 +400,8 @@ def install_routes(
                 body.args,
                 body.based_on_seq,
                 key,
+                fence=body.fence,
+                ttl_seconds=body.ttl_seconds,
                 events=events,
             )
         except PlaybackError as error:
@@ -421,6 +423,31 @@ def install_routes(
                 },
             )
         return answer
+
+    @app.post("/api/playback/commands/{command_id}/ack")
+    def playback_command_ack(
+        command_id: str,
+        body: AckBody,
+        request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ) -> dict[str, Any]:
+        """Record delivery to local state, never an audibility claim (ADR-0461)."""
+        found = principal(request, claims, "devices.remote_control")
+        here = mine(found, body.device_id, request)
+        try:
+            result = fencing.ack_command(
+                engine, found.workspace.id, here, command_id, body.result
+            )
+        except PlaybackError as error:
+            raise refused(error) from error
+        return {
+            "command_id": result.command_id,
+            "ack_result": result.ack_result,
+            "acked_at": result.acked_at,
+            "fence": result.fence,
+            "replayed": result.replayed,
+            "audible": False,
+        }
 
 
 __all__ = ["DEVICE_COOKIE", "device_json", "install_routes"]

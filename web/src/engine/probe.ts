@@ -24,7 +24,7 @@ export type ProbeResult = ProbeOk | ProbeFailure;
 type ProbeReport = { type: 'probe-report'; blocks: number; misses: number; sampleRate: number };
 
 type ProbePort = {
-  onmessage: ((event: { data: unknown }) => void) | null;
+  onmessage: ((event: MessageEvent<unknown>) => void) | null;
   close?(): void;
 };
 type ProbeNode = {

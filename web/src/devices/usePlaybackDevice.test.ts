@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { Api, extrapolate, FADE_MS, SessionState, Speaker, SPEAKER_POLL_MS, START_DELAY_MS, usePlaybackDevice } from './usePlaybackDevice';
 
@@ -19,6 +19,42 @@ describe('the playback session on a device', () => {
 
   it('waits for the old speaker to hear and fade before starting here', () => {
     expect(START_DELAY_MS).toBeGreaterThan(SPEAKER_POLL_MS + FADE_MS);
+  });
+
+  it('stamps remote commands with the current fence and a short TTL', async () => {
+    let sent: RequestInit | undefined;
+    const quiet: Speaker = {
+      start: async () => undefined, stop: () => undefined, pause: () => undefined,
+      resume: () => undefined, position: () => null, active: () => false,
+    };
+    const api = (async (path: string, init?: RequestInit) => {
+      if (path === '/devices') return { device: {
+        id: 'remote', name: 'Remote', kind: 'phone', signed_in: true,
+        this_device: true, poor_speaker: false, last_seen_at: 0, warnings: [],
+      }, notice: null };
+      if (path === '/playback/reconnect') return {
+        action: 'stop_moved', session: session({ fence: 9 }), message: null,
+      };
+      if (path.startsWith('/playback/session')) return {
+        session: session({ fence: 9 }), speaker: 'elsewhere', speaker_device_id: 'd1',
+        speaker_name: 'Tablet', ask_before_playing_here: true, server_time: 1000,
+      };
+      if (path === '/playback/commands') {
+        sent = init;
+        return { status: 'applied', session: session({ fence: 9 }) };
+      }
+      throw new Error(`unexpected ${path}`);
+    }) as Api;
+    const hook = renderHook(() => usePlaybackDevice({
+      api, workspaceId: 'ws-fenced-command', speaker: quiet,
+    }));
+    try {
+      await waitFor(() => expect(hook.result.current.view?.session?.fence).toBe(9));
+      await act(async () => { await hook.result.current.command('pause'); });
+      const body = JSON.parse(String(sent?.body));
+      expect(body).toMatchObject({ command: 'pause', fence: 9, ttl_seconds: 60, based_on_seq: 4 });
+      expect(body.idempotency_key).toEqual(expect.any(String));
+    } finally { hook.unmount(); }
   });
 
   it('stops the buffered speaker when an unreachable server cannot renew its lease', async () => {

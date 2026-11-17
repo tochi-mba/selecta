@@ -320,12 +320,12 @@ export type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
 export const request: Request = (path, init) => send(path, init);
 
 /** `get` over an injected request, with the local `get`'s exact semantics. */
-export const getVia = (via: Request) => <T,>(path: string): Promise<T> => via<T>(path);
+export const getVia = (via: Request = request) => <T,>(path: string): Promise<T> => via<T>(path);
 
 /** `post` over an injected request. The operation-id behaviour is identical to the local `post`:
  * every change carries one (T0094), and an id made up here is remembered so an ApiError does not
  * present it as something Diagnostics could look up (T0244). */
-export const postVia = (via: Request) => <T,>(path: string, body?: unknown, headers?: Record<string, string>): Promise<T> => {
+export const postVia = (via: Request = request) => <T,>(path: string, body?: unknown, headers?: Record<string, string>): Promise<T> => {
   const init: RequestInit = {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-operation-id': newOperationId(), ...headers },
@@ -336,7 +336,7 @@ export const postVia = (via: Request) => <T,>(path: string, body?: unknown, head
 };
 
 /** `del` over an injected request, with the local `del`'s exact semantics. */
-export const delVia = (via: Request) => <T,>(path: string, headers?: Record<string, string>): Promise<T> => via<T>(path, { method: 'DELETE', headers });
+export const delVia = (via: Request = request) => <T,>(path: string, headers?: Record<string, string>): Promise<T> => via<T>(path, { method: 'DELETE', headers });
 
 export const get = <T,>(path: string) => send<T>(path);
 

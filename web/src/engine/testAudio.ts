@@ -41,6 +41,10 @@ export class FakeNode {
 
 export class FakeGainNode extends FakeNode {
   readonly gain = new FakeAudioParam();
+  /** Automation belongs to gain.gain in Web Audio; expose the fake's recorded events here too. */
+  get events() {
+    return this.gain.events;
+  }
 }
 
 export class FakeAnalyserNode extends FakeNode {
@@ -134,7 +138,13 @@ export class FakeAudioContext extends FakeBaseContext {
   /** Present only when a test sets it; probe.ts feature-detects it on the instance. The
    * `declare` keeps it out of the emitted class fields, so an unset context really has no
    * such property and a subclass may define it as a getter. */
-  declare audioWorklet?: { addModule(url: string | URL): Promise<void> };
+  private worklet?: { addModule(url: string | URL): Promise<void> };
+  get audioWorklet() {
+    return this.worklet;
+  }
+  set audioWorklet(value: { addModule(url: string | URL): Promise<void> } | undefined) {
+    this.worklet = value;
+  }
   /** Swap in a failing decode to test the per-file error path. */
   decode: (bytes: ArrayBuffer) => Promise<FakeAudioBuffer> = async (bytes) =>
     bufferOfSeconds(bytes.byteLength / 1000, this.sampleRate);
@@ -177,12 +187,12 @@ export class FakeOfflineAudioContext extends FakeBaseContext {
 /** The worklet node shape probe.ts drives; tests emit the report themselves. */
 export class FakeWorkletNode extends FakeNode {
   readonly port = {
-    onmessage: null as ((event: { data: unknown }) => void) | null,
+    onmessage: null as ((event: MessageEvent<unknown>) => void) | null,
     postMessage: (_message: unknown) => {},
     close: () => {},
   };
   emit(data: unknown) {
-    this.port.onmessage?.({ data });
+    this.port.onmessage?.({ data } as MessageEvent<unknown>);
   }
 }
 

@@ -7,11 +7,10 @@ import { listener, signedIn } from './cloud';
 // loads the cloud app signed in, runs a worklet probe in the page, and records
 // { engine, sampleRate, misses } to the test report.
 //
-// Until web/src/engine/probe.ts ships (BF-0457-02, BF-0460-01) the app bundle exposes no probe,
-// so this spec drives the page directly: it creates an AudioContext and loads a probe worklet
-// from an inline processor (via a Blob URL) that counts its own process() calls and scheduling
-// gaps. Once the real probe exists, replace the inline processor with the app's own probe
-// through the bundle, keeping the tripwire below.
+// The app probe now exists, but the production bundle deliberately does not expose internals on
+// window. This independent tripwire drives the same browser primitives directly and prevents CI
+// from mistaking a mocked AudioContext for engine evidence. Wiring the app probe itself into this
+// three-engine run remains part of BF-0466-03, so the ADR records this item as In progress.
 //
 // The anti-mock tripwire: the worklet must GENUINELY have processed. We sample its process()
 // counter twice and require the second reading to be larger - a stub, a mocked AudioContext or
@@ -95,7 +94,7 @@ test('the engine probe worklet genuinely processes audio quanta, with recorded n
   expect(probed.sampleRate).toBeGreaterThan(0);
 
   // The recorded numbers the gate asks for. The engine name must eventually be one of
-  // chromium, firefox and webkit per the register; today's cloud project is Edge (Chromium).
+// chromium, firefox and webkit per the register; the dedicated config runs exactly those three.
   const recorded = {
     engine: testInfo.project.name || 'chromium (msedge channel)',
     sampleRate: probed.sampleRate,

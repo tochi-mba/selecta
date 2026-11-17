@@ -148,7 +148,7 @@ async function opfsRoot(): Promise<OpfsDirectory | null> {
       ? (navigator.storage as (StorageManager & { getDirectory?: () => Promise<OpfsDirectory> }) | undefined)
       : undefined;
     if (!storage?.getDirectory) return null;
-    return await storage.getDirectory();
+    return await storage.getDirectory() as unknown as OpfsDirectory;
   } catch {
     return null;
   }

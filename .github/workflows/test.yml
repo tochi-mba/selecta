@@ -519,6 +519,17 @@ jobs:
       - name: Cloud browser tests, in Edge, muted
         run: pnpm e2e:cloud
         working-directory: web
+      - name: Browser engine truth in Chromium, Firefox and WebKit, muted
+        run: pnpm e2e:engine-truth
+        working-directory: web
+      - name: Keep browser engine truth records
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: browser-engine-truth
+          path: web/test-results/engine-truth
+          if-no-files-found: error
+          retention-days: 14
       - name: Playback proxy sample alignment in Chrome, Edge, Firefox and WebKit
         run: pnpm e2e:alignment
         working-directory: web

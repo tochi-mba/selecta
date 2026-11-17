@@ -16,9 +16,47 @@ export type Account = {
   usage?: Usage;
   billing?: { consent_version: string };
   lucy?: { tier: string };
+  /** One server-decided answer for the two independent Cloud grants (BF-0455-03). */
+  experience?: { local_first: boolean; hosted: boolean };
   features: Record<string, boolean>;
   feature_locks: Record<string, string>;
 };
+
+export type CloudModeCopy = {
+  heading: string;
+  privacy: string;
+  source: 'device' | 'hosted' | 'both' | 'none';
+};
+
+/** Member-facing words for the decided Cloud experience (BF-0455-06).
+ *
+ * Keep this keyed by the account snapshot rather than scattering flag checks and jargon through
+ * pages. Hosted mode is intentionally described as available, never legacy or deprecated.
+ */
+export function cloudModeCopy(account: Pick<Account, 'experience'> | null): CloudModeCopy {
+  const local = account?.experience?.local_first === true;
+  const hosted = account?.experience?.hosted === true;
+  if (local && hosted) return {
+    heading: 'Use music on this device or from your Cloud library',
+    privacy: 'Music you connect locally stays on this device. Your hosted library remains available in SelectaDJ Cloud.',
+    source: 'both',
+  };
+  if (local) return {
+    heading: 'Use music on this device',
+    privacy: 'Your music stays on this device. SelectaDJ Cloud keeps only the details needed for your library and mixes.',
+    source: 'device',
+  };
+  if (hosted) return {
+    heading: 'Use your SelectaDJ Cloud library',
+    privacy: 'Your hosted music remains available in SelectaDJ Cloud.',
+    source: 'hosted',
+  };
+  return {
+    heading: 'Connect music to begin',
+    privacy: 'SelectaDJ has not been given access to music for this account.',
+    source: 'none',
+  };
+}
 export type Asset = { id: string; name: string; size: number; sha256: string | null; format: string | null; duration_seconds: number | null; sample_rate: number | null; channels: number | null; created_at: number };
 export type Api = <T>(path: string, init?: RequestInit, workspaceId?: string) => Promise<T>;
 export type Page = 'home' | 'listen' | 'library' | 'uploads' | 'billing' | 'settings';
@@ -36,7 +74,12 @@ export function lockedTo(account: Pick<Account, 'feature_locks'> | null, flag: s
 }
 
 /** The flag a page needs, if any: with it off the page is gone, from the menu and the address. */
-const PAGE_FLAGS: Partial<Record<Page, string>> = { library: 'cloud.uploads', uploads: 'cloud.uploads' };
+// Reading an existing library is independent from the hosted-media write grant (ADR-0456).
+// Revoking uploads must never make somebody's stored music disappear.
+const PAGE_FLAGS: Partial<Record<Page, string>> = {
+  library: 'cloud.stored_media',
+  uploads: 'cloud.uploads',
+};
 
 export function pageShown(account: Pick<Account, 'features'> | null, page: Page) {
   const flag = PAGE_FLAGS[page];

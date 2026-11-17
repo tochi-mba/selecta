@@ -5,6 +5,7 @@ import { DevicesPanel } from '../devices/DevicesPanel';
 import { DeviceCheck, showsDeviceCheck } from '../devices/DeviceCheck';
 import { CloudListen } from '../rooms/CloudListen';
 import { LucyCloudSettings } from '../views/LucyCloudSettings';
+import { DESTINATIONS } from '../shell/manifest';
 import { AccountDanger, AccountData } from './AccountData';
 import { AccountProblem, accountProblem, blockedMessage } from './accountStates';
 import { Account, apiOrigin, CloudError, featureOn, idempotencyKey, isOverQuota, lockedTo, messageOf, Page, pageShown, planName } from './api';
@@ -46,7 +47,8 @@ export function pageFor(pathname: string): Page {
 }
 
 const PATHS: Record<Page, string> ={ home: '/', listen: '/listen', library: '/library', uploads: '/upload', billing: '/account/billing', settings: '/account' };
-const LABELS: Record<Page, string> = { home: 'Overview', listen: 'Listen', library: 'Library', uploads: 'Add music', billing: 'Plan & billing', settings: 'Settings' };
+const sharedLabel = (id: 'listen' | 'library') => DESTINATIONS.find((destination) => destination.id === id)!.label;
+const LABELS: Record<Page, string> = { home: 'Overview', listen: sharedLabel('listen'), library: sharedLabel('library'), uploads: 'Add music', billing: 'Plan & billing', settings: 'Settings' };
 const TITLES: Record<Page, string> = { home: 'Your music workspace', listen: 'Listen', library: 'Your library', uploads: 'Add music', billing: 'Plan & billing', settings: 'Account settings' };
 
 export function CloudApp() {
