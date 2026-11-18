@@ -159,9 +159,9 @@ function Report({ rows, truncated, onRefresh }: { rows: ReconciledRow[]; truncat
   if (!rows.length && truncated) {
     return (
       <>
-        <p role="status">This report reached the 10,000-item safety limit. It may not include every item; narrow your library or ask support for a full reconciliation.</p>
+        {/* one status, said once: the limit, what it means for this empty result, and what to do */}
         <div className="cloud-reconcile-partial">
-          <p role="status">No comparable items were found in the portion scanned. This partial report cannot confirm that the full libraries have no matches. Narrow your library or ask support for a full reconciliation.</p>
+          <p role="status">This report reached the 10,000-item safety limit. No comparable items were found in the portion scanned, so it cannot confirm that the full libraries have no matches. Narrow your library or ask support for a full reconciliation.</p>
           <button type="button" onClick={onRefresh}>Check again</button>
         </div>
       </>

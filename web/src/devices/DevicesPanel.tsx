@@ -1,7 +1,7 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Action } from '../ui/controls';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { relativeTime } from '../ui/format';
+import { ELLIPSIS, relativeTime } from '../ui/format';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { Api, Device, DEVICE_REGISTERED } from './usePlaybackDevice';
 import './devices.css';
@@ -71,7 +71,7 @@ export function DevicesPanel({ api, workspaceId, notice = '' }: { api: Api; work
               <form onSubmit={(event: FormEvent) => { event.preventDefault(); void rename(device); }}>
                 <label htmlFor={`rename-${device.id}`}>Device name</label>
                 <input id={`rename-${device.id}`} value={name} maxLength={60} onChange={(event) => setName(event.target.value)} autoFocus />
-                <Action type="button" className="primary" run={() => rename(device)} working="Saving...">Save</Action>
+                <Action type="button" className="primary" run={() => rename(device)} working={`Saving${ELLIPSIS}`}>Save</Action>
                 <button type="button" onClick={() => setEditing(null)}>Cancel</button>
               </form>
             ) : (
@@ -89,11 +89,11 @@ export function DevicesPanel({ api, workspaceId, notice = '' }: { api: Api; work
       </ul>
       {forgetting && (
         <ConfirmDialog
-          title="Forget this device?"
-          body="It can be paired again any time."
-          confirmLabel="Forget this device"
+          title={`Sign out ${forgetting.name}?`}
+          body="That device is signed out of your account. It can sign in again any time."
+          confirmLabel="Sign out this device"
           destructive
-          working="Signing out..."
+          working={`Signing out${ELLIPSIS}`}
           onConfirm={() => signOut(forgetting)}
           onClose={() => setForgetting(null)}
         />

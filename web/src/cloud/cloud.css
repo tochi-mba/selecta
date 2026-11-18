@@ -425,6 +425,18 @@
 }
 .cloud-reconcile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cloud-reconcile-list small { grid-column: 1 / -1; color: var(--text-soft); }
+/* a capped scan that found nothing: the same card rhythm as the report's rows, its status in the
+   warning tone so it never reads as a clean "no matches" */
+.cloud-reconcile-partial {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  padding: var(--space-3);
+  border: var(--separator) solid var(--border);
+  border-inline-start: calc(var(--separator) * 3) solid var(--warn);
+  border-radius: var(--radius);
+}
+.cloud-reconcile-partial p { margin: 0; }
 
 /* laptop: four meters go to two */
 @media (max-width: 1100px) {

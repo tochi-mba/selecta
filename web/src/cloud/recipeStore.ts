@@ -78,7 +78,7 @@ export function recipeStore(cloud: Request, workspaceId: string): RecipeStore {
       body: JSON.stringify({ name, song_ids: songIds }),
     })).mix,
     read: async (mixId) => (await cloud<{ mix: Recipe }>(`/local-media/recipes/${encodeURIComponent(mixId)}`)).mix,
-    list: async () => (await cloud<{ recipes: RecipeSummary[] }>('/local-media/recipes?kind=draft')).recipes,
+    list: async () => (await cloud<{ recipes: RecipeSummary[] }>('/local-media/recipes')).recipes,
   };
 }
 

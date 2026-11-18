@@ -2,6 +2,7 @@ import { ChangeEvent, useEffect, useId, useState } from 'react';
 import { playbackStatusText } from '../../copy';
 import type { ImportSource } from '../../media';
 import { Icon } from '../../ui/Icon';
+import { Meter } from '../../ui/Meter';
 import type { ImportSnapshot } from '../importSession';
 import type { AudioSession, SpineDeps, WakeSentinel } from './deps';
 import { forkToController, ImportTally, OutputRoute, settle, skipPlayback, SpineState } from './state';
@@ -90,10 +91,16 @@ export function VerifyStep({ state, onChange, live, earlyContinue, onStop, onCon
     return (
       <>
         <p>SelectaDJ is reading each song on this device to recognise it by its contents. Your files are not changed or moved.</p>
-        {known
-          ? <progress className="cloud-spine-progress" aria-label="Checking your music" max={Math.max(live.total ?? 0, 1)} value={live.registered} />
-          : <progress className="cloud-spine-progress" aria-label="Checking your music" />}
-        <p role="status">
+        {/* the count updates silently; milestones are announced once by useImportAnnouncer */}
+        <Meter
+          className="cloud-spine-progress"
+          label="Checking your music"
+          showLabel={false}
+          value={known ? live.registered : undefined}
+          max={known ? Math.max(live.total ?? 0, 1) : undefined}
+          valueText={known ? `${live.registered} of ${live.total} songs` : undefined}
+        />
+        <p>
           {known
             ? `${live.registered} of ${live.total} checked so far. You can keep going; checking continues in the background.`
             : `${live.registered} checked so far. SelectaDJ is still counting the files in that folder.`}
@@ -219,7 +226,9 @@ export function OutputStep({ state, onChange }: StepProps) {
       </fieldset>
       <div className="cloud-actions">
         <button type="button" className="primary" onClick={() => onChange(settle(state, 'output', 'done', { output: route }))}>Continue</button>
-        <SkipButton onClick={() => onChange(settle(state, 'output', 'skipped'))}>Use whatever is set</SkipButton>
+        {/* "whatever is set" is the system route, the same choice as the recommended default, so it
+            records the same outcome rather than a skip of that choice */}
+        <SkipButton onClick={() => onChange(settle(state, 'output', 'done', { output: 'system' }))}>Use whatever is set</SkipButton>
       </div>
     </>
   );

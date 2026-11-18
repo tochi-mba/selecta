@@ -1,7 +1,7 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { Action } from '../ui/controls';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { countOf } from '../ui/format';
+import { countOf, ELLIPSIS } from '../ui/format';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { groupGuests, guestPresence, guestsHeading, presenceChanges, screenPresence } from './presence';
 import { qrSvg } from './qr';
@@ -111,7 +111,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
     );
   }
 
-  if (!loaded) return <section className="room-panel" aria-busy="true"><h2 id="room-title">Room</h2><p>Loading...</p></section>;
+  if (!loaded) return <section className="room-panel" aria-busy="true"><h2 id="room-title">Room</h2><p>{`Loading${ELLIPSIS}`}</p></section>;
 
   if (!panel) {
     const open = () => act('/rooms', { method: 'POST', body: JSON.stringify({ name: name || 'Party', settings: {} }) }, 'Room open.');
@@ -125,7 +125,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
         <form onSubmit={(event: FormEvent) => { event.preventDefault(); void open(); }} className="room-row">
           <label htmlFor="room-name">Room name guests will see</label>
           <input id="room-name" value={name} maxLength={40} placeholder="Party" onChange={(event) => setName(event.target.value)} />
-          <Action type="button" className="primary" run={open} working="Opening...">Open room</Action>
+          <Action type="button" className="primary" run={open} working={`Opening${ELLIPSIS}`}>Open room</Action>
         </form>
         {error && <p className="room-error" role="alert">{error}</p>}
       </section>
@@ -249,7 +249,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
           <form className="room-row" onSubmit={(event) => { event.preventDefault(); void pair(); }}>
             <label htmlFor="pairing-code">Code on the screen</label>
             <input id="pairing-code" value={pairing} maxLength={8} autoComplete="off" onChange={(event) => setPairing(event.target.value)} />
-            <Action type="button" run={pair} working="Pairing...">Pair screen</Action>
+            <Action type="button" run={pair} working={`Pairing${ELLIPSIS}`}>Pair screen</Action>
             {panel.displays > 0 && <Action type="button" run={() => act(`${base}/displays`, { method: 'DELETE' }, 'Screens disconnected.')}>Disconnect screens</Action>}
           </form>
         </section>
@@ -257,7 +257,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
       <div className="room-row room-end">
         {confirmEnd ? (<>
           <span>End the room for everyone? Waiting requests are withdrawn.</span>
-          <Action type="button" className="danger" run={() => act(`${base}/end`, { method: 'POST' }, 'Room ended.').then(() => setConfirmEnd(false))} working="Ending...">End room</Action>
+          <Action type="button" className="danger" run={() => act(`${base}/end`, { method: 'POST' }, 'Room ended.').then(() => setConfirmEnd(false))} working={`Ending${ELLIPSIS}`}>End room</Action>
           <Action type="button" run={() => setConfirmEnd(false)}>Keep it open</Action>
         </>) : <Action type="button" run={() => setConfirmEnd(true)}>End room</Action>}
       </div>

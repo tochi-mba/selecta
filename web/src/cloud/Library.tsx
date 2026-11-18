@@ -107,6 +107,20 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
     const waiting = pending.current;
     return () => { for (const id of [...waiting.keys()]) void commit(id); };
   }, [commit]);
+  // Closing or reloading the tab never unmounts React, so the removals the person was told about
+  // are sent on pagehide instead, with keepalive so the request outlives the page.
+  useEffect(() => {
+    const waiting = pending.current;
+    const onPageHide = () => {
+      for (const [id, entry] of [...waiting.entries()]) {
+        window.clearTimeout(entry.timer);
+        waiting.delete(id);
+        void api(`/assets/${encodeURIComponent(id)}`, { method: 'DELETE', keepalive: true }, workspaceId).catch(() => undefined);
+      }
+    };
+    window.addEventListener('pagehide', onPageHide);
+    return () => window.removeEventListener('pagehide', onPageHide);
+  }, [api, workspaceId]);
   const remove = (asset: Asset) => {
     setError('');
     const at = assets.findIndex((entry) => entry.id === asset.id);

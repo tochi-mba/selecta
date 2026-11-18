@@ -1,6 +1,6 @@
 import { Icon } from '../ui/Icon';
 import { RouteDiagram, SongMotif } from '../ui/MusicObjects';
-import { Problem, Skeleton } from '../ui/controls';
+import { Action, Problem, Skeleton } from '../ui/controls';
 import { createContext, Fragment, KeyboardEvent, useContext, useEffect, useRef, useState } from 'react';
 import { ApiError, SERVER_FAILED_WORDS, MixData, MixItem, Request, SongRow } from '../api';
 import { useApi, useRequest } from '../requestContext';
@@ -553,7 +553,7 @@ export function ComingSongs({ afterSongId }: { afterSongId: number }) {
               <span className="coming-progress" role="status">
                 {stage === 'ready' ? 'Ready - waiting for a valid opening' : seams.length ? `${done} of ${seams.length} ready${wait}` : `Getting it ready${wait}`}
               </span>
-              <button aria-label={`Cancel request for ${title}`} title="Cancel this request" onClick={() => void cancel(request)}>Cancel</button>
+              <Action aria-label={`Cancel request for ${title}`} title="Cancel this request" run={() => cancel(request)} working="Cancelling…">Cancel</Action>
             </div>
             <RouteDiagram songs={songs} requestedId={request.song_id} state={stage === 'ready' ? 'ready' : 'preparing'} compact />
             <ol className="coming-rows">
@@ -737,9 +737,9 @@ function TransitionPreviews({ request }: { request: RequestRow; playback?: Playb
         <div className="request-preview" key={item.key}>
           <span className="request-pair"><b>{item.from}</b> → <b>{item.to}</b></span>
           <span className={`pill ${item.status}`}>{SEAM_WORDS[item.status] ?? 'Not made yet'}</span>
-          <button aria-label={`Hear ${item.from} into ${item.to}`} aria-pressed={preview.playing === item.key} onClick={() => void hear(item)}>
+          <Action aria-label={`Hear ${item.from} into ${item.to}`} aria-pressed={preview.playing === item.key} run={() => hear(item)}>
             {preview.playing === item.key ? <><Icon name="stop" /> Stop</> : wanted === item.key ? 'Getting it ready…' : <><Icon name="play" /> Hear</>}
-          </button>
+          </Action>
         </div>
       ))}
       {(problem || preview.problem) && <p className="warn" role="alert">{problem || preview.problem}</p>}
@@ -935,8 +935,8 @@ export function RequestsPanel() {
                     </ol>
                     <TransitionPreviews request={request} playback={playback} />
                     <div className="row wrap">
-                      <button className="primary" aria-describedby={`request-approve-${request.id}`} onClick={() => void chooseBridge(request, true)}>{(request.route?.length ?? 0) > 2 ? `Add all ${request.route?.length}` : 'Add both'}</button>
-                      <button aria-describedby={`request-decline-${request.id}`} onClick={() => void chooseBridge(request, false)}>No, keep waiting</button>
+                      <Action className="primary" aria-describedby={`request-approve-${request.id}`} run={() => chooseBridge(request, true)} working="Adding…">{(request.route?.length ?? 0) > 2 ? `Add all ${request.route?.length}` : 'Add both'}</Action>
+                      <Action aria-describedby={`request-decline-${request.id}`} run={() => chooseBridge(request, false)} working="Saving…">No, keep waiting</Action>
                     </div>
                     <p className="hint request-consequence" id={`request-approve-${request.id}`}>{(request.route?.length ?? 0) > 2 ? `Add all ${request.route?.length}` : 'Add both'}: {Math.max((request.route?.length ?? 1) - 1, 0) === 1 ? 'one extra song joins' : `${Math.max((request.route?.length ?? 1) - 1, 0)} extra songs join`} with {title}, in the order above.</p>
                     <p className="hint request-consequence" id={`request-decline-${request.id}`}>No, keep waiting: nothing extra joins, and {title} keeps looking for a spot of its own.</p>
@@ -954,9 +954,9 @@ export function RequestsPanel() {
                       </button>
                     )}
                     {CAN_FORCE.has(stage) && (
-                      <button aria-describedby={`request-force-${request.id}`} onClick={() => void addAnyway(request)}>
+                      <Action aria-describedby={`request-force-${request.id}`} run={() => addAnyway(request)} working="Adding…">
                         Add to mix anyway
-                      </button>
+                      </Action>
                     )}
                     {CAN_FORCE.has(stage) && <small className="hint request-consequence" id={`request-force-${request.id}`}>Adding it directly may make a rough transition. This changes the mix; it does not promise immediate playback.</small>}
                   </div>

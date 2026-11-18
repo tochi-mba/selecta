@@ -69,7 +69,11 @@ function update(current: Node, fresh: Node): void {
   }
   for (const { name } of Array.from(current.attributes)) if (!fresh.hasAttribute(name)) current.removeAttribute(name);
   for (const { name, value } of Array.from(fresh.attributes)) if (current.getAttribute(name) !== value) current.setAttribute(name, value);
-  for (const [type, handler] of Object.entries((fresh as Handled)._on ?? {})) listen(current as Handled, type, handler);
+  const freshOn = (fresh as Handled)._on ?? {};
+  // a handler the fresh node does not declare is dropped, so a stale onclick never survives a patch
+  const kept = (current as Handled)._on;
+  if (kept) for (const type of Object.keys(kept)) if (!(type in freshOn)) delete kept[type];
+  for (const [type, handler] of Object.entries(freshOn)) listen(current as Handled, type, handler);
   patch(current, ...Array.from(fresh.childNodes));
 }
 

@@ -271,7 +271,8 @@ function WakeStep({ posture, dispatch, askWake }: BodyProps) {
 
 function OutputChoice({ posture, dispatch }: BodyProps) {
   const id = useId();
-  const [route, setRoute] = useState<OutputRoute | null>(posture.route ?? 'system');
+  // the recommended default is the system route; "Use whatever is set" records that same route
+  const [route, setRoute] = useState<OutputRoute>(posture.route ?? 'system');
   return (
     <>
       <p>SelectaDJ uses the output the tablet has already selected. Keep the recommended default unless you want more specific troubleshooting tips; change the speaker itself in the tablet’s sound settings.</p>
@@ -286,7 +287,7 @@ function OutputChoice({ posture, dispatch }: BodyProps) {
       </fieldset>
       <div className="cloud-actions">
         <button type="button" className="primary" onClick={() => dispatch({ type: 'route_chosen', route })}>Continue</button>
-        <button type="button" className="cloud-spine-skip" onClick={() => dispatch({ type: 'route_chosen', route: null })}>Use whatever is set</button>
+        <button type="button" className="cloud-spine-skip" onClick={() => dispatch({ type: 'route_chosen', route: 'system' })}>Use whatever is set</button>
       </div>
     </>
   );

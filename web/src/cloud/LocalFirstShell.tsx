@@ -10,7 +10,7 @@ import { Shell } from '../shell/Shell';
 import { useMediaKeys } from '../shell/useMediaKeys';
 import { ControllerNotices } from '../devices/ControllerNotices';
 import { setJobsSource } from '../state/jobs';
-import { Skeleton } from '../ui/controls';
+import { Section, Skeleton } from '../ui/controls';
 import { countOf } from '../ui/format';
 import { showToast } from '../ui/toasts';
 import { Library } from '../views/Library';
@@ -349,7 +349,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
           ? <main className="page" id="main"><h1 className="display small">Library</h1><LibraryEmpty />{connect}</main>
           : <><Library {...shared} /><div className="page">{connect}</div></>;
       case 'mixes':
-        if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts />{on('drafts') && <SavedBrowserRecipes workspaceId={workspaceId} recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} />}{localExport}</>;
+        if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts>{on('drafts') && <SavedBrowserRecipes workspaceId={workspaceId} recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} />}</MyMixes>{localExport}</>;
         return <>{(status?.counts.ready ?? 0) >= BROWSER_MIX_NEEDS ? <Mixes {...shared} /> : (
           <MixesEmpty
             connected={connected}
@@ -393,7 +393,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
         more={moreItems}
         banner={<>{notices}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
       >
-        {page()}
+        {/* one page's render error stays inside that page, as in the hosted shell */}
+        <Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}>{page()}</Section>
         <footer className="cloud-footer">SelectaDJ Cloud. Your music files stay on your devices; your account keeps their details.</footer>
       </Shell>
       {controls.overlays}
