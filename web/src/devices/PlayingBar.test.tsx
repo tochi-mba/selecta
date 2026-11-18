@@ -166,3 +166,25 @@ describe('the playing bar on a phone (SC-0415-05)', () => {
     }
   });
 });
+
+// W3: a remote's Pause shows at once, busy until the server answers, and a refusal puts it back.
+describe('optimistic play and pause', () => {
+  it('shows the press straight away and rolls it back when the server refuses', async () => {
+    let refuse!: (error: Error) => void;
+    const api = (async (path: string) => {
+      if (path === '/devices') return { device: { id: 'phone', name: 'Phone', kind: 'phone', signed_in: true, this_device: true, poor_speaker: false, last_seen_at: 0, warnings: [] }, notice: null };
+      if (path === '/playback/reconnect') return { action: 'stop_moved', session, message: null };
+      if (path.startsWith('/playback/session')) return elsewhere;
+      if (path === '/playback/commands') return new Promise((_, reject) => { refuse = reject; });
+      throw new Error(`unexpected ${path}`);
+    }) as Api;
+    render(<PlayingBar api={api} workspaceId="ws-optimistic" source={source} />);
+    const pause = await screen.findByRole('button', { name: 'Pause' }, { timeout: 8000 });
+    await userEvent.click(pause);
+    const shown = await screen.findByRole('button', { name: 'Play' });
+    expect(shown).toHaveAttribute('aria-busy', 'true');
+    await act(async () => { refuse(new Error('The speaker said no.')); await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(await screen.findByRole('button', { name: 'Pause' })).toBeVisible();
+    expect(screen.getByRole('alert')).toHaveTextContent('The speaker said no.');
+  });
+});
