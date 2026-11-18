@@ -52,6 +52,16 @@ Current implementation (`web/src/cloud/events.ts`): the Cloud site reads `/api/e
 - **Listen** (`rooms/CloudListen.tsx`, mounted by `CloudApp.tsx` at `/listen`): the "Playing on..." bar and the host's room panel ([§11A](11a-devices-and-rooms.md)).
 - **Account** (`AccountData.tsx`, `devices/DevicesPanel.tsx`, `views/LucyCloudSettings.tsx`): Download my data saves the export ZIP; the signed-in devices list follows; Lucy's Cloud settings show the plan's Lucy level, this month's turns and only the person's own choices (Use Lucy, phases, the two sharing choices). Local mode keeps `views/LucySettings.tsx` unchanged.
 
+### 11.3b One shell (ADR-0462, ADR-0468)
+
+Every signed-in Cloud account is drawn by the same shared shell as local SelectaDJ (`web/src/shell/Shell.tsx` with the manifest and router), or, while one flag is off, by the legacy Cloud rail. `web/src/cloud/CloudApp.tsx` decides which, once the account is known:
+
+- **Local-first shell.** An account with the local-first experience and `cloud.local_first` on gets `LocalFirstShell.tsx`: the shared shell with the browser engine, the device library, saved browser recipes in My Mixes, the server-free command palette, shortcuts and media keys (`cloud/serverFreeControls.tsx`), and the account places (Account, Plan & billing, Devices, Rooms) in More.
+- **Hosted on the shared shell (`cloud.hosted_shell`).** Every other account, when the server decides `cloud.hosted_shell` on for it, gets `HostedShell.tsx`: the same shell, manifest and router, with the hosted pages (overview, Listen, Make a Mix, Library) as its children and the account places in More exactly as the local-first shell has them; Add music appears in More only with `cloud.uploads`. Hosted playback stays the `CloudTransportDock`'s own media element in the dock slot, and the shell gets a null player facade, so no engine, media store or DSP enters the hosted bundle (`importBoundaries.test.ts`, `routeChunks.test.ts`). Features that need this computer's server or the browser engine (requests, the editor, drafts, Activity, the command palette, shortcuts) are switched off while the hosted shell is open, so their buttons are gone rather than dead. Each page sits in its own `Section`, so a render error in one never blanks the app.
+- **Legacy rail.** With `cloud.hosted_shell` off, the `.cloud-shell` rail renders exactly as before; `web/e2e-cloud/hosted-shell.cloud.ts` checks it is byte for byte what it was, and that flag on renders the hosted pages in the shared shell engine-free.
+
+`cloud.hosted_shell` is registered off by default (`src/selecta/flags/cloud.json`) and on in the development posture (`dev.cmd cloud`). **Retirement path:** once the flag has baked (on for every hosted account through the ADR-0467 rollout with no regressions), a later PR deletes the legacy rail markup in `CloudApp.tsx`, the `.cloud-shell` and `.cloud-rail` rules in `cloud/cloud.css` and the flag-off check, then retires the flag. Nothing in PR #96 removes the legacy rail.
+
 ### 11.4 Honest status language
 
 - Show stages ("Uploading 3 of 12", "Checking the file", "Analysing", "Ready"), measured counts ("4 of 7 transitions ready") and ranged ETAs from `eta.py`, never a global "you are number 27".

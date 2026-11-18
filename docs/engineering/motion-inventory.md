@@ -30,7 +30,7 @@ every token to 0ms.
 | Dialog, sheet, drawer | opened | `overlay-appear` (dialog); `drawer-appear` from its side (drawer, sheet) | `--motion-overlay`; `--motion-slow` | none |
 | Dialog | closing (`data-closing`) | `dialog-exit` (fade and shrink 2%) with the scrim's `fade-exit` | `--motion-exit-dialog` | reduced: `fade-exit` 120ms; Still: none |
 | Drawer, sheet | closing (`data-closing`) | `drawer-exit` back out of its side, scrim `fade-exit` | `--motion-exit-drawer` | reduced: `fade-exit` 120ms; Still: none |
-| Menu, popover, tooltip | opened (`data-motion='pop'`); closing | `pop-appear`; `fade-exit` | `--motion-fast`; `--motion-exit-menu` | reduced: exit `fade-exit`; Still: none |
+| Menu, popover, tooltip | opened (`data-motion='pop'`); closing | `pop-appear`; `fade-exit` | `--motion-fast`; `--motion-exit-menu` | reduced: exit `fade-exit` in the sheet, but cut short in practice (see [Known gap](#known-gap)); Still: none |
 | Toast | shown | `toast-appear` | `--motion-reveal` | none |
 | Toast | closing (`data-closing`) | `toast-exit` (fade and drop 4px) | `--motion-exit-toast` | reduced: `fade-exit` 120ms; Still: none |
 | Route | page change | `route-reveal` | `--motion-reveal` | none |
@@ -39,11 +39,29 @@ every token to 0ms.
 | Request pill | a request is working | `request-pulse` | 1.8s loop, exception | none |
 | Pending line | a render is in line | `pending-flow` | 2.4s loop, exception | none |
 | Lucy progress | Lucy is working | `lucy-slide` when the length is unknown; width when known | 1.6s loop exception; `--motion-reveal` | none |
+| Meter (`ui/Meter`) | the value changes; no value known | fill width follows the value; indeterminate fill runs `lucy-slide` | `--motion-reveal`; `--motion-loop-slide` 1.6s loop | none; the words still say the value |
 | Drag in the editor | dragging a song | drop line follows the pointer, no transition | pointer | unchanged (it is the pointer) |
 | Spectrum visualizer | playing on Listen | canvas redrawn from the analyser | at most 15fps, stops when hidden or off screen | one still frame |
 | Lyric focus | the player clock | current line and word colour | `--motion-reveal` | instant, still follows the clock |
 | Hand-over progress | the player clock | width follows the transition | 70ms linear, exception: it tracks the clock tick | instant, still follows the clock |
 | Countdown, playhead, beat pips | the player clock | position set from player time each tick, no transition | clock | unchanged (it is data) |
+
+## Cloud, Rooms, devices and the other surfaces
+
+The hosted Cloud pages (in the shared shell with `cloud.hosted_shell` on, or in the legacy rail with it off), the local-first Cloud shell, Rooms hosting and the devices list move only through the shared parts above: the shared shell's route reveal, `Dialog`, `Drawer`, `Sheet` and `ConfirmDialog` (open and exit), `Menu`, `Popover` and `Tooltip` (pop-in and exit), toasts (appear and exit), `Action`'s busy line, `Skeleton` and `Meter`. `cloud/cloud.css`, `rooms/rooms.css` and `devices/devices.css` define no animation, transition or keyframe of their own; `motion-tokens.test.ts` scans them with the app's sheets, so one added later has to be a token and a row here.
+
+Outside that scan, the remaining feature sheets keep motion to almost nothing:
+
+| Sheet | Motion | Still / reduced motion |
+| --- | --- | --- |
+| `venueops/staffDashboard.css` | Staff buttons and Stop change background at `--motion-fast`, only under `prefers-reduced-motion: no-preference` | none |
+| `business/business.css`, `business/staff/staff.css` | No animation of their own; each resets animation and transition inside `.biz` and `.biz-staff` | reset under reduced motion and Still |
+| `guest/guest.css` | No animation of its own; a reduced-motion reset for the whole guest page | reset under reduced motion |
+| `display/display.css` | None: the big screen never moves | - |
+
+## Known gap
+
+`Menu`, `Tooltip` (`ui/controls.tsx`) and `Popover` (`ui/primitives.tsx`) give `usePresence` the `--motion-fast` token for the exit fallback timeout instead of `--motion-exit-menu`. Under OS reduced motion `--motion-fast` is 0ms, so the timeout removes them before the 80ms swap fade can play; with full motion the fallback is longer than the 80ms exit and the exit plays. Dialogs, drawers, sheets and toasts use their exit tokens and fade as documented. Tracked by ADR-0468 BF-0468-04.
 
 ## Exceptions to the tokens
 

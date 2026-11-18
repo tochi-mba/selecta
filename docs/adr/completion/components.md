@@ -1,12 +1,19 @@
 # Shared component contracts and states
 
 Shared parts live in `web/src/ui/controls.tsx`, `web/src/ui/primitives.tsx`, `web/src/ui/toasts.tsx`,
-`web/src/ui/Skeleton.tsx` and `web/src/ui/MusicObjects.tsx`. The development-only gallery
-(`web/src/ui/ControlGallery.tsx`, shown in Workspace › Diagnostics when `import.meta.env.DEV`, or in a
-test build made with `VITE_SELECTA_GALLERY=1`) renders each state in both themes. ADR-279 measures it in
-`web/e2e/mp-0279-component-gallery.e2e.ts`: actions, fields (a `Field` with hint and error), tabs, a
-menu, every status kind, every skeleton variant, a dialog, a drawer, a problem with Retry and an empty
-state.
+`web/src/ui/Skeleton.tsx`, `web/src/ui/MusicObjects.tsx`, and since the UI/UX overhaul `web/src/ui/ConfirmDialog.tsx`,
+`web/src/ui/Meter.tsx`, `web/src/ui/BrandMark.tsx` and `web/src/ui/format.ts`. Every `ui/` export is catalogued in
+[docs/engineering/design-system.md](../../engineering/design-system.md#component-catalogue).
+
+The development-only gallery (`web/src/ui/ControlGallery.tsx`, shown in Workspace › Diagnostics at
+`/workshop/diagnostics` when `import.meta.env.DEV`, or in a test build made with `VITE_SELECTA_GALLERY=1`) renders a
+selection of these parts in both themes, not all of them. ADR-279 measures what it shows in
+`web/e2e/mp-0279-component-gallery.e2e.ts`: actions, fields (a `Field` with hint and error), tabs, a menu, 8 of the
+11 status kinds (not `paused`, `recovering` or `blocked`), 9 of the 10 skeleton variants (not `rows`), a dialog, a
+drawer, a problem with Retry and an empty state. It does not yet show `ConfirmDialog`, `Meter`, `BrandMark`, toasts,
+`announce`, the command palette, `Section`, the music objects or the compact density, and there is no Cloud gallery.
+A completeness test that fails when a `ui/` export is missing from the gallery (`gallery-completeness.test.ts`) is
+pending: [ADR-0468](../adr-0468-one-shell-and-design-system-consolidation.md) BF-0468-07.
 
 ## Contracts
 
@@ -22,11 +29,16 @@ state.
 | `Popover` | disclosure button + region | Enter/Space, Escape | open, closed | not hover-only |
 | `Tooltip` | adds to the control's description | shows on focus; first Escape hides only the tooltip | shown, hidden | keeps an existing description |
 | `Dialog` / `Drawer` / `Sheet` / `Workspace` | `dialog`, `aria-modal`, labelled by title, inert background | focus enters, Tab is trapped, Escape closes the top one only, focus returns | open, closing | dialogs sit above toasts |
-| `Status` | text + mark (never colour alone) | - | ready, working, planned, warning, blocked, failed, recovering, request, unavailable | words always present |
+| `Status` | text + mark (never colour alone) | - | planned, queued, working, paused, recovering, ready, warning, blocked, failed, needs-action, unavailable | words always present |
 | `Problem` | `alert` region with optional Retry | Retry is a button | shown | says what failed and what is safe |
 | `Skeleton` | `aria-busy` region, decorative bars `aria-hidden` | - | loading | announced once; 3 pulses then still |
 | `Toaster` / `showToast` | `status` (or `alert` for problems) | Undo and dismiss are buttons | info, success, problem, with Undo | ≤ 3 visible, duplicates merge, Undo stays longer, history in Activity |
 | `LiveRegion` / `announce` | one polite live region | - | - | one announcement per outcome |
+| `ConfirmDialog` | `alertdialog` on the shared overlay stack, labelled by its title, described by its body | destructive: focus starts on the safe answer; Tab trapped; Escape closes as Keep it; focus returns | open, working, failed (the confirm `Action` shows the failure and the dialog stays open), closing | destructive: with `undo` confirming shows the 15 s Undo toast; without it the body says it can't be undone |
+| `Meter` | `progressbar` (progress) or `meter` (quantity), named by its label, `aria-valuetext` | - | determinate, indeterminate, neutral, ready, warning, danger | words always said as well as drawn; tone from `warnAt`/`dangerAt` |
+| `BrandMark` | `aria-hidden` | - | - | the words beside it carry the name |
+| `VisuallyHidden` | hidden from the eye, read by a screen reader (`.visually-hidden`) | - | - | the one screen-reader-only class |
+| `Truncate` | text with the full value as `title`, `dir="auto"` | - | - | uses `format.ts` and the one ellipsis character |
 | `SongMotif`, `VibeMotif`, `MixSignature` | decorative, `aria-hidden` | - | - | from IDs only; no artwork or genre claims |
 | `SeamDiagram`, `RouteDiagram`, `EnergyHorizon`, `EnergyOverview`, `EnergyThumb` | `img` with a text label, or a labelled list | overview segments are buttons | known / unknown / planned / rendered / failed | see `MusicObjects.test.tsx` |
 | `TermHint`, `GlossaryDialog` | disclosure button "What is <term>?"; dialog with search | Enter/Space, Escape | open, closed, hidden by preference | never hides warnings |
