@@ -250,6 +250,7 @@ SCOPED: dict[tuple[str, str], dict | None] = {
         "device_id": "missing",
         "command": "pause",
         "based_on_seq": 0,
+        "fence": 0,
         "idempotency_key": "tenant-matrix",
     },
     ("POST", "/api/playback/commands/{command_id}/ack"): {

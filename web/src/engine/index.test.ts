@@ -2,17 +2,24 @@ import { describe, expect, it } from 'vitest';
 import * as engineSurface from './index';
 import { buildCapabilityRoster, createEngine } from './index';
 import { LIMITER_IMPLEMENTATION } from '../dsp/limiter';
-import { FakeAudioContext, FakeDocument } from './testAudio';
 import { WORKER_CALIBRATION_IMPLEMENTATION, type WorkerBudgetEvidence } from '../dsp/budget';
+import { FakeAudioContext, FakeDocument } from './testAudio';
 
-/** Full worker-budget evidence for a device at (or above) its floor. */
-function budgetEvidence(atFloor: boolean): WorkerBudgetEvidence {
-  return {
-    calibration: { implementation: WORKER_CALIBRATION_IMPLEMENTATION, deviceId: 'test-device', calibratedAt: Date.now(), samples: 3, msPerBlock: 4, horizonS: 30 },
-    deviceId: 'test-device', atFloor, deadlineMisses: 0,
-  };
-}
-
+const CALIBRATED_AT = 1_700_000_000_000;
+const DEVICE_ID = 'engine-roster-test-device';
+const workerBudget: WorkerBudgetEvidence = {
+  calibration: {
+    implementation: WORKER_CALIBRATION_IMPLEMENTATION,
+    deviceId: DEVICE_ID,
+    calibratedAt: CALIBRATED_AT,
+    samples: 3,
+    msPerBlock: 12,
+    horizonS: 30,
+  },
+  deviceId: DEVICE_ID,
+  atFloor: false,
+  deadlineMisses: 0,
+};
 
 describe('the engine owner', () => {
   it('closes every context it opened when the runtime is disposed', () => {
@@ -73,7 +80,7 @@ describe('the capability roster', () => {
   });
 
   it('Tier 2 needs a measured budget; Tier 3 is never ready', () => {
-    const roster = buildCapabilityRoster({ probe: passed, workerBudget: budgetEvidence(false) });
+    const roster = buildCapabilityRoster({ probe: passed, workerBudget, now: CALIBRATED_AT });
     expect(roster.get('tempo')?.status).toBe('ready');
     expect(roster.get('time_stretch')?.status).toBe('unsupported_here');
     expect(roster.list().filter((record) => record.tier === 3).every((record) => record.status === 'unsupported_here')).toBe(true);

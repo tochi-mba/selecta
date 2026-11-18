@@ -1,18 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { CapabilityRegistry, registerBrowserDspCapabilities } from './capability';
-import { abilitiesFrom, abilityOf, analyseTiming, beatGrid, calibrateAnalysis, gridSupport, makeSeamProvider, MIN_PULSE, pulseStrength, sliceMono, type PcmLike, type SeamRecord } from './seamProvider';
+import { abilitiesFrom, abilityOf, analyseTiming, beatGrid, calibrateAnalysis, gridSupport, makeSeamProvider, makeWorkerSeamProvider, MIN_PULSE, pulseStrength, sliceMono, type PcmLike, type SeamRecord } from './seamProvider';
 import { MIN_BEATMATCH_CONFIDENCE } from './seams';
 import type { TrackTiming } from './seams';
 import { WORKER_CALIBRATION_IMPLEMENTATION, type WorkerBudgetEvidence } from './budget';
 
-/** Full worker-budget evidence for a device at (or above) its floor. */
-function budgetEvidence(atFloor: boolean): WorkerBudgetEvidence {
+const TEST_NOW = 1_700_000_000_000;
+const TEST_DEVICE = 'seam-provider-test-device';
+function workerEvidence(horizonS = 30): WorkerBudgetEvidence {
   return {
-    calibration: { implementation: WORKER_CALIBRATION_IMPLEMENTATION, deviceId: 'test-device', calibratedAt: Date.now(), samples: 3, msPerBlock: 4, horizonS: 30 },
-    deviceId: 'test-device', atFloor, deadlineMisses: 0,
+    calibration: {
+      implementation: WORKER_CALIBRATION_IMPLEMENTATION,
+      deviceId: TEST_DEVICE,
+      calibratedAt: TEST_NOW,
+      samples: 3,
+      msPerBlock: 10,
+      horizonS,
+    },
+    deviceId: TEST_DEVICE,
+    atFloor: false,
+    deadlineMisses: 0,
   };
 }
-
 
 function clicks(bpm: number, seconds: number, sampleRate = 22050, phase = 0.1): PcmLike {
   const pcm = new Float32Array(seconds * sampleRate);
@@ -32,7 +41,7 @@ const timing = (bpm: number, confidence = 0.9): TrackTiming => ({
   durationSeconds: 120,
 });
 
-const ready = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: budgetEvidence(false) });
+const ready = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: workerEvidence(), now: TEST_NOW });
 const status = (feature: string) => ready.get(feature);
 
 describe('analysis for seams', () => {
@@ -133,5 +142,69 @@ describe('the seam provider', () => {
     expect(schedule.reason).toContain('mixed-source');
     expect(schedule.degraded?.[0]).toMatchObject({ wanted: 'bass_swap_blend', instead: 'fade' });
     expect(schedule.startSeconds).toBeGreaterThanOrEqual(30);
+  });
+
+  it('keeps Tier 2 on a labelled fade without fresh matching calibration and never creates a worker', async () => {
+    let created = 0;
+    const provider = makeWorkerSeamProvider({
+      settingsFor: () => ({ move: 'beatmatch' }),
+      abilities: () => abilitiesFrom(status),
+      calibration: { ...workerEvidence().calibration, deviceId: 'another-device' },
+      deviceId: TEST_DEVICE,
+      now: () => TEST_NOW,
+      workerFactory: () => { created += 1; throw new Error('worker must not start without valid evidence'); },
+    });
+    const song = clicks(120, 90);
+    const schedule = await provider({ fromIndex: 0, from: song, toIndex: 1, to: song });
+    expect(created).toBe(0);
+    expect(schedule.kind).toBe('fade');
+    expect(schedule.reason).toMatch(/different device/);
+    expect(schedule.degraded?.[0]).toMatchObject({ wanted: 'beatmatch', instead: 'fade' });
+  });
+
+  it('shrinks the following worker analysis window after a calibrated deadline miss', async () => {
+    let now = TEST_NOW;
+    const latencies = [20, 0, 0];
+    const pcmLengths: number[] = [];
+    const states: Array<{ supported: boolean; deadlineMisses: number; horizonS?: number }> = [];
+    const workerFactory = () => {
+      const listeners = new Map<string, (event: MessageEvent) => void>();
+      return {
+        addEventListener: (type: string, listener: EventListenerOrEventListenerObject) => {
+          if (typeof listener === 'function') listeners.set(type, listener as (event: MessageEvent) => void);
+        },
+        removeEventListener: (type: string) => { listeners.delete(type); },
+        postMessage: (request: { id: number; pcm: Float32Array }) => {
+          pcmLengths.push(request.pcm.length);
+          now += latencies.shift() ?? 0;
+          queueMicrotask(() => listeners.get('message')?.({
+            data: {
+              id: request.id,
+              tempo: { implementation: 'test-tempo', bpm: 120, confidence: 0.9, ambiguous: false },
+              onsetTimes: [],
+            },
+          } as MessageEvent));
+        },
+        terminate: () => { listeners.clear(); },
+      } as unknown as Worker;
+    };
+    const provider = makeWorkerSeamProvider({
+      settingsFor: () => ({}),
+      abilities: () => abilitiesFrom(status),
+      calibration: workerEvidence().calibration,
+      deviceId: TEST_DEVICE,
+      now: () => now,
+      workerFactory,
+      onBudgetState: (state) => states.push(state),
+    });
+    const song = clicks(120, 90);
+    const first = await provider({ fromIndex: 0, from: song, toIndex: 1, to: song });
+    expect(first.kind).toBe('fade');
+    expect(states.some((state) => state.deadlineMisses === 1 && state.horizonS === 15)).toBe(true);
+    expect(pcmLengths[0]).toBe(60 * song.sampleRate);
+
+    await provider({ fromIndex: 0, from: song, toIndex: 1, to: song });
+    expect(pcmLengths[1]).toBe(30 * song.sampleRate);
+    provider.dispose();
   });
 });

@@ -9,9 +9,12 @@ from __future__ import annotations
 
 from selecta.flags import State
 from selecta.flags.flip_guard import (
+    DASHBOARDS_MARKER,
     GRANDFATHER_MARKER,
     HOSTED_MEDIA,
+    LOCAL_FIRST,
     check_flip,
+    dashboards_marker_recorded,
     grandfather_marker_recorded,
 )
 from selecta.flags.matching import Rule, RuleKind, RuleSnapshot
@@ -223,3 +226,36 @@ def test_marker_on_another_flag_does_not_count():
 def test_no_marker_without_the_exact_token():
     history = [version("grandfather grants verified by hand")]
     assert grandfather_marker_recorded(history) is False
+
+
+def test_dashboard_review_marker_on_the_latest_rule_change_applies():
+    history = [version(f"owner reviewed both dashboards {DASHBOARDS_MARKER}", flag_id=LOCAL_FIRST)]
+    assert dashboards_marker_recorded(history) is True
+
+
+def test_a_newer_rollout_rule_change_invalidates_an_older_dashboard_review():
+    history = [
+        version("percentage changed after review", flag_id=LOCAL_FIRST),
+        version(f"owner reviewed both dashboards {DASHBOARDS_MARKER}", flag_id=LOCAL_FIRST),
+    ]
+    assert dashboards_marker_recorded(history) is False
+
+
+def test_a_later_rollback_without_review_invalidates_the_old_marker():
+    history = [
+        version("rollback", change="rollback", flag_id=LOCAL_FIRST),
+        version(f"owner reviewed both dashboards {DASHBOARDS_MARKER}", flag_id=LOCAL_FIRST),
+    ]
+    assert dashboards_marker_recorded(history) is False
+
+
+def test_dashboard_marker_on_the_proposed_rule_change_applies_to_that_change():
+    history = [version("a later saved rule change", flag_id=LOCAL_FIRST)]
+    assert dashboards_marker_recorded(
+        history, reason=f"reviewed current dashboards {DASHBOARDS_MARKER}"
+    ) is True
+
+
+def test_dashboard_marker_from_another_flag_does_not_apply():
+    history = [version(f"{DASHBOARDS_MARKER}", flag_id="cloud.uploads")]
+    assert dashboards_marker_recorded(history) is False

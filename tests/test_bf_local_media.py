@@ -88,6 +88,14 @@ def _register(party, token: str, songs: list[dict]) -> list[dict]:
     return answer.json()["songs"]
 
 
+def _playback_device(party, user: str, name: str = "Browser") -> str:
+    answer = party.client.post(
+        "/api/devices", headers=auth(user), json={"name": name, "kind": "laptop"}
+    )
+    assert answer.status_code == 201, answer.text
+    return answer.json()["device"]["id"]
+
+
 def song(sha: str, title: str = "Night Drive", artist: str = "Rex", **extra) -> dict:
     return {"content_sha256": sha, "title": title, "artist": artist, **extra}
 
@@ -228,6 +236,7 @@ def test_no_payload_with_a_path_in_it_is_accepted(party, local_media_on):
 def test_availability_flips_requestability_through_the_catalog(party, local_media_on):
     [made] = _register(party, ALICE, [song(SHA_A, "Night Drive", "Rex", duration_s=180.0)])
     song_id, workspace_id = made["song_id"], party.workspaces[ALICE]
+    device_id = _playback_device(party, ALICE)
     catalog = LocalMediaCatalog(party.engine)
     assert catalog.is_requestable(workspace_id, song_id) is False
     assert catalog.count_requestable(workspace_id, None) == 0
@@ -235,7 +244,7 @@ def test_availability_flips_requestability_through_the_catalog(party, local_medi
     reported = party.client.post(
         "/api/local-media/availability",
         headers=auth(ALICE),
-        json={"device_id": "device-a", "present": [song_id], "absent": []},
+        json={"device_id": device_id, "present": [song_id], "absent": []},
     )
     assert reported.status_code == 200
     assert reported.json()["present"] == 1
@@ -254,7 +263,7 @@ def test_availability_flips_requestability_through_the_catalog(party, local_medi
     party.client.post(
         "/api/local-media/availability",
         headers=auth(ALICE),
-        json={"device_id": "device-a", "present": [], "absent": [song_id]},
+        json={"device_id": device_id, "present": [], "absent": [song_id]},
     )
     assert catalog.is_requestable(workspace_id, song_id) is False
     assert catalog.search(workspace_id, "night", None, 10) == []
@@ -263,10 +272,11 @@ def test_availability_flips_requestability_through_the_catalog(party, local_medi
 def test_a_deleted_song_is_not_requestable_even_while_reported_present(party, local_media_on):
     [made] = _register(party, ALICE, [song(SHA_A)])
     song_id, workspace_id = made["song_id"], party.workspaces[ALICE]
+    device_id = _playback_device(party, ALICE)
     party.client.post(
         "/api/local-media/availability",
         headers=auth(ALICE),
-        json={"device_id": "device-a", "present": [song_id], "absent": []},
+        json={"device_id": device_id, "present": [song_id], "absent": []},
     )
     party.client.delete(f"/api/local-media/songs/{song_id}", headers=auth(ALICE))
     assert LocalMediaCatalog(party.engine).is_requestable(workspace_id, song_id) is False
@@ -274,14 +284,15 @@ def test_a_deleted_song_is_not_requestable_even_while_reported_present(party, lo
 
 def test_an_availability_report_for_someone_elses_song_is_ignored(party, local_media_on):
     [made] = _register(party, ALICE, [song(SHA_A)])
+    device_id = _playback_device(party, BOB, "Bob's browser")
     answer = party.client.post(
         "/api/local-media/availability",
         headers=auth(BOB),
-        json={"device_id": "device-b", "present": [made["song_id"]], "absent": []},
+        json={"device_id": device_id, "present": [made["song_id"]], "absent": []},
     )
     assert answer.status_code == 200
     assert answer.json() == {
-        "device_id": "device-b",
+        "device_id": device_id,
         "present": 0,
         "absent": 0,
         "ignored": 1,
@@ -290,6 +301,63 @@ def test_an_availability_report_for_someone_elses_song_is_ignored(party, local_m
         LocalMediaCatalog(party.engine).is_requestable(party.workspaces[ALICE], made["song_id"])
         is False
     )
+
+
+def test_availability_rejects_an_unregistered_or_another_members_device(
+    party, local_media_on
+):
+    [made] = _register(party, ALICE, [song(SHA_A)])
+    alice_device = _playback_device(party, ALICE, "Alice's browser")
+    for device_id in ("not-registered", alice_device):
+        answer = party.client.post(
+            "/api/local-media/availability",
+            headers=auth(BOB),
+            json={"device_id": device_id, "present": [made["song_id"]], "absent": []},
+        )
+        assert answer.status_code == 404
+        assert answer.json()["detail"]["code"] == "unknown_device"
+    assert LocalMediaCatalog(party.engine).is_requestable(
+        party.workspaces[ALICE], made["song_id"]
+    ) is False
+
+
+def test_a_full_availability_snapshot_replaces_old_device_claims(party, local_media_on):
+    songs = _register(party, ALICE, [song(SHA_A), song(SHA_B, "Warm Lights")])
+    first, second = (row["song_id"] for row in songs)
+    workspace_id = party.workspaces[ALICE]
+    device_id = _playback_device(party, ALICE)
+    path = "/api/local-media/availability"
+
+    initial = party.client.post(
+        path,
+        headers=auth(ALICE),
+        json={
+            "device_id": device_id,
+            "present": [first, second],
+            "absent": [],
+            "snapshot": True,
+        },
+    )
+    assert initial.status_code == 200, initial.text
+    assert LocalMediaCatalog(party.engine).count_requestable(workspace_id, None) == 2
+
+    replaced = party.client.post(
+        path,
+        headers=auth(ALICE),
+        json={"device_id": device_id, "present": [second], "absent": [], "snapshot": True},
+    )
+    assert replaced.status_code == 200, replaced.text
+    catalog = LocalMediaCatalog(party.engine)
+    assert catalog.is_requestable(workspace_id, first) is False
+    assert catalog.is_requestable(workspace_id, second) is True
+
+    cleared = party.client.post(
+        path,
+        headers=auth(ALICE),
+        json={"device_id": device_id, "present": [], "absent": [], "snapshot": True},
+    )
+    assert cleared.status_code == 200, cleared.text
+    assert catalog.count_requestable(workspace_id, None) == 0
 
 
 # -- workspace isolation -----------------------------------------------------------------------

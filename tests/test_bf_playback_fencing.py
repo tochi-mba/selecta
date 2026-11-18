@@ -14,6 +14,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 import pytest
+from pydantic import ValidationError
 from cloud_party import ALICE, BOB, auth, party  # noqa: F401
 from test_cloud_playback_fakes import (
     OTHER_WORKSPACE,
@@ -25,6 +26,7 @@ from test_cloud_playback_fakes import (
 from test_cloud_playback_races import _race
 
 from selecta.persistence import new_id, transaction
+from selecta.playback import api as playback_api
 from selecta.playback import devices, fencing, ports, session, zone_session
 from selecta.playback.model import (
     LEASE_SECONDS,
@@ -75,6 +77,7 @@ def _current(engine) -> Session:
 def _send(engine, device, command="pause", *, key, based_on=None, **more):
     if based_on is None:
         based_on = _current(engine).seq
+    more.setdefault("fence", _current(engine).fence)
     return session.submit_command(
         engine, WORKSPACE, device.id, command, None, based_on, key, **more
     )
@@ -275,11 +278,12 @@ def test_ttl_defaults_to_a_minute_from_database_time_and_is_capped(engine, clock
         _send(engine, phone, "play", key="too-long", ttl_seconds=fencing.MAX_TTL_SECONDS + 1)
 
 
-def test_a_command_without_a_fence_is_stamped_with_the_current_one(engine, laptop, phone):
-    owned = session.take_over(engine, WORKSPACE, laptop.id).session
-    result = _send(engine, phone, key="no-fence")
-    assert result.status is CommandStatus.APPLIED
-    assert _row(engine, result.command_id)["fence"] == owned.fence
+def test_a_command_without_a_fence_is_refused_as_superseded(engine, laptop, phone):
+    session.take_over(engine, WORKSPACE, laptop.id)
+    result = _send(engine, phone, key="no-fence", fence=None)
+    assert result.status is CommandStatus.SUPERSEDED
+    assert result.applied_seq is None
+    assert _row(engine, result.command_id)["status"] == "superseded"
 
 
 def test_the_delivered_envelope_is_metadata_with_id_fence_and_expiry(engine, clock, laptop, phone):
@@ -432,15 +436,38 @@ def test_state_events_carry_fence_and_confidence(engine, laptop, phone):
 
 
 def _press(party, device: str, *, fence=None, key: str, ttl=None) -> object:
-    seq = party.client.get(
+    session_view = party.client.get(
         f"/api/playback/session?device_id={device}", headers=auth(ALICE)
-    ).json()["session"]["seq"]
+    ).json()["session"]
+    seq = session_view["seq"]
     body = {"device_id": device, "command": "pause", "based_on_seq": seq, "idempotency_key": key}
-    if fence is not None:
-        body["fence"] = fence
+    body["fence"] = session_view["fence"] if fence is None else fence
     if ttl is not None:
         body["ttl_seconds"] = ttl
     return party.client.post("/api/playback/commands", headers=auth(ALICE), json=body)
+
+
+def test_the_command_route_requires_an_explicit_fence(party):
+    device = party.speaker_on()
+    view = party.client.get(
+        f"/api/playback/session?device_id={device}", headers=auth(ALICE)
+    ).json()["session"]
+    body = {
+        "device_id": device,
+        "command": "pause",
+        "based_on_seq": view["seq"],
+        "idempotency_key": "missing-fence",
+    }
+    answer = party.client.post("/api/playback/commands", headers=auth(ALICE), json=body)
+    assert answer.status_code == 422
+    assert answer.json()["detail"]["code"] == "invalid_command"
+
+
+@pytest.mark.parametrize("body_model", [playback_api.CommandBody, playback_api.ZoneCommandBody])
+def test_personal_and_zone_command_contracts_require_fences(body_model):
+    payload = {"device_id": "device-1", "command": "pause", "based_on_seq": 4}
+    with pytest.raises(ValidationError):
+        body_model(**payload)
 
 
 def test_the_routes_fence_expire_and_ack(party):

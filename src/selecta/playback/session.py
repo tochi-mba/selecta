@@ -418,8 +418,8 @@ def submit_command_in(
     Commands apply synchronously under the session lock, so the ADR-0461 fence and TTL are
     checked right here, before anything changes: a press carrying a fence other than the
     session's current one is refused "superseded" (ownership moved since it was issued), and
-    one already past its expiry is refused "expired". A press carrying no fence is checked by
-    sequence alone, as before.
+    one already past its expiry is refused "expired". A command without a fence cannot prove
+    which ownership generation its controller observed and is refused as superseded.
 
     A speaker press (play aside) for a speaker whose lease has lapsed is held "deferred" and
     changes nothing now; `deferred.reconcile` delivers or drops it when the speaker is heard
@@ -458,7 +458,9 @@ def submit_command_in(
         )
     ttl = fencing.clean_ttl(ttl_seconds)
     expires_at = now + ttl  # `now` is the database clock, never the controller's
-    issued_fence = session.fence if fence is None else fence
+    # No compatibility fallback to the current fence: that would let a command
+    # issued under an unknown ownership generation inherit today's authority.
+    issued_fence = -1 if fence is None else fence
     refs = None
     if name is commands.Command.SET_PROGRAMME:
         refs = programme.resolve(conn, workspace_id, clean["songs"])
