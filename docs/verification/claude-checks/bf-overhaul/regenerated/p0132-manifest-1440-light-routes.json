@@ -1,0 +1,98 @@
+{
+  "status": "candidate-not-independently-verified",
+  "fixture": "tests/e2e_server.py",
+  "fixedTime": "2026-01-05T10:00:00.000Z",
+  "motion": "reduced, animations disabled",
+  "masks": [
+    "canvas",
+    "time",
+    ".tabular-time",
+    ".toast-stack"
+  ],
+  "candidates": [
+    {
+      "name": "1440-light-listen",
+      "width": 1440,
+      "scheme": "light",
+      "screenshot": "candidate-p0132-1440-light-listen.png"
+    },
+    {
+      "name": "1440-light-mixes",
+      "width": 1440,
+      "scheme": "light",
+      "screenshot": "candidate-p0132-1440-light-mixes.png"
+    },
+    {
+      "name": "1440-light-mixes-mine",
+      "width": 1440,
+      "scheme": "light",
+      "screenshot": "candidate-p0132-1440-light-mixes-mine.png"
+    },
+    {
+      "name": "1440-light-mix-current-edit",
+      "width": 1440,
+      "scheme": "light",
+      "screenshot": "candidate-p0132-1440-light-mix-current-edit.png"
+    },
+    {
+      "name": "1440-light-library",
+      "width": 1440,
+      "scheme": "light",
+      "screenshot": "candidate-p0132-1440-light-library.png"
+    },
+    {
+      "name": "1440-light-discover",
+      "width": 1440,
+      "scheme": "light",
+      "screenshot": "candidate-p0132-1440-light-discover.png"
+    },
+    {
+      "name": "1440-light-discover-harmonic",
+      "width": 1440,
+      "scheme": "light",
+      "screenshot": "candidate-p0132-1440-light-discover-harmonic.png"
+    },
+    {
+      "name": "1440-light-workshop",
+      "width": 1440,
+      "scheme": "light",
+      "screenshot": "candidate-p0132-1440-light-workshop.png"
+    },
+    {
+      "name": "1440-light-workshop-analysis",
+      "width": 1440,
+      "scheme": "light",
+      "screenshot": "candidate-p0132-1440-light-workshop-analysis.png"
+    },
+    {
+      "name": "1440-light-workshop-storage",
+      "width": 1440,
+      "scheme": "light",
+      "screenshot": "candidate-p0132-1440-light-workshop-storage.png"
+    },
+    {
+      "name": "1440-light-workshop-sources",
+      "width": 1440,
+      "scheme": "light",
+      "screenshot": "candidate-p0132-1440-light-workshop-sources.png"
+    },
+    {
+      "name": "1440-light-workshop-learning",
+      "width": 1440,
+      "scheme": "light",
+      "screenshot": "candidate-p0132-1440-light-workshop-learning.png"
+    },
+    {
+      "name": "1440-light-workshop-diagnostics",
+      "width": 1440,
+      "scheme": "light",
+      "screenshot": "candidate-p0132-1440-light-workshop-diagnostics.png"
+    },
+    {
+      "name": "1440-light-listening",
+      "width": 1440,
+      "scheme": "light",
+      "screenshot": "candidate-p0132-1440-light-listening.png"
+    }
+  ]
+}

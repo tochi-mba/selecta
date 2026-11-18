@@ -1,0 +1,38 @@
+{
+  "status": "candidate-not-independently-verified",
+  "fixture": "tests/e2e_server.py",
+  "fixedTime": "2026-01-05T10:00:00.000Z",
+  "motion": "reduced, animations disabled",
+  "masks": [
+    "canvas",
+    "time",
+    ".tabular-time",
+    ".toast-stack"
+  ],
+  "candidates": [
+    {
+      "name": "375-light-library-loading",
+      "width": 375,
+      "scheme": "light",
+      "screenshot": "candidate-p0132-375-light-library-loading.png"
+    },
+    {
+      "name": "375-light-library-empty",
+      "width": 375,
+      "scheme": "light",
+      "screenshot": "candidate-p0132-375-light-library-empty.png"
+    },
+    {
+      "name": "375-light-library-failed",
+      "width": 375,
+      "scheme": "light",
+      "screenshot": "candidate-p0132-375-light-library-failed.png"
+    },
+    {
+      "name": "375-light-library-recovered",
+      "width": 375,
+      "scheme": "light",
+      "screenshot": "candidate-p0132-375-light-library-recovered.png"
+    }
+  ]
+}
