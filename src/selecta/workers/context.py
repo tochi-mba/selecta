@@ -21,7 +21,6 @@ cancelled, preempted, timed out or has lost its lease.
 from __future__ import annotations
 
 import logging
-import re
 import threading
 import time
 import traceback
@@ -306,13 +305,44 @@ def classify(problem: BaseException) -> ErrorClass:
     return ErrorClass.ENGINE_BUG
 
 
-# A URL's query string: where signed URLs keep their signature and credential.
-_URL_QUERY = re.compile(r"(https?://[^\s'\"<>?#]+)\?[^\s'\"<>]*", re.IGNORECASE)
+def _ends_url(char: str) -> bool:
+    return char.isspace() or char in "'\"<>"
 
 
 def scrub_urls(text: str) -> str:
-    """Drop every URL's query string, so a signed URL in an error can't be reused."""
-    return _URL_QUERY.sub(r"\1?<redacted>", text)
+    """Drop every URL's query string, so a signed URL in an error can't be reused.
+
+    An http(s) URL is its scheme, a non-empty run up to `?`, `#`, whitespace, a quote or an
+    angle bracket, then (when the run stops at `?`) its query up to whitespace, a quote or an
+    angle bracket; the query becomes `?<redacted>`. One forward pass, so a hostile message
+    (many `http://` in a row) costs linear time, unlike a backtracking pattern.
+    """
+    lower = text.lower()
+    out: list[str] = []
+    done = 0
+    at = lower.find("http", 0)
+    while at != -1:
+        if lower.startswith("://", at + 4):
+            body = at + 7
+        elif lower.startswith("s://", at + 4):
+            body = at + 8
+        else:
+            at = lower.find("http", at + 1)
+            continue
+        stop = body
+        while stop < len(text) and not _ends_url(text[stop]) and text[stop] not in "?#":
+            stop += 1
+        if stop > body and stop < len(text) and text[stop] == "?":
+            out.append(text[done:stop])
+            out.append("?<redacted>")
+            done = stop + 1
+            while done < len(text) and not _ends_url(text[done]):
+                done += 1
+            stop = done
+        # Any URL starting inside the run just scanned ends where it did, so none can match.
+        at = lower.find("http", max(stop, at + 1))
+    out.append(text[done:])
+    return "".join(out)
 
 
 def describe(problem: BaseException, limit: int = 4_000) -> str:
