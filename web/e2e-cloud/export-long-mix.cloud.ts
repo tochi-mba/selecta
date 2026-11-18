@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import { build } from 'vite';
 import { decodeFlac } from '../src/engine/flacDecode';
-import type { HarnessResult } from './exportHarness';
+import type { HarnessResult, PhaseTimes } from './exportHarness';
 
 // BF-0457-06: the long-mix export in a real browser (muted, like every cloud spec). A
 // multi-minute synthetic mix is rendered by the engine's chunked OfflineAudioContext path and
@@ -120,9 +120,23 @@ test('a long synthetic mix exports as a checked WAV and a checked FLAC holding t
     }),
   });
   console.info('export numbers', testInfo.annotations.at(-1)?.description);
-  // Recorded, not judged, for WAV: its encoder is one synchronous pass by design (wav.ts).
-  // FLAC encodes and checks in slices that yield to the page, so it never stalls it for long.
-  expect(flac.longestStallMs).toBeLessThan(2000);
+});
+
+test('the FLAC encoder and checker never freeze the page, phase by phase', async ({ page }, testInfo) => {
+  test.setTimeout(600_000);
+  await page.goto('/api/status');
+  await page.addScriptTag({ content: harness });
+  const phases = await page.evaluate(
+    (seconds) => (window as unknown as { selectaExportPhases: (s: number[]) => Promise<PhaseTimes> }).selectaExportPhases(seconds),
+    MIX_TRACK_SECONDS,
+  );
+  testInfo.annotations.push({ type: 'flac phase numbers', description: JSON.stringify(phases) });
+  console.info('flac phase numbers', JSON.stringify(phases));
+  expect(phases.check.ok).toBe(true);
+  // flac.ts and flacDecode.ts work in slices that yield to the page, so neither may hold it
+  // for long. The render step (render.ts, outside this task) is recorded but not judged here.
+  expect(phases.encode.longestStallMs).toBeLessThan(1000);
+  expect(phases.check.longestStallMs).toBeLessThan(1000);
 });
 
 test('a cancelled long export hands back no file', async ({ page }) => {

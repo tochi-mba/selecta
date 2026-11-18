@@ -19,8 +19,9 @@ import type { PcmChunk } from './wav';
  * Quantisation is the same as wav.ts encodeWav (clamp, then round against 32768/32767 or
  * 8388608/8388607), so a FLAC and a WAV export of one render hold identical samples.
  *
- * Long mixes never freeze the page: encodeFlac works in slices of frames and yields to the
- * event loop between slices, checks its AbortSignal at every slice, and only returns bytes
+ * Long mixes never freeze the page: encodeFlac works in slices (at most 32 frames or about
+ * 25 ms, whichever ends first), yields to the event loop between slices and between 1 MB
+ * steps of the final sha256, checks its AbortSignal at every yield, and only returns bytes
  * once the whole stream, including STREAMINFO, is written. A cancel throws FlacCancelled and
  * leaves nothing behind.
  */
@@ -31,8 +32,14 @@ export const FLAC_IMPLEMENTATION = 'ts-flac-fixed-rice-v1';
 export const FLAC_BLOCK_SIZE = 4096;
 /** The largest Rice partition order tried (RFC 9639 allows 15; gains stop well before 8). */
 const MAX_PARTITION_ORDER = 8;
-/** Frames encoded between yields to the event loop (about 3 s of 44.1 kHz audio). */
+/** At most this many frames (about 3 s of 44.1 kHz audio) between yields to the event loop. */
 const FRAMES_PER_SLICE = 32;
+/** A slice also ends once it has held the page this long, whatever the device's speed. */
+const SLICE_BUDGET_MS = 25;
+/** The finished file is hashed in steps of this size, yielding between them. */
+const HASH_STEP_BYTES = 1 << 20;
+
+const clock = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 
 export type EncodedFlac = {
   bytes: Uint8Array;
@@ -363,7 +370,8 @@ export async function encodeFlac(chunks: PcmChunk[], bits: FlacBits = 16, option
   let encoded = 0;
 
   while (encoded < totalSamples) {
-    for (let slice = 0; slice < FRAMES_PER_SLICE && encoded < totalSamples; slice += 1) {
+    const sliceStarted = clock();
+    for (let slice = 0; slice < FRAMES_PER_SLICE && encoded < totalSamples && (slice === 0 || clock() - sliceStarted < SLICE_BUDGET_MS); slice += 1) {
       const size = source.fill(block, blockSize);
       if (size === 0) throw new Error('The audio ended before its stated length.');
 
@@ -415,9 +423,19 @@ export async function encodeFlac(chunks: PcmChunk[], bits: FlacBits = 16, option
   out.patch(infoAt, writeStreamInfo({ blockSize, minFrame, maxFrame, sampleRate, channels, bits, totalSamples, md5: sum }));
   const bytes = out.finish();
   checkCancel();
+  // A long mix is tens of megabytes: hash it in steps so the page keeps breathing.
+  const fileHash = sha256.create();
+  for (let at = 0; at < bytes.length; at += HASH_STEP_BYTES) {
+    fileHash.update(bytes.subarray(at, at + HASH_STEP_BYTES));
+    if (at + HASH_STEP_BYTES < bytes.length) {
+      await yieldToLoop();
+      checkCancel();
+    }
+  }
+  checkCancel();
   return {
     bytes,
-    sha256: bytesToHex(sha256(bytes)),
+    sha256: bytesToHex(fileHash.digest()),
     md5: bytesToHex(sum),
     durationSeconds: totalSamples / sampleRate,
     sampleRate,
