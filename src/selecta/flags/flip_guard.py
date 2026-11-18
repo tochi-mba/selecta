@@ -203,3 +203,110 @@ def check_flip_now(
         gates_green=gates_green,
         grandfather_missing=audit.missing,
     )
+
+
+# --- Dashboards before percentage (BF-0467-04) ---------------------------------------------------
+#
+# ADR-0467 step 4 (percentage) may begin only once the per-mode cost dashboard (BF-0464-05) and an
+# error-rate view per flag cohort exist and are watched. The check below refuses any rule change
+# that raises `cloud.local_first`'s highest percentage above what is saved now, until:
+#
+# - each named dashboard is live: the cost dashboard shows real data for both account modes
+#   (`usage.unit_economics.is_live`), and the error-rate view per cohort exists. No such view is
+#   built yet (request metrics carry no cohort label), so it answers not-live and the check names
+#   it; whoever builds it flips `ERROR_RATE_VIEW` to its admin path;
+# - the owner recorded that they are green: a `cloud.local_first` rule change whose reason holds
+#   `DASHBOARDS_MARKER`, or the reason of this very change (the step ledger links the evidence).
+#
+# Lowering or freezing a percentage is never refused: rollback is the flag alone (ADR-0467).
+
+DASHBOARDS_MARKER = "[dashboards-green]"
+COST_DASHBOARD = "GET /api/admin/economics/cost-per-mode"
+# The admin path of the error-rate view per flag cohort, once one exists; None while it doesn't.
+ERROR_RATE_VIEW: str | None = None
+DASHBOARDS = ("cost_per_mode", "error_rate_per_cohort")
+
+
+def highest_percentage(rules: Sequence[Rule]) -> float:
+    """The largest enabled, valid percentage in a flag's rules (0 when there is none)."""
+    return max(
+        (
+            float(rule.params.get("percent") or 0)
+            for rule in rules
+            if rule.enabled and not rule.problems and rule.kind == RuleKind.PERCENTAGE
+        ),
+        default=0.0,
+    )
+
+
+def raises_percentage(current: Sequence[Rule], proposed: Sequence[Rule]) -> bool:
+    return highest_percentage(proposed) > highest_percentage(current)
+
+
+def check_percentage_step(
+    current: Sequence[Rule],
+    proposed: Sequence[Rule],
+    *,
+    dashboards_live: Mapping[str, bool],
+    dashboards_green: bool,
+) -> list[str]:
+    """Every reason this `cloud.local_first` rule change may not begin or widen step 4. Empty when
+    the change does not raise the percentage, or when every dashboard is live and recorded
+    green. Pure: the caller answers which dashboards are live and whether the marker exists."""
+    if not raises_percentage(current, proposed):
+        return []
+    refusals: list[str] = []
+    for name in DASHBOARDS:
+        if not dashboards_live.get(name, False):
+            where = {
+                "cost_per_mode": f"{COST_DASHBOARD} shows no real data for both account modes",
+                "error_rate_per_cohort": "no error-rate view per flag cohort exists yet",
+            }[name]
+            refusals.append(
+                f"step 4 needs the {name.replace('_', ' ')} dashboard live first: {where}"
+                " (BF-0467-04, docs/verification/bf-step-ledger.md)"
+            )
+    if not dashboards_green:
+        refusals.append(
+            "the dashboards are not recorded green: save the cloud.local_first rules with a reason"
+            f" containing {DASHBOARDS_MARKER} once the owner has reviewed them"
+        )
+    return refusals
+
+
+def dashboards_marker_recorded(history: Iterable[Version], reason: str = "") -> bool:
+    return DASHBOARDS_MARKER in reason or any(
+        version.flag_id == LOCAL_FIRST
+        and version.change in ("rules", "rollback")
+        and DASHBOARDS_MARKER in version.reason
+        for version in history
+    )
+
+
+def check_percentage_step_now(
+    conn: Connection, proposed: Sequence[Rule], *, reason: str = "", month: str | None = None
+) -> list[str]:
+    """`check_percentage_step` against the stored rules, the live cost dashboard and the
+    recorded marker. Cheap when the change doesn't raise the percentage (nothing is measured)."""
+    from selecta.flags import rules as rule_store
+
+    current = rule_store.current_rules(conn, LOCAL_FIRST)
+    if not raises_percentage(current, proposed):
+        return []
+    import datetime as dt
+
+    from selecta.persistence import db_now
+    from selecta.usage.unit_economics import cost_report
+
+    month = month or dt.datetime.fromtimestamp(db_now(conn), dt.UTC).strftime("%Y-%m")
+    live = {
+        "cost_per_mode": bool(cost_report(conn, month)["live"]),
+        "error_rate_per_cohort": ERROR_RATE_VIEW is not None,
+    }
+    history = rule_store.history(conn, LOCAL_FIRST, limit=500)
+    return check_percentage_step(
+        current,
+        proposed,
+        dashboards_live=live,
+        dashboards_green=dashboards_marker_recorded(history, reason),
+    )

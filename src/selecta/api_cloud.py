@@ -36,6 +36,7 @@ from selecta import flags
 from selecta.admin import guard as admin_guard
 from selecta.admin import routes as admin_routes
 from selecta.admin import routes_controls as admin_control_routes
+from selecta.admin import routes_economics as admin_economics_routes
 from selecta.admin.state import EmergencyCache
 from selecta.autopilot import routes_autopilot as autopilot_routes
 from selecta.billing import api as billing_api
@@ -74,6 +75,7 @@ from selecta.routes import cloud_assets as cloud_assets_routes
 from selecta.routes import cloud_export as cloud_export_routes
 from selecta.routes import cloud_mixes as cloud_mix_routes
 from selecta.routes import cloud_proxy as cloud_proxy_routes
+from selecta.routes import local_first_labs as local_first_labs_routes
 from selecta.storage import api as storage_api
 from selecta.storage import playback_api as playback_api
 from selecta.usage import meters, quota
@@ -786,6 +788,13 @@ def create_cloud_app(
         current_claims=current_claims,
         emergency_cache=emergency_cache,
         rule_cache=rule_cache,
+    )
+    # Unit economics and step-4 readiness for Browser-first Cloud (BF-0464-04/05, BF-0467-04).
+    admin_economics_routes.install_routes(app, engine=engine, current_claims=current_claims)
+    # The Labs opening for browser-first Cloud (BF-0467-05).
+    local_first_labs_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal,
+        rules=rule_cache,
     )
 
     flag_guard.assert_cloud_api_routes_owned(app)
