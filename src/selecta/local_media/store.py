@@ -236,6 +236,30 @@ def set_availability(
     return written
 
 
+def replace_device_availability(
+    conn: Connection,
+    workspace_id: str,
+    device_id: str,
+    present_ids: Iterable[int],
+    absent_ids: Iterable[int],
+) -> dict[str, int]:
+    """Record one device's FULL picture: besides the named present and absent songs, every song
+    it claimed present before but no longer names is now absent. A partial page keeps using
+    `set_availability`; a snapshot report comes here so stale claims cannot outlive the report."""
+    present = {int(song_id) for song_id in present_ids}
+    claimed = {
+        int(row.song_id)
+        for row in conn.execute(
+            sa.select(local_song_availability.c.song_id)
+            .where(local_song_availability.c.workspace_id == workspace_id)
+            .where(local_song_availability.c.device_id == device_id)
+            .where(local_song_availability.c.present.is_(True))
+        )
+    }
+    absent = {int(song_id) for song_id in absent_ids} | (claimed - present)
+    return set_availability(conn, workspace_id, device_id, present, absent - present)
+
+
 def availability_counts(
     conn: Connection, workspace_id: str, song_ids: Iterable[int]
 ) -> dict[int, int]:
