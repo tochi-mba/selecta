@@ -157,6 +157,8 @@ describe('designed empty states, never a blank table', () => {
       ...withExperience(true, false, true),
       features: { 'cloud.local_first': true, 'cloud.hosted_media': false, drafts: true },
     };
+    // A connected library makes this a returning account, so the shell reaches My Mixes.
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
     window.history.replaceState({}, '', '/mixes/mine');
     const calls: string[] = [];
     const fetcher = vi.mocked(globalThis.fetch as unknown as (url: string, init?: RequestInit) => Promise<Response>);
