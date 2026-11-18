@@ -42,9 +42,9 @@ test('MP-0279 cloud: a visually hidden picker is reached by Tab and its label sh
 
 test('MP-0279 cloud: a destructive confirmation keeps focus safe and gives it back', async ({ page }) => {
   await openGallery(page);
-  const opener = page.getByRole('button', { name: 'Forget this device' });
+  const opener = page.getByRole('button', { name: 'Sign out a device' });
   await opener.click();
-  const dialog = page.getByRole('alertdialog', { name: 'Forget this device?' });
+  const dialog = page.getByRole('alertdialog', { name: 'Sign out Living room speaker?' });
   await expect(dialog.getByRole('button', { name: 'Keep it' })).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);

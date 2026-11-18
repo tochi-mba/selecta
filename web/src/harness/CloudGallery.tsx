@@ -46,7 +46,7 @@ export function CloudGallery() {
           <button className="primary">Primary action</button>
           <button>Secondary action</button>
           <Action working="Checking…" run={() => new Promise<void>((resolve) => window.setTimeout(() => { setSaid('Checked for this demonstration.'); resolve(); }, 800))}>Check now</Action>
-          <button className="destructive" onClick={() => setConfirm('forget')}>Forget this device</button>
+          <button className="destructive" onClick={() => setConfirm('forget')}>Sign out a device</button>
           <button onClick={() => setConfirm('code')}>Make a new code</button>
           <button onClick={() => showToast('Removed. You can undo this for a few seconds.', { undo: () => setSaid('Put back.') })}>Show an undo toast</button>
         </div>
@@ -98,7 +98,7 @@ export function CloudGallery() {
         <div className="devices-panel stack">
           <h3>Your devices</h3>
           <ul className="devices-list">
-            <li><span className="devices-name">Living room speaker</span><span className="devices-seen">Seen just now</span><span className="devices-actions"><button>Play here</button><button className="destructive" onClick={() => setConfirm('forget')}>Forget</button></span></li>
+            <li><span className="devices-name">Living room speaker</span><span className="devices-seen">Seen just now</span><span className="devices-actions"><button>Play here</button><button className="destructive" onClick={() => setConfirm('forget')}>Sign out this device</button></span></li>
           </ul>
           <div className="playing-bar">
             <p className="playing-bar-song"><b>Specimen song</b> by Example artist</p>
@@ -110,7 +110,7 @@ export function CloudGallery() {
       </section>
 
       {confirm === 'forget' && (
-        <ConfirmDialog title="Forget this device?" body="It can be paired again any time." destructive confirmLabel="Forget it" onConfirm={() => setSaid('Forgotten for this demonstration.')} onClose={() => setConfirm(null)} />
+        <ConfirmDialog title="Sign out Living room speaker?" body="That device is signed out of your account. It can sign in again any time." destructive confirmLabel="Sign out this device" onConfirm={() => setSaid('Signed out, for this demonstration.')} onClose={() => setConfirm(null)} />
       )}
       {confirm === 'code' && (
         <ConfirmDialog title="Make a new code?" body="The old QR code stops working the moment the new one exists." confirmLabel="Make a new code" onConfirm={() => setSaid('A new code, for this demonstration.')} onClose={() => setConfirm(null)} />
