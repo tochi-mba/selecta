@@ -259,6 +259,34 @@ SCOPED: dict[tuple[str, str], dict | None] = {
         "device_id": "missing",
         "result": "applied",
     },
+    # Zone playback (venue zones; the same workspace principal as personal playback, so a
+    # caller naming another workspace is refused before the zone is looked up).
+    ("GET", "/api/zones/playback"): None,
+    ("GET", "/api/zones/holding"): None,
+    ("GET", "/api/zones/{zone_id}/playback/session"): None,
+    ("POST", "/api/zones/{zone_id}/playback/heartbeat"): {
+        "device_id": "missing",
+        "song_index": 0,
+        "offset_ms": 0,
+    },
+    ("POST", "/api/zones/{zone_id}/playback/take-over"): {"device_id": "missing"},
+    ("POST", "/api/zones/{zone_id}/playback/reconnect"): {"device_id": "missing"},
+    ("POST", "/api/zones/{zone_id}/playback/commands"): {
+        "device_id": "missing",
+        "command": "pause",
+        "based_on_seq": 0,
+        "fence": 0,
+        "idempotency_key": "tenant-matrix-zone",
+    },
+    ("POST", "/api/zones/{zone_id}/playback/commands/{command_id}/ack"): {
+        "device_id": "missing",
+        "result": "applied",
+    },
+    ("POST", "/api/zones/{zone_id}/playback/hand-back"): {
+        "device_id": "missing",
+        "song_index": 0,
+        "offset_ms": 0,
+    },
     ("POST", "/api/rooms"): {"name": "Party", "settings": {}},
     ("GET", "/api/rooms/current"): None,
     ("GET", "/api/rooms/{room_id}"): None,
@@ -421,6 +449,7 @@ def world(tmp_path, monkeypatch):
                 "request_id": new_id(),
                 "guest_id": new_id(),
                 "command_id": new_id(),
+                "zone_id": new_id(),
                 "song_id": 1,
             },
             "derived": derived,

@@ -266,6 +266,7 @@ __all__ = [
     "list_songs",
     "normalised",
     "register_songs",
+    "replace_device_availability",
     "set_availability",
     "soft_delete",
 ]
