@@ -50,8 +50,8 @@ export function GalleryParts() {
       </section>
       <section className="stack"><h3>Words, tables and themes</h3>
         <p>{relativeTime(90)}; {relativeTime(60 * 60 * 26)}; {countOf(1, 'song')}; {countOf(2898, 'song')}; {ellipsize(LONG, 24)}</p>
-        <DataTable caption="Specimen mixes" rowKey={(row) => row.name} rows={ROWS} columns={[
-          { key: 'name', label: 'Mix', render: (row) => <Truncate text={row.name} /> },
+        <DataTable caption="Specimen mixes" stacked="auto" rowKey={(row) => row.name} rows={ROWS} columns={[
+          { key: 'name', label: 'Mix' },
           { key: 'songs', label: 'Songs', numeric: true, render: (row) => countOf(row.songs, 'song') },
           { key: 'when', label: 'Changed', render: (row) => relativeTime(row.when) },
         ]} />

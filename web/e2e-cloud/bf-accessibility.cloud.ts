@@ -1,7 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { APIRequestContext, expect, Page, test } from '@playwright/test';
 import { rewriteJson } from '../e2e/helpers';
-import { listener, signedIn } from './cloud';
+import { asStaff, enterConsole, listener, signedIn } from './cloud';
+import { endRooms, hostWithRoom } from './helpers';
 
 // BF-0463-06, the automated half: the new Browser-first Cloud surfaces checked by machine for
 // WCAG 2.2 AA (axe), at 320 px (which is also what 400% zoom of a 1280 px window lays out) and
@@ -78,11 +79,11 @@ test('the local-first shell destinations pass WCAG AA at 320 px and desktop, bot
   test.setTimeout(300_000);
   await localFirst(page, request, listener('bf-a11y'));
   const found: string[] = [];
-  for (const [path, heading] of [['/listen', 'Listen'], ['/library', 'Library'], ['/mixes', 'Make a Mix'], ['/mixes/mine', 'My Mixes']]) {
+  for (const [path, heading, id] of [['/listen', 'Listen', 'site.cloud.local.listen'], ['/library', 'Library', 'site.cloud.local.library'], ['/mixes', 'Make a Mix', 'site.cloud.local.mixes'], ['/mixes/mine', 'My Mixes', 'site.cloud.local.mixes-mine']]) {
     await page.goto(path);
     await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
-    found.push(...(await checked(page, path)));
+    found.push(...(await checked(page, `${id} ${path}`)));
   }
   expect(found).toEqual([]);
 });
@@ -123,4 +124,125 @@ test('the hosted Library with the hosted media grant revoked passes WCAG AA, bot
   // By keyboard, the stored song still plays.
   expect(await tabTo(page, /^Listen to Song 1/)).toEqual([]);
   await request.post('/test/flags/off', { data: { user, flags: [] } });
+});
+
+// BF overhaul W6: every Cloud, staff console, business, guest and display surface in the MP-0272
+// inventory's `sites` list (docs/adr/mp-0272-surface-inventory.json) is checked here under its id;
+// web/src/shell/mpSurfaceInventory.test.ts fails when a listed surface is not named in this file.
+
+/** Wait until the page has drawn past its loading placeholders, then run the shared checks. */
+async function settledCheck(page: Page, id: string): Promise<string[]> {
+  await expect(page.locator('[aria-busy="true"]:not(button)')).toHaveCount(0, { timeout: 20_000 }).catch(() => undefined);
+  return checked(page, id);
+}
+
+test('the hosted Cloud pages pass WCAG AA at 320 px and desktop, both themes, reduced motion', async ({ page, request }) => {
+  test.setTimeout(400_000);
+  await signedIn(page, request, listener('bf-a11y-hosted'), { songs: 1 });
+  const found: string[] = [];
+  for (const [id, path] of [
+    ['site.cloud.home', '/'], ['site.cloud.listen', '/listen'], ['site.cloud.library', '/library'], ['site.cloud.uploads', '/upload'],
+    ['site.cloud.billing', '/account/billing'], ['site.cloud.not-found', '/an-old-link'],
+  ] as const) {
+    await page.goto(path);
+    await expect(page.getByRole('navigation', { name: 'Cloud workspace' })).toBeVisible();
+    found.push(...(await settledCheck(page, `${id} ${path}`)));
+  }
+  expect(found).toEqual([]);
+});
+
+test('Cloud settings with devices and the venue tablet card pass WCAG AA', async ({ page, request }) => {
+  test.setTimeout(200_000);
+  await page.route('**/api/account', (route) => rewriteJson(route, (account) => ({
+    ...account,
+    features: { ...account.features, devices: true, 'devices.browser_player': true, 'cloud.venue_tablet': true },
+  })));
+  await signedIn(page, request, listener('bf-a11y-settings'), { songs: 1, path: '/account' });
+  await expect(page.getByRole('heading', { name: 'Account settings' })).toBeVisible();
+  expect(await settledCheck(page, 'site.cloud.settings')).toEqual([]);
+});
+
+test('the unified hosted shell passes WCAG AA', async ({ page, request }) => {
+  const user = listener('bf-a11y-hosted-shell');
+  const seeded = await request.post('/test/seed', { data: { user } });
+  expect(seeded.ok(), await seeded.text()).toBeTruthy();
+  await page.route('**/api/account', (route) => rewriteJson(route, (account) => ({
+    ...account,
+    experience: { ...(account.experience ?? {}), local_first: false },
+    features: { ...account.features, 'cloud.hosted_shell': true },
+  })));
+  await page.addInitScript((name) => localStorage.setItem('selecta-e2e-user', name), user);
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
+  expect(await settledCheck(page, 'site.cloud.hosted-shell')).toEqual([]);
+});
+
+test('a new local-first member sees the onboarding spine, and it passes WCAG AA', async ({ page, request }) => {
+  const user = listener('bf-a11y-onboarding');
+  const seeded = await request.post('/test/seed', { data: { user, songs: 0, local_songs: 0 } });
+  expect(seeded.ok(), await seeded.text()).toBeTruthy();
+  await page.route('**/api/account', (route) => rewriteJson(route, (account) => ({
+    ...account,
+    experience: { ...(account.experience ?? {}), local_first: true, hosted: false },
+    features: { ...account.features, 'cloud.local_first': true, 'cloud.local_media': true, 'cloud.progressive_import': true },
+  })));
+  await page.addInitScript((name) => localStorage.setItem('selecta-e2e-user', name), user);
+  await page.goto('/library');
+  await expect(page.getByRole('heading', { level: 1, name: 'Welcome to SelectaDJ' })).toBeVisible();
+  expect(await settledCheck(page, 'site.cloud.onboarding')).toEqual([]);
+});
+
+test('the staff console pages pass WCAG AA', async ({ page, request }) => {
+  test.setTimeout(400_000);
+  await asStaff(page, request);
+  const nav = await enterConsole(page);
+  const found: string[] = [];
+  for (const [id, label] of [
+    ['site.admin.overview', 'Overview'], ['site.admin.jobs', 'Jobs & workers'], ['site.admin.accounts', 'Accounts & billing'],
+    ['site.admin.ai', 'AI routing'], ['site.admin.security', 'Security'], ['site.admin.flags', 'Flags'],
+  ] as const) {
+    await nav.getByRole('button', { name: label, exact: true }).click();
+    await expect(nav.getByRole('button', { name: label, exact: true })).toHaveAttribute('aria-current', 'page');
+    found.push(...(await settledCheck(page, `${id} ${label}`)));
+  }
+  expect(found).toEqual([]);
+});
+
+test('Rooms, devices, the cloud gallery and the business harness pass WCAG AA', async ({ page }) => {
+  test.setTimeout(400_000);
+  await endRooms(page);
+  const found: string[] = [];
+  await page.goto('/harness?as=alice');
+  await expect(page.getByRole('heading', { name: /room/i }).first()).toBeVisible();
+  // one harness page carries the Rooms panel, the devices panel and the playing bar
+  found.push(...(await settledCheck(page, ['site.cloud.rooms', 'site.cloud.devices'].join(' '))));
+  await page.goto('/harness?page=gallery');
+  await expect(page.getByRole('heading', { level: 1, name: 'SelectaDJ Cloud patterns' })).toBeVisible();
+  found.push(...(await settledCheck(page, 'site.cloud.gallery')));
+  await page.goto('/business-harness.html');
+  await expect(page.getByRole('heading', { level: 1, name: /SelectaDJ for Business/ })).toBeVisible();
+  found.push(...(await settledCheck(page, 'site.business.harness')));
+  expect(found).toEqual([]);
+});
+
+test('the guest page and the room display pass WCAG AA', async ({ browser, page }) => {
+  test.setTimeout(300_000);
+  await endRooms(page);
+  const { context, joinPath } = await hostWithRoom(browser);
+  const found: string[] = [];
+  try {
+    await page.goto(joinPath);
+    await expect(page.getByRole('button', { name: 'Join the room' })).toBeVisible();
+    found.push(...(await checked(page, `${'site.guest.join'} before joining`)));
+    await page.getByRole('button', { name: 'Join the room' }).click();
+    await expect(page.getByRole('heading', { name: 'Request a song' })).toBeVisible();
+    found.push(...(await checked(page, `${'site.guest.join'} joined`)));
+    await page.goto('/display');
+    await expect(page.getByRole('heading', { name: 'Pair this screen' })).toBeVisible();
+    found.push(...(await checked(page, 'site.display.pairing')));
+  } finally {
+    await endRooms(page);
+    await context.close();
+  }
+  expect(found).toEqual([]);
 });

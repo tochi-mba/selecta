@@ -53,15 +53,6 @@
 .hq-wall .hq-zone-name, .hq-wall .biz-now-artist, .hq-wall .biz-quiet { color: var(--text); }
 .hq-wall .hq-grid-headgroup { background: var(--surface-base); }
 
-/* DataTable stacked mode (web/src/ui/DataTable.tsx, used under 600 px). */
-.data-table-stacked { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
-.data-table-card { border: var(--separator) solid var(--edge-decorative); border-radius: var(--radius); background: var(--surface-raised); padding: var(--space-3); }
-.data-table-card dl { margin: 0; display: grid; gap: var(--space-1); }
-.data-table-field { display: grid; grid-template-columns: minmax(6rem, 30%) minmax(0, 1fr); gap: var(--space-3); }
-.data-table-card dt { color: var(--text-soft); font: var(--type-label); }
-.data-table-card dd { margin: 0; overflow-wrap: anywhere; min-width: 0; }
-.data-table-stacked-caption { margin: 0 0 var(--space-2); color: var(--text-soft); }
-
 /* Schedules */
 .sched { max-width: var(--content-work); margin: 0 auto; padding: var(--space-4); display: grid; gap: var(--space-4); min-width: 0; }
 .sched h1 { margin: 0; font: var(--type-page); }

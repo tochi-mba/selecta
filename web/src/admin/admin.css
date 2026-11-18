@@ -76,24 +76,6 @@
   background: var(--surface-control);
 }
 
-/* DataTable (ui/DataTable.tsx), first used here */
-.data-table-wrap { overflow-x: auto; max-width: 100%; }
-.data-table-wrap:focus-visible { outline: 2px solid var(--focus); outline-offset: var(--space-hair); }
-.data-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
-.data-table caption { text-align: left; color: var(--text-soft); font: var(--type-caption); padding-bottom: var(--space-dense); }
-.data-table th,
-.data-table td {
-  text-align: left;
-  padding: var(--space-dense) var(--space-2);
-  border-bottom: var(--separator) solid var(--edge-decorative);
-  vertical-align: top;
-}
-.data-table th { color: var(--text-soft); font-weight: var(--weight-label); }
-.data-table .numeric { text-align: right; font-variant-numeric: tabular-nums; }
-.data-table-empty { color: var(--text-soft); font-style: italic; }
-/* a row's name that opens it: words that go somewhere, so the link role, not raw lime */
-.data-table-pick { border: 0; background: none; padding: 0; color: var(--link); text-decoration: underline; cursor: pointer; font: inherit; }
-
 @media (max-width: 640px) {
   .admin-top { flex-direction: column; align-items: start; }
   .admin-who { justify-items: start; }

@@ -69,12 +69,45 @@ test('MP-0279-01 controls, fields, tabs, menus, skeletons, overlays and statuses
   expect(await gallery.locator('.skeleton').count(), 'every skeleton variant').toBeGreaterThanOrEqual(9);
   await expect(gallery.getByRole('alert').filter({ hasText: 'could not be loaded' })).toBeVisible();
   await expect(gallery.locator('.empty-state')).toBeVisible();
-  for (const kind of ['dialog', 'drawer'] as const) {
+  for (const kind of ['dialog', 'drawer', 'sheet', 'workspace'] as const) {
     await gallery.getByRole('button', { name: `Open ${kind}` }).click();
     await expect(page.getByRole('dialog', { name: `Example ${kind}` })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog', { name: `Example ${kind}` })).toHaveCount(0);
   }
+});
+
+test('MP-0279-01b the overhaul primitives, music objects and compact density are in the gallery', async ({ page }) => {
+  const gallery = await openGallery(page);
+  for (const heading of ['Meters and progress', 'Confirmations, toasts and announcements', 'Primitives', 'Form controls', 'Words, tables and themes', 'Compact density', 'Music objects']) {
+    await expect(gallery.getByRole('heading', { name: heading, exact: true }), heading).toBeVisible();
+  }
+  expect(await gallery.locator('.status').count(), 'all 11 status kinds').toBeGreaterThanOrEqual(11);
+  expect(await gallery.locator('.skeleton').count(), 'all 10 skeleton variants').toBeGreaterThanOrEqual(10);
+  await expect(gallery.getByRole('progressbar', { name: 'Songs checked', exact: true })).toHaveAttribute('aria-valuenow', '312');
+  await expect(gallery.getByRole('meter', { name: 'Storage full' })).toBeVisible();
+  await expect(gallery.locator('.brand-mark-badge').first()).toHaveAttribute('aria-hidden', 'true');
+  await expect(gallery.locator('.draft-list[data-density="compact"]')).toBeVisible();
+  // the specimen menu (S4 route tasks name this spec for it)
+  await gallery.getByRole('button', { name: 'Specimen menu' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Danger item' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  // a destructive confirmation focuses the safe answer, then its undo toast puts things back
+  await gallery.getByRole('button', { name: 'Remove with undo' }).click();
+  const confirm = page.getByRole('alertdialog', { name: 'Remove this specimen?' });
+  await expect(confirm.getByRole('button', { name: 'Keep it' })).toBeFocused();
+  await confirm.getByRole('button', { name: 'Yes, remove it' }).click();
+  await expect(confirm).toHaveCount(0);
+  await expect(gallery.getByText('The specimen was removed. Undo puts it back.')).toBeVisible();
+  await page.locator('.toast-row').filter({ hasText: 'Removed.' }).getByRole('button', { name: 'Undo' }).click();
+  await expect(gallery.getByText('The specimen was removed. Undo puts it back.')).toHaveCount(0);
+  // the real command palette, with no song search, gives focus back when it closes
+  const opener = gallery.getByRole('button', { name: 'Open the command palette' });
+  await opener.click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(opener).toBeFocused();
 });
 
 test('MP-0279-02 rest, hover, focus, pressed and selected keep each control’s geometry and look different', async ({ page }, info) => {
