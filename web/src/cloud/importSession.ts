@@ -95,8 +95,17 @@ export function subscribeImport(listener: () => void): () => void {
   };
 }
 
-export function useImportSession(): ImportSnapshot {
-  return useSyncExternalStore(subscribeImport, importSnapshot, importSnapshot);
+/** The snapshot as one workspace may see it: another workspace's import reads as idle. */
+export function importSnapshotFor(workspaceId: string | undefined): ImportSnapshot {
+  if (workspaceId !== undefined && snapshotWorkspace !== null && snapshotWorkspace !== workspaceId) return IDLE_IMPORT;
+  return importSnapshot();
+}
+
+/** Pass the signed-in workspace wherever it is known: the filter then holds from the very first
+ * render, before any binding effect has run. */
+export function useImportSession(workspaceId?: string): ImportSnapshot {
+  const read = () => importSnapshotFor(workspaceId);
+  return useSyncExternalStore(subscribeImport, read, read);
 }
 
 function writeMarker(workspaceId: string, marker: ImportMarker) {
@@ -226,6 +235,16 @@ export function cancelImportSession(): void {
 export function clearImportSession(): void {
   if (snapshot.phase === 'idle' || snapshot.phase === 'running') return;
   if (session && !session.settled) return;
+  session = null;
+  snapshotWorkspace = null;
+  publish(IDLE_IMPORT);
+}
+
+/** The shell is going away (sign-out, account switch): stop a running import and forget the
+ * snapshot entirely, so nothing of it (folder, file names, summary) outlives the shell. The
+ * marker of a deliberate stop is cleared as a cancel always is. */
+export function endImportSession(): void {
+  cancelImportSession();
   session = null;
   snapshotWorkspace = null;
   publish(IDLE_IMPORT);

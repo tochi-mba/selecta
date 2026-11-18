@@ -34,7 +34,7 @@ What this branch found before the change:
 - **One index per workspace.** `MediaStore.open(workspaceId)` opens `selecta-media-ws-<workspaceId>`. The shell keys its open store and resolver by workspace, so a different account in the same tab opens its own index. The memory-only degraded path keeps working, still scoped.
 - **Legacy disposal.** The unscoped `selecta-media` database cannot be attributed to a workspace, so the first scoped open on a page deletes it. The cost is one re-import, never music.
 - **Two workspaces, one folder.** Each workspace keeps its own remembered folder entry and its own import marker. The browser's read permission for a folder is granted per site, not per account, so B picking a folder A already granted may not be prompted; B still has to pick it, and no handle or folder name crosses between workspaces.
-- **Import progress.** `bindImportWorkspace` records the signed-in workspace; another workspace's import, running or settled, reads as idle on every surface (chip, panel, announcer).
+- **Import progress.** The snapshot is keyed by the workspace that started it. `useImportSession(workspaceId)` reads another workspace's import as idle from the first render, `bindImportWorkspace` does the same for surfaces without a workspace (the announcer), and leaving the shell ends the import and forgets the snapshot, so a new account in the same tab never sees, or records against itself, the last account's summary.
 - **Sign out** keeps that workspace's device data so returning is instant. While another workspace is active it is unreachable, because every index is named by workspace and the server session decides which workspace is active.
 - **Delete account** wipes that workspace's song index, remembered folder, import marker, media profile id and device key before signing out.
 - **This browser card** (Settings, `cloud.local_media`): "Forget this account here" does the same wipe for the signed-in workspace; "Clear everything in this browser" deletes every `selecta-media*` database, the venue offline cache, the OPFS `cache-` namespace and SelectaDJ's own `selecta.` keys in local storage, then reloads. The sign-in itself is left alone; signing out is its own button.
@@ -78,6 +78,9 @@ Data may be shared across tenants by fingerprint only when it is a deterministic
 - [x] `cloud.content_cache` registered and build-on; `cloud.hosted_dedupe` registered, default off; `docs/flags.md` regenerated. Implemented (66506d6b, f66ce2c4)
 - [x] Server `shared_derivations` with possession-gated reads, verified writes, user-data refusal and no oracle. Implemented (f66ce2c4)
 - [x] Reference count derived from live assets; shared rows dropped when the last holder is erased. Implemented (f66ce2c4)
+- [x] A failed open is a lapse (permission only on NotAllowedError, otherwise missing), never a changed file; only a verified byte mismatch is changed. Implemented (see the commit after 85e8388d)
+- [x] Play-time verification hashes without freezing the page (WebCrypto, else sliced). Implemented (see the commit after 85e8388d)
+- [x] A plain import does not invalidate the lapsed sweep, and concurrent sweeps share one run. Implemented (see the commit after 85e8388d)
 - [ ] Hosted originals stored content-addressed with refcounted erasure. Needs follow-up (contract above; ADR-0397 layout change)
 - [ ] A producer that writes server analysis into `shared_derivations`. Needs follow-up (no hosted analysis job writes it today)
 - [ ] Guard test: every table with a content hash and no `workspace_id` is allowlisted with the possession rule, and allowlisted tables carry no user-entered columns. Pending tests

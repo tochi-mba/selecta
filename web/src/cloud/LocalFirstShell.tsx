@@ -33,7 +33,7 @@ import { OnboardingSpine } from './onboarding/OnboardingSpine';
 import { browserStorage, onboardingFinished, recordImportOutcome } from './onboarding/state';
 import { ImportChip } from './ImportChip';
 import { StorageCard } from './StorageCard';
-import { bindImportWorkspace, cancelImportSession, useImportSession } from './importSession';
+import { bindImportWorkspace, endImportSession, useImportSession } from './importSession';
 import { useServerFreeControls } from './serverFreeControls';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
@@ -185,9 +185,9 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   const resolver = useCallback(async () => {
     if (resolverFor.current !== workspaceId) { resolverFor.current = workspaceId; resolving.current = null; }
     return (resolving.current ??= openStore().then((opened) => makeCoexistingResolver({
-    device: makeResolver(opened, undefined, (songId, present) => {
+    device: makeResolver(opened, undefined, (songId, present, why) => {
       if (present) lapsed.current.delete(songId);
-      else lapsed.current.set(songId, 'changed');
+      else lapsed.current.set(songId, why ?? 'missing');
       refreshStatusRef.current?.();
       if (on('cloud.local_media')) {
         const snapshot = present ? { present: [songId], absent: [] } : { present: [], absent: [songId] };
@@ -233,7 +233,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   // The import session outlives any one page: each landed batch refreshes the counts, and a
   // finished import records its outcome in the onboarding state even with the spine gone.
   useEffect(() => { bindImportWorkspace(workspaceId); }, [workspaceId]);
-  const importLive = useImportSession();
+  const importLive = useImportSession(workspaceId);
   const lastBatches = useRef(importLive.batches);
   useEffect(() => {
     const moved = importLive.batches !== lastBatches.current;
@@ -245,7 +245,9 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
     }
     if (moved || ended) refreshStatus();
   }, [importLive.batches, importLive.phase, importLive.summary, refreshStatus, sweepLapsed, workspaceId]);
-  useEffect(() => () => cancelImportSession(), []);
+  // Leaving the shell ends the import and forgets its snapshot (ADR-0469): a different account
+  // signing in to this tab starts from idle, never from the last account's summary.
+  useEffect(() => () => endImportSession(), []);
 
   // This shell has no local server: the shell's job badge and the local-only buttons stand down
   // while it is open, and come back exactly as they were when it closes.
@@ -389,7 +391,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
         onCommands={controls.onCommands}
         mode="cloud"
         more={moreItems}
-        banner={<>{notices}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
+        banner={<>{notices}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
       >
         {page()}
         <footer className="cloud-footer">SelectaDJ Cloud. Your music files stay on your devices; your account keeps their details.</footer>

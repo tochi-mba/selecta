@@ -1,3 +1,4 @@
+import { bytesSha256 } from './identity';
 import { cacheRead, MediaStore, readSongBytes } from './store';
 
 // The engine's media resolver (ADR-0458 with ADR-0457).
@@ -24,7 +25,7 @@ export type MediaResolver = (songId: number) => Promise<ResolvedTrack | null>;
 
 /** Told whether a song's exact registered bytes could be read here (true) or not (false), so the
  * shell can keep the catalogue's device availability honest without a separate sweep. */
-export type AvailabilityObserver = (songId: number, present: boolean) => void;
+export type AvailabilityObserver = (songId: number, present: boolean, why?: 'changed' | 'permission' | 'missing') => void;
 
 export function makeResolver(
   store: MediaStore,
@@ -53,11 +54,10 @@ export function makeResolver(
             // The bytes are read for decoding anyway; hashing them proves they are still the
             // song the catalogue registered, so a file edited in place never plays as it.
             const bytes = await file.arrayBuffer();
-            const { sha256 } = await import('@noble/hashes/sha2.js');
-            const digest = Array.from(sha256(new Uint8Array(bytes)), (byte) => byte.toString(16).padStart(2, '0')).join('');
+            const digest = await bytesSha256(bytes);
             if (digest !== expected) {
               await store.markChanged(songId);
-              onAvailability?.(songId, false);
+              onAvailability?.(songId, false, 'changed');
               throw new Error('This song’s file has changed since it was connected, so SelectaDJ will not play it as this song.');
             }
             if (song.availabilityIssue === 'changed') await store.clearChanged(songId);
@@ -65,9 +65,11 @@ export function makeResolver(
             return bytes;
           },
         };
-      } catch {
+      } catch (problem) {
         // The handle lapsed or the file moved: fall through to the cache, then to an honest null.
-        onAvailability?.(songId, false);
+        // A failed open is a lapse (permission, or a missing file), never a changed file: only a
+        // verified byte mismatch above is 'changed'.
+        onAvailability?.(songId, false, (problem as DOMException | null)?.name === 'NotAllowedError' ? 'permission' : 'missing');
       }
     }
     // The cache is keyed by the hash this device computed when it imported the file (never a

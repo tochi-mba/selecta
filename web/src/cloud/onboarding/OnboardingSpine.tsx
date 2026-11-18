@@ -37,7 +37,7 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
 }) {
   const deps = useMemo<SpineDeps>(() => ({ ...defaultDeps(request, workspaceId), ...given }), [request, workspaceId, given]);
   const [state, setState] = useState<SpineState>(() => loadState(deps.storage, workspaceId));
-  const live = useImportSession();
+  const live = useImportSession(workspaceId);
   const progressive = useFlag('cloud.progressive_import');
   const audio = useRef<AudioSession | null>(null);
   // The page around the spine owns the one h1 ("Welcome to SelectaDJ"); each step is an h2.

@@ -1,4 +1,4 @@
-import type { TrackIdentity } from './identity';
+import { bytesSha256, type TrackIdentity } from './identity';
 
 // The local media index (ADR-0458, BF-0458-06): cache, not a second library.
 //
@@ -188,7 +188,12 @@ export class MediaStore {
   async put(song: StoredSong): Promise<void> {
     const previous = this.memory.get(song.songId);
     this.memory.set(song.songId, song);
-    this.touchAvailability();
+    // Only a re-link changes availability (a new handle, or a cleared or raised issue). A plain
+    // import adds a song without invalidating the lapsed sweep, so an import of thousands of
+    // songs does not make the next Library visit reopen every file.
+    const relinked = previous !== undefined
+      && (previous.ref !== song.ref || (previous.availabilityIssue ?? null) !== (song.availabilityIssue ?? null));
+    if (relinked) this.touchAvailability();
     const db = this.db;
     if (!db) return;
     try {
@@ -337,10 +342,7 @@ export function cachedBytesKey(song: Pick<StoredSong, 'songId' | 'identity'>, sc
   return `bytes-${encodeURIComponent(scope.workspaceId)}-${song.songId}`;
 }
 
-async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
-  const { sha256 } = await import('@noble/hashes/sha2.js');
-  return Array.from(sha256(new Uint8Array(bytes)), (byte) => byte.toString(16).padStart(2, '0')).join('');
-}
+const sha256Hex = bytesSha256;
 
 /** Possession proof for content keys: bytes enter a shared entry only when this device hashed
  * them to the song's hash itself. A hash from anywhere else (a server reply, another tab's

@@ -24,20 +24,15 @@ export type LapsedItem = {
 };
 
 async function handleState(handle: FileHandleLike): Promise<'granted' | 'ask' | 'missing'> {
-  // queryPermission is advisory only: Chromium answers "prompt" for a file handle whose parent
-  // folder was granted as a whole, while getFile() works fine. Opening the file is the truth,
-  // so a non-granted answer is only "ask" when the open itself is refused for permission.
+  // Opening the file is the truth. queryPermission is not consulted: Chromium answers "prompt"
+  // for every file under a granted folder, so it would turn every moved or deleted file into a
+  // permission problem. Only a refusal for permission (NotAllowedError) asks again; any other
+  // failure (NotFoundError, a vanished drive) is a missing file.
   try {
     await handle.getFile();
     return 'granted';
   } catch (problem) {
-    if ((problem as DOMException | null)?.name === 'NotAllowedError') return 'ask';
-    if (!handle.queryPermission) return 'missing';
-  }
-  try {
-    return (await handle.queryPermission({ mode: 'read' })) === 'granted' ? 'missing' : 'ask';
-  } catch {
-    return 'missing';
+    return (problem as DOMException | null)?.name === 'NotAllowedError' ? 'ask' : 'missing';
   }
 }
 
@@ -48,10 +43,29 @@ async function handleState(handle: FileHandleLike): Promise<'granted' | 'ask' | 
  * Opening every file is expensive at thousands of songs, so a sweep is remembered against the
  * store's availability revision; `force` opens every file again regardless. */
 const sweeps = new WeakMap<MediaStore, { revision: number; items: LapsedItem[] }>();
+/** The sweep under way per store: concurrent callers (the shell's forced sweep at start-up and
+ * a Library visit) join it instead of opening every file twice. */
+const inflight = new WeakMap<MediaStore, { force: boolean; sweep: Promise<LapsedItem[]> }>();
 
 export async function findLapsed(store: MediaStore, options: { force?: boolean } = {}): Promise<LapsedItem[]> {
   const remembered = sweeps.get(store);
   if (!options.force && remembered && remembered.revision === store.availabilityRevision) return remembered.items;
+  const running = inflight.get(store);
+  // A forced caller may join only a forced sweep; an unforced caller may join either.
+  if (running && (running.force || !options.force)) return running.sweep;
+  const sweep = sweepLapsed(store);
+  inflight.set(store, { force: options.force === true, sweep });
+  try {
+    return await sweep;
+  } finally {
+    if (inflight.get(store)?.sweep === sweep) inflight.delete(store);
+  }
+}
+
+async function sweepLapsed(store: MediaStore): Promise<LapsedItem[]> {
+  // Remember the revision the sweep started from, so a change made while files were being
+  // opened makes the next caller sweep again rather than trust a stale answer.
+  const revision = store.availabilityRevision;
   const lapsed: LapsedItem[] = [];
   for (const song of await store.all()) {
     if (song.ref.kind !== 'handle') continue;
@@ -64,7 +78,7 @@ export async function findLapsed(store: MediaStore, options: { force?: boolean }
       regrant: () => regrant(store, song),
     });
   }
-  sweeps.set(store, { revision: store.availabilityRevision, items: lapsed });
+  sweeps.set(store, { revision, items: lapsed });
   return lapsed;
 }
 

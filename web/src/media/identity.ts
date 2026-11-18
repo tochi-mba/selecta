@@ -74,3 +74,19 @@ export function assertNoPath(payload: unknown, at = 'payload'): void {
     }
   }
 }
+
+/** The SHA-256 of bytes already in memory, without freezing the page: WebCrypto digests off the
+ * main thread where it exists; otherwise the bytes are hashed in slices, yielding between them,
+ * so a long WAV checked at play time never stalls a fade. */
+export async function bytesSha256(bytes: ArrayBuffer): Promise<string> {
+  const subtle = typeof crypto !== 'undefined' ? crypto.subtle : undefined;
+  if (subtle?.digest) {
+    try {
+      const digest = await subtle.digest('SHA-256', bytes);
+      return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+    } catch {
+      // fall through to the sliced hash
+    }
+  }
+  return fileSha256(new Blob([bytes]));
+}

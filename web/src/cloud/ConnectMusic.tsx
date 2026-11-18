@@ -67,7 +67,7 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
   /** Reconcile this device's catalogue availability after a permission is restored. */
   onAvailabilityChanged?: () => void | Promise<void>;
 }) {
-  const live = useImportSession();
+  const live = useImportSession(workspaceId);
   useImportAnnouncer();
   const progressive = useFlag('cloud.progressive_import');
   const [problem, setProblem] = useState('');
