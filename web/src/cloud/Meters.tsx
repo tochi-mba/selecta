@@ -43,7 +43,7 @@ export function storageMode(account: Pick<Account, 'usage'>): StorageMode {
 export function NoHostedStorage() {
   return (
     <section className="cloud-card cloud-meter-card cloud-meter-none" aria-label="Storage">
-      <p className="cloud-eyebrow">STORAGE</p>
+      <p className="cloud-eyebrow">Storage</p>
       <h2>No hosted storage</h2>
       <p className="cloud-meter-free">Your music stays on your own devices, so SelectaDJ Cloud keeps no audio for you and there is nothing here to fill up.</p>
     </section>

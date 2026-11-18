@@ -161,20 +161,20 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
   return (
     <section className="cloud-library">
       <div className="cloud-library-heading">
-        <div><p className="cloud-eyebrow">PRIVATE TO THIS WORKSPACE</p><p>Listen from any song and the rest of the list follows, with the next song loaded ahead. Removing a song frees its space once the few seconds to undo it have passed.</p></div>
+        <div><p className="cloud-eyebrow">Private to this workspace</p><p>Listen from any song and the rest of the list follows, with the next song loaded ahead. Removing a song frees its space once the few seconds to undo it have passed.</p></div>
         <div><button onClick={() => void load()} disabled={busy}>Refresh</button>{uploads && <button className="primary" onClick={() => go('uploads')}>Upload tracks</button>}</div>
       </div>
       {truthful && (
         <section className="cloud-library-overview" aria-label="Library overview">
           <div><span className="cloud-eyebrow">SONGS</span><strong data-testid="library-songs">{songWords(overview)}</strong></div>
-          {storage !== null && limit !== null && <div><span className="cloud-eyebrow">STORAGE</span><strong data-testid="library-storage">{bytes(storage)} of {bytes(limit)}</strong></div>}
+          {storage !== null && limit !== null && <div><span className="cloud-eyebrow">Storage</span><strong data-testid="library-storage">{bytes(storage)} of {bytes(limit)}</strong></div>}
           {uploads && <div><span className="cloud-eyebrow">UNFINISHED UPLOADS</span><strong data-testid="library-unfinished">{overview.processing === null ? 'Not known' : overview.processing}</strong>{overview.processing ? <button onClick={() => go('uploads')}>Carry on</button> : null}</div>}
         </section>
       )}
       {track && !shared && (
         <section className="cloud-card cloud-library-player" aria-label="Player">
           <div>
-            <p className="cloud-eyebrow">NOW PLAYING</p>
+            <p className="cloud-eyebrow">Now playing</p>
             <strong data-testid="now-playing">{track.name}</strong>
             {player.upNext && <p className="cloud-up-next" data-testid="up-next">Up next: {player.upNext.name}{player.bufferedId === player.upNext.id ? ' · loaded' : ''}</p>}
           </div>

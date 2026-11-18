@@ -129,7 +129,7 @@ export function ReconciliationPanel({ request }: { request: Request }) {
 
   return (
     <section className="cloud-card cloud-reconcile" aria-labelledby="cloud-reconcile-title">
-      <p className="cloud-eyebrow">YOUR HOSTED AND DEVICE MUSIC</p>
+      <p className="cloud-eyebrow">Your hosted and device music</p>
       <h2 id="cloud-reconcile-title">How your libraries line up</h2>
       <p>SelectaDJ compares the audio itself, not the names. This only looks: it never deletes, moves or copies anything, and your hosted library stays as it is.</p>
       <div className="cloud-reconcile-next-steps">

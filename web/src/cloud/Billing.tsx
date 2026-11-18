@@ -25,7 +25,7 @@ type Axis = { name: string; words: string; flag?: FlagId };
 const LOCAL_FIRST_AXES: Record<Paid, { headline: string; eyebrow: string; axes: Axis[] }> = {
   standard: {
     headline: 'More from Lucy',
-    eyebrow: 'FOR EVERYDAY MIXING',
+    eyebrow: 'For everyday mixing',
     axes: [
       { name: 'Lucy', words: 'Lucy Standard: 400 everyday turns and 40 planning turns a month.', flag: 'lucy' },
       { name: 'Discovery', words: 'Scheduled discovery sweeps for new links between your songs.' },
@@ -34,7 +34,7 @@ const LOCAL_FIRST_AXES: Record<Paid, { headline: string; eyebrow: string; axes: 
   },
   premium: {
     headline: 'Rooms and Lucy Advanced',
-    eyebrow: 'FOR HOSTING',
+    eyebrow: 'For hosting',
     axes: [
       { name: 'Rooms', words: 'Open a room for up to 100 guests, for up to 12 hours, with song requests.', flag: 'rooms' },
       { name: 'Lucy', words: 'Lucy Advanced: 150 everyday turns, 25 deep plans a month, and quick turns on fair use.', flag: 'lucy' },
@@ -133,7 +133,7 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
       <CheckoutStatus phase={phase} account={account} />
       <section className="cloud-card cloud-current-plan">
         <div>
-          <p className="cloud-eyebrow">CURRENT PLAN</p>
+          <p className="cloud-eyebrow">Current plan</p>
           <h2>{planName(account)}</h2>
           {account.lucy && accountFlagOn('lucy', account.features) && <p>Includes {account.lucy.tier}.</p>}
         </div>
@@ -142,7 +142,7 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
       <h2 className="cloud-section-title">This period’s usage</h2>
       <Meters account={account} />
       {paid
-        ? portal && <section className="cloud-card"><p className="cloud-eyebrow">UPGRADE OR DOWNGRADE</p><p>{local
+        ? portal && <section className="cloud-card"><p className="cloud-eyebrow">Upgrade or downgrade</p><p>{local
           ? 'Upgrades start now and are prorated. Downgrades take effect at the end of the period, and your music and mixes stay exactly as they are. Payment details and invoices are in the same secure Stripe portal.'
           : 'Upgrades start now and are prorated. Downgrades take effect at the end of the period; if your library is then bigger than the new plan, it stays playable and nothing is deleted. Payment details and invoices are in the same secure Stripe portal.'}</p></section>
         : checkout && !confirming && <>
@@ -154,7 +154,7 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
           <div className="cloud-plan-grid">
             {PLANS.map((plan) => (
               <section key={plan.id} className={`cloud-plan-card ${plan.featured ? 'featured' : ''}`} aria-label={plan.name}>
-                <p className="cloud-eyebrow">{local ? LOCAL_FIRST_AXES[plan.id].eyebrow : plan.featured ? 'MOST ROOM TO PLAY' : 'FOR YOUR GROWING LIBRARY'}</p>
+                <p className="cloud-eyebrow">{local ? LOCAL_FIRST_AXES[plan.id].eyebrow : plan.featured ? 'Most room to play' : 'For your growing library'}</p>
                 <h2>{plan.name}</h2>
                 {local
                   ? <><p className="cloud-price">{interval === 'month' ? plan.month : plan.year}</p><LocalFirstPlan plan={plan.id} account={account} /></>

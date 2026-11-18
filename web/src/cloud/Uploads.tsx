@@ -29,7 +29,7 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
   const [progress, setProgress] = useState('');
   const [items, setItems] = useState<Item[]>([]);
   const [unfinished, setUnfinished] = useState<UploadSession[]>([]);
-  // A duplicate's question waits for an answer in the shared dialog, never in window.confirm.
+  // A duplicate's question waits for an answer in the shared dialog, never the browser's own prompt.
   const [question, setQuestion] = useState<string | null>(null);
   const answer = useRef<((keep: boolean) => void) | null>(null);
   const ask = (name: string) => new Promise<boolean>((resolve) => {
@@ -145,7 +145,7 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
 
   return (
     <section className="cloud-upload-panel">
-      <div className="cloud-upload-intro"><p className="cloud-eyebrow">PRIVATE LIBRARY</p><h2>Add your tracks</h2><p>Files transfer directly to private object storage. SelectaDJ checks the actual audio format, file size and duration before accepting an upload.</p></div>
+      <div className="cloud-upload-intro"><p className="cloud-eyebrow">Private library</p><h2>Add your tracks</h2><p>Files transfer directly to private object storage. SelectaDJ checks the actual audio format, file size and duration before accepting an upload.</p></div>
       {blocked && <p className="cloud-inline-error" role="status">{blocked}</p>}
       {unfinished.length > 0 && (
         <section className="cloud-unfinished" aria-label="Unfinished uploads">

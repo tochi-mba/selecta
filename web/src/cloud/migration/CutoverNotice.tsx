@@ -39,7 +39,7 @@ export function CutoverNotice({ accountId }: { accountId: string }) {
     <section className="cloud-card cloud-cutover" aria-labelledby={`${id}-title`}>
       <div className="cloud-card-heading">
         <div>
-          <p className="cloud-eyebrow">A NOTE FROM SELECTADJ</p>
+          <p className="cloud-eyebrow">A note from SelectaDJ</p>
           <h2 id={`${id}-title`}>Nothing has changed for you</h2>
         </div>
         <IconButton icon="close" label="Dismiss this note" onClick={dismiss} />

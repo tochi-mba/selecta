@@ -1,11 +1,12 @@
 import { AuthKitProvider } from '@workos-inc/authkit-react';
 import { CloudApp } from './CloudApp';
 import { authKitConfig, followReturnTo } from './authConfig';
+import { BrandMark } from '../ui/BrandMark';
 
 export function CloudRoot({ clientId }: { clientId: string }) {
   const config = authKitConfig(import.meta.env);
   if ('error' in config) {
-    return <main className="cloud-runtime-message"><span className="cloud-mark">S</span><h1>Cloud sign-in needs configuration</h1><p>{config.error}</p></main>;
+    return <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><h1>Cloud sign-in needs configuration</h1><p>{config.error}</p></main>;
   }
   return (
     <AuthKitProvider

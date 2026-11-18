@@ -105,7 +105,7 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
       {track && (
         <section className="cloud-card cloud-library-player" aria-label="Player">
           <div>
-            <p className="cloud-eyebrow">NOW PLAYING FROM YOUR LIBRARY</p>
+            <p className="cloud-eyebrow">Now playing from your library</p>
             <strong data-testid="now-playing">{track.name}</strong>
             {player.upNext && <p className="cloud-up-next" data-testid="up-next">Up next: {player.upNext.name}{player.bufferedId === player.upNext.id ? ' · loaded' : ''}</p>}
           </div>

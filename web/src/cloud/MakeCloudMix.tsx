@@ -163,7 +163,7 @@ function MixMaker({ api, workspaceId, stored, uploads }: { api: Api; workspaceId
 
   return (
     <section className="cloud-card cloud-mix-maker" aria-labelledby="cloud-mix-heading">
-      <p className="cloud-eyebrow">MIXES</p>
+      <p className="cloud-eyebrow">Mixes</p>
       <h2 id="cloud-mix-heading">Make a mix</h2>
       <p>Pick songs from your Cloud Library in the order you want. SelectaDJ plans each change from tempo and key where it knows them, and says plainly when a change is only a crossfade.</p>
       {error && <p className="cloud-mix-error" role="alert">{error}</p>}

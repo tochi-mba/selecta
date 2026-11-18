@@ -48,7 +48,7 @@ export function AccountData({ token, workspaceId, features }: { token: () => Pro
   };
   return (
     <section className="cloud-card" aria-labelledby="cloud-data-title">
-      <p className="cloud-eyebrow">YOUR DATA</p>
+      <p className="cloud-eyebrow">Your data</p>
       <h2 id="cloud-data-title">Download a copy</h2>
       <p>One ZIP file with your original audio, your settings ({settingsWords(features)}) as settings.json, and what Cloud keeps about your mixes as mixes.json. Mix revisions themselves aren’t stored in Cloud yet.</p>
       <button className="primary" disabled={busy} onClick={() => void start()} aria-busy={busy || undefined}>{busy ? 'Preparing export…' : 'Download my data'}</button>
@@ -84,7 +84,7 @@ export function AccountDanger({ busy, onSignOutEverywhere, onDelete }: {
   const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { event.stopPropagation(); back(); } };
   return (
     <section className="cloud-card cloud-danger" aria-labelledby="cloud-danger-title">
-      <p className="cloud-eyebrow">LEAVING OR DELETING</p>
+      <p className="cloud-eyebrow">Leaving or deleting</p>
       <h2 id="cloud-danger-title">Sign-in and account removal</h2>
       <div className="cloud-danger-row">
         <div><h3>Sign out everywhere</h3><p>Ends every sign-in, on every device and browser, including this one.</p></div>

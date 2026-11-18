@@ -112,7 +112,7 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
         : playbackStatusText({ state: 'output_unverified' });
     return (
       <section className="cloud-spine" aria-labelledby={`spine-${workspaceId}-title`}>
-        <p className="cloud-eyebrow">GETTING STARTED</p>
+        <p className="cloud-eyebrow">Getting started</p>
         <h2 id={`spine-${workspaceId}-title`} ref={heading} tabIndex={-1}>You’re set up</h2>
         <StepList state={state} />
         <p role="status">{status}</p>

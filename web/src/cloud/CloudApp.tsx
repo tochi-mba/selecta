@@ -270,6 +270,8 @@ export function CloudApp() {
     if (window.location.pathname !== PATHS[next]) window.history.pushState({}, '', PATHS[next]);
     setPath(PATHS[next]);
     moved.current = true;
+    // a new page starts at its top, as the shared shells' pages do
+    window.scrollTo?.(0, 0);
   };
   const exact = flagOn(ACCOUNT_STATES_FLAG);
   const route = resolveRoute(path);
@@ -293,12 +295,13 @@ export function CloudApp() {
     window.history.replaceState({}, '', `/${window.location.search}${window.location.hash}`);
     setPath('/');
   }, [exact, hostedShell, account, routedPage]);
-  // Keyboard and screen reader users land on the new page's title after choosing a page.
+  // Keyboard and screen reader users land on the new page's title after choosing a page, in one
+  // line, as pageStart does in the shared shells (never the whole content read aloud).
   useEffect(() => {
-    if (!exact || !moved.current) return;
+    if (!moved.current) return;
     moved.current = false;
-    titleRef.current?.focus();
-  }, [exact, path]);
+    titleRef.current?.focus({ preventScroll: true });
+  }, [path, page]);
   // An unreachable account tries again by itself when the connection comes back.
   useEffect(() => {
     if (!exact || problem?.kind !== 'offline') return;
@@ -410,7 +413,7 @@ export function CloudApp() {
           <button className="cloud-delete-account" onClick={() => setConfirmingDelete(true)} disabled={busy('delete')}>Delete account</button></div>
       </aside>
       <main className="cloud-main">
-        <header className="cloud-top"><div><p className={account ? 'cloud-eyebrow' : 'cloud-eyebrow cloud-caps'}>{account?.workspace.name ?? 'Your workspace'}</p><h1 ref={titleRef} tabIndex={exact ? -1 : undefined}>{notFound ? 'Page not found' : TITLES[shown]}</h1></div><span className="cloud-plan-chip">{account ? planName(account) : 'Free'} plan</span></header>
+        <header className="cloud-top"><div><p className={account ? 'cloud-eyebrow' : 'cloud-eyebrow cloud-caps'}>{account?.workspace.name ?? 'Your workspace'}</p><h1 ref={titleRef} tabIndex={-1}>{notFound ? 'Page not found' : TITLES[shown]}</h1></div><span className="cloud-plan-chip">{account ? planName(account) : 'Free'} plan</span></header>
         {account?.user.suspended && (exact ? <SuspendedPanel go={choosePage} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>)}
         {exact && account && problem && <AccountProblemNote kind={problem.kind} onRetry={() => void retryAccount()} />}
         <OverQuotaBanner account={account} go={choosePage} />

@@ -4,6 +4,7 @@ import { flagOn, useFlag } from '../flags';
 import { dirPicker, directoryInput, findLapsed, forgetFolder, recallFolder, refreshDeviceAvailability, rememberFolder, runImport } from '../media';
 import type { DirectoryHandleLike, ImportEvent, ImportSource, ImportSummary, LapsedItem, MediaStore, RegrantOutcome, StoredFolderHandle } from '../media';
 import { importSummaryWords, useImportAnnouncer } from './importAnnouncer';
+import { countOf } from '../ui/format';
 import { cancelImportSession, clearImportMarker, readImportMarker, startImportSession, useImportSession, type ImportRunner } from './importSession';
 
 /** Connect Music in the local-first Library (ADR-0458 import, ADR-0463 surfaces).
@@ -206,7 +207,7 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
       {shownProblem && <p className="error" role="alert">{shownProblem}</p>}
       {failures.length > 0 && (
         <details open={failures.length <= 5}>
-          <summary>{failures.length} {failures.length === 1 ? 'file' : 'files'} could not be connected</summary>
+          <summary>{countOf(failures.length, 'file')} could not be connected</summary>
           <ul>
             {failures.map((failure, index) => <li key={`${failure.name}-${index}`}><b dir="auto">{failure.name}</b>: {failure.reason}</li>)}
           </ul>

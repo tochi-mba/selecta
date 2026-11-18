@@ -1,5 +1,6 @@
 import type { Page } from './api';
 import { ACCOUNT_PROBLEMS, AccountProblem, SUSPENDED_STATE } from './accountStates';
+import { BrandMark } from '../ui/BrandMark';
 
 // The Cloud site's honest states (ADR-0420, `cloud.account_states`): an address that isn't a
 // page, an account that couldn't be read, and a suspended account. Each says what happened and
@@ -9,7 +10,7 @@ import { ACCOUNT_PROBLEMS, AccountProblem, SUSPENDED_STATE } from './accountStat
 export function NotFound({ path, go }: { path: string; go: (page: Page) => void }) {
   return (
     <section className="cloud-card cloud-not-found" aria-labelledby="cloud-not-found-title">
-      <p className="cloud-eyebrow">NOTHING AT THIS ADDRESS</p>
+      <p className="cloud-eyebrow">Nothing at this address</p>
       <h2 id="cloud-not-found-title">There’s no SelectaDJ Cloud page at {path}</h2>
       <p>The link may be mistyped or out of date. Your music and settings are unaffected.</p>
       <div className="cloud-actions"><button className="primary" onClick={() => go('home')}>Go to Overview</button><button onClick={() => go('library')}>Open your library</button></div>
@@ -22,7 +23,7 @@ export function AccountProblemPage({ kind, onRetry, onSignOut, retrying }: { kin
   const words = ACCOUNT_PROBLEMS[kind];
   return (
     <main className="cloud-runtime-message" data-account-problem={kind}>
-      <span className="cloud-mark">S</span>
+      <BrandMark className="cloud-mark" />
       <h1>{words.title}</h1>
       <p role="alert">{words.detail}</p>
       <div className="cloud-actions">

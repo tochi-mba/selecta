@@ -57,7 +57,7 @@ export default function AdminArea({ token, onLeave, origin }: { token: TokenSour
   if (!api || !me) {
     return (
       <main className="admin-enter">
-        <p className="cloud-eyebrow">STAFF CONSOLE</p>
+        <p className="cloud-eyebrow">Staff console</p>
         <h1>Enter the admin console</h1>
         <p>An admin session lasts at most an hour and needs a sign-in from the last five minutes.</p>
         <div className="cloud-actions"><button className="primary" onClick={() => void enter()} disabled={busy}>{busy ? 'Entering…' : 'Enter console'}</button><button onClick={onLeave}>Back to my workspace</button></div>
@@ -72,7 +72,7 @@ export default function AdminArea({ token, onLeave, origin }: { token: TokenSour
   return (
     <div className="admin-shell">
       <header className="admin-top">
-        <div><p className="cloud-eyebrow">STAFF CONSOLE</p><h1>{current?.label ?? 'Nothing to show'}</h1></div>
+        <div><p className="cloud-eyebrow">Staff console</p><h1>{current?.label ?? 'Nothing to show'}</h1></div>
         <div className="admin-who"><span>{me.roles.map((r) => `${r.title} (${r.scope})`).join(', ')}</span><small>Session ends {when(me.session.expires_at)}</small><button onClick={onLeave}>Leave console</button></div>
       </header>
       <nav className="admin-nav" aria-label="Admin pages">
