@@ -84,8 +84,9 @@ test('with cloud.hosted_shell on, the hosted pages render in the shared shell, e
   await expect(page.getByRole('region', { name: 'Signed in as' })).toContainText(`${user}@example.test`);
   await expect(page.getByRole('button', { name: 'Delete account…' })).toBeVisible();
 
-  // the bundle boundary on the real build: no script loaded so far carries the engine
-  await page.waitForLoadState('networkidle');
+  // the bundle boundary on the real build: every page and place visited has drawn, so every chunk
+  // it needed has loaded; none of them carries the engine (the live stream keeps the network busy,
+  // so this waits on what the pages show, not on network idle)
   expect(scripts.size).toBeGreaterThan(0);
   const carrying = [...scripts].filter(([, text]) => ENGINE_MARKS.some((mark) => text.includes(mark))).map(([url]) => url);
   expect(carrying).toEqual([]);
