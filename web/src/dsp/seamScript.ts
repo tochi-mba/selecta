@@ -52,6 +52,8 @@ export const CUT_DECLICK_SECONDS = 0.008;
 export const MAX_DRIFT_BEATS = 0.125;
 /** A default exit leaves this much of A after the overlap ends. */
 export const TAIL_GUARD_SECONDS = 2;
+/** An overlap ends at least this long before A's own end. */
+export const SEAM_ROOM_GUARD_SECONDS = 0.5;
 const BAR_CHOICES = [32, 16, 8, 4, 2, 1];
 
 /** Every move a recipe can name (src/selecta/styles/__init__.py all_recipes), plus 'blend'. */
@@ -111,8 +113,8 @@ function withDegrades(schedule: SeamSchedule, style: string, degraded: SeamDegra
 }
 
 /** The largest bar count that fits the window bound and the no-stretch drift bound. */
-export function barsThatFit(wanted: number, beatSeconds: number, tempoGap: number): number {
-  const byWindow = MAX_WINDOW_SECONDS / (BEATS_PER_BAR * beatSeconds);
+export function barsThatFit(wanted: number, beatSeconds: number, tempoGap: number, roomSeconds = MAX_WINDOW_SECONDS): number {
+  const byWindow = Math.min(MAX_WINDOW_SECONDS, roomSeconds) / (BEATS_PER_BAR * beatSeconds);
   const byDrift = tempoGap > 0 ? MAX_DRIFT_BEATS / (BEATS_PER_BAR * tempoGap) : Infinity;
   const limit = Math.min(wanted, byWindow, byDrift);
   return BAR_CHOICES.find((bars) => bars <= limit) ?? 0;
@@ -174,15 +176,22 @@ export function scriptSeam(request: ScriptRequest): SeamSchedule {
     style = 'blend';
   }
   const wantedBars = Math.max(1, Math.round(request.bars ?? DEFAULT_BARS[style] ?? 8));
-  const bars = barsThatFit(wantedBars, beat, gap);
+  // the overlap has to end inside A, after the settle rule and a snap of up to one beat
+  const room = a.durationSeconds - Math.max(exitAsked ?? leaveAfter, leaveAfter) - beat - SEAM_ROOM_GUARD_SECONDS;
+  const bars = barsThatFit(wantedBars, beat, gap, room);
+  if (bars === 0 && barsThatFit(wantedBars, beat, gap) > 0) {
+    return fade(exitWanted(3), 'overlap', 'the song is too short after the 30 s settle rule for a beatmatched overlap');
+  }
   if (bars === 0) {
     const percent = (gap * 100).toFixed(1);
     return fade(exitWanted(3), 'stretch', `the tempos are ${percent} percent apart and this browser has no time-stretch to close the gap`);
   }
   if (bars < wantedBars) {
-    const why = bars < barsThatFit(wantedBars, beat, 0)
-      ? 'without a time-stretch a longer overlap would drift off the beat'
-      : `a browser seam window is at most ${MAX_WINDOW_SECONDS} s`;
+    const why = bars < barsThatFit(wantedBars, beat, gap)
+      ? 'the song ends too soon after the 30 s settle rule for a longer overlap'
+      : bars < barsThatFit(wantedBars, beat, 0)
+        ? 'without a time-stretch a longer overlap would drift off the beat'
+        : `a browser seam window is at most ${MAX_WINDOW_SECONDS} s`;
     degraded.push({ wanted: `${wantedBars} bars`, instead: `${bars} bars`, reason: why });
   }
   const window = bars * BEATS_PER_BAR * beat;

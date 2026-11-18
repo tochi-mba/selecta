@@ -135,4 +135,15 @@ describe('the browser seam script', () => {
     const schedule = scriptSeam({ a: track(120), b: track(120), move: 'spinback', abilities: ALL });
     expect(schedule.degraded?.[0]).toMatchObject({ wanted: 'spinback', instead: 'blend' });
   });
+
+  it('ends every overlap inside the outgoing song, shortening or fading when it is short', () => {
+    const short = scriptSeam({ a: track(120, 0.9, false, 40), b: track(120), move: 'bass_swap_blend', bars: 8, abilities: ALL });
+    expect(short.startSeconds + short.windowSeconds).toBeLessThan(40);
+    expect(short.startSeconds).toBeGreaterThanOrEqual(LEAVE_AFTER_SECONDS);
+    expect(short.degraded?.[0]).toMatchObject({ wanted: '8 bars', instead: '4 bars' });
+    expect(short.degraded?.[0].reason).toContain('settle rule');
+    const tiny = scriptSeam({ a: track(120, 0.9, false, 32), b: track(120), move: 'bass_swap_blend', abilities: ALL });
+    expect(tiny.kind).toBe('fade');
+    expect(tiny.degraded?.[0]).toMatchObject({ wanted: 'overlap', instead: 'fade' });
+  });
 });

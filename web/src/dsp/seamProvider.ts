@@ -76,13 +76,50 @@ export function sliceMono(buffer: PcmLike, part: 'head' | 'tail', seconds = ANAL
   return { pcm, offset: from / buffer.sampleRate };
 }
 
-/** The lightweight timing of one song from a bounded slice of it. */
+/** How much the loudness moves frame to frame: the coefficient of variation of 1024-sample RMS.
+ * A steady tone or a drone is near 0; anything with a pulse moves. The onset flux is normalised
+ * to its own peak, so without this a steady tone's tiny ripples could look like a beat. */
+export function pulseStrength(pcm: Float32Array, frame = 1024): number {
+  const levels: number[] = [];
+  for (let start = 0; start + frame <= pcm.length; start += frame) {
+    let sum = 0;
+    for (let index = start; index < start + frame; index += 1) sum += pcm[index] * pcm[index];
+    levels.push(Math.sqrt(sum / frame));
+  }
+  if (levels.length < 2) return 0;
+  const mean = levels.reduce((total, level) => total + level, 0) / levels.length;
+  if (!(mean > 1e-6)) return 0;
+  const variance = levels.reduce((total, level) => total + (level - mean) ** 2, 0) / levels.length;
+  return Math.sqrt(variance) / mean;
+}
+
+/** Below this pulse strength there is no beat to match, whatever the tempo estimate says. */
+export const MIN_PULSE = 0.05;
+/** At least this share of the grid's beats inside the analysed slice must sit on an onset. */
+export const MIN_GRID_SUPPORT = 0.5;
+
+/** The share of grid beats inside [from, to) that have an onset within 60 ms. */
+export function gridSupport(beats: readonly number[], onsetTimes: readonly number[], from: number, to: number): number {
+  const inside = beats.filter((beat) => beat >= from && beat < to);
+  if (!inside.length) return 0;
+  const hit = inside.filter((beat) => onsetTimes.some((time) => Math.abs(time - beat) <= PHASE_TOLERANCE_SECONDS * 2));
+  return hit.length / inside.length;
+}
+
+/** The lightweight timing of one song from a bounded slice of it. The tempo's confidence is
+ * capped when the slice has no pulse or the grid is not borne out by the onsets, so a steady
+ * tone or a loose fit is never beatmatched on (seams.ts falls back to a fade). */
 export function analyseTiming(buffer: PcmLike, part: 'head' | 'tail'): TrackTiming {
   const { pcm, offset } = sliceMono(buffer, part);
   const onsets = detectOnsets(pcm, buffer.sampleRate);
-  const tempo = estimateTempo(onsets);
+  const estimate = estimateTempo(onsets);
   const onsetTimes = onsets.onsetTimes.map((time) => time + offset);
-  return { beats: beatGrid(tempo.bpm, onsetTimes, buffer.duration), tempo, durationSeconds: buffer.duration };
+  const beats = beatGrid(estimate.bpm, onsetTimes, buffer.duration);
+  const pulse = pulseStrength(pcm);
+  const support = gridSupport(beats, onsetTimes, offset, offset + pcm.length / buffer.sampleRate);
+  const trusted = pulse >= MIN_PULSE && support >= MIN_GRID_SUPPORT;
+  const tempo = trusted ? estimate : { ...estimate, confidence: Math.min(estimate.confidence, pulse >= MIN_PULSE ? support * 0.5 : 0) };
+  return { beats, tempo, durationSeconds: buffer.duration };
 }
 
 export type SeamProviderOptions = {

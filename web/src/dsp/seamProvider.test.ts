@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CapabilityRegistry, registerBrowserDspCapabilities } from './capability';
-import { abilitiesFrom, abilityOf, analyseTiming, beatGrid, calibrateAnalysis, makeSeamProvider, sliceMono, type PcmLike, type SeamRecord } from './seamProvider';
+import { abilitiesFrom, abilityOf, analyseTiming, beatGrid, calibrateAnalysis, gridSupport, makeSeamProvider, MIN_PULSE, pulseStrength, sliceMono, type PcmLike, type SeamRecord } from './seamProvider';
+import { MIN_BEATMATCH_CONFIDENCE } from './seams';
 import type { TrackTiming } from './seams';
 
 function clicks(bpm: number, seconds: number, sampleRate = 22050, phase = 0.1): PcmLike {
@@ -45,6 +46,20 @@ describe('analysis for seams', () => {
     const near = found.beats.find((beat) => beat > 60)!;
     const off = ((near - 0.1) % 0.5 + 0.5) % 0.5;
     expect(Math.min(off, 0.5 - off)).toBeLessThan(0.04);
+  });
+
+  it('never trusts a tempo on a steady tone: no pulse, no beatmatch', () => {
+    const sampleRate = 22050;
+    const pcm = new Float32Array(40 * sampleRate).map((_, index) => 0.2 * Math.sin(2 * Math.PI * 220 * index / sampleRate));
+    expect(pulseStrength(pcm)).toBeLessThan(MIN_PULSE);
+    const tone = analyseTiming({ sampleRate, duration: 40, numberOfChannels: 1, getChannelData: () => pcm }, 'tail');
+    expect(tone.tempo.confidence).toBeLessThan(MIN_BEATMATCH_CONFIDENCE);
+    expect(pulseStrength(clicks(120, 10).getChannelData(0))).toBeGreaterThan(MIN_PULSE);
+  });
+
+  it('measures how far onsets bear out a grid', () => {
+    expect(gridSupport([1, 2, 3, 4], [1.01, 2.02, 3.5], 0, 10)).toBe(0.5);
+    expect(gridSupport([1, 2], [], 0, 10)).toBe(0);
   });
 
   it('calibrates a real worker budget from measured analysis time', () => {
