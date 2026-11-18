@@ -10,7 +10,8 @@ import { messageOf } from '../api';
 export type LabsStatus = { enrolled: boolean; on: boolean; reason: string; labs_open: boolean };
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
 
-const BASE = '/api/account/labs/local-first';
+// Cloud's request function prefixes `/api` itself (CloudApp `api`), so the path starts after it.
+const BASE = '/account/labs/local-first';
 
 export function LocalFirstLabs({ request, onChanged }: { request: Request; onChanged?: () => void }) {
   const [status, setStatus] = useState<LabsStatus | null>(null);
