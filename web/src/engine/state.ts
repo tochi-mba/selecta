@@ -59,6 +59,34 @@ export type EngineStore = {
   subscribe(watch: (state: EngineState) => void): () => void;
 };
 
+// A sound check can use a short-lived engine, while playback uses a separate engine. They still
+// feed the same physical output in this tab, so a person's answer and any later output loss must
+// reach every live engine. This is page memory only: a reload starts unverified again.
+const outputStores = new Set<EngineStore>();
+let deviceOutputConfirmedAt: number | null = null;
+
+export function registerDeviceOutputStore(store: EngineStore): () => void {
+  outputStores.add(store);
+  if (deviceOutputConfirmedAt !== null) store.confirmHeard(deviceOutputConfirmedAt);
+  return () => outputStores.delete(store);
+}
+
+export function confirmDeviceOutput(at: number): void {
+  deviceOutputConfirmedAt = at;
+  for (const store of outputStores) store.confirmHeard(at);
+}
+
+export function downgradeDeviceOutput(next: OutputDowngrade, notice?: string, source?: EngineStore): void {
+  deviceOutputConfirmedAt = null;
+  let includedSource = false;
+  for (const store of outputStores) {
+    if (store === source) includedSource = true;
+    store.downgradeOutput(next, notice);
+  }
+  // Standalone EngineContext/BrowserSpeaker instances are used by embedders and tests too.
+  if (source && !includedSource) source.downgradeOutput(next, notice);
+}
+
 export function createEngineStore(initial?: Partial<EngineState>): EngineStore {
   let state: EngineState = {
     phase: 'idle',
