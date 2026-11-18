@@ -41,12 +41,24 @@ class Kind(enum.StrEnum):
     EXPORT = "export"
     ANALYSIS_SONG = "analysis_song"
     LUCY_TURN = "lucy_turn"
+    OBJECT_READ_BYTES = "object_read_bytes"
+    OBJECT_READ_OPS = "object_read_ops"
+    OBJECT_READ_AUTH_OPS = "object_read_auth_ops"
+    OBJECT_READ_AUTH_BYTES = "object_read_auth_bytes"
+    OBJECT_WRITE_BYTES = "object_write_bytes"
+    OBJECT_WRITE_OPS = "object_write_ops"
+    OBJECT_WRITE_AUTH_OPS = "object_write_auth_ops"
+    EGRESS_BYTES = "egress_bytes"
+    RENDER_SECONDS = "render_seconds"
 
 
 # Kinds that count whole things, so a fraction is a mistake.
-WHOLE = frozenset(
-    {Kind.STORAGE_BYTES, Kind.AI_TOKENS, Kind.EXPORT, Kind.ANALYSIS_SONG, Kind.LUCY_TURN}
-)
+WHOLE = frozenset({
+    Kind.STORAGE_BYTES, Kind.AI_TOKENS, Kind.EXPORT, Kind.ANALYSIS_SONG, Kind.LUCY_TURN,
+    Kind.OBJECT_READ_BYTES, Kind.OBJECT_READ_OPS, Kind.OBJECT_READ_AUTH_OPS,
+    Kind.OBJECT_READ_AUTH_BYTES, Kind.OBJECT_WRITE_BYTES, Kind.OBJECT_WRITE_OPS,
+    Kind.OBJECT_WRITE_AUTH_OPS, Kind.EGRESS_BYTES,
+})
 
 
 @dataclass(frozen=True)

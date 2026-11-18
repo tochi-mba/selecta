@@ -19,6 +19,7 @@ import { LOUDNESS_IMPLEMENTATION, TRUE_PEAK_IMPLEMENTATION } from './loudness';
 import { SEAM_MOVES_IMPLEMENTATION } from './seamMoves';
 import { SEAMS_IMPLEMENTATION } from './seams';
 import { STRETCH_IMPLEMENTATION, STRETCH_PLAYBACK_INTEGRATION } from './stretchLimits';
+import { workerBudgetEvidenceState, type WorkerBudgetEvidence } from './budget';
 
 /** How a seam meets a track from either music path: the whole file decoded before planning. */
 export const WHOLE_FILE_DECODE_IMPLEMENTATION = 'whole-file-decode-v1';
@@ -110,13 +111,15 @@ export interface DspEvidence {
   limiter?: { kind: 'worklet' } | { kind: 'compressor_fallback'; implementation: string };
   /** Tier 2 needs a measured device: a benchmark-calibrated worker budget (budget.ts) that has
    * not collapsed to its floor. Absent means not measured, so Tier 2 is unsupported_here. */
-  workerBudget?: { atFloor: boolean } | null;
+  workerBudget?: WorkerBudgetEvidence | null;
   /** The time-stretch module loaded on this device and passed its self-test
    * (stretchLoader.ts loadStretchEvidence). Absent means not loaded, so stretch stays off. */
   stretch?: { implementation: string } | null;
   /** Exact integration token from the runtime only after a seam buffer is prepared and used.
    * Loading and self-testing the DSP module alone cannot make a UI capability ready. */
   stretchPlaybackIntegration?: string | null;
+  /** Injectable epoch clock for checking calibration freshness. */
+  now?: number;
 }
 
 /** Tier 3 features: none may be ready in this release (no benchmark or licence evidence). */
@@ -155,14 +158,12 @@ export function registerBrowserDspCapabilities(
   tier1('seam_source_device', WHOLE_FILE_DECODE_IMPLEMENTATION);
   tier1('seam_source_hosted', WHOLE_FILE_DECODE_IMPLEMENTATION);
 
-  const budget = evidence.workerBudget ?? null;
+  const budget = workerBudgetEvidenceState(evidence.workerBudget, evidence.now ?? Date.now());
   const tier2Reason = !player
     ? playerReason
-    : !budget
-      ? 'this device has not been measured yet, so lightweight analysis stays off'
-      : budget.atFloor
-        ? 'this device is out of headroom, so lightweight analysis is paused'
-        : '';
+    : !budget.supported
+      ? budget.reason
+      : '';
   const tier2 = (feature: string, implementation: string) => (tier2Reason
     ? registry.markUnsupported(feature, 2, implementation, tier2Reason)
     : registry.register({ feature, tier: 2, implementation, status: 'ready' }));
