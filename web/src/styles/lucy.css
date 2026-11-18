@@ -401,22 +401,6 @@
 .lucy-fact input, .lucy-remember input { flex: 1 1 200px; width: auto; }
 .lucy-remember p { margin: 0 0 var(--space-1); }
 
-/* native dialogs */
-dialog.lucy-dialog {
-  width: min(520px, calc(100vw - 2 * var(--space-4)));
-  max-height: calc(100dvh - 2 * var(--space-5));
-  padding: 0;
-  color: var(--text);
-  background: var(--surface-overlay);
-  border: 1px solid var(--edge-overlay);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-overlay);
-}
-dialog.lucy-dialog[open] { display: flex; flex-direction: column; }
-dialog.lucy-dialog::backdrop { background: var(--surface-scrim); }
-dialog.lucy-dialog .overlay-body { display: grid; gap: var(--space-3); }
-dialog.lucy-dialog .overlay-body p { margin: 0; }
-
 @media (max-width: 760px) {
   .lucy-msg.is-user article, .lucy-msg.is-assistant article { margin-inline: 0; }
   .lucy-msg article, .lucy-proposal { padding: var(--space-3); }

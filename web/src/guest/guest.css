@@ -55,7 +55,7 @@ main { max-width: 34rem; margin: 0 auto; padding: max(16px, env(safe-area-inset-
 h1 { font-size: var(--text-xl); line-height: 1.15; margin: 0.2rem 0 0.4rem; overflow-wrap: anywhere; }
 h2 { font-size: var(--text-md); margin: 0 0 0.5rem; }
 p { margin: 0.4rem 0; }
-.g-eyebrow { font-size: var(--text-xs); letter-spacing: var(--tracking-eyebrow); color: var(--soft); margin: 0; }
+.g-eyebrow { font-size: var(--text-xs); letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; color: var(--soft); margin: 0; }
 .g-muted { color: var(--soft); }
 .g-small { font-size: var(--text-sm); color: var(--soft); }
 .g-card, .g-section { background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin: 12px 0; }

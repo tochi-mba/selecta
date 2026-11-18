@@ -4,19 +4,15 @@ import { describe, expect, it } from 'vitest';
  * ADR-0276 static guards: the parts of surface depth, borders, shadows and accent hierarchy a stylesheet
  * can be checked for without a browser. The measured proof is web/e2e/mp-0276-surface-depth.e2e.ts.
  */
-// Read from disk through Node's own loader, as spacing-tokens.test.ts does (CSS ?raw imports are empty in Vitest).
-type Fs = { readFileSync(path: string, encoding: 'utf8'): string; readdirSync(path: string): string[] };
-const node = (globalThis as unknown as { process: { cwd(): string; getBuiltinModule(id: string): unknown } }).process;
-const fs = node.getBuiltinModule('node:fs') as Fs;
-const SOURCE = `${node.cwd()}/src/`;
-const FILES = ['style.css', ...fs.readdirSync(`${SOURCE}styles/`).filter((name) => name.endsWith('.css')).map((name) => `styles/${name}`)];
-const COMPONENTS = FILES.filter((file) => file !== 'styles/tokens.css');
-const read = (file: string) => fs.readFileSync(SOURCE + file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+// Every sheet under web/src (src/test/sheets.ts), so a feature-local sheet cannot hide a raw value.
+import { COMPONENT_SHEETS, readSheet as read, rulesOf } from '../test/sheets';
+
 const tokens = read('styles/tokens.css');
 
-type Rule = { file: string; selector: string; body: string };
-const rules: Rule[] = COMPONENTS.flatMap((file) => [...read(file).matchAll(/([^{}]+)\{([^{}]*)\}/g)]
-  .map((match) => ({ file, selector: match[1].trim().replace(/\s+/g, ' '), body: match[2] })));
+// guest.css and display.css load without tokens.css and carry a copy of its values in their own :root
+// block (palette-drift.test.ts keeps the copy honest); that block is a token block, not a component rule.
+const MINI_PALETTES = ['guest/guest.css', 'display/display.css'];
+const rules = rulesOf(COMPONENT_SHEETS).filter((rule) => !(MINI_PALETTES.includes(rule.file) && rule.selector === ':root'));
 const declarations = (property: RegExp) => rules.flatMap((rule) => [...rule.body.matchAll(new RegExp(`(?:^|;|\\s)(${property.source})\\s*:\\s*([^;]+)`, 'g'))]
   .map((match) => ({ ...rule, property: match[1], value: match[2].trim() })));
 
@@ -39,14 +35,13 @@ describe('surface roles (MP-0276-01)', () => {
     const shell = read('styles/shell.css');
     expect(shell).toMatch(/\.overlay \{[^}]*background: var\(--surface-scrim\);/);
     expect(shell).toMatch(/\.overlay-panel \{[^}]*background: var\(--surface-overlay\);/);
-    expect(read('styles/lucy.css')).toMatch(/dialog\.lucy-dialog::backdrop \{ background: var\(--surface-scrim\); \}/);
   });
 });
 
 describe('overlay depth (MP-0276-06)', () => {
   it('gives every floating surface the overlay shadow and edge, and nothing else a raw shadow', () => {
     for (const [file, selector] of [['styles/shell.css', '.overlay-panel'], ['styles/shell.css', '.menu-list'], ['styles/shell.css', '.toast-row'],
-      ['styles/shell.css', '.tooltip'], ['styles/foundation.css', '.popover-panel'], ['styles/lucy.css', 'dialog.lucy-dialog']] as const) {
+      ['styles/shell.css', '.tooltip'], ['styles/foundation.css', '.popover-panel']] as const) {
       const rule = rules.find((item) => item.file === file && item.selector === selector && /box-shadow/.test(item.body));
       expect(rule?.body, `${selector} has no overlay shadow`).toMatch(/box-shadow: var\(--shadow-overlay\)/);
     }

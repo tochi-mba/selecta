@@ -6,6 +6,7 @@ const paths = {
   stop: 'M6 6h12v12H6Z',
   next: 'm5 5 11 7-11 7ZM19 5v14',
   previous: 'm19 5-11 7 11 7ZM5 5v14',
+  backspace: 'M9 5h12v14H9l-6-7ZM12 9l6 6M18 9l-6 6',
   volume: 'M11 4 6 8H3v8h3l5 4ZM15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14',
   muted: 'M11 4 6 8H3v8h3l5 4ZM16 9l6 6M22 9l-6 6',
   music: 'M9 18V5l11-2v13M9 8l11-2M9 18c0 3-6 4-6 1s6-4 6-1ZM20 16c0 3-6 4-6 1s6-4 6-1Z',

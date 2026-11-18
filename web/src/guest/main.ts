@@ -73,7 +73,7 @@ function say(text: string): void {
 
 function screen(title: string, text: string, ...extra: (Node | null)[]): void {
   window.clearTimeout(timer);
-  replace(root, h('section', { className: 'g-card' }, h('p', { className: 'g-eyebrow' }, 'SELECTA ROOM'), h('h1', {}, title), h('p', {}, text), ...extra));
+  replace(root, h('section', { className: 'g-card' }, h('p', { className: 'g-eyebrow' }, 'SelectaDJ room'), h('h1', {}, title), h('p', {}, text), ...extra));
 }
 
 function joinScreen(error = ''): void {
@@ -206,7 +206,7 @@ function draw(): void {
   }
   const parts = shell();
   patch(parts.head,
-    h('p', { className: 'g-eyebrow' }, 'SELECTA ROOM'),
+    h('p', { className: 'g-eyebrow' }, 'SelectaDJ room'),
     h('h1', {}, v.room_name),
     v.nickname_confirm ? nameLine(v) : h('p', { className: 'g-muted' }, `You're ${v.nickname}. `, h('button', { type: 'button', className: 'g-link', onclick: () => void nicknames() }, 'Change nickname')),
     v.nickname_confirm && nameSave?.state === 'failed' ? h('p', { className: 'g-error', role: 'alert' }, `${nameSave.name} wasn't saved. ${nameSave.error ?? ''}`.trim(), ' ', h('button', { type: 'button', className: 'g-link', onclick: () => void saveNickname(nameSave?.name ?? '') }, 'Try again')) : null);

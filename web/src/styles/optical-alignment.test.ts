@@ -4,17 +4,11 @@ import { describe, expect, it } from 'vitest';
  * ADR-0274 static guards: the parts of optical alignment a stylesheet can be checked for without a
  * browser. The measured proof is web/e2e/mp-0274-optical-alignment.e2e.ts.
  */
-// Read from disk through Node's own loader, as spacing-tokens.test.ts does (CSS ?raw imports are empty in Vitest).
-type Fs = { readFileSync(path: string, encoding: 'utf8'): string; readdirSync(path: string): string[] };
-const node = (globalThis as unknown as { process: { cwd(): string; getBuiltinModule(id: string): unknown } }).process;
-const fs = node.getBuiltinModule('node:fs') as Fs;
-const SOURCE = `${node.cwd()}/src/`;
-const FILES = ['style.css', ...fs.readdirSync(`${SOURCE}styles/`).filter((name) => name.endsWith('.css')).map((name) => `styles/${name}`)];
-const read = (file: string) => fs.readFileSync(SOURCE + file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+// Every sheet under web/src (src/test/sheets.ts), so a feature-local sheet cannot pin a page width,
+// sticky offset or focus ring the shared rules do not know about.
+import { ALL_SHEETS, fs, SOURCE, readSheet as read, rulesOf, type Rule } from '../test/sheets';
 
-type Rule = { file: string; selector: string; body: string };
-const rules: Rule[] = FILES.flatMap((file) => [...read(file).matchAll(/([^{}]+)\{([^{}]*)\}/g)]
-  .map((match) => ({ file, selector: match[1].trim().replace(/\s+/g, ' '), body: match[2] })));
+const rules = rulesOf(ALL_SHEETS);
 const declares = (rule: Rule, property: string) => new RegExp(`(?:^|;|\\s)${property}\\s*:`).test(rule.body);
 
 describe('page anchors (MP-0274-01)', () => {

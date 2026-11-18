@@ -5,13 +5,11 @@ import { describe, expect, it } from 'vitest';
  * defined, and the numbers that change in place are tabular. Geometry proof lives in
  * web/e2e/mp-0275-typography.e2e.ts.
  */
-// Same loader as spacing-tokens.test.ts: Vitest hands CSS ?raw imports back empty.
-type Fs = { readFileSync(path: string, encoding: 'utf8'): string; readdirSync(path: string): string[] };
-const node = (globalThis as unknown as { process: { cwd(): string; getBuiltinModule(id: string): unknown } }).process;
-const fs = node.getBuiltinModule('node:fs') as Fs;
-const SOURCE = `${node.cwd()}/src/`;
-const read = (file: string) => fs.readFileSync(SOURCE + file, 'utf8');
-const FILES = ['style.css', ...fs.readdirSync(`${SOURCE}styles/`).filter((name) => name.endsWith('.css')).map((name) => `styles/${name}`)];
+// Every sheet under web/src (src/test/sheets.ts): the Cloud, Rooms, devices, guest, display, admin
+// and business sheets answer to the same type rules as the local app's.
+import { ALL_SHEETS, COMPONENT_SHEETS, readSource as read, rulesOf } from '../test/sheets';
+
+const FILES = ALL_SHEETS;
 const tokens = read('styles/tokens.css');
 
 /** The smallest size a role can take, in px: the first length in its font shorthand. */
@@ -87,5 +85,37 @@ describe('text-only zoom (MP-0275-07)', () => {
       const fixed = [...read(file).matchAll(/(?:^|[;{\s])font(?:-size)?:\s*([^;}]*\d(?:\.\d+)?px[^;}]*)/gm)].map((match) => match[1].trim());
       expect(fixed, file).toEqual([]);
     }
+  });
+});
+
+describe('one type scale (BF overhaul cross-wave contract)', () => {
+  /** A size a sheet may write: a role, a step, or a value that only passes the parent's size on. */
+  const STEP = /^(?:var\(--(?:type|text)-[\w-]+\)|inherit|1em|100%)$/;
+  /** The font shorthand with a step for its size: `[weight] var(--text-x)[ / line-height] var(--family)`. */
+  const SHORTHAND = /^(?:(?:\d{3}|var\(--weight-\w+\)) )?var\(--text-[\w-]+\)(?: ?\/ ?[\d.]+)? var\(--(?:body|mono|display)\)$/;
+  /**
+   * The two deliberate exceptions, by shape rather than by line:
+   * - Listen and Stage fit their focal text (lyrics, countdown, phrase, the title) to the window or
+   *   the player's container with clamp() (MP-0275-03, the --title-floor fit); a step would not fit.
+   * - display.css sizes in em of a body size fitted to the big screen, so the room display scales as
+   *   one; it loads without tokens.css (palette-drift.test.ts).
+   */
+  const FITTED = /\.(?:lyrics|countdown-number|phrase|stage|now|listen-identity)(?![\w-])/;
+  const exempt = (file: string, selector: string, value: string) =>
+    (['style.css', 'styles/listening.css'].includes(file) && FITTED.test(selector) && /clamp\(/.test(value))
+    || (file === 'display/display.css' && (/^[\d.]+em$/.test(value) || (selector === 'body' && /^clamp\(/.test(value))));
+
+  it('every font size outside tokens.css is a type role or a step, or one of the named fitted exceptions', () => {
+    const sizes = rulesOf(COMPONENT_SHEETS).flatMap((rule) => [...rule.body.matchAll(/(?:^|;|\s)(font-size|font)\s*:\s*([^;]+)/g)]
+      .map((match) => ({ ...rule, property: match[1], value: match[2].trim() })));
+    expect(sizes.length).toBeGreaterThan(100);
+    const off = sizes.filter((item) => !STEP.test(item.value) && !(item.property === 'font' && (SHORTHAND.test(item.value) || /^var\(--[\w-]+\)$/.test(item.value))))
+      .filter((item) => !exempt(item.file, item.selector, item.value));
+    expect(off.map((item) => `${item.file} ${item.selector}: ${item.property}: ${item.value}`)).toEqual([]);
+  });
+
+  it('the fitted exceptions stay where they are named, and no other sheet uses one', () => {
+    const fitted = rulesOf(COMPONENT_SHEETS).filter((rule) => /(?:^|;|\s)font(?:-size)?\s*:[^;]*clamp\(/.test(rule.body)).map((rule) => rule.file);
+    expect([...new Set(fitted)].sort()).toEqual(['display/display.css', 'style.css', 'styles/listening.css']);
   });
 });

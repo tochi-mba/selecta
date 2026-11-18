@@ -42,6 +42,8 @@ export function above(name: Breakpoint): string {
  * Every one is either pinned by the MP-0278-06 breakpoint register (docs/adr/completion/css-ownership.md,
  * checked by css-ownership.test.ts) or mirrored by a useMediaQuery in a component, so moving it is a
  * change to that register or component in the same commit, not a stylesheet edit alone.
+ * styles/breakpoints.test.ts allows exactly these and the canonical widths, in every sheet under
+ * web/src and every component media query, and fails when one of these is no longer used.
  */
 export const LEGACY_WIDTHS: Readonly<Record<number, { to: number; why: string }>> = {
   360: { to: 480, why: 'shell.css breadcrumb at 320px (SF-0207-05); register row' },
@@ -51,7 +53,7 @@ export const LEGACY_WIDTHS: Readonly<Record<number, { to: number; why: string }>
   599: { to: 640, why: 'business/forms.css, mirrored by ui/DataTable.tsx useMediaQuery' },
   620: { to: 640, why: 'timeline, Library and vibe cards; register rows and e2e at 620' },
   621: { to: 641, why: 'polish.css vibe skeleton band, pairs with 620' },
-  760: { to: 768, why: 'the shell: tokens.css and shell.css, mirrored by views/Now.tsx useMediaQuery' },
+  760: { to: 768, why: 'the shell: tokens.css and shell.css, mirrored by views/Now.tsx useMediaQuery. Kept on purpose: max-width 768 would put an upright 768px iPad on the phone layout (bottom bar, no rail), so the shell moves only with a tablet review of both layouts' },
   761: { to: 769, why: 'the side rail above the shell breakpoint, pairs with 760' },
   767: { to: 768, why: 'business/forms.css, mirrored by business/console/HqConsole.tsx' },
   850: { to: 900, why: 'polish.css Make a Mix paths; register row' },

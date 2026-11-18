@@ -3,6 +3,7 @@
 
 import { KeyboardEvent, useState } from 'react';
 import { Dialog } from '../../ui/controls';
+import { Icon } from '../../ui/Icon';
 import { STAFF_COPY } from '../copy/staff';
 import './staff.css';
 
@@ -40,7 +41,7 @@ export function PinKeypad({ onSubmit, onClose }: { onSubmit: (pin: string) => Pr
         {wrong && <p role="alert">{STAFF_COPY.pinWrong}</p>}
         <div className="biz-pin-pad" role="group" aria-label={STAFF_COPY.pinTitle}>
           {KEYS.map((digit) => <button key={digit} type="button" className="biz-pin-key" onClick={() => add(digit)}>{digit}</button>)}
-          <button type="button" className="biz-pin-key" aria-label={STAFF_COPY.pinBack} onClick={back}>{'←'}</button>
+          <button type="button" className="biz-pin-key" aria-label={STAFF_COPY.pinBack} title={STAFF_COPY.pinBack} onClick={back}><Icon name="backspace" /></button>
           <button type="button" className="biz-pin-key" onClick={() => add('0')}>0</button>
           <button type="button" className="biz-pin-key" aria-busy={busy || undefined} onClick={() => void go()}>{STAFF_COPY.pinGo}</button>
         </div>

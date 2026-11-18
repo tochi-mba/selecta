@@ -24,6 +24,7 @@ The box and stroke live in `ICON_SLOTS` and `ICON_STROKES` (`web/src/ui/Icon.tsx
 | `stop` | Stop a preview, voice input or Lucy run | standard | `views/Links.tsx`, `views/LucyComposer.tsx`, `views/Requests.tsx`, `views/Studio.tsx` | The button's words, or the mic button's hidden words |
 | `next` | Go to the next song | standard | `shell/Shell.tsx`, `views/Now.tsx` | `aria-label` "Next song" and `title` |
 | `previous` | Go back a song | standard | `views/Now.tsx` | `aria-label` "Previous song" and `title` |
+| `backspace` | Take back the last PIN digit on the staff keypad | standard | `business/staff/PinKeypad.tsx` | `aria-label` and `title` "Back one digit" |
 | `volume` | Sound is on; press to mute; play the sound-check tone | standard, toolbar | `shell/Shell.tsx`, `cloud/onboarding/steps.tsx`, `cloud/venue/VenuePosture.tsx` | `aria-label` and `title`, or the button's words |
 | `muted` | Sound is off; press to restore | standard | `shell/Shell.tsx` | `aria-label` and `title` |
 | `music` | Listen destination; choosing music files to import | standard, toolbar | `shell/manifest.ts`, `cloud/onboarding/steps.tsx` | The destination label, or the button's words |
@@ -32,7 +33,7 @@ The box and stroke live in `ICON_SLOTS` and `ICON_STROKES` (`web/src/ui/Icon.tsx
 | `discover` | Classic Discover destination | standard | `shell/manifest.ts` | The destination label |
 | `settings` | Workspace destination; Lucy settings; the Cloud More menu | standard, toolbar | `shell/manifest.ts`, `shell/Shell.tsx`, `views/Lucy.tsx` | The destination label; the button's words |
 | `edit` | Open the editor or edit one part | standard, toolbar | `shell/Shell.tsx`, `views/EditorStory.tsx`, `ui/ControlGallery.tsx` | The link or button words; gallery `aria-label` |
-| `close` | Close, dismiss, cancel or remove; a failed status mark | standard, toolbar, compact | `ui/controls.tsx`, `ui/primitives.tsx`, `ui/toasts.tsx`, `views/Lucy.tsx`, `views/LucyDialog.tsx`, `views/LucyProposal.tsx`, `views/Mix.tsx`, `views/Requests.tsx`, `cloud/migration/CutoverNotice.tsx` | `aria-label` and `title`, or the status words |
+| `close` | Close, dismiss, cancel or remove; a failed status mark | standard, toolbar, compact | `ui/controls.tsx`, `ui/primitives.tsx`, `ui/toasts.tsx`, `views/Lucy.tsx`, `views/LucyProposal.tsx`, `views/Mix.tsx`, `views/Requests.tsx`, `cloud/migration/CutoverNotice.tsx` | `aria-label` and `title`, or the status words |
 | `check` | Done, passed or ready | compact, toolbar | `ui/controls.tsx`, `views/LucyProposal.tsx`, `views/LucySongs.tsx`, `views/Requests.tsx`, `views/SeamInspector.tsx`, `cloud/onboarding/OnboardingSpine.tsx`, `cloud/onboarding/steps.tsx`, `cloud/venue/VenuePosture.tsx` | The words beside it |
 | `warning` | Needs attention, blocked or a failed check | standard, compact, toolbar | `shell/Shell.tsx`, `ui/controls.tsx`, `views/Mix.tsx`, `views/SeamInspector.tsx`, `cloud/onboarding/OnboardingSpine.tsx`, `cloud/onboarding/steps.tsx`, `cloud/venue/VenueFallback.tsx` | The link `aria-label`, button words, status words or the heading beside it |
 | `clock` | Queued status mark | compact | `ui/controls.tsx` | The status words |
