@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { VibeCard } from '../api';
 import { SetPlayer } from '../player';
@@ -515,5 +515,55 @@ describe('destination search', () => {
     expect(screen.getByRole('button', { name: 'Midnight - Example Artist' })).toBeInTheDocument();
     fireEvent.change(box, { target: { value: '' } });
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Midnight - Example Artist' })).toBeNull());
+  });
+});
+
+describe('Make a Mix in the browser and on this computer (W4 owner check)', () => {
+  function showWith(props: { analysisAvailable?: boolean; mixName?: string; playing?: boolean }) {
+    fakeBackend({ 'GET /vibes': [card('pick', 'SelectaDJ’s pick', '')] });
+    const player = new SetPlayer(() => [], () => {});
+    const now = props.playing ? { ...player.state, phase: 'playing' as const } : player.state;
+    render(
+      <Mixes
+        status={status()}
+        mix={props.playing ? songs() : []}
+        mixName={props.mixName ?? ''}
+        canUndo={false}
+        refreshMix={() => {}}
+        setMixData={() => {}}
+        refreshStatus={() => {}}
+        player={player}
+        now={now}
+        setView={() => {}}
+        notify={() => {}}
+        stage={false}
+        toggleStage={() => {}}
+        analysisAvailable={props.analysisAvailable}
+      />,
+    );
+  }
+
+  it('offers analysis on this computer, and never in the browser, where seams are worked out as the mix plays', async () => {
+    showWith({});
+    expect(await screen.findByText(/50 of 90 songs have audio analysis/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Analyse the rest' })).toBeInTheDocument();
+    cleanup();
+    showWith({ analysisAvailable: false });
+    expect(await screen.findByText(/40 of 90 songs can play on this device/)).toBeInTheDocument();
+    expect(screen.queryByText(/have audio analysis/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Analyse the rest' })).toBeNull();
+  });
+
+  it('keeps the length group to its chips, with no loose meter or badge inside it', async () => {
+    showWith({});
+    const group = await screen.findByRole('group', { name: 'How long, roughly' });
+    expect(group.querySelector('.length-scale, .scope-tag')).toBeNull();
+    expect(within(group).getAllByRole('button').map((button) => button.textContent)).toEqual(['About 30 min', 'About 1 hour', 'About 2 hours']);
+  });
+
+  it('quotes the current mix by name, so its capitals never land mid-sentence', async () => {
+    showWith({ playing: true, mixName: 'Your songs, in your browser' });
+    expect(await screen.findByText(/Playing a new mix replaces your current mix, “Your songs, in your browser”; you can undo that\./)).toBeInTheDocument();
+    expect(screen.queryByText(/replaces Your songs/)).toBeNull();
   });
 });

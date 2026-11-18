@@ -1,4 +1,4 @@
-import { act, cleanup, configure, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, configure, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setAccountFeatures, setFlags } from '../flags';
 import { cloudAccount } from '../test/cloudAccount';
@@ -318,5 +318,55 @@ describe('the import session in the shell (BF-0463-02 progressive import)', () =
     const held = heldImport();
     view.unmount();
     expect(held.signal()?.aborted).toBe(true);
+  });
+});
+
+describe('the server-free palette and keys in the local-first shell (W5 subset)', () => {
+  const member = (features: Record<string, boolean> = {}): Account => ({
+    ...cloudAccount(),
+    experience: { local_first: true, hosted: false },
+    features: { 'cloud.local_first': true, 'cloud.account_states': true, ...features },
+  });
+  const press = (key: string, more: Partial<KeyboardEventInit> = {}) => act(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, ...more })); });
+
+  it('opens Ctrl K with this shell’s own places and nothing that needs a local server', async () => {
+    account = member();
+    window.history.replaceState({}, '', '/account');
+    render(<CloudApp />);
+    await screen.findByRole('region', { name: 'Signed in as' });
+    press('k', { ctrlKey: true });
+    const palette = await screen.findByRole('dialog', { name: 'Search and commands' });
+    const options = within(palette).getAllByRole('option').map((option) => option.getAttribute('aria-label'));
+    for (const place of ['Page: Listen', 'Page: Make a Mix', 'Page: My Mixes', 'Page: Library', 'Page: Account']) expect(options).toContain(place);
+    expect(options.some((label) => /Play|Pause/.test(label ?? ''))).toBe(true);
+    for (const local of [/Request a song/, /Undo/, /Analyse/, /Workspace/, /Edit current mix/]) expect(options.some((label) => local.test(label ?? ''))).toBe(false);
+    const box = within(palette).getByRole('combobox');
+    fireEvent.change(box, { target: { value: 'blue moon' } });
+    await new Promise((settled) => setTimeout(settled, 250));
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes('/library?q='))).toBe(false);
+    expect(within(palette).queryByText(/Search your library for/)).toBeNull();
+  });
+
+  it('lists only the server-free keys in its help', async () => {
+    account = member();
+    window.history.replaceState({}, '', '/account');
+    render(<CloudApp />);
+    await screen.findByRole('region', { name: 'Signed in as' });
+    press('?');
+    const help = await screen.findByRole('dialog', { name: 'Keyboard shortcuts' });
+    for (const shown of ['Play or pause', 'Next song', 'Previous song', 'Mute', 'Search and commands', 'This list']) expect(help).toHaveTextContent(shown);
+    for (const hidden of ['Request a song', 'Undo', 'Search your library', 'Jump to the transition', 'Fullscreen lyrics']) expect(help).not.toHaveTextContent(hidden);
+  });
+
+  it('has no palette or help with the flags off, and its buttons are gone', async () => {
+    account = member({ 'app.command_palette': false, 'app.shortcuts': false });
+    window.history.replaceState({}, '', '/account');
+    render(<CloudApp />);
+    await screen.findByRole('region', { name: 'Signed in as' });
+    expect(screen.queryByRole('button', { name: 'Keyboard shortcuts' })).toBeNull();
+    press('k', { ctrlKey: true });
+    press('?');
+    await new Promise((settled) => setTimeout(settled, 50));
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });
