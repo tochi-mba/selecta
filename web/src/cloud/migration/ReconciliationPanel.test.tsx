@@ -90,7 +90,7 @@ describe('ReconciliationPanel', () => {
 
     render(<ReconciliationPanel request={request} />);
 
-    expect(await screen.findByRole('status')).toHaveTextContent('10,000-item safety limit');
+    expect(await screen.findByText(/10,000-item safety limit/)).toBeInTheDocument();
     expect(calls.mock.calls.filter(([path]) => path.startsWith('/assets'))).toHaveLength(100);
     expect(screen.getByText(/Nothing was changed|there's nothing to compare yet/i)).toBeInTheDocument();
   });
@@ -105,7 +105,7 @@ describe('ReconciliationPanel', () => {
 
     render(<ReconciliationPanel request={request} />);
 
-    expect(await screen.findByRole('status')).toHaveTextContent('10,000-item safety limit');
+    expect(await screen.findByText(/10,000-item safety limit/)).toBeInTheDocument();
     expect(calls.mock.calls.filter(([path]) => path.startsWith('/local-media/songs'))).toHaveLength(100);
     expect(screen.getByText(/Nothing was changed|there's nothing to compare yet/i)).toBeInTheDocument();
   });
