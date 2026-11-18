@@ -1,0 +1,25 @@
+{
+  "task": "SF-0207-05",
+  "status": "candidate-not-independently-verified",
+  "sourceSha": "207abfb8b068aa7fcdb1124ef0d0cbe02bf47430",
+  "os": "win32 10.0.26300",
+  "fixtureDataVersion": "3bc5fa14c0e149e3",
+  "reviewer": null,
+  "capturedAt": "2026-11-18T12:22:02.334Z",
+  "browser": "msedge",
+  "width": 1440,
+  "height": 900,
+  "fixture": "tests/e2e_server.py",
+  "seam": {
+    "meaning": "Rendered transition. Blend. from Morning Light into Slow Tide",
+    "state": "ready",
+    "family": "overlap"
+  },
+  "files": [
+    "1440-player.png",
+    "1440-card.png",
+    "1440-editor-row.png",
+    "1440-editor-inspector.png",
+    "1440-editor-page.png"
+  ]
+}

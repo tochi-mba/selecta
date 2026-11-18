@@ -1,0 +1,538 @@
+{
+  "task": "SF-0201-08",
+  "status": "candidate-not-independently-verified",
+  "sourceSha": "207abfb8b068aa7fcdb1124ef0d0cbe02bf47430",
+  "os": "win32 10.0.26300",
+  "fixtureDataVersion": "3bc5fa14c0e149e3",
+  "reviewer": null,
+  "capturedAt": "2026-11-18T12:21:39.721Z",
+  "browser": "msedge",
+  "motion": "still/reduced",
+  "fixture": "tests/e2e_server.py",
+  "excluded": [
+    "Workspace: sources and diagnostics. Paused by the privacy rule of 2026-11-12: the test server showed a local folder path there. Add them once the server roots its library elsewhere.",
+    "Saved draft editor (/mixes/drafts/N/edit): the same editor as Edit the current mix, on a draft."
+  ],
+  "shots": [
+    {
+      "screen": "explore",
+      "title": "Explore (start page)",
+      "path": "/mixes",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-explore-part1.png",
+        "desktop-light-explore-part2.png",
+        "desktop-light-explore-part3.png",
+        "desktop-light-explore-part4.png",
+        "desktop-light-explore-part5.png"
+      ]
+    },
+    {
+      "screen": "my-mixes",
+      "title": "My Mixes",
+      "path": "/mixes/mine",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-my-mixes.png"
+      ]
+    },
+    {
+      "screen": "listen",
+      "title": "Listen",
+      "path": "/listen",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-listen.png"
+      ]
+    },
+    {
+      "screen": "editor",
+      "title": "Edit the current mix",
+      "path": "/mix/current/edit",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-editor.png"
+      ]
+    },
+    {
+      "screen": "library",
+      "title": "Library",
+      "path": "/library",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-library.png"
+      ]
+    },
+    {
+      "screen": "discover-words",
+      "title": "Discover: words",
+      "path": "/discover",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-discover-words.png"
+      ]
+    },
+    {
+      "screen": "discover-harmonic",
+      "title": "Discover: harmonic",
+      "path": "/discover/harmonic",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-discover-harmonic.png"
+      ]
+    },
+    {
+      "screen": "lucy",
+      "title": "Lucy",
+      "path": "/mixes/lucy",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-lucy.png"
+      ]
+    },
+    {
+      "screen": "workspace",
+      "title": "Workspace overview",
+      "path": "/workshop",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-workspace.png"
+      ]
+    },
+    {
+      "screen": "analysis",
+      "title": "Workspace: analysis",
+      "path": "/workshop/analysis",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-analysis.png"
+      ]
+    },
+    {
+      "screen": "storage",
+      "title": "Workspace: storage and backups",
+      "path": "/workshop/storage",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-storage.png"
+      ]
+    },
+    {
+      "screen": "learning",
+      "title": "Workspace: learning",
+      "path": "/workshop/learning",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-learning.png"
+      ]
+    },
+    {
+      "screen": "listening-study",
+      "title": "Listening study",
+      "path": "/listening",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-listening-study.png"
+      ]
+    },
+    {
+      "screen": "missing-page",
+      "title": "Page not found",
+      "path": "/no-such-page",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-missing-page.png"
+      ]
+    },
+    {
+      "screen": "export-dialog",
+      "title": "Export dialog",
+      "path": "/mix/current/edit",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-export-dialog.png"
+      ]
+    },
+    {
+      "screen": "customize-dialog",
+      "title": "Shape the next mix",
+      "path": "/mixes",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-customize-dialog-part1.png",
+        "desktop-light-customize-dialog-part2.png",
+        "desktop-light-customize-dialog-part3.png",
+        "desktop-light-customize-dialog-part4.png",
+        "desktop-light-customize-dialog-part5.png"
+      ]
+    },
+    {
+      "screen": "requests-dialog",
+      "title": "Requests",
+      "path": "/listen",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-requests-dialog.png"
+      ]
+    },
+    {
+      "screen": "song-details",
+      "title": "Song details",
+      "path": "/library",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-song-details.png"
+      ]
+    },
+    {
+      "screen": "transition-inspector",
+      "title": "Transition inspector",
+      "path": "/mix/current/edit",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-transition-inspector.png"
+      ]
+    },
+    {
+      "screen": "library-selection",
+      "title": "Library with a selection",
+      "path": "/library",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-library-selection.png"
+      ]
+    },
+    {
+      "screen": "library-no-results",
+      "title": "Library search with no results",
+      "path": "/library?q=nothing-is-called-this",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "files": [
+        "desktop-light-library-no-results.png"
+      ]
+    },
+    {
+      "screen": "explore",
+      "title": "Explore (start page)",
+      "path": "/mixes",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-explore-part1.png",
+        "desktop-dark-explore-part2.png",
+        "desktop-dark-explore-part3.png",
+        "desktop-dark-explore-part4.png",
+        "desktop-dark-explore-part5.png"
+      ]
+    },
+    {
+      "screen": "my-mixes",
+      "title": "My Mixes",
+      "path": "/mixes/mine",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-my-mixes.png"
+      ]
+    },
+    {
+      "screen": "listen",
+      "title": "Listen",
+      "path": "/listen",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-listen.png"
+      ]
+    },
+    {
+      "screen": "editor",
+      "title": "Edit the current mix",
+      "path": "/mix/current/edit",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-editor.png"
+      ]
+    },
+    {
+      "screen": "library",
+      "title": "Library",
+      "path": "/library",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-library.png"
+      ]
+    },
+    {
+      "screen": "discover-words",
+      "title": "Discover: words",
+      "path": "/discover",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-discover-words.png"
+      ]
+    },
+    {
+      "screen": "discover-harmonic",
+      "title": "Discover: harmonic",
+      "path": "/discover/harmonic",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-discover-harmonic.png"
+      ]
+    },
+    {
+      "screen": "lucy",
+      "title": "Lucy",
+      "path": "/mixes/lucy",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-lucy.png"
+      ]
+    },
+    {
+      "screen": "workspace",
+      "title": "Workspace overview",
+      "path": "/workshop",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-workspace.png"
+      ]
+    },
+    {
+      "screen": "analysis",
+      "title": "Workspace: analysis",
+      "path": "/workshop/analysis",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-analysis.png"
+      ]
+    },
+    {
+      "screen": "storage",
+      "title": "Workspace: storage and backups",
+      "path": "/workshop/storage",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-storage.png"
+      ]
+    },
+    {
+      "screen": "learning",
+      "title": "Workspace: learning",
+      "path": "/workshop/learning",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-learning.png"
+      ]
+    },
+    {
+      "screen": "listening-study",
+      "title": "Listening study",
+      "path": "/listening",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-listening-study.png"
+      ]
+    },
+    {
+      "screen": "missing-page",
+      "title": "Page not found",
+      "path": "/no-such-page",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-missing-page.png"
+      ]
+    },
+    {
+      "screen": "export-dialog",
+      "title": "Export dialog",
+      "path": "/mix/current/edit",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-export-dialog.png"
+      ]
+    },
+    {
+      "screen": "customize-dialog",
+      "title": "Shape the next mix",
+      "path": "/mixes",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-customize-dialog-part1.png",
+        "desktop-dark-customize-dialog-part2.png",
+        "desktop-dark-customize-dialog-part3.png",
+        "desktop-dark-customize-dialog-part4.png",
+        "desktop-dark-customize-dialog-part5.png"
+      ]
+    },
+    {
+      "screen": "requests-dialog",
+      "title": "Requests",
+      "path": "/listen",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-requests-dialog.png"
+      ]
+    },
+    {
+      "screen": "song-details",
+      "title": "Song details",
+      "path": "/library",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-song-details.png"
+      ]
+    },
+    {
+      "screen": "transition-inspector",
+      "title": "Transition inspector",
+      "path": "/mix/current/edit",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-transition-inspector.png"
+      ]
+    },
+    {
+      "screen": "library-selection",
+      "title": "Library with a selection",
+      "path": "/library",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-library-selection.png"
+      ]
+    },
+    {
+      "screen": "library-no-results",
+      "title": "Library search with no results",
+      "path": "/library?q=nothing-is-called-this",
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "files": [
+        "desktop-dark-library-no-results.png"
+      ]
+    }
+  ]
+}
