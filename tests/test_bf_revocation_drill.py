@@ -24,6 +24,7 @@ a fresh server and database, and nothing here depends on wall-clock order beyond
 from __future__ import annotations
 
 import json
+import os
 import socket
 import sys
 import threading
@@ -61,11 +62,21 @@ def _free_port() -> int:
 
 @pytest.fixture(scope="module")
 def server():
+    # The e2e server is built to own its process: it sets SELECTA_* variables and swaps the R2
+    # and Stripe clients module-wide. In-process, put all of that back for the tests after us.
+    from selecta.billing import api as billing_api
+    from selecta.storage import api as storage_api
+
+    environ = dict(os.environ)
+    r2_client, stripe_client = storage_api.R2Client, billing_api.HttpStripeClient
     rehearsal = Rehearsal(_free_port())
     try:
         yield rehearsal
     finally:
         rehearsal.close()
+        storage_api.R2Client, billing_api.HttpStripeClient = r2_client, stripe_client
+        os.environ.clear()
+        os.environ.update(environ)
 
 
 def _grant(r: Rehearsal, workspace_ids: list[str]) -> None:
