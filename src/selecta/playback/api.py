@@ -112,7 +112,9 @@ class ZoneCommandBody(DeviceBody):
     args: dict[str, Any] | None = None
     based_on_seq: int = Field(ge=0)
     idempotency_key: str | None = Field(default=None, max_length=128)
-    fence: int | None = Field(default=None, ge=0)
+    # Commands from a controller must be fenced; accepting omission would revive
+    # sequence-only authorization for this route.
+    fence: int = Field(ge=0)
     ttl_seconds: int | None = Field(default=None, ge=0, le=fencing.MAX_TTL_SECONDS)
 
 
@@ -129,9 +131,8 @@ class CommandBody(DeviceBody):
     args: dict[str, Any] | None = None
     based_on_seq: int = Field(ge=0)
     idempotency_key: str | None = Field(default=None, max_length=128)
-    # ADR-0461: the fence the press was issued under (None: checked by sequence alone, as
-    # before), and how long it stays executable, from server time.
-    fence: int | None = Field(default=None, ge=0)
+    # ADR-0461: every press is issued under an explicit fence and expires from server time.
+    fence: int = Field(ge=0)
     ttl_seconds: int | None = Field(default=None, ge=0, le=fencing.MAX_TTL_SECONDS)
 
 
