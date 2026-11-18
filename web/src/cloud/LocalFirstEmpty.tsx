@@ -34,7 +34,7 @@ export function MixesEmpty({ connected }: { connected: number }) {
         ) : (
           <>
             <h2 id="mixes-empty-title">Your songs are connected</h2>
-            <p>{`${connected} ${connected === 1 ? 'song is' : 'songs are'} in your library. Mix ideas appear once SelectaDJ has measured tempo and key, and measuring in the browser is not available yet. Nothing has been lost; your library is ready for it.`}</p>
+            <p>{`${connected} ${connected === 1 ? 'song is' : 'songs are'} in your library, but fewer than two can play on this device right now. Connect them here and SelectaDJ can shape them into a mix in your browser. Nothing has been lost.`}</p>
             <PageLink to="/library" className="button">See your library</PageLink>
           </>
         )}

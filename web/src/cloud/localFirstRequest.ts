@@ -1,4 +1,6 @@
 import { ApiError, LibraryPage, LibrarySong, MixData, Request, SongAvailability, Status } from '../api';
+import { mixFamily, type PlayableSong } from './localFirstMixes';
+import { DEFAULT_STEERING, WORKED_OUT_LIVE, type RecipeStore } from './recipeStore';
 
 /** The local-first shell's request adapter (ADR-0462 "one adapter per route family").
  *
@@ -48,6 +50,8 @@ export async function readCatalogue(cloud: Request): Promise<CatalogueSong[]> {
 export type AvailabilitySources = {
   here?: () => Promise<ReadonlyMap<number, 'here' | 'reauth'>>;
   hosted?: (songs: readonly CatalogueSong[]) => Promise<ReadonlySet<number>>;
+  /** Where browser mixes are kept (BF-0462-05); without it the current mix is empty. */
+  recipes?: RecipeStore;
 };
 export type Availability = { here: ReadonlyMap<number, 'here' | 'reauth'>; hosted: ReadonlySet<number> };
 export const NO_AVAILABILITY: Availability = { here: new Map(), hosted: new Set() };
@@ -66,6 +70,7 @@ export function availabilityOf(song: CatalogueSong, known: Availability): SongAv
 export function asLibrarySong(song: CatalogueSong, known: Availability = NO_AVAILABILITY): LibrarySong {
   const availability = availabilityOf(song, known);
   const here = availability !== 'nowhere';
+  const playable = availability === 'here' || availability === 'hosted';
   return {
     id: song.id, artist: song.artist, title: song.title, genre: null,
     duration: song.duration_s ?? 0, bpm: null, camelot: null,
@@ -73,9 +78,13 @@ export function asLibrarySong(song: CatalogueSong, known: Availability = NO_AVAI
     music_override: null, energy: null, grid_confidence: null, lyric_status: null,
     never: false, priority: false, availability,
     // the availability line says where it is; readiness only says how far analysis has got
-    readiness: here
-      ? { status: 'analysed_incomplete', reason: 'Not analysed in this browser yet.' }
-      : { status: 'missing', reason: '' },
+    // in a browser mix a song that plays here is ready: its transitions are worked out from the
+    // audio as the mix plays, so nothing has to be measured first (BF-0462-05)
+    readiness: playable
+      ? { status: 'mix_ready', reason: WORKED_OUT_LIVE }
+      : here
+        ? { status: 'analysed_incomplete', reason: 'Plays once it is on this device.' }
+        : { status: 'missing', reason: '' },
   };
 }
 
@@ -88,11 +97,13 @@ export function libraryPage(songs: CatalogueSong[], search: URLSearchParams, kno
   const start = Math.max(0, Number(search.get('after') ?? 0) || 0);
   const matching = songs
     .filter((song) => !query || `${song.title} ${song.artist} ${song.album ?? ''}`.toLowerCase().includes(query))
-    // nothing in the browser is mix-ready yet, so the ready view is honestly empty and every song
-    // is not analysed yet; needing attention is a song this device cannot play
+    // nothing is measured in the browser, so every song is not analysed yet; ready means it plays
+    // here (a browser mix works its transitions out as it plays); needing attention is a song this
+    // device cannot play
     .filter((song) => {
       if (state === 'all' || state === 'not_yet') return true;
       const where = availabilityOf(song, known);
+      if (state === 'ready') return where === 'here' || where === 'hosted';
       if (state === 'attention') return where === 'reauth' || where === 'nowhere';
       return state === 'missing' && where === 'nowhere';
     })
@@ -106,11 +117,12 @@ export function libraryPage(songs: CatalogueSong[], search: URLSearchParams, kno
 }
 
 /** The status the shared shell and views read, from what the catalogue knows. */
-export function statusFrom(songs: CatalogueSong[]): Status {
+export function statusFrom(songs: CatalogueSong[], known: Availability = NO_AVAILABILITY, steering: Status['steering'] = DEFAULT_STEERING): Status {
   const available = songs.filter((song) => (song.available_on ?? 0) > 0).length;
+  const ready = songs.filter((song) => ['here', 'hosted'].includes(availabilityOf(song, known))).length;
   return {
-    counts: { total: songs.length, music: songs.length, analysed: 0, ready: 0, lyrics: 0, set_aside: 0, missing: songs.length - available },
-    steering: { mix_language: 'any', stems: 'auto', energy_arc: null, target: null },
+    counts: { total: songs.length, music: songs.length, analysed: 0, ready, lyrics: 0, set_aside: 0, missing: songs.length - available },
+    steering,
     moves: {},
     analysis_running: false,
     analysing: [],
@@ -119,7 +131,7 @@ export function statusFrom(songs: CatalogueSong[]): Status {
   };
 }
 
-/** No recipe store reaches the browser yet (BF-0462-05), so the current mix is truthfully empty. */
+/** The current mix before a recipe store has answered, or without one. */
 export const EMPTY_MIX: MixData = { mix: [], name: 'Current mix', can_undo: false };
 
 /** The adapted request. `cloud` asks the Cloud API with the account's token and workspace. */
@@ -140,6 +152,15 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     here: (await sources.here?.().catch(() => null)) ?? NO_AVAILABILITY.here,
     hosted: (await sources.hosted?.(list).catch(() => null)) ?? NO_AVAILABILITY.hosted,
   });
+  const playable = async (): Promise<PlayableSong[]> => {
+    const list = await songs();
+    const known = await availability(list);
+    return list.map((song) => {
+      const where = availabilityOf(song, known);
+      return { id: song.id, title: song.title, artist: song.artist, duration: song.duration_s ?? 0, playable: where === 'here' || where === 'hosted' };
+    });
+  };
+  const mixes = sources.recipes ? mixFamily(sources.recipes, playable) : null;
   const adapted = async <T,>(path: string, init?: RequestInit): Promise<T> => {
     const method = (init?.method ?? 'GET').toUpperCase();
     const [route, query = ''] = path.split('?');
@@ -147,9 +168,14 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
       const list = await songs();
       return libraryPage(list, new URLSearchParams(query), await availability(list)) as T;
     }
-    if (method === 'GET' && route === '/status') return statusFrom(await songs()) as T;
+    if (method === 'GET' && route === '/status') {
+      const list = await songs();
+      return statusFrom(list, await availability(list), mixes?.steering()) as T;
+    }
+    const mixAnswer = mixes?.answer(method, route, new URLSearchParams(query), init);
+    if (mixAnswer) return (await mixAnswer) as T;
     if (method === 'GET' && route === '/mix' && !query) return EMPTY_MIX as T;
-    // Make a Mix's ideas need analysed songs; none are analysed in the browser yet
+    // without a recipe store there is nothing to build a mix into
     if (method === 'GET' && route === '/vibes') return [] as T;
     // the catalogue's own routes pass straight through (the import surface uses them)
     if (route.startsWith('/local-media/')) return cloud<T>(path, init);

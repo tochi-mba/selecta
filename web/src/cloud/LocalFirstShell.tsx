@@ -20,7 +20,9 @@ import { hostedResolver, matchAsset, readHostedAssets, type HostedAsset } from '
 import { isHostedAccount } from './localFirstGate';
 import { CannotPlayHere, LibraryEmpty, ListenEmpty, MixesEmpty, MyMixesEmpty, NotOnThisAccount, OnlyOnYourComputer } from './LocalFirstEmpty';
 import { useLocalFirstPlayer } from './localFirstPlayer';
+import { BROWSER_MIX_NEEDS } from './localFirstMixes';
 import { EMPTY_MIX, localFirstRequest, mediaRequest, type AvailabilitySources } from './localFirstRequest';
+import { recipeStore } from './recipeStore';
 import { QueueSources } from './QueueSources';
 import { CutoverNotice } from './migration/CutoverNotice';
 import { OnboardingSpine } from './onboarding/OnboardingSpine';
@@ -46,6 +48,10 @@ export const NOT_IN_THE_BROWSER = {
   'app.shortcuts': false,
   export: false,
   lucy: false,
+  // a browser mix has no measured feel, energy or stems to shape by; its ending can be chosen
+  'mixes.shaping.feel': false,
+  'mixes.shaping.energy_arc': false,
+  'mixes.shaping.stem_moves': false,
 } as const;
 
 const VIEW_PATHS: Record<View, string> = { Mixes: '/mixes', Now: '/listen', Edit: '/mix/current/edit', Library: '/library', Words: '/discover', Workshop: '/workshop' };
@@ -92,7 +98,9 @@ export function LocalFirstShell({ api, account, more, feedback }: {
       const assets = await listing;
       return new Set(songs.filter((song) => matchAsset({ song_id: song.id, title: song.title, artist: song.artist }, song.content_sha256 ?? null, assets)).map((song) => song.id));
     } : undefined,
-  }), [api, workspaceId, coexisting, openStore]);
+    // Make a Mix and My Mixes: recipes on the server, this browser's current mix and shaping here
+    recipes: recipeStore(cloud, workspaceId),
+  }), [api, cloud, workspaceId, coexisting, openStore]);
   const request = useMemo(() => localFirstRequest(cloud, sources), [cloud, sources]);
   const programme = useRef<MixData['mix']>([]);
   const resolver = useCallback(async () => (resolving.current ??= openStore().then((opened) => makeCoexistingResolver({
@@ -146,7 +154,7 @@ export function LocalFirstShell({ api, account, more, feedback }: {
   }, []);
   const shared: ViewProps | null = status && {
     status, mix: data.mix, mixName: data.name, currentMixName: data.name, canUndo: data.can_undo, mixEta: data.eta,
-    refreshMix, setMixData: setData, refreshStatus, request, player, now,
+    refreshMix, setMixData: setData, refreshStatus, request, player, now, readyNeeded: BROWSER_MIX_NEEDS,
     setView: (view: View) => navigate(VIEW_PATHS[view]), notify, stage: false, toggleStage: IDLE,
   };
   const song = data.mix[now.position];
@@ -178,7 +186,7 @@ export function LocalFirstShell({ api, account, more, feedback }: {
           : <><Library {...shared} /><div className="page">{connect}</div></>;
       case 'mixes':
         if (route.tab === 'mine') return data.mix.length ? <MyMixes {...shared} /> : <MyMixesEmpty connected={connected} />;
-        return (status?.counts.ready ?? 0) > 0 ? <Mixes {...shared} /> : <MixesEmpty connected={connected} />;
+        return (status?.counts.ready ?? 0) >= BROWSER_MIX_NEEDS ? <Mixes {...shared} /> : <MixesEmpty connected={connected} />;
       case 'listen':
         return (
           <>
