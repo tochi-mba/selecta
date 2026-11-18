@@ -2,8 +2,8 @@ import { Icon } from '../ui/Icon';
 import { RouteDiagram, SongMotif } from '../ui/MusicObjects';
 import { Problem, Skeleton } from '../ui/controls';
 import { createContext, Fragment, KeyboardEvent, useContext, useEffect, useRef, useState } from 'react';
-import { ApiError, SERVER_FAILED_WORDS, clientFor, MixData, MixItem, Request, SongRow } from '../api';
-import { useRequest } from '../requestContext';
+import { ApiError, SERVER_FAILED_WORDS, MixData, MixItem, Request, SongRow } from '../api';
+import { useApi, useRequest } from '../requestContext';
 import { usePreview } from '../audio/focus';
 import { etaWords } from '../lib';
 import { PlayerLike } from '../playerContract';
@@ -186,7 +186,7 @@ export function useRequests(playback?: Playback, notify?: Notify, override?: Req
   // ADR-0462: all reads and writes go through the injected request; standalone local mounts
   // (and the existing tests) keep the local client by default.
   const request = useRequest(override);
-  const { get, post, del } = clientFor(request);
+  const { get, post, del } = useApi(request);
   // without requests in this build, nothing here asks the server anything
   const on = useFlagHeard('requests');
   const [requests, setRequests] = useState<RequestRow[] | null>(null);
@@ -681,7 +681,7 @@ function TransitionPreviews({ request }: { request: RequestRow; playback?: Playb
   // ADR-0462: previews ask the server through the shared requests client.
   const state = useContext(RequestsContext);
   const provided = useRequest();
-  const { get, post } = clientFor(state?.request ?? provided);
+  const { get, post } = useApi(state?.request ?? provided);
   const preview = usePreview();
   const [wanted, setWanted] = useState('');
   const [problem, setProblem] = useState('');
@@ -753,7 +753,7 @@ export function RequestsPanel() {
   const state = useContext(RequestsContext);
   // ADR-0462: the song search goes through the shared requests client.
   const provided = useRequest();
-  const { get } = clientFor(state?.request ?? provided);
+  const { get } = useApi(state?.request ?? provided);
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState<SongRow[] | null>(null);
   const [searchError, setSearchError] = useState('');

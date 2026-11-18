@@ -1,6 +1,7 @@
 import { flagOn } from '../flags';
 import { LinkIfThere } from '../shell/PageLink';
-import { clientFor, Request, Status } from '../api';
+import type { Request, Status } from '../api';
+import { clientForRequest } from '../requestContext';
 import { analysisWords } from '../lib';
 import { PageLink } from '../shell/PageLink';
 import { Action, Status as StatusMark } from '../ui/controls';
@@ -107,4 +108,4 @@ export function Preparing({ status, onAnalyse }: { status: Status; onAnalyse: ()
 }
 
 /** Start analysing the rest of the library, through the page's injected request (ADR-0462). */
-export const askToAnalyse = (request: Request) => clientFor(request).post('/analysis/start');
+export const askToAnalyse = (request: Request) => clientForRequest(request).post('/analysis/start');

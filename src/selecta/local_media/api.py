@@ -12,15 +12,18 @@ from collections.abc import Callable
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+import sqlalchemy as sa
 from sqlalchemy.engine import Engine
 
 from selecta.authz.roles import WorkspaceAction
 from selecta.identity.tokens import Claims
 from selecta.local_media import store
 from selecta.persistence import transaction
+from selecta.playback.schema import devices as playback_devices
 
 _MAX_PAGE_SIZE = 100
+_MAX_AVAILABILITY_SNAPSHOT_IDS = 20_000
 
 
 class SongRegistration(BaseModel):
@@ -45,8 +48,17 @@ class AvailabilityReport(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     device_id: str = Field(min_length=1, max_length=36)
-    present: list[int] = Field(default_factory=list, max_length=5000)
-    absent: list[int] = Field(default_factory=list, max_length=5000)
+    present: list[int] = Field(default_factory=list, max_length=_MAX_AVAILABILITY_SNAPSHOT_IDS)
+    absent: list[int] = Field(default_factory=list, max_length=_MAX_AVAILABILITY_SNAPSHOT_IDS)
+    snapshot: bool = False
+
+    @model_validator(mode="after")
+    def limit_report_size(self) -> AvailabilityReport:
+        if len(self.present) + len(self.absent) > _MAX_AVAILABILITY_SNAPSHOT_IDS:
+            raise ValueError(
+                f"availability reports are limited to {_MAX_AVAILABILITY_SNAPSHOT_IDS} ids"
+            )
+        return self
 
 
 def install_routes(
@@ -131,9 +143,33 @@ def install_routes(
         request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
     ) -> dict[str, Any]:
-        workspace_id = workspace(request, claims, WorkspaceAction.LIBRARY_WRITE)
+        principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
+        if not principal.can(WorkspaceAction.LIBRARY_WRITE):
+            raise HTTPException(status_code=403, detail={"code": "not_allowed"})
+        workspace_id = principal.workspace.id
         with transaction(engine, workspace_id) as conn:
-            written = store.set_availability(
+            # Lock the authenticated device row so concurrent snapshots for this device serialize
+            # before replacing availability. SQLite write transactions already serialize writers.
+            device = conn.execute(
+                sa.select(playback_devices)
+                .where(playback_devices.c.workspace_id == workspace_id)
+                .where(playback_devices.c.id == body.device_id)
+                .with_for_update()
+            ).mappings().first()
+            if (
+                device is None
+                or device["user_id"] != principal.user.id
+                or device["signed_out_at"] is not None
+            ):
+                # Match playback's own-device contract: a caller cannot report for another
+                # member's device, a signed-out device or an unregistered id.
+                raise HTTPException(status_code=404, detail={"code": "unknown_device"})
+            report = (
+                store.replace_device_availability
+                if body.snapshot
+                else store.set_availability
+            )
+            written = report(
                 conn, workspace_id, body.device_id, body.present, body.absent
             )
         return {"device_id": body.device_id, **written}

@@ -1,7 +1,7 @@
-import { clientFor, LibraryPage } from '../api';
+import type { LibraryPage, Request } from '../api';
+import { clientForRequest } from '../requestContext';
 
 // local-only: the early read runs before the app knows its mode, and only in a local-only build
-const { get } = clientFor();
 
 /** The Library's page request, built one way for the page and for the early read below. */
 export function libraryUrl(query: string, filter: string, sort: string, after?: string | null, limit = 100) {
@@ -17,12 +17,12 @@ let early: { url: string; at: number; answer: Promise<LibraryPage> } | null = nu
 
 /** MI-0162-04: opening the app on /library asks for the first rows at once, alongside status and
  * the mix, instead of after them. `search` is the address's query string. */
-export function prefetchLibrary(search: string) {
+export function prefetchLibrary(search: string, request?: Request) {
   const address = new URLSearchParams(search);
   const url = libraryUrl(address.get('q') ?? '', address.get('show') ?? 'all', address.get('sort') ?? 'title');
   // S4-0111-05: asked for even earlier (before the app knew it was local), it isn't asked for twice
   if (hasEarlyLibrary(url)) return;
-  const answer = get<LibraryPage>(url);
+  const answer = clientForRequest(request).get<LibraryPage>(url);
   early = { url, at: performance.now(), answer };
   // a failed read (the server still starting) is dropped, so a later ask reads the rows again
   answer.catch(() => {

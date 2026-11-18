@@ -1,8 +1,9 @@
 import { useSyncExternalStore } from 'react';
-import { ApiError, clientFor, ExportJob } from '../api';
+import { ApiError, ExportJob, Request } from '../api';
+import { clientForRequest, useRequest } from '../requestContext';
 
-// local-only: exports are jobs on this computer's own server (ADR-0462 lists them as mode-specific)
-const { get, post, del } = clientFor();
+// Export jobs are currently local-only, but their view helpers still use the injected request
+// boundary so they cannot silently bypass a shell that provides another request.
 
 /** What's known about exports, shared by whatever is showing them. The work itself happens on the
  * server, so closing a panel or reloading loses nothing: this only has to ask again. It only asks
@@ -39,6 +40,7 @@ function validJob(value: unknown): value is ExportJob {
 let asked = 0;
 let timer: number | undefined;
 const listeners = new Set<() => void>();
+let activeRequest: Request | undefined;
 
 function changed(next: Partial<ExportsNow>) {
   now = { ...now, ...next };
@@ -47,9 +49,9 @@ function changed(next: Partial<ExportsNow>) {
 
 export const isExportActive = (job: Pick<ExportJob, 'state'>) => ACTIVE.has(job.state);
 
-export function refreshExports(): Promise<void> {
+export function refreshExports(request: Request | undefined = activeRequest): Promise<void> {
   const mine = ++asked;
-  return get<{ jobs: ExportJob[] }>('/exports/jobs').then(
+  return clientForRequest(request).get<{ jobs: ExportJob[] }>('/exports/jobs').then(
     (answer) => {
       // an answer to an older question can't overwrite a newer one
       if (mine !== asked) return;
@@ -65,12 +67,12 @@ export function refreshExports(): Promise<void> {
   );
 }
 
-function schedule() {
+function schedule(request: Request | undefined = activeRequest) {
   window.clearTimeout(timer);
   if (!listeners.size || document.visibilityState === 'hidden') return;
   const busy = now.jobs?.some(isExportActive);
   timer = window.setTimeout(() => {
-    void refreshExports().finally(schedule);
+    void refreshExports(request).finally(() => schedule(request));
   }, busy ? QUICK_MS : SLOW_MS);
 }
 
@@ -78,52 +80,56 @@ const whenVisible = () => {
   if (document.visibilityState === 'hidden') {
     window.clearTimeout(timer);
   } else if (listeners.size) {
-    void refreshExports().finally(schedule);
+    const request = activeRequest;
+    void refreshExports(request).finally(() => schedule(request));
   }
 };
 
-function subscribe(listener: () => void) {
+function subscribe(listener: () => void, request: Request) {
   const first = !listeners.size;
   listeners.add(listener);
   if (first) {
+    activeRequest = request;
     document.addEventListener('visibilitychange', whenVisible);
-    void refreshExports().finally(schedule);
+    void refreshExports(request).finally(() => schedule(request));
   }
   return () => {
     listeners.delete(listener);
     if (!listeners.size) {
       window.clearTimeout(timer);
       document.removeEventListener('visibilitychange', whenVisible);
+      activeRequest = undefined;
     }
   };
 }
 
-export function useExports(): ExportsNow {
-  return useSyncExternalStore(subscribe, () => now);
+export function useExports(override?: Request): ExportsNow {
+  const request = useRequest(override);
+  return useSyncExternalStore((listener) => subscribe(listener, request), () => now);
 }
 
-function known(job: ExportJob) {
+function known(job: ExportJob, request?: Request) {
   const others = (now.jobs ?? []).filter((item) => item.id !== job.id);
   changed({ jobs: [job, ...others], unsupported: false });
-  schedule();
+  schedule(request);
 }
 
 /** `path` already says which mix. `guard` stops it if the mix has changed since it was last shown. */
-export async function startExport(path: string, guard: Record<string, string>): Promise<ExportJob> {
+export async function startExport(path: string, guard: Record<string, string>, request?: Request): Promise<ExportJob> {
   asked += 1;
-  const job = await post<ExportJob>(path, undefined, guard);
+  const job = await clientForRequest(request).post<ExportJob>(path, undefined, guard);
   // A job may have been created even if the reply was malformed; callers
   // retain their operation ID on this uncertain result and can retry safely.
   if (!validJob(job)) throw new Error('The export started, but its details could not be read. Retry to recover its status.');
-  known(job);
+  known(job, request);
   return job;
 }
 
-export async function cancelExport(id: string): Promise<void> {
+export async function cancelExport(id: string, request?: Request): Promise<void> {
   asked += 1;
-  const job = await del<ExportJob>(`/exports/jobs/${id}`);
+  const job = await clientForRequest(request).del<ExportJob>(`/exports/jobs/${id}`);
   if (!validJob(job)) throw new Error('Couldn’t confirm the export was cancelled. Check its latest status.');
-  known(job);
+  known(job, request);
 }
 
 /** For the tests: forget everything. */

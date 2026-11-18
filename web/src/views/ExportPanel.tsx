@@ -1,6 +1,6 @@
 import { useContext, useRef, useState } from 'react';
 import { ApiError, ExportJob, MixData, MixItem } from '../api';
-import { useApi } from '../requestContext';
+import { useApi, useRequest } from '../requestContext';
 import { length, runningTime } from '../lib';
 import { PageLink } from '../shell/PageLink';
 import { Action, Dialog, Status } from '../ui/controls';
@@ -31,10 +31,11 @@ export function ExportPanel(props: {
   onClose: () => void;
 }) {
   const { get } = useApi();
+  const request = useRequest();
   const { mix, mixName, inDraft, guard, setMixData, names, onClose } = props;
   const at = useMixPath();
   const draftId = useContext(MixScope);
-  const { jobs, unsupported } = useExports();
+  const { jobs, unsupported } = useExports(request);
   const [started, setStarted] = useState<string | null>(null);
   const [problem, setProblem] = useState('');
   const starting = useRef(false);
@@ -62,7 +63,7 @@ export function ExportPanel(props: {
     // cannot silently create a second export of the same frozen mix.
     operation.current ??= `export-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     try {
-      const job = await startExport(at('/exports/jobs'), { ...guard, 'x-operation-id': operation.current });
+      const job = await startExport(at('/exports/jobs'), { ...guard, 'x-operation-id': operation.current }, request);
       operation.current = null;
       setStarted(job.id);
       // the songs on the page show what's now in line
@@ -144,7 +145,7 @@ export function ExportPanel(props: {
           {mine?.state === 'encoding' ? 'Saving the file…' : going ? `Rendering ${mine?.seams_ready} of ${mine?.seams_total}…` : 'Save it'}
         </Action>
       )}
-      {mine?.can_cancel && <Action working="Cancelling…" run={() => cancelExport(mine.id)}>Cancel export</Action>}
+      {mine?.can_cancel && <Action working="Cancelling…" run={() => cancelExport(mine.id, request)}>Cancel export</Action>}
       <p className="hint">Your original songs aren’t touched.</p>
       <p className="hint">You can close this and it keeps going. Find it again under Activity, or in <PageLink to="/workshop" onClick={onClose}>Workspace</PageLink>.</p>
     </Dialog>

@@ -16,9 +16,14 @@ export function useRequest(override?: Request): Request {
   return override ?? provided;
 }
 
+/** A request-bound client for non-hook view helpers; views should prefer `useApi` in components. */
+export function clientForRequest(override?: Request): Client {
+  return clientFor(override ?? localRequest);
+}
+
 /** get/post/del over this page's request, stable for as long as the request is. */
 export function useApi(override?: Request): Client {
-  return clientFor(useRequest(override));
+  return clientForRequest(useRequest(override));
 }
 
 /** Raw bytes (backups, seam clips) the JSON request does not carry. Callers check `ok` themselves. */
