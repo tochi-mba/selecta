@@ -36,6 +36,9 @@ export type ViewProps = {
   openRequests?: () => void;
   /** Take back the newest change in this mix: `null` is the current mix, a number is that draft. */
   undo?: (scope: number | null) => Promise<void>;
+  /** How many ready songs Make a Mix needs before it offers a mix. Local mode leaves it to the
+   * page's own number; a browser mix needs only two songs it can play (BF-0462-05). */
+  readyNeeded?: number;
   /** The name of the current mix, whatever is being edited, for saying what a change will or won't touch. */
   currentMixName?: string;
 };

@@ -41,7 +41,7 @@ function rememberLength(songs: number) {
 }
 
 /** The front door. One tap plays something good, and everything can be changed afterwards. */
-export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshMix, refreshStatus, request }: ViewProps) {
+export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshMix, refreshStatus, request, readyNeeded = READY_NEEDED }: ViewProps) {
   // ADR-0462: this page's own reads and writes go through the injected request, never the local client.
   const via = useRequest(request);
   const { get, post } = useApi(via);
@@ -182,7 +182,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
     );
   }
 
-  if (readyCount < READY_NEEDED) return <Preparing status={status} onAnalyse={analyse} />;
+  if (readyCount < readyNeeded) return <Preparing status={status} onAnalyse={analyse} />;
 
   const firstMix = !mix.length && !hasStartedAMix();
   return (

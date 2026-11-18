@@ -1,3 +1,4 @@
+import { words } from '../copy';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { ApiError, LibraryPage, LibrarySong, MixData, problemKind } from '../api';
@@ -585,7 +586,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
             </button>
           )}
         </p>
-        <p className="library-readiness-help">Analysed means audio has been measured. Ready for mixes means a song has the cues needed to plan a mix; it does not mean transitions are already rendered.</p>
+        <p className="library-readiness-help">{words().libraryReadyMeaning}</p>
       </header>
       <div className="library-find">
         <SearchField label="Search your library" value={typed} onChange={setTyped} placeholder="Search titles, artists, remixes, credits or recording ID" />

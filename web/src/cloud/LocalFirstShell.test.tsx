@@ -120,13 +120,13 @@ describe('designed empty states, never a blank table', () => {
     expect(screen.queryByRole('table')).toBeNull();
   });
 
-  it('Make a Mix says why there are no ideas yet once songs are connected', async () => {
+  it('Make a Mix says why there is no mix yet when too few songs play on this device', async () => {
     account = withExperience(true, false, true);
     songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
     window.history.replaceState({}, '', '/mixes');
     render(<CloudApp />);
     expect(await screen.findByRole('heading', { name: 'Your songs are connected' })).toBeVisible();
-    expect(screen.getByText(/measuring in the browser is not available yet/)).toBeVisible();
+    expect(screen.getByText(/fewer than two can play on this device/)).toBeVisible();
   });
 
   it('My Mixes with no mix offers to make one', async () => {

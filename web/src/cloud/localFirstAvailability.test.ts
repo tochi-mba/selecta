@@ -25,7 +25,9 @@ describe('availability of a catalogue song', () => {
     expect(row.availability).toBe('nowhere');
     expect(row.bpm).toBeNull();
     expect(row.readiness.status).toBe('missing');
-    expect(asLibrarySong(song(5, 'E'), known([[5, 'here']])).readiness.status).toBe('analysed_incomplete');
+    // a song that plays here is ready for a browser mix; one on another device is not, yet
+    expect(asLibrarySong(song(5, 'E'), known([[5, 'here']])).readiness.status).toBe('mix_ready');
+    expect(asLibrarySong(song(6, 'F'), known()).readiness.status).toBe('analysed_incomplete');
   });
 
   it('filters by what the member can act on', () => {
@@ -33,9 +35,9 @@ describe('availability of a catalogue song', () => {
     const where = known([[1, 'here'], [2, 'reauth']]);
     const titles = (state: string) => libraryPage(songs, new URLSearchParams({ state }), where).songs.map((row) => row.title);
     expect(titles('all')).toEqual(['Ask', 'Away', 'Gone', 'Here']);
-    // nothing is analysed in the browser yet: every song is not analysed, none is ready
+    // nothing is measured in the browser: every song is not analysed; ready is what plays here
     expect(titles('not_yet')).toEqual(['Ask', 'Away', 'Gone', 'Here']);
-    expect(titles('ready')).toEqual([]);
+    expect(titles('ready')).toEqual(['Here']);
     expect(titles('attention')).toEqual(['Ask', 'Gone']);
   });
 });

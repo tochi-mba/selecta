@@ -40,6 +40,7 @@ const local = {
   jobsNeedRestart: 'This running copy of SelectaDJ can’t report background jobs. Restart SelectaDJ to update it.',
   sourcesHelp: 'Copy a folder address from File Explorer. Your audio stays on this PC. For lyric lookup, SelectaDJ sends each song’s artist, title, album and duration to LRCLIB. That request does not upload the audio file. SelectaDJ also communicates with its local server.',
   diagnosticsStaysHere: 'No paths or song names, and nothing is sent anywhere. It only leaves this PC if you copy it somewhere yourself.',
+  libraryReadyMeaning: 'Analysed means audio has been measured. Ready for mixes means a song has the cues needed to plan a mix; it does not mean transitions are already rendered.',
 };
 
 export type CopyKey = keyof typeof local;
@@ -73,6 +74,7 @@ const cloud: Record<CopyKey, string> = {
   jobsNeedRestart: 'Background jobs can’t be shown right now. Try again in a few minutes.',
   sourcesHelp: 'Add music by uploading files. Your audio stays private to your workspace. For lyric lookup, SelectaDJ sends each song’s artist, title, album and duration to LRCLIB. That request does not upload the audio file.',
   diagnosticsStaysHere: 'No paths or song names, and nothing is sent anywhere. It only leaves this device if you copy it somewhere yourself.',
+  libraryReadyMeaning: 'Ready for mixes means a song can play on this device: SelectaDJ works out each transition in your browser as the mix plays, so nothing is measured or rendered ahead.',
 };
 
 export const copy: Record<Mode, Record<CopyKey, string>> = { local, cloud };
