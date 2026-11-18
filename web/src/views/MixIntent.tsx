@@ -56,7 +56,7 @@ export function MixIntentGuide({ replacing, mixName }: { replacing: boolean; mix
       <div className="mix-intent-pair">
         <article className="mix-intent" data-intent="quick-listen">
           <h3>Quick listen</h3>
-          <p>Press Play on SelectaDJ’s pick or any feeling. It starts at once{replacing ? ` and replaces ${mixName}, which you can undo` : ''}. Nothing new is saved to My Mixes.</p>
+          <p>Press Play on SelectaDJ’s pick or any feeling. It starts at once{replacing ? ` and replaces your current mix, “${mixName}”; you can undo that` : ''}. Nothing new is saved to My Mixes.</p>
           <p className="hint"><ScopeTag scope="this-mix" /> Play makes one mix to listen to now. Your saved defaults stay as they are.</p>
         </article>
         {keep && (

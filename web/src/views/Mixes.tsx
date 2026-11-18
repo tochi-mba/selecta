@@ -12,8 +12,8 @@ import { Action, Dialog, Problem, Skeleton } from '../ui/controls';
 import { LinkTabs } from '../ui/primitives';
 import { CurrentMix } from './CurrentMix';
 import { buildSummary, MixSetup } from './MixSetup';
-import { MixIntentGuide, ScopeTag } from './MixIntent';
-import { LengthScale, VibeMotif } from '../ui/MusicObjects';
+import { MixIntentGuide, ScopeTag, scopedSettings } from './MixIntent';
+import { VibeMotif } from '../ui/MusicObjects';
 import { Icon } from '../ui/Icon';
 import { askToAnalyse, hasStartedAMix, Preparing, READY_NEEDED, rememberStartedAMix, SetupSteps } from './Setup';
 import { ViewProps } from './shared';
@@ -157,6 +157,10 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const readyCount = counts.ready;
   // a mix that's playing or paused is what would be replaced, so that's when to ask (EX-0117-04: idle builds straight away)
   const replacing = mix.length > 0 && now.phase !== 'idle';
+  // the current mix by name, quoted, so a name like "Your songs, in your browser" never reads as
+  // part of the sentence around it
+  const current = `your current mix, “${mixName}”`;
+  const lengthScope = scopedSettings(on).find((setting) => setting.id === 'length');
   const ask = (asked: Asked) => {
     const choice = { ...asked, order: orderOf(mix) };
     if (replacing) {
@@ -215,7 +219,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
             disabled={!hero?.ready || (!!building && !building.startsWith('pick'))}
             busy={building.startsWith('pick')}
             working="Building…"
-            title={replacing ? `Replaces ${mixName}, which you can undo` : undefined}
+            title={replacing ? `Replaces ${current}; you can undo that` : undefined}
             run={() => hero && ask({ key: 'pick', name: hero.name, open: false })}
           >
             Play
@@ -226,11 +230,11 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                 About {option.label}
               </button>
             ))}
-            <LengthScale songs={songs} most={SET_LENGTHS[SET_LENGTHS.length - 1].songs} />
-            {on('mixes.intent_language') && <ScopeTag scope={on('mixes.shaping.remember_length') ? 'saved-default' : 'this-visit'} />}
           </div>
           {shaping && <button aria-label="Customize: Shape this mix (optional)" onClick={() => setCustomizing(true)}>Shape this mix <span className="soft">(optional)</span></button>}
         </div>
+        {/* the length chips' scope, said beside its own words rather than as a loose badge in the chips */}
+        {on('mixes.intent_language') && lengthScope && <p className="hint mix-length-scope"><ScopeTag scope={lengthScope.scope} /> How long: {lengthScope.detail}</p>}
         {/* MP-0282-07: the first-run reassurance sits under Play, so Play stays in the first screen on a phone */}
         {firstMix && (
           <p className="notice" role="status">
@@ -241,7 +245,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         {shaping && <p className="hint build-summary"><b>Shape</b> · Next mix: {buildSummary(status.steering)}.</p>}
         <p className="hint">
           <b>Commit</b> · {listed(['Play now', on('editor') && 'edit first', on('drafts') && 'save a draft']).replace(' and ', ', or ')}. {songs} songs. How long it really runs depends on where the transitions fall.
-          {replacing ? ` Playing a new mix replaces ${mixName}, which you can undo.${on('drafts') ? ' To keep it playing, use Save as draft.' : ''}` : ''}
+          {replacing ? ` Playing a new mix replaces ${current}; you can undo that.${on('drafts') ? ' To keep it playing, use Save as draft.' : ''}` : ''}
         </p>
       </section>
       {on('mixes.intent_language') && firstMix && <MixIntentGuide replacing={replacing} mixName={mixName} />}
