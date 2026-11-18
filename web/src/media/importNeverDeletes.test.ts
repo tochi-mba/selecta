@@ -46,7 +46,7 @@ describe('the import path never deletes or moves a member file', () => {
     expect(removals).toHaveLength(4);
     expect(removals.map(({ receiver }) => receiver)).toEqual(['root', 'root', 'root', 'root']);
     expect(removals.map(({ target }) => target).sort()).toEqual(['candidate.name', 'entry.name', 'name', 'name']);
-    const enumeration = store.slice(store.indexOf('async function opfsCacheEntries'), store.indexOf('async function estimatedFreeBytes'));
+    const enumeration = store.slice(store.indexOf('async function opfsCacheEntries'), store.indexOf('async function evictOldestOpfsCacheEntry'));
     expect(enumeration).toContain("!handle.name?.startsWith('cache-')");
     expect(store).toContain('const name = cacheEntryName(key)');
     expect(store).toContain('await root.getFileHandle(cacheEntryName(key), { create: true })');
