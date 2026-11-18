@@ -144,6 +144,15 @@
       "kind": "release",
       "owner": "playback"
     },
+    "cloud.hosted_dedupe": {
+      "label": "Share machine-derived data across accounts by fingerprint",
+      "about": "Server side of ADR-0469: deterministic derivations of a hosted file's bytes may be reused by another workspace that holds the same bytes as a server-hashed upload; titles, ratings and history never join, and a client-claimed hash grants nothing. Off, every workspace keeps its own derived data as before.",
+      "surfaces": ["cloud.library"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
     "cloud.local_first_labs": {
       "label": "Labs: browser-first Cloud",
       "about": "Lets a beta cohort opt into browser-first Cloud themselves, give feedback and opt out again; opting in adds the member to a cloud.local_first targeting rule (ADR-0467 step 3).",
