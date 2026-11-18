@@ -3,6 +3,16 @@ import * as engineSurface from './index';
 import { buildCapabilityRoster, createEngine } from './index';
 import { LIMITER_IMPLEMENTATION } from '../dsp/limiter';
 import { FakeAudioContext, FakeDocument } from './testAudio';
+import { WORKER_CALIBRATION_IMPLEMENTATION, type WorkerBudgetEvidence } from '../dsp/budget';
+
+/** Full worker-budget evidence for a device at (or above) its floor. */
+function budgetEvidence(atFloor: boolean): WorkerBudgetEvidence {
+  return {
+    calibration: { implementation: WORKER_CALIBRATION_IMPLEMENTATION, deviceId: 'test-device', calibratedAt: Date.now(), samples: 3, msPerBlock: 4, horizonS: 30 },
+    deviceId: 'test-device', atFloor, deadlineMisses: 0,
+  };
+}
+
 
 describe('the engine owner', () => {
   it('closes every context it opened when the runtime is disposed', () => {
@@ -63,7 +73,7 @@ describe('the capability roster', () => {
   });
 
   it('Tier 2 needs a measured budget; Tier 3 is never ready', () => {
-    const roster = buildCapabilityRoster({ probe: passed, workerBudget: { atFloor: false } });
+    const roster = buildCapabilityRoster({ probe: passed, workerBudget: budgetEvidence(false) });
     expect(roster.get('tempo')?.status).toBe('ready');
     expect(roster.get('time_stretch')?.status).toBe('unsupported_here');
     expect(roster.list().filter((record) => record.tier === 3).every((record) => record.status === 'unsupported_here')).toBe(true);

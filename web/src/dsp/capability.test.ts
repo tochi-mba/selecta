@@ -11,6 +11,16 @@ import { loadStretchEvidence } from './stretchLoader';
 import { CROSSFADE_IMPLEMENTATION } from './crossfade';
 import { LIMITER_IMPLEMENTATION } from './limiter';
 import { TRUE_PEAK_IMPLEMENTATION } from './loudness';
+import { WORKER_CALIBRATION_IMPLEMENTATION, type WorkerBudgetEvidence } from './budget';
+
+/** Full worker-budget evidence for a device at (or above) its floor. */
+function budgetEvidence(atFloor: boolean): WorkerBudgetEvidence {
+  return {
+    calibration: { implementation: WORKER_CALIBRATION_IMPLEMENTATION, deviceId: 'test-device', calibratedAt: Date.now(), samples: 3, msPerBlock: 4, horizonS: 30 },
+    deviceId: 'test-device', atFloor, deadlineMisses: 0,
+  };
+}
+
 
 describe('capability registry', () => {
   it('claims nothing without evidence: importing the module leaves the shared registry empty', () => {
@@ -31,30 +41,30 @@ describe('capability registry', () => {
   });
 
   it('a measured device gets Tier 2 under the analysis modules own ids; a collapsed budget pauses it', () => {
-    const measured = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: { atFloor: false } });
+    const measured = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: budgetEvidence(false) });
     expect(measured.get('tempo')).toMatchObject({ tier: 2, status: 'ready', implementation: TEMPO_IMPLEMENTATION });
     expect(measured.get('time_stretch')).toMatchObject({ status: 'unsupported_here', reason: expect.stringMatching(/has not loaded/) });
-    const collapsed = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: { atFloor: true } });
+    const collapsed = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: budgetEvidence(true) });
     expect(collapsed.get('key')).toMatchObject({ status: 'unsupported_here', reason: expect.stringMatching(/headroom/) });
   });
 
   it('time-stretch is ready only on a measured device whose stretch module loaded and self-tested', async () => {
     const evidence = await loadStretchEvidence();
     expect(evidence).toEqual({ implementation: 'wsola-stretch-v1' });
-    const ready = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: { atFloor: false }, stretch: evidence });
+    const ready = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: budgetEvidence(false), stretch: evidence });
     expect(ready.get('time_stretch')).toMatchObject({ tier: 2, status: 'ready', implementation: 'wsola-stretch-v1' });
     const unmeasured = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, stretch: evidence });
     expect(unmeasured.get('time_stretch')).toMatchObject({ status: 'unsupported_here', reason: expect.stringMatching(/not been measured/) });
     const failedLoad = await loadStretchEvidence(async () => { throw new Error('chunk failed to load'); });
     expect(failedLoad).toBeNull();
-    const wrongId = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: { atFloor: false }, stretch: { implementation: 'something-else' } });
+    const wrongId = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: budgetEvidence(false), stretch: { implementation: 'something-else' } });
     expect(wrongId.get('time_stretch')?.status).toBe('unsupported_here');
   });
 
   it('a failed probe makes every Tier 1 feature unsupported_here with the probe reason', () => {
     const registry = registerBrowserDspCapabilities(new CapabilityRegistry(), {
       probe: { ok: false, reason: 'the audio worklet never processed audio' },
-      workerBudget: { atFloor: false },
+      workerBudget: budgetEvidence(false),
     });
     for (const feature of ['two_deck_playback', 'crossfade', 'limiter', 'tempo']) {
       expect(registry.get(feature)).toMatchObject({ status: 'unsupported_here', reason: expect.stringMatching(/never processed/) });
@@ -70,7 +80,7 @@ describe('capability registry', () => {
   });
 
   it('never makes a Tier 3 feature ready, whatever the evidence', () => {
-    const registry = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: { atFloor: false } });
+    const registry = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: budgetEvidence(false) });
     for (const feature of TIER3_FEATURES) {
       expect(registry.get(feature)).toMatchObject({ tier: 3, status: 'unsupported_here' });
     }

@@ -3,6 +3,16 @@ import { CapabilityRegistry, registerBrowserDspCapabilities } from './capability
 import { abilitiesFrom, abilityOf, analyseTiming, beatGrid, calibrateAnalysis, gridSupport, makeSeamProvider, MIN_PULSE, pulseStrength, sliceMono, type PcmLike, type SeamRecord } from './seamProvider';
 import { MIN_BEATMATCH_CONFIDENCE } from './seams';
 import type { TrackTiming } from './seams';
+import { WORKER_CALIBRATION_IMPLEMENTATION, type WorkerBudgetEvidence } from './budget';
+
+/** Full worker-budget evidence for a device at (or above) its floor. */
+function budgetEvidence(atFloor: boolean): WorkerBudgetEvidence {
+  return {
+    calibration: { implementation: WORKER_CALIBRATION_IMPLEMENTATION, deviceId: 'test-device', calibratedAt: Date.now(), samples: 3, msPerBlock: 4, horizonS: 30 },
+    deviceId: 'test-device', atFloor, deadlineMisses: 0,
+  };
+}
+
 
 function clicks(bpm: number, seconds: number, sampleRate = 22050, phase = 0.1): PcmLike {
   const pcm = new Float32Array(seconds * sampleRate);
@@ -22,7 +32,7 @@ const timing = (bpm: number, confidence = 0.9): TrackTiming => ({
   durationSeconds: 120,
 });
 
-const ready = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: { atFloor: false } });
+const ready = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: budgetEvidence(false) });
 const status = (feature: string) => ready.get(feature);
 
 describe('analysis for seams', () => {

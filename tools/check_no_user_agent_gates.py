@@ -13,7 +13,6 @@ import re
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "web" / "src"
 
@@ -88,14 +87,16 @@ def main() -> int:
             readers.add(relative)
             if relative not in LABEL_ONLY:
                 problems.append(
-                    f"{relative}: reads user-agent/platform identity outside the label-only allowlist"
+                    f"{relative}: reads user-agent/platform identity "
+                    "outside the label-only allowlist"
                 )
 
         if DECIDER.match(relative):
             for imported in IMPORT.findall(text):
                 if IDENTITY_IMPORT.search(imported):
                     problems.append(
-                        f"{relative}: capability/feature decision imports identity reader {imported}"
+                        f"{relative}: capability/feature decision imports "
+                        f"identity reader {imported}"
                     )
 
     stale = LABEL_ONLY - readers

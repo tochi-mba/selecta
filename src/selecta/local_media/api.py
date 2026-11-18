@@ -11,9 +11,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+import sqlalchemy as sa
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-import sqlalchemy as sa
 from sqlalchemy.engine import Engine
 
 from selecta.authz.roles import WorkspaceAction

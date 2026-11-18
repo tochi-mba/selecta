@@ -226,12 +226,12 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
   const provide = async (request: SeamRequestLike): Promise<SeamSchedule> => {
     const sources = { a: options.sourceOf?.(request.fromIndex) ?? null, b: options.sourceOf?.(request.toIndex) ?? null };
     const settings = options.settingsFor(request.toIndex) ?? {};
-    if (disposed) return fadeSchedule(Math.max(30, request.from.durationSeconds - 5), 0, 'seam preparation stopped');
+    if (disposed) return fadeSchedule(Math.max(30, request.from.duration - 5), 0, 'seam preparation stopped');
     const initial = budgetState();
     if (!initial.supported || !budget) {
       const reason = initial.reason ?? 'this device has no current worker budget';
       const schedule = {
-        ...fadeSchedule(Math.max(30, request.from.durationSeconds - 5), 0, reason),
+        ...fadeSchedule(Math.max(30, request.from.duration - 5), 0, reason),
         degraded: [{ wanted: settings.move || 'beatmatch', instead: 'fade' as const, reason }],
       };
       options.onPlanned?.({ fromIndex: request.fromIndex, toIndex: request.toIndex, sources, schedule });
@@ -298,7 +298,7 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
       const reason = problem instanceof Error ? problem.message : String(problem);
       budgetState(reason);
       const schedule = {
-        ...fadeSchedule(Math.max(30, request.from.durationSeconds - 5), 0, `seam analysis worker failed: ${reason}`),
+        ...fadeSchedule(Math.max(30, request.from.duration - 5), 0, `seam analysis worker failed: ${reason}`),
         degraded: [{ wanted: settings.move || 'beatmatch', instead: 'fade' as const, reason: `worker analysis unavailable: ${reason}` }],
       };
       options.onPlanned?.({ fromIndex: request.fromIndex, toIndex: request.toIndex, sources, schedule });

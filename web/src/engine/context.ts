@@ -129,7 +129,7 @@ export function createEngineContext(options: EngineContextOptions): EngineContex
       try {
         await Promise.race([
           context.resume(),
-          new Promise((settled) => { wait = globalThis.setTimeout(settled, WAKE_WAIT_MS); }),
+          new Promise((settled) => { wait = window.setTimeout(settled, WAKE_WAIT_MS); }),
         ]);
       } catch {
         // whether it worked is what is checked next

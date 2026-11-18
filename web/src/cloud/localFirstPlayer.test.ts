@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { playbackStatusText } from '../copy';
 import type { SessionState, SessionView } from '../devices/usePlaybackDevice';
 import type { BrowserSpeaker } from '../engine';
-import { LocalFirstPlayer, NOTHING_TO_PLAY, nowStateFrom, PlayerActions, PlayerFacts, statusOf, VOLUME_HERE } from './localFirstPlayer';
+import { LocalFirstPlayer, NOTHING_TO_PLAY, nowStateFrom, PlayerActions, PlayerFacts, statusOf } from './localFirstPlayer';
 
 const session = (over: Partial<SessionState> = {}): SessionState => ({
   mix_revision_id: 'r', song_index: 1, offset_ms: 30_000, anchor_at: 100, state: 'playing',
@@ -125,11 +125,15 @@ describe('the player’s controls', () => {
     expect(act.command).not.toHaveBeenCalled();
   });
 
-  it('volume is an honest no-op with a reason, and the level shown never moves', () => {
+  it('volume moves the level shown, and mute remembers the last audible level', () => {
     const player = new LocalFirstPlayer(facts(), actions());
     player.setVolume(0.2);
-    expect(player.state.volume).toBe(1);
-    expect(player.state.notice).toBe(VOLUME_HERE);
+    expect(player.state.volume).toBe(0.2);
+    player.toggleMute();
+    expect(player.state.volume).toBe(0);
+    expect(player.state.muted).toBe(true);
+    player.toggleMute();
+    expect(player.state.volume).toBe(0.2);
     expect(player.getSpectrum()).toBeNull();
     expect(player.getVisualTaps()).toBeNull();
   });

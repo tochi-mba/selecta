@@ -455,7 +455,9 @@ def explain_user(conn: Connection, actor: Actor, user_id: str) -> dict[str, Any]
             "local_first_on": local_first_on,
             "local_first_reason": local_first["reason"] if local_first else "flag_not_registered",
             "hosted_media_on": hosted_media_on,
-            "hosted_media_reason": hosted_media["reason"] if hosted_media else "flag_not_registered",
+            "hosted_media_reason": (
+                hosted_media["reason"] if hosted_media else "flag_not_registered"
+            ),
         },
         "flags": out,
     }

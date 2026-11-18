@@ -20,11 +20,10 @@ import { ConnectMusic, mediaDeviceId } from './ConnectMusic';
 import { hostedResolver, matchAsset, readHostedAssets, type HostedAsset } from './hostedMedia';
 import { isHostedAccount } from './localFirstGate';
 import { CannotPlayHere, LibraryEmpty, ListenEmpty, MixesEmpty, NotOnThisAccount, OnlyOnYourComputer } from './LocalFirstEmpty';
-import { LocalExport } from './LocalExport';
 import { useLocalFirstPlayer } from './localFirstPlayer';
 import { BROWSER_MIX_NEEDS } from './localFirstMixes';
 import { EMPTY_MIX, localFirstRequest, mediaRequest, type AvailabilitySources } from './localFirstRequest';
-import { asMixData, recipeStore } from './recipeStore';
+import { recipeStore } from './recipeStore';
 import { QueueSources } from './QueueSources';
 import { CutoverNotice } from './migration/CutoverNotice';
 import { OnboardingSpine } from './onboarding/OnboardingSpine';
@@ -91,6 +90,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   // lapsed between sweeps fails honestly at play time with its notice.
   const lapsed = useRef(new Map<number, LapsedWhy>());
   const refreshStatusRef = useRef<(() => void) | null>(null);
+  // The sweep is declared before the media request exists; it reads the request at run time.
+  const mediaRef = useRef<ReturnType<typeof mediaRequest> | null>(null);
   const sweeping = useRef<Promise<void> | null>(null);
   const lastAvailabilitySweep = useRef(0);
   const lastAvailabilityReport = useRef(0);
@@ -124,7 +125,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
           if (on('cloud.local_media')) {
             const snapshot = await deviceAvailabilitySnapshot(opened, lapsedItems);
             try {
-              await reportDeviceAvailability(media, mediaDeviceId(workspaceId), snapshot, true);
+              if (!mediaRef.current) throw new Error('not ready');
+              await reportDeviceAvailability(mediaRef.current, mediaDeviceId(workspaceId), snapshot, true);
               lastAvailabilityReport.current = Date.now();
             } catch {
               // A transient auth/network failure leaves the report clock due, so the next
@@ -141,7 +143,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
     })();
     sweeping.current = task;
     return task;
-  }, [media, on, openStore, workspaceId]);
+  }, [on, openStore, workspaceId]);
   const sources = useMemo<AvailabilitySources>(() => ({
     here: async () => {
       const opened = await openStore();
@@ -167,6 +169,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   const request = useMemo(() => localFirstRequest(cloud, sources), [cloud, sources]);
   // imports register through the adapted request, so each landed batch reads a fresh catalogue
   const media = useMemo(() => mediaRequest(request), [request]);
+  mediaRef.current = media;
   const programme = useRef<MixData['mix']>([]);
   const resolver = useCallback(async () => (resolving.current ??= openStore().then((opened) => makeCoexistingResolver({
     device: makeResolver(opened, undefined, (songId, present) => {
@@ -265,15 +268,6 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
       return typeof value === 'function' ? (value as (...args: unknown[]) => unknown).bind(target) : value;
     },
   }), [player]);
-  const playRecipe = useCallback(async (id: string) => {
-    const recipes = sources.recipes;
-    if (!recipes) throw new Error('Saved browser mixes are not available here.');
-    const recipe = await recipes.read(id);
-    if (!recipe.is_draft) throw new Error('That saved draft is no longer available.');
-    recipes.setCurrent(id);
-    setMixData(asMixData(recipe));
-    await shellPlayer.playFrom(0);
-  }, [sources, setMixData, shellPlayer]);
   const [now, setNow] = useState<NowState>(player.state);
   useEffect(() => {
     player.onChange = setNow;
@@ -298,13 +292,10 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
     status, mix: data.mix, mixName: data.name, currentMixName: data.name, canUndo: data.can_undo, mixEta: data.eta,
     refreshMix, setMixData, refreshStatus, request, player: shellPlayer, now, readyNeeded: BROWSER_MIX_NEEDS,
     analysisAvailable: false, transitionEditingAvailable: false, visualizerAvailable: false,
-    recipeDrafts: true, playRecipe,
     setView: (view: View) => navigate(VIEW_PATHS[view]), notify, stage: false, toggleStage: IDLE,
   };
   const song = data.mix[now.position];
-  const localExport = on('cloud.local_export') && data.mix.length >= BROWSER_MIX_NEEDS
-    ? <div className="page"><LocalExport mixItems={data.mix} resolver={resolveTrack} mixName={data.name} /></div>
-    : null;
+  const localExport: ReactNode = null;
   const connect = <ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} onAvailabilityChanged={() => sweepLapsed(true)} />;
 
   const page = (): ReactNode => {

@@ -273,7 +273,8 @@ function cacheTouch(name: string): void {
 }
 
 function cacheByteLength(bytes: ArrayBuffer | Uint8Array | Blob): number {
-  return typeof Blob !== 'undefined' && bytes instanceof Blob ? bytes.size : bytes.byteLength;
+  if (typeof Blob !== 'undefined' && bytes instanceof Blob) return bytes.size;
+  return (bytes as ArrayBuffer | Uint8Array).byteLength;
 }
 
 async function estimatedFreeBytes(): Promise<number | null> {

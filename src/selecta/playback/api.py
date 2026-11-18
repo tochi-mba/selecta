@@ -40,9 +40,9 @@ from selecta.playback.model import (
     NotTheSpeaker,
     OutputReport,
     OwnershipChanged,
+    PersonSpeakerOff,
     PlaybackError,
     PlayState,
-    PersonSpeakerOff,
     Position,
     Session,
     UnknownCommand,
@@ -252,20 +252,31 @@ def install_routes(
 
     def zone_refused(error: PlaybackError) -> HTTPException:
         if isinstance(error, UnknownZone):
-            return HTTPException(status_code=404, detail={"code": "zone_not_found", "message": "That zone isn't here."})
+            return HTTPException(
+                status_code=404,
+                detail={"code": "zone_not_found", "message": "That zone isn't here."},
+            )
         if isinstance(error, ZonePaused):
-            return HTTPException(status_code=409, detail={"code": error.code, "message": str(error)})
+            return HTTPException(
+                status_code=409, detail={"code": error.code, "message": str(error)}
+            )
         if isinstance(error, DeviceInOtherZone):
             return HTTPException(
                 status_code=409,
                 detail={"code": error.code, "message": str(error), "zone_id": error.zone_id},
             )
         if isinstance(error, PersonSpeakerOff):
-            return HTTPException(status_code=409, detail={"code": error.code, "message": str(error)})
+            return HTTPException(
+                status_code=409, detail={"code": error.code, "message": str(error)}
+            )
         if isinstance(error, zone_session.ConfirmNeeded):
-            return HTTPException(status_code=409, detail={"code": error.code, "message": str(error)})
+            return HTTPException(
+                status_code=409, detail={"code": error.code, "message": str(error)}
+            )
         if isinstance(error, zone_session.ZoneFull):
-            return HTTPException(status_code=409, detail={"code": "zone_full", "message": str(error)})
+            return HTTPException(
+                status_code=409, detail={"code": "zone_full", "message": str(error)}
+            )
         return refused(error)
 
     def zone_holder(found, request: Request, device_id: str | None, zone_id: str) -> str:
@@ -740,7 +751,9 @@ def install_routes(
         previous = result.previous_device
         return {
             "session": session_json(result.session, now),
-            "previous_device": None if previous is None else {"id": previous.id, "name": previous.name},
+            "previous_device": (
+                None if previous is None else {"id": previous.id, "name": previous.name}
+            ),
             "message": result.message,
             "envelope_key": envelope.speaker_key(result.session),
             "missed": list(result.missed),

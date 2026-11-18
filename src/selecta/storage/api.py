@@ -45,8 +45,7 @@ from selecta.storage.uploads import (
     Uploads,
     UploadSession,
 )
-from selecta.usage import quota
-from selecta.usage import ledger, observability
+from selecta.usage import ledger, observability, quota
 
 UPLOAD_NOT_FOUND = {"code": "upload_not_found"}
 GENERIC_REJECTION = "The uploaded file could not be safely read as supported audio."

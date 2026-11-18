@@ -8,7 +8,8 @@ import type { FileHandleLike, MediaStore, StoredSong } from './store';
 // polite flow whatever lapsed. After a re-grant or a re-pick, the library reconciles by content
 // hash against the stored identity, so recovery never creates a duplicate entry.
 
-export type LapsedWhy = 'permission' | 'missing';
+/** `changed`: the handle still opens but its bytes no longer match the registered identity. */
+export type LapsedWhy = 'permission' | 'missing' | 'changed';
 
 export type RegrantOutcome = {
   status: 'recovered' | 'denied' | 'different_file' | 'missing';
@@ -40,22 +41,30 @@ async function handleState(handle: FileHandleLike): Promise<'granted' | 'ask' | 
   }
 }
 
-/** Every stored handle whose permission lapsed or whose file no longer opens. Songs stored
- * with a re-pick marker are not listed here: they never had a durable handle to lapse, and
- * the repair flow covers re-choosing them. */
-export async function findLapsed(store: MediaStore): Promise<LapsedItem[]> {
+/** Every stored handle whose permission lapsed, whose file no longer opens, or whose bytes changed
+ * since import. Songs stored with a re-pick marker are not listed here: they never had a durable
+ * handle to lapse, and the repair flow covers re-choosing them.
+ *
+ * Opening every file is expensive at thousands of songs, so a sweep is remembered against the
+ * store's availability revision; `force` opens every file again regardless. */
+const sweeps = new WeakMap<MediaStore, { revision: number; items: LapsedItem[] }>();
+
+export async function findLapsed(store: MediaStore, options: { force?: boolean } = {}): Promise<LapsedItem[]> {
+  const remembered = sweeps.get(store);
+  if (!options.force && remembered && remembered.revision === store.availabilityRevision) return remembered.items;
   const lapsed: LapsedItem[] = [];
   for (const song of await store.all()) {
     if (song.ref.kind !== 'handle') continue;
-    const state = await handleState(song.ref.handle);
+    const state = song.availabilityIssue === 'changed' ? 'changed' : await handleState(song.ref.handle);
     if (state === 'granted') continue;
     lapsed.push({
       songId: song.songId,
       title: song.identity.title,
-      why: state === 'ask' ? 'permission' : 'missing',
+      why: state === 'ask' ? 'permission' : state,
       regrant: () => regrant(store, song),
     });
   }
+  sweeps.set(store, { revision: store.availabilityRevision, items: lapsed });
   return lapsed;
 }
 
@@ -66,10 +75,14 @@ async function regrant(store: MediaStore, song: StoredSong): Promise<RegrantOutc
     if (handle.requestPermission && (await handle.requestPermission({ mode: 'read' })) !== 'granted') return { status: 'denied' };
     const file = await handle.getFile();
     const digest = await fileSha256(file);
-    if (digest !== song.identity.content_sha256) return { status: 'different_file' };
+    if (digest !== song.identity.content_sha256) {
+      await store.markChanged(song.songId);
+      return { status: 'different_file' };
+    }
     // Same bytes, same identity, same songId: writing the row back reconciles without ever
-    // minting a second entry.
+    // minting a second entry, and a prior mismatch clears only now the exact bytes read again.
     await store.put(song);
+    await store.clearChanged(song.songId);
     return { status: 'recovered' };
   } catch {
     return { status: 'missing' };

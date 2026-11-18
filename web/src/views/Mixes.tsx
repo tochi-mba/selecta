@@ -387,7 +387,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         </section>
       )}
 
-      {customizing && shaping && <MixSetup status={status} mix={mix} refreshStatus={refreshStatus} notify={notify} songs={songs} onSongs={setSongs} transitionEditingAvailable={transitionEditingAvailable} onClose={() => setCustomizing(false)} />}
+      {customizing && shaping && <MixSetup status={status} mix={mix} refreshStatus={refreshStatus} notify={notify} songs={songs} onSongs={setSongs} onClose={() => setCustomizing(false)} />}
       {confirming && (
         <Dialog
           title={`Replace ${mixName}?`}

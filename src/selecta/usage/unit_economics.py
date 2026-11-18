@@ -162,7 +162,9 @@ def _mode_summary(costs: list[AccountCost], usages: list[AccountUsage]) -> dict[
             " multipart client transfers are not observable",
             "egress": "partial: application-observed bytes exclude direct object-store delivery",
             "render_compute": "partial: only explicitly instrumented worker durations are counted",
-            "priced_total": "partial: excludes unknown object operations, egress and render compute",
+            "priced_total": (
+                "partial: excludes unknown object operations, egress and render compute"
+            ),
         },
     }
 
