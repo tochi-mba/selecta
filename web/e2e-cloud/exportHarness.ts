@@ -9,7 +9,7 @@ import { exportFile, ExportFormat } from '../src/engine/export';
 import { encodeFlac } from '../src/engine/flac';
 import { validateFlac } from '../src/engine/flacDecode';
 import { renderMix } from '../src/engine/render';
-import { encodeWav } from '../src/engine/wav';
+import { encodeWav, encodeWavSliced, validateWav } from '../src/engine/wav';
 
 const RATE = 44100;
 
@@ -130,10 +130,12 @@ export type PhaseTimes = {
   render: { ms: number; longestStallMs: number };
   encode: { ms: number; longestStallMs: number };
   check: { ms: number; longestStallMs: number; ok: boolean };
+  wav: { ms: number; longestStallMs: number; ok: boolean };
 };
 
-/** The FLAC export one phase at a time, so a stall can be pinned on the step that causes it. */
-async function flacPhases(trackSeconds: number[]): Promise<PhaseTimes> {
+/** The export one phase at a time (render, FLAC encode, FLAC check, WAV encode and check), so a
+ * stall can be pinned on the step that causes it. */
+async function exportPhases(trackSeconds: number[]): Promise<PhaseTimes> {
   const decoder = new OfflineAudioContext(2, 1, RATE);
   const songs = trackSeconds.map((seconds, index) => synthTrack(seconds, index));
   const tracks = songs.map((bytes, index) => ({
@@ -145,13 +147,18 @@ async function flacPhases(trackSeconds: number[]): Promise<PhaseTimes> {
   const rendered = render.value;
   const encode = await timed(() => encodeFlac(rendered.chunks, 16));
   const check = await timed(() => validateFlac(encode.value.bytes, { durationSeconds: rendered.durationSeconds, toleranceSeconds: 1 / RATE }));
+  const wav = await timed(async () => {
+    const made = await encodeWavSliced(rendered.chunks, 16);
+    return validateWav(made.bytes, { durationSeconds: rendered.durationSeconds, toleranceSeconds: 1 / RATE });
+  });
   return {
     render: { ms: render.ms, longestStallMs: render.longestStallMs },
     encode: { ms: encode.ms, longestStallMs: encode.longestStallMs },
     check: { ms: check.ms, longestStallMs: check.longestStallMs, ok: check.value.ok },
+    wav: { ms: wav.ms, longestStallMs: wav.longestStallMs, ok: wav.value.ok },
   };
 }
 
-const scope = window as unknown as { selectaExportE2E: typeof exportSynthetic; selectaExportPhases: typeof flacPhases };
+const scope = window as unknown as { selectaExportE2E: typeof exportSynthetic; selectaExportPhases: typeof exportPhases };
 scope.selectaExportE2E = exportSynthetic;
-scope.selectaExportPhases = flacPhases;
+scope.selectaExportPhases = exportPhases;

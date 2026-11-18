@@ -120,9 +120,13 @@ test('a long synthetic mix exports as a checked WAV and a checked FLAC holding t
     }),
   });
   console.info('export numbers', testInfo.annotations.at(-1)?.description);
+  // Every step yields to the page (render.ts limiter blocks, wav.ts and flac.ts slices), so
+  // neither whole export may freeze it for a second or more.
+  expect(wav.longestStallMs).toBeLessThan(1000);
+  expect(flac.longestStallMs).toBeLessThan(1000);
 });
 
-test('the FLAC encoder and checker never freeze the page, phase by phase', async ({ page }, testInfo) => {
+test('no export step freezes the page for a second or more, phase by phase', async ({ page }, testInfo) => {
   test.setTimeout(600_000);
   await page.goto('/api/status');
   await page.addScriptTag({ content: harness });
@@ -130,13 +134,13 @@ test('the FLAC encoder and checker never freeze the page, phase by phase', async
     (seconds) => (window as unknown as { selectaExportPhases: (s: number[]) => Promise<PhaseTimes> }).selectaExportPhases(seconds),
     MIX_TRACK_SECONDS,
   );
-  testInfo.annotations.push({ type: 'flac phase numbers', description: JSON.stringify(phases) });
-  console.info('flac phase numbers', JSON.stringify(phases));
+  testInfo.annotations.push({ type: 'export phase numbers', description: JSON.stringify(phases) });
+  console.info('export phase numbers', JSON.stringify(phases));
   expect(phases.check.ok).toBe(true);
-  // flac.ts and flacDecode.ts work in slices that yield to the page, so neither may hold it
-  // for long. The render step (render.ts, outside this task) is recorded but not judged here.
-  expect(phases.encode.longestStallMs).toBeLessThan(1000);
-  expect(phases.check.longestStallMs).toBeLessThan(1000);
+  expect(phases.wav.ok).toBe(true);
+  for (const step of ['render', 'encode', 'check', 'wav'] as const) {
+    expect(phases[step].longestStallMs, `${step} froze the page`).toBeLessThan(1000);
+  }
 });
 
 test('a cancelled long export hands back no file', async ({ page }) => {
