@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { LibrarySong } from '../api';
 import { clock, etaWords } from '../lib';
+import { availabilityFacts } from '../state/availability';
 import { trackReadiness } from '../state/readiness';
 import { Action, Menu, Status } from '../ui/controls';
 import { Icon } from '../ui/Icon';
@@ -54,6 +55,7 @@ export const LibraryRow = memo(function LibraryRow({
   inMix, searched, playing, linePlace, eta, lyricsFlag, priorityFlag, neverFlag,
 }: LibraryRowProps) {
   const facts = trackReadiness(song);
+  const where = availabilityFacts(song.availability);
   const title = song.title ?? 'Untitled';
   const name = duplicate ? `${title} (song ${song.id})` : title;
   const spoken = duplicate || !sharedTitle ? name : `${title} by ${song.artist ?? 'Unknown artist'}`;
@@ -85,6 +87,8 @@ export const LibraryRow = memo(function LibraryRow({
         {lyricsFlag && song.lyric_status === 'synced' && <><span>lyrics</span>{' '}</>}
       </small>{' '}
       <div className="song-readiness">
+        {where && <Status kind={where.kind}>{where.words}</Status>}
+        {where && !where.canPlay && <small className="hint song-why">{where.reason}</small>}
         <Status kind={facts.kind}>{facts.words}</Status>
         {facts.reason && !facts.canStartMix && <small className="hint song-why">{facts.reason}</small>}
       </div>

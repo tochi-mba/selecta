@@ -1,7 +1,7 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MixData, Request, Status } from '../api';
 import { setFlags, useFlags } from '../flags';
-import { makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, storageSpace, type MediaResolver, type StorageSpace } from '../media';
+import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, storageSpace, type MediaResolver, type StorageSpace } from '../media';
 import type { NowState } from '../player';
 import { BytesContext, noBytesHere, RequestContext } from '../requestContext';
 import { navigate, parseRoute, useLocationText } from '../router';
@@ -16,11 +16,11 @@ import { Now } from '../views/Now';
 import type { View, ViewProps } from '../views/shared';
 import type { Account, Api } from './api';
 import { ConnectMusic } from './ConnectMusic';
-import { hostedResolver } from './hostedMedia';
+import { hostedResolver, matchAsset, readHostedAssets, type HostedAsset } from './hostedMedia';
 import { isHostedAccount } from './localFirstGate';
 import { CannotPlayHere, LibraryEmpty, ListenEmpty, MixesEmpty, MyMixesEmpty, NotOnThisAccount, OnlyOnYourComputer } from './LocalFirstEmpty';
 import { useLocalFirstPlayer } from './localFirstPlayer';
-import { EMPTY_MIX, localFirstRequest, mediaRequest } from './localFirstRequest';
+import { EMPTY_MIX, localFirstRequest, mediaRequest, type AvailabilitySources } from './localFirstRequest';
 import { QueueSources } from './QueueSources';
 import { CutoverNotice } from './migration/CutoverNotice';
 import { OnboardingSpine } from './onboarding/OnboardingSpine';
@@ -61,7 +61,6 @@ export function LocalFirstShell({ api, account, more, feedback }: {
   const workspaceId = account.workspace.id;
   const on = useFlags();
   const cloud = useCallback(<T,>(path: string, init?: RequestInit) => api<T>(path, init, workspaceId), [api, workspaceId]) as Request;
-  const request = useMemo(() => localFirstRequest(cloud), [cloud]);
   const media = useMemo(() => mediaRequest(cloud), [cloud]);
   const store = useRef<Promise<MediaStore> | null>(null);
   const openStore = useCallback(() => (store.current ??= MediaStore.open()), []);
@@ -70,6 +69,31 @@ export function LocalFirstShell({ api, account, more, feedback }: {
   // readable gets the hosted path; every answer lands in the source book the queue shows.
   const book = useMemo(() => makeSourceBook(), []);
   const coexisting = isHostedAccount(account) && on('cloud.stored_media');
+  const hostedCopies = useRef<Promise<HostedAsset[]> | null>(null);
+  // BF-0462-04: the Library says where each song can play from, against this device's own
+  // connected files and, for a grandfathered account, its hosted copies
+  const sources = useMemo<AvailabilitySources>(() => ({
+    here: async () => {
+      const opened = await openStore();
+      const lapsed = new Map((await findLapsed(opened)).map((item) => [item.songId, item.why] as const));
+      const found = new Map<number, 'here' | 'reauth'>();
+      for (const song of await opened.all()) {
+        const why = lapsed.get(song.songId);
+        // a file that no longer opens is not on this device; a lapsed permission asks again;
+        // a song picked without a durable handle plays only while this visit holds its file
+        if (why === 'missing') continue;
+        if (song.ref.kind !== 'handle' && !opened.sessionFile(song.songId)) continue;
+        found.set(song.songId, why === 'permission' ? 'reauth' : 'here');
+      }
+      return found;
+    },
+    hosted: coexisting ? async (songs) => {
+      const listing = (hostedCopies.current ??= readHostedAssets(api, workspaceId).catch((problem) => { hostedCopies.current = null; throw problem; }));
+      const assets = await listing;
+      return new Set(songs.filter((song) => matchAsset({ song_id: song.id, title: song.title, artist: song.artist }, song.content_sha256 ?? null, assets)).map((song) => song.id));
+    } : undefined,
+  }), [api, workspaceId, coexisting, openStore]);
+  const request = useMemo(() => localFirstRequest(cloud, sources), [cloud, sources]);
   const programme = useRef<MixData['mix']>([]);
   const resolver = useCallback(async () => (resolving.current ??= openStore().then((opened) => makeCoexistingResolver({
     device: makeResolver(opened),

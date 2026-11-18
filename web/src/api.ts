@@ -397,7 +397,15 @@ export type LibrarySong = {
   priority: boolean;
   match?: string | null;
   readiness: { status: string; reason: string };
+  /** Where this song can play from, in a shell whose music lives on the member's devices
+   * (local-first Cloud, BF-0462-04). The local server never sends it: its files are on this computer. */
+  availability?: SongAvailability;
 };
+
+/** here: a file on this device that opens; reauth: on this device, but the browser needs the
+ * member's permission again; hosted: a hosted copy in SelectaDJ Cloud plays it; elsewhere: on
+ * another of the member's devices, not this one; nowhere: on none of their devices right now. */
+export type SongAvailability = 'here' | 'reauth' | 'hosted' | 'elsewhere' | 'nowhere';
 
 export type LibraryPage = { songs: LibrarySong[]; total: number; next: string | null };
 

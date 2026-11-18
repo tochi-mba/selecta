@@ -1,4 +1,4 @@
-import { ApiError, LibraryPage, LibrarySong, MixData, Request, Status } from '../api';
+import { ApiError, LibraryPage, LibrarySong, MixData, Request, SongAvailability, Status } from '../api';
 
 /** The local-first shell's request adapter (ADR-0462 "one adapter per route family").
  *
@@ -12,6 +12,7 @@ import { ApiError, LibraryPage, LibrarySong, MixData, Request, Status } from '..
 /** A catalogue row as `/api/local-media/songs` answers it. */
 export type CatalogueSong = {
   id: number;
+  content_sha256?: string | null;
   title: string;
   artist: string;
   album?: string | null;
@@ -41,24 +42,45 @@ export async function readCatalogue(cloud: Request): Promise<CatalogueSong[]> {
   return songs;
 }
 
+/** What this browser knows about where songs can play from (BF-0462-04): this device's own
+ * connected files (`here`: song id to whether the file opens or needs permission again) and the
+ * content hashes of the account's hosted copies, for a grandfathered account. Either may be absent. */
+export type AvailabilitySources = {
+  here?: () => Promise<ReadonlyMap<number, 'here' | 'reauth'>>;
+  hosted?: (songs: readonly CatalogueSong[]) => Promise<ReadonlySet<number>>;
+};
+export type Availability = { here: ReadonlyMap<number, 'here' | 'reauth'>; hosted: ReadonlySet<number> };
+export const NO_AVAILABILITY: Availability = { here: new Map(), hosted: new Set() };
+
+/** One song's availability: this device first, then a hosted copy, then the member's other devices. */
+export function availabilityOf(song: CatalogueSong, known: Availability): SongAvailability {
+  const device = known.here.get(song.id);
+  if (device === 'here') return 'here';
+  if (known.hosted.has(song.id)) return 'hosted';
+  if (device === 'reauth') return 'reauth';
+  return (song.available_on ?? 0) > 0 ? 'elsewhere' : 'nowhere';
+}
+
 /** A catalogue song in the Library's shape. Nothing is analysed in the browser yet, so no tempo,
- * key or energy is claimed; a song on none of the member's devices says so. */
-export function asLibrarySong(song: CatalogueSong): LibrarySong {
-  const here = (song.available_on ?? 0) > 0;
+ * key or energy is claimed; where it can play from rides alongside as `availability`. */
+export function asLibrarySong(song: CatalogueSong, known: Availability = NO_AVAILABILITY): LibrarySong {
+  const availability = availabilityOf(song, known);
+  const here = availability !== 'nowhere';
   return {
     id: song.id, artist: song.artist, title: song.title, genre: null,
     duration: song.duration_s ?? 0, bpm: null, camelot: null,
     detected_bpm: null, detected_camelot: null, override_bpm: null, override_camelot: null,
     music_override: null, energy: null, grid_confidence: null, lyric_status: null,
-    never: false, priority: false,
+    never: false, priority: false, availability,
+    // the availability line says where it is; readiness only says how far analysis has got
     readiness: here
-      ? { status: 'analysed_incomplete', reason: 'On your devices. Not analysed in this browser yet.' }
-      : { status: 'missing', reason: 'Not on any of your devices right now. Connect it again to play it.' },
+      ? { status: 'analysed_incomplete', reason: 'Not analysed in this browser yet.' }
+      : { status: 'missing', reason: '' },
   };
 }
 
 /** The Library page the views ask for, answered from the catalogue. */
-export function libraryPage(songs: CatalogueSong[], search: URLSearchParams): LibraryPage {
+export function libraryPage(songs: CatalogueSong[], search: URLSearchParams, known: Availability = NO_AVAILABILITY): LibraryPage {
   const query = (search.get('q') ?? '').trim().toLowerCase();
   const state = search.get('state') ?? 'all';
   const sort = search.get('sort') ?? 'title';
@@ -66,15 +88,21 @@ export function libraryPage(songs: CatalogueSong[], search: URLSearchParams): Li
   const start = Math.max(0, Number(search.get('after') ?? 0) || 0);
   const matching = songs
     .filter((song) => !query || `${song.title} ${song.artist} ${song.album ?? ''}`.toLowerCase().includes(query))
-    // nothing in the browser is mix-ready yet, so the ready view is honestly empty
-    .filter((song) => state === 'all' || (state === 'missing' && !(song.available_on ?? 0)))
+    // nothing in the browser is mix-ready yet, so the ready view is honestly empty and every song
+    // is not analysed yet; needing attention is a song this device cannot play
+    .filter((song) => {
+      if (state === 'all' || state === 'not_yet') return true;
+      const where = availabilityOf(song, known);
+      if (state === 'attention') return where === 'reauth' || where === 'nowhere';
+      return state === 'missing' && where === 'nowhere';
+    })
     .sort((one, other) => {
       const key = sort === 'artist' ? 'artist' : 'title';
       return one[key].localeCompare(other[key]) || one.id - other.id;
     });
   const page = matching.slice(start, start + limit);
   const next = start + limit < matching.length ? String(start + limit) : null;
-  return { songs: page.map(asLibrarySong), total: matching.length, next };
+  return { songs: page.map((song) => asLibrarySong(song, known)), total: matching.length, next };
 }
 
 /** The status the shared shell and views read, from what the catalogue knows. */
@@ -95,7 +123,7 @@ export function statusFrom(songs: CatalogueSong[]): Status {
 export const EMPTY_MIX: MixData = { mix: [], name: 'Current mix', can_undo: false };
 
 /** The adapted request. `cloud` asks the Cloud API with the account's token and workspace. */
-export function localFirstRequest(cloud: Request): Request {
+export function localFirstRequest(cloud: Request, sources: AvailabilitySources = {}): Request {
   let catalogue: Promise<CatalogueSong[]> | null = null;
   let readAt = 0;
   // one catalogue read serves a burst of requests (status, the library page, a search)
@@ -107,10 +135,18 @@ export function localFirstRequest(cloud: Request): Request {
     }
     return catalogue;
   };
+  // asked fresh with each Library read: a permission granted a moment ago shows at once
+  const availability = async (list: CatalogueSong[]): Promise<Availability> => ({
+    here: (await sources.here?.().catch(() => null)) ?? NO_AVAILABILITY.here,
+    hosted: (await sources.hosted?.(list).catch(() => null)) ?? NO_AVAILABILITY.hosted,
+  });
   const adapted = async <T,>(path: string, init?: RequestInit): Promise<T> => {
     const method = (init?.method ?? 'GET').toUpperCase();
     const [route, query = ''] = path.split('?');
-    if (method === 'GET' && route === '/library') return libraryPage(await songs(), new URLSearchParams(query)) as T;
+    if (method === 'GET' && route === '/library') {
+      const list = await songs();
+      return libraryPage(list, new URLSearchParams(query), await availability(list)) as T;
+    }
     if (method === 'GET' && route === '/status') return statusFrom(await songs()) as T;
     if (method === 'GET' && route === '/mix' && !query) return EMPTY_MIX as T;
     // Make a Mix's ideas need analysed songs; none are analysed in the browser yet
