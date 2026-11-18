@@ -20,7 +20,7 @@ import type { DeviceIdentity } from './deviceIdentity';
  * the sound check (soundCheckTruth.ts), and nothing in this file can set it.
  */
 
-export const RECORD_SCHEMA = 'selecta.capability-record/1';
+export const RECORD_SCHEMA = 'selectadj/capability-record/1';
 
 export type MediaSourceKind = 'local_file' | 'opfs_cache' | 'hosted_stream';
 
