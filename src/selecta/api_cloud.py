@@ -60,6 +60,7 @@ from selecta.identity.tokens import (
 )
 from selecta.identity.workos import WorkOSClient
 from selecta.local_media import api as local_media_routes
+from selecta.local_media import recipe_api as local_recipe_routes
 from selecta.local_media.catalog import LocalMediaCatalog
 from selecta.lucy import cloud_settings as lucy_cloud_settings
 from selecta.observability import errors, metrics, tracing
@@ -727,6 +728,10 @@ def create_cloud_app(
     )
     # The metadata-only song catalogue (ADR-0458); refused while cloud.local_media is off.
     local_media_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
+    # Portable recipes over that catalogue (BF-0462-05); refused while cloud.local_media is off.
+    local_recipe_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal
     )
     business_org_routes.install_routes(

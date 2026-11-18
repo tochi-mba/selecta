@@ -177,6 +177,12 @@ FLAG_DARK = {
     ("GET", "/api/local-media/songs/{song_id}"),
     ("DELETE", "/api/local-media/songs/{song_id}"),
     ("POST", "/api/local-media/availability"),
+    # Portable recipes ride the same flag; Bob cannot list, read or edit Alice's recipes
+    # (`test_bf_local_recipes.py`).
+    ("GET", "/api/local-media/recipes"),
+    ("POST", "/api/local-media/recipes"),
+    ("GET", "/api/local-media/recipes/{mix_id}"),
+    ("POST", "/api/local-media/recipes/{mix_id}/revisions"),
     # The Labs opening for browser-first Cloud ships dark (`cloud.local_first_labs` off); its
     # routes act only on the caller's own user id and workspace (`test_bf_local_first_labs.py`).
     ("POST", "/api/account/labs/local-first/join"),
