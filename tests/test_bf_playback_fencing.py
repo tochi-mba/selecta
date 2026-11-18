@@ -14,8 +14,8 @@ from __future__ import annotations
 from dataclasses import replace
 
 import pytest
-from pydantic import ValidationError
 from cloud_party import ALICE, BOB, auth, party  # noqa: F401
+from pydantic import ValidationError
 from test_cloud_playback_fakes import (
     OTHER_WORKSPACE,
     USER,

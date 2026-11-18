@@ -24,7 +24,6 @@ from selecta.rooms import api_guest, api_host, codes
 from selecta.rooms.cloud_ports import (
     CloudPlans,
     CloudSpeakers,
-    OutboxPlaybackEvents,
     OutboxRoomEvents,
     RoomPorts,
 )

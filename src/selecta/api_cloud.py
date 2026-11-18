@@ -71,7 +71,7 @@ from selecta.persistence.migrate import head as migration_head
 from selecta.playback import api as device_playback_routes
 from selecta.playback.zones import SQL_ZONES
 from selecta.rooms import wiring as rooms_wiring
-from selecta.rooms.cloud_ports import RoomPorts
+from selecta.rooms.cloud_ports import OutboxPlaybackEvents, RoomPorts
 from selecta.routes import business_hours as business_hours_routes
 from selecta.routes import business_zones as business_zones_routes
 from selecta.routes import cloud_assets as cloud_assets_routes
@@ -806,7 +806,7 @@ def create_cloud_app(
         current_claims=current_claims,
         principal_for=_principal,
         rules=rule_cache,
-        events=rooms_wiring.OutboxPlaybackEvents(),
+        events=OutboxPlaybackEvents(),
         zones=SQL_ZONES,
     )
     cloud_export_routes.install_routes(
