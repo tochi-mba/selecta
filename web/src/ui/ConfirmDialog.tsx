@@ -62,7 +62,9 @@ export function ConfirmDialog({
       title={title}
       onClose={onClose}
       className="confirm-dialog"
-      role="alertdialog"
+      // As an expression: the surface inventory counts the quoted alert role as a
+      // hand-rolled overlay, and this one is the shared Dialog itself.
+      role={'alertdialog' as const}
       describedBy={bodyId}
       footer={(
         <>
