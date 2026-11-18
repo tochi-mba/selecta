@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { assertNoPath } from './identity';
-import { isAudioName, runImport } from './importer';
+import { FIRST_BATCH, isAudioName, runImport } from './importer';
 import type { ImportEvent, TagReader } from './importer';
 import { MediaStore } from './store';
 import { bytesFile, captureRequest, fakeDirectory, fakeHandle } from './testFixtures';
@@ -183,6 +183,50 @@ describe('runImport', () => {
     expect(summary.failed).toBe(1);
     expect(summary.imported).toBe(1);
     expect(events.find((event) => event.kind === 'file' && event.stage === 'failed')).toMatchObject({ name: 'a.mp3' });
+  });
+});
+
+describe('runImport progressive events', () => {
+  const twelve = () => Array.from({ length: 12 }, (_, index) => bytesFile(`song ${index}`, `t${index}.mp3`));
+
+  it('announces an honest total and skip count before any file event', async () => {
+    const { request } = captureRequest();
+    const store = await MediaStore.open();
+    const events: ImportEvent[] = [];
+    await runImport({
+      source: [bytesFile('one', 'a.mp3'), bytesFile('cover', 'cover.jpg'), bytesFile('two', 'b.flac')],
+      request, store, deviceId: 'dev-1', readTags: tagsFromName, onProgress: (event) => events.push(event),
+    });
+    expect(events[0]).toEqual({ kind: 'collected', total: 2, skipped: 1 });
+    expect(events.filter((event) => event.kind === 'collected')).toHaveLength(1);
+  });
+
+  it('flushes the first registration after FIRST_BATCH files, then in full batches', async () => {
+    expect(FIRST_BATCH).toBe(5);
+    const { request, calls } = captureRequest();
+    const store = await MediaStore.open();
+    const summary = await runImport({ source: twelve(), request, store, deviceId: 'dev-1', readTags: tagsFromName });
+    expect(summary.imported).toBe(12);
+    const posts = songsPosts(calls);
+    expect(posts).toHaveLength(2);
+    expect((posts[0].body as { songs: unknown[] }).songs).toHaveLength(5);
+    expect((posts[1].body as { songs: unknown[] }).songs).toHaveLength(7);
+  });
+
+  it('emits a batch event after each availability post, including the final partial flush', async () => {
+    const { request, calls } = captureRequest();
+    const store = await MediaStore.open();
+    const events: ImportEvent[] = [];
+    await runImport({ source: twelve(), request, store, deviceId: 'dev-1', readTags: tagsFromName, batchSize: 4, onProgress: (event) => events.push(event) });
+    const batches = events.filter((event) => event.kind === 'batch');
+    expect(batches).toEqual([
+      { kind: 'batch', registered: 4 }, { kind: 'batch', registered: 4 }, { kind: 'batch', registered: 4 },
+    ]);
+    expect(availabilityPosts(calls)).toHaveLength(3);
+    // Each batch event follows that batch's done events, never precedes them.
+    const firstBatch = events.findIndex((event) => event.kind === 'batch');
+    const doneBefore = events.slice(0, firstBatch).filter((event) => event.kind === 'file' && event.stage === 'done');
+    expect(doneBefore).toHaveLength(4);
   });
 });
 

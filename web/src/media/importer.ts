@@ -19,6 +19,10 @@ export const AUDIO_EXTENSIONS = new Set(['mp3', 'm4a', 'aac', 'flac', 'wav', 'og
  * batch reply never stalls the progress list for long. */
 export const BATCH_SIZE = 50;
 
+/** The first registration flush fires after this many files, so the first songs land in Cloud
+ * (and onboarding can unlock) within seconds instead of after a full batch of 50. */
+export const FIRST_BATCH = 5;
+
 export type SongRegistration = {
   content_sha256: string;
   title: string;
@@ -44,6 +48,8 @@ export type ImportEvent =
   | { kind: 'file'; name: string; stage: 'hashing' | 'registering' }
   | { kind: 'file'; name: string; stage: 'done'; songId: number; duplicateOf?: number }
   | { kind: 'file'; name: string; stage: 'failed'; reason: string }
+  | { kind: 'collected'; total: number; skipped: number }
+  | { kind: 'batch'; registered: number }
   | { kind: 'paused'; paused: 'storage_full' }
   | ({ kind: 'finished' } & ImportSummary);
 
@@ -189,6 +195,8 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
   const summary: ImportSummary = { imported: 0, duplicates: 0, failed: 0, skipped: 0, cancelled: false, paused: false };
   const { candidates, skipped } = await collect(source, signal);
   summary.skipped = skipped;
+  emit({ kind: 'collected', total: candidates.length, skipped });
+  let flushedOnce = false;
 
   let batch: { name: string; ref: FileRef; entry: SongRegistration }[] = [];
 
@@ -196,6 +204,7 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
     if (!batch.length) return;
     const sending = batch;
     batch = [];
+    flushedOnce = true;
     for (const item of sending) emit({ kind: 'file', name: item.name, stage: 'registering' });
     const payload = { songs: sending.map((item) => item.entry) };
     assertNoPath(payload);
@@ -242,6 +251,7 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
       const availability = { device_id: deviceId, present, absent: [] as number[] };
       assertNoPath(availability);
       await postJson(request, '/api/local-media/availability', availability);
+      emit({ kind: 'batch', registered: present.length });
     }
     if (stopped !== null) throw stopped;
   };
@@ -295,7 +305,7 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
         continue;
       }
       batch.push({ name: candidate.name, ref: candidate.ref, entry });
-      if (batch.length >= batchSize) await flush();
+      if (batch.length >= (flushedOnce ? batchSize : Math.min(FIRST_BATCH, batchSize))) await flush();
     }
     if (!summary.cancelled) await flush();
   } catch (error) {

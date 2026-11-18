@@ -8,10 +8,12 @@ export { directoryInput, dirPicker, fileInput, opfs, storageSpace } from './capa
 export type { Capability, StorageSpace } from './capabilities';
 export { assertNoPath, fileSha256, HASH_CHUNK_BYTES, normalise } from './identity';
 export type { TrackIdentity } from './identity';
-export { AUDIO_EXTENSIONS, BATCH_SIZE, defaultTagReader, isAudioName, runImport } from './importer';
+export { AUDIO_EXTENSIONS, BATCH_SIZE, defaultTagReader, FIRST_BATCH, isAudioName, runImport } from './importer';
 export type { ImportEvent, ImportOptions, ImportSource, ImportSummary, RegisteredSong, Request, SongRegistration, TagReader } from './importer';
 export { cachedBytesKey, cacheEvict, cacheRead, cacheWrite, isQuotaError, MediaStore, StorageFullError } from './store';
 export type { CacheWriteResult, DirectoryHandleLike, FileHandleLike, FileRef, StoredSong } from './store';
+export { forgetFolder, FOLDERS_DB, recallFolder, rememberFolder } from './folders';
+export type { StoredFolderHandle } from './folders';
 export { acceptRepick, findLapsed } from './reauth';
 export type { LapsedItem, LapsedWhy, RegrantOutcome } from './reauth';
 export { makeCoexistingResolver, makeResolver, makeSourceBook, NOT_ANYWHERE, NOT_ON_DEVICE, resolveByIndex } from './resolve';
