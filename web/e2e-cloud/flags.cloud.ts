@@ -460,7 +460,7 @@ test('each Browser-first mark is real: shown with its flag on', async ({ page, r
   await expect(page.getByRole('link', { name: 'Make a Mix', exact: true }).first()).toBeVisible();
   // This test build turns the catalogue on (tests/e2e_cloud_server.py), so its marks show.
   await expect(page.getByRole('heading', { name: 'Connect music' })).toBeVisible();
-  await expect(page.getByText('Local song 1')).toBeVisible();
+  await expect(page.getByText('Local song 1', { exact: true }).first()).toBeVisible();
 });
 
 for (const id of BF_IDS) {
