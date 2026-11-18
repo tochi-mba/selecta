@@ -35,9 +35,8 @@ from selecta.authz.errors import Forbidden
 from selecta.authz.roles import may_change_flag
 from selecta.authz.scopes import ResourceRef
 from selecta.billing import plans, stripe_sync
-from selecta.flags import flip_guard
+from selecta.flags import flip_guard, targeting
 from selecta.flags import rules as flag_rules
-from selecta.flags import targeting
 from selecta.flags.matching import Context, Rule, RuleKind
 from selecta.identity.schema import users, workspaces
 from selecta.persistence import db_now

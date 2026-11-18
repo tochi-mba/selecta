@@ -57,6 +57,9 @@ class Rates:
     source: str = "ADR-0464 research, checked 2026-11-17; reconcile against invoices"
 
 
+DEFAULT_RATES = Rates()
+
+
 @dataclass(frozen=True)
 class AccountUsage:
     """One workspace's metered month."""
@@ -148,7 +151,7 @@ def gaps(rates: Rates) -> list[str]:
     return found
 
 
-def summarise(usages: Iterable[AccountUsage], rates: Rates = Rates()) -> dict[str, Any]:
+def summarise(usages: Iterable[AccountUsage], rates: Rates = DEFAULT_RATES) -> dict[str, Any]:
     """The dashboard body for a set of metered accounts: per mode, totals and per-account cost."""
     usages = list(usages)
     by_mode: dict[str, tuple[list[AccountCost], list[AccountUsage]]] = {
@@ -275,7 +278,7 @@ def gather(conn: Connection, month: str, *, rules: Any = None) -> list[AccountUs
 
 
 def cost_report(
-    conn: Connection, month: str, *, rates: Rates = Rates(), rules: Any = None
+    conn: Connection, month: str, *, rates: Rates = DEFAULT_RATES, rules: Any = None
 ) -> dict[str, Any]:
     """The per-mode cost dashboard for one month, from the database the connection reads."""
     return {"month": month, **summarise(gather(conn, month, rules=rules), rates)}

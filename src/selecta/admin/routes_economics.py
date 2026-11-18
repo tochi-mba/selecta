@@ -11,9 +11,9 @@ Same rules as the other admin routes: staff only with a live admin session (`adm
 by the `admin.console` flag, read-only, and each read is authorized with
 `platform.dashboard.read` (economics) or `flags.read` (readiness). Every read is a system
 transaction, so the numbers cover every workspace; the answers carry ids and totals only.
-"""
 
-from __future__ import annotations
+No `from __future__ import annotations` here: FastAPI must resolve the local `SignedIn` alias.
+"""
 
 import datetime as dt
 from collections.abc import Callable
