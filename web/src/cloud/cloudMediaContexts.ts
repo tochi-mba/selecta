@@ -31,6 +31,10 @@ export const CLOUD_MEDIA_CONTEXTS: MediaContext[] = [
     file: 'devices/DeviceCheck.tsx', count: 1, kind: 'audio context',
     owner: 'Settings > Device check reads the sample rate and closes the context at once. Silent; never takes focus.',
   },
+  {
+    file: 'cloud/venue/probeSuite.ts', count: 1, kind: 'audio element',
+    owner: 'Venue capability probe: a detached element asked canPlayType for each codec, never given a source or played. Silent; never takes focus.',
+  },
 ];
 
 /** What counts as making a media context, matched against source with comments removed. */
