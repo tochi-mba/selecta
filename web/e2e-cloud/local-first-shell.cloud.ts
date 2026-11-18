@@ -45,7 +45,8 @@ test('a local-first account finds account places in More, and no dead button', a
   const signedIn = page.getByRole('region', { name: 'Signed in as' });
   await expect(signedIn).toContainText(`${user}@example.test`);
   await expect(signedIn.getByRole('button', { name: 'Sign out' })).toBeVisible();
-  for (const name of ['Download my data', 'Sign out everywhere', 'Delete account']) {
+  // the two account removals open a confirmation first, so their buttons end with an ellipsis
+  for (const name of ['Download my data', 'Sign out everywhere…', 'Delete account…']) {
     await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
   }
   await expect(page.locator('footer.cloud-footer')).toContainText('Your music files stay on your devices');
