@@ -71,6 +71,33 @@ export class BrowserSpeaker implements Speaker {
   private readonly queueLength: (() => number) | null;
   private readonly limiterReady: Promise<LimiterInstall>;
   private limiterInstalled: LimiterInstall | null = null;
+  private readonly watchedDocument: Document | null;
+  private readonly watchedDevices: MediaDevices | null;
+  private readonly onVisibilityChange = () => {
+    if (this.disposed || this.watchedDocument?.visibilityState !== 'hidden') return;
+    this.store.downgradeOutput(
+      { status: 'uncertain' },
+      'This tab went to the background, so SelectaDJ cannot promise the sound still reaches your speakers.',
+    );
+  };
+  private readonly onOutputDeviceChange = () => {
+    if (this.disposed) return;
+    const playing = this.store.get().phase === 'playing';
+    // A route change must not send audio into a newly attached output at an unexpected level.
+    // Pause the scheduler/context and require a fresh Play gesture; never auto-resume.
+    if (playing) {
+      this.store.downgradeOutput(
+        { status: 'output_unverified' },
+        'Audio output changed. Check your speakers or headphones before playing on.',
+      );
+      void this.scheduler.pause();
+    } else {
+      this.store.downgradeOutput(
+        { status: 'output_unverified' },
+        'Audio output changed. Check your speakers or headphones before playing on.',
+      );
+    }
+  };
 
   constructor(options: BrowserSpeakerOptions) {
     this.store = options.store ?? createEngineStore();
@@ -90,6 +117,10 @@ export class BrowserSpeaker implements Speaker {
       seam: options.seam,
       timers: options.timers,
     });
+    this.watchedDocument = typeof document === 'undefined' ? null : document;
+    this.watchedDevices = typeof navigator === 'undefined' ? null : navigator.mediaDevices ?? null;
+    this.watchedDocument?.addEventListener('visibilitychange', this.onVisibilityChange);
+    this.watchedDevices?.addEventListener('devicechange', this.onOutputDeviceChange);
     // The limiter goes in before the first note, so the stage is never swapped mid-song.
     this.limiterReady = installLimiter(this.graph, {
       probe: options.probe,
@@ -119,6 +150,15 @@ export class BrowserSpeaker implements Speaker {
 
   state(): EngineState {
     return this.store.get();
+  }
+
+  /** Called by the lease owner after a previously granted screen wake lock is revoked. */
+  wakeLockLost(): void {
+    if (this.disposed) return;
+    this.store.downgradeOutput(
+      { status: 'uncertain' },
+      'The screen wake lock was released, so the device may sleep and stop the sound.',
+    );
   }
 
   onState(watch: (state: EngineState) => void): () => void {
@@ -195,6 +235,8 @@ export class BrowserSpeaker implements Speaker {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.watchedDocument?.removeEventListener('visibilitychange', this.onVisibilityChange);
+    this.watchedDevices?.removeEventListener('devicechange', this.onOutputDeviceChange);
     this.scheduler.dispose();
     this.loader.clear();
     this.graph.dispose();

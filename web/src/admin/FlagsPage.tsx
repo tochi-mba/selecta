@@ -9,7 +9,19 @@ type Counts = { total: number; changed: number; turned_on: number; turned_off: n
 type Impact = { accounts: number; flags: Record<string, Counts & { by_plan: Record<string, Counts> }>; dependents: string[]; broad: boolean; rules: Rule[] };
 type Outcome = { applied: boolean; version: number | null; action_id: string | null; execute_after: number | null; warnings: string[] };
 type Version = { version: number; flag_id: string; change: string; author: string; reason: string; created_at: number; rules: Rule[] };
-type Trace = { user_id: string; plan: string; rule_version: number; flags: { flag_id: string; on: boolean; reason: string; steps: { layer: string; on: boolean | null; reason: string; detail: string }[] }[] };
+type Trace = {
+  user_id: string;
+  plan: string;
+  rule_version: number;
+  browser_first_experience?: {
+    mode: 'local_first' | 'hosted' | 'both' | 'neither';
+    local_first_on: boolean;
+    local_first_reason: string;
+    hosted_media_on: boolean;
+    hosted_media_reason: string;
+  };
+  flags: { flag_id: string; on: boolean; reason: string; steps: { layer: string; on: boolean | null; reason: string; detail: string }[] }[];
+};
 
 export type FlagAction = 'kill_switch' | 'off_for_tier' | 'off_for_users' | 'rollout' | 'schedule';
 const ACTIONS: { id: FlagAction; label: string }[] = [
@@ -20,6 +32,12 @@ const ACTIONS: { id: FlagAction; label: string }[] = [
   { id: 'schedule', label: 'Schedule' },
 ];
 const PLANS = ['free', 'standard', 'premium'];
+const BROWSER_EXPERIENCE_LABEL: Record<NonNullable<Trace['browser_first_experience']>['mode'], string> = {
+  local_first: 'local-first Cloud',
+  hosted: 'hosted media',
+  both: 'both modes',
+  neither: 'neither mode',
+};
 
 function describe(rule: Rule) {
   const p = rule.params;
@@ -156,9 +174,16 @@ function Trace({ api }: { api: AdminFetch }) {
         <button className="primary">Explain</button>
       </form>
       <Failure error={error} />
-      {trace && <DataTable caption={`Decisions for ${trace.user_id} on ${trace.plan} (rules version ${trace.rule_version})`} rows={rows} rowKey={(f) => f.flag_id} empty="Every feature is on."
-        columns={[{ key: 'flag_id', label: 'Flag' }, { key: 'on', label: 'Decision', render: (f) => f.on ? 'On' : 'Off' }, { key: 'reason', label: 'Reason' },
-          { key: 'steps', label: 'Each layer', render: (f) => f.steps.map((s) => `${s.layer}: ${s.on === null ? 'n/a' : s.on ? 'yes' : 'no'} (${s.reason})`).join(' · ') }]} />}
+      {trace && <>
+        {trace.browser_first_experience && <section className="admin-impact" aria-label="Browser-first Cloud experience">
+          <h3>Cloud experience: {BROWSER_EXPERIENCE_LABEL[trace.browser_first_experience.mode]}</h3>
+          <p><b>Browser-first Cloud:</b> {trace.browser_first_experience.local_first_on ? 'On' : 'Off'} — {trace.browser_first_experience.local_first_reason}</p>
+          <p><b>Hosted media:</b> {trace.browser_first_experience.hosted_media_on ? 'On' : 'Off'} — {trace.browser_first_experience.hosted_media_reason}</p>
+        </section>}
+        <DataTable caption={`Decisions for ${trace.user_id} on ${trace.plan} (rules version ${trace.rule_version})`} rows={rows} rowKey={(f) => f.flag_id} empty="Every feature is on."
+          columns={[{ key: 'flag_id', label: 'Flag' }, { key: 'on', label: 'Decision', render: (f) => f.on ? 'On' : 'Off' }, { key: 'reason', label: 'Reason' },
+            { key: 'steps', label: 'Each layer', render: (f) => f.steps.map((s) => `${s.layer}: ${s.on === null ? 'n/a' : s.on ? 'yes' : 'no'} (${s.reason})`).join(' · ') }]} />
+      </>}
     </Panel>
   );
 }

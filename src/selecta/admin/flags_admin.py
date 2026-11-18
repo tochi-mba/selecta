@@ -434,11 +434,29 @@ def explain_user(conn: Connection, actor: Actor, user_id: str) -> dict[str, Any]
                 "steps": [vars(step) | {"layer": str(step.layer)} for step in why.steps],
             }
         )
+    decisions = {item["flag_id"]: item for item in out}
+    local_first = decisions.get("cloud.local_first")
+    hosted_media = decisions.get("cloud.hosted_media")
+    local_first_on = bool(local_first and local_first["on"])
+    hosted_media_on = bool(hosted_media and hosted_media["on"])
+    experience = (
+        "both" if local_first_on and hosted_media_on
+        else "local_first" if local_first_on
+        else "hosted" if hosted_media_on
+        else "neither"
+    )
     return {
         "user_id": user_id,
         "workspace_id": found.workspace_id,
         "plan": found.plan,
         "rule_version": snapshot.version,
+        "browser_first_experience": {
+            "mode": experience,
+            "local_first_on": local_first_on,
+            "local_first_reason": local_first["reason"] if local_first else "flag_not_registered",
+            "hosted_media_on": hosted_media_on,
+            "hosted_media_reason": hosted_media["reason"] if hosted_media else "flag_not_registered",
+        },
         "flags": out,
     }
 

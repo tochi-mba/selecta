@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Skeleton, Status } from '../../ui/controls';
 import { Truncate } from '../../ui/format';
+import { navigate } from '../../router';
 import { EmptyState } from '../LocalFirstEmpty';
 
 /** The migration reconciliation (ADR-0465 BF-0465-02): the member's hosted uploads side by side
@@ -120,6 +121,14 @@ export function ReconciliationPanel({ request }: { request: Request }) {
       <p className="cloud-eyebrow">YOUR HOSTED AND DEVICE MUSIC</p>
       <h2 id="cloud-reconcile-title">How your libraries line up</h2>
       <p>SelectaDJ compares the audio itself, not the names. This only looks: it never deletes, moves or copies anything, and your hosted library stays as it is.</p>
+      <div className="cloud-reconcile-next-steps">
+        <p>To bring hosted music onto this device, download your hosted archive below, then choose the extracted original files here. SelectaDJ checks their contents in this browser; it never transfers audio between Cloud and this device.</p>
+        <div className="cloud-actions">
+          <a href="#cloud-data-title">Go to your account export</a>
+          <button type="button" onClick={() => navigate('/library')}>Add music from this device</button>
+        </div>
+        <p className="cloud-hint">After adding music, return here and choose Check again. A match is based on identical audio bytes; a different encoding remains a separate recording.</p>
+      </div>
       {loaded.state === 'loading' && <Skeleton variant="rows" lines={3} label="Comparing your libraries" />}
       {loaded.state === 'failed' && (
         <div role="alert">

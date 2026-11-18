@@ -96,7 +96,9 @@ export interface Speaker {
   /** Release listeners and locally cached audio when the device UI unmounts. */
   dispose?(): void;
   /** The engine's truthful output status (BrowserSpeaker), reported with each heartbeat. */
-  state?(): { output: { status: string; at?: number } };
+  state?(): { phase?: string; output: { status: string; at?: number } };
+  /** A wake lock that was granted and then revoked makes audibility uncertain. */
+  wakeLockLost?(): void;
 }
 
 /** The heartbeat fields for what this speaker knows about its output: 'playing' only with the
@@ -139,6 +141,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const [device, setDevice] = useState<Device | null>(null);
   const [notice, setNotice] = useState('');
   const [view, setView] = useState<SessionView | null>(null);
+  const viewSnapshot = useRef<SessionView | null>(null);
   const [message, setMessage] = useState('');
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
@@ -165,6 +168,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     if (session && typeof session.fence === 'number' && (fence.current === null || session.fence >= fence.current)) fence.current = session.fence;
   };
   const wake = useRef<WakeLockHold | null>(null);
+  const wakeWasHeld = useRef(false);
   const deviceId = device?.id ?? null;
 
   useEffect(() => {
@@ -200,6 +204,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     speaker?.stop(fadeMs);
     wake.current?.release();
     wake.current = null;
+    wakeWasHeld.current = false;
     setMessage(why);
   }, [speaker]);
 
@@ -211,6 +216,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     leaseDeadline.current = session.lease_expires_at;
     appliedSeq.current = session.seq;
     if (!wake.current) wake.current = holdWakeLock();
+    wakeWasHeld.current = false;
     if (typeof session.volume === 'number') speaker.setVolume?.(Math.min(1, Math.max(0, session.volume / 100)));
     await speaker.start(session.song_index, extrapolate(session, serverNow()), session.state === 'playing');
   }, [speaker]);
@@ -270,6 +276,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       learnClock(sentAt, next.server_time);
       adopt(next.session);
       if (next.speaker === 'here') learnKey(next.envelope_key);
+      viewSnapshot.current = next;
       setView(next);
       if (!commandRefused.current) setError('');
       if (expiredSpeaker.current) {
@@ -345,9 +352,34 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
 
   useEffect(() => {
     if (!deviceId) return;
+    // WakeLockHold intentionally owns its browser sentinel, so sample its public state here.
+    // A granted lock that disappears is evidence of uncertainty; an unsupported wake-lock API
+    // (always false) does not by itself downgrade output.
+    const watchWakeLock = window.setInterval(() => {
+      const held = wake.current?.held() ?? false;
+      if (speaking.current && wakeWasHeld.current && !held) speaker?.wakeLockLost?.();
+      wakeWasHeld.current = held;
+    }, 1000);
+    return () => window.clearInterval(watchWakeLock);
+  }, [deviceId, speaker]);
+
+  useEffect(() => {
+    if (!deviceId) return;
     const beat = window.setInterval(async () => {
       if (!speaking.current || !speaker) return;
-      const at = speaker.position();
+      const at = speaker.position() ?? (() => {
+        // A route switch or interruption can pause the graph and make its position
+        // unavailable for a beat. Keep the lease and output report current from the last
+        // server snapshot, while reporting the engine's phase truthfully.
+        const session = viewSnapshot.current?.session;
+        if (!session) return null;
+        const phase = speaker.state?.().phase;
+        return {
+          song_index: session.song_index,
+          offset_ms: extrapolate(session, serverNow()),
+          state: phase === 'idle' ? 'stopped' as const : phase === 'paused' ? 'paused' as const : session.state,
+        };
+      })();
       if (!at) return;
       const sentAt = Date.now();
       try {
@@ -375,6 +407,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     speaker?.stop(0);
     speaker?.dispose?.();
     wake.current?.release();
+    wakeWasHeld.current = false;
   }, [speaker]);
 
   const playHere = useCallback(async (observedOwnerId?: string | null) => {

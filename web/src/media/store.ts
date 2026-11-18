@@ -126,16 +126,17 @@ export class MediaStore {
     const previous = this.memory.get(song.songId);
     this.memory.set(song.songId, song);
     this.touchAvailability();
-    if (!this.db) return;
+    const db = this.db;
+    if (!db) return;
     try {
-      await persistSong(this.db, song);
+      await persistSong(db, song);
     } catch (error) {
       if (isQuotaError(error)) {
         // IndexedDB stores source pointers and identities, so its rows are never eviction
         // candidates. Free derived OPFS cache first, then retry the index write transaction.
         while (await evictOldestOpfsCacheEntry()) {
           try {
-            await persistSong(this.db, song);
+            await persistSong(db, song);
             return;
           } catch (retryError) {
             if (!isQuotaError(retryError)) {
@@ -231,11 +232,12 @@ export class MediaStore {
 // unreadable entry is a miss, and a miss means recompute.
 
 type OpfsWritable = { write: (data: Blob | ArrayBuffer | Uint8Array) => Promise<void>; close: () => Promise<void>; abort?: () => Promise<void> };
-type OpfsFileHandle = { name?: string; kind?: string; getFile: () => Promise<File>; createWritable: () => Promise<OpfsWritable> };
+type OpfsFileHandle = { name?: string; kind?: 'file'; getFile: () => Promise<File>; createWritable: () => Promise<OpfsWritable> };
+type OpfsEntry = (OpfsFileHandle & { name: string; kind: 'file' }) | { name: string; kind: 'directory' };
 type OpfsDirectory = {
   getFileHandle: (name: string, options?: { create?: boolean }) => Promise<OpfsFileHandle>;
   removeEntry: (name: string) => Promise<void>;
-  values?: () => AsyncIterableIterator<OpfsFileHandle | { name: string; kind: string }>;
+  values?: () => AsyncIterableIterator<OpfsEntry>;
 };
 
 async function opfsRoot(): Promise<OpfsDirectory | null> {
@@ -266,7 +268,7 @@ const cacheUse = new Map<string, number>();
 let cacheClock = 0;
 
 function cacheTouch(name: string): void {
-  cacheClock += 1;
+  cacheClock = Math.max(Date.now(), cacheClock + 1);
   cacheUse.set(name, cacheClock);
 }
 
@@ -310,15 +312,16 @@ async function opfsCacheEntries(root: OpfsDirectory, except: string): Promise<Ca
 async function evictOldestOpfsCacheEntry(): Promise<boolean> {
   const root = await opfsRoot();
   if (!root) return false;
-  const [oldest] = await opfsCacheEntries(root, '');
-  if (!oldest) return false;
-  try {
-    await root.removeEntry(oldest.name);
-    cacheUse.delete(oldest.name);
-    return true;
-  } catch {
-    return false;
+  for (const candidate of await opfsCacheEntries(root, '')) {
+    try {
+      await root.removeEntry(candidate.name);
+      cacheUse.delete(candidate.name);
+      return true;
+    } catch {
+      // A locked cache entry cannot help with quota; try the next derived entry.
+    }
   }
+  return false;
 }
 
 /** Write one cache object atomically. Keep an older good object if its replacement fails. */

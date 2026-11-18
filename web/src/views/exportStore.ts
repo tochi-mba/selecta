@@ -1,5 +1,6 @@
-import { useSyncExternalStore } from 'react';
-import { ApiError, ExportJob, Request } from '../api';
+import { useCallback, useSyncExternalStore } from 'react';
+import { ApiError } from '../api';
+import type { ExportJob, Request } from '../api';
 import { clientForRequest, useRequest } from '../requestContext';
 
 // Export jobs are currently local-only, but their view helpers still use the injected request
@@ -105,7 +106,8 @@ function subscribe(listener: () => void, request: Request) {
 
 export function useExports(override?: Request): ExportsNow {
   const request = useRequest(override);
-  return useSyncExternalStore((listener) => subscribe(listener, request), () => now);
+  const subscribeTo = useCallback((listener: () => void) => subscribe(listener, request), [request]);
+  return useSyncExternalStore(subscribeTo, () => now);
 }
 
 function known(job: ExportJob, request?: Request) {
@@ -137,4 +139,5 @@ export function resetExports() {
   window.clearTimeout(timer);
   asked += 1;
   now = { jobs: null, stale: false, unsupported: false };
+  activeRequest = undefined;
 }
