@@ -13,11 +13,18 @@ import { GlossaryHost } from '../ui/Glossary';
 /** The command palette, the keyboard shortcuts and their help list for a Cloud shell with no
  * SelectaDJ server on this computer (W5's server-free subset). The palette offers this shell's own
  * places, help, the glossary, theme and motion, and, with a player of its own, play/pause and the
- * next song; the keys are SERVER_FREE_SHORTCUTS, and the help list names only those. Search,
+ * next song; the keys are SERVER_FREE_SHORTCUTS (and N, see keyHere), and the help list names only those. Search,
  * Request, Undo, Stage and the song lookups reach a local server, so they are never offered here.
  * `app.command_palette` and `app.shortcuts` still decide whether any of it exists. */
 
-const TRANSPORT_KEYS: ReadonlySet<ShortcutId> = new Set<ShortcutId>(['playPause', 'next', 'previous', 'back5', 'forward5', 'mute']);
+const TRANSPORT_KEYS: ReadonlySet<ShortcutId> = new Set<ShortcutId>(['playPause', 'jump', 'next', 'previous', 'back5', 'forward5', 'mute']);
+
+/** The server-free keys, plus N: Listen's own "Jump to the transition" button names N, and it acts on
+ * the shell's player like the other transport keys (the browser player jumps to the next song). */
+function keyHere(id: ShortcutId, hasPlayer: boolean): boolean {
+  if (TRANSPORT_KEYS.has(id) && !hasPlayer) return false;
+  return SERVER_FREE_SHORTCUTS.has(id) || id === 'jump';
+}
 
 export function useServerFreeControls({ places, player, now, hasMix, hasNext }: {
   places: readonly CommandPlace[];
@@ -38,9 +45,8 @@ export function useServerFreeControls({ places, player, now, hasMix, hasNext }: 
     const keys = (event: KeyboardEvent) => {
       if (event.key === 'Escape') { setHelping(false); setCommanding(false); }
       const shortcut = shortcutFor(event);
-      if (!shortcut || !SERVER_FREE_SHORTCUTS.has(shortcut)) return;
       const { player: transport, hasMix: mixed } = live.current;
-      if (TRANSPORT_KEYS.has(shortcut) && !transport) return;
+      if (!shortcut || !keyHere(shortcut, !!transport)) return;
       if (shortcut !== 'palette' && !prefs().singleKeys) return;
       switch (shortcut) {
         case 'palette':
@@ -53,6 +59,7 @@ export function useServerFreeControls({ places, player, now, hasMix, hasNext }: 
           event.preventDefault();
           if (mixed) void transport!.togglePause();
           break;
+        case 'jump': void transport!.skip(); break;
         case 'next': void transport!.next(); break;
         case 'previous': void transport!.previous(); break;
         case 'mute': transport!.toggleMute(); break;
@@ -80,9 +87,7 @@ export function useServerFreeControls({ places, player, now, hasMix, hasNext }: 
       next: () => void player.next(),
     } : undefined,
   }) : [];
-  const listed = shortcutsOn().filter((shortcut) => SERVER_FREE_SHORTCUTS.has(shortcut.id)
-    && (player || !TRANSPORT_KEYS.has(shortcut.id))
-    && (shortcut.id !== 'palette' || preferences.palette));
+  const listed = shortcutsOn().filter((shortcut) => keyHere(shortcut.id, !!player) && (shortcut.id !== 'palette' || preferences.palette));
 
   const overlays = (
     <>

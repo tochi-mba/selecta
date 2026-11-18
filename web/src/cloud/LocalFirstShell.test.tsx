@@ -354,8 +354,9 @@ describe('the server-free palette and keys in the local-first shell (W5 subset)'
     await screen.findByRole('region', { name: 'Signed in as' });
     press('?');
     const help = await screen.findByRole('dialog', { name: 'Keyboard shortcuts' });
-    for (const shown of ['Play or pause', 'Next song', 'Previous song', 'Mute', 'Search and commands', 'This list']) expect(help).toHaveTextContent(shown);
-    for (const hidden of ['Request a song', 'Undo', 'Search your library', 'Jump to the transition', 'Fullscreen lyrics']) expect(help).not.toHaveTextContent(hidden);
+    // N too: Listen's own Jump to the transition button names it, and it acts on the browser player
+    for (const shown of ['Play or pause', 'Jump to the transition', 'Next song', 'Previous song', 'Mute', 'Search and commands', 'This list']) expect(help).toHaveTextContent(shown);
+    for (const hidden of ['Request a song', 'Undo', 'Search your library', 'Fullscreen lyrics']) expect(help).not.toHaveTextContent(hidden);
   });
 
   it('has no palette or help with the flags off, and its buttons are gone', async () => {
