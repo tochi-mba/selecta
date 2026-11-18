@@ -62,7 +62,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
       return asMixData(await store.read(id));
     } catch (error) {
       // a recipe that is no longer there (another device, another account) is let go of
-      if (error instanceof ApiError && error.status === 404) store.setCurrent(null);
+      if ((error as { status?: number }).status === 404) store.setCurrent(null);
       throw error;
     }
   };
