@@ -55,7 +55,7 @@ describe('checking a delivered command (ADR-0461)', () => {
     expect(commandStillValid({ fence: 7, expires_at: 999 }, 7, now)).toBe(false);
     expect(commandStillValid({ fence: 6, expires_at: 1100 }, 7, now)).toBe(false);
     expect(commandStillValid({ fence: 7, expires_at: 1100 }, 7, now)).toBe(true);
-    expect(commandStillValid({ fence: 8, expires_at: null }, 7, now)).toBe(true);
+    expect(commandStillValid({ fence: 8, expires_at: null }, 7, now)).toBe(false);
   });
 
   it('treats superseded and expired refusals like a stale one', () => {
