@@ -176,6 +176,9 @@ function Overlay({
   children,
   footer,
   keepsChrome,
+  className,
+  role = 'dialog',
+  describedBy,
 }: {
   title: string;
   onClose: () => void;
@@ -184,6 +187,12 @@ function Overlay({
   footer?: ReactNode;
   /** stops above the tab bar and mini-player and leaves them working, for a side task beside the music */
   keepsChrome?: boolean;
+  /** an extra class on the overlay's root, such as `confirm-dialog` */
+  className?: string;
+  /** `alertdialog` for a question that interrupts, such as a confirmation */
+  role?: 'dialog' | 'alertdialog';
+  /** the id of the text that explains the dialog, read with its title */
+  describedBy?: string;
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const holder = useRef<HTMLDivElement>(null);
@@ -268,8 +277,8 @@ function Overlay({
     }
   };
   return createPortal(
-    <div ref={holder} className={`overlay overlay-${kind}${keepsChrome ? ' overlay-keeps-chrome' : ''}`} data-keeps-chrome={keepsChrome ? 'true' : undefined} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <div ref={panel} className="overlay-panel" role="dialog" aria-modal={keepsChrome ? undefined : 'true'} aria-labelledby={titleId} tabIndex={-1} onKeyDown={keys}>
+    <div ref={holder} className={`overlay overlay-${kind}${keepsChrome ? ' overlay-keeps-chrome' : ''}${className ? ` ${className}` : ''}`} data-keeps-chrome={keepsChrome ? 'true' : undefined} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div ref={panel} className="overlay-panel" role={role} aria-modal={keepsChrome ? undefined : 'true'} aria-labelledby={titleId} aria-describedby={describedBy} tabIndex={-1} onKeyDown={keys}>
         <header className="overlay-head">
           <h2 id={titleId}>{title}</h2>
           <button className="overlay-close" aria-label={`Close ${title}`} title={`Close ${title}`} onClick={onClose}><Icon name="close" /></button>
@@ -282,7 +291,7 @@ function Overlay({
   );
 }
 
-export function Dialog(props: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
+export function Dialog(props: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; className?: string; role?: 'dialog' | 'alertdialog'; describedBy?: string }) {
   return <Overlay kind="dialog" {...props} />;
 }
 

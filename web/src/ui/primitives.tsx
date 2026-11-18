@@ -179,3 +179,11 @@ export function moveInGrid(key: string, at: { row: number; column: number }, row
     column: Math.min(Math.max(at.column + step[1], firstColumn), columns - 1),
   };
 }
+
+/** The one class that hides something from the eye and keeps it for a screen reader. Use the
+ * component, or the class name on an element that must stay what it is (a label, a heading). */
+export const VISUALLY_HIDDEN = 'visually-hidden';
+
+export function VisuallyHidden({ children, as: Tag = 'span', id }: { children: ReactNode; as?: 'span' | 'div' | 'h2' | 'h3' | 'p' | 'label'; id?: string }) {
+  return <Tag id={id} className={VISUALLY_HIDDEN}>{children}</Tag>;
+}
