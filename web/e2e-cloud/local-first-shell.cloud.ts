@@ -1,43 +1,20 @@
-import { APIRequestContext, expect, Page, test } from '@playwright/test';
+import { APIRequestContext, expect, test } from '@playwright/test';
 import { listener } from './cloud';
+import { openLocalFirst, seeded } from './localFirst';
 
 // ADR-0462/0463 mounting: an account with the local-first experience and `cloud.local_first`
 // on gets the shared shell (Listen, Make a Mix, My Mixes, Library, with Cloud's own places in
 // More); every other account keeps the hosted pages exactly as before.
 //
-// The build ships `cloud.local_first` off by default and a per-user rule can never grant what
-// the build denies (ADR-0414), so this spec turns it on for its one person by amending the
-// account answer in the browser: the server's own decision is replaced only for the fields that
-// make a new local-first member (`experience`, `features["cloud.local_first"]`). The e2e build
-// grandfathers every person into hosted media, so `experience.hosted` is set false too: a new
-// local-first member has no upload surface. Everything else, including the catalogue songs and
-// the catalogue routes (on in the e2e build), comes from the real e2e server.
+// How the spec turns the experience on for its one person: see localFirst.ts.
 
-async function seeded(request: APIRequestContext, user: string, localSongs: number) {
-  const seed = await request.post('/test/seed', { data: { user, local_songs: localSongs } });
-  expect(seed.ok(), await seed.text()).toBeTruthy();
-}
-
-/** Open the site as `user`, with the local-first experience switched on for them. */
-async function openLocalFirst(page: Page, user: string, path: string) {
-  await page.route('**/api/account', async (route) => {
-    try {
-      const answer = await route.fetch();
-      const account = await answer.json();
-      account.experience = { ...(account.experience ?? {}), local_first: true, hosted: false };
-      account.features = { ...account.features, 'cloud.local_first': true, 'cloud.local_media': true };
-      await route.fulfill({ response: answer, json: account });
-    } catch {
-      // the test ended while an account refresh was in flight: nothing is waiting for it
-    }
-  });
-  await page.addInitScript((name) => localStorage.setItem('selecta-e2e-user', name), user);
-  await page.goto(path);
+async function seededWith(request: APIRequestContext, user: string, localSongs: number) {
+  await seeded(request, user, { local_songs: localSongs });
 }
 
 test('a local-first account sees the shared music destinations', async ({ page, request }) => {
   const user = listener('local-first');
-  await seeded(request, user, 2);
+  await seededWith(request, user, 2);
   await openLocalFirst(page, user, '/library');
   const nav = page.getByRole('navigation', { name: 'Main' });
   await expect(nav).toBeVisible();
@@ -54,7 +31,7 @@ test('a local-first account sees the shared music destinations', async ({ page, 
 
 test('a local-first account finds account places in More, and no dead button', async ({ page, request }) => {
   const user = listener('local-first-more');
-  await seeded(request, user, 1);
+  await seededWith(request, user, 1);
   await openLocalFirst(page, user, '/listen');
   await expect(page.getByRole('heading', { name: 'Nothing is playing' })).toBeVisible();
   await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: 'More' }).first().click();
@@ -66,7 +43,7 @@ test('a local-first account finds account places in More, and no dead button', a
 
 test('a flag switched off for a local-first account reflows its open shell over the event stream (BF-0462-03)', async ({ page, request }) => {
   const user = listener('local-first-live');
-  await seeded(request, user, 1);
+  await seededWith(request, user, 1);
   await openLocalFirst(page, user, '/listen');
   await page.evaluate(() => { (window as unknown as { stayed: boolean }).stayed = true; });
   await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: 'More' }).first().click();
@@ -88,7 +65,7 @@ test('a flag switched off for a local-first account reflows its open shell over 
 
 test('a legacy account keeps the hosted Cloud pages', async ({ page, request }) => {
   const user = listener('legacy');
-  await seeded(request, user, 0);
+  await seededWith(request, user, 0);
   await page.addInitScript((name) => localStorage.setItem('selecta-e2e-user', name), user);
   await page.goto('/');
   await expect(page.getByRole('navigation', { name: 'Cloud workspace' })).toBeVisible();
