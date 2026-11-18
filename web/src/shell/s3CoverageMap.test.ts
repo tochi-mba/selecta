@@ -11,8 +11,8 @@ import states from '../../e2e/s3-0075-01-state-candidates.e2e.ts?raw';
 import regression from '../../e2e/s3-0075-visual-regression.e2e.ts?raw';
 import helpers from '../../e2e/helpers.ts?raw';
 
-/** S3-0075-01: docs/adr/s3-0075-coverage-map.json names every state of every surface in the MP-0272
- * inventory, with the review candidates that capture it or the reason none does yet. The candidates
+/** S3-0075-01: docs/adr/s3-0075-coverage-map.json indexes route, overlay and persistent coverage
+ * segments that name each inventory state, with the candidates that capture it or a reason none does. The candidates
  * come from specs that save images marked candidate-not-independently-verified and never compare
  * against a golden, so nothing here can turn an unreviewed capture into a baseline. */
 
@@ -45,6 +45,16 @@ describe('S3-0075-01 visual coverage map', () => {
       persistent: 'docs/adr/s3-0075-persistent-coverage.json',
     });
     expect(segments.map((segment) => segment.inventory)).toEqual([map.inventory, map.inventory, map.inventory]);
+    const grouped = [
+      { name: 'routes', segment: routesCoverage, surfaces: inventory.routes },
+      { name: 'overlays', segment: overlaysCoverage, surfaces: inventory.overlays },
+      { name: 'persistent', segment: persistentCoverage, surfaces: inventory.persistent },
+    ];
+    for (const { name, segment, surfaces: groupSurfaces } of grouped) {
+      expect(segment.group).toBe(name);
+      const ids = new Set(groupSurfaces.map((surface) => surface.id));
+      expect(segment.entries.every((entry) => ids.has(entry.surface))).toBe(true);
+    }
   });
 
   it('captures a state or says which written reason leaves it uncovered, and the totals add up', () => {
