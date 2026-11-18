@@ -11,7 +11,7 @@
 // cookie, so the guest is back in the room by themselves. There's no leave-on-close beacon: a
 // reload or a phone switching apps fires the same events, and leaving would put them out.
 
-import { ApiError, call, h, replace, Song, songLength, songLine, store } from '../rooms/dom';
+import { ApiError, call, h, patch, replace, Song, songLength, songLine, store } from '../rooms/dom';
 import './guest.css';
 
 type Item = { request_id: string; song: Song | null; status: string; votes: number; nickname: string | null; voted: boolean; mine: boolean };
@@ -143,11 +143,11 @@ async function refresh(): Promise<void> {
 }
 
 function section(title: string, ...children: (Node | null)[]): HTMLElement {
-  return h('section', { className: 'g-section', 'aria-label': title }, h('h2', {}, title), ...children);
+  return h('section', { className: 'g-section', 'aria-label': title, 'data-key': title }, h('h2', {}, title), ...children);
 }
 
-function songItem(song: Song | null, ...extra: (Node | string | null)[]): HTMLElement {
-  return h('li', {}, h('span', { className: 'g-song' }, h('strong', {}, song?.title ?? 'A song'), h('span', { className: 'g-muted' }, song ? `${song.artist} · ${songLength(song.length_s)}` : '')), ...extra);
+function songItem(song: Song | null, key: string | undefined, ...extra: (Node | string | null)[]): HTMLElement {
+  return h('li', { 'data-key': key }, h('span', { className: 'g-song' }, h('strong', {}, song?.title ?? 'A song'), h('span', { className: 'g-muted' }, song ? `${song.artist} · ${songLength(song.length_s)}` : '')), ...extra);
 }
 
 function voteButton(item: Item): HTMLElement | null {
@@ -193,7 +193,8 @@ function shell(): Record<string, HTMLElement> {
   return { head: part('g-head'), banners: part('g-banners'), now: part('g-now'), search: part('g-search'), lists: part('g-lists'), mine: part('g-mine') };
 }
 
-// Only the parts that change are redrawn, so a poll never takes focus or typing from the search.
+// Only the parts that change are redrawn, and those are patched in place (keyed by request), so a
+// poll never takes focus from a Vote or Withdraw button, nor typing from the search.
 function draw(): void {
   if (!view) return;
   // ADR-0422: a poll landing while the guest is picking a nickname mustn't close the picker
@@ -204,30 +205,30 @@ function draw(): void {
     return;
   }
   const parts = shell();
-  replace(parts.head,
+  patch(parts.head,
     h('p', { className: 'g-eyebrow' }, 'SELECTA ROOM'),
     h('h1', {}, v.room_name),
     v.nickname_confirm ? nameLine(v) : h('p', { className: 'g-muted' }, `You're ${v.nickname}. `, h('button', { type: 'button', className: 'g-link', onclick: () => void nicknames() }, 'Change nickname')),
     v.nickname_confirm && nameSave?.state === 'failed' ? h('p', { className: 'g-error', role: 'alert' }, `${nameSave.name} wasn't saved. ${nameSave.error ?? ''}`.trim(), ' ', h('button', { type: 'button', className: 'g-link', onclick: () => void saveNickname(nameSave?.name ?? '') }, 'Try again')) : null);
-  replace(parts.banners,
+  patch(parts.banners,
     v.guest_status === 'pending' ? h('p', { className: 'g-banner' }, "The host hasn't let you in yet. This page will update when they do.") : null,
     v.music_paused ? h('p', { className: 'g-banner' }, "The music's paused. Requests will wait until it starts again.") : null);
   const active = v.guest_status === 'active';
-  replace(parts.now, active
+  patch(parts.now, active
     ? section('Now playing', v.now_playing ? h('p', { className: 'g-now' }, songLine(v.now_playing)) : h('p', { className: 'g-muted' }, 'Nothing is playing right now.'),
-      v.up_next.length ? h('ol', { className: 'g-list' }, ...v.up_next.slice(0, 3).map((song) => songItem(song))) : null)
+      v.up_next.length ? h('ol', { className: 'g-list' }, ...v.up_next.slice(0, 3).map((song, index) => songItem(song, `next-${index}-${song.song_id}`))) : null)
     : null);
   parts.search.hidden = !(active && v.requests_open);
-  replace(parts.lists,
+  patch(parts.lists,
     active && !v.requests_open ? section('Requests', h('p', { className: 'g-muted' }, 'Requests are off in this room.')) : null,
-    active && v.coming_up.length ? section('Coming up from guests', h('ol', { className: 'g-list' }, ...v.coming_up.map((item) => songItem(item.song, item.nickname ? h('span', { className: 'g-muted' }, item.nickname) : null, voteButton(item))))) : null,
-    active && v.waiting.length ? section('Waiting for the host', h('ul', { className: 'g-list' }, ...v.waiting.map((item) => songItem(item.song, voteButton(item))))) : null);
-  replace(parts.mine, myRequests(v));
+    active && v.coming_up.length ? section('Coming up from guests', h('ol', { className: 'g-list' }, ...v.coming_up.map((item) => songItem(item.song, item.request_id, item.nickname ? h('span', { className: 'g-muted' }, item.nickname) : null, voteButton(item))))) : null,
+    active && v.waiting.length ? section('Waiting for the host', h('ul', { className: 'g-list' }, ...v.waiting.map((item) => songItem(item.song, item.request_id, voteButton(item))))) : null);
+  patch(parts.mine, myRequests(v));
 }
 
 function myRequests(v: View): HTMLElement {
   if (!v.my_requests.length) return section('My requests', h('p', { className: 'g-muted' }, "You haven't asked for anything yet."));
-  return section('My requests', h('ul', { className: 'g-list' }, ...v.my_requests.map((item) => songItem(item.song,
+  return section('My requests', h('ul', { className: 'g-list' }, ...v.my_requests.map((item) => songItem(item.song, item.request_id,
     h('span', { className: `g-status g-${item.status}` }, item.text),
     item.status === 'sent' || item.status === 'accepted'
       ? h('button', { type: 'button', className: 'g-quiet', 'aria-label': `Withdraw ${songLine(item.song)}`, onclick: () => void act(`${base()}/requests/${encodeURIComponent(item.request_id)}`, 'DELETE', undefined, 'Request withdrawn.') }, 'Withdraw')
@@ -256,7 +257,7 @@ async function search(query: string, results: HTMLElement): Promise<void> {
     const found = await call<{ songs: Song[] }>(`${base()}/search?q=${encodeURIComponent(query.trim())}`);
     if (seq !== searchSeq) return;
     if (!found.songs.length) { replace(results, h('li', { className: 'g-muted' }, 'No songs match that.')); return; }
-    replace(results, ...found.songs.map((song) => songItem(song, h('button', {
+    replace(results, ...found.songs.map((song) => songItem(song, undefined, h('button', {
       type: 'button', className: 'g-primary g-small-button', 'aria-label': `Request ${songLine(song)}`,
       onclick: () => void request(song),
     }, 'Request'))));

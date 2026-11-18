@@ -41,11 +41,11 @@ export const POLLING: readonly PollRule[] = [
   { file: 'ui/ActivityPanel.tsx', reads: null, everyMs: 30000, hidden: 'continues', why: 'refreshes "x minutes ago" wording only' },
   { file: 'cloud/events.ts', reads: 'cloud events fallback', everyMs: 'pollMs', hidden: 'pauses', why: 'useVisiblePoll when the event stream is unavailable (Cloud programme)' },
   { file: 'cloud/checkout.ts', reads: 'checkout confirmation', everyMs: 'bounded tries', hidden: 'continues', why: 'a payment confirmation must finish; it stops after a set number of tries (Cloud programme)' },
-  { file: 'devices/DevicesPanel.tsx', reads: 'devices', everyMs: 15000, hidden: 'continues', why: 'Cloud programme' },
+  { file: 'devices/DevicesPanel.tsx', reads: '/devices', everyMs: 15000, hidden: 'pauses', why: 'useVisiblePoll: the device list is presentation only, read again on return (W3 adoption)' },
   { file: 'devices/usePlaybackDevice.ts', reads: 'remote playback state and heartbeat', everyMs: '1000 or 2000', hidden: 'continues', why: 'remote playback keeps going while this tab is hidden (Cloud programme)' },
   { file: 'devices/PlayingBar.tsx', reads: null, everyMs: 1000, hidden: 'continues', why: 'clock text only' },
   { file: 'devices/audioSpeaker.ts', reads: null, everyMs: 'fade steps', hidden: 'continues', why: 'volume fade' },
-  { file: 'rooms/RoomPanel.tsx', reads: 'room state', everyMs: 3000, hidden: 'continues', why: 'Cloud programme' },
+  { file: 'rooms/RoomPanel.tsx', reads: '/rooms/current', everyMs: 3000, hidden: 'pauses', why: 'useVisiblePoll: the host panel reads the room only while it is on screen, and at once on return (W3 adoption)' },
   { file: 'cloud/localFirstPlayer.ts', reads: null, everyMs: 500, hidden: 'continues', why: 'redraws the browser player position only; never reads the server (ADR-0457)' },
   { file: 'engine/scheduler.ts', reads: null, everyMs: 'audio clock tick', hidden: 'continues', why: 'schedules the next song and seam on the audio clock while music plays in a hidden tab (ADR-0457)' },
 ];

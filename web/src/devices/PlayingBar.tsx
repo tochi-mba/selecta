@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { audioSpeaker } from './audioSpeaker';
 import { ControllerNotices } from './ControllerNotices';
 import { PlaybackStatus, playbackStatusText } from '../copy';
+import { Action } from '../ui/controls';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Api, extrapolate, SessionState, Speaker, usePlaybackDevice } from './usePlaybackDevice';
 import './devices.css';
 
@@ -38,6 +40,9 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
   const [asking, setAsking] = useState(false);
   const [observedOwner, setObservedOwner] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
+  // Optimistic play/pause: the bar shows the press at once, tied to the session seq it was based
+  // on. A newer seq from the server replaces it; a refusal takes it back straight away.
+  const [wanted, setWanted] = useState<{ playing: boolean; seq: number } | null>(null);
   const [, tick] = useState(0);
   useEffect(() => { const t = window.setInterval(() => tick((n) => n + 1), 1000); return () => window.clearInterval(t); }, []);
 
@@ -47,7 +52,14 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
   const warning = pb.device?.warnings.find((w) => w.code === 'ios_keep_screen_on' || w.code === 'no_audio');
   const name = session ? songName?.(session.song_index) ?? `Song ${session.song_index + 1}` : null;
   const position = session ? extrapolate(session, pb.serverNow()) : 0;
-  const playing = session?.state === 'playing';
+  const shownWanted = wanted && session && session.seq === wanted.seq ? wanted : null;
+  const playing = shownWanted ? shownWanted.playing : session?.state === 'playing';
+  useEffect(() => { if (wanted && session && session.seq !== wanted.seq) setWanted(null); }, [session, wanted]);
+  const steer = async (name: 'play' | 'pause') => {
+    if (session) setWanted({ playing: name === 'play', seq: session.seq });
+    const ok = await pb.send(name);
+    if (!ok) setWanted(null);
+  };
 
   const where = useMemo(() => {
     if (!view) return 'Connecting...';
@@ -107,8 +119,8 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
       <div className="playing-bar-controls">
         {remote && session && (
           <>
-            <button type="button" onClick={() => void pb.command(playing ? 'pause' : 'play')} aria-label={playing ? 'Pause' : 'Play'}>{playing ? 'Pause' : 'Play'}</button>
-            <button type="button" onClick={() => void pb.command('skip')}>Skip</button>
+            <Action type="button" run={() => steer(playing ? 'pause' : 'play')} aria-label={playing ? 'Pause' : 'Play'}>{playing ? 'Pause' : 'Play'}</Action>
+            <Action type="button" run={() => pb.command('skip')}>Skip</Action>
           </>
         )}
         {!here && !pb.starting && (
@@ -116,11 +128,15 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
         )}
       </div>
       {asking && (
-        <div className="playing-bar-ask" role="alertdialog" aria-label="Move playback here?">
-          <span>{`Playing on ${view?.speaker_name ?? 'another device'}. Play here instead?`}</span>
-          <button type="button" className="primary" onClick={() => void pressPlayHere()}>Play here instead</button>
-          <button type="button" onClick={() => setAsking(false)}>Cancel</button>
-        </div>
+        <ConfirmDialog
+          title="Move playback here?"
+          body={`Playing on ${view?.speaker_name ?? 'another device'}. Play here instead?`}
+          confirmLabel="Play here instead"
+          cancelLabel="Cancel"
+          working="Moving..."
+          onConfirm={pressPlayHere}
+          onClose={() => setAsking(false)}
+        />
       )}
       {output && <p className="playing-bar-output" data-testid="speaker-output">{playbackStatusText(output)}</p>}
       {remoteControl && !here && (

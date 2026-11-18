@@ -3,12 +3,21 @@
 
 type Child = Node | string | null | undefined | false;
 type Props = Record<string, string | number | boolean | ((event: Event) => void) | undefined>;
+type Handlers = Record<string, (event: Event) => void>;
+type Handled = Element & { _on?: Handlers };
+
+function listen(node: Handled, type: string, handler: (event: Event) => void): void {
+  if (!node._on) node._on = {};
+  // one listener per type reads the current handler, so a patched node runs the newest one
+  if (!node._on[type]) node.addEventListener(type, (event) => node._on?.[type]?.(event));
+  node._on[type] = handler;
+}
 
 export function h(tag: string, props: Props = {}, ...children: Child[]): HTMLElement {
   const node = document.createElement(tag);
   for (const [key, value] of Object.entries(props)) {
     if (value === undefined || value === false) continue;
-    if (typeof value === 'function') node.addEventListener(key.replace(/^on/, '').toLowerCase(), value);
+    if (typeof value === 'function') listen(node, key.replace(/^on/, '').toLowerCase(), value);
     else if (key === 'className') node.className = String(value);
     else node.setAttribute(key, value === true ? '' : String(value));
   }
@@ -21,6 +30,47 @@ export function h(tag: string, props: Props = {}, ...children: Child[]): HTMLEle
 
 export function replace(target: Element, ...children: Child[]): void {
   target.replaceChildren(...children.filter((c): c is Node | string => c !== null && c !== undefined && c !== false));
+}
+
+const keyOf = (node: Node): string | null => (node instanceof Element ? node.getAttribute('data-key') ?? node.id ?? null : null) || null;
+const sameKind = (a: Node, b: Node) => a.nodeType === b.nodeType && a.nodeName === b.nodeName;
+
+/** Like `replace`, but keeps the nodes that are still there: a child with the same `data-key` (or
+ * id), or else the same tag in the same place, is updated in place rather than swapped. A poll
+ * redrawing a list therefore never takes focus from the button a guest is on. */
+export function patch(target: Element, ...children: Child[]): void {
+  const focused = document.activeElement;
+  const next = children
+    .filter((c): c is Node | string => c !== null && c !== undefined && c !== false)
+    .map((c) => (typeof c === 'string' ? document.createTextNode(c) : c));
+  const old = Array.from(target.childNodes);
+  const keyed = new Map<string, Node>();
+  for (const node of old) { const key = keyOf(node); if (key) keyed.set(key, node); }
+  const used = new Set<Node>();
+  const result = next.map((fresh, index) => {
+    const key = keyOf(fresh);
+    const candidate = key ? keyed.get(key) : old[index];
+    if (!candidate || used.has(candidate) || !sameKind(candidate, fresh) || (!key && keyOf(candidate))) return fresh;
+    used.add(candidate);
+    update(candidate, fresh);
+    return candidate;
+  });
+  for (const node of old) if (!used.has(node)) node.remove();
+  // kept nodes are already in order relative to each other; only new ones are inserted
+  result.forEach((node, index) => { if (target.childNodes[index] !== node) target.insertBefore(node, target.childNodes[index] ?? null); });
+  // a kept button moved by a reorder (votes change the order) is focused again where it now is
+  if (focused instanceof HTMLElement && focused.isConnected && document.activeElement !== focused) focused.focus({ preventScroll: true });
+}
+
+function update(current: Node, fresh: Node): void {
+  if (!(current instanceof Element) || !(fresh instanceof Element)) {
+    if (current.nodeValue !== fresh.nodeValue) current.nodeValue = fresh.nodeValue;
+    return;
+  }
+  for (const { name } of Array.from(current.attributes)) if (!fresh.hasAttribute(name)) current.removeAttribute(name);
+  for (const { name, value } of Array.from(fresh.attributes)) if (current.getAttribute(name) !== value) current.setAttribute(name, value);
+  for (const [type, handler] of Object.entries((fresh as Handled)._on ?? {})) listen(current as Handled, type, handler);
+  patch(current, ...Array.from(fresh.childNodes));
 }
 
 export type Song = { song_id: number; title: string; artist: string; length_s: number };

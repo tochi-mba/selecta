@@ -413,8 +413,9 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     }
   }, [api, deviceId, poll, speaker, startSpeaking, workspaceId]);
 
-  const command = useCallback(async (name: string, args?: Record<string, unknown>) => {
-    if (!deviceId || !view?.session) return;
+  /** Sends a press; true when the server took it, false when it was refused or never sent. */
+  const send = useCallback(async (name: string, args?: Record<string, unknown>): Promise<boolean> => {
+    if (!deviceId || !view?.session) return false;
     try {
       await api('/playback/commands', {
         method: 'POST',
@@ -430,14 +431,17 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       }, workspaceId);
       commandRefused.current = false;
       setError('');
+      return true;
     } catch (problem) {
       const code = (problem as { code?: string }).code;
       commandRefused.current = true;
       setError(code && RETRY_CODES.has(code) ? "Something changed just then. Here's where it is now; try again." : (problem as Error).message);
+      return false;
     } finally {
       void poll();
     }
   }, [api, deviceId, poll, view?.session, workspaceId]);
+  const command = useCallback(async (name: string, args?: Record<string, unknown>) => { await send(name, args); }, [send]);
 
   // ADR-0461: the speaker checks each delivered command against its own fence and the server's
   // clock, carries it out by following the session, then acks what it actually did. A command
@@ -490,5 +494,5 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     return () => window.removeEventListener(PLAYBACK_COMMAND_EVENT, hear);
   }, [handleCommand]);
 
-  return { device, notice, view, message, starting, error, playHere, handleCommand, knownFence: () => fence.current, refreshSession: () => poll(true), command, serverNow, isSpeaker: () => speaking.current };
+  return { device, notice, view, message, starting, error, playHere, handleCommand, knownFence: () => fence.current, refreshSession: () => poll(true), command, send, serverNow, isSpeaker: () => speaking.current };
 }
