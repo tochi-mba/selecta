@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import inventory from '../../../docs/adr/mp-0272-surface-inventory.json' with { type: 'json' };
 import map from '../../../docs/adr/s3-0075-coverage-map.json' with { type: 'json' };
+import persistentCoverage from '../../../docs/adr/s3-0075-persistent-coverage.json' with { type: 'json' };
+import overlaysCoverage from '../../../docs/adr/s3-0075-overlay-coverage.json' with { type: 'json' };
+import routesCoverage from '../../../docs/adr/s3-0075-route-coverage.json' with { type: 'json' };
 import mp from '../../e2e/mp-baseline.mp.ts?raw';
 import p0132 from '../../e2e/polish-p0132-baselines.e2e.ts?raw';
 import fp0271 from '../../e2e/fp-0271-paired-states.e2e.ts?raw';
@@ -24,7 +27,8 @@ const SPECS: Record<string, string> = {
   'web/e2e/s3-0075-01-state-candidates.e2e.ts': states,
   'web/e2e/s3-0075-visual-regression.e2e.ts': regression,
 };
-const entries = map.entries as Entry[];
+const segments = [routesCoverage, overlaysCoverage, persistentCoverage];
+const entries = segments.flatMap((segment) => segment.entries) as Entry[];
 const surfaces = [...inventory.routes, ...inventory.overlays, ...inventory.persistent] as Surface[];
 const key = (surface: string, state: string) => `${surface} / ${state}`;
 
@@ -35,6 +39,12 @@ describe('S3-0075-01 visual coverage map', () => {
     expect(new Set(listed).size).toBe(listed.length);
     expect([...listed].sort()).toEqual(expected);
     expect(map.inventory).toBe('docs/adr/mp-0272-surface-inventory.json');
+    expect(map.segments).toEqual({
+      routes: 'docs/adr/s3-0075-route-coverage.json',
+      overlays: 'docs/adr/s3-0075-overlay-coverage.json',
+      persistent: 'docs/adr/s3-0075-persistent-coverage.json',
+    });
+    expect(segments.map((segment) => segment.inventory)).toEqual([map.inventory, map.inventory, map.inventory]);
   });
 
   it('captures a state or says which written reason leaves it uncovered, and the totals add up', () => {
