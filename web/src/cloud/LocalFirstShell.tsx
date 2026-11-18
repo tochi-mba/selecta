@@ -381,7 +381,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
  * remains in the shared Current mix card, where the device resolver can refuse missing files. */
 function SavedBrowserRecipes({ recipes, request, setMixData, refreshStatus }: {
   recipes: RecipeStore;
-  request: ViewProps['request'];
+  request: NonNullable<ViewProps['request']>;
   setMixData: ViewProps['setMixData'];
   refreshStatus: ViewProps['refreshStatus'];
 }) {
@@ -399,14 +399,15 @@ function SavedBrowserRecipes({ recipes, request, setMixData, refreshStatus }: {
     setPending(recipe.mix_id);
     setNotice('');
     setProblem('');
+    const previous = recipes.current();
     recipes.setCurrent(recipe.mix_id);
     try {
       const current = await request<MixData>('/mix');
       setMixData(current);
       refreshStatus();
-      setNotice(`${recipe.name} is now your current mix. Use Play below when its songs are available on this device.`);
+      setNotice(`${recipe.name} is now your current mix. Use Play on the current mix when its songs are available to play here.`);
     } catch (error) {
-      recipes.setCurrent(null);
+      recipes.setCurrent(previous);
       setProblem((error as Error).message || 'Couldn’t open that saved mix.');
     } finally { setPending(null); }
   };
