@@ -52,14 +52,14 @@ export function ConnectStep({ state, onChange, deps, onPick }: StepProps & { onP
       <div className="cloud-actions">
         <label className="cloud-spine-pick primary" htmlFor={`${id}-files`}>
           <Icon name="music" size="toolbar" /> Choose music files
-          <input id={`${id}-files`} type="file" multiple accept="audio/*" onChange={fromInput} />
+          <input id={`${id}-files`} className="visually-hidden" type="file" multiple accept="audio/*" onChange={fromInput} />
         </label>
         {picker.supported
           ? <button type="button" onClick={() => void pickFolder()}><Icon name="folder" size="toolbar" /> Choose a folder</button>
           : folderInput.supported && (
             <label className="cloud-spine-pick" htmlFor={`${id}-folder`}>
               <Icon name="folder" size="toolbar" /> Choose a folder
-              <input id={`${id}-folder`} type="file" multiple onChange={fromInput} {...{ webkitdirectory: '' }} />
+              <input id={`${id}-folder`} className="visually-hidden" type="file" multiple onChange={fromInput} {...{ webkitdirectory: '' }} />
             </label>
           )}
       </div>

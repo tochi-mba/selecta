@@ -3,6 +3,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useFlag } from '../flags';
 import { Skeleton } from '../ui/controls';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { Icon } from '../ui/Icon';
 import { countOf, Truncate } from '../ui/format';
 import { EmptyState } from './LocalFirstEmpty';
 import { Account, Api, Asset, bytes, Page } from './api';
@@ -147,7 +148,7 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
     <>
       <div className="cloud-library-list">{assets.map((asset, at) => (
         <article className="cloud-library-row" key={asset.id}>
-          <span className="cloud-library-icon" aria-hidden="true">♪</span>
+          <span className="cloud-library-icon" aria-hidden="true"><Icon name="music" /></span>
           <div className="cloud-library-meta"><strong><Truncate text={asset.name} /></strong><span>{asset.format?.toUpperCase() ?? 'Audio'} · {bytes(asset.size)}{asset.duration_seconds ? ` · ${Math.max(1, Math.round(asset.duration_seconds / 60))} min` : ''}</span></div>
           <button aria-label={`Listen to ${asset.name}`} onClick={() => void player.start(assets, at)} disabled={player.preparing === asset.id || busyId === asset.id}>{player.preparing === asset.id ? 'Opening…' : track?.id === asset.id ? 'Play again' : 'Listen'}</button>
           <button aria-label={`Remove ${asset.name}`} onClick={() => setAsking(asset)} disabled={busyId === asset.id}>Remove</button>

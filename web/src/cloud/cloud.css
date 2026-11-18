@@ -341,9 +341,8 @@
 .cloud-spine-steps li[aria-current='step'] { color: var(--text); font-weight: var(--weight-strong); }
 .cloud-spine-steps li[data-outcome='done'] { color: var(--status-ready); }
 .cloud-spine-steps li[data-outcome='unverified'] { color: var(--status-warning); }
-/* the same hiding as .visually-hidden (shell.css), kept for the picker input until it adopts it */
-.cloud-spine-sr,
-.cloud-spine-pick input {
+/* the same hiding as .visually-hidden (shell.css); the picker inputs use the shared class */
+.cloud-spine-sr {
   position: absolute;
   width: 1px;
   height: 1px;

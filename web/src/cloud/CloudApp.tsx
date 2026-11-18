@@ -4,6 +4,7 @@ import { VenueSetup } from '../autopilot/VenueSetup';
 import { DevicesPanel } from '../devices/DevicesPanel';
 import { DeviceCheck, showsDeviceCheck } from '../devices/DeviceCheck';
 import { PLAYBACK_COMMAND_EVENT } from '../devices/usePlaybackDevice';
+import { Icon } from '../ui/Icon';
 import { CloudListen } from '../rooms/CloudListen';
 import { RoomPanel } from '../rooms/RoomPanel';
 import { LucyCloudSettings } from '../views/LucyCloudSettings';
@@ -480,7 +481,7 @@ function Feedback({ error, notice }: { error: string; notice: string }) {
 function Overview({ account, go }: { account: Account; go: (page: Page) => void }) {
   const uploads = flagOn('cloud.uploads');
   return <>
-    {uploads && <section className="cloud-hero"><div><p className="cloud-eyebrow cloud-caps">Made for your next set</p><h2>Your library starts here.</h2><p>Add your tracks and SelectaDJ will prepare them for your next mix.</p><button className="primary" onClick={() => go('uploads')}>Add music</button></div><div className="cloud-hero-art" aria-hidden="true"><span>♪</span><i /><b /><em /></div></section>}
+    {uploads && <section className="cloud-hero"><div><p className="cloud-eyebrow cloud-caps">Made for your next set</p><h2>Your library starts here.</h2><p>Add your tracks and SelectaDJ will prepare them for your next mix.</p><button className="primary" onClick={() => go('uploads')}>Add music</button></div><div className="cloud-hero-art" aria-hidden="true"><Icon name="music" size="hero" /><i /><b /><em /></div></section>}
     <div className="cloud-cards"><StorageMeter account={account} /><section className="cloud-card"><p className="cloud-eyebrow cloud-caps">Current plan</p><h2>{planName(account)}</h2><p>Storage and processing limits are managed with your plan.</p><button onClick={() => go('billing')}>Manage plan</button></section>{uploads && <section className="cloud-card"><p className="cloud-eyebrow cloud-caps">Your music</p><h2>Library and uploads</h2><p>Browse private files or add tracks to your workspace.</p><button onClick={() => go('library')}>Open library</button><button onClick={() => go('uploads')}>Upload tracks</button></section>}</div>
     <RoomsCard account={account} go={go} />
   </>;

@@ -24,7 +24,7 @@ const code = (file: string) => readSource(file).replace(/\/\*[\s\S]*?\*\//g, '')
  * left here, so the list can only shrink.
  */
 const AWAITING_OWNER: Record<string, string[]> = {
-  glyph: ['cloud/CloudApp.tsx', 'cloud/Library.tsx'],
+  glyph: [],
 };
 
 describe('native dialogs (ConfirmDialog replaces them)', () => {
