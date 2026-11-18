@@ -1,5 +1,5 @@
 import { createEngine, isUnsupported } from '../../engine';
-import type { Engine, EngineContext } from '../../engine';
+import type { Engine, EngineContext, EngineState, ProbeResult } from '../../engine';
 import { dirPicker, directoryInput, MediaStore, runImport } from '../../media';
 import type { Capability, DirectoryHandleLike, ImportEvent, ImportSource, ImportSummary } from '../../media';
 import { browserStorage, KeyValue } from './state';
@@ -14,6 +14,14 @@ import { browserStorage, KeyValue } from './state';
 export type AudioSession = {
   /** The capability probe: does an audio worklet really run on this device? */
   probe(): Promise<{ ok: boolean; reason?: string }>;
+  /** The same probe with its measured numbers, for the capability record (BF-0460-01). */
+  probeDetail?(): Promise<ProbeResult>;
+  /** The engine's own truthful state; downgrades (visibility, wake lock, route) arrive here. */
+  engineState?(): EngineState;
+  subscribe?(watch: (state: EngineState) => void): () => void;
+  /** Called when the system stops the audio context (a call, another app, an OS interruption)
+   * without anyone pressing stop; returns the unsubscribe. */
+  onInterrupted?(listen: () => void): () => void;
   /** Ask for sound within a press; true only if the audio context is really running. */
   wake(): Promise<boolean>;
   /** Play the short, quiet check tone through the engine's own output. */
@@ -61,6 +69,15 @@ function engineSession(engine: Engine, made: EngineContext): AudioSession {
       const answer = await engine.probe(made.context);
       return answer.ok ? { ok: true } : { ok: false, reason: answer.reason };
     },
+    probeDetail: () => engine.probe(made.context),
+    engineState: () => engine.store.get(),
+    subscribe: (watch) => engine.store.subscribe(watch),
+    onInterrupted: (listen) => {
+      const context = made.context;
+      const changed = () => { if (context.state !== 'running' && context.state !== 'closed') listen(); };
+      context.addEventListener('statechange', changed);
+      return () => context.removeEventListener('statechange', changed);
+    },
     wake: () => made.wake(),
     playTone: async () => {
       const context = made.context;
@@ -88,6 +105,29 @@ function engineSession(engine: Engine, made: EngineContext): AudioSession {
   };
 }
 
+/** Open the browser engine from inside a press; a string is why this device cannot. Shared by the
+ * onboarding spine and the venue posture flow (BF-0460-02). */
+export function openEngineAudio(): AudioSession | string {
+  const engine = createEngine();
+  const made = engine.openContext({ fromUserGesture: true });
+  if (isUnsupported(made)) {
+    engine.dispose();
+    return made.reason;
+  }
+  return engineSession(engine, made);
+}
+
+/** Ask the browser to keep the screen on. Feature-detected: no wake lock API is 'unsupported'. */
+export async function requestScreenWakeLock(): Promise<WakeLockAnswer> {
+  const api = typeof navigator === 'undefined' ? undefined : (navigator as Navigator & { wakeLock?: { request(type: 'screen'): Promise<WakeSentinel> } }).wakeLock;
+  if (!api) return { result: 'unsupported' };
+  try {
+    return { result: 'held', sentinel: await api.request('screen') };
+  } catch (error) {
+    return { result: 'refused', reason: (error as Error)?.message || 'The browser did not say why.' };
+  }
+}
+
 export function defaultDeps(request: Request, workspaceId: string): SpineDeps {
   const storage = browserStorage();
   return {
@@ -105,24 +145,8 @@ export function defaultDeps(request: Request, workspaceId: string): SpineDeps {
       const store = await MediaStore.open();
       return runImport({ source, request, store, deviceId: browserProfileId(storage, workspaceId), onProgress, signal });
     },
-    openAudio: () => {
-      const engine = createEngine();
-      const made = engine.openContext({ fromUserGesture: true });
-      if (isUnsupported(made)) {
-        engine.dispose();
-        return made.reason;
-      }
-      return engineSession(engine, made);
-    },
-    requestWakeLock: async () => {
-      const api = typeof navigator === 'undefined' ? undefined : (navigator as Navigator & { wakeLock?: { request(type: 'screen'): Promise<WakeSentinel> } }).wakeLock;
-      if (!api) return { result: 'unsupported' };
-      try {
-        return { result: 'held', sentinel: await api.request('screen') };
-      } catch (error) {
-        return { result: 'refused', reason: (error as Error)?.message || 'The browser did not say why.' };
-      }
-    },
+    openAudio: openEngineAudio,
+    requestWakeLock: requestScreenWakeLock,
     now: () => Date.now() / 1000,
   };
 }

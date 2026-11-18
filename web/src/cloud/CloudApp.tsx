@@ -36,6 +36,9 @@ const AdminArea = lazy(() => import('../admin/AdminArea'));
 // The local-first shell (ADR-0462/0463) and the browser engine it carries load only for an account
 // that has the local-first experience with `cloud.local_first` on; everyone else never fetches it.
 const LocalFirstShell = lazy(() => import('./LocalFirstShell').then((module) => ({ default: module.LocalFirstShell })));
+// The venue tablet posture flow (ADR-0460) carries the browser engine too, so it loads only with
+// `cloud.venue_tablet` on.
+const VenuePosture = lazy(() => import('./venue/VenuePosture').then((module) => ({ default: module.VenuePosture })));
 
 /** Whether this account may see the staff console link: staff, with the console flag on. */
 export function showsAdmin(account: Account | null) {
@@ -261,7 +264,7 @@ export function CloudApp() {
   }
 
   const quotaBlock = blockedByQuota(account);
-  const settingsPanel = account ? <div className="cloud-settings"><AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} />{flagOn('devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{flagOn('lucy') && flagOn('account.lucy_settings') && <LucyCloudSettings request={lucyRequest} features={account.features} />}{showsDeviceCheck(account.features) && <DeviceCheck />}{showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />}{flagOn('autopilot.venue_mode') && flagOn('autopilot.venue_policy') && <VenueSetup api={api} workspaceId={account.workspace.id} />}{exact && <AccountDanger busy={busy} onSignOutEverywhere={() => void signOutEverywhere()} onDelete={() => void deleteAccount(true)} />}</div> : null;
+  const settingsPanel = account ? <div className="cloud-settings"><AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} />{flagOn('devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{flagOn('lucy') && flagOn('account.lucy_settings') && <LucyCloudSettings request={lucyRequest} features={account.features} />}{showsDeviceCheck(account.features) && <DeviceCheck />}{flagOn('cloud.venue_tablet') && <Suspense fallback={null}><VenuePosture workspaceId={account.workspace.id} places={{ localFirst: showsLocalFirst(account), devices: flagOn('devices'), rooms: flagOn('rooms'), library: showsLocalFirst(account) || pageShown(account, 'library') }} /></Suspense>}{showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />}{flagOn('autopilot.venue_mode') && flagOn('autopilot.venue_policy') && <VenueSetup api={api} workspaceId={account.workspace.id} />}{exact && <AccountDanger busy={busy} onSignOutEverywhere={() => void signOutEverywhere()} onDelete={() => void deleteAccount(true)} />}</div> : null;
 
   // ADR-0462/0463: an account with the local-first experience, and `cloud.local_first` on, gets the
   // shared shell. With either off, everything below renders exactly as before.

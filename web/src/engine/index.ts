@@ -27,7 +27,7 @@ export { COMPRESSOR_FALLBACK_IMPLEMENTATION, installLimiter, limiterProcessorOpt
 export type { DecodeFailure, DecodeOk, DecodeResult, Loader, LoaderStats, TrackId } from './loader';
 export { createLoader, KEEP_DECODED } from './loader';
 export type { ProbeFailure, ProbeOk, ProbeOptions, ProbeResult } from './probe';
-export { probeCapability, PROBE_PROCESSOR, PROBE_WAIT_MS } from './probe';
+export { ENGINE_VERSION, probeCapability, PROBE_PROCESSOR, PROBE_WAIT_MS } from './probe';
 export type { RenderFailure, RenderOptions, RenderProgress, RenderResult, RenderSuccess, RenderTrack } from './render';
 export { MAX_RENDER_SECONDS, renderMix, RENDER_CHUNK_SECONDS } from './render';
 export type { ExportResult, ExportSuccess } from './export';

@@ -243,7 +243,7 @@ export function StartStep({ state, onChange, session, openSession }: StepProps) 
 
 /* ---------- sound check ---------- */
 
-const ROUTE_CHECKS: Record<OutputRoute | 'any', string[]> = {
+export const ROUTE_CHECKS: Record<OutputRoute | 'any', string[]> = {
   any: ['Turn the volume up on this device, and check it isn’t muted or on silent.', 'Check this tab isn’t muted in the browser.'],
   built_in: ['Unplug any headphones, so the sound comes out of the device itself.'],
   headphones: ['Push the plug all the way in, or try the other port.', 'Check the speaker at the other end is on and turned up.'],

@@ -15,6 +15,10 @@ import { loadWorkletModule, MODULE_WAIT_MS } from './worklet/scope';
  */
 
 export { PROBE_PROCESSOR } from './worklet/probeProcessor';
+/** Which browser engine produced a capability record (ADR-0460 tuple field `engine_version`).
+ * Bump it when the engine's DSP, scheduling or probe changes: a record measured on an older
+ * engine is a different tuple and proves nothing about this one. */
+export const ENGINE_VERSION = 'selecta-browser-engine/1';
 /** How long to wait for the processor's report before calling the device unable. */
 export const PROBE_WAIT_MS = 2000;
 
