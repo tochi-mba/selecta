@@ -3,7 +3,7 @@ import { createEngineContext, EngineContext, EngineContextOptions, isUnsupported
 import { COMPRESSOR_FALLBACK_IMPLEMENTATION, LimiterInstall } from './limiter';
 import { probeCapability, ProbeResult } from './probe';
 import { BrowserSpeaker, BrowserSpeakerOptions } from './speakerAdapter';
-import { createEngineStore, EngineState, EngineStore, UnsupportedHere } from './state';
+import { createEngineStore, EngineState, EngineStore, registerDeviceOutputStore, UnsupportedHere } from './state';
 import type { WorkerBudgetEvidence, WorkerCalibration } from '../dsp/budget';
 
 /** The public surface of the browser audio runtime (ADR-0457), as the interface uses it.
@@ -58,7 +58,7 @@ export { createScheduler, SEAM_FADE, END_FADE } from './scheduler';
 export type { BrowserSpeakerOptions, ResolveTrack, SpeakerAudio, TrackSource } from './speakerAdapter';
 export { BrowserSpeaker } from './speakerAdapter';
 export type { EnginePhase, EngineState, EngineStore, OutputDowngrade, OutputStatus, UnsupportedHere } from './state';
-export { createEngineStore } from './state';
+export { confirmDeviceOutput, createEngineStore, downgradeDeviceOutput } from './state';
 export type { EncodedWav, PcmChunk, WavBits, WavDetails, WavProblem } from './wav';
 export { encodeWav, validateWav } from './wav';
 export type { Capability, CapabilityStatus, DspEvidence, Tier } from '../dsp/capability';
@@ -109,6 +109,7 @@ export type Engine = {
 /** One engine with one truthful state stream. Everything else can be used piecemeal too. */
 export function createEngine(options: { onState?: (state: EngineState) => void } = {}): Engine {
   const store = createEngineStore();
+  const unregisterOutput = registerDeviceOutputStore(store);
   const unsubscribe = options.onState ? store.subscribe(options.onState) : null;
   const contexts = new Set<EngineContext>();
   const speakers = new Set<BrowserSpeaker>();
@@ -116,6 +117,7 @@ export function createEngine(options: { onState?: (state: EngineState) => void }
   const dispose = () => {
     if (disposed) return;
     disposed = true;
+    unregisterOutput();
     for (const speaker of speakers) speaker.dispose();
     speakers.clear();
     for (const context of contexts) context.dispose();
