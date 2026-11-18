@@ -199,15 +199,15 @@ export const OUTPUT_ROUTES: { id: OutputRoute; label: string; about: string }[] 
   { id: 'headphones', label: 'Headphones, or a cable to a speaker', about: '3.5 mm or USB-C. Plug it in before you start sound.' },
   { id: 'bluetooth', label: 'A Bluetooth speaker', about: 'Pair it in this device’s settings first. If it drops, SelectaDJ stops calling the sound confirmed until you check again.' },
   { id: 'hdmi_dock', label: 'HDMI or a dock', about: 'The sound goes wherever the screen or dock sends it, so check that end isn’t muted.' },
-  { id: 'system', label: 'Whatever this device is set to', about: 'SelectaDJ uses the device’s own choice. Change it in the device’s sound settings.' },
+  { id: 'system', label: "This device's current output (recommended)", about: 'SelectaDJ uses the output already selected in your device settings. It will not change that setting.' },
 ];
 
 export function OutputStep({ state, onChange }: StepProps) {
   const id = useId();
-  const [route, setRoute] = useState<OutputRoute | undefined>(state.output);
+  const [route, setRoute] = useState<OutputRoute>(state.output ?? 'system');
   return (
     <>
-      <p>SelectaDJ plays through whichever output this device is using. Set it up in the device’s own settings, then tell SelectaDJ what you chose so the sound check can help if nothing comes out.</p>
+      <p>SelectaDJ uses the sound output your device has already selected. Keep the recommended default unless you want more specific troubleshooting tips; change the speaker itself in your device settings.</p>
       <fieldset className="cloud-spine-routes">
         <legend>Where should the sound go?</legend>
         {OUTPUT_ROUTES.map((option) => (
@@ -218,7 +218,7 @@ export function OutputStep({ state, onChange }: StepProps) {
         ))}
       </fieldset>
       <div className="cloud-actions">
-        <button type="button" className="primary" disabled={!route} onClick={() => route && onChange(settle(state, 'output', 'done', { output: route }))}>Continue</button>
+        <button type="button" className="primary" onClick={() => onChange(settle(state, 'output', 'done', { output: route }))}>Continue</button>
         <SkipButton onClick={() => onChange(settle(state, 'output', 'skipped'))}>Use whatever is set</SkipButton>
       </div>
     </>
