@@ -68,6 +68,8 @@ from selecta.persistence import db_now, make_engine, transaction
 from selecta.persistence.listen import PgListener
 from selecta.persistence.migrate import current as migration_current
 from selecta.persistence.migrate import head as migration_head
+from selecta.playback import api as device_playback_routes
+from selecta.playback.zones import SQL_ZONES
 from selecta.rooms import wiring as rooms_wiring
 from selecta.rooms.cloud_ports import RoomPorts
 from selecta.routes import business_hours as business_hours_routes
@@ -335,11 +337,14 @@ def create_cloud_app(
             return await call_next(request)
         flag_id = flag_guard.owner_of(request.app, request.scope)
         flag = flags.registry().get(flag_id) if flag_id else None
-        if (flag is None or flag.core or flag_rules.is_untargetable(flag_id)
-                or flag_id.split(".")[0] in self_gated):
-            return await call_next(request)
+        route_is_self_gated = (
+            flag is None
+            or flag.core
+            or flag_rules.is_untargetable(flag_id)
+            or flag_id.split(".")[0] in self_gated
+        )
 
-        def check() -> None:
+        def check() -> tuple[str, HTTPException | None]:
             principal = _principal(
                 engine,
                 _bearer(request, verifier),
@@ -347,15 +352,58 @@ def create_cloud_app(
                 allow_suspended=True,
             )
             with transaction(engine, principal.workspace.id) as conn:
-                cloud_gate.require(conn, principal, flag_id, rule_cache)
+                # The same live decision drives the per-cohort request metric. This keeps the
+                # rollout dashboard tied to actual account targeting instead of browser claims,
+                # request parameters or an inferred account identity.
+                local_first = cloud_gate.decide(
+                    conn, principal, "cloud.local_first", rule_cache
+                ).on
+                cohort = "browser_first" if local_first else "hosted"
+                if route_is_self_gated:
+                    return cohort, None
+                try:
+                    cloud_gate.require(conn, principal, flag_id, rule_cache)
+                except HTTPException as refused:
+                    return cohort, refused
+                return cohort, None
 
         try:
-            await asyncio.to_thread(check)
+            cohort, refused = await asyncio.to_thread(check)
+            request.state.local_first_cohort = cohort
+            if refused is not None:
+                detail = refused.detail if isinstance(refused.detail, dict) else {}
+                return JSONResponse({"detail": detail}, status_code=refused.status_code)
         except HTTPException as refused:
             detail = refused.detail if isinstance(refused.detail, dict) else {}
             if refused.status_code == 403 and detail.get("code") in {"flag_off", "plan_required"}:
                 return JSONResponse({"detail": detail}, status_code=403)
         return await call_next(request)
+
+    @app.middleware("http")
+    async def browser_first_cohort_metrics(request: Request, call_next):
+        """Record only low-cardinality request outcomes for the rollout cohort dashboard.
+
+        Workspace and user ids, paths and query strings are deliberately excluded. Requests which
+        cannot be tied to a signed-in account stay in the `unknown` cohort and are excluded from
+        the browser-first versus hosted comparison.
+        """
+        if not request.url.path.startswith("/api/"):
+            return await call_next(request)
+
+        def record(status_code: int) -> None:
+            cohort = getattr(request.state, "local_first_cohort", "unknown")
+            status_class = f"{status_code // 100}xx" if 100 <= status_code < 600 else "unknown"
+            metrics.add(
+                "selecta_api_requests_total", cohort=cohort, status_class=status_class
+            )
+
+        try:
+            response = await call_next(request)
+        except Exception:
+            record(500)
+            raise
+        record(response.status_code)
+        return response
 
     flag_guard.install(app, strict=True)
     emergency_cache = EmergencyCache(engine)
@@ -750,6 +798,17 @@ def create_cloud_app(
         object_client_factory=storage_api.r2_client,
         buckets=storage_api.buckets(),
     )
+    # Browser devices and fenced playback sessions (ADR-0461). This is distinct from the
+    # storage playback-URL routes above: it owns device registration, leases, commands and zones.
+    device_playback_routes.install_routes(
+        app,
+        engine=engine,
+        current_claims=current_claims,
+        principal_for=_principal,
+        rules=rule_cache,
+        events=rooms_wiring.OutboxPlaybackEvents(),
+        zones=SQL_ZONES,
+    )
     cloud_export_routes.install_routes(
         app,
         engine=engine,
@@ -771,7 +830,7 @@ def create_cloud_app(
         object_client_factory=storage_api.r2_client, buckets=storage_api.buckets(),
     )
 
-    # Devices, the playback session, Rooms, guests and displays (ADR-0415, ADR-0416). Tests and
+    # Rooms, guests and displays (ADR-0415, ADR-0416). Tests and
     # the browser-test server pass `room_ports` with a song library; see `rooms.cloud_ports`.
     rooms_wiring.install(
         app, engine=engine, current_claims=current_claims, principal_for=_principal,

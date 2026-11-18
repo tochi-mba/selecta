@@ -160,7 +160,9 @@
         "GET /api/local-media/recipes",
         "POST /api/local-media/recipes",
         "GET /api/local-media/recipes/{mix_id}",
-        "POST /api/local-media/recipes/{mix_id}/revisions"
+        "POST /api/local-media/recipes/{mix_id}/revisions",
+        "POST /api/local-media/recipes/{mix_id}/duplicate",
+        "DELETE /api/local-media/recipes/{mix_id}"
       ],
       "surfaces": ["cloud.library"],
       "modes": ["cloud"],
@@ -290,7 +292,13 @@
         "GET /api/playback/session",
         "POST /api/playback/heartbeat",
         "POST /api/playback/take-over",
-        "POST /api/playback/reconnect"
+        "POST /api/playback/reconnect",
+        "GET /api/zones/holding",
+        "GET /api/zones/playback",
+        "GET /api/zones/{zone_id}/playback/session",
+        "POST /api/zones/{zone_id}/playback/heartbeat",
+        "POST /api/zones/{zone_id}/playback/take-over",
+        "POST /api/zones/{zone_id}/playback/reconnect"
       ],
       "surfaces": ["cloud.listen", "cloud.settings"],
       "words": ["Play here"],
@@ -303,7 +311,10 @@
       "about": "Control the account's active playback session from another device.",
       "routes": [
         "POST /api/playback/commands",
-        "POST /api/playback/commands/{command_id}/ack"
+        "POST /api/playback/commands/{command_id}/ack",
+        "POST /api/zones/{zone_id}/playback/commands",
+        "POST /api/zones/{zone_id}/playback/commands/{command_id}/ack",
+        "POST /api/zones/{zone_id}/playback/hand-back"
       ],
       "requires": ["devices"],
       "surfaces": ["cloud.listen"],

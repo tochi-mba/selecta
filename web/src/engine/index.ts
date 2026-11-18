@@ -4,6 +4,7 @@ import { COMPRESSOR_FALLBACK_IMPLEMENTATION, LimiterInstall } from './limiter';
 import { probeCapability, ProbeResult } from './probe';
 import { BrowserSpeaker, BrowserSpeakerOptions } from './speakerAdapter';
 import { createEngineStore, EngineState, EngineStore, UnsupportedHere } from './state';
+import type { WorkerBudgetEvidence, WorkerCalibration } from '../dsp/budget';
 
 /** The public surface of the browser audio runtime (ADR-0457), as the interface uses it.
  *
@@ -15,11 +16,14 @@ import { createEngineStore, EngineState, EngineStore, UnsupportedHere } from './
  * The usual path: in a press handler, `engine.openContext({ fromUserGesture: true })`, wake it,
  * `await engine.probe(context.context)`, then `engine.createSpeaker({ audio, probe, resolve,
  * queueLength })` for usePlaybackDevice, and `engine.roster({ probe, limiter })` for what the
- * device may honestly claim. Exports go through `exportFile` (WAV or FLAC), or renderMix plus encodeWav / encodeFlac.
+ * device may honestly claim. Member exports go through `exportFile` (WAV only until the vetted
+ * WASM FLAC encoder is available); FLAC codec modules stay internal to validation and harness use.
  */
 
 export type { EngineContext, EngineContextOptions } from './context';
 export { createEngineContext, isUnsupported, WAKE_WAIT_MS, ENGINE_SAMPLE_RATE } from './context';
+export type { WorkerBudgetEvidence, WorkerCalibration } from '../dsp/budget';
+export { WorkerBudget, workerBudgetEvidenceState, workerCalibrationState, WORKER_CALIBRATION_IMPLEMENTATION, WORKER_CALIBRATION_MAX_AGE_MS } from '../dsp/budget';
 export type { EngineGraph } from './graph';
 export { buildGraph, VOLUME_RAMP_SECONDS } from './graph';
 export type { InstallLimiterOptions, LimiterInstall } from './limiter';
@@ -33,7 +37,10 @@ export { MAX_RENDER_SECONDS, renderMix, RENDER_CHUNK_SECONDS } from './render';
 export type { ExportedFile, ExportFileResult, ExportFormat, ExportResult, ExportSuccess, FlacExportResult, FlacExportSuccess } from './export';
 export { exportFile, exportFlac, exportWav, localExportFormats } from './export';
 export type { EncodedFlac, FlacBits } from './flac';
-export { encodeFlac, flacSupported, FLAC_IMPLEMENTATION } from './flac';
+// The encoder internals remain available to the validation harness by direct module import.
+// The public engine surface exposes only the truthful negative capability until the vetted
+// WASM encoder is bundled.
+export { flacSupported } from './flac';
 export type { FlacDetails, FlacProblem } from './flacDecode';
 export { validateFlac } from './flacDecode';
 export type {
@@ -62,7 +69,9 @@ export { CapabilityRegistry } from '../dsp/capability';
 export type RosterEvidence = {
   probe: ProbeResult;
   limiter?: LimiterInstall | null;
-  workerBudget?: { atFloor: boolean } | null;
+  workerBudget?: WorkerBudgetEvidence | null;
+  /** Epoch milliseconds; defaults to Date.now() for calibration expiry checks. */
+  now?: number;
 };
 
 /** The device's capability roster (ADR-0459): Tier 1 ready only when the probe passed, the
@@ -77,6 +86,7 @@ export function buildCapabilityRoster(evidence: RosterEvidence, registry = new C
       ? { kind: 'worklet' }
       : { kind: 'compressor_fallback', implementation: COMPRESSOR_FALLBACK_IMPLEMENTATION },
     workerBudget: evidence.workerBudget ?? null,
+    now: evidence.now,
     // Loading and self-testing the DSP module is not proof that the live scheduler applies it.
     // Until a buffer-preprocessing path is wired into seam execution, never advertise this as
     // a playback capability (ADR-0459's capability truth contract).

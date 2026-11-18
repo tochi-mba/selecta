@@ -5,6 +5,7 @@ import type { MusicSource, SeamRecord, SeamSettingsLike } from '../dsp/seamProvi
 import { playbackStatusText, type PlaybackStatus } from '../copy';
 import { Api, extrapolate, Position, SessionView, usePlaybackDevice } from '../devices/usePlaybackDevice';
 import { createEngine, type BrowserSpeaker, type Engine, type EngineState } from '../engine';
+import type { WorkerCalibration } from '../dsp/budget';
 import type { MediaResolver } from '../media';
 import type { NowState } from '../player';
 import type { PlayerLike } from '../playerContract';
@@ -250,6 +251,10 @@ export type SeamWiring = {
   /** Which music path a resolved song came from. */
   sourceOf(index: number): MusicSource | null;
   onPlanned(record: SeamRecord): void;
+  /** Explicit, device-bound worker calibration; omission keeps Tier 2 on the fade fallback. */
+  workerCalibration?: WorkerCalibration | null;
+  /** Must be the same stable local identity used when the calibration was recorded. */
+  deviceId?: string | null;
 };
 
 /** Opens the engine from a press and makes this device's speaker. Injectable for tests. */
@@ -270,15 +275,26 @@ export const startBrowserEngine: EngineStarter = async (resolve, queueLength, se
       return { speaker: null, refusal: opened.reason };
     }
     const probe = await engine.probe(opened.context);
-    // The worker analysis module is available for preparation, but one synthetic warm-up is not
-    // evidence that this device has the calibrated, self-throttling schedule budget required for
-    // Tier 2. Keep Tier 2 unavailable until the runtime consumes a measured budget and can surface
-    // deadline misses. Playback remains Tier 1 and uses the labelled fade path meanwhile.
-    const roster = engine.roster({ probe });
+    let budgetEvidence = seams?.workerCalibration && seams.deviceId
+      ? { calibration: seams.workerCalibration, deviceId: seams.deviceId, atFloor: false, deadlineMisses: 0 }
+      : null;
+    let roster = engine.roster({ probe, workerBudget: budgetEvidence });
     const seam = seams ? provider.makeWorkerSeamProvider({
       ...seams,
+      calibration: seams.workerCalibration,
+      deviceId: seams.deviceId,
       abilities: () => provider.abilitiesFrom((feature) => roster.get(feature)),
       sourceSafe: (source) => provider.abilityOf((feature) => roster.get(feature), `seam_source_${source}`),
+      onBudgetState: (state) => {
+        if (budgetEvidence) {
+          budgetEvidence = {
+            ...budgetEvidence,
+            atFloor: !state.supported,
+            deadlineMisses: state.deadlineMisses,
+          };
+          roster = engine.roster({ probe, workerBudget: budgetEvidence });
+        }
+      },
     }) : undefined;
     // queueLength lets an unavailable track skip with a notice instead of ending the set (ADR-0458)
     const speaker = engine.createSpeaker({ audio: opened, probe, resolve, queueLength, seam });
@@ -357,7 +373,17 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
       setSpeaker(made.speaker);
     }
     const latest = await pb.refreshSession();
-    if (!latest) return pb.error || 'SelectaDJ could not reach your account just now. Try again.';
+    if (!latest) {
+      // A failed account refresh does not leave a newly opened AudioContext around. The member
+      // can retry from a fresh press, which also renews the browser's gesture authorization.
+      if (needsSpeaker) {
+        setSpeaker((made) => {
+          made?.dispose();
+          return null;
+        });
+      }
+      return pb.error || 'SelectaDJ could not reach your account just now. Try again.';
+    }
     if (latest.ask_before_playing_here && owner.current !== latest.speaker_device_id) {
       // the same confirmation the playing bar asks for, as a second press
       owner.current = latest.speaker_device_id;

@@ -276,12 +276,19 @@ def check_percentage_step(
 
 
 def dashboards_marker_recorded(history: Iterable[Version], reason: str = "") -> bool:
-    return DASHBOARDS_MARKER in reason or any(
-        version.flag_id == LOCAL_FIRST
-        and version.change in ("rules", "rollback")
-        and DASHBOARDS_MARKER in version.reason
-        for version in history
-    )
+    """Whether the dashboard review applies to the current rule state.
+
+    A marker on the proposed change can approve that exact change. Otherwise, only the latest
+    saved rule change or rollback can carry the approval forward. An older marker expires when
+    the rollout rules are subsequently changed, so stale dashboard review cannot authorize a
+    later percentage increase.
+    """
+    if DASHBOARDS_MARKER in reason:
+        return True
+    for version in history:
+        if version.flag_id == LOCAL_FIRST and version.change in ("rules", "rollback"):
+            return DASHBOARDS_MARKER in version.reason
+    return False
 
 
 def check_percentage_step_now(
@@ -308,19 +315,24 @@ def check_percentage_step_now(
     # deployment. Merely having a JSON panel in source is not enough to advance a cohort: the
     # metrics exporter and the metrics flag must both be live. The owner marker still requires a
     # human to review real data from both cohorts before widening the percentage.
-    error_rate_live = (
+    error_rate_configured = (
         ERROR_RATE_VIEW is not None
         and metrics.enabled()
         and bool(os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip())
     )
+    # Configuration only proves the exporter could ship samples. The owner marker is recorded
+    # after reviewing non-empty hosted and browser_first denominators in the deployed view, so
+    # readiness must not label a configured-but-empty Grafana dashboard as live.
+    history = rule_store.history(conn, LOCAL_FIRST, limit=500)
+    dashboards_green = dashboards_marker_recorded(history, reason)
+    error_rate_live = error_rate_configured and dashboards_green
     live = {
         "cost_per_mode": bool(cost_report(conn, month)["live"]),
         "error_rate_per_cohort": error_rate_live,
     }
-    history = rule_store.history(conn, LOCAL_FIRST, limit=500)
     return check_percentage_step(
         current,
         proposed,
         dashboards_live=live,
-        dashboards_green=dashboards_marker_recorded(history, reason),
+        dashboards_green=dashboards_green,
     )

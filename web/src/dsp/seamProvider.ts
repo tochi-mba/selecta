@@ -13,7 +13,7 @@
  */
 
 import { detectOnsets } from './analysis/onsets';
-import { WorkerBudget } from './budget';
+import { DEFAULT_HORIZON_S, WorkerBudget, workerCalibrationState, WORKER_CALIBRATION_IMPLEMENTATION, type WorkerCalibration } from './budget';
 import { estimateTempo } from './analysis/tempo';
 import type { AnalysisResponse } from './workers/analysisWorker';
 import { analyseInWorker, spawnAnalysisWorker } from './workers/spawn';
@@ -184,6 +184,14 @@ export type WorkerSeamProvider = ((request: SeamRequestLike) => Promise<SeamSche
 export type WorkerSeamProviderOptions = SeamProviderOptions & {
   /** Override for a worker factory in browser integration and verification harnesses. */
   workerFactory?: () => Worker;
+  /** Per-device worker calibration. Missing, stale, or mismatched evidence keeps Tier 2 off. */
+  calibration?: WorkerCalibration | null;
+  /** Current local device identity; it must match the calibration record. */
+  deviceId?: string | null;
+  /** Injectable clock for capability refresh and deterministic application integration. */
+  now?: () => number;
+  /** Receives the live scheduling state so the engine roster can stop claiming Tier 2 after misses. */
+  onBudgetState?(state: { supported: boolean; reason?: string; deadlineMisses: number; horizonS?: number }): void;
 };
 
 /** Production seam provider. It performs onset and tempo analysis in a module worker and only
@@ -193,6 +201,23 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
   const makeWorker = options.workerFactory ?? spawnAnalysisWorker;
   let worker: Worker | null = null;
   let disposed = false;
+  const now = options.now ?? (() => Date.now());
+  const calibrationState = () => workerCalibrationState(options.calibration, options.deviceId, now());
+  const liveBudget = calibrationState().supported && options.calibration
+    ? WorkerBudget.fromCalibration(options.calibration, options.deviceId!, now())
+    : null;
+  let budget = liveBudget;
+  const budgetState = (reason?: string) => {
+    const calibration = calibrationState();
+    const supported = calibration.supported && !!budget && !budget.atFloor;
+    options.onBudgetState?.({
+      supported,
+      reason: reason ?? (!calibration.supported ? calibration.reason : budget?.atFloor ? 'this device is out of headroom, so lightweight analysis is paused' : undefined),
+      deadlineMisses: budget?.deadlineMisses ?? 0,
+      horizonS: budget?.horizonS,
+    });
+    return { supported, reason: reason ?? (!calibration.supported ? calibration.reason : budget?.atFloor ? 'this device is out of headroom, so lightweight analysis is paused' : undefined) };
+  };
   const getWorker = () => {
     if (!worker) worker = makeWorker();
     return worker;
@@ -202,15 +227,52 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
     const sources = { a: options.sourceOf?.(request.fromIndex) ?? null, b: options.sourceOf?.(request.toIndex) ?? null };
     const settings = options.settingsFor(request.toIndex) ?? {};
     if (disposed) return fadeSchedule(Math.max(30, request.from.durationSeconds - 5), 0, 'seam preparation stopped');
+    const initial = budgetState();
+    if (!initial.supported || !budget) {
+      const reason = initial.reason ?? 'this device has no current worker budget';
+      const schedule = {
+        ...fadeSchedule(Math.max(30, request.from.durationSeconds - 5), 0, reason),
+        degraded: [{ wanted: settings.move || 'beatmatch', instead: 'fade' as const, reason }],
+      };
+      options.onPlanned?.({ fromIndex: request.fromIndex, toIndex: request.toIndex, sources, schedule });
+      return schedule;
+    }
     try {
       const analyse = async (buffer: PcmLike, part: 'head' | 'tail') => {
-        const { pcm, offset } = sliceMono(buffer, part);
-        const response = await analyseInWorker(getWorker(), pcm, buffer.sampleRate, ['onsets', 'tempo'], { owned: true });
+        const current = budgetState();
+        if (!current.supported || !budget) throw new Error(current.reason ?? 'worker budget exhausted');
+        // A missed deadline halves the work window on the next block as well as shrinking the
+        // prepared horizon. This gives the calibrated budget an actual effect on DSP cost.
+        const workSeconds = ANALYSE_SECONDS * Math.min(1, budget.horizonS / DEFAULT_HORIZON_S);
+        const { pcm, offset } = sliceMono(buffer, part, workSeconds);
+        const began = now();
+        let response: AnalysisResponse;
+        try {
+          response = await analyseInWorker(getWorker(), pcm, buffer.sampleRate, ['onsets', 'tempo'], {
+            owned: true,
+            timeoutMs: Math.max(1, Math.ceil(budget.msPerBlock)),
+          });
+        } catch (error) {
+          const elapsed = Math.max(0, now() - began);
+          if (budget.recordBlock(elapsed)) budget.shrinkHorizon();
+          budgetState(elapsed > budget.msPerBlock
+            ? `worker missed its calibrated deadline (${Math.round(elapsed)} ms over ${Math.round(budget.msPerBlock)} ms)`
+            : undefined);
+          throw error;
+        }
+        const elapsed = Math.max(0, now() - began);
+        if (budget.recordBlock(elapsed)) {
+          budget.shrinkHorizon();
+          budgetState(`worker missed its calibrated deadline (${Math.round(elapsed)} ms over ${Math.round(budget.msPerBlock)} ms)`);
+          throw new Error('worker missed its calibrated deadline');
+        }
         if (response.error || !response.tempo) throw new Error(response.error || 'tempo analysis returned no result');
         return timingFromAnalysis(buffer, pcm, offset, response);
       };
       const a = await analyse(request.from, 'tail');
       const b = await analyse(request.to, 'head');
+      const afterAnalysis = budgetState();
+      if (!afterAnalysis.supported) throw new Error(afterAnalysis.reason ?? 'worker budget exhausted');
       if (disposed) return fadeSchedule(Math.max(30, a.durationSeconds - 5), 0, 'seam preparation stopped');
       const unsafe = sources.a && sources.b && sources.a !== sources.b
         ? [sources.a, sources.b].map((source) => options.sourceSafe?.(source) ?? { ok: true as const }).find((ability) => !ability.ok)
@@ -234,6 +296,7 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
       worker?.terminate();
       worker = null;
       const reason = problem instanceof Error ? problem.message : String(problem);
+      budgetState(reason);
       const schedule = {
         ...fadeSchedule(Math.max(30, request.from.durationSeconds - 5), 0, `seam analysis worker failed: ${reason}`),
         degraded: [{ wanted: settings.move || 'beatmatch', instead: 'fade' as const, reason: `worker analysis unavailable: ${reason}` }],
@@ -282,6 +345,8 @@ export function calibrateAnalysis(samples = 3, seconds = 4, sampleRate = 44100):
 }
 
 export type WorkerCalibrationOptions = {
+  /** Required stable device identity; calibration without it is not reusable evidence. */
+  deviceId: string;
   samples?: number;
   seconds?: number;
   sampleRate?: number;
@@ -296,11 +361,13 @@ export type WorkerCalibrationOptions = {
  * synthetic owned buffer for each sample, measures worker round-trip latency conservatively,
  * and always tears the worker down. A missing worker, timeout, malformed response or startup
  * failure returns null so callers keep Tier 2 disabled instead of blocking the UI. */
-export async function calibrateAnalysisInWorker(options: WorkerCalibrationOptions = {}): Promise<WorkerBudget | null> {
+export async function calibrateAnalysisInWorker(options: WorkerCalibrationOptions): Promise<WorkerCalibration | null> {
   const samples = options.samples ?? 3;
-  const seconds = options.seconds ?? 4;
+  // Match the provider's bounded analysis window so small calibrations cannot overstate capacity.
+  const seconds = options.seconds ?? ANALYSE_SECONDS;
   const sampleRate = options.sampleRate ?? 44100;
-  if (!Number.isInteger(samples) || samples < 1 || !Number.isFinite(seconds) || seconds <= 0 || !Number.isFinite(sampleRate) || sampleRate <= 0) {
+  if (typeof options.deviceId !== 'string' || !options.deviceId.trim() ||
+      !Number.isInteger(samples) || samples < 1 || !Number.isFinite(seconds) || seconds <= 0 || !Number.isFinite(sampleRate) || sampleRate <= 0) {
     return null;
   }
 
@@ -325,7 +392,15 @@ export async function calibrateAnalysisInWorker(options: WorkerCalibrationOption
       const ended = typeof performance !== 'undefined' ? performance.now() : Date.now();
       times.push(Math.max(0, ended - began));
     }
-    return WorkerBudget.fromBenchmark(times);
+    const measured = WorkerBudget.fromBenchmark(times);
+    return {
+      implementation: WORKER_CALIBRATION_IMPLEMENTATION,
+      deviceId: options.deviceId,
+      calibratedAt: Date.now(),
+      samples,
+      msPerBlock: measured.msPerBlock,
+      horizonS: measured.horizonS,
+    };
   } catch {
     return null;
   } finally {

@@ -71,7 +71,9 @@ export function reconcile(assets: HostedAsset[], songs: LocalSong[]): Reconciled
   return rows;
 }
 
-async function allAssets(request: Request): Promise<HostedAsset[]> {
+type PageResult<T> = { items: T[]; truncated: boolean };
+
+async function allAssets(request: Request): Promise<PageResult<HostedAsset>> {
   const found: HostedAsset[] = [];
   let cursor: string | null = null;
   for (let page = 0; page < MAX_PAGES; page += 1) {
@@ -81,23 +83,28 @@ async function allAssets(request: Request): Promise<HostedAsset[]> {
     cursor = answer.next_cursor ?? null;
     if (!cursor) break;
   }
-  return found;
+  return { items: found, truncated: cursor !== null };
 }
 
-async function allSongs(request: Request): Promise<LocalSong[]> {
+async function allSongs(request: Request): Promise<PageResult<LocalSong>> {
   const found: LocalSong[] = [];
   let after: number | undefined;
+  let hasMore = false;
   for (let page = 0; page < MAX_PAGES; page += 1) {
     const query = after !== undefined ? `?limit=${PAGE}&after=${after}` : `?limit=${PAGE}`;
     const answer: { songs: LocalSong[]; next?: number } = await request(`/local-media/songs${query}`, { method: 'GET' });
     found.push(...answer.songs);
-    if (answer.next === undefined || answer.next === null) break;
+    if (answer.next === undefined || answer.next === null) {
+      hasMore = false;
+      break;
+    }
     after = answer.next;
+    hasMore = true;
   }
-  return found;
+  return { items: found, truncated: hasMore };
 }
 
-type Loaded = { state: 'loading' } | { state: 'failed' } | { state: 'ready'; rows: ReconciledRow[] };
+type Loaded = { state: 'loading' } | { state: 'failed' } | { state: 'ready'; rows: ReconciledRow[]; truncated: boolean };
 
 export function ReconciliationPanel({ request }: { request: Request }) {
   const [loaded, setLoaded] = useState<Loaded>({ state: 'loading' });
@@ -106,7 +113,11 @@ export function ReconciliationPanel({ request }: { request: Request }) {
     const run = ++current.current;
     setLoaded({ state: 'loading' });
     Promise.all([allAssets(request), allSongs(request)]).then(([assets, songs]) => {
-      if (run === current.current) setLoaded({ state: 'ready', rows: reconcile(assets, songs) });
+      if (run === current.current) setLoaded({
+        state: 'ready',
+        rows: reconcile(assets.items, songs.items),
+        truncated: assets.truncated || songs.truncated,
+      });
     }, () => {
       if (run === current.current) setLoaded({ state: 'failed' });
     });
@@ -136,18 +147,19 @@ export function ReconciliationPanel({ request }: { request: Request }) {
           <button type="button" onClick={load}>Try again</button>
         </div>
       )}
-      {loaded.state === 'ready' && <Report rows={loaded.rows} onRefresh={load} />}
+      {loaded.state === 'ready' && <Report rows={loaded.rows} truncated={loaded.truncated} onRefresh={load} />}
     </section>
   );
 }
 
-function Report({ rows, onRefresh }: { rows: ReconciledRow[]; onRefresh: () => void }) {
+function Report({ rows, truncated, onRefresh }: { rows: ReconciledRow[]; truncated: boolean; onRefresh: () => void }) {
   const matched = rows.filter((row) => row.kind === 'matched');
   const hosted = rows.filter((row) => row.kind === 'hosted_only');
   const device = rows.filter((row) => row.kind === 'device_only');
   if (!rows.length) {
     return (
       <>
+        {truncated && <p role="status">This report reached the 10,000-item safety limit. It may not include every item; narrow your library or ask support for a full reconciliation.</p>}
         <EmptyState title="Nothing to compare yet" actions={<button type="button" onClick={onRefresh}>Check again</button>}>
           There’s nothing to compare yet: no hosted uploads and no songs added on a device.
         </EmptyState>
@@ -156,6 +168,7 @@ function Report({ rows, onRefresh }: { rows: ReconciledRow[]; onRefresh: () => v
   }
   return (
     <>
+      {truncated && <p role="status">This report reached the 10,000-item safety limit. It may not include every item; narrow your library or ask support for a full reconciliation.</p>}
       <p role="status">{matched.length} matched · {hosted.length} only in your hosted library · {device.length} only on your devices</p>
       {!!matched.length && (
         <Group title="Matched" rows={matched} />

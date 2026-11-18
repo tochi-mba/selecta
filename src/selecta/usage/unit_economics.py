@@ -10,8 +10,8 @@ meters the server already writes. This module is that computation. It reads:
   month: each is one accepted original or kept export, so it is a *lower bound* on R2 Class A
   operations (a multipart upload makes several). Class B reads are **not metered** per account
   today; the report says so instead of inventing a number.
-- **Egress**: R2 egress is free at the researched rates, so R2 contributes $0. Render bandwidth is
-  not metered per account; the report names it as a gap.
+- **Egress**: nominal R2 egress pricing does not establish actual object delivery. Signed URLs
+  bypass the API, and Render bandwidth is not metered per account; both stay unknown.
 - **Worker compute** from `usage_ledger` `compute_seconds`. No researched per-second rate exists
   yet (Modal pools are priced per GPU/CPU class), so it is reported raw and priced only when the
   caller passes a rate.
@@ -71,6 +71,15 @@ class AccountUsage:
     compute_seconds: float = 0.0
     lucy_usd: float = 0.0
     lucy_turns: int = 0
+    object_read_bytes_observed: int = 0
+    object_read_ops_observed: int = 0
+    object_read_auth_bytes: int = 0
+    object_read_auth_ops: int = 0
+    object_write_bytes_observed: int = 0
+    object_write_ops_observed: int = 0
+    object_write_auth_ops: int = 0
+    egress_bytes_observed: int = 0
+    render_seconds_observed: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -118,7 +127,12 @@ def _mode_summary(costs: list[AccountCost], usages: list[AccountUsage]) -> dict[
             "r2_storage": _round(sum(cost.storage_usd for cost in costs)),
             "r2_class_a_lower_bound": _round(sum(cost.class_a_usd for cost in costs)),
             "r2_class_b": None,
-            "r2_egress": 0.0,
+            # An unmetered signal is unknown, even when a provider's nominal rate is zero.
+            "r2_egress": None,
+            "render_bandwidth": None,
+            "object_read": None,
+            "object_write": None,
+            "render_compute": None,
             "compute": (
                 None
                 if any(cost.compute_usd is None for cost in costs)
@@ -131,6 +145,24 @@ def _mode_summary(costs: list[AccountCost], usages: list[AccountUsage]) -> dict[
             "upload_writes": sum(usage.upload_writes for usage in usages),
             "compute_seconds": _round(sum(usage.compute_seconds for usage in usages)),
             "lucy_turns": sum(usage.lucy_turns for usage in usages),
+            "object_read_bytes_observed": sum(u.object_read_bytes_observed for u in usages),
+            "object_read_ops_observed": sum(u.object_read_ops_observed for u in usages),
+            "object_read_authorized_bytes": sum(u.object_read_auth_bytes for u in usages),
+            "object_read_authorizations": sum(u.object_read_auth_ops for u in usages),
+            "object_write_bytes_observed": sum(u.object_write_bytes_observed for u in usages),
+            "object_write_ops_observed": sum(u.object_write_ops_observed for u in usages),
+            "object_write_authorizations": sum(u.object_write_auth_ops for u in usages),
+            "egress_bytes_observed": sum(u.egress_bytes_observed for u in usages),
+            "render_seconds_observed": _round(sum(u.render_seconds_observed for u in usages)),
+        },
+        "signal_status": {
+            "object_reads": "partial: server-side reads and signed URL authorizations only;"
+            " client fetches are not observable",
+            "object_writes": "partial: server-side writes and signed URL authorizations only;"
+            " multipart client transfers are not observable",
+            "egress": "partial: application-observed bytes exclude direct object-store delivery",
+            "render_compute": "partial: only explicitly instrumented worker durations are counted",
+            "priced_total": "partial: excludes unknown object operations, egress and render compute",
         },
     }
 
@@ -143,6 +175,9 @@ def gaps(rates: Rates) -> list[str]:
         "R2 Class A operations are a lower bound: one write per accepted upload or kept export;"
         " multipart parts are not counted",
         "Render bandwidth (API and SSE egress) is not metered per account",
+        "Object-store direct client transfer bytes and completed operations cannot be confirmed"
+        " from signed URLs; authorization counts are not completed transfers",
+        "Render/API/SSE egress and render CPU duration are not fully metered per account",
     ]
     if rates.compute_usd_per_second is None:
         found.append(
@@ -186,7 +221,9 @@ def is_live(modes: Mapping[str, Mapping[str, Any]]) -> bool:
     metered = [modes[mode]["meters"] for mode in MODES]
     return any(
         meter["stored_bytes"] or meter["upload_writes"] or meter["lucy_turns"]
-        or meter["compute_seconds"]
+        or meter["compute_seconds"] or meter["object_read_ops_observed"]
+        or meter["object_read_authorizations"] or meter["object_write_ops_observed"]
+        or meter["object_write_authorizations"]
         for meter in metered
     )
 
@@ -205,6 +242,15 @@ class _Row:
     compute_seconds: float = 0.0
     lucy_usd: float = 0.0
     lucy_turns: int = 0
+    object_read_bytes_observed: int = 0
+    object_read_ops_observed: int = 0
+    object_read_auth_bytes: int = 0
+    object_read_auth_ops: int = 0
+    object_write_bytes_observed: int = 0
+    object_write_ops_observed: int = 0
+    object_write_auth_ops: int = 0
+    egress_bytes_observed: int = 0
+    render_seconds_observed: float = 0.0
 
 
 def gather(conn: Connection, month: str, *, rules: Any = None) -> list[AccountUsage]:
@@ -231,22 +277,41 @@ def gather(conn: Connection, month: str, *, rules: Any = None) -> list[AccountUs
             rows[workspace_id].stored_bytes = int(committed or 0)
 
     in_month = sa.and_(usage_ledger.c.occurred_at >= since, usage_ledger.c.occurred_at < until)
-    writes = conn.execute(
-        sa.select(usage_ledger.c.workspace_id, sa.func.count())
-        .where(in_month, usage_ledger.c.kind == "storage_bytes", usage_ledger.c.amount > 0)
-        .group_by(usage_ledger.c.workspace_id)
-    )
-    for workspace_id, count in writes:
-        if workspace_id in rows:
-            rows[workspace_id].upload_writes = int(count)
-    compute = conn.execute(
-        sa.select(usage_ledger.c.workspace_id, sa.func.sum(usage_ledger.c.amount))
-        .where(in_month, usage_ledger.c.kind == "compute_seconds")
-        .group_by(usage_ledger.c.workspace_id)
-    )
-    for workspace_id, seconds in compute:
-        if workspace_id in rows:
-            rows[workspace_id].compute_seconds = float(seconds or 0.0)
+    # Keep per-event dimensions explicit. Signed URL issuance is not counted as a completed
+    # transfer; detail.source separates those authorizations from server-side object I/O.
+    for event in conn.execute(
+        sa.select(
+            usage_ledger.c.workspace_id, usage_ledger.c.kind,
+            usage_ledger.c.amount, usage_ledger.c.detail,
+        ).where(in_month)
+    ):
+        workspace_id, kind, amount, detail = event
+        row = rows.get(workspace_id)
+        if row is None:
+            continue
+        amount = int(amount or 0) if float(amount or 0).is_integer() else float(amount or 0)
+        if kind == "storage_bytes" and amount > 0:
+            row.upload_writes += 1
+        elif kind == "compute_seconds":
+            row.compute_seconds += float(amount)
+        elif kind == "object_read_bytes":
+            row.object_read_bytes_observed += int(amount)
+        elif kind == "object_read_ops":
+            row.object_read_ops_observed += int(amount)
+        elif kind == "object_read_auth_bytes":
+            row.object_read_auth_bytes += int(amount)
+        elif kind == "object_read_auth_ops":
+            row.object_read_auth_ops += int(amount)
+        elif kind == "object_write_bytes":
+            row.object_write_bytes_observed += int(amount)
+        elif kind == "object_write_ops":
+            row.object_write_ops_observed += int(amount)
+        elif kind == "object_write_auth_ops":
+            row.object_write_auth_ops += int(amount)
+        elif kind == "egress_bytes":
+            row.egress_bytes_observed += int(amount)
+        elif kind == "render_seconds":
+            row.render_seconds_observed += float(amount)
     lucy = conn.execute(
         sa.select(
             ai_usage.c.workspace_id, sa.func.sum(ai_usage.c.cost_usd), sa.func.sum(ai_usage.c.turns)
@@ -272,6 +337,15 @@ def gather(conn: Connection, month: str, *, rules: Any = None) -> list[AccountUs
                 compute_seconds=row.compute_seconds,
                 lucy_usd=row.lucy_usd,
                 lucy_turns=row.lucy_turns,
+                object_read_bytes_observed=row.object_read_bytes_observed,
+                object_read_ops_observed=row.object_read_ops_observed,
+                object_read_auth_bytes=row.object_read_auth_bytes,
+                object_read_auth_ops=row.object_read_auth_ops,
+                object_write_bytes_observed=row.object_write_bytes_observed,
+                object_write_ops_observed=row.object_write_ops_observed,
+                object_write_auth_ops=row.object_write_auth_ops,
+                egress_bytes_observed=row.egress_bytes_observed,
+                render_seconds_observed=row.render_seconds_observed,
             )
         )
     return out
