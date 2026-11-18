@@ -7,6 +7,7 @@ import {
   registerBrowserDspCapabilities,
   TIER3_FEATURES,
 } from './capability';
+import { loadStretchEvidence } from './stretchLoader';
 import { CROSSFADE_IMPLEMENTATION } from './crossfade';
 import { LIMITER_IMPLEMENTATION } from './limiter';
 import { TRUE_PEAK_IMPLEMENTATION } from './loudness';
@@ -25,16 +26,29 @@ describe('capability registry', () => {
     expect(registry.get('true_peak')).toMatchObject({ status: 'ready', implementation: TRUE_PEAK_IMPLEMENTATION });
     expect(registry.get('tempo')).toMatchObject({ tier: 2, status: 'unsupported_here', reason: expect.stringMatching(/not been measured/) });
     expect(registry.get('time_stretch')).toMatchObject({
-      tier: 2, status: 'unsupported_here', implementation: 'time-stretch-unsupported-v0',
+      tier: 2, status: 'unsupported_here', implementation: 'wsola-stretch-v1',
     });
   });
 
   it('a measured device gets Tier 2 under the analysis modules own ids; a collapsed budget pauses it', () => {
     const measured = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: { atFloor: false } });
     expect(measured.get('tempo')).toMatchObject({ tier: 2, status: 'ready', implementation: TEMPO_IMPLEMENTATION });
-    expect(measured.get('time_stretch')?.status).toBe('unsupported_here');
+    expect(measured.get('time_stretch')).toMatchObject({ status: 'unsupported_here', reason: expect.stringMatching(/has not loaded/) });
     const collapsed = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: { atFloor: true } });
     expect(collapsed.get('key')).toMatchObject({ status: 'unsupported_here', reason: expect.stringMatching(/headroom/) });
+  });
+
+  it('time-stretch is ready only on a measured device whose stretch module loaded and self-tested', async () => {
+    const evidence = await loadStretchEvidence();
+    expect(evidence).toEqual({ implementation: 'wsola-stretch-v1' });
+    const ready = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: { atFloor: false }, stretch: evidence });
+    expect(ready.get('time_stretch')).toMatchObject({ tier: 2, status: 'ready', implementation: 'wsola-stretch-v1' });
+    const unmeasured = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, stretch: evidence });
+    expect(unmeasured.get('time_stretch')).toMatchObject({ status: 'unsupported_here', reason: expect.stringMatching(/not been measured/) });
+    const failedLoad = await loadStretchEvidence(async () => { throw new Error('chunk failed to load'); });
+    expect(failedLoad).toBeNull();
+    const wrongId = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: { atFloor: false }, stretch: { implementation: 'something-else' } });
+    expect(wrongId.get('time_stretch')?.status).toBe('unsupported_here');
   });
 
   it('a failed probe makes every Tier 1 feature unsupported_here with the probe reason', () => {

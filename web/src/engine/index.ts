@@ -15,7 +15,7 @@ import { createEngineStore, EngineState, EngineStore, UnsupportedHere } from './
  * The usual path: in a press handler, `engine.openContext({ fromUserGesture: true })`, wake it,
  * `await engine.probe(context.context)`, then `engine.createSpeaker({ audio, probe, resolve,
  * queueLength })` for usePlaybackDevice, and `engine.roster({ probe, limiter })` for what the
- * device may honestly claim. Exports go through `exportWav` (or renderMix plus encodeWav).
+ * device may honestly claim. Exports go through `exportFile` (WAV or FLAC), or renderMix plus encodeWav / encodeFlac.
  */
 
 export type { EngineContext, EngineContextOptions } from './context';
@@ -30,8 +30,12 @@ export type { ProbeFailure, ProbeOk, ProbeOptions, ProbeResult } from './probe';
 export { ENGINE_VERSION, probeCapability, PROBE_PROCESSOR, PROBE_WAIT_MS } from './probe';
 export type { RenderFailure, RenderOptions, RenderProgress, RenderResult, RenderSuccess, RenderTrack } from './render';
 export { MAX_RENDER_SECONDS, renderMix, RENDER_CHUNK_SECONDS } from './render';
-export type { ExportResult, ExportSuccess } from './export';
-export { exportWav } from './export';
+export type { ExportedFile, ExportFileResult, ExportFormat, ExportResult, ExportSuccess, FlacExportResult, FlacExportSuccess } from './export';
+export { exportFile, exportFlac, exportWav, localExportFormats } from './export';
+export type { EncodedFlac, FlacBits } from './flac';
+export { encodeFlac, flacSupported, FLAC_IMPLEMENTATION } from './flac';
+export type { FlacDetails, FlacProblem } from './flacDecode';
+export { validateFlac } from './flacDecode';
 export type {
   LoadedTrack,
   Scheduler,
@@ -49,7 +53,7 @@ export { BrowserSpeaker } from './speakerAdapter';
 export type { EnginePhase, EngineState, EngineStore, OutputDowngrade, OutputStatus, UnsupportedHere } from './state';
 export { createEngineStore } from './state';
 export type { EncodedWav, PcmChunk, WavBits, WavDetails, WavProblem } from './wav';
-export { encodeWav, flacSupported, validateWav } from './wav';
+export { encodeWav, validateWav } from './wav';
 export type { Capability, CapabilityStatus, DspEvidence, Tier } from '../dsp/capability';
 export { CapabilityRegistry } from '../dsp/capability';
 
@@ -59,6 +63,8 @@ export type RosterEvidence = {
   probe: ProbeResult;
   limiter?: LimiterInstall | null;
   workerBudget?: { atFloor: boolean } | null;
+  /** dsp/stretchLoader.ts loadStretchEvidence: the stretch module loaded and self-tested. */
+  stretch?: { implementation: string } | null;
 };
 
 /** The device's capability roster (ADR-0459): Tier 1 ready only when the probe passed, the
@@ -73,6 +79,7 @@ export function buildCapabilityRoster(evidence: RosterEvidence, registry = new C
       ? { kind: 'worklet' }
       : { kind: 'compressor_fallback', implementation: COMPRESSOR_FALLBACK_IMPLEMENTATION },
     workerBudget: evidence.workerBudget ?? null,
+    stretch: evidence.stretch ?? null,
   });
 }
 

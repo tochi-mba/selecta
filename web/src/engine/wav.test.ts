@@ -84,11 +84,10 @@ describe('validating WAV bytes', () => {
   });
 });
 
-describe('FLAC honesty', () => {
-  it('says plainly that no vetted encoder is bundled, instead of a hidden fallback', () => {
+describe('FLAC support', () => {
+  it('reports the bundled encoder by implementation id, now that one exists', () => {
     const answer = flacSupported();
-    expect(answer.supported).toBe(false);
-    expect(answer.reason).toMatch(/no vetted FLAC encoder/);
-    expect(answer.reason).toMatch(/WAV/);
+    expect(answer.supported).toBe(true);
+    expect(answer.implementation).toBe('ts-flac-fixed-rice-v1');
   });
 });
