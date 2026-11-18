@@ -181,12 +181,12 @@ def _sensed_spans(script: TransitionScript) -> dict[str, list[tuple[float, float
     """Singing measured from the voice stem, for each side whose lyrics don't say. Empty when the
     build can't hear voices, which sends the caller down the old careful path."""
     from selecta.analysis.vocal_sense import sense_on, singing_spans
-    from selecta.config import Settings
+    from selecta.config import Settings, default_home
 
     if not sense_on():
         return {}
     found: dict[str, list[tuple[float, float]]] = {}
-    settings = Settings()
+    settings = Settings(home=default_home())
     for side, part in (("a", script.a), ("b", script.b)):
         if part.song.vocals_known:
             continue

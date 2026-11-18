@@ -9,7 +9,7 @@ moves smoothly. While paused, the anchor is frozen, so a long pause doesn't drif
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import asdict, dataclass, fields, replace
+from dataclasses import asdict, dataclass, field, fields, replace
 from enum import StrEnum
 from typing import Any
 
@@ -258,7 +258,7 @@ class Session:
     fence: int = 0
     # The per-session salt envelope signing keys derive from (server-only), and the programme
     # as ADR-0458 identities in play order (None: the session points into a mix by index only).
-    signing_salt: str | None = None
+    signing_salt: str | None = field(default=None, repr=False)
     programme: tuple[ProgrammeRef, ...] | None = None
     speaker_output: SpeakerOutput | None = None  # the lease holder's last output report
 
