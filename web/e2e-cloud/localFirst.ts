@@ -46,6 +46,11 @@ export async function openLocalFirst(page: Page, user: string, path: string, opt
   await page.goto(path);
 }
 
+/** The workspace's song index name, as media/store.ts mediaDbName makes it. */
+export function mediaDbName(workspaceId: string): string {
+  return `selecta-media-ws-${encodeURIComponent(workspaceId)}`;
+}
+
 export type DeviceSong = { songId: number; title: string; artist?: string; audio?: boolean; gone?: boolean };
 
 /** Connect songs on this device the way a folder pick does: a real file handle per song, kept
@@ -53,10 +58,11 @@ export type DeviceSong = { songId: number; title: string; artist?: string; audio
  * place a test can make a real handle without a picker). `audio` writes a short real WAV, so
  * the browser engine can decode and play it; `gone` removes the file behind the handle, as a
  * moved or deleted file does. Call before the app has opened its store: it visits a same-origin
- * page that is not the app. */
-export async function connectOnThisDevice(page: Page, songs: DeviceSong[]) {
+ * page that is not the app. The index is the workspace's own (ADR-0469, media/store.ts
+ * mediaDbName); the unscoped legacy one is deleted by the app on its first open. */
+export async function connectOnThisDevice(page: Page, workspaceId: string, songs: DeviceSong[]) {
   await page.goto('/api/status');
-  await page.evaluate(async (wanted) => {
+  await page.evaluate(async ({ wanted, dbName }) => {
     const wav = (seconds: number, tone: number) => {
       const rate = 22_050;
       const frames = Math.round(seconds * rate);
@@ -71,7 +77,7 @@ export async function connectOnThisDevice(page: Page, songs: DeviceSong[]) {
     };
     const root = await navigator.storage.getDirectory();
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const opening = indexedDB.open('selecta-media', 1);
+      const opening = indexedDB.open(dbName, 1);
       opening.onupgradeneeded = () => opening.result.createObjectStore('songs', { keyPath: 'songId' });
       opening.onsuccess = () => resolve(opening.result);
       opening.onerror = () => reject(opening.error);
@@ -96,5 +102,5 @@ export async function connectOnThisDevice(page: Page, songs: DeviceSong[]) {
       });
     }
     db.close();
-  }, songs);
+  }, { wanted: songs, dbName: mediaDbName(workspaceId) });
 }

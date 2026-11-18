@@ -326,7 +326,9 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   const songs = useRef(mix);
   songs.current = mix;
   const owner = useRef<string | null | undefined>(undefined);
-  const wantHere = useRef(false);
+  // State, not a ref: the speaker usually lands (and this effect runs) before the session refresh
+  // decides the lease is wanted, so the decision itself must re-run the effect.
+  const [wantHere, setWantHere] = useState(false);
   const [seams, setSeams] = useState<SeamRecord[]>([]);
   const sources = useRef(new Map<number, MusicSource>());
   const wiring = useMemo<SeamWiring>(() => ({
@@ -352,10 +354,10 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
 
   // A speaker made from a press asks for the lease once it exists.
   useEffect(() => {
-    if (!speaker || !wantHere.current || !pb.device) return;
-    wantHere.current = false;
+    if (!speaker || !wantHere || !pb.device) return;
+    setWantHere(false);
     void pb.playHere(owner.current);
-  }, [speaker, pb.device, pb.playHere]);
+  }, [speaker, wantHere, pb.device, pb.playHere]);
 
   const playHere = useCallback(async (): Promise<string> => {
     if (refusal) return '';
@@ -391,7 +393,7 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     }
     if (owner.current === undefined) owner.current = null;
     if (needsSpeaker) {
-      wantHere.current = true;
+      setWantHere(true);
       return '';
     }
     await pb.playHere(owner.current);

@@ -16,7 +16,7 @@ test('a new member makes a mix from the songs on this device, and it is still th
   const made = await seeded(request, user, { local_songs: 3, local_titles: ['Alpha here', 'Bravo here', 'Charlie away'] });
   const [alpha, bravo] = made.local_songs;
   await asLocalFirst(page, user);
-  await connectOnThisDevice(page, [{ songId: alpha, title: 'Alpha here', audio: true }, { songId: bravo, title: 'Bravo here', audio: true }]);
+  await connectOnThisDevice(page, made.workspace_id, [{ songId: alpha, title: 'Alpha here', audio: true }, { songId: bravo, title: 'Bravo here', audio: true }]);
 
   await page.goto('/mixes');
   await expect(page.getByRole('heading', { name: 'Make a Mix', level: 1 })).toBeVisible();
@@ -62,7 +62,7 @@ test('a grandfathered account mixes a device song with a hosted one, and the que
   const made = await seeded(request, user, { songs: 1, seconds: 12, local_songs: 2, local_titles: ['Device song', 'Song 1'] });
   const [device] = made.local_songs;
   await asLocalFirst(page, user, { hosted: true });
-  await connectOnThisDevice(page, [{ songId: device, title: 'Device song', audio: true }]);
+  await connectOnThisDevice(page, made.workspace_id, [{ songId: device, title: 'Device song', audio: true }]);
 
   await page.goto('/library');
   await expect(page.locator('li.song-row', { hasText: 'Device song' }).getByText('On this device')).toBeVisible();

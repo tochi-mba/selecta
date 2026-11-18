@@ -1,6 +1,6 @@
 import { expect, Page, test } from '@playwright/test';
 import { listener } from './cloud';
-import { asLocalFirst, openLocalFirst, seeded } from './localFirst';
+import { asLocalFirst, mediaDbName, openLocalFirst, seeded } from './localFirst';
 
 // BF-0462-04: the shared Library renders in local-first Cloud against the metadata catalogue
 // (ADR-0458) and says where each song can play from. The catalogue, the device reports and the
@@ -35,7 +35,7 @@ test('a new local-first member sees the songs connected on this device as availa
   await asLocalFirst(page, user);
   // a same-origin page that is not the app, so the app has not opened its store yet
   await page.goto('/api/status');
-  await page.evaluate(async ({ hereId, movedId }) => {
+  await page.evaluate(async ({ hereId, movedId, dbName }) => {
     const root = await navigator.storage.getDirectory();
     const fileFor = async (name: string) => {
       const handle = await root.getFileHandle(name, { create: true });
@@ -49,7 +49,7 @@ test('a new local-first member sees the songs connected on this device as availa
     // the file behind this handle goes away, as a moved or deleted file does
     await root.removeEntry('moved-song.wav');
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const opening = indexedDB.open('selecta-media', 1);
+      const opening = indexedDB.open(dbName, 1);
       opening.onupgradeneeded = () => opening.result.createObjectStore('songs', { keyPath: 'songId' });
       opening.onsuccess = () => resolve(opening.result);
       opening.onerror = () => reject(opening.error);
@@ -63,7 +63,7 @@ test('a new local-first member sees the songs connected on this device as availa
       writing.onerror = () => reject(writing.error);
     });
     db.close();
-  }, { hereId, movedId });
+  }, { hereId, movedId, dbName: mediaDbName(made.workspace_id) });
 
   await page.goto('/library');
   await expect(row(page, 'Here song').getByText('On this device')).toBeVisible();
