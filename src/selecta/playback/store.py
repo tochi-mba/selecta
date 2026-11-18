@@ -28,6 +28,7 @@ from selecta.playback.model import (
     Principal,
     ProgrammeRef,
     Session,
+    SpeakerOutput,
     UnknownDevice,
     frozen,
     state_confidence,
@@ -76,7 +77,14 @@ def session_from_row(row: Mapping[str, Any]) -> Session:
         fence=row.get("fence") or 0,
         signing_salt=row.get("signing_salt"),
         programme=programme_from_json(row.get("programme")),
+        speaker_output=_output_from_json(row.get("speaker_output")),
     )
+
+
+def _output_from_json(raw: Any) -> SpeakerOutput | None:
+    if not raw:
+        return None
+    return SpeakerOutput(str(raw["device_id"]), str(raw["status"]), raw.get("verified_at"))
 
 
 def programme_from_json(raw: Any) -> tuple[ProgrammeRef, ...] | None:
@@ -225,6 +233,9 @@ def save_session(conn: Connection, session: Session) -> None:
             fence=session.fence,
             signing_salt=session.signing_salt,
             programme=programme_json(session.programme),
+            speaker_output=None
+            if session.speaker_output is None
+            else session.speaker_output.to_json(),
             updated_at=session.updated_at,
             volume=session.volume,
             hand_back_to_device_id=session.hand_back_to_device_id,
@@ -252,6 +263,12 @@ def session_payload(session: Session, now: float | None = None) -> dict[str, Any
         "fence": session.fence,
         "state_confidence": state_confidence(session, now),
     }
+    output = session.speaker_output
+    if output is not None and output.device_id == session.active_device_id:
+        # The speaker's own report, never stronger than the lease backing it (ADR-0457/0461).
+        status = "uncertain" if payload["state_confidence"] != "fresh" else output.status
+        payload["output_status"] = status
+        payload["output_verified_at"] = output.verified_at if status == "playing" else None
     if session.programme is not None:
         # ADR-0458 identities only: each device resolves them against its own library.
         payload["programme"] = programme_json(session.programme)

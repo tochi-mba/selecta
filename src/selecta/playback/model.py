@@ -180,6 +180,39 @@ class Device:
         return self.signed_out_at is None
 
 
+OUTPUT_STATUSES = ("playing", "output_unverified", "uncertain", "interrupted")
+
+
+@dataclass(frozen=True)
+class OutputReport:
+    """What a speaker knows about its sound output (ADR-0457 truthful states). "playing" means
+    a person confirmed hearing the check tone at `verified_at` (ADR-0460), never more."""
+
+    status: str
+    verified_at: float | None = None
+
+    def __post_init__(self) -> None:
+        if self.status not in OUTPUT_STATUSES:
+            raise ValueError(f"output status is one of: {', '.join(OUTPUT_STATUSES)}")
+        if self.status == "playing" and self.verified_at is None:
+            # A claim of sound with no confirmation behind it is only unverified.
+            object.__setattr__(self, "status", "output_unverified")
+        if self.status != "playing":
+            object.__setattr__(self, "verified_at", None)
+
+
+@dataclass(frozen=True)
+class SpeakerOutput:
+    """The output report as stored on the session: which device said it."""
+
+    device_id: str
+    status: str
+    verified_at: float | None = None
+
+    def to_json(self) -> dict[str, Any]:
+        return {"device_id": self.device_id, "status": self.status, "verified_at": self.verified_at}
+
+
 @dataclass(frozen=True)
 class Position:
     """Where a device says the music is. `seq` is the session sequence the device has applied, so
@@ -190,6 +223,7 @@ class Position:
     state: PlayState | None = None
     mix_revision_id: str | None = None
     seq: int | None = None
+    output: OutputReport | None = None  # the speaker's sound-output status, if it knows one
 
 
 @dataclass(frozen=True)
@@ -226,6 +260,7 @@ class Session:
     # as ADR-0458 identities in play order (None: the session points into a mix by index only).
     signing_salt: str | None = None
     programme: tuple[ProgrammeRef, ...] | None = None
+    speaker_output: SpeakerOutput | None = None  # the lease holder's last output report
 
     @property
     def key(self) -> SessionKey:

@@ -38,6 +38,7 @@ from selecta.playback.model import (
     PlayState,
     Position,
     Session,
+    SpeakerOutput,
     position_at,
 )
 from selecta.playback.ports import NO_EVENTS, MixControl, PlaybackEvents
@@ -236,6 +237,14 @@ def heartbeat_in(
     )
     if accepted:
         session = _record(session, position, now)
+    if position.output is not None:
+        # Whatever the sequence, the holder's word on its own output is current (BF-0457-03).
+        session = replace(
+            session,
+            speaker_output=SpeakerOutput(
+                device_id, position.output.status, position.output.verified_at
+            ),
+        )
     session = replace(session, lease_expires_at=now + LEASE_SECONDS, updated_at=now)
     save_session(conn, session)
     if previous is not None:
@@ -730,6 +739,7 @@ def _visibly_changed(before: Session, after: Session) -> bool:
         before.state != after.state
         or before.song_index != after.song_index
         or before.mix_revision_id != after.mix_revision_id
+        or before.speaker_output != after.speaker_output
     )
 
 

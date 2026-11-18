@@ -5,7 +5,7 @@
 .playing-bar button, .devices-panel button { min-height: 44px; min-width: 44px; }
 .playing-bar-warning { border-left: 3px solid var(--status-action); padding-left: var(--space-2); margin: 0; }
 .playing-bar-message:empty { display: none; }
-.playing-bar-message, .playing-bar-error { margin: 0; }
+.playing-bar-message, .playing-bar-error, .playing-bar-output { margin: 0; }
 .playing-bar-error, .devices-error { color: var(--danger); }
 .playing-bar-notices { display: grid; gap: var(--space-1); }
 .playing-bar-notices p { margin: 0; }

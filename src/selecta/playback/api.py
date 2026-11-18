@@ -13,7 +13,7 @@ with an idempotency key and the sequence they were based on. A stale command is 
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, Field
@@ -37,6 +37,7 @@ from selecta.playback.model import (
     IdempotencyConflict,
     InvalidCommand,
     NotTheSpeaker,
+    OutputReport,
     OwnershipChanged,
     PlaybackError,
     PlayState,
@@ -84,6 +85,10 @@ class HeartbeatBody(DeviceBody):
     # ADR-0461: the fence this device last saw. A device claiming a lapsed lease with an older
     # one is refused; None keeps the old behaviour for clients that don't send it.
     fence: int | None = Field(default=None, ge=0)
+    # ADR-0457 BF-0457-03: what the speaker knows about its sound output, for controllers.
+    # "playing" needs the time a person confirmed the check tone; without it, it is unverified.
+    output_status: Literal["playing", "output_unverified", "uncertain", "interrupted"] | None = None
+    output_verified_at: float | None = Field(default=None, ge=0)
 
 
 class TakeOverBody(DeviceBody):
@@ -357,6 +362,9 @@ def install_routes(
             state=body.state,
             mix_revision_id=body.mix_revision_id,
             seq=body.seq,
+            output=None
+            if body.output_status is None
+            else OutputReport(body.output_status, body.output_verified_at),
         )
         try:
             result = session.heartbeat(

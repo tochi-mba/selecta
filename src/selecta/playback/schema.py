@@ -86,6 +86,10 @@ playback_sessions = sa.Table(
     # The programme as ADR-0458 identities: [{"song_id": int, "sha256": str}, ...], in play
     # order, so the speaker resolves each locally. Never a path or URL. Empty: index only.
     sa.Column("programme", sa.JSON, nullable=True),
+    # What the lease holder last reported about its sound output (ADR-0457, BF-0457-03):
+    # {"device_id", "status", "verified_at"}. Shown to controllers only while that device
+    # still holds the lease, and downgraded to "uncertain" when the lease lapses.
+    sa.Column("speaker_output", sa.JSON, nullable=True),
     sa.Column("updated_at", Epoch, nullable=False),
     sa.CheckConstraint(_one_of("state", PLAY_STATES), name="state"),
     sa.CheckConstraint("volume IS NULL OR (volume >= 0 AND volume <= 100)", name="volume"),

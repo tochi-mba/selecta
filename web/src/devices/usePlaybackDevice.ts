@@ -17,7 +17,9 @@ export type Warning = { code: string; text: string };
 export type Device = { id: string; name: string; kind: string; signed_in: boolean; this_device: boolean; poor_speaker: boolean; last_seen_at: number; warnings: Warning[] };
 /** A programme entry as an ADR-0458 identity: resolved locally on the speaker, never a path. */
 export type ProgrammeRef = { song_id: number; sha256: string };
-export type SessionState = { mix_revision_id: string | null; song_index: number; offset_ms: number; anchor_at: number | null; state: 'playing' | 'paused' | 'stopped'; active_device_id: string | null; lease_expires_at: number | null; seq: number; fence?: number; state_confidence?: 'fresh' | 'uncertain'; programme?: ProgrammeRef[]; track?: ProgrammeRef | null };
+export type SessionState = { mix_revision_id: string | null; song_index: number; offset_ms: number; anchor_at: number | null; state: 'playing' | 'paused' | 'stopped'; active_device_id: string | null; lease_expires_at: number | null; seq: number; fence?: number; state_confidence?: 'fresh' | 'uncertain'; programme?: ProgrammeRef[]; track?: ProgrammeRef | null; output_status?: OutputWire; output_verified_at?: number | null };
+/** The speaker's sound-output status as it reaches controllers (ADR-0457 truthful states, BF-0457-03). */
+export type OutputWire = 'playing' | 'output_unverified' | 'uncertain' | 'interrupted';
 /** A press held for an offline speaker (BF-0461-04): `reason` is deferred while it waits, or why it was dropped. */
 export type HeldPress = { command_id: string; command: string; args?: Record<string, unknown>; issued_by: string; reason: 'deferred' | 'expired' | 'superseded' | 'stale'; created_at: number; expires_at: number | null; resolved_at: number | null };
 export type Alternative = { song_id: number; title: string; artist: string; programme_index: number | null; same_song: boolean };
@@ -90,6 +92,18 @@ export interface Speaker {
   active(): boolean;
   /** Release listeners and locally cached audio when the device UI unmounts. */
   dispose?(): void;
+  /** The engine's truthful output status (BrowserSpeaker), reported with each heartbeat. */
+  state?(): { output: { status: string; at?: number } };
+}
+
+/** The heartbeat fields for what this speaker knows about its output: 'playing' only with the
+ * time a person confirmed the check tone (ADR-0460), never inferred. Nothing when it can't say. */
+export function outputReport(speaker: Speaker | null): { output_status: OutputWire; output_verified_at?: number } | Record<string, never> {
+  const output = speaker?.state?.().output;
+  if (!output) return {};
+  if (output.status === 'verified_at' && typeof output.at === 'number') return { output_status: 'playing', output_verified_at: output.at };
+  if (output.status === 'output_unverified' || output.status === 'uncertain' || output.status === 'interrupted') return { output_status: output.status };
+  return {};
 }
 
 /** Fired on window once this browser has registered, so the devices list can mark it. */
@@ -333,7 +347,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       const sentAt = Date.now();
       try {
         const answer = await api<{ outcome: string; session: SessionState; server_time: number; envelope_key?: string | null }>('/playback/heartbeat', {
-          method: 'POST', body: JSON.stringify({ device_id: deviceId, ...at, seq: appliedSeq.current, ...(fence.current === null ? {} : { fence: fence.current }) }),
+          method: 'POST', body: JSON.stringify({ device_id: deviceId, ...at, seq: appliedSeq.current, ...(fence.current === null ? {} : { fence: fence.current }), ...outputReport(speaker) }),
         }, workspaceId);
         learnClock(sentAt, answer.server_time);
         if (answer.outcome !== 'refused') {

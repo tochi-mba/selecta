@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { audioSpeaker } from './audioSpeaker';
 import { ControllerNotices } from './ControllerNotices';
-import { Api, extrapolate, Speaker, usePlaybackDevice } from './usePlaybackDevice';
+import { PlaybackStatus, playbackStatusText } from '../copy';
+import { Api, extrapolate, SessionState, Speaker, usePlaybackDevice } from './usePlaybackDevice';
 import './devices.css';
 
 // The "Playing on ..." bar (ADR-0415): every device sees where the music is and can steer it.
@@ -10,6 +11,14 @@ import './devices.css';
 // iPhone is told plainly to keep the screen on.
 
 export type SongName = (index: number) => string | null;
+
+/** The speaker's reported output as the shared PLAYBACK_STATUS vocabulary, or null. */
+export function speakerOutput(session: SessionState | null): PlaybackStatus | null {
+  const status = session?.output_status;
+  if (!status) return null;
+  if (status === 'playing') return typeof session?.output_verified_at === 'number' ? { state: 'playing', verifiedAt: session.output_verified_at } : { state: 'output_unverified' };
+  return { state: status };
+}
 
 function clock(ms: number) {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -82,6 +91,9 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
     }
   };
   const remote = remoteControl && (view?.speaker === 'elsewhere' || (here && Boolean(session)));
+  // What the speaker says about its sound output (BF-0457-03). Only a browser-engine speaker
+  // reports one, so with that player off nothing renders here.
+  const output = !here ? speakerOutput(session) : null;
 
   return (
     <section className="playing-bar" aria-label="Playback">
@@ -108,6 +120,7 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
           <button type="button" onClick={() => setAsking(false)}>Cancel</button>
         </div>
       )}
+      {output && <p className="playing-bar-output" data-testid="speaker-output">{playbackStatusText(output)}</p>}
       {remoteControl && !here && (
         <ControllerNotices notices={view?.notices} speakerName={view?.speaker_name ?? null} session={session} send={(name, args) => void pb.command(name, args)} />
       )}
