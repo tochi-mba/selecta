@@ -32,6 +32,35 @@ from selecta.storage import api as storage_api
 
 STRIPE_TEST_MODE_ENV = "SELECTA_DEV_STRIPE_TEST_MODE"
 
+HOSTED_DEV_ENV = "SELECTA_DEV_HOSTED"
+# The browser-first experience (ADR-0455): what personal Cloud becomes after the flip, so it is
+# what `dev.cmd cloud` shows. A developer's own SELECTA_FLAGS wins outright.
+BROWSER_FIRST_FLAGS = (
+    "+cloud.local_first +cloud.local_media +devices.browser_player"
+    " +cloud.browser_dsp +cloud.local_export"
+)
+
+
+def browser_first_posture(engine) -> None:
+    """Make dev look like Cloud after the cutover (ADR-0456): the build runs the browser-first
+    flags, and the hosted catch-all off rule leaves hosted media admin-granted only, so a dev
+    account keeps playing its stored songs but is not offered uploads or a storage pitch.
+    `SELECTA_DEV_HOSTED=1` skips both and gives the hosted-by-default Cloud instead."""
+    from selecta.flags import rules as flag_rules
+    from selecta.hosted_coexistence.grandfather import build_grandfather_rules
+    from selecta.persistence import transaction
+
+    if os.environ.get(HOSTED_DEV_ENV) == "1":
+        return
+    os.environ.setdefault("SELECTA_FLAGS", BROWSER_FIRST_FLAGS)
+    with transaction(engine) as conn:
+        if not flag_rules.current_rules(conn, "cloud.hosted_media"):
+            flag_rules.save(
+                conn, "cloud.hosted_media", build_grandfather_rules(()),
+                author="dev.cmd cloud",
+                reason="dev default: hosted media is admin-granted only (ADR-0456)",
+            )
+
 
 def use_disk_storage(settings: DevSettings) -> objects.DiskObjects:
     """Point every Cloud storage route (and the worker's verifier) at the data folder."""
@@ -68,6 +97,7 @@ def application() -> FastAPI:
     settings = DevSettings.from_environment()
     engine = make_engine(settings.database_url)
     migrate.upgrade(engine)
+    browser_first_posture(engine)
     use_disk_storage(settings)
     os.environ.setdefault("SELECTA_ROOMS_PEPPER", settings.secret("rooms-pepper"))
     test_mode = stripe_test_mode()
