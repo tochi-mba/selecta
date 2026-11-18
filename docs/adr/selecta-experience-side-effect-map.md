@@ -38,6 +38,8 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.guest.room.<code>` | local | `web/src/guest/main.ts` (through `store` in `web/src/rooms/dom.ts`) | The guest's room id for a party code (Cloud) | Requests (guest rooms) |
 | `selecta.cutover-notice.<account>` | local | `web/src/cloud/migration/CutoverNotice.tsx` | That this account dismissed the hosted-media cutover notice on this browser (Cloud, ADR-0465) | Cloud |
 | `selecta.media-profile.<workspace>` | local | `web/src/cloud/ConnectMusic.tsx` | The workspace's chosen media profile (local-first or hosted), so the shell draws the right home (Cloud, ADR-0463) | Cloud |
+| `selecta.import.<workspace>` | local | `web/src/cloud/importSession.ts` | Whether a workspace import is in progress, so an interrupted import can be resumed safely | Cloud |
+| `selecta.labs.feedback-draft` | local | `web/src/cloud/labs/LocalFirstLabs.tsx` | Unsubmitted feedback text from the local-first labs page | Cloud |
 | `selecta.onboarding.<workspace>` | local | `web/src/cloud/onboarding/state.ts` | How far local-first Cloud onboarding got, so an interrupted step resumes (Cloud, ADR-0463) | Cloud |
 | `selecta.venue.last-heard.<workspace>` | local | `web/src/cloud/venue/deps.ts` | When a person last confirmed hearing the venue check tone, shown only as history and never trusted as a current check (Cloud, ADR-0460) | Cloud |
 | `selecta.venue.record.<workspace>` | local | `web/src/cloud/venue/deps.ts` | The newest capability record measured on this device, filed under its full tuple (Cloud, ADR-0460) | Cloud |
@@ -200,6 +202,12 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/playback/reconnect` | Reclaims playback after a drop |
 | `POST /api/playback/commands` | Sends a transport command to the playing device |
 | `POST /api/playback/commands/{command_id}/ack` | Records that the playing device received a command, never that it was audible (ADR-0461) |
+| `POST /api/zones/{zone_id}/playback/heartbeat` | Updates a zone's active device lease and accepted playback position |
+| `POST /api/zones/{zone_id}/playback/take-over` | Transfers the zone playback lease to this device |
+| `POST /api/zones/{zone_id}/playback/reconnect` | Reclaims or reports the zone playback lease after a device reconnects |
+| `POST /api/zones/{zone_id}/playback/commands` | Sends a fenced transport command to the zone's active device |
+| `POST /api/zones/{zone_id}/playback/commands/{command_id}/ack` | Records delivery acknowledgement for a zone command, never that it was audible |
+| `POST /api/zones/{zone_id}/playback/hand-back` | Hands zone playback back and records the current position |
 | `POST /api/uploads/plan` | Plans an upload |
 | `POST /api/uploads/{session_id}/parts` | Signs upload parts |
 | `POST /api/uploads/{session_id}/complete` | Finishes an upload |
@@ -219,6 +227,8 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 | `POST /api/local-media/availability` | Reports which catalogue songs a device holds right now |
 | `POST /api/local-media/recipes` | Saves a new portable recipe (a mix over catalogue songs) as its first immutable revision |
 | `POST /api/local-media/recipes/{mix_id}/revisions` | Saves the next immutable revision of a recipe, refused when made from a stale one |
+| `POST /api/local-media/recipes/{mix_id}/duplicate` | Copies the latest recipe revision into a new recipe with a fresh identity |
+| `DELETE /api/local-media/recipes/{mix_id}` | Deletes a recipe and its revisions from this workspace |
 
 ### Rooms (`src/selecta/rooms/api_host.py`, `src/selecta/rooms/api_guest.py`) - Requests (guest rooms)
 

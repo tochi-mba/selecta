@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { shortcutFor } from './shortcuts';
+import { anOverlayIsOpen, shortcutFor } from './shortcuts';
 
 function ctrlK(target: EventTarget, metaKey = false) {
   return shortcutFor({
@@ -34,6 +34,20 @@ describe('palette shortcut focus ownership', () => {
       expect(ctrlK(document.body)).toBeNull();
     } finally {
       dialog.remove();
+    }
+  });
+
+  it('does not let an inert closing-overlay ghost keep owning the keys', () => {
+    const ghost = document.createElement('div');
+    ghost.className = 'overlay';
+    ghost.setAttribute('inert', '');
+    ghost.setAttribute('aria-hidden', 'true');
+    document.body.append(ghost);
+    try {
+      expect(anOverlayIsOpen()).toBe(false);
+      expect(ctrlK(document.body)).toBe('palette');
+    } finally {
+      ghost.remove();
     }
   });
 });

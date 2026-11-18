@@ -24,6 +24,7 @@ from selecta.local_media import store
 from selecta.local_media.recipe_schema import local_recipes
 from selecta.mix_contract import (
     MAX_SONGS,
+    NAME_LIMIT,
     ContractError,
     MixContract,
     SongRef,
@@ -177,6 +178,39 @@ def read(conn: Connection, workspace_id: str, mix_id: str) -> dict[str, Any]:
     }
 
 
+def duplicate(
+    conn: Connection, workspace_id: str, user_id: str, mix_id: str, name: str | None = None
+) -> dict[str, Any]:
+    """Start a new recipe from the latest revision, preserving its song identities."""
+    chain = _chain(conn, workspace_id, mix_id)
+    if not chain:
+        raise RecipeError("mix_not_found", "That mix is not in this account.", 404)
+    original = chain[-1]
+    suffix = " copy"
+    copied_name = (
+        name.strip()
+        if name is not None
+        else f"{original.name[: NAME_LIMIT - len(suffix)]}{suffix}"
+    )
+    try:
+        contract = new_contract(new_id(), copied_name, SOURCE, original.songs)
+    except ContractError as error:
+        raise RecipeError("invalid_mix", str(error)) from error
+    _store(conn, workspace_id, user_id, contract)
+    return _with_availability(conn, workspace_id, contract)
+
+
+def delete(conn: Connection, workspace_id: str, mix_id: str) -> None:
+    """Delete all revisions of one recipe in this workspace."""
+    result = conn.execute(
+        local_recipes.delete()
+        .where(local_recipes.c.workspace_id == workspace_id)
+        .where(local_recipes.c.mix_id == mix_id)
+    )
+    if result.rowcount == 0:
+        raise RecipeError("mix_not_found", "That mix is not in this account.", 404)
+
+
 def list_recipes(conn: Connection, workspace_id: str) -> list[dict[str, Any]]:
     """Every recipe's latest revision, newest first."""
     rows = conn.execute(
@@ -201,4 +235,4 @@ def list_recipes(conn: Connection, workspace_id: str) -> list[dict[str, Any]]:
     ]
 
 
-__all__ = ["RecipeError", "create", "edit", "list_recipes", "read"]
+__all__ = ["RecipeError", "create", "delete", "duplicate", "edit", "list_recipes", "read"]

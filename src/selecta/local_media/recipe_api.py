@@ -37,6 +37,12 @@ class RecipeEdit(BaseModel):
     song_ids: list[int] | None = Field(default=None, min_length=2, max_length=MAX_SONGS)
 
 
+class RecipeDuplicate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = Field(default=None, min_length=1, max_length=NAME_LIMIT)
+
+
 def _refused(error: recipes.RecipeError) -> HTTPException:
     return HTTPException(
         status_code=error.status,
@@ -114,6 +120,37 @@ def install_routes(
                     name=body.name,
                 )
                 return {"mix": mix}
+        except recipes.RecipeError as error:
+            raise _refused(error) from error
+
+    @app.post("/api/local-media/recipes/{mix_id}/duplicate")
+    def duplicate_recipe(
+        mix_id: str,
+        request: Request,
+        body: RecipeDuplicate | None = None,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ) -> dict[str, Any]:
+        workspace_id, user_id = member(request, claims, WorkspaceAction.MIXES_EDIT)
+        try:
+            with transaction(engine, workspace_id) as conn:
+                return {
+                    "mix": recipes.duplicate(
+                        conn, workspace_id, user_id, mix_id, None if body is None else body.name
+                    )
+                }
+        except recipes.RecipeError as error:
+            raise _refused(error) from error
+
+    @app.delete("/api/local-media/recipes/{mix_id}", status_code=204)
+    def delete_recipe(
+        mix_id: str,
+        request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ) -> None:
+        workspace_id, _user_id = member(request, claims, WorkspaceAction.MIXES_EDIT)
+        try:
+            with transaction(engine, workspace_id) as conn:
+                recipes.delete(conn, workspace_id, mix_id)
         except recipes.RecipeError as error:
             raise _refused(error) from error
 

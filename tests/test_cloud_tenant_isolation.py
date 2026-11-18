@@ -183,6 +183,8 @@ FLAG_DARK = {
     ("POST", "/api/local-media/recipes"),
     ("GET", "/api/local-media/recipes/{mix_id}"),
     ("POST", "/api/local-media/recipes/{mix_id}/revisions"),
+    ("POST", "/api/local-media/recipes/{mix_id}/duplicate"),
+    ("DELETE", "/api/local-media/recipes/{mix_id}"),
     # The Labs opening for browser-first Cloud ships dark (`cloud.local_first_labs` off); its
     # routes act only on the caller's own user id and workspace (`test_bf_local_first_labs.py`).
     ("POST", "/api/account/labs/local-first/join"),

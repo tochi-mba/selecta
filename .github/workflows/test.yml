@@ -537,7 +537,18 @@ jobs:
         env:
           SELECTA_E2E_CHANNEL: ${{ steps.browsers.outputs.channel }}
       - name: Browser engine truth in Chromium, Firefox and WebKit, muted
+        id: engine-truth
         run: pnpm e2e:engine-truth
+        working-directory: web
+      - name: Require browser engine truth evidence
+        if: ${{ steps.engine-truth.outcome == 'success' }}
+        shell: bash
+        run: |
+          evidence_count=$(find test-results/engine-truth -type f -name 'engine-truth*.json' 2>/dev/null | wc -l)
+          if [ "$evidence_count" -lt 6 ]; then
+            echo "Expected at least six engine truth JSON records (two per browser engine); found $evidence_count."
+            exit 1
+          fi
         working-directory: web
       - name: Keep browser engine truth records
         if: always()
@@ -545,7 +556,10 @@ jobs:
         with:
           name: browser-engine-truth
           path: web/test-results/engine-truth
-          if-no-files-found: error
+          # Preserve the actual browser-test/evidence failure in the job summary instead of
+          # replacing it with a secondary artifact-upload failure when tests never ran or failed
+          # before writing their attachments. A successful test run is guarded above.
+          if-no-files-found: warn
           retention-days: 14
       - name: Playback proxy sample alignment in Chrome, Edge, Firefox and WebKit
         run: pnpm e2e:alignment

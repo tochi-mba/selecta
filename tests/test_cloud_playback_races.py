@@ -151,7 +151,8 @@ def _many_remotes_skip(engine, *, remotes: int, presses: int) -> None:
         stale = 0
         for number in range(presses):
             for attempt in range(1000):
-                seq = session.get_session(engine, workspace).seq
+                current = session.get_session(engine, workspace)
+                seq = current.seq
                 result = session.submit_command(
                     engine,
                     workspace,
@@ -160,6 +161,7 @@ def _many_remotes_skip(engine, *, remotes: int, presses: int) -> None:
                     None,
                     seq,
                     f"{index}-{number}-{attempt}",
+                    fence=current.fence,
                 )
                 if result.status is CommandStatus.APPLIED:
                     with lock:
@@ -194,13 +196,14 @@ def test_many_remotes_pressing_at_once_lose_and_double_nothing_on_sqlite(sqlite_
 def _same_press_twice(engine) -> None:
     workspace = new_id()
     speaker = _device(engine, workspace, "Speaker")
-    seq = session.take_over(engine, workspace, speaker.id).session.seq
+    owned = session.take_over(engine, workspace, speaker.id).session
     remote = _device(engine, workspace, "Remote")
 
     results = _race(
         2,
         lambda _index: session.submit_command(
-            engine, workspace, remote.id, "skip", None, seq, "the-same-press"
+            engine, workspace, remote.id, "skip", None, owned.seq, "the-same-press",
+            fence=owned.fence,
         ),
     )
 
@@ -361,7 +364,8 @@ def test_random_device_actions_keep_every_playback_invariant(sqlite_engine, cloc
             self.key += 1
             try:
                 session.submit_command(
-                    engine, self.workspace, device, command, args, seq, f"k{self.key}", mix=mix
+                    engine, self.workspace, device, command, args, seq, f"k{self.key}",
+                    fence=current.fence if current else 0, mix=mix,
                 )
             except ALLOWED:
                 pass

@@ -410,6 +410,7 @@ def _programme(cloud_engine, workspace, phone, songs, *, key, events=None, song_
     return session.submit_command(
         cloud_engine, workspace, phone.id, "set_programme",
         {"songs": songs, "song_index": song_index}, current.seq, key,
+        fence=current.fence,
         events=events or NO_EVENTS,
     )
 

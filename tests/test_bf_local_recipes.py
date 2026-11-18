@@ -100,6 +100,48 @@ def test_edits_make_new_revisions_and_refuse_a_stale_base(party, local_media_on)
     assert read["history"][1]["songs"] == 3
 
 
+def test_duplicate_starts_an_independent_recipe_from_latest_revision(party, local_media_on):
+    ids = _songs(party, ALICE)
+    original = _make(party, ALICE, ids)
+    edited = party.client.post(
+        f"/api/local-media/recipes/{original['mix_id']}/revisions",
+        headers=auth(ALICE),
+        json={"base_revision": original["revision"], "name": "Friday final", "song_ids": ids[:2]},
+    )
+    assert edited.status_code == 200, edited.text
+    latest = edited.json()["mix"]
+
+    copied = party.client.post(
+        f"/api/local-media/recipes/{original['mix_id']}/duplicate", headers=auth(ALICE)
+    )
+    assert copied.status_code == 200, copied.text
+    duplicate = copied.json()["mix"]
+    assert duplicate["mix_id"] != original["mix_id"]
+    assert duplicate["name"] == "Friday final copy"
+    assert duplicate["number"] == 1 and duplicate["parent"] is None
+    assert [song["song_id"] for song in duplicate["songs"]] == [
+        song["song_id"] for song in latest["songs"]
+    ]
+
+
+def test_delete_removes_all_revisions_only_for_the_callers_workspace(party, local_media_on):
+    ids = _songs(party, ALICE)
+    mix = _make(party, ALICE, ids)
+    edit = party.client.post(
+        f"/api/local-media/recipes/{mix['mix_id']}/revisions",
+        headers=auth(ALICE),
+        json={"base_revision": mix["revision"], "name": "Friday revised"},
+    )
+    assert edit.status_code == 200, edit.text
+
+    refused = party.client.delete(f"/api/local-media/recipes/{mix['mix_id']}", headers=auth(BOB))
+    assert refused.status_code == 404
+    deleted = party.client.delete(f"/api/local-media/recipes/{mix['mix_id']}", headers=auth(ALICE))
+    assert deleted.status_code == 204
+    missing = party.client.get(f"/api/local-media/recipes/{mix['mix_id']}", headers=auth(ALICE))
+    assert missing.status_code == 404
+
+
 def test_a_deleted_song_stays_in_the_recipe_and_reads_as_not_in_the_library(party, local_media_on):
     ids = _songs(party, ALICE)
     mix = _make(party, ALICE, ids)

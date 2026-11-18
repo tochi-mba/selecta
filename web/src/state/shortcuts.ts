@@ -55,7 +55,9 @@ export function focusOwnsKeys(target: EventTarget | null): boolean {
 }
 
 export function anOverlayIsOpen(): boolean {
-  return !!document.querySelector('.overlay');
+  // Closing overlays leave an inert, aria-hidden copy behind while it animates out. It is only
+  // decoration: it no longer owns focus or keys, so it must not block a new Ctrl K palette.
+  return !!document.querySelector('.overlay:not([inert]):not([aria-hidden="true"])');
 }
 
 /** Which shortcut this key press means here, if any. A key whose feature isn't in this build means

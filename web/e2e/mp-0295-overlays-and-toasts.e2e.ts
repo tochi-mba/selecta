@@ -59,7 +59,10 @@ test('MP-0295-01 dialog, sheet, drawer and palette share header, body, footer in
     await expect(page.getByRole('dialog', { name: 'Activity' })).toBeVisible();
     frames.push(await frame(page));
     await page.keyboard.press('Escape');
-    await page.keyboard.press('Control+k');
+    // This case measures the palette's overlay geometry, not the Ctrl+K handler (covered
+    // by S3-0068). Use its ordinary control so the closing Activity overlay cannot race
+    // the shortcut's overlay-arbitration check.
+    await page.locator('.palette-button').click();
     await expect(page.getByRole('dialog', { name: 'Search and commands' })).toBeVisible();
     frames.push(await frame(page));
     await page.keyboard.press('Escape');

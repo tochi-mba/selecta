@@ -11,7 +11,7 @@ def test_the_inventory_in_docs_is_up_to_date():
 
 def test_it_reads_every_shared_sheet_in_load_order():
     order = sc.load_order()
-    assert order[0] == "style.css"
+    assert order[0] == "styles/boot.css"
     assert order[-1] == "styles/typography.css"
     assert "styles/tokens.css" not in order
 

@@ -206,7 +206,11 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
   if (!loaded && !error) {
     return (
       <section className="next-up discoveries">
-        <div className="row wrap discoveries-head"><h2>Songs that might share chords</h2></div>
+        <div className="row wrap discoveries-head">
+          <h2>Songs that might share chords</h2>
+          {/* Keep the mobile heading's second line reserved for the count shown once results arrive. */}
+          <span className="hint" aria-hidden="true">Checking…</span>
+        </div>
         {harmonicIntro}
         <Skeleton
           variant="pairs"

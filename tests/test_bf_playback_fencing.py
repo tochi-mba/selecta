@@ -460,7 +460,12 @@ def test_the_command_route_requires_an_explicit_fence(party):
     }
     answer = party.client.post("/api/playback/commands", headers=auth(ALICE), json=body)
     assert answer.status_code == 422
-    assert answer.json()["detail"]["code"] == "invalid_command"
+    detail = answer.json()["detail"]
+    assert isinstance(detail, list)
+    assert any(
+        error.get("loc", [])[-1:] == ["fence"] and error.get("type") == "missing"
+        for error in detail
+    )
 
 
 @pytest.mark.parametrize("body_model", [playback_api.CommandBody, playback_api.ZoneCommandBody])

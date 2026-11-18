@@ -89,6 +89,9 @@ for (const view of [{ width: 320, height: 568 }, { width: 667, height: 320 }]) {
         await expect(primary, `${theme} ${surface.path}`).toBeVisible();
         await primary.scrollIntoViewIfNeeded();
         await expect(primary).toBeInViewport();
+        // Several primary actions finish loading after the page shell is visible. Disabled
+        // buttons cannot receive focus, so wait for readiness before checking keyboard access.
+        await expect(primary, `${theme} ${surface.path} is ready for keyboard input`).toBeEnabled();
         const width = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
         expect(width, `${theme} ${surface.path} scrolls sideways`).toBeLessThanOrEqual(1);
         // focus reaches it and moves on: no trap around the core action

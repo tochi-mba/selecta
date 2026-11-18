@@ -146,7 +146,14 @@ def test_a_heartbeat_sent_before_a_remote_command_arrived_can_not_undo_it(
 ):
     held = _beat(engine, laptop, 0, 4000, seq=1).session
     seek = session.submit_command(
-        engine, WORKSPACE, phone.id, "seek", {"offset_ms": 60_000}, held.seq, "seek-1"
+        engine,
+        WORKSPACE,
+        phone.id,
+        "seek",
+        {"offset_ms": 60_000},
+        held.seq,
+        "seek-1",
+        fence=held.fence,
     )
     clock.advance(1)
 
@@ -264,7 +271,9 @@ def test_taking_over_without_playing_keeps_a_pause_and_turns_a_stop_into_a_pause
 ):
     fresh = session.take_over(engine, WORKSPACE, laptop.id, start_playing=False).session
     assert fresh.state is PlayState.PAUSED and fresh.active_device_id == laptop.id
-    session.submit_command(engine, WORKSPACE, laptop.id, "play", None, fresh.seq, "play-1")
+    session.submit_command(
+        engine, WORKSPACE, laptop.id, "play", None, fresh.seq, "play-1", fence=fresh.fence
+    )
     clock.advance(3)
     still_playing = session.take_over(engine, WORKSPACE, phone.id, start_playing=False).session
     assert still_playing.state is PlayState.PLAYING
@@ -288,6 +297,7 @@ def _send(engine, device, command, args=None, based_on=None, key=None, **more):
     if based_on is None:
         based_on = _current(engine).seq
     key = key or f"{command}-{based_on}-{device.id}"
+    more.setdefault("fence", _current(engine).fence)
     return session.submit_command(
         engine, WORKSPACE, device.id, command, args, based_on, key, **more
     )
@@ -360,7 +370,9 @@ def test_a_reused_key_with_a_different_command_is_a_conflict(engine, laptop, pho
 def test_every_command_needs_an_idempotency_key_of_up_to_128_characters(engine, laptop, key):
     _playing(engine, laptop)
     with pytest.raises(session.InvalidCommand):
-        session.submit_command(engine, WORKSPACE, laptop.id, "pause", None, 1, key)
+        session.submit_command(
+            engine, WORKSPACE, laptop.id, "pause", None, 1, key, fence=_current(engine).fence
+        )
 
 
 def test_keys_are_per_workspace_so_another_account_can_not_replay_yours(engine, laptop):
@@ -370,7 +382,14 @@ def test_keys_are_per_workspace_so_another_account_can_not_replay_yours(engine, 
     other = elsewhere.device
     session.take_over(engine, OTHER_WORKSPACE, other.id)
     result = session.submit_command(
-        engine, OTHER_WORKSPACE, other.id, "skip", None, 1, "shared-key"
+        engine,
+        OTHER_WORKSPACE,
+        other.id,
+        "skip",
+        None,
+        1,
+        "shared-key",
+        fence=session.get_session(engine, OTHER_WORKSPACE).fence,
     )
     assert result.status is CommandStatus.APPLIED and not result.replayed
 
