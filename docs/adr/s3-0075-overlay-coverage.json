@@ -23,6 +23,8 @@
   {"surface":"overlay.palette","state":"partial","uncovered":"needs-driver"},
   {"surface":"overlay.gallery.dialog","state":"open","uncovered":"outside-route-tree"},
   {"surface":"overlay.gallery.drawer","state":"open","uncovered":"outside-route-tree"},
+  {"surface":"overlay.gallery.sheet","state":"open","uncovered":"outside-route-tree"},
+  {"surface":"overlay.gallery.workspace","state":"open","uncovered":"outside-route-tree"},
   {"surface":"overlay.glossary","state":"open","candidates":[{"spec":"web/e2e/mp-baseline.mp.ts","capture":"candidate-overlay.glossary--fx.overlay.glossary--<viewport>.png"}]},
   {"surface":"overlay.delete_draft","state":"open","candidates":[{"spec":"web/e2e/mp-baseline.mp.ts","capture":"candidate-overlay.delete_draft--fx.overlay.delete_draft--<viewport>.png"}]},
   {"surface":"overlay.delete_draft","state":"saving","uncovered":"in-flight"},

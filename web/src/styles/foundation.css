@@ -88,6 +88,8 @@ input[aria-invalid='true'], select[aria-invalid='true'], textarea[aria-invalid='
 .meter[data-status='warning'] .meter-fill { background: var(--status-warning); }
 .meter[data-status='danger'] .meter-fill { background: var(--status-failed); }
 .meter[data-indeterminate] .meter-fill { inline-size: 30%; animation: lucy-slide var(--motion-loop-slide) ease-in-out infinite; }
+/* reduced motion keeps the short bar still at the start: still working, length unknown, nothing sliding */
+@media (prefers-reduced-motion: reduce) { .meter[data-indeterminate] .meter-fill { animation: none; } }
 .meter-detail { margin: 0; font: var(--type-caption); color: var(--text-soft); }
 
 /* ConfirmDialog (ui/ConfirmDialog.tsx): a narrow dialog that asks one question. The consequence line

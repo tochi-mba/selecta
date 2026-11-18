@@ -1,13 +1,15 @@
 // The browser-test harness for the cloud playback and Rooms panels. It's built only with
 // SELECTA_CLOUD_E2E=1 (see rooms.vite.ts) and served by tests/cloud_e2e_server.py, which signs in
 // test people by bearer token. It mounts the same components the Cloud app does, against the
-// real cloud API, without AuthKit. `?as=alice` picks the person.
+// real cloud API, without AuthKit. `?as=alice` picks the person. `?page=gallery` shows the Cloud,
+// Rooms and devices patterns instead (CloudGallery.tsx), with no account and no server reads.
 
 import { StrictMode, useCallback, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DevicesPanel } from '../devices/DevicesPanel';
 import { PlayingBar } from '../devices/PlayingBar';
 import { RoomPanel } from '../rooms/RoomPanel';
+import { CloudGallery } from './CloudGallery';
 import { RuntimeHarness } from './runtime';
 
 class HarnessError extends Error {
@@ -51,4 +53,4 @@ function Harness() {
   );
 }
 
-createRoot(document.getElementById('root')!).render(<StrictMode><Harness /></StrictMode>);
+createRoot(document.getElementById('root')!).render(<StrictMode>{params.get('page') === 'gallery' ? <CloudGallery /> : <Harness />}</StrictMode>);
