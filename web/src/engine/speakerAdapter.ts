@@ -5,7 +5,7 @@ import { installLimiter, InstallLimiterOptions, LimiterInstall } from './limiter
 import { createLoader, Loader } from './loader';
 import type { ProbeResult } from './probe';
 import { createScheduler, LoadedTrack, Scheduler, SchedulerTimers, SeamProvider, Transition } from './scheduler';
-import { createEngineStore, downgradeDeviceOutput, EngineState, EngineStore, UnsupportedHere } from './state';
+import { BACKGROUND_TAB_NOTICE, createEngineStore, downgradeDeviceOutput, EngineState, EngineStore, noticeWhilePlaying, OUTPUT_CHANGED_NOTICE, UnsupportedHere } from './state';
 
 /** The browser engine as an ADR-0415 playback device (ADR-0457, BF-0457-05).
  *
@@ -75,31 +75,16 @@ export class BrowserSpeaker implements Speaker {
   private readonly watchedDevices: MediaDevices | null;
   private readonly onVisibilityChange = () => {
     if (this.disposed || this.watchedDocument?.visibilityState !== 'hidden') return;
-    downgradeDeviceOutput(
-      { status: 'uncertain' },
-      'This tab went to the background, so SelectaDJ cannot promise the sound still reaches your speakers.',
-      this.store,
-    );
+    // this speaker keeps its own wording; other engines are told only if they are playing
+    downgradeDeviceOutput({ status: 'uncertain' }, noticeWhilePlaying(BACKGROUND_TAB_NOTICE, this.store), this.store);
   };
   private readonly onOutputDeviceChange = () => {
     if (this.disposed) return;
     const playing = this.store.get().phase === 'playing';
     // A route change must not send audio into a newly attached output at an unexpected level.
     // Pause the scheduler/context and require a fresh Play gesture; never auto-resume.
-    if (playing) {
-      downgradeDeviceOutput(
-        { status: 'output_unverified' },
-        'Audio output changed. Check your speakers or headphones before playing on.',
-        this.store,
-      );
-      void this.scheduler.pause();
-    } else {
-      downgradeDeviceOutput(
-        { status: 'output_unverified' },
-        'Audio output changed. Check your speakers or headphones before playing on.',
-        this.store,
-      );
-    }
+    downgradeDeviceOutput({ status: 'output_unverified' }, OUTPUT_CHANGED_NOTICE, this.store);
+    if (playing) void this.scheduler.pause();
   };
 
   constructor(options: BrowserSpeakerOptions) {

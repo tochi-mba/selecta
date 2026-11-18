@@ -60,50 +60,83 @@ export type EngineStore = {
 };
 
 // A sound check can use a short-lived engine, while playback uses a separate engine. They still
-// feed the same physical output in this tab, so a person's answer and any later output loss must
-// reach every live engine. This is page memory only: a reload starts unverified again.
+// feed the same physical output in this tab, so a person's answer and any device-wide output loss
+// (a hidden tab, a route change, a released wake lock) must reach every live engine. An
+// 'interrupted' context is not device-wide: it belongs to the one engine whose AudioContext the
+// system suspended, so it never travels. This is page memory only: a reload starts unverified.
 const outputStores = new Set<EngineStore>();
 let deviceOutputConfirmedAt: number | null = null;
-let deviceOutputWatchersAttached = false;
+let detachDeviceOutputWatchers: (() => void) | null = null;
 
-function watchDeviceOutput(): void {
-  if (deviceOutputWatchersAttached) return;
-  deviceOutputWatchersAttached = true;
-  if (typeof document !== 'undefined') {
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') {
-        downgradeDeviceOutput({ status: 'uncertain' }, 'This tab went to the background, so SelectaDJ cannot promise the sound still reaches your speakers.');
-      }
-    });
-  }
-  if (typeof navigator !== 'undefined') {
-    navigator.mediaDevices?.addEventListener('devicechange', () => {
-      downgradeDeviceOutput({ status: 'output_unverified' }, 'Audio output changed. Check your speakers or headphones before playing on.');
-    });
-  }
+/** The sentence for a downgrade: the same words for every engine, or worked out per engine. */
+export type DowngradeNotice = string | ((store: EngineStore) => string | undefined);
+
+export const BACKGROUND_TAB_NOTICE = 'This tab went to the background, so SelectaDJ cannot promise the sound still reaches your speakers.';
+export const OUTPUT_CHANGED_NOTICE = 'Audio output changed. Check your speakers or headphones before playing on.';
+
+/** A notice only engines that are playing should show: an idle engine has no sound to promise.
+ * `always` names one engine that gets it regardless (its own event, its own wording). */
+export function noticeWhilePlaying(text: string, always?: EngineStore): DowngradeNotice {
+  return (store) => (store === always || store.get().phase === 'playing' ? text : undefined);
 }
 
+function watchDeviceOutput(): void {
+  if (detachDeviceOutputWatchers) return;
+  const watchedDocument = typeof document === 'undefined' ? null : document;
+  const watchedDevices = typeof navigator === 'undefined' ? null : navigator.mediaDevices ?? null;
+  const onVisibility = () => {
+    if (watchedDocument?.visibilityState !== 'hidden') return;
+    downgradeDeviceOutput({ status: 'uncertain' }, noticeWhilePlaying(BACKGROUND_TAB_NOTICE));
+  };
+  const onDeviceChange = () => downgradeDeviceOutput({ status: 'output_unverified' }, OUTPUT_CHANGED_NOTICE);
+  watchedDocument?.addEventListener('visibilitychange', onVisibility);
+  watchedDevices?.addEventListener('devicechange', onDeviceChange);
+  detachDeviceOutputWatchers = () => {
+    watchedDocument?.removeEventListener('visibilitychange', onVisibility);
+    watchedDevices?.removeEventListener('devicechange', onDeviceChange);
+  };
+}
+
+/** Join an engine to this tab's shared output; it starts confirmed if a person already confirmed. */
 export function registerDeviceOutputStore(store: EngineStore): () => void {
   outputStores.add(store);
   if (deviceOutputConfirmedAt !== null) store.confirmHeard(deviceOutputConfirmedAt);
   return () => outputStores.delete(store);
 }
 
+/** A person heard the check tone (ADR-0460): every live engine on this tab, and any made later
+ * until the next device-wide downgrade, shares that answer. */
 export function confirmDeviceOutput(at: number): void {
   watchDeviceOutput();
   deviceOutputConfirmedAt = at;
   for (const store of outputStores) store.confirmHeard(at);
 }
 
-export function downgradeDeviceOutput(next: OutputDowngrade, notice?: string, source?: EngineStore): void {
+/** Move the output status down on evidence. Device-wide evidence reaches every live engine and
+ * forgets the shared confirmation; 'interrupted' stays with `source`, the engine it happened to.
+ * `source` also gets the downgrade when it is a standalone store (embedders and tests). */
+export function downgradeDeviceOutput(next: OutputDowngrade, notice?: DowngradeNotice, source?: EngineStore): void {
+  const noticeFor = (store: EngineStore) => (typeof notice === 'function' ? notice(store) : notice);
+  if (next.status === 'interrupted') {
+    source?.downgradeOutput(next, noticeFor(source));
+    return;
+  }
   deviceOutputConfirmedAt = null;
   let includedSource = false;
   for (const store of outputStores) {
     if (store === source) includedSource = true;
-    store.downgradeOutput(next, notice);
+    store.downgradeOutput(next, noticeFor(store));
   }
-  // Standalone EngineContext/BrowserSpeaker instances are used by embedders and tests too.
-  if (source && !includedSource) source.downgradeOutput(next, notice);
+  if (source && !includedSource) source.downgradeOutput(next, noticeFor(source));
+}
+
+/** TEST ONLY: forget every registered engine, the shared confirmation and the page watchers, so
+ * one test's confirmation never leaks into the next. Product code never calls this. */
+export function resetDeviceOutputForTests(): void {
+  outputStores.clear();
+  deviceOutputConfirmedAt = null;
+  detachDeviceOutputWatchers?.();
+  detachDeviceOutputWatchers = null;
 }
 
 export function createEngineStore(initial?: Partial<EngineState>): EngineStore {

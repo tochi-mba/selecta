@@ -1,4 +1,4 @@
-import { downgradeDeviceOutput } from './state';
+import { BACKGROUND_TAB_NOTICE, downgradeDeviceOutput, noticeWhilePlaying, OUTPUT_CHANGED_NOTICE } from './state';
 import type { EngineStore, UnsupportedHere } from './state';
 
 /** AudioContext lifecycle for the browser runtime (ADR-0457).
@@ -77,7 +77,8 @@ export function createEngineContext(options: EngineContextOptions): EngineContex
     if (holdingSound || disposed) return;
     if (context.state !== 'running' && store.get().phase === 'playing') {
       store.set({ phase: 'paused' });
-      downgradeDeviceOutput({ status: 'interrupted' }, 'The sound was interrupted. Press play to carry on.', store);
+      // this context's own interruption, not the device's: only this engine hears about it
+      store.downgradeOutput({ status: 'interrupted' }, 'The sound was interrupted. Press play to carry on.');
     }
   };
 
@@ -92,12 +93,8 @@ export function createEngineContext(options: EngineContextOptions): EngineContex
   // reaches the speakers. Coming back to the foreground proves nothing, so there is no upgrade.
   const onVisibility = () => {
     if (disposed || watchedDocument?.visibilityState !== 'hidden') return;
-    const playing = store.get().phase === 'playing';
-    downgradeDeviceOutput(
-      { status: 'uncertain' },
-      playing ? 'This tab went to the background, so SelectaDJ cannot promise the sound still reaches your speakers.' : undefined,
-      store,
-    );
+    // only an engine that is playing has sound to promise; an idle one shows no warning
+    downgradeDeviceOutput({ status: 'uncertain' }, noticeWhilePlaying(BACKGROUND_TAB_NOTICE), store);
   };
   watchedDocument?.addEventListener('visibilitychange', onVisibility);
 
@@ -107,11 +104,7 @@ export function createEngineContext(options: EngineContextOptions): EngineContex
     if (disposed) return;
     const playing = store.get().phase === 'playing';
     if (playing) options.pauseSafely?.();
-    downgradeDeviceOutput(
-      { status: 'output_unverified' },
-      'Audio output changed. Check your speakers or headphones before playing on.',
-      store,
-    );
+    downgradeDeviceOutput({ status: 'output_unverified' }, OUTPUT_CHANGED_NOTICE, store);
   };
   watchedDevices?.addEventListener('devicechange', onDeviceChange);
 
