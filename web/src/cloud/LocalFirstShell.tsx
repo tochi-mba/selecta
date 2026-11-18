@@ -417,7 +417,6 @@ function SavedBrowserRecipes({ workspaceId, recipes, request, setMixData, refres
       currentRecipes.setCurrent(previous);
       setProblem((error as Error).message || 'Couldn’t open that saved mix.');
     } finally { setPending(null); }
-  }; setPending(null); }
   };
   const currentId = recipes.current();
   return (
