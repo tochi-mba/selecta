@@ -434,6 +434,17 @@ def build(port: int):
         objects.failing_parts = {int(number) for number in body.get("parts", [])}
         return {"failing": sorted(objects.failing_parts)}
 
+    @app.get("/test/r2/objects")
+    def r2_objects():
+        """Every stored object by bucket and key, with its size and digest, so a test can prove
+        a flow wrote nothing to object storage (BF-0465-02)."""
+        listed = []
+        for (bucket, key), found in sorted(objects.objects.items()):
+            data = found.bytes()
+            listed.append({"bucket": bucket, "key": key, "size": len(data),
+                           "sha256": hashlib.sha256(data).hexdigest()})
+        return {"objects": listed}
+
     @app.get("/test/r2/log")
     def r2_log():
         return {"requests": objects.log}
