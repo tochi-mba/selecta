@@ -392,9 +392,9 @@ test('hosted media is an account grant: revoking it hides uploads but keeps stor
 // Honest scope: `cloud.hosted_media` and `cloud.stored_media` ship on, so a real per-user rule
 // switches them off. The others ship off and a rule can never grant past the build (ADR-0414),
 // so off is every account's state and the sweep checks that state as is. Where a flag has a
-// visible on-state in this build (the local-first shell, its catalogue, the upload entry), the
-// "marks are real" test first shows each mark with the flag on, so an absent mark means
-// something. `devices.browser_player`, `cloud.browser_dsp`, `cloud.venue_tablet` and
+// visible on-state (the local-first shell and the upload entry here; the catalogue in
+// reconciliation.reconcile.ts, whose server builds it on), a test first shows each mark with
+// the flag on, so an absent mark means something. `devices.browser_player`, `cloud.browser_dsp`, `cloud.venue_tablet` and
 // `cloud.local_export` have no Cloud UI of their own yet; their marks are their own names and the
 // player refusal, and the sweep proves only that none appears.
 
