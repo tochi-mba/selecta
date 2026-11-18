@@ -1,7 +1,7 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MixData, Request, Status } from '../api';
 import { setFlags, useFlags } from '../flags';
-import { makeResolver, MediaStore, storageSpace, type MediaResolver, type StorageSpace } from '../media';
+import { makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, storageSpace, type MediaResolver, type StorageSpace } from '../media';
 import type { NowState } from '../player';
 import { RequestContext } from '../requestContext';
 import { navigate, parseRoute, useLocationText } from '../router';
@@ -16,10 +16,12 @@ import { Now } from '../views/Now';
 import type { View, ViewProps } from '../views/shared';
 import type { Account, Api } from './api';
 import { ConnectMusic } from './ConnectMusic';
+import { hostedResolver } from './hostedMedia';
 import { isHostedAccount } from './localFirstGate';
 import { CannotPlayHere, LibraryEmpty, ListenEmpty, MixesEmpty, MyMixesEmpty, NotOnThisAccount, OnlyOnYourComputer } from './LocalFirstEmpty';
 import { useLocalFirstPlayer } from './localFirstPlayer';
 import { EMPTY_MIX, localFirstRequest, mediaRequest } from './localFirstRequest';
+import { QueueSources } from './QueueSources';
 import { CutoverNotice } from './migration/CutoverNotice';
 import { OnboardingSpine } from './onboarding/OnboardingSpine';
 import { onboardingFinished } from './onboarding/state';
@@ -64,11 +66,24 @@ export function LocalFirstShell({ api, account, more, feedback }: {
   const store = useRef<Promise<MediaStore> | null>(null);
   const openStore = useCallback(() => (store.current ??= MediaStore.open()), []);
   const resolving = useRef<Promise<MediaResolver> | null>(null);
-  const resolver = useCallback(async () => (resolving.current ??= openStore().then((opened) => makeResolver(opened))), [openStore]);
+  // Device first, hosted fallback (ADR-0465): only a grandfathered account with stored media
+  // readable gets the hosted path; every answer lands in the source book the queue shows.
+  const book = useMemo(() => makeSourceBook(), []);
+  const coexisting = isHostedAccount(account) && on('cloud.stored_media');
+  const programme = useRef<MixData['mix']>([]);
+  const resolver = useCallback(async () => (resolving.current ??= openStore().then((opened) => makeCoexistingResolver({
+    device: makeResolver(opened),
+    hosted: coexisting ? hostedResolver(api, workspaceId, {
+      songs: () => programme.current,
+      shaOf: async (songId) => (await opened.get(songId))?.identity.content_sha256 ?? null,
+    }) : null,
+    book,
+  }))), [openStore, coexisting, api, workspaceId, book]);
 
   const [status, setStatus] = useState<Status | null>(null);
   const [statusProblem, setStatusProblem] = useState('');
   const [data, setData] = useState<MixData>(EMPTY_MIX);
+  programme.current = data.mix;
   const refreshStatus = useCallback(() => {
     request<Status>('/status')
       .then((next) => { setStatus(next); setStatusProblem(''); })
@@ -145,6 +160,7 @@ export function LocalFirstShell({ api, account, more, feedback }: {
           <>
             {refusal && <div className="page"><CannotPlayHere reason={refusal} /></div>}
             {data.mix.length ? <Now {...shared} /> : <ListenEmpty connected={connected} />}
+            {on('cloud.local_media') && data.mix.length > 0 && <div className="page"><QueueSources mix={data.mix} book={book} /></div>}
           </>
         );
       case 'missing':

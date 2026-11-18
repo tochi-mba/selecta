@@ -14,7 +14,7 @@ export { cachedBytesKey, cacheEvict, cacheRead, cacheWrite, isQuotaError, MediaS
 export type { CacheWriteResult, DirectoryHandleLike, FileHandleLike, FileRef, StoredSong } from './store';
 export { acceptRepick, findLapsed } from './reauth';
 export type { LapsedItem, LapsedWhy, RegrantOutcome } from './reauth';
-export { makeResolver, resolveByIndex } from './resolve';
-export type { MediaResolver, ResolvedTrack } from './resolve';
+export { makeCoexistingResolver, makeResolver, makeSourceBook, NOT_ANYWHERE, NOT_ON_DEVICE, resolveByIndex } from './resolve';
+export type { MediaResolver, MusicSource, ResolvedTrack, SourceBook, SourceEntry } from './resolve';
 export { acceptReimport, anyPlayable, planRepair } from './repair';
 export type { MissingReason, RepairMatch, RepairMissing, RepairPlan } from './repair';

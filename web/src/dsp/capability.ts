@@ -16,8 +16,12 @@ import { TEMPO_IMPLEMENTATION } from './analysis/tempo';
 import { CROSSFADE_IMPLEMENTATION } from './crossfade';
 import { LIMITER_IMPLEMENTATION } from './limiter';
 import { LOUDNESS_IMPLEMENTATION, TRUE_PEAK_IMPLEMENTATION } from './loudness';
+import { SEAM_MOVES_IMPLEMENTATION } from './seamMoves';
 import { SEAMS_IMPLEMENTATION } from './seams';
 import { STRETCH_IMPLEMENTATION } from './stretch';
+
+/** How a seam meets a track from either music path: the whole file decoded before planning. */
+export const WHOLE_FILE_DECODE_IMPLEMENTATION = 'whole-file-decode-v1';
 
 export type Tier = 1 | 2 | 3;
 
@@ -137,7 +141,12 @@ export function registerBrowserDspCapabilities(
   tier1('true_peak', TRUE_PEAK_IMPLEMENTATION);
   const limiter = evidence.limiter ?? { kind: 'worklet' };
   tier1('limiter', limiter.kind === 'worklet' ? LIMITER_IMPLEMENTATION : limiter.implementation);
-  registry.markUnsupported('eq_filters', 1, 'eq-filters-unbuilt-v0', 'SelectaDJ has no browser EQ or filters yet');
+  // The seam move chain (seamMoves.ts): reduced minimum-phase biquads, under their own id.
+  tier1('eq_filters', SEAM_MOVES_IMPLEMENTATION);
+  // Both music paths decode the whole file before a seam is planned, so either may meet the
+  // other mid-seam (ADR-0465 coexistence: the capability record says both paths are seam-safe).
+  tier1('seam_source_device', WHOLE_FILE_DECODE_IMPLEMENTATION);
+  tier1('seam_source_hosted', WHOLE_FILE_DECODE_IMPLEMENTATION);
 
   const budget = evidence.workerBudget ?? null;
   const tier2Reason = !player

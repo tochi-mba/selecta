@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MixItem } from '../api';
+import type { MusicSource, SeamRecord, SeamSettingsLike } from '../dsp/seamProvider';
 import { playbackStatusText, type PlaybackStatus } from '../copy';
 import { Api, extrapolate, Position, SessionView, usePlaybackDevice } from '../devices/usePlaybackDevice';
 import type { BrowserSpeaker, Engine, EngineState } from '../engine';
@@ -18,6 +19,10 @@ import type { PlayerLike } from '../playerContract';
  *   claims audible sound, only a person's sound-check confirmation does.
  * - What the engine cannot do yet is an honest no-op with a reason, never a silent success:
  *   volume (the engine has no gain control exposed), the spectrum (no analyser is exposed).
+ * - Planned transitions (BF-0459-04): the speaker gets a seam provider (dsp/seamProvider.ts) that
+ *   scripts each seam from the mix's seam settings and this device's capability record; the
+ *   state's `nextReady`/`seamAt`/`inSeam` come from the schedule actually handed to the
+ *   scheduler, never from a wish.
  */
 
 export const NOTHING_TO_PLAY = 'Nothing to play yet. Connect your music and make a mix first.';
@@ -37,6 +42,8 @@ export type PlayerFacts = {
   serverNow: number;
   /** A sentence about the last action, which wins over the status words while it is fresh. */
   said: string;
+  /** The seam most recently scheduled on this device's engine, if any. */
+  seam?: SeamRecord | null;
 };
 
 /** The one-vocabulary status for these facts (copy.ts), or null when nothing is playing. */
@@ -69,15 +76,18 @@ export function nowStateFrom(facts: PlayerFacts, sound: { volume: number; muted:
     : session && phase !== 'idle' ? extrapolate(session, facts.serverNow) : 0;
   const status = statusOf(facts);
   const words = status ? playbackStatusText(status) : '';
+  // only a schedule this device's engine was handed, out of the song playing here, counts
+  const seam = facts.speaking && facts.seam && facts.seam.fromIndex === position ? facts.seam.schedule : null;
+  const songTime = offsetMs / 1000;
   return {
     phase,
     position,
-    songTime: offsetMs / 1000,
+    songTime,
     duration: facts.mix[position]?.duration ?? 0,
-    inSeam: false,
-    seamAt: null,
+    inSeam: !!seam && songTime >= seam.startSeconds && songTime < seam.startSeconds + seam.windowSeconds,
+    seamAt: seam ? seam.startSeconds : null,
     notice: facts.said || facts.engine?.notice || words,
-    nextReady: false,
+    nextReady: !!seam,
     lastSeamKey: null,
     volume: sound.volume,
     muted: sound.muted,
@@ -203,26 +213,50 @@ export class LocalFirstPlayer implements PlayerLike {
   }
 }
 
-/** Opens the engine from a press and makes this device's speaker. Injectable for tests. */
-export type EngineStarter = (resolve: (index: number) => Promise<{ id: number; data: () => Promise<ArrayBuffer> } | null>, queueLength?: () => number) => Promise<{ speaker: BrowserSpeaker; refusal: string | null } | { speaker: null; refusal: string }>;
+/** What the seam provider is told about the programme (BF-0459-04, BF-0465-03). */
+export type SeamWiring = {
+  /** The seam settings for the transition into the song at `toIndex` (mix[toIndex].seam). */
+  settingsFor(toIndex: number): SeamSettingsLike | null | undefined;
+  /** Which music path a resolved song came from. */
+  sourceOf(index: number): MusicSource | null;
+  onPlanned(record: SeamRecord): void;
+};
 
-/** The real starter: AudioContext from the press, the measured probe, then the speaker. */
-export const startBrowserEngine: EngineStarter = async (resolve, queueLength) => {
-  const { createEngine } = await import('../engine');
+/** Opens the engine from a press and makes this device's speaker. Injectable for tests. */
+export type EngineStarter = (
+  resolve: (index: number) => Promise<{ id: number; data: () => Promise<ArrayBuffer> } | null>,
+  queueLength?: () => number,
+  seams?: SeamWiring,
+) => Promise<{ speaker: BrowserSpeaker; refusal: string | null } | { speaker: null; refusal: string }>;
+
+/** The real starter: AudioContext from the press, the measured probe, the capability roster,
+ * then the speaker with its seam provider. */
+export const startBrowserEngine: EngineStarter = async (resolve, queueLength, seams) => {
+  const [{ createEngine }, provider] = await Promise.all([import('../engine'), import('../dsp/seamProvider')]);
   const engine: Engine = createEngine();
   const opened = engine.openContext({ fromUserGesture: true });
   if ('state' in opened) return { speaker: null, refusal: opened.reason };
   const probe = await engine.probe(opened.context);
+  // Tier 2 (beatmatching) rests on this device's own measured analysis time (dsp/budget.ts)
+  const roster = engine.roster({ probe, workerBudget: probe.ok ? provider.calibrateAnalysis() : null });
+  const seam = seams ? provider.makeSeamProvider({
+    ...seams,
+    abilities: () => provider.abilitiesFrom((feature) => roster.get(feature)),
+    sourceSafe: (source) => provider.abilityOf((feature) => roster.get(feature), `seam_source_${source}`),
+  }) : undefined;
   // queueLength lets an unavailable track skip with a notice instead of ending the set (ADR-0458)
-  const speaker = engine.createSpeaker({ audio: opened, probe, resolve, queueLength });
+  const speaker = engine.createSpeaker({ audio: opened, probe, resolve, queueLength, seam });
   return { speaker, refusal: probe.ok ? null : probe.reason };
 };
+
+/** How many scheduled seams the hook remembers for surfaces and tests. */
+export const SEAMS_KEPT = 8;
 
 /** The hook the local-first shell uses: one stable LocalFirstPlayer over the device session. */
 export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, resolver, starter = startBrowserEngine }: {
   api: Api;
   workspaceId: string;
-  mix: readonly Pick<MixItem, 'duration' | 'song_id'>[];
+  mix: readonly (Pick<MixItem, 'duration' | 'song_id'> & { seam?: Pick<NonNullable<MixItem['seam']>, 'settings'> | null })[];
   remoteControl: boolean;
   /** The media agent's resolver (media/makeResolver), opened lazily; null before it exists. */
   resolver: () => Promise<MediaResolver | null>;
@@ -237,6 +271,13 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   songs.current = mix;
   const owner = useRef<string | null | undefined>(undefined);
   const wantHere = useRef(false);
+  const [seams, setSeams] = useState<SeamRecord[]>([]);
+  const sources = useRef(new Map<number, MusicSource>());
+  const wiring = useMemo<SeamWiring>(() => ({
+    settingsFor: (toIndex) => songs.current[toIndex]?.seam?.settings ?? null,
+    sourceOf: (index) => sources.current.get(index) ?? null,
+    onPlanned: (record) => setSeams((kept) => [...kept, record].slice(-SEAMS_KEPT)),
+  }), []);
 
   useEffect(() => speaker?.onState(setEngine), [speaker]);
   // the clock moves while playing: redraw the position twice a second, never faster
@@ -248,6 +289,8 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   const resolve = useCallback(async (index: number) => {
     const songId = songs.current[index]?.song_id;
     const found = songId === undefined ? null : await (await resolver())?.(songId);
+    if (found) sources.current.set(index, found.source ?? 'device');
+    else sources.current.delete(index);
     return found ? { id: found.id, data: found.data } : null;
   }, [resolver]);
 
@@ -270,23 +313,23 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     if (owner.current === undefined) owner.current = null;
     if (!speaker) {
       wantHere.current = true;
-      const made = await starter(resolve, () => songs.current.length);
+      const made = await starter(resolve, () => songs.current.length, wiring);
       if (made.refusal) setRefusal(made.refusal);
       if (made.speaker) setSpeaker(made.speaker);
       return '';
     }
     await pb.playHere(owner.current);
     return '';
-  }, [pb, refusal, resolve, speaker, starter]);
+  }, [pb, refusal, resolve, speaker, starter, wiring]);
 
   const actions: PlayerActions = { playHere, command: pb.command, remoteControl, speaker };
   const facts: PlayerFacts = {
     mix, view: pb.view, speaking: pb.isSpeaker(), here: speaker?.position() ?? null, engine, refusal,
-    serverNow: pb.serverNow(), said: '',
+    serverNow: pb.serverNow(), said: '', seam: seams[seams.length - 1] ?? null,
   };
   const player = useMemo(() => new LocalFirstPlayer(facts, actions), []);
   // facts change every render; the player tells its listener only when the state moved
   useEffect(() => { player.update(facts, actions); });
-  return { player, device: pb, refusal };
+  return { player, device: pb, refusal, seams };
 }
 

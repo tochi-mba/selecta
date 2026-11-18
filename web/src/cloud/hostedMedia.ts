@@ -1,0 +1,85 @@
+import type { MediaResolver } from '../media';
+import type { Api } from './api';
+
+/** The hosted fallback for coexisting accounts (ADR-0465, BF-0465-03).
+ *
+ * A grandfathered account keeps its stored hosted media playable through the
+ * `cloud.stored_media` routes: `GET /api/assets` lists it (with each file's sha256) and
+ * `GET /api/assets/{id}/playback-url` signs a short-lived link to the original. A catalogue
+ * song is matched to a hosted asset by content first (the device's own identity hash for the
+ * song, when this device ever imported it), then by the exact "Artist - Title" or "Title" file
+ * name, case and extension aside. Anything less certain is no match: playing the wrong song
+ * would be worse than saying the song is unavailable.
+ */
+
+export type HostedAsset = { id: string; name: string; sha256?: string | null };
+type Page = { assets: HostedAsset[]; next_cursor: string | null };
+
+const PAGE = 100;
+const MAX_PAGES = 200;
+
+export type CatalogueEntry = { song_id: number; artist?: string | null; title?: string | null };
+
+const plain = (text: string) => text.replace(/\.[a-z0-9]{2,5}$/i, '').replace(/\s+/g, ' ').trim().toLowerCase();
+
+/** The hosted asset that is this song, or null when no match is certain. */
+export function matchAsset(song: CatalogueEntry, sha: string | null, assets: readonly HostedAsset[]): HostedAsset | null {
+  if (sha) {
+    const same = assets.find((asset) => asset.sha256 && asset.sha256.toLowerCase() === sha.toLowerCase());
+    if (same) return same;
+  }
+  const title = plain(song.title ?? '');
+  if (!title) return null;
+  const names = new Set([title, song.artist ? plain(`${song.artist} - ${song.title}`) : title]);
+  const named = assets.filter((asset) => names.has(plain(asset.name)));
+  return named.length === 1 ? named[0] : null;
+}
+
+/** Every hosted asset, page by page by the server's cursor. */
+export async function readHostedAssets(api: Api, workspaceId: string): Promise<HostedAsset[]> {
+  const found: HostedAsset[] = [];
+  const seen = new Set<string>();
+  let cursor: string | null = null;
+  for (let page = 0; page < MAX_PAGES; page += 1) {
+    const query = new URLSearchParams({ limit: String(PAGE) });
+    if (cursor) query.set('cursor', cursor);
+    const answer: Page = await api<Page>(`/assets?${query}`, {}, workspaceId);
+    found.push(...answer.assets.map((asset) => ({ id: asset.id, name: asset.name, sha256: asset.sha256 ?? null })));
+    if (!answer.next_cursor || seen.has(answer.next_cursor)) break;
+    seen.add(answer.next_cursor);
+    cursor = answer.next_cursor;
+  }
+  return found;
+}
+
+/** A MediaResolver over the account's hosted copies. `songs` is the current programme's
+ * catalogue entries; `shaOf` reads the device's identity hash for a song when it has one. */
+export function hostedResolver(api: Api, workspaceId: string, options: {
+  songs: () => readonly CatalogueEntry[];
+  shaOf?: (songId: number) => Promise<string | null>;
+  fetchBytes?: (url: string) => Promise<ArrayBuffer>;
+}): MediaResolver {
+  let listing: Promise<HostedAsset[]> | null = null;
+  const assets = () => (listing ??= readHostedAssets(api, workspaceId).catch((problem) => { listing = null; throw problem; }));
+  const fetchBytes = options.fetchBytes ?? (async (url: string) => {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('SelectaDJ could not fetch the hosted copy of this song.');
+    return response.arrayBuffer();
+  });
+  return async (songId) => {
+    const song = options.songs().find((entry) => entry.song_id === songId);
+    if (!song) return null;
+    const sha = (await options.shaOf?.(songId).catch(() => null)) ?? null;
+    const asset = matchAsset(song, sha, await assets());
+    if (!asset) return null;
+    return {
+      id: songId,
+      source: 'hosted',
+      // the link is signed when the engine wants the bytes, so it never expires in a queue
+      data: async () => {
+        const signed = await api<{ url: string }>(`/assets/${encodeURIComponent(asset.id)}/playback-url`, {}, workspaceId);
+        return fetchBytes(signed.url);
+      },
+    };
+  };
+}

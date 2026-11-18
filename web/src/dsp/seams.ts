@@ -40,10 +40,20 @@ export const SCHEDULE_CURVE_STEPS = 48;
  *  - 'start': the deck begins playing its track from `sourceAt` seconds at output time `at`.
  *  - 'gain':  the deck's gain ramps linearly from its previous point to `value` at `at`.
  *  - 'stop':  the deck stops at `at`.
+ *  - 'eq':    the deck's `band` gain (linear, 1 untouched, 0 removed) ramps to `value` at `at`.
+ *  - 'filter': the deck's `filter` cutoff sweeps (exponentially) to `hz` at `at`.
+ * 'eq' and 'filter' are the scripted moves of seamScript.ts; a device without the move chain
+ * (seamMoves.ts) never receives them, because the scripter degrades the move first.
  */
 export interface SeamEvent {
   deck: 'a' | 'b';
-  kind: 'start' | 'gain' | 'stop';
+  kind: 'start' | 'gain' | 'stop' | 'eq' | 'filter';
+  /** For 'eq': which of the reference's three bands. */
+  band?: 'low' | 'mid' | 'high';
+  /** For 'filter': which filter moves. */
+  filter?: 'highpass' | 'lowpass';
+  /** For 'filter': the cutoff reached at `at`, in Hz. */
+  hz?: number;
   /** Seconds on the output timeline (deck A's track starts at 0). */
   at: number;
   /** For 'start': seconds into the entering deck's own track. */
@@ -80,9 +90,22 @@ export interface SeamSchedule {
   /** Crossfade length actually scheduled. */
   windowSeconds: number;
   events: SeamEvent[];
+  /** The move this schedule plays (seamScript.ts), when it came from a scripted move. */
+  style?: string;
+  /** Every part of the asked-for move this device could not do, and what it did instead. */
+  degraded?: SeamDegrade[];
 }
 
-function firstBeatAtOrAfter(beats: number[], time: number): number | null {
+/** A move the browser tier could not do honestly, and the documented fallback it took. */
+export interface SeamDegrade {
+  /** What was asked for: a move name, or a part of one ('eq', 'stretch', 'stems', 'echo'). */
+  wanted: string;
+  /** What was scheduled instead. */
+  instead: string;
+  reason: string;
+}
+
+export function firstBeatAtOrAfter(beats: number[], time: number): number | null {
   for (const beat of beats) {
     if (beat >= time) {
       return beat;
@@ -91,15 +114,15 @@ function firstBeatAtOrAfter(beats: number[], time: number): number | null {
   return null;
 }
 
-function confident(track: TrackTiming): boolean {
+export function confident(track: TrackTiming): boolean {
   return track.tempo.confidence >= MIN_BEATMATCH_CONFIDENCE && !track.tempo.ambiguous;
 }
 
-function gainEvents(deck: 'a' | 'b', points: ReadonlyArray<readonly [number, number]>): SeamEvent[] {
+export function gainEvents(deck: 'a' | 'b', points: ReadonlyArray<readonly [number, number]>): SeamEvent[] {
   return points.map(([at, value]) => ({ deck, kind: 'gain', at, value }));
 }
 
-function fadeSchedule(startSeconds: number, entrySeconds: number, reason: string): SeamSchedule {
+export function fadeSchedule(startSeconds: number, entrySeconds: number, reason: string): SeamSchedule {
   const window = FALLBACK_FADE_SECONDS;
   const end = startSeconds + window;
   const events: SeamEvent[] = [

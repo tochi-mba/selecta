@@ -8,10 +8,15 @@ import { cachedBytesKey, cacheRead, MediaStore } from './store';
 // A revoked permission or a vanished file is null, never a crash or a silent skip; the
 // re-authorisation flow is how it comes back.
 
+/** Where a song's bytes come from: this device's own file, or the account's hosted copy. */
+export type MusicSource = 'device' | 'hosted';
+
 export type ResolvedTrack = {
   id: number;
   /** Fetches the bytes when the engine actually wants them; resolving stays cheap. */
   data: () => Promise<ArrayBuffer>;
+  /** Which path answered; device when absent (the plain device resolver). */
+  source?: MusicSource;
 };
 
 /** The contract injected into the engine: null means unavailable on this device right now. */
@@ -50,4 +55,85 @@ export function makeResolver(
 export async function resolveByIndex(resolve: MediaResolver, programme: number[], index: number): Promise<ResolvedTrack | null> {
   const songId = programme[index];
   return songId === undefined ? null : resolve(songId);
+}
+
+// Coexistence precedence (ADR-0465, BF-0465-03).
+//
+// A grandfathered account holds both kinds of music. Each track in a programme resolves on the
+// playing device first (the device resolver above), and only where the device lacks the file
+// falls back to the account's hosted copy (cloud.stored_media playback-url routes, injected as
+// `hosted` so this layer never learns about the Cloud API). Every answer is written to the
+// source book, so each queue item can show where it plays from, and a track neither path can
+// play is recorded with its reason instead of stalling silently.
+
+/** What the queue shows for one song: where it plays from, or why it cannot play. */
+export type SourceEntry =
+  | { source: MusicSource }
+  | { source: 'unavailable'; reason: string };
+
+export type SourceBook = {
+  get(songId: number): SourceEntry | undefined;
+  set(songId: number, entry: SourceEntry): void;
+  /** Every entry, by song id. */
+  all(): ReadonlyMap<number, SourceEntry>;
+  subscribe(watch: () => void): () => void;
+};
+
+export function makeSourceBook(): SourceBook {
+  const entries = new Map<number, SourceEntry>();
+  const watchers = new Set<() => void>();
+  return {
+    get: (songId) => entries.get(songId),
+    set(songId, entry) {
+      const before = entries.get(songId);
+      if (before && JSON.stringify(before) === JSON.stringify(entry)) return;
+      entries.set(songId, entry);
+      for (const watch of watchers) watch();
+    },
+    all: () => entries,
+    subscribe(watch) {
+      watchers.add(watch);
+      return () => { watchers.delete(watch); };
+    },
+  };
+}
+
+export const NOT_ON_DEVICE = 'This song is not on this device, and SelectaDJ has no hosted copy to play instead.';
+export const NOT_ANYWHERE = 'This song is not on this device right now.';
+
+/** Device first, hosted fallback. Without `hosted` (an account with no hosted media, or
+ * `cloud.stored_media` off) it is the device resolver with its answers recorded. */
+export function makeCoexistingResolver(options: {
+  device: MediaResolver;
+  hosted?: MediaResolver | null;
+  book?: SourceBook;
+}): MediaResolver {
+  const book = options.book;
+  return async (songId) => {
+    let deviceProblem = '';
+    try {
+      const found = await options.device(songId);
+      if (found) {
+        book?.set(songId, { source: 'device' });
+        return { ...found, source: 'device' };
+      }
+    } catch (error) {
+      deviceProblem = (error as Error | null)?.message ?? '';
+    }
+    if (options.hosted) {
+      try {
+        const found = await options.hosted(songId);
+        if (found) {
+          book?.set(songId, { source: 'hosted' });
+          return { ...found, source: 'hosted' };
+        }
+      } catch {
+        // a hosted copy that cannot be reached is the same honest null as a missing one
+      }
+      book?.set(songId, { source: 'unavailable', reason: NOT_ON_DEVICE });
+      return null;
+    }
+    book?.set(songId, { source: 'unavailable', reason: deviceProblem || NOT_ANYWHERE });
+    return null;
+  };
 }

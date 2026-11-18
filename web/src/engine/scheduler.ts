@@ -6,6 +6,7 @@ import {
   GainPoint,
   SEAM_FADE_SECONDS,
 } from '../dsp/crossfade';
+import { applyMoves, canMakeMoves, makeMovesChain, type MovesChain } from '../dsp/seamMoves';
 import type { SeamEvent, SeamSchedule } from '../dsp/seams';
 import type { EngineGraph } from './graph';
 import type { EngineStore } from './state';
@@ -91,7 +92,9 @@ export type Scheduler = {
   dispose(): void;
 };
 
-type Layer = { source: AudioBufferSourceNode; gain: GainNode };
+/** `moves` is the seam move chain (dsp/seamMoves.ts), present when a seam provider may ask for
+ * EQ or filter moves and the context can build it; neutral until a schedule moves it. */
+type Layer = { source: AudioBufferSourceNode; gain: GainNode; moves?: MovesChain };
 type Current = Layer & { index: number; startedAt: number; offset: number; duration: number };
 type Planned = Layer & { index: number; at: number; offset: number; duration: number };
 
@@ -149,12 +152,19 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     const source = context.createBufferSource();
     source.buffer = buffer;
     const gain = context.createGain();
-    source.connect(gain);
+    const moves = deps.seam && canMakeMoves(context) ? makeMovesChain(context) : undefined;
+    if (moves) {
+      source.connect(moves.input);
+      moves.output.connect(gain);
+    } else {
+      source.connect(gain);
+    }
     gain.connect(index % 2 === 0 ? deps.graph.deckA : deps.graph.deckB);
-    const made = { source, gain };
+    const made: Layer = { source, gain, moves };
     layers.add(made);
     source.onended = () => {
       source.disconnect();
+      moves?.dispose();
       gain.disconnect();
       layers.delete(made);
     };
@@ -177,6 +187,7 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
       // a layer that has not started cannot be stopped, and that is fine
     }
     made.source.disconnect();
+    made.moves?.dispose();
     made.gain.disconnect();
     layers.delete(made);
   };
@@ -214,6 +225,10 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
       .map((event) => [event.at, event.value as number] as const);
     applyPoints(from.gain.gain, byDeck('a'), base);
     applyPoints(made.gain.gain, byDeck('b'), base);
+    // EQ and filter moves; the scripter only sends them to a device whose roster has the chain
+    const nyquist = context.sampleRate / 2;
+    if (from.moves) applyMoves(from.moves, schedule.events.filter((event) => event.deck === 'a'), base, nyquist);
+    if (made.moves) applyMoves(made.moves, schedule.events.filter((event) => event.deck === 'b'), base, nyquist);
     let entered = { at: base, offset: 0 };
     for (const event of schedule.events) {
       if (event.kind === 'start' && event.deck === 'b') {
@@ -312,6 +327,7 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
       current = {
         source: planned.source,
         gain: planned.gain,
+        moves: planned.moves,
         index: planned.index,
         startedAt: planned.at,
         offset: planned.offset,
