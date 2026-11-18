@@ -78,7 +78,7 @@ from selecta.billing.plans import plan_for  # noqa: E402
 from selecta.identity.tokens import BadSignature, Claims  # noqa: E402
 from selecta.local_media import store as local_media_store  # noqa: E402
 from selecta.persistence import db_now, make_engine, migrate, transaction  # noqa: E402
-from selecta.playback.schema import playback_sessions  # noqa: E402
+from selecta.playback.schema import playback_commands, playback_sessions  # noqa: E402
 from selecta.rooms.cloud_ports import RoomPorts  # noqa: E402
 from selecta.storage import api as storage_api  # noqa: E402
 from selecta.usage import allowances, quota  # noqa: E402
@@ -421,6 +421,22 @@ def build(port: int):
                 .values(lease_expires_at=db_now(conn) - 1)
             )
         return {"ok": True}
+
+    @app.post("/test/expire-held")
+    def expire_held(body: dict = Body(default={})):  # noqa: B008
+        """Let every press held for `user`'s offline speaker run out its TTL now, as waiting
+        a minute would (BF-0461-04)."""
+        workspace_id = workspace_of(str(body["user"]))
+        with transaction(engine, workspace_id) as conn:
+            changed = conn.execute(
+                playback_commands.update()
+                .where(
+                    playback_commands.c.workspace_id == workspace_id,
+                    playback_commands.c.status == "deferred",
+                )
+                .values(expires_at=db_now(conn) - 1)
+            ).rowcount
+        return {"expired": changed}
 
     @app.post("/test/reset-playback")
     def reset_playback(body: dict = Body(default={})):  # noqa: B008

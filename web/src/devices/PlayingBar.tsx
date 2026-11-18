@@ -90,7 +90,9 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
       setChecking(false);
     }
   };
-  const remote = remoteControl && (view?.speaker === 'elsewhere' || (here && Boolean(session)));
+  // An offline speaker can still be steered: the press is held and reaches it if it comes back
+  // in time, or is shown as missed (BF-0461-04), so the buttons stay.
+  const remote = remoteControl && (view?.speaker === 'elsewhere' || view?.speaker === 'offline' || (here && Boolean(session)));
   // What the speaker says about its sound output (BF-0457-03). Only a browser-engine speaker
   // reports one, so with that player off nothing renders here.
   const output = !here ? speakerOutput(session) : null;
