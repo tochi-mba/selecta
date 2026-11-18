@@ -331,6 +331,29 @@ def create_cloud_app(
     # `playback/api.py`), on purpose leaving some reads open, such as a downgraded host's room.
     self_gated = ("rooms", "devices")
 
+    # A self-gated route (rooms and playback heartbeats, device polling) is refused or allowed
+    # by its own handler, so this middleware only needs the metrics cohort for it. Deciding that
+    # cohort costs a principal lookup and a transaction, which such routes previously never paid,
+    # so the answer is remembered briefly per credential pair. Gated routes never use this cache:
+    # `cloud_gate.require` still runs on every request, keeping the 5 s kill-switch contract.
+    cohort_cache: dict[tuple[str, str], tuple[str, float]] = {}
+    cohort_cache_ttl = 30.0
+
+    def _cohort_remembered(key: tuple[str, str]) -> str | None:
+        kept = cohort_cache.get(key)
+        if kept is None or time.monotonic() - kept[1] >= cohort_cache_ttl:
+            return None
+        return kept[0]
+
+    def _remember_cohort(key: tuple[str, str], cohort: str) -> None:
+        if len(cohort_cache) > 4096:
+            now = time.monotonic()
+            for stale in [k for k, (_, at) in cohort_cache.items() if now - at >= cohort_cache_ttl]:
+                cohort_cache.pop(stale, None)
+            if len(cohort_cache) > 4096:
+                cohort_cache.clear()
+        cohort_cache[key] = (cohort, time.monotonic())
+
     @app.middleware("http")
     async def account_feature_flags(request: Request, call_next):
         if not request.url.path.startswith("/api/") or not request.headers.get("authorization"):
@@ -343,6 +366,16 @@ def create_cloud_app(
             or flag_rules.is_untargetable(flag_id)
             or flag_id.split(".")[0] in self_gated
         )
+
+        cohort_key = (
+            request.headers.get("authorization", ""),
+            request.headers.get("x-workspace-id") or "",
+        )
+        if route_is_self_gated:
+            remembered = _cohort_remembered(cohort_key)
+            if remembered is not None:
+                request.state.local_first_cohort = remembered
+                return await call_next(request)
 
         def check() -> tuple[str, HTTPException | None]:
             principal = _principal(
@@ -370,6 +403,7 @@ def create_cloud_app(
         try:
             cohort, refused = await asyncio.to_thread(check)
             request.state.local_first_cohort = cohort
+            _remember_cohort(cohort_key, cohort)
             if refused is not None:
                 detail = refused.detail if isinstance(refused.detail, dict) else {}
                 return JSONResponse({"detail": detail}, status_code=refused.status_code)

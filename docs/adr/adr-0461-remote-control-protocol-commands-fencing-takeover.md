@@ -6,7 +6,7 @@
 - **Programme/date/baseline:** Browser-first Cloud (BF); 2026-11-17; `main` at `7d7f7932`.
 - **Priority / phase:** P1 / Phase BF3. **Owner:** Unassigned. **Implementing PR:** #96.
 - **Existing ADR owners:** ADR-0415 (playback devices and sessions: lease, heartbeat, take-over) and ADR-0419 (single audio owner): unchanged, extended to browser-owned audio. ADR-0414 (targeting), ADR-0416 (Rooms): unchanged. Sibling BF ADRs: ADR-0457, ADR-0460.
-- **Source touchpoints:** `src/selecta/playback/session.py`, `zone_session.py`, `fencing.py`, `deferred.py`, `envelope.py`, `programme.py`, `commands.py`, and `api.py`; `web/src/devices/usePlaybackDevice.ts`, `useZonePlaybackDevice.ts`, `PlayingBar.tsx`, and `ControllerNotices.tsx`; the `devices.remote_control` gate.
+- **Source touchpoints:** `src/selecta/playback/session.py`, `zone_session.py`, `fencing.py`, `deferred.py`, `envelope.py`, `programme.py`, `commands.py`, and `api.py`; `web/src/devices/usePlaybackDevice.ts`, `PlayingBar.tsx`, and `ControllerNotices.tsx`; the `devices.remote_control` gate.
 - **Proposal chapter:** [docs/saas/11a-devices-and-rooms.md](../saas/11a-devices-and-rooms.md).
 
 ## Context and evidence boundary
