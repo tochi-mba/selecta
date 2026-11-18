@@ -55,7 +55,6 @@ _FORBIDDEN_WORDS = frozenset({
     "filename", "dir", "directory", "folder", "audio", "blob", "stream", "bytes", "data_url",
     "wav", "mp3", "flac", "handle",
 })
-_WORD = re.compile(r"[A-Z]?[a-z0-9]+|[A-Z]+(?![a-z])")
 _FORBIDDEN_VALUE = re.compile(
     r"^(?:[a-z][a-z0-9+.-]*://|blob:|data:|file:|/|~/|\\\\|[a-z]:[\\/])"
     r"|\.(?:mp3|wav|flac|aiff?|m4a|aac|ogg|opus)$",
@@ -67,10 +66,33 @@ class NotMetadata(ValueError):
     """A payload carried something that looks like audio, a URL or a path."""
 
 
+def _words(key: str) -> list[str]:
+    """Split a key into lower-case words at separators and camelCase boundaries (`audioURL` ->
+    audio, url; `URLPath` -> url, path). One pass over the characters, so a hostile key costs
+    linear time."""
+    words: list[str] = []
+    current = ""
+    for index, char in enumerate(key):
+        if not char.isalnum():
+            if current:
+                words.append(current)
+            current = ""
+            continue
+        if current and char.isupper():
+            following = key[index + 1] if index + 1 < len(key) else ""
+            if not current[-1].isupper() or following.islower():
+                words.append(current)
+                current = ""
+        current += char
+    if current:
+        words.append(current)
+    return [word.lower() for word in words]
+
+
 def forbidden_key(key: str) -> bool:
     """Does this key name audio, a URL or a path? Judged word by word (snake_case, camelCase),
     so `direction` is fine and `file_path`, `audioUrl` or `src` are not."""
-    words = [word.lower() for word in _WORD.findall(str(key))]
+    words = _words(str(key))
     return any(word in _FORBIDDEN_WORDS for word in words) or str(key).lower() in _FORBIDDEN_WORDS
 
 
