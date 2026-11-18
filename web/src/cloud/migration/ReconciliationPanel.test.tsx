@@ -93,6 +93,9 @@ describe('ReconciliationPanel', () => {
     expect(await screen.findByText(/10,000-item safety limit/)).toBeInTheDocument();
     expect(calls.mock.calls.filter(([path]) => path.startsWith('/assets'))).toHaveLength(100);
     expect(await screen.findByText(/partial report cannot confirm that the full libraries have no matches/i)).toBeInTheDocument();
+    // one status says it once (L6), inside the styled partial block
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.getByRole('status').closest('.cloud-reconcile-partial')).not.toBeNull();
   });
 
   it('warns when the device catalogue reaches the 10,000-item safety limit', async () => {
@@ -108,5 +111,8 @@ describe('ReconciliationPanel', () => {
     expect(await screen.findByText(/10,000-item safety limit/)).toBeInTheDocument();
     expect(calls.mock.calls.filter(([path]) => path.startsWith('/local-media/songs'))).toHaveLength(100);
     expect(await screen.findByText(/partial report cannot confirm that the full libraries have no matches/i)).toBeInTheDocument();
+    // one status says it once (L6), inside the styled partial block
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.getByRole('status').closest('.cloud-reconcile-partial')).not.toBeNull();
   });
 });

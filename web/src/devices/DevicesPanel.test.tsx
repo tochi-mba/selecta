@@ -2,9 +2,12 @@ import { act, cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DevicesPanel, seen } from './DevicesPanel';
 import type { Api } from './usePlaybackDevice';
+import devicesSource from './DevicesPanel.tsx?raw';
+import playingSource from './PlayingBar.tsx?raw';
+import roomSource from '../rooms/RoomPanel.tsx?raw';
 
 // W3: Account > Devices reads its list only while the tab is on screen, signing a device out asks
-// "Forget this device?" first, and last seen reads in the reader's language.
+// "Sign out <name>?" first, and last seen reads in the reader's language.
 
 const NOW = 1_800_000_000;
 const device = (id: string, name: string, lastSeen: number) => ({ id, name, kind: 'laptop', signed_in: true, this_device: false, poor_speaker: false, last_seen_at: lastSeen, warnings: [] });
@@ -28,10 +31,11 @@ describe('devices panel', () => {
     mount();
     await settle();
     await act(async () => { screen.getByRole('button', { name: 'Sign out Old laptop' }).click(); await vi.advanceTimersByTimeAsync(0); });
-    const dialog = screen.getByRole('alertdialog', { name: 'Forget this device?' });
-    expect(dialog).toHaveTextContent('It can be paired again any time.');
+    const dialog = screen.getByRole('alertdialog', { name: 'Sign out Old laptop?' });
+    expect(dialog).toHaveTextContent('That device is signed out of your account. It can sign in again any time.');
+    expect(dialog).not.toHaveTextContent(/forget|paired/i);
     expect(calls.some((call) => call.path.endsWith('/sign-out'))).toBe(false);
-    await act(async () => { within(dialog).getByRole('button', { name: 'Forget this device' }).click(); await vi.advanceTimersByTimeAsync(0); });
+    await act(async () => { within(dialog).getByRole('button', { name: 'Sign out this device' }).click(); await vi.advanceTimersByTimeAsync(0); });
     expect(calls).toContainEqual({ path: '/devices/d1/sign-out', method: 'POST' });
     expect(screen.getByText('Old laptop was signed out.')).toBeInTheDocument();
   });
@@ -55,5 +59,17 @@ describe('devices panel', () => {
     // jsdom reads as en-US, so Intl says it in English
     expect(seen(NOW - 5 * 60, NOW)).toBe('Seen 5 minutes ago');
     expect(seen(NOW - 3 * 3600, NOW)).toBe('Seen 3 hours ago');
+  });
+});
+
+describe('busy labels (L3)', () => {
+  it('end in the ellipsis character, never three dots', () => {
+    for (const source of [devicesSource, playingSource, roomSource]) {
+      expect(source).not.toMatch(/working=["{`][^"}`]*\.\.\./);
+      expect(source).not.toMatch(/'[A-Z][a-z ]+\.\.\.'/);
+    }
+    expect(devicesSource).toContain('`Signing out${ELLIPSIS}`');
+    expect(playingSource).toContain('`Moving${ELLIPSIS}`');
+    expect(roomSource).toContain('`Ending${ELLIPSIS}`');
   });
 });

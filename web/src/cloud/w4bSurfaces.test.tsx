@@ -33,7 +33,7 @@ describe('Library remove', () => {
     });
     const refreshAccount = vi.fn(async () => {});
     render(<><LibraryPanel api={api as unknown as Api} workspaceId="ws" setError={() => {}} refreshAccount={refreshAccount} go={() => {}} /><Toaster /></>);
-    return { calls, refreshAccount };
+    return { calls, refreshAccount, api };
   }
 
   it('asks in the shared dialog, never window.confirm', async () => {
@@ -69,6 +69,32 @@ describe('Library remove', () => {
     await act(async () => { vi.advanceTimersByTime(UNDO_WINDOW_MS + 10); });
     await waitFor(() => expect(calls).toContain('DELETE /assets/a2'));
     expect(refreshAccount).toHaveBeenCalled();
+  });
+
+  it('commits a waiting removal with keepalive when the tab closes inside the Undo window (M6)', async () => {
+    const { calls, api } = library();
+    await userEvent.click(await screen.findByRole('button', { name: 'Remove Second Song' }));
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Yes, remove it' }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Remove Second Song' })).toBeNull());
+    expect(calls.some((call) => call.startsWith('DELETE'))).toBe(false);
+    await act(async () => { window.dispatchEvent(new Event('pagehide')); });
+    expect(calls.filter((call) => call === 'DELETE /assets/a2')).toHaveLength(1);
+    const sent = api.mock.calls.find(([path, init]) => path === '/assets/a2' && init?.method === 'DELETE');
+    expect(sent?.[1]).toMatchObject({ method: 'DELETE', keepalive: true });
+    // the timer it replaced never sends a second delete
+    await act(async () => { vi.advanceTimersByTime(UNDO_WINDOW_MS + 10); });
+    expect(calls.filter((call) => call === 'DELETE /assets/a2')).toHaveLength(1);
+  });
+
+  it('sends nothing on pagehide once Undo has put the song back', async () => {
+    const { calls } = library();
+    await userEvent.click(await screen.findByRole('button', { name: 'Remove First Song' }));
+    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Yes, remove it' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Undo/ }));
+    expect(await screen.findByRole('button', { name: 'Remove First Song' })).toBeInTheDocument();
+    await act(async () => { window.dispatchEvent(new Event('pagehide')); });
+    expect(calls.some((call) => call.startsWith('DELETE'))).toBe(false);
   });
 });
 

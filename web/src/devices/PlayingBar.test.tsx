@@ -2,7 +2,7 @@ import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { IOS_WARNING } from './deviceInfo';
-import { PlayingBar } from './PlayingBar';
+import { OPTIMISTIC_MS, PlayingBar } from './PlayingBar';
 import type { Api, SessionState, SessionView } from './usePlaybackDevice';
 
 // SC-0415-05: the iOS speaker warning and the screen wake lock, where they apply. The warning is
@@ -187,4 +187,23 @@ describe('optimistic play and pause', () => {
     expect(await screen.findByRole('button', { name: 'Pause' })).toBeVisible();
     expect(screen.getByRole('alert')).toHaveTextContent('The speaker said no.');
   });
+
+  it('lets an accepted press the speaker never applies lapse back to the reported state (M9)', async () => {
+    // the server takes the command, but the (offline) speaker never moves the session on
+    const api = (async (path: string) => {
+      if (path === '/devices') return { device: { id: 'phone', name: 'Phone', kind: 'phone', signed_in: true, this_device: true, poor_speaker: false, last_seen_at: 0, warnings: [] }, notice: null };
+      if (path === '/playback/reconnect') return { action: 'stop_moved', session, message: null };
+      if (path.startsWith('/playback/session')) return elsewhere;
+      if (path === '/playback/commands') return { command_id: 'c1' };
+      throw new Error(`unexpected ${path}`);
+    }) as Api;
+    render(<PlayingBar api={api} workspaceId="ws-lapse" source={source} />);
+    const pause = await screen.findByRole('button', { name: 'Pause' }, { timeout: 8000 });
+    const pressed = Date.now();
+    await userEvent.click(pause);
+    expect(await screen.findByRole('button', { name: 'Play' })).toBeVisible();
+    // the session still says playing at seq 3, so once the ack window passes the bar says so
+    expect(await screen.findByRole('button', { name: 'Pause' }, { timeout: OPTIMISTIC_MS + 3000 })).toBeVisible();
+    expect(Date.now() - pressed).toBeGreaterThanOrEqual(OPTIMISTIC_MS - 50);
+  }, OPTIMISTIC_MS + 15_000);
 });

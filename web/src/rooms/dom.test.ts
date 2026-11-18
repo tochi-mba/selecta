@@ -45,4 +45,21 @@ describe('patch', () => {
     expect(p.hasAttribute('aria-busy')).toBe(false);
     expect(root.innerHTML).toBe('<p class="y">two</p><strong>new</strong>');
   });
+
+  it('drops a handler the fresh node no longer declares, so a stale onclick cannot survive (L8)', () => {
+    const root = document.body.appendChild(h('div'));
+    const stale = vi.fn();
+    patch(root, h('button', { type: 'button', onclick: stale }, 'Vote'));
+    const button = root.querySelector('button')!;
+    patch(root, h('button', { type: 'button', disabled: true }, 'Voted'));
+    expect(root.querySelector('button')).toBe(button);
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(stale).not.toHaveBeenCalled();
+    // a handler declared again is heard again
+    const fresh = vi.fn();
+    patch(root, h('button', { type: 'button', onclick: fresh }, 'Vote'));
+    button.click();
+    expect(fresh).toHaveBeenCalledTimes(1);
+    expect(stale).not.toHaveBeenCalled();
+  });
 });

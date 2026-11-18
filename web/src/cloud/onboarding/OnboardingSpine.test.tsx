@@ -142,6 +142,32 @@ describe('onboarding back and restart', () => {
   });
 });
 
+describe('onboarding output choice (L5)', () => {
+  it('records "Use whatever is set" as the same system route the recommended default records', async () => {
+    const user = userEvent.setup();
+    const atOutput = { step: 'output' as const, outcomes: { connect: 'done' as const, verify: 'done' as const, capability: 'done' as const } };
+    const skipped = setup({ saved: atOutput });
+    await heading('Check the sound output');
+    // a different radio picked first: the button still means the system route, as it says
+    await user.click(screen.getByRole('radio', { name: /A Bluetooth speaker/ }));
+    await user.click(screen.getByRole('button', { name: 'Use whatever is set' }));
+    await heading('Start sound');
+    const bySkip = skipped.saved();
+    skipped.view.unmount();
+
+    const kept = setup({ saved: atOutput });
+    await heading('Check the sound output');
+    expect(screen.getByRole('radio', { name: /current output \(recommended\)/ })).toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await heading('Start sound');
+    const byDefault = kept.saved();
+    expect(bySkip.outcomes.output).toBe('done');
+    expect(bySkip.output).toBe('system');
+    expect(byDefault.outcomes.output).toBe(bySkip.outcomes.output);
+    expect(byDefault.output).toBe(bySkip.output);
+  });
+});
+
 describe('onboarding resume', () => {
   it('opens at the saved step for this account', async () => {
     setup({ saved: { step: 'output', outcomes: { connect: 'done', verify: 'done', capability: 'done' } } });
@@ -280,13 +306,22 @@ describe('verify never blocks (progressive import)', () => {
     await heading('Connect your music');
     await pickOne(user);
     await heading('Check your music');
-    expect(screen.getByRole('status')).toHaveTextContent('0 checked so far. SelectaDJ is still counting the files in that folder.');
-    expect(screen.getByRole('progressbar', { name: 'Checking your music' })).not.toHaveAttribute('value');
+    // the count is plain text: the import announcer says milestones, never every file (H3)
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByText('0 checked so far. SelectaDJ is still counting the files in that folder.')).not.toHaveAttribute('aria-live');
+    const bar = screen.getByRole('progressbar', { name: 'Checking your music' });
+    expect(bar.closest('.meter')).not.toBeNull();
+    expect(bar).not.toHaveAttribute('aria-valuenow');
+    expect(bar).toHaveAttribute('aria-busy', 'true');
     held.emit({ kind: 'collected', total: 3, skipped: 0 });
     held.emit({ kind: 'file', name: 'one.mp3', stage: 'hashing' });
     held.emit({ kind: 'file', name: 'one.mp3', stage: 'done', songId: 1 });
-    expect(screen.getByRole('status')).toHaveTextContent('1 of 3 checked so far. You can keep going; checking continues in the background.');
-    expect(screen.getByRole('progressbar', { name: 'Checking your music' })).toHaveAttribute('value', '1');
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByText('1 of 3 checked so far. You can keep going; checking continues in the background.')).toBeVisible();
+    const known = screen.getByRole('progressbar', { name: 'Checking your music' });
+    expect(known).toHaveAttribute('aria-valuenow', '1');
+    expect(known).toHaveAttribute('aria-valuemax', '3');
+    expect(known).toHaveAttribute('aria-valuetext', '1 of 3 songs');
     expect(screen.getByText('Now: one.mp3')).toBeVisible();
     noForbiddenWords();
   });

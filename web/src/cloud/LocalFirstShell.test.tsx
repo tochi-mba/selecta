@@ -18,8 +18,12 @@ vi.mock('@workos-inc/authkit-react', () => ({
   useAuth: () => ({ isLoading: false, user: auth.user, getAccessToken: async () => 'token', signIn: vi.fn(), signUp: vi.fn(), signOut: vi.fn() }),
 }));
 // The two contracts owned elsewhere, stood in by markers so this file tests only where they mount.
+const spine = vi.hoisted(() => ({ throws: false }));
 vi.mock('./onboarding/OnboardingSpine', () => ({
-  OnboardingSpine: ({ workspaceId }: { workspaceId: string }) => <section aria-label="Onboarding">{`spine for ${workspaceId}`}</section>,
+  OnboardingSpine: ({ workspaceId }: { workspaceId: string }) => {
+    if (spine.throws) throw new Error('spine broke');
+    return <section aria-label="Onboarding">{`spine for ${workspaceId}`}</section>;
+  },
 }));
 const recorded = vi.hoisted(() => [] as unknown[]);
 vi.mock('./onboarding/state', () => ({ onboardingFinished: () => false, browserStorage: () => null, recordImportOutcome: (_storage: unknown, _ws: string, summary: unknown) => { recorded.push(summary); } }));
@@ -63,6 +67,7 @@ afterEach(async () => {
   }
   clearImportMarker('ws-1');
   recorded.length = 0;
+  spine.throws = false;
   setAccountFeatures(null);
   setFlags({});
   window.history.replaceState({}, '', '/');
@@ -103,6 +108,19 @@ describe('what the local-first shell mounts', () => {
     render(<CloudApp />);
     expect(await screen.findByLabelText('Onboarding')).toHaveTextContent('spine for ws-1');
     expect(screen.queryByLabelText('Cutover notice')).toBeNull();
+  });
+
+  it('keeps the shell standing when one page throws: the page alone says it stopped (L1)', async () => {
+    account = withExperience(true, false, true);
+    spine.throws = true;
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(<CloudApp />);
+    expect(await screen.findByRole('heading', { level: 1, name: /stopped working\.$/ })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Start this page again' })).toBeVisible();
+    // the shell around the page is still there
+    expect(screen.getByText(/SelectaDJ Cloud\. Your music files stay on your devices/)).toBeVisible();
+    expect(screen.getAllByRole('main')).toHaveLength(1);
+    quiet.mockRestore();
   });
 
   it('shows a grandfathered hosted account the cutover notice', async () => {
@@ -165,7 +183,7 @@ describe('designed empty states, never a blank table', () => {
     const fallback = fetcher.getMockImplementation()!;
     fetcher.mockImplementation(async (url: string, init?: RequestInit) => {
       calls.push(`${init?.method ?? 'GET'} ${url}`);
-      if (url === '/api/local-media/recipes?kind=draft') {
+      if (url === '/api/local-media/recipes') {
         return new Response(JSON.stringify({ recipes: [] }), { status: 200, headers: { 'content-type': 'application/json' } });
       }
       return fallback(url, init);
@@ -174,7 +192,12 @@ describe('designed empty states, never a blank table', () => {
     render(<CloudApp />);
 
     expect(await screen.findByText(/No saved drafts yet/)).toBeVisible();
-    expect(calls).toContain('GET /api/local-media/recipes?kind=draft');
+    // the saved list sits inside My Mixes' own main landmark, never after it (L1)
+    const saved = screen.getByRole('heading', { name: 'Saved browser mixes' });
+    expect(screen.getAllByRole('main')).toHaveLength(1);
+    expect(screen.getByRole('main')).toContainElement(saved);
+    expect(calls).toContain('GET /api/local-media/recipes');
+    expect(calls.some((call) => call.includes('kind='))).toBe(false);
     expect(calls.some((call) => call.includes('/api/drafts'))).toBe(false);
   });
 });

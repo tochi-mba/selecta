@@ -4,12 +4,17 @@
 type Child = Node | string | null | undefined | false;
 type Props = Record<string, string | number | boolean | ((event: Event) => void) | undefined>;
 type Handlers = Record<string, (event: Event) => void>;
-type Handled = Element & { _on?: Handlers };
+type Handled = Element & { _on?: Handlers; _bound?: Set<string> };
 
 function listen(node: Handled, type: string, handler: (event: Event) => void): void {
   if (!node._on) node._on = {};
-  // one listener per type reads the current handler, so a patched node runs the newest one
-  if (!node._on[type]) node.addEventListener(type, (event) => node._on?.[type]?.(event));
+  if (!node._bound) node._bound = new Set();
+  // one listener per type reads the current handler, so a patched node runs the newest one; a
+  // handler dropped by a patch leaves that listener reading nothing until one is declared again
+  if (!node._bound.has(type)) {
+    node._bound.add(type);
+    node.addEventListener(type, (event) => node._on?.[type]?.(event));
+  }
   node._on[type] = handler;
 }
 
