@@ -35,10 +35,11 @@ describe('the import path never deletes or moves a member file', () => {
     // MediaStore.put, the one store call the import makes, writes IndexedDB records only.
     const put = store.slice(store.indexOf('async put('), store.indexOf('async get('));
     expect(put.match(DESTRUCTIVE) ?? []).toEqual([]);
-    // The one removeEntry and the one createWritable are the derived-data cache, on the OPFS
-    // root and on its own `cache-` names (cacheEvict, cacheWrite), not on any picked handle.
-    expect(store.match(/removeEntry\s*\(/g)).toHaveLength(1);
-    expect(store).toContain('await root.removeEntry(cacheEntryName(key))');
+    // Every removeEntry and the one createWritable are the derived-data cache, on the OPFS root
+    // and on its own `cache-` names (cacheEvict, cacheWrite's clean-up), not on any picked handle.
+    const removals = store.match(/[\w.?]*removeEntry\s*\([^)]*\)/g) ?? [];
+    expect(removals.length).toBeGreaterThan(0);
+    for (const removal of removals) expect(removal).toBe('root.removeEntry(cacheEntryName(key)');
     expect(store).toContain('await root.getFileHandle(cacheEntryName(key), { create: true })');
   });
 

@@ -389,27 +389,28 @@ test('hosted media is an account grant: revoking it hides uploads but keeps stor
 // still closes up. The person is seeded with a stored song and catalogue songs on a device, so a
 // mark that leaked would have something to show.
 //
-// Honest scope: `cloud.hosted_media` and `cloud.stored_media` ship on, so a real per-user rule
-// switches them off. The others ship off and a rule can never grant past the build (ADR-0414),
-// so off is every account's state and the sweep checks that state as is. Where a flag has a
-// visible on-state (the local-first shell and the upload entry here; the catalogue in
-// reconciliation.reconcile.ts, whose server builds it on), a test first shows each mark with
-// the flag on, so an absent mark means something. `devices.browser_player`, `cloud.browser_dsp`, `cloud.venue_tablet` and
+// Honest scope: a flag on for a new account on this server (`cloud.hosted_media` and
+// `cloud.stored_media` ship on; this test build also turns `cloud.local_media` on) is switched
+// off by a real per-user rule. The others ship off and a rule can never grant past the build
+// (ADR-0414), so off is every account's state and the sweep checks that state as is. Where a
+// flag has a visible on-state (the local-first shell, its catalogue, the upload entry), the
+// "marks are real" test first shows each mark with the flag on, so an absent mark means
+// something. `devices.browser_player`, `cloud.browser_dsp`, `cloud.venue_tablet` and
 // `cloud.local_export` have no Cloud UI of their own yet; their marks are their own names and the
 // player refusal, and the sweep proves only that none appears.
 
 type Mark = { text?: RegExp; role?: { role: 'navigation' | 'heading' | 'button' | 'link'; name: string } };
 
 /** Each BF flag: the `cloud.*` pages it must name in the registry, and its marks on them. */
-const BF: Record<string, { surfaces: string[]; marks: Mark[]; rule: boolean }> = {
-  'cloud.hosted_media': { surfaces: ['cloud.uploads'], rule: true, marks: [{ role: { role: 'button', name: 'Add music' } }, { text: /upload tracks/i }] },
-  'cloud.stored_media': { surfaces: ['cloud.library', 'cloud.listen'], rule: true, marks: [{ role: { role: 'button', name: 'Library' } }] },
-  'cloud.local_first': { surfaces: ['cloud.home', 'cloud.listen', 'cloud.library', 'cloud.settings'], rule: false, marks: [{ role: { role: 'navigation', name: 'Main' } }, { role: { role: 'link', name: 'Make a Mix' } }] },
-  'cloud.local_media': { surfaces: ['cloud.library'], rule: false, marks: [{ role: { role: 'heading', name: 'Connect music' } }, { text: /Local song \d/ }] },
-  'devices.browser_player': { surfaces: ['cloud.listen'], rule: false, marks: [{ text: /Browser player/ }, { text: /This device can.t play mixes/ }] },
-  'cloud.browser_dsp': { surfaces: ['cloud.listen'], rule: false, marks: [{ text: /Browser DSP/ }] },
-  'cloud.venue_tablet': { surfaces: ['cloud.listen', 'cloud.settings'], rule: false, marks: [{ text: /Venue tablet/ }] },
-  'cloud.local_export': { surfaces: ['cloud.listen'], rule: false, marks: [{ text: /Local export/ }] },
+const BF: Record<string, { surfaces: string[]; marks: Mark[]; ships: boolean }> = {
+  'cloud.hosted_media': { surfaces: ['cloud.uploads'], ships: true, marks: [{ role: { role: 'button', name: 'Add music' } }, { text: /upload tracks/i }] },
+  'cloud.stored_media': { surfaces: ['cloud.library', 'cloud.listen'], ships: true, marks: [{ role: { role: 'button', name: 'Library' } }] },
+  'cloud.local_first': { surfaces: ['cloud.home', 'cloud.listen', 'cloud.library', 'cloud.settings'], ships: false, marks: [{ role: { role: 'navigation', name: 'Main' } }, { role: { role: 'link', name: 'Make a Mix' } }] },
+  'cloud.local_media': { surfaces: ['cloud.library'], ships: false, marks: [{ role: { role: 'heading', name: 'Connect music' } }, { text: /Local song \d/ }] },
+  'devices.browser_player': { surfaces: ['cloud.listen'], ships: false, marks: [{ text: /Browser player/ }, { text: /This device can.t play mixes/ }] },
+  'cloud.browser_dsp': { surfaces: ['cloud.listen'], ships: false, marks: [{ text: /Browser DSP/ }] },
+  'cloud.venue_tablet': { surfaces: ['cloud.listen', 'cloud.settings'], ships: false, marks: [{ text: /Venue tablet/ }] },
+  'cloud.local_export': { surfaces: ['cloud.listen'], ships: false, marks: [{ text: /Local export/ }] },
 };
 const BF_IDS = Object.keys(BF) as FlagId[];
 const BF_SEED = { songs: 1, local_songs: 2 };
@@ -428,8 +429,8 @@ test('every Browser-first flag declares its Cloud surfaces, and the sweep covers
     expect(FLAG_IDS, id).toContain(id);
     expect([...cloudSurfaces(id)].sort(), `${id} surfaces`).toEqual([...BF[id].surfaces].sort());
     for (const surface of BF[id].surfaces) expect(SURFACES[surface], `${id}: ${surface}`).toBeTruthy();
-    // Only the two that ship on can be switched off by a rule; the rest ship dark.
-    expect(spec(id).default !== false, `${id} default`).toBe(BF[id].rule);
+    // The registry default: only hosted and stored media ship on; the rest ship dark.
+    expect(spec(id).default !== false, `${id} default`).toBe(BF[id].ships);
   }
 });
 
@@ -454,22 +455,21 @@ test('each Browser-first mark is real: shown with its flag on', async ({ page, r
   await page.goto('/library');
   await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Make a Mix', exact: true }).first()).toBeVisible();
-  // `cloud.local_media` is off in this server's build, so its catalogue routes refuse and the
-  // shell says so; its own marks (Connect music, the catalogue songs) are shown with it on by
-  // the reconciliation spec, whose server builds it on (playwright.reconcile.config.ts).
-  await expect(page.getByText('Local media catalogue is turned off in this build.')).toBeVisible();
+  // This test build turns the catalogue on (tests/e2e_cloud_server.py), so its marks show.
+  await expect(page.getByRole('heading', { name: 'Connect music' })).toBeVisible();
+  await expect(page.getByText('Local song 1')).toBeVisible();
 });
 
 for (const id of BF_IDS) {
   test(`with ${id} off, its Cloud pages hold together at 320 px and in both themes, with no trace of it`, async ({ page, request }) => {
     test.setTimeout(480_000); // all six views
     const extra = async (current: Page, where: string) => (await marksShown(current, BF[id].marks)).map((mark) => `${where}: shows ${mark}, but ${id} is off`);
-    // A ship-dark flag is already off for everyone: no rule, the sweep checks every account's state.
-    const flags = BF[id].rule ? [id] : [];
+    // On for a new account here: a real per-user rule switches it off. Off already (the build
+    // ships it dark): no rule, the sweep checks the state every account is in.
     const fresh = listener('bf-check');
     expect((await request.post('/test/seed', { data: { user: fresh } })).ok()).toBeTruthy();
     const account = await accountOf(request, fresh);
-    expect(account.features[id], `${id} is on for a new account`).toBe(BF[id].rule);
+    const flags = account.features[id] === false ? [] : [id];
     expect(teased(account, id), `${id} is teased`).toBe(false);
     expect(await sweep(page, request, flags, BF[id].surfaces, { views: FULL_VIEWS, seed: BF_SEED, extra })).toEqual([]);
   });

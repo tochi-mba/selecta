@@ -158,7 +158,7 @@ export class MediaStore {
 // Quota-aware and eviction-tolerant: a failed write reports why without throwing, a missing or
 // unreadable entry is a miss, and a miss means recompute.
 
-type OpfsWritable = { write: (data: Blob | ArrayBuffer | Uint8Array) => Promise<void>; close: () => Promise<void> };
+type OpfsWritable = { write: (data: Blob | ArrayBuffer | Uint8Array) => Promise<void>; close: () => Promise<void>; abort?: () => Promise<void> };
 type OpfsFileHandle = { getFile: () => Promise<File>; createWritable: () => Promise<OpfsWritable> };
 type OpfsDirectory = {
   getFileHandle: (name: string, options?: { create?: boolean }) => Promise<OpfsFileHandle>;
@@ -191,13 +191,18 @@ export type CacheWriteResult = { ok: true } | { ok: false; why: 'storage_full' |
 export async function cacheWrite(key: string, bytes: ArrayBuffer | Uint8Array | Blob): Promise<CacheWriteResult> {
   const root = await opfsRoot();
   if (!root) return { ok: false, why: 'unavailable' };
+  let writable: OpfsWritable | null = null;
   try {
     const handle = await root.getFileHandle(cacheEntryName(key), { create: true });
-    const writable = await handle.createWritable();
+    writable = await handle.createWritable();
     await writable.write(bytes);
     await writable.close();
     return { ok: true };
   } catch (error) {
+    // A failed write must leave a miss, not an empty entry that reads back as a hit: let go of
+    // the open stream (it locks the entry) and drop the entry the write created.
+    try { await writable?.abort?.(); } catch { /* already closed */ }
+    try { await root.removeEntry(cacheEntryName(key)); } catch { /* never created */ }
     return { ok: false, why: isQuotaError(error) ? 'storage_full' : 'unavailable' };
   }
 }
