@@ -1,10 +1,11 @@
-"""Put the devices, playback session, Rooms, guest and display routes into the cloud app.
+"""Put the Rooms, guest and display routes into the cloud app.
 
-`api_cloud.create_cloud_app` calls `install` once. The Rooms service is built here from the
+`api_cloud.create_cloud_app` calls `install` once. Playback routes are registered by the app
+factory, which supplies their zone directory. The Rooms service is built here from the
 cloud ports (`cloud_ports`) and the room-code pepper, a secret read from `SELECTA_ROOMS_PEPPER`
 (at least 16 bytes) unless the caller's `RoomPorts` carries one. Without a pepper the Rooms
-routes answer 503 `rooms_unavailable` rather than hashing codes with a guessable key; devices
-and playback don't need it.
+routes answer 503 `rooms_unavailable` rather than hashing codes with a guessable key; playback
+routes are wired separately and don't need it.
 """
 
 from __future__ import annotations
@@ -19,7 +20,6 @@ from sqlalchemy.engine import Engine
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now
-from selecta.playback import api as playback_routes
 from selecta.rooms import api_guest, api_host, codes
 from selecta.rooms.cloud_ports import (
     CloudPlans,
@@ -78,14 +78,6 @@ def install(
             raise api_guest.unavailable()
         return service
 
-    playback_routes.install_routes(
-        app,
-        engine=engine,
-        current_claims=current_claims,
-        principal_for=principal_for,
-        rules=rules,
-        events=OutboxPlaybackEvents(),
-    )
     api_host.install_routes(
         app,
         engine=engine,

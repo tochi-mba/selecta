@@ -122,7 +122,7 @@ def ack_command(
     events: PlaybackEvents = NO_EVENTS,
 ) -> AckOutcome:
     """The speaker reports what it did with a delivered command. Recorded once; a retried ack
-    gets the first answer again.
+    gets the first answer again while it remains the current speaker.
 
     Another workspace's command id looks exactly like one that doesn't exist (the explicit
     workspace filter holds on SQLite too, where there is no row-level security). Lock order is
@@ -173,8 +173,10 @@ def ack_command(
             raise InvalidCommand("That command was refused, so it was never delivered")
         if signature is not None and not envelope.same_signature(row["signature"], signature):
             raise BadSignature("That is not the envelope this command was delivered in")
-        # A retry is a read of the first ACK, not a new ACK. Check it before current lease
-        # ownership so a lost response still resolves after another device takes over.
+        # A device that no longer owns the lease cannot read/replay an ACK after takeover.
+        # The current speaker can retry idempotently to recover a lost response.
+        if session.active_device_id != device_id:
+            raise NotTheSpeaker("Only the current speaker acknowledges commands")
         if row["acked_at"] is not None:
             detail = row["ack_detail"] or {}
             return AckOutcome(
@@ -182,8 +184,6 @@ def ack_command(
                 song_id=detail.get("song_id"),
                 alternatives=tuple(detail.get("alternatives") or ()),
             )
-        if session.active_device_id != device_id:
-            raise NotTheSpeaker("Only the current speaker acknowledges commands")
         recorded = result
         if stale_fence(session, row["fence"]):
             recorded = ACK_SUPERSEDED
