@@ -133,3 +133,4 @@
 .cloud-reconcile-list small{grid-column:1/-1;color:var(--text-soft)}
 .cloud-meter-none h2{margin-bottom:var(--space-2)}
 @media(max-width:560px){.cloud-reconcile-list li{grid-template-columns:1fr}.cloud-spine-step .cloud-actions{width:100%}.cloud-spine-step .cloud-actions>*{flex:1}}
+.cloud-import-chip{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-snug);border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:var(--space-dense) var(--space-3);margin:var(--space-2) var(--space-4);font-size:.85rem}

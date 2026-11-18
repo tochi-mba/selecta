@@ -1,7 +1,9 @@
-import { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { ChangeEvent, useCallback, useEffect, useState } from 'react';
 import type { Request } from '../api';
-import { dirPicker, directoryInput, findLapsed, runImport } from '../media';
-import type { DirectoryHandleLike, ImportEvent, ImportSource, ImportSummary, LapsedItem, MediaStore, RegrantOutcome } from '../media';
+import { flagOn, useFlag } from '../flags';
+import { dirPicker, directoryInput, findLapsed, forgetFolder, recallFolder, rememberFolder, runImport } from '../media';
+import type { DirectoryHandleLike, ImportEvent, ImportSource, ImportSummary, LapsedItem, MediaStore, RegrantOutcome, StoredFolderHandle } from '../media';
+import { cancelImportSession, clearImportMarker, readImportMarker, startImportSession, useImportSession, type ImportRunner } from './importSession';
 
 /** Connect Music in the local-first Library (ADR-0458 import, ADR-0463 surfaces).
  *
@@ -60,24 +62,27 @@ export function mediaDeviceId(workspaceId: string): string {
   return made;
 }
 
-export function ConnectMusic({ request, workspaceId, openStore, onImported, importer = runImport }: {
+export function ConnectMusic({ request, workspaceId, openStore, importer = runImport }: {
   /** Asks with full /api paths, as the media importer does. */
   request: Request;
   workspaceId: string;
   openStore: () => Promise<MediaStore>;
-  onImported: () => void;
   importer?: typeof runImport;
 }) {
-  const [rows, setRows] = useState<FileRow[]>([]);
-  const [running, setRunning] = useState(false);
-  const [summary, setSummary] = useState<ImportSummary | null>(null);
+  const live = useImportSession();
+  const progressive = useFlag('cloud.progressive_import');
   const [problem, setProblem] = useState('');
   const [lapsed, setLapsed] = useState<LapsedItem[]>([]);
   const [regranted, setRegranted] = useState<Record<number, string>>({});
   const [degraded, setDegraded] = useState(false);
-  const stopper = useRef<AbortController | null>(null);
   const picker = dirPicker();
   const folderInput = directoryInput();
+  // the resume offer: an import that stopped part way last visit, and the folder it read if the
+  // browser kept a handle to it
+  const [marker, setMarker] = useState(() => (progressive ? readImportMarker(workspaceId) : null));
+  // undefined until the folder store has answered, so the offer never flickers between its forms
+  const [recalled, setRecalled] = useState<StoredFolderHandle | null | undefined>(undefined);
+  const [refused, setRefused] = useState(false);
 
   const checkLapsed = useCallback(async () => {
     try {
@@ -87,34 +92,34 @@ export function ConnectMusic({ request, workspaceId, openStore, onImported, impo
     } catch { setLapsed([]); }
   }, [openStore]);
   useEffect(() => { void checkLapsed(); }, [checkLapsed]);
-  useEffect(() => () => stopper.current?.abort(), []);
-
-  const start = async (source: ImportSource) => {
-    stopper.current?.abort();
-    const controller = new AbortController();
-    stopper.current = controller;
-    setRows([]); setSummary(null); setProblem(''); setRunning(true);
-    try {
-      const store = await openStore();
-      const done = await importer({
-        source, request, store, deviceId: mediaDeviceId(workspaceId), signal: controller.signal,
-        onProgress: (event) => setRows((current) => applyImportEvent(current, event)),
-      });
-      setSummary(done);
-      setDegraded(store.degraded);
-      if (done.imported || done.duplicates) onImported();
-    } catch (error) {
-      setProblem((error as Error).message || 'The import stopped. Nothing after the last connected song was changed.');
-    } finally {
-      setRunning(false);
-      if (stopper.current === controller) stopper.current = null;
+  // With `cloud.progressive_import` off, leaving this panel stops the import as it always did;
+  // on, the import belongs to the session and keeps going.
+  useEffect(() => () => { if (!flagOn('cloud.progressive_import')) cancelImportSession(); }, []);
+  useEffect(() => {
+    if (!marker) return undefined;
+    let current = true;
+    void recallFolder(workspaceId).then((found) => { if (current) setRecalled(found ?? null); }, () => { if (current) setRecalled(null); });
+    return () => { current = false; };
+  }, [marker, workspaceId]);
+  useEffect(() => {
+    if (live.phase === 'finished' || live.phase === 'paused') {
+      void openStore().then((store) => setDegraded(store.degraded)).catch(() => undefined);
     }
+  }, [live.phase, openStore]);
+
+  const start = (source: ImportSource, folder?: string) => {
+    setProblem(''); setRefused(false); setMarker(null);
+    const run: ImportRunner = async (given, onProgress, signal) => importer({
+      source: given, request, store: await openStore(), deviceId: mediaDeviceId(workspaceId), onProgress, signal,
+    });
+    void startImportSession({ source, run, workspaceId, folder });
   };
 
   const chooseFolder = async () => {
     try {
       const handle = await (window as unknown as { showDirectoryPicker(options?: { mode: 'read' }): Promise<DirectoryHandleLike> }).showDirectoryPicker({ mode: 'read' });
-      await start(handle);
+      void rememberFolder(workspaceId, handle);
+      start(handle, handle.name);
     } catch (error) {
       // closing the picker is a choice, not a failure
       if ((error as Error).name !== 'AbortError') setProblem((error as Error).message);
@@ -122,22 +127,48 @@ export function ConnectMusic({ request, workspaceId, openStore, onImported, impo
   };
   const chosen = (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (files?.length) void start(Array.from(files));
+    if (files?.length) start(Array.from(files));
     event.target.value = '';
+  };
+  const keepChecking = async (handle: StoredFolderHandle) => {
+    const answer = handle.requestPermission ? await handle.requestPermission({ mode: 'read' }).catch(() => 'denied') : 'granted';
+    if (answer === 'granted') start(handle, handle.name);
+    else setRefused(true);
+  };
+  const forget = () => {
+    void forgetFolder(workspaceId);
+    clearImportMarker(workspaceId);
+    setMarker(null); setRecalled(null); setRefused(false);
   };
 
   const allow = async (item: LapsedItem) => {
     const outcome = await item.regrant();
     setRegranted((current) => ({ ...current, [item.songId]: REGRANT_WORDS[outcome.status] }));
-    if (outcome.status === 'recovered') onImported();
   };
 
-  const finished = rows.filter((row) => row.stage === 'done' || row.stage === 'failed').length;
-  const failures = rows.filter((row) => row.stage === 'failed');
+  const running = live.phase === 'running';
+  const checked = live.registered + live.failures.length;
+  const failures = live.failures;
+  const shownProblem = problem || (live.phase === 'failed' ? live.error || 'The import stopped. Nothing after the last connected song was changed.' : '');
+  const offer = progressive && live.phase === 'idle' && marker && recalled !== undefined;
+  const folderName = marker?.folder ?? recalled?.name;
   return (
     <section className="panel stack connect-music" aria-labelledby="connect-music-title">
       <h2 id="connect-music-title">Connect music</h2>
       <p className="hint">Your music stays on this device. SelectaDJ keeps only each song’s title, artist and a fingerprint, so your library and mixes work on your other devices.</p>
+      {offer && recalled && !refused && (
+        <div className="stack" role="note">
+          <p>{`An import of ${folderName} was interrupted. Anything already checked is in your library.`}</p>
+          <div className="row wrap">
+            <button className="primary" onClick={() => void keepChecking(recalled)}>{`Keep checking ${folderName}`}</button>
+            <button className="quiet" onClick={forget}>Forget this</button>
+          </div>
+        </div>
+      )}
+      {offer && refused && <p role="alert">The browser did not allow it. Choose the folder again.</p>}
+      {offer && !recalled && !refused && (
+        <p role="note">An import stopped part way last time. Anything already checked is in your library. Choose the same folder or files again and SelectaDJ will recognise them; nothing is duplicated.</p>
+      )}
       {!running && (
         <div className="row wrap">
           {picker.supported && <button className="primary" onClick={() => void chooseFolder()}>Choose a folder</button>}
@@ -151,18 +182,20 @@ export function ConnectMusic({ request, workspaceId, openStore, onImported, impo
       {degraded && <p className="hint" role="note">This browser is not keeping SelectaDJ’s list of connected files, so you will need to connect them again next visit.</p>}
       {running && (
         <div className="stack" role="status" aria-live="polite">
-          <p><b>Connecting your music…</b> {finished} of {rows.length} {rows.length === 1 ? 'file' : 'files'} checked so far.</p>
-          <progress max={Math.max(rows.length, 1)} value={finished} aria-label="Files checked" />
-          <button onClick={() => stopper.current?.abort()}>Cancel</button>
+          <p><b>Connecting your music…</b> {checked} of {live.total ?? '…'} files checked so far.</p>
+          {typeof live.total === 'number'
+            ? <progress max={Math.max(live.total, 1)} value={checked} aria-label="Files checked" />
+            : <progress aria-label="Files checked" />}
+          <button onClick={cancelImportSession}>Cancel</button>
         </div>
       )}
-      {summary && <p role="status">{summaryWords(summary)}</p>}
-      {problem && <p className="error" role="alert">{problem}</p>}
+      {(live.phase === 'finished' || live.phase === 'paused') && live.summary && <p role="status">{summaryWords(live.summary)}</p>}
+      {shownProblem && <p className="error" role="alert">{shownProblem}</p>}
       {failures.length > 0 && (
         <details open={failures.length <= 5}>
           <summary>{failures.length} {failures.length === 1 ? 'file' : 'files'} could not be connected</summary>
           <ul>
-            {failures.map((row, index) => <li key={`${row.name}-${index}`}><b dir="auto">{row.name}</b>: {row.reason}</li>)}
+            {failures.map((failure, index) => <li key={`${failure.name}-${index}`}><b dir="auto">{failure.name}</b>: {failure.reason}</li>)}
           </ul>
         </details>
       )}

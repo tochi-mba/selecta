@@ -1,8 +1,10 @@
-import { configure, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, configure, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setAccountFeatures, setFlags } from '../flags';
 import { cloudAccount } from '../test/cloudAccount';
+import type { ImportEvent, ImportSummary } from '../media';
 import type { Account } from './api';
+import { cancelImportSession, clearImportMarker, clearImportSession, importSnapshot, startImportSession } from './importSession';
 
 // ADR-0462/0463 mounting rules: the shared shell only for an account with the local-first
 // experience AND `cloud.local_first` on; otherwise the hosted pages exactly as before. New
@@ -19,7 +21,8 @@ vi.mock('@workos-inc/authkit-react', () => ({
 vi.mock('./onboarding/OnboardingSpine', () => ({
   OnboardingSpine: ({ workspaceId }: { workspaceId: string }) => <section aria-label="Onboarding">{`spine for ${workspaceId}`}</section>,
 }));
-vi.mock('./onboarding/state', () => ({ onboardingFinished: () => false }));
+const recorded = vi.hoisted(() => [] as unknown[]);
+vi.mock('./onboarding/state', () => ({ onboardingFinished: () => false, browserStorage: () => null, recordImportOutcome: (_storage: unknown, _ws: string, summary: unknown) => { recorded.push(summary); } }));
 vi.mock('./migration/CutoverNotice', () => ({
   CutoverNotice: ({ accountId }: { accountId: string }) => <aside aria-label="Cutover notice">{`notice for ${accountId}`}</aside>,
 }));
@@ -49,7 +52,17 @@ beforeEach(() => {
   }));
 });
 
-afterEach(() => {
+afterEach(async () => {
+  // only a test that started an import waits for it to settle: an act() around a wait would
+  // also flush the shell's own live updates, which never go quiet in some account states
+  cleanup();
+  if (importSnapshot().phase !== 'idle') {
+    cancelImportSession();
+    await new Promise((settled) => setTimeout(settled, 0));
+    clearImportSession();
+  }
+  clearImportMarker('ws-1');
+  recorded.length = 0;
   setAccountFeatures(null);
   setFlags({});
   window.history.replaceState({}, '', '/');
@@ -200,5 +213,83 @@ describe('the account chrome in the local-first shell (hosted frame parity)', ()
     expect(screen.getByText(/You’re 2.0 GB over Free’s 10.0 GB/)).toBeVisible();
     expect(container.querySelector('.cloud-suspended')).not.toBeNull();
     expect(container.querySelector('.cloud-footer')).toHaveTextContent('Your music files stay on your devices; your account keeps their details.');
+  });
+});
+
+/** An import the test drives by hand, started on the session the shell subscribes to. */
+function heldImport() {
+  let emit: (event: ImportEvent) => void = () => {};
+  let finish: (summary: ImportSummary) => void = () => {};
+  let signal: AbortSignal | null = null;
+  act(() => {
+    void startImportSession({
+      source: [],
+      workspaceId: 'ws-1',
+      run: (_source, onProgress, abort) => {
+        emit = onProgress;
+        signal = abort;
+        return new Promise<ImportSummary>((resolve) => {
+          finish = resolve;
+          abort.addEventListener('abort', () => resolve({ imported: 0, duplicates: 0, failed: 0, skipped: 0, cancelled: true, paused: false }));
+        });
+      },
+    });
+  });
+  return { emit: (event: ImportEvent) => act(() => emit(event)), finish: (summary: ImportSummary) => finish(summary), signal: () => signal };
+}
+
+const songListings = () => (fetch as unknown as { mock: { calls: [string][] } }).mock.calls.filter(([url]) => url.startsWith('/api/local-media/songs')).length;
+
+describe('the import session in the shell (BF-0463-02 progressive import)', () => {
+  it('shows the import chip with its counts while an import runs, and it goes when the import ends', async () => {
+    account = withExperience(true, false, true);
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    window.history.replaceState({}, '', '/listen');
+    render(<CloudApp />);
+    await screen.findByRole('navigation', { name: 'Main' });
+    const held = heldImport();
+    held.emit({ kind: 'collected', total: 4, skipped: 0 });
+    held.emit({ kind: 'file', name: 'a.mp3', stage: 'done', songId: 2 });
+    expect(await screen.findByText('Checking your music: 1 of 4 checked.')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'View' })).toBeVisible();
+    held.finish({ imported: 1, duplicates: 0, failed: 0, skipped: 0, cancelled: false, paused: false });
+    await waitFor(() => expect(screen.queryByText(/Checking your music:/)).toBeNull());
+    expect(recorded).toEqual([{ imported: 1, duplicates: 0, failed: 0, skipped: 0, cancelled: false, paused: false }]);
+  });
+
+  it('reads the counts again on each landed batch', async () => {
+    account = withExperience(true, false, true);
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    window.history.replaceState({}, '', '/listen');
+    render(<CloudApp />);
+    await screen.findByRole('navigation', { name: 'Main' });
+    await waitFor(() => expect(songListings()).toBeGreaterThan(0));
+    const held = heldImport();
+    const before = songListings();
+    held.emit({ kind: 'batch', registered: 5 });
+    await waitFor(() => expect(songListings()).toBeGreaterThan(before));
+  });
+
+  it('keeps the spine mounted when songs land mid-import', async () => {
+    account = withExperience(true, false, true);
+    render(<CloudApp />);
+    expect(await screen.findByLabelText('Onboarding')).toBeVisible();
+    const held = heldImport();
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    const before = songListings();
+    held.emit({ kind: 'batch', registered: 1 });
+    await waitFor(() => expect(songListings()).toBeGreaterThan(before));
+    await new Promise((settled) => setTimeout(settled, 50));
+    expect(screen.getByLabelText('Onboarding')).toBeVisible();
+  });
+
+  it('cancels the import when the shell itself goes', async () => {
+    account = withExperience(true, false, true);
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    const view = render(<CloudApp />);
+    await screen.findByRole('navigation', { name: 'Main' });
+    const held = heldImport();
+    view.unmount();
+    expect(held.signal()?.aborted).toBe(true);
   });
 });

@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { clockTime, playbackStatusText } from '../../copy';
-import type { ImportEvent, ImportSource } from '../../media';
+import { flagOn, useFlag } from '../../flags';
+import { rememberFolder, type DirectoryHandleLike, type ImportSource } from '../../media';
 import { Icon, IconName } from '../../ui/Icon';
+import { cancelImportSession, startImportSession, useImportSession } from '../importSession';
 import { AudioSession, defaultDeps, SpineDeps } from './deps';
-import { FRESH, loadState, saveState, SpineState, STEP_TITLES, StepId, StepOutcome, STEPS } from './state';
-import { CapabilityStep, ConnectStep, ImportProgress, KeepAwakeStep, OutputStep, RemoteStep, SoundcheckStep, StartStep, StepProps, VerifyStep } from './steps';
+import { FRESH, loadState, saveState, settleVerifyLater, SpineState, STEP_TITLES, StepId, StepOutcome, STEPS } from './state';
+import { CapabilityStep, ConnectStep, KeepAwakeStep, OutputStep, RemoteStep, SoundcheckStep, StartStep, StepProps, VerifyStep } from './steps';
+
+/** A folder handle, as opposed to a list of picked files. */
+const isFolder = (source: ImportSource): source is DirectoryHandleLike => (source as { kind?: string }).kind === 'directory';
 
 export { onboardingFinished } from './state';
 
@@ -31,14 +36,16 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
 }) {
   const deps = useMemo<SpineDeps>(() => ({ ...defaultDeps(request, workspaceId), ...given }), [request, workspaceId, given]);
   const [state, setState] = useState<SpineState>(() => loadState(deps.storage, workspaceId));
-  const [progress, setProgress] = useState<ImportProgress | null>(null);
+  const live = useImportSession();
+  const progressive = useFlag('cloud.progressive_import');
   const audio = useRef<AudioSession | null>(null);
-  const importing = useRef<AbortController | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const firstRender = useRef(true);
 
+  // With `cloud.progressive_import` on, the import belongs to the session and outlives this
+  // spine (the shell cancels it when the shell itself goes); off, leaving the spine stops it.
   useEffect(() => () => {
-    importing.current?.abort();
+    if (!flagOn('cloud.progressive_import')) cancelImportSession();
     audio.current?.dispose();
     audio.current = null;
   }, []);
@@ -49,6 +56,19 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
     setState(next);
     saveState(deps.storage, workspaceId, next);
   };
+
+  // A finished import lands in the saved state whether or not the member is still on verify.
+  const seen = useRef(live.summary);
+  useEffect(() => {
+    // a storage-full pause also ends the run, with its own honest summary
+    if ((live.phase !== 'finished' && live.phase !== 'paused') || !live.summary || seen.current === live.summary) return;
+    seen.current = live.summary;
+    setState((current) => {
+      const next = settleVerifyLater(current, live.summary!);
+      saveState(deps.storage, workspaceId, next);
+      return next;
+    });
+  }, [live.phase, live.summary, deps.storage, workspaceId]);
   useEffect(() => {
     if (firstRender.current) { firstRender.current = false; return; }
     heading.current?.focus();
@@ -62,32 +82,16 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
   };
 
   const startImport = (source: ImportSource) => {
-    importing.current?.abort();
-    const controller = new AbortController();
-    importing.current = controller;
-    const live: ImportProgress = { running: true, done: 0, duplicates: 0, failures: [], paused: false };
-    setProgress(live);
-    const moved: SpineState = { ...state, step: 'verify', outcomes: { ...state.outcomes, connect: 'done' } };
-    change(moved);
-    const onProgress = (event: ImportEvent) => {
-      if (event.kind === 'file') {
-        if (event.stage === 'hashing') live.current = event.name;
-        if (event.stage === 'done') { if (event.duplicateOf !== undefined) live.duplicates += 1; else live.done += 1; }
-        if (event.stage === 'failed') live.failures = [...live.failures, { name: event.name, reason: event.reason }];
-      }
-      if (event.kind === 'paused') live.paused = true;
-      setProgress({ ...live });
-    };
-    deps.importMusic(source, onProgress, controller.signal).then((summary) => {
-      if (importing.current !== controller) return;
-      setProgress({ ...live, running: false, current: undefined });
-      const { imported, duplicates, failed, skipped, cancelled, paused } = summary;
-      change({ ...moved, imported: { imported, duplicates, failed, skipped, cancelled, paused } });
-    }, () => {
-      if (importing.current !== controller) return;
-      setProgress({ ...live, running: false, current: undefined, error: 'SelectaDJ couldn’t reach your account to add these songs. Check your connection and try again.' });
-    });
+    // a new import's verify outcome is its own: an earlier one's tally and verdict are dropped
+    const outcomes = { ...state.outcomes, connect: 'done' as const };
+    delete outcomes.verify;
+    change({ ...state, step: 'verify', outcomes, imported: undefined });
+    const folder = isFolder(source) ? source.name : undefined;
+    if (isFolder(source)) void rememberFolder(workspaceId, source);
+    void startImportSession({ source, run: deps.importMusic, workspaceId, folder });
   };
+  // Carry on while checking continues: verify stays unsettled until the import finishes.
+  const continueEarly = () => change({ ...state, step: 'capability' });
 
   const props: StepProps = { state, onChange: change, deps, session: () => audio.current, openSession };
 
@@ -119,7 +123,7 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
       <StepList state={state} />
       <div className="cloud-card cloud-spine-step" data-step={step}>
         {step === 'connect' && <ConnectStep {...props} onPick={startImport} />}
-        {step === 'verify' && <VerifyStep {...props} progress={progress} onStop={() => importing.current?.abort()} />}
+        {step === 'verify' && <VerifyStep {...props} live={live} earlyContinue={progressive} onStop={cancelImportSession} onContinueEarly={continueEarly} />}
         {step === 'capability' && <CapabilityStep {...props} />}
         {step === 'output' && <OutputStep {...props} />}
         {step === 'start' && <StartStep {...props} />}

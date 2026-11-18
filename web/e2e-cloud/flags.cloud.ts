@@ -413,7 +413,7 @@ const BF: Record<string, { surfaces: string[]; marks: Mark[]; ships: boolean }> 
   'cloud.local_export': { surfaces: ['cloud.listen'], ships: false, marks: [{ text: /Local export/ }] },
   // Its on-state (the shell import chip, the carry-on offer) is drawn by the onboarding and shell
   // work; these marks are that copy, so with the flag off none of it may appear.
-  'cloud.progressive_import': { surfaces: ['cloud.home', 'cloud.library', 'cloud.listen'], ships: false, marks: [{ text: /Carry on (the )?import/i }, { text: /Importing \d+ of \d+/ }] },
+  'cloud.progressive_import': { surfaces: ['cloud.home', 'cloud.library', 'cloud.listen'], ships: false, marks: [{ text: /Checking your music: \d+ of/ }, { text: /Keep checking / }, { text: /Continue while it finishes/ }] },
   // Its on-state (join, leave, the closed refusal) is local-first-labs.labs.ts, on a server whose
   // build turns it on (playwright.labs.config.ts).
   'cloud.local_first_labs': { surfaces: ['cloud.settings'], ships: false, marks: [{ role: { role: 'region', name: 'Labs: browser-first Cloud' } }, { role: { role: 'button', name: 'Join Labs' } }] },

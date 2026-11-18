@@ -26,7 +26,9 @@ import { recipeStore } from './recipeStore';
 import { QueueSources } from './QueueSources';
 import { CutoverNotice } from './migration/CutoverNotice';
 import { OnboardingSpine } from './onboarding/OnboardingSpine';
-import { onboardingFinished } from './onboarding/state';
+import { browserStorage, onboardingFinished, recordImportOutcome } from './onboarding/state';
+import { ImportChip } from './ImportChip';
+import { cancelImportSession, useImportSession } from './importSession';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
  *
@@ -129,6 +131,19 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   const refreshMix = useCallback(() => { request<MixData>('/mix').then(setData).catch(() => undefined); }, [request]);
   useEffect(() => { refreshStatus(); refreshMix(); }, [refreshStatus, refreshMix]);
 
+  // The import session outlives any one page: each landed batch refreshes the counts, and a
+  // finished import records its outcome in the onboarding state even with the spine gone.
+  const importLive = useImportSession();
+  const lastBatches = useRef(importLive.batches);
+  useEffect(() => {
+    const moved = importLive.batches !== lastBatches.current;
+    lastBatches.current = importLive.batches;
+    const ended = (importLive.phase === 'finished' || importLive.phase === 'paused') && importLive.summary !== null;
+    if (ended) recordImportOutcome(browserStorage(), workspaceId, importLive.summary!);
+    if (moved || ended) refreshStatus();
+  }, [importLive.batches, importLive.phase, importLive.summary, refreshStatus, workspaceId]);
+  useEffect(() => () => cancelImportSession(), []);
+
   // This shell has no local server: the shell's job badge and the local-only buttons stand down
   // while it is open, and come back exactly as they were when it closes.
   useEffect(() => {
@@ -176,7 +191,10 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   const moreItems = moreDestinationsFor({ mode: 'cloud', feature: on, experience: account.experience ?? null });
   const connected = status?.counts.music ?? 0;
   const [spine, setSpine] = useState(() => !onboardingFinished(workspaceId));
-  const newMember = spine && status !== null && connected === 0;
+  // frozen at the first status: songs landing mid-import must not unmount the spine under the member
+  const startedEmpty = useRef<boolean | null>(null);
+  if (status !== null && startedEmpty.current === null) startedEmpty.current = connected === 0;
+  const newMember = spine && startedEmpty.current === true;
 
   const notify = useCallback<ViewProps['notify']>((message, undo) => {
     showToast(message, typeof undo === 'function' ? { undo } : {});
@@ -187,7 +205,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
     setView: (view: View) => navigate(VIEW_PATHS[view]), notify, stage: false, toggleStage: IDLE,
   };
   const song = data.mix[now.position];
-  const connect = <ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} onImported={refreshStatus} />;
+  const connect = <ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} />;
 
   const page = (): ReactNode => {
     if (route.page === 'more') {
@@ -250,7 +268,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
         onHelp={IDLE}
         mode="cloud"
         more={moreItems}
-        banner={<>{notices}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
+        banner={<>{notices}{on('cloud.progressive_import') && <ImportChip onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
       >
         {page()}
         <footer className="cloud-footer">SelectaDJ Cloud. Your music files stay on your devices; your account keeps their details.</footer>

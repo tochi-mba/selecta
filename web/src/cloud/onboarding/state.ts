@@ -104,6 +104,29 @@ export function settle(state: SpineState, step: StepId, outcome: StepOutcome, ch
   };
 }
 
+/** An import finished after the member may have moved on ("Continue while it finishes").
+ * Past verify with no outcome yet: verify is 'done' only if something really landed (new or
+ * already there), else 'skipped'. Still on verify: only the tally is kept, because the live step
+ * settles itself when the member presses Continue. The tally is always kept and the step never
+ * moves. Pure. */
+export function settleVerifyLater(state: SpineState, tally: ImportTally): SpineState {
+  const { imported, duplicates, failed, skipped, cancelled, paused } = tally;
+  const next: SpineState = { ...state, imported: { imported, duplicates, failed, skipped, cancelled, paused } };
+  const past = state.finished === true || STEPS.indexOf(state.step) > STEPS.indexOf('verify');
+  if (past && state.outcomes.verify === undefined) {
+    next.outcomes = { ...state.outcomes, verify: imported + duplicates > 0 ? 'done' : 'skipped' };
+  }
+  return next;
+}
+
+/** Fold a finished import into this account's saved spine state, even with the spine unmounted.
+ * Idempotent: saving the same summary twice writes nothing the second time. */
+export function recordImportOutcome(storage: KeyValue | null, workspaceId: string, summary: ImportTally): void {
+  const before = loadState(storage, workspaceId);
+  const after = settleVerifyLater(before, summary);
+  if (JSON.stringify(after) !== JSON.stringify(before)) saveState(storage, workspaceId, after);
+}
+
 /** The capability check failed: every playing step becomes not_here, with the reason kept, and the
  * flow goes straight to the remote step. It never loops back to a check this device cannot pass. */
 export function forkToController(state: SpineState, reason: string): SpineState {

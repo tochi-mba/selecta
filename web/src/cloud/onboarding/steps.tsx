@@ -2,22 +2,13 @@ import { ChangeEvent, useEffect, useId, useState } from 'react';
 import { playbackStatusText } from '../../copy';
 import type { ImportSource } from '../../media';
 import { Icon } from '../../ui/Icon';
+import type { ImportSnapshot } from '../importSession';
 import type { AudioSession, SpineDeps, WakeSentinel } from './deps';
-import { forkToController, OutputRoute, settle, skipPlayback, SpineState } from './state';
+import { forkToController, ImportTally, OutputRoute, settle, skipPlayback, SpineState } from './state';
 
 /** The steps of the onboarding spine (ADR-0463). Each one says plainly what is happening and
  * what is not, and records its own outcome through `onChange`. No step says install, upload or
  * wait for processing: the music stays on this device and is checked here. */
-
-export type ImportProgress = {
-  running: boolean;
-  current?: string;
-  done: number;
-  duplicates: number;
-  failures: { name: string; reason: string }[];
-  paused: boolean;
-  error?: string;
-};
 
 export type StepProps = {
   state: SpineState;
@@ -82,23 +73,43 @@ export function ConnectStep({ state, onChange, deps, onPick }: StepProps & { onP
 
 /* ---------- verify ---------- */
 
-export function VerifyStep({ state, onChange, progress, onStop }: StepProps & { progress: ImportProgress | null; onStop: () => void }) {
-  const summary = state.imported;
-  if (progress?.running) {
-    const counted = progress.done + progress.duplicates;
+export type VerifyProps = StepProps & {
+  /** The import session's live snapshot (cloud/importSession.ts). */
+  live: ImportSnapshot;
+  /** `cloud.progressive_import`: the member may carry on while checking continues. */
+  earlyContinue: boolean;
+  onStop: () => void;
+  /** Move on without settling verify; the finished import settles it later. */
+  onContinueEarly: () => void;
+};
+
+/** Never blocking: while the import runs, the member sees honest counts and may carry on. */
+export function VerifyStep({ state, onChange, live, earlyContinue, onStop, onContinueEarly }: VerifyProps) {
+  if (live.phase === 'running') {
+    const known = typeof live.total === 'number';
     return (
       <>
         <p>SelectaDJ is reading each song on this device to recognise it by its contents. Your files are not changed or moved.</p>
-        <progress className="cloud-spine-progress" aria-label="Checking your music" />
-        <p role="status">{counted === 1 ? '1 song checked' : `${counted} songs checked`}{progress.current ? `. Now: ${progress.current}` : ''}</p>
-        <button type="button" onClick={onStop}>Stop here</button>
+        {known
+          ? <progress className="cloud-spine-progress" aria-label="Checking your music" max={Math.max(live.total ?? 0, 1)} value={live.registered} />
+          : <progress className="cloud-spine-progress" aria-label="Checking your music" />}
+        <p role="status">
+          {known
+            ? `${live.registered} of ${live.total} checked so far. You can keep going; checking continues in the background.`
+            : `${live.registered} checked so far. SelectaDJ is still counting the files in that folder.`}
+        </p>
+        {live.current && <p className="cloud-hint" dir="auto">Now: {live.current}</p>}
+        <div className="cloud-actions">
+          {earlyContinue && <button type="button" className="primary" onClick={onContinueEarly}>Continue while it finishes</button>}
+          <button type="button" onClick={onStop}>Stop here</button>
+        </div>
       </>
     );
   }
-  if (progress?.error) {
+  if (live.phase === 'failed') {
     return (
       <>
-        <p className="cloud-inline-error" role="alert">{progress.error}</p>
+        <p className="cloud-inline-error" role="alert">SelectaDJ couldn’t reach your account to add these songs. Check your connection and try again.</p>
         <p>Anything already checked is in your library.</p>
         <div className="cloud-actions">
           <button type="button" className="primary" onClick={() => onChange({ ...state, step: 'connect' })}>Try again</button>
@@ -107,6 +118,12 @@ export function VerifyStep({ state, onChange, progress, onStop }: StepProps & { 
       </>
     );
   }
+  // finished or paused: the session's own summary; a paused run without one reads its counts;
+  // idle (a resumed visit): the tally saved when the import finished
+  const summary: ImportTally | undefined = live.summary
+    ?? (live.phase === 'paused'
+      ? { imported: live.imported, duplicates: live.duplicates, failed: live.failures.length, skipped: live.skipped, cancelled: false, paused: true }
+      : state.imported);
   if (!summary) {
     return (
       <>
@@ -129,9 +146,9 @@ export function VerifyStep({ state, onChange, progress, onStop }: StepProps & { 
       </p>
       {summary.cancelled && <p>You stopped part way. Everything checked before that is in your library.</p>}
       {summary.paused && <p>This browser ran out of room for its notes about your music. Everything checked so far is in your library; free some space and add the rest later.</p>}
-      {!!progress?.failures.length && (
+      {live.failures.length > 0 && (
         <ul className="cloud-spine-failures">
-          {progress.failures.slice(0, 20).map((failure) => <li key={failure.name}><b>{failure.name}</b> <span>{failure.reason}</span></li>)}
+          {live.failures.slice(0, 20).map((failure, index) => <li key={`${failure.name}-${index}`}><b dir="auto">{failure.name}</b> <span>{failure.reason}</span></li>)}
         </ul>
       )}
       <div className="cloud-actions">
