@@ -123,6 +123,75 @@ dated rollback row to the [step ledger](../verification/bf-step-ledger.md) namin
 any gate regression in the [gate register](../verification/bf-gate-register.md); no new accounts
 enter until green again.
 
+## Targeting playbook (BF-0456-04)
+
+Four recipes an operator uses at any step, each made through the admin Flags page (or
+`POST /api/admin/flags/{flag}/change`) and each **checked through the admin explain endpoint**
+`GET /api/admin/flags/explain/{user_id}`: read the flag's entry, its `on`, its `reason`, and the
+`rules` step's `detail`, which names the rule that decided. Every change needs a reason and writes
+a new rule version; a change that moves more than 10% of accounts waits as a delayed action
+(`flags.rules.broad`) and is executed once due. The recipes are rehearsed end to end in
+`tests/test_bf_targeting_playbook.py` on `cloud.local_first` staged as below.
+
+| Recipe | Rule (above the catch-all) | Explain shows |
+|--------|----------------------------|---------------|
+| Grant one account | `{"kind": "users", "params": {"ids": ["<user id>"], "on": true, "note": "..."}}` | that account `on`, `rule_on`, `rule N (users) decided`; everyone else off from the catch-all |
+| Grant one workspace | `{"kind": "workspaces", "params": {"ids": ["<workspace id>"], "on": true, "note": "..."}}` | that workspace's owner `on`, `rule N (workspaces) decided` |
+| Staff preview with expiry | `{"kind": "schedule", "params": {"staff": true, "until": <UTC epoch seconds>, "on": true, "note": "staff preview, expires <date>"}}` | staff `on`, `rule N (schedule) decided` until `until`; after it the same rule answers staff **off** by itself (no clean-up needed); members fall through to the catch-all |
+| Kill switch | the `kill_switch` action (instant, alerts every Owner) | everyone `off`, `rule_off`, `kill switch: off for everyone`, grants and previews included |
+
+- The staff preview uses a SCHEDULE rule with the `staff` segment because the page's `schedule`
+  action does not carry segment keys: save it with the `set_rules` action (the full list, preview
+  first, catch-all last). The staff segment matches anyone holding a live staff role; explain
+  reads the same live roles as a request does.
+- Lift a kill switch by rolling back its version with `before: true` (`POST
+  /api/admin/flags/rollback`), then re-check explain: the rules below it decide again.
+- A one-person staff preview without a rule also exists (the page's "preview on my account",
+  `POST /api/admin/flags/{flag}/preview`); it has no expiry of its own and the kill switch beats
+  it too. Prefer the schedule recipe when the preview must end by itself.
+
+## Staging `cloud.local_first` for steps 2 to 4
+
+A cloud flag that is off at the build layer never reaches its rules, so internal previews (step
+2), the Labs cohort (step 3) and a percentage (step 4) need `+cloud.local_first` in
+`SELECTA_FLAGS` **and** a trailing catch-all off rule saved first:
+`{"kind": "percentage", "params": {"percent": 0, "salt": "bf-local-first", "note": "catch-all off"}}`.
+Save the catch-all before deploying the build change, so nobody turns on in between. With this
+staging, step 5's flip is the catch-all's removal (or its percentage at 100) rather than the
+`SELECTA_FLAGS` change described above; the flip guard and the owner's decision apply the same.
+Rollback at any of these steps stays one change: a kill switch on `cloud.local_first`, or the
+catch-all restored as the only rule.
+
+## Labs opening (step 3, BF-0467-05)
+
+Labs is a companion flag, `cloud.local_first_labs` (default off), that owns the member's opt-in
+and feedback routes; opting in adds the member's user id to one USERS rule on `cloud.local_first`
+(note `labs: self-serve beta cohort ...`), created first in the list.
+
+1. Stage `cloud.local_first` as above.
+2. Choose the cohort with ordinary rules on `cloud.local_first_labs` (for example a segment off
+   for plans outside the beta), then add `+cloud.local_first_labs` to `SELECTA_FLAGS`.
+3. Members call `GET /api/account/labs/local-first` (status, `labs_open`), `POST .../join`,
+   `POST .../leave`, `POST .../feedback`. Join is refused (409 `labs_unavailable` with the
+   decision's reason) and saves nothing unless `cloud.local_first` would really turn on for that
+   member, so a kill switch or a missing build layer is told truthfully. Leave is owned by
+   `account.labs`, so it works even after Labs closes.
+4. Feedback lands in the audit log as `labs.local_first.feedback` events (actor, workspace, the
+   member's words scrubbed of secrets); read it on the admin audit page.
+5. Close Labs: a kill switch on `cloud.local_first_labs` stops new joins; removing the cohort rule
+   (or a kill switch on `cloud.local_first`) returns every member to the hosted experience.
+
+## Dashboards before percentage (step 4, BF-0467-04)
+
+The admin change path refuses any `cloud.local_first` rule change that raises its highest
+percentage until (a) the per-mode cost dashboard (`GET /api/admin/economics/cost-per-mode`) shows
+real data for both account modes, (b) an error-rate view per flag cohort exists, and (c) the
+owner recorded them green with a rule-change reason containing `[dashboards-green]`. Lowering or
+freezing a percentage is never refused. `GET /api/admin/flags/cloud.local_first/percentage-readiness`
+answers the same check read-only, with the reasons. The error-rate view per cohort is not built
+yet, so today the check always refuses step 4 (as it should). See
+[unit economics measurement](../verification/bf-unit-economics-measurement.md).
+
 ## Links
 
 - [Step ledger](../verification/bf-step-ledger.md) - which step the programme is on.

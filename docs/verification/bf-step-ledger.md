@@ -22,6 +22,18 @@ release truth lives in the [gate register](bf-gate-register.md) and the operatio
 | 5 | Default on | Every ADR-0466 release-critical gate green; the grandfather rule verified in place (BF-0465-01); `cloud.hosted_media` rules created before the flip; the flip guard (`src/selecta/flags/flip_guard.py`) returns no refusals; the owner's recorded flip decision (BF-0467-06) | The cutover notice sent to grandfathered accounts (BF-0465-04); the missed-grant remedy path quiet | Revert `cloud.local_first` to off by flag change alone; the grandfather rule is independent of the flip and keeps hosted accounts working in either direction |
 | 6 | Rollback (standing rule, any step) | Always available | Not a step to exit: at any step, rollback is the flag alone (ADR-0465) | The flag alone; the register records why, and no new accounts enter until green again |
 
+## Dashboards for step 4 (BF-0467-04)
+
+Step 4 may not begin until both dashboards are live with real data and the owner records them
+green; the admin flag change path enforces this mechanically
+(`src/selecta/flags/flip_guard.py`, `check_percentage_step_now`).
+
+| Dashboard | Where | State |
+|-----------|-------|-------|
+| Per-mode cost (BF-0464-05) | `GET /api/admin/economics/cost-per-mode?month=YYYY-MM`; CLI `tools/bf_unit_economics.py cost-per-mode` | Built; no real data yet (needs the Labs beta population); invoice reconciliation pending ([measurement record](bf-unit-economics-measurement.md)) |
+| Error rate per flag cohort | Not built | Missing: request metrics carry no cohort label yet; the guard names it in every refusal |
+| Readiness (both, plus the marker) | `GET /api/admin/flags/cloud.local_first/percentage-readiness` | Answers not ready today |
+
 ## Ledger entries
 
 Newest first. Every step change appends a dated row naming the evidence that justified it; a step
