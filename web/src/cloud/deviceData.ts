@@ -30,6 +30,9 @@ export async function forgetWorkspaceOnDevice(workspaceId: string): Promise<void
   await MediaStore.forget(workspaceId);
 }
 
+/** The business venue offline cache's database (business/offline/zoneCache.ts). */
+const ZONE_CACHE_DB = 'selectadj-zone-cache';
+
 type DatabasesApi = { databases?: () => Promise<{ name?: string }[]> };
 
 /** Every SelectaDJ media database this browser holds, by name. Where the browser cannot list
@@ -56,6 +59,8 @@ const DEVICE_PREFIXES = ['selecta.', 'selecta-now'];
 export async function clearEverythingOnDevice(known: string[] = []): Promise<void> {
   for (const workspaceId of known) await forgetWorkspaceOnDevice(workspaceId);
   for (const name of await mediaDatabases()) await deleteDatabase(name);
+  // The venue offline cache (business zones) is SelectaDJ data in this browser too.
+  await deleteDatabase(ZONE_CACHE_DB);
   await cacheClearAll();
   try {
     const doomed: string[] = [];
