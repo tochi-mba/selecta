@@ -5,7 +5,7 @@ import { rememberFolder, type DirectoryHandleLike, type ImportSource } from '../
 import { Icon, IconName } from '../../ui/Icon';
 import { cancelImportSession, startImportSession, useImportSession } from '../importSession';
 import { AudioSession, defaultDeps, SpineDeps } from './deps';
-import { FRESH, loadState, saveState, settleVerifyLater, SpineState, STEP_TITLES, StepId, StepOutcome, STEPS } from './state';
+import { FRESH, loadState, previousStep, saveState, settleVerifyLater, SpineState, STEP_TITLES, StepId, StepOutcome, STEPS } from './state';
 import { CapabilityStep, ConnectStep, KeepAwakeStep, OutputStep, RemoteStep, SoundcheckStep, StartStep, StepProps, VerifyStep } from './steps';
 
 /** A folder handle, as opposed to a list of picked files. */
@@ -39,6 +39,7 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
   const live = useImportSession();
   const progressive = useFlag('cloud.progressive_import');
   const audio = useRef<AudioSession | null>(null);
+  // The page around the spine owns the one h1 ("Welcome to SelectaDJ"); each step is an h2.
   const heading = useRef<HTMLHeadingElement>(null);
   const firstRender = useRef(true);
 
@@ -93,6 +94,12 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
   // Carry on while checking continues: verify stays unsettled until the import finishes.
   const continueEarly = () => change({ ...state, step: 'capability' });
 
+  // Back walks to the step before this one. Its outcome is kept until the step is settled again,
+  // so going back to look never undoes a sound check someone really heard.
+  // While music is being checked, Back would only offer a second import over the first.
+  const back = state.step === 'verify' && live.phase === 'running' ? null : previousStep(state);
+  const goBack = () => { if (back) change({ ...state, step: back }); };
+
   const props: StepProps = { state, onChange: change, deps, session: () => audio.current, openSession };
 
   if (state.finished) {
@@ -104,7 +111,7 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
     return (
       <section className="cloud-spine" aria-labelledby={`spine-${workspaceId}-title`}>
         <p className="cloud-eyebrow">GETTING STARTED</p>
-        <h1 id={`spine-${workspaceId}-title`} ref={heading} tabIndex={-1}>You’re set up</h1>
+        <h2 id={`spine-${workspaceId}-title`} ref={heading} tabIndex={-1}>You’re set up</h2>
         <StepList state={state} />
         <p role="status">{status}</p>
         <div className="cloud-actions">
@@ -119,7 +126,7 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
   return (
     <section className="cloud-spine" aria-labelledby={`spine-${workspaceId}-title`}>
       <p className="cloud-eyebrow">GETTING STARTED · STEP {STEPS.indexOf(step) + 1} OF {STEPS.length}</p>
-      <h1 id={`spine-${workspaceId}-title`} ref={heading} tabIndex={-1}>{STEP_TITLES[step]}</h1>
+      <h2 id={`spine-${workspaceId}-title`} ref={heading} tabIndex={-1}>{STEP_TITLES[step]}</h2>
       <StepList state={state} />
       <div className="cloud-card cloud-spine-step" data-step={step}>
         {step === 'connect' && <ConnectStep {...props} onPick={startImport} />}
@@ -131,7 +138,10 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
         {step === 'keepawake' && <KeepAwakeStep {...props} />}
         {step === 'remote' && <RemoteStep {...props} />}
       </div>
-      <button type="button" className="cloud-spine-later" onClick={onDone}>Finish later</button>
+      <div className="cloud-actions">
+        {back && <button type="button" onClick={goBack}>Back</button>}
+        <button type="button" className="cloud-spine-later" onClick={onDone}>Finish later</button>
+      </div>
     </section>
   );
 }

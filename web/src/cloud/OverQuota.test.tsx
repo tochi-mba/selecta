@@ -8,7 +8,7 @@ describe('the over-quota banner', () => {
   it('names the overage and offers Manage storage and Upgrade', async () => {
     const go = vi.fn();
     render(<OverQuotaBanner account={cloudAccount({ used: 45e9, limit: 10e9 })} go={go} />);
-    const banner = screen.getByRole('alert');
+    const banner = screen.getByRole('status');
     expect(banner).toHaveTextContent('You’re 35.0 GB over Free’s 10.0 GB');
     expect(banner).toHaveTextContent('You can still listen, download and remove songs. Nothing has been deleted.');
     await userEvent.click(screen.getByRole('button', { name: 'Manage storage' }));
@@ -25,7 +25,7 @@ describe('the over-quota banner', () => {
     const account = cloudAccount({ used: 11e9, limit: 10e9 });
     delete account.usage;
     render(<OverQuotaBanner account={account} go={() => {}} />);
-    expect(screen.getByRole('alert')).toHaveTextContent('1.0 GB over');
+    expect(screen.getByRole('status')).toHaveTextContent('1.0 GB over');
   });
 });
 

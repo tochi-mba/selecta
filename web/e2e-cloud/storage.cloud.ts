@@ -10,7 +10,7 @@ test('over quota: the banner names the overage, uploads wait, listening and down
   const user = listener('over');
   await signedIn(page, request, user, { songs: 2, seconds: 3 });
   await request.post('/test/quota', { data: { user, limit_bytes: 100_000 } });
-  const banner = page.getByRole('alert').filter({ hasText: 'over Free’s' });
+  const banner = page.getByRole('status').filter({ hasText: 'over Free’s' });
   await expect(banner).toBeVisible();
   await expect(banner).toContainText(/You’re \d+\.\d MB over Free’s 0\.1 MB/);
   await expect(banner).toContainText('Nothing has been deleted.');

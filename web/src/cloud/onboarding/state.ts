@@ -92,6 +92,20 @@ export function nextStep(step: StepId): StepId | null {
   return at >= 0 && at < STEPS.length - 1 ? STEPS[at + 1] : null;
 }
 
+/** The step Back returns to, or null on the first. A device that forked to the controller skips
+ * back over the playing steps it cannot do; verify is skipped while nothing was connected. Pure. */
+export function previousStep(state: SpineState): StepId | null {
+  let at = STEPS.indexOf(state.step) - 1;
+  while (at >= 0) {
+    const step = STEPS[at];
+    const outcome = state.outcomes[step];
+    const pointless = outcome === 'not_here' || (step === 'verify' && state.outcomes.connect === 'skipped');
+    if (!pointless) return step;
+    at -= 1;
+  }
+  return null;
+}
+
 /** Record a step's outcome and move on to the next step (or finish after the last). */
 export function settle(state: SpineState, step: StepId, outcome: StepOutcome, changes: Partial<SpineState> = {}): SpineState {
   const next = nextStep(step);

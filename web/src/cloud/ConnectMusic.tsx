@@ -1,8 +1,9 @@
-import { ChangeEvent, useCallback, useEffect, useState } from 'react';
+import { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import type { Request } from '../api';
 import { flagOn, useFlag } from '../flags';
 import { dirPicker, directoryInput, findLapsed, forgetFolder, recallFolder, rememberFolder, runImport } from '../media';
 import type { DirectoryHandleLike, ImportEvent, ImportSource, ImportSummary, LapsedItem, MediaStore, RegrantOutcome, StoredFolderHandle } from '../media';
+import { importSummaryWords, useImportAnnouncer } from './importAnnouncer';
 import { cancelImportSession, clearImportMarker, readImportMarker, startImportSession, useImportSession, type ImportRunner } from './importSession';
 
 /** Connect Music in the local-first Library (ADR-0458 import, ADR-0463 surfaces).
@@ -30,15 +31,9 @@ export function applyImportEvent(rows: FileRow[], event: ImportEvent): FileRow[]
   return next;
 }
 
+/** What an import did, in words (the announcer says the same at the finish). */
 export function summaryWords(summary: ImportSummary): string {
-  const parts = [`${summary.imported} ${summary.imported === 1 ? 'song' : 'songs'} connected`];
-  if (summary.duplicates) parts.push(`${summary.duplicates} already in your library`);
-  if (summary.failed) parts.push(`${summary.failed} could not be read`);
-  if (summary.skipped) parts.push(`${summary.skipped} skipped as not music`);
-  const words = parts.join(', ');
-  if (summary.cancelled) return `Stopped. ${words} before you cancelled. Nothing else changed.`;
-  if (summary.paused) return `Paused because browser storage is full. ${words} so far.`;
-  return `${words}.`;
+  return importSummaryWords(summary);
 }
 
 const REGRANT_WORDS: Record<RegrantOutcome['status'], string> = {
@@ -70,6 +65,7 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
   importer?: typeof runImport;
 }) {
   const live = useImportSession();
+  useImportAnnouncer();
   const progressive = useFlag('cloud.progressive_import');
   const [problem, setProblem] = useState('');
   const [lapsed, setLapsed] = useState<LapsedItem[]>([]);
@@ -83,6 +79,9 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
   // undefined until the folder store has answered, so the offer never flickers between its forms
   const [recalled, setRecalled] = useState<StoredFolderHandle | null | undefined>(undefined);
   const [refused, setRefused] = useState(false);
+  // real buttons drive the file inputs, so the pickers are reachable from the keyboard
+  const folderPick = useRef<HTMLInputElement>(null);
+  const songsPick = useRef<HTMLInputElement>(null);
 
   const checkLapsed = useCallback(async () => {
     try {
@@ -173,15 +172,19 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
         <div className="row wrap">
           {picker.supported && <button className="primary" onClick={() => void chooseFolder()}>Choose a folder</button>}
           {!picker.supported && folderInput.supported && (
-            <label className="button primary">Choose a folder<input type="file" hidden multiple {...{ webkitdirectory: '' }} onChange={chosen} /></label>
+            <>
+              <button type="button" className="primary" onClick={() => folderPick.current?.click()}>Choose a folder</button>
+              <input ref={folderPick} type="file" hidden tabIndex={-1} aria-hidden="true" multiple {...{ webkitdirectory: '' }} onChange={chosen} />
+            </>
           )}
-          <label className="button">Choose songs<input type="file" hidden multiple accept="audio/*" onChange={chosen} /></label>
+          <button type="button" onClick={() => songsPick.current?.click()}>Choose songs</button>
+          <input ref={songsPick} type="file" hidden tabIndex={-1} aria-hidden="true" multiple accept="audio/*" onChange={chosen} />
         </div>
       )}
       {!picker.supported && <p className="hint">{picker.reason}</p>}
       {degraded && <p className="hint" role="note">This browser is not keeping SelectaDJ’s list of connected files, so you will need to connect them again next visit.</p>}
       {running && (
-        <div className="stack" role="status" aria-live="polite">
+        <div className="stack">
           <p><b>Connecting your music…</b> {checked} of {live.total ?? '…'} files checked so far.</p>
           {typeof live.total === 'number'
             ? <progress max={Math.max(live.total, 1)} value={checked} aria-label="Files checked" />
@@ -189,7 +192,7 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
           <button onClick={cancelImportSession}>Cancel</button>
         </div>
       )}
-      {(live.phase === 'finished' || live.phase === 'paused') && live.summary && <p role="status">{summaryWords(live.summary)}</p>}
+      {(live.phase === 'finished' || live.phase === 'paused') && live.summary && <p>{summaryWords(live.summary)}</p>}
       {shownProblem && <p className="error" role="alert">{shownProblem}</p>}
       {failures.length > 0 && (
         <details open={failures.length <= 5}>

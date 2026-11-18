@@ -251,7 +251,7 @@ describe('the import session in the shell (BF-0463-02 progressive import)', () =
     held.emit({ kind: 'collected', total: 4, skipped: 0 });
     held.emit({ kind: 'file', name: 'a.mp3', stage: 'done', songId: 2 });
     expect(await screen.findByText('Checking your music: 1 of 4 checked.')).toBeVisible();
-    expect(screen.getByRole('button', { name: 'View' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Show import details' })).toBeVisible();
     held.finish({ imported: 1, duplicates: 0, failed: 0, skipped: 0, cancelled: false, paused: false });
     await waitFor(() => expect(screen.queryByText(/Checking your music:/)).toBeNull());
     expect(recorded).toEqual([{ imported: 1, duplicates: 0, failed: 0, skipped: 0, cancelled: false, paused: false }]);

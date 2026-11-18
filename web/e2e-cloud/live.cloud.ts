@@ -5,7 +5,7 @@ import { accessible, listener, signedIn } from './cloud';
 // origin allowlist; web/e2e/pages.e2e.ts keeps the local "only talks to this computer") and
 // SC-0404-05 (Lucy settings show only the person's own choices).
 
-const overQuota = (page: import('@playwright/test').Page) => page.getByRole('alert').filter({ hasText: 'over Free’s' });
+const overQuota = (page: import('@playwright/test').Page) => page.getByRole('status').filter({ hasText: 'over Free’s' });
 
 test('with the event stream live, a server change reaches the page at once', async ({ page, request }) => {
   const user = listener('live');

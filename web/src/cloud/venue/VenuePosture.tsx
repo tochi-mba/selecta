@@ -316,11 +316,17 @@ function StartSound({ dispatch, openSession }: BodyProps) {
 
 function SoundCheck({ posture, deps, dispatch, session, workspaceId }: BodyProps) {
   const [phase, setPhase] = useState<'ready' | 'playing' | 'asking' | 'heard_nothing'>('ready');
+  const [problem, setProblem] = useState('');
   const play = () => {
     const opened = session();
     if (!opened) { dispatch({ type: 'go', step: 'start' }); return; }
+    setProblem('');
     setPhase('playing');
-    void opened.playTone().then(() => setPhase('asking'), () => setPhase('asking'));
+    // a tone that failed to play is said, never passed off as silence in the room
+    void opened.playTone().then(() => setPhase('asking'), () => {
+      setPhase('asking');
+      setProblem('The check tone may not have played. Press Play the tone again, or say what you heard.');
+    });
   };
   // The one place output becomes verified: a person pressed this button (ADR-0460).
   const heard = () => {
@@ -341,6 +347,7 @@ function SoundCheck({ posture, deps, dispatch, session, workspaceId }: BodyProps
       {phase === 'playing'
         ? <p aria-busy="true">Playing the check tone…</p>
         : <button type="button" className={phase === 'ready' ? 'primary' : ''} onClick={play}><Icon name="volume" size="toolbar" /> {phase === 'ready' ? 'Play the check tone' : 'Play the tone again'}</button>}
+      {problem && <p className="cloud-inline-error" role="alert">{problem}</p>}
       {phase === 'asking' && (
         <div className="cloud-actions" role="group" aria-label="Did you hear the tone?">
           <button type="button" className="primary" onClick={heard}><Icon name="check" size="toolbar" /> I heard it</button>
@@ -351,6 +358,8 @@ function SoundCheck({ posture, deps, dispatch, session, workspaceId }: BodyProps
         <section className="cloud-spine-routes-help" aria-label="Find the sound">
           <h3>Let’s find the sound</h3>
           <ol>{checks.map((check) => <li key={check}>{check}</li>)}</ol>
+          <p>Then play the tone again. If it still doesn’t come through, you can carry on: the status board keeps saying the sound isn’t confirmed until someone hears it.</p>
+          <button type="button" className="cloud-spine-skip" onClick={() => dispatch({ type: 'go', step: 'ready' })}>Carry on without a confirmed sound</button>
         </section>
       )}
     </>
