@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FakeAudioBuffer } from './testAudio';
-import { encodeWav, flacSupported, validateWav } from './wav';
+import { encodeWav, encodeWavSliced, flacSupported, validateWav, WavCancelled } from './wav';
 
 const filled = (seconds: number, value: number, channels = 2, sampleRate = 44100) => {
   const buffer = new FakeAudioBuffer(channels, Math.round(seconds * sampleRate), sampleRate);
@@ -89,5 +89,40 @@ describe('FLAC support', () => {
     const answer = flacSupported();
     expect(answer.supported).toBe(true);
     expect(answer.implementation).toBe('ts-flac-fixed-rice-v1');
+  });
+});
+
+describe('the sliced WAV writer', () => {
+  const tone = (seconds: number) => {
+    const buffer = new FakeAudioBuffer(2, Math.round(seconds * 44100), 44100);
+    for (let channel = 0; channel < 2; channel += 1) {
+      const data = buffer.getChannelData(channel);
+      for (let index = 0; index < data.length; index += 1) data[index] = 0.7 * Math.sin(index / (5 + channel));
+    }
+    return buffer;
+  };
+
+  it('writes the same bytes and checksum as encodeWav, for both bit depths', async () => {
+    const chunks = [tone(2), tone(1.3)];
+    for (const bits of [16, 24] as const) {
+      const once = encodeWav(chunks, bits);
+      const sliced = await encodeWavSliced(chunks, bits, { yieldToLoop: () => Promise.resolve() });
+      expect(sliced.sha256).toBe(once.sha256);
+      expect(sliced.bytes).toEqual(once.bytes);
+    }
+  });
+
+  it('yields to the page on a long mix and stops at a cancel with no file', async () => {
+    const chunks = [tone(30), tone(30)];
+    let yields = 0;
+    await encodeWavSliced(chunks, 16, { yieldToLoop: async () => { yields += 1; } });
+    expect(yields).toBeGreaterThan(0);
+
+    const control = new AbortController();
+    const pending = encodeWavSliced(chunks, 16, { signal: control.signal, yieldToLoop: async () => control.abort() });
+    await expect(pending).rejects.toBeInstanceOf(WavCancelled);
+    const already = new AbortController();
+    already.abort();
+    await expect(encodeWavSliced(chunks, 16, { signal: already.signal })).rejects.toBeInstanceOf(WavCancelled);
   });
 });

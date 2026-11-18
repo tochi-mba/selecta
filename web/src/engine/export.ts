@@ -1,7 +1,7 @@
 import { EncodedFlac, encodeFlac, FlacBits, FlacCancelled } from './flac';
 import { FlacDetails, validateFlac } from './flacDecode';
 import { renderMix, RenderFailure, RenderOptions } from './render';
-import { EncodedWav, encodeWav, validateWav, WavBits, WavDetails } from './wav';
+import { EncodedWav, encodeWavSliced, validateWav, WavBits, WavCancelled, WavDetails } from './wav';
 
 /** The whole local export, render to checked file (ADR-0457, BF-0457-06).
  *
@@ -12,9 +12,10 @@ import { EncodedWav, encodeWav, validateWav, WavBits, WavDetails } from './wav';
  *
  * WAV is checked by its header and sizes. FLAC (flac.ts) is checked harder, because a decoder
  * has to understand it: validateFlac decodes every frame, checks every CRC and compares the MD5
- * of the decoded audio with the MD5 the encoder stored. The FLAC encoder and checker yield to
- * the page between slices so a long mix does not freeze it, and a cancel during encoding or
- * checking drops everything.
+ * of the decoded audio with the MD5 the encoder stored. Every step yields to the page in short
+ * slices so a long mix does not freeze it: the render's limiter pass (render.ts), the WAV
+ * writer and its sha256 (wav.ts encodeWavSliced), and the FLAC encoder and checker. A cancel
+ * at any yield drops everything.
  *
  * The engine is flag-agnostic; the caller offers export only behind `cloud.local_export`.
  * `localExportFormats` is the one place that turns that flag into the formats on offer.
@@ -39,7 +40,7 @@ export type ExportedFile = {
 };
 export type ExportFileResult = { ok: true; file: ExportedFile } | RenderFailure;
 
-type SliceOptions = { onEncodeProgress?: (fraction: number) => void; yieldToLoop?: () => Promise<void> };
+type SliceOptions = { onEncodeProgress?: (fraction: number) => void };
 
 const cancelled = (): RenderFailure => ({ ok: false, reason: 'cancelled', detail: 'The export was cancelled, so no file was made.' });
 
@@ -48,14 +49,15 @@ export function localExportFormats(flags: { localExport: boolean }): ExportForma
   return flags.localExport ? ['wav', 'flac'] : [];
 }
 
-export async function exportWav(options: RenderOptions & { bits?: WavBits }): Promise<ExportResult> {
+export async function exportWav(options: RenderOptions & SliceOptions & { bits?: WavBits }): Promise<ExportResult> {
   const rendered = await renderMix(options);
   if (!rendered.ok) return rendered;
   if (options.signal?.aborted) return cancelled();
   let wav: EncodedWav;
   try {
-    wav = encodeWav(rendered.chunks, options.bits ?? 16);
+    wav = await encodeWavSliced(rendered.chunks, options.bits ?? 16, { signal: options.signal, yieldToLoop: options.yieldToLoop });
   } catch (error) {
+    if (error instanceof WavCancelled || options.signal?.aborted) return cancelled();
     return { ok: false, reason: 'invalid_output', detail: `The file could not be written: ${(error as Error | null)?.message || 'unknown reason'}.` };
   }
   const checked = validateWav(wav.bytes, { durationSeconds: rendered.durationSeconds, toleranceSeconds: 1 / rendered.sampleRate });
