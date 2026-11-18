@@ -290,7 +290,8 @@ def build(port: int):
         """Sign up `user` and give them `songs` ready-to-play songs of `seconds` each, on
         `plan` (free unless it names a paid plan, given as an expiring override). With
         `local_songs`, also register that many metadata-only catalogue songs (ADR-0458),
-        reported present on the seeding device id "e2e-device"."""
+        reported present on the seeding device id "e2e-device". `local_titles` names them
+        (default "Local song N"); the last `local_absent` of them are on no device at all."""
         user = str(body["user"])
         auth = {"Authorization": f"Bearer e2e:{user}", "Origin": base}
         made = httpx.post(
@@ -327,12 +328,13 @@ def build(port: int):
             ids.append(asset_id)
         local_song_ids: list[int] = []
         if int(body.get("local_songs", 0)):
+            titles = [str(title) for title in body.get("local_titles", [])]
             entries = [
                 {
                     "content_sha256": hashlib.sha256(
                         f"{workspace_id}:local:{number}".encode()
                     ).hexdigest(),
-                    "title": f"Local song {number + 1}",
+                    "title": titles[number] if number < len(titles) else f"Local song {number + 1}",
                     "artist": "E2E Local",
                     "duration_s": float(body.get("seconds", 4.0)),
                 }
@@ -341,8 +343,10 @@ def build(port: int):
             with transaction(engine, workspace_id) as conn:
                 made_songs = local_media_store.register_songs(conn, workspace_id, entries)
                 local_song_ids = [entry["song_id"] for entry in made_songs]
+                absent = int(body.get("local_absent", 0))
+                present = local_song_ids[: len(local_song_ids) - absent]
                 local_media_store.set_availability(
-                    conn, workspace_id, "e2e-device", local_song_ids, []
+                    conn, workspace_id, "e2e-device", present, local_song_ids[len(present):]
                 )
         return {"workspace_id": workspace_id, "assets": ids, "local_songs": local_song_ids}
 
