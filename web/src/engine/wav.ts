@@ -6,9 +6,8 @@ import { bytesToHex } from '@noble/hashes/utils.js';
  * The encoder takes rendered PCM chunks (render.ts output, or anything with the same shape) and
  * writes one RIFF file in 16-bit or 24-bit PCM, with a sha256 checksum computed before anyone is
  * told the file exists. validateWav re-reads the finished bytes, so what is offered for download
- * was checked, not assumed. FLAC is honestly unsupported here: WebCodecs AudioEncoder does not
- * produce FLAC and no vetted WASM encoder is bundled, so flacSupported() says so instead of
- * shipping an unvetted dependency.
+ * was checked, not assumed. FLAC is written by flac.ts, a plain TypeScript encoder (WebCodecs
+ * AudioEncoder does not produce FLAC), and checked by flacDecode.ts.
  */
 
 export type WavBits = 16 | 24;
@@ -164,11 +163,5 @@ export function validateWav(
   return { ok: true, sampleRate: format.sampleRate, channels: format.channels, bits: format.bits, durationSeconds, dataBytes };
 }
 
-/** FLAC export is honestly unsupported here until a vetted WASM encoder is reviewed in
- * (ADR-0457: no hidden fallback, no unvetted dependency). The interface shows this reason. */
-export function flacSupported(): { supported: false; reason: string } {
-  return {
-    supported: false,
-    reason: 'SelectaDJ has no vetted FLAC encoder in the browser yet, so exports here are WAV.',
-  };
-}
+/** FLAC lives in flac.ts now; re-exported here so existing imports keep the true answer. */
+export { flacSupported } from './flac';
