@@ -8,7 +8,7 @@ import { bytesFile, fakeHandle } from './testFixtures';
 const noCache = async () => null;
 
 async function storeWith(...songs: StoredSong[]): Promise<MediaStore> {
-  const store = await MediaStore.open();
+  const store = await MediaStore.open('ws-test');
   for (const song of songs) await store.put(song);
   return store;
 }
@@ -48,7 +48,7 @@ describe('makeResolver', () => {
   });
 
   it('returns null for a song this device never imported', async () => {
-    const resolve = makeResolver(await MediaStore.open(), noCache);
+    const resolve = makeResolver(await MediaStore.open('ws-test'), noCache);
     expect(await resolve(99)).toBeNull();
   });
 
@@ -71,7 +71,7 @@ describe('makeResolver', () => {
   });
 
   it('resolves a repick marker to null until the person picks the file again', async () => {
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     await store.put({
       songId: 2,
       identity: { content_sha256: 'hash-2', title: 'Song 2', artist: 'Test Artist' },

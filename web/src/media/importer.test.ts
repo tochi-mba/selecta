@@ -15,7 +15,7 @@ const availabilityPosts = (calls: CapturedCall[]) => calls.filter((call) => call
 describe('runImport', () => {
   it('registers in batches, reporting availability for the device after each batch', async () => {
     const { request, calls } = captureRequest();
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     const files = [bytesFile('one', 'a.mp3'), bytesFile('two', 'b.mp3'), bytesFile('three', 'c.mp3')];
     const summary = await runImport({ source: files, request, store, deviceId: 'dev-1', readTags: tagsFromName, batchSize: 2 });
     expect(summary).toMatchObject({ imported: 3, duplicates: 0, failed: 0, cancelled: false, paused: false });
@@ -35,7 +35,7 @@ describe('runImport', () => {
 
   it('sends no path in any payload, ever', async () => {
     const { request, calls } = captureRequest();
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     const handles = [fakeHandle(bytesFile('one', 'a.mp3')), fakeHandle(bytesFile('two', 'b.mp3'))];
     await runImport({ source: fakeDirectory('Music', handles), request, store, deviceId: 'dev-1', readTags: tagsFromName });
     expect(calls.length).toBeGreaterThan(0);
@@ -44,7 +44,7 @@ describe('runImport', () => {
 
   it('only reads source handles; importing never moves or deletes the member\'s files', async () => {
     const { request } = captureRequest();
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     const file = bytesFile('owned audio', 'mine.flac');
     const touched = { reads: 0, destructive: 0 };
     const handle = {
@@ -63,7 +63,7 @@ describe('runImport', () => {
 
   it('omits an unknown duration and repairs blank tags before registration', async () => {
     const { request, calls } = captureRequest();
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     await runImport({
       source: [bytesFile('one', 'Fallback title.flac')],
       request,
@@ -78,7 +78,7 @@ describe('runImport', () => {
 
   it('skips files that are not audio, counting them honestly', async () => {
     const { request, calls } = captureRequest();
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     const summary = await runImport({
       source: [bytesFile('song', 'a.flac'), bytesFile('art', 'cover.jpg'), bytesFile('notes', 'cue.txt')],
       request, store, deviceId: 'dev-1', readTags: tagsFromName,
@@ -90,7 +90,7 @@ describe('runImport', () => {
 
   it('walks a directory tree and stores durable handle references', async () => {
     const { request } = captureRequest();
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     const inner = fakeDirectory('b-sides', [fakeHandle(bytesFile('two', 'b.mp3'))]);
     const source = fakeDirectory('Music', [fakeHandle(bytesFile('one', 'a.mp3')), inner]);
     const summary = await runImport({ source, request, store, deviceId: 'dev-1', readTags: tagsFromName });
@@ -102,7 +102,7 @@ describe('runImport', () => {
 
   it('marks a likely duplicate from the server without silently merging it', async () => {
     const { request } = captureRequest({ duplicates: { b: 1 } });
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     const events: ImportEvent[] = [];
     const summary = await runImport({
       source: [bytesFile('one', 'a.mp3'), bytesFile('other encoding', 'b.mp3')],
@@ -120,7 +120,7 @@ describe('runImport', () => {
 
   it('cancels between files, keeping what already registered and claiming nothing more', async () => {
     const { request, calls } = captureRequest();
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     const controller = new AbortController();
     const summary = await runImport({
       source: [bytesFile('one', 'a.mp3'), bytesFile('two', 'b.mp3'), bytesFile('three', 'c.mp3')],
@@ -136,7 +136,7 @@ describe('runImport', () => {
 
   it('emits per-file hashing, registering and done stages in order', async () => {
     const { request } = captureRequest();
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     const events: ImportEvent[] = [];
     await runImport({ source: [bytesFile('one', 'a.mp3')], request, store, deviceId: 'dev-1', readTags: tagsFromName, onProgress: (event) => events.push(event) });
     const stages = events.filter((event) => event.kind === 'file').map((event) => (event as { stage: string }).stage);
@@ -146,7 +146,7 @@ describe('runImport', () => {
 
   it('pauses with a typed storage_full event when the local store is out of room', async () => {
     const { request } = captureRequest();
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     store.put = async () => {
       throw new DOMException('No room.', 'QuotaExceededError');
     };
@@ -158,7 +158,7 @@ describe('runImport', () => {
 
   it('still reports the songs recorded before the store filled up as present on this device', async () => {
     const { request, calls } = captureRequest();
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     const put = store.put.bind(store);
     let room = 1;
     store.put = async (song) => {
@@ -176,7 +176,7 @@ describe('runImport', () => {
 
   it('reports an unreadable file as failed and carries on with the rest', async () => {
     const { request } = captureRequest();
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     const broken = fakeHandle(bytesFile('one', 'a.mp3'), { broken: true });
     const events: ImportEvent[] = [];
     const summary = await runImport({ source: [broken, fakeHandle(bytesFile('two', 'b.mp3'))], request, store, deviceId: 'dev-1', readTags: tagsFromName, onProgress: (event) => events.push(event) });
@@ -191,7 +191,7 @@ describe('runImport progressive events', () => {
 
   it('announces an honest total and skip count before any file event', async () => {
     const { request } = captureRequest();
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     const events: ImportEvent[] = [];
     await runImport({
       source: [bytesFile('one', 'a.mp3'), bytesFile('cover', 'cover.jpg'), bytesFile('two', 'b.flac')],
@@ -204,7 +204,7 @@ describe('runImport progressive events', () => {
   it('flushes the first registration after FIRST_BATCH files, then in full batches', async () => {
     expect(FIRST_BATCH).toBe(5);
     const { request, calls } = captureRequest();
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     const summary = await runImport({ source: twelve(), request, store, deviceId: 'dev-1', readTags: tagsFromName });
     expect(summary.imported).toBe(12);
     const posts = songsPosts(calls);
@@ -215,7 +215,7 @@ describe('runImport progressive events', () => {
 
   it('emits a batch event after each availability post, including the final partial flush', async () => {
     const { request, calls } = captureRequest();
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     const events: ImportEvent[] = [];
     await runImport({ source: twelve(), request, store, deviceId: 'dev-1', readTags: tagsFromName, batchSize: 4, onProgress: (event) => events.push(event) });
     const batches = events.filter((event) => event.kind === 'batch');

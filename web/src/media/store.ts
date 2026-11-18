@@ -52,9 +52,48 @@ export function isQuotaError(error: unknown): boolean {
   return typeof error === 'object' && error !== null && (error as { name?: string }).name === 'QuotaExceededError';
 }
 
-const DB_NAME = 'selecta-media';
+/** The pre-ADR-0469 index: one database for every account that ever signed in here. Its rows
+ * cannot be attributed to a workspace, so the first scoped open deletes it (a cache, not a
+ * second library: the cost is one re-import, never music). */
+export const LEGACY_DB_NAME = 'selecta-media';
+/** Every SelectaDJ media database starts with this; "clear everything" deletes them all. */
+export const MEDIA_DB_PREFIX = 'selecta-media';
 const DB_VERSION = 1;
 const SONGS = 'songs';
+
+/** One song index per workspace (ADR-0469). Song ids are per-workspace server ids, so a shared
+ * index would let one account's rows (titles, file handles) answer another account's ids. */
+export function mediaDbName(workspaceId: string): string {
+  if (!workspaceId) throw new Error('A media index needs the workspace it belongs to.');
+  return `${MEDIA_DB_PREFIX}-ws-${encodeURIComponent(workspaceId)}`;
+}
+
+/** Delete one IndexedDB database. Resolves once the browser says it is gone, or on error; a
+ * "blocked" deletion still completes when the other tab lets go, so it resolves then too. */
+export function deleteDatabase(name: string): Promise<void> {
+  return new Promise((resolve) => {
+    try {
+      if (typeof indexedDB === 'undefined' || !indexedDB) { resolve(); return; }
+      const request = indexedDB.deleteDatabase(name);
+      request.onsuccess = () => resolve();
+      request.onerror = () => resolve();
+      request.onblocked = () => resolve();
+    } catch {
+      resolve();
+    }
+  });
+}
+
+let legacyDisposal: Promise<void> | null = null;
+/** Drop the unscoped legacy index once per page. */
+function disposeLegacyIndex(): Promise<void> {
+  return (legacyDisposal ??= deleteDatabase(LEGACY_DB_NAME));
+}
+
+/** Test seam: forget that the legacy index was already disposed this page. */
+export function resetLegacyDisposalForTests(): void {
+  legacyDisposal = null;
+}
 
 /** The tiny promise wrapper: one request, one promise, no dependency. */
 function settled<T>(request: IDBRequest<T>): Promise<T> {
@@ -86,6 +125,8 @@ export class MediaStore {
   /** True where IndexedDB would not open or stopped taking writes: the index lives only in
    * memory for this visit, and the UI should say a re-import will be needed next time. */
   degraded = false;
+  /** The workspace this index belongs to; nothing here is ever read for another. */
+  readonly workspaceId: string;
   private db: IDBDatabase | null = null;
   /** Write-through mirror: reads come from here, so a mid-visit IndexedDB failure never makes
    * songs vanish from the page that imported them. */
@@ -101,10 +142,16 @@ export class MediaStore {
 
   private touchAvailability(): void { this.revision += 1; }
 
-  static async open(): Promise<MediaStore> {
-    const store = new MediaStore();
+  private constructor(workspaceId: string) {
+    this.workspaceId = workspaceId;
+  }
+
+  static async open(workspaceId: string): Promise<MediaStore> {
+    const store = new MediaStore(workspaceId);
+    const name = mediaDbName(workspaceId);
     try {
-      const opening = indexedDB.open(DB_NAME, DB_VERSION);
+      await disposeLegacyIndex();
+      const opening = indexedDB.open(name, DB_VERSION);
       opening.onupgradeneeded = () => {
         opening.result.createObjectStore(SONGS, { keyPath: 'songId' });
       };
@@ -113,6 +160,9 @@ export class MediaStore {
         opening.onerror = () => reject(opening.error ?? new Error('IndexedDB would not open'));
         opening.onblocked = () => reject(new Error('IndexedDB blocked by another tab'));
       });
+      // Another tab forgetting this workspace (or clearing the device) must not wait on this
+      // connection: let go, and keep serving this visit from memory.
+      store.db.onversionchange = () => store.release();
       const rows = await settled(store.db.transaction(SONGS).objectStore(SONGS).getAll() as IDBRequest<StoredSong[]>);
       for (const row of rows) store.memory.set(row.songId, row);
     } catch {
@@ -120,6 +170,19 @@ export class MediaStore {
       store.degraded = true;
     }
     return store;
+  }
+
+  /** Close the database connection; the memory mirror keeps answering for this visit. */
+  release(): void {
+    try { this.db?.close(); } catch { /* already closed */ }
+    if (this.db) this.degraded = true;
+    this.db = null;
+  }
+
+  /** Wipe this workspace's index on this device (delete account, forget this device). Songs,
+   * handles and session files go; the source files themselves are never touched. */
+  static async forget(workspaceId: string): Promise<void> {
+    await deleteDatabase(mediaDbName(workspaceId));
   }
 
   async put(song: StoredSong): Promise<void> {
@@ -256,9 +319,73 @@ function cacheEntryName(key: string): string {
   return `cache-${encodeURIComponent(key)}`;
 }
 
-/** The agreed key for a song's cached decoded bytes, shared by the writer and the resolver. */
-export function cachedBytesKey(songId: number): string {
-  return `bytes-${songId}`;
+/** Bumped whenever what is cached under a content key changes shape, so an old entry is a miss
+ * (and evictable) rather than misread. */
+export const CACHE_KEY_VERSION = 'v1';
+const SHA256 = /^[0-9a-f]{64}$/;
+
+/** Who may share a cache entry (ADR-0469). `shared` is the `cloud.content_cache` flag: on, the
+ * key is the song's content hash, so the same bytes reuse one entry across workspaces and
+ * titles on this device; off, the key is scoped to the workspace and nothing is shared. */
+export type CacheScope = { workspaceId: string; shared: boolean };
+
+/** The agreed key for a song's cached bytes, shared by the writer and the resolver. A content
+ * key is used only for a well-formed hash; anything else falls back to the scoped key. */
+export function cachedBytesKey(song: Pick<StoredSong, 'songId' | 'identity'>, scope: CacheScope): string {
+  const sha = song.identity.content_sha256;
+  if (scope.shared && SHA256.test(sha)) return `bytes-${CACHE_KEY_VERSION}-${sha}`;
+  return `bytes-${encodeURIComponent(scope.workspaceId)}-${song.songId}`;
+}
+
+async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
+  const { sha256 } = await import('@noble/hashes/sha2.js');
+  return Array.from(sha256(new Uint8Array(bytes)), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/** Possession proof for content keys: bytes enter a shared entry only when this device hashed
+ * them to the song's hash itself. A hash from anywhere else (a server reply, another tab's
+ * claim) is never trusted to name shared bytes. */
+export async function cacheSongBytes(
+  song: Pick<StoredSong, 'songId' | 'identity'>,
+  bytes: ArrayBuffer,
+  scope: CacheScope,
+  write: (key: string, bytes: ArrayBuffer) => Promise<CacheWriteResult> = cacheWrite,
+): Promise<CacheWriteResult | { ok: false; why: 'not_these_bytes' }> {
+  if (await sha256Hex(bytes) !== song.identity.content_sha256) return { ok: false, why: 'not_these_bytes' };
+  return write(cachedBytesKey(song, scope), bytes);
+}
+
+/** Read a song's cached bytes and prove they are the song before handing them over. A content
+ * entry that does not hash to its name (corrupt, or written by something that skipped the
+ * proof) is evicted and reported as a miss. */
+export async function readSongBytes(
+  song: Pick<StoredSong, 'songId' | 'identity'>,
+  scope: CacheScope,
+  read: (key: string) => Promise<ArrayBuffer | null> = cacheRead,
+  evict: (key: string) => Promise<void> = cacheEvict,
+): Promise<ArrayBuffer | null> {
+  const key = cachedBytesKey(song, scope);
+  const bytes = await read(key);
+  if (!bytes) return null;
+  if (await sha256Hex(bytes) !== song.identity.content_sha256) {
+    await evict(key);
+    return null;
+  }
+  return bytes;
+}
+
+/** Remove every derived cache entry this module wrote ("clear everything on this device"). */
+export async function cacheClearAll(): Promise<void> {
+  const root = await opfsRoot();
+  if (!root) return;
+  for (const entry of await opfsCacheEntries(root, '')) {
+    try {
+      await root.removeEntry(entry.name);
+      cacheUse.delete(entry.name);
+    } catch {
+      // A locked entry is still derived data; the browser may evict it later.
+    }
+  }
 }
 
 export type CacheWriteResult = { ok: true } | { ok: false; why: 'storage_full' | 'unavailable' };

@@ -17,7 +17,7 @@ afterEach(() => {
 describe('MediaStore without usable IndexedDB', () => {
   it('degrades to memory with the flag raised, and still serves reads and writes', async () => {
     // jsdom has no IndexedDB at all: the exact shape of a private window with storage blocked.
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     expect(store.degraded).toBe(true);
     await store.put(song(1));
     expect(await store.get(1)).toMatchObject({ songId: 1 });
@@ -28,7 +28,7 @@ describe('MediaStore without usable IndexedDB', () => {
 
   it('degrades when indexedDB.open itself throws', async () => {
     vi.stubGlobal('indexedDB', { open: () => { throw new Error('storage disabled'); } });
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     expect(store.degraded).toBe(true);
     await store.put(song(2));
     expect(await store.get(2)).toMatchObject({ songId: 2 });
@@ -42,7 +42,7 @@ describe('MediaStore without usable IndexedDB', () => {
         return request;
       },
     });
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     expect(store.degraded).toBe(true);
   });
 });
@@ -88,7 +88,7 @@ const quotaAtCommit = () => {
 describe('MediaStore writes', () => {
   it('waits for the commit, so a disk that fills at commit pauses the import instead of claiming the song', async () => {
     vi.stubGlobal('indexedDB', quotaAtCommit());
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     expect(store.degraded).toBe(false);
     await expect(store.put(song(9))).rejects.toBeInstanceOf(StorageFullError);
     expect(await store.get(9)).toBeNull();
@@ -97,7 +97,7 @@ describe('MediaStore writes', () => {
 
 describe('session files', () => {
   it('keeps a picked file reachable for the visit without writing it anywhere', async () => {
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     const file = bytesFile('abc', 'a.mp3');
     expect(store.sessionFile(5)).toBeNull();
     store.attachSessionFile(5, file);

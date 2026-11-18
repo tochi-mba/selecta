@@ -78,7 +78,7 @@ describe('the import path never deletes or moves a member file', () => {
     const root = watched(fakeDirectory('Music', [files[0], files[1], files[2], inner]) as DirectoryHandleLike, 'Music');
     const { request, calls } = captureRequest();
     const readTags: TagReader = async (file) => ({ title: file.name, artist: 'Artist', duration_s: 1 });
-    const summary = await runImport({ source: root, request, store: await MediaStore.open(), deviceId: 'dev', readTags });
+    const summary = await runImport({ source: root, request, store: await MediaStore.open('ws-test'), deviceId: 'dev', readTags });
 
     expect(summary).toMatchObject({ imported: 3, skipped: 1, failed: 0 });
     expect(reached).toEqual([]);

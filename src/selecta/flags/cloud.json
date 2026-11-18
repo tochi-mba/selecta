@@ -135,6 +135,15 @@
       "kind": "release",
       "owner": "playback"
     },
+    "cloud.content_cache": {
+      "label": "Reuse work on the same song by fingerprint",
+      "about": "Derived data on this device (cached song bytes) is keyed by the song's content hash, computed here from the file itself, so the same file under another account or another title reuses it; off, the cache is keyed per workspace and nothing is shared (ADR-0469).",
+      "surfaces": ["cloud.library", "cloud.listen"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
     "cloud.local_first_labs": {
       "label": "Labs: browser-first Cloud",
       "about": "Lets a beta cohort opt into browser-first Cloud themselves, give feedback and opt out again; opting in adds the member to a cloud.local_first targeting rule (ADR-0467 step 3).",

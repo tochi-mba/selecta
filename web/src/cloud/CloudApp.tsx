@@ -34,6 +34,8 @@ import { Action, LiveRegion, Section } from '../ui/controls';
 import { Toaster } from '../ui/toasts';
 import { BrandMark } from '../ui/BrandMark';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { DeviceDataCard } from './DeviceDataCard';
+import { forgetWorkspaceOnDevice } from './deviceData';
 import type { HostedView } from './HostedShell';
 import './cloud.css';
 // Shared business styles are scoped to .biz and loaded by the Cloud shell.
@@ -245,6 +247,8 @@ export function CloudApp() {
   const deleteAccount = async () => {
     await operate('delete', async () => {
       await api('/account', { method: 'DELETE' }, account?.workspace.id);
+      // ADR-0469: a deleted account leaves nothing on this device (song index, folder, marker).
+      if (account) await forgetWorkspaceOnDevice(account.workspace.id);
       signOut({ returnTo: window.location.origin });
     });
   };
@@ -259,6 +263,7 @@ export function CloudApp() {
       onConfirm={async () => {
         // the dialog stays open and says why when the server refuses
         await api('/account', { method: 'DELETE' }, account?.workspace.id);
+        if (account) await forgetWorkspaceOnDevice(account.workspace.id);
         signOut({ returnTo: window.location.origin });
       }}
       onClose={() => setConfirmingDelete(false)}
@@ -334,7 +339,7 @@ export function CloudApp() {
   const goShell = (next: Page) => navigate(PATHS[next]);
   // the shared shells have no rail, so the account page says who is signed in and offers leaving
   const framed = localFirst || hostedShell;
-  const settingsPanel = account ? <div className="cloud-settings">{framed && <AccountStrip email={user.email} onSignOut={signOutHere} onStaffConsole={showsAdmin(account) ? openAdmin : undefined} />}{framed && lockedTo(account, 'rooms') && <RoomsCard account={account} go={goShell} />}{localFirst && isHostedAccount(account) && accountFlagOn('cloud.stored_media', account.features) && <ReconciliationPanel request={workspaceRequest} />}<AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} />{flagOn('devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{accountFlagOn('lucy', account.features) && accountFlagOn('account.lucy_settings', account.features) && <LucyCloudSettings request={workspaceRequest} features={account.features} />}{showsDeviceCheck(account.features) && <DeviceCheck />}{flagOn('cloud.venue_tablet') && <Suspense fallback={null}><VenuePosture workspaceId={account.workspace.id} places={{ localFirst, devices: flagOn('devices'), rooms: flagOn('rooms'), library: localFirst || pageShown(account, 'library') }} /></Suspense>}{(flagOn('cloud.local_first_labs') || account.experience?.local_first === true) && <LocalFirstLabs request={<T,>(path: string, init?: RequestInit) => api<T>(path, init, account.workspace.id)} onChanged={() => void refreshAccount()} />}{showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />}{flagOn('autopilot.venue_mode') && flagOn('autopilot.venue_policy') && <VenueSetup api={api} workspaceId={account.workspace.id} />}{(exact || hostedShell) && <AccountDanger busy={busy('everywhere') || busy('delete')} onSignOutEverywhere={() => void signOutEverywhere()} onDelete={() => void deleteAccount()} />}</div> : null;
+  const settingsPanel = account ? <div className="cloud-settings">{framed && <AccountStrip email={user.email} onSignOut={signOutHere} onStaffConsole={showsAdmin(account) ? openAdmin : undefined} />}{framed && lockedTo(account, 'rooms') && <RoomsCard account={account} go={goShell} />}{localFirst && isHostedAccount(account) && accountFlagOn('cloud.stored_media', account.features) && <ReconciliationPanel request={workspaceRequest} />}<AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} />{flagOn('devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{accountFlagOn('lucy', account.features) && accountFlagOn('account.lucy_settings', account.features) && <LucyCloudSettings request={workspaceRequest} features={account.features} />}{showsDeviceCheck(account.features) && <DeviceCheck />}{flagOn('cloud.venue_tablet') && <Suspense fallback={null}><VenuePosture workspaceId={account.workspace.id} places={{ localFirst, devices: flagOn('devices'), rooms: flagOn('rooms'), library: localFirst || pageShown(account, 'library') }} /></Suspense>}{(flagOn('cloud.local_first_labs') || account.experience?.local_first === true) && <LocalFirstLabs request={<T,>(path: string, init?: RequestInit) => api<T>(path, init, account.workspace.id)} onChanged={() => void refreshAccount()} />}{showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />}{flagOn('autopilot.venue_mode') && flagOn('autopilot.venue_policy') && <VenueSetup api={api} workspaceId={account.workspace.id} />}{localFirst && flagOn('cloud.local_media') && <DeviceDataCard workspaceId={account.workspace.id} onCleared={() => window.location.reload()} />}{(exact || hostedShell) && <AccountDanger busy={busy('everywhere') || busy('delete')} onSignOutEverywhere={() => void signOutEverywhere()} onDelete={() => void deleteAccount()} />}</div> : null;
   const billing = account && <Billing account={account} busy={busy('checkout') || busy('portal')} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} />;
   const uploads = account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} perFile={flagOn(LIBRARY_STATES_FLAG)} />;
   // The account places behind More, one drawing for both shared shells.

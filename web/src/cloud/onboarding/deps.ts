@@ -142,7 +142,7 @@ export function defaultDeps(request: Request, workspaceId: string): SpineDeps {
       },
     },
     importMusic: async (source, onProgress, signal) => {
-      const store = await MediaStore.open();
+      const store = await MediaStore.open(workspaceId);
       return runImport({ source, request, store, deviceId: browserProfileId(storage, workspaceId), onProgress, signal });
     },
     openAudio: openEngineAudio,

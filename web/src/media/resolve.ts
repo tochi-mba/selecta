@@ -1,4 +1,4 @@
-import { cachedBytesKey, cacheRead, MediaStore } from './store';
+import { cacheRead, MediaStore, readSongBytes } from './store';
 
 // The engine's media resolver (ADR-0458 with ADR-0457).
 //
@@ -30,7 +30,11 @@ export function makeResolver(
   store: MediaStore,
   cache: (key: string) => Promise<ArrayBuffer | null> = cacheRead,
   onAvailability?: AvailabilityObserver,
+  /** `cloud.content_cache` (ADR-0469): on, cached bytes are found by content hash, so the same
+   * song reuses one entry whatever workspace or title registered it; off, by workspace. */
+  options: { sharedCache?: boolean } = {},
 ): MediaResolver {
+  const scope = { workspaceId: store.workspaceId, shared: options.sharedCache === true };
   return async (songId) => {
     const session = store.sessionFile(songId);
     if (session) return { id: songId, data: () => session.arrayBuffer() };
@@ -66,7 +70,10 @@ export function makeResolver(
         onAvailability?.(songId, false);
       }
     }
-    const bytes = await cache(cachedBytesKey(songId));
+    // The cache is keyed by the hash this device computed when it imported the file (never a
+    // server-supplied one), and a hit is re-hashed before use, so shared bytes are always the
+    // registered song.
+    const bytes = song ? await readSongBytes(song, scope, cache) : null;
     if (bytes) return { id: songId, data: async () => bytes };
     return null;
   };

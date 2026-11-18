@@ -7,7 +7,7 @@ import { bytesFile, fakeHandle } from './testFixtures';
 import type { FakeHandle } from './testFixtures';
 
 async function storedWith(songId: number, handle: FakeHandle, content: string): Promise<{ store: MediaStore; song: StoredSong }> {
-  const store = await MediaStore.open();
+  const store = await MediaStore.open('ws-test');
   const song: StoredSong = {
     songId,
     identity: { content_sha256: await fileSha256(new Blob([content])), title: `Song ${songId}`, artist: 'Test Artist' },
@@ -25,7 +25,7 @@ describe('findLapsed', () => {
   });
 
   it('surfaces one consistent item per lapse, naming why', async () => {
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     const asking = fakeHandle(bytesFile('abc', 'a.mp3'), { permission: 'prompt' });
     const gone = fakeHandle(bytesFile('def', 'b.mp3'), { broken: true });
     await store.put({ songId: 1, identity: { content_sha256: await fileSha256(new Blob(['abc'])), title: 'A', artist: 'X' }, ref: { kind: 'handle', handle: asking }, importedAt: 1 });
@@ -47,7 +47,7 @@ describe('findLapsed', () => {
   });
 
   it('does not list repick markers: they never had a handle to lapse', async () => {
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     await store.put({ songId: 3, identity: { content_sha256: 'x', title: 'C', artist: 'X' }, ref: { kind: 'repick', name: 'c.mp3', size: 3 }, importedAt: 1 });
     expect(await findLapsed(store)).toEqual([]);
   });
@@ -95,7 +95,7 @@ describe('acceptRepick', () => {
   });
 
   it('reports missing for a song that was never imported here', async () => {
-    const store = await MediaStore.open();
+    const store = await MediaStore.open('ws-test');
     expect((await acceptRepick(store, 42, bytesFile('abc', 'a.mp3'))).status).toBe('missing');
   });
 });

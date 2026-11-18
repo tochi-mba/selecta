@@ -64,6 +64,11 @@ type Session = {
 let snapshot: ImportSnapshot = IDLE_IMPORT;
 let session: Session | null = null;
 const listeners = new Set<() => void>();
+/** Whose import the snapshot describes, and which workspace is signed in on this page
+ * (ADR-0469). A snapshot carries a folder name and file names, so one account's import is
+ * never shown to another account that signs in to the same tab afterwards. */
+let snapshotWorkspace: string | null = null;
+let activeWorkspace: string | null = null;
 
 function publish(next: ImportSnapshot) {
   snapshot = next;
@@ -71,7 +76,16 @@ function publish(next: ImportSnapshot) {
 }
 
 export function importSnapshot(): ImportSnapshot {
+  if (activeWorkspace !== null && snapshotWorkspace !== null && snapshotWorkspace !== activeWorkspace) return IDLE_IMPORT;
   return snapshot;
+}
+
+/** Say which workspace this page is signed in to. Another workspace's import, running or
+ * settled, then reads as idle everywhere (chip, progress panel, announcer). */
+export function bindImportWorkspace(workspaceId: string | null): void {
+  if (activeWorkspace === workspaceId) return;
+  activeWorkspace = workspaceId;
+  for (const listener of listeners) listener();
 }
 
 export function subscribeImport(listener: () => void): () => void {
@@ -171,6 +185,7 @@ export function startImportSession(options: { source: ImportSource; run: ImportR
   if (session && !session.settled) cancelImportSession();
   const owner: Session = { controller: new AbortController(), workspaceId: options.workspaceId, startedAt: Date.now(), cancelled: false, settled: false };
   session = owner;
+  snapshotWorkspace = owner.workspaceId;
   const folder = options.folder ?? null;
   publish({ ...IDLE_IMPORT, phase: 'running', folder });
   writeMarker(owner.workspaceId, markerFor(owner, snapshot));
@@ -212,5 +227,6 @@ export function clearImportSession(): void {
   if (snapshot.phase === 'idle' || snapshot.phase === 'running') return;
   if (session && !session.settled) return;
   session = null;
+  snapshotWorkspace = null;
   publish(IDLE_IMPORT);
 }

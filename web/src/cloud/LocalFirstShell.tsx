@@ -33,7 +33,7 @@ import { OnboardingSpine } from './onboarding/OnboardingSpine';
 import { browserStorage, onboardingFinished, recordImportOutcome } from './onboarding/state';
 import { ImportChip } from './ImportChip';
 import { StorageCard } from './StorageCard';
-import { cancelImportSession, useImportSession } from './importSession';
+import { bindImportWorkspace, cancelImportSession, useImportSession } from './importSession';
 import { useServerFreeControls } from './serverFreeControls';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
@@ -80,8 +80,12 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   const workspaceId = account.workspace.id;
   const on = useFlags();
   const cloud = useCallback(<T,>(path: string, init?: RequestInit) => api<T>(path, init, workspaceId), [api, workspaceId]) as Request;
-  const store = useRef<Promise<MediaStore> | null>(null);
-  const openStore = useCallback(() => (store.current ??= MediaStore.open()), []);
+  // One song index per workspace (ADR-0469): a different account in this browser opens its own.
+  const store = useRef<{ workspaceId: string; opened: Promise<MediaStore> } | null>(null);
+  const openStore = useCallback(() => {
+    if (store.current?.workspaceId !== workspaceId) store.current = { workspaceId, opened: MediaStore.open(workspaceId) };
+    return store.current.opened;
+  }, [workspaceId]);
   const resolving = useRef<Promise<MediaResolver> | null>(null);
   // Device first, hosted fallback (ADR-0465): only a grandfathered account with stored media
   // readable gets the hosted path; every answer lands in the source book the queue shows.
@@ -177,7 +181,10 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   const media = useMemo(() => mediaRequest(request), [request]);
   mediaRef.current = media;
   const programme = useRef<MixData['mix']>([]);
-  const resolver = useCallback(async () => (resolving.current ??= openStore().then((opened) => makeCoexistingResolver({
+  const resolverFor = useRef<string | null>(null);
+  const resolver = useCallback(async () => {
+    if (resolverFor.current !== workspaceId) { resolverFor.current = workspaceId; resolving.current = null; }
+    return (resolving.current ??= openStore().then((opened) => makeCoexistingResolver({
     device: makeResolver(opened, undefined, (songId, present) => {
       if (present) lapsed.current.delete(songId);
       else lapsed.current.set(songId, 'changed');
@@ -188,13 +195,14 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
           refreshStatusRef.current?.();
         }).catch(() => undefined);
       }
-    }),
+    }, { sharedCache: on('cloud.content_cache') }),
     hosted: coexisting ? hostedResolver(api, workspaceId, {
       songs: () => programme.current,
       shaOf: async (songId) => (await opened.get(songId))?.identity.content_sha256 ?? null,
     }) : null,
     book,
-  }))), [openStore, coexisting, api, workspaceId, book, media, on]);
+  })));
+  }, [openStore, coexisting, api, workspaceId, book, media, on]);
 
   const [status, setStatus] = useState<Status | null>(null);
   const [statusProblem, setStatusProblem] = useState('');
@@ -224,6 +232,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
 
   // The import session outlives any one page: each landed batch refreshes the counts, and a
   // finished import records its outcome in the onboarding state even with the spine gone.
+  useEffect(() => { bindImportWorkspace(workspaceId); }, [workspaceId]);
   const importLive = useImportSession();
   const lastBatches = useRef(importLive.batches);
   useEffect(() => {

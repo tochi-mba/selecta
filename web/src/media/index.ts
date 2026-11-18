@@ -12,7 +12,7 @@ export { assertNoPath, fileSha256, HASH_CHUNK_BYTES, normalise } from './identit
 export type { TrackIdentity } from './identity';
 export { AUDIO_EXTENSIONS, BATCH_SIZE, defaultTagReader, FIRST_BATCH, isAudioName, runImport } from './importer';
 export type { ImportEvent, ImportOptions, ImportSource, ImportSummary, RegisteredSong, Request, SongRegistration, TagReader } from './importer';
-export { cachedBytesKey, cacheEvict, cacheRead, cacheWrite, isQuotaError, MediaStore, StorageFullError } from './store';
+export { CACHE_KEY_VERSION, cacheClearAll, cachedBytesKey, cacheEvict, cacheRead, cacheSongBytes, cacheWrite, deleteDatabase, isQuotaError, MEDIA_DB_PREFIX, mediaDbName, MediaStore, readSongBytes, StorageFullError, type CacheScope } from './store';
 export type { CacheWriteResult, DirectoryHandleLike, FileHandleLike, FileRef, StoredSong } from './store';
 export { forgetFolder, FOLDERS_DB, recallFolder, rememberFolder } from './folders';
 export type { StoredFolderHandle } from './folders';
