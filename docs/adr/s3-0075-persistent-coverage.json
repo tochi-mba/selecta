@@ -1,0 +1,19 @@
+{
+ "$comment": "S3-0075-01 persistent coverage segment. Entries map this group in docs/adr/mp-0272-surface-inventory.json to review candidates or an explicit uncovered reason. See docs/adr/s3-0075-coverage-map.json for shared status, reasons and totals.",
+ "inventory": "docs/adr/mp-0272-surface-inventory.json",
+ "group": "persistent",
+ "entries": [
+  {"surface":"persistent.nav","state":"idle","candidates":[{"spec":"web/e2e/mp-baseline.mp.ts","capture":"candidate-<route>--fx.route.idle--<viewport>.png"}]},
+  {"surface":"persistent.nav","state":"playing","candidates":[{"spec":"web/e2e/mp-baseline.mp.ts","capture":"candidate-persistent.nav--fx.handoff.mini--<viewport>.png"}]},
+  {"surface":"persistent.context_bar","state":"idle","candidates":[{"spec":"web/e2e/mp-baseline.mp.ts","capture":"candidate-<route>--fx.route.idle--<viewport>.png"}]},
+  {"surface":"persistent.context_bar","state":"playing","candidates":[{"spec":"web/e2e/mp-baseline.mp.ts","capture":"candidate-persistent.context_bar--fx.handoff.mini--<viewport>.png"}]},
+  {"surface":"persistent.context_bar","state":"offline","candidates":[{"spec":"web/e2e/mp-baseline.mp.ts","capture":"candidate-persistent.context_bar--fx.fail.offline--<viewport>.png"}]},
+  {"surface":"persistent.mini","state":"playing","candidates":[{"spec":"web/e2e/mp-baseline.mp.ts","capture":"candidate-persistent.mini--fx.handoff.mini--<viewport>.png"}]},
+  {"surface":"persistent.mini","state":"unavailable","uncovered":"needs-driver"},
+  {"surface":"persistent.stage","state":"playing","candidates":[{"spec":"web/e2e/mp-baseline.mp.ts","capture":"candidate-persistent.stage--fx.stage--<viewport>.png"},{"spec":"web/e2e/fp-0271-paired-states.e2e.ts","capture":"candidate-<width>x<height>-stage-<theme>.png"}]},
+  {"surface":"persistent.stage","state":"unavailable","uncovered":"needs-driver"},
+  {"surface":"persistent.connection","state":"offline","candidates":[{"spec":"web/e2e/mp-baseline.mp.ts","capture":"candidate-persistent.connection--fx.fail.offline--<viewport>.png"},{"spec":"web/e2e/fp-0271-paired-states.e2e.ts","capture":"candidate-<width>x<height>-offline-<theme>.png"}]},
+  {"surface":"persistent.connection","state":"recovery","uncovered":"needs-driver"},
+  {"surface":"persistent.toasts","state":"open","candidates":[{"spec":"web/e2e/mp-baseline.mp.ts","capture":"candidate-persistent.toasts--fx.toast--<viewport>.png"}]}
+ ]
+}
