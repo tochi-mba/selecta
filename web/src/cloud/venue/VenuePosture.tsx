@@ -273,7 +273,7 @@ function OutputChoice({ posture, dispatch }: BodyProps) {
     <>
       <p>SelectaDJ uses the output the tablet has already selected. Keep the recommended default unless you want more specific troubleshooting tips; change the speaker itself in the tablet's sound settings.</p>
       <fieldset className="cloud-spine-routes">
-        <legend>Where should the sound go?</legend>
+        <legend>What sound output is this tablet using?</legend>
         {OUTPUT_ROUTES.map((option) => (
           <label key={option.id} className="cloud-check">
             <input type="radio" name={`${id}-route`} value={option.id} checked={route === option.id} onChange={() => setRoute(option.id)} />
