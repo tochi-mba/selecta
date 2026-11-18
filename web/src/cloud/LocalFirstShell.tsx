@@ -74,7 +74,6 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   const workspaceId = account.workspace.id;
   const on = useFlags();
   const cloud = useCallback(<T,>(path: string, init?: RequestInit) => api<T>(path, init, workspaceId), [api, workspaceId]) as Request;
-  const media = useMemo(() => mediaRequest(cloud), [cloud]);
   const store = useRef<Promise<MediaStore> | null>(null);
   const openStore = useCallback(() => (store.current ??= MediaStore.open()), []);
   const resolving = useRef<Promise<MediaResolver> | null>(null);
@@ -109,6 +108,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
     recipes: recipeStore(cloud, workspaceId),
   }), [api, cloud, workspaceId, coexisting, openStore]);
   const request = useMemo(() => localFirstRequest(cloud, sources), [cloud, sources]);
+  // imports register through the adapted request, so each landed batch reads a fresh catalogue
+  const media = useMemo(() => mediaRequest(request), [request]);
   const programme = useRef<MixData['mix']>([]);
   const resolver = useCallback(async () => (resolving.current ??= openStore().then((opened) => makeCoexistingResolver({
     device: makeResolver(opened),

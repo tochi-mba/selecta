@@ -178,7 +178,11 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     // without a recipe store there is nothing to build a mix into
     if (method === 'GET' && route === '/vibes') return [] as T;
     // the catalogue's own routes pass straight through (the import surface uses them)
-    if (route.startsWith('/local-media/')) return cloud<T>(path, init);
+    // (a registration through here changes the catalogue, so the next read asks again)
+    if (route.startsWith('/local-media/')) {
+      if (method !== 'GET') catalogue = null;
+      return cloud<T>(path, init);
+    }
     throw notHereYet(path);
   };
   return adapted as Request;
