@@ -138,7 +138,11 @@
         "GET /api/local-media/songs",
         "GET /api/local-media/songs/{song_id}",
         "DELETE /api/local-media/songs/{song_id}",
-        "POST /api/local-media/availability"
+        "POST /api/local-media/availability",
+        "GET /api/local-media/recipes",
+        "POST /api/local-media/recipes",
+        "GET /api/local-media/recipes/{mix_id}",
+        "POST /api/local-media/recipes/{mix_id}/revisions"
       ],
       "surfaces": ["cloud.library"],
       "modes": ["cloud"],

@@ -217,6 +217,8 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 | `POST /api/local-media/songs` | Registers songs on the member's own devices in the workspace catalogue |
 | `DELETE /api/local-media/songs/{song_id}` | Soft-deletes a catalogue entry |
 | `POST /api/local-media/availability` | Reports which catalogue songs a device holds right now |
+| `POST /api/local-media/recipes` | Saves a new portable recipe (a mix over catalogue songs) as its first immutable revision |
+| `POST /api/local-media/recipes/{mix_id}/revisions` | Saves the next immutable revision of a recipe, refused when made from a stale one |
 
 ### Rooms (`src/selecta/rooms/api_host.py`, `src/selecta/rooms/api_guest.py`) - Requests (guest rooms)
 
