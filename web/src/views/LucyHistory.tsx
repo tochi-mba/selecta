@@ -8,7 +8,7 @@ import { PageLink } from '../shell/PageLink';
 import { Action, Menu, Problem, Skeleton } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { SearchField } from '../ui/primitives';
-import { NativeDialog } from './LucyDialog';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 /** Earlier conversations with Lucy: open one, start a new one, rename, archive or delete. Deleting a
  * conversation never touches a draft that was already saved from it. */
@@ -120,19 +120,20 @@ export function LucyHistory({ currentId, refreshKey, onPicked }: { currentId: st
         </ul>
       )}
       {deleting && (
-        <NativeDialog
+        <ConfirmDialog
           title="Delete this conversation?"
+          destructive
+          confirmLabel="Delete conversation"
+          working="Deleting…"
+          onConfirm={remove}
           onClose={() => setDeleting(null)}
-          footer={(
+          body={(
             <>
-              <button type="button" data-autofocus onClick={() => setDeleting(null)}>Keep it</button>
-              <Action className="destructive" working="Deleting…" run={remove}>Delete conversation</Action>
+              <p><b dir="auto">{titleOf(deleting)}</b> and the mixes Lucy proposed in it will be deleted.</p>
+              <p>Drafts you already saved from it are kept in My Mixes, and your music is never touched.</p>
             </>
           )}
-        >
-          <p><b dir="auto">{titleOf(deleting)}</b> and the mixes Lucy proposed in it will be deleted.</p>
-          <p>Drafts you already saved from it are kept in My Mixes, and your music is never touched.</p>
-        </NativeDialog>
+        />
       )}
     </nav>
   );
