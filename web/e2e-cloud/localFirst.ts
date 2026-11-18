@@ -31,7 +31,7 @@ export async function asLocalFirst(page: Page, user: string, { hosted = false }:
       const answer = await route.fetch();
       const account = await answer.json();
       account.experience = { ...(account.experience ?? {}), local_first: true, hosted };
-      account.features = { ...account.features, 'cloud.local_first': true, 'cloud.local_media': true };
+      account.features = { ...account.features, 'cloud.local_first': true, 'cloud.local_media': true, 'cloud.progressive_import': true };
       await route.fulfill({ response: answer, json: account });
     } catch {
       // the test ended while an account refresh was in flight: nothing is waiting for it

@@ -117,6 +117,15 @@
       "kind": "release",
       "owner": "playback"
     },
+    "cloud.progressive_import": {
+      "label": "Import continues in the background",
+      "about": "A folder import keeps running while the member moves on: onboarding unlocks as songs land, a shell chip shows progress, and an interrupted import offers to carry on (ADR-0463 BF-0463-02).",
+      "surfaces": ["cloud.home", "cloud.library", "cloud.listen"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
     "cloud.local_first_labs": {
       "label": "Labs: browser-first Cloud",
       "about": "Lets a beta cohort opt into browser-first Cloud themselves, give feedback and opt out again; opting in adds the member to a cloud.local_first targeting rule (ADR-0467 step 3).",

@@ -56,6 +56,7 @@ export const CACHE_OWNERS: readonly { resource: string; owner: string; others: s
   { resource: 'current mix', owner: 'App.tsx', others: 'pages get `mix` and replace it only through `setMixData` with a server answer' },
   { resource: 'open draft', owner: 'App.tsx', others: 'the editor gets it as `draftData`' },
   { resource: 'jobs and failures', owner: 'state/jobs.ts', others: 'useJobsStatus subscribers share one snapshot and one timer' },
+  { resource: 'import progress (this device)', owner: 'cloud/importSession.ts', others: 'ConnectMusic, the onboarding spine and the shell import chip subscribe to one snapshot' },
   { resource: 'export jobs', owner: 'views/exportStore.ts', others: 'Export panels subscribe to one store' },
   { resource: 'preferences', owner: 'state/prefs.ts', others: 'kept in this browser, not on the server' },
 ];

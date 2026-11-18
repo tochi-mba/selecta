@@ -225,6 +225,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `cloud.uploads` | **Cloud uploads.** Upload private audio files to a Cloud workspace. | `cloud.hosted_media` |
 | `cloud.stored_media` | **Stored media.** List, play, export and delete audio already stored in Cloud. Reads of stored media stay open without the hosted media grant, so nobody's library goes dark (ADR-0456). |  |
 | `cloud.local_first` | **Browser-first personal Cloud.** Selects the local-first navigation and browser-owned playback in personal Cloud; the legacy pages remain when off (ADR-0455). |  |
+| `cloud.progressive_import` | **Import continues in the background.** A folder import keeps running while the member moves on: onboarding unlocks as songs land, a shell chip shows progress, and an interrupted import offers to carry on (ADR-0463 BF-0463-02). |  |
 | `cloud.local_first_labs` | **Labs: browser-first Cloud.** Lets a beta cohort opt into browser-first Cloud themselves, give feedback and opt out again; opting in adds the member to a cloud.local_first targeting rule (ADR-0467 step 3). |  |
 | `cloud.local_media` | **Local media catalogue.** The metadata-only catalogue of songs on the member's own devices; no audio is uploaded (ADR-0458). |  |
 | `billing.checkout` | **Plan checkout.** Start or change a paid Selecta Cloud subscription. |  |
