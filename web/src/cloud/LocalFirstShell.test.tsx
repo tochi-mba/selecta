@@ -150,6 +150,30 @@ describe('designed empty states, never a blank table', () => {
     render(<CloudApp />);
     expect(await screen.findByRole('heading', { name: 'No mixes yet' })).toBeVisible();
   });
+
+  it('loads browser recipe drafts through the Cloud request boundary, not the local draft route', async () => {
+    account = {
+      ...withExperience(true, false, true),
+      features: { 'cloud.local_first': true, 'cloud.hosted_media': false, drafts: true },
+    };
+    window.history.replaceState({}, '', '/mixes/mine');
+    const calls: string[] = [];
+    const fetcher = vi.mocked(globalThis.fetch as unknown as (url: string, init?: RequestInit) => Promise<Response>);
+    const fallback = fetcher.getMockImplementation()!;
+    fetcher.mockImplementation(async (url: string, init?: RequestInit) => {
+      calls.push(`${init?.method ?? 'GET'} ${url}`);
+      if (url === '/api/local-media/recipes?kind=draft') {
+        return new Response(JSON.stringify({ recipes: [] }), { status: 200, headers: { 'content-type': 'application/json' } });
+      }
+      return fallback(url, init);
+    });
+
+    render(<CloudApp />);
+
+    expect(await screen.findByText(/No saved drafts yet/)).toBeVisible();
+    expect(calls).toContain('GET /api/local-media/recipes?kind=draft');
+    expect(calls.some((call) => call.includes('/api/drafts'))).toBe(false);
+  });
 });
 
 describe('the account chrome in the local-first shell (hosted frame parity)', () => {

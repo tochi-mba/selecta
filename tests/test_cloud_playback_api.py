@@ -160,13 +160,14 @@ def test_commands_apply_once_replay_by_key_and_refuse_stale_sequences(party):
     client = party.client
     speaker = party.speaker_on()
     remote = party.register(ALICE, "Phone", kind="phone")["device"]["id"]
-    seq = client.get(f"/api/playback/session?device_id={remote}", headers=auth(ALICE)).json()[
-        "session"
-    ]["seq"]
+    session_view = client.get(
+        f"/api/playback/session?device_id={remote}", headers=auth(ALICE)
+    ).json()["session"]
     press = {
         "device_id": remote,
         "command": "pause",
-        "based_on_seq": seq,
+        "based_on_seq": session_view["seq"],
+        "fence": session_view["fence"],
         "idempotency_key": "press-1",
     }
     first = client.post("/api/playback/commands", headers=auth(ALICE), json=press)
@@ -196,11 +197,17 @@ def test_commands_apply_once_replay_by_key_and_refuse_stale_sequences(party):
 
 def test_command_key_may_come_from_the_header(party):
     device = party.speaker_on()
-    seq = party.client.get(f"/api/playback/session?device_id={device}", headers=auth(ALICE)).json()[
-        "session"
-    ]["seq"]
+    session_view = party.client.get(
+        f"/api/playback/session?device_id={device}", headers=auth(ALICE)
+    ).json()["session"]
     headers = {**auth(ALICE), "Idempotency-Key": "header-key"}
-    body = {"device_id": device, "command": "seek", "args": {"offset_ms": 10}, "based_on_seq": seq}
+    body = {
+        "device_id": device,
+        "command": "seek",
+        "args": {"offset_ms": 10},
+        "based_on_seq": session_view["seq"],
+        "fence": session_view["fence"],
+    }
     answer = party.client.post("/api/playback/commands", headers=headers, json=body)
     assert answer.status_code == 200 and answer.json()["session"]["offset_ms"] == 10
     missing = party.client.post("/api/playback/commands", headers=auth(ALICE), json=body)
@@ -209,9 +216,9 @@ def test_command_key_may_come_from_the_header(party):
 
 def test_mix_commands_are_unavailable_until_the_cloud_has_a_mix(party):
     device = party.speaker_on()
-    seq = party.client.get(f"/api/playback/session?device_id={device}", headers=auth(ALICE)).json()[
-        "session"
-    ]["seq"]
+    session_view = party.client.get(
+        f"/api/playback/session?device_id={device}", headers=auth(ALICE)
+    ).json()["session"]
     steer = party.client.post(
         "/api/playback/commands",
         headers=auth(ALICE),
@@ -219,7 +226,8 @@ def test_mix_commands_are_unavailable_until_the_cloud_has_a_mix(party):
             "device_id": device,
             "command": "steer",
             "args": {"direction": "calmer"},
-            "based_on_seq": seq,
+            "based_on_seq": session_view["seq"],
+            "fence": session_view["fence"],
             "idempotency_key": "steer-1",
         },
     )
@@ -247,7 +255,13 @@ ROUTES = [
     (
         "post",
         "/api/playback/commands",
-        {"device_id": "{id}", "command": "pause", "based_on_seq": 0, "idempotency_key": "k"},
+        {
+            "device_id": "{id}",
+            "command": "pause",
+            "based_on_seq": 0,
+            "fence": 0,
+            "idempotency_key": "k",
+        },
     ),
 ]
 
@@ -293,7 +307,7 @@ def test_the_features_follow_their_flags(party, monkeypatch):
     answer = party.client.post(
         "/api/playback/commands",
         headers=auth(CAROL),
-        json={"command": "pause", "based_on_seq": 0, "idempotency_key": "x"},
+        json={"command": "pause", "based_on_seq": 0, "fence": 0, "idempotency_key": "x"},
     )
     assert answer.status_code == 403 and answer.json()["code"] == "flag_off"
     flags.use("-devices")

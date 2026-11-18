@@ -76,6 +76,7 @@ def _current(engine) -> Session:
 def _send(engine, device, command="pause", args=None, *, key, based_on=None, **more):
     if based_on is None:
         based_on = _current(engine).seq
+    more.setdefault("fence", _current(engine).fence)
     return session.submit_command(
         engine, WORKSPACE, device.id, command, args, based_on, key, **more
     )
@@ -375,13 +376,14 @@ def test_the_routes_hold_deliver_and_report(party, clock, monkeypatch):
     speaker = party.speaker_on()
     remote = party.register(ALICE, "Phone", kind="phone")["device"]["id"]
     clock.advance(LEASE_SECONDS + 1)
-    seq = client.get(f"/api/playback/session?device_id={remote}", headers=auth(ALICE)).json()[
-        "session"
-    ]["seq"]
+    session_view = client.get(
+        f"/api/playback/session?device_id={remote}", headers=auth(ALICE)
+    ).json()["session"]
     held = client.post(
         "/api/playback/commands",
         headers=auth(ALICE),
-        json={"device_id": remote, "command": "pause", "based_on_seq": seq,
+        json={"device_id": remote, "command": "pause", "based_on_seq": session_view["seq"],
+              "fence": session_view["fence"],
               "idempotency_key": "held", "ttl_seconds": 30},
     )
     assert held.status_code == 200, held.text

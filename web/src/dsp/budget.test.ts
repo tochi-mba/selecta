@@ -1,5 +1,34 @@
 import { describe, expect, it } from 'vitest';
-import { WorkerBudget, MIN_HORIZON_S, CALIBRATION_MARGIN } from './budget';
+import {
+  WorkerBudget,
+  MIN_HORIZON_S,
+  CALIBRATION_MARGIN,
+  WORKER_CALIBRATION_IMPLEMENTATION,
+  WORKER_CALIBRATION_MAX_AGE_MS,
+  workerBudgetEvidenceState,
+  workerCalibrationState,
+  type WorkerBudgetEvidence,
+  type WorkerCalibration,
+} from './budget';
+
+const NOW = 1_700_000_000_000;
+const DEVICE = 'budget-test-device';
+const calibration = (overrides: Partial<WorkerCalibration> = {}): WorkerCalibration => ({
+  implementation: WORKER_CALIBRATION_IMPLEMENTATION,
+  deviceId: DEVICE,
+  calibratedAt: NOW,
+  samples: 3,
+  msPerBlock: 12,
+  horizonS: 30,
+  ...overrides,
+});
+const evidence = (overrides: Partial<WorkerBudgetEvidence> = {}): WorkerBudgetEvidence => ({
+  calibration: calibration(),
+  deviceId: DEVICE,
+  atFloor: false,
+  deadlineMisses: 0,
+  ...overrides,
+});
 
 describe('worker scheduling budget', () => {
   it('calibrates from benchmark samples with headroom', () => {
@@ -29,5 +58,20 @@ describe('worker scheduling budget', () => {
   it('refuses a nonsensical budget', () => {
     expect(() => new WorkerBudget({ msPerBlock: 0, horizonS: 30 })).toThrow();
     expect(() => WorkerBudget.fromBenchmark([])).toThrow();
+  });
+
+  it('accepts only a fresh calibration bound to this device', () => {
+    expect(workerCalibrationState(calibration(), DEVICE, NOW).supported).toBe(true);
+    expect(workerCalibrationState(calibration(), 'other-device', NOW)).toMatchObject({ supported: false, reason: expect.stringMatching(/different device/) });
+    expect(workerCalibrationState(calibration({ calibratedAt: NOW - WORKER_CALIBRATION_MAX_AGE_MS - 1 }), DEVICE, NOW)).toMatchObject({ supported: false, reason: expect.stringMatching(/stale/) });
+    expect(workerCalibrationState(calibration({ calibratedAt: NOW + 1 }), DEVICE, NOW)).toMatchObject({ supported: false, reason: expect.stringMatching(/invalid/) });
+    expect(workerCalibrationState(calibration({ samples: 0 }), DEVICE, NOW)).toMatchObject({ supported: false, reason: expect.stringMatching(/invalid/) });
+  });
+
+  it('rejects missing, mismatched and exhausted runtime evidence', () => {
+    expect(workerBudgetEvidenceState(null, NOW).supported).toBe(false);
+    expect(workerBudgetEvidenceState(evidence({ deviceId: 'other-device' }), NOW)).toMatchObject({ supported: false, reason: expect.stringMatching(/different device/) });
+    expect(workerBudgetEvidenceState(evidence({ atFloor: true }), NOW)).toMatchObject({ supported: false, reason: expect.stringMatching(/out of headroom/) });
+    expect(workerBudgetEvidenceState(evidence({ deadlineMisses: -1 }), NOW)).toMatchObject({ supported: false, reason: expect.stringMatching(/invalid/) });
   });
 });

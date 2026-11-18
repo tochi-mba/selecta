@@ -186,6 +186,7 @@ def journey(client, recorder: Recorder, rng: random.Random, other_asset_ids: Seq
     if taken is None or taken.status_code != 200:
         return
     seq = taken.json()["session"]["seq"]
+    fence = taken.json()["session"]["fence"]
     key = str(uuid.UUID(int=rng.getrandbits(128)))
     seqs = []
     for _ in range(2):  # the same press sent twice, as a retry after a lost response would
@@ -197,6 +198,7 @@ def journey(client, recorder: Recorder, rng: random.Random, other_asset_ids: Seq
                     "command": "pause",
                     "args": {},
                     "based_on_seq": seq,
+                    "fence": fence,
                     "idempotency_key": key,
                 },
             ),
