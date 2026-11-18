@@ -1,3 +1,4 @@
+import { downgradeDeviceOutput } from './state';
 import type { EngineStore, UnsupportedHere } from './state';
 
 /** AudioContext lifecycle for the browser runtime (ADR-0457).
@@ -76,7 +77,7 @@ export function createEngineContext(options: EngineContextOptions): EngineContex
     if (holdingSound || disposed) return;
     if (context.state !== 'running' && store.get().phase === 'playing') {
       store.set({ phase: 'paused' });
-      store.downgradeOutput({ status: 'interrupted' }, 'The sound was interrupted. Press play to carry on.');
+      downgradeDeviceOutput({ status: 'interrupted' }, 'The sound was interrupted. Press play to carry on.', store);
     }
   };
 
@@ -92,9 +93,10 @@ export function createEngineContext(options: EngineContextOptions): EngineContex
   const onVisibility = () => {
     if (disposed || watchedDocument?.visibilityState !== 'hidden') return;
     const playing = store.get().phase === 'playing';
-    store.downgradeOutput(
+    downgradeDeviceOutput(
       { status: 'uncertain' },
       playing ? 'This tab went to the background, so SelectaDJ cannot promise the sound still reaches your speakers.' : undefined,
+      store,
     );
   };
   watchedDocument?.addEventListener('visibilitychange', onVisibility);
@@ -105,18 +107,20 @@ export function createEngineContext(options: EngineContextOptions): EngineContex
     if (disposed) return;
     const playing = store.get().phase === 'playing';
     if (playing) options.pauseSafely?.();
-    store.downgradeOutput(
+    downgradeDeviceOutput(
       { status: 'output_unverified' },
       'Audio output changed. Check your speakers or headphones before playing on.',
+      store,
     );
   };
   watchedDevices?.addEventListener('devicechange', onDeviceChange);
 
   const onWakeRelease = () => {
     if (disposed) return;
-    store.downgradeOutput(
+    downgradeDeviceOutput(
       { status: 'uncertain' },
       'The screen wake lock was released, so the device may sleep and stop the sound.',
+      store,
     );
   };
 
