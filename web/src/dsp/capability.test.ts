@@ -12,6 +12,7 @@ import { CROSSFADE_IMPLEMENTATION } from './crossfade';
 import { LIMITER_IMPLEMENTATION } from './limiter';
 import { TRUE_PEAK_IMPLEMENTATION } from './loudness';
 import { WORKER_CALIBRATION_IMPLEMENTATION, WORKER_CALIBRATION_MAX_AGE_MS, type WorkerBudgetEvidence } from './budget';
+import { STRETCH_PLAYBACK_INTEGRATION } from './stretchLimits';
 
 const CALIBRATION_NOW = 1_700_000_000_000;
 const TEST_DEVICE = 'device-capability-test';
@@ -60,7 +61,7 @@ describe('capability registry', () => {
   it('time-stretch is ready only on a measured device whose stretch module loaded and self-tested', async () => {
     const evidence = await loadStretchEvidence();
     expect(evidence).toEqual({ implementation: 'wsola-stretch-v1' });
-    const ready = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: workerEvidence(), now: CALIBRATION_NOW, stretch: evidence });
+    const ready = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: workerEvidence(), now: CALIBRATION_NOW, stretch: evidence, stretchPlaybackIntegration: STRETCH_PLAYBACK_INTEGRATION });
     expect(ready.get('time_stretch')).toMatchObject({ tier: 2, status: 'ready', implementation: 'wsola-stretch-v1' });
     const unmeasured = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, stretch: evidence });
     expect(unmeasured.get('time_stretch')).toMatchObject({ status: 'unsupported_here', reason: expect.stringMatching(/not been measured/) });
@@ -106,7 +107,7 @@ describe('capability registry', () => {
     });
     expect(future.get('tempo')).toMatchObject({ status: 'unsupported_here', reason: expect.stringMatching(/stale|invalid/) });
     const mismatch = registerBrowserDspCapabilities(new CapabilityRegistry(), {
-      probe: { ok: true }, workerBudget: workerEvidence(false, CALIBRATION_NOW, 'other-device'), now: CALIBRATION_NOW,
+      probe: { ok: true }, workerBudget: { ...workerEvidence(false, CALIBRATION_NOW, 'other-device'), deviceId: TEST_DEVICE }, now: CALIBRATION_NOW,
     });
     expect(mismatch.get('tempo')).toMatchObject({ status: 'unsupported_here', reason: expect.stringMatching(/different device/) });
   });
