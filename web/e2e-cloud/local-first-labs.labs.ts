@@ -49,6 +49,8 @@ test('joining Labs puts the account in browser-first Cloud, and leaving returns 
   const inShell = page.getByRole('region', { name: 'Labs: browser-first Cloud' });
   await expect(inShell.getByRole('button', { name: 'Leave Labs' })).toBeVisible();
   await inShell.getByRole('button', { name: 'Leave Labs' }).click();
+  // leaving asks first, in the shared confirmation
+  await page.getByRole('alertdialog', { name: 'Leave Labs?' }).getByRole('button', { name: 'Yes, leave Labs' }).click();
   await expect(page.getByRole('navigation', { name: 'Cloud workspace' })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('navigation', { name: 'Main' })).toHaveCount(0);
   const left = await (await request.get('/api/account', { headers: auth })).json();

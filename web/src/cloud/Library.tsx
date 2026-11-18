@@ -1,6 +1,9 @@
 // Hosted mode only (ADR-0462): local-first accounts get the shared views and shell player instead.
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useFlag } from '../flags';
+import { Skeleton } from '../ui/controls';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { Truncate } from '../ui/format';
 import { Account, Api, Asset, bytes, Page } from './api';
 import { INITIAL_LIBRARY, isBusy, libraryReducer, overviewOf, songWords } from './libraryState';
 import { unfinishedUploads } from './uploadParts';
@@ -14,6 +17,15 @@ import { useCloudPlayer } from './useCloudPlayer';
 // `truthful` (`cloud.library_states`, ADR-0421): loading, failed, empty and ready are told apart
 // (libraryState.ts), so a list that didn't load never says "Your library is empty", and an
 // overview above the list counts the songs, the storage they use and unfinished uploads.
+
+/** How long a removed song waits before the server is told: the Undo toast's own 15 seconds. */
+export const UNDO_WINDOW_MS = 15000;
+
+function insertAt(list: Asset[], asset: Asset, at: number): Asset[] {
+  const next = list.slice();
+  next.splice(Math.min(at, next.length), 0, asset);
+  return next;
+}
 
 export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, reload, truthful = true, account }: {
   api: Api;
@@ -34,6 +46,8 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
   const [busyId, setBusyId] = useState('');
   const [state, dispatch] = useReducer(libraryReducer, INITIAL_LIBRARY);
   const [unfinished, setUnfinished] = useState<number | null>(null);
+  // songs removed inside their Undo window: off the list here, not yet deleted on the server
+  const pending = useRef(new Map<string, { asset: Asset; at: number; timer: number }>());
   // Uploading needs `cloud.uploads` (and through it the hosted media grant, ADR-0456): with it
   // off, every way to the upload page and the unfinished-uploads read are gone, the list stays.
   const uploads = useFlag('cloud.uploads');
@@ -49,7 +63,8 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
     try {
       const query = new URLSearchParams({ limit: '50' });
       if (cursor) query.set('cursor', cursor);
-      const page = await api<{ assets: Asset[]; next_cursor: string | null }>(`/assets?${query}`, {}, workspaceId);
+      const answer = await api<{ assets: Asset[]; next_cursor: string | null }>(`/assets?${query}`, {}, workspaceId);
+      const page = { ...answer, assets: answer.assets.filter((asset) => !pending.current.has(asset.id)) };
       setAssets((old) => append ? [...old, ...page.assets] : page.assets);
       setNextCursor(page.next_cursor);
       dispatch({ type: 'loaded', assets: page.assets, nextCursor: page.next_cursor, append });
@@ -67,16 +82,45 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
     return () => { live = false; };
   }, [api, workspaceId, truthful, reload, uploads]);
 
-  const remove = async (asset: Asset) => {
-    if (!window.confirm(`Remove ${asset.name} from your library?`)) return;
-    setBusyId(asset.id); setError('');
+  // Remove asks first, then takes the song off the list at once and waits out the Undo window
+  // before telling the server: Undo inside it really puts the song back, because nothing was
+  // deleted yet. Leaving the page commits what is waiting.
+  const [asking, setAsking] = useState<Asset | null>(null);
+  const commit = useCallback(async (id: string) => {
+    const waiting = pending.current.get(id);
+    if (!waiting) return;
+    window.clearTimeout(waiting.timer);
+    pending.current.delete(id);
+    setBusyId(id);
     try {
-      await api(`/assets/${encodeURIComponent(asset.id)}`, { method: 'DELETE' }, workspaceId);
-      setAssets((old) => old.filter((entry) => entry.id !== asset.id));
-      dispatch({ type: 'removed', id: asset.id });
+      await api(`/assets/${encodeURIComponent(id)}`, { method: 'DELETE' }, workspaceId);
       await refreshAccount();
-    } catch (problem) { setError((problem as Error).message); }
-    finally { setBusyId(''); }
+    } catch (problem) {
+      // the server kept it: the song comes back, and the page says why
+      setAssets((old) => (old.some((entry) => entry.id === id) ? old : insertAt(old, waiting.asset, waiting.at)));
+      dispatch({ type: 'restored', asset: waiting.asset, at: waiting.at });
+      setError((problem as Error).message);
+    } finally { setBusyId(''); }
+  }, [api, workspaceId, refreshAccount, setError]);
+  useEffect(() => {
+    const waiting = pending.current;
+    return () => { for (const id of [...waiting.keys()]) void commit(id); };
+  }, [commit]);
+  const remove = (asset: Asset) => {
+    setError('');
+    const at = assets.findIndex((entry) => entry.id === asset.id);
+    setAssets((old) => old.filter((entry) => entry.id !== asset.id));
+    dispatch({ type: 'removed', id: asset.id });
+    const timer = window.setTimeout(() => void commit(asset.id), UNDO_WINDOW_MS);
+    pending.current.set(asset.id, { asset, at: Math.max(at, 0), timer });
+  };
+  const undoRemove = (asset: Asset) => {
+    const waiting = pending.current.get(asset.id);
+    if (!waiting) throw new Error(`${asset.name} was already removed for good. Upload it again to add it back.`);
+    window.clearTimeout(waiting.timer);
+    pending.current.delete(asset.id);
+    setAssets((old) => insertAt(old, waiting.asset, waiting.at));
+    dispatch({ type: 'restored', asset: waiting.asset, at: waiting.at });
   };
 
   const track = player.track;
@@ -89,9 +133,9 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
       <div className="cloud-library-list">{assets.map((asset, at) => (
         <article className="cloud-library-row" key={asset.id}>
           <span className="cloud-library-icon" aria-hidden="true">♪</span>
-          <div className="cloud-library-meta"><strong>{asset.name}</strong><span>{asset.format?.toUpperCase() ?? 'Audio'} · {bytes(asset.size)}{asset.duration_seconds ? ` · ${Math.max(1, Math.round(asset.duration_seconds / 60))} min` : ''}</span></div>
+          <div className="cloud-library-meta"><strong><Truncate text={asset.name} /></strong><span>{asset.format?.toUpperCase() ?? 'Audio'} · {bytes(asset.size)}{asset.duration_seconds ? ` · ${Math.max(1, Math.round(asset.duration_seconds / 60))} min` : ''}</span></div>
           <button aria-label={`Listen to ${asset.name}`} onClick={() => void player.start(assets, at)} disabled={player.preparing === asset.id || busyId === asset.id}>{player.preparing === asset.id ? 'Opening…' : track?.id === asset.id ? 'Play again' : 'Listen'}</button>
-          <button aria-label={`Remove ${asset.name}`} onClick={() => void remove(asset)} disabled={busyId === asset.id}>Remove</button>
+          <button aria-label={`Remove ${asset.name}`} onClick={() => setAsking(asset)} disabled={busyId === asset.id}>Remove</button>
         </article>
       ))}</div>
       {nextCursor && <button onClick={() => void load(nextCursor, true)} disabled={loading}>{loading ? 'Loading…' : 'Load more'}</button>}
@@ -99,8 +143,8 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
   );
   const empty = <div className="cloud-card"><h2>Your library is empty</h2>{uploads ? <><p>Start by uploading tracks from your device.</p><button className="primary" onClick={() => go('uploads')}>Add tracks</button></> : <p>No songs are stored in this workspace.</p>}</div>;
   const body = !truthful
-    ? (loading && assets.length === 0 ? <p>Loading your library…</p> : assets.length === 0 ? empty : list)
-    : state.status === 'loading' ? <p role="status">Loading your library…</p>
+    ? (loading && assets.length === 0 ? <Skeleton variant="library" lines={4} label="Loading your library" /> : assets.length === 0 ? empty : list)
+    : state.status === 'loading' ? <Skeleton variant="library" lines={4} label="Loading your library" />
     : state.status === 'failed' ? (
       <div className="cloud-card cloud-library-failed" role="alert">
         <h2>Your library didn’t load</h2>
@@ -114,7 +158,7 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
   return (
     <section className="cloud-library">
       <div className="cloud-library-heading">
-        <div><p className="cloud-eyebrow">PRIVATE TO THIS WORKSPACE</p><p>Listen from any song and the rest of the list follows, with the next song loaded ahead. Removing songs frees space at once.</p></div>
+        <div><p className="cloud-eyebrow">PRIVATE TO THIS WORKSPACE</p><p>Listen from any song and the rest of the list follows, with the next song loaded ahead. Removing a song frees its space once the few seconds to undo it have passed.</p></div>
         <div><button onClick={() => void load()} disabled={busy}>Refresh</button>{uploads && <button className="primary" onClick={() => go('uploads')}>Upload tracks</button>}</div>
       </div>
       {truthful && (
@@ -137,6 +181,16 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
         </section>
       )}
       {body}
+      {asking && (
+        <ConfirmDialog
+          title={`Remove ${asking.name}?`}
+          body="It leaves your library and the space it uses is freed."
+          destructive
+          onConfirm={() => remove(asking)}
+          onClose={() => setAsking(null)}
+          undo={() => undoRemove(asking)}
+        />
+      )}
     </section>
   );
 }

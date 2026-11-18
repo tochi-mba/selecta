@@ -1,4 +1,6 @@
-import { ChangeEvent, useCallback, useEffect, useState } from 'react';
+import { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { countOf, Truncate } from '../ui/format';
 import type { Api } from './api';
 import { completeOutcome, completeStatusWords, uploadSummary, UploadResult, withUnreached } from './libraryState';
 import { fileSha256, resumableFor, sendParts, unfinishedUploads, UploadEntry, UploadSession, UploadStatus } from './uploadParts';
@@ -27,6 +29,19 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
   const [progress, setProgress] = useState('');
   const [items, setItems] = useState<Item[]>([]);
   const [unfinished, setUnfinished] = useState<UploadSession[]>([]);
+  // A duplicate's question waits for an answer in the shared dialog, never in window.confirm.
+  const [question, setQuestion] = useState<string | null>(null);
+  const answer = useRef<((keep: boolean) => void) | null>(null);
+  const ask = (name: string) => new Promise<boolean>((resolve) => {
+    answer.current = resolve;
+    setQuestion(name);
+  });
+  const answered = (keep: boolean) => {
+    const resolve = answer.current;
+    answer.current = null;
+    setQuestion(null);
+    resolve?.(keep);
+  };
   const selected = useCallback((event: ChangeEvent<HTMLInputElement>) => setFiles(Array.from(event.target.files ?? [])), []);
 
   const loadUnfinished = useCallback(async () => {
@@ -80,7 +95,7 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
             if (perFile) next.push({ name: entry.name, status: 'Needs attention', detail: 'SelectaDJ couldn’t start this upload. Choose the file again to try once more.', outcome: 'failed' });
             return;
           }
-          if (entry.duplicate_of && !window.confirm(`${entry.name} already exists in your library. Keep another copy anyway?`)) {
+          if (entry.duplicate_of && !(await ask(entry.name))) {
             await api(`/uploads/${session.id}`, { method: 'DELETE' }, workspaceId);
             next.push({ name: entry.name, status: 'Skipped', detail: 'A matching copy is already in your library.', outcome: 'skipped' });
             setItems([...next]);
@@ -136,20 +151,30 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
         <section className="cloud-unfinished" aria-label="Unfinished uploads">
           <h3>Unfinished uploads</h3>
           <p>Choose the same file again and SelectaDJ carries on from where it stopped.</p>
-          <ul>{unfinished.map((session) => <li key={session.id}><span>{session.name}</span><small>{session.part_count} {session.part_count === 1 ? 'part' : 'parts'}</small></li>)}</ul>
+          <ul>{unfinished.map((session) => <li key={session.id}><Truncate text={session.name} /><small>{countOf(session.part_count, 'part')}</small></li>)}</ul>
         </section>
       )}
       <label className={`cloud-drop${blocked ? ' disabled' : ''}`}>
         <input type="file" multiple disabled={Boolean(blocked)} accept="audio/*,.aiff,.aif,.flac,.mp3,.m4a,.wav,.ogg,.opus" onChange={selected} />
         <span className="cloud-drop-icon">＋</span>
-        <strong>{files.length ? `${files.length} ${files.length === 1 ? 'file' : 'files'} selected` : 'Choose music files'}</strong>
+        <strong>{files.length ? `${countOf(files.length, 'file')} selected` : 'Choose music files'}</strong>
         <small>MP3, FLAC, WAV, AIFF, M4A, AAC and Ogg audio</small>
       </label>
       <div className="cloud-upload-actions">
         <button className="primary" disabled={!files.length || uploading || Boolean(blocked)} onClick={() => void begin()}>{uploading ? 'Uploading…' : 'Start upload'}</button>
         {progress && <span role="status">{progress}</span>}
       </div>
-      {items.length > 0 && <ul className="cloud-upload-list" aria-label={perFile ? 'Each file’s result' : undefined}>{items.map((item, index) => <li key={`${item.name}-${index}`} data-outcome={perFile ? item.outcome : undefined}><span>{item.name}</span><b>{item.status}</b>{item.detail && <small>{item.detail}</small>}</li>)}</ul>}
+      {items.length > 0 && <ul className="cloud-upload-list" aria-label={perFile ? 'Each file’s result' : undefined}>{items.map((item, index) => <li key={`${item.name}-${index}`} data-outcome={perFile ? item.outcome : undefined}><Truncate text={item.name} /><b>{item.status}</b>{item.detail && <small>{item.detail}</small>}</li>)}</ul>}
+      {question !== null && (
+        <ConfirmDialog
+          title={`Keep another copy of ${question}?`}
+          body={`${question} is already in your library. Another copy uses more of your storage.`}
+          confirmLabel="Keep another copy"
+          cancelLabel="Skip this file"
+          onConfirm={() => answered(true)}
+          onClose={() => answered(false)}
+        />
+      )}
     </section>
   );
 }
