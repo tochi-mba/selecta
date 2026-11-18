@@ -37,6 +37,15 @@ describe('findLapsed', () => {
     ]);
   });
 
+  it('trusts an opening file over a doubtful permission answer', async () => {
+    // Chromium answers "prompt" for a file handle under a folder granted as a whole, while the
+    // file opens fine. 705 playable songs must not be classed "needs permission again".
+    const underGrantedFolder = fakeHandle(bytesFile('abc', 'a.mp3'));
+    underGrantedFolder.queryPermission = async () => 'prompt';
+    const { store } = await storedWith(1, underGrantedFolder, 'abc');
+    expect(await findLapsed(store)).toEqual([]);
+  });
+
   it('does not list repick markers: they never had a handle to lapse', async () => {
     const store = await MediaStore.open();
     await store.put({ songId: 3, identity: { content_sha256: 'x', title: 'C', artist: 'X' }, ref: { kind: 'repick', name: 'c.mp3', size: 3 }, importedAt: 1 });

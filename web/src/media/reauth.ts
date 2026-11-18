@@ -23,10 +23,18 @@ export type LapsedItem = {
 };
 
 async function handleState(handle: FileHandleLike): Promise<'granted' | 'ask' | 'missing'> {
+  // queryPermission is advisory only: Chromium answers "prompt" for a file handle whose parent
+  // folder was granted as a whole, while getFile() works fine. Opening the file is the truth,
+  // so a non-granted answer is only "ask" when the open itself is refused for permission.
   try {
-    if (handle.queryPermission && (await handle.queryPermission({ mode: 'read' })) !== 'granted') return 'ask';
     await handle.getFile();
     return 'granted';
+  } catch (problem) {
+    if ((problem as DOMException | null)?.name === 'NotAllowedError') return 'ask';
+    if (!handle.queryPermission) return 'missing';
+  }
+  try {
+    return (await handle.queryPermission({ mode: 'read' })) === 'granted' ? 'missing' : 'ask';
   } catch {
     return 'missing';
   }

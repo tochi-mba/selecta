@@ -20,12 +20,18 @@ export function LibraryEmpty() {
 }
 
 /** `connected` is how many songs are in the catalogue; ideas need songs measured in the browser. */
-export function MixesEmpty({ connected }: { connected: number }) {
+export function MixesEmpty({ connected, checking }: { connected: number; checking?: { checked: number; total: number | null } }) {
   return (
     <main className="page" id="main">
       <h1 className="display small">Make a Mix</h1>
       <section className="empty-state" aria-labelledby="mixes-empty-title">
-        {connected === 0 ? (
+        {checking ? (
+          <>
+            <h2 id="mixes-empty-title">Still checking your music</h2>
+            <p>{`${checking.checked} of ${checking.total ?? 'your'} songs checked so far. Mixes open as soon as two songs can play here; you can keep using SelectaDJ while it finishes.`}</p>
+            <PageLink to="/library" className="button">See your library</PageLink>
+          </>
+        ) : connected === 0 ? (
           <>
             <h2 id="mixes-empty-title">Mixes start with your music</h2>
             <p>Connect the songs on this device and SelectaDJ can shape them into a mix.</p>

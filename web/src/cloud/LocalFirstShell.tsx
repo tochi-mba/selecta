@@ -1,7 +1,7 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MixData, Request, Status } from '../api';
 import { setFlags, useFlags } from '../flags';
-import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, storageSpace, type MediaResolver, type StorageSpace } from '../media';
+import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, storageSpace, type LapsedWhy, type MediaResolver, type StorageSpace } from '../media';
 import type { NowState } from '../player';
 import { BytesContext, noBytesHere, RequestContext } from '../requestContext';
 import { navigate, parseRoute, useLocationText } from '../router';
@@ -84,14 +84,28 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   const hostedCopies = useRef<Promise<HostedAsset[]> | null>(null);
   // BF-0462-04: the Library says where each song can play from, against this device's own
   // connected files and, for a grandfathered account, its hosted copies
+  // Probing every handle means opening every file, which at thousands of songs cannot happen
+  // inside each /status read. One sweep owns the lapsed map; reads stay cheap, and a file that
+  // lapsed between sweeps fails honestly at play time with its notice.
+  const lapsed = useRef(new Map<number, LapsedWhy>());
+  const refreshStatusRef = useRef<(() => void) | null>(null);
+  const sweeping = useRef<Promise<void> | null>(null);
+  const sweepLapsed = useCallback(() => (sweeping.current ??= (async () => {
+    try {
+      const opened = await openStore();
+      lapsed.current = new Map((await findLapsed(opened)).map((item) => [item.songId, item.why] as const));
+      refreshStatusRef.current?.();
+    } finally {
+      sweeping.current = null;
+    }
+  })()), [openStore]);
   const sources = useMemo<AvailabilitySources>(() => ({
     here: async () => {
       const opened = await openStore();
-      const lapsed = new Map((await findLapsed(opened)).map((item) => [item.songId, item.why] as const));
       const found = new Map<number, 'here' | 'reauth'>();
       for (const song of await opened.all()) {
-        const why = lapsed.get(song.songId);
-        // a file that no longer opens is not on this device; a lapsed permission asks again;
+        const why = lapsed.current.get(song.songId);
+        // a file the sweep found gone is not on this device; a lapsed permission asks again;
         // a song picked without a durable handle plays only while this visit holds its file
         if (why === 'missing') continue;
         if (song.ref.kind !== 'handle' && !opened.sessionFile(song.songId)) continue;
@@ -130,7 +144,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
       .catch((error: Error) => setStatusProblem(error.message));
   }, [request]);
   const refreshMix = useCallback(() => { request<MixData>('/mix').then(setData).catch(() => undefined); }, [request]);
-  useEffect(() => { refreshStatus(); refreshMix(); }, [refreshStatus, refreshMix]);
+  refreshStatusRef.current = refreshStatus;
+  useEffect(() => { refreshStatus(); refreshMix(); void sweepLapsed(); }, [refreshStatus, refreshMix, sweepLapsed]);
 
   // The import session outlives any one page: each landed batch refreshes the counts, and a
   // finished import records its outcome in the onboarding state even with the spine gone.
@@ -140,9 +155,12 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
     const moved = importLive.batches !== lastBatches.current;
     lastBatches.current = importLive.batches;
     const ended = (importLive.phase === 'finished' || importLive.phase === 'paused') && importLive.summary !== null;
-    if (ended) recordImportOutcome(browserStorage(), workspaceId, importLive.summary!);
+    if (ended) {
+      recordImportOutcome(browserStorage(), workspaceId, importLive.summary!);
+      void sweepLapsed();
+    }
     if (moved || ended) refreshStatus();
-  }, [importLive.batches, importLive.phase, importLive.summary, refreshStatus, workspaceId]);
+  }, [importLive.batches, importLive.phase, importLive.summary, refreshStatus, sweepLapsed, workspaceId]);
   useEffect(() => () => cancelImportSession(), []);
 
   // This shell has no local server: the shell's job badge and the local-only buttons stand down
@@ -234,7 +252,12 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
           : <><Library {...shared} /><div className="page">{connect}</div></>;
       case 'mixes':
         if (route.tab === 'mine') return data.mix.length ? <MyMixes {...shared} /> : <MyMixesEmpty connected={connected} />;
-        return (status?.counts.ready ?? 0) >= BROWSER_MIX_NEEDS ? <Mixes {...shared} /> : <MixesEmpty connected={connected} />;
+        return (status?.counts.ready ?? 0) >= BROWSER_MIX_NEEDS ? <Mixes {...shared} /> : (
+          <MixesEmpty
+            connected={connected}
+            checking={importLive.phase === 'running' ? { checked: importLive.registered, total: importLive.total } : undefined}
+          />
+        );
       case 'listen':
         return (
           <>
