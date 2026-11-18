@@ -165,7 +165,7 @@ export const STEP_TITLES: Record<StepId, string> = {
   connect: 'Connect your music',
   verify: 'Check your music',
   capability: 'Check this device',
-  output: 'Choose where the sound goes',
+  output: 'Check the sound output',
   start: 'Start sound',
   soundcheck: 'Sound check',
   keepawake: 'Keep the screen awake',
