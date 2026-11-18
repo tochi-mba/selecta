@@ -27,7 +27,7 @@ The box and stroke live in `ICON_SLOTS` and `ICON_STROKES` (`web/src/ui/Icon.tsx
 | `backspace` | Take back the last PIN digit on the staff keypad | standard | `business/staff/PinKeypad.tsx` | `aria-label` and `title` "Back one digit" |
 | `volume` | Sound is on; press to mute; play the sound-check tone | standard, toolbar | `shell/Shell.tsx`, `cloud/onboarding/steps.tsx`, `cloud/venue/VenuePosture.tsx` | `aria-label` and `title`, or the button's words |
 | `muted` | Sound is off; press to restore | standard | `shell/Shell.tsx` | `aria-label` and `title` |
-| `music` | Listen destination; choosing music files to import | standard, toolbar | `shell/manifest.ts`, `cloud/onboarding/steps.tsx`, `harness/CloudGallery.tsx` | The destination label, or the button's words |
+| `music` | Listen destination; choosing music files to import; decorative art beside the hero and the library rows | standard, toolbar, hero | `shell/manifest.ts`, `cloud/onboarding/steps.tsx`, `harness/CloudGallery.tsx`, `cloud/CloudApp.tsx`, `cloud/Library.tsx` | The destination label, or the button's words; the decorative uses are aria-hidden |
 | `mixes` | My Mixes and classic Mixes destination | standard | `shell/manifest.ts` | The destination label |
 | `library` | Library destination | standard | `shell/manifest.ts` | The destination label |
 | `discover` | Classic Discover destination | standard | `shell/manifest.ts` | The destination label |
