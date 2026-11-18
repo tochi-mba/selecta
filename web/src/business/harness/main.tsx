@@ -23,7 +23,7 @@ function BusinessHarness() {
   return (
     <main className="biz" style={{ maxWidth: 1100, padding: '1.5rem', marginInline: 'auto' }}>
       <header>
-        <p className="biz-quiet">Test fixture — invented data, no connected venue or account</p>
+        <p className="biz-quiet">Test fixture: invented data, no connected venue or account</p>
         <h1>SelectaDJ for Business · harness</h1>
         <label htmlFor="business-scenario">Scenario</label>
         <select

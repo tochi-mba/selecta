@@ -5,6 +5,7 @@ import { clientForRequest } from '../requestContext';
 import { analysisWords } from '../lib';
 import { PageLink } from '../shell/PageLink';
 import { Action, Status as StatusMark } from '../ui/controls';
+import { Icon } from '../ui/Icon';
 import { words } from '../copy';
 import { ScanReveals } from './ScanReveals';
 
@@ -25,6 +26,7 @@ export function SetupSteps({ stage }: { stage: SetupStage }) {
     <ol className="setup-steps" aria-label="Getting started">
       {STAGES.map((item, index) => (
         <li key={item.id} className={index < at ? 'done' : undefined} aria-current={index === at ? 'step' : undefined}>
+          {index < at && <span className="setup-step-mark"><Icon name="check" size="compact" /></span>}
           <span className="setup-step-label">{item.label}</span>
           {index < at && <span className="visually-hidden"> (done)</span>}
         </li>

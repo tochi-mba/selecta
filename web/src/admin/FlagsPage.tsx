@@ -177,8 +177,8 @@ function Trace({ api }: { api: AdminFetch }) {
       {trace && <>
         {trace.browser_first_experience && <section className="admin-impact" aria-label="Browser-first Cloud experience">
           <h3>Cloud experience: {BROWSER_EXPERIENCE_LABEL[trace.browser_first_experience.mode]}</h3>
-          <p><b>Browser-first Cloud:</b> {trace.browser_first_experience.local_first_on ? 'On' : 'Off'} — {trace.browser_first_experience.local_first_reason}</p>
-          <p><b>Hosted media:</b> {trace.browser_first_experience.hosted_media_on ? 'On' : 'Off'} — {trace.browser_first_experience.hosted_media_reason}</p>
+          <p><b>Browser-first Cloud:</b> {trace.browser_first_experience.local_first_on ? 'On' : 'Off'}: {trace.browser_first_experience.local_first_reason}</p>
+          <p><b>Hosted media:</b> {trace.browser_first_experience.hosted_media_on ? 'On' : 'Off'}: {trace.browser_first_experience.hosted_media_reason}</p>
         </section>}
         <DataTable caption={`Decisions for ${trace.user_id} on ${trace.plan} (rules version ${trace.rule_version})`} rows={rows} rowKey={(f) => f.flag_id} empty="Every feature is on."
           columns={[{ key: 'flag_id', label: 'Flag' }, { key: 'on', label: 'Decision', render: (f) => f.on ? 'On' : 'Off' }, { key: 'reason', label: 'Reason' },

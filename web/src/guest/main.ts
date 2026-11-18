@@ -156,7 +156,7 @@ function voteButton(item: Item): HTMLElement | null {
   return h('button', {
     type: 'button', className: 'g-vote', 'aria-pressed': String(item.voted), 'aria-label': label,
     onclick: () => void act(`${base()}/requests/${encodeURIComponent(item.request_id)}/vote`, item.voted ? 'DELETE' : 'POST'),
-  }, `▲ ${item.votes}`);
+  }, String(item.votes));
 }
 
 async function act(path: string, method: string, body?: unknown, success = ''): Promise<void> {

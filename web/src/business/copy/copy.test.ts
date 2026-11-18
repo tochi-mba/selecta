@@ -20,7 +20,7 @@ describe('business copy deck', () => {
   for (const name of modules) {
     const source = readFileSync(join(here, name), 'utf-8');
     const words = strings(source).filter((text) => /[A-Za-z]{3,}\s/.test(text));
-    it(`${name}: no em dashes`, () => expect(source.includes('—')).toBe(false));
+    it(`${name}: no em dashes`, () => expect(source.includes(String.fromCodePoint(0x2014))).toBe(false));
     it(`${name}: no exclamation marks in copy`, () => expect(words.filter((text) => /!(\s|$)/.test(text))).toEqual([]));
     it(`${name}: says SelectaDJ, never Selecta alone`, () => expect(words.filter((text) => /\bSelecta\b(?!DJ)/.test(text))).toEqual([]));
     it(`${name}: no jargon`, () => expect(words.filter((text) => /\b(device principal|cache|lease|tenant|entitlement|SSE)\b/i.test(text))).toEqual([]));

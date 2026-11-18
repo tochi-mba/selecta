@@ -67,7 +67,9 @@ input[aria-invalid='true'], select[aria-invalid='true'], textarea[aria-invalid='
 .setup-steps li::before { content: counter(step); display: inline-grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--border-strong); border-radius: var(--radius-pill); font-variant-numeric: tabular-nums; }
 .setup-steps li[aria-current='step'] { color: var(--text); font-weight: 700; }
 .setup-steps li[aria-current='step']::before { background: var(--primary-fill); color: var(--primary-ink); border-color: var(--primary-edge); }
-.setup-steps li.done::before { content: '✓'; color: var(--status-ready); border-color: var(--status-ready); }
+/* a finished step trades its number for the shared check glyph (Setup.tsx), in the same circle */
+.setup-steps li.done::before { content: none; }
+.setup-step-mark { display: inline-grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--status-ready); border-radius: var(--radius-pill); color: var(--status-ready); }
 /* MP-0282-07: on a phone a finished step is just its tick (its name is still read out), so the steps
    take one line and the next action stays in the first screen */
 @media (max-width: 520px) {
