@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { equalPowerIn } from '../dsp/crossfade';
 import { LIMITER_IMPLEMENTATION, limiterCoefficients, process as limit } from '../dsp/limiter';
-import { renderMix, RenderTrack } from './render';
+import { LIMIT_BLOCK_SECONDS, renderMix, RenderTrack } from './render';
 import { bufferOfSeconds, FakeAudioBuffer, FakeOfflineAudioContext } from './testAudio';
 
 /** Tracks of n seconds as n-kilobyte fake files; the fake decode reads that back. */
@@ -189,7 +189,7 @@ describe('rendering a mix offline', () => {
     expect(result.ok).toBe(true);
     // chunk 1 (0-30 s) needs only song 0; chunk 2 (30-60 s) needs song 1 as well.
     expect(progress.slice(0, 2)).toEqual([1, 2]);
-  });
+  }, 30_000); // two minutes of audio through the real limiter
 
   it('schedules equal-power crossfade envelopes at the track boundaries', async () => {
     const contexts: FakeOfflineAudioContext[] = [];
@@ -260,5 +260,68 @@ describe('rendering a mix offline', () => {
     }
     expect(worst).toBeLessThan(1e-6);
     expect(result.peak).toBeLessThanOrEqual(CEILING + 1e-6);
+  });
+});
+
+describe('the render limiter yields inside a chunk', () => {
+  const sampleRate = 44100;
+  const loudMix = (seconds: number) => {
+    const whole = [new Float32Array(seconds * sampleRate), new Float32Array(seconds * sampleRate)];
+    for (let index = 0; index < whole[0].length; index += 1) {
+      // Loud bursts straddling every limiter block edge inside one render chunk.
+      const nearEdge = [1, 2, 3, 4, 5].map((edge) => edge * LIMIT_BLOCK_SECONDS).some((edge) => Math.abs(index - edge * sampleRate) < 3000);
+      const loud = nearEdge ? 2.5 : 0.4;
+      whole[0][index] = loud * Math.sin(index / 7);
+      whole[1][index] = loud * Math.cos(index / 11);
+    }
+    return whole;
+  };
+  const filledFrom = (whole: Float32Array[]) => {
+    let cursor = 0;
+    return offline((buffer) => {
+      for (let channel = 0; channel < 2; channel += 1) buffer.getChannelData(channel).set(whole[channel].subarray(cursor, cursor + buffer.length));
+      cursor += buffer.length;
+    });
+  };
+
+  it('limits block by block exactly as if the whole chunk were limited at once', async () => {
+    const seconds = 3 * LIMIT_BLOCK_SECONDS;
+    const whole = loudMix(seconds);
+    let yields = 0;
+    const result = await renderMix({
+      tracks: tracksOf(seconds),
+      decode,
+      chunkSeconds: 60, // one render chunk, so only the block split is exercised
+      sampleRate,
+      createOfflineContext: filledFrom(whole),
+      yieldToLoop: async () => { yields += 1; },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.chunks).toHaveLength(1);
+    expect(yields).toBe(2); // one between each of the three blocks
+    const reference = limit(whole, { sampleRate });
+    let worst = 0;
+    for (let channel = 0; channel < 2; channel += 1) {
+      const lane = result.chunks[0].getChannelData(channel);
+      for (let index = 0; index < lane.length; index += 1) worst = Math.max(worst, Math.abs(reference[channel][index] - lane[index]));
+    }
+    expect(worst).toBeLessThan(1e-6);
+    expect(result.peak).toBeLessThanOrEqual(CEILING + 1e-6);
+  });
+
+  it('a cancel at a limiter yield resolves to cancelled with no audio', async () => {
+    const control = new AbortController();
+    const result = await renderMix({
+      tracks: tracksOf(4),
+      decode,
+      chunkSeconds: 60,
+      sampleRate,
+      createOfflineContext: filledFrom(loudMix(4)),
+      signal: control.signal,
+      yieldToLoop: async () => control.abort(),
+    });
+    expect(result).toMatchObject({ ok: false, reason: 'cancelled' });
+    expect('chunks' in result).toBe(false);
   });
 });

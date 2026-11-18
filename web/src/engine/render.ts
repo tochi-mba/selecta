@@ -13,6 +13,8 @@ import type { PcmChunk } from './wav';
  * the current chunk needs are held, never the whole set. Every rendered chunk then goes through
  * the dsp/limiter.ts true-peak limiter before anything is encoded; the limiter streams across
  * chunk edges with enough overlap that the result is the same as limiting the whole mix at once.
+ * Inside a chunk the limiter runs in blocks of about two seconds with the same overlap, yielding to
+ * the page and checking for a cancel between blocks, so a long export never freezes the page.
  *
  * On completion the output is validated (duration within tolerance, no NaN or infinity, peak at
  * or below the ceiling) before anyone is told it succeeded. Every failure, including one thrown
@@ -82,7 +84,7 @@ const FRAME_TOLERANCE_PER_CHUNK = 1;
 const TRUE_PEAK_REACH = 8;
 /** The limiter runs over each rendered chunk in blocks of about this length, yielding between
  * them, so a 30 s chunk never holds the page for the whole limiter pass. */
-export const LIMIT_BLOCK_SECONDS = 1;
+export const LIMIT_BLOCK_SECONDS = 2;
 
 const cancelled = (): RenderFailure => ({ ok: false, reason: 'cancelled', detail: 'The export was cancelled, so no file was made.' });
 const why = (error: unknown) => (error as Error | null)?.message || 'unknown reason';
