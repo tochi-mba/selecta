@@ -151,7 +151,8 @@ describe('FLAC encoding never blocks or leaks a partial file', () => {
       yieldToLoop: async () => { yields += 1; },
       onProgress: (fraction) => progress.push(fraction),
     });
-    expect(yields).toBe(Math.ceil(Math.ceil(frames / 4096) / 32) - 1);
+    // At least one yield per 32 frames; slower machines end slices earlier and yield more.
+    expect(yields).toBeGreaterThanOrEqual(Math.ceil(Math.ceil(frames / 4096) / 32) - 1);
     expect(progress.at(-1)).toBe(1);
     expect(progress).toEqual([...progress].sort((a, b) => a - b));
   });

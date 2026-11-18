@@ -6,6 +6,9 @@
 // app entry imports it.
 
 import { exportFile, ExportFormat } from '../src/engine/export';
+import { encodeFlac } from '../src/engine/flac';
+import { validateFlac } from '../src/engine/flacDecode';
+import { renderMix } from '../src/engine/render';
 import { encodeWav } from '../src/engine/wav';
 
 const RATE = 44100;
@@ -105,4 +108,50 @@ async function exportSynthetic(format: ExportFormat, trackSeconds: number[], can
   };
 }
 
-(window as unknown as { selectaExportE2E: typeof exportSynthetic }).selectaExportE2E = exportSynthetic;
+/** Time `work` with a 50 ms heartbeat: elapsed time and the longest stall it caused. */
+async function timed<T>(work: () => Promise<T>): Promise<{ value: T; ms: number; longestStallMs: number }> {
+  let last = performance.now();
+  let longestStallMs = 0;
+  const beat = setInterval(() => {
+    const now = performance.now();
+    longestStallMs = Math.max(longestStallMs, now - last);
+    last = now;
+  }, 50);
+  const started = performance.now();
+  try {
+    const value = await work();
+    return { value, ms: performance.now() - started, longestStallMs: Math.max(longestStallMs, performance.now() - last) };
+  } finally {
+    clearInterval(beat);
+  }
+}
+
+export type PhaseTimes = {
+  render: { ms: number; longestStallMs: number };
+  encode: { ms: number; longestStallMs: number };
+  check: { ms: number; longestStallMs: number; ok: boolean };
+};
+
+/** The FLAC export one phase at a time, so a stall can be pinned on the step that causes it. */
+async function flacPhases(trackSeconds: number[]): Promise<PhaseTimes> {
+  const decoder = new OfflineAudioContext(2, 1, RATE);
+  const songs = trackSeconds.map((seconds, index) => synthTrack(seconds, index));
+  const tracks = songs.map((bytes, index) => ({
+    id: index,
+    data: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer,
+  }));
+  const render = await timed(() => renderMix({ tracks, decode: (bytes) => decoder.decodeAudioData(bytes) }));
+  if (!render.value.ok) throw new Error(`render failed: ${render.value.detail}`);
+  const rendered = render.value;
+  const encode = await timed(() => encodeFlac(rendered.chunks, 16));
+  const check = await timed(() => validateFlac(encode.value.bytes, { durationSeconds: rendered.durationSeconds, toleranceSeconds: 1 / RATE }));
+  return {
+    render: { ms: render.ms, longestStallMs: render.longestStallMs },
+    encode: { ms: encode.ms, longestStallMs: encode.longestStallMs },
+    check: { ms: check.ms, longestStallMs: check.longestStallMs, ok: check.value.ok },
+  };
+}
+
+const scope = window as unknown as { selectaExportE2E: typeof exportSynthetic; selectaExportPhases: typeof flacPhases };
+scope.selectaExportE2E = exportSynthetic;
+scope.selectaExportPhases = flacPhases;
