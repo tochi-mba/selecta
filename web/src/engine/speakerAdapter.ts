@@ -5,7 +5,7 @@ import { installLimiter, InstallLimiterOptions, LimiterInstall } from './limiter
 import { createLoader, Loader } from './loader';
 import type { ProbeResult } from './probe';
 import { createScheduler, LoadedTrack, Scheduler, SchedulerTimers, SeamProvider, Transition } from './scheduler';
-import { createEngineStore, EngineState, EngineStore, UnsupportedHere } from './state';
+import { createEngineStore, downgradeDeviceOutput, EngineState, EngineStore, UnsupportedHere } from './state';
 
 /** The browser engine as an ADR-0415 playback device (ADR-0457, BF-0457-05).
  *
@@ -75,9 +75,10 @@ export class BrowserSpeaker implements Speaker {
   private readonly watchedDevices: MediaDevices | null;
   private readonly onVisibilityChange = () => {
     if (this.disposed || this.watchedDocument?.visibilityState !== 'hidden') return;
-    this.store.downgradeOutput(
+    downgradeDeviceOutput(
       { status: 'uncertain' },
       'This tab went to the background, so SelectaDJ cannot promise the sound still reaches your speakers.',
+      this.store,
     );
   };
   private readonly onOutputDeviceChange = () => {
@@ -86,15 +87,17 @@ export class BrowserSpeaker implements Speaker {
     // A route change must not send audio into a newly attached output at an unexpected level.
     // Pause the scheduler/context and require a fresh Play gesture; never auto-resume.
     if (playing) {
-      this.store.downgradeOutput(
+      downgradeDeviceOutput(
         { status: 'output_unverified' },
         'Audio output changed. Check your speakers or headphones before playing on.',
+        this.store,
       );
       void this.scheduler.pause();
     } else {
-      this.store.downgradeOutput(
+      downgradeDeviceOutput(
         { status: 'output_unverified' },
         'Audio output changed. Check your speakers or headphones before playing on.',
+        this.store,
       );
     }
   };
@@ -155,9 +158,10 @@ export class BrowserSpeaker implements Speaker {
   /** Called by the lease owner after a previously granted screen wake lock is revoked. */
   wakeLockLost(): void {
     if (this.disposed) return;
-    this.store.downgradeOutput(
+    downgradeDeviceOutput(
       { status: 'uncertain' },
       'The screen wake lock was released, so the device may sleep and stop the sound.',
+      this.store,
     );
   }
 
