@@ -5,6 +5,7 @@ import type { AudioSession } from '../onboarding/deps';
 import type { CapabilityRecord } from './capabilityRecord';
 import type { VenueDeps } from './deps';
 import type { FallbackContext } from './fallback';
+import { VenueFallback } from './VenueFallback';
 import { VenuePosture } from './VenuePosture';
 
 const WS = 'ws-venue';
@@ -197,3 +198,49 @@ describe('controller fallbacks (BF-0460-07)', () => {
     }
   });
 });
+
+describe('venue recovery paths (W4 overhaul)', () => {
+  async function toSoundcheck(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole('button', { name: 'Check this tablet' }));
+    await user.click(await screen.findByRole('button', { name: 'It’s plugged in' }));
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await user.click(screen.getByRole('button', { name: 'Use whatever is set' }));
+    await user.click(screen.getByRole('button', { name: /Start sound/ }));
+  }
+
+  it('says when the check tone failed to play, instead of passing it off as silence', async () => {
+    const user = userEvent.setup();
+    const { session } = setup();
+    (session.playTone as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('no output'));
+    await toSoundcheck(user);
+    await user.click(await screen.findByRole('button', { name: /Play the check tone/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('The check tone may not have played.');
+    expect(screen.getByRole('button', { name: /Play the tone again/ })).toBeInTheDocument();
+  });
+
+  it('after hearing nothing, carries on to the status board with the sound still unconfirmed', async () => {
+    const user = userEvent.setup();
+    setup();
+    await toSoundcheck(user);
+    await user.click(await screen.findByRole('button', { name: /Play the check tone/ }));
+    await user.click(await screen.findByRole('button', { name: 'I heard nothing' }));
+    await user.click(screen.getByRole('button', { name: 'Carry on without a confirmed sound' }));
+    expect(document.querySelector('[data-venue-step]')?.getAttribute('data-venue-step')).toBe('ready');
+    expect(status()).toBe('output_unverified');
+    expect(screen.getByRole('button', { name: 'Play the check tone again' })).toBeInTheDocument();
+  });
+
+  it('follows a fallback link inside the app, without a page load', async () => {
+    const user = userEvent.setup();
+    const heard = vi.fn();
+    window.addEventListener('popstate', heard);
+    window.history.replaceState({}, '', '/account');
+    render(<VenueFallback reason="No AudioWorklet here." places={PLACES} deepLinked={false} />);
+    await user.click(screen.getByRole('link', { name: 'Browse your library' }));
+    expect(window.location.pathname).toBe('/library');
+    expect(heard).toHaveBeenCalled();
+    window.removeEventListener('popstate', heard);
+    window.history.replaceState({}, '', '/');
+  });
+});
+

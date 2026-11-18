@@ -1,6 +1,9 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-import { LocalFirstLabs, type LabsStatus } from './LocalFirstLabs';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { LABS_DRAFT_KEY, LocalFirstLabs, type LabsStatus } from './LocalFirstLabs';
+
+afterEach(() => sessionStorage.removeItem(LABS_DRAFT_KEY));
 
 /** BF-0467-05: the Labs card shows only what is true, and opt-out never depends on Labs being open. */
 function server(initial: LabsStatus) {
@@ -53,5 +56,40 @@ describe('LocalFirstLabs', () => {
     expect(await screen.findByRole('button', { name: 'Leave Labs' })).toBeInTheDocument();
     expect(screen.getByText(/paused for your account/)).toBeInTheDocument();
     expect(screen.queryByLabelText('Tell us what you noticed')).toBeNull();
+  });
+
+  it('asks before leaving, and focus lands on the button that replaces Leave', async () => {
+    const { request, calls } = server({ ...OPEN, enrolled: true, on: true });
+    render(<LocalFirstLabs request={request} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Leave Labs' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Leave Labs?' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Stay in Labs' }));
+    expect(calls.some((call) => call.path.endsWith('/leave'))).toBe(false);
+    await userEvent.click(screen.getByRole('button', { name: 'Leave Labs' }));
+    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Yes, leave Labs' }));
+    const join = await screen.findByRole('button', { name: 'Join Labs' });
+    await waitFor(() => expect(document.activeElement).toBe(join));
+    expect(screen.getByRole('status')).toHaveTextContent('You have left.');
+  });
+
+  it('says a failure as an alert, apart from good news, and keeps the draft for next time', async () => {
+    let fail = true;
+    const request = vi.fn(async (path: string) => {
+      if (path.endsWith('/feedback') && fail) throw new Error('The note service is busy.');
+      return (path.endsWith('local-first') ? { ...OPEN, enrolled: true, on: true } : {}) as never;
+    }) as unknown as <T>(path: string, init?: RequestInit) => Promise<T>;
+    const view = render(<LocalFirstLabs request={request} />);
+    fireEvent.change(await screen.findByLabelText('Tell us what you noticed'), { target: { value: 'Loud seams' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send feedback' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your note did not send.');
+    expect(screen.queryByRole('status')).toBeNull();
+    view.unmount();
+    render(<LocalFirstLabs request={request} />);
+    expect(await screen.findByLabelText('Tell us what you noticed')).toHaveValue('Loud seams');
+    fail = false;
+    fireEvent.click(screen.getByRole('button', { name: 'Send feedback' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Thanks.');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(sessionStorage.getItem(LABS_DRAFT_KEY)).toBeNull();
   });
 });

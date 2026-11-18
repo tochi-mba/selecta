@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setAccountFeatures } from '../../flags';
@@ -43,7 +43,7 @@ function setup(options: { saved?: Partial<SpineState>; probe?: { ok: boolean; re
   return { session, deps, onDone, saved, storage, view };
 }
 
-const heading = (name: string) => screen.findByRole('heading', { level: 1, name });
+const heading = (name: string) => screen.findByRole('heading', { level: 2, name });
 /** No step tells a default account to install, upload or wait for processing (ADR-0463). */
 const noForbiddenWords = () => expect(document.body.textContent).not.toMatch(/install|upload|processing/i);
 
@@ -108,6 +108,40 @@ describe('onboarding spine progression (BF-0463-02)', () => {
   });
 });
 
+describe('onboarding back and restart', () => {
+  it('has no h1 of its own, so the page around it keeps the one', async () => {
+    setup();
+    await heading('Connect your music');
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+  });
+
+  it('goes back a step without undoing what was recorded, and skips a verify nobody did', async () => {
+    const user = userEvent.setup();
+    const { saved } = setup({ saved: { step: 'output', outcomes: { connect: 'skipped', verify: 'skipped', capability: 'done' } } });
+    await heading('Choose where the sound goes');
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    await heading('Check this device');
+    expect(saved().outcomes.capability).toBe('done');
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    await heading('Connect your music');
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+  });
+
+  it('asks before going through it all again', async () => {
+    const user = userEvent.setup();
+    const { saved } = setup({ saved: { step: 'remote', finished: true, heardAt: NOW, outcomes: { connect: 'done', soundcheck: 'done' } } });
+    await heading('You’re set up');
+    await user.click(screen.getByRole('button', { name: 'Go through it again' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Go through set-up again?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Keep my set-up' }));
+    expect(saved().finished).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Go through it again' }));
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Start again' }));
+    await heading('Connect your music');
+    expect(saved()).toEqual(FRESH);
+  });
+});
+
 describe('onboarding resume', () => {
   it('opens at the saved step for this account', async () => {
     setup({ saved: { step: 'output', outcomes: { connect: 'done', verify: 'done', capability: 'done' } } });
@@ -154,7 +188,7 @@ describe('sound check truth (BF-0460-03)', () => {
     await new Promise((settled) => setTimeout(settled, 50));
     expect(session.playTone).toHaveBeenCalled();
     expect(session.confirmHeard).not.toHaveBeenCalled();
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Sound check');
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Sound check');
     expect(saved().outcomes.soundcheck).toBeUndefined();
     expect(saved().heardAt).toBeUndefined();
   });
@@ -168,7 +202,7 @@ describe('sound check truth (BF-0460-03)', () => {
     const help = screen.getByRole('region', { name: 'Find the sound' });
     expect(help).toHaveTextContent('Bluetooth settings');
     expect(screen.queryByRole('button', { name: /I heard it/ })).toBeNull();
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Sound check');
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Sound check');
     await user.click(screen.getByRole('button', { name: 'Carry on without a confirmed sound' }));
     await heading('Keep the screen awake');
     expect(saved().outcomes.soundcheck).toBe('unverified');

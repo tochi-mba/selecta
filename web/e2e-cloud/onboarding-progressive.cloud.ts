@@ -51,13 +51,13 @@ test('a new member carries on while the import finishes, and verify still settle
   const held = await holdBatches(page, 1);
   await openLocalFirst(page, user, '/library');
 
-  await expect(page.getByRole('heading', { level: 1, name: 'Connect your music' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Connect your music' })).toBeVisible();
   await page.getByLabel('Choose music files').setInputFiles(files(30));
-  await expect(page.getByRole('heading', { level: 1, name: 'Check your music' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Check your music' })).toBeVisible();
   await expect(page.getByText(/checked so far/)).toBeVisible();
 
   await page.getByRole('button', { name: 'Continue while it finishes' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Check this device' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Check this device' })).toBeVisible();
   // the first batch of five lands while the rest are held at the door
   const chip = page.locator('.cloud-import-chip');
   await expect(chip).toContainText('Checking your music: 5 of 30 checked.');

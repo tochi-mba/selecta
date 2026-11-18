@@ -19,7 +19,7 @@ describe('Lucy settings in Cloud', () => {
   it('shows the plan’s Lucy level and this month’s turns, not a provider, model, key or limits', async () => {
     render(<LucyCloudSettings request={fakeRequest()} />);
     expect(await screen.findByRole('heading', { name: 'Lucy Standard' })).toBeInTheDocument();
-    expect(screen.getByText('120 of 440 turns this month')).toBeInTheDocument();
+    expect(screen.getByText('120 of 440 turns this month', { selector: 'b' })).toBeInTheDocument();
     expect(screen.getByText(/resets (1 Dec|Dec 1)/)).toBeInTheDocument();
     expect(screen.getByRole('meter', { name: 'Lucy turns this month' })).toHaveAttribute('aria-valuenow', '27');
     for (const hidden of [/who does the planning/i, /API key/i, /spending limit/i, /most rounds/i, /most steps/i, /most seconds/i, /I agree to send/i]) {
