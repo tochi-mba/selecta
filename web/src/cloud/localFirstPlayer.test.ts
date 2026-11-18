@@ -144,3 +144,28 @@ describe('the player’s controls', () => {
     expect(heard).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('planned transitions on the runtime (BF-0459-04)', () => {
+  const schedule = { implementation: 'x', kind: 'beatmatch' as const, startSeconds: 150, windowSeconds: 8, events: [] };
+  const record = (fromIndex: number) => ({ fromIndex, toIndex: fromIndex + 1, sources: { a: 'device' as const, b: 'hosted' as const }, schedule });
+  const playingHere = (offsetMs: number, fromIndex = 0) => facts({
+    speaking: true, here: { song_index: 0, offset_ms: offsetMs, state: 'playing' },
+    engine: { phase: 'playing', output: { status: 'output_unverified' }, notice: '' }, seam: record(fromIndex),
+  });
+
+  it('names the seam the engine was handed: ready, where, and while it runs', () => {
+    const before = nowStateFrom(playingHere(100_000), SOUND);
+    expect(before.nextReady).toBe(true);
+    expect(before.seamAt).toBe(150);
+    expect(before.inSeam).toBe(false);
+    expect(nowStateFrom(playingHere(152_000), SOUND).inSeam).toBe(true);
+    expect(nowStateFrom(playingHere(159_000), SOUND).inSeam).toBe(false);
+  });
+
+  it('claims no seam for a song it is not out of, or on another device', () => {
+    expect(nowStateFrom(playingHere(100_000, 1), SOUND).nextReady).toBe(false);
+    const elsewhere = nowStateFrom(facts({ view: view(), seam: record(1) }), SOUND);
+    expect(elsewhere.nextReady).toBe(false);
+    expect(elsewhere.seamAt).toBeNull();
+  });
+});

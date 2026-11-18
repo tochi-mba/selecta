@@ -27,7 +27,7 @@ const OWN_CLIENTS = [
   'RuntimeApp.tsx', 'admin/adminApi.ts', 'api.ts', 'cloud/CloudApp.tsx',
   'cloud/devAuthKit.tsx',
   'devcloud/authkit.tsx',
-  'devices/audioSpeaker.ts', 'harness/main.tsx', 'rooms/dom.ts', 'studio.ts',
+  'cloud/hostedMedia.ts', 'devices/audioSpeaker.ts', 'harness/main.tsx', 'harness/runtime.tsx', 'rooms/dom.ts', 'studio.ts',
   'venueops/staffApi.ts',
 ];
 

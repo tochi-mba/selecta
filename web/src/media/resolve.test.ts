@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { makeResolver, resolveByIndex } from './resolve';
+import { describe, expect, it, vi } from 'vitest';
+import { makeCoexistingResolver, makeResolver, makeSourceBook, NOT_ANYWHERE, NOT_ON_DEVICE, resolveByIndex } from './resolve';
 import { MediaStore } from './store';
 import type { StoredSong } from './store';
 import { bytesFile, fakeHandle } from './testFixtures';
@@ -88,5 +88,38 @@ describe('resolveByIndex', () => {
     expect(await resolveByIndex(resolve, programme, 1)).toBeNull();
     expect(await resolveByIndex(resolve, programme, 5)).toBeNull();
     expect(await resolveByIndex(resolve, programme, -1)).toBeNull();
+  });
+});
+
+describe('coexistence precedence (BF-0465-03)', () => {
+  const bytes = (n: number) => async () => new ArrayBuffer(n);
+  it('resolves on the device first, then falls back to the hosted copy, recording each source', async () => {
+    const book = makeSourceBook();
+    const hosted = vi.fn(async (songId: number) => (songId === 2 ? { id: 2, data: bytes(2) } : null));
+    const resolve = makeCoexistingResolver({
+      device: async (songId) => (songId === 1 ? { id: 1, data: bytes(1) } : null),
+      hosted,
+      book,
+    });
+    expect((await resolve(1))?.source).toBe('device');
+    expect(hosted).not.toHaveBeenCalled();
+    expect((await resolve(2))?.source).toBe('hosted');
+    expect(await resolve(3)).toBeNull();
+    expect(book.get(1)).toEqual({ source: 'device' });
+    expect(book.get(2)).toEqual({ source: 'hosted' });
+    expect(book.get(3)).toEqual({ source: 'unavailable', reason: NOT_ON_DEVICE });
+  });
+
+  it('without a hosted path says the song is not on this device, and survives a failing path', async () => {
+    const book = makeSourceBook();
+    const heard = vi.fn();
+    book.subscribe(heard);
+    const resolve = makeCoexistingResolver({ device: async () => null, book });
+    expect(await resolve(5)).toBeNull();
+    expect(book.get(5)).toEqual({ source: 'unavailable', reason: NOT_ANYWHERE });
+    const failing = makeCoexistingResolver({ device: async () => null, hosted: async () => { throw new Error('offline'); }, book });
+    expect(await failing(6)).toBeNull();
+    expect(book.get(6)?.source).toBe('unavailable');
+    expect(heard).toHaveBeenCalledTimes(2);
   });
 });

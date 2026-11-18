@@ -8,6 +8,7 @@ import { createRoot } from 'react-dom/client';
 import { DevicesPanel } from '../devices/DevicesPanel';
 import { PlayingBar } from '../devices/PlayingBar';
 import { RoomPanel } from '../rooms/RoomPanel';
+import { RuntimeHarness } from './runtime';
 
 class HarnessError extends Error {
   constructor(message: string, readonly status: number, readonly code?: string) { super(message); }
@@ -38,6 +39,7 @@ function Harness() {
   useEffect(() => { void api<typeof account>('/account').then(setAccount); }, [api]);
   if (!account) return <p>Signing in...</p>;
   const ws = account.workspace.id;
+  if (params.get('runtime') === '1') return <main style={{ padding: 16 }}><RuntimeHarness api={api} workspaceId={ws} /></main>;
   return (
     <main style={{ display: 'grid', gap: 16, padding: 16, maxWidth: 900 }}>
       <PlayingBar api={api} workspaceId={ws} source={source} songName={songName} />
