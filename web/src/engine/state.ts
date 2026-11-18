@@ -64,6 +64,24 @@ export type EngineStore = {
 // reach every live engine. This is page memory only: a reload starts unverified again.
 const outputStores = new Set<EngineStore>();
 let deviceOutputConfirmedAt: number | null = null;
+let deviceOutputWatchersAttached = false;
+
+function watchDeviceOutput(): void {
+  if (deviceOutputWatchersAttached) return;
+  deviceOutputWatchersAttached = true;
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        downgradeDeviceOutput({ status: 'uncertain' }, 'This tab went to the background, so SelectaDJ cannot promise the sound still reaches your speakers.');
+      }
+    });
+  }
+  if (typeof navigator !== 'undefined') {
+    navigator.mediaDevices?.addEventListener('devicechange', () => {
+      downgradeDeviceOutput({ status: 'output_unverified' }, 'Audio output changed. Check your speakers or headphones before playing on.');
+    });
+  }
+}
 
 export function registerDeviceOutputStore(store: EngineStore): () => void {
   outputStores.add(store);
@@ -72,6 +90,7 @@ export function registerDeviceOutputStore(store: EngineStore): () => void {
 }
 
 export function confirmDeviceOutput(at: number): void {
+  watchDeviceOutput();
   deviceOutputConfirmedAt = at;
   for (const store of outputStores) store.confirmHeard(at);
 }
