@@ -36,13 +36,30 @@ Owner area: `src/selecta/playback/**`, migration `bf0461fence01`, `tests/test_bf
 - `session` payloads (events and every route) carry `fence` and `state_confidence`
   (`fresh` or `uncertain`, judged at server time).
 
-### Known limit
+### Deferred delivery, signing and programmes (BF-0461-01/04/05, BF-0457-03)
 
-Commands still apply to the server session synchronously under its lock (ADR-0415 model). TTL
-expiry is therefore enforced at submission (a TTL of 0 is already expired), on the device (the
-envelope's `expires_at`), and at ack time (recorded `expired`). A command accepted while the
-speaker was offline still changes server state that the speaker adopts on reconnect; dropping
-such commands instead needs a deferred-delivery command model, which is BF-0461-04 work.
+Migrations `bf0461defer01` and `bf0457output01` (chained after `bf0461fence01`).
+
+- A speaker press (pause, skip, seek, volume, `set_programme`) for a speaker whose lease lapsed
+  is no longer applied: it answers 200 `status: "deferred"` with a `message`, and is delivered
+  or dropped (`expired`, `superseded`, `stale`) when the speaker next renews, reconnects, or
+  someone takes over (`playback/deferred.py`). Play with an offline speaker stays `no_speaker`;
+  mix commands still apply at once. Drops are published as `playback.missed` and returned as
+  `missed` (and `delivered`) on heartbeat, reconnect and take-over answers.
+- `GET /api/playback/session` carries `notices` (`missed`, `waiting`, `unavailable`, last 15
+  minutes) and, for the speaker only, `envelope_key`. Heartbeat, take-over and reconnect
+  answers carry `envelope_key` for the holder.
+- `playback.command` events carry `issued_by`, `envelope` (canonical JSON) and `signature`
+  (HMAC-SHA256 under the lease key). Set `SELECTA_PLAYBACK_SIGNING_SECRET` in production; the
+  per-session salt alone keys the HMAC without it. Acks may echo `signature` (mismatch: 422
+  `bad_signature`) and, for `unavailable_here`, `song_id`; the answer and the
+  `playback.unavailable` event carry `alternatives`.
+- Command args that look like audio, a URL or a path are refused 422 (`envelope.py`).
+- Heartbeats accept `output_status` (`playing` with `output_verified_at`, `output_unverified`,
+  `uncertain`, `interrupted`); session payloads show `output_status` / `output_verified_at`
+  while that device holds the lease, `uncertain` once it lapses.
+- Zone routes are not wired yet; `zone_session` passes `volume_cap` and `events` through the
+  shared `*_in` functions, so a zone gets the same behaviour when they are.
 
 ## ADR-0456 / ADR-0464 / ADR-0465 hosted coexistence (backend)
 
