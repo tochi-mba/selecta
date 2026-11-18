@@ -39,6 +39,28 @@ test('a local-first account finds account places in More, and no dead button', a
   await expect(more.getByRole('link', { name: 'Account' })).toBeVisible();
   await expect(more.getByRole('link', { name: 'Plan & billing' })).toBeVisible();
   await expect(more.getByRole('link', { name: 'Add music' })).toHaveCount(0);
+
+  // the hosted rail's account controls all live in More > Account, and each one is there to press
+  await more.getByRole('link', { name: 'Account' }).click();
+  const signedIn = page.getByRole('region', { name: 'Signed in as' });
+  await expect(signedIn).toContainText(`${user}@example.test`);
+  await expect(signedIn.getByRole('button', { name: 'Sign out' })).toBeVisible();
+  for (const name of ['Download my data', 'Sign out everywhere', 'Delete account']) {
+    await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
+  }
+  await expect(page.locator('footer.cloud-footer')).toContainText('Your music files stay on your devices');
+  // a new local-first member has no hosted library to line up
+  await expect(page.getByRole('heading', { name: 'How your libraries line up' })).toHaveCount(0);
+});
+
+test('a grandfathered local-first account sees how its hosted and device libraries line up', async ({ page, request }) => {
+  const user = listener('local-first-reconcile');
+  await seededWith(request, user, 1);
+  await openLocalFirst(page, user, '/account', { hosted: true });
+  await expect(page.getByRole('heading', { name: 'How your libraries line up' })).toBeVisible();
+  // it loads both libraries from the real server through the injected client (no '/api/api')
+  await expect(page.getByText(/\d+ matched · \d+ only in your hosted library · \d+ only on your devices/)).toBeVisible();
+  await expect(page.getByText('SelectaDJ couldn’t load both libraries just now. Nothing was changed.')).toHaveCount(0);
 });
 
 test('a flag switched off for a local-first account reflows its open shell over the event stream (BF-0462-03)', async ({ page, request }) => {

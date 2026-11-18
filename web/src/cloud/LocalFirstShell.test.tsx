@@ -1,4 +1,4 @@
-import { configure, render, screen, waitFor } from '@testing-library/react';
+import { configure, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setAccountFeatures, setFlags } from '../flags';
 import { cloudAccount } from '../test/cloudAccount';
@@ -44,6 +44,7 @@ beforeEach(() => {
     if (url.startsWith('/api/local-media/songs')) return json({ songs });
     if (url.startsWith('/api/uploads')) return json({ uploads: [] });
     if (url.startsWith('/api/assets?')) return json({ assets: [], next_cursor: null });
+    if (url === '/api/account/lucy') return json({ enabled: true, phases: { chat: true, proposals: true, commit: true, memory: false, voice: false }, privacy: { share_lyrics: false, share_history: false }, tier: 'Lucy Basic', usage: { used: 0, limit: 40, fair_use: false, resets_at: null } });
     return new Response('{}', { status: 404 });
   }));
 });
@@ -135,5 +136,69 @@ describe('designed empty states, never a blank table', () => {
     window.history.replaceState({}, '', '/mixes/mine');
     render(<CloudApp />);
     expect(await screen.findByRole('heading', { name: 'No mixes yet' })).toBeVisible();
+  });
+});
+
+describe('the account chrome in the local-first shell (hosted frame parity)', () => {
+  const localFirst = (features: Record<string, boolean> = {}, user: Partial<Account['user']> = {}, base: Account = cloudAccount()): Account => ({
+    ...base,
+    user: { ...base.user, ...user },
+    experience: { local_first: true, hosted: false },
+    features: { 'cloud.local_first': true, 'cloud.account_states': true, ...features },
+  });
+
+  it('shows who is signed in and Sign out in More > Account, and no staff console for a member', async () => {
+    account = localFirst();
+    window.history.replaceState({}, '', '/account');
+    render(<CloudApp />);
+    const strip = await screen.findByRole('region', { name: 'Signed in as' });
+    expect(strip).toHaveTextContent('listener@example.test');
+    expect(within(strip).getByRole('button', { name: 'Sign out' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Staff console' })).toBeNull();
+  });
+
+  it('offers the staff console only to staff', async () => {
+    account = localFirst({ 'admin.console': true }, { staff: true });
+    window.history.replaceState({}, '', '/account');
+    render(<CloudApp />);
+    expect(await screen.findByRole('button', { name: 'Staff console' })).toBeVisible();
+  });
+
+  it('reaches Lucy settings when the plan includes Lucy, though the shell turns Lucy mixing off', async () => {
+    account = localFirst({ lucy: true, 'account.lucy_settings': true });
+    window.history.replaceState({}, '', '/account');
+    render(<CloudApp />);
+    expect(await screen.findByRole('heading', { name: 'Lucy Basic' })).toBeVisible();
+  });
+
+  it('mounts the reconciliation only for a grandfathered account with stored media', async () => {
+    account = { ...localFirst({ 'cloud.stored_media': true }), experience: { local_first: true, hosted: true } };
+    window.history.replaceState({}, '', '/account');
+    const hosted = render(<CloudApp />);
+    expect(await screen.findByRole('heading', { name: 'How your libraries line up' })).toBeVisible();
+    hosted.unmount();
+    account = localFirst({ 'cloud.stored_media': true });
+    render(<CloudApp />);
+    await screen.findByRole('region', { name: 'Signed in as' });
+    expect(screen.queryByRole('heading', { name: 'How your libraries line up' })).toBeNull();
+  });
+
+  it('shows the Rooms plan teaser only while a plan locks Rooms', async () => {
+    account = { ...localFirst({ rooms: false }), feature_locks: { rooms: 'premium' } };
+    window.history.replaceState({}, '', '/account');
+    render(<CloudApp />);
+    expect(await screen.findByRole('button', { name: 'Explore Premium' })).toBeVisible();
+  });
+
+  it('carries the suspended, over-quota and paused-updates notices in its banner, and a truthful footer', async () => {
+    account = localFirst({}, { suspended: true }, cloudAccount({ used: 12e9, limit: 10e9 }));
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    window.history.replaceState({}, '', '/library');
+    const { container } = render(<CloudApp />);
+    await screen.findByRole('navigation', { name: 'Main' });
+    expect(await screen.findByText(/Live updates are paused on this network/)).toBeVisible();
+    expect(screen.getByText(/You’re 2.0 GB over Free’s 10.0 GB/)).toBeVisible();
+    expect(container.querySelector('.cloud-suspended')).not.toBeNull();
+    expect(container.querySelector('.cloud-footer')).toHaveTextContent('Your music files stay on your devices; your account keeps their details.');
   });
 });
