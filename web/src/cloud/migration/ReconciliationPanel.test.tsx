@@ -77,4 +77,36 @@ describe('ReconciliationPanel', () => {
     render(<ReconciliationPanel request={request} />);
     expect(await screen.findByRole('alert')).toHaveTextContent('Nothing was changed.');
   });
+
+  it('warns when the hosted catalogue reaches the 10,000-item safety limit', async () => {
+    const calls = vi.fn(async (path: string) => {
+      if (path.startsWith('/assets')) {
+        const page = path.includes('cursor=') ? Number(new URLSearchParams(path.split('?')[1]).get('cursor')) : 0;
+        return { assets: [], next_cursor: String(page + 1) };
+      }
+      return { songs: [] };
+    });
+    const request = calls as unknown as <T>(path: string, init?: RequestInit) => Promise<T>;
+
+    render(<ReconciliationPanel request={request} />);
+
+    expect(await screen.findByRole('status')).toHaveTextContent('10,000-item safety limit');
+    expect(calls.mock.calls.filter(([path]) => path.startsWith('/assets'))).toHaveLength(100);
+    expect(screen.getByText(/Nothing was changed|there's nothing to compare yet/i)).toBeInTheDocument();
+  });
+
+  it('warns when the device catalogue reaches the 10,000-item safety limit', async () => {
+    const calls = vi.fn(async (path: string) => {
+      if (path.startsWith('/assets')) return { assets: [] };
+      const after = path.includes('after=') ? Number(new URLSearchParams(path.split('?')[1]).get('after')) : 0;
+      return { songs: [], next: after + 1 };
+    });
+    const request = calls as unknown as <T>(path: string, init?: RequestInit) => Promise<T>;
+
+    render(<ReconciliationPanel request={request} />);
+
+    expect(await screen.findByRole('status')).toHaveTextContent('10,000-item safety limit');
+    expect(calls.mock.calls.filter(([path]) => path.startsWith('/local-media/songs'))).toHaveLength(100);
+    expect(screen.getByText(/Nothing was changed|there's nothing to compare yet/i)).toBeInTheDocument();
+  });
 });
