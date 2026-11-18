@@ -2,12 +2,12 @@ import { lazy, type ReactNode, startTransition, Suspense, useCallback, useEffect
 import { ApiError, get, MixData, MixItem, OFFLINE_WORDS, post, problemKind, request, Status } from './api';
 import { getDraftNames } from './state/draftNames';
 import { audioOwner, connectMainPlayer, mainPlayerTouched, stopPreviewsOnly } from './audio/focus';
-import { bindMediaSession, syncMediaSession } from './audio/mediaSession';
 import { setFlags, useFlags } from './flags';
 import { loadResume } from './lib';
 import { NowState, SetPlayer } from './player';
 import { navigate, useRoute } from './router';
 import { buildCommands } from './shell/commands';
+import { useMediaKeys } from './shell/useMediaKeys';
 import { describeRoute, shownRoute } from './shell/manifest';
 import { PageLink, Shell, whenShown } from './shell/Shell';
 import { markNewestUndone } from './state/activity';
@@ -433,25 +433,9 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
     if (setUp) rememberSetUp();
   }, [setUp]);
 
-  // Register media keys just once. Handlers read live state so they cannot act on a stale song.
-  const mediaKeys = on('listen.media_keys');
-  useEffect(() => {
-    if (!('mediaSession' in navigator) || !mediaKeys) return;
-    return bindMediaSession(navigator.mediaSession, player, () => mixRef.current);
-  }, [player, mediaKeys]);
-
-  // The OS advances at playbackRate 1 between these authoritative one-second updates.
-  // Preview ownership never turns the paused mix into a second apparent player.
-  useEffect(() => {
-    if (!('mediaSession' in navigator) || !mediaKeys) return;
-    const update = () => {
-      const state = player.state;
-      syncMediaSession(navigator.mediaSession, state, mixRef.current[state.position], data.name, !!audioOwner());
-    };
-    update();
-    const timer = window.setInterval(update, 1000);
-    return () => window.clearInterval(timer);
-  }, [player, mediaKeys, now.phase, now.position, playing?.song_id, playing?.title, playing?.artist, data.name]);
+  // Media keys and what the OS shows as playing (shared with the other shells: shell/useMediaKeys.ts)
+  const currentMix = useCallback(() => mixRef.current, []);
+  useMediaKeys({ on: on('listen.media_keys'), player, getMix: currentMix, mixName: data.name, now });
 
   // Going on stage hides everything that had focus, so coming back puts focus back where it was.
   const beforeStage = useRef<{ element: HTMLElement | null; name: string } | null>(null);

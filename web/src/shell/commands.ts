@@ -3,6 +3,7 @@ import { FlagId, visible } from '../flags';
 import { navigate } from '../router';
 import { openGlossary } from '../state/glossaryRequests';
 import { setPrefs, Theme, Motion } from '../state/prefs';
+import type { ShortcutId } from '../state/shortcuts';
 import { aboutOf, DESTINATIONS, exploreTabs, workspaceTabs } from './manifest';
 import { words } from '../copy';
 
@@ -75,7 +76,23 @@ export function buildCommands(context: CommandContext): Command[] {
     { id: 'undo', label: 'Undo the last change', group: 'Do', detail: context.undoScope, unavailable: context.undoUnavailable ?? (context.canUndo ? undefined : 'There’s nothing to undo.'), run: context.undo },
     { id: 'analyse', label: 'Analyse the rest of my library', group: 'Do', unavailable: context.analysing ? 'Analysis is already running.' : context.songsLeftToAnalyse ? undefined : 'Every song has been analysed.', run: context.startAnalysis },
     { id: 'activity', label: 'Activity and Undo', group: 'Do', keywords: 'history recent', flag: 'app.activity', run: context.openActivity },
-    { id: 'help', label: 'Keyboard shortcuts', group: 'Do', keywords: 'keys help', flag: 'app.shortcuts', run: context.openHelp },
+    ...browserOnly(context),
+  ];
+  const drafts = context.drafts.map((draft): Command => ({
+    id: `draft-${draft.id}`,
+    label: `Edit draft: ${draft.name}`,
+    group: 'Your drafts',
+    flag: ['drafts', 'editor'],
+    // the address says which one, and if it's gone by then, that page says so and changes nothing
+    run: () => navigate(`/mixes/drafts/${draft.id}/edit`),
+  }));
+  return visible([...places, ...playback, ...actions, ...drafts]);
+}
+
+/** Help, the glossary and the look of the app: they need nothing but this browser. */
+function browserOnly(context: { theme: Theme; motion: Motion; openHelp?: () => void }): Command[] {
+  return [
+    ...(context.openHelp ? [{ id: 'help', label: 'Keyboard shortcuts', group: 'Do', keywords: 'keys help', flag: 'app.shortcuts', run: context.openHelp } satisfies Command] : []),
     { id: 'glossary', label: 'Music terms (glossary)', group: 'Do', keywords: 'help glossary words meaning definitions explain what is', flag: 'app.glossary', run: () => openGlossary() },
     ...(['light', 'dark', 'system'] as Theme[]).map((theme): Command => ({
       id: `theme-${theme}`,
@@ -97,16 +114,37 @@ export function buildCommands(context: CommandContext): Command[] {
       run: () => setPrefs({ motion }),
     })),
   ];
-  const drafts = context.drafts.map((draft): Command => ({
-    id: `draft-${draft.id}`,
-    label: `Edit draft: ${draft.name}`,
-    group: 'Your drafts',
-    flag: ['drafts', 'editor'],
-    // the address says which one, and if it's gone by then, that page says so and changes nothing
-    run: () => navigate(`/mixes/drafts/${draft.id}/edit`),
-  }));
-  return visible([...places, ...playback, ...actions, ...drafts]);
 }
+
+/** A place a shell can go, as its own manifest lists it. */
+export type CommandPlace = { id: string; label: string; path: string; about?: string };
+
+/** What a shell with no SelectaDJ server on this computer can still offer (hosted Cloud): going to its
+ * own places, help, the glossary, theme and motion, and, when it has a player of its own, play and
+ * pause and the next song. Nothing here reads or changes a mix, a draft, a request or the library on
+ * a server, so no command is offered that would fail for want of one. */
+export type ServerFreeContext = {
+  places: readonly CommandPlace[];
+  theme: Theme;
+  motion: Motion;
+  openHelp?: () => void;
+  transport?: { ready: boolean; playing: boolean; hasNext: boolean; togglePause: () => void; next?: () => void };
+};
+
+export function buildServerFreeCommands(context: ServerFreeContext): Command[] {
+  const places = context.places.map((place): Command => ({ id: `go-${place.id}`, label: place.label, group: 'Go to', keywords: place.about, run: () => navigate(place.path) }));
+  const transport = context.transport;
+  const playback: Command[] = transport ? [
+    { id: 'play-pause', label: transport.playing ? 'Pause' : 'Play', group: 'Playback', unavailable: transport.ready ? undefined : 'Nothing to play yet.', run: transport.togglePause },
+    ...(transport.next ? [{ id: 'next', label: 'Next song', group: 'Playback', keywords: 'skip', unavailable: transport.hasNext ? undefined : 'This is the last song.', run: transport.next } satisfies Command] : []),
+  ] : [];
+  return visible([...places, ...playback, ...browserOnly(context)]);
+}
+
+/** The keyboard shortcuts that work without a server: the transport keys act on the shell's own
+ * player, and the palette and this list are the browser's. Search, Request, Undo and Stage reach
+ * this computer's library, requests, mixes or Listen page, so a server-free shell leaves them out. */
+export const SERVER_FREE_SHORTCUTS: ReadonlySet<ShortcutId> = new Set<ShortcutId>(['playPause', 'next', 'previous', 'back5', 'forward5', 'mute', 'palette', 'help']);
 
 // GP-0251-06: the same folding as the Library's own search (src/selecta/library/relevance.py
 // normalize_music), so "cafe" finds "Café" here too. Only for comparing: labels are shown as they are.
