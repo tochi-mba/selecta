@@ -66,7 +66,7 @@ export function CloudGallery() {
           <li data-outcome="unverified"><Icon name="warning" size="compact" /> Name this device</li>
         </ol>
         <div className="cloud-actions">
-          <label className="cloud-spine-pick primary" htmlFor="g-files"><Icon name="music" size="toolbar" /> Choose music files<input id="g-files" type="file" multiple accept="audio/*" onChange={nowhere} /></label>
+          <label className="cloud-spine-pick primary" htmlFor="g-files"><Icon name="music" size="toolbar" /> Choose music files<input id="g-files" className="visually-hidden" type="file" multiple accept="audio/*" onChange={nowhere} /></label>
           <button type="button"><Icon name="folder" size="toolbar" /> Choose a folder</button>
         </div>
         <p className="cloud-hint">A picker hidden only visually stays in the tab order; its label shows the focus ring.</p>

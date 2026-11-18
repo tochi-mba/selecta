@@ -36,7 +36,7 @@ async function mediaPage(page: Page) {
   await page.addScriptTag({ content: bundle });
   await page.evaluate(async () => {
     await new Promise<void>((done) => {
-      const gone = indexedDB.deleteDatabase('selecta-media');
+      const gone = indexedDB.deleteDatabase('selecta-media-ws-pressure-ws');
       gone.onsuccess = gone.onerror = gone.onblocked = () => done();
     });
   });
@@ -74,7 +74,7 @@ test('a full IndexedDB pauses the import, tells the member, claims nothing, and 
     }) as Parameters<Media['runImport']>[0]['request'];
     const files = ['a.mp3', 'b.flac', 'c.wav'].map((name, at) => new File([`song ${at}`], name, { type: 'audio/mpeg' }));
     const readTags = async (file: File) => ({ title: file.name, artist: 'Artist', duration_s: 1 });
-    const store = await media.MediaStore.open();
+    const store = await media.MediaStore.open('pressure-ws');
     const events: string[] = [];
     const full = await media.runImport({ source: files, request, store, deviceId: 'dev', readTags, onProgress: (event) => {
       if (event.kind === 'paused') events.push(`paused:${event.paused}`);
@@ -83,7 +83,7 @@ test('a full IndexedDB pauses the import, tells the member, claims nothing, and 
     const told = new media.StorageFullError().message;
     scope.full = false;
     const again = await media.runImport({ source: files, request, store, deviceId: 'dev', readTags });
-    const reopened = await media.MediaStore.open();
+    const reopened = await media.MediaStore.open('pressure-ws');
     const texts = await Promise.all(files.map((file) => file.text()));
     return { full, events, heldWhileFull, told, degraded: store.degraded, again, kept: (await reopened.all()).length, texts };
   });
@@ -106,10 +106,10 @@ test('with IndexedDB refused (private mode), the index lives in memory and says 
     IDBFactory.prototype.open = function refused() {
       throw new DOMException('The operation is insecure.', 'SecurityError');
     };
-    const store = await media.MediaStore.open();
+    const store = await media.MediaStore.open('pressure-ws');
     await store.put({ songId: 7, identity: { content_sha256: 'a'.repeat(64), title: 'Seven', artist: 'Artist' }, ref: { kind: 'repick', name: 'seven.mp3', size: 5 }, importedAt: 1 });
     const now = (await store.all()).map((song) => song.songId);
-    const next = await media.MediaStore.open();
+    const next = await media.MediaStore.open('pressure-ws');
     IDBFactory.prototype.open = open;
     return { degraded: store.degraded, now, nextDegraded: next.degraded, nextVisit: (await next.all()).length };
   });
