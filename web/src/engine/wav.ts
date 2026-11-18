@@ -5,9 +5,10 @@ import { bytesToHex } from '@noble/hashes/utils.js';
  *
  * The encoder takes rendered PCM chunks (render.ts output, or anything with the same shape) and
  * writes one RIFF file in 16-bit or 24-bit PCM, with a sha256 checksum computed before anyone is
- * told the file exists. validateWav re-reads the finished bytes, so what is offered for download
- * was checked, not assumed. FLAC is written by flac.ts, a plain TypeScript encoder (WebCodecs
- * AudioEncoder does not produce FLAC), and checked by flacDecode.ts.
+ * told the file exists. encodeWavSliced writes the same bytes in steps that yield to the page
+ * and can be cancelled, for long mixes. validateWav re-reads the finished bytes, so what is
+ * offered for download was checked, not assumed. FLAC is written by flac.ts, a plain TypeScript
+ * encoder (WebCodecs AudioEncoder does not produce FLAC), and checked by flacDecode.ts.
  */
 
 export type WavBits = 16 | 24;
@@ -52,7 +53,18 @@ const readAscii = (view: DataView, at: number, length: number): string => {
   return text;
 };
 
-export function encodeWav(chunks: PcmChunk[], bits: WavBits = 16): EncodedWav {
+/** Frames written between steps of the stepwise writer (about 0.37 s at 44.1 kHz). */
+const STEP_FRAMES = 16384;
+/** The finished file is hashed in steps of this size. */
+const HASH_STEP_BYTES = 1 << 20;
+/** encodeWavSliced yields once a run of steps has held the page this long. */
+const SLICE_BUDGET_MS = 25;
+
+const clock = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+/** The WAV writer as a series of small steps: samples in runs of STEP_FRAMES, then the sha256
+ * in 1 MB pieces. encodeWav runs every step at once; encodeWavSliced yields between them. */
+function* wavSteps(chunks: PcmChunk[], bits: WavBits): Generator<void, EncodedWav, void> {
   if (chunks.length === 0) throw new Error('There is no audio to encode.');
   const sampleRate = chunks[0].sampleRate;
   const channels = chunks[0].numberOfChannels;
@@ -88,31 +100,82 @@ export function encodeWav(chunks: PcmChunk[], bits: WavBits = 16): EncodedWav {
   for (const chunk of chunks) {
     const data: Float32Array[] = [];
     for (let channel = 0; channel < channels; channel += 1) data.push(chunk.getChannelData(channel));
-    for (let frame = 0; frame < chunk.length; frame += 1) {
-      for (let channel = 0; channel < channels; channel += 1) {
-        const sample = Math.max(-1, Math.min(1, data[channel][frame]));
-        if (bits === 16) {
-          view.setInt16(at, Math.round(sample < 0 ? sample * 32768 : sample * 32767), true);
-          at += 2;
-        } else {
-          const whole = Math.round(sample < 0 ? sample * 8388608 : sample * 8388607);
-          view.setUint8(at, whole & 0xff);
-          view.setUint8(at + 1, (whole >> 8) & 0xff);
-          view.setUint8(at + 2, (whole >> 16) & 0xff);
-          at += 3;
+    for (let first = 0; first < chunk.length; first += STEP_FRAMES) {
+      const last = Math.min(chunk.length, first + STEP_FRAMES);
+      for (let frame = first; frame < last; frame += 1) {
+        for (let channel = 0; channel < channels; channel += 1) {
+          const sample = Math.max(-1, Math.min(1, data[channel][frame]));
+          if (bits === 16) {
+            view.setInt16(at, Math.round(sample < 0 ? sample * 32768 : sample * 32767), true);
+            at += 2;
+          } else {
+            const whole = Math.round(sample < 0 ? sample * 8388608 : sample * 8388607);
+            view.setUint8(at, whole & 0xff);
+            view.setUint8(at + 1, (whole >> 8) & 0xff);
+            view.setUint8(at + 2, (whole >> 16) & 0xff);
+            at += 3;
+          }
         }
       }
+      yield;
     }
+  }
+
+  const hash = sha256.create();
+  for (let from = 0; from < bytes.length; from += HASH_STEP_BYTES) {
+    hash.update(bytes.subarray(from, from + HASH_STEP_BYTES));
+    yield;
   }
 
   return {
     bytes,
-    sha256: bytesToHex(sha256(bytes)),
+    sha256: bytesToHex(hash.digest()),
     durationSeconds: frames / sampleRate,
     sampleRate,
     channels,
     bits,
   };
+}
+
+/** Encode in one go (small files, tests, synthetic audio). */
+export function encodeWav(chunks: PcmChunk[], bits: WavBits = 16): EncodedWav {
+  const steps = wavSteps(chunks, bits);
+  for (let step = steps.next(); ; step = steps.next()) if (step.done) return step.value;
+}
+
+export class WavCancelled extends Error {
+  constructor() {
+    super('The WAV encode was cancelled.');
+    this.name = 'AbortError';
+  }
+}
+
+/** Encode a long mix without freezing the page: the same bytes as encodeWav, written in steps
+ * that yield to the event loop about every 25 ms and check the AbortSignal at each yield. Throws
+ * WavCancelled on a cancel and resolves only with a complete, hashed file. */
+export async function encodeWavSliced(
+  chunks: PcmChunk[],
+  bits: WavBits = 16,
+  options: { signal?: AbortSignal; yieldToLoop?: () => Promise<void> } = {},
+): Promise<EncodedWav> {
+  const yieldToLoop = options.yieldToLoop ?? (() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
+  const checkCancel = () => {
+    if (options.signal?.aborted) throw new WavCancelled();
+  };
+  checkCancel();
+  const steps = wavSteps(chunks, bits);
+  let sliceStarted = clock();
+  for (let step = steps.next(); ; step = steps.next()) {
+    if (step.done) {
+      checkCancel();
+      return step.value;
+    }
+    if (clock() - sliceStarted >= SLICE_BUDGET_MS) {
+      await yieldToLoop();
+      checkCancel();
+      sliceStarted = clock();
+    }
+  }
 }
 
 /** Re-read a finished WAV: header, chunk walk, size consistency and (optionally) duration. */
