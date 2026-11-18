@@ -50,7 +50,7 @@ test('a new member makes a mix from the songs on this device, and it is still th
   await page.goto('/mixes/mine');
   await expect(page.getByRole('heading', { name: 'My Mixes' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Your songs, in your browser' })).toBeVisible();
-  await expect(page.getByText(/^2 songs/)).toBeVisible();
+  await expect(page.getByText(/^2 songs, about/)).toBeVisible();
   // and Listen plays it in the order the recipe keeps: the ending chosen in MixSetup last
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Listen', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Bravo here' })).toBeVisible();
