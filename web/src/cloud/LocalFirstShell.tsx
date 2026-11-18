@@ -23,7 +23,7 @@ import { CannotPlayHere, LibraryEmpty, ListenEmpty, MixesEmpty, NotOnThisAccount
 import { useLocalFirstPlayer } from './localFirstPlayer';
 import { BROWSER_MIX_NEEDS } from './localFirstMixes';
 import { EMPTY_MIX, localFirstRequest, mediaRequest, type AvailabilitySources } from './localFirstRequest';
-import { recipeStore } from './recipeStore';
+import { recipeStore, type RecipeStore, type RecipeSummary } from './recipeStore';
 import { QueueSources } from './QueueSources';
 import { CutoverNotice } from './migration/CutoverNotice';
 import { OnboardingSpine } from './onboarding/OnboardingSpine';
@@ -144,6 +144,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
     sweeping.current = task;
     return task;
   }, [on, openStore, workspaceId]);
+  const recipes = useMemo(() => recipeStore(cloud, workspaceId), [cloud, workspaceId]);
   const sources = useMemo<AvailabilitySources>(() => ({
     here: async () => {
       const opened = await openStore();
@@ -164,8 +165,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
       return new Set(songs.filter((song) => matchAsset({ song_id: song.id, title: song.title, artist: song.artist }, song.content_sha256 ?? null, assets)).map((song) => song.id));
     } : undefined,
     // Make a Mix and My Mixes: recipes on the server, this browser's current mix and shaping here
-    recipes: recipeStore(cloud, workspaceId),
-  }), [api, cloud, workspaceId, coexisting, openStore]);
+    recipes,
+  }), [api, cloud, workspaceId, coexisting, openStore, recipes]);
   const request = useMemo(() => localFirstRequest(cloud, sources), [cloud, sources]);
   // imports register through the adapted request, so each landed batch reads a fresh catalogue
   const media = useMemo(() => mediaRequest(request), [request]);
@@ -323,7 +324,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
           ? <main className="page" id="main"><h1 className="display small">Library</h1><LibraryEmpty />{connect}</main>
           : <><Library {...shared} /><div className="page">{connect}</div></>;
       case 'mixes':
-        if (route.tab === 'mine') return <><MyMixes {...shared} />{localExport}</>;
+        if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts />{on('drafts') && <SavedBrowserRecipes recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} />}{localExport}</>;
         return <>{(status?.counts.ready ?? 0) >= BROWSER_MIX_NEEDS ? <Mixes {...shared} /> : (
           <MixesEmpty
             connected={connected}
@@ -371,6 +372,64 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
       </Shell>
     </BytesContext.Provider>
     </RequestContext.Provider>
+  );
+}
+
+/** Browser-first saved recipes keep their server identity (string mix_id). The shared local Drafts
+ * actions use numeric IDs and /drafts mutation routes that recipes do not have, so this list offers
+ * only the operation the recipe contract supports: making a saved recipe the current mix. Playback
+ * remains in the shared Current mix card, where the device resolver can refuse missing files. */
+function SavedBrowserRecipes({ recipes, request, setMixData, refreshStatus }: {
+  recipes: RecipeStore;
+  request: ViewProps['request'];
+  setMixData: ViewProps['setMixData'];
+  refreshStatus: ViewProps['refreshStatus'];
+}) {
+  const [list, setList] = useState<RecipeSummary[] | null>(null);
+  const [problem, setProblem] = useState('');
+  const [pending, setPending] = useState<string | null>(null);
+  const [notice, setNotice] = useState('');
+  const load = useCallback(() => {
+    setProblem('');
+    return recipes.list().then((next) => setList(next)).catch((error: Error) => setProblem(error.message || 'Couldn’t load your saved mixes.'));
+  }, [recipes]);
+  useEffect(() => { void load(); }, [load]);
+  const useAsCurrent = async (recipe: RecipeSummary) => {
+    if (pending) return;
+    setPending(recipe.mix_id);
+    setNotice('');
+    setProblem('');
+    recipes.setCurrent(recipe.mix_id);
+    try {
+      const current = await request<MixData>('/mix');
+      setMixData(current);
+      refreshStatus();
+      setNotice(`${recipe.name} is now your current mix. Use Play below when its songs are available on this device.`);
+    } catch (error) {
+      recipes.setCurrent(null);
+      setProblem((error as Error).message || 'Couldn’t open that saved mix.');
+    } finally { setPending(null); }
+  };
+  const currentId = recipes.current();
+  return (
+    <section className="panel stack" aria-labelledby="saved-browser-mixes">
+      <h2 id="saved-browser-mixes">Saved browser mixes</h2>
+      {problem && <p className="warn" role="alert">{problem} <button onClick={() => void load()}>Try again</button></p>}
+      {notice && <p className="hint" role="status">{notice}</p>}
+      {list === null && !problem && <p className="hint" role="status">Loading saved mixes…</p>}
+      {list?.length === 0 && <div className="empty-state"><p role="status">No saved drafts yet. Make a Mix to create one.</p><button className="primary" onClick={() => navigate('/mixes')}>Make a Mix</button></div>}
+      {!!list?.length && <ul className="draft-list density">
+        {list.map((recipe) => {
+          const selected = recipe.mix_id === currentId;
+          return <li className="draft" key={recipe.mix_id}>
+            <div className="draft-name"><b>{recipe.name}</b><span className="soft">{recipe.songs} {recipe.songs === 1 ? 'song' : 'songs'} · saved browser mix</span></div>
+            <div className="row wrap draft-actions">
+              <button disabled={selected || pending !== null} onClick={() => void useAsCurrent(recipe)}>{pending === recipe.mix_id ? 'Opening…' : selected ? 'Current mix' : 'Use as current mix'}</button>
+            </div>
+          </li>;
+        })}
+      </ul>}
+    </section>
   );
 }
 
