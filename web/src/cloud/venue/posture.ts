@@ -19,7 +19,7 @@ export const VENUE_STEP_TITLES: Record<VenueStep, string> = {
   probe: 'Check this tablet',
   power: 'Plug into power',
   wake: 'Keep the screen on',
-  output: 'Choose the speaker',
+  output: 'Check the sound output',
   start: 'Start sound',
   soundcheck: 'Hear the check tone',
   ready: 'Venue status',
