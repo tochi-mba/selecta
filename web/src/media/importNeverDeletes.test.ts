@@ -37,7 +37,7 @@ describe('the import path never deletes or moves a member file', () => {
     expect(put.match(DESTRUCTIVE) ?? []).toEqual([]);
     // Every removeEntry and the one createWritable are the derived-data cache, on the OPFS root
     // and on its own `cache-` names (cacheEvict, cacheWrite's clean-up), not on any picked handle.
-    const removals = store.match(/root\\.removeEntry\\([^)]*\\)/g) ?? [];
+    const removals = store.match(/root\.removeEntry\([^)]*\)/g) ?? [];
     // Eviction removes only enumerated cache entries; cache writes and explicit eviction derive
     // their target name from cacheEntryName(key). No removal may receive a member-selected path.
     expect(removals).toHaveLength(4);
