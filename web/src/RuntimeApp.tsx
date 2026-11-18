@@ -4,6 +4,7 @@ import type { MixData } from './api';
 import { setCopyMode } from './copy';
 import { setFlags } from './flags';
 import { handOnStartupStatus } from './startupStatus';
+import { BrandMark } from './ui/BrandMark';
 import { prefetchLibrary } from './views/libraryPrefetch';
 
 const CloudRoot = lazy(() => import('./cloud/CloudRoot').then((module) => ({ default: module.CloudRoot })));
@@ -89,5 +90,5 @@ export function RuntimeApp() {
 }
 
 function RuntimeMessage({ title, detail, children }: { title: string; detail: string; children?: ReactNode }) {
-  return <main className="cloud-runtime-message"><span className="cloud-mark">S</span><h1>{title}</h1><p>{detail}</p>{children}</main>;
+  return <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><h1>{title}</h1><p>{detail}</p>{children}</main>;
 }

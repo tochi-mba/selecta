@@ -12,8 +12,10 @@ export type MoreDestinationId = 'account' | 'billing' | 'devices' | 'rooms' | 'w
 export type ShellMode = 'local' | 'cloud';
 /** A Cloud-only page in More, by its address. Local addresses stay `Route`s, untouched. */
 export type MoreRoute = { page: 'more'; id: MoreDestinationId };
+/** Hosted Cloud's overview, its first page (`cloud.hosted_shell`). Local addresses never make it. */
+export type HomeRoute = { page: 'home' };
 /** Every page the shell can be on, in either mode. */
-export type ShellRoute = Route | MoreRoute;
+export type ShellRoute = Route | MoreRoute | HomeRoute;
 /** The two independent Cloud grants the server decides per account (`experience` on /api/account). */
 export type Experience = { local_first: boolean; hosted: boolean };
 
@@ -23,6 +25,8 @@ export type Experience = { local_first: boolean; hosted: boolean };
 export type DestinationRequirements = {
   modes?: readonly ShellMode[];
   flag?: FlagId;
+  /** At least one of these flags (Cloud only): how one destination serves both Cloud shells. */
+  anyFlag?: readonly FlagId[];
   experience?: keyof Experience;
   capability?: string;
 };
@@ -48,6 +52,7 @@ export function destinationVisible<T extends { requires?: DestinationRequirement
   if (needs.modes && !needs.modes.includes(context.mode)) return false;
   if (context.mode === 'local') return true;
   if (needs.flag && !context.feature(needs.flag)) return false;
+  if (needs.anyFlag && !needs.anyFlag.some((id) => context.feature(id))) return false;
   if (needs.experience && context.experience?.[needs.experience] !== true) return false;
   return !needs.capability || context.capability?.(needs.capability) === true;
 }
@@ -98,9 +103,12 @@ export function aboutOf(id: DestinationId): string {
 
 export const DESTINATIONS: Destination[] = [
   { id: 'listen', label: 'Listen', path: '/listen', icon: 'music', about: 'What’s playing, what’s next and the lyrics' },
-  { id: 'explore', label: 'Make a Mix', path: '/mixes', icon: 'explore', about: 'Choose an idea, shape the journey, then play, edit or save it' },
-  { id: 'mine', label: 'My Mixes', path: '/mixes/mine', icon: 'mixes', about: 'Your current mix, your drafts and the render line' },
-  { id: 'library', label: 'Library', path: '/library', icon: 'library', about: 'Every song, with its details and corrections' },
+  // In Cloud, browser-first (`cloud.local_first`) has all three; the hosted shell, which reads
+  // `cloud.local_first` as off, has Make a Mix with `cloud.mix_create` and the Library with
+  // `cloud.stored_media`, and no My Mixes. Local mode is permissive, so it is untouched.
+  { id: 'explore', label: 'Make a Mix', path: '/mixes', icon: 'explore', about: 'Choose an idea, shape the journey, then play, edit or save it', requires: { anyFlag: ['cloud.local_first', 'cloud.mix_create'] } },
+  { id: 'mine', label: 'My Mixes', path: '/mixes/mine', icon: 'mixes', about: 'Your current mix, your drafts and the render line', requires: { flag: 'cloud.local_first' } },
+  { id: 'library', label: 'Library', path: '/library', icon: 'library', about: 'Every song, with its details and corrections', requires: { anyFlag: ['cloud.local_first', 'cloud.stored_media'] } },
   // Analysis, folders and diagnostics are this computer's server; Cloud keeps its device extras in More.
   { id: 'workspace', label: 'Workspace', path: '/workshop', icon: 'settings', about: 'Analysis, folders, storage, learning and diagnostics', requires: { modes: ['local'] } },
 ];
@@ -166,7 +174,8 @@ export function routeOn(route: Route): boolean {
 
 export function destinationOf(route: ShellRoute): DestinationId | null {
   switch (route.page) {
-    case 'more': return null;
+    case 'more':
+    case 'home': return null;
     case 'listen': return 'listen';
     case 'mixes': return route.tab === 'mine' ? 'mine' : 'explore';
     case 'discover':
@@ -206,6 +215,7 @@ export function describeRoute(route: ShellRoute): { title: string; crumbs: Crumb
     case 'listening': return { title: 'Listening study', crumbs: [workspace, { label: 'Listening study' }] };
     case 'lucy': return { title: 'Lucy', crumbs: [explore, { label: 'Lucy' }] };
     case 'missing': return { title: 'Not found', crumbs: [{ label: 'Not found' }] };
+    case 'home': return { title: 'Overview', crumbs: [{ label: 'Overview' }] };
     case 'more': {
       const label = MORE_DESTINATIONS.find((item) => item.id === route.id)?.label ?? 'More';
       return { title: label, crumbs: [{ label }] };

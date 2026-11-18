@@ -26,10 +26,15 @@ import { MakeCloudMix } from './MakeCloudMix';
 import { StorageMeter } from './Meters';
 import { blockedByQuota, OverQuotaBanner } from './OverQuota';
 import { UploadsPanel } from './Uploads';
-import { isHostedAccount, showsLocalFirst } from './localFirstGate';
+import { isHostedAccount } from './localFirstGate';
 import { LocalFirstLabs } from './labs/LocalFirstLabs';
 import { ReconciliationPanel } from './migration/ReconciliationPanel';
-import { navigate } from '../router';
+import { navigate, useLocationText } from '../router';
+import { Action, LiveRegion, Section } from '../ui/controls';
+import { Toaster } from '../ui/toasts';
+import { BrandMark } from '../ui/BrandMark';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+import type { HostedView } from './HostedShell';
 import './cloud.css';
 // Shared business styles are scoped to .biz and loaded by the Cloud shell.
 import '../business/business.css';
@@ -42,6 +47,20 @@ const LocalFirstShell = lazy(() => import('./LocalFirstShell').then((module) => 
 // The venue tablet posture flow (ADR-0460) carries the browser engine too, so it loads only with
 // `cloud.venue_tablet` on.
 const VenuePosture = lazy(() => import('./venue/VenuePosture').then((module) => ({ default: module.VenuePosture })));
+// The hosted pages on the shared shell (`cloud.hosted_shell`): the shell loads only with the flag
+// on, so the legacy rail's bundle is unchanged with it off. It carries no engine.
+const HostedShell = lazy(() => import('./HostedShell').then((module) => ({ default: module.HostedShell })));
+
+/** The work a button starts. Each has its own busy state, so a slow checkout never greys out
+ * Sign out everywhere, and the button pressed is the one that says it is working. */
+type Operation = 'onboarding' | 'checkout' | 'portal' | 'everywhere' | 'delete';
+
+/** Whether this account gets the local-first shell: `showsLocalFirst`, decided on the account's own
+ * read. The hosted shell reads `cloud.local_first` as off while it is open (it is not the
+ * local-first shell), which must not keep a member who has just joined Labs out of it. */
+function localFirstDecided(account: Account | null): boolean {
+  return account?.experience?.local_first === true && accountFlagOn('cloud.local_first', account.features);
+}
 
 /** Whether this account may see the staff console link: staff, with the console flag on. */
 export function showsAdmin(account: Account | null) {
@@ -62,6 +81,13 @@ export function pageFor(pathname: string): Page {
 const PATHS: Record<Page, string> ={ home: '/', listen: '/listen', library: '/library', uploads: '/upload', billing: '/account/billing', settings: '/account' };
 const sharedLabel = (id: 'listen' | 'library') => DESTINATIONS.find((destination) => destination.id === id)!.label;
 const LABELS: Record<Page, string> = { home: 'Overview', listen: sharedLabel('listen'), library: sharedLabel('library'), uploads: 'Add music', billing: 'Plan & billing', settings: 'Settings' };
+/** The page the hosted dock is beside in the shared shell: Make a Mix was part of Listen, and the
+ * account places are the account's pages. */
+function dockPage(view: HostedView): Page {
+  if (typeof view !== 'object') return view === 'mixes' ? 'listen' : view;
+  if ('missing' in view) return 'home';
+  return view.more === 'uploads' ? 'uploads' : view.more === 'billing' ? 'billing' : 'settings';
+}
 const TITLES: Record<Page, string> = { home: 'Your music workspace', listen: 'Listen', library: 'Your library', uploads: 'Add music', billing: 'Plan & billing', settings: 'Account settings' };
 
 export function CloudApp() {
@@ -71,7 +97,7 @@ export function CloudApp() {
   const [blocked, setBlocked] = useState<BlockedCode | null>(null);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [page, setPage] = useState<Page>(() => pageFor(window.location.pathname));
-  const [busy, setBusy] = useState(false);
+  const [running, setRunning] = useState<ReadonlySet<Operation>>(() => new Set());
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [libraryVersion, setLibraryVersion] = useState(0);
@@ -106,6 +132,15 @@ export function CloudApp() {
     }
     return payload as T;
   }, [getAccessToken]);
+
+  // One operation at a time per button: its own busy state, and a refusal said in the page feedback.
+  const operate = useCallback(async (operation: Operation, work: () => Promise<void>) => {
+    setRunning((now) => new Set(now).add(operation));
+    setError('');
+    try { await work(); } catch (problem) { setError((problem as Error).message); }
+    finally { setRunning((now) => { const next = new Set(now); next.delete(operation); return next; }); }
+  }, []);
+  const busy = (operation: Operation) => running.has(operation);
 
   const refreshAccount = useCallback(async () => {
     if (!user) return;
@@ -161,64 +196,74 @@ export function CloudApp() {
 
   const completeOnboarding = async (event: FormEvent) => {
     event.preventDefault();
-    setBusy(true); setError('');
-    try {
+    await operate('onboarding', async () => {
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
       await api('/onboarding/complete', { method: 'POST', body: JSON.stringify({ age_confirmed: ageConfirmed, timezone }) });
       await refreshAccount();
-    } catch (problem) { setError((problem as Error).message); }
-    finally { setBusy(false); }
+    });
   };
 
   const openCheckout = async (plan: 'standard' | 'premium', interval: 'month' | 'year', consent: Consent) => {
     if (!account) return;
-    setBusy(true); setError('');
-    try {
-      const result = await api<{ url: string }>('/billing/checkout', {
-        method: 'POST', headers: { 'Idempotency-Key': idempotencyKey() },
-        body: JSON.stringify(checkoutBody(plan, interval, consent, consentVersion)),
-      }, account.workspace.id);
-      window.location.assign(result.url);
-    } catch (problem) {
-      setError(problem instanceof CloudError && problem.code === 'consent_version_changed'
-        ? 'The subscription terms have just been updated. Refresh the page to read the new wording, then try again.'
-        : (problem as Error).message);
-    } finally { setBusy(false); }
+    await operate('checkout', async () => {
+      try {
+        const result = await api<{ url: string }>('/billing/checkout', {
+          method: 'POST', headers: { 'Idempotency-Key': idempotencyKey() },
+          body: JSON.stringify(checkoutBody(plan, interval, consent, consentVersion)),
+        }, account.workspace.id);
+        window.location.assign(result.url);
+      } catch (problem) {
+        throw problem instanceof CloudError && problem.code === 'consent_version_changed'
+          ? new Error('The subscription terms have just been updated. Refresh the page to read the new wording, then try again.')
+          : problem;
+      }
+    });
   };
 
   const openPortal = async () => {
     if (!account) return;
-    setBusy(true); setError('');
-    try {
+    await operate('portal', async () => {
       const result = await api<{ url: string }>('/billing/portal', {
         method: 'POST', headers: { 'Idempotency-Key': idempotencyKey() },
         body: JSON.stringify({ return_url: `${window.location.origin}/account/billing` }),
       }, account.workspace.id);
       window.location.assign(result.url);
-    } catch (problem) { setError((problem as Error).message); }
-    finally { setBusy(false); }
+    });
   };
 
   const signOutEverywhere = async () => {
     if (!account) return;
-    setBusy(true); setError('');
-    try {
+    await operate('everywhere', async () => {
       await api('/account/sign-out-everywhere', { method: 'POST' }, account.workspace.id);
       signOut({ returnTo: window.location.origin });
-    } catch (problem) { setError((problem as Error).message); }
-    finally { setBusy(false); }
+    });
   };
 
-  const deleteAccount = async (alreadyConfirmed = false) => {
-    const confirmed = alreadyConfirmed || window.confirm('Delete your SelectaDJ Cloud account? Your account will be hidden and you will be signed out immediately. Final erasure is scheduled after the 30-day recovery window.');
-    if (!confirmed) return;
-    setBusy(true); setError('');
-    try {
+  // Asked first, on the shared overlay stack: the rail's Delete account opens the dialog, and the
+  // Account page's own confirmation (AccountDanger) calls deleteAccount once it has been answered.
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const deleteAccount = async () => {
+    await operate('delete', async () => {
       await api('/account', { method: 'DELETE' }, account?.workspace.id);
       signOut({ returnTo: window.location.origin });
-    } catch (problem) { setError((problem as Error).message); }
-    finally { setBusy(false); }
+    });
   };
+  const deleteDialog = confirmingDelete && (
+    <ConfirmDialog
+      destructive
+      title="Delete your SelectaDJ Cloud account?"
+      body="It is hidden and you are signed out at once. Final erasure happens after the 30 day recovery window; contact SelectaDJ support within it to keep the account."
+      confirmLabel="Delete my account"
+      cancelLabel="Keep my account"
+      working="Deleting…"
+      onConfirm={async () => {
+        // the dialog stays open and says why when the server refuses
+        await api('/account', { method: 'DELETE' }, account?.workspace.id);
+        signOut({ returnTo: window.location.origin });
+      }}
+      onClose={() => setConfirmingDelete(false)}
+    />
+  );
 
   const choosePage = (next: Page) => {
     setPage(next); setNotice(''); setError('');
@@ -231,11 +276,21 @@ export function CloudApp() {
   // With exact routes, an address whose page is switched off shows the overview and says so in
   // the address too, never a page that doesn't match it.
   const routedPage = route.kind === 'page' ? route.page : null;
+  const localFirst = account !== null && localFirstDecided(account);
+  // `cloud.hosted_shell`: every other account's pages in the shared shell, which routes them itself.
+  const hostedShell = account !== null && !localFirst && flagOn('cloud.hosted_shell');
+  // The shared shells move with the router, not choosePage, so a message about one page is not
+  // left standing on the next.
+  const place = useLocationText().split('?')[0];
   useEffect(() => {
-    if (!exact || !account || !routedPage || pageShown(account, routedPage)) return;
+    if (!hostedShell) return;
+    setError(''); setNotice('');
+  }, [hostedShell, place]);
+  useEffect(() => {
+    if (!exact || hostedShell || !account || !routedPage || pageShown(account, routedPage)) return;
     window.history.replaceState({}, '', `/${window.location.search}${window.location.hash}`);
     setPath('/');
-  }, [exact, account, routedPage]);
+  }, [exact, hostedShell, account, routedPage]);
   // Keyboard and screen reader users land on the new page's title after choosing a page.
   useEffect(() => {
     if (!exact || !moved.current) return;
@@ -252,11 +307,11 @@ export function CloudApp() {
   const retryAccount = async () => { setRetrying(true); try { await refreshAccount(); } finally { setRetrying(false); } };
   const workspaceRequest = useCallback(<T,>(path: string, init?: RequestInit) => api<T>(path, init, account?.workspace.id), [api, account?.workspace.id]);
 
-  if (isLoading) return <main className="cloud-runtime-message"><span className="cloud-mark">S</span><p>Checking your sign-in…</p></main>;
-  if (!user) return <main className="cloud-welcome"><span className="cloud-mark">S</span><p className="cloud-eyebrow cloud-caps">SelectaDJ Cloud</p><h1>Your music, ready to move.</h1><p>Build your library, shape the set and keep the transitions ready on every device.</p>{signInProblem && <p className="cloud-feedback error" role="alert">{signInProblem}</p>}<div className="cloud-actions"><button className="primary" onClick={() => void signUp()}>Create your account</button><button onClick={startSignIn}>Sign in</button></div><small>Your music stays private to your workspace.</small><footer className="cloud-footer"><CloudCredit /></footer></main>;
+  if (isLoading) return <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p>Checking your sign-in…</p></main>;
+  if (!user) return <main className="cloud-welcome"><BrandMark className="cloud-mark" /><p className="cloud-eyebrow cloud-caps">SelectaDJ Cloud</p><h1>Your music, ready to move.</h1><p>Build your library, shape the set and keep the transitions ready on every device.</p>{signInProblem && <p className="cloud-feedback error" role="alert">{signInProblem}</p>}<div className="cloud-actions"><button className="primary" onClick={() => void signUp()}>Create your account</button><button onClick={startSignIn}>Sign in</button></div><small>Your music stays private to your workspace.</small><footer className="cloud-footer"><CloudCredit /></footer></main>;
   if (blocked) return <BlockedAccount code={blocked} distinct={exact} onSignOut={() => signOut({ returnTo: window.location.origin })} />;
-  if (!user.emailVerified) return <main className="cloud-runtime-message"><span className="cloud-mark">S</span><h1>Verify your email</h1><p>Open the verification email for {user.email}, then refresh this page.</p><button onClick={() => window.location.reload()}>I’ve verified my email</button><button onClick={() => signOut({ returnTo: window.location.origin })}>Sign out</button></main>;
-  if (needsOnboarding) return <main className="cloud-onboarding"><span className="cloud-mark">S</span><p className="cloud-eyebrow">ONE QUICK CHECK</p><h1>Set up your SelectaDJ workspace</h1><p>Your personal space starts with 10 GB of private music storage.</p><form onSubmit={(event) => void completeOnboarding(event)}><label className="cloud-check"><input type="checkbox" checked={ageConfirmed} onChange={(event) => setAgeConfirmed(event.target.checked)} /> I confirm that I’m at least 13 years old.</label><button className="primary" disabled={!ageConfirmed || busy}>Create workspace</button></form><Feedback error={error} notice="" /></main>;
+  if (!user.emailVerified) return <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><h1>Verify your email</h1><p>Open the verification email for {user.email}, then refresh this page.</p><button onClick={() => window.location.reload()}>I’ve verified my email</button><button onClick={() => signOut({ returnTo: window.location.origin })}>Sign out</button></main>;
+  if (needsOnboarding) return <main className="cloud-onboarding"><BrandMark className="cloud-mark" /><p className="cloud-eyebrow cloud-caps">One quick check</p><h1>Set up your SelectaDJ workspace</h1><p>Your personal space starts with 10 GB of private music storage.</p><form onSubmit={(event) => void completeOnboarding(event)}><label className="cloud-check"><input type="checkbox" checked={ageConfirmed} onChange={(event) => setAgeConfirmed(event.target.checked)} /> I confirm that I’m at least 13 years old.</label><button className="primary" disabled={!ageConfirmed || busy('onboarding')} aria-busy={busy('onboarding') || undefined}>Create workspace</button></form><Feedback error={error} notice="" /></main>;
 
   // No account could be read at all: say why, instead of an empty workspace (AV-0420-03).
   if (exact && !account && problem) return <AccountProblemPage kind={problem.kind} retrying={retrying} onRetry={() => void retryAccount()} onSignOut={() => signOut({ returnTo: window.location.origin })} />;
@@ -269,35 +324,66 @@ export function CloudApp() {
   const quotaBlock = blockedByQuota(account);
   const signOutHere = () => signOut({ returnTo: window.location.origin });
   const openAdmin = () => { setInAdmin(true); window.history.pushState({}, '', '/admin'); setPath('/admin'); };
-  const localFirst = account !== null && showsLocalFirst(account);
-  // The local-first shell has its own router: a hosted page moves to the same address there,
-  // which it serves from More (Account, Plan & billing, Add music) or its own music pages.
+  // Both shared shells have their own router: a hosted page moves to the same address there,
+  // which they serve from More (Account, Plan & billing, Add music) or their own pages.
   const goShell = (next: Page) => navigate(PATHS[next]);
-  const settingsPanel = account ? <div className="cloud-settings">{localFirst && <AccountStrip email={user.email} onSignOut={signOutHere} onStaffConsole={showsAdmin(account) ? openAdmin : undefined} />}{localFirst && lockedTo(account, 'rooms') && <RoomsCard account={account} go={goShell} />}{localFirst && isHostedAccount(account) && accountFlagOn('cloud.stored_media', account.features) && <ReconciliationPanel request={workspaceRequest} />}<AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} />{flagOn('devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{accountFlagOn('lucy', account.features) && accountFlagOn('account.lucy_settings', account.features) && <LucyCloudSettings request={workspaceRequest} features={account.features} />}{showsDeviceCheck(account.features) && <DeviceCheck />}{flagOn('cloud.venue_tablet') && <Suspense fallback={null}><VenuePosture workspaceId={account.workspace.id} places={{ localFirst: showsLocalFirst(account), devices: flagOn('devices'), rooms: flagOn('rooms'), library: showsLocalFirst(account) || pageShown(account, 'library') }} /></Suspense>}{(flagOn('cloud.local_first_labs') || account.experience?.local_first === true) && <LocalFirstLabs request={<T,>(path: string, init?: RequestInit) => api<T>(path, init, account.workspace.id)} onChanged={() => void refreshAccount()} />}{showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />}{flagOn('autopilot.venue_mode') && flagOn('autopilot.venue_policy') && <VenueSetup api={api} workspaceId={account.workspace.id} />}{exact && <AccountDanger busy={busy} onSignOutEverywhere={() => void signOutEverywhere()} onDelete={() => void deleteAccount(true)} />}</div> : null;
+  // the shared shells have no rail, so the account page says who is signed in and offers leaving
+  const framed = localFirst || hostedShell;
+  const settingsPanel = account ? <div className="cloud-settings">{framed && <AccountStrip email={user.email} onSignOut={signOutHere} onStaffConsole={showsAdmin(account) ? openAdmin : undefined} />}{framed && lockedTo(account, 'rooms') && <RoomsCard account={account} go={goShell} />}{localFirst && isHostedAccount(account) && accountFlagOn('cloud.stored_media', account.features) && <ReconciliationPanel request={workspaceRequest} />}<AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} />{flagOn('devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{accountFlagOn('lucy', account.features) && accountFlagOn('account.lucy_settings', account.features) && <LucyCloudSettings request={workspaceRequest} features={account.features} />}{showsDeviceCheck(account.features) && <DeviceCheck />}{flagOn('cloud.venue_tablet') && <Suspense fallback={null}><VenuePosture workspaceId={account.workspace.id} places={{ localFirst, devices: flagOn('devices'), rooms: flagOn('rooms'), library: localFirst || pageShown(account, 'library') }} /></Suspense>}{(flagOn('cloud.local_first_labs') || account.experience?.local_first === true) && <LocalFirstLabs request={<T,>(path: string, init?: RequestInit) => api<T>(path, init, account.workspace.id)} onChanged={() => void refreshAccount()} />}{showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />}{flagOn('autopilot.venue_mode') && flagOn('autopilot.venue_policy') && <VenueSetup api={api} workspaceId={account.workspace.id} />}{(exact || hostedShell) && <AccountDanger busy={busy('everywhere') || busy('delete')} onSignOutEverywhere={() => void signOutEverywhere()} onDelete={() => void deleteAccount()} />}</div> : null;
+  const billing = account && <Billing account={account} busy={busy('checkout') || busy('portal')} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} />;
+  const uploads = account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} perFile={flagOn(LIBRARY_STATES_FLAG)} />;
+  // The account places behind More, one drawing for both shared shells.
+  const morePanel = (id: MoreDestinationId): ReactNode => {
+    if (!account) return null;
+    switch (id) {
+      case 'account': return settingsPanel;
+      case 'billing': return billing;
+      case 'devices': return <DevicesPanel api={api} workspaceId={account.workspace.id} />;
+      case 'rooms': return <RoomPanel api={api} workspaceId={account.workspace.id} locked={account.feature_locks.rooms} votesOn={flagOn('rooms.votes')} displayOn={flagOn('rooms.display')} playHereOn={flagOn('devices')} freshOnly={account.features['rooms.nickname_confirm'] === true} />;
+      case 'uploads': return uploads;
+      case 'workspace': return null;
+    }
+  };
+  // The hosted frame's account notices, in a shared shell's banner slot (one source for every frame).
+  const shellNotices = account && <>
+    {account.user.suspended && (exact ? <SuspendedPanel go={goShell} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>)}
+    {problem && <AccountProblemNote kind={problem.kind} onRetry={() => void retryAccount()} />}
+    <OverQuotaBanner account={account} go={goShell} />
+    {stream === 'polling' && <p className="cloud-stream-note" role="status">Live updates are paused on this network, so this page checks for changes every few seconds.</p>}
+  </>;
+  const shellFeedback = <Feedback error={problem && error === problem.message ? '' : error} notice={notice} />;
 
   // ADR-0462/0463: an account with the local-first experience, and `cloud.local_first` on, gets the
   // shared shell. With either off, everything below renders exactly as before.
   if (account && localFirst) {
-    // The hosted frame's account notices, in the shell's banner slot (one source for both shells).
-    const shellNotices = <>
-      {account.user.suspended && (exact ? <SuspendedPanel go={goShell} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>)}
-      {problem && <AccountProblemNote kind={problem.kind} onRetry={() => void retryAccount()} />}
-      <OverQuotaBanner account={account} go={goShell} />
-      {stream === 'polling' && <p className="cloud-stream-note" role="status">Live updates are paused on this network, so this page checks for changes every few seconds.</p>}
-    </>;
-    const morePanel = (id: MoreDestinationId): ReactNode => {
-      switch (id) {
-        case 'account': return settingsPanel;
-        case 'billing': return <Billing account={account} busy={busy} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} />;
-        case 'devices': return <DevicesPanel api={api} workspaceId={account.workspace.id} />;
-        case 'rooms': return <RoomPanel api={api} workspaceId={account.workspace.id} locked={account.feature_locks.rooms} votesOn={flagOn('rooms.votes')} displayOn={flagOn('rooms.display')} playHereOn={flagOn('devices')} freshOnly={account.features['rooms.nickname_confirm'] === true} />;
-        case 'uploads': return <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} perFile={flagOn(LIBRARY_STATES_FLAG)} />;
-        case 'workspace': return null;
+    return (
+      <Suspense fallback={<main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p>Opening SelectaDJ…</p></main>}>
+        <LocalFirstShell api={api} account={account} more={morePanel} notices={shellNotices} feedback={shellFeedback} />
+      </Suspense>
+    );
+  }
+
+  // `cloud.hosted_shell`: the same hosted pages, inside the shared shell. Off, the legacy rail below.
+  if (account && hostedShell) {
+    const hostedPage = (view: HostedView): ReactNode => {
+      if (typeof view === 'object') return 'more' in view ? morePanel(view.more) : <NotFound path={view.missing} go={goShell} />;
+      switch (view) {
+        case 'home': return <><div className="cloud-top"><p className="cloud-eyebrow">{account.workspace.name}</p><span className="cloud-plan-chip">{planName(account)} plan</span></div><Overview account={account} go={goShell} /></>;
+        case 'listen': return <CloudListen api={api} account={account} />;
+        case 'mixes': return <MakeCloudMix api={api} account={account} />;
+        case 'library': return <LibraryPanel api={api} workspaceId={account.workspace.id} setError={setError} refreshAccount={refreshAccount} go={goShell} reload={libraryVersion} truthful={flagOn(LIBRARY_STATES_FLAG)} account={account} />;
       }
     };
     return (
-      <Suspense fallback={<main className="cloud-runtime-message"><span className="cloud-mark">S</span><p>Opening SelectaDJ…</p></main>}>
-        <LocalFirstShell api={api} account={account} more={morePanel} notices={shellNotices} feedback={<Feedback error={problem && error === problem.message ? '' : error} notice={notice} />} />
+      <Suspense fallback={<main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p>Opening SelectaDJ…</p></main>}>
+        <HostedShell
+          account={account}
+          page={hostedPage}
+          notices={<>{shellNotices}{shellFeedback}</>}
+          dock={singleAudioOwner(account) ? (view) => <CloudTransportDock api={api} account={account} page={dockPage(view)} reload={libraryVersion} /> : undefined}
+          footer={<footer className="cloud-footer">SelectaDJ Cloud · Your originals remain private to your workspace.<CloudCredit /></footer>}
+        />
+        {deleteDialog}
       </Suspense>
     );
   }
@@ -318,11 +404,11 @@ export function CloudApp() {
           ))}
         </nav>
         <div className="cloud-rail-bottom">{showsAdmin(account) && <button onClick={openAdmin}>Staff console</button>}<span>{user.email}</span>{exact && <button onClick={signOutHere}>Sign out</button>}
-          <button onClick={() => void signOutEverywhere()} disabled={busy}>Sign out everywhere</button>
-          <button className="cloud-delete-account" onClick={() => void deleteAccount()} disabled={busy}>Delete account</button></div>
+          <Action run={signOutEverywhere} disabled={busy('everywhere')}>Sign out everywhere</Action>
+          <button className="cloud-delete-account" onClick={() => setConfirmingDelete(true)} disabled={busy('delete')}>Delete account</button></div>
       </aside>
       <main className="cloud-main">
-        <header className="cloud-top"><div><p className="cloud-eyebrow">{account?.workspace.name ?? 'YOUR WORKSPACE'}</p><h1 ref={titleRef} tabIndex={exact ? -1 : undefined}>{notFound ? 'Page not found' : TITLES[shown]}</h1></div><span className="cloud-plan-chip">{account ? planName(account) : 'Free'} plan</span></header>
+        <header className="cloud-top"><div><p className={account ? 'cloud-eyebrow' : 'cloud-eyebrow cloud-caps'}>{account?.workspace.name ?? 'Your workspace'}</p><h1 ref={titleRef} tabIndex={exact ? -1 : undefined}>{notFound ? 'Page not found' : TITLES[shown]}</h1></div><span className="cloud-plan-chip">{account ? planName(account) : 'Free'} plan</span></header>
         {account?.user.suspended && (exact ? <SuspendedPanel go={choosePage} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>)}
         {exact && account && problem && <AccountProblemNote kind={problem.kind} onRetry={() => void retryAccount()} />}
         <OverQuotaBanner account={account} go={choosePage} />
@@ -330,15 +416,21 @@ export function CloudApp() {
         <Feedback error={exact && problem && error === problem.message ? '' : error} notice={notice} />
         {notFound && <NotFound path={path} go={choosePage} />}
         {account && singleAudioOwner(account) && <CloudTransportDock api={api} account={account} page={shown} reload={libraryVersion} />}
-        {view === 'home' && account && <Overview account={account} go={choosePage} />}
-        {view === 'listen' && account && <CloudListen api={api} account={account} />}
-        {view === 'listen' && account && <MakeCloudMix api={api} account={account} />}
-        {view === 'library' && account && <LibraryPanel api={api} workspaceId={account.workspace.id} setError={setError} refreshAccount={refreshAccount} go={choosePage} reload={libraryVersion} truthful={flagOn(LIBRARY_STATES_FLAG)} account={account} />}
-        {view === 'uploads' && account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} perFile={flagOn(LIBRARY_STATES_FLAG)} />}
-        {view === 'billing' && account && <Billing account={account} busy={busy} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} />}
-        {view === 'settings' && settingsPanel}
+        {/* each page in its own Section: one that fails to draw says so, and the rail stays */}
+        <Section key={view ?? 'not-found'} name={notFound ? 'This page' : TITLES[shown]}>
+          {view === 'home' && account && <Overview account={account} go={choosePage} />}
+          {view === 'listen' && account && <CloudListen api={api} account={account} />}
+          {view === 'listen' && account && <MakeCloudMix api={api} account={account} />}
+          {view === 'library' && account && <LibraryPanel api={api} workspaceId={account.workspace.id} setError={setError} refreshAccount={refreshAccount} go={choosePage} reload={libraryVersion} truthful={flagOn(LIBRARY_STATES_FLAG)} account={account} />}
+          {view === 'uploads' && uploads}
+          {view === 'billing' && billing}
+          {view === 'settings' && settingsPanel}
+        </Section>
         <footer className="cloud-footer">SelectaDJ Cloud · Your originals remain private to your workspace.<CloudCredit /></footer>
       </main>
+      <Toaster />
+      <LiveRegion />
+      {deleteDialog}
     </div>
   );
 }
@@ -347,7 +439,7 @@ export function CloudApp() {
 export function AccountStrip({ email, onSignOut, onStaffConsole }: { email: string; onSignOut: () => void; onStaffConsole?: () => void }) {
   return (
     <section className="cloud-card cloud-account-strip" aria-label="Signed in as">
-      <p className="cloud-eyebrow">SIGNED IN AS</p>
+      <p className="cloud-eyebrow cloud-caps">Signed in as</p>
       <p className="cloud-account-email">{email}</p>
       <div className="cloud-actions">
         <button className="quiet" onClick={onSignOut}>Sign out</button>
@@ -364,7 +456,7 @@ export function CloudCredit() {
 
 function BlockedAccount({ code, distinct, onSignOut }: { code: BlockedCode; distinct: boolean; onSignOut: () => void }) {
   const message = blockedMessage(code, distinct);
-  return <main className="cloud-runtime-message" role="alert"><span className="cloud-mark">S</span><h1>{message.title}</h1><p>{message.detail}</p>
+  return <main className="cloud-runtime-message" role="alert"><BrandMark className="cloud-mark" /><h1>{message.title}</h1><p>{message.detail}</p>
     {code === 'verified_email_required' && <button onClick={() => window.location.reload()}>I’ve verified my email</button>}
     <button onClick={onSignOut}>{code === 'session_revoked' || code === 'token_invalid' || code === 'token_expired' ? 'Sign in again' : 'Sign out'}</button>
   </main>;
@@ -378,8 +470,8 @@ function Feedback({ error, notice }: { error: string; notice: string }) {
 function Overview({ account, go }: { account: Account; go: (page: Page) => void }) {
   const uploads = flagOn('cloud.uploads');
   return <>
-    {uploads && <section className="cloud-hero"><div><p className="cloud-eyebrow">MADE FOR YOUR NEXT SET</p><h2>Your library starts here.</h2><p>Add your tracks and SelectaDJ will prepare them for your next mix.</p><button className="primary" onClick={() => go('uploads')}>Add music</button></div><div className="cloud-hero-art" aria-hidden="true"><span>♪</span><i /><b /><em /></div></section>}
-    <div className="cloud-cards"><StorageMeter account={account} /><section className="cloud-card"><p className="cloud-eyebrow">CURRENT PLAN</p><h2>{planName(account)}</h2><p>Storage and processing limits are managed with your plan.</p><button onClick={() => go('billing')}>Manage plan</button></section>{uploads && <section className="cloud-card"><p className="cloud-eyebrow">YOUR MUSIC</p><h2>Library and uploads</h2><p>Browse private files or add tracks to your workspace.</p><button onClick={() => go('library')}>Open library</button><button onClick={() => go('uploads')}>Upload tracks</button></section>}</div>
+    {uploads && <section className="cloud-hero"><div><p className="cloud-eyebrow cloud-caps">Made for your next set</p><h2>Your library starts here.</h2><p>Add your tracks and SelectaDJ will prepare them for your next mix.</p><button className="primary" onClick={() => go('uploads')}>Add music</button></div><div className="cloud-hero-art" aria-hidden="true"><span>♪</span><i /><b /><em /></div></section>}
+    <div className="cloud-cards"><StorageMeter account={account} /><section className="cloud-card"><p className="cloud-eyebrow cloud-caps">Current plan</p><h2>{planName(account)}</h2><p>Storage and processing limits are managed with your plan.</p><button onClick={() => go('billing')}>Manage plan</button></section>{uploads && <section className="cloud-card"><p className="cloud-eyebrow cloud-caps">Your music</p><h2>Library and uploads</h2><p>Browse private files or add tracks to your workspace.</p><button onClick={() => go('library')}>Open library</button><button onClick={() => go('uploads')}>Upload tracks</button></section>}</div>
     <RoomsCard account={account} go={go} />
   </>;
 }
@@ -390,8 +482,8 @@ function RoomsCard({ account, go }: { account: Account; go: (page: Page) => void
   const plan = lockedTo(account, 'rooms');
   if (plan) {
     const name = `${plan[0]?.toUpperCase() ?? ''}${plan.slice(1)}`;
-    return <section className="cloud-card cloud-locked"><div><p className="cloud-eyebrow">{name.toUpperCase()} FEATURE</p><h2>Host a request room</h2><p>Share a QR code so guests can add requests to your set. Rooms are part of {name}.</p></div><button onClick={() => go('billing')}>Explore {name}</button></section>;
+    return <section className="cloud-card cloud-locked"><div><p className="cloud-eyebrow cloud-caps">{name} feature</p><h2>Host a request room</h2><p>Share a QR code so guests can add requests to your set. Rooms are part of {name}.</p></div><button onClick={() => go('billing')}>Explore {name}</button></section>;
   }
   if (!flagOn('rooms')) return null;
-  return <section className="cloud-card cloud-locked"><div><p className="cloud-eyebrow">ROOMS</p><h2>Host a request room</h2><p>Share a QR code so guests can add requests to your set.</p></div><button onClick={() => go('listen')}>Open a room</button></section>;
+  return <section className="cloud-card cloud-locked"><div><p className="cloud-eyebrow cloud-caps">Rooms</p><h2>Host a request room</h2><p>Share a QR code so guests can add requests to your set.</p></div><button onClick={() => go('listen')}>Open a room</button></section>;
 }
