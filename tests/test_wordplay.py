@@ -557,7 +557,9 @@ def test_only_songs_that_can_play_together_get_a_blend(tmp_path):
 def test_music_decides_the_order_as_well_as_the_words(tmp_path):
     a = song_from_track(tmp_path, "a", make_track(bpm=120, bars=48, seed=1), camelot="8A")
     fits = song_from_track(tmp_path, "b", make_track(bpm=118, bars=48, seed=2), camelot="8A")
-    only_cut = song_from_track(tmp_path, "c", make_track(bpm=108, bars=48, seed=3), camelot="2A")
+    # Within a cut's tempo gap but too many keys away for a blend or a roll (rolls across four
+    # or more keys rated badly), so a word cut is the only way in.
+    only_cut = song_from_track(tmp_path, "c", make_track(bpm=114, bars=48, seed=3), camelot="2A")
     none = song_from_track(tmp_path, "d", make_track(bpm=88, bars=48, seed=4), camelot="2A")
     songs = {a.id: a, fits.id: fits, only_cut.id: only_cut, none.id: none}
     line = Line(30.0, 32.0, "text")

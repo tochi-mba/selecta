@@ -717,11 +717,13 @@ def test_stem_preference_steers_vocal_ride_availability_and_weight(tmp_path, mon
 def test_intertwined_stem_request_uses_the_shared_audited_seam_path(tmp_path, monkeypatch):
     from types import SimpleNamespace
 
+    from selecta.render.intertwine import _pair_that_fits
     from selecta.render.script import Curve
 
     a = _song(tmp_path, "intertwine-render-a", "First")
     b = _song(tmp_path, "intertwine-render-b", "Second")
-    exit_cue, entry_cue = a.exit_cues()[0], b.entry_cues()[0]
+    # The cues the real render would choose: one with 16 bars of room in both songs.
+    exit_cue, entry_cue = _pair_that_fits(a, b)
     a_index = a.beat_index_of_bar(exit_cue.bar - 8)
     b_index = b.beat_index_of_bar(entry_cue.bar)
     a_points = a.beats[a_index : a_index + 65]

@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import math
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, time, timedelta, tzinfo
 from types import MappingProxyType
 from typing import Any
@@ -29,6 +29,7 @@ from selecta.planner.choose import (
 )
 from selecta.planner.vibes import BY_KEY as VIBES_BY_KEY
 from selecta.session import Steering
+from selecta.styles import all_recipes
 
 # The values `session.steer` accepts. session.py keeps them inline, so they are mirrored here and
 # a test checks them against `steer` itself.
@@ -508,7 +509,12 @@ def boundary_seam(
             continue
         if allowed is None or name in allowed:
             return candidate
-    return fallback_candidate(a, b)
+    # The engine's own last resort is a cut, which a block boundary never allows; keep its cues
+    # and play the echo out instead.
+    last = fallback_candidate(a, b)
+    return replace(
+        last, recipe=all_recipes()[ECHO_OUT], reasons=("a new block never starts on a cut",)
+    )
 
 
 STAFF_ACTIONS = frozenset({"bigger", "calmer", "something_else"})
