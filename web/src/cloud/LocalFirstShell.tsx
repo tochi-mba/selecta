@@ -1,7 +1,7 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MixData, Request, Status } from '../api';
 import { setFlags, useFlags } from '../flags';
-import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, reportDeviceAvailability, deviceAvailabilitySnapshot, storageSpace, type LapsedWhy, type MediaResolver, type StorageSpace } from '../media';
+import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, reportDeviceAvailability, deviceAvailabilitySnapshot, type LapsedWhy, type MediaResolver } from '../media';
 import type { NowState } from '../player';
 import { BytesContext, noBytesHere, RequestContext } from '../requestContext';
 import { navigate, parseRoute, useLocationText } from '../router';
@@ -32,6 +32,7 @@ import { CutoverNotice } from './migration/CutoverNotice';
 import { OnboardingSpine } from './onboarding/OnboardingSpine';
 import { browserStorage, onboardingFinished, recordImportOutcome } from './onboarding/state';
 import { ImportChip } from './ImportChip';
+import { StorageCard } from './StorageCard';
 import { cancelImportSession, useImportSession } from './importSession';
 import { useServerFreeControls } from './serverFreeControls';
 
@@ -458,25 +459,16 @@ function SavedBrowserRecipes({ workspaceId, recipes, request, setMixData, refres
 
 /** More > This device: the music connected here and the storage it uses (workspace extras). */
 function ThisDevice({ openStore, children }: { openStore: () => Promise<MediaStore>; children: ReactNode }) {
-  const [space, setSpace] = useState<StorageSpace | null>(null);
   const [degraded, setDegraded] = useState(false);
   useEffect(() => {
     let live = true;
-    void storageSpace().then((found) => { if (live) setSpace(found); });
     void openStore().then((opened) => { if (live) setDegraded(opened.degraded); }).catch(() => undefined);
     return () => { live = false; };
   }, [openStore]);
-  const megabytes = (bytes?: number) => (bytes === undefined ? '?' : `${(bytes / 1_000_000).toFixed(1)} MB`);
   return (
     <main className="page" id="main">
       <h1 className="display small">This device</h1>
-      <section className="panel stack" aria-labelledby="this-device-storage">
-        <h2 id="this-device-storage">Browser storage</h2>
-        {space === null && <Skeleton lines={1} label="Checking this browser’s storage" />}
-        {space && !space.supported && <p>{space.reason}</p>}
-        {space?.supported && <p>{`SelectaDJ is using ${megabytes(space.usage)} of the ${megabytes(space.quota)} this browser allows.`} {space.persisted ? 'The browser has promised to keep it.' : 'The browser may clear it if the device runs short of space; your music files are never touched.'}</p>}
-        {degraded && <p role="note">This browser is not keeping SelectaDJ’s list of connected files, so you will need to connect them again next visit.</p>}
-      </section>
+      <StorageCard degraded={degraded} />
       {children}
     </main>
   );

@@ -39,6 +39,7 @@ import hashlib
 import io
 import itertools
 import json
+import mimetypes
 import os
 import sys
 import threading
@@ -86,6 +87,9 @@ from selecta.work import outbox  # noqa: E402
 
 # SELECTA_CLOUD_E2E_DIST names another build folder, so parallel runs never share one.
 DIST = ROOT / "web" / os.environ.get("SELECTA_CLOUD_E2E_DIST", "dist-cloud-e2e")
+# The install manifest and SVG icons keep their real types whatever the Windows registry says.
+mimetypes.add_type("application/manifest+json", ".webmanifest")
+mimetypes.add_type("image/svg+xml", ".svg")
 # The same site with the real AuthKit library, served at http://localhost:<port> for the sign-in
 # redirect test (e2e_cloud_authkit.py).
 DIST_AUTHKIT = DIST.with_name(DIST.name + "-authkit")

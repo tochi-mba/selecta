@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Icon, IconName } from '../../ui/Icon';
+import { InstallOffer } from '../InstallOffer';
 import type { AudioSession, WakeSentinel } from '../onboarding/deps';
 import type { OutputRoute } from '../onboarding/state';
 import { OUTPUT_ROUTES, ROUTE_CHECKS } from '../onboarding/steps';
@@ -240,6 +241,8 @@ function PowerStep({ posture, dispatch }: BodyProps) {
       {battery === 'charging' && <p role="status">The tablet says it is charging.</p>}
       {battery === 'on_battery' && <p className="cloud-inline-error" role="alert">The tablet says it is running on its battery. Plug it in.</p>}
       {battery === 'unknown' && <p className="cloud-hint">This browser does not say whether the tablet is charging, so SelectaDJ asks you.</p>}
+      {/* Installed, the tablet opens SelectaDJ as its own app and keeps its details (plan W5b). */}
+      <InstallOffer />
       <div className="cloud-actions">
         <button type="button" className="primary" onClick={() => dispatch({ type: 'power_confirmed' })}>It’s plugged in</button>
       </div>
