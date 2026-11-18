@@ -67,7 +67,7 @@ describe('onboarding spine progression (BF-0463-02)', () => {
     await user.click(screen.getByRole('button', { name: 'Check this device' }));
     expect(session.probe).toHaveBeenCalled();
 
-    await heading('Choose where the sound goes');
+    await heading('Check the sound output');
     await user.click(screen.getByRole('radio', { name: /A Bluetooth speaker/ }));
     await user.click(screen.getByRole('button', { name: 'Continue' }));
 
@@ -118,7 +118,7 @@ describe('onboarding back and restart', () => {
   it('goes back a step without undoing what was recorded, and skips a verify nobody did', async () => {
     const user = userEvent.setup();
     const { saved } = setup({ saved: { step: 'output', outcomes: { connect: 'skipped', verify: 'skipped', capability: 'done' } } });
-    await heading('Choose where the sound goes');
+    await heading('Check the sound output');
     await user.click(screen.getByRole('button', { name: 'Back' }));
     await heading('Check this device');
     expect(saved().outcomes.capability).toBe('done');
@@ -145,8 +145,8 @@ describe('onboarding back and restart', () => {
 describe('onboarding resume', () => {
   it('opens at the saved step for this account', async () => {
     setup({ saved: { step: 'output', outcomes: { connect: 'done', verify: 'done', capability: 'done' } } });
-    await heading('Choose where the sound goes');
-    expect(screen.getByRole('list', { name: 'Steps' }).querySelector('[aria-current="step"]')).toHaveTextContent('Choose where the sound goes');
+    await heading('Check the sound output');
+    expect(screen.getByRole('list', { name: 'Steps' }).querySelector('[aria-current="step"]')).toHaveTextContent('Check the sound output');
   });
 
   it('survives abandoning the tab part way', async () => {

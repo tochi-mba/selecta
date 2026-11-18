@@ -76,7 +76,7 @@ async function walkToConfirmed(page: Page) {
   await panel.getByRole('button', { name: 'Keep the screen on' }).click();
   await expect(panel.getByText(/browser agreed to keep the screen on/)).toBeVisible();
   await panel.getByRole('button', { name: 'Continue' }).click();
-  await panel.getByRole('radio', { name: /Whatever this device is set to/ }).check();
+  await panel.getByRole('radio', { name: /This device’s current output/ }).check();
   await panel.getByRole('button', { name: 'Continue' }).click();
   await panel.getByRole('button', { name: /Start sound/ }).click();
   await panel.getByRole('button', { name: /Play the check tone/ }).click();

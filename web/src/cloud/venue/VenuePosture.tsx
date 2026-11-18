@@ -125,7 +125,7 @@ export function VenuePosture({ workspaceId, places, deps: given }: {
 
   return (
     <section ref={section} id="venue" className="cloud-card venue-posture" aria-labelledby={titleId} onPointerDown={touched} onKeyDown={touched}>
-      <p className="cloud-eyebrow">VENUE TABLET</p>
+      <p className="cloud-eyebrow">Venue tablet</p>
       <h2 id={titleId} tabIndex={-1}>Play a venue from this tablet</h2>
       {unqualified ? <VenueFallback reason={reason} places={places} deepLinked={deepLinked} /> : (
         <>
@@ -271,7 +271,7 @@ function OutputChoice({ posture, dispatch }: BodyProps) {
   const [route, setRoute] = useState<OutputRoute | null>(posture.route ?? 'system');
   return (
     <>
-      <p>SelectaDJ uses the output the tablet has already selected. Keep the recommended default unless you want more specific troubleshooting tips; change the speaker itself in the tablet's sound settings.</p>
+      <p>SelectaDJ uses the output the tablet has already selected. Keep the recommended default unless you want more specific troubleshooting tips; change the speaker itself in the tablet’s sound settings.</p>
       <fieldset className="cloud-spine-routes">
         <legend>What sound output is this tablet using?</legend>
         {OUTPUT_ROUTES.map((option) => (

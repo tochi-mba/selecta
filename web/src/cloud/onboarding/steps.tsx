@@ -199,7 +199,7 @@ export const OUTPUT_ROUTES: { id: OutputRoute; label: string; about: string }[] 
   { id: 'headphones', label: 'Headphones, or a cable to a speaker', about: '3.5 mm or USB-C. Plug it in before you start sound.' },
   { id: 'bluetooth', label: 'A Bluetooth speaker', about: 'Pair it in this device’s settings first. If it drops, SelectaDJ stops calling the sound confirmed until you check again.' },
   { id: 'hdmi_dock', label: 'HDMI or a dock', about: 'The sound goes wherever the screen or dock sends it, so check that end isn’t muted.' },
-  { id: 'system', label: "This device's current output (recommended)", about: 'SelectaDJ uses the output already selected in your device settings. It will not change that setting.' },
+  { id: 'system', label: 'This device’s current output (recommended)', about: 'SelectaDJ uses the output already selected in your device settings. It will not change that setting.' },
 ];
 
 export function OutputStep({ state, onChange }: StepProps) {
