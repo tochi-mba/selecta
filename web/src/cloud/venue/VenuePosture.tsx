@@ -268,10 +268,10 @@ function WakeStep({ posture, dispatch, askWake }: BodyProps) {
 
 function OutputChoice({ posture, dispatch }: BodyProps) {
   const id = useId();
-  const [route, setRoute] = useState<OutputRoute | null>(posture.route);
+  const [route, setRoute] = useState<OutputRoute | null>(posture.route ?? 'system');
   return (
     <>
-      <p>SelectaDJ plays through whatever output the tablet uses. Set it up in the tablet’s own settings, then say what you chose so the sound check can help if nothing comes out.</p>
+      <p>SelectaDJ uses the output the tablet has already selected. Keep the recommended default unless you want more specific troubleshooting tips; change the speaker itself in the tablet's sound settings.</p>
       <fieldset className="cloud-spine-routes">
         <legend>Where should the sound go?</legend>
         {OUTPUT_ROUTES.map((option) => (
@@ -282,7 +282,7 @@ function OutputChoice({ posture, dispatch }: BodyProps) {
         ))}
       </fieldset>
       <div className="cloud-actions">
-        <button type="button" className="primary" disabled={!route} onClick={() => dispatch({ type: 'route_chosen', route })}>Continue</button>
+        <button type="button" className="primary" onClick={() => dispatch({ type: 'route_chosen', route })}>Continue</button>
         <button type="button" className="cloud-spine-skip" onClick={() => dispatch({ type: 'route_chosen', route: null })}>Use whatever is set</button>
       </div>
     </>
