@@ -42,7 +42,7 @@ export function MixesEmpty({ connected, checking }: { connected: number; checkin
         {checking ? (
           <>
             <h2 id="mixes-empty-title">Still checking your music</h2>
-            <p>{`${checking.checked} of ${checking.total ?? 'your'} songs checked so far. Mixes open as soon as two songs can play here; you can keep using SelectaDJ while it finishes.`}</p>
+            <p role="status" aria-live="polite" aria-atomic="true">{`${checking.checked} of ${checking.total ?? 'your'} songs checked so far. Mixes open as soon as two songs can play here; you can keep using SelectaDJ while it finishes.`}</p>
             <PageLink to="/library" className="button">See your library</PageLink>
           </>
         ) : connected === 0 ? (
