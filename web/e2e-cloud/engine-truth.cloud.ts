@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { build } from 'vite';
 import { limiterProcessorOptions } from '../src/engine/limiter';
 import { LIMITER_PROCESSOR, LIMITER_PROCESSOR_SOURCE } from '../src/engine/worklet/limiterProcessor';
 import { PROBE_PROCESSOR, PROBE_PROCESSOR_SOURCE } from '../src/engine/worklet/probeProcessor';
@@ -170,4 +171,90 @@ test('the shipped probe and limiter worklets genuinely process audio, with recor
     body: JSON.stringify(recorded, null, 2),
     contentType: 'application/json',
   });
+});
+
+// BF-0466-03: the application's own capability probe is the subject. engine/probe.ts (the
+// exact module the browser player gates on, via e2e-cloud/engineProbeEntry.ts) is bundled and
+// run in the page on each engine against its real AudioContext and AudioWorkletNode. A mocked
+// or stubbed audio stack fails here: the constructors must be the browser's native ones, the
+// probe must answer ok with real processed blocks at the context's own rate, and the same probe
+// over a processor that never reports must refuse with its recorded reason.
+
+let probeBundle = '';
+
+test.beforeAll(async () => {
+  const built = await build({
+    configFile: false,
+    logLevel: 'silent',
+    build: {
+      write: false,
+      minify: false,
+      lib: { entry: new URL('./engineProbeEntry.ts', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'), formats: ['iife'], name: 'SelectaProbe' },
+    },
+  });
+  const outputs = (Array.isArray(built) ? built : [built]) as { output: { code?: string }[] }[];
+  probeBundle = outputs[0].output.map((chunk) => chunk.code ?? '').join('\n');
+  expect(probeBundle).toContain('probe-report');
+});
+
+type AppProbe = {
+  native: { context: boolean; worklet: boolean };
+  result: { ok: boolean; sampleRate?: number; schedulingMisses?: number; blocks?: number; reason?: string };
+  contextRate: number;
+  stubbed: { ok: boolean; reason?: string };
+};
+
+test('the application probe (engine/probe.ts) passes on this engine with real worklet processing', async ({ page, request }, testInfo) => {
+  await signedIn(page, request, listener('engine-probe'));
+  await page.addScriptTag({ content: probeBundle });
+  await page.evaluate(() => {
+    const button = document.createElement('button');
+    button.id = 'engine-probe-start';
+    button.textContent = 'start';
+    button.addEventListener('click', () => {
+      const scope = window as unknown as { probeContext?: AudioContext; silentContext?: AudioContext };
+      scope.probeContext = new AudioContext();
+      void scope.probeContext.resume();
+      scope.silentContext = new AudioContext();
+      void scope.silentContext.resume();
+    });
+    document.body.append(button);
+  });
+  await page.click('#engine-probe-start');
+
+  const probed = await page.evaluate(async (name): Promise<AppProbe> => {
+    type Probe = { probeCapability: (context: AudioContext, options?: { waitMs?: number }) => Promise<AppProbe['result']> };
+    const scope = window as unknown as { probeContext: AudioContext; silentContext: AudioContext; SelectaProbe: Probe };
+    const native = (value: unknown) => typeof value === 'function' && /\[native code\]/.test(Function.prototype.toString.call(value));
+    const context = scope.probeContext;
+    const result = await scope.SelectaProbe.probeCapability(context, { waitMs: 5000 });
+    const contextRate = context.sampleRate;
+    await context.close();
+    // Tripwire: the same probe over a processor that runs but never reports must refuse, with
+    // its reason, so a pass above can only come from the real processor really processing.
+    const silent = scope.silentContext;
+    const stub = URL.createObjectURL(new Blob([`registerProcessor(${JSON.stringify(name)}, class extends AudioWorkletProcessor { process() { return true; } });`], { type: 'text/javascript' }));
+    const stubbed = await scope.SelectaProbe.probeCapability(silent, { waitMs: 600, moduleUrl: stub } as never);
+    URL.revokeObjectURL(stub);
+    await silent.close();
+    return { native: { context: native(AudioContext), worklet: native(AudioWorkletNode) }, result, contextRate, stubbed };
+  }, PROBE_PROCESSOR);
+
+  expect(probed.native).toEqual({ context: true, worklet: true });
+  expect(probed.result.ok, probed.result.reason).toBe(true);
+  expect(probed.result.blocks).toBeGreaterThanOrEqual(32);
+  expect(probed.result.sampleRate).toBe(probed.contextRate);
+  expect(probed.stubbed.ok).toBe(false);
+  expect(probed.stubbed.reason).toMatch(/never processed audio/);
+
+  const recorded = {
+    engine: testInfo.project.name,
+    subject: 'web/src/engine/probe.ts probeCapability',
+    ok: probed.result.ok,
+    sampleRate: probed.result.sampleRate,
+    blocks: probed.result.blocks,
+    schedulingMisses: probed.result.schedulingMisses,
+  };
+  testInfo.annotations.push({ type: 'engine-truth-probe', description: JSON.stringify(recorded) });
+  await testInfo.attach('engine-truth-probe.json', { body: JSON.stringify(recorded, null, 2), contentType: 'application/json' });
 });
