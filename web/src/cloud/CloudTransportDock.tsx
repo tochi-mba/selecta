@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PlayingBar } from '../devices/PlayingBar';
 import type { Speaker } from '../devices/usePlaybackDevice';
 import { Account, Api, featureOn, Page } from './api';
-import { catalogueSource } from './cloudCatalogue';
+import { assetCatalogue, catalogueSource } from './cloudCatalogue';
 import { claimFocus, clearNotice, releaseFocus, shareLibraryPlayer, useTransport } from './cloudTransport';
 import { recoveringSpeaker } from './recoveringSpeaker';
 import { useCloudPlayer } from './useCloudPlayer';
@@ -41,7 +41,9 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
     releaseFocus('device');
   }, [workspaceId]);
 
-  const library = useMemo(() => catalogueSource(api, workspaceId), [api, workspaceId]);
+  // Stored media off (ADR-0456 reads grant): nothing to play from, and no read of /assets.
+  const storedMedia = featureOn(account, 'cloud.stored_media');
+  const library = useMemo(() => catalogueSource(api, workspaceId, assetCatalogue(api, workspaceId, storedMedia)), [api, workspaceId, storedMedia]);
   useEffect(() => { if (reload) library.catalogue.refresh(); }, [library, reload]);
   const speakerFor = useCallback((audio: HTMLAudioElement, source: (index: number) => Promise<string | null>): Speaker => {
     const made = recoveringSpeaker(audio, source, { onProblem: setDeviceProblem, songName: library.name });

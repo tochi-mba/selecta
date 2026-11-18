@@ -30,10 +30,12 @@ function seamWords(seam: MixSeam) {
 
 export function MakeCloudMix({ api, account }: { api: Api; account: Pick<Account, 'features' | 'workspace'> }) {
   if (!featureOn(account, MIX_CREATE_FLAG)) return null;
-  return <MixMaker api={api} workspaceId={account.workspace.id} />;
+  // Songs come from stored media (ADR-0456): with `cloud.stored_media` off there is no library
+  // to read, so the maker never asks the server for one.
+  return <MixMaker api={api} workspaceId={account.workspace.id} stored={featureOn(account, 'cloud.stored_media')} uploads={featureOn(account, 'cloud.uploads')} />;
 }
 
-function MixMaker({ api, workspaceId }: { api: Api; workspaceId: string }) {
+function MixMaker({ api, workspaceId, stored, uploads }: { api: Api; workspaceId: string; stored: boolean; uploads: boolean }) {
   const [mixes, setMixes] = useState<MixSummary[] | null>(null);
   const [library, setLibrary] = useState<Asset[]>([]);
   const [picked, setPicked] = useState<string[]>([]);
@@ -48,7 +50,7 @@ function MixMaker({ api, workspaceId }: { api: Api; workspaceId: string }) {
     try {
       const [listed, songs] = await Promise.all([
         api<{ mixes: MixSummary[] }>('/cloud-mixes', {}, workspaceId),
-        api<{ assets: Asset[] }>('/assets?limit=100', {}, workspaceId),
+        stored ? api<{ assets: Asset[] }>('/assets?limit=100', {}, workspaceId) : Promise.resolve({ assets: [] as Asset[] }),
       ]);
       setMixes(listed.mixes);
       setLibrary(songs.assets);
@@ -56,7 +58,7 @@ function MixMaker({ api, workspaceId }: { api: Api; workspaceId: string }) {
     } catch (failure) {
       setError(problem(failure, 'Your Cloud mixes could not be loaded.'));
     }
-  }, [api, workspaceId]);
+  }, [api, workspaceId, stored]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -134,7 +136,7 @@ function MixMaker({ api, workspaceId }: { api: Api; workspaceId: string }) {
             </li>
           ))}
         </ul>
-        {library.length === 0 && mixes !== null && <p>Upload songs to your Cloud Library to make a mix.</p>}
+        {library.length === 0 && mixes !== null && <p>{uploads ? 'Upload songs to your Cloud Library to make a mix.' : 'Songs in your Cloud Library can be made into a mix.'}</p>}
         <button className="primary" type="submit" disabled={busy || picked.length < 2}>Make mix</button>
       </form>
 

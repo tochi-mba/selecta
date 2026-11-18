@@ -30,7 +30,9 @@ export type AssetCatalogue = {
   refresh: () => void;
 };
 
-export function assetCatalogue(api: Api, workspaceId: string): AssetCatalogue {
+/** `readable` is `cloud.stored_media`: with it off the catalogue is empty and never asks the
+ * server, so a page with the dock on it makes no request to a route that feature owns. */
+export function assetCatalogue(api: Api, workspaceId: string, readable = true): AssetCatalogue {
   let loaded: Promise<CatalogueAsset[]> | null = null;
   let known: CatalogueAsset[] | null = null;
   const pinned = new Map<number, CatalogueAsset>();
@@ -39,6 +41,10 @@ export function assetCatalogue(api: Api, workspaceId: string): AssetCatalogue {
     const newestFirst: CatalogueAsset[] = [];
     const seen = new Set<string>();
     let cursor: string | null = null;
+    if (!readable) {
+      known = [];
+      return known;
+    }
     do {
       const query = new URLSearchParams({ limit: String(CATALOGUE_PAGE_SIZE) });
       if (cursor) query.set('cursor', cursor);

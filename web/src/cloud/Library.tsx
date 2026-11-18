@@ -1,5 +1,6 @@
 // Hosted mode only (ADR-0462): local-first accounts get the shared views and shell player instead.
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useFlag } from '../flags';
 import { Account, Api, Asset, bytes, Page } from './api';
 import { INITIAL_LIBRARY, isBusy, libraryReducer, overviewOf, songWords } from './libraryState';
 import { unfinishedUploads } from './uploadParts';
@@ -33,6 +34,9 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
   const [busyId, setBusyId] = useState('');
   const [state, dispatch] = useReducer(libraryReducer, INITIAL_LIBRARY);
   const [unfinished, setUnfinished] = useState<number | null>(null);
+  // Uploading needs `cloud.uploads` (and through it the hosted media grant, ADR-0456): with it
+  // off, every way to the upload page and the unfinished-uploads read are gone, the list stays.
+  const uploads = useFlag('cloud.uploads');
   const audioRef = useRef<HTMLAudioElement>(null);
   const own = useCloudPlayer({ api, workspaceId, audio: audioRef, setError });
   // One Cloud player (ADR-0419): with the dock mounted, songs play there and keep playing
@@ -57,11 +61,11 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
   }, [api, setError, workspaceId, truthful]);
   useEffect(() => { void load(); }, [load, reload]);
   useEffect(() => {
-    if (!truthful) return;
+    if (!truthful || !uploads) return;
     let live = true;
     unfinishedUploads(api, workspaceId).then((sessions) => { if (live) setUnfinished(sessions.length); }, () => { if (live) setUnfinished(null); });
     return () => { live = false; };
-  }, [api, workspaceId, truthful, reload]);
+  }, [api, workspaceId, truthful, reload, uploads]);
 
   const remove = async (asset: Asset) => {
     if (!window.confirm(`Remove ${asset.name} from your library?`)) return;
@@ -93,7 +97,7 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
       {nextCursor && <button onClick={() => void load(nextCursor, true)} disabled={loading}>{loading ? 'Loading…' : 'Load more'}</button>}
     </>
   );
-  const empty = <div className="cloud-card"><h2>Your library is empty</h2><p>Start by uploading tracks from your device.</p><button className="primary" onClick={() => go('uploads')}>Add tracks</button></div>;
+  const empty = <div className="cloud-card"><h2>Your library is empty</h2>{uploads ? <><p>Start by uploading tracks from your device.</p><button className="primary" onClick={() => go('uploads')}>Add tracks</button></> : <p>No songs are stored in this workspace.</p>}</div>;
   const body = !truthful
     ? (loading && assets.length === 0 ? <p>Loading your library…</p> : assets.length === 0 ? empty : list)
     : state.status === 'loading' ? <p role="status">Loading your library…</p>
@@ -103,7 +107,7 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
         <p>{state.message} Your songs are safe; only the list didn’t arrive.</p>
         <button className="primary" onClick={() => void load()} disabled={state.retrying}>{state.retrying ? 'Trying again…' : 'Try again'}</button>
       </div>)
-    : state.status === 'empty' ? (unfinished ? (
+    : state.status === 'empty' ? (uploads && unfinished ? (
       <div className="cloud-card"><h2>Your first songs are on the way</h2><p>{unfinished} {unfinished === 1 ? 'upload hasn’t' : 'uploads haven’t'} finished yet. Choose the same file again on Add music to carry on.</p><button className="primary" onClick={() => go('uploads')}>Carry on uploading</button></div>
     ) : empty)
     : <>{state.stale && <p className="cloud-feedback" role="status">This list may be out of date: {state.stale} <button onClick={() => void load()}>Try again</button></p>}{list}</>;
@@ -111,13 +115,13 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
     <section className="cloud-library">
       <div className="cloud-library-heading">
         <div><p className="cloud-eyebrow">PRIVATE TO THIS WORKSPACE</p><p>Listen from any song and the rest of the list follows, with the next song loaded ahead. Removing songs frees space at once.</p></div>
-        <div><button onClick={() => void load()} disabled={busy}>Refresh</button><button className="primary" onClick={() => go('uploads')}>Upload tracks</button></div>
+        <div><button onClick={() => void load()} disabled={busy}>Refresh</button>{uploads && <button className="primary" onClick={() => go('uploads')}>Upload tracks</button>}</div>
       </div>
       {truthful && (
         <section className="cloud-library-overview" aria-label="Library overview">
           <div><span className="cloud-eyebrow">SONGS</span><strong data-testid="library-songs">{songWords(overview)}</strong></div>
           {storage !== null && limit !== null && <div><span className="cloud-eyebrow">STORAGE</span><strong data-testid="library-storage">{bytes(storage)} of {bytes(limit)}</strong></div>}
-          <div><span className="cloud-eyebrow">UNFINISHED UPLOADS</span><strong data-testid="library-unfinished">{overview.processing === null ? 'Not known' : overview.processing}</strong>{overview.processing ? <button onClick={() => go('uploads')}>Carry on</button> : null}</div>
+          {uploads && <div><span className="cloud-eyebrow">UNFINISHED UPLOADS</span><strong data-testid="library-unfinished">{overview.processing === null ? 'Not known' : overview.processing}</strong>{overview.processing ? <button onClick={() => go('uploads')}>Carry on</button> : null}</div>}
         </section>
       )}
       {track && !shared && (
