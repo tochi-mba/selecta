@@ -374,7 +374,7 @@ test('hosted media is an account grant: revoking it hides uploads but keeps stor
   await switchOff(request, user, ['cloud.hosted_media']);
   await expect(menu.getByRole('button', { name: 'Add music' })).toHaveCount(0, { timeout: 10_000 });
   await page.goto('/library');
-  await expect(page.getByRole('heading', { name: 'Your library' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your library', exact: true })).toBeVisible();
   await expect(page.getByText(/upload tracks|add music/i)).toHaveCount(0);
 
   await switchOff(request, user, []);
