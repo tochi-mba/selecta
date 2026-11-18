@@ -1,3 +1,4 @@
+import { relativeTime, userLocale } from '../ui/format';
 // The admin console's side of the admin API: an admin session, then requests that carry it.
 //
 // The session id lives in memory only. Losing it (a reload) means entering the console again,
@@ -56,12 +57,10 @@ export function post(body: unknown): RequestInit {
   return { method: 'POST', body: JSON.stringify(body) };
 }
 
-/** "12 s ago", "4 min ago", "2 h ago": how old a number is, in words. */
+/** How old a number is, in the reader's language: "just now", "4 minutes ago", "2 hours ago". */
 export function age(seconds: number | null) {
   if (seconds === null) return 'never measured';
-  if (seconds < 60) return `${Math.round(seconds)} s ago`;
-  if (seconds < 3600) return `${Math.round(seconds / 60)} min ago`;
-  return `${Math.round(seconds / 3600)} h ago`;
+  return relativeTime(seconds);
 }
 
 /** Decimal sizes as people read them: "18.4 GB", "820.0 MB". */
@@ -72,5 +71,5 @@ export function bytes(value: number) {
 
 export function when(epoch: number | null | undefined) {
   if (!epoch) return '';
-  return new Date(epoch * 1000).toLocaleString();
+  return new Date(epoch * 1000).toLocaleString(userLocale());
 }

@@ -20,8 +20,8 @@ describe('Lucy settings in Cloud', () => {
     render(<LucyCloudSettings request={fakeRequest()} />);
     expect(await screen.findByRole('heading', { name: 'Lucy Standard' })).toBeInTheDocument();
     expect(screen.getByText('120 of 440 turns this month')).toBeInTheDocument();
-    expect(screen.getByText(/resets 1 Dec/)).toBeInTheDocument();
-    expect(screen.getByRole('progressbar', { name: 'Lucy turns this month' })).toHaveAttribute('aria-valuenow', '27');
+    expect(screen.getByText(/resets (1 Dec|Dec 1)/)).toBeInTheDocument();
+    expect(screen.getByRole('meter', { name: 'Lucy turns this month' })).toHaveAttribute('aria-valuenow', '27');
     for (const hidden of [/who does the planning/i, /API key/i, /spending limit/i, /most rounds/i, /most steps/i, /most seconds/i, /I agree to send/i]) {
       expect(screen.queryByText(hidden)).toBeNull();
     }

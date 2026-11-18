@@ -1,4 +1,5 @@
 import { accountFlagOn } from '../flags';
+import { Meter as Bar } from '../ui/Meter';
 import { Account, Allowance, bytes, isOverQuota, resetWords } from './api';
 
 // The usage meters on Plan & billing (docs/saas/11-ui-ux.md §11.1): storage used of the limit,
@@ -17,7 +18,7 @@ function Meter({ label, used, limit, words, reset, warn }: { label: string; used
       <p className="cloud-eyebrow">{label.toUpperCase()}</p>
       <h2>{words}</h2>
       {limit !== null
-        ? <div className="cloud-meter" role="progressbar" aria-label={label} aria-valuenow={Math.round(percent)} aria-valuemin={0} aria-valuemax={100} aria-valuetext={words}><i style={{ width: `${percent}%` }} /></div>
+        ? <Bar kind="meter" label={label} showLabel={false} value={Math.round(percent)} max={100} valueText={words} warnAt={0.8} dangerAt={1} tone={warn ? 'danger' : undefined} />
         : <p className="cloud-meter-free">Fair use: counted, never cut off.</p>}
       {reset && <p className="cloud-meter-reset">{reset}</p>}
     </section>

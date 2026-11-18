@@ -5,6 +5,7 @@ import { Skeleton } from '../ui/controls';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { countOf, Truncate } from '../ui/format';
 import { CloudError, type Account, type Api, type Asset } from './api';
+import { EmptyState } from './LocalFirstEmpty';
 import './makeCloudMix.css';
 
 // Make and edit a mix from Cloud Library songs (ADR-0418, flag `cloud.mix_create`). Each save is
@@ -176,7 +177,7 @@ function MixMaker({ api, workspaceId, stored, uploads }: { api: Api; workspaceId
             </li>
           ))}
         </ul>
-        {library.length === 0 && mixes !== null && <p>{uploads ? 'Upload songs to your Cloud Library to make a mix.' : 'Songs in your Cloud Library can be made into a mix.'}</p>}
+        {library.length === 0 && mixes !== null && <EmptyState title="Mixes start with your music">{uploads ? 'Upload songs to your Cloud Library, then pick them here in the order you want.' : 'Songs in your Cloud Library can be made into a mix.'}</EmptyState>}
         <button className="primary" type="submit" disabled={busy || picked.length < 2}>Make mix</button>
       </form>
 

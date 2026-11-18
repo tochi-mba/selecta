@@ -3,7 +3,8 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useFlag } from '../flags';
 import { Skeleton } from '../ui/controls';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { Truncate } from '../ui/format';
+import { countOf, Truncate } from '../ui/format';
+import { EmptyState } from './LocalFirstEmpty';
 import { Account, Api, Asset, bytes, Page } from './api';
 import { INITIAL_LIBRARY, isBusy, libraryReducer, overviewOf, songWords } from './libraryState';
 import { unfinishedUploads } from './uploadParts';
@@ -141,7 +142,9 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
       {nextCursor && <button onClick={() => void load(nextCursor, true)} disabled={loading}>{loading ? 'Loading…' : 'Load more'}</button>}
     </>
   );
-  const empty = <div className="cloud-card"><h2>Your library is empty</h2>{uploads ? <><p>Start by uploading tracks from your device.</p><button className="primary" onClick={() => go('uploads')}>Add tracks</button></> : <p>No songs are stored in this workspace.</p>}</div>;
+  const empty = uploads
+    ? <EmptyState title="Your library is empty" actions={<button className="primary" onClick={() => go('uploads')}>Add tracks</button>}>Upload tracks from your device to begin. They stay private to this workspace.</EmptyState>
+    : <EmptyState title="Your library is empty">No songs are stored in this workspace.</EmptyState>;
   const body = !truthful
     ? (loading && assets.length === 0 ? <Skeleton variant="library" lines={4} label="Loading your library" /> : assets.length === 0 ? empty : list)
     : state.status === 'loading' ? <Skeleton variant="library" lines={4} label="Loading your library" />
@@ -152,7 +155,7 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
         <button className="primary" onClick={() => void load()} disabled={state.retrying}>{state.retrying ? 'Trying again…' : 'Try again'}</button>
       </div>)
     : state.status === 'empty' ? (uploads && unfinished ? (
-      <div className="cloud-card"><h2>Your first songs are on the way</h2><p>{unfinished} {unfinished === 1 ? 'upload hasn’t' : 'uploads haven’t'} finished yet. Choose the same file again on Add music to carry on.</p><button className="primary" onClick={() => go('uploads')}>Carry on uploading</button></div>
+      <EmptyState title="Your first songs are on the way" actions={<button className="primary" onClick={() => go('uploads')}>Carry on uploading</button>}>{`${countOf(unfinished, 'upload')} ${unfinished === 1 ? 'hasn’t' : 'haven’t'} finished yet. Choose the same file again on Add music to carry on.`}</EmptyState>
     ) : empty)
     : <>{state.stale && <p className="cloud-feedback" role="status">This list may be out of date: {state.stale} <button onClick={() => void load()}>Try again</button></p>}{list}</>;
   return (

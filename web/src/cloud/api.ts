@@ -1,4 +1,5 @@
 import { accountFlagOn, type FlagId } from '../flags';
+import { userLocale } from '../ui/format';
 // What the Cloud site knows about the API: the shapes it answers with, how a refusal is read,
 // and the few formatting helpers every Cloud page shares.
 
@@ -111,7 +112,7 @@ export function bytes(value: number) {
   return `${(value / (unit === 'GB' ? 1_000_000_000 : 1_000_000)).toFixed(1)} ${unit}`;
 }
 
-/** When an allowance resets, in the listener's own words: "Resets 11 Nov", or with the time for
+/** When an allowance resets, in the listener's own language: "Resets 11 Nov" (or "Dec 1"), or with the time for
  * a daily one. `timeZone` is the account's, so the date matches the server's period. */
 export function resetWords(epochSeconds: number, period: 'day' | 'month', timeZone?: string) {
   const when = new Date(epochSeconds * 1000);
@@ -119,9 +120,9 @@ export function resetWords(epochSeconds: number, period: 'day' | 'month', timeZo
     ? { hour: 'numeric', minute: '2-digit', weekday: 'short' }
     : { day: 'numeric', month: 'short' };
   try {
-    return `Resets ${when.toLocaleString('en-GB', { ...options, timeZone })}`;
+    return `Resets ${when.toLocaleString(userLocale(), { ...options, timeZone })}`;
   } catch {
-    return `Resets ${when.toLocaleString('en-GB', options)}`;
+    return `Resets ${when.toLocaleString(userLocale(), options)}`;
   }
 }
 

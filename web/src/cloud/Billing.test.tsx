@@ -17,10 +17,10 @@ describe('the meters', () => {
     expect(screen.getByRole('region', { name: 'Analysis today' })).toHaveTextContent('12 of 150 songs');
     expect(screen.getByRole('region', { name: 'Analysis today' })).toHaveTextContent(/Resets .*Wed/);
     expect(screen.getByRole('region', { name: 'Lucy turns this month' })).toHaveTextContent('9 of 40 turns');
-    expect(screen.getByRole('region', { name: 'Lucy turns this month' })).toHaveTextContent('Resets 1 Dec');
+    expect(screen.getByRole('region', { name: 'Lucy turns this month' })).toHaveTextContent(/Resets (1 Dec|Dec 1)/);
     expect(screen.getByRole('region', { name: 'Exports this month' })).toHaveTextContent('1 of 3 exports');
     expect(screen.getByRole('region', { name: 'Exports this month' })).toHaveTextContent('kept 7 days');
-    const bars = screen.getAllByRole('progressbar');
+    const bars = screen.getAllByRole('meter');
     expect(bars.map((bar) => bar.getAttribute('aria-valuenow'))).toEqual(['42', '8', '23', '33']);
   });
 
@@ -30,7 +30,7 @@ describe('the meters', () => {
     render(<Meters account={account} />);
     const exports = screen.getByRole('region', { name: 'Exports this month' });
     expect(exports).toHaveTextContent('1 exports');
-    expect(within(exports).queryByRole('progressbar')).toBeNull();
+    expect(within(exports).queryByRole('meter')).toBeNull();
     expect(exports).toHaveTextContent('Fair use');
   });
 

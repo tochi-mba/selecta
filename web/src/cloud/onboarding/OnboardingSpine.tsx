@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { clockTime, playbackStatusText } from '../../copy';
 import { flagOn, useFlag } from '../../flags';
 import { rememberFolder, type DirectoryHandleLike, type ImportSource } from '../../media';
+import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { Icon, IconName } from '../../ui/Icon';
 import { cancelImportSession, startImportSession, useImportSession } from '../importSession';
 import { AudioSession, defaultDeps, SpineDeps } from './deps';
@@ -42,6 +43,7 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
   // The page around the spine owns the one h1 ("Welcome to SelectaDJ"); each step is an h2.
   const heading = useRef<HTMLHeadingElement>(null);
   const firstRender = useRef(true);
+  const [restarting, setRestarting] = useState(false);
 
   // With `cloud.progressive_import` on, the import belongs to the session and outlives this
   // spine (the shell cancels it when the shell itself goes); off, leaving the spine stops it.
@@ -116,8 +118,18 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
         <p role="status">{status}</p>
         <div className="cloud-actions">
           <button type="button" className="primary" onClick={onDone}>Open SelectaDJ</button>
-          <button type="button" onClick={() => change(FRESH)}>Go through it again</button>
+          <button type="button" onClick={() => setRestarting(true)}>Go through it again</button>
         </div>
+        {restarting && (
+          <ConfirmDialog
+            title="Go through set-up again?"
+            body="The steps start over from the beginning. Your music and library stay exactly as they are, and the sound check needs someone to hear the tone again."
+            confirmLabel="Start again"
+            cancelLabel="Keep my set-up"
+            onConfirm={() => change(FRESH)}
+            onClose={() => setRestarting(false)}
+          />
+        )}
       </section>
     );
   }

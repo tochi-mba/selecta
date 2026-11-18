@@ -3,6 +3,9 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import type { PhaseName, Phases } from '../lucy/types';
 import { PHASES } from './LucySettings';
 import '../styles/lucy.css';
+import { Skeleton } from '../ui/controls';
+import { userLocale } from '../ui/format';
+import { Meter } from '../ui/Meter';
 
 /** Lucy's settings in Cloud mode (docs/saas/09-lucy-ai-gateway.md §9.5). Only the person's own
  * choices are here: Use Lucy, the phases, and what may be shared with Selecta's AI provider. The
@@ -22,7 +25,7 @@ type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
 
 function resetDate(epoch: number | null) {
   if (!epoch) return '';
-  return new Date(epoch * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return new Date(epoch * 1000).toLocaleDateString(userLocale(), { day: 'numeric', month: 'short' });
 }
 
 export function LucyTurnsMeter({ usage }: { usage: CloudLucy['usage'] }) {
@@ -31,7 +34,7 @@ export function LucyTurnsMeter({ usage }: { usage: CloudLucy['usage'] }) {
   return (
     <div className="lucy-cloud-meter">
       <p><b>{words}</b>{usage.resets_at ? <span className="soft"> · resets {resetDate(usage.resets_at)}</span> : null}</p>
-      {usage.limit !== null && <div className="cloud-meter" role="progressbar" aria-label="Lucy turns this month" aria-valuenow={Math.round(percent)} aria-valuemin={0} aria-valuemax={100} aria-valuetext={words}><i style={{ width: `${percent}%` }} /></div>}
+      {usage.limit !== null && <Meter kind="meter" label="Lucy turns this month" showLabel={false} value={Math.round(percent)} max={100} valueText={words} warnAt={0.8} dangerAt={1} />}
       {usage.fair_use && <p className="hint">Quick turns on your plan are fair use: counted, never cut off.</p>}
     </div>
   );
@@ -59,7 +62,7 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
     return () => { live = false; };
   }, []);
 
-  if (!status || !phases) return <section className="cloud-card lucy-settings" aria-busy={!problem || undefined}><h2>Lucy</h2>{problem ? <p className="warn" role="alert">{problem}</p> : <p>Loading Lucy’s settings…</p>}</section>;
+  if (!status || !phases) return <section className="cloud-card lucy-settings" aria-busy={!problem || undefined}><h2>Lucy</h2>{problem ? <p className="warn" role="alert">{problem}</p> : <Skeleton variant="rows" lines={3} label="Loading Lucy’s settings" />}</section>;
 
   const shown = PHASES.filter((phase) => ([] as FlagId[]).concat(phase.flag ?? []).every((flag) => accountFlagOn(flag, features)));
   const save = async (event: FormEvent) => {

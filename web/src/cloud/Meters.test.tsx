@@ -17,7 +17,7 @@ describe('storage meter by storage_mode', () => {
     const storage = screen.getByRole('region', { name: 'Storage' });
     expect(storage).toHaveTextContent('No hosted storage');
     expect(storage).toHaveTextContent('Your music stays on your own devices');
-    expect(within(storage).queryByRole('progressbar')).toBeNull();
+    expect(within(storage).queryByRole('meter')).toBeNull();
     expect(storage).not.toHaveClass('warn');
     expect(document.body.textContent).not.toMatch(/0 B of 0 B|over your plan|0 B free/);
   });
@@ -33,7 +33,7 @@ describe('storage meter by storage_mode', () => {
     render(<Meters account={withMode('hosted')} />);
     const storage = screen.getByRole('region', { name: 'Storage' });
     expect(storage).toHaveTextContent('4.2 GB of 10.0 GB');
-    expect(within(storage).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '42');
+    expect(within(storage).getByRole('meter')).toHaveAttribute('aria-valuenow', '42');
   });
 
   it('treats a server that does not say as hosted, and still warns when over quota', () => {

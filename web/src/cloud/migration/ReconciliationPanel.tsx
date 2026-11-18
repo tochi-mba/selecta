@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Status } from '../../ui/controls';
+import { Skeleton, Status } from '../../ui/controls';
+import { Truncate } from '../../ui/format';
+import { EmptyState } from '../LocalFirstEmpty';
 
 /** The migration reconciliation (ADR-0465 BF-0465-02): the member's hosted uploads side by side
  * with the songs added on their devices, matched by content hash and nothing else (ADR-0458:
@@ -118,7 +120,7 @@ export function ReconciliationPanel({ request }: { request: Request }) {
       <p className="cloud-eyebrow">YOUR HOSTED AND DEVICE MUSIC</p>
       <h2 id="cloud-reconcile-title">How your libraries line up</h2>
       <p>SelectaDJ compares the audio itself, not the names. This only looks: it never deletes, moves or copies anything, and your hosted library stays as it is.</p>
-      {loaded.state === 'loading' && <p role="status" aria-busy="true">Comparing your libraries…</p>}
+      {loaded.state === 'loading' && <Skeleton variant="rows" lines={3} label="Comparing your libraries" />}
       {loaded.state === 'failed' && (
         <div role="alert">
           <p>SelectaDJ couldn’t load both libraries just now. Nothing was changed.</p>
@@ -137,8 +139,9 @@ function Report({ rows, onRefresh }: { rows: ReconciledRow[]; onRefresh: () => v
   if (!rows.length) {
     return (
       <>
-        <p role="status">There’s nothing to compare yet: no hosted uploads and no songs added on a device.</p>
-        <button type="button" onClick={onRefresh}>Check again</button>
+        <EmptyState title="Nothing to compare yet" actions={<button type="button" onClick={onRefresh}>Check again</button>}>
+          There’s nothing to compare yet: no hosted uploads and no songs added on a device.
+        </EmptyState>
       </>
     );
   }
@@ -165,7 +168,7 @@ function Group({ title, rows }: { title: string; rows: ReconciledRow[] }) {
           const name = row.kind === 'device_only' ? `${row.song.title} · ${row.song.artist}` : row.asset.name;
           return (
             <li key={key}>
-              <span className="cloud-reconcile-name">{name}</span>
+              <Truncate className="cloud-reconcile-name" text={name} />
               {row.kind === 'matched' && <Status kind="ready">Matched</Status>}
               {row.kind === 'hosted_only' && <Status kind="unavailable">Hosted only</Status>}
               {row.kind === 'device_only' && <Status kind="planned">On your device</Status>}

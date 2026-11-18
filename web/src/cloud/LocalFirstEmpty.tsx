@@ -1,3 +1,4 @@
+import { ReactNode, useId } from 'react';
 import { flagOn } from '../flags';
 import { PageLink } from '../shell/PageLink';
 
@@ -8,6 +9,19 @@ import { PageLink } from '../shell/PageLink';
  * the reason is shown and every way forward is a working link, never a loop back to a check it
  * cannot pass.
  */
+
+/** The one shape of an empty place, shared by the local-first and hosted surfaces: a heading that
+ * says what the place will hold, a line on how it fills, and the action that fills it. */
+export function EmptyState({ title, children, actions, className = '' }: { title: string; children: ReactNode; actions?: ReactNode; className?: string }) {
+  const id = useId();
+  return (
+    <section className={`empty-state ${className}`.trim()} aria-labelledby={id}>
+      <h2 id={id}>{title}</h2>
+      {typeof children === 'string' ? <p>{children}</p> : children}
+      {actions && <div className="row wrap">{actions}</div>}
+    </section>
+  );
+}
 
 export function LibraryEmpty() {
   return (
