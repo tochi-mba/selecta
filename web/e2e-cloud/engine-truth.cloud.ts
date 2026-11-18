@@ -44,8 +44,18 @@ type Probed = {
   ceilingLinear: number;
 };
 
+/** Playwright's Windows WebKit build ships without Web Audio at all (no AudioContext), so
+ * WebKit engine truth can only run where its build has it (Linux, as CI runs it). That one case
+ * is skipped, with the reason recorded; anywhere else a missing AudioContext fails the gate. */
+async function skipWithoutWebAudio(page: import('@playwright/test').Page, engine: string) {
+  const present = await page.evaluate(() => typeof AudioContext !== 'undefined');
+  test.skip(!present && engine === 'webkit' && process.platform === 'win32', 'Playwright WebKit on Windows has no Web Audio; WebKit engine truth runs on Linux (CI).');
+  expect(present, `${engine} has no AudioContext`).toBe(true);
+}
+
 test('the shipped probe and limiter worklets genuinely process audio, with recorded numbers', async ({ page, request }, testInfo) => {
   await signedIn(page, request, listener('engine-truth'));
+  await skipWithoutWebAudio(page, testInfo.project.name);
 
   // Make the context inside a real click, so every engine's autoplay rule is met honestly.
   await page.evaluate(() => {
@@ -206,6 +216,7 @@ type AppProbe = {
 
 test('the application probe (engine/probe.ts) passes on this engine with real worklet processing', async ({ page, request }, testInfo) => {
   await signedIn(page, request, listener('engine-probe'));
+  await skipWithoutWebAudio(page, testInfo.project.name);
   await page.addScriptTag({ content: probeBundle });
   await page.evaluate(() => {
     const button = document.createElement('button');

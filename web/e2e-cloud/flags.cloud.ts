@@ -399,7 +399,7 @@ test('hosted media is an account grant: revoking it hides uploads but keeps stor
 // `cloud.local_export` have no Cloud UI of their own yet; their marks are their own names and the
 // player refusal, and the sweep proves only that none appears.
 
-type Mark = { text?: RegExp; role?: { role: 'navigation' | 'heading' | 'button' | 'link'; name: string } };
+type Mark = { text?: RegExp; role?: { role: 'navigation' | 'heading' | 'button' | 'link' | 'region'; name: string } };
 
 /** Each BF flag: the `cloud.*` pages it must name in the registry, and its marks on them. */
 const BF: Record<string, { surfaces: string[]; marks: Mark[]; ships: boolean }> = {
@@ -411,6 +411,9 @@ const BF: Record<string, { surfaces: string[]; marks: Mark[]; ships: boolean }> 
   'cloud.browser_dsp': { surfaces: ['cloud.listen'], ships: false, marks: [{ text: /Browser DSP/ }] },
   'cloud.venue_tablet': { surfaces: ['cloud.listen', 'cloud.settings'], ships: false, marks: [{ text: /Venue tablet/ }] },
   'cloud.local_export': { surfaces: ['cloud.listen'], ships: false, marks: [{ text: /Local export/ }] },
+  // Its on-state (join, leave, the closed refusal) is local-first-labs.labs.ts, on a server whose
+  // build turns it on (playwright.labs.config.ts).
+  'cloud.local_first_labs': { surfaces: ['cloud.settings'], ships: false, marks: [{ role: { role: 'region', name: 'Labs: browser-first Cloud' } }, { role: { role: 'button', name: 'Join Labs' } }] },
 };
 const BF_IDS = Object.keys(BF) as FlagId[];
 const BF_SEED = { songs: 1, local_songs: 2 };
