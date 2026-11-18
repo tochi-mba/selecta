@@ -44,6 +44,9 @@ test('a paired display shows the room and survives a new code', async ({ browser
 
   // A new code: the old one stops working, and the paired screen shows the new QR by itself.
   await host.getByRole('button', { name: 'Make a new code' }).click();
+  const ask = host.getByRole('alertdialog', { name: 'Make a new code?' });
+  await expect(ask).toContainText('The old QR code stops working the moment the new one exists.');
+  await ask.getByRole('button', { name: 'Make a new code', exact: true }).click();
   await expect(host.locator('.room-said')).toContainText('New code made');
   const fresh = (await host.getByTestId('room-code').textContent()) ?? '';
   const freshPath = `/r/${fresh.replace('-', '')}`;

@@ -75,6 +75,9 @@ test('the eleventh device signs out the oldest with a notice, and sign-out works
   await expect(page.getByTestId('device-row')).toHaveCount(10);
   await expect(page.getByTestId('device-row').filter({ hasText: 'Old device 0' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Sign out Old device 1' }).click();
+  const ask = page.getByRole('alertdialog', { name: 'Forget this device?' });
+  await expect(ask).toContainText('It can be paired again any time.');
+  await ask.getByRole('button', { name: 'Forget this device', exact: true }).click();
   await expect(page.getByText('Old device 1 was signed out.')).toBeVisible();
   await expect(page.getByTestId('device-row')).toHaveCount(9);
   await context.close();

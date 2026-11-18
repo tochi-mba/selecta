@@ -48,6 +48,12 @@ test('a guest joins, requests, votes and follows their requests on a slow phone'
   await expect(vote).toHaveAttribute('aria-pressed', 'false');
   await vote.click();
   await expect(second.page.getByRole('button', { name: 'Remove your vote for Song 12 - Artist 5' })).toHaveAttribute('aria-pressed', 'true', { timeout: 30_000 });
+  // W3: the next poll redraws the list in place, so the guest's focus stays on the button.
+  const unvote = second.page.getByRole('button', { name: 'Remove your vote for Song 12 - Artist 5' });
+  await unvote.focus();
+  await second.page.waitForResponse((response) => /^\/api\/guest\/rooms\/[^/]+$/.test(new URL(response.url()).pathname), { timeout: 30_000 });
+  await second.page.waitForTimeout(500);
+  await expect(unvote).toBeFocused();
   await second.page.getByLabel("Search the host's songs").fill('Song 12');
   await second.page.getByRole('button', { name: 'Request Song 12 - Artist 5' }).click();
   await expect(second.page.getByRole('status')).toContainText(/already|vote/, { timeout: 30_000 });
