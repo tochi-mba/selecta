@@ -39,6 +39,8 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.cutover-notice.<account>` | local | `web/src/cloud/migration/CutoverNotice.tsx` | That this account dismissed the hosted-media cutover notice on this browser (Cloud, ADR-0465) | Cloud |
 | `selecta.media-profile.<workspace>` | local | `web/src/cloud/ConnectMusic.tsx` | The workspace's chosen media profile (local-first or hosted), so the shell draws the right home (Cloud, ADR-0463) | Cloud |
 | `selecta.onboarding.<workspace>` | local | `web/src/cloud/onboarding/state.ts` | How far local-first Cloud onboarding got, so an interrupted step resumes (Cloud, ADR-0463) | Cloud |
+| `selecta.venue.last-heard.<workspace>` | local | `web/src/cloud/venue/deps.ts` | When a person last confirmed hearing the venue check tone, shown only as history and never trusted as a current check (Cloud, ADR-0460) | Cloud |
+| `selecta.venue.record.<workspace>` | local | `web/src/cloud/venue/deps.ts` | The newest capability record measured on this device, filed under its full tuple (Cloud, ADR-0460) | Cloud |
 | `selecta-cloud-dev:refresh` | local | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The local identity service's refresh token, so a reload signs back in; removed on sign-out or a failed refresh | Cloud (local dev stack) |
 | `selecta-cloud-dev:login` | session | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The PKCE verifier, CSRF state and return path of a sign-in in flight; removed when the code comes back | Cloud (local dev stack) |
 
