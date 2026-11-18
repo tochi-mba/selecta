@@ -95,11 +95,11 @@ function savedView(): ListenView {
   }
 }
 
-const LYRIC_WORD = /^[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)?$/u;
+const LYRIC_WORD = /^[\p{L}\p{N}]+(?:[''][\p{L}\p{N}]+)?$/u;
 
 function highlightedLine(text: string, activeWord: number) {
   let word = 0;
-  return text.split(/([\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)?)/gu).map((part, index) => {
+  return text.split(/([\p{L}\p{N}]+(?:[''][\p{L}\p{N}]+)?)/gu).map((part, index) => {
     if (!LYRIC_WORD.test(part)) return part;
     const current = word === activeWord;
     word += 1;
@@ -198,7 +198,7 @@ function TransitionCountdown({
         <div className="handoff-title"><span className="eyebrow">Transition in progress</span><b>{nextTitle}</b></div>
         {currentTitle && <p className="handoff-pair" dir="auto"><span>From <b>{currentTitle}</b></span><span>Into <b>{nextTitle}</b></span></p>}
         {switchAt !== undefined && switchAt > 0 && <div className="handoff-progress"><i style={{ width: `${progress * 100}%` }} /></div>}
-        {phrase && <p className="handoff-phrase" dir="auto">On the shared words “{phrase}”</p>}
+        {phrase && <p className="handoff-phrase" dir="auto">On the shared words "{phrase}"</p>}
         <span className="handoff-caption">The next song is entering</span>
       </section>
     );
@@ -207,7 +207,7 @@ function TransitionCountdown({
     return <section className="handoff pending" aria-label="Time to the next transition">
       <span className="eyebrow">Next transition</span>
       <b>{clock(Math.max(0, seamAt - time))} until the hand-off</b>
-      <span>{nextTitle} · Beat grid unavailable, so time is shown in minutes and seconds.</span>
+      <span>{nextTitle} � Beat grid unavailable, so time is shown in minutes and seconds.</span>
     </section>;
   }
   const countdown = transitionCount(detail, time, seamAt);
@@ -235,7 +235,7 @@ function TransitionCountdown({
         <i className="countdown-end" />
       </div>
       <div className="countdown-meta">
-        {countdown.aligned && <span>Bar {countdown.barNumber} · </span>}
+        {countdown.aligned && <span>Bar {countdown.barNumber} � </span>}
         <span>Beat {countdown.beatInBar} / {beatsPerBar}</span>
         <div className="beat-pips" aria-hidden="true">
           {Array.from({ length: beatsPerBar }, (_, index) => <i className={index + 1 === countdown.beatInBar ? 'on' : undefined} key={index} />)}
@@ -418,11 +418,11 @@ export function MusicVisualizer({ player, active, stage, intensity, spectrumShap
 function noLyricsWords(status: string | null | undefined): string {
   switch (status) {
     case 'instrumental': return 'Instrumental';
-    case 'plain': return 'Lyrics for this song aren’t timed, so they can’t follow along.';
-    case 'failed': return 'Looking up lyrics for this song didn’t work. SelectaDJ will try again later.';
-    case 'synced': return 'The timed lyrics for this song couldn’t be read.';
+    case 'plain': return 'Lyrics for this song aren't timed, so they can't follow along.';
+    case 'failed': return 'Looking up lyrics for this song didn't work. SelectaDJ will try again later.';
+    case 'synced': return 'The timed lyrics for this song couldn't be read.';
     case null:
-    case undefined: return 'Lyrics haven’t been looked up yet.';
+    case undefined: return 'Lyrics haven't been looked up yet.';
     default: return 'No lyrics found for this song.';
   }
 }
@@ -497,13 +497,13 @@ function WhyThisTransition({ from, into, names }: { from?: ViewProps['mix'][numb
   const seam = into.seam;
   if (!seam) return null;
   const state = seam.state;
-  const tempo = from?.bpm && into.bpm ? `${Math.round(from.bpm)} → ${Math.round(into.bpm)} BPM` : null;
-  const keys = from?.key && into.key ? `${from.key} → ${into.key}` : null;
+  const tempo = from?.bpm && into.bpm ? `${Math.round(from.bpm)}  ${Math.round(into.bpm)} BPM` : null;
+  const keys = from?.key && into.key ? `${from.key}  ${into.key}` : null;
   return (
     <details className="why">
       <summary>Why this transition?</summary>
       {state.why && <p>{state.why}</p>}
-      <p className="hint">{[tempo, keys].filter(Boolean).join(' · ')}</p>
+      <p className="hint">{[tempo, keys].filter(Boolean).join(' � ')}</p>
       {!!state.tried?.length && (
         <>
           <p className="hint">Also tried:</p>
@@ -512,7 +512,7 @@ function WhyThisTransition({ from, into, names }: { from?: ViewProps['mix'][numb
       )}
       {!!state.checks?.length && (
         <>
-          <p className="hint">What was measured on the finished audio. It can’t tell you how it sounds. Only you can:</p>
+          <p className="hint">What was measured on the finished audio. It can't tell you how it sounds. Only you can:</p>
           <ul className="audit">
             {state.checks.map((check) => <li key={check.name}><Status kind={check.passed ? 'ready' : 'warning'}>{check.text}</Status></li>)}
           </ul>
@@ -532,15 +532,15 @@ function TransitionTruth({ seam, ready, names }: { seam: ViewProps['mix'][number
     <div className="transition-truth">
       <p><Status kind={facts.kind}>{facts.words}</Status><TermHint term="transition" /></p>
       {rendered && facts.asked && state?.label && facts.asked !== state.label && <p className="hint">You asked for {facts.asked}. What will play is {state.label}.</p>}
-      {!rendered && state?.status !== 'failed' && <p className="hint">Planned: {facts.asked ?? 'SelectaDJ’s choice'}. It hasn’t been made yet, so what plays can still change.<TermHint term="planned" /></p>}
-      {!ready && !rendered && <p className="hint">If it isn’t ready in time, this song plays on and the next one fades in, so the music doesn’t stop.</p>}
-      {state?.status === 'failed' && <p className="hint">If it can’t be made, SelectaDJ falls back to its own pick. You can choose another in Edit.</p>}
+      {!rendered && state?.status !== 'failed' && <p className="hint">Planned: {facts.asked ?? 'SelectaDJ's choice'}. It hasn't been made yet, so what plays can still change.<TermHint term="planned" /></p>}
+      {!ready && !rendered && <p className="hint">If it isn't ready in time, this song plays on and the next one fades in, so the music doesn't stop.</p>}
+      {state?.status === 'failed' && <p className="hint">If it can't be made, SelectaDJ falls back to its own pick. You can choose another in Edit.</p>}
     </div>
   );
 }
 
 export function Now(props: ViewProps) {
-  const { mix, mixName, now, player, setView, refreshMix, setMixData, notify, stage, stageFallback, toggleStage, status, openRequests, request } = props;
+  const { mix, mixName, now, player, setView, refreshMix, setMixData, notify, stage, stageFallback, toggleStage, status, openRequests, request, analysisAvailable, visualizerAvailable } = props;
   // ADR-0462: the song detail read and the rating/swap writes go through the injected request.
   const { get, post } = useApi(request);
   const requests = useContext(RequestsContext);
@@ -599,7 +599,14 @@ export function Now(props: ViewProps) {
   };
 
   useEffect(() => {
-    if (!item) return;
+    // Browser-first Cloud has catalogue metadata and playback, but no server-side song analysis
+    // endpoint. Don't request `/songs/{id}` there: the adapter correctly refuses that route, and
+    // treating this expected capability gap as a load error produces a permanent warning on Listen.
+    if (!item || analysisAvailable === false) {
+      setDetail(null);
+      setDetailFailed(false);
+      return;
+    }
     let live = true;
     setDetail(null);
     setDetailFailed(false);
@@ -607,7 +614,7 @@ export function Now(props: ViewProps) {
     return () => {
       live = false;
     };
-  }, [item?.song_id, detailAttempt]);
+  }, [item?.song_id, detailAttempt, analysisAvailable]);
 
   useEffect(() => setRated(''), [now.lastSeamKey]);
 
@@ -674,7 +681,7 @@ export function Now(props: ViewProps) {
       : now.inSeam
         ? `${SEAM_LABEL}, mixing into ${entering?.title ?? 'the next song'}`
         : now.phase === 'paused'
-          ? `Paused · ${mixName}`
+          ? `Paused � ${mixName}`
           : mixName;
   const shown = detail && detail.id === item?.song_id ? detail : null;
   const waiting = waitingRequestCount(requests?.requests);
@@ -682,14 +689,14 @@ export function Now(props: ViewProps) {
   const showChanged = changed && changed.id === next?.song_id ? changed : null;
   const on = useFlags();
   const keys = on('app.shortcuts');
-  const hasLyrics = on('listen.lyrics');
+  const hasLyrics = analysisAvailable !== false && on('listen.lyrics');
   const lyricFocus = view.lyrics && hasLyrics;
-  const spectrum = view.spectrum && on('listen.visualizers');
-  const timing = view.timing && on('listen.beat_countdown');
+  const spectrum = visualizerAvailable !== false && view.spectrum && on('listen.visualizers');
+  const timing = analysisAvailable !== false && view.timing && on('listen.beat_countdown');
   const editing = on('editor');
   // the display choices there are, so the row of them closes up around any that aren't
-  const toggles = [hasLyrics && 'lyrics', on('listen.visualizers') && 'spectrum', on('listen.beat_countdown') && 'timing'].filter(Boolean);
-  const display = toggles.length > 0 || on('listen.visualizers') || on('listen.stage');
+  const toggles = [hasLyrics && 'lyrics', visualizerAvailable !== false && on('listen.visualizers') && 'spectrum', analysisAvailable !== false && on('listen.beat_countdown') && 'timing'].filter(Boolean);
+  const display = toggles.length > 0 || (visualizerAvailable !== false && on('listen.visualizers')) || on('listen.stage');
   const thumbs = on('ratings') && !!now.lastSeamKey && !rated;
   const steering = !!next && on('listen.steering');
   const why = !!next && on('listen.why_transition');
@@ -736,9 +743,9 @@ export function Now(props: ViewProps) {
           )}
 
           {shown && !stage && <Strip detail={shown} time={now.songTime} seamAt={now.seamAt} seekBlocked={now.inSeam} onSeek={(seconds) => void player.seek(seconds)} />}
-          {!shown && item && !detailFailed && !stage && <StripPlaceholder />}
-          {(on('listen.visualizers') && view.intensity !== 'quiet' && (stage || (spectrum && !lyricFocus))) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} intensity={view.intensity} spectrumShape={view.spectrumShape} detail={shown} />}
-          {detailFailed && !shown && <Problem retry={() => setDetailAttempt((attempt) => attempt + 1)}>{hasLyrics ? 'Couldn’t load lyrics and song details.' : 'Couldn’t load this song’s details.'} Playback controls are still available.</Problem>}
+          {!shown && item && analysisAvailable !== false && !detailFailed && !stage && <StripPlaceholder />}
+          {(visualizerAvailable !== false && on('listen.visualizers') && view.intensity !== 'quiet' && (stage || (spectrum && !lyricFocus))) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} intensity={view.intensity} spectrumShape={view.spectrumShape} detail={shown} />}
+          {detailFailed && !shown && <Problem retry={() => setDetailAttempt((attempt) => attempt + 1)}>{hasLyrics ? 'Couldn't load lyrics and song details.' : 'Couldn't load this song's details.'} Playback controls are still available.</Problem>}
           {hasLyrics && (shown ? <Lyrics detail={shown} time={now.songTime} focus={lyricFocus && !stage} canBrowse /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" retry={() => setDetailAttempt((attempt) => attempt + 1)} />)}
         </div>
 
@@ -844,7 +851,7 @@ export function Now(props: ViewProps) {
                 </div>
                 <details className="listen-visualizer-help">
                   <summary>About the visualizer</summary>
-                  <p className="hint">The visualizer follows the live mixed-audio analyser and this song’s analysed beats and sections, never a simulated beat. Each style reacts to something different: kicks, hi-hats, the bar, the stereo width or the waveform. Quiet visuals hide it without affecting playback.</p>
+                  <p className="hint">The visualizer follows the live mixed-audio analyser and this song's analysed beats and sections, never a simulated beat. Each style reacts to something different: kicks, hi-hats, the bar, the stereo width or the waveform. Quiet visuals hide it without affecting playback.</p>
                 </details>
                 </>
                 )}
@@ -866,9 +873,9 @@ export function Now(props: ViewProps) {
                 <section className="listen-next-steering" aria-labelledby="listen-next-steering-title">
                   <h2 id="listen-next-steering-title" ref={steeringHeading} tabIndex={-1}>Change the next song</h2>
                   <div className="chips steer" role="group" aria-label="Change what plays next">
-                    <Action waiting={swapBusy} run={() => swap(1)} working="Finding one…">Bigger</Action>
-                    <Action waiting={swapBusy} run={() => swap(-1)} working="Finding one…">Calmer</Action>
-                    <Action waiting={swapBusy} run={() => swap(0)} working="Finding one…">Something else</Action>
+                    <Action waiting={swapBusy} run={() => swap(1)} working="Finding one.">Bigger</Action>
+                    <Action waiting={swapBusy} run={() => swap(-1)} working="Finding one.">Calmer</Action>
+                    <Action waiting={swapBusy} run={() => swap(0)} working="Finding one.">Something else</Action>
                   </div>
                   <p className="hint steer-note">Bigger and Calmer swap the next song for one with more or less measured energy<TermHint term="measured-energy" />. Something else picks a different one that fits.<TermHint term="steering" /></p>
                   {showChanged && <p className="notice" role="status">Changed from {showChanged.from} to {showChanged.to}. You can undo this.</p>}
@@ -883,7 +890,7 @@ export function Now(props: ViewProps) {
 
       {stage && (
         <div className="stage-controls">
-          {stageFallback && <p className="hint stage-notice" role="status">Your browser didn’t allow fullscreen, so this fills the page instead. Press Escape to go back.</p>}
+          {stageFallback && <p className="hint stage-notice" role="status">Your browser didn't allow fullscreen, so this fills the page instead. Press Escape to go back.</p>}
           <button onClick={() => void player.togglePause()} disabled={now.phase === 'loading'}>{playLabel(now.phase)}</button>
           <button className="exit-stage" onClick={toggleStage}>Exit fullscreen</button>
         </div>
@@ -891,3 +898,4 @@ export function Now(props: ViewProps) {
     </main>
   );
 }
+
