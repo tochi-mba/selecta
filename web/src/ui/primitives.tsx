@@ -1,6 +1,7 @@
 import { ButtonHTMLAttributes, InputHTMLAttributes, KeyboardEvent, ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { PageLink } from '../shell/PageLink';
 import { Icon, IconName } from './Icon';
+import { usePresence } from './exitMotion';
 
 /** The smaller building blocks. Each one has one job and one way of behaving, so every page gets the
  * same keyboard handling, names and error wiring without having to think about it. */
@@ -136,6 +137,7 @@ export function Popover({ label, children, className = '' }: { label: ReactNode;
   const holder = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
   const id = useId();
+  const shown = usePresence<HTMLDivElement>(open, '--motion-fast');
   useEffect(() => {
     if (!open) return;
     const away = (event: MouseEvent) => {
@@ -157,7 +159,17 @@ export function Popover({ label, children, className = '' }: { label: ReactNode;
       }}
     >
       <button ref={opener} type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>{label}</button>
-      {open && <div id={id} className="popover-panel">{children}</div>}
+      {shown.present && (
+        <div
+          ref={shown.ref}
+          id={id}
+          className="popover-panel"
+          data-motion="pop"
+          data-closing={shown.closing ? '' : undefined}
+          aria-hidden={shown.closing || undefined}
+          inert={shown.closing || undefined}
+        >{children}</div>
+      )}
     </div>
   );
 }
