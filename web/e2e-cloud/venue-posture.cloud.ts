@@ -19,14 +19,18 @@ import { listener, signedIn } from './cloud';
 
 async function openVenue(page: Page, request: APIRequestContext, user: string, options: { noWorklet?: boolean } = {}) {
   await page.route('**/api/account', async (route) => {
-    const answer = await route.fetch();
-    const account = await answer.json();
-    account.features = { ...account.features, devices: true, 'devices.browser_player': true, 'cloud.venue_tablet': true };
-    await route.fulfill({ response: answer, json: account });
+    try {
+      const answer = await route.fetch();
+      const account = await answer.json();
+      account.features = { ...account.features, devices: true, 'devices.browser_player': true, 'cloud.venue_tablet': true };
+      await route.fulfill({ response: answer, json: account });
+    } catch {
+      // The page closed while a late account refresh was in flight; nothing is left to amend.
+    }
   });
   await page.addInitScript(({ noWorklet }) => {
     const sentinels: EventTarget[] = [];
-    const scope = window as unknown as { venueTest: { release(): void; hide(): void; show(): void } };
+    const scope = window as unknown as { venueTest: { release(): void; hide(): void; show(): void; unplug(): void } };
     let hidden = false;
     Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => (hidden ? 'hidden' : 'visible') });
     Object.defineProperty(navigator, 'wakeLock', {
@@ -46,7 +50,11 @@ async function openVenue(page: Page, request: APIRequestContext, user: string, o
         },
       },
     });
+    // The battery, pinned to "charging" so the run does not depend on the test machine's power.
+    const battery = Object.assign(new EventTarget(), { charging: true });
+    Object.defineProperty(navigator, 'getBattery', { configurable: true, value: async () => battery });
     scope.venueTest = {
+      unplug: () => { battery.charging = false; battery.dispatchEvent(new Event('chargingchange')); },
       release: () => { for (const sentinel of sentinels) void (sentinel as unknown as { release(): Promise<void> }).release(); },
       hide: () => { hidden = true; document.dispatchEvent(new Event('visibilitychange')); },
       show: () => { hidden = false; document.dispatchEvent(new Event('visibilitychange')); },
@@ -115,6 +123,10 @@ test('interruptions downgrade the state: hidden tab, wake lock release, route ch
 
   await page.evaluate(() => navigator.mediaDevices.dispatchEvent(new Event('devicechange')));
   await expect(venue(page).getByText(/The audio output changed. Play the check tone/)).toBeVisible();
+
+  await page.evaluate(() => (window as unknown as { venueTest: { unplug(): void } }).venueTest.unplug());
+  await expect(venue(page).getByText(/This tablet is running on its battery/)).toBeVisible();
+  await expect(statusOf(page)).toHaveAttribute('data-venue-status', 'uncertain');
 });
 
 test('a deep link on a device that cannot run the player explains and offers the fallbacks', async ({ page, request }) => {
