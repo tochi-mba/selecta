@@ -229,7 +229,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
       </div>
       {harmonicIntro}
       {error && <p role="alert" className="warn">{error}</p>}
-      {unsaved && <button disabled={saving} onClick={() => void review(unsaved.target, unsaved.verdict)}>Try saving that again</button>}
+      {unsaved && <Action working="Saving…" waiting={saving} run={() => review(unsaved.target, unsaved.verdict)}>Try saving that again</Action>}
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <audio
         ref={audio}
@@ -296,8 +296,8 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
           )}
           <div className="row wrap" role="group" aria-label={`Do ${item.title_a} and ${item.title_b} sound connected?`}>
             <span>Hear a connection?</span>
-            <button aria-disabled={saving || undefined} onClick={() => void review(item, 'approved')}>Yes</button>
-            <button aria-disabled={saving || undefined} onClick={() => void review(item, 'rejected')}>No</button>
+            <Action waiting={saving} run={() => review(item, 'approved')}>Yes</Action>
+            <Action waiting={saving} run={() => review(item, 'rejected')}>No</Action>
             {following && <button aria-disabled={saving || undefined} onClick={() => { if (!saving) skip(item); }}>Skip for now</button>}
           </div>
         </article>
@@ -312,7 +312,7 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
                 <span>
                   {row.title_a} and {row.title_b}: {row.status === 'approved' ? 'connected' : 'not connected'}
                 </span>
-                <button disabled={saving} onClick={() => void review(row, 'new')}>Change</button>
+                <Action waiting={saving} run={() => review(row, 'new')}>Change</Action>
               </li>
             ))}
           </ul>
@@ -396,9 +396,9 @@ const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts }:
       </p>
       <div className="chips" role="group" aria-label="Which move">
         {link.moves.map((name) => (
-          <button key={name} disabled={rendering} aria-pressed={move === name} onClick={() => void render(name)}>
+          <Action key={name} waiting={rendering} aria-pressed={move === name} run={() => render(name)}>
             {names[name] ?? name}
-          </button>
+          </Action>
         ))}
       </div>
       <p className="link-status"><Status kind={facts.kind}>{facts.words}</Status></p>
@@ -410,9 +410,9 @@ const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts }:
         {state.status === 'ready' ? (
           <button className="primary" onClick={() => setPlaying(!playing)}>{playing ? 'Hide' : 'Play it'}</button>
         ) : (
-          <button className="primary" disabled={busy || rendering} onClick={() => void render(move)}>
+          <Action className="primary" disabled={busy} waiting={rendering} working="Starting…" run={() => render(move)}>
             {busy ? 'Rendering…' : state.status === 'failed' ? 'Try again' : 'Render it now'}
-          </button>
+          </Action>
         )}
         {flagOn('drafts') && drafts.length ? (
           <Menu label="Add both to…">

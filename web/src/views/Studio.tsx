@@ -564,7 +564,7 @@ export function Studio(props: {
             <Action className="primary" run={playOrStop}>
               <Icon name={playing ? 'stop' : 'play'} /> {playing ? 'Stop preview' : 'Play preview'}
             </Action>
-            {soloed && <button onClick={() => void solo(soloed)}>Hear everything again</button>}
+            {soloed && <Action run={() => solo(soloed)}>Hear everything again</Action>}
             {playing && cell >= 0 && <span className="studio-playhead" role="status">Preview at bar {Math.round(cell * ((session?.bars ?? 8) / (session?.cells ?? 8))) + 1}</span>}
           </div>
         )}

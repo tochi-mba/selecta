@@ -8,6 +8,7 @@ import { CurrentMix, NoCurrentMix } from './CurrentMix';
 import { Drafts } from './Drafts';
 import { selectInEditor } from './Mix';
 import { ViewProps } from './shared';
+import { Action } from '../ui/controls';
 
 const RECENT_DRAFT_KEY = 'selecta.recentDraft';
 // r8a: My Mixes redraws with the music clock (the current mix says Playing or Paused), and its list of
@@ -119,9 +120,9 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
         <h2>Continue working</h2>
         <p>Return to <b>{recent.name}</b> at its last saved song order. This only opens the editor - no playback starts and no pending Studio edits are applied.</p>
         <div className="row wrap">
-          <button className="primary" disabled={checking} onClick={() => void continueEditing()}>
-            {checking ? 'Checking draft…' : 'Continue editing draft'}
-          </button>
+          <Action className="primary" waiting={checking} working="Checking draft…" run={() => continueEditing()}>
+            Continue editing draft
+          </Action>
           <button onClick={forget}>Forget shortcut</button>
         </div>
         {!!recent.waiting.length && (
@@ -131,10 +132,10 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
               {recent.waiting.slice(0, 3).map((transition) => (
                 <li key={`${transition.a}>${transition.b}`}>
                   <span>{transition.from} into {transition.into}: {transition.why}.</span>{' '}
-                  <button disabled={checking} onClick={() => void continueEditing(transition)}
+                  <Action waiting={checking} run={() => continueEditing(transition)}
                     aria-label={`Open the transition from ${transition.from} into ${transition.into}`}>
                     Open this transition
-                  </button>
+                  </Action>
                 </li>
               ))}
             </ul>
