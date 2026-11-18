@@ -38,10 +38,10 @@ describe('ReconciliationPanel', () => {
     const calls: { path: string; method: string }[] = [];
     const request = vi.fn(async (path: string, init?: RequestInit) => {
       calls.push({ path, method: (init?.method ?? 'GET').toUpperCase() });
-      if (path.startsWith('/api/assets')) {
+      if (path.startsWith('/assets')) {
         return path.includes('cursor=') ? { assets: assets.slice(2), next_cursor: null } : { assets: assets.slice(0, 2), next_cursor: 'page-2' };
       }
-      if (path.startsWith('/api/local-media/songs')) {
+      if (path.startsWith('/local-media/songs')) {
         return path.includes('after=') ? { songs: songs.slice(2) } : { songs: songs.slice(0, 2), next: 2 };
       }
       throw new Error(`unexpected ${path}`);
@@ -68,7 +68,7 @@ describe('ReconciliationPanel', () => {
     await screen.findByText(/1 matched/);
     expect(calls.length).toBeGreaterThan(0);
     expect(calls.every((call) => call.method === 'GET')).toBe(true);
-    expect(calls.every((call) => call.path.startsWith('/api/assets') || call.path.startsWith('/api/local-media/songs'))).toBe(true);
+    expect(calls.every((call) => call.path.startsWith('/assets') || call.path.startsWith('/local-media/songs'))).toBe(true);
     expect(calls.some((call) => /upload|delete|purge/i.test(call.path))).toBe(false);
   });
 

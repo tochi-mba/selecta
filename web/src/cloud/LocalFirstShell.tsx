@@ -59,11 +59,14 @@ export const NOT_IN_THE_BROWSER = {
 const VIEW_PATHS: Record<View, string> = { Mixes: '/mixes', Now: '/listen', Edit: '/mix/current/edit', Library: '/library', Words: '/discover', Workshop: '/workshop' };
 const IDLE = (): void => {};
 
-export function LocalFirstShell({ api, account, more, feedback }: {
+export function LocalFirstShell({ api, account, more, notices, feedback }: {
   api: Api;
   account: Account;
   /** The account panel for a More destination, drawn by CloudApp with its own handlers. */
   more: (id: MoreDestinationId) => ReactNode;
+  /** The account's notices (suspended, account problem, over quota, paused live updates), drawn
+   * by CloudApp from the same sources as the hosted frame, shown first in the banner. */
+  notices?: ReactNode;
   feedback?: ReactNode;
 }) {
   const workspaceId = account.workspace.id;
@@ -247,9 +250,10 @@ export function LocalFirstShell({ api, account, more, feedback }: {
         onHelp={IDLE}
         mode="cloud"
         more={moreItems}
-        banner={<>{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
+        banner={<>{notices}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
       >
         {page()}
+        <footer className="cloud-footer">SelectaDJ Cloud. Your music files stay on your devices; your account keeps their details.</footer>
       </Shell>
     </BytesContext.Provider>
     </RequestContext.Provider>

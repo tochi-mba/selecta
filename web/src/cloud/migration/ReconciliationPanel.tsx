@@ -8,6 +8,8 @@ import { Status } from '../../ui/controls';
  * It only reads. It sends GET requests and nothing else: no deletion, no upload, no write of any
  * kind. A hosted original stays in hosted storage whatever the report says. */
 
+/** The workspace-authenticated Cloud client: it adds `/api`, the token and the workspace, so the
+ * paths below start at the route (`/assets`, `/local-media/songs`). */
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
 
 export type HostedAsset = { id: string; name: string; sha256: string | null; size?: number };
@@ -71,7 +73,7 @@ async function allAssets(request: Request): Promise<HostedAsset[]> {
   let cursor: string | null = null;
   for (let page = 0; page < MAX_PAGES; page += 1) {
     const query: string = cursor ? `?limit=${PAGE}&cursor=${encodeURIComponent(cursor)}` : `?limit=${PAGE}`;
-    const answer: { assets: HostedAsset[]; next_cursor?: string | null } = await request(`/api/assets${query}`, { method: 'GET' });
+    const answer: { assets: HostedAsset[]; next_cursor?: string | null } = await request(`/assets${query}`, { method: 'GET' });
     found.push(...answer.assets);
     cursor = answer.next_cursor ?? null;
     if (!cursor) break;
@@ -84,7 +86,7 @@ async function allSongs(request: Request): Promise<LocalSong[]> {
   let after: number | undefined;
   for (let page = 0; page < MAX_PAGES; page += 1) {
     const query = after !== undefined ? `?limit=${PAGE}&after=${after}` : `?limit=${PAGE}`;
-    const answer: { songs: LocalSong[]; next?: number } = await request(`/api/local-media/songs${query}`, { method: 'GET' });
+    const answer: { songs: LocalSong[]; next?: number } = await request(`/local-media/songs${query}`, { method: 'GET' });
     found.push(...answer.songs);
     if (answer.next === undefined || answer.next === null) break;
     after = answer.next;
