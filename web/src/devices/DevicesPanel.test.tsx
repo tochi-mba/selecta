@@ -30,7 +30,7 @@ describe('devices panel', () => {
   it('asks before signing a device out, and only then sends it', async () => {
     mount();
     await settle();
-    await act(async () => { screen.getByRole('button', { name: 'Sign out Old laptop' }).click(); await vi.advanceTimersByTimeAsync(0); });
+    await act(async () => { screen.getByRole('button', { name: 'Sign out this device: Old laptop' }).click(); await vi.advanceTimersByTimeAsync(0); });
     const dialog = screen.getByRole('alertdialog', { name: 'Sign out Old laptop?' });
     expect(dialog).toHaveTextContent('That device is signed out of your account. It can sign in again any time.');
     expect(dialog).not.toHaveTextContent(/forget|paired/i);

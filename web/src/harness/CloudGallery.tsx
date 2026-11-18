@@ -22,7 +22,6 @@ import { BrandMark } from '../ui/BrandMark';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Action, LiveRegion, Problem, Skeleton, Status } from '../ui/controls';
 import { GALLERY_KINDS } from '../ui/gallery/specimens';
-import { Truncate } from '../ui/format';
 import { Icon } from '../ui/Icon';
 import { Meter } from '../ui/Meter';
 import { VisuallyHidden } from '../ui/primitives';
@@ -34,7 +33,7 @@ export function CloudGallery() {
   const [confirm, setConfirm] = useState<'forget' | 'code' | null>(null);
   const [said, setSaid] = useState('');
   return (
-    <main className="cloud-main cloud-gallery" style={{ display: 'grid', gap: 'var(--space-5)', padding: 'var(--space-4)', maxWidth: 1100, marginInline: 'auto' }}>
+    <main className="cloud-main cloud-gallery" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 'var(--space-5)', padding: 'var(--space-4)', maxWidth: 1100, marginInline: 'auto' }}>
       <header className="stack">
         <p className="cloud-eyebrow cloud-caps">Test harness</p>
         <h1><BrandMark /> SelectaDJ Cloud patterns</h1>
@@ -91,15 +90,15 @@ export function CloudGallery() {
           <div className="room-head"><h3>Your room</h3><Status kind="ready">Open for requests</Status></div>
           <p>Room code <b className="room-code">K7Q2</b><VisuallyHidden>, spelled K 7 Q 2</VisuallyHidden></p>
           <ul className="room-list">
-            <li className="room-row"><Truncate text="A requested song with a long title from a guest at the back" /><span className="room-said">from Sam</span><button>Play next</button></li>
-            <li className="room-row"><Truncate text="Another request" /><span className="room-said">2 votes</span><button>Play next</button></li>
+            <li className="room-row"><span>A requested song with a long title from a guest at the back</span><span className="room-said">from Sam</span><button>Play next</button></li>
+            <li className="room-row"><span>Another request</span><span className="room-said">2 votes</span><button>Play next</button></li>
           </ul>
           <p className="room-error" role="alert">That code was replaced. The old QR code stops working the moment a new one exists.</p>
         </div>
         <div className="devices-panel stack">
           <h3>Your devices</h3>
           <ul className="devices-list">
-            <li><span className="devices-name"><Truncate text="Living room speaker" /></span><span className="devices-seen">Seen just now</span><span className="devices-actions"><button>Play here</button><button className="destructive" onClick={() => setConfirm('forget')}>Forget</button></span></li>
+            <li><span className="devices-name">Living room speaker</span><span className="devices-seen">Seen just now</span><span className="devices-actions"><button>Play here</button><button className="destructive" onClick={() => setConfirm('forget')}>Forget</button></span></li>
           </ul>
           <div className="playing-bar">
             <p className="playing-bar-song"><b>Specimen song</b> by Example artist</p>

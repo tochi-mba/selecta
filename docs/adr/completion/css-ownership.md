@@ -13,7 +13,7 @@ overlap or a new breakpoint fails the test until it is given an owner here.
 | `style.css` | legacy global sheet: base controls, Listen strip/lyrics/handoff, timeline rows, Library rows, Links cards, Workspace metrics | `main.tsx` |
 | `styles/shell.css` | rail/bottom bar, context bar, mini-player, toasts, overlays, menus, tooltips, skeletons, inspector resize | `main.tsx` |
 | `styles/polish.css` | interaction feedback, card disclosure, skeleton reveal, reduced-motion overrides | `main.tsx` |
-| `styles/foundation.css` | base element meanings: primary fill, popovers, word highlight | `main.tsx` |
+| `styles/foundation.css` | base element meanings: primary fill, popovers, word highlight; the shared primitives Meter, ConfirmDialog, Truncate and DataTable (moved here from admin.css and business/console.css) | `main.tsx` |
 | `styles/listening.css` | Listen layout, Stage, seek ghost, energy arc inputs, forced-colour fallbacks for music graphics | `main.tsx` |
 | `styles/creation.css` | editor scope bar, inspector, Studio, Story view, energy overview and thumb | `main.tsx` |
 | `styles/operations.css` | Library columns, Workspace panels, export jobs | `main.tsx` |

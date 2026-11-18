@@ -80,7 +80,7 @@ export function DevicesPanel({ api, workspaceId, notice = '' }: { api: Api; work
                 <span className="devices-seen">{seen(device.last_seen_at)}{device.poor_speaker ? ' · Best as a remote' : ''}</span>
                 <span className="devices-actions">
                   <button type="button" onClick={() => { setEditing(device.id); setName(device.name); }} aria-label={`Rename ${device.name}`}>Rename</button>
-                  <Action type="button" run={() => setForgetting(device)} busy={forgetting?.id === device.id} aria-label={`Sign out ${device.name}`}>Sign out this device</Action>
+                  <Action type="button" run={() => setForgetting(device)} busy={forgetting?.id === device.id} aria-label={`Sign out this device: ${device.name}`}>Sign out this device</Action>
                 </span>
               </>
             )}
