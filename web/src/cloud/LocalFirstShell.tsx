@@ -324,7 +324,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
           ? <main className="page" id="main"><h1 className="display small">Library</h1><LibraryEmpty />{connect}</main>
           : <><Library {...shared} /><div className="page">{connect}</div></>;
       case 'mixes':
-        if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts />{on('drafts') && <SavedBrowserRecipes recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} />}{localExport}</>;
+        if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts />{on('drafts') && <SavedBrowserRecipes workspaceId={workspaceId} recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} />}{localExport}</>;
         return <>{(status?.counts.ready ?? 0) >= BROWSER_MIX_NEEDS ? <Mixes {...shared} /> : (
           <MixesEmpty
             connected={connected}
@@ -379,7 +379,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
  * actions use numeric IDs and /drafts mutation routes that recipes do not have, so this list offers
  * only the operation the recipe contract supports: making a saved recipe the current mix. Playback
  * remains in the shared Current mix card, where the device resolver can refuse missing files. */
-function SavedBrowserRecipes({ recipes, request, setMixData, refreshStatus }: {
+function SavedBrowserRecipes({ workspaceId, recipes, request, setMixData, refreshStatus }: {
+  workspaceId: string;
   recipes: RecipeStore;
   request: NonNullable<ViewProps['request']>;
   setMixData: ViewProps['setMixData'];
@@ -389,27 +390,34 @@ function SavedBrowserRecipes({ recipes, request, setMixData, refreshStatus }: {
   const [problem, setProblem] = useState('');
   const [pending, setPending] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
+  const latest = useRef({ recipes, request, setMixData, refreshStatus });
+  latest.current = { recipes, request, setMixData, refreshStatus };
   const load = useCallback(() => {
     setProblem('');
-    return recipes.list().then((next) => setList(next)).catch((error: Error) => setProblem(error.message || 'Couldn’t load your saved mixes.'));
-  }, [recipes]);
-  useEffect(() => { void load(); }, [load]);
+    return latest.current.recipes.list().then((next) => setList(next)).catch((error: Error) => setProblem(error.message || 'Couldn’t load your saved mixes.'));
+  }, []);
+  useEffect(() => {
+    setList(null);
+    void load();
+  }, [load, workspaceId]);
   const useAsCurrent = async (recipe: RecipeSummary) => {
     if (pending) return;
     setPending(recipe.mix_id);
     setNotice('');
     setProblem('');
-    const previous = recipes.current();
-    recipes.setCurrent(recipe.mix_id);
+    const { recipes: currentRecipes, request: currentRequest, setMixData: updateMix, refreshStatus: refresh } = latest.current;
+    const previous = currentRecipes.current();
+    currentRecipes.setCurrent(recipe.mix_id);
     try {
-      const current = await request<MixData>('/mix');
-      setMixData(current);
-      refreshStatus();
+      const current = await currentRequest<MixData>('/mix');
+      updateMix(current);
+      refresh();
       setNotice(`${recipe.name} is now your current mix. Use Play on the current mix when its songs are available to play here.`);
     } catch (error) {
-      recipes.setCurrent(previous);
+      currentRecipes.setCurrent(previous);
       setProblem((error as Error).message || 'Couldn’t open that saved mix.');
     } finally { setPending(null); }
+  }; setPending(null); }
   };
   const currentId = recipes.current();
   return (
