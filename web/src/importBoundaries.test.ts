@@ -54,6 +54,29 @@ describe('frontend import direction', () => {
     expect(offending).toEqual([]);
   });
 
+  // Modules ADR-0462 lists as mode-specific: they only ever ask this computer's own server, and no
+  // Cloud shell mounts what uses them (exports are local jobs; the early Library read runs before
+  // the app knows its mode, in a local build only).
+  const LOCAL_ONLY = ['views/exportStore.ts', 'views/libraryPrefetch.ts'];
+
+  it('shared views and the shell take bytes and requests from the injected layer, not the local defaults (BF-0462-02)', () => {
+    const offending = [...sources('views'), ...sources('shell')].filter((file) => !LOCAL_ONLY.includes(file)).flatMap((file) => {
+      const source = fs.readFileSync(`${SOURCE}${file}`, 'utf8');
+      const named = [...source.matchAll(/import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*['"]\.\.\/api['"]/g)]
+        .flatMap((match) => match[1].split(',').map((part) => part.trim().replace(/^type\s+/, '').split(/\s+as\s+/)[0]))
+        .filter((imported) => ['get', 'post', 'del', 'request', 'send', 'fetchBytes'].includes(imported))
+        .map((imported) => `${file}: imports ${imported}`);
+      // clientFor() or getVia() with nothing passed falls back to the local client silently
+      const defaulted = [...source.matchAll(/\b(clientFor|getVia|postVia|delVia)\(\s*\)/g)].map((match) => `${file}: ${match[1]}() with no request`);
+      return [...named, ...defaulted];
+    });
+    expect(offending).toEqual([]);
+  });
+
+  it('the local-only list names real modules, so it cannot quietly excuse a renamed view', () => {
+    expect(sources('views')).toEqual(expect.arrayContaining(LOCAL_ONLY));
+  });
+
   it('the request guard reads every view, not a hand-kept list', () => {
     expect(sources('views')).toEqual(expect.arrayContaining(['views/Library.tsx', 'views/Drafts.tsx', 'views/libraryPrefetch.ts']));
   });

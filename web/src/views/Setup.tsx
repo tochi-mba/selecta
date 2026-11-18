@@ -1,6 +1,6 @@
 import { flagOn } from '../flags';
 import { LinkIfThere } from '../shell/PageLink';
-import { clientFor, Status } from '../api';
+import { clientFor, Request, Status } from '../api';
 import { analysisWords } from '../lib';
 import { PageLink } from '../shell/PageLink';
 import { Action, Status as StatusMark } from '../ui/controls';
@@ -106,5 +106,5 @@ export function Preparing({ status, onAnalyse }: { status: Status; onAnalyse: ()
   );
 }
 
-// local-only: analysis runs on this computer's own server
-export const askToAnalyse = () => clientFor().post('/analysis/start');
+/** Start analysing the rest of the library, through the page's injected request (ADR-0462). */
+export const askToAnalyse = (request: Request) => clientFor(request).post('/analysis/start');

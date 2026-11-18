@@ -70,6 +70,7 @@ from test_cloud_rooms_fakes import (  # noqa: E402
     FakeSongCatalog,
 )
 
+from selecta import flags as selecta_flags  # noqa: E402
 from selecta.api_cloud import CloudSettings, create_cloud_app  # noqa: E402
 from selecta.billing import api as billing_api  # noqa: E402
 from selecta.billing import stripe_sync  # noqa: E402
@@ -179,6 +180,13 @@ class E2EObjects(CloudObjects):
 
 
 def build(port: int):
+    # The metadata-only catalogue (ADR-0458) is off by default and a per-user rule can never grant
+    # what the build denies, so this test build turns its routes on; the local-first specs need
+    # them and no hosted page reads the flag. `cloud.local_first` stays off: those specs select
+    # the shell for their own person only.
+    wanted = os.environ.get("SELECTA_FLAGS", "").strip()
+    os.environ["SELECTA_FLAGS"] = f"{wanted} +cloud.local_media".strip()
+    selecta_flags.use(None)  # read again, in case anything asked before this point
     base = f"http://127.0.0.1:{port}"
     home = make_home("selecta-cloud-e2e-")
     server = cloud_db.postgres_url()

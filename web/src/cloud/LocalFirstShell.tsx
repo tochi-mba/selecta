@@ -3,7 +3,7 @@ import type { MixData, Request, Status } from '../api';
 import { setFlags, useFlags } from '../flags';
 import { makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, storageSpace, type MediaResolver, type StorageSpace } from '../media';
 import type { NowState } from '../player';
-import { RequestContext } from '../requestContext';
+import { BytesContext, noBytesHere, RequestContext } from '../requestContext';
 import { navigate, parseRoute, useLocationText } from '../router';
 import { describeRoute, destinationOf, DESTINATIONS, moreDestinationsFor, moreRouteOf, type MoreDestinationId, type ShellRoute } from '../shell/manifest';
 import { Shell } from '../shell/Shell';
@@ -174,6 +174,7 @@ export function LocalFirstShell({ api, account, more, feedback }: {
 
   return (
     <RequestContext.Provider value={request}>
+    <BytesContext.Provider value={noBytesHere}>
       <Shell
         route={route}
         player={player}
@@ -192,6 +193,7 @@ export function LocalFirstShell({ api, account, more, feedback }: {
       >
         {page()}
       </Shell>
+    </BytesContext.Provider>
     </RequestContext.Provider>
   );
 }

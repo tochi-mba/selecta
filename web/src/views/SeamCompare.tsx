@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AudioPreview } from '../ui/AudioPreview';
-import { fetchBytes } from '../api';
+import { BytesRequest, useBytes } from '../requestContext';
 
 /** SF-0221-06: A/B only between two real, finished renders of the same transition. A render's key is
  * a hash of exactly what was made, so a key is an immutable clip. Each render this browser has seen
@@ -31,10 +31,10 @@ export function forgetRenders() {
 }
 
 /** Asks for the clip and stops once the server answers: a 200 means it is really there. */
-async function clipExists(key: string): Promise<boolean> {
+async function clipExists(bytes: BytesRequest, key: string): Promise<boolean> {
   const stop = new AbortController();
   try {
-    const answer = await fetchBytes(`/seams/${encodeURIComponent(key)}/preview`, { signal: stop.signal });
+    const answer = await bytes(`/seams/${encodeURIComponent(key)}/preview`, { signal: stop.signal });
     stop.abort();
     return answer.ok;
   } catch {
@@ -46,13 +46,14 @@ export function SeamCompare({ pair, now, title }: { pair: string; now: Render; t
   const before = earlierRender(pair, now.key);
   const [verified, setVerified] = useState<string | null>(null);
   const [side, setSide] = useState<'a' | 'b'>('b');
+  const bytes = useBytes();
   useEffect(() => {
     let live = true;
     setVerified(null);
     setSide('b');
-    if (before) void clipExists(before.key).then((there) => { if (live && there) setVerified(before.key); });
+    if (before) void clipExists(bytes, before.key).then((there) => { if (live && there) setVerified(before.key); });
     return () => { live = false; };
-  }, [before?.key, now.key]);
+  }, [before?.key, now.key, bytes]);
   if (!before || verified !== before.key) return null;
   const chosen = side === 'a' ? before : now;
   return (

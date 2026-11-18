@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { configure, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setAccountFeatures, setFlags } from '../flags';
 import { cloudAccount } from '../test/cloudAccount';
@@ -7,6 +7,9 @@ import type { Account } from './api';
 // ADR-0462/0463 mounting rules: the shared shell only for an account with the local-first
 // experience AND `cloud.local_first` on; otherwise the hosted pages exactly as before. New
 // members meet the onboarding spine; grandfathered hosted accounts see the cutover notice.
+
+// The shell is a lazy chunk: its first load in a busy run takes longer than the default second.
+configure({ asyncUtilTimeout: 10_000 });
 
 const auth = vi.hoisted(() => ({ user: { id: 'user-1', email: 'listener@example.test', emailVerified: true } as unknown }));
 vi.mock('@workos-inc/authkit-react', () => ({

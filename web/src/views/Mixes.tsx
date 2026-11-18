@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ApiError, MixData, VibeCard } from '../api';
-import { useApi } from '../requestContext';
+import { useApi, useRequest } from '../requestContext';
 import { flagOn, useFlags } from '../flags';
 import { analysisWords, length, SET_LENGTHS } from '../lib';
 import { useLocationText } from '../router';
@@ -43,7 +43,8 @@ function rememberLength(songs: number) {
 /** The front door. One tap plays something good, and everything can be changed afterwards. */
 export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshMix, refreshStatus, request }: ViewProps) {
   // ADR-0462: this page's own reads and writes go through the injected request, never the local client.
-  const { get, post } = useApi(request);
+  const via = useRequest(request);
+  const { get, post } = useApi(via);
   const [cards, setCards] = useState<VibeCard[] | null>(null);
   const [songs, setSongsState] = useState(rememberedLength);
   const setSongs = (next: number) => { setSongsState(next); rememberLength(next); };
@@ -142,7 +143,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   };
 
   const analyse = async () => {
-    await askToAnalyse();
+    await askToAnalyse(via);
     refreshStatus();
     notify('Analysing the rest of your library in the background.');
   };

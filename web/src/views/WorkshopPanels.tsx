@@ -1,7 +1,7 @@
 import { flagOn } from '../flags';
 import { LinkIfThere } from '../shell/PageLink';
 import { FormEvent, useCallback, useEffect, useId, useRef, useState } from 'react';
-import { ApiError, clientFor, FolderCheck, Folders, Jobs, Storage } from '../api';
+import { ApiError, Client, FolderCheck, Folders, Jobs, Storage } from '../api';
 import { useApi } from '../requestContext';
 import { gb, storageWords } from '../lib';
 import { PageLink } from '../shell/PageLink';
@@ -334,10 +334,9 @@ export function JobsPanel({ status, onJobs }: { status: ViewProps['status']; onJ
 }
 
 /** Whether a folder would work, or null if this server can't say, which isn't a reason to stop. */
-async function checkFolder(folder: string): Promise<FolderCheck | null> {
+async function checkFolder(get: Client['get'], folder: string): Promise<FolderCheck | null> {
   try {
-    // local-only: checking a folder path is a question for this computer's own server
-    return await clientFor().get<FolderCheck>(`/folders/check?path=${encodeURIComponent(folder)}`);
+    return await get<FolderCheck>(`/folders/check?path=${encodeURIComponent(folder)}`);
   } catch (error) {
     if (error instanceof ApiError && (error.status === 404 || error.status === 405)) return null;
     throw error;
@@ -441,7 +440,7 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
     try {
       // File Explorer wraps some copied paths in matching quotes.
       const address = folder.trim().replace(/^(["'])(.*)\1$/u, '$2').trim();
-      const check = await checkFolder(address);
+      const check = await checkFolder(get, address);
       if (check && !check.ok) {
         setProblem(check.reason);
         return;

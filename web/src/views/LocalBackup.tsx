@@ -1,7 +1,7 @@
 import { ChangeEvent, useEffect, useState } from 'react';
 import { Action, Dialog } from '../ui/controls';
 import { words } from '../copy';
-import { fetchBytes } from '../api';
+import { BytesRequest, useBytes } from '../requestContext';
 
 type Preview = {
   token: string;
@@ -12,8 +12,8 @@ type Preview = {
 };
 type BackupStatus = { pending_restart: boolean; rollback_available: boolean; problem?: string | null };
 
-async function backupRequest(path: string, init?: RequestInit): Promise<Response> {
-  const response = await fetchBytes('/backup' + path, init);
+async function askBackup(bytes: BytesRequest, path: string, init?: RequestInit): Promise<Response> {
+  const response = await bytes('/backup' + path, init);
   if (!response.ok) {
     let message = 'Could not work with this backup.';
     try {
@@ -28,6 +28,9 @@ async function backupRequest(path: string, init?: RequestInit): Promise<Response
 /** Backups contain local paths and user history. Neither the ZIP nor its contents
  * are uploaded to any external service; the destination is the local Selecta API. */
 export function LocalBackup() {
+  // ADR-0462: bytes come through the injected source, the local server's own /api here
+  const bytes = useBytes();
+  const backupRequest = (path: string, init?: RequestInit) => askBackup(bytes, path, init);
   const [status, setStatus] = useState<BackupStatus | null>(null);
   const [chosen, setChosen] = useState<File | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
