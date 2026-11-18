@@ -48,6 +48,8 @@ export const NOT_IN_THE_BROWSER = {
   'app.shortcuts': false,
   export: false,
   lucy: false,
+  // lyrics are looked up by this computer's own server; the browser has none to show or require
+  'lyrics.lookup': false,
   // a browser mix has no measured feel, energy or stems to shape by; its ending can be chosen
   'mixes.shaping.feel': false,
   'mixes.shaping.energy_arc': false,
@@ -135,6 +137,30 @@ export function LocalFirstShell({ api, account, more, feedback }: {
   const { player, refusal } = useLocalFirstPlayer({
     api, workspaceId, mix: data.mix, remoteControl: on('devices.remote_control'), resolver,
   });
+  // Make a Mix sets the new mix and asks to play it in the same breath (local mode's player reads
+  // the mix from its server). Here the engine learns the mix from the next render, so a play asked
+  // for straight after a new mix waits for that render instead of playing the old one.
+  const mixJustSet = useRef(false);
+  const playWaiting = useRef<{ from: number; offset?: number; done: () => void } | null>(null);
+  const setMixData = useCallback((next: MixData) => { mixJustSet.current = true; setData(next); }, []);
+  useEffect(() => {
+    mixJustSet.current = false;
+    const waiting = playWaiting.current;
+    if (!waiting) return;
+    playWaiting.current = null;
+    void player.playFrom(waiting.from, waiting.offset).finally(waiting.done);
+  }, [data.mix, player]);
+  const shellPlayer = useMemo(() => new Proxy(player, {
+    get(target, key) {
+      if (key === 'playFrom') {
+        return (from: number, offset?: number) => (mixJustSet.current
+          ? new Promise<void>((done) => { playWaiting.current = { from, offset, done }; })
+          : target.playFrom(from, offset));
+      }
+      const value = Reflect.get(target, key, target) as unknown;
+      return typeof value === 'function' ? (value as (...args: unknown[]) => unknown).bind(target) : value;
+    },
+  }), [player]);
   const [now, setNow] = useState<NowState>(player.state);
   useEffect(() => {
     player.onChange = setNow;
@@ -154,7 +180,7 @@ export function LocalFirstShell({ api, account, more, feedback }: {
   }, []);
   const shared: ViewProps | null = status && {
     status, mix: data.mix, mixName: data.name, currentMixName: data.name, canUndo: data.can_undo, mixEta: data.eta,
-    refreshMix, setMixData: setData, refreshStatus, request, player, now, readyNeeded: BROWSER_MIX_NEEDS,
+    refreshMix, setMixData, refreshStatus, request, player: shellPlayer, now, readyNeeded: BROWSER_MIX_NEEDS,
     setView: (view: View) => navigate(VIEW_PATHS[view]), notify, stage: false, toggleStage: IDLE,
   };
   const song = data.mix[now.position];
@@ -209,7 +235,7 @@ export function LocalFirstShell({ api, account, more, feedback }: {
     <BytesContext.Provider value={noBytesHere}>
       <Shell
         route={route}
-        player={player}
+        player={shellPlayer}
         now={now}
         song={song}
         showPlayer={route.page !== 'listen' && !!song && now.phase !== 'idle'}

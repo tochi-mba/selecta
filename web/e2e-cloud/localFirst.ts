@@ -12,6 +12,7 @@ import { APIRequestContext, expect, Page } from '@playwright/test';
 
 export type Seed = {
   songs?: number;
+  seconds?: number;
   local_songs?: number;
   local_titles?: string[];
   local_absent?: number;
@@ -43,4 +44,57 @@ export async function asLocalFirst(page: Page, user: string, { hosted = false }:
 export async function openLocalFirst(page: Page, user: string, path: string, options: { hosted?: boolean } = {}) {
   await asLocalFirst(page, user, options);
   await page.goto(path);
+}
+
+export type DeviceSong = { songId: number; title: string; artist?: string; audio?: boolean; gone?: boolean };
+
+/** Connect songs on this device the way a folder pick does: a real file handle per song, kept
+ * in SelectaDJ's IndexedDB store. The files live in the origin-private file system (the only
+ * place a test can make a real handle without a picker). `audio` writes a short real WAV, so
+ * the browser engine can decode and play it; `gone` removes the file behind the handle, as a
+ * moved or deleted file does. Call before the app has opened its store: it visits a same-origin
+ * page that is not the app. */
+export async function connectOnThisDevice(page: Page, songs: DeviceSong[]) {
+  await page.goto('/api/status');
+  await page.evaluate(async (wanted) => {
+    const wav = (seconds: number, tone: number) => {
+      const rate = 22_050;
+      const frames = Math.round(seconds * rate);
+      const bytes = new DataView(new ArrayBuffer(44 + frames * 2));
+      const text = (at: number, value: string) => { for (let i = 0; i < value.length; i += 1) bytes.setUint8(at + i, value.charCodeAt(i)); };
+      text(0, 'RIFF'); bytes.setUint32(4, 36 + frames * 2, true); text(8, 'WAVE'); text(12, 'fmt ');
+      bytes.setUint32(16, 16, true); bytes.setUint16(20, 1, true); bytes.setUint16(22, 1, true);
+      bytes.setUint32(24, rate, true); bytes.setUint32(28, rate * 2, true); bytes.setUint16(32, 2, true); bytes.setUint16(34, 16, true);
+      text(36, 'data'); bytes.setUint32(40, frames * 2, true);
+      for (let frame = 0; frame < frames; frame += 1) bytes.setInt16(44 + frame * 2, Math.round(Math.sin((2 * Math.PI * tone * frame) / rate) * 8000), true);
+      return bytes.buffer;
+    };
+    const root = await navigator.storage.getDirectory();
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const opening = indexedDB.open('selecta-media', 1);
+      opening.onupgradeneeded = () => opening.result.createObjectStore('songs', { keyPath: 'songId' });
+      opening.onsuccess = () => resolve(opening.result);
+      opening.onerror = () => reject(opening.error);
+    });
+    for (const [index, song] of wanted.entries()) {
+      const name = `song-${song.songId}.wav`;
+      const handle = await root.getFileHandle(name, { create: true });
+      const writing = await handle.createWritable();
+      await writing.write(song.audio ? wav(12, 220 + 60 * index) : new Uint8Array([1, 2, 3, 4]));
+      await writing.close();
+      if (song.gone) await root.removeEntry(name);
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction('songs', 'readwrite');
+        tx.objectStore('songs').put({
+          songId: song.songId,
+          identity: { content_sha256: String(song.songId).padStart(64, '0'), title: song.title, artist: song.artist ?? 'E2E Local' },
+          ref: { kind: 'handle', handle },
+          importedAt: Date.now(),
+        });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+    db.close();
+  }, songs);
 }
