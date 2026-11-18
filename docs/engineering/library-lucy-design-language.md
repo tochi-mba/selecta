@@ -44,5 +44,5 @@ song row is also known by its occurrence id, so the same recording twice is two 
 Lucy has one animation: the indeterminate bar on a step that is running with no count to show. It
 appears only for real running work, never for decoration, and both the app's Still setting
 (`:root[data-motion='still']`) and the system's reduced-motion setting remove it. The step keeps its
-words ("Working"). Progress bars resize with `--motion-reveal` and `--motion-ease`; the duration is 0 ms under Still and reduced
+words ("Working"). The slide's length is `--motion-loop-slide`. Progress bars resize with `--motion-reveal` and `--motion-ease`; the duration is 0 ms under Still and reduced
 motion. Nothing else in Lucy or the Library moves on its own.

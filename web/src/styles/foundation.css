@@ -73,3 +73,30 @@ input[aria-invalid='true'], select[aria-invalid='true'], textarea[aria-invalid='
 @media (max-width: 520px) {
   .setup-steps li.done .setup-step-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
+
+/* Meter (ui/Meter.tsx): the one progress and quantity bar. Its words always say what the colour
+   says; data-status picks the fill from the status tokens, data-indeterminate slides a short bar
+   when the length is unknown. */
+.meter { display: grid; gap: var(--field-gap); min-width: 0; }
+.meter-label { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-hair) var(--space-3); font: var(--type-meta); color: var(--text); }
+.meter-value { color: var(--text-soft); font-variant-numeric: tabular-nums; }
+.meter-track { position: relative; block-size: var(--space-2); overflow: hidden; border-radius: var(--radius-pill); background: var(--surface-control); }
+.meter-fill { display: block; block-size: 100%; border-radius: inherit; background: var(--status-working); transition: inline-size var(--motion-reveal) var(--motion-ease); }
+.meter[data-status='ready'] .meter-fill { background: var(--status-ready); }
+.meter[data-status='warning'] .meter-fill { background: var(--status-warning); }
+.meter[data-status='danger'] .meter-fill { background: var(--status-failed); }
+.meter[data-indeterminate] .meter-fill { inline-size: 30%; animation: lucy-slide var(--motion-loop-slide) ease-in-out infinite; }
+.meter-detail { margin: 0; font: var(--type-caption); color: var(--text-soft); }
+
+/* ConfirmDialog (ui/ConfirmDialog.tsx): a narrow dialog that asks one question. The consequence line
+   says plainly whether it can be undone; a destructive answer is never the first focus. */
+.confirm-dialog > .overlay-panel { inline-size: min(420px, 100%); }
+.confirm-dialog-body { display: grid; gap: var(--rhythm-related); }
+.confirm-dialog-body p { margin: 0; }
+.confirm-dialog-consequence { color: var(--text-soft); }
+.confirm-dialog .overlay-foot .destructive { border-color: var(--edge-error); color: var(--danger); }
+
+/* Truncate (ui/format.ts): one line, an ellipsis, the full text in its title. */
+.truncate { display: block; min-inline-size: 0; max-inline-size: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the indeterminate slide, shared by Meter and Lucy's progress (lucy.css loads only with Lucy) */
+@keyframes lucy-slide { from { transform: translateX(-100%); } to { transform: translateX(340%); } }

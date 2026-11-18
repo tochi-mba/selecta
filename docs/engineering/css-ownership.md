@@ -50,7 +50,7 @@ The QR code's white quiet zone is the one colour these sheets needed that had no
 | Sheet | Count | Why |
 | --- | --- | --- |
 | `styles/tokens.css` | 6 | Still motion and OS reduced motion stop every animation, transition and smooth scroll, whatever a component asked for. |
-| `styles/polish.css` | 4 | Reduced motion: smooth scrolling and any remaining animation or transition are cut to nothing. |
+| `styles/polish.css` | 5 | Reduced motion: smooth scrolling and any remaining animation or transition are cut to nothing, except leaving, which is swapped for a short fade that must outrank those resets. |
 | `styles/creation.css` | 2 | Inspector scope and state lines keep their 4px top margin against the generic heading-to-content rhythm. |
 | `styles/shell.css` | 1 | The desktop More menu is removed on phones, where the tab bar has its own. |
 | `styles/music-objects.css` | 1 | Forced colours: motifs use the system text colour so they stay visible. |

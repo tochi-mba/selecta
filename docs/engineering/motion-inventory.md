@@ -12,12 +12,12 @@ every token to 0ms.
 
 | Token | Default | Purpose |
 | --- | --- | --- |
-| `--motion-feedback` | 80ms | Direct feedback to a press: a toggle or pressed colour that must feel instant. Reserved; nothing uses it yet. |
+| `--motion-feedback` | 80ms | Direct feedback to a press, and the quickest exit: a menu, popover or tooltip fading out (`--motion-exit-menu`). |
 | `--motion-fast` | 120ms | Hover and focus colour, border and background changes on controls, chips and cards. |
 | `--motion-reveal` | 160ms | Content arriving in place: route reveal, skeleton reveal, toasts, the lyric line taking focus, Lucy progress. |
 | `--motion-handoff` | 200ms | One group handing over to the next: vibe groups appearing on Make a Mix. |
 | `--motion-overlay` | 220ms | A dialog, sheet or drawer opening over the page. |
-| `--motion-slow` | 240ms | The longest considered movement, for a large surface. Reserved; nothing uses it yet. |
+| `--motion-slow` | 240ms | The longest considered movement, for a large surface: a drawer or sheet sliding in from its side (`drawer-appear`). |
 
 ## Animated surfaces and their triggers
 
@@ -27,8 +27,12 @@ every token to 0ms.
 | Busy button | an `Action` is running | `button-working` pulse | 0.9s loop, exception | none |
 | Chips, cards, vibe tempo | hover, focus, selection | colour and border | `--motion-fast` | instant |
 | Listen side cards | selection | border and shadow | `--motion-fast` | instant |
-| Dialog, sheet, drawer | opened | `overlay-appear` | `--motion-overlay` | none |
+| Dialog, sheet, drawer | opened | `overlay-appear` (dialog); `drawer-appear` from its side (drawer, sheet) | `--motion-overlay`; `--motion-slow` | none |
+| Dialog | closing (`data-closing`) | `dialog-exit` (fade and shrink 2%) with the scrim's `fade-exit` | `--motion-exit-dialog` | reduced: `fade-exit` 120ms; Still: none |
+| Drawer, sheet | closing (`data-closing`) | `drawer-exit` back out of its side, scrim `fade-exit` | `--motion-exit-drawer` | reduced: `fade-exit` 120ms; Still: none |
+| Menu, popover, tooltip | opened (`data-motion='pop'`); closing | `pop-appear`; `fade-exit` | `--motion-fast`; `--motion-exit-menu` | reduced: exit `fade-exit`; Still: none |
 | Toast | shown | `toast-appear` | `--motion-reveal` | none |
+| Toast | closing (`data-closing`) | `toast-exit` (fade and drop 4px) | `--motion-exit-toast` | reduced: `fade-exit` 120ms; Still: none |
 | Route | page change | `route-reveal` | `--motion-reveal` | none |
 | Skeleton | loading | `skeleton-reveal` after `--motion-fast`, then `skeleton-breathe` 3 times | reveal token; breathe 1.4s exception | none |
 | Vibe groups | Make a Mix loads | `feeling-reveal` | `--motion-handoff` | none |
@@ -43,8 +47,8 @@ every token to 0ms.
 
 ## Exceptions to the tokens
 
-These keep raw durations on purpose. Each is an ambient loop that says something is still going, or
-follows the player clock.
+These are longer or shorter than the six tokens on purpose. Each is an ambient loop that says something is still going, or
+follows the player clock. Their lengths are named tokens in `tokens.css` (`--motion-loop-*`, `--motion-clock`), so no sheet holds a raw duration.
 
 - `button-working` 0.9s, `skeleton-breathe` 1.4s, `lucy-slide` 1.6s, `request-pulse` 1.8s, `pending-flow` 2.4s: loops, longer than any token by design.
 - `.handoff-progress i` width 70ms linear: smooths the gap between clock ticks; a token would lag the music.
@@ -52,4 +56,5 @@ follows the player clock.
 ## Keyframes
 
 `pending-flow`, `request-pulse`, `lucy-slide`, `feeling-reveal`, `skeleton-reveal`, `toast-appear`,
-`overlay-appear`, `route-reveal`, `skeleton-breathe`, `button-working`.
+`overlay-appear`, `route-reveal`, `skeleton-breathe`, `button-working`, `drawer-appear`, `pop-appear`,
+`fade-exit`, `dialog-exit`, `drawer-exit`, `toast-exit`.

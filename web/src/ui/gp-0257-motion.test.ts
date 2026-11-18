@@ -18,6 +18,13 @@ const INVENTORY: Record<string, Severity> = {
   'pending-flow': 'waiting',
   'request-pulse': 'waiting',
   'lucy-slide': 'waiting',
+  // the exit protocol and pop-in (polish.css): each answers an open or close the listener asked for
+  'drawer-appear': 'answers-you',
+  'pop-appear': 'answers-you',
+  'fade-exit': 'answers-you',
+  'dialog-exit': 'answers-you',
+  'drawer-exit': 'answers-you',
+  'toast-exit': 'answers-you',
 };
 
 const SRC = join(process.cwd(), 'src');
