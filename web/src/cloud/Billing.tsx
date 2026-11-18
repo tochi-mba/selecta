@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
-import { Account, featureOn, lockedTo, planName } from './api';
+import { accountFlagOn, FlagId } from '../flags';
+import { Account, lockedTo, planName } from './api';
 import { CheckoutPhase, Consent, consentComplete, NO_CONSENT } from './checkout';
 import { Meters } from './Meters';
 
@@ -20,7 +21,7 @@ const PLANS: { id: Paid; name: string; storage: string; month: string; year: str
  * devices and discovery. Storage is not a plan line for these accounts, because their music stays
  * on their own devices; prices are the same as the hosted cards. `flag` hides an axis whose
  * feature is off for this account, and Rooms shows only where it is on or a plan-locked teaser. */
-type Axis = { name: string; words: string; flag?: string };
+type Axis = { name: string; words: string; flag?: FlagId };
 const LOCAL_FIRST_AXES: Record<Paid, { headline: string; eyebrow: string; axes: Axis[] }> = {
   standard: {
     headline: 'More from Lucy',
@@ -50,8 +51,8 @@ export function sellsLocalFirst(account: Pick<Account, 'experience'>) {
 
 function axisShown(axis: Axis, account: Account) {
   if (!axis.flag) return true;
-  if (axis.flag === 'rooms') return featureOn(account, 'rooms') || Boolean(lockedTo(account, 'rooms'));
-  return featureOn(account, axis.flag);
+  if (axis.flag === 'rooms') return accountFlagOn('rooms', account.features) || Boolean(lockedTo(account, 'rooms'));
+  return accountFlagOn(axis.flag, account.features);
 }
 
 function LocalFirstPlan({ plan, account }: { plan: Paid; account: Account }) {
@@ -75,7 +76,7 @@ function LocalFirstPlan({ plan, account }: { plan: Paid; account: Account }) {
 /** What a plan card says it includes, without naming a feature that's switched off for this
  * account (a plan-locked teaser still names it: that's what the plan unlocks). */
 function aboutPlan(plan: (typeof PLANS)[number], account: Account) {
-  const rooms = featureOn(account, 'rooms') || Boolean(lockedTo(account, 'rooms'));
+  const rooms = accountFlagOn('rooms', account.features) || Boolean(lockedTo(account, 'rooms'));
   return plan.id === 'premium' && !rooms ? 'Priority processing.' : plan.about;
 }
 
@@ -122,8 +123,8 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
   const [consent, setConsent] = useState<Consent>(NO_CONSENT);
   const paid = account.entitlement.plan !== 'free';
   // Each way to change plan is its own feature: with one off, it's gone from the page.
-  const checkout = featureOn(account, 'billing.checkout');
-  const portal = featureOn(account, 'billing.portal');
+  const checkout = accountFlagOn('billing.checkout', account.features);
+  const portal = accountFlagOn('billing.portal', account.features);
   const ready = consentComplete(consent) && Boolean(consentVersion) && !busy;
   const confirming = phase === 'confirming';
   const local = localFirst ?? sellsLocalFirst(account);
@@ -134,7 +135,7 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
         <div>
           <p className="cloud-eyebrow">CURRENT PLAN</p>
           <h2>{planName(account)}</h2>
-          {account.lucy && featureOn(account, 'lucy') && <p>Includes {account.lucy.tier}.</p>}
+          {account.lucy && accountFlagOn('lucy', account.features) && <p>Includes {account.lucy.tier}.</p>}
         </div>
         {paid && portal && <button className="primary" disabled={busy} onClick={onPortal}>Change plan or cancel</button>}
       </section>

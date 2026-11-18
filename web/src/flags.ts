@@ -80,7 +80,7 @@ export function setFlags(next: Record<string, boolean> | undefined | null) {
 /** One flag read in both modes (ADR-0462): Cloud feeds the account's features snapshot here on
  * every account load and refresh (after each `flags.changed`), and `flagOn`, `Gate`, `useFlags`
  * and the shell then gate on it exactly as they gate on /api/status locally. A flag the account
- * does not mention is on, as `featureOn` always read it. `null` forgets them (sign-out, unmount). */
+ * does not mention is on, as Cloud's pages always read it. `null` forgets them (sign-out, unmount). */
 export function setAccountFeatures(features: Record<string, boolean> | null) {
   if (JSON.stringify(features) === JSON.stringify(account)) return;
   account = features ? { ...features } : null;
@@ -94,8 +94,22 @@ export function useFlagHeard(id: FlagId): boolean {
   return heard && flagOn(id);
 }
 
+/** The one rule both sources follow: a flag the decisions do not mention is on. */
+export function decidedOn(decisions: Readonly<Record<string, boolean>> | null | undefined, id: FlagId): boolean {
+  return decisions?.[id] !== false;
+}
+
 export function flagOn(id: FlagId): boolean {
-  return current?.[id] !== false && account?.[id] !== false;
+  return decidedOn(current, id) && decidedOn(account, id);
+}
+
+/** The account source of the one read (BF-0462-03): what this account's plan and rules decide,
+ * without what the open shell can run here. For a Cloud page that describes the account (plan
+ * cards, allowance meters) or is handed an account snapshot: pass that snapshot's `features`, or
+ * nothing to read the one the store holds. It replaced Cloud's private `featureOn`, so Cloud and
+ * local gate with one rule, one set of typed ids and the same live `flags.changed` refresh. */
+export function accountFlagOn(id: FlagId, features?: Readonly<Record<string, boolean>> | null): boolean {
+  return decidedOn(features === undefined ? account : features, id);
 }
 
 function subscribe(listener: () => void) {

@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PlayingBar } from '../devices/PlayingBar';
 import type { Speaker } from '../devices/usePlaybackDevice';
-import { Account, Api, featureOn, Page } from './api';
+import { accountFlagOn, type FlagId } from '../flags';
+import { Account, Api, Page } from './api';
 import { assetCatalogue, catalogueSource } from './cloudCatalogue';
 import { claimFocus, clearNotice, releaseFocus, shareLibraryPlayer, useTransport } from './cloudTransport';
 import { recoveringSpeaker } from './recoveringSpeaker';
@@ -14,10 +15,10 @@ import { useCloudPlayer } from './useCloudPlayer';
 // other and nothing resumes on its own (AV-0419-03, see cloudTransport.ts). The speaker joins
 // the dock the first time Listen is opened in this tab, as the bar did before, and then stays.
 
-export const SINGLE_AUDIO_OWNER = 'cloud.single_audio_owner';
+export const SINGLE_AUDIO_OWNER: FlagId = 'cloud.single_audio_owner';
 
 export function singleAudioOwner(account: Pick<Account, 'features'> | null) {
-  return featureOn(account, SINGLE_AUDIO_OWNER);
+  return accountFlagOn(SINGLE_AUDIO_OWNER, account?.features ?? null);
 }
 
 export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Api; account: Account; page: Page; reload?: number }) {
@@ -42,7 +43,7 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
   }, [workspaceId]);
 
   // Stored media off (ADR-0456 reads grant): nothing to play from, and no read of /assets.
-  const storedMedia = featureOn(account, 'cloud.stored_media');
+  const storedMedia = accountFlagOn('cloud.stored_media', account.features);
   const library = useMemo(() => catalogueSource(api, workspaceId, assetCatalogue(api, workspaceId, storedMedia)), [api, workspaceId, storedMedia]);
   useEffect(() => { if (reload) library.catalogue.refresh(); }, [library, reload]);
   const speakerFor = useCallback((audio: HTMLAudioElement, source: (index: number) => Promise<string | null>): Speaker => {
@@ -89,7 +90,7 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
   };
 
   const track = player.track;
-  const devices = featureOn(account, 'devices');
+  const devices = accountFlagOn('devices', account.features);
   const showDevice = devices && armed;
   if (!track && !showDevice && !error) return null;
   return (
@@ -97,7 +98,7 @@ export function CloudTransportDock({ api, account, page, reload = 0 }: { api: Ap
       {showDevice && (
         <div ref={deviceBox}>
           <PlayingBar api={api} workspaceId={workspaceId} source={library.source} songName={library.name}
-            remoteControl={account.features['devices.remote_control'] !== false} speakerFor={speakerFor} />
+            remoteControl={accountFlagOn('devices.remote_control', account.features)} speakerFor={speakerFor} />
           {deviceProblem && <p className="cloud-feedback error" role="alert">{deviceProblem} <button type="button" onClick={() => setDeviceProblem('')}>Dismiss</button></p>}
         </div>
       )}
