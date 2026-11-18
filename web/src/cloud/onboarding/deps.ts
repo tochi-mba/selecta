@@ -1,4 +1,4 @@
-import { createEngine, isUnsupported } from '../../engine';
+import { confirmDeviceOutput, createEngine, downgradeDeviceOutput, isUnsupported } from '../../engine';
 import type { Engine, EngineContext, EngineState, ProbeResult } from '../../engine';
 import { dirPicker, directoryInput, MediaStore, runImport } from '../../media';
 import type { Capability, DirectoryHandleLike, ImportEvent, ImportSource, ImportSummary } from '../../media';
@@ -98,8 +98,8 @@ function engineSession(engine: Engine, made: EngineContext): AudioSession {
         oscillator.stop(start + TONE_SECONDS);
       });
     },
-    confirmHeard: (at) => engine.store.confirmHeard(at),
-    markUnverified: () => engine.store.downgradeOutput({ status: 'output_unverified' }, 'Nobody has confirmed hearing this device yet.'),
+    confirmHeard: confirmDeviceOutput,
+    markUnverified: () => downgradeDeviceOutput({ status: 'output_unverified' }, 'Nobody has confirmed hearing this device yet.'),
     watchWakeLock: (sentinel) => made.watchWakeLock(sentinel),
     dispose: () => engine.dispose(),
   };
