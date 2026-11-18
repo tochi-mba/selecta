@@ -1,7 +1,7 @@
 # ADR-0455 - Browser-first Cloud: goal and two Cloud modes
 
 - **Decision:** Accepted (owner, 2026-11-17).
-- **Implementation:** 4/7 Implemented; 2/7 In progress; 1/7 Not started.
+- **Implementation:** 5/7 Implemented; 1/7 In progress; 1/7 Not started.
 - **Independent verification:** 0/7 Verified.
 - **Programme/date/baseline:** Browser-first Cloud (BF); 2026-11-17; `main` at `7d7f7932`.
 - **Priority / phase:** P1 / Phase BF0 (architecture and contracts). **Owner:** Unassigned. **Implementing PR:** #96.

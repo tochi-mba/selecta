@@ -137,7 +137,7 @@ export function Popover({ label, children, className = '' }: { label: ReactNode;
   const holder = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
   const id = useId();
-  const shown = usePresence<HTMLDivElement>(open, '--motion-fast');
+  const shown = usePresence<HTMLDivElement>(open);
   useEffect(() => {
     if (!open) return;
     const away = (event: MouseEvent) => {

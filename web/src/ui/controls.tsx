@@ -319,7 +319,7 @@ export function Menu({ label, children, className, title }: { label: ReactNode; 
   const opener = useRef<HTMLButtonElement>(null);
   const menuId = useId();
   const firstOnOpen = useRef<'first' | 'last'>('first');
-  const shown = usePresence<HTMLDivElement>(open, '--motion-fast');
+  const shown = usePresence<HTMLDivElement>(open);
   useEffect(() => {
     if (!open) return;
     const away = (event: MouseEvent) => {
@@ -401,7 +401,7 @@ export function Menu({ label, children, className, title }: { label: ReactNode; 
 export function Tooltip({ text, children }: { text: string; children: ReactElement<{ 'aria-describedby'?: string }> }) {
   const id = useId();
   const [dismissed, setDismissed] = useState(false);
-  const shown = usePresence<HTMLSpanElement>(!dismissed, '--motion-fast');
+  const shown = usePresence<HTMLSpanElement>(!dismissed);
   return (
     <span
       className="tooltip-anchor"
