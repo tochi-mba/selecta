@@ -16,6 +16,9 @@ const backend = () => fakeBackend({
   'GET /drafts': { drafts: [], current: { name: 'Test mix', songs: 2, left: 0, eta: { seconds: 0, low: 0, high: 0 } }, out_of_room: false },
   'GET /library': { songs: [], total: 0 },
 });
+// W5: a new page's focus lands on its own main heading (via pageStart), not the whole content area,
+// so a screen reader says where you are in one line instead of reading the page
+const pageHeading = () => [...document.querySelectorAll<HTMLElement>('#content h1')].find((heading) => !heading.closest('[aria-busy="true"]')) ?? null;
 const nav = async () => await screen.findByRole('navigation', { name: 'Main' });
 
 let scrollY = 0;
@@ -56,7 +59,7 @@ describe('SF-0208-06 focus and scroll survive moving around', () => {
     backend();
     render(<App />);
     fireEvent.click(within(await nav()).getByRole('link', { name: 'Library' }));
-    await waitFor(() => expect(document.getElementById('content')).toHaveFocus());
+    await waitFor(() => expect(pageHeading()).toHaveFocus());
     expect(window.scrollTo).toHaveBeenLastCalledWith(0, 0);
     await waitFor(() => expect(document.body.textContent).toContain('Library page'));
   });
@@ -68,7 +71,7 @@ describe('SF-0208-06 focus and scroll survive moving around', () => {
     scrollY = 640;
     fireEvent.click(within(main).getByRole('link', { name: 'Library' }));
     await waitFor(() => expect(window.location.pathname).toBe('/library'));
-    await waitFor(() => expect(document.getElementById('content')).toHaveFocus());
+    await waitFor(() => expect(pageHeading()).toHaveFocus());
     scrollY = 0;
     (document.activeElement as HTMLElement | null)?.blur();
     await act(async () => {
@@ -77,7 +80,7 @@ describe('SF-0208-06 focus and scroll survive moving around', () => {
     });
     await waitFor(() => expect(window.location.pathname).toBe('/mixes'));
     await waitFor(() => expect(window.scrollTo).toHaveBeenLastCalledWith(0, 640));
-    expect(document.getElementById('content')).toHaveFocus();
+    await waitFor(() => expect(pageHeading()).toHaveFocus());
     expect(within(main).getByRole('link', { name: 'Make a Mix' })).toHaveAttribute('aria-current', 'page');
   });
 });

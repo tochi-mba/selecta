@@ -10,6 +10,7 @@ import { attentionWords, jobAttention, useJobsStatus } from '../state/jobs';
 import { announce, Drawer, LiveRegion } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { playLabel, SEAM_LABEL, songArtist, songTitle, timeLabel, transportClock } from '../audio/transportWords';
+import { pageStart } from '../ui/focusReturn';
 import { ThemeMenu } from '../ui/ThemeChoice';
 import { Toaster } from '../ui/toasts';
 import { aboutOf, classicDestinations, describeRoute, destinationOf, destinationsFor, type MoreDestination, type ShellMode, type ShellRoute, workspaceTabs } from './manifest';
@@ -170,6 +171,66 @@ function useHeaderBlock(bar: { current: HTMLElement | null }) {
   }, [bar]);
 }
 
+/** Hands `found` what `look` returns as soon as it returns something: at once if it's already there,
+ * otherwise on the first DOM change that brings it, giving up after `limit` ms. A page that arrives in
+ * a lazy chunk or after a read is waited for, not raced. Returns a function that stops looking. */
+export function whenShown<T>(look: () => T | null | undefined | false, found: (value: T) => void, limit = 3000): () => void {
+  const already = look();
+  if (already) {
+    found(already);
+    return () => {};
+  }
+  if (typeof MutationObserver === 'undefined') return () => {};
+  let done = false;
+  const observer = new MutationObserver(() => {
+    if (done) return;
+    const value = look();
+    if (!value) return;
+    stop();
+    found(value);
+  });
+  const timer = window.setTimeout(() => stop(), limit);
+  function stop() {
+    if (done) return;
+    done = true;
+    observer.disconnect();
+    window.clearTimeout(timer);
+  }
+  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-busy', 'hidden', 'class', 'style'] });
+  return stop;
+}
+
+/** The page's own main heading once the page itself is there: not the loading fallback's, which is
+ * replaced a moment later and would take focus with it. */
+function pageHeading(container: HTMLElement | null): HTMLElement | null {
+  if (!container?.isConnected) return null;
+  const start = pageStart();
+  if (!start || start === container || start.closest('[aria-busy="true"]')) return null;
+  return start;
+}
+
+const SOMEONE_SCROLLS = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const;
+
+/** Scrolls to `target`, and again as the page grows, until it gets there: Back to a page whose rows
+ * are still arriving would otherwise stop short wherever the page ended at that moment. Anyone who
+ * scrolls, taps or types in the meantime wins straight away. */
+function restoreScroll(target: number): () => void {
+  window.scrollTo?.(0, target);
+  if (target <= 0) return () => {};
+  const arrived = () => Math.abs(window.scrollY - target) <= 1;
+  let stopLooking = () => {};
+  const leave = () => {
+    stopLooking();
+    for (const kind of SOMEONE_SCROLLS) window.removeEventListener(kind, leave);
+  };
+  for (const kind of SOMEONE_SCROLLS) window.addEventListener(kind, leave, { passive: true });
+  stopLooking = whenShown(() => {
+    if (!arrived()) window.scrollTo?.(0, target);
+    return arrived();
+  }, leave);
+  return leave;
+}
+
 /** Keeps everything fixed to the bottom above an on-screen keyboard, or out of its way, by working out
  * how much of the window the keyboard is covering. The first screen uses it too (MI-0141-07). */
 export function useKeyboardInset() {
@@ -255,7 +316,6 @@ export function Shell({
   const place = useLocationText().split('?')[0];
   const content = useRef<HTMLDivElement>(null);
   const first = useRef(true);
-  const [popped, setPopped] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   // MP-0282-04: on a phone the Workspace warning is a dot on More, not one more button in the top bar
   const attention = jobAttention(useJobsStatus().jobs);
@@ -263,23 +323,30 @@ export function Shell({
   const on = useFlags();
   useKeyboardInset();
 
-  useEffect(() => {
-    const pop = () => setPopped(true);
-    window.addEventListener('popstate', pop);
-    return () => window.removeEventListener('popstate', pop);
-  }, []);
-
-  // A new page starts at the top with focus at its start, and says where you are. Back and Forward
-  // return to where you were.
+  // A new page starts at the top with focus on its heading, and says where you are. Back and Forward
+  // return to where you were. The history entry itself says which: a page left by navigating away
+  // carries the scroll it was left at, and a new entry carries none. (A popstate flag set in a listener
+  // was read too late: the router's own listener renders the new page, effects included, first.)
   useEffect(() => {
     if (first.current) {
       first.current = false;
       return;
     }
-    window.scrollTo?.(0, popped ? savedScroll() : 0);
-    setPopped(false);
-    content.current?.focus({ preventScroll: true });
+    const container = content.current;
+    const stopScroll = restoreScroll(savedScroll());
+    // focus never drops to the body while the page arrives; the heading takes it once it's painted.
+    // Someone already typing in the new page (the '/' shortcut's search box) keeps their place.
+    const typing = document.activeElement?.matches('input, textarea, select, [contenteditable="true"]') && container?.contains(document.activeElement);
+    if (!typing) container?.focus({ preventScroll: true });
+    const stopFocus = whenShown(() => pageHeading(container), (heading) => {
+      const now = document.activeElement;
+      if (!now || now === document.body || now === container) heading.focus({ preventScroll: true });
+    });
     announce(`${describeRoute(route).title} page`);
+    return () => {
+      stopScroll();
+      stopFocus();
+    };
   }, [place]);
 
   // the shape of the frame lives in one place, on the root, so everything is measured from the same numbers
