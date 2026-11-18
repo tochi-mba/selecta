@@ -62,7 +62,7 @@
 .term-hint-more { display: inline-flex; align-items: center; margin-inline-start: var(--space-2); min-height: var(--control-height); }
 
 @media (pointer: coarse) {
-  .term-hint-button { min-width: 36px; min-height: 36px; }
+  .term-hint-button { min-width: 44px; min-height: 44px; }
 }
 
 @media (forced-colors: active) {
