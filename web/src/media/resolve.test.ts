@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { makeCoexistingResolver, makeResolver, makeSourceBook, NOT_ANYWHERE, NOT_ON_DEVICE, resolveByIndex } from './resolve';
 import { MediaStore } from './store';
+import { fileSha256 } from './identity';
 import type { StoredSong } from './store';
 import { bytesFile, fakeHandle } from './testFixtures';
 
@@ -23,8 +24,11 @@ function handleSong(songId: number, handle: ReturnType<typeof fakeHandle>): Stor
 
 describe('makeResolver', () => {
   it('resolves a granted handle to its bytes', async () => {
-    const handle = fakeHandle(bytesFile('abc', 'a.mp3'));
-    const resolve = makeResolver(await storeWith(handleSong(1, handle)), noCache);
+    const file = bytesFile('abc', 'a.mp3');
+    const handle = fakeHandle(file);
+    const song = handleSong(1, handle);
+    song.identity.content_sha256 = await fileSha256(file);
+    const resolve = makeResolver(await storeWith(song), noCache);
     const track = await resolve(1);
     expect(track).not.toBeNull();
     expect(track?.id).toBe(1);
