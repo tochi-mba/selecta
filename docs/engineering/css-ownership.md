@@ -9,19 +9,20 @@ Later sheets win ties of equal specificity. A sheet only refines what an earlier
 | Order | Sheet | Owns |
 | --- | --- | --- |
 | 1 | `styles/tokens.css` | Every value: palette, semantic roles (text, surface, focus, selection, status, border, edge), spacing, type, motion, density and theme overrides. The only place a raw colour may appear. |
-| 2 | `style.css` | Element defaults and the legacy page layouts that came before the split sheets. |
-| 3 | `styles/shell.css` | The frame around every page: rail, phone tab bar, context bar, mini-player, overlays, notifications, skeletons. |
-| 4 | `styles/polish.css` | Shared finish over legacy layouts: hit targets, focus that never moves, reveal motion, reduced-motion overrides. |
-| 5 | `styles/foundation.css` | Small building blocks every page uses: primary action, Activity, command palette parts. |
-| 6 | `styles/listening.css` | Onboarding, Explore (Make a Mix), Listen, My Mixes and Requests. |
-| 7 | `styles/creation.css` | The editor, the transition inspector and the Studio. |
-| 8 | `styles/operations.css` | Discovery, Library, Workspace, export and listening studies. |
-| 9 | `styles/music-objects.css` | Cross-scene musical objects: motifs, verified transition, energy and request path. |
-| 10 | `styles/glossary.css` | The glossary dialog and inline term hints. |
-| 11 | `styles/palette.css` | Search and command palette result groups. |
-| 12 | `styles/icons.css` | Icon slots, badge baselines and icon-only control geometry (ADR-0277). |
-| 13 | `styles/depth.css` | Surface depth, borders, shadows and accent hierarchy beyond a token (ADR-0276). |
-| 14 | `styles/typography.css` | Type roles applied where an earlier rule left a gap; loaded last so it owns type (ADR-0275). |
+| 2 | `styles/boot.css` | The runtime and sign-in messages shown before an app frame exists, and the brand mark badge, so `RuntimeApp.tsx` is styled in local mode too. |
+| 3 | `style.css` | Element defaults and the legacy page layouts that came before the split sheets. |
+| 4 | `styles/shell.css` | The frame around every page: rail, phone tab bar, context bar, mini-player, overlays, notifications, skeletons. |
+| 5 | `styles/polish.css` | Shared finish over legacy layouts: hit targets, focus that never moves, reveal motion, reduced-motion overrides. |
+| 6 | `styles/foundation.css` | Small building blocks every page uses: primary action, Activity, command palette parts. |
+| 7 | `styles/listening.css` | Onboarding, Explore (Make a Mix), Listen, My Mixes and Requests. |
+| 8 | `styles/creation.css` | The editor, the transition inspector and the Studio. |
+| 9 | `styles/operations.css` | Discovery, Library, Workspace, export and listening studies. |
+| 10 | `styles/music-objects.css` | Cross-scene musical objects: motifs, verified transition, energy and request path. |
+| 11 | `styles/glossary.css` | The glossary dialog and inline term hints. |
+| 12 | `styles/palette.css` | Search and command palette result groups. |
+| 13 | `styles/icons.css` | Icon slots, badge baselines and icon-only control geometry (ADR-0277). |
+| 14 | `styles/depth.css` | Surface depth, borders, shadows and accent hierarchy beyond a token (ADR-0276). |
+| 15 | `styles/typography.css` | Type roles applied where an earlier rule left a gap; loaded last so it owns type (ADR-0275). |
 
 `styles/lucy.css` is not loaded by `main.tsx`: `views/Lucy.tsx` and `views/LucyCloudSettings.tsx` import it, so it only exists once Lucy is on screen. It owns the Lucy page and uses only meanings from `tokens.css`.
 

@@ -1,0 +1,42 @@
+/* What shows before an app has a frame: the runtime and sign-in messages (RuntimeApp.tsx, CloudRoot,
+   CloudApp, CloudStates) and the brand mark. Loaded right after tokens.css by main.tsx, so these
+   screens are styled in local mode and in the Cloud before any page sheet has arrived. */
+
+.cloud-runtime-message,
+.cloud-welcome,
+.cloud-onboarding {
+  min-height: 100vh;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: var(--space-3);
+  padding: clamp(var(--space-5), 8vw, calc(var(--space-7) * 2));
+  max-width: var(--content-reading);
+  margin: auto;
+}
+.cloud-runtime-message h1,
+.cloud-welcome h1,
+.cloud-onboarding h1 { font: var(--type-hero); letter-spacing: -0.035em; margin: 0; max-width: 40rem; }
+.cloud-runtime-message p,
+.cloud-welcome p,
+.cloud-onboarding p { color: var(--text-soft); max-width: 35rem; }
+
+/* The brand mark: the "S" in a round lime badge (BrandMark.tsx draws .brand-mark-badge; .cloud-mark is
+   the same badge on the screens written before it). Always decoration: its words sit beside it. In
+   Light the lime keeps its dark ink and gains a dark edge, as every lime fill does. */
+.brand-mark-badge,
+.cloud-mark {
+  inline-size: 46px;
+  block-size: 46px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--primary-edge);
+  border-radius: 50%;
+  background: var(--primary-fill);
+  color: var(--primary-ink);
+  font: var(--weight-display) var(--text-xl) / 1 var(--display);
+}
+.brand-mark-badge.small,
+.cloud-brand .cloud-mark,
+.biz-shell-brand .cloud-mark { inline-size: 34px; block-size: 34px; font-size: var(--text-lg); }

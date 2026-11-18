@@ -9,6 +9,7 @@ overlap or a new breakpoint fails the test until it is given an owner here.
 | File | Owns | Loaded by |
 |---|---|---|
 | `styles/tokens.css` | palette, meanings, type, space, motion, layers, shell geometry, density, theme switching | `main.tsx` |
+| `styles/boot.css` | runtime and sign-in messages before an app frame exists, the brand mark badge | `main.tsx` |
 | `style.css` | legacy global sheet: base controls, Listen strip/lyrics/handoff, timeline rows, Library rows, Links cards, Workspace metrics | `main.tsx` |
 | `styles/shell.css` | rail/bottom bar, context bar, mini-player, toasts, overlays, menus, tooltips, skeletons, inspector resize | `main.tsx` |
 | `styles/polish.css` | interaction feedback, card disclosure, skeleton reveal, reduced-motion overrides | `main.tsx` |
@@ -45,7 +46,7 @@ Feature-local sheets live beside the one component that imports them and style n
 | `venueops/staffDashboard.css` | unattended playback dashboard and staff controls | `venueops/StaffDashboard.tsx` |
 | `views/mixIntent.css` | mix intent and setting-scope explanatory surfaces | `views/MixIntent.tsx` |
 
-Load order (`web/src/main.tsx`): tokens, style.css, shell, polish, foundation, listening, creation,
+Load order (`web/src/main.tsx`): tokens, boot, style.css, shell, polish, foundation, listening, creation,
 operations, music-objects, glossary, palette, icons, depth, typography. Later files refine earlier
 ones; feature files come after the legacy sheet so they win at equal specificity. New work goes into
 the file that owns the feature; `style.css` only shrinks.
