@@ -30,11 +30,12 @@ from sqlalchemy.engine import Connection
 from selecta import flags
 from selecta.admin import alerts
 from selecta.authz import audit, delayed
-from selecta.authz.check import Actor, Assignment, authorize
+from selecta.authz.check import Actor, Assignment, active_assignments, authorize
 from selecta.authz.errors import Forbidden
 from selecta.authz.roles import may_change_flag
 from selecta.authz.scopes import ResourceRef
 from selecta.billing import plans, stripe_sync
+from selecta.flags import flip_guard
 from selecta.flags import rules as flag_rules
 from selecta.flags import targeting
 from selecta.flags.matching import Context, Rule, RuleKind
@@ -253,6 +254,11 @@ def change(
         raise flag_rules.RuleError([f"{flag_id!r} isn't a flag."])
     proposed = proposed_rules(conn, flag_id, action, params)
     _validated(flag_id, proposed)
+    if flag_id == flip_guard.LOCAL_FIRST:
+        # Dashboards before percentage (BF-0467-04): raising the rollout waits for them.
+        refusals = flip_guard.check_percentage_step_now(conn, proposed, reason=reason)
+        if refusals:
+            raise flag_rules.RuleError(refusals)
 
     if action == "kill_switch":
         match = authorize(conn, actor, "flags.kill_switch", _flag_resource(flag_id))
@@ -453,6 +459,8 @@ def contexts_for(conn: Connection, user_id: str) -> list[Context]:
         return []
     now = db_now(conn)
     entitlement = stripe_sync.effective_entitlement(conn, row.id, now)
+    # Staff roles count, as they do in the live context, so a staff-segment rule explains true.
+    staff = frozenset(str(match.role.value) for match in active_assignments(conn, user_id, now))
     return [
         Context(
             mode="cloud",
@@ -460,6 +468,7 @@ def contexts_for(conn: Connection, user_id: str) -> list[Context]:
             user_id=user_id,
             plan=entitlement.plan_id,
             plan_version=entitlement.plan_version,
+            staff_roles=staff,
             account_age_days=max(0.0, (now - row.created_at) / 86_400),
         )
     ]

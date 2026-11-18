@@ -173,6 +173,9 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | Route | Side effect |
 |---|---|
 | `PUT /api/account/labs/{flag_id}` | Turns a Labs feature on or off for the account |
+| `POST /api/account/labs/local-first/join` | Adds the member's user id to the Labs cohort rule on `cloud.local_first` (a new rule version), only if that really turns browser-first Cloud on |
+| `POST /api/account/labs/local-first/leave` | Removes the member's user id from the Labs cohort rule on `cloud.local_first` (a new rule version when it changed) |
+| `POST /api/account/labs/local-first/feedback` | Records the member's Labs feedback as a `labs.local_first.feedback` audit event |
 | `POST /api/onboarding/complete` | Marks Cloud onboarding done |
 | `POST /api/account/sign-out-everywhere` | Revokes every session |
 | `DELETE /api/account` | Hides the account and queues its deletion |

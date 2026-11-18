@@ -22,7 +22,9 @@
       "about": "Opt into preview features that your plan is allowed to use.",
       "routes": [
         "GET /api/account/labs",
-        "PUT /api/account/labs/{flag_id}"
+        "PUT /api/account/labs/{flag_id}",
+        "GET /api/account/labs/local-first",
+        "POST /api/account/labs/local-first/leave"
       ],
       "modes": ["cloud"],
       "kind": "release",
@@ -114,6 +116,19 @@
       "default": false,
       "kind": "release",
       "owner": "playback"
+    },
+    "cloud.local_first_labs": {
+      "label": "Labs: browser-first Cloud",
+      "about": "Lets a beta cohort opt into browser-first Cloud themselves, give feedback and opt out again; opting in adds the member to a cloud.local_first targeting rule (ADR-0467 step 3).",
+      "routes": [
+        "POST /api/account/labs/local-first/join",
+        "POST /api/account/labs/local-first/feedback"
+      ],
+      "surfaces": ["cloud.settings"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "platform"
     },
     "cloud.local_media": {
       "label": "Local media catalogue",
@@ -423,6 +438,9 @@
           "GET /api/admin/flags",
           "GET /api/admin/flags/history",
           "GET /api/admin/flags/cloud.hosted_media/grandfather-audit",
+          "GET /api/admin/flags/cloud.local_first/percentage-readiness",
+          "GET /api/admin/economics/cost-per-mode",
+          "GET /api/admin/economics/lucy-ceiling",
           "POST /api/admin/flags/rollback",
           "GET /api/admin/flags/explain/{user_id}",
           "POST /api/admin/flags/{flag_id}/impact",

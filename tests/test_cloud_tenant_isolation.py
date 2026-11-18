@@ -109,6 +109,9 @@ STAFF_ONLY = {
     ("POST", "/api/admin/upload-restrictions/{workspace_id}/lift"),
     ("POST", "/api/admin/business/pilots"),
     ("GET", "/api/admin/flags/cloud.hosted_media/grandfather-audit"),
+    ("GET", "/api/admin/flags/cloud.local_first/percentage-readiness"),
+    ("GET", "/api/admin/economics/cost-per-mode"),
+    ("GET", "/api/admin/economics/lucy-ceiling"),
 }
 # Business routes require an organisation workspace and membership, not merely a
 # personal library workspace. The dedicated Business tests exercise their tenant
@@ -174,6 +177,10 @@ FLAG_DARK = {
     ("GET", "/api/local-media/songs/{song_id}"),
     ("DELETE", "/api/local-media/songs/{song_id}"),
     ("POST", "/api/local-media/availability"),
+    # The Labs opening for browser-first Cloud ships dark (`cloud.local_first_labs` off); its
+    # routes act only on the caller's own user id and workspace (`test_bf_local_first_labs.py`).
+    ("POST", "/api/account/labs/local-first/join"),
+    ("POST", "/api/account/labs/local-first/feedback"),
 }
 
 # Every route that can reach a workspace's data, with a body valid enough to get past
@@ -190,6 +197,8 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("GET", "/api/account"): None,
     ("GET", "/api/account/labs"): None,
     ("PUT", "/api/account/labs/{flag_id}"): {"enabled": False},
+    ("GET", "/api/account/labs/local-first"): None,
+    ("POST", "/api/account/labs/local-first/leave"): None,
     ("GET", "/api/account/export"): None,
     ("GET", "/api/account/lucy"): None,
     ("PUT", "/api/account/lucy"): {
