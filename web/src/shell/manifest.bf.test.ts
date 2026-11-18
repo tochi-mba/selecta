@@ -22,7 +22,7 @@ const BOTH: Experience = { local_first: true, hosted: true };
 describe('shared-shell destination requirements (BF-0462-01)', () => {
   it('offers the same four primary music destinations in local and Cloud', () => {
     for (const mode of ['local', 'cloud'] as const) {
-      expect(destinationsFor(context(mode)).filter((item) => item.id !== 'workspace').map((item) => item.label))
+      expect(destinationsFor(context(mode, ['cloud.local_first'])).filter((item) => item.id !== 'workspace').map((item) => item.label))
         .toEqual(['Listen', 'Make a Mix', 'My Mixes', 'Library']);
     }
   });
@@ -55,6 +55,20 @@ describe('shared-shell destination requirements (BF-0462-01)', () => {
     const feature = vi.fn(() => false);
     expect(destinationVisible(gated, { mode: 'local', feature })).toBe(true);
     expect(feature).not.toHaveBeenCalled();
+  });
+
+  it('gives the hosted shell (cloud.local_first read as off) Make a Mix and Library by their own flags, and no My Mixes', () => {
+    const ids = (features: string[]) => destinationsFor(context('cloud', features)).map((item) => item.id);
+    expect(ids(['cloud.mix_create', 'cloud.stored_media'])).toEqual(['listen', 'explore', 'library']);
+    expect(ids(['cloud.stored_media'])).toEqual(['listen', 'library']);
+    expect(ids([])).toEqual(['listen']);
+    // local mode never consults them
+    expect(destinationsFor(context('local')).map((item) => item.id)).toEqual(DESTINATIONS.map((item) => item.id));
+  });
+
+  it('names the hosted overview, which belongs to no destination', () => {
+    expect(describeRoute({ page: 'home' })).toEqual({ title: 'Overview', crumbs: [{ label: 'Overview' }] });
+    expect(destinationOf({ page: 'home' })).toBeNull();
   });
 
   it('does not consult gates for an unrestricted destination', () => {

@@ -406,6 +406,9 @@ const BF: Record<string, { surfaces: string[]; marks: Mark[]; ships: boolean }> 
   'cloud.hosted_media': { surfaces: ['cloud.uploads'], ships: true, marks: [{ role: { role: 'button', name: 'Add music' } }, { text: /upload tracks/i }] },
   'cloud.stored_media': { surfaces: ['cloud.library', 'cloud.listen'], ships: true, marks: [{ role: { role: 'button', name: 'Library' } }] },
   'cloud.local_first': { surfaces: ['cloud.home', 'cloud.listen', 'cloud.library', 'cloud.settings'], ships: false, marks: [{ role: { role: 'navigation', name: 'Main' } }, { role: { role: 'link', name: 'Make a Mix' } }] },
+  // Its on-state (the shared shell's Main navigation and More for a hosted account) is shown below
+  // and in hosted-shell.cloud.ts; off, the legacy rail is all there is.
+  'cloud.hosted_shell': { surfaces: ['cloud.home', 'cloud.listen', 'cloud.library', 'cloud.settings'], ships: false, marks: [{ role: { role: 'navigation', name: 'Main' } }, { role: { role: 'button', name: 'More' } }] },
   'cloud.local_media': { surfaces: ['cloud.library'], ships: false, marks: [{ role: { role: 'heading', name: 'Connect music' } }, { text: /Local song \d/ }] },
   'devices.browser_player': { surfaces: ['cloud.listen'], ships: false, marks: [{ text: /Browser player/ }, { text: /This device can.t play mixes/ }] },
   'cloud.browser_dsp': { surfaces: ['cloud.listen'], ships: false, marks: [{ text: /Browser DSP/ }] },
@@ -464,6 +467,20 @@ test('each Browser-first mark is real: shown with its flag on', async ({ page, r
   // This test build turns the catalogue on (tests/e2e_cloud_server.py), so its marks show.
   await expect(page.getByRole('heading', { name: 'Connect music' })).toBeVisible();
   await expect(page.getByText('Local song 1', { exact: true }).first()).toBeVisible();
+});
+
+test('the hosted shell marks are real: shown with cloud.hosted_shell on for a hosted account', async ({ page, request }) => {
+  const user = listener('bf-hosted-shell-marks');
+  const seeded = await request.post('/test/seed', { data: { user, plan: 'premium', ...BF_SEED } });
+  expect(seeded.ok(), await seeded.text()).toBeTruthy();
+  await page.route('**/api/account', (route) => rewriteJson(route, (account) => ({
+    ...account,
+    experience: { ...(account.experience ?? {}), local_first: false },
+    features: { ...account.features, 'cloud.hosted_shell': true },
+  })));
+  await page.addInitScript((name) => localStorage.setItem('selecta-e2e-user', name), user);
+  await page.goto('/library');
+  expect(await marksShown(page, BF['cloud.hosted_shell'].marks)).toEqual(['navigation "Main"', 'button "More"']);
 });
 
 for (const id of BF_IDS) {

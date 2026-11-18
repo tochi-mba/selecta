@@ -278,7 +278,9 @@ export function CloudApp() {
   const routedPage = route.kind === 'page' ? route.page : null;
   const localFirst = account !== null && localFirstDecided(account);
   // `cloud.hosted_shell`: every other account's pages in the shared shell, which routes them itself.
-  const hostedShell = account !== null && !localFirst && flagOn('cloud.hosted_shell');
+  // The server decides every registry flag in the account's snapshot; this one moves the whole
+  // frame, so it is drawn only when decided on, never because an answer did not mention it.
+  const hostedShell = account !== null && !localFirst && account.features['cloud.hosted_shell'] === true && flagOn('cloud.hosted_shell');
   // The shared shells move with the router, not choosePage, so a message about one page is not
   // left standing on the next.
   const place = useLocationText().split('?')[0];

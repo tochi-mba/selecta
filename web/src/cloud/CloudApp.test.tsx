@@ -24,6 +24,7 @@ let events: string | null = null;
 /** From which /api/account call on the session counts as revoked (Infinity: never). */
 let revokedFromCall = Infinity;
 let signOutEverywhere: Response | null = null;
+let deleted: Response | null = null;
 
 beforeEach(() => {
   account = cloudAccount();
@@ -31,17 +32,19 @@ beforeEach(() => {
   events = null;
   revokedFromCall = Infinity;
   signOutEverywhere = null;
+  deleted = null;
   auth.user = SIGNED_IN;
   auth.signOut.mockReset();
   let accountCalls = 0;
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
     requests.push(`${init?.method ?? 'GET'} ${url}`);
     const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
-    if (url === '/api/account') {
+    if (url === '/api/account' && init?.method !== 'DELETE') {
       accountCalls += 1;
       if (accountCalls >= revokedFromCall) return json({ detail: { code: 'session_revoked', message: 'You were signed out. Sign in again.' } }, 401);
       return json(account);
     }
+    if (url === '/api/account' && init?.method === 'DELETE') return deleted ?? new Response(null, { status: 204 });
     if (url === '/api/account/sign-out-everywhere') return signOutEverywhere ?? json({ revoked_before: 1, sessions_revoked: 2, devices_signed_out: 1, playback_stopped: true });
     if (url === '/api/events') {
       if (events === null) throw new TypeError('blocked');
@@ -69,7 +72,8 @@ describe('the Cloud app', () => {
   it('shows the over-quota banner everywhere and pauses uploads, not the library', async () => {
     account = cloudAccount({ used: 12e9, limit: 10e9 });
     render(<CloudApp />);
-    expect(await screen.findByRole('alert')).toHaveTextContent('You’re 2.0 GB over Free’s 10.0 GB');
+    // a standing condition, said politely (role=status), not as an alert
+    expect(await screen.findByText(/You’re 2.0 GB over Free’s 10.0 GB/)).toBeInTheDocument();
     await userEvent.click(within(screen.getByRole('navigation', { name: 'Cloud workspace' })).getByRole('button', { name: 'Add music' }));
     expect(screen.getByRole('button', { name: 'Start upload' })).toBeDisabled();
     await userEvent.click(screen.getByRole('button', { name: 'Manage storage' }));
@@ -174,14 +178,71 @@ describe('the Cloud app', () => {
 
     account = { ...cloudAccount(), features: { rooms: false }, feature_locks: { rooms: 'premium' } };
     const teaser = render(<CloudApp />);
-    expect(await screen.findByText('PREMIUM FEATURE')).toBeInTheDocument();
+    expect(await screen.findByText('Premium feature')).toBeInTheDocument();
     expect(screen.getByText(/Rooms are part of Premium/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Explore Premium' })).toBeInTheDocument();
     teaser.unmount();
 
     account = { ...cloudAccount(), features: { rooms: false } };
     render(<CloudApp />);
-    expect(await screen.findByText('CURRENT PLAN')).toBeInTheDocument();
+    expect(await screen.findByText('Current plan')).toBeInTheDocument();
     expect(screen.queryByText('Host a request room')).toBeNull();
+  });
+  // The legacy rail, captured from the commit before cloud.hosted_shell existed (ff96815b) with
+  // this same account; with the flag off it must not move by a byte.
+  const LEGACY_RAIL = '<aside class="cloud-rail"><button class="cloud-brand" title="Return to Cloud home"><span class="cloud-mark" aria-hidden="true">S</span><span>SelectaDJ <span class="cloud-brand-sub">REX Technologies</span></span></button><nav aria-label="Cloud workspace"><button aria-current="page">Overview</button><button>Listen</button><button>Library</button><button>Add music</button><button>Plan &amp; billing</button><button>Settings</button></nav><div class="cloud-rail-bottom"><span>listener@example.test</span><button>Sign out</button><button>Sign out everywhere</button><button class="cloud-delete-account">Delete account</button></div></aside>';
+
+  it('keeps the legacy rail byte for byte with cloud.hosted_shell off, decided or unmentioned', async () => {
+    for (const features of [{ 'cloud.account_states': true }, { 'cloud.account_states': true, 'cloud.hosted_shell': false }] as Record<string, boolean>[]) {
+      account = { ...cloudAccount(), features };
+      const { container, unmount } = render(<CloudApp />);
+      await screen.findByText('Sign out');
+      expect(container.querySelector('aside.cloud-rail')!.outerHTML).toBe(LEGACY_RAIL);
+      expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull();
+      unmount();
+    }
+  });
+
+  it('asks before deleting the account from the rail, in a dialog rather than window.confirm', async () => {
+    const native = vi.spyOn(window, 'confirm');
+    render(<CloudApp />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Delete account' }));
+    const dialog = await screen.findByRole('alertdialog', { name: 'Delete your SelectaDJ Cloud account?' });
+    expect(dialog).toHaveTextContent('It is hidden and you are signed out at once. Final erasure happens after the 30 day recovery window');
+    expect(native).not.toHaveBeenCalled();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Keep my account' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(requests).not.toContain('DELETE /api/account');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Delete account' }));
+    await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Delete my account' }));
+    await waitFor(() => expect(auth.signOut).toHaveBeenCalledTimes(1));
+    expect(requests).toContain('DELETE /api/account');
+    native.mockRestore();
+  });
+
+  it('keeps the account dialog open and says why when the server refuses the deletion', async () => {
+    deleted = new Response(JSON.stringify({ detail: { message: 'Deleting is paused for a moment. Try again.' } }), { status: 503, headers: { 'content-type': 'application/json' } });
+    render(<CloudApp />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Delete account' }));
+    await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Delete my account' }));
+    expect(await screen.findByText(/Deleting is paused for a moment/)).toBeInTheDocument();
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(auth.signOut).not.toHaveBeenCalled();
+  });
+
+  it('busies only the operation that is running: a slow sign-out everywhere leaves Delete account pressable', async () => {
+    let finish: (response: Response) => void = () => {};
+    const slow = new Promise<Response>((resolve) => { finish = resolve; });
+    const fetcher = vi.mocked(globalThis.fetch as unknown as (url: string, init?: RequestInit) => Promise<Response>);
+    const passOn = fetcher.getMockImplementation()!;
+    fetcher.mockImplementation(async (url: string, init?: RequestInit) => (url === '/api/account/sign-out-everywhere' ? slow : passOn(url, init)));
+    render(<CloudApp />);
+    const everywhere = await screen.findByRole('button', { name: 'Sign out everywhere' });
+    await userEvent.click(everywhere);
+    await waitFor(() => expect(everywhere).toHaveAttribute('aria-busy', 'true'));
+    expect(screen.getByRole('button', { name: 'Delete account' })).toBeEnabled();
+    finish(new Response(JSON.stringify({ revoked_before: 1 }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    await waitFor(() => expect(auth.signOut).toHaveBeenCalledTimes(1));
   });
 });

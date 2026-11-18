@@ -24,7 +24,8 @@ def test_dev_defaults_to_the_browser_first_experience(tmp_path, monkeypatch):
         import os
 
         assert os.environ["SELECTA_FLAGS"] == BROWSER_FIRST_FLAGS
-        for flag in ("cloud.local_first", "cloud.local_media", "devices.browser_player", "cloud.hosted_shell"):
+        browser_first = ("cloud.local_first", "cloud.local_media", "devices.browser_player")
+        for flag in (*browser_first, "cloud.hosted_shell"):
             assert f"+{flag}" in BROWSER_FIRST_FLAGS
         with transaction(engine) as conn:
             rules = flag_rules.current_rules(conn, "cloud.hosted_media")
