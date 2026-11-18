@@ -19,7 +19,7 @@ from selecta.ai.schema import ai_runs, ai_usage
 from selecta.flags import rules as flag_rules
 from selecta.hosted_coexistence.grandfather import build_grandfather_rules
 from selecta.persistence import new_id, transaction
-from selecta.usage import lucy_ceiling, unit_economics
+from selecta.usage import lucy_ceiling, observability, unit_economics
 from selecta.usage.lucy_ceiling import TurnSample
 from selecta.usage.schema import quota_state, usage_ledger
 from selecta.usage.unit_economics import AccountUsage, Rates
@@ -64,6 +64,71 @@ def test_the_summary_splits_modes_and_names_its_gaps():
     assert any("not priced" in gap for gap in report["gaps"])
     assert not any("not priced" in gap for gap in unit_economics.gaps(
         Rates(compute_usd_per_second=0.0001)))
+
+
+def test_the_cost_summary_keeps_observed_io_separate_from_authorizations():
+    report = unit_economics.summarise(
+        [
+            AccountUsage(
+                "hosted-ws",
+                "hosted",
+                object_read_bytes_observed=128,
+                object_read_ops_observed=1,
+                object_read_auth_bytes=8192,
+                object_read_auth_ops=2,
+                object_write_bytes_observed=32,
+                object_write_ops_observed=1,
+                object_write_auth_ops=1,
+                egress_bytes_observed=64,
+                render_seconds_observed=2.5,
+            ),
+            AccountUsage("default-ws", "default", lucy_turns=1),
+        ]
+    )
+    hosted = report["modes"]["hosted"]
+    assert hosted["meters"]["object_read_bytes_observed"] == 128
+    assert hosted["meters"]["object_read_ops_observed"] == 1
+    assert hosted["meters"]["object_read_authorized_bytes"] == 8192
+    assert hosted["meters"]["object_read_authorizations"] == 2
+    assert hosted["meters"]["object_write_bytes_observed"] == 32
+    assert hosted["meters"]["object_write_authorizations"] == 1
+    assert hosted["meters"]["egress_bytes_observed"] == 64
+    assert hosted["meters"]["render_seconds_observed"] == pytest.approx(2.5)
+    assert hosted["components_usd"]["r2_egress"] is None
+    assert hosted["components_usd"]["object_read"] is None
+    assert hosted["components_usd"]["object_write"] is None
+    assert "not observable" in hosted["signal_status"]["object_reads"]
+    assert any("not completed transfers" in gap for gap in report["gaps"])
+
+
+def test_usage_observations_capture_mode_and_provenance(world):
+    hosted, default = _seed(world, "2026-11")
+    with transaction(world.engine) as conn:
+        read_id = observability.observe(
+            conn, hosted, "object_read_bytes", 120,
+            source="playback.proxy", ref="request-1", detail={"status": 200},
+        )
+        observability.observe(
+            conn, hosted, "object_read_auth_bytes", 2048,
+            source="signed-url.issue", ref="asset-1",
+        )
+        observability.observe(
+            conn, default, "render_seconds", 1.5, source="render.worker",
+        )
+        rows = {row.workspace_id: row for row in unit_economics.gather(conn, "2026-11")}
+        read = (
+            conn.execute(usage_ledger.select().where(usage_ledger.c.id == read_id))
+            .mappings()
+            .one()
+        )
+    assert rows[hosted].mode == "hosted"
+    assert rows[hosted].object_read_bytes_observed == 120
+    assert rows[hosted].object_read_auth_bytes == 2048
+    assert rows[default].mode == "default"
+    assert rows[default].render_seconds_observed == pytest.approx(1.5)
+    assert read["detail"]["account_mode"] == "hosted"
+    assert read["detail"]["source"] == "playback.proxy"
+    assert read["detail"]["status"] == 200
 
 
 def test_a_dashboard_is_live_only_with_both_modes_and_real_use():
