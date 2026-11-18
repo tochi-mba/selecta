@@ -40,7 +40,7 @@ export function transitionsWaiting(mix: MixItem[]): WaitingTransition[] {
 
 /** An optional return shortcut. Trust the server's exact order, never a stored title,
  * selected transition, or optimistic snapshot from a previous browser session. */
-export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft, playDraft, request }: ViewProps) {
+export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft, playDraft, request, suppressDrafts = false }: ViewProps & { suppressDrafts?: boolean }) {
   // ADR-0462: reads go through the injected request, never the local client.
   const { get } = useApi(request);
   const [recent, setRecent] = useState<RecentDraft | null>(null);
@@ -110,6 +110,7 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
   const stableSetView = useCallback<ViewProps['setView']>((...args) => latest.current.setView(...args), []);
 
   const on = useFlags();
+  const showDrafts = !suppressDrafts && on('drafts');
   // SF-0204-02: one primary action. Continue editing leads when offered, then the drafts (first Edit or
   // Start your first draft), and the current mix only when drafts are off.
   const continuing = !!recent && on('mymixes.continue_working') && on('editor');
@@ -145,9 +146,9 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
       </section>}
       {problem && <p className="warn" role="alert">{problem}</p>}
       {mix.length > 0
-        ? <CurrentMix prominent lead={!continuing && !on('drafts')} mix={mix} mixName={mixName} now={now} player={player} setView={setView} />
+        ? <CurrentMix prominent lead={!continuing && !showDrafts} mix={mix} mixName={mixName} now={now} player={player} setView={setView} />
         : <NoCurrentMix lead={!continuing && !on('drafts')} />}
-      {on('drafts') && <StableDrafts lead={!continuing} notify={stableNotify} openDraft={stableOpen} playDraft={stablePlay} setView={stableSetView} />}
+      {showDrafts && <StableDrafts lead={!continuing} notify={stableNotify} openDraft={stableOpen} playDraft={stablePlay} setView={stableSetView} />}
     </main>
   );
 }
