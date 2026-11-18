@@ -5,10 +5,13 @@ import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, Media
 import type { NowState } from '../player';
 import { BytesContext, noBytesHere, RequestContext } from '../requestContext';
 import { navigate, parseRoute, useLocationText } from '../router';
-import { describeRoute, destinationOf, DESTINATIONS, moreDestinationsFor, moreRouteOf, type MoreDestinationId, type ShellRoute } from '../shell/manifest';
+import { describeRoute, destinationOf, DESTINATIONS, destinationsFor, moreDestinationsFor, moreRouteOf, type MoreDestinationId, type ShellRoute } from '../shell/manifest';
 import { Shell } from '../shell/Shell';
+import { useMediaKeys } from '../shell/useMediaKeys';
 import { ControllerNotices } from '../devices/ControllerNotices';
 import { setJobsSource } from '../state/jobs';
+import { Skeleton } from '../ui/controls';
+import { countOf } from '../ui/format';
 import { showToast } from '../ui/toasts';
 import { Library } from '../views/Library';
 import { Mixes } from '../views/Mixes';
@@ -30,6 +33,7 @@ import { OnboardingSpine } from './onboarding/OnboardingSpine';
 import { browserStorage, onboardingFinished, recordImportOutcome } from './onboarding/state';
 import { ImportChip } from './ImportChip';
 import { cancelImportSession, useImportSession } from './importSession';
+import { useServerFreeControls } from './serverFreeControls';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
  *
@@ -41,13 +45,13 @@ import { cancelImportSession, useImportSession } from './importSession';
  */
 
 /** Shell features served by this computer's own server and not by the browser runtime yet. The
- * shell reads them through the one flag read, so their buttons are gone rather than dead. */
+ * shell reads them through the one flag read, so their buttons are gone rather than dead. The
+ * command palette and the keyboard shortcuts stay: this shell offers their server-free subset
+ * (serverFreeControls.tsx), which needs nothing but this browser and its own player. */
 export const NOT_IN_THE_BROWSER = {
   requests: false,
   editor: false,
   'app.activity': false,
-  'app.command_palette': false,
-  'app.shortcuts': false,
   export: false,
   lucy: false,
   // lyrics are looked up by this computer's own server; the browser has none to show or require
@@ -297,6 +301,15 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   };
   const song = data.mix[now.position];
   const localExport: ReactNode = null;
+  // Ctrl K, the single keys and their help, for what this shell really has (W5's server-free
+  // subset); the media keys and what the OS shows as playing drive the browser player.
+  const places = [
+    ...destinationsFor({ mode: 'cloud', feature: on, experience: account.experience ?? null }).filter((place) => place.id !== 'workspace'),
+    ...moreItems,
+  ].map((place) => ({ id: place.id, label: place.label, path: place.path, about: place.about }));
+  const controls = useServerFreeControls({ places, player: shellPlayer, now, hasMix: data.mix.length > 0, hasNext: data.mix.length > now.position + 1 });
+  const currentMix = useCallback(() => data.mix, [data.mix]);
+  useMediaKeys({ on: on('listen.media_keys'), player: shellPlayer, getMix: currentMix, mixName: data.name, now });
   const connect = <ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} onAvailabilityChanged={() => sweepLapsed(true)} />;
 
   const page = (): ReactNode => {
@@ -307,7 +320,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
       return <main className="page" id="main"><h1 className="display small">{item.label}</h1><div className="stack">{more(item.id)}</div></main>;
     }
     if (!shared) {
-      return <main className="page" id="main" aria-busy={!statusProblem}><h1 className="display small">{describeRoute(route).title}</h1>{statusProblem ? <p role="alert">{statusProblem}</p> : <p className="hint">Opening your library…</p>}</main>;
+      return <main className="page" id="main" aria-busy={!statusProblem}><h1 className="display small">{describeRoute(route).title}</h1>{statusProblem ? <p role="alert">{statusProblem}</p> : <Skeleton variant="rows" lines={4} label="Opening your library" />}</main>;
     }
     if (newMember) {
       return (
@@ -362,7 +375,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
         stage={false}
         waitingRequests={0}
         onRequests={IDLE}
-        onHelp={IDLE}
+        onHelp={controls.onHelp}
+        onCommands={controls.onCommands}
         mode="cloud"
         more={moreItems}
         banner={<>{notices}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
@@ -370,6 +384,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
         {page()}
         <footer className="cloud-footer">SelectaDJ Cloud. Your music files stay on your devices; your account keeps their details.</footer>
       </Shell>
+      {controls.overlays}
     </BytesContext.Provider>
     </RequestContext.Provider>
   );
@@ -424,13 +439,13 @@ function SavedBrowserRecipes({ workspaceId, recipes, request, setMixData, refres
       <h2 id="saved-browser-mixes">Saved browser mixes</h2>
       {problem && <p className="warn" role="alert">{problem} <button onClick={() => void load()}>Try again</button></p>}
       {notice && <p className="hint" role="status">{notice}</p>}
-      {list === null && !problem && <p className="hint" role="status">Loading saved mixes…</p>}
+      {list === null && !problem && <Skeleton variant="rows" lines={2} label="Loading saved mixes" />}
       {list?.length === 0 && <div className="empty-state"><p role="status">No saved drafts yet. Make a Mix to create one.</p><button className="primary" onClick={() => navigate('/mixes')}>Make a Mix</button></div>}
       {!!list?.length && <ul className="draft-list density">
         {list.map((recipe) => {
           const selected = recipe.mix_id === currentId;
           return <li className="draft" key={recipe.mix_id}>
-            <div className="draft-name"><b>{recipe.name}</b><span className="soft">{recipe.songs} {recipe.songs === 1 ? 'song' : 'songs'} · saved browser mix</span></div>
+            <div className="draft-name"><b>{recipe.name}</b><span className="soft">{countOf(recipe.songs, 'song')} · saved browser mix</span></div>
             <div className="row wrap draft-actions">
               <button disabled={selected || pending !== null} onClick={() => void useAsCurrent(recipe)}>{pending === recipe.mix_id ? 'Opening…' : selected ? 'Current mix' : 'Use as current mix'}</button>
             </div>
@@ -457,7 +472,7 @@ function ThisDevice({ openStore, children }: { openStore: () => Promise<MediaSto
       <h1 className="display small">This device</h1>
       <section className="panel stack" aria-labelledby="this-device-storage">
         <h2 id="this-device-storage">Browser storage</h2>
-        {space === null && <p className="hint">Checking…</p>}
+        {space === null && <Skeleton lines={1} label="Checking this browser’s storage" />}
         {space && !space.supported && <p>{space.reason}</p>}
         {space?.supported && <p>{`SelectaDJ is using ${megabytes(space.usage)} of the ${megabytes(space.quota)} this browser allows.`} {space.persisted ? 'The browser has promised to keep it.' : 'The browser may clear it if the device runs short of space; your music files are never touched.'}</p>}
         {degraded && <p role="note">This browser is not keeping SelectaDJ’s list of connected files, so you will need to connect them again next visit.</p>}

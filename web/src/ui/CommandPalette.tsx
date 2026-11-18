@@ -16,7 +16,13 @@ const kindOf = (command: Command) => (command.id === SEARCH_LIBRARY ? 'Search' :
  * highlighted, and a command that can't run says why instead of doing something else. Everything here
  * has an ordinary way to do it too, so nothing depends on knowing this exists. Songs found here only
  * ever open their details in the Library: choosing one never plays or changes anything. */
-export function CommandPalette({ commands, onClose }: { commands: Command[]; onClose: () => void }) {
+export function CommandPalette({ commands, onClose, searchSongs = true }: {
+  commands: Command[];
+  onClose: () => void;
+  /** Off in a shell with no SelectaDJ server on this computer: song lookups ask that server, so
+   * the palette offers pages and commands only, and the library search row is the Library's own. */
+  searchSongs?: boolean;
+}) {
   const [query, setQuery] = useState('');
   // What's highlighted is remembered by what it is, so results arriving above it can't move Enter
   // onto something else. The position is only used when that thing has gone from the list.
@@ -25,16 +31,16 @@ export function CommandPalette({ commands, onClose }: { commands: Command[]; onC
   const base = useId();
   const list = useRef<HTMLDivElement>(null);
   const text = query.trim();
-  const songs = usePaletteSongs(text);
+  const songs = usePaletteSongs(searchSongs ? text : '');
 
   const shown = useMemo<Command[]>(() => {
     const matches = matchCommands(commands, text);
     const grouped = GROUPS.filter((group) => group !== 'Songs').flatMap((group) => matches.filter((command) => command.group === group));
-    const everywhere: Command[] = text
+    const everywhere: Command[] = text && searchSongs
       ? [{ id: SEARCH_LIBRARY, label: `Search your library for “${text}”`, group: 'Go to', run: () => navigate(`/library?q=${encodeURIComponent(text)}&show=all`) }]
       : [];
     return [...songs.commands, ...grouped, ...everywhere];
-  }, [commands, text, songs.commands]);
+  }, [commands, text, songs.commands, searchSongs]);
 
   const found = highlight.id === null ? -1 : shown.findIndex((command) => command.id === highlight.id);
   const activeIndex = found >= 0 ? found : Math.min(highlight.index, Math.max(0, shown.length - 1));
@@ -118,7 +124,7 @@ export function CommandPalette({ commands, onClose }: { commands: Command[]; onC
           aria-autocomplete="list"
           aria-activedescendant={shown.length ? optionId(activeIndex) : undefined}
           aria-label="Search for a page or a command"
-          placeholder="A song, a page, or what to do"
+          placeholder={searchSongs ? 'A song, a page, or what to do' : 'A page, or what to do'}
           autoComplete="off"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
@@ -137,7 +143,7 @@ export function CommandPalette({ commands, onClose }: { commands: Command[]; onC
             </ul>
           )))}
         </div>
-        <p className="hint">Arrow keys choose, Enter goes, Escape closes. This never deletes anything or replaces what’s playing. A song opens its details; it doesn’t play.</p>
+        <p className="hint">Arrow keys choose, Enter goes, Escape closes. This never deletes anything or replaces what’s playing.{searchSongs ? ' A song opens its details; it doesn’t play.' : ''}</p>
       </div>
     </Dialog>
   );
