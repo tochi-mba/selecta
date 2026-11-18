@@ -143,12 +143,13 @@ describe('designed empty states, never a blank table', () => {
     expect(screen.getByText(/fewer than two can play on this device/)).toBeVisible();
   });
 
-  it('My Mixes with no mix offers to make one', async () => {
+  it('My Mixes with no current mix offers a next step', async () => {
     account = withExperience(true, false, true);
     songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
     window.history.replaceState({}, '', '/mixes/mine');
     render(<CloudApp />);
-    expect(await screen.findByRole('heading', { name: 'No mixes yet' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Nothing’s playing yet' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Find a mix' })).toBeVisible();
   });
 
   it('loads browser recipe drafts through the Cloud request boundary, not the local draft route', async () => {
