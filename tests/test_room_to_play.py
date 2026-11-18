@@ -367,3 +367,88 @@ def test_memory_only_reads_what_has_changed(tmp_path, monkeypatch):
     monkeypatch.setattr("selecta.seams.json.loads", lambda text: reads.append(1) or real(text))
     store.remembered(fresh=True)
     assert reads == []
+
+
+# ---- a requested song reaching the speaker by identity (ADR-0461 BF-0461-05) ----------------
+#
+# The tests above keep a seam from leaving a song before it arrives. These follow a Room's
+# request on a local-first account to the speaker: the requestable song joins the session
+# programme as an ADR-0458 identity (catalogue id plus content hash, never a path), and when the
+# speaker does not hold it, its unavailable_here ack offers controllers what it does hold.
+
+
+def _local_room(cloud_engine, clock, monkeypatch):
+    from test_cloud_playback_fakes import USER, WORKSPACE, follow_clock
+
+    from selecta.local_media import store as local_store
+    from selecta.persistence import transaction
+    from selecta.playback import devices, session
+
+    follow_clock(monkeypatch, clock)
+    speaker = devices.register(
+        cloud_engine, WORKSPACE, USER, name="Bar tablet", kind="tablet"
+    ).device
+    phone = devices.register(cloud_engine, WORKSPACE, USER, name="Phone", kind="phone").device
+    with transaction(cloud_engine, WORKSPACE) as conn:
+        made = local_store.register_songs(conn, WORKSPACE, [
+            {"content_sha256": digit * 64, "title": title, "artist": "Rex", "duration_s": 200.0}
+            for digit, title in (("a", "Opener"), ("b", "Requested"), ("c", "Closer"))
+        ])
+        ids = [entry["song_id"] for entry in made]
+        # The tablet holds the opener and the closer; only the phone holds the request.
+        local_store.set_availability(conn, WORKSPACE, speaker.id, [ids[0], ids[2]], [ids[1]])
+        local_store.set_availability(conn, WORKSPACE, phone.id, [ids[1]], [])
+    session.take_over(cloud_engine, WORKSPACE, speaker.id)
+    return WORKSPACE, speaker, phone, ids
+
+
+def _programme(cloud_engine, workspace, phone, songs, *, key, events=None, song_index=0):
+    from selecta.playback import session
+    from selecta.playback.ports import NO_EVENTS
+
+    current = session.get_session(cloud_engine, workspace)
+    return session.submit_command(
+        cloud_engine, workspace, phone.id, "set_programme",
+        {"songs": songs, "song_index": song_index}, current.seq, key,
+        events=events or NO_EVENTS,
+    )
+
+
+def test_a_requested_song_joins_the_programme_by_identity(cloud_engine, clock, monkeypatch):
+    from selecta.local_media.catalog import LocalMediaCatalog
+    from selecta.playback import envelope
+    from selecta.playback.store import session_payload
+
+    workspace, _speaker, phone, ids = _local_room(cloud_engine, clock, monkeypatch)
+    # Requestable in the Room: some device of the account holds it.
+    assert LocalMediaCatalog(cloud_engine).is_requestable(workspace, ids[1])
+    sent = _programme(cloud_engine, workspace, phone, ids, key="request", song_index=1)
+    payload = session_payload(sent.session, clock.now)
+    assert payload["programme"] == [
+        {"song_id": song, "sha256": digit * 64} for song, digit in zip(ids, "abc", strict=True)
+    ]
+    assert payload["track"] == {"song_id": ids[1], "sha256": "b" * 64}
+    envelope.assert_metadata_only(payload)  # identities only, no path or link to audio
+
+
+def test_a_song_missing_on_the_speaker_offers_what_it_holds(cloud_engine, clock, monkeypatch):
+    from test_cloud_playback_fakes import RecordingEvents
+
+    from selecta.playback import fencing, ports, session
+
+    workspace, speaker, phone, ids = _local_room(cloud_engine, clock, monkeypatch)
+    events = RecordingEvents()
+    sent = _programme(cloud_engine, workspace, phone, ids, key="request", song_index=1,
+                      events=events)
+    [delivered] = events.of(ports.COMMAND)
+    ack = fencing.ack_command(
+        cloud_engine, workspace, speaker.id, sent.command_id, "unavailable_here",
+        signature=delivered["signature"], events=events,
+    )
+    assert ack.ack_result == "unavailable_here" and ack.song_id == ids[1]
+    # Never a silent skip: the controller is offered the next song the tablet holds.
+    assert [(a["song_id"], a["programme_index"]) for a in ack.alternatives] == [(ids[2], 2)]
+    [told] = events.of(ports.UNAVAILABLE)
+    assert told["alternatives"] == list(ack.alternatives)
+    view = session.session_view(cloud_engine, workspace, phone.id)
+    assert view.notices["unavailable"][0]["alternatives"] == list(ack.alternatives)
