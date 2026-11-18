@@ -7,7 +7,7 @@ import { PLAYBACK_COMMAND_EVENT } from '../devices/usePlaybackDevice';
 import { CloudListen } from '../rooms/CloudListen';
 import { RoomPanel } from '../rooms/RoomPanel';
 import { LucyCloudSettings } from '../views/LucyCloudSettings';
-import { flagOn, setAccountFeatures, useFlags } from '../flags';
+import { accountFlagOn, flagOn, setAccountFeatures, useFlags } from '../flags';
 import { DESTINATIONS, type MoreDestinationId } from '../shell/manifest';
 import { AccountDanger, AccountData } from './AccountData';
 import { AccountProblem, accountProblem, blockedMessage } from './accountStates';
@@ -42,7 +42,7 @@ const VenuePosture = lazy(() => import('./venue/VenuePosture').then((module) => 
 
 /** Whether this account may see the staff console link: staff, with the console flag on. */
 export function showsAdmin(account: Account | null) {
-  return Boolean(account?.user.staff) && account?.features['admin.console'] !== false;
+  return Boolean(account?.user.staff) && accountFlagOn('admin.console', account?.features ?? null);
 }
 
 /** The first, substring matching of addresses (`/listening` opened Listen). Kept for

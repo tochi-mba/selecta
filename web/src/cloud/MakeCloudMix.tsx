@@ -1,6 +1,7 @@
 // Hosted mode only (ADR-0462): local-first accounts get the shared views and shell player instead.
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { CloudError, featureOn, type Account, type Api, type Asset } from './api';
+import { accountFlagOn, type FlagId } from '../flags';
+import { CloudError, type Account, type Api, type Asset } from './api';
 import './makeCloudMix.css';
 
 // Make and edit a mix from Cloud Library songs (ADR-0418, flag `cloud.mix_create`). Each save is
@@ -9,7 +10,7 @@ import './makeCloudMix.css';
 // they really are: a plain crossfade until both songs have tempo and key facts. With the flag off
 // this renders nothing and Cloud Listen is exactly as before.
 
-export const MIX_CREATE_FLAG = 'cloud.mix_create';
+export const MIX_CREATE_FLAG: FlagId = 'cloud.mix_create';
 
 type Facts = { bpm: number | null; camelot: string | null; energy: number | null };
 export type MixSong = { source: string; id: string; title: string; artist: string | null; duration: number | null; facts: Facts; available?: boolean };
@@ -29,10 +30,10 @@ function seamWords(seam: MixSeam) {
 }
 
 export function MakeCloudMix({ api, account }: { api: Api; account: Pick<Account, 'features' | 'workspace'> }) {
-  if (!featureOn(account, MIX_CREATE_FLAG)) return null;
+  if (!accountFlagOn(MIX_CREATE_FLAG, account.features)) return null;
   // Songs come from stored media (ADR-0456): with `cloud.stored_media` off there is no library
   // to read, so the maker never asks the server for one.
-  return <MixMaker api={api} workspaceId={account.workspace.id} stored={featureOn(account, 'cloud.stored_media')} uploads={featureOn(account, 'cloud.uploads')} />;
+  return <MixMaker api={api} workspaceId={account.workspace.id} stored={accountFlagOn('cloud.stored_media', account.features)} uploads={accountFlagOn('cloud.uploads', account.features)} />;
 }
 
 function MixMaker({ api, workspaceId, stored, uploads }: { api: Api; workspaceId: string; stored: boolean; uploads: boolean }) {

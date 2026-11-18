@@ -64,6 +64,28 @@ test('a local-first account finds account places in More, and no dead button', a
   await expect(more.getByRole('link', { name: 'Add music' })).toHaveCount(0);
 });
 
+test('a flag switched off for a local-first account reflows its open shell over the event stream (BF-0462-03)', async ({ page, request }) => {
+  const user = listener('local-first-live');
+  await seeded(request, user, 1);
+  await openLocalFirst(page, user, '/listen');
+  await page.evaluate(() => { (window as unknown as { stayed: boolean }).stayed = true; });
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: 'More' }).first().click();
+  const more = page.getByRole('navigation', { name: 'More' });
+  await expect(more.getByRole('link', { name: 'Devices' })).toBeVisible();
+
+  // a real per-user rule: the server publishes `flags.changed`, the shell reads its account again
+  // and the one flag read closes More up around the feature, without a reload
+  const off = await request.post('/test/flags/off', { data: { user, flags: ['devices'] } });
+  expect(off.ok(), await off.text()).toBeTruthy();
+  await expect(more.getByRole('link', { name: 'Devices' })).toHaveCount(0, { timeout: 10_000 });
+  await expect(more.getByRole('link', { name: 'Account' })).toBeVisible();
+
+  const back = await request.post('/test/flags/off', { data: { user, flags: [] } });
+  expect(back.ok(), await back.text()).toBeTruthy();
+  await expect(more.getByRole('link', { name: 'Devices' })).toBeVisible({ timeout: 10_000 });
+  expect(await page.evaluate(() => (window as unknown as { stayed?: boolean }).stayed)).toBe(true);
+});
+
 test('a legacy account keeps the hosted Cloud pages', async ({ page, request }) => {
   const user = listener('legacy');
   await seeded(request, user, 0);

@@ -1,3 +1,4 @@
+import { accountFlagOn, type FlagId } from '../flags';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import type { PhaseName, Phases } from '../lucy/types';
 import { PHASES } from './LucySettings';
@@ -60,7 +61,7 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
 
   if (!status || !phases) return <section className="cloud-card lucy-settings" aria-busy={!problem || undefined}><h2>Lucy</h2>{problem ? <p className="warn" role="alert">{problem}</p> : <p>Loading Lucy’s settings…</p>}</section>;
 
-  const shown = PHASES.filter((phase) => ([] as string[]).concat(phase.flag ?? []).every((flag) => features[flag] !== false));
+  const shown = PHASES.filter((phase) => ([] as FlagId[]).concat(phase.flag ?? []).every((flag) => accountFlagOn(flag, features)));
   const save = async (event: FormEvent) => {
     event.preventDefault();
     setSaving(true); setProblem(''); setSaved('');
