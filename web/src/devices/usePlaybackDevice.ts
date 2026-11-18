@@ -17,7 +17,7 @@ export type Warning = { code: string; text: string };
 export type Device = { id: string; name: string; kind: string; signed_in: boolean; this_device: boolean; poor_speaker: boolean; last_seen_at: number; warnings: Warning[] };
 /** A programme entry as an ADR-0458 identity: resolved locally on the speaker, never a path. */
 export type ProgrammeRef = { song_id: number; sha256: string };
-export type SessionState = { mix_revision_id: string | null; song_index: number; offset_ms: number; anchor_at: number | null; state: 'playing' | 'paused' | 'stopped'; active_device_id: string | null; lease_expires_at: number | null; seq: number; fence?: number; state_confidence?: 'fresh' | 'uncertain'; programme?: ProgrammeRef[]; track?: ProgrammeRef | null; output_status?: OutputWire; output_verified_at?: number | null };
+export type SessionState = { mix_revision_id: string | null; song_index: number; offset_ms: number; anchor_at: number | null; state: 'playing' | 'paused' | 'stopped'; active_device_id: string | null; lease_expires_at: number | null; seq: number; fence?: number; state_confidence?: 'fresh' | 'uncertain'; programme?: ProgrammeRef[]; track?: ProgrammeRef | null; output_status?: OutputWire; output_verified_at?: number | null; volume?: number | null };
 /** The speaker's sound-output status as it reaches controllers (ADR-0457 truthful states, BF-0457-03). */
 export type OutputWire = 'playing' | 'output_unverified' | 'uncertain' | 'interrupted';
 /** A press held for an offline speaker (BF-0461-04): `reason` is deferred while it waits, or why it was dropped. */
@@ -36,19 +36,20 @@ export type AckResult = 'applied' | 'unavailable_here';
 /** Fired on window by the Cloud event stream for each `playback.command` event, so the speaker
  * hook hears commands without owning a second stream. `detail` is the event payload. */
 export const PLAYBACK_COMMAND_EVENT = 'selecta-playback-command';
-/** Commands the speaker carries out itself by following the session; anything else (volume,
- * mix steering, requests) is the server's to apply, so the speaker says unavailable_here. */
-export const SPEAKER_COMMANDS = new Set(['play', 'pause', 'skip', 'seek', 'set_programme']);
+/** Commands the speaker carries out itself by following the session; anything else (mix
+ * steering, requests) is the server's to apply, so the speaker says unavailable_here. */
+export const SPEAKER_COMMANDS = new Set(['play', 'pause', 'skip', 'seek', 'set_programme', 'set_volume']);
 /** Commands that move the speaker to a (possibly missing) track. */
 const MOVES_TRACK = new Set(['skip', 'seek', 'set_programme']);
 /** A refused press the controller answers by redrawing from where the music is now. */
 export const RETRY_CODES = new Set(['stale_command', 'superseded_command', 'expired_command']);
 
-/** Whether a delivered command may still be acted on here: same or newer fence than this speaker
- * has seen, and not past its expiry by the server's clock (ADR-0461). */
+/** Whether a delivered command may still be acted on here: exactly this speaker's current fence,
+ * and not past its expiry by the server's clock (ADR-0461). A future fence is no more ours than
+ * an old one; learn ownership from a session response before acting on it. */
 export function commandStillValid(event: Pick<CommandEvent, 'fence' | 'expires_at'>, knownFence: number | null, serverNow: number): boolean {
   if (event.expires_at != null && serverNow >= event.expires_at) return false;
-  if (event.fence != null && knownFence != null && event.fence < knownFence) return false;
+  if (event.fence != null && event.fence !== knownFence) return false;
   return true;
 }
 
@@ -88,6 +89,8 @@ export interface Speaker {
   stop(fadeMs: number): void;
   pause(): void;
   resume(): void;
+  /** Apply a venue's shared volume as a normalized output level from 0 (muted) to 1. */
+  setVolume?(level: number): void;
   position(): Position | null;
   active(): boolean;
   /** Release listeners and locally cached audio when the device UI unmounts. */
@@ -208,6 +211,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     leaseDeadline.current = session.lease_expires_at;
     appliedSeq.current = session.seq;
     if (!wake.current) wake.current = holdWakeLock();
+    if (typeof session.volume === 'number') speaker.setVolume?.(Math.min(1, Math.max(0, session.volume / 100)));
     await speaker.start(session.song_index, extrapolate(session, serverNow()), session.state === 'playing');
   }, [speaker]);
 
@@ -216,6 +220,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     if (!speaker || session.seq <= appliedSeq.current) return;
     appliedSeq.current = session.seq;
     if (!remoteControl) return;
+    if (typeof session.volume === 'number') speaker.setVolume?.(Math.min(1, Math.max(0, session.volume / 100)));
     const here = speaker.position();
     const target = extrapolate(session, serverNow());
     const moved = !here || here.song_index !== session.song_index || Math.abs(here.offset_ms - target) > 2500;
@@ -456,7 +461,9 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     if (!commandStillValid(event, fence.current, serverNow())) return null;
     let result: AckResult = 'unavailable_here';
     let songId: number | null = null;
-    if (SPEAKER_COMMANDS.has(event.command)) {
+    if (event.command === 'set_volume' && typeof speaker.setVolume !== 'function') {
+      result = 'unavailable_here';
+    } else if (SPEAKER_COMMANDS.has(event.command)) {
       const now = await poll(true);
       // Applied only when this device is still the speaker and has followed the session to (or
       // past) the command; otherwise it says it could not, never that it did.
@@ -474,7 +481,10 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     }
     acked.current.add(event.command_id);
     try {
-      await api(`/playback/commands/${encodeURIComponent(event.command_id)}/ack`, {
+      const ackPath = event.zone_id
+        ? `/zones/${encodeURIComponent(event.zone_id)}/playback/commands/${encodeURIComponent(event.command_id)}/ack`
+        : `/playback/commands/${encodeURIComponent(event.command_id)}/ack`;
+      await api(ackPath, {
         method: 'POST', body: JSON.stringify({
           device_id: deviceId, result,
           ...(event.signature ? { signature: event.signature } : {}),

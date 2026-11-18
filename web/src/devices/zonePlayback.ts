@@ -1,4 +1,4 @@
-import type { Api, SessionState, SessionView } from './usePlaybackDevice';
+import type { Api, OutputWire, SessionState, SessionView } from './usePlaybackDevice';
 
 // Typed calls to the zone playback routes (ADR-0443). A business workspace has one playback
 // session per zone; these mirror the personal /playback routes with the zone in the path. Every
@@ -24,11 +24,12 @@ export type ZoneSummary = {
   speaker_name: string | null;
   speaker_is_person: boolean;
 };
-export type HeartbeatBody = { device_id: string; song_index: number; offset_ms: number; state: 'playing' | 'paused'; seq: number };
-export type HeartbeatAnswer = { outcome: string; session: ZoneSessionState; server_time: number };
-export type TakeOverAnswer = { session: ZoneSessionState; previous_device: { name: string } | null; server_time: number };
-export type ReconnectAnswer = { action: string; session: ZoneSessionState | null; message: string | null };
-export type CommandBody = { device_id: string; command: string; args?: Record<string, unknown>; based_on_seq: number; idempotency_key: string };
+export type HeartbeatBody = { device_id: string; song_index: number; offset_ms: number; state?: 'playing' | 'paused' | 'stopped'; seq?: number; mix_revision_id?: string; fence?: number; output_status?: OutputWire; output_verified_at?: number };
+export type HeartbeatAnswer = { outcome: string; position_accepted?: boolean; previous_device_id?: string | null; hand_back_to_device_id?: string | null; playing_zone_id?: string | null; playing_zone_name?: string | null; session: ZoneSessionState; server_time: number; envelope_key?: string | null; delivered?: string[]; missed?: unknown[] };
+export type TakeOverAnswer = { session: ZoneSessionState; previous_device: { id: string; name: string } | null; server_time: number; envelope_key?: string | null; missed?: unknown[] };
+export type ReconnectAnswer = { action: string; session: ZoneSessionState | null; message: string | null; server_time: number; envelope_key?: string | null; delivered?: string[]; missed?: unknown[] };
+export type CommandBody = { device_id: string; command: string; args?: Record<string, unknown>; based_on_seq: number; idempotency_key: string; fence?: number; ttl_seconds?: number };
+export type AckBody = { device_id: string; result: 'applied' | 'unavailable_here'; signature?: string; song_id?: number };
 
 /** Refusal codes the zone routes answer with. */
 export type ZoneErrorCode =
@@ -112,10 +113,14 @@ export function zonePlayback(api: Api, workspaceId: string) {
       call<TakeOverAnswer>(ZONE_ROUTES.action(zoneId, 'take-over'), { device_id: deviceId, start_playing: opts.startPlaying ?? true, confirm: opts.confirm ?? false }),
     reconnect: (zoneId: string, deviceId: string) => call<ReconnectAnswer>(ZONE_ROUTES.action(zoneId, 'reconnect'), { device_id: deviceId }),
     command: (zoneId: string, body: CommandBody) => call<unknown>(ZONE_ROUTES.action(zoneId, 'commands'), body),
+    ack: (zoneId: string, commandId: string, body: AckBody) =>
+      call<{ command_id: string; ack_result: string; audible: false }>(
+        `${ZONE_ROUTES.action(zoneId, 'commands')}/${enc(commandId)}/ack`, body,
+      ),
     /** Zone volume, 0 to 100; the server clamps it to the zone's cap. */
-    setVolume: (zoneId: string, deviceId: string, volume: number, basedOnSeq: number, idempotencyKey: string) =>
+    setVolume: (zoneId: string, deviceId: string, volume: number, basedOnSeq: number, idempotencyKey: string, fence?: number) =>
       call<unknown>(ZONE_ROUTES.action(zoneId, 'commands'), {
-        device_id: deviceId, command: 'set_volume', args: { volume: Math.max(0, Math.min(100, Math.round(volume))) }, based_on_seq: basedOnSeq, idempotency_key: idempotencyKey,
+        device_id: deviceId, command: 'set_volume', args: { volume: Math.max(0, Math.min(100, Math.round(volume))) }, based_on_seq: basedOnSeq, idempotency_key: idempotencyKey, ttl_seconds: 60, ...(fence === undefined ? {} : { fence }),
       }),
     /** "Hand back to Bar player": give the lease back with where the music is now. */
     handBack: (zoneId: string, deviceId: string, songIndex: number, offsetMs: number) =>

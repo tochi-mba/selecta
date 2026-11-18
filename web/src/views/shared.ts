@@ -39,6 +39,13 @@ export type ViewProps = {
   /** How many ready songs Make a Mix needs before it offers a mix. Local mode leaves it to the
    * page's own number; a browser mix needs only two songs it can play (BF-0462-05). */
   readyNeeded?: number;
+  /** Whether this mode runs the local background audio-analysis pipeline. Browser-first Cloud
+   * works transitions out while playing and must not offer the local-only Analyse action. */
+  analysisAvailable?: boolean;
+  /** Whether this mode supports editing individual songs and transitions after building a mix. */
+  transitionEditingAvailable?: boolean;
+  /** Whether this player's runtime exposes measured audio-frequency data for the visualizer. */
+  visualizerAvailable?: boolean;
   /** The name of the current mix, whatever is being edited, for saying what a change will or won't touch. */
   currentMixName?: string;
 };

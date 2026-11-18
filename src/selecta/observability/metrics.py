@@ -7,6 +7,7 @@ code path it describes:
 | Series | Kind | Where |
 |---|---|---|
 | `selecta_invariant_violations_total{invariant}` | counter | `maintain` task `lost_jobs` |
+| `selecta_api_requests_total{cohort,status_class}` | counter | Cloud API middleware; only low-cardinality browser-first/hosted cohorts |
 | `selecta_webhook_to_entitlement_seconds` | histogram | `billing.webhooks.process_event` |
 | `selecta_oldest_queued_seconds{lane}` | gauge | `maintain` task `queue_metrics` |
 | `selecta_jobs_quarantined_total` | counter | `work.lifecycle` (a job quarantined) |
@@ -64,6 +65,9 @@ SERIES: Mapping[str, Series] = {
                "Invariant violations the maintenance leader found, by invariant.", ("invariant",)),
         Series("selecta_webhook_to_entitlement_seconds", "histogram",
                "From a Stripe webhook arriving to the entitlement it changed.", unit="s"),
+        Series("selecta_api_requests_total", "counter",
+               "Cloud API requests by browser-first/hosted cohort and HTTP status class.",
+               ("cohort", "status_class")),
         Series("selecta_oldest_queued_seconds", "gauge",
                "Age of the oldest queued job, by lane.", ("lane",), unit="s"),
         Series("selecta_jobs_quarantined_total", "counter", "Jobs quarantined as poison."),

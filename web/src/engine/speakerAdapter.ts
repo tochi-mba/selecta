@@ -42,6 +42,8 @@ export type BrowserSpeakerOptions = {
   audio: SpeakerAudio;
   probe: ProbeResult;
   resolve: ResolveTrack;
+  /** The engine that owns the context and this speaker; disposed with the speaker. */
+  disposeOwner?: () => void;
   /** How many songs the programme holds. Without it a null from resolve ends the set, which is
    * only right for resolvers that never answer null for an unavailable song. */
   queueLength?: () => number;
@@ -65,6 +67,7 @@ export class BrowserSpeaker implements Speaker {
   private readonly loader: Loader;
   private readonly scheduler: Scheduler;
   private readonly resolve: ResolveTrack;
+  private readonly disposeOwner?: () => void;
   private readonly queueLength: (() => number) | null;
   private readonly limiterReady: Promise<LimiterInstall>;
   private limiterInstalled: LimiterInstall | null = null;
@@ -73,6 +76,7 @@ export class BrowserSpeaker implements Speaker {
     this.store = options.store ?? createEngineStore();
     this.refused = options.probe.ok ? null : { state: 'unsupported_here', reason: options.probe.reason };
     this.resolve = options.resolve;
+    this.disposeOwner = options.disposeOwner;
     this.queueLength = options.queueLength ?? null;
     this.graph = options.graph ?? buildGraph(options.audio.context);
     const context = options.audio.context;
@@ -87,9 +91,13 @@ export class BrowserSpeaker implements Speaker {
       timers: options.timers,
     });
     // The limiter goes in before the first note, so the stage is never swapped mid-song.
-    this.limiterReady = installLimiter(this.graph, { probe: options.probe, ...options.limiter })
+    this.limiterReady = installLimiter(this.graph, {
+      probe: options.probe,
+      ...options.limiter,
+      isActive: () => !this.disposed,
+    })
       .then((installed) => {
-        this.limiterInstalled = installed;
+        if (!this.disposed) this.limiterInstalled = installed;
         return installed;
       });
   }
@@ -144,6 +152,10 @@ export class BrowserSpeaker implements Speaker {
       this.store.set({ phase: 'idle', notice: this.refused.reason });
       return;
     }
+    if (!Number.isSafeInteger(songIndex) || songIndex < 0 || !Number.isFinite(offsetMs) || offsetMs < 0 || typeof playing !== 'boolean') {
+      this.store.set({ phase: 'idle', notice: 'That playback position is not valid, so SelectaDJ did not start.' });
+      return;
+    }
     await this.limiterReady;
     if (this.disposed) return;
     await this.scheduler.start(songIndex, offsetMs, playing);
@@ -151,6 +163,11 @@ export class BrowserSpeaker implements Speaker {
 
   stop(fadeMs: number): void {
     if (!this.disposed) this.scheduler.stop(fadeMs);
+  }
+
+  /** Set the device's master output level (normalized to [0, 1]). */
+  setVolume(volume: number): void {
+    if (!this.disposed) this.graph.setVolume(volume);
   }
 
   pause(): void {
@@ -181,5 +198,6 @@ export class BrowserSpeaker implements Speaker {
     this.scheduler.dispose();
     this.loader.clear();
     this.graph.dispose();
+    this.disposeOwner?.();
   }
 }

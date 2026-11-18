@@ -41,7 +41,7 @@ function rememberLength(songs: number) {
 }
 
 /** The front door. One tap plays something good, and everything can be changed afterwards. */
-export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshMix, refreshStatus, request, readyNeeded = READY_NEEDED }: ViewProps) {
+export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshMix, refreshStatus, request, readyNeeded = READY_NEEDED, analysisAvailable = true, transitionEditingAvailable = true }: ViewProps) {
   // ADR-0462: this page's own reads and writes go through the injected request, never the local client.
   const via = useRequest(request);
   const { get, post } = useApi(via);
@@ -365,7 +365,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         </section>
       )}
 
-      {left > 0 && (
+      {left > 0 && analysisAvailable && (
         <section className="nudge">
           <p>
             <b>{counts.analysed} of {counts.music} songs have audio analysis; {counts.ready ?? 0} are ready for mixes.</b> The rest will mean more variety{on('discover.word_links') ? ' and word links' : ''}. {analysisWords(status.eta?.analysis)}
@@ -378,7 +378,16 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         </section>
       )}
 
-      {customizing && shaping && <MixSetup status={status} mix={mix} refreshStatus={refreshStatus} notify={notify} songs={songs} onSongs={setSongs} onClose={() => setCustomizing(false)} />}
+      {!analysisAvailable && readyCount < counts.music && (
+        <section className="nudge" aria-label="Songs available on this device">
+          <p>
+            <b>{readyCount} of {counts.music} songs can play on this device.</b> Connect more music from your Library to add variety. Browser mixes work out transitions as they play, so audio analysis is not required.
+          </p>
+          <PageLink className="button" to="/library">See your library</PageLink>
+        </section>
+      )}
+
+      {customizing && shaping && <MixSetup status={status} mix={mix} refreshStatus={refreshStatus} notify={notify} songs={songs} onSongs={setSongs} transitionEditingAvailable={transitionEditingAvailable} onClose={() => setCustomizing(false)} />}
       {confirming && (
         <Dialog
           title={`Replace ${mixName}?`}

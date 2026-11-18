@@ -18,7 +18,7 @@ import { LIMITER_IMPLEMENTATION } from './limiter';
 import { LOUDNESS_IMPLEMENTATION, TRUE_PEAK_IMPLEMENTATION } from './loudness';
 import { SEAM_MOVES_IMPLEMENTATION } from './seamMoves';
 import { SEAMS_IMPLEMENTATION } from './seams';
-import { STRETCH_IMPLEMENTATION } from './stretchLimits';
+import { STRETCH_IMPLEMENTATION, STRETCH_PLAYBACK_INTEGRATION } from './stretchLimits';
 
 /** How a seam meets a track from either music path: the whole file decoded before planning. */
 export const WHOLE_FILE_DECODE_IMPLEMENTATION = 'whole-file-decode-v1';
@@ -114,6 +114,9 @@ export interface DspEvidence {
   /** The time-stretch module loaded on this device and passed its self-test
    * (stretchLoader.ts loadStretchEvidence). Absent means not loaded, so stretch stays off. */
   stretch?: { implementation: string } | null;
+  /** Exact integration token from the runtime only after a seam buffer is prepared and used.
+   * Loading and self-testing the DSP module alone cannot make a UI capability ready. */
+  stretchPlaybackIntegration?: string | null;
 }
 
 /** Tier 3 features: none may be ready in this release (no benchmark or licence evidence). */
@@ -169,8 +172,11 @@ export function registerBrowserDspCapabilities(
   tier2('beatmatch', SEAMS_IMPLEMENTATION);
   const stretch = evidence.stretch ?? null;
   const stretchLoaded = stretch !== null && stretch.implementation === STRETCH_IMPLEMENTATION;
+  const stretchIntegrated = evidence.stretchPlaybackIntegration === STRETCH_PLAYBACK_INTEGRATION;
   if (!tier2Reason && !stretchLoaded) {
-    registry.markUnsupported('time_stretch', 2, STRETCH_IMPLEMENTATION, 'the time-stretch module has not loaded on this device');
+    registry.markUnsupported('time_stretch', 2, STRETCH_IMPLEMENTATION, 'the time-stretch module has not loaded and passed its self-test on this device');
+  } else if (!tier2Reason && !stretchIntegrated) {
+    registry.markUnsupported('time_stretch', 2, STRETCH_IMPLEMENTATION, 'the time-stretch module is not connected to scheduled playback on this device');
   } else {
     tier2('time_stretch', STRETCH_IMPLEMENTATION);
   }

@@ -1,7 +1,7 @@
 import { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import type { Request } from '../api';
 import { flagOn, useFlag } from '../flags';
-import { dirPicker, directoryInput, findLapsed, forgetFolder, recallFolder, rememberFolder, runImport } from '../media';
+import { dirPicker, directoryInput, findLapsed, forgetFolder, recallFolder, refreshDeviceAvailability, rememberFolder, runImport } from '../media';
 import type { DirectoryHandleLike, ImportEvent, ImportSource, ImportSummary, LapsedItem, MediaStore, RegrantOutcome, StoredFolderHandle } from '../media';
 import { importSummaryWords, useImportAnnouncer } from './importAnnouncer';
 import { cancelImportSession, clearImportMarker, readImportMarker, startImportSession, useImportSession, type ImportRunner } from './importSession';
@@ -57,12 +57,14 @@ export function mediaDeviceId(workspaceId: string): string {
   return made;
 }
 
-export function ConnectMusic({ request, workspaceId, openStore, importer = runImport }: {
+export function ConnectMusic({ request, workspaceId, openStore, importer = runImport, onAvailabilityChanged }: {
   /** Asks with full /api paths, as the media importer does. */
   request: Request;
   workspaceId: string;
   openStore: () => Promise<MediaStore>;
   importer?: typeof runImport;
+  /** Reconcile this device's catalogue availability after a permission is restored. */
+  onAvailabilityChanged?: () => void | Promise<void>;
 }) {
   const live = useImportSession();
   useImportAnnouncer();
@@ -143,6 +145,14 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
   const allow = async (item: LapsedItem) => {
     const outcome = await item.regrant();
     setRegranted((current) => ({ ...current, [item.songId]: REGRANT_WORDS[outcome.status] }));
+    if (outcome.status === 'recovered') {
+      // A successful re-grant makes this copy requestable in Rooms again. A report failure
+      // must not undo the local recovery or replace its truthful confirmation.
+      try {
+        if (onAvailabilityChanged) await onAvailabilityChanged();
+        else await refreshDeviceAvailability(request, await openStore(), mediaDeviceId(workspaceId));
+      } catch { /* startup and the next periodic refresh can retry the catalogue report */ }
+    }
   };
 
   const running = live.phase === 'running';
@@ -210,10 +220,10 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
             {lapsed.map((item) => (
               <li key={item.songId} className="row wrap">
                 <span dir="auto">{item.title}</span>
-                <span className="hint">{item.why === 'permission' ? 'Needs permission' : 'File not found'}</span>
+                <span className="hint">{item.why === 'permission' ? 'Needs permission' : item.why === 'changed' ? 'File contents changed' : 'File not found'}</span>
                 {regranted[item.songId]
                   ? <span role="status">{regranted[item.songId]}</span>
-                  : <button onClick={() => void allow(item)}>{item.why === 'permission' ? 'Allow' : 'Look again'}</button>}
+                  : <button onClick={() => void allow(item)}>{item.why === 'permission' ? 'Allow' : item.why === 'changed' ? 'Check file' : 'Look again'}</button>}
               </li>
             ))}
           </ul>

@@ -6,6 +6,8 @@ export const LOCAL_MEDIA_FLAG = 'cloud.local_media';
 
 export { directoryInput, dirPicker, fileInput, opfs, storageSpace } from './capabilities';
 export type { Capability, StorageSpace } from './capabilities';
+export { AVAILABILITY_REPORT_BATCH, deviceAvailabilitySnapshot, refreshDeviceAvailability, reportDeviceAvailability } from './availability';
+export type { DeviceAvailabilitySnapshot } from './availability';
 export { assertNoPath, fileSha256, HASH_CHUNK_BYTES, normalise } from './identity';
 export type { TrackIdentity } from './identity';
 export { AUDIO_EXTENSIONS, BATCH_SIZE, defaultTagReader, FIRST_BATCH, isAudioName, runImport } from './importer';

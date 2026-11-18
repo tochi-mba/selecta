@@ -38,6 +38,8 @@ export function limiterProcessorOptions(sampleRate: number): LimiterProcessorOpt
 
 export type InstallLimiterOptions = {
   probe: ProbeResult;
+  /** False once the owning speaker is disposed, to avoid installing into a dead graph. */
+  isActive?: () => boolean;
   /** Load the processor module; the blob-module loader by default, a stub in tests. */
   load?: (context: BaseAudioContext) => Promise<void>;
   /** Make the node; the real AudioWorkletNode by default, a fake in tests. */
@@ -67,6 +69,9 @@ export async function installLimiter(graph: EngineGraph, options: InstallLimiter
   const processorOptions = limiterProcessorOptions(context.sampleRate);
   try {
     await load(context);
+    if (options.isActive && !options.isActive()) {
+      return fallback('The speaker was closed before the limiter finished loading.');
+    }
     const node = makeNode(context, LIMITER_PROCESSOR, {
       numberOfInputs: 1,
       numberOfOutputs: 1,

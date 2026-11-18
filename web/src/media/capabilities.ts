@@ -27,7 +27,12 @@ export function directoryInput(): Capability {
 
 /** `showDirectoryPicker`: the File System Access folder picker, with re-usable handles. */
 export function dirPicker(): Capability {
-  if (typeof window !== 'undefined' && 'showDirectoryPicker' in window) return { supported: true };
+  // A property can exist but be disabled or replaced with `undefined` by a restricted
+  // context. Treat the picker as available only when the browser exposes a callable API.
+  if (
+    typeof window !== 'undefined'
+    && typeof (window as Window & { showDirectoryPicker?: unknown }).showDirectoryPicker === 'function'
+  ) return { supported: true };
   return { supported: false, reason: 'This browser has no folder picker, so SelectaDJ will ask you to choose files. Imports work the same; the browser just cannot remember the folder between visits.' };
 }
 

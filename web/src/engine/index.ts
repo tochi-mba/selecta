@@ -21,7 +21,7 @@ import { createEngineStore, EngineState, EngineStore, UnsupportedHere } from './
 export type { EngineContext, EngineContextOptions } from './context';
 export { createEngineContext, isUnsupported, WAKE_WAIT_MS, ENGINE_SAMPLE_RATE } from './context';
 export type { EngineGraph } from './graph';
-export { buildGraph } from './graph';
+export { buildGraph, VOLUME_RAMP_SECONDS } from './graph';
 export type { InstallLimiterOptions, LimiterInstall } from './limiter';
 export { COMPRESSOR_FALLBACK_IMPLEMENTATION, installLimiter, limiterProcessorOptions } from './limiter';
 export type { DecodeFailure, DecodeOk, DecodeResult, Loader, LoaderStats, TrackId } from './loader';
@@ -63,8 +63,6 @@ export type RosterEvidence = {
   probe: ProbeResult;
   limiter?: LimiterInstall | null;
   workerBudget?: { atFloor: boolean } | null;
-  /** dsp/stretchLoader.ts loadStretchEvidence: the stretch module loaded and self-tested. */
-  stretch?: { implementation: string } | null;
 };
 
 /** The device's capability roster (ADR-0459): Tier 1 ready only when the probe passed, the
@@ -79,7 +77,9 @@ export function buildCapabilityRoster(evidence: RosterEvidence, registry = new C
       ? { kind: 'worklet' }
       : { kind: 'compressor_fallback', implementation: COMPRESSOR_FALLBACK_IMPLEMENTATION },
     workerBudget: evidence.workerBudget ?? null,
-    stretch: evidence.stretch ?? null,
+    // Loading and self-testing the DSP module is not proof that the live scheduler applies it.
+    // Until a buffer-preprocessing path is wired into seam execution, never advertise this as
+    // a playback capability (ADR-0459's capability truth contract).
   });
 }
 
@@ -103,6 +103,15 @@ export function createEngine(options: { onState?: (state: EngineState) => void }
   const contexts = new Set<EngineContext>();
   const speakers = new Set<BrowserSpeaker>();
   let disposed = false;
+  const dispose = () => {
+    if (disposed) return;
+    disposed = true;
+    for (const speaker of speakers) speaker.dispose();
+    speakers.clear();
+    for (const context of contexts) context.dispose();
+    contexts.clear();
+    unsubscribe?.();
+  };
   return {
     store,
     state: () => store.get(),
@@ -114,20 +123,12 @@ export function createEngine(options: { onState?: (state: EngineState) => void }
     },
     probe: probeCapability,
     createSpeaker: (made) => {
-      const speaker = new BrowserSpeaker({ ...made, store });
+      const speaker = new BrowserSpeaker({ ...made, store, disposeOwner: dispose });
       if (disposed) speaker.dispose();
       else speakers.add(speaker);
       return speaker;
     },
     roster: (evidence) => buildCapabilityRoster(evidence),
-    dispose() {
-      if (disposed) return;
-      disposed = true;
-      for (const speaker of speakers) speaker.dispose();
-      speakers.clear();
-      for (const context of contexts) context.dispose();
-      contexts.clear();
-      unsubscribe?.();
-    },
+    dispose,
   };
 }

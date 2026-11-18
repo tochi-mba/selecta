@@ -19,7 +19,10 @@ type Watched = {
 };
 type WatchedDocument = Watched & { visibilityState: string };
 /** The shape of a WakeLockSentinel the runtime cares about. */
-export type WakeLockLike = { addEventListener(type: 'release', listen: () => void): void };
+export type WakeLockLike = {
+  addEventListener(type: 'release', listen: () => void): void;
+  removeEventListener?(type: 'release', listen: () => void): void;
+};
 
 export type EngineContextOptions = {
   /** Must be set to true inside a real event handler. The engine never makes sound by itself. */
@@ -65,6 +68,7 @@ export function createEngineContext(options: EngineContextOptions): EngineContex
 
   let holdingSound = false;
   let disposed = false;
+  const wakeLocks = new Set<WakeLockLike>();
 
   // The system can take the sound away by itself, on a phone call for example. What is shown
   // follows what is really happening, rather than saying it is playing (mirrors player.ts).
@@ -125,12 +129,12 @@ export function createEngineContext(options: EngineContextOptions): EngineContex
       try {
         await Promise.race([
           context.resume(),
-          new Promise((settled) => { wait = window.setTimeout(settled, WAKE_WAIT_MS); }),
+          new Promise((settled) => { wait = globalThis.setTimeout(settled, WAKE_WAIT_MS); }),
         ]);
       } catch {
         // whether it worked is what is checked next
       } finally {
-        window.clearTimeout(wait);
+        if (wait !== undefined) globalThis.clearTimeout(wait);
       }
       return isRunning();
     },
@@ -143,6 +147,8 @@ export function createEngineContext(options: EngineContextOptions): EngineContex
       }
     },
     watchWakeLock(sentinel) {
+      if (disposed || wakeLocks.has(sentinel)) return;
+      wakeLocks.add(sentinel);
       sentinel.addEventListener('release', onWakeRelease);
     },
     dispose() {
@@ -150,6 +156,8 @@ export function createEngineContext(options: EngineContextOptions): EngineContex
       disposed = true;
       watchedDocument?.removeEventListener('visibilitychange', onVisibility);
       watchedDevices?.removeEventListener('devicechange', onDeviceChange);
+      for (const sentinel of wakeLocks) sentinel.removeEventListener?.('release', onWakeRelease);
+      wakeLocks.clear();
       context.onstatechange = null;
       void context.close?.().catch(() => undefined);
     },

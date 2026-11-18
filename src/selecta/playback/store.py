@@ -72,7 +72,14 @@ def session_from_row(row: Mapping[str, Any]) -> Session:
         seq=row["seq"],
         updated_at=row["updated_at"],
         zone_id=row.get("zone_id"),
-        volume=row.get("volume"),
+        # Legacy zone sessions predate the shared-volume column and may still have NULL.
+        # Treat those as the documented full-volume default; personal sessions keep NULL
+        # because their level belongs to each device.
+        volume=(
+            100
+            if row.get("zone_id") is not None and row.get("volume") is None
+            else row.get("volume")
+        ),
         hand_back_to_device_id=row.get("hand_back_to_device_id"),
         fence=row.get("fence") or 0,
         signing_salt=row.get("signing_salt"),

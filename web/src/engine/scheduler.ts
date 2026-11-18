@@ -53,7 +53,10 @@ export type SchedulerTimers = {
 export type SeamRequest = { fromIndex: number; from: AudioBuffer; toIndex: number; to: AudioBuffer };
 /** Builds the dsp/seams.ts schedule for one transition (from the analysis it holds), or null
  * when it has none prepared. Times in the schedule are on the outgoing song's own timeline. */
-export type SeamProvider = (request: SeamRequest) => SeamSchedule | null | Promise<SeamSchedule | null>;
+export type SeamProvider = ((request: SeamRequest) => SeamSchedule | null | Promise<SeamSchedule | null>) & {
+  /** Release provider-owned workers or other long-lived resources when its speaker ends. */
+  dispose?: () => void;
+};
 
 /** Which transition actually ran, so a surface can name it honestly (ADR-0459). */
 export type TransitionKind = 'seam_schedule' | 'boundary' | 'fallback_fade' | 'late_fade';
@@ -109,10 +112,39 @@ function applyPoints(param: AudioParam, points: readonly GainPoint[], base = 0):
 
 /** Check a schedule against the songs it joins; a reason when it cannot be used as given. */
 function unusable(schedule: SeamSchedule, from: Current, to: AudioBuffer, now: number): string | null {
+  if (!schedule || !Array.isArray(schedule.events) || schedule.events.length === 0) return 'the seam schedule has no events';
+  if (schedule.kind !== 'beatmatch' && schedule.kind !== 'fade') return 'the seam schedule has an unknown kind';
+  if (typeof schedule.implementation !== 'string' || !schedule.implementation) return 'the seam schedule has no implementation id';
+  if (!Number.isFinite(schedule.startSeconds) || !Number.isFinite(schedule.windowSeconds) || schedule.windowSeconds <= 0) {
+    return 'the seam schedule has invalid window timing';
+  }
+  for (const event of schedule.events) {
+    if (!event || (event.deck !== 'a' && event.deck !== 'b') || !Number.isFinite(event.at) || event.at < 0) {
+      return 'the seam schedule has an invalid event';
+    }
+    if (event.kind === 'gain' || event.kind === 'eq') {
+      if (!Number.isFinite(event.value) || (event.value as number) < 0 || (event.value as number) > 1) {
+        return 'the seam schedule has an invalid gain';
+      }
+      if (event.kind === 'eq' && event.band !== 'low' && event.band !== 'mid' && event.band !== 'high') {
+        return 'the seam schedule has an unknown EQ band';
+      }
+    } else if (event.kind === 'filter') {
+      if ((event.filter !== 'highpass' && event.filter !== 'lowpass') || !Number.isFinite(event.hz) || (event.hz as number) <= 0) {
+        return 'the seam schedule has an invalid filter';
+      }
+    } else if (event.kind !== 'start' && event.kind !== 'stop') {
+      return 'the seam schedule has an unknown event';
+    }
+  }
   const entry = schedule.events.find((event) => event.deck === 'b' && event.kind === 'start');
   if (!entry) return 'the seam schedule never starts the next song';
+  if (schedule.events.filter((event) => event.deck === 'b' && event.kind === 'start').length !== 1) {
+    return 'the seam schedule starts the next song more than once';
+  }
+  if (Math.abs(schedule.startSeconds - entry.at) > 1e-6) return 'the seam schedule has inconsistent start timing';
   const sourceAt = entry.sourceAt ?? 0;
-  if (!(sourceAt >= 0) || sourceAt >= to.duration) return 'the seam enters the next song outside its audio';
+  if (!Number.isFinite(sourceAt) || sourceAt < 0 || sourceAt >= to.duration) return 'the seam enters the next song outside its audio';
   const base = from.startedAt - from.offset;
   const startAt = base + entry.at;
   const endAt = from.startedAt + (from.duration - from.offset);
@@ -479,6 +511,11 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
       stopTimer();
       silenceAll();
       disposed = true;
+      try {
+        deps.seam?.dispose?.();
+      } catch {
+        // Resource cleanup must not prevent the audio graph from being released.
+      }
     },
   };
 }

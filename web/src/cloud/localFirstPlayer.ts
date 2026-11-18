@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MixItem } from '../api';
+import * as provider from '../dsp/seamProvider';
 import type { MusicSource, SeamRecord, SeamSettingsLike } from '../dsp/seamProvider';
 import { playbackStatusText, type PlaybackStatus } from '../copy';
 import { Api, extrapolate, Position, SessionView, usePlaybackDevice } from '../devices/usePlaybackDevice';
-import type { BrowserSpeaker, Engine, EngineState } from '../engine';
+import { createEngine, type BrowserSpeaker, type Engine, type EngineState } from '../engine';
 import type { MediaResolver } from '../media';
 import type { NowState } from '../player';
 import type { PlayerLike } from '../playerContract';
@@ -18,7 +19,7 @@ import type { PlayerLike } from '../playerContract';
  * - `notice` carries the one status vocabulary (copy.ts); a passing probe or a running graph never
  *   claims audible sound, only a person's sound-check confirmation does.
  * - What the engine cannot do yet is an honest no-op with a reason, never a silent success:
- *   volume (the engine has no gain control exposed), the spectrum (no analyser is exposed).
+ *   the spectrum (no analyser is exposed).
  * - Planned transitions (BF-0459-04): the speaker gets a seam provider (dsp/seamProvider.ts) that
  *   scripts each seam from the mix's seam settings and this device's capability record; the
  *   state's `nextReady`/`seamAt`/`inSeam` come from the schedule actually handed to the
@@ -26,7 +27,6 @@ import type { PlayerLike } from '../playerContract';
  */
 
 export const NOTHING_TO_PLAY = 'Nothing to play yet. Connect your music and make a mix first.';
-export const VOLUME_HERE = 'Use this device’s own volume controls; SelectaDJ can’t set the browser player’s volume yet.';
 
 /** Everything the player's state is worked out from. */
 export type PlayerFacts = {
@@ -89,8 +89,10 @@ export function nowStateFrom(facts: PlayerFacts, sound: { volume: number; muted:
     notice: facts.said || facts.engine?.notice || words,
     nextReady: !!seam,
     lastSeamKey: null,
-    volume: sound.volume,
-    muted: sound.muted,
+    volume: facts.view?.session?.volume == null
+      ? sound.volume
+      : Math.max(0, Math.min(1, facts.view.session.volume / 100)),
+    muted: facts.view?.session?.volume === 0 || sound.muted,
   };
 }
 
@@ -98,7 +100,7 @@ export function nowStateFrom(facts: PlayerFacts, sound: { volume: number; muted:
 export type PlayerActions = {
   /** Make this device the speaker (from a press); resolves with a sentence when it could not. */
   playHere(): Promise<string>;
-  command(name: 'play' | 'pause' | 'skip' | 'seek', args?: Record<string, unknown>): Promise<void>;
+  command(name: 'play' | 'pause' | 'skip' | 'seek' | 'set_volume', args?: Record<string, unknown>): Promise<void>;
   /** Whether remote commands work; when off, this device steers its own speaker directly. */
   remoteControl: boolean;
   speaker: BrowserSpeaker | null;
@@ -109,7 +111,7 @@ export class LocalFirstPlayer implements PlayerLike {
   onChange: (state: NowState) => void = () => {};
   private facts: PlayerFacts;
   private actions: PlayerActions;
-  private sound = { volume: 1, muted: false };
+  private sound = { volume: 1, muted: false, lastAudibleVolume: 1 };
 
   constructor(facts: PlayerFacts, actions: PlayerActions) {
     this.facts = facts;
@@ -122,6 +124,13 @@ export class LocalFirstPlayer implements PlayerLike {
     // what the last press said stays until the next press replaces it
     this.facts = { ...facts, said: this.facts.said };
     this.actions = actions;
+    const sessionVolume = facts.view?.session?.volume;
+    if (typeof sessionVolume === 'number' && Number.isFinite(sessionVolume)) {
+      this.sound.volume = Math.max(0, Math.min(1, sessionVolume / 100));
+      this.sound.muted = this.sound.volume === 0;
+      if (!this.sound.muted) this.sound.lastAudibleVolume = this.sound.volume;
+    }
+    if (actions.speaker) actions.speaker.setVolume(this.sound.muted ? 0 : this.sound.volume);
     this.publish();
   }
 
@@ -197,11 +206,32 @@ export class LocalFirstPlayer implements PlayerLike {
   }
 
   toggleMute(): void {
-    this.publish(VOLUME_HERE);
+    if (this.sound.muted) {
+      this.sound.muted = false;
+      this.sound.volume = this.sound.lastAudibleVolume;
+    } else {
+      if (this.sound.volume > 0) this.sound.lastAudibleVolume = this.sound.volume;
+      this.sound.muted = true;
+      this.sound.volume = 0;
+    }
+    const volume = this.sound.volume;
+    this.actions.speaker?.setVolume(volume);
+    if (this.actions.remoteControl) {
+      void this.actions.command('set_volume', { volume: Math.round(volume * 100) });
+    }
+    this.publish('');
   }
 
-  setVolume(_volume: number): void {
-    this.publish(VOLUME_HERE);
+  setVolume(volume: number): void {
+    if (!Number.isFinite(volume)) return;
+    this.sound.volume = Math.max(0, Math.min(1, volume));
+    this.sound.muted = this.sound.volume === 0;
+    if (!this.sound.muted) this.sound.lastAudibleVolume = this.sound.volume;
+    this.actions.speaker?.setVolume(this.sound.volume);
+    if (this.actions.remoteControl) {
+      void this.actions.command('set_volume', { volume: Math.round(this.sound.volume * 100) });
+    }
+    this.publish('');
   }
 
   getSpectrum(): Uint8Array | null {
@@ -229,24 +259,34 @@ export type EngineStarter = (
   seams?: SeamWiring,
 ) => Promise<{ speaker: BrowserSpeaker; refusal: string | null } | { speaker: null; refusal: string }>;
 
-/** The real starter: AudioContext from the press, the measured probe, the capability roster,
- * then the speaker with its seam provider. */
+/** The real starter: AudioContext from the press, the measured probe, worker calibration, the
+ * capability roster, then the speaker with its worker-backed seam provider. */
 export const startBrowserEngine: EngineStarter = async (resolve, queueLength, seams) => {
-  const [{ createEngine }, provider] = await Promise.all([import('../engine'), import('../dsp/seamProvider')]);
   const engine: Engine = createEngine();
-  const opened = engine.openContext({ fromUserGesture: true });
-  if ('state' in opened) return { speaker: null, refusal: opened.reason };
-  const probe = await engine.probe(opened.context);
-  // Tier 2 (beatmatching) rests on this device's own measured analysis time (dsp/budget.ts)
-  const roster = engine.roster({ probe, workerBudget: probe.ok ? provider.calibrateAnalysis() : null });
-  const seam = seams ? provider.makeSeamProvider({
-    ...seams,
-    abilities: () => provider.abilitiesFrom((feature) => roster.get(feature)),
-    sourceSafe: (source) => provider.abilityOf((feature) => roster.get(feature), `seam_source_${source}`),
-  }) : undefined;
-  // queueLength lets an unavailable track skip with a notice instead of ending the set (ADR-0458)
-  const speaker = engine.createSpeaker({ audio: opened, probe, resolve, queueLength, seam });
-  return { speaker, refusal: probe.ok ? null : probe.reason };
+  try {
+    const opened = engine.openContext({ fromUserGesture: true });
+    if ('state' in opened) {
+      engine.dispose();
+      return { speaker: null, refusal: opened.reason };
+    }
+    const probe = await engine.probe(opened.context);
+    // The worker analysis module is available for preparation, but one synthetic warm-up is not
+    // evidence that this device has the calibrated, self-throttling schedule budget required for
+    // Tier 2. Keep Tier 2 unavailable until the runtime consumes a measured budget and can surface
+    // deadline misses. Playback remains Tier 1 and uses the labelled fade path meanwhile.
+    const roster = engine.roster({ probe });
+    const seam = seams ? provider.makeWorkerSeamProvider({
+      ...seams,
+      abilities: () => provider.abilitiesFrom((feature) => roster.get(feature)),
+      sourceSafe: (source) => provider.abilityOf((feature) => roster.get(feature), `seam_source_${source}`),
+    }) : undefined;
+    // queueLength lets an unavailable track skip with a notice instead of ending the set (ADR-0458)
+    const speaker = engine.createSpeaker({ audio: opened, probe, resolve, queueLength, seam });
+    return { speaker, refusal: probe.ok ? null : probe.reason };
+  } catch (problem) {
+    engine.dispose();
+    return { speaker: null, refusal: `SelectaDJ could not prepare browser audio: ${(problem as Error)?.message || 'unknown reason'}.` };
+  }
 };
 
 /** How many scheduled seams the hook remembers for surfaces and tests. */
@@ -303,6 +343,19 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
 
   const playHere = useCallback(async (): Promise<string> => {
     if (refusal) return '';
+    // Open the AudioContext synchronously from the player's press, before the session fetch.
+    // iOS Safari and autoplay policies may reject play() if setup waits on network first.
+    const needsSpeaker = !speaker;
+    if (needsSpeaker) {
+      const made = await starter(resolve, () => songs.current.length, wiring);
+      if (made.refusal) {
+        made.speaker?.dispose();
+        setRefusal(made.refusal);
+        return made.refusal;
+      }
+      if (!made.speaker) return 'SelectaDJ could not open audio in this browser. Try again.';
+      setSpeaker(made.speaker);
+    }
     const latest = await pb.refreshSession();
     if (!latest) return pb.error || 'SelectaDJ could not reach your account just now. Try again.';
     if (latest.ask_before_playing_here && owner.current !== latest.speaker_device_id) {
@@ -311,11 +364,8 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
       return `Playing on ${latest.speaker_name ?? 'another device'}. Press play again to move it here.`;
     }
     if (owner.current === undefined) owner.current = null;
-    if (!speaker) {
+    if (needsSpeaker) {
       wantHere.current = true;
-      const made = await starter(resolve, () => songs.current.length, wiring);
-      if (made.refusal) setRefusal(made.refusal);
-      if (made.speaker) setSpeaker(made.speaker);
       return '';
     }
     await pb.playHere(owner.current);

@@ -1,0 +1,73 @@
+{
+  "uid": "selecta-local-first-cohort-error-rate",
+  "title": "Browser-first Cloud rollout: API errors by cohort",
+  "tags": ["selecta", "browser-first", "rollout"],
+  "schemaVersion": 39,
+  "time": { "from": "now-24h", "to": "now" },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      { "name": "datasource", "type": "datasource", "query": "prometheus" }
+    ]
+  },
+  "links": [
+    {
+      "title": "Rollout runbook",
+      "url": "https://github.com/tochi-mba/selecta/blob/main/docs/operations/bf-rollout-runbook.md"
+    },
+    {
+      "title": "Metric and cohort contract",
+      "url": "https://github.com/tochi-mba/selecta/blob/main/docs/operations/bf-cohort-error-dashboard.md"
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "5xx response rate by cohort",
+      "description": "Only signed-in browser-first and hosted accounts. Unknown and staff/anonymous requests are not compared.",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 9 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0 } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (cohort) (rate(selecta_api_requests_total{cohort=~\"hosted|browser_first\",status_class=\"5xx\"}[5m])) / clamp_min(sum by (cohort) (rate(selecta_api_requests_total{cohort=~\"hosted|browser_first\"}[5m])), 1e-9)",
+          "legendFormat": "{{cohort}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "API request rate by cohort",
+      "description": "Use this alongside error rates to distinguish low traffic from a healthy cohort.",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 9 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "min": 0 } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (cohort) (rate(selecta_api_requests_total{cohort=~\"hosted|browser_first\"}[5m]))",
+          "legendFormat": "{{cohort}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "4xx response rate by cohort",
+      "description": "Separates expected client refusals from server failures so changes remain visible without inflating the 5xx series.",
+      "gridPos": { "x": 0, "y": 9, "w": 24, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "min": 0 } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (cohort) (rate(selecta_api_requests_total{cohort=~\"hosted|browser_first\",status_class=\"4xx\"}[5m]))",
+          "legendFormat": "{{cohort}}"
+        }
+      ]
+    }
+  ]
+}

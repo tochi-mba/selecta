@@ -8,6 +8,9 @@
  */
 
 export const STRETCH_IMPLEMENTATION = 'wsola-stretch-v1';
+/** Capability proof emitted only when the playback scheduler applies prepared WSOLA buffers.
+ * A module self-test alone does not mean a mix can use stretch. */
+export const STRETCH_PLAYBACK_INTEGRATION = 'seam-buffer-preprocessor-v1';
 
 /** Tempo ratio = new tempo / old tempo. 1.05 plays 5 percent faster (shorter), same pitch. */
 export const STRETCH_MIN_TEMPO_RATIO = 0.92;

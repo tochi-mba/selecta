@@ -222,8 +222,9 @@ def check_flip_now(
 
 DASHBOARDS_MARKER = "[dashboards-green]"
 COST_DASHBOARD = "GET /api/admin/economics/cost-per-mode"
-# The admin path of the error-rate view per flag cohort, once one exists; None while it doesn't.
-ERROR_RATE_VIEW: str | None = None
+ERROR_RATE_VIEW = (
+    "infra/observability/generated/dashboards/local_first_cohort_error_rate.json"
+)
 DASHBOARDS = ("cost_per_mode", "error_rate_per_cohort")
 
 
@@ -299,9 +300,22 @@ def check_percentage_step_now(
     from selecta.usage.unit_economics import cost_report
 
     month = month or dt.datetime.fromtimestamp(db_now(conn), dt.UTC).strftime("%Y-%m")
+    import os
+
+    from selecta.observability import metrics
+
+    # The dashboard is provisioned from the repository, while telemetry is configured by the
+    # deployment. Merely having a JSON panel in source is not enough to advance a cohort: the
+    # metrics exporter and the metrics flag must both be live. The owner marker still requires a
+    # human to review real data from both cohorts before widening the percentage.
+    error_rate_live = (
+        ERROR_RATE_VIEW is not None
+        and metrics.enabled()
+        and bool(os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip())
+    )
     live = {
         "cost_per_mode": bool(cost_report(conn, month)["live"]),
-        "error_rate_per_cohort": ERROR_RATE_VIEW is not None,
+        "error_rate_per_cohort": error_rate_live,
     }
     history = rule_store.history(conn, LOCAL_FIRST, limit=500)
     return check_percentage_step(

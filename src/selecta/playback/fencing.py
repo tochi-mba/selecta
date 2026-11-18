@@ -29,10 +29,11 @@ the session's current programme entry); the server records the alternatives the 
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import sqlalchemy as sa
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 
 from selecta.persistence import transaction
 from selecta.playback import envelope, ports, programme
@@ -115,6 +116,8 @@ def ack_command(
     *,
     signature: str | None = None,
     song_id: int | None = None,
+    expected_zone_id: str | None = None,
+    authorize_zone: Callable[[Connection, str], None] | None = None,
     now: float | None = None,
     events: PlaybackEvents = NO_EVENTS,
 ) -> AckOutcome:
@@ -140,6 +143,14 @@ def ack_command(
         ).first()
         if found is None:
             raise UnknownCommand("No such command here")
+        if expected_zone_id is not None and found.zone_id != expected_zone_id:
+            raise UnknownCommand("No such command here")
+        if authorize_zone is not None:
+            # The route's membership check runs in this same transaction as the ACK so a
+            # concurrent role revocation cannot slip between authorization and mutation.
+            if found.zone_id is None:
+                raise UnknownCommand("No such command here")
+            authorize_zone(conn, found.zone_id)
         session = lock_session(conn, workspace_id, now, found.zone_id)
         # Read the row again under the session lock: two racing acks are serialised by it, so
         # the second one sees the first one's answer and replays it.
@@ -158,12 +169,12 @@ def ack_command(
             .mappings()
             .one()
         )
-        if session.active_device_id != device_id:
-            raise NotTheSpeaker("Only the current speaker acknowledges commands")
         if row["status"] != DELIVERED:
             raise InvalidCommand("That command was refused, so it was never delivered")
         if signature is not None and not envelope.same_signature(row["signature"], signature):
             raise BadSignature("That is not the envelope this command was delivered in")
+        # A retry is a read of the first ACK, not a new ACK. Check it before current lease
+        # ownership so a lost response still resolves after another device takes over.
         if row["acked_at"] is not None:
             detail = row["ack_detail"] or {}
             return AckOutcome(
@@ -171,10 +182,12 @@ def ack_command(
                 song_id=detail.get("song_id"),
                 alternatives=tuple(detail.get("alternatives") or ()),
             )
+        if session.active_device_id != device_id:
+            raise NotTheSpeaker("Only the current speaker acknowledges commands")
         recorded = result
         if stale_fence(session, row["fence"]):
             recorded = ACK_SUPERSEDED
-        elif row["expires_at"] is not None and now > row["expires_at"]:
+        elif row["expires_at"] is not None and now >= row["expires_at"]:
             recorded = ACK_EXPIRED
         detail = None
         missing = None

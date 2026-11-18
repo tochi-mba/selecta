@@ -15,6 +15,8 @@
 import { detectOnsets } from './analysis/onsets';
 import { WorkerBudget } from './budget';
 import { estimateTempo } from './analysis/tempo';
+import type { AnalysisResponse } from './workers/analysisWorker';
+import { analyseInWorker, spawnAnalysisWorker } from './workers/spawn';
 import { fadeSchedule, type SeamSchedule, type TrackTiming } from './seams';
 import { scriptSeam, type Ability, type SeamAbilities } from './seamScript';
 
@@ -112,8 +114,14 @@ export function gridSupport(beats: readonly number[], onsetTimes: readonly numbe
 export function analyseTiming(buffer: PcmLike, part: 'head' | 'tail'): TrackTiming {
   const { pcm, offset } = sliceMono(buffer, part);
   const onsets = detectOnsets(pcm, buffer.sampleRate);
-  const estimate = estimateTempo(onsets);
-  const onsetTimes = onsets.onsetTimes.map((time) => time + offset);
+  return timingFromAnalysis(buffer, pcm, offset, { onsetTimes: onsets.onsetTimes, tempo: estimateTempo(onsets) });
+}
+
+/** Rebuild a song's timing record from worker output without moving channel data off the page.
+ * This is shared by synchronous diagnostics and the production worker-backed seam provider. */
+function timingFromAnalysis(buffer: PcmLike, pcm: Float32Array, offset: number, analysis: Pick<AnalysisResponse, 'onsetTimes' | 'tempo'>): TrackTiming {
+  const estimate = analysis.tempo ?? { bpm: 0, confidence: 0, ambiguous: true, implementation: 'worker-analysis-missing-v0' };
+  const onsetTimes = (analysis.onsetTimes ?? []).map((time) => time + offset);
   const beats = beatGrid(estimate.bpm, onsetTimes, buffer.duration);
   const pulse = pulseStrength(pcm);
   const support = gridSupport(beats, onsetTimes, offset, offset + pcm.length / buffer.sampleRate);
@@ -171,6 +179,79 @@ export function makeSeamProvider(options: SeamProviderOptions) {
   };
 }
 
+export type WorkerSeamProvider = ((request: SeamRequestLike) => Promise<SeamSchedule>) & { dispose(): void };
+
+export type WorkerSeamProviderOptions = SeamProviderOptions & {
+  /** Override for a worker factory in browser integration and verification harnesses. */
+  workerFactory?: () => Worker;
+};
+
+/** Production seam provider. It performs onset and tempo analysis in a module worker and only
+ * does the small beat-grid/schedule assembly on the caller. If worker analysis is unavailable,
+ * it emits a labelled fade rather than running a long PCM analysis on the audio/UI thread. */
+export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): WorkerSeamProvider {
+  const makeWorker = options.workerFactory ?? spawnAnalysisWorker;
+  let worker: Worker | null = null;
+  let disposed = false;
+  const getWorker = () => {
+    if (!worker) worker = makeWorker();
+    return worker;
+  };
+
+  const provide = async (request: SeamRequestLike): Promise<SeamSchedule> => {
+    const sources = { a: options.sourceOf?.(request.fromIndex) ?? null, b: options.sourceOf?.(request.toIndex) ?? null };
+    const settings = options.settingsFor(request.toIndex) ?? {};
+    if (disposed) return fadeSchedule(Math.max(30, request.from.durationSeconds - 5), 0, 'seam preparation stopped');
+    try {
+      const analyse = async (buffer: PcmLike, part: 'head' | 'tail') => {
+        const { pcm, offset } = sliceMono(buffer, part);
+        const response = await analyseInWorker(getWorker(), pcm, buffer.sampleRate, ['onsets', 'tempo'], { owned: true });
+        if (response.error || !response.tempo) throw new Error(response.error || 'tempo analysis returned no result');
+        return timingFromAnalysis(buffer, pcm, offset, response);
+      };
+      const a = await analyse(request.from, 'tail');
+      const b = await analyse(request.to, 'head');
+      if (disposed) return fadeSchedule(Math.max(30, a.durationSeconds - 5), 0, 'seam preparation stopped');
+      const unsafe = sources.a && sources.b && sources.a !== sources.b
+        ? [sources.a, sources.b].map((source) => options.sourceSafe?.(source) ?? { ok: true as const }).find((ability) => !ability.ok)
+        : undefined;
+      const schedule = unsafe && !unsafe.ok
+        ? {
+            ...fadeSchedule(Math.max(30, a.durationSeconds - 5), 0, `mixed-source seam: ${unsafe.reason}`),
+            degraded: [{ wanted: settings.move || 'blend', instead: 'fade' as const, reason: `one music path is not seam-safe: ${unsafe.reason}` }],
+          }
+        : scriptSeam({
+            a, b,
+            move: settings.move,
+            bars: settings.bars,
+            exitBar: settings.exit_bar,
+            entryBar: settings.entry_bar,
+            abilities: options.abilities(),
+          });
+      options.onPlanned?.({ fromIndex: request.fromIndex, toIndex: request.toIndex, sources, schedule });
+      return schedule;
+    } catch (problem) {
+      worker?.terminate();
+      worker = null;
+      const reason = problem instanceof Error ? problem.message : String(problem);
+      const schedule = {
+        ...fadeSchedule(Math.max(30, request.from.durationSeconds - 5), 0, `seam analysis worker failed: ${reason}`),
+        degraded: [{ wanted: settings.move || 'beatmatch', instead: 'fade' as const, reason: `worker analysis unavailable: ${reason}` }],
+      };
+      options.onPlanned?.({ fromIndex: request.fromIndex, toIndex: request.toIndex, sources, schedule });
+      return schedule;
+    }
+  };
+  return Object.assign(provide, {
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      worker?.terminate();
+      worker = null;
+    },
+  });
+}
+
 type StatusOf = (feature: string) => { status: string; reason?: string } | undefined;
 
 /** One feature of a capability record as an ability. */
@@ -198,6 +279,58 @@ export function calibrateAnalysis(samples = 3, seconds = 4, sampleRate = 44100):
     times.push(now() - began);
   }
   return WorkerBudget.fromBenchmark(times);
+}
+
+export type WorkerCalibrationOptions = {
+  samples?: number;
+  seconds?: number;
+  sampleRate?: number;
+  /** The worker request deadline. A timeout fails calibration closed. */
+  timeoutMs?: number;
+  /** Override for deterministic integration harnesses. */
+  workerFactory?: () => Worker;
+};
+
+/** Calibrate lightweight analysis through the same off-thread path the player uses. Unlike
+ * `calibrateAnalysis`, this never runs the analysis synchronously on the page. It transfers a
+ * synthetic owned buffer for each sample, measures worker round-trip latency conservatively,
+ * and always tears the worker down. A missing worker, timeout, malformed response or startup
+ * failure returns null so callers keep Tier 2 disabled instead of blocking the UI. */
+export async function calibrateAnalysisInWorker(options: WorkerCalibrationOptions = {}): Promise<WorkerBudget | null> {
+  const samples = options.samples ?? 3;
+  const seconds = options.seconds ?? 4;
+  const sampleRate = options.sampleRate ?? 44100;
+  if (!Number.isInteger(samples) || samples < 1 || !Number.isFinite(seconds) || seconds <= 0 || !Number.isFinite(sampleRate) || sampleRate <= 0) {
+    return null;
+  }
+
+  let worker: Worker | null = null;
+  try {
+    worker = (options.workerFactory ?? spawnAnalysisWorker)();
+    const length = Math.ceil(seconds * sampleRate);
+    const times: number[] = [];
+    for (let sample = 0; sample < samples; sample += 1) {
+      const pcm = new Float32Array(length);
+      let seed = 1;
+      for (let index = 0; index < length; index += 1) {
+        seed = (seed * 16807) % 2147483647;
+        pcm[index] = ((seed / 2147483647) * 2 - 1) * 0.1;
+      }
+      const began = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const response = await analyseInWorker(worker, pcm, sampleRate, ['onsets', 'tempo'], {
+        owned: true,
+        timeoutMs: options.timeoutMs ?? 10_000,
+      });
+      if (response.error || !response.tempo || !Number.isFinite(response.tempo.bpm)) return null;
+      const ended = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      times.push(Math.max(0, ended - began));
+    }
+    return WorkerBudget.fromBenchmark(times);
+  } catch {
+    return null;
+  } finally {
+    worker?.terminate();
+  }
 }
 
 /** The seam abilities a capability record (dsp/capability.ts) supports. */

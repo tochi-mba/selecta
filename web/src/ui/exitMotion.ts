@@ -11,8 +11,6 @@ import { RefObject, useLayoutEffect, useRef, useState } from 'react';
  * Panels that pop in (menus, popovers, tooltips) also carry `data-motion="pop"`, the one hook the
  * sheets use for their appear animation. */
 
-const SLACK_MS = 50;
-
 function toMs(value: string): number {
   const text = value.trim();
   if (!text) return Number.NaN;
@@ -71,7 +69,10 @@ export function playExit(node: HTMLElement, done: () => void, token = '--motion-
     return () => {};
   }
   node.addEventListener('animationend', ended);
-  timer = window.setTimeout(finish, Math.max(longest, motionMs(token)) + SLACK_MS);
+  // The fallback follows the same exit token as the stylesheet. Animation duration can be
+  // clamped by reduced-motion rules or reported differently by a browser; it must not extend
+  // the close beyond the contract (120ms for sheets, 80ms for menus under reduced motion).
+  timer = window.setTimeout(finish, motionMs(token));
   return () => {
     if (finished) return;
     finished = true;

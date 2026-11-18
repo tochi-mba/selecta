@@ -137,7 +137,7 @@ function probeDuration(file: File): Promise<number> {
   });
 }
 
-type Candidate = { name: string; ref: FileRef; open: () => Promise<File> };
+type Candidate = { name: string; ref: FileRef; open: () => Promise<File>; sessionFile?: File };
 
 function isDirectorySource(source: ImportSource): source is DirectoryHandleLike {
   return (source as { kind?: string }).kind === 'directory';
@@ -159,7 +159,7 @@ async function collect(source: ImportSource, signal?: AbortSignal): Promise<{ ca
       skipped += 1;
       return;
     }
-    candidates.push({ name: file.name, ref: { kind: 'repick', name: file.name, size: file.size }, open: async () => file });
+    candidates.push({ name: file.name, ref: { kind: 'repick', name: file.name, size: file.size }, open: async () => file, sessionFile: file });
   };
   const addHandle = (handle: FileHandleLike) => {
     if (!isAudioName(handle.name)) {
@@ -198,7 +198,7 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
   emit({ kind: 'collected', total: candidates.length, skipped });
   let flushedOnce = false;
 
-  let batch: { name: string; ref: FileRef; entry: SongRegistration }[] = [];
+  let batch: { name: string; ref: FileRef; entry: SongRegistration; sessionFile?: File }[] = [];
 
   const flush = async () => {
     if (!batch.length) return;
@@ -234,6 +234,9 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
           ref: item.ref,
           importedAt: Date.now(),
         });
+        // Plain inputs and webkitdirectory return File objects, not durable handles. Keep that
+        // object reachable for this visit only: it is never written to IndexedDB or sent to Cloud.
+        if (item.sessionFile) store.attachSessionFile(song.song_id, item.sessionFile);
       } catch (error) {
         stopped = error;
         break;
@@ -304,7 +307,7 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
         emit({ kind: 'file', name: candidate.name, stage: 'failed', reason: 'SelectaDJ could not read this file. It stays where it is; nothing was changed.' });
         continue;
       }
-      batch.push({ name: candidate.name, ref: candidate.ref, entry });
+      batch.push({ name: candidate.name, ref: candidate.ref, entry, ...(candidate.sessionFile ? { sessionFile: candidate.sessionFile } : {}) });
       if (batch.length >= (flushedOnce ? batchSize : Math.min(FIRST_BATCH, batchSize))) await flush();
     }
     if (!summary.cancelled) await flush();

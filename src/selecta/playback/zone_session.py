@@ -112,6 +112,8 @@ class ZoneHeartbeatResult:
     # Set when refused because this device is the live speaker of another zone.
     playing_zone_id: str | None = None
     playing_zone_name: str | None = None
+    delivered: tuple[str, ...] = ()
+    missed: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -216,6 +218,7 @@ def zone_heartbeat(
     position: Position,
     *,
     fence: int | None = None,
+    user_id: str | None = None,
     now: float | None = None,
     events: PlaybackEvents = NO_EVENTS,
 ) -> ZoneHeartbeatResult:
@@ -223,7 +226,7 @@ def zone_heartbeat(
     last saw: a stale one can't claim a lapsed lease (ADR-0461, via `heartbeat_in`)."""
     with transaction(engine, workspace_id) as conn:
         now = resolve_now(conn, now)
-        zone = require_zone(conn, zones, workspace_id, zone_id)
+        zone = require_zone(conn, zones, workspace_id, zone_id, user_id=user_id)
         device = _zone_device(conn, workspace_id, device_id, zone)
         lock_device(conn, workspace_id, device_id)
         touch_device(conn, device_id, now)
@@ -271,6 +274,8 @@ def zone_heartbeat(
             result.position_accepted,
             result.previous_device_id,
             session.hand_back_to_device_id,
+            delivered=result.delivered,
+            missed=result.missed,
         )
 
 
@@ -347,6 +352,7 @@ def hand_back(
     device_id: str,
     position: Position,
     *,
+    user_id: str | None = None,
     now: float | None = None,
     events: PlaybackEvents = NO_EVENTS,
 ) -> Session:
@@ -354,7 +360,9 @@ def hand_back(
     kiosk) or when the person pressed "Hand back to Bar player" (a staff phone)."""
     with transaction(engine, workspace_id) as conn:
         now = resolve_now(conn, now)
-        zone = require_zone(conn, zones, workspace_id, zone_id, allow_paused=True)
+        zone = require_zone(
+            conn, zones, workspace_id, zone_id, user_id=user_id, allow_paused=True
+        )
         require_signed_in(conn, workspace_id, device_id)
         session = lock_session(conn, workspace_id, now, zone.id)
         if session.active_device_id != device_id:
@@ -419,12 +427,15 @@ def zone_reconnect(
     zone_id: str,
     device_id: str,
     *,
+    user_id: str | None = None,
     now: float | None = None,
     events: PlaybackEvents = NO_EVENTS,
 ) -> ReconnectResult:
     with transaction(engine, workspace_id) as conn:
         now = resolve_now(conn, now)
-        zone = require_zone(conn, zones, workspace_id, zone_id, allow_paused=True)
+        zone = require_zone(
+            conn, zones, workspace_id, zone_id, user_id=user_id, allow_paused=True
+        )
         return on_reconnect_in(
             conn, workspace_id, device_id, now, zone_id=zone.id, events=events,
             volume_cap=zones.volume_cap(conn, zone, now),

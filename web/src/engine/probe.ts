@@ -18,7 +18,7 @@ export { PROBE_PROCESSOR } from './worklet/probeProcessor';
 /** Which browser engine produced a capability record (ADR-0460 tuple field `engine_version`).
  * Bump it when the engine's DSP, scheduling or probe changes: a record measured on an older
  * engine is a different tuple and proves nothing about this one. */
-export const ENGINE_VERSION = 'selecta-browser-engine/1';
+export const ENGINE_VERSION = 'selecta-browser-engine/2';
 /** How long to wait for the processor's report before calling the device unable. */
 export const PROBE_WAIT_MS = 2000;
 
@@ -27,6 +27,15 @@ export type ProbeFailure = { ok: false } & UnsupportedHere;
 export type ProbeResult = ProbeOk | ProbeFailure;
 
 type ProbeReport = { type: 'probe-report'; blocks: number; misses: number; sampleRate: number };
+
+function isProbeReport(value: unknown, expectedRate: number): value is ProbeReport {
+  if (!value || typeof value !== 'object') return false;
+  const report = value as Partial<ProbeReport>;
+  return report.type === 'probe-report'
+    && Number.isSafeInteger(report.blocks) && (report.blocks ?? 0) > 0
+    && Number.isSafeInteger(report.misses) && (report.misses ?? -1) >= 0
+    && Number.isFinite(report.sampleRate) && report.sampleRate === expectedRate;
+}
 
 type ProbePort = {
   onmessage: ((event: MessageEvent<unknown>) => void) | null;
@@ -59,10 +68,15 @@ export async function probeCapability(context: AudioContext, options: ProbeOptio
   // A processor only runs on a running context; one that is suspended would fail the probe for
   // the wrong reason. The caller wakes it inside the gesture; nudge once more, never forever.
   if (context.state !== 'running') {
-    await Promise.race([
-      context.resume().catch(() => undefined),
-      new Promise((settled) => setTimeout(settled, options.waitMs ?? PROBE_WAIT_MS)),
-    ]);
+    let wait: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        context.resume().catch(() => undefined),
+        new Promise((settled) => { wait = setTimeout(settled, options.waitMs ?? PROBE_WAIT_MS); }),
+      ]);
+    } finally {
+      if (wait !== undefined) clearTimeout(wait);
+    }
     if ((context.state as AudioContextState) !== 'running') {
       return refuse('Sound has not been allowed to start yet, so SelectaDJ could not check this device. Press play to try again.');
     }
@@ -103,17 +117,35 @@ export async function probeCapability(context: AudioContext, options: ProbeOptio
   }
 
   // Connected through a muted gain so the graph pulls the processor without making any sound.
-  const mute = context.createGain();
-  mute.gain.value = 0;
-  node.connect(mute as unknown as AudioNode);
-  mute.connect(context.destination);
+  let mute: GainNode | null = null;
+  try {
+    mute = context.createGain();
+    mute.gain.value = 0;
+    node.connect(mute as unknown as AudioNode);
+    mute.connect(context.destination);
+  } catch (error) {
+    node.port.close?.();
+    try {
+      node.disconnect();
+      mute?.disconnect();
+    } catch {
+      // partially connected nodes are already gone
+    }
+    return refuse(`The probe could not connect to the audio device: ${(error as Error).message ?? 'unknown reason'}.`);
+  }
 
+  let invalidReport = false;
   const report = await new Promise<ProbeReport | null>((settle) => {
-    const wait = window.setTimeout(() => settle(null), options.waitMs ?? PROBE_WAIT_MS);
+    const wait = globalThis.setTimeout(() => settle(null), options.waitMs ?? PROBE_WAIT_MS);
     node.port.onmessage = (event) => {
-      const data = event.data as ProbeReport | null;
-      if (data?.type !== 'probe-report') return;
-      window.clearTimeout(wait);
+      const data = event.data;
+      if (!data || typeof data !== 'object' || (data as { type?: unknown }).type !== 'probe-report') return;
+      globalThis.clearTimeout(wait);
+      if (!isProbeReport(data, context.sampleRate)) {
+        invalidReport = true;
+        settle(null);
+        return;
+      }
       settle(data);
     };
   });
@@ -127,7 +159,8 @@ export async function probeCapability(context: AudioContext, options: ProbeOptio
     // already gone with its context
   }
 
-  if (!report || report.blocks <= 0) {
+  if (!report) {
+    if (invalidReport) return refuse('The audio worklet returned invalid capability measurements for this device.');
     return refuse('The audio worklet loaded but never processed audio, so SelectaDJ cannot trust playback here.');
   }
   return {

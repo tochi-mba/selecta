@@ -31,7 +31,7 @@ green; the admin flag change path enforces this mechanically
 | Dashboard | Where | State |
 |-----------|-------|-------|
 | Per-mode cost (BF-0464-05) | `GET /api/admin/economics/cost-per-mode?month=YYYY-MM`; CLI `tools/bf_unit_economics.py cost-per-mode` | Built; no real data yet (needs the Labs beta population); invoice reconciliation pending ([measurement record](bf-unit-economics-measurement.md)) |
-| Error rate per flag cohort | Not built | Missing: request metrics carry no cohort label yet; the guard names it in every refusal |
+| Error rate per flag cohort | `infra/observability/generated/dashboards/local_first_cohort_error_rate.json`; `selecta_api_requests_total{cohort,status_class}` | Built and wired to live cohort decisions; not live until the API exporter is configured and real `hosted` and `browser_first` samples are reviewed ([dashboard runbook](../operations/bf-cohort-error-dashboard.md)) |
 | Readiness (both, plus the marker) | `GET /api/admin/flags/cloud.local_first/percentage-readiness` | Answers not ready today |
 
 ## Ledger entries

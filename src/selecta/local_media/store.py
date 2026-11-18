@@ -24,6 +24,11 @@ from selecta.persistence import db_now
 # The metadata a registration may carry, besides the required identity fields.
 OPTIONAL_FIELDS = ("album", "duration_s", "codec", "sample_rate")
 
+# Availability is a device observation, not a permanent assertion. If a browser does not
+# refresh its report, stop promising that its copy is still playable after 30 days. The next
+# successful device sync makes the tracks requestable again without changing catalogue identity.
+AVAILABILITY_TTL_SECONDS = 30 * 24 * 60 * 60
+
 
 def normalised(text: str) -> str:
     """Case-folded with whitespace collapsed, for duplicate marking only, never for identity."""
@@ -234,10 +239,11 @@ def set_availability(
 def availability_counts(
     conn: Connection, workspace_id: str, song_ids: Iterable[int]
 ) -> dict[int, int]:
-    """How many devices report each song present; a song nothing reports is simply missing."""
+    """Count devices with a recent positive report; stale reports no longer mean playable."""
     wanted = [int(song_id) for song_id in song_ids]
     if not wanted:
         return {}
+    fresh_after = db_now(conn) - AVAILABILITY_TTL_SECONDS
     rows = conn.execute(
         sa.select(
             local_song_availability.c.song_id,
@@ -246,12 +252,14 @@ def availability_counts(
         .where(local_song_availability.c.workspace_id == workspace_id)
         .where(local_song_availability.c.song_id.in_(wanted))
         .where(local_song_availability.c.present.is_(True))
+        .where(local_song_availability.c.reported_at >= fresh_after)
         .group_by(local_song_availability.c.song_id)
     )
     return {int(row.song_id): int(row.devices) for row in rows}
 
 
 __all__ = [
+    "AVAILABILITY_TTL_SECONDS",
     "availability_counts",
     "exists",
     "get_song",

@@ -1,7 +1,7 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MixData, Request, Status } from '../api';
 import { setFlags, useFlags } from '../flags';
-import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, storageSpace, type LapsedWhy, type MediaResolver, type StorageSpace } from '../media';
+import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, reportDeviceAvailability, deviceAvailabilitySnapshot, storageSpace, type LapsedWhy, type MediaResolver, type StorageSpace } from '../media';
 import type { NowState } from '../player';
 import { BytesContext, noBytesHere, RequestContext } from '../requestContext';
 import { navigate, parseRoute, useLocationText } from '../router';
@@ -15,7 +15,7 @@ import { MyMixes } from '../views/MyMixes';
 import { Now } from '../views/Now';
 import type { View, ViewProps } from '../views/shared';
 import type { Account, Api } from './api';
-import { ConnectMusic } from './ConnectMusic';
+import { ConnectMusic, mediaDeviceId } from './ConnectMusic';
 import { hostedResolver, matchAsset, readHostedAssets, type HostedAsset } from './hostedMedia';
 import { isHostedAccount } from './localFirstGate';
 import { CannotPlayHere, LibraryEmpty, ListenEmpty, MixesEmpty, MyMixesEmpty, NotOnThisAccount, OnlyOnYourComputer } from './LocalFirstEmpty';
@@ -60,6 +60,7 @@ export const NOT_IN_THE_BROWSER = {
 
 const VIEW_PATHS: Record<View, string> = { Mixes: '/mixes', Now: '/listen', Edit: '/mix/current/edit', Library: '/library', Words: '/discover', Workshop: '/workshop' };
 const IDLE = (): void => {};
+const AVAILABILITY_REFRESH_MS = 12 * 60 * 60 * 1000;
 
 export function LocalFirstShell({ api, account, more, notices, feedback }: {
   api: Api;
@@ -90,15 +91,31 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   const lapsed = useRef(new Map<number, LapsedWhy>());
   const refreshStatusRef = useRef<(() => void) | null>(null);
   const sweeping = useRef<Promise<void> | null>(null);
-  const sweepLapsed = useCallback(() => (sweeping.current ??= (async () => {
+  const lastAvailabilityReport = useRef(0);
+  const sweepLapsed = useCallback((forceReport = false) => (sweeping.current ??= (async () => {
     try {
       const opened = await openStore();
-      lapsed.current = new Map((await findLapsed(opened)).map((item) => [item.songId, item.why] as const));
+      const lapsedItems = await findLapsed(opened);
+      lapsed.current = new Map(lapsedItems.map((item) => [item.songId, item.why] as const));
+      // Catalogue availability is a time-bounded device observation (30-day server TTL).
+      // Send a complete snapshot on startup and then at most twice a day while this app is
+      // active. The report contains only catalogue ids and the same profile id used for
+      // playback-device auth; no filename, handle, tag or audio bytes leave the browser.
+      if (on('cloud.local_media') && (forceReport || Date.now() - lastAvailabilityReport.current >= AVAILABILITY_REFRESH_MS)) {
+        const snapshot = await deviceAvailabilitySnapshot(opened, lapsedItems);
+        try {
+          await reportDeviceAvailability(media, mediaDeviceId(workspaceId), snapshot);
+          lastAvailabilityReport.current = Date.now();
+        } catch {
+          // A transient auth/network failure leaves the previous observation to expire; the
+          // next focus, import, reauthorization or periodic refresh retries it.
+        }
+      }
       refreshStatusRef.current?.();
     } finally {
       sweeping.current = null;
     }
-  })()), [openStore]);
+  })()), [media, on, openStore, workspaceId]);
   const sources = useMemo<AvailabilitySources>(() => ({
     here: async () => {
       const opened = await openStore();
@@ -145,7 +162,20 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   }, [request]);
   const refreshMix = useCallback(() => { request<MixData>('/mix').then(setData).catch(() => undefined); }, [request]);
   refreshStatusRef.current = refreshStatus;
-  useEffect(() => { refreshStatus(); refreshMix(); void sweepLapsed(); }, [refreshStatus, refreshMix, sweepLapsed]);
+  useEffect(() => { refreshStatus(); refreshMix(); void sweepLapsed(true); }, [refreshStatus, refreshMix, sweepLapsed]);
+  useEffect(() => {
+    const refreshWhenActive = () => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') void sweepLapsed();
+    };
+    const timer = window.setInterval(refreshWhenActive, AVAILABILITY_REFRESH_MS);
+    window.addEventListener('focus', refreshWhenActive);
+    document.addEventListener('visibilitychange', refreshWhenActive);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refreshWhenActive);
+      document.removeEventListener('visibilitychange', refreshWhenActive);
+    };
+  }, [sweepLapsed]);
 
   // The import session outlives any one page: each landed batch refreshes the counts, and a
   // finished import records its outcome in the onboarding state even with the spine gone.
@@ -221,10 +251,11 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   const shared: ViewProps | null = status && {
     status, mix: data.mix, mixName: data.name, currentMixName: data.name, canUndo: data.can_undo, mixEta: data.eta,
     refreshMix, setMixData, refreshStatus, request, player: shellPlayer, now, readyNeeded: BROWSER_MIX_NEEDS,
+    analysisAvailable: false, transitionEditingAvailable: false, visualizerAvailable: false,
     setView: (view: View) => navigate(VIEW_PATHS[view]), notify, stage: false, toggleStage: IDLE,
   };
   const song = data.mix[now.position];
-  const connect = <ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} />;
+  const connect = <ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} onAvailabilityChanged={() => sweepLapsed(true)} />;
 
   const page = (): ReactNode => {
     if (route.page === 'more') {

@@ -36,14 +36,16 @@ export function analyseInWorker(
   pcm: Float32Array,
   sampleRate: number,
   tasks?: AnalysisTask[],
-  options: { owned?: boolean } = {},
+  options: { owned?: boolean; timeoutMs?: number } = {},
 ): Promise<AnalysisResponse> {
   const id = nextRequestId;
   nextRequestId += 1;
   const sending = transferable(pcm, options.owned === true);
   const request: AnalysisRequest = { id, sampleRate, pcm: sending.pcm, tasks };
   return new Promise((resolve, reject) => {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
     const done = () => {
+      if (timeout !== undefined) clearTimeout(timeout);
       worker.removeEventListener('message', onMessage);
       worker.removeEventListener('error', onError);
       worker.removeEventListener('messageerror', onMessageError);
@@ -66,6 +68,13 @@ export function analyseInWorker(
     worker.addEventListener('message', onMessage);
     worker.addEventListener('error', onError);
     worker.addEventListener('messageerror', onMessageError);
+    const timeoutMs = options.timeoutMs ?? 15_000;
+    if (Number.isFinite(timeoutMs) && timeoutMs > 0) {
+      timeout = setTimeout(() => {
+        done();
+        reject(new Error(`The analysis worker exceeded its ${timeoutMs} ms deadline.`));
+      }, timeoutMs);
+    }
     try {
       worker.postMessage(request, sending.transfer);
     } catch (error) {
