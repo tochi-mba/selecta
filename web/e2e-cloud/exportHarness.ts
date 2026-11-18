@@ -56,12 +56,12 @@ export type HarnessResult =
 
 async function exportSynthetic(format: ExportFormat, trackSeconds: number[], cancelAfterMs?: number): Promise<HarnessResult> {
   const decoder = new OfflineAudioContext(2, 1, RATE);
-  const tracks = trackSeconds.map((seconds, index) => ({
+  // Songs are synthesised before the clock starts: making test audio is harness work, not the
+  // engine's, so it must not count against the engine's stall figure.
+  const songs = trackSeconds.map((seconds, index) => synthTrack(seconds, index));
+  const tracks = songs.map((bytes, index) => ({
     id: index,
-    data: async () => {
-      const bytes = synthTrack(seconds, index);
-      return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
-    },
+    data: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer,
   }));
   const control = new AbortController();
   if (cancelAfterMs !== undefined) setTimeout(() => control.abort(), cancelAfterMs);
@@ -74,8 +74,9 @@ async function exportSynthetic(format: ExportFormat, trackSeconds: number[], can
   }, 50);
   const progress: number[] = [];
   const started = performance.now();
+  let result: Awaited<ReturnType<typeof exportFile>>;
   try {
-    const result = await exportFile({
+    result = await exportFile({
       tracks,
       decode: (bytes) => decoder.decodeAudioData(bytes),
       format,
@@ -83,22 +84,25 @@ async function exportSynthetic(format: ExportFormat, trackSeconds: number[], can
       signal: control.signal,
       onProgress: (step) => progress.push(step.renderedSeconds),
     });
-    if (!result.ok) return { ok: false, reason: result.reason, detail: result.detail };
-    return {
-      ok: true,
-      format: result.file.format,
-      durationSeconds: result.file.durationSeconds,
-      sha256: result.file.sha256,
-      mimeType: result.file.mimeType,
-      limiter: result.file.limiter,
-      base64: toBase64(result.file.bytes),
-      elapsedMs: performance.now() - started,
-      longestStallMs: Math.max(longestStallMs, performance.now() - last),
-      progress,
-    };
   } finally {
+    // Stop the clock before the harness copies the file out (base64 is harness work too).
     clearInterval(beat);
+    longestStallMs = Math.max(longestStallMs, performance.now() - last);
   }
+  const elapsedMs = performance.now() - started;
+  if (!result.ok) return { ok: false, reason: result.reason, detail: result.detail };
+  return {
+    ok: true,
+    format: result.file.format,
+    durationSeconds: result.file.durationSeconds,
+    sha256: result.file.sha256,
+    mimeType: result.file.mimeType,
+    limiter: result.file.limiter,
+    base64: toBase64(result.file.bytes),
+    elapsedMs,
+    longestStallMs,
+    progress,
+  };
 }
 
 (window as unknown as { selectaExportE2E: typeof exportSynthetic }).selectaExportE2E = exportSynthetic;

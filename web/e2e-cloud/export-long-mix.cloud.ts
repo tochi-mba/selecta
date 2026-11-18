@@ -120,6 +120,7 @@ test('a long synthetic mix exports as a checked WAV and a checked FLAC holding t
     }),
   });
   console.info('export numbers', testInfo.annotations.at(-1)?.description);
+  // Recorded, not judged, for WAV: its encoder is one synchronous pass by design (wav.ts).
   // FLAC encodes and checks in slices that yield to the page, so it never stalls it for long.
   expect(flac.longestStallMs).toBeLessThan(2000);
 });
