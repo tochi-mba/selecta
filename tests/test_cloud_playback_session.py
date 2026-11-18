@@ -385,9 +385,13 @@ def test_pause_freezes_the_position_where_the_music_was(engine, clock, laptop, p
     paused = result.session
     assert paused.state is PlayState.PAUSED
     assert paused.offset_ms == 9500 and paused.anchor_at == clock.now
-    command = events.of(ports.COMMAND)[0]
+    command = dict(events.of(ports.COMMAND)[0])
+    # The ADR-0461 envelope: signed canonical text plus the same fields in the clear.
+    assert command.pop("envelope").startswith("{")
+    assert len(command.pop("signature")) == 64
     assert command == {
         "device_id": laptop.id,
+        "issued_by": phone.id,
         "command": "pause",
         "args": {},
         "seq": 2,
@@ -421,7 +425,7 @@ def test_pausing_a_stopped_session_changes_nothing_but_the_sequence(engine, lapt
 
 def test_skip_goes_to_the_next_song_or_the_one_asked_for(engine, clock, laptop, phone):
     _playing(engine, laptop)
-    clock.advance(30)
+    clock.advance(15)  # inside the 20 s lease: a lapsed one holds presses (BF-0461-04)
     skipped = _send(engine, phone, "skip").session
     assert (skipped.song_index, skipped.offset_ms, skipped.anchor_at) == (1, 0, clock.now)
     jumped = _send(engine, phone, "skip", {"song_index": 6}).session
@@ -597,11 +601,11 @@ def test_a_remote_sees_the_position_move_while_playing_and_hold_while_paused(
     engine, clock, laptop, phone
 ):
     _playing(engine, laptop)
-    clock.advance(30)
-    assert session.session_view(engine, WORKSPACE, phone.id).position.offset_ms == 30_000
+    clock.advance(15)  # inside the 20 s lease: a lapsed one holds presses (BF-0461-04)
+    assert session.session_view(engine, WORKSPACE, phone.id).position.offset_ms == 15_000
     _send(engine, phone, "pause")
     clock.advance(3600)
-    assert session.session_view(engine, WORKSPACE, phone.id).position.offset_ms == 30_000
+    assert session.session_view(engine, WORKSPACE, phone.id).position.offset_ms == 15_000
 
 
 # ---- what each device shows

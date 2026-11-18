@@ -8,6 +8,11 @@ sequence number.
 `set_volume` exists only for a venue zone's session (ADR-0443): the zone's volume is shared state
 every remote sees, clamped to the zone's cap (ADR-0450) and applied by the speaker as gain. A
 personal session keeps volume on each device, so the command is unavailable there.
+
+`set_programme` (BF-0461-05) gives the session its programme as ADR-0458 catalogue ids; the
+session stores each with its content hash (`playback.programme` resolves them) and the speaker
+resolves them locally. Every command's arguments are metadata only: anything that looks like
+audio, a URL or a path is refused here, before a row exists (`envelope.assert_metadata_only`).
 """
 
 from __future__ import annotations
@@ -17,10 +22,12 @@ from dataclasses import replace
 from enum import StrEnum
 from typing import Any
 
+from selecta.playback.envelope import NotMetadata, assert_metadata_only
 from selecta.playback.model import (
     CommandUnavailable,
     InvalidCommand,
     PlayState,
+    ProgrammeRef,
     Session,
     frozen,
 )
@@ -36,10 +43,18 @@ class Command(StrEnum):
     REORDER = "reorder"
     APPROVE_REQUEST = "approve_request"
     SET_VOLUME = "set_volume"
+    SET_PROGRAMME = "set_programme"
 
 
 STEER_DIRECTIONS = ("bigger", "calmer", "something_else")
 MIX_COMMANDS = frozenset({Command.STEER, Command.REORDER, Command.APPROVE_REQUEST})
+# What the speaker carries out by following the session. Held for an offline speaker and
+# delivered (or dropped) when it comes back (BF-0461-04); mix commands change the plan itself.
+SPEAKER_COMMANDS = frozenset({
+    Command.PLAY, Command.PAUSE, Command.SKIP, Command.SEEK, Command.SET_VOLUME,
+    Command.SET_PROGRAMME,
+})
+MAX_PROGRAMME = 1000
 
 
 def _whole(value: Any, name: str) -> int:
@@ -57,6 +72,10 @@ def validate(command: str, args: Mapping[str, Any] | None) -> tuple[Command, dic
     if args is not None and not isinstance(args, Mapping):
         raise InvalidCommand("Command arguments must be an object")
     raw = dict(args or {})
+    try:
+        assert_metadata_only(raw, "args")
+    except NotMetadata as error:
+        raise InvalidCommand(f"Commands carry no audio, links or paths ({error})") from None
     clean: dict[str, Any] = {}
     if name in (Command.SKIP, Command.SEEK) and "song_index" in raw:
         clean["song_index"] = _whole(raw["song_index"], "song_index")
@@ -78,6 +97,15 @@ def validate(command: str, args: Mapping[str, Any] | None) -> tuple[Command, dic
         if volume > 100:
             raise InvalidCommand("volume must be from 0 to 100")
         clean["volume"] = volume
+    elif name is Command.SET_PROGRAMME:
+        songs = raw.get("songs")
+        if not isinstance(songs, list) or not songs or len(songs) > MAX_PROGRAMME:
+            raise InvalidCommand(f"A programme is a list of 1 to {MAX_PROGRAMME} song ids")
+        clean["songs"] = [_whole(song, "songs[]") for song in songs]
+        start = _whole(raw.get("song_index", 0), "song_index")
+        if start >= len(songs):
+            raise InvalidCommand("song_index must point into the programme")
+        clean["song_index"] = start
     elif name is Command.APPROVE_REQUEST:
         request_id = raw.get("request_id")
         if isinstance(request_id, bool) or not isinstance(request_id, (str, int)):
@@ -94,8 +122,17 @@ def apply(
     mix: MixControl | None,
     *,
     volume_cap: int = 100,
+    programme: tuple[ProgrammeRef, ...] | None = None,
 ) -> Session:
-    """The session after this command. The caller bumps the sequence and saves it."""
+    """The session after this command. The caller bumps the sequence and saves it.
+    `programme` is `set_programme`'s songs already resolved to ADR-0458 identities."""
+    if name is Command.SET_PROGRAMME:
+        if programme is None:
+            raise CommandUnavailable("Those songs aren't in this library")
+        return replace(
+            session, programme=programme, song_index=args["song_index"], offset_ms=0,
+            anchor_at=now,
+        )
     if name is Command.SET_VOLUME:
         if session.zone_id is None:
             raise CommandUnavailable("Volume is set on each device")

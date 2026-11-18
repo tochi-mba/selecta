@@ -24,10 +24,11 @@ from selecta.flags import cloud_gate
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
 from selecta.persistence import transaction
-from selecta.playback import devices, fencing, session
+from selecta.playback import devices, envelope, fencing, session
 from selecta.playback import store as playback_store
 from selecta.playback.model import (
     MAX_SIGNED_IN_DEVICES,
+    BadSignature,
     Capabilities,
     CommandUnavailable,
     Device,
@@ -104,6 +105,10 @@ class CommandBody(DeviceBody):
 
 class AckBody(DeviceBody):
     result: str = Field(max_length=32)  # "applied" or "unavailable_here"
+    # BF-0461: the envelope signature the speaker verified, and for unavailable_here the
+    # ADR-0458 song id it could not resolve (default: the session's current programme entry).
+    signature: str | None = Field(default=None, max_length=64)
+    song_id: int | None = Field(default=None, ge=0)
 
 
 # Refused presses the controller must hear about loudly, with the current state to redraw from.
@@ -122,6 +127,10 @@ COMMAND_REFUSALS = {
         "That press waited too long, so it was dropped. Here's where it is now.",
     ),
 }
+DEFERRED_MESSAGE = (
+    "The speaker is offline. This reaches it if it is back before the press expires; "
+    "otherwise it is dropped and shown as missed."
+)
 
 
 def device_json(device: Device, *, this_device: str | None = None) -> dict[str, Any]:
@@ -208,7 +217,7 @@ def install_routes(
                 status_code=403,
                 detail={"code": error.code, "message": "This device was signed out."},
             )
-        if isinstance(error, InvalidCommand):
+        if isinstance(error, (InvalidCommand, BadSignature)):
             return HTTPException(
                 status_code=422,
                 detail={"code": error.code, "message": str(error)},
@@ -329,6 +338,8 @@ def install_routes(
             "speaker_device_id": view.speaker_device_id,
             "speaker_name": view.speaker_name,
             "ask_before_playing_here": view.ask_before_playing_here,
+            "notices": view.notices,
+            "envelope_key": view.envelope_key,
             "server_time": now,
         }
 
@@ -354,11 +365,15 @@ def install_routes(
         except PlaybackError as error:
             raise refused(error) from error
         now = server_time()
+        holder = result.outcome is not session.HeartbeatOutcome.REFUSED
         return {
             "outcome": result.outcome.value,
             "position_accepted": result.position_accepted,
             "previous_device_id": result.previous_device_id,
             "session": session_json(result.session, now),
+            "envelope_key": envelope.speaker_key(result.session) if holder else None,
+            "delivered": list(result.delivered),
+            "missed": list(result.missed),
             "server_time": now,
         }
 
@@ -388,6 +403,8 @@ def install_routes(
             if previous is None
             else {"id": previous.id, "name": previous.name},
             "message": result.message,
+            "envelope_key": envelope.speaker_key(result.session),
+            "missed": list(result.missed),
             "server_time": now,
         }
 
@@ -399,7 +416,8 @@ def install_routes(
     ) -> dict[str, Any]:
         found = principal(request, claims)
         here = mine(found, body.device_id, request)
-        result = session.on_reconnect(engine, found.workspace.id, here)
+        result = session.on_reconnect(engine, found.workspace.id, here, events=events)
+        carry_on = result.action is session.ReconnectAction.CONTINUE
         return {
             "action": result.action.value,
             # Judged at the moment of answering: a device coming back to a speaker whose lease
@@ -409,6 +427,11 @@ def install_routes(
             "moved_to_name": result.moved_to_name,
             "reason": result.reason,
             "message": result.message,
+            "envelope_key": envelope.speaker_key(result.session)
+            if carry_on and result.session is not None
+            else None,
+            "delivered": list(result.delivered),
+            "missed": list(result.missed),
         }
 
     @app.post("/api/playback/commands")
@@ -444,6 +467,8 @@ def install_routes(
             "fence": result.fence,
             "expires_at": result.expires_at,
         }
+        if result.status is session.CommandStatus.DEFERRED:
+            answer["message"] = DEFERRED_MESSAGE
         refusal = COMMAND_REFUSALS.get(result.status)
         if refusal is not None:
             code, message = refusal
@@ -464,7 +489,8 @@ def install_routes(
         here = mine(found, body.device_id, request)
         try:
             result = fencing.ack_command(
-                engine, found.workspace.id, here, command_id, body.result
+                engine, found.workspace.id, here, command_id, body.result,
+                signature=body.signature, song_id=body.song_id, events=events,
             )
         except PlaybackError as error:
             raise refused(error) from error
@@ -474,6 +500,8 @@ def install_routes(
             "acked_at": result.acked_at,
             "fence": result.fence,
             "replayed": result.replayed,
+            "song_id": result.song_id,
+            "alternatives": list(result.alternatives),
             "audible": False,
         }
 

@@ -28,7 +28,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
 from selecta.persistence import new_id, transaction
-from selecta.playback import commands, fencing, ports
+from selecta.playback import commands, deferred, envelope, fencing, ports, programme
 from selecta.playback.model import (
     LEASE_SECONDS,
     Device,
@@ -73,6 +73,7 @@ class CommandStatus(StrEnum):
     NO_SPEAKER = "no_speaker"  # play with no speaker online; offer "Play here"
     SUPERSEDED = "superseded"  # fenced to an owner that has since been replaced (ADR-0461)
     EXPIRED = "expired"  # outlived its TTL; dropped, never executed late (ADR-0461)
+    DEFERRED = "deferred"  # held for an offline speaker; delivered or dropped on its return
 
 
 class ReconnectAction(StrEnum):
@@ -93,6 +94,9 @@ class HeartbeatResult:
     session: Session
     position_accepted: bool
     previous_device_id: str | None = None
+    # BF-0461-04: held presses delivered on this check-in, and the ones dropped (missed).
+    delivered: tuple[str, ...] = ()
+    missed: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -100,6 +104,7 @@ class TakeOverResult:
     session: Session
     previous_device: Device | None
     message: str | None  # what the previous speaker shows, e.g. "Playback moved to Phone"
+    missed: tuple[dict[str, Any], ...] = ()  # held presses the take-over superseded
 
 
 @dataclass(frozen=True)
@@ -123,6 +128,8 @@ class ReconnectResult:
     moved_to_name: str | None = None
     reason: str = ""  # "", "moved", "stopped" or "signed_out"
     message: str | None = None
+    delivered: tuple[str, ...] = ()
+    missed: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -142,6 +149,10 @@ class SessionView:
     speaker_device_id: str | None
     speaker_name: str | None
     ask_before_playing_here: bool
+    # BF-0461: recent missed and waiting presses and unavailable-here acks, for controllers;
+    # and, for the speaker only, the key it verifies command envelopes with.
+    notices: dict[str, list[dict[str, Any]]] | None = None
+    envelope_key: str | None = None
 
 
 def get_session(
@@ -183,6 +194,7 @@ def heartbeat_in(
     *,
     may_take_over: bool = True,
     fence: int | None = None,
+    volume_cap: int = 100,
 ) -> HeartbeatResult:
     """`heartbeat` on a locked session. `may_take_over` False (a zone's standby while its home
     kiosk is still around) refuses instead of taking a lapsed lease.
@@ -191,8 +203,12 @@ def heartbeat_in(
     adopts the current fence from the answer, so a lost response never strands it. A device
     claiming a lapsed lease with an older fence is a stale speaker resurrecting after a
     take-over: it is refused, and learns the current fence, instead of overwriting the new
-    owner's position with its own."""
+    owner's position with its own.
+
+    A check-in that keeps or takes the lease then reconciles presses held while the speaker
+    was away (BF-0461-04): delivered if still current, dropped and reported if not."""
     workspace_id = session.workspace_id
+    session = envelope.ensure_salt(conn, session)
     previous = None
     if session.active_device_id == device_id:
         outcome = HeartbeatOutcome.RENEWED
@@ -226,7 +242,10 @@ def heartbeat_in(
         _announce_move(conn, session, previous, device_id, events)
     if outcome is HeartbeatOutcome.TOOK_OVER or _visibly_changed(before, session):
         events.publish(conn, workspace_id, ports.STATE, session_payload(session, now))
-    return HeartbeatResult(outcome, session, accepted, previous)
+    held = deferred.reconcile(conn, session, now, events, volume_cap=volume_cap)
+    return HeartbeatResult(
+        outcome, held.session, accepted, previous, held.delivered, held.missed
+    )
 
 
 def take_over(
@@ -266,9 +285,12 @@ def take_over_in(
     start_playing: bool = True,
     require_observed_owner: bool = False,
     observed_owner_id: str | None = None,
+    volume_cap: int = 100,
 ) -> TakeOverResult:
-    """`take_over` on a locked session."""
+    """`take_over` on a locked session. Presses held for the previous speaker are fenced to it,
+    so a take-over drops them as superseded and reports them missed (BF-0461-04)."""
     workspace_id = session.workspace_id
+    session = envelope.ensure_salt(conn, session)
     # The Cloud browser sends the owner it actually displayed to the person. Under the
     # session row lock, refuse a transfer if somebody else has acquired a live lease
     # since that observation. Existing non-interactive/zone callers are unchanged.
@@ -309,7 +331,8 @@ def take_over_in(
     if previous_id is not None:
         message = _announce_move(conn, session, previous_id, device_id, events)
     events.publish(conn, workspace_id, ports.STATE, session_payload(session, now))
-    return TakeOverResult(session, previous, message)
+    held = deferred.reconcile(conn, session, now, events, volume_cap=volume_cap)
+    return TakeOverResult(held.session, previous, message, held.missed)
 
 
 def submit_command(
@@ -387,7 +410,12 @@ def submit_command_in(
     checked right here, before anything changes: a press carrying a fence other than the
     session's current one is refused "superseded" (ownership moved since it was issued), and
     one already past its expiry is refused "expired". A press carrying no fence is checked by
-    sequence alone, as before."""
+    sequence alone, as before.
+
+    A speaker press (play aside) for a speaker whose lease has lapsed is held "deferred" and
+    changes nothing now; `deferred.reconcile` delivers or drops it when the speaker is heard
+    from again (BF-0461-04). Play with an offline speaker stays "no_speaker" (offer Play here).
+    Delivered envelopes are signed for the speaker (`envelope`)."""
     workspace_id = session.workspace_id
     key = _clean_key(idempotency_key)
     earlier = (
@@ -422,6 +450,14 @@ def submit_command_in(
     ttl = fencing.clean_ttl(ttl_seconds)
     expires_at = now + ttl  # `now` is the database clock, never the controller's
     issued_fence = session.fence if fence is None else fence
+    refs = None
+    if name is commands.Command.SET_PROGRAMME:
+        refs = programme.resolve(conn, workspace_id, clean["songs"])
+    speaker_away = (
+        session.active_device_id is not None
+        and session.active_device_id != device_id
+        and not session.lease_live(now)
+    )
     if fencing.stale_fence(session, issued_fence):
         status = CommandStatus.SUPERSEDED
     elif expires_at <= now:
@@ -434,13 +470,33 @@ def submit_command_in(
         and not session.lease_live(now)
     ):
         status = CommandStatus.NO_SPEAKER
+    elif speaker_away and name in commands.SPEAKER_COMMANDS:
+        status = CommandStatus.DEFERRED
     else:
-        session = commands.apply(session, name, clean, now, mix, volume_cap=volume_cap)
+        session = commands.apply(
+            session, name, clean, now, mix, volume_cap=volume_cap, programme=refs
+        )
         session = replace(session, seq=session.seq + 1, updated_at=now)
         save_session(conn, session)
         status = CommandStatus.APPLIED
     applied_seq = session.seq if status is CommandStatus.APPLIED else None
     command_id = new_id()
+    signature = None
+    if status is CommandStatus.APPLIED:
+        # The envelope the speaker verifies before touching local state, and acks by id.
+        # Metadata only, signed with the speaker's lease key (ADR-0461).
+        signature = deferred.publish_delivery(
+            conn,
+            session,
+            command_id=command_id,
+            issued_by=device_id,
+            command=name.value,
+            args=clean,
+            fence=issued_fence,
+            expires_at=expires_at,
+            now=now,
+            events=events,
+        )
     conn.execute(
         sa.insert(playback_commands).values(
             id=command_id,
@@ -457,30 +513,12 @@ def submit_command_in(
             expires_at=expires_at,
             # What the controller actually issued, so a superseded row stays visibly so.
             fence=issued_fence,
+            signature=signature,
+            deferred_at=now if status is CommandStatus.DEFERRED else None,
+            resolved_at=None if status is CommandStatus.DEFERRED else now,
             created_at=now,
         )
     )
-    if status is CommandStatus.APPLIED:
-        # The envelope the speaker verifies before touching local state, and acks by id.
-        # Metadata only: no audio, no path (ADR-0461).
-        events.publish(
-            conn,
-            workspace_id,
-            ports.COMMAND,
-            zone_payload(
-                session,
-                {
-                    "device_id": session.active_device_id,
-                    "command": name.value,
-                    "args": clean,
-                    "seq": session.seq,
-                    "command_id": command_id,
-                    "fence": issued_fence,
-                    "expires_at": expires_at,
-                },
-            ),
-        )
-        events.publish(conn, workspace_id, ports.STATE, session_payload(session, now))
     return CommandResult(
         status, session, applied_seq, command_id, fence=issued_fence, expires_at=expires_at
     )
@@ -493,12 +531,15 @@ def on_reconnect(
     *,
     zone_id: str | None = None,
     now: float | None = None,
+    events: PlaybackEvents = NO_EVENTS,
 ) -> ReconnectResult:
     """A device that was the speaker is back online. It carries on (and renews its lease) if it
     is still the speaker; otherwise it fades out, told where playback went."""
     with transaction(engine, workspace_id) as conn:
         now = resolve_now(conn, now)
-        return on_reconnect_in(conn, workspace_id, device_id, now, zone_id=zone_id)
+        return on_reconnect_in(
+            conn, workspace_id, device_id, now, zone_id=zone_id, events=events
+        )
 
 
 def on_reconnect_in(
@@ -508,7 +549,11 @@ def on_reconnect_in(
     now: float,
     *,
     zone_id: str | None = None,
+    volume_cap: int = 100,
+    events: PlaybackEvents = NO_EVENTS,
 ) -> ReconnectResult:
+    """A speaker that carries on reconciles what was pressed while it was away: still-current
+    presses are delivered, expired or overtaken ones dropped and reported (BF-0461-04)."""
     device = load_device(conn, workspace_id, device_id)
     session = load_session(conn, workspace_id, zone_id)
     if device is None or not device.signed_in:
@@ -522,9 +567,14 @@ def on_reconnect_in(
     if session is not None and session.active_device_id == device_id:
         session = lock_session(conn, workspace_id, now, zone_id)
         if session.active_device_id == device_id:
+            session = envelope.ensure_salt(conn, session)
             session = replace(session, lease_expires_at=now + LEASE_SECONDS, updated_at=now)
             save_session(conn, session)
-            return ReconnectResult(ReconnectAction.CONTINUE, session)
+            held = deferred.reconcile(conn, session, now, events, volume_cap=volume_cap)
+            return ReconnectResult(
+                ReconnectAction.CONTINUE, held.session, delivered=held.delivered,
+                missed=held.missed,
+            )
     if session is None or session.active_device_id is None:
         return ReconnectResult(
             ReconnectAction.STOP_MOVED, session, reason="stopped", message="Playback stopped."
@@ -616,9 +666,12 @@ def session_view_in(
     zone_id: str | None = None,
 ) -> SessionView:
     session = load_session(conn, workspace_id, zone_id)
+    notices = deferred.report(conn, session, now) if session is not None else None
     if session is None or session.active_device_id is None:
         position = position_at(session, now) if session else None
-        return SessionView(session, position, SpeakerStatus.NONE, None, None, False)
+        return SessionView(
+            session, position, SpeakerStatus.NONE, None, None, False, notices=notices
+        )
     active = session.active_device_id
     name = device_names(conn, workspace_id, [active]).get(active)
     if active == device_id:
@@ -634,6 +687,8 @@ def session_view_in(
         active,
         name,
         ask_before_playing_here=speaker is SpeakerStatus.ELSEWHERE,
+        notices=notices,
+        envelope_key=envelope.speaker_key(session) if speaker is SpeakerStatus.HERE else None,
     )
 
 
