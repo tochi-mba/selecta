@@ -130,6 +130,6 @@ test('an interrupted folder import carries on over the remembered folder', async
   await page.goto('/library');
   await expect(page.getByRole('note').filter({ hasText: 'An import of Crates was interrupted.' })).toBeVisible();
   await page.getByRole('button', { name: 'Keep checking Crates' }).click();
-  await expect(page.getByText('6 songs connected.')).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText('6 songs connected.', { exact: true })).toBeVisible({ timeout: 60_000 });
   await expect(songCount(page, 7)).toBeVisible();
 });
