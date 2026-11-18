@@ -95,7 +95,7 @@ async function regrant(store: MediaStore, song: StoredSong): Promise<RegrantOutc
     }
     // Same bytes, same identity, same songId: writing the row back reconciles without ever
     // minting a second entry, and a prior mismatch clears only now the exact bytes read again.
-    await store.put(song);
+    await store.put(song, { availability: true });
     await store.clearChanged(song.songId);
     return { status: 'recovered' };
   } catch {

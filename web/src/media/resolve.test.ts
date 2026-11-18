@@ -55,8 +55,11 @@ describe('makeResolver', () => {
   it('falls back to cached bytes when the handle lapsed', async () => {
     const handle = fakeHandle(bytesFile('abc', 'a.mp3'), { permission: 'prompt' });
     const cached = new Uint8Array([1, 2, 3]).buffer;
-    const cache = async (key: string) => (key === 'bytes-1' ? cached : null);
-    const resolve = makeResolver(await storeWith(handleSong(1, handle)), cache);
+    const lapsedSong = handleSong(1, handle);
+    lapsedSong.identity.content_sha256 = await fileSha256(new Blob([cached]));
+    // flag off: the cache is keyed by workspace and song id (ADR-0469)
+    const cache = async (key: string) => (key === 'bytes-ws-test-1' ? cached : null);
+    const resolve = makeResolver(await storeWith(lapsedSong), cache);
     const track = await resolve(1);
     expect(track).not.toBeNull();
     expect(await track!.data()).toBe(cached);

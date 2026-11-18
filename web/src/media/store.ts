@@ -185,7 +185,9 @@ export class MediaStore {
     await deleteDatabase(mediaDbName(workspaceId));
   }
 
-  async put(song: StoredSong): Promise<void> {
+  /** `availability`: the caller knows this write changes whether the song is reachable (a
+   * re-grant writing the same row back), so the lapsed sweep must look again. */
+  async put(song: StoredSong, options: { availability?: boolean } = {}): Promise<void> {
     const previous = this.memory.get(song.songId);
     this.memory.set(song.songId, song);
     // Only a re-link changes availability (a new handle, or a cleared or raised issue). A plain
@@ -193,7 +195,7 @@ export class MediaStore {
     // songs does not make the next Library visit reopen every file.
     const relinked = previous !== undefined
       && (previous.ref !== song.ref || (previous.availabilityIssue ?? null) !== (song.availabilityIssue ?? null));
-    if (relinked) this.touchAvailability();
+    if (relinked || options.availability) this.touchAvailability();
     const db = this.db;
     if (!db) return;
     try {

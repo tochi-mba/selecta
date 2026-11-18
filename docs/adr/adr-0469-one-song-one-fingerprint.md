@@ -78,11 +78,11 @@ Data may be shared across tenants by fingerprint only when it is a deterministic
 - [x] `cloud.content_cache` registered and build-on; `cloud.hosted_dedupe` registered, default off; `docs/flags.md` regenerated. Implemented (66506d6b, f66ce2c4)
 - [x] Server `shared_derivations` with possession-gated reads, verified writes, user-data refusal and no oracle. Implemented (f66ce2c4)
 - [x] Reference count derived from live assets; shared rows dropped when the last holder is erased. Implemented (f66ce2c4)
-- [x] A failed open is a lapse (permission only on NotAllowedError, otherwise missing), never a changed file; only a verified byte mismatch is changed. Implemented (see the commit after 85e8388d)
-- [x] Play-time verification hashes without freezing the page (WebCrypto, else sliced). Implemented (see the commit after 85e8388d)
-- [x] A plain import does not invalidate the lapsed sweep, and concurrent sweeps share one run. Implemented (see the commit after 85e8388d)
+- [x] A failed open is a lapse (permission only on NotAllowedError, otherwise missing), never a changed file; only a verified byte mismatch is changed. Implemented (d415b878)
+- [x] Play-time verification hashes without freezing the page (WebCrypto, else sliced). Implemented (d415b878)
+- [x] A plain import does not invalidate the lapsed sweep, and concurrent sweeps share one run. Implemented (d415b878)
 - [ ] Hosted originals stored content-addressed with refcounted erasure. Needs follow-up (contract above; ADR-0397 layout change)
 - [ ] A producer that writes server analysis into `shared_derivations`. Needs follow-up (no hosted analysis job writes it today)
-- [ ] Guard test: every table with a content hash and no `workspace_id` is allowlisted with the possession rule, and allowlisted tables carry no user-entered columns. Pending tests
-- [ ] Vitest: two workspaces do not bleed, legacy database dropped, forget wipes, content cache hit across workspaces, flag-off keys. Pending tests
-- [ ] Pytest: shared derivation read and write rules. Pending tests
+- [x] Guard test `tests/test_fingerprint_sharing_guard.py`: every table with a content hash and no `workspace_id` is allowlisted with the possession rule beside it, and allowlisted tables carry no user-entered columns. Implemented (this commit)
+- [x] Vitest `web/src/media/accountSwitch.test.ts` and `web/src/media/lapseHonesty.test.ts`: two workspaces do not bleed, legacy database dropped, forget and clear-everything wipe, import snapshot scoped and forgotten, content cache hit across workspaces and titles, flag-off keys, hash-verified writes and reads, honest lapse reasons, one shared sweep. Implemented (this commit)
+- [x] Pytest `tests/test_shared_derivations.py`: possession-gated reads, claimed hashes refused, refusal equals absence, verified writes only, user data refused, flag off, reference count, erasure drops rows. Implemented (this commit; PostgreSQL variants run where a PostgreSQL test database is configured)

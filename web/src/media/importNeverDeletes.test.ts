@@ -42,10 +42,11 @@ describe('the import path never deletes or moves a member file', () => {
       target: match[2],
     }));
     // Eviction removes only enumerated cache entries; cache writes and explicit eviction derive
-    // their target name from cacheEntryName(key). Every remover must stay on the OPFS root.
-    expect(removals).toHaveLength(4);
-    expect(removals.map(({ receiver }) => receiver)).toEqual(['root', 'root', 'root', 'root']);
-    expect(removals.map(({ target }) => target).sort()).toEqual(['candidate.name', 'entry.name', 'name', 'name']);
+    // their target name from cacheEntryName(key); clearing the device (ADR-0469) removes only
+    // enumerated cache entries too. Every remover must stay on the OPFS root.
+    expect(removals).toHaveLength(5);
+    expect(removals.map(({ receiver }) => receiver)).toEqual(['root', 'root', 'root', 'root', 'root']);
+    expect(removals.map(({ target }) => target).sort()).toEqual(['candidate.name', 'entry.name', 'entry.name', 'name', 'name']);
     const enumeration = store.slice(store.indexOf('async function opfsCacheEntries'), store.indexOf('async function evictOldestOpfsCacheEntry'));
     expect(enumeration).toContain("!handle.name?.startsWith('cache-')");
     const cacheWrite = store.slice(store.indexOf('export async function cacheWrite'), store.indexOf('export async function cacheRead'));
