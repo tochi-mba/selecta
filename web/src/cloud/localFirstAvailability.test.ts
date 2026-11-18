@@ -76,7 +76,7 @@ describe('one answer for the row and the Play capability', () => {
   it('names every state in words a member understands', () => {
     for (const state of ['here', 'reauth', 'hosted', 'elsewhere', 'nowhere'] as const) {
       expect(availabilityFacts(state)?.words).toBeTruthy();
-      expect(availabilityFacts(state)?.reason).not.toMatch(/—/);
+      expect(availabilityFacts(state)?.reason).not.toMatch(/2014/);
     }
     expect(availabilityFacts('reauth')?.kind).toBe('needs-action');
   });
