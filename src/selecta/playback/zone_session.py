@@ -34,7 +34,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
 from selecta.persistence import transaction
-from selecta.playback import fencing, ports
+from selecta.playback import deferred, fencing, ports
 from selecta.playback.model import (
     LEASE_SECONDS,
     Device,
@@ -255,6 +255,7 @@ def zone_heartbeat(
             events,
             may_take_over=_may_pick_up(conn, workspace_id, zone, device, now),
             fence=fence,
+            volume_cap=zones.volume_cap(conn, zone, now),
         )
         session = result.session
         if (
@@ -334,7 +335,8 @@ def _hand_back_in(
         ),
     )
     events.publish(conn, session.workspace_id, ports.STATE, session_payload(handed, now))
-    return handed
+    # The fence moved home, so presses held for the standby are superseded and reported.
+    return deferred.reconcile(conn, handed, now, events).session
 
 
 def hand_back(
@@ -404,7 +406,10 @@ def zone_take_over(
             raise ConfirmNeeded(
                 f"Play {zone.name} music from this phone? The {zone.name} player will stop."
             )
-        return take_over_in(conn, session, device_id, now, events, start_playing=start_playing)
+        return take_over_in(
+            conn, session, device_id, now, events, start_playing=start_playing,
+            volume_cap=zones.volume_cap(conn, zone, now),
+        )
 
 
 def zone_reconnect(
@@ -415,11 +420,15 @@ def zone_reconnect(
     device_id: str,
     *,
     now: float | None = None,
+    events: PlaybackEvents = NO_EVENTS,
 ) -> ReconnectResult:
     with transaction(engine, workspace_id) as conn:
         now = resolve_now(conn, now)
         zone = require_zone(conn, zones, workspace_id, zone_id, allow_paused=True)
-        return on_reconnect_in(conn, workspace_id, device_id, now, zone_id=zone.id)
+        return on_reconnect_in(
+            conn, workspace_id, device_id, now, zone_id=zone.id, events=events,
+            volume_cap=zones.volume_cap(conn, zone, now),
+        )
 
 
 # ---- remotes

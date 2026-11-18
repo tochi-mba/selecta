@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { audioSpeaker } from './audioSpeaker';
+import { ControllerNotices } from './ControllerNotices';
 import { Api, extrapolate, Speaker, usePlaybackDevice } from './usePlaybackDevice';
 import './devices.css';
 
@@ -44,12 +45,13 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
     // This device knows its own speaker is running; anyone else only knows what the server last
     // heard, so a lapsed lease (state_confidence uncertain, ADR-0461) is never shown as playing.
     if (here) return 'Playing here';
+    // The server already judged the lease lapsed: say plainly the speaker is offline.
+    if (view.speaker === 'offline') return `${view.speaker_name ?? 'The speaker'} is offline and may still be playing`;
     if (session?.state_confidence === 'uncertain') {
       return `${view.speaker_name ?? 'The speaker'} has not checked in recently and may still be playing`;
     }
     if (view.speaker === 'here') return 'Playing here';
     if (view.speaker === 'elsewhere') return `Playing on ${view.speaker_name ?? 'another device'}`;
-    if (view.speaker === 'offline') return `${view.speaker_name ?? 'The speaker'} is offline and may still be playing`;
     return 'Nothing is playing';
   }, [here, session?.state_confidence, view]);
 
@@ -105,6 +107,9 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
           <button type="button" className="primary" onClick={() => void pressPlayHere()}>Play here instead</button>
           <button type="button" onClick={() => setAsking(false)}>Cancel</button>
         </div>
+      )}
+      {remoteControl && !here && (
+        <ControllerNotices notices={view?.notices} speakerName={view?.speaker_name ?? null} session={session} send={(name, args) => void pb.command(name, args)} />
       )}
       {warning && (here || pb.starting || asking) && <p className="playing-bar-warning" role="note">{warning.text}</p>}
       <p className="playing-bar-message" role="status">{pb.message || pb.notice}</p>

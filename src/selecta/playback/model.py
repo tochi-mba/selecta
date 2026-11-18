@@ -97,6 +97,12 @@ class UnknownCommand(PlaybackError):
     code = "unknown_command"
 
 
+class BadSignature(PlaybackError):
+    """An ack echoed an envelope signature the server never issued for that command."""
+
+    code = "bad_signature"
+
+
 class UnknownZone(PlaybackError):
     """No such zone in this workspace, or not one this person may see (both look the same)."""
 
@@ -187,6 +193,18 @@ class Position:
 
 
 @dataclass(frozen=True)
+class ProgrammeRef:
+    """One programme entry as an ADR-0458 identity: the workspace's catalogue id and the
+    content hash the speaker resolves locally. Never a path or a URL (BF-0461-05)."""
+
+    song_id: int
+    sha256: str
+
+    def to_json(self) -> dict[str, Any]:
+        return {"song_id": self.song_id, "sha256": self.sha256}
+
+
+@dataclass(frozen=True)
 class Session:
     workspace_id: str
     mix_revision_id: str | None
@@ -204,6 +222,10 @@ class Session:
     # Moves only when ownership of the lease moves (ADR-0461). A command stamped with an
     # older fence is superseded; a failed take-over leaves the old fence valid.
     fence: int = 0
+    # The per-session salt envelope signing keys derive from (server-only), and the programme
+    # as ADR-0458 identities in play order (None: the session points into a mix by index only).
+    signing_salt: str | None = None
+    programme: tuple[ProgrammeRef, ...] | None = None
 
     @property
     def key(self) -> SessionKey:

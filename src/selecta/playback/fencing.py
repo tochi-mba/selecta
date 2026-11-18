@@ -19,6 +19,12 @@ never audibility (ADR-0460 owns that claim). Only the device holding the lease m
 a command that was actually delivered (status "applied"). What is recorded is the server's
 verdict, not just the device's claim: a command from an older fence is recorded "superseded",
 one acked after its expiry "expired". A repeated ack gets the first answer again.
+
+An ack may echo the envelope signature it verified (BF-0461-01); one that does not match the
+signature recorded for that command is refused `bad_signature` and records nothing. An
+`unavailable_here` ack names the song the speaker could not resolve (ADR-0458 id, defaulting to
+the session's current programme entry); the server records the alternatives the speaker holds
+(`programme.alternatives`) and publishes them to controllers as `playback.unavailable`.
 """
 
 from __future__ import annotations
@@ -29,18 +35,22 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Engine
 
 from selecta.persistence import transaction
+from selecta.playback import envelope, ports, programme
 from selecta.playback.model import (
+    BadSignature,
     InvalidCommand,
     NotTheSpeaker,
     Session,
     UnknownCommand,
 )
+from selecta.playback.ports import NO_EVENTS, PlaybackEvents
 from selecta.playback.schema import COMMAND_ACK_RESULTS, playback_commands
 from selecta.playback.store import (
     lock_session,
     require_signed_in,
     resolve_now,
     touch_device,
+    zone_payload,
 )
 
 DEFAULT_TTL_SECONDS = 60
@@ -92,6 +102,8 @@ class AckOutcome:
     acked_at: float
     fence: int  # the session's current fence, for the speaker to reconcile against
     replayed: bool = False
+    song_id: int | None = None  # the song an unavailable_here ack was about
+    alternatives: tuple[dict, ...] = ()  # what controllers may offer instead (ADR-0458)
 
 
 def ack_command(
@@ -101,7 +113,10 @@ def ack_command(
     command_id: str,
     result: str,
     *,
+    signature: str | None = None,
+    song_id: int | None = None,
     now: float | None = None,
+    events: PlaybackEvents = NO_EVENTS,
 ) -> AckOutcome:
     """The speaker reports what it did with a delivered command. Recorded once; a retried ack
     gets the first answer again.
@@ -136,6 +151,8 @@ def ack_command(
                     playback_commands.c.expires_at,
                     playback_commands.c.acked_at,
                     playback_commands.c.ack_result,
+                    playback_commands.c.ack_detail,
+                    playback_commands.c.signature,
                 ).where(*this_command)
             )
             .mappings()
@@ -145,21 +162,50 @@ def ack_command(
             raise NotTheSpeaker("Only the current speaker acknowledges commands")
         if row["status"] != DELIVERED:
             raise InvalidCommand("That command was refused, so it was never delivered")
+        if signature is not None and not envelope.same_signature(row["signature"], signature):
+            raise BadSignature("That is not the envelope this command was delivered in")
         if row["acked_at"] is not None:
+            detail = row["ack_detail"] or {}
             return AckOutcome(
-                command_id, row["ack_result"], row["acked_at"], session.fence, replayed=True
+                command_id, row["ack_result"], row["acked_at"], session.fence, replayed=True,
+                song_id=detail.get("song_id"),
+                alternatives=tuple(detail.get("alternatives") or ()),
             )
         recorded = result
         if stale_fence(session, row["fence"]):
             recorded = ACK_SUPERSEDED
         elif row["expires_at"] is not None and now > row["expires_at"]:
             recorded = ACK_EXPIRED
+        detail = None
+        missing = None
+        offered: tuple[dict, ...] = ()
+        if recorded == ACK_UNAVAILABLE_HERE:
+            missing = song_id
+            if missing is None and session.programme:
+                if 0 <= session.song_index < len(session.programme):
+                    missing = session.programme[session.song_index].song_id
+            if missing is not None:
+                offered = tuple(programme.alternatives(conn, session, device_id, missing))
+            detail = {"song_id": missing, "alternatives": list(offered)}
         conn.execute(
             sa.update(playback_commands)
             .where(*this_command)
-            .values(acked_at=now, ack_result=recorded)
+            .values(acked_at=now, ack_result=recorded, ack_detail=detail)
         )
-        return AckOutcome(command_id, recorded, now, session.fence)
+        if detail is not None:
+            events.publish(
+                conn,
+                workspace_id,
+                ports.UNAVAILABLE,
+                zone_payload(
+                    session,
+                    {"command_id": command_id, "device_id": device_id, "fence": session.fence,
+                     **detail},
+                ),
+            )
+        return AckOutcome(
+            command_id, recorded, now, session.fence, song_id=missing, alternatives=offered
+        )
 
 
 __all__ = [

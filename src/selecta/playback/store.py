@@ -9,6 +9,7 @@ a second writer would try to create it. Waiting for the one row is what's wanted
 
 from __future__ import annotations
 
+import secrets
 from collections.abc import Iterable, Mapping
 from dataclasses import replace
 from typing import Any
@@ -25,6 +26,7 @@ from selecta.playback.model import (
     DeviceSignedOut,
     PlayState,
     Principal,
+    ProgrammeRef,
     Session,
     UnknownDevice,
     frozen,
@@ -72,7 +74,19 @@ def session_from_row(row: Mapping[str, Any]) -> Session:
         volume=row.get("volume"),
         hand_back_to_device_id=row.get("hand_back_to_device_id"),
         fence=row.get("fence") or 0,
+        signing_salt=row.get("signing_salt"),
+        programme=programme_from_json(row.get("programme")),
     )
+
+
+def programme_from_json(raw: Any) -> tuple[ProgrammeRef, ...] | None:
+    if raw is None:
+        return None
+    return tuple(ProgrammeRef(int(item["song_id"]), str(item["sha256"])) for item in raw)
+
+
+def programme_json(programme: tuple[ProgrammeRef, ...] | None) -> list[dict[str, Any]] | None:
+    return None if programme is None else [ref.to_json() for ref in programme]
 
 
 def load_device(conn: Connection, workspace_id: str, device_id: str) -> Device | None:
@@ -158,6 +172,7 @@ def lock_session(
                         state=PlayState.STOPPED.value,
                         seq=0,
                         fence=0,
+                        signing_salt=secrets.token_hex(32),
                         updated_at=now,
                     )
                 )
@@ -208,6 +223,8 @@ def save_session(conn: Connection, session: Session) -> None:
             lease_expires_at=session.lease_expires_at,
             seq=session.seq,
             fence=session.fence,
+            signing_salt=session.signing_salt,
+            programme=programme_json(session.programme),
             updated_at=session.updated_at,
             volume=session.volume,
             hand_back_to_device_id=session.hand_back_to_device_id,
@@ -235,6 +252,13 @@ def session_payload(session: Session, now: float | None = None) -> dict[str, Any
         "fence": session.fence,
         "state_confidence": state_confidence(session, now),
     }
+    if session.programme is not None:
+        # ADR-0458 identities only: each device resolves them against its own library.
+        payload["programme"] = programme_json(session.programme)
+        playing = session.song_index
+        payload["track"] = (
+            session.programme[playing].to_json() if 0 <= playing < len(session.programme) else None
+        )
     if session.zone_id is not None:
         payload["zone_id"] = session.zone_id
         payload["volume"] = session.volume

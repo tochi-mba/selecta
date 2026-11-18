@@ -7,6 +7,9 @@
 .playing-bar-message:empty { display: none; }
 .playing-bar-message, .playing-bar-error { margin: 0; }
 .playing-bar-error, .devices-error { color: var(--danger); }
+.playing-bar-notices { display: grid; gap: var(--space-1); }
+.playing-bar-notices p { margin: 0; }
+.playing-bar-notices button { margin-left: var(--space-2); }
 .devices-panel { display: grid; gap: var(--space-2); }
 .devices-list { list-style: none; margin: 0; padding: 0; }
 .devices-list li { display: flex; flex-wrap: wrap; gap: var(--space-dense) var(--space-3); align-items: center; padding: var(--space-snug) 0; border-top: 1px solid var(--border); }
