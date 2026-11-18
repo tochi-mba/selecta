@@ -68,6 +68,8 @@ export type RenderOptions = {
   onProgress?: (progress: RenderProgress) => void;
   /** The real OfflineAudioContext by default; a fake in tests. */
   createOfflineContext?: (channels: number, frames: number, sampleRate: number) => OfflineAudioContext;
+  /** Hands control back to the event loop between limiter blocks; a resolved promise in tests. */
+  yieldToLoop?: () => Promise<void>;
 };
 
 export const RENDER_CHUNK_SECONDS = 30;
@@ -78,6 +80,9 @@ export const MAX_RENDER_SECONDS = 90 * 60;
 const FRAME_TOLERANCE_PER_CHUNK = 1;
 /** The interpolator's reach either side of a sample (12 taps per phase). */
 const TRUE_PEAK_REACH = 8;
+/** The limiter runs over each rendered chunk in blocks of about this length, yielding between
+ * them, so a 30 s chunk never holds the page for the whole limiter pass. */
+export const LIMIT_BLOCK_SECONDS = 1;
 
 const cancelled = (): RenderFailure => ({ ok: false, reason: 'cancelled', detail: 'The export was cancelled, so no file was made.' });
 const why = (error: unknown) => (error as Error | null)?.message || 'unknown reason';
@@ -117,6 +122,7 @@ export async function renderMix(options: RenderOptions): Promise<RenderResult> {
 
 async function renderInside(options: RenderOptions): Promise<RenderResult> {
   const { tracks, decode, signal, onProgress } = options;
+  const yieldToLoop = options.yieldToLoop ?? (() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
   if (tracks.length === 0) return { ok: false, reason: 'empty', detail: 'There is nothing to export.' };
   if (signal?.aborted) return cancelled();
   const checkCancel = () => {
@@ -178,8 +184,13 @@ async function renderInside(options: RenderOptions): Promise<RenderResult> {
   let limitedUpTo = 0;
   let rawStartChunk = 0;
 
-  /** Limit raw chunk `which` using its neighbours' edges, then drop what is no longer needed. */
-  const limitChunk = (which: number, last: boolean) => {
+  const blockFrames = Math.max(1, Math.round(LIMIT_BLOCK_SECONDS * sampleRate));
+
+  /** Limit raw chunk `which` using its neighbours' edges, then drop what is no longer needed.
+   * The chunk is limited in blocks, each with `reach` samples of context either side (the same
+   * overlap argument that makes chunk streaming exact), yielding and checking for a cancel
+   * between blocks. */
+  const limitChunk = async (which: number, last: boolean) => {
     const at = which - rawStartChunk;
     const middle = raw[at];
     const before = at > 0 ? raw[at - 1] : null;
@@ -196,7 +207,19 @@ async function renderInside(options: RenderOptions): Promise<RenderResult> {
       whole.set(tail, head.length + lane.length);
       return whole;
     });
-    const out = limit(joined, { sampleRate }).map((lane) => lane.slice(left, left + middle[0].length));
+    const length = middle[0].length;
+    const out = middle.map(() => new Float32Array(length));
+    for (let from = 0; from < length; from += blockFrames) {
+      const to = Math.min(length, from + blockFrames);
+      const start = Math.max(0, left + from - reach);
+      const end = Math.min(joined[0].length, left + to + reach);
+      const block = limit(joined.map((lane) => lane.subarray(start, end)), { sampleRate });
+      block.forEach((lane, channel) => out[channel].set(lane.subarray(left + from - start, left + to - start), from));
+      if (to < length) {
+        await yieldToLoop();
+        checkCancel();
+      }
+    }
     for (const lane of out) {
       for (let frame = 0; frame < lane.length; frame += 1) {
         const size = Math.abs(lane[frame]);
@@ -279,7 +302,7 @@ async function renderInside(options: RenderOptions): Promise<RenderResult> {
     chunk += 1;
     // The previous chunk now has its right-hand neighbour: limit it.
     if (chunk - 1 > limitedUpTo) {
-      limitChunk(limitedUpTo, false);
+      await limitChunk(limitedUpTo, false);
       limitedUpTo += 1;
     }
     // Songs that ended before this chunk are not needed again.
@@ -297,7 +320,7 @@ async function renderInside(options: RenderOptions): Promise<RenderResult> {
   }
   checkCancel();
   while (limitedUpTo < chunk) {
-    limitChunk(limitedUpTo, limitedUpTo === chunk - 1);
+    await limitChunk(limitedUpTo, limitedUpTo === chunk - 1);
     limitedUpTo += 1;
   }
   checkCancel();
