@@ -17,7 +17,7 @@ import { CROSSFADE_IMPLEMENTATION } from './crossfade';
 import { LIMITER_IMPLEMENTATION } from './limiter';
 import { LOUDNESS_IMPLEMENTATION, TRUE_PEAK_IMPLEMENTATION } from './loudness';
 import { SEAMS_IMPLEMENTATION } from './seams';
-import { STRETCH_IMPLEMENTATION } from './stretch';
+import { STRETCH_IMPLEMENTATION } from './stretchLimits';
 
 export type Tier = 1 | 2 | 3;
 
@@ -107,6 +107,9 @@ export interface DspEvidence {
   /** Tier 2 needs a measured device: a benchmark-calibrated worker budget (budget.ts) that has
    * not collapsed to its floor. Absent means not measured, so Tier 2 is unsupported_here. */
   workerBudget?: { atFloor: boolean } | null;
+  /** The time-stretch module loaded on this device and passed its self-test
+   * (stretchLoader.ts loadStretchEvidence). Absent means not loaded, so stretch stays off. */
+  stretch?: { implementation: string } | null;
 }
 
 /** Tier 3 features: none may be ready in this release (no benchmark or licence evidence). */
@@ -119,7 +122,8 @@ const NOT_A_PLAYER = (reason: string) => `this device cannot play here: ${reason
  *  - Tier 1 is ready only when the probe passed; otherwise every Tier 1 feature is
  *    unsupported_here with the probe's reason (the device is a controller, ADR-0460).
  *  - Tier 2 is ready only on a measured device (probe passed and a calibrated budget exists and
- *    is not at its floor); time-stretch stays unsupported_here everywhere (stretch.ts).
+ *    is not at its floor); time-stretch additionally needs its module loaded and self-tested
+ *    on this device (stretchLoader.ts), else it stays unsupported_here.
  *  - Tier 3 is always unsupported_here. */
 export function registerBrowserDspCapabilities(
   registry: CapabilityRegistry = capabilities,
@@ -154,7 +158,13 @@ export function registerBrowserDspCapabilities(
   tier2('tempo', TEMPO_IMPLEMENTATION);
   tier2('key', KEY_IMPLEMENTATION);
   tier2('beatmatch', SEAMS_IMPLEMENTATION);
-  registry.markUnsupported('time_stretch', 2, STRETCH_IMPLEMENTATION, 'no vetted pitch-preserving stretch is bundled');
+  const stretch = evidence.stretch ?? null;
+  const stretchLoaded = stretch !== null && stretch.implementation === STRETCH_IMPLEMENTATION;
+  if (!tier2Reason && !stretchLoaded) {
+    registry.markUnsupported('time_stretch', 2, STRETCH_IMPLEMENTATION, 'the time-stretch module has not loaded on this device');
+  } else {
+    tier2('time_stretch', STRETCH_IMPLEMENTATION);
+  }
 
   for (const feature of TIER3_FEATURES) registry.markUnsupported(feature, 3, `${feature.replace(/_/g, '-')}-unavailable-v0`, TIER3_REASON);
   return registry;
