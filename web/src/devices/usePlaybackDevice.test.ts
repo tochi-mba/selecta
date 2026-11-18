@@ -97,7 +97,9 @@ describe('the playback session on a device', () => {
       online = false;
       await waitFor(() => expect(quiet.stop).toHaveBeenCalledWith(0), { timeout: 3500 });
       expect(hook.result.current.isSpeaker()).toBe(false);
-      expect(hook.result.current.message).toContain('could not renew its audio lease');
+      // The message is React state set in the same call as stop(0): wait for the render, so a
+      // loaded machine cannot read the hook before it re-renders.
+      await waitFor(() => expect(hook.result.current.message).toContain('could not renew its audio lease'));
       online = true;
       // A normal poll re-establishes ownership atomically via /reconnect, without
       // requiring a page reload or resuming if another device has since taken over.
