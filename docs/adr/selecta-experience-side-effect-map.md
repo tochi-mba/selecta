@@ -14,6 +14,8 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 
 | Key | Storage | Written by | Holds | Owner |
 |---|---|---|---|---|
+| `selecta.persist.asked` | local | `web/src/cloud/persistence.ts` | That the one storage-persistence ask after the first import has been made, so no browser re-asks on every import | Cloud storage card |
+| `selecta.` | local | `web/src/cloud/deviceData.ts` | A clearing prefix, not a key: Clear everything in this browser removes every `selecta.`-prefixed entry | Cloud device data |
 | `selecta.prefs` | local | `web/src/state/prefs.ts` | Theme, motion, density, rail and library layout choices | Shared foundation |
 | `selecta.sound` | local | `web/src/player.ts` | Volume and mute | Listen |
 | `selecta-now` | local | `web/src/lib.ts` | Where playback was, so a reload resumes without a surprise | Listen |
