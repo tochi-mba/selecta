@@ -143,7 +143,7 @@ function ToastRow({ toast, closing = false, onGone }: { toast: Toast; closing?: 
       onGone?.(toast.id);
       return undefined;
     }
-    return playExit(node, () => onGone?.(toast.id), '--motion-handoff');
+    return playExit(node, () => onGone?.(toast.id), '--motion-exit-toast');
   }, [closing]);
   const undo = async () => {
     // The toast is an opportunity to undo, not permission to reverse an

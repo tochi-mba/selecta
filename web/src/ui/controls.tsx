@@ -230,7 +230,7 @@ function Overlay({
     if (own) lost.observe(own, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'hidden', 'inert'] });
     return () => {
       // the exit animation plays on a copy, since whoever opened this has already let it go
-      exitGhost(mine, '--motion-overlay');
+      exitGhost(mine, '--motion-exit-drawer');
       lost.disconnect();
       if (--openOverlays === 0) document.body.style.overflow = previousOverflow;
       if (mine) {

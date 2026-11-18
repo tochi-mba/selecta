@@ -3,7 +3,8 @@ import { RefObject, useLayoutEffect, useRef, useState } from 'react';
 /** The exit-animation protocol (the overhaul's cross-wave contract). Something closing sets
  * `data-closing` on its root; the sheets animate that at the motion tokens; this code takes it away
  * when the animation ends. If the animation never ends (the tab is hidden, the element is
- * `display: none`), a timeout of the token's own length takes it away anyway. If nothing animates at
+ * `display: none`), a timeout of the token's own length takes it away anyway. The timeouts read the
+ * `--motion-exit-*` tokens, which reduced motion keeps at a short fade instead of zeroing. If nothing animates at
  * all (reduced motion with no opacity fade, a sheet without the keyframes, a test runner with no
  * CSS), it goes at once, so nothing waits on motion that isn't there.
  *
@@ -49,7 +50,7 @@ function animationLength(node: Element): number {
 /** Marks `node` as closing and calls `done` once its exit animation has finished, or at once when it
  * has none. The root or its first child may carry the animation (a backdrop fades while its panel
  * slides). Returns a cancel, which takes `data-closing` away again and never calls `done`. */
-export function playExit(node: HTMLElement, done: () => void, token = '--motion-overlay'): () => void {
+export function playExit(node: HTMLElement, done: () => void, token = '--motion-exit-drawer'): () => void {
   node.setAttribute('data-closing', '');
   const panel = node.firstElementChild;
   const longest = Math.max(animationLength(node), panel ? animationLength(panel) : 0);
@@ -87,7 +88,7 @@ export function playExit(node: HTMLElement, done: () => void, token = '--motion-
  * Call it from the overlay's unmount clean-up, while the real one is still in the page. The copy
  * only goes in once the real one has actually left: React's development double-run of effects
  * unmounts and remounts the same node, and that must not flash a closing copy on open. */
-export function exitGhost(node: HTMLElement | null, token = '--motion-overlay') {
+export function exitGhost(node: HTMLElement | null, token = '--motion-exit-drawer') {
   const parent = node?.parentNode;
   if (!node?.isConnected || !parent) return;
   const after = node.nextSibling;
@@ -111,7 +112,7 @@ export function exitGhost(node: HTMLElement | null, token = '--motion-overlay') 
 
 /** Keeps something on screen while it animates out. `present` is whether to render it at all;
  * `closing` is whether it is on its way out (render `data-closing`, `aria-hidden` and `inert`). */
-export function usePresence<T extends HTMLElement>(open: boolean, token = '--motion-fast'): { present: boolean; closing: boolean; ref: RefObject<T | null> } {
+export function usePresence<T extends HTMLElement>(open: boolean, token = '--motion-exit-menu'): { present: boolean; closing: boolean; ref: RefObject<T | null> } {
   const [shown, setShown] = useState(open);
   const ref = useRef<T | null>(null);
   const present = open || shown;
