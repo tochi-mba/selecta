@@ -5,7 +5,8 @@ import type { MusicSource, SeamRecord, SeamSettingsLike } from '../dsp/seamProvi
 import { playbackStatusText, type PlaybackStatus } from '../copy';
 import { Api, extrapolate, Position, SessionView, usePlaybackDevice } from '../devices/usePlaybackDevice';
 import { createEngine, type BrowserSpeaker, type Engine, type EngineState } from '../engine';
-import type { WorkerCalibration } from '../dsp/budget';
+import { workerCalibrationState, type WorkerCalibration } from '../dsp/budget';
+import { mediaDeviceId } from './ConnectMusic';
 import type { MediaResolver } from '../media';
 import type { NowState } from '../player';
 import type { PlayerLike } from '../playerContract';
@@ -309,6 +310,31 @@ export const startBrowserEngine: EngineStarter = async (resolve, queueLength, se
 export const SEAMS_KEPT = 8;
 
 /** The hook the local-first shell uses: one stable LocalFirstPlayer over the device session. */
+/** Worker calibration is device evidence (ADR-0457): measured on this device, at most 30 days
+ * old. It is remembered per device identity, re-measured in the background when missing or
+ * stale, and a press that arrives mid-measurement waits for it rather than silently playing a
+ * whole visit of style-less fades. A device that cannot be measured keeps the labelled fade. */
+const CALIBRATION_KEY = (deviceId: string) => `selecta.dsp.calibration.${deviceId}`;
+
+function recallCalibration(deviceId: string): WorkerCalibration | null {
+  try {
+    const raw = localStorage.getItem(CALIBRATION_KEY(deviceId));
+    if (!raw) return null;
+    const kept = JSON.parse(raw) as WorkerCalibration;
+    return workerCalibrationState(kept, deviceId).supported ? kept : null;
+  } catch {
+    return null;
+  }
+}
+
+function rememberCalibration(made: WorkerCalibration): void {
+  try {
+    localStorage.setItem(CALIBRATION_KEY(made.deviceId), JSON.stringify(made));
+  } catch {
+    // nothing: an unwritable store only means measuring again next visit
+  }
+}
+
 export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, resolver, starter = startBrowserEngine }: {
   api: Api;
   workspaceId: string;
@@ -330,6 +356,25 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   // decides the lease is wanted, so the decision itself must re-run the effect.
   const [wantHere, setWantHere] = useState(false);
   const [seams, setSeams] = useState<SeamRecord[]>([]);
+  const calibration = useRef<{ deviceId: string; record: WorkerCalibration | null; measuring: Promise<WorkerCalibration | null> | null } | null>(null);
+  useEffect(() => {
+    let gone = false;
+    const deviceId = mediaDeviceId(workspaceId);
+    const kept = recallCalibration(deviceId);
+    const mine = { deviceId, record: kept, measuring: null as Promise<WorkerCalibration | null> | null };
+    calibration.current = mine;
+    if (!kept && typeof Worker !== 'undefined') {
+      mine.measuring = provider.calibrateAnalysisInWorker({ deviceId }).then((made) => {
+        if (made) {
+          rememberCalibration(made);
+          if (!gone) mine.record = made;
+        }
+        mine.measuring = null;
+        return made;
+      }).catch(() => (mine.measuring = null));
+    }
+    return () => { gone = true; };
+  }, [workspaceId]);
   const sources = useRef(new Map<number, MusicSource>());
   const wiring = useMemo<SeamWiring>(() => ({
     settingsFor: (toIndex) => songs.current[toIndex]?.seam?.settings ?? null,
@@ -365,7 +410,13 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     // iOS Safari and autoplay policies may reject play() if setup waits on network first.
     const needsSpeaker = !speaker;
     if (needsSpeaker) {
-      const made = await starter(resolve, () => songs.current.length, wiring);
+      const measured = calibration.current;
+      if (measured && !measured.record && measured.measuring) await measured.measuring;
+      const made = await starter(resolve, () => songs.current.length, {
+        ...wiring,
+        workerCalibration: measured?.record ?? null,
+        deviceId: measured?.deviceId ?? null,
+      });
       if (made.refusal) {
         made.speaker?.dispose();
         setRefusal(made.refusal);

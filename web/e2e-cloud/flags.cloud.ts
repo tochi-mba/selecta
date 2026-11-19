@@ -480,6 +480,8 @@ test('the hosted shell marks are real: shown with cloud.hosted_shell on for a ho
   })));
   await page.addInitScript((name) => localStorage.setItem('selecta-e2e-user', name), user);
   await page.goto('/library');
+  // marksShown never waits, so let the shell finish booting first (as the local-first test does)
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
   expect(await marksShown(page, BF['cloud.hosted_shell'].marks)).toEqual(['navigation "Main"', 'button "More"']);
 });
 

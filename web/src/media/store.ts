@@ -219,8 +219,8 @@ export class MediaStore {
         if (previous) this.memory.set(song.songId, previous);
         else this.memory.delete(song.songId);
         this.touchAvailability();
-        // The catalogue may still be readable, but this write did not reach durable storage.
-        this.degraded = true;
+        // Full is not broken: the index still answers and keeps taking writes once space frees,
+        // so this is a paused import, never the degraded memory-only state.
         throw new StorageFullError();
       }
       this.degraded = true;

@@ -162,6 +162,7 @@ export function makeSeamProvider(options: SeamProviderOptions) {
       const at = Math.max(30, a.durationSeconds - 5);
       schedule = {
         ...fadeSchedule(at, 0, `mixed-source seam: ${unsafe.reason}`),
+        style: settings.move || 'blend',
         degraded: [{ wanted: settings.move || 'blend', instead: 'fade', reason: `one music path is not seam-safe: ${unsafe.reason}` }],
       };
     } else {
@@ -232,6 +233,8 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
       const reason = initial.reason ?? 'this device has no current worker budget';
       const schedule = {
         ...fadeSchedule(Math.max(30, request.from.duration - 5), 0, reason),
+        // the label survives the degrade: the member asked for this move, and the fade says so
+        style: settings.move || 'beatmatch',
         degraded: [{ wanted: settings.move || 'beatmatch', instead: 'fade' as const, reason }],
       };
       options.onPlanned?.({ fromIndex: request.fromIndex, toIndex: request.toIndex, sources, schedule });
@@ -280,6 +283,7 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
       const schedule = unsafe && !unsafe.ok
         ? {
             ...fadeSchedule(Math.max(30, a.durationSeconds - 5), 0, `mixed-source seam: ${unsafe.reason}`),
+            style: settings.move || 'blend',
             degraded: [{ wanted: settings.move || 'blend', instead: 'fade' as const, reason: `one music path is not seam-safe: ${unsafe.reason}` }],
           }
         : scriptSeam({
@@ -299,6 +303,7 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
       budgetState(reason);
       const schedule = {
         ...fadeSchedule(Math.max(30, request.from.duration - 5), 0, `seam analysis worker failed: ${reason}`),
+        style: settings.move || 'beatmatch',
         degraded: [{ wanted: settings.move || 'beatmatch', instead: 'fade' as const, reason: `worker analysis unavailable: ${reason}` }],
       };
       options.onPlanned?.({ fromIndex: request.fromIndex, toIndex: request.toIndex, sources, schedule });
