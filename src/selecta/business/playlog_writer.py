@@ -111,9 +111,9 @@ def record(conn: Connection, zone: ZoneInfo, before: Session, after: Session,
         seconds = play["seconds_played"]
         if song.duration_s:
             seconds = min(seconds, float(song.duration_s))
-        from selecta.business import isrc as isrc_mod
+        from selecta.business.upload_rights import isrc_for_song
 
-        code = isrc_mod.current_isrc(conn, zone.workspace_id, str(play["song_id"]))
+        code = isrc_for_song(conn, zone.workspace_id, play["song_id"])
         with conn.begin_nested():
             done = playlog.append(conn, org, zone.venue_id, [{
                 "idempotency_key": play["idempotency_key"], "zone_id": zone.id,

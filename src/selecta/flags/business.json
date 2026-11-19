@@ -161,7 +161,11 @@
         "PUT /api/business/library/songs/{song_id}/isrc",
         "GET /api/business/venues/{venue_id}/isrc-coverage",
         "GET /api/business/terms",
-        "POST /api/business/terms/accept"
+        "POST /api/business/terms/accept",
+        "GET /api/business/uploads/statement",
+        "POST /api/business/uploads/attestation",
+        "GET /api/business/settings/mix-exports",
+        "PUT /api/business/settings/mix-exports"
       ],
       "modes": ["cloud"],
       "scope": "workspace",
@@ -224,6 +228,16 @@
         "GET /api/business/zones/{zone_id}/speaker/horizon",
         "POST /api/business/zones/{zone_id}/speaker/segment-url"
       ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.mix_exports": {
+      "label": "Business mix exports",
+      "about": "Lets a business organisation save a mix as a file, which could be redistributed. Off by default; also needs the owner's setting.",
+      "default": false,
+      "requires": ["business.licensing"],
       "modes": ["cloud"],
       "scope": "workspace",
       "kind": "release",

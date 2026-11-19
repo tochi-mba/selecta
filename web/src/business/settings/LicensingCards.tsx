@@ -1,7 +1,7 @@
 // Licensing settings (ADR-0449): how long play logs are kept (the owner decides), the business
 // terms acceptance, and the owner's one-off licence grace extension. Behind `business.licensing`.
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, ReactNode, useState } from 'react';
 import { EXPORT_COPY as COPY } from '../copy/console';
 import { businessOn, useBusiness } from '../context';
 import { dayWords } from '../time';
@@ -67,4 +67,15 @@ export function ExtendGrace({ venue }: { venue: Venue }) {
     <button type="submit">{COPY.extendButton}</button>
     <span role="status" aria-live="polite">{status}</span>
   </form>;
+}
+
+/** Management waits while changed business terms are unaccepted (ADR-0449 BZ-0449-09); playback
+ * and the staff control page never do. While the answer loads, or if it can't be read, the
+ * page shows as normal: the server stays the judge of every change. */
+export function TermsGate({ children, skip = false }: { children: ReactNode; skip?: boolean }) {
+  const { org, client } = useBusiness();
+  const on = !skip && businessOn(org.features, 'business.licensing');
+  const access = useLoad(() => (on ? client.termsAccess() : Promise.resolve(null)), [client, on]);
+  if (!on || !access.data || access.data.accepted) return <>{children}</>;
+  return <section className="biz biz-stack"><h1>{COPY.termsTitle}</h1><TermsCard /></section>;
 }

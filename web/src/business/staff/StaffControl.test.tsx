@@ -5,7 +5,7 @@ import { NOW, org, venue, zone } from '../fixtures';
 import type { Org, Venue } from '../types';
 import { StaffControl } from './StaffControl';
 
-function renderControl({ venues = [venue('camden', 'Camden')], theOrg = org(), loading = false }: { venues?: Venue[]; theOrg?: Org; loading?: boolean } = {}) {
+function renderControl({ venues = [venue('camden', 'Camden')], theOrg = org(), loading = false, api }: { venues?: Venue[]; theOrg?: Org; loading?: boolean; api?: unknown } = {}) {
   const client = {
     requests: vi.fn(async () => []),
     command: vi.fn(async () => ({ id: 'c1', accepted: true })),
@@ -16,7 +16,7 @@ function renderControl({ venues = [venue('camden', 'Camden')], theOrg = org(), l
   const refresh = vi.fn(async () => {});
   const ctx = {
     org: theOrg, venues, devices: [], activity: [], client, now: NOW, offline: false, updatedAt: NOW,
-    health: 'ok', loading, readOnly: false, refresh, go: vi.fn(),
+    health: 'ok', loading, readOnly: false, refresh, go: vi.fn(), api,
   } as unknown as BusinessCtx;
   render(<BusinessContext.Provider value={ctx}><StaffControl venueId="camden" /></BusinessContext.Provider>);
   return { client, refresh };
@@ -49,14 +49,36 @@ describe('StaffControl wiring (ADR-0453 D4, D10)', () => {
     expect(screen.queryByText(/Your owner knows why/)).toBeNull();
   });
 
-  it('asks before a paired tablet plays a silent zone here, then sends play_here', async () => {
-    localStorage.setItem('selecta.device.ws-crown', 'tablet-1');
-    const silent = venue('camden', 'Camden', { zones: [zone('camden', 'camden-bar', 'Bar', { state: 'silent', state_since: NOW - 300, now: null })] });
-    const { client } = renderControl({ venues: [silent] });
+  it('Play here: asks when the zone player is still on, then this browser becomes the speaker', async () => {
+    const silent = venue('camden', 'Camden', { zones: [zone('camden', 'camden-bar', 'Bar', { state: 'silent', state_since: NOW - 300, now: null, speaker_device_id: null })] });
+    const sent: { path: string; body: unknown }[] = [];
+    let confirmed = false;
+    const api = vi.fn(async (path: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(init.body as string) : undefined;
+      sent.push({ path, body });
+      if (path === '/devices') return { device: { id: 'tablet-1' } };
+      if (path.endsWith('/take-over')) {
+        if (!body.confirm) throw Object.assign(new Error('ask'), { status: 409, code: 'confirm_needed' });
+        confirmed = true;
+        return { session: { zone_id: 'camden-bar', song_index: 0, offset_ms: 0, anchor_at: null, state: 'playing', active_device_id: 'tablet-1', lease_expires_at: NOW + 60, seq: 1, fence: 2, volume: 50, hand_back_to_device_id: null, mix_revision_id: null }, previous_device: null, server_time: NOW };
+      }
+      if (path.includes('/speaker/horizon')) return { segments: [] };
+      return {};
+    });
+    renderControl({ venues: [silent], api });
     fireEvent.click(screen.getByRole('button', { name: 'Play here instead' }));
-    expect(screen.getByText('Play Bar music from this tablet? The Bar player will stop.')).toBeInTheDocument();
+    expect(await screen.findByText('Play Bar music from this tablet? The Bar player will stop.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Play here' }));
-    await waitFor(() => expect(client.command).toHaveBeenCalledWith('camden-bar', { kind: 'play_here', device_id: 'tablet-1' }, expect.any(String)));
+    expect(await screen.findByText('Playing Bar here')).toBeInTheDocument();
+    expect(confirmed).toBe(true);
+    expect(screen.getByRole('button', { name: 'Hand back' })).toBeInTheDocument();
+    expect(sent.filter((call) => call.path.endsWith('/take-over')).map((call) => (call.body as { confirm: boolean }).confirm)).toEqual([false, true]);
+  });
+
+  it('offers no Play here without a connection to the zone routes', () => {
+    const silent = venue('camden', 'Camden', { zones: [zone('camden', 'camden-bar', 'Bar', { state: 'silent', state_since: NOW - 300, now: null })] });
+    renderControl({ venues: [silent] });
+    expect(screen.queryByRole('button', { name: 'Play here instead' })).toBeNull();
   });
 
   it('shows skeletons, not "unavailable", while the venue is still loading', () => {

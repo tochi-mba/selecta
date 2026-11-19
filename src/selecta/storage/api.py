@@ -16,6 +16,7 @@ from sqlalchemy.engine import Connection, Engine
 
 from selecta.admin import state as emergency_state
 from selecta.billing import plans, stripe_sync
+from selecta.business import terms, upload_rights
 from selecta.business.content.store import record_upload_tag
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, transaction
@@ -252,6 +253,17 @@ def install_routes(
         workspace_id = workspace(request, claims)
         refuse_if_restricted(workspace_id)
         try:
+            with transaction(engine, workspace_id) as conn:
+                upload_rights.require_batch(conn, workspace_id,
+                                            request.headers.get(upload_rights.HEADER),
+                                            len(body.files))
+        except upload_rights.AttestationRequired as error:
+            raise HTTPException(status_code=403, detail={
+                "code": error.code, "message": str(error),
+                "statement": terms.UPLOAD_STATEMENT,
+                "statement_version": terms.CURRENT_UPLOAD_STATEMENT_VERSION,
+            }) from error
+        try:
             with service() as (uploads, _client):
                 with transaction(engine, workspace_id) as conn:
                     results = uploads.plan_batch(
@@ -392,6 +404,11 @@ def install_routes(
                             record_upload_tag(
                                 conn, workspace_id, outcome.asset_id, audio_probe.explicit_tag,
                                 now=db_now(conn),
+                            )
+                        if outcome.asset_id and audio_probe.isrc_tag:
+                            upload_rights.record_isrc(
+                                conn, workspace_id, outcome.asset_id, audio_probe.isrc_tag,
+                                actor=f"upload:{session_id}", now=db_now(conn),
                             )
         except (SessionNotFound, InvalidState, R2Error, ValueError) as error:
             raise map_error(error) from error

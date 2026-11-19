@@ -11,7 +11,7 @@ import { RequestsPage } from './RequestsPage';
 import { VenueActivity } from './VenueActivity';
 import { KioskPlayers } from './KioskPlayers';
 import { PlayerAlerts } from './PlayerAlerts';
-import { PlayLogExport } from '../settings/PlayLogExport';
+import { IsrcCoverage, PlayLogExport } from '../settings/PlayLogExport';
 
 export function VenueManager({ venueId, tab }: { venueId: string; tab?: string }) {
   const { ctx, venue, disabled } = useVenueView(venueId);
@@ -49,6 +49,7 @@ export function VenueManager({ venueId, tab }: { venueId: string; tab?: string }
     </section>}
     {chosen === 'log' && <>
       <PlayLogExport venueId={venue.id} />
+      <IsrcCoverage venueId={venue.id} />
       <VenueActivity venueId={venue.id} />
     </>}
   </section>;

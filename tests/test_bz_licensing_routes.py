@@ -241,3 +241,75 @@ def test_the_owner_extends_an_expired_licence_once(world):
     assert first.status_code == 200, first.text
     again = world["http"].post(path, json={"reason": "Still waiting"})
     assert again.status_code == 422
+
+
+# --- BZ-0449-04 upload batches, -07 ISRC from tags, -10 derived budget and mix exports -------
+
+
+def test_an_organisation_upload_needs_an_attested_batch(world):
+    from selecta.business import upload_rights
+
+    http = world["http"]
+    statement = http.get("/api/business/uploads/statement").json()
+    with transaction(world["engine"]) as conn:
+        with pytest.raises(upload_rights.AttestationRequired) as refused:
+            upload_rights.require_batch(conn, world["org"], None, 2)
+    assert refused.value.code == "upload_attestation_required"
+    made = http.post("/api/business/uploads/attestation", json={
+        "file_count": 2, "statement_version": statement["statement_version"],
+        "attested": True}).json()
+    with transaction(world["engine"]) as conn:
+        upload_rights.require_batch(conn, world["org"], made["batch_id"], 2)
+        with pytest.raises(upload_rights.AttestationRequired) as over:
+            upload_rights.require_batch(conn, world["org"], made["batch_id"], 3)
+    assert over.value.code == "batch_overfull"
+    stale = http.post("/api/business/uploads/attestation", json={
+        "file_count": 1, "statement_version": "old", "attested": True})
+    assert stale.status_code == 422
+    flags.use("+business.orgs -business.licensing")
+    with transaction(world["engine"]) as conn:
+        upload_rights.require_batch(conn, world["org"], None, 5)  # off: never asked
+
+
+def test_an_isrc_read_at_upload_reaches_the_play_log_by_content(world):
+    from selecta.business import upload_rights
+    from selecta.persistence import new_id
+    from selecta.storage.keys import original_key
+    from selecta.storage.sandbox import _isrc
+    from selecta.storage.schema import assets
+
+    now = world["clock"].now
+    asset_id = new_id()
+    assert _isrc("gb-abc-24-00099") == "GBABC2400099" and _isrc("junk") is None
+    with transaction(world["engine"]) as conn:
+        conn.execute(sa.insert(assets).values(
+            id=asset_id, workspace_id=world["org"],
+            original_key=original_key(world["org"], asset_id), size=10,
+            sha256="b" * 64, format="mp3", duration_s=240.0, created_at=now))
+        assert upload_rights.record_isrc(conn, world["org"], asset_id, "GBABC2400099",
+                                         actor="upload:s1", now=now) == "GBABC2400099"
+        assert upload_rights.isrc_for_song(conn, world["org"], world["song"]) == "GBABC2400099"
+    zone, before, after = _sessions(world, 200)
+    with transaction(world["engine"]) as conn:
+        playlog_writer.record(conn, zone, replace(before, mix_revision_id="m9"),
+                              replace(after, mix_revision_id="m9"), now)
+    assert _logged(world)["isrc"] == "GBABC2400099"
+
+
+def test_business_derived_budget_and_mix_exports_are_off_by_default(world):
+    from selecta.business import derived_limits
+    from selecta.storage import eviction
+
+    http = world["http"]
+    with transaction(world["engine"]) as conn:
+        assert eviction.budget_for(conn, world["org"]) == derived_limits.derived_budget_bytes(1)
+        with pytest.raises(derived_limits.MixExportsOff):
+            derived_limits.require_mix_exports(conn, world["org"], flags.on)
+    assert http.get("/api/business/settings/mix-exports").json() == {
+        "allowed": False, "reason": "flag_off"}
+    flags.use("+business.orgs +business.licensing +business.mix_exports")
+    assert http.put("/api/business/settings/mix-exports", json={"enabled": True}).json() == {
+        "allowed": True, "reason": "allowed"}
+    world["role"]["value"] = "admin"
+    assert http.put("/api/business/settings/mix-exports",
+                    json={"enabled": False}).status_code == 403

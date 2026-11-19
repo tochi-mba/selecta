@@ -358,7 +358,19 @@ def inspect(path: str, limits: Limits) -> dict[str, Any]:
         "sample_rate": rate,
         "channels": channels,
         "explicit_tag": _explicit_tag(path),
+        "isrc_tag": _isrc_tag(path),
     }
+
+
+def _isrc_tag(path: str) -> str | None:
+    """The file's ISRC tag (ADR-0449 BZ-0449-07), normalised, or None; read in the sandbox for
+    the same reason as the explicit tag. A tag problem never refuses a good file."""
+    from selecta.business.isrc import read_from_file
+
+    try:
+        return read_from_file(path)
+    except Exception:  # noqa: BLE001 - a tag problem never refuses an otherwise good file
+        return None
 
 
 def _explicit_tag(path: str) -> str:

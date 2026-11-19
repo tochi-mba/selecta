@@ -474,6 +474,7 @@ def create_cloud_app(
             "X-Workspace-ID",
             "X-Operation-ID",
             "X-Admin-Session",
+            "X-Upload-Batch",
         ],
         expose_headers=["X-Request-ID"],
         max_age=600,

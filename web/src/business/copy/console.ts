@@ -221,6 +221,9 @@ export const EXPORT_COPY = {
   backwards: 'The end date must be on or after the start date',
   needVenue: 'Choose a venue',
   ready: (name: string) => `Downloaded ${name}`,
+  coverageTitle: 'ISRC codes',
+  coverage: (withIsrc: number, tracks: number) => tracks ? `${withIsrc} of ${tracks} songs played here have an ISRC code, which licensing returns use to identify recordings` : 'No songs played here yet',
+  coverageNote: "Codes come from the files' own tags when they are uploaded",
   retentionLabel: 'Keep play logs for (days)',
   retentionNote: (years: number) => `The default is ${years} years. Licensing audits can look back up to six years. Older plays are deleted`,
   retentionSave: 'Save',
@@ -235,4 +238,40 @@ export const EXPORT_COPY = {
   extendReason: 'Why it needs more time',
   extendButton: 'Extend once by 14 days',
   extended: (day: string) => `Grace extended to ${day}`,
+} as const;
+
+// ADR-0449 BZ-0449-08: what each kind of music licence is, in plain words, with the bodies' own
+// sites. General information only, never legal advice; the licensing bodies decide what a
+// venue needs.
+export const LICENCE_GUIDE = {
+  summary: 'Which music licence does a venue need?',
+  intro: 'Playing music in public needs a licence from the bodies that collect for songwriters and for recordings. SelectaDJ does not sell these licences. This is general information, not legal advice: the bodies below decide what your venue needs.',
+  territories: [
+    {
+      name: 'United Kingdom',
+      words: 'Most venues need TheMusicLicence from PPL PRS, which covers both the songs and the recordings. Copying music onto a player or cloud store can also need PPL ProDub and PRS for Music ProDub.',
+      links: [{ label: 'TheMusicLicence (PPL PRS)', href: 'https://pplprs.co.uk/' }],
+    },
+    {
+      name: 'United States',
+      words: 'Public performance licences come from the performing rights organisations. Many venues hold licences from more than one: ASCAP, BMI, SESAC and GMR each represent different songwriters.',
+      links: [
+        { label: 'ASCAP', href: 'https://www.ascap.com/' },
+        { label: 'BMI', href: 'https://www.bmi.com/' },
+        { label: 'SESAC', href: 'https://www.sesac.com/' },
+        { label: 'GMR', href: 'https://globalmusicrights.com/' },
+      ],
+    },
+    {
+      name: 'European Union',
+      words: 'Each country has its own collecting societies, usually one for songwriters and one for recordings, for example GEMA and GVL in Germany, SACEM and SPRE in France, IMRO and PPI in Ireland, Buma and Sena in the Netherlands, SGAE and AGEDI in Spain.',
+      links: [
+        { label: 'GEMA', href: 'https://www.gema.de/' },
+        { label: 'SACEM', href: 'https://www.sacem.fr/' },
+        { label: 'IMRO', href: 'https://www.imro.ie/' },
+        { label: 'Sena', href: 'https://www.sena.nl/' },
+        { label: 'SGAE', href: 'https://www.sgae.es/' },
+      ],
+    },
+  ],
 } as const;

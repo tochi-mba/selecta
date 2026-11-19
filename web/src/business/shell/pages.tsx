@@ -7,6 +7,7 @@ import type { BusinessRoute } from '../context';
 import { SHELL_COPY } from '../copy/shell';
 import type { Org } from '../types';
 import { access } from './nav';
+import { TermsGate } from '../settings/LicensingCards';
 
 const HqConsole = lazy(() => import('../console/HqConsole').then((m) => ({ default: m.HqConsole })));
 const VenuesPage = lazy(() => import('../console/VenuesPage').then((m) => ({ default: m.VenuesPage })));
@@ -51,5 +52,5 @@ export function BusinessPage({ route, org, wall }: { route: NonNullable<Business
         case 'settings': page = <SettingsPage />; break;
       }
   }
-  return <Suspense fallback={<PageFallback />}>{page}</Suspense>;
+  return <Suspense fallback={<PageFallback />}><TermsGate skip={route.page === 'control'}>{page}</TermsGate></Suspense>;
 }

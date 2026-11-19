@@ -136,6 +136,13 @@ def run_child(path: Path, limits: Limits, command: Sequence[str] | None = None) 
 EXPLICIT_TAGS = ("explicit", "clean", "unknown")
 
 
+def _isrc(value: object) -> str | None:
+    """Only a well-formed ISRC crosses back from the sandbox."""
+    from selecta.business.isrc import normalise
+
+    return normalise(value) if isinstance(value, str) else None
+
+
 def probe_in_sandbox(
     path: Path, limits: Limits = DEFAULT_LIMITS, *, command: Sequence[str] | None = None
 ) -> Probe:
@@ -159,6 +166,7 @@ def probe_in_sandbox(
             digest,
             size,
             explicit_tag=tag if (tag := answer.get("explicit_tag")) in EXPLICIT_TAGS else None,
+            isrc_tag=_isrc(answer.get("isrc_tag")),
         )
     except (KeyError, TypeError, ValueError) as error:
         raise Rejected(FAILED) from error

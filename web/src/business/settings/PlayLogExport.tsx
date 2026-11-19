@@ -4,6 +4,7 @@
 import { FormEvent, useState } from 'react';
 import { EXPORT_COPY as COPY } from '../copy/console';
 import { businessOn, useBusiness } from '../context';
+import { useLoad } from '../venue/useVenue';
 
 function saveFile(name: string, text: string) {
   const url = URL.createObjectURL(new Blob([text], { type: 'text/csv' }));
@@ -59,4 +60,17 @@ export function PlayLogExport({ venueId }: { venueId?: string } = {}) {
     <div className="biz-row"><button type="submit" disabled={busy}>{busy ? COPY.starting : COPY.start}</button></div>
     <p role="status" aria-live="polite">{status}</p>
   </form>;
+}
+
+/** How many songs played at a venue have an ISRC code (ADR-0449 BZ-0449-07). */
+export function IsrcCoverage({ venueId }: { venueId: string }) {
+  const { org, client } = useBusiness();
+  const on = businessOn(org.features, 'business.licensing');
+  const found = useLoad(() => (on ? client.isrcCoverage(venueId) : Promise.resolve(null)), [client, on, venueId]);
+  if (!on || !found.data) return null;
+  return <section className="biz-card" aria-labelledby="biz-isrc-coverage">
+    <h2 id="biz-isrc-coverage">{COPY.coverageTitle}</h2>
+    <p>{COPY.coverage(found.data.with_isrc, found.data.tracks)}</p>
+    <p className="biz-quiet">{COPY.coverageNote}</p>
+  </section>;
 }

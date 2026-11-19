@@ -57,7 +57,13 @@ class Evicted:
 
 
 def budget_for(connection: Connection, workspace_id: str) -> int:
-    """The workspace's derived-data budget: its share of the storage limit it's on."""
+    """The workspace's derived-data budget: its share of the storage limit it's on. A business
+    organisation's is 15% of its pooled storage for its paid venues (ADR-0449 BZ-0449-10)."""
+    from selecta.business.derived_limits import business_budget_bytes
+
+    business = business_budget_bytes(connection, workspace_id)
+    if business is not None:
+        return business
     return int(quota.usage(connection, workspace_id).limit_bytes * DERIVED_SHARE)
 
 

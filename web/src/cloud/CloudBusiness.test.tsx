@@ -10,9 +10,10 @@ import { isBusinessPath } from './cloudRoutes';
 // as its own chunk only when the account has `business.workspaces` on; off, nothing business
 // is fetched and the address is an ordinary unknown one.
 
-const auth = vi.hoisted(() => ({ user: { id: 'user-1', email: 'listener@example.test', emailVerified: true } as unknown }));
+// AuthKit's getAccessToken keeps its identity across renders, so the mock does too.
+const auth = vi.hoisted(() => ({ user: { id: 'user-1', email: 'listener@example.test', emailVerified: true } as unknown, token: async () => 'token' }));
 vi.mock('@workos-inc/authkit-react', () => ({
-  useAuth: () => ({ isLoading: false, user: auth.user, getAccessToken: async () => 'token', signIn: vi.fn(), signUp: vi.fn(), signOut: vi.fn() }),
+  useAuth: () => ({ isLoading: false, user: auth.user, getAccessToken: auth.token, signIn: vi.fn(), signUp: vi.fn(), signOut: vi.fn() }),
 }));
 
 const { CloudApp, businessShown } = await import('./CloudApp');

@@ -141,8 +141,28 @@ def values_for(spec: JobSpec, state: JobState, now: float) -> dict[str, Any]:
     }
 
 
+MIX_EXPORT_TYPES = frozenset({"export", "export.render"})
+
+
+def _require_mix_exports(connection: Connection, workspace_id: str) -> None:
+    """Business mix exports are off unless the owner and `business.mix_exports` allow them
+    (ADR-0449 BZ-0449-10); personal workspaces are unaffected."""
+    from selecta import flags
+    from selecta.business.derived_limits import require_mix_exports
+
+    def on(flag: str) -> bool:
+        try:
+            return flags.on(flag)
+        except KeyError:
+            return False
+
+    require_mix_exports(connection, workspace_id, on)
+
+
 def enqueue(connection: Connection, spec: JobSpec, now: float) -> Enqueued:
     """Create the job (or find its live twin), its dependency edges and its head counts."""
+    if spec.type in MIX_EXPORT_TYPES:
+        _require_mix_exports(connection, spec.workspace_id)
     existing = _live_duplicate(connection, spec)
     if existing is not None:
         return Enqueued(existing, False)

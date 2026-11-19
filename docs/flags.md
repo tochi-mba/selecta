@@ -308,6 +308,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `business.console` | **Business HQ console.** The multi-venue overview for owners, admins and viewers: venue health, zone states and what needs attention. | `business.workspaces` |
 | `business.venue_view` | **Venue manager view.** One venue's page for its managers: now playing, schedule, rules, devices and people. | `business.workspaces` |
 | `business.staff_controls` | **Staff quick controls.** The staff screen for a venue: skip, steer, volume within the cap, requests, and Play here to make this browser the zone's speaker. | `business.workspaces` |
+| `business.mix_exports` | **Business mix exports.** Lets a business organisation save a mix as a file, which could be redistributed. Off by default; also needs the owner's setting. | `business.licensing` |
 | `business.pilots` | **Business pilots.** REX Technologies staff create free pilot organisations with their venues and zones, using the same model a paying venue will. | `admin.console`, `business.orgs` |
 | `business.content_controls` | **Venue content controls.** Organisation and venue music rules, the blocklist, 24-hour overrides, explicit flags from managers and file tags, and each zone's volume cap with quiet hours. | `business.orgs` |
 | `business.rooms` | **Rooms for Business.** Standing guest request rooms for business zones: guests join with a table-card code, staff approve or pass requests, and managers set modes and limits. | `business.orgs` |
