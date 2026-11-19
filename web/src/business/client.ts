@@ -21,12 +21,10 @@ import type {
 
 export const ROUTES = {
   workspaces: '/workspaces',
-  createOrg: '/business/orgs',
   org: (org: string) => `/business/orgs/${enc(org)}`,
   overview: (org: string) => `/business/orgs/${enc(org)}/overview`,
   setup: (org: string) => `/business/orgs/${enc(org)}/setup`,
   venues: '/business/venues',
-  venue: (venue: string) => `/business/venues/${enc(venue)}`,
   hours: (venue: string) => `/business/venues/${enc(venue)}/hours`,
   hourExceptions: (venue: string) => `/business/venues/${enc(venue)}/hour-exceptions`,
   hourException: (venue: string, id: string) => `/business/venues/${enc(venue)}/hour-exceptions/${enc(id)}`,
@@ -133,7 +131,6 @@ export function businessClient(api: Api, workspaceId?: string) {
       const answer = await api<{ workspaces?: { id: string; name: string; kind: string; role: Role; pilot_until: number | null }[] }>(ROUTES.workspaces);
       return (answer?.workspaces ?? []).map((item) => ({ id: item.id, name: item.name, kind: item.kind === 'business' ? 'business' : 'personal', role: item.role, marks: { pilot: item.pilot_until != null } }));
     },
-    startTrial: (body: { name: string }) => api<{ org: Org }>(ROUTES.createOrg, json('POST', { name: body.name })),
     org: async (org: string) => (await inOrg<Overview>(org, ROUTES.overview(org))).org,
     overview: (org: string) => inOrg<Overview>(org, ROUTES.overview(org)),
     saveSetup: (org: string, progress: Partial<SetupProgress>) => inOrg<SetupProgress>(org, ROUTES.setup(org), json('PUT', progress)),
@@ -144,7 +141,6 @@ export function businessClient(api: Api, workspaceId?: string) {
       }));
       return answer.venue;
     },
-    updateVenue: (_org: string, venue: string, body: { name?: string; time_zone?: string }) => call<{ venue: unknown }>(ROUTES.venue(venue), json('PATCH', { name: body.name, timezone: body.time_zone })),
     saveHours: async (_org: string, venue: string, hours: WeekHours, holidays: Holiday[]) => {
       await call(ROUTES.hours(venue), json('PUT', hoursBody(hours)));
       for (const holiday of holidays) await call(ROUTES.hourExceptions(venue), json('POST', exceptionBody(holiday)));
@@ -207,7 +203,6 @@ export function businessClient(api: Api, workspaceId?: string) {
       const answer = await call<PeopleAnswer>(ROUTES.people);
       return { members: membersOf(answer), invitations: answer.invitations ?? [], seats: answer.seats };
     },
-    members: async (_org: string) => membersOf(await call<PeopleAnswer>(ROUTES.people)),
     invite: (_org: string, body: { email: string; role: Role; venue_ids: string[] | null }) =>
       call<{ invitation: Invitation; accept_url: string; emailed: boolean }>(ROUTES.invitations, json('POST', body)),
     setPaidSeats: (paidSeats: number) => call<PeopleAnswer['seats']>(ROUTES.seats, json('PUT', { paid_seats: paidSeats })),
