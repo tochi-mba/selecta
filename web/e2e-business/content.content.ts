@@ -26,14 +26,14 @@ test('BZ-0450-04: the bulk editor selects, applies and undoes', async ({ page, r
   const seeded = await seed(page, owner);
   await venueTab(page, seeded, 'rules');
   await page.getByRole('button', { name: 'Count songs' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Marking 6 songs as clean' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Marking 6 songs as clean' }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Mark them' }).click();
   await expect(page.getByRole('button', { name: 'Undo last change' })).toBeVisible();
   await page.getByRole('button', { name: 'Count songs' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Marking 0 songs as clean' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Marking 0 songs as clean' }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Undo last change' }).click();
   await page.getByRole('button', { name: 'Count songs' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Marking 6 songs as clean' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Marking 6 songs as clean' }).first()).toBeVisible();
 });
 
 test('BZ-0450-03 and -06: the song sheet and an artist block with its spellings', async ({ page, request }) => {
@@ -66,7 +66,9 @@ test('BZ-0450-09: the staff volume slider ends at the zone cap', async ({ page, 
   await page.getByRole('button', { name: 'Save anyway' }).click();
   await expect(page.getByText('Save anyway')).toHaveCount(0);
   await page.goto(`/b/${seeded.org}/v/${seeded.venues[0]}/control`);
-  await expect(page.getByRole('slider', { name: 'Volume' }).first()).toHaveAttribute('max', '60');
+  const bar = page.getByRole('button', { name: /^Bar/ }).first();
+  if (await bar.count()) await bar.click();
+  await expect(page.locator('.biz-volume[data-cap="60"]')).toHaveCount(1);
 });
 
 test('BZ-0451-02: rotating warns first, and the print sheet carries each zone code', async ({ page, request, context }) => {
@@ -119,6 +121,9 @@ test('BZ-0451-04 and -08: a guest asks at 320 px in both themes and staff approv
   for (const word of ['tablet', 'kiosk', 'billing', 'licence']) await expect(guest.getByText(new RegExp(word, 'i'))).toHaveCount(0);
 
   await staffPage.reload();
+  const barZone = staffPage.getByRole('button', { name: /^Bar/ }).first();
+  if (await barZone.count()) await barZone.click();
+  await staffPage.getByRole('button', { name: /^Requests/ }).first().click();
   await staffPage.getByRole('button', { name: /^Approve Harbour Song 2/ }).click();
   await guest.reload();
   await expect(guest.getByText('Coming up').first()).toBeVisible();

@@ -28,6 +28,7 @@ The session's sequence is bumped on every change so every holder sees the new pr
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -134,8 +135,14 @@ def plan_songs(
     zone_crates: tuple[str, ...] = (),
     offset: float = 0.0,
     recent: list[str] | None = None,
+    allowed_at: Callable[[datetime], list[Any]] | None = None,
 ) -> list[tuple[Any, float, str]]:
-    """(song, energy target, block name) for each slot from `start` until `end`. Pure."""
+    """(song, energy target, block name) for each slot from `start` until `end`.
+
+    `allowed_at` is evaluated at each slot's start. This matters when content rules depend on a
+    daypart: a four-hour horizon can cross several policy boundaries, so one decision made at the
+    beginning of the planning pass cannot safely be reused for every future song.
+    """
     recent = list(recent or [])
     inputs = [
         dayparts.planner_inputs(w.block, max(1.0, w.seconds), zone_default_crates=zone_crates,
@@ -159,7 +166,13 @@ def plan_songs(
             before = [value for at, value in ramp if at <= cursor]
             if ramp and cursor >= ramp[0][0] and before:
                 target = before[-1]
-        pool = _block_pool(allowed, here) or previous_pool
+        slot_allowed = allowed_at(datetime.fromtimestamp(cursor, UTC)) if allowed_at else allowed
+        slot_ids = {song.song_id for song in slot_allowed}
+        pool = _block_pool(slot_allowed, here)
+        if not pool:
+            # The bridge may preserve continuity across a sparse crate, but it cannot carry a song
+            # that the rules for this slot now refuse.
+            pool = [song for song in previous_pool if song.song_id in slot_ids]
         song = choose(pool, target, recent)
         if song is None:
             break
@@ -242,7 +255,7 @@ def plan_zone(conn: Connection, ref: zone_clock.ZoneRef, now: float, *,
 
         def allow(songs: list[Any], at: datetime) -> list[Any]:
             return service.filter_allowed(conn, ref.zone_id, songs, at, directory=SqlDirectory())
-    allowed = allow([s for s in library if s.analysed], datetime.fromtimestamp(now, UTC))
+    candidates = [s for s in library if s.analysed]
     lengths = {s.song_id: float(s.length_s or DEFAULT_LENGTH_S) for s in library}
     local_to_song = {source.local_id(conn, ref.workspace_id, s.song_id): s.song_id
                      for s in library}
@@ -256,7 +269,15 @@ def plan_zone(conn: Connection, ref: zone_clock.ZoneRef, now: float, *,
                     dirty=False)
         return {"zone_id": ref.zone_id, "planned": 0, "skipped": "full"}
     recent = [local_to_song.get(item.song_id, "") for item in kept]
-    picks = plan_songs(windows, allowed, cursor, end, offset=steering.offset, recent=recent)
+    picks = plan_songs(
+        windows,
+        candidates,
+        cursor,
+        end,
+        offset=steering.offset,
+        recent=recent,
+        allowed_at=lambda at: allow(candidates, at),
+    )
     from selecta.storage.schema import assets
 
     hashes = dict(conn.execute(

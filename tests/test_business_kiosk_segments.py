@@ -256,3 +256,51 @@ def _other_device(conn, workspace_id: str) -> str:
         )
     )
     return device_id
+
+
+def test_fallback_hand_offs_and_local_actions_upload_once_into_the_device_log(party, zone, signer):
+    from selecta.playback.zone_schema import device_log_entries
+
+    player = Player(party, "machine-resync-3")
+    assert pair(party, zone, player).status_code == 201
+    player.collect()
+    entries = [
+        {
+            "kind": "offline_fallback",
+            "idempotency_key": "fallback:a:1",
+            "device_seq": 4,
+            "started_at": 1_800_000_000.0,
+            "recorded_at": 1_800_000_000.0,
+        },
+        {
+            "kind": "urgent_update",
+            "idempotency_key": "urgent-update:2026.12.1",
+            "device_seq": 5,
+            "started_at": 1_800_000_100.0,
+            "recorded_at": 1_800_000_100.0,
+        },
+        {
+            "kind": "play",
+            "idempotency_key": "play-1",
+            "title": "Song 0",
+            "artist": "Band",
+            "started_at": 1_800_000_000.0,
+            "seconds_played": 120,
+            "device_seq": 3,
+        },
+    ]
+    first = player.client.post("/api/kiosk/resync", json={"entries": entries}).json()
+    again = player.client.post("/api/kiosk/resync", json={"entries": entries}).json()
+    assert (first["log_inserted"], first["inserted"]) == (2, 1)
+    assert (again["log_inserted"], again["log_duplicates"], again["duplicates"]) == (0, 2, 1)
+    with transaction(party.engine, zone["org"]) as conn:
+        rows = (
+            conn.execute(sa.select(device_log_entries).order_by(device_log_entries.c.device_seq))
+            .mappings()
+            .all()
+        )
+    assert [(r["kind"], r["device_seq"]) for r in rows] == [
+        ("offline_fallback", 4),
+        ("urgent_update", 5),
+    ]
+    assert rows[0]["device_time"] == 1_800_000_000.0 and rows[0]["zone_id"] == zone["zone"]
