@@ -15,7 +15,7 @@ type Item = UploadResult;
 // outcome (added, already there, skipped, needs attention, not uploaded), one file's failure
 // doesn't stop the rest, and the closing message counts them instead of one "Upload finished".
 
-export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, onAccepted, perFile = true }: {
+export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, onAccepted, perFile = true, venueId }: {
   api: Api;
   workspaceId: string;
   setError: (value: string) => void;
@@ -23,6 +23,8 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
   blocked: string | null;
   onAccepted?: () => void;
   perFile?: boolean;
+  /** A business venue the files are for (ADR-0448 per-venue storage); none for the whole library. */
+  venueId?: string;
 }) {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -98,7 +100,7 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
         }
       }
       if (fresh.length) {
-        const plan = (headers?: Record<string, string>) => api<{ uploads: UploadEntry[] }>('/uploads/plan', { method: 'POST', body: JSON.stringify({ files: fresh.map((item) => item.spec) }), headers }, workspaceId);
+        const plan = (headers?: Record<string, string>) => api<{ uploads: UploadEntry[] }>('/uploads/plan', { method: 'POST', body: JSON.stringify({ files: fresh.map((item) => item.spec), ...(venueId ? { venue_id: venueId } : {}) }), headers }, workspaceId);
         let planned: { uploads: UploadEntry[] };
         try {
           planned = await plan();

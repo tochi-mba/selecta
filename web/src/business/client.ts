@@ -32,6 +32,7 @@ export const ROUTES = {
   hourException: (venue: string, id: string) => `/business/venues/${enc(venue)}/hour-exceptions/${enc(id)}`,
   holidaySuggestions: (venue: string, country: string, year: number) => `/business/venues/${enc(venue)}/holiday-suggestions?country=${enc(country)}&year=${year}`,
   closeNow: (venue: string) => `/business/venues/${enc(venue)}/close-now`,
+  closingMode: (venue: string) => `/business/venues/${enc(venue)}/closing-mode`,
   closeNowUndo: (venue: string, id: string) => `/business/venues/${enc(venue)}/close-now/${enc(id)}/undo`,
   zoneState: (zone: string) => `/business/zones/${enc(zone)}/state`,
   usage: '/business/usage',
@@ -175,6 +176,7 @@ export function businessClient(api: Api, workspaceId?: string) {
     /** Public holidays as suggestions only: nothing changes until one is added as an exception. */
     holidaySuggestions: async (venue: string, country: string, year: number) => (await call<{ suggestions: HolidaySuggestion[] }>(ROUTES.holidaySuggestions(venue, country, year))).suggestions ?? [],
     closeNow: (venue: string) => call<CloseNowAnswer>(ROUTES.closeNow(venue), json('POST')),
+    setClosingMode: (venue: string, mode: 'natural' | 'exact') => call<{ closing_mode: string }>(ROUTES.closingMode(venue), json('PUT', { closing_mode: mode })),
     undoCloseNow: (venue: string, id: string) => call<{ id: string; undone: boolean }>(ROUTES.closeNowUndo(venue, id), json('POST')),
     zoneState: (zone: string) => call<ZoneDayState>(ROUTES.zoneState(zone)),
     /** Organisation and per-venue meters (ADR-0448); managers only, the server refuses others. */

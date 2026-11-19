@@ -8,7 +8,7 @@ const DAYS: (keyof WeekHours)[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'su
 
 export type HoursPeriod = { id: string; zone_id: string | null; weekday: number; opens: string; closes: string; all_day: boolean };
 export type HourException = { id: string; zone_id: string | null; date: string; until: string | null; closed: boolean; periods: [string, string][]; repeat_yearly: boolean; note: string };
-export type HoursAnswer = { time_zone: string; periods: HoursPeriod[]; exceptions: HourException[] };
+export type HoursAnswer = { time_zone: string; closing_mode?: 'natural' | 'exact'; periods: HoursPeriod[]; exceptions: HourException[] };
 export type HolidaySuggestion = { date: string; closed: boolean; note: string };
 export type ZoneDayState = {
   state: 'closed' | 'warming' | 'opening' | 'open' | 'closing';

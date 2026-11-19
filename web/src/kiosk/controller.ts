@@ -19,6 +19,16 @@ import { updateDecision, type KioskWorker } from './update';
 import type { KioskView } from './view';
 import type { WakeController } from './wake';
 
+/** The closing fade (ADR-0444): 20 s, ending at the close in "exact" mode. */
+export const CLOSING_FADE_S = 20;
+
+/** Whether an "exact" close has begun its fade, and how long the fade has left. */
+export function exactClosing(mode: unknown, closeAt: number | null, now: number | null): number | null {
+  if (mode !== 'exact' || closeAt === null || now === null) return null;
+  const left = closeAt - now;
+  return left <= CLOSING_FADE_S ? Math.max(0.05, left) : null;
+}
+
 export const HEARTBEAT_MS = 5_000;
 export const HEALTH_MS = 60_000;
 export const VIEW_MS = 15_000;
@@ -103,6 +113,7 @@ export function createController(deps: ControllerDeps) {
     }
     return dayStateAt(periods, at);
   };
+  const closingMode = () => (deps.cache.manifest()?.schedule as { closing_mode?: string } | undefined)?.closing_mode;
   const permitValid = () => {
     const at = now();
     if (deps.permits) {
@@ -170,6 +181,7 @@ export function createController(deps: ControllerDeps) {
     const d = day().state;
     if (d === 'closed') return false;
     if (!online && !permitValid() && !started) return false;
+    if (exactClosing(closingMode(), day().closeAt, now()) !== null) return false;
     return d === 'open';
   }
 
@@ -182,7 +194,10 @@ export function createController(deps: ControllerDeps) {
       deps.audio.player.start(5);
     } else if (!want && started) {
       started = false;
-      deps.audio.player.stop();
+      // At closing time the music fades over 20 s (ending at the close in exact mode); a
+      // pause, an unpairing or a refused permit stops within a second.
+      const exact = exactClosing(closingMode(), day().closeAt, now());
+      deps.audio.player.stop(exact ?? (day().state === 'closed' ? CLOSING_FADE_S : 1));
     }
     deps.audio.player.setPaused(sessionPaused);
     deps.wake.sync(want);

@@ -6,6 +6,7 @@ import { NowTab } from './NowTab';
 import { RulesTab } from './RulesTab';
 import { ScheduleTab, TodayTab } from './ScheduleTabs';
 import { HoursTab } from './HoursTab';
+import { VenueUploads } from './VenueUploads';
 import { useVenueView } from './useVenue';
 import { PeoplePage } from './PeoplePage';
 import { RequestsPage } from './RequestsPage';
@@ -20,6 +21,8 @@ export function VenueManager({ venueId, tab }: { venueId: string; tab?: string }
   const { ctx, venue, disabled } = useVenueView(venueId);
   // Today, Schedule and Hours ride on business.schedules (ADR-0444); off, they are not drawn.
   const schedulesOn = businessOn(ctx.org.features, 'business.schedules');
+  // Upload music for this venue rides on business.entitlements (ADR-0448 per-venue storage).
+  const entitlementsOn = businessOn(ctx.org.features, 'business.entitlements');
   const chosen = tab && tab in VENUE_TABS && (schedulesOn || !SCHEDULE_TABS.includes(tab as VenueTab)) ? tab as VenueTab : 'now';
   const [error, setError] = useState('');
   // kiosk pairing and health ride on business.kiosk (ADR-0445); off, the tab shows tablets only
@@ -32,12 +35,13 @@ export function VenueManager({ venueId, tab }: { venueId: string; tab?: string }
     {disabled && <p className="biz-quiet">{disabled}</p>}
     {kioskOn && <PlayerAlerts venueId={venue.id} />}
     <nav className="biz-row" aria-label="Venue sections">
-      {(Object.keys(VENUE_TABS) as VenueTab[]).filter((key) => key !== 'requests' || businessOn(ctx.org.features, 'business.rooms')).filter((key) => schedulesOn || !SCHEDULE_TABS.includes(key)).map((key) => <button key={key} type="button" aria-current={key === chosen ? 'page' : undefined} onClick={() => ctx.go(PATHS.venue(ctx.org.id, venue.id, key))}>{VENUE_TABS[key]}</button>)}
+      {(Object.keys(VENUE_TABS) as VenueTab[]).filter((key) => key !== 'requests' || businessOn(ctx.org.features, 'business.rooms')).filter((key) => schedulesOn || !SCHEDULE_TABS.includes(key)).filter((key) => key !== 'music' || (entitlementsOn && ctx.api != null)).map((key) => <button key={key} type="button" aria-current={key === chosen ? 'page' : undefined} onClick={() => ctx.go(PATHS.venue(ctx.org.id, venue.id, key))}>{VENUE_TABS[key]}</button>)}
     </nav>
     {chosen === 'now' && <NowTab venue={venue} disabled={disabled} />}
     {chosen === 'today' && <TodayTab venue={venue} />}
     {chosen === 'schedule' && <ScheduleTab venue={venue} disabled={disabled} />}
     {chosen === 'hours' && <HoursTab venue={venue} disabled={disabled} />}
+    {chosen === 'music' && <VenueUploads venueId={venue.id} disabled={disabled} />}
     {chosen === 'rules' && <RulesTab venue={venue} disabled={disabled} />}
     {chosen === 'requests' && <RequestsPage venueId={venue.id} />}
     {chosen === 'people' && <PeoplePage venueId={venue.id} />}

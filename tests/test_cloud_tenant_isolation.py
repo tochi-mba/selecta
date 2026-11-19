@@ -201,6 +201,7 @@ BUSINESS_SCOPED = {
     ("DELETE", "/api/business/crates/{crate_id}"),
     ("GET", "/api/business/venues/{venue_id}/hours"),
     ("PUT", "/api/business/venues/{venue_id}/hours"),
+    ("PUT", "/api/business/venues/{venue_id}/closing-mode"),
     ("POST", "/api/business/venues/{venue_id}/hour-exceptions"),
     ("DELETE", "/api/business/venues/{venue_id}/hour-exceptions/{exception_id}"),
     ("GET", "/api/business/venues/{venue_id}/holiday-suggestions"),

@@ -62,6 +62,19 @@ class UploadFileInput(BaseModel):
 
 class PlanUploadsRequest(BaseModel):
     files: list[UploadFileInput] = Field(max_length=500)
+    # The business venue these files are for, when uploaded from a venue page (ADR-0448).
+    venue_id: str | None = Field(default=None, max_length=36)
+
+
+def _own_venue(conn, workspace_id: str, venue_id: str | None) -> str | None:
+    """The venue when it is one of this workspace's, else None (never another tenant's)."""
+    if not venue_id:
+        return None
+    from selecta.business.schema import venues
+
+    found = conn.execute(select(venues.c.id).where(
+        venues.c.workspace_id == workspace_id, venues.c.id == venue_id)).scalar()
+    return found
 
 
 class PartsRequest(BaseModel):
@@ -271,11 +284,13 @@ def install_routes(
         try:
             with service() as (uploads, _client):
                 with transaction(engine, workspace_id) as conn:
+                    venue_id = _own_venue(conn, workspace_id, body.venue_id)
                     results = uploads.plan_batch(
                         conn,
                         workspace_id,
                         [FileSpec(**item.model_dump()) for item in body.files],
                         uploaded_by=uploaded_by,
+                        venue_id=venue_id,
                     )
         except BatchTooLarge as error:
             raise HTTPException(status_code=422, detail={"code": "batch_too_large"}) from error

@@ -102,6 +102,22 @@ function Suggestions({ venue, exceptions, disabled, onAdded }: {
   </fieldset>;
 }
 
+function ClosingMode({ venue, mode, disabled, onSaved }: { venue: Venue; mode: 'natural' | 'exact'; disabled: string | null; onSaved: () => Promise<void> }) {
+  const { client } = useBusiness();
+  const choose = async (next: 'natural' | 'exact') => {
+    await client.setClosingMode(venue.id, next);
+    showToast(COPY.closingSaved);
+    await onSaved();
+  };
+  return <fieldset disabled={disabled != null}>
+    <legend>{COPY.closingHeading}</legend>
+    {(['natural', 'exact'] as const).map((value) => <label key={value} className="bzf-check">
+      <input type="radio" name={`closing-${venue.id}`} checked={mode === value} onChange={() => void choose(value)} />
+      {' '}{value === 'natural' ? COPY.closingNatural : COPY.closingExact}
+    </label>)}
+  </fieldset>;
+}
+
 export function HoursTab({ venue, disabled }: { venue: Venue; disabled: string | null }) {
   const { client } = useBusiness();
   const { data, error, loading, reload } = useLoad(() => client.hours(venue.id), [client, venue.id]);
@@ -133,6 +149,7 @@ export function HoursTab({ venue, disabled }: { venue: Venue; disabled: string |
     {week && <OpeningHoursEditor hours={week} holidays={fresh} disabled={disabled} onChange={(hours, holidays) => { setWeek(hours); setFresh(holidays); }} />}
     {failed && <p className="warn" role="alert">{failed}</p>}
     <div className="biz-row"><Action className="primary" disabled={disabled != null} run={save} working={COPY.saving}>{COPY.save}</Action></div>
+    {data && <ClosingMode venue={venue} mode={data.closing_mode ?? 'natural'} disabled={disabled} onSaved={reload} />}
     <section className="biz-card" aria-labelledby={`exceptions-${venue.id}`}>
       <h3 id={`exceptions-${venue.id}`}>{COPY.exceptionsHeading}</h3>
       {!exceptions.length ? <p className="biz-quiet">{COPY.exceptionsEmpty}</p> : <ul className="bzf-plain">

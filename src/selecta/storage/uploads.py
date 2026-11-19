@@ -258,10 +258,11 @@ class Uploads:
 
     def plan_batch(
         self, conn: Connection, workspace_id: str, files: Sequence[FileSpec],
-        *, uploaded_by: str | None = None,
+        *, uploaded_by: str | None = None, venue_id: str | None = None,
     ) -> list[PlannedFile]:
         """Plan up to 500 files, one result per file in the order given. `uploaded_by` is the
-        person uploading; the kept asset records it (an organisation names its uploader)."""
+        person uploading; the kept asset records it (an organisation names its uploader).
+        `venue_id` is the business venue the files are for (ADR-0448 per-venue storage)."""
         files = list(files)
         if len(files) > MAX_BATCH:
             raise BatchTooLarge(
@@ -313,7 +314,8 @@ class Uploads:
                     conn.execute(
                         sa.update(upload_sessions)
                         .where(upload_sessions.c.id == session_id)
-                        .values(reservation_id=reservation, uploaded_by=uploaded_by)
+                        .values(reservation_id=reservation, uploaded_by=uploaded_by,
+                                venue_id=venue_id)
                     )
             except QuotaExceeded as exc:
                 results.append(PlannedFile(index, name, refused=str(exc)))
@@ -483,12 +485,14 @@ class Uploads:
         now = db_now(conn)
         known = conn.execute(sa.select(assets.c.id).where(assets.c.id == asset_id)).first()
         if known is None:
-            uploader = conn.execute(sa.select(upload_sessions.c.uploaded_by).where(
-                upload_sessions.c.id == session.id)).scalar()
+            uploader, for_venue = conn.execute(sa.select(
+                upload_sessions.c.uploaded_by, upload_sessions.c.venue_id).where(
+                upload_sessions.c.id == session.id)).one()
             conn.execute(
                 sa.insert(assets).values(
                     id=asset_id,
                     uploaded_by=uploader,
+                    venue_id=for_venue,
                     workspace_id=session.workspace_id,
                     original_key=key,
                     size=session.declared_size,

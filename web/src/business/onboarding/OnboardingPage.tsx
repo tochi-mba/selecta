@@ -7,6 +7,7 @@ import { VenueForm } from '../forms/VenueForm';
 import { ZoneListEditor } from '../forms/ZoneListEditor';
 import { LicenceAttestationForm } from '../forms/LicenceAttestationForm';
 import { PairingCodeEntry } from '../forms/PairingCodeEntry';
+import { Boundary } from '../pricing/BusinessPricing';
 import { MUSIC_COPY, SETUP_COPY, STEP_COPY, SERVICE_COPY } from '../copy/onboarding';
 import type { SetupStepId, WeekHours, Holiday } from '../types';
 
@@ -38,6 +39,7 @@ export function OnboardingPage() {
     finally { setBusy(false); }
   };
   return <section className="biz biz-stack"><h1>{SETUP_COPY.title}</h1>
+    {current === 'business' && <Boundary />}
     <ol aria-label={SETUP_COPY.checklist}>{steps.map((step) => <li key={step} aria-current={step === current ? 'step' : undefined}>
       {STEP_COPY[step].title}{setup?.done.includes(step) ? ' (done)' : setup?.skipped.includes(step) ? ' (skipped)' : ''}
     </li>)}</ol>

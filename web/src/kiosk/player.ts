@@ -118,6 +118,7 @@ export function createPlayer(options: PlayerOptions) {
   let active = 0;
   let wanted = false;
   let fadeInS = 0;
+  let fadeOutS = 1;
   let mode: Mode = 'idle';
   let segments: PlayableSegment[] = [];
   let paused = false;
@@ -200,8 +201,9 @@ export function createPlayer(options: PlayerOptions) {
     const deck = decks[active];
     if (!wanted || paused) {
       if (deck.segment) {
-        ramp(deck, curves.fadeOut, 1);
-        setTimeout(() => { if (!wanted || paused) release(deck, options.now() ?? Date.now() / 1000); }, 1000);
+        const seconds = paused ? 1 : fadeOutS;
+        ramp(deck, curves.fadeOut, seconds);
+        setTimeout(() => { if (!wanted || paused) release(deck, options.now() ?? Date.now() / 1000); }, seconds * 1000);
       }
       mode = 'idle';
       return;
@@ -249,8 +251,10 @@ export function createPlayer(options: PlayerOptions) {
       fadeInS = fadeIn;
       void tick();
     },
-    stop() {
+    /** Stop with a fade-out: 1 s by default, 20 s at closing time (ADR-0444). */
+    stop(fadeOut = 1) {
       wanted = false;
+      fadeOutS = Math.max(0.05, fadeOut);
       void tick();
     },
     setSegments(next: PlayableSegment[]) { segments = [...next].sort((a, b) => a.starts_at - b.starts_at); },

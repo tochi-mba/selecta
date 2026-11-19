@@ -35,6 +35,10 @@ export const HOURS_TAB_COPY = {
   undo: 'Undo close now',
   undone: 'Close now undone. The music fades back in.',
   closeFailed: "That couldn't be done.",
+  closingHeading: 'At closing time',
+  closingNatural: 'Let the song finish (at most 4 minutes), then fade out over 20 seconds',
+  closingExact: 'End exactly at the closing time: the fade finishes as the venue closes',
+  closingSaved: 'Closing time setting saved.',
 } as const;
 
 export const USAGE_COPY = {

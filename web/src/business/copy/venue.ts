@@ -8,6 +8,7 @@ export const VENUE_TABS = {
   today: 'Today',
   schedule: 'Schedule',
   hours: 'Hours',
+  music: 'Upload music',
   rules: 'Music rules',
   requests: 'Requests',
   devices: 'Devices',
