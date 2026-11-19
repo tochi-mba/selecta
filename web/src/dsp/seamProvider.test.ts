@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { CapabilityRegistry, registerBrowserDspCapabilities } from './capability';
-import { abilitiesFrom, abilityOf, analyseTiming, beatGrid, calibrateAnalysis, CLIP_CONTEXT_SECONDS, gridSupport, makeSeamProvider, makeWorkerSeamProvider, MIN_PULSE, pulseStrength, sliceMono, type PcmLike, type SeamRecord } from './seamProvider';
+import { abilitiesFrom, abilityOf, analyseTiming, beatGrid, calibrateAnalysis, CLIP_CONTEXT_SECONDS, gridSupport, makeSeamProvider, makeWorkerSeamProvider, MIN_ANALYSE_SECONDS, MIN_PULSE, pulseStrength, sliceMono, type PcmLike, type SeamRecord } from './seamProvider';
 import { rampSourceSeconds } from './stretchLimits';
 import { MIN_BEATMATCH_CONFIDENCE } from './seams';
-import type { TrackTiming } from './seams';
+import type { SeamSchedule, TrackTiming } from './seams';
+import { analyse } from './workers/analysisWorker';
 import { WORKER_CALIBRATION_IMPLEMENTATION, type WorkerBudgetEvidence } from './budget';
 
 const TEST_NOW = 1_700_000_000_000;
@@ -206,6 +207,66 @@ describe('the seam provider', () => {
 
     await provider({ fromIndex: 0, from: song, toIndex: 1, to: song });
     expect(pcmLengths[1]).toBe(30 * song.sampleRate);
+    provider.dispose();
+  });
+
+  it('keeps a confident beat when the slice is transferred to the worker and emptied on this side', async () => {
+    const workerFactory = () => {
+      const listeners = new Map<string, (event: MessageEvent) => void>();
+      return {
+        addEventListener: (type: string, listener: EventListenerOrEventListenerObject) => {
+          if (typeof listener === 'function') listeners.set(type, listener as (event: MessageEvent) => void);
+        },
+        removeEventListener: (type: string) => { listeners.delete(type); },
+        postMessage: (request: { id: number; pcm: Float32Array; sampleRate: number }, transfer?: Transferable[]) => {
+          // as a browser does: the transferred buffer is detached here, so the page's slice is empty
+          const sent = structuredClone(request.pcm, { transfer: (transfer ?? []) as Transferable[] });
+          expect(request.pcm.length).toBe(0);
+          const response = analyse({ id: request.id, sampleRate: request.sampleRate, pcm: sent, tasks: ['onsets', 'tempo'] });
+          queueMicrotask(() => listeners.get('message')?.({ data: response } as MessageEvent));
+        },
+        terminate: () => { listeners.clear(); },
+      } as unknown as Worker;
+    };
+    const planned: SeamSchedule[] = [];
+    const provider = makeWorkerSeamProvider({
+      settingsFor: () => ({ move: 'blend' }), abilities: () => abilitiesFrom(status), calibration: workerEvidence().calibration,
+      deviceId: TEST_DEVICE, now: () => TEST_NOW, workerFactory, onPlanned: (record) => planned.push(record.schedule),
+    });
+    const song = clicks(120, 90);
+    const schedule = await provider({ fromIndex: 0, from: song, toIndex: 1, to: song });
+    expect(schedule.kind).toBe('beatmatch');
+    provider.dispose();
+  });
+
+  it('never shrinks the analysis below the slice a beat grid needs', async () => {
+    let now = TEST_NOW;
+    const pcmLengths: number[] = [];
+    const workerFactory = () => {
+      const listeners = new Map<string, (event: MessageEvent) => void>();
+      return {
+        addEventListener: (type: string, listener: EventListenerOrEventListenerObject) => {
+          if (typeof listener === 'function') listeners.set(type, listener as (event: MessageEvent) => void);
+        },
+        removeEventListener: (type: string) => { listeners.delete(type); },
+        postMessage: (request: { id: number; pcm: Float32Array }) => {
+          pcmLengths.push(request.pcm.length);
+          queueMicrotask(() => listeners.get('message')?.({
+            data: { id: request.id, tempo: { implementation: 'test-tempo', bpm: 120, confidence: 0.9, ambiguous: false }, onsetTimes: [] },
+          } as MessageEvent));
+        },
+        terminate: () => { listeners.clear(); },
+      } as unknown as Worker;
+    };
+    // a budget already shrunk to its 5 s floor
+    const provider = makeWorkerSeamProvider({
+      settingsFor: () => ({}), abilities: () => abilitiesFrom(status), calibration: { ...workerEvidence().calibration!, horizonS: 6 },
+      deviceId: TEST_DEVICE, now: () => now, workerFactory,
+    });
+    const song = clicks(120, 90);
+    await provider({ fromIndex: 0, from: song, toIndex: 1, to: song });
+    expect(pcmLengths[0]).toBe(MIN_ANALYSE_SECONDS * song.sampleRate);
+    now += 1;
     provider.dispose();
   });
 });

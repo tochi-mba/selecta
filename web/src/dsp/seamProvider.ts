@@ -32,6 +32,10 @@ import { spawnStretchWorker, stretchInWorker, STRETCH_TIMEOUT_MS } from './worke
 
 /** At most this much of each song is analysed for one seam. */
 export const ANALYSE_SECONDS = 60;
+/** A shrunk budget never analyses less than this: below about 15 s of a song the onset grid's
+ * support drops under MIN_GRID_SUPPORT on real music (measured on pop at 126 BPM: 0.85 at 60 s,
+ * 0.50 at 15 s, 0.40 at 10 s), and a short slice would be blamed on the song's beat. */
+export const MIN_ANALYSE_SECONDS = 20;
 /** An onset within this distance of a grid line votes for that phase. */
 const PHASE_TOLERANCE_SECONDS = 0.03;
 const PHASE_STEPS = 64;
@@ -130,17 +134,25 @@ export function gridSupport(beats: readonly number[], onsetTimes: readonly numbe
 export function analyseTiming(buffer: PcmLike, part: 'head' | 'tail'): TrackTiming {
   const { pcm, offset } = sliceMono(buffer, part);
   const onsets = detectOnsets(pcm, buffer.sampleRate);
-  return timingFromAnalysis(buffer, pcm, offset, { onsetTimes: onsets.onsetTimes, tempo: estimateTempo(onsets) });
+  return timingFromAnalysis(buffer, sliceFacts(pcm, buffer.sampleRate), offset, { onsetTimes: onsets.onsetTimes, tempo: estimateTempo(onsets) });
 }
 
 /** Rebuild a song's timing record from worker output without moving channel data off the page.
  * This is shared by synchronous diagnostics and the production worker-backed seam provider. */
-function timingFromAnalysis(buffer: PcmLike, pcm: Float32Array, offset: number, analysis: Pick<AnalysisResponse, 'onsetTimes' | 'tempo'>): TrackTiming {
+/** What the trust check needs from an analysed slice, read before the slice is handed to a worker:
+ * a transferred Float32Array is emptied on this side, and an empty slice would read as no pulse and
+ * no grid, so every song would look unsure. */
+type SliceFacts = { pulse: number; seconds: number };
+function sliceFacts(pcm: Float32Array, sampleRate: number): SliceFacts {
+  return { pulse: pulseStrength(pcm), seconds: pcm.length / sampleRate };
+}
+
+function timingFromAnalysis(buffer: PcmLike, slice: SliceFacts, offset: number, analysis: Pick<AnalysisResponse, 'onsetTimes' | 'tempo'>): TrackTiming {
   const estimate = analysis.tempo ?? { bpm: 0, confidence: 0, ambiguous: true, implementation: 'worker-analysis-missing-v0' };
   const onsetTimes = (analysis.onsetTimes ?? []).map((time) => time + offset);
   const beats = beatGrid(estimate.bpm, onsetTimes, buffer.duration);
-  const pulse = pulseStrength(pcm);
-  const support = gridSupport(beats, onsetTimes, offset, offset + pcm.length / buffer.sampleRate);
+  const pulse = slice.pulse;
+  const support = gridSupport(beats, onsetTimes, offset, offset + slice.seconds);
   const trusted = pulse >= MIN_PULSE && support >= MIN_GRID_SUPPORT;
   const tempo = trusted ? estimate : { ...estimate, confidence: Math.min(estimate.confidence, pulse >= MIN_PULSE ? support * 0.5 : 0) };
   return { beats, tempo, durationSeconds: buffer.duration };
@@ -331,8 +343,9 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
         if (!current.supported || !budget) throw new Error(current.reason ?? 'worker budget exhausted');
         // A missed deadline halves the work window on the next block as well as shrinking the
         // prepared horizon. This gives the calibrated budget an actual effect on DSP cost.
-        const workSeconds = ANALYSE_SECONDS * Math.min(1, budget.horizonS / DEFAULT_HORIZON_S);
+        const workSeconds = Math.max(MIN_ANALYSE_SECONDS, ANALYSE_SECONDS * Math.min(1, budget.horizonS / DEFAULT_HORIZON_S));
         const { pcm, offset } = sliceMono(buffer, part, workSeconds);
+        const facts = sliceFacts(pcm, buffer.sampleRate);
         const began = now();
         let response: AnalysisResponse;
         try {
@@ -355,7 +368,7 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
           throw new Error('worker missed its calibrated deadline');
         }
         if (response.error || !response.tempo) throw new Error(response.error || 'tempo analysis returned no result');
-        return timingFromAnalysis(buffer, pcm, offset, response);
+        return timingFromAnalysis(buffer, facts, offset, response);
       };
       // an injected analysis (tests, diagnostics) stands in for the worker's
       const a = options.timing ? options.timing(request.from, 'tail') : await analyse(request.from, 'tail');
