@@ -82,8 +82,17 @@ describe('licensing pages', () => {
     expect(screen.getByRole('heading', { name: 'European Union' })).toBeInTheDocument();
   });
 
-  it('shows how many songs played at a venue have an ISRC', async () => {
-    mount(<IsrcCoverage venueId="camden" />, { 'GET /business/venues/camden/isrc-coverage': { tracks: 10, with_isrc: 7, share: 0.7 } });
+  it('shows how many songs played at a venue have an ISRC and corrects one in place', async () => {
+    const api = mount(<IsrcCoverage venueId="camden" />, {
+      'GET /business/venues/camden/isrc-coverage': { tracks: 10, with_isrc: 7, share: 0.7 },
+      'GET /business/venues/camden/isrc-tracks': { tracks: [{ song_id: '42', title: 'Golden Hour', artist: 'Sunday Static', isrc: null }] },
+      'PUT /business/library/songs/42/isrc': { song_id: '42', isrc: 'GBABC2400012' },
+    });
     expect(await screen.findByText(EXPORT_COPY.coverage(7, 10))).toBeInTheDocument();
+    await userEvent.type(await screen.findByLabelText(EXPORT_COPY.isrcFor('Golden Hour', 'Sunday Static')), 'GB-ABC-24-00012');
+    await userEvent.click(screen.getByRole('button', { name: EXPORT_COPY.isrcSave }));
+    expect(await screen.findByText(EXPORT_COPY.isrcSaved('Golden Hour'))).toBeInTheDocument();
+    const put = api.mock.calls.find(([path]) => path === '/business/library/songs/42/isrc')!;
+    expect(JSON.parse(String(put[1]?.body))).toEqual({ isrc: 'GB-ABC-24-00012' });
   });
 });

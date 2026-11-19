@@ -55,6 +55,7 @@ CHANGES = tuple(re.compile(p) for p in (
     r"^POST /api/business/zones/[^/]+/archive$",
     r"^DELETE /api/business/people/[^/]+$",
     r"^POST /api/business/invitations/accept$",
+    r"^PUT /api/business/seats$",
 ))
 
 

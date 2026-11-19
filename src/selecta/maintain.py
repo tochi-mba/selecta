@@ -368,6 +368,19 @@ def _business_kiosk_alerts(engine: Engine, env: Mapping[str, str], plan: Plan) -
     plan.tasks.append(Task(alerts.TASK_NAME, alerts.EVERY_S, run))
 
 
+def _business_horizons(engine: Engine, plan: Plan) -> None:
+    """Seam render work for each open kiosk zone's 4-hour horizon (ADR-0446), while
+    business.kiosk is on."""
+    from selecta.business import alerts, horizon
+
+    def run(_fence: TermFence) -> object:
+        if not _flag_on(alerts.FLAG):
+            return None
+        return horizon.tick(engine)
+
+    plan.tasks.append(Task(horizon.TASK_NAME, horizon.EVERY_S, run))
+
+
 def _business_billing(engine: Engine, env: Mapping[str, str], plan: Plan) -> None:
     """Business dunning and VAT rechecks (ADR-0447), only while `business.billing` is on.
     Dunning needs no Stripe; the VAT recheck runs only with a test-mode Stripe key."""
@@ -412,6 +425,7 @@ def cloud_plan(engine: Engine, env: Mapping[str, str] | None = None) -> Plan:
     _emails(engine, env, plan)
     _business_hours(engine, plan)
     _business_kiosk_alerts(engine, env, plan)
+    _business_horizons(engine, plan)
     _business_billing(engine, env, plan)
     _business_licensing(engine, plan)
     from selecta.observability import leader_metrics

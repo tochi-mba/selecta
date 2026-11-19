@@ -72,5 +72,36 @@ export function IsrcCoverage({ venueId }: { venueId: string }) {
     <h2 id="biz-isrc-coverage">{COPY.coverageTitle}</h2>
     <p>{COPY.coverage(found.data.with_isrc, found.data.tracks)}</p>
     <p className="biz-quiet">{COPY.coverageNote}</p>
+    {(org.role === 'owner' || org.role === 'admin') && <IsrcEditor venueId={venueId} onSaved={found.reload} />}
   </section>;
+}
+
+/** Enter or correct the ISRC of songs played at a venue, missing ones first (BZ-0449-07). */
+function IsrcEditor({ venueId, onSaved }: { venueId: string; onSaved: () => Promise<void> }) {
+  const { client } = useBusiness();
+  const tracks = useLoad(() => client.isrcTracks(venueId), [client, venueId]);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [status, setStatus] = useState('');
+  const save = async (event: FormEvent, song: string, title: string) => {
+    event.preventDefault();
+    try {
+      await client.saveIsrc(song, drafts[song] ?? '');
+      setStatus(COPY.isrcSaved(title));
+      await tracks.reload();
+      await onSaved();
+    } catch (problem) {
+      setStatus((problem as Error).message);
+    }
+  };
+  return <>
+    <ul className="biz-stack">{(tracks.data?.tracks ?? []).map((track) => <li key={track.song_id}>
+      <form className="biz-row" onSubmit={(event) => void save(event, track.song_id, track.title)}>
+        <label className="biz-field">{COPY.isrcFor(track.title, track.artist)}
+          <input value={drafts[track.song_id] ?? track.isrc ?? ''} maxLength={32} placeholder="GB-ABC-24-00012" onChange={(event) => setDrafts({ ...drafts, [track.song_id]: event.target.value })} />
+        </label>
+        <button type="submit">{COPY.isrcSave}</button>
+      </form>
+    </li>)}</ul>
+    <p role="status" aria-live="polite">{status}</p>
+  </>;
 }

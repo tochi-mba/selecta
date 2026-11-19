@@ -2,8 +2,10 @@
 
 With every horizon the kiosk gets a bundle signed with Ed25519: the venue's opening periods for
 the next 7 days with its time zone, the zone's programme version, its volume, and the **offline
-permit** (organisation, venue, zone, device, plan state, the licence's expiry and grace end, a
-stop instant set by a pilot end, the issue time and `valid_until` 7 days on). The kiosk checks
+permit** (organisation, venue, zone, device, plan state, the licence's expiry and grace end, the
+earliest stop instant set by a pilot end or a payment grace (`dunning.stop_plan`), the issue time
+and `valid_until` 7 days on), and the zone's content snapshot: its policy version and the
+programme songs the policy refuses now. The kiosk checks
 the signature against the keys it trusts and refuses a bundle that fails it or is older than the
 one it holds, so being offline can never extend what the server would allow.
 
@@ -177,18 +179,27 @@ def build_body(
         for p in (schedule or {}).get("periods", [])
         if p.get("closes_at", 0) > now and p.get("opens_at", 0) < now + WINDOW_S
     ]
+    payment_stop = _payment_stop(conn, workspace_id, venue_id, now)
+    stops = [
+        (float(pilot_until), "pilot_end") if pilot_until else None,
+        (payment_stop, "payment") if payment_stop is not None else None,
+    ]
+    earliest = min((stop for stop in stops if stop), default=None)
+    in_grace = payment_stop is not None
     return {
         "time_zone": (schedule or {}).get("time_zone"),
         "periods": periods,
         "programme_version": (schedule or {}).get("programme_version"),
         "volume": volume,
+        "content": _content(conn, workspace_id, zone_id, now),
         "permit": {
             "organisation_id": workspace_id,
             "venue_id": venue_id,
             "zone_id": zone_id,
             "device_id": device_id,
-            "plan_state": "pilot" if pilot_until else "paid",
-            "stop_at": float(pilot_until) if pilot_until else None,
+            "plan_state": "pilot" if pilot_until else ("grace" if in_grace else "paid"),
+            "stop_at": earliest[0] if earliest else None,
+            "stop_reason": earliest[1] if earliest else None,
             "licence_expires_at": licence_expires,
             "licence_grace_ends_at": licence_grace,
             "issued_at": now,
@@ -197,12 +208,85 @@ def build_body(
     }
 
 
+def _payment_stop(conn: Any, workspace_id: str, venue_id: str | None, now: float) -> float | None:
+    """The venue's planned stop in a payment grace (ADR-0447 `dunning.stop_plan`), if any."""
+    if venue_id is None:
+        return None
+    from selecta.business import dunning
+    from selecta.business.commercial_facts import Bz3Hours, SqlFacts
+
+    org = SqlFacts().organisation(conn, workspace_id)
+    if org is None:
+        return None
+    for stop in dunning.stop_plan(conn, org, Bz3Hours(), now):
+        if stop.venue_id == venue_id:
+            return float(stop.stopped_at or stop.stop_at)
+    return None
+
+
+def _content(conn: Any, workspace_id: str, zone_id: str, now: float) -> dict[str, Any]:
+    try:
+        with conn.begin_nested():
+            return content_snapshot(conn, workspace_id, zone_id, now)
+    except Exception as error:  # noqa: BLE001 - the bundle still goes out, saying so
+        log.warning("Content snapshot for zone %s not built: %s", zone_id, error)
+        return {"version": None, "refused_song_ids": [], "unavailable": True}
+
+
+def content_snapshot(conn: Any, workspace_id: str, zone_id: str, now: float) -> dict[str, Any]:
+    """The zone's content policy as the kiosk needs it offline (ADR-0450): its version and the
+    songs of the zone's programme the policy refuses now, so a tightened rule reaches the
+    kiosk's saved music before its next song. With content controls off nothing is refused."""
+    from datetime import UTC, datetime
+
+    import sqlalchemy as sa
+
+    from selecta.business.access.directory import SqlDirectory
+    from selecta.business.content import gate, service
+    from selecta.business.content.engine import SongFacts, allowed
+    from selecta.local_media.schema import local_songs
+    from selecta.playback.schema import playback_sessions
+
+    if not gate.on(gate.ENGINE):
+        return {"version": None, "refused_song_ids": []}
+    programme = (
+        conn.execute(
+            sa.select(playback_sessions.c.programme).where(
+                playback_sessions.c.workspace_id == workspace_id,
+                playback_sessions.c.zone_id == zone_id,
+            )
+        ).scalar()
+        or []
+    )
+    ids = sorted({int(item["song_id"]) for item in programme if isinstance(item, dict)})
+    snapshot = service.zone_snapshot(conn, zone_id, directory=SqlDirectory())
+    rows = (
+        conn.execute(
+            sa.select(local_songs.c.id, local_songs.c.title, local_songs.c.artist).where(
+                local_songs.c.workspace_id == workspace_id, local_songs.c.id.in_(ids)
+            )
+        ).all()
+        if ids
+        else []
+    )
+    when = datetime.fromtimestamp(now, UTC)
+    refused = [
+        row.id
+        for row in rows
+        if not allowed(
+            SongFacts(song_id=str(row.id), title=row.title, artist=row.artist), snapshot, when
+        ).allowed
+    ]
+    return {"version": snapshot.version, "refused_song_ids": refused}
+
+
 __all__ = [
     "KEY_ENV",
     "PERMIT_S",
     "Keyring",
     "PermitRefused",
     "build_body",
+    "content_snapshot",
     "default_keyring",
     "key_id",
     "keyring_from",

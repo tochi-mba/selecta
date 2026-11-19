@@ -308,6 +308,10 @@ def install_routes(
             return HTTPException(
                 status_code=409, detail={"code": error.code, "message": str(error)}
             )
+        if isinstance(error, zone_session.SpeakerOffline):
+            return HTTPException(
+                status_code=409, detail={"code": error.code, "message": str(error)}
+            )
         if isinstance(error, zone_session.ZoneFull):
             return HTTPException(
                 status_code=409, detail={"code": "zone_full", "message": str(error)}

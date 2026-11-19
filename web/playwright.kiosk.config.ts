@@ -17,7 +17,7 @@ export default defineConfig({
   use: { ...cloud.use, baseURL: `http://127.0.0.1:${port}` },
   webServer: {
     command: `pnpm exec vite build -c vite.cloud-e2e.config.ts --outDir ${dist} --logLevel warn && pnpm exec vite build -c vite.cloud-e2e-authkit.config.ts --outDir ${dist}-authkit --logLevel warn && ${python} ../tests/e2e_cloud_server.py ${port}`,
-    env: { ...process.env, SELECTA_CLOUD_E2E_DIST: dist, SELECTA_FLAGS: '+business.orgs +business.schedules +business.kiosk' } as Record<string, string>,
+    env: { ...process.env, SELECTA_CLOUD_E2E_DIST: dist, SELECTA_FLAGS: '+business.orgs +business.schedules +business.kiosk +business.offline' } as Record<string, string>,
     url: `http://127.0.0.1:${port}/api/status`,
     reuseExistingServer: false,
     timeout: 240_000,

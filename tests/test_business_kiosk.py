@@ -91,7 +91,7 @@ class Player:
 
 @pytest.fixture
 def on():
-    flags.use("+business.orgs +business.kiosk")
+    flags.use("+business.orgs +business.kiosk +business.offline")
     yield
     flags.use(None)
 

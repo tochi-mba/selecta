@@ -313,3 +313,37 @@ def test_business_derived_budget_and_mix_exports_are_off_by_default(world):
     world["role"]["value"] = "admin"
     assert http.put("/api/business/settings/mix-exports",
                     json={"enabled": False}).status_code == 403
+
+
+def test_changes_wait_for_the_terms_but_reading_and_staff_controls_do_not(world):
+    from selecta.business import terms, terms_gate
+
+    headers = {"X-Workspace-ID": world["org"]}
+    http = world["http"]
+    refused = http.put("/api/business/play-log/retention", json={"days": 30}, headers=headers)
+    assert (refused.status_code, refused.json()["detail"]["code"]) == (403, "terms_required")
+    assert "Music keeps playing" in refused.json()["detail"]["message"]
+    assert http.get("/api/business/play-log/retention", headers=headers).status_code == 200
+    assert not terms_gate.guarded("POST", "/api/business/zones/z1/commands")
+    assert not terms_gate.guarded("POST", "/api/business/venues/v1/stay-open-late")
+    assert terms_gate.guarded("PATCH", "/api/business/venues/v1")
+    assert http.post("/api/business/terms/accept", headers=headers).json()["accepted"]
+    assert http.put("/api/business/play-log/retention", json={"days": 30},
+                    headers=headers).json() == {"days": 30}
+    flags.use("+business.orgs -business.licensing")
+    with transaction(world["engine"]) as conn:
+        assert not terms.needs_acceptance(conn, world["org"])
+
+
+def test_the_isrc_editor_lists_played_songs_missing_codes_first(world):
+    zone, before, after = _sessions(world, 200)
+    with transaction(world["engine"]) as conn:
+        playlog_writer.record(conn, zone, replace(before, mix_revision_id="m5"),
+                              replace(after, mix_revision_id="m5"), world["clock"].now)
+    path = f"/api/business/venues/{world['venue']}/isrc-tracks"
+    listed = world["http"].get(path).json()["tracks"]
+    assert listed == [{"song_id": str(world["song"]), "title": "Northern Line",
+                       "artist": "The Platform Ten", "isrc": None}]
+    world["http"].put(f"/api/business/library/songs/{world['song']}/isrc",
+                      json={"isrc": "GBABC2400012"})
+    assert world["http"].get(path).json()["tracks"][0]["isrc"] == "GBABC2400012"

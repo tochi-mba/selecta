@@ -245,6 +245,7 @@ BUSINESS_SCOPED = {
     ("PUT", "/api/business/orgs/{org_id}/setup"),
     ("GET", "/api/business/people"),
     ("DELETE", "/api/business/people/{user_id}"),
+    ("PUT", "/api/business/seats"),
     ("POST", "/api/business/invitations"),
     ("POST", "/api/business/invitations/{invitation_id}/revoke"),
     ("POST", "/api/business/invitations/accept"),

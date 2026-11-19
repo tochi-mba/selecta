@@ -76,6 +76,10 @@ class SetupBody(BaseModel):
     draft: dict[str, Any] | None = None
 
 
+class SeatsBody(BaseModel):
+    paid_seats: int = Field(ge=0, le=10_000)
+
+
 class PinBody(BaseModel):
     pin: str = Field(min_length=4, max_length=6, pattern=r"^\d{4,6}$")
 
@@ -218,6 +222,19 @@ def install_routes(
             to=invitation["email"], org_name=org_name, role=body.role, venues=venue_names,
             link=link, invitation_id=invitation["id"]))
         return {"invitation": invitation, "accept_url": link, "emailed": emailed}
+
+    @app.put("/api/business/seats")
+    def change_seats(
+        body: SeatsBody, request: Request, claims: Claims = Depends(current_claims)  # noqa: B008
+    ):
+        """Paid seats are billed (ADR-0447): refused unless business billing is on here. The
+        billing change hook (`billing_plan.CHANGES`) then brings Stripe's quantity along."""
+        with acting(request, claims) as (conn, actor, found, now):
+            if not decide(conn, found, "business.billing"):
+                raise HTTPException(
+                    status_code=403, detail={"code": "flag_off", "flag": "business.billing"}
+                )
+            return people.set_paid_seats(conn, actor, body.paid_seats, now=now)
 
     @app.post("/api/business/invitations/{invitation_id}/revoke")
     def revoke_invitation(

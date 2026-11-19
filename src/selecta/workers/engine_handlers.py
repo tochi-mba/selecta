@@ -310,6 +310,13 @@ def render_seam(job: Job, ctx: JobContext, *, ffmpeg: str = "ffmpeg") -> dict:
         versions=_versions(),
         settings={"style": style or "auto"},
     )
+    # Where native playback of A hands over to the clip and of B takes over after it, so a
+    # player that plays the songs and the clip as separate files can join them (ADR-0446).
+    provenance["cues"] = {
+        "a_source_start": round(choice.rendered.script.a_source_start, 4),
+        "b_source_end": round(choice.rendered.script.b_source_end, 4),
+        "seconds": round(choice.rendered.seconds, 4),
+    }
     artifact = ctx.publish("seam", input_hash, output, "seam.flac", provenance=provenance)
     ctx.progress(2, 2)
     script = choice.rendered.script

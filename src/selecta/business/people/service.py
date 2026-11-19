@@ -259,6 +259,33 @@ def seats(conn: Connection, workspace_id: str, *, now: float) -> dict[str, int]:
     return {"included": included, "paid": int(paid), "held": len(holders) + len(pending)}
 
 
+def set_paid_seats(conn: Connection, actor: BusinessActor, paid: int, *, now: float) -> dict:
+    """Owners and admins buy (or give back) extra seats. Never fewer than are in use: the
+    seats held beyond the included ones stay paid until someone is removed."""
+    guard.require(conn, actor, "business.seats.add")
+    if paid < 0 or paid > 10_000:
+        raise BusinessInvalid("Choose a number of seats from 0.", code="invalid_seats")
+    count = seats(conn, actor.workspace_id, now=now)
+    needed = max(count["held"] - count["included"], 0)
+    if paid < needed:
+        raise BusinessConflict(
+            f"{count['held']} seats are in use, so at least {needed} paid seats must stay.",
+            code="seats_in_use",
+        )
+    values = {"paid_seats": paid, "updated_at": now, "updated_by": actor.id}
+    updated = conn.execute(business_seats.update().where(
+        business_seats.c.workspace_id == actor.workspace_id).values(**values)).rowcount
+    if not updated:
+        conn.execute(business_seats.insert().values(
+            organisation_id=actor.organisation_id, workspace_id=actor.workspace_id, **values))
+    business_audit.record(
+        conn, actor, "seats.changed", organisation_id=actor.organisation_id,
+        workspace_id=actor.workspace_id, resource_type="seats",
+        resource_id=actor.organisation_id, metadata={"from": count["paid"], "to": paid},
+    )
+    return seats(conn, actor.workspace_id, now=now)
+
+
 # -- invitations ------------------------------------------------------------------------------
 
 
@@ -411,7 +438,9 @@ def accept(
         raise BusinessNotFound()
     if row["expires_at"] <= now:
         raise BusinessConflict("This invitation has expired. Ask for a new one.", code="expired")
-    if not email_verified or not _same_email(email, row["email"]):
+    if not email_verified or not (
+        _same_email(email, row["email"]) or domain_join_allowed(conn, row["workspace_id"], email)
+    ):
         raise BusinessForbidden(
             "This invitation was sent to a different email address.", code="wrong_email"
         )
@@ -477,6 +506,31 @@ def accept(
         resource_type="invitation", resource_id=row["id"],
     )
     return {"organisation_id": org_id, "workspace_id": workspace_id}
+
+
+def _domain(email: str | None) -> str:
+    return (email or "").rsplit("@", 1)[-1].strip().casefold() if email and "@" in email else ""
+
+
+def domain_join_allowed(conn: Connection, workspace_id: str, email: str | None) -> bool:
+    """ADR-0452: an invitation may be accepted from another address only when that address is on
+    a verified domain of the organisation's active SSO connection and the owner allowed domain
+    joins. Domains are verified through WorkOS (not built here), so with no such connection
+    this is always False."""
+    from selecta.business.people.schema import business_sso_connections as sso
+
+    domain = _domain(email)
+    if not domain:
+        return False
+    for row in conn.execute(sa.select(sso).where(
+        sso.c.workspace_id == workspace_id, sso.c.status == "active",
+        sso.c.allow_domain_join.is_(True),
+    )).mappings():
+        for item in row["domains"] or []:
+            if (isinstance(item, dict) and item.get("verified") is True
+                    and str(item.get("domain", "")).casefold() == domain):
+                return True
+    return False
 
 
 # -- offboarding ------------------------------------------------------------------------------
@@ -612,5 +666,6 @@ __all__ = [
     "remove",
     "revoke",
     "seats",
+    "set_paid_seats",
     "token_hash",
 ]

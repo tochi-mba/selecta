@@ -8,7 +8,8 @@
   conflicts the page has not resolved. A zone mid-song is never cut: the zone clock reads the
   new programme at its next block (ADR-0444).
 - `GET /api/business/library/songs` and `POST /api/business/library/explicit`
-  (`business.content_controls`): the organisation's songs with their explicit marks, and marking
+  (`business.content_controls`): the organisation's songs with title, artist and explicit mark,
+  and marking
   many at once in one transaction (each mark audited, as the one-song route does).
 - `PUT /api/business/venues/{venue_id}/licence` (`business.licensing`): record the venue's music
   licence attestation through `licensing.record_licence` (dates in the venue's own day).
@@ -185,24 +186,38 @@ def apply_schedule(conn: Connection, actor: BusinessActor, body: ApplyBody, now:
 
 
 def library_songs(conn: Connection, actor: BusinessActor) -> list[dict[str, Any]]:
+    """Every live upload of the organisation with its title and artist from the song catalogue
+    (`local_songs`, matched by content hash), else the upload's own name and no artist."""
     from selecta.business.content import store
+    from selecta.local_media.schema import local_songs
     from selecta.storage.schema import assets, upload_sessions
 
     flags = store.flags_map(conn, actor.organisation_id)
     rows = conn.execute(
-        sa.select(assets.c.id, upload_sessions.c.display_name)
+        sa.select(assets.c.id, assets.c.sha256, upload_sessions.c.display_name)
         .select_from(assets.outerjoin(upload_sessions, sa.and_(
             upload_sessions.c.id == assets.c.id,
             upload_sessions.c.workspace_id == assets.c.workspace_id)))
         .where(assets.c.workspace_id == actor.workspace_id, assets.c.deleted_at.is_(None))
-        .order_by(upload_sessions.c.display_name, assets.c.id)
         .limit(5000)
-    )
-    return [
-        {"id": row.id, "title": row.display_name or "Untitled", "artist": "",
-         "explicit": flags.get(row.id, "unknown")}
-        for row in rows
-    ]
+    ).all()
+    catalogue: dict[str, tuple[str | None, str | None]] = {}
+    hashes = sorted({row.sha256 for row in rows if row.sha256})
+    for start in range(0, len(hashes), 500):
+        for song in conn.execute(
+            sa.select(local_songs.c.content_sha256, local_songs.c.title, local_songs.c.artist)
+            .where(local_songs.c.workspace_id == actor.workspace_id,
+                   local_songs.c.content_sha256.in_(hashes[start:start + 500]),
+                   local_songs.c.deleted_at.is_(None))
+        ):
+            catalogue.setdefault(song.content_sha256, (song.title, song.artist))
+    songs = []
+    for row in rows:
+        title, artist = catalogue.get(row.sha256, (None, None))
+        songs.append({"id": row.id, "title": title or row.display_name or "Untitled",
+                      "artist": artist or "", "explicit": flags.get(row.id, "unknown")})
+    songs.sort(key=lambda song: (song["title"].casefold(), song["artist"].casefold(), song["id"]))
+    return songs
 
 
 def record_licence(conn: Connection, actor: BusinessActor, venue_id: str, body: LicenceBody,

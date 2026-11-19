@@ -29,6 +29,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 
+from selecta import flags
 from selecta.business import alerts, health, kiosk, offline, permits, zone_clock
 from selecta.business.access import BusinessForbidden, BusinessNotFound
 from selecta.identity.tokens import Claims
@@ -85,20 +86,22 @@ class PinIn(BaseModel):
 
 
 def storage_presign(client_factory: Callable[[], Any], buckets: Any) -> Presign:
-    """A `Presign` over the Cloud's object storage: only an uploaded original in the kiosk's own
-    workspace, for 5 minutes."""
+    """A `Presign` over the Cloud's object storage: an uploaded original or a rendered seam in
+    the kiosk's own workspace, for 5 minutes."""
     from selecta.storage.keys import Bucket, UnsafeKey, validate_key, workspace_of
     from selecta.storage.objects import R2Error
 
     def presign(workspace_id: str, key: str) -> str | None:
         try:
-            if validate_key(key) is not Bucket.ORIGINALS or workspace_of(key) != workspace_id:
+            if validate_key(key) not in (Bucket.ORIGINALS, Bucket.DERIVED):
+                return None
+            if workspace_of(key) != workspace_id:
                 return None
         except UnsafeKey:
             return None
         client = client_factory()
         try:
-            return client.presign_get(buckets.name(Bucket.ORIGINALS), key, 300)
+            return client.presign_get(buckets.name(validate_key(key)), key, 300)
         except R2Error:
             return None
         finally:
@@ -136,13 +139,15 @@ def install_routes(
     principal_for: Callable[..., Any],
     pepper: bytes = b"",
     presign: Presign | None = None,
-    horizon_for: HorizonFor = health.programme_horizon,
+    horizon_for: HorizonFor | None = None,
     zones: ZoneDirectory = SQL_ZONES,
     limiter: Limiter | None = None,
     keyring: permits.Keyring | None = None,
 ) -> None:
     limits = limiter or Limiter()
     ring = keyring or permits.default_keyring()
+    if horizon_for is None:
+        from selecta.business.horizon import planned_horizon as horizon_for
 
     def peppered() -> bytes:
         if len(pepper) < codes.MIN_PEPPER_BYTES:
@@ -405,9 +410,16 @@ def install_routes(
         by_id = {item["id"]: item for item in items}
         for segment in manifest.get("segments", []):
             extra = by_id.get(segment.get("id"), {})
-            for name in ("title", "artist", "song_index", "song_id"):
+            for name in ("title", "artist", "song_index", "song_id", "from_s"):
                 if name in extra:
                     segment[name] = extra[name]
+        if not flags.on("business.offline"):
+            # Offline-first is off: the next three songs only, and no permit to play offline.
+            manifest["segments"] = manifest.get("segments", [])[: offline.COMMITTED_COUNT]
+            manifest["offline"] = False
+            manifest["server_time"] = now
+            return manifest
+        manifest["offline"] = True
         # The signed bundle is what the kiosk trusts offline; these copies are for display only.
         manifest["offline_bundle"] = permits.sign(body, ring)
         manifest["issued_at"] = body["permit"]["issued_at"]

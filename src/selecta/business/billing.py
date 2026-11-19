@@ -197,7 +197,8 @@ def quantities_for(
         zones = venue.zones if venue.id not in caps else min(venue.zones, caps[venue.id])
         extra_zones += max(zones - INCLUDED_ZONES_PER_VENUE, 0)
     included_seats = INCLUDED_SEATS_PER_VENUE * len(venues)
-    extra_seats = max(org.staff_seats - included_seats, 0) if venues else 0
+    # Seats bought on the People page are billed even before anyone fills them (ADR-0452).
+    extra_seats = max(org.staff_seats - included_seats, org.paid_seats, 0) if venues else 0
     return {ITEM_VENUE: len(venues), ITEM_ZONE: extra_zones, ITEM_SEAT: extra_seats}
 
 

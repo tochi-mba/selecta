@@ -68,9 +68,9 @@
     },
     "business.offline": {
       "label": "Offline zone controls",
-      "about": "Kiosk offline manifests, idempotent command resync and device cache reports for business zones.",
+      "about": "Kiosk players keep about four hours of music saved ahead with a signed offline permit, so the music never stops when the venue internet drops; plus offline manifests, command resync and cache reports. Off, a player keeps only the next three songs and plays only while connected.",
       "default": false,
-      "requires": ["business.schedules"],
+      "requires": ["business.kiosk"],
       "routes": [
         "GET /api/business/zones/{zone_id}/offline-manifest",
         "POST /api/business/zones/{zone_id}/commands",
@@ -182,7 +182,8 @@
         "GET /api/business/people",
         "POST /api/business/invitations",
         "POST /api/business/invitations/{invitation_id}/revoke",
-        "DELETE /api/business/people/{user_id}"
+        "DELETE /api/business/people/{user_id}",
+        "PUT /api/business/seats"
       ],
       "modes": ["cloud"],
       "scope": "workspace",

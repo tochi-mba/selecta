@@ -54,6 +54,7 @@ def test_every_core_cloud_task_runs_cleanly_and_missing_secrets_are_named(sqlite
     assert names == {
         "business.zone_clock",
         "business.kiosk_alerts",
+        "business.kiosk_horizons",
         "business.billing",
         "business.licensing",
         "actions",

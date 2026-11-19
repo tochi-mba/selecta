@@ -1,7 +1,8 @@
 // People (ADR-0452 BZ-0452-04/05/09, ADR-0453 D2): who works here, pending invitations and seats.
 // Owners and admins manage everyone; a venue manager invites staff and viewers into free seats at
-// their venues. SelectaDJ does not email invitations yet, so inviting shows the link to copy and
-// send; removing someone signs them out of the organisation at once.
+// their venues. An invitation is emailed when email is set up, and the link is always shown to
+// copy too; owners and admins can buy a paid seat when none is free (business billing on).
+// Removing someone ends their access to the organisation at once; their own SelectaDJ stays.
 
 import { useState } from 'react';
 import { Skeleton } from '../../ui/controls';
@@ -33,7 +34,7 @@ export function PeoplePage({ venueId }: { venueId?: string }) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role>('staff');
   const [error, setError] = useState('');
-  const [link, setLink] = useState<{ email: string; url: string } | null>(null);
+  const [link, setLink] = useState<{ email: string; url: string; emailed: boolean } | null>(null);
   const [working, setWorking] = useState(false);
   const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
   const canInvite = roles.length > 0 && !readOnly && !offline && (org.role !== 'venue_manager' || Boolean(managerVenue));
@@ -45,7 +46,7 @@ export function PeoplePage({ venueId }: { venueId?: string }) {
     setWorking(true); setError(''); setLink(null);
     try {
       const made = await client.invite(org.id, { email: email.trim(), role, venue_ids: orgWide ? null : managerVenue ? [managerVenue] : venues.map((v) => v.id) });
-      setLink({ email: made.invitation.email, url: new URL(made.accept_url, window.location.origin).toString() });
+      setLink({ email: made.invitation.email, url: new URL(made.accept_url, window.location.origin).toString(), emailed: made.emailed });
       setEmail('');
       await people.reload();
     } catch (problem) {
@@ -58,11 +59,22 @@ export function PeoplePage({ venueId }: { venueId?: string }) {
     catch { setError("Couldn't withdraw the invitation. Try again."); }
     finally { setWorking(false); }
   };
+  const canBuySeats = (org.role === 'owner' || org.role === 'admin') && org.features['business.billing'] === true && !readOnly && !offline;
+  const seatsFull = Boolean(seats && seats.held >= seats.included + seats.paid);
+  const addSeat = async () => {
+    if (!seats) return;
+    setWorking(true); setError('');
+    try { await client.setPaidSeats(seats.paid + 1); await people.reload(); }
+    catch (problem) { setError((problem as Error).message || "Couldn't add a seat. Try again."); }
+    finally { setWorking(false); }
+  };
   const members = (people.data?.members ?? []).filter((member) => !venueId || member.venue_ids === null || member.venue_ids.includes(venueId));
   return <section className="biz biz-stack"><h1>People</h1>
     {people.loading && !people.data && <Skeleton variant="rows" lines={3} label="Loading people" />}
     {Boolean(people.error) && <p role="alert">Couldn't load people. <button type="button" onClick={() => { void people.reload(); }}>Retry</button></p>}
     {seats && <p className="biz-quiet">Seats: {seats.held} used of {seats.included + seats.paid} ({seats.included} included, {seats.paid} paid)</p>}
+    {seats && seatsFull && canBuySeats && <p>All seats are in use. <button type="button" disabled={working} onClick={() => { void addSeat(); }}>Add a paid seat</button> It is billed from today.</p>}
+    {seats && seatsFull && !canBuySeats && invitableRoles(org.role).length > 0 && <p className="biz-quiet">All seats are in use. An owner or admin can add a paid seat.</p>}
     <ul>{members.map((member) => <li key={member.id} className="biz-card">
       <strong>{member.name}</strong> ({member.email}): {roleWords(member.role)}
       {canRemove && member.role !== 'owner' && <button type="button" aria-label={`Remove ${member.name}`} disabled={working} onClick={() => setRemoving({ id: member.id, name: member.name })}>Remove</button>}
@@ -81,11 +93,11 @@ export function PeoplePage({ venueId }: { venueId?: string }) {
         {roles.map((option) => <option key={option} value={option}>{roleWords(option)}</option>)}
       </select></label>
       {managerVenue && !orgWide && <p>Access limited to {venues.find((v) => v.id === managerVenue)?.name ?? 'this venue'}.</p>}
-      <p className="biz-quiet">SelectaDJ doesn't email invitations yet. You'll get a link to send them yourself; it works for 7 days.</p>
-      <button type="submit" disabled={working}>{working ? 'Making the link' : 'Make an invitation link'}</button>
+      <p className="biz-quiet">We email them a link that works for 7 days, and show it here so you can send it yourself too.</p>
+      <button type="submit" disabled={working}>{working ? 'Inviting' : 'Invite'}</button>
     </form>}
     {link && <section className="biz-card" aria-label="Invitation link">
-      <p role="status">Send this link to {link.email}. They sign in with that email address to join.</p>
+      <p role="status">{link.emailed ? `We emailed ${link.email} an invitation. You can also send them this link.` : `We couldn't email ${link.email}. Send them this link yourself.`} They sign in with that email address to join.</p>
       <p><input readOnly aria-label="Invitation link" value={link.url} onFocus={(event) => event.currentTarget.select()} /></p>
       <button type="button" onClick={() => { void navigator.clipboard?.writeText(link.url); }}>Copy link</button>
     </section>}
@@ -93,7 +105,7 @@ export function PeoplePage({ venueId }: { venueId?: string }) {
     {error && <p role="alert">{error}</p>}
     {removing && <ConfirmDialog
       title={`Remove ${removing.name} from this organisation?`}
-      body="They lose access to its venues at once and are signed out. Kiosks they paired keep playing. You can invite them again any time."
+      body="They lose access to its venues at once, and their devices here are signed out. Their own SelectaDJ is not affected, and kiosks they paired keep playing. You can invite them again any time."
       destructive
       onConfirm={async () => {
         setWorking(true); setError('');

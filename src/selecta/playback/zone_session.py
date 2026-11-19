@@ -157,6 +157,30 @@ class NotAKiosk(PlaybackError):
     code = "not_a_kiosk"
 
 
+class SpeakerOffline(PlaybackError):
+    """A transport press for a zone whose kiosk is unreachable (ADR-0446). Refused at once and
+    never queued, so a skip can't fire an hour later; the kiosk plays its saved music."""
+
+    code = "speaker_offline"
+
+
+# Transport presses only mean something live; state changes (volume, steering, programme)
+# still apply on the server and reach the kiosk when it is back.
+TRANSPORT_COMMANDS = frozenset({"play", "pause", "skip", "seek"})
+
+
+def _kiosk_unreachable(conn: Connection, session: Session, device_id: str, now: float) -> bool:
+    speaker = session.active_device_id
+    if speaker is None or speaker == device_id or session.lease_live(now):
+        return False
+    principal = conn.execute(
+        sa.select(devices.c.principal).where(
+            devices.c.workspace_id == session.workspace_id, devices.c.id == speaker
+        )
+    ).scalar()
+    return principal == "kiosk"
+
+
 @dataclass(frozen=True)
 class ZoneHeartbeatResult:
     outcome: HeartbeatOutcome
@@ -541,6 +565,11 @@ def zone_submit_command(
         require_signed_in(conn, workspace_id, device_id)
         touch_device(conn, device_id, now)
         session = lock_session(conn, workspace_id, now, zone.id)
+        if command in TRANSPORT_COMMANDS and _kiosk_unreachable(conn, session, device_id, now):
+            raise SpeakerOffline(
+                f"The {zone.name} player is offline. It's still playing saved music. Use the "
+                "player's own screen, or try again when it's back."
+            )
         return submit_command_in(
             conn,
             session,
@@ -868,6 +897,8 @@ __all__ = [
     "zone_heartbeat",
     "zone_reconnect",
     "zone_submit_command",
+    "SpeakerOffline",
+    "TRANSPORT_COMMANDS",
     "zone_take_over",
     "zone_view",
     "zones_overview",
