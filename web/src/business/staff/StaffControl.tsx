@@ -59,7 +59,7 @@ export function StaffControl({ venueId }: { venueId: string }) {
   // Play here is offered when the zone is silent and this browser can reach the zone routes; the
   // server asks first (confirm_needed) when a kiosk is still playing.
   const speaking = speaker.phase === 'speaking' || speaker.phase === 'starting';
-  const playHere = !disabled && !offline && api && !speaking && (speaker.deviceId() === null || zone.speaker_device_id !== speaker.deviceId())
+  const playHere = !disabled && !offline && api && businessOn(org.features, 'business.zones') && !speaking && (speaker.deviceId() === null || zone.speaker_device_id !== speaker.deviceId())
     ? async () => { if ((await speaker.playHere(false)) === 'speaking') await refresh(); } : null;
   const confirmPlayHere = async () => { if ((await speaker.playHere(true)) === 'speaking') await refresh(); };
   return <section className="biz biz-stack"><h1>Staff controls: {venue.name}</h1>

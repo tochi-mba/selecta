@@ -26,6 +26,8 @@ CLIENT_FILES = (
     "web/src/devices/zonePlayback.ts",
     "web/src/devices/useZoneSpeaker.ts",
     "web/src/business/start/StartPage.tsx",
+    "web/src/business/library/CopyFromPersonal.tsx",
+    "web/src/admin/PilotsPage.tsx",
 )
 COMMENTS = re.compile(r"/\*.*?\*/|(?<![:'\"`])//[^\n]*", re.S)
 SLOT = "\u0001"

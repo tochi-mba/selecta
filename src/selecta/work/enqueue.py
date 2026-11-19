@@ -51,6 +51,8 @@ class JobSpec:
     created_by: str | None = None
     entitlement_version: int | None = None
     flag_id: str | None = CATALOGUE_FLAG
+    zone_id: str | None = None
+    """The business zone the work is for (ADR-0443): zones take turns, boosts count per zone."""
     pool: str | None = None
     """None: the catalogue's pool. The local app gives analysis a pool of its own, because its
     analysis worker is a separate process from its seam worker (SC-0394-04)."""
@@ -132,6 +134,7 @@ def values_for(spec: JobSpec, state: JobState, now: float) -> dict[str, Any]:
         "created_by": spec.created_by,
         "flag_id": flag_id,
         "parent_id": spec.parent_id,
+        "zone_id": spec.zone_id,
         "lease_generation": 0,
         "progress_done": 0.0,
         "created_at": now,

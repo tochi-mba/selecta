@@ -16,8 +16,9 @@ from sqlalchemy.engine import Connection, Engine
 
 from selecta import flags
 from selecta.admin import http
+from selecta.authz import audit as authz_audit
 from selecta.authz.check import authorize
-from selecta.business import pilot
+from selecta.business import pilot, pilot_admin
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now
 
@@ -28,6 +29,12 @@ class PilotVenue(BaseModel):
     country: str = Field(min_length=2, max_length=2)
     address: dict[str, Any] | None = None
     zones: list[str] = Field(default_factory=list, max_length=50)
+
+
+class PilotAction(BaseModel):
+    reason: str = Field(min_length=3, max_length=500)
+    ends_at: float | None = None
+    allowance: dict[str, int] | None = None
 
 
 class PilotBody(BaseModel):
@@ -59,16 +66,76 @@ def install_routes(
                 raise http.CommandRefused(
                     403, "flag_off", f"{flag.label} is turned off in this build.", flag=flag.id
                 )
-            return pilot.create_pilot(
+            now = int(db_now(conn))
+            made = pilot.create_pilot(
                 conn,
                 owner_user_id=body.owner_user_id,
                 org_name=body.org_name,
                 venues=[venue.model_dump() for venue in body.venues],
                 pilot_days=body.pilot_days,
-                now=int(db_now(conn)),
+                now=now,
             )
+            made["pilot_id"] = pilot_admin.record(
+                conn, organisation_id=made["org"]["id"], name=body.org_name,
+                owner_user_id=body.owner_user_id, venues=len(made["venues"]),
+                zones=max(3, len(made["zones"])), ends_at=made["org"]["pilot_until"],
+                created_by=actor.user_id, now=now,
+            )
+            return made
 
         return {"pilot": http.run(engine, actor, provision)}
+
+    def pilots_on(conn: Connection, actor) -> None:
+        authorize(conn, actor, "business.pilots.create")
+        if not flags.on("business.pilots"):
+            flag = flags.registry()["business.pilots"]
+            raise http.CommandRefused(
+                403, "flag_off", f"{flag.label} is turned off in this build.", flag=flag.id
+            )
+
+    @app.get("/api/admin/business/pilots")
+    def list_business_pilots(
+        request: Request, claims: Claims = Depends(current_claims)  # noqa: B008
+    ) -> dict[str, Any]:
+        """Every pilot with its use, allowance and end date (ADR-0453 S8)."""
+        actor = http.staff_actor(engine, request, claims)
+
+        def read(conn: Connection) -> list:
+            pilots_on(conn, actor)
+            return pilot_admin.list_pilots(conn, float(db_now(conn)))
+
+        return {"pilots": http.run(engine, actor, read)}
+
+    @app.post("/api/admin/business/pilots/{pilot_id}/{action}")
+    def change_business_pilot(
+        pilot_id: str,
+        action: str,
+        body: PilotAction,
+        request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ) -> dict[str, Any]:
+        """Extend, change the allowance, convert or end a pilot, with a reason (audited)."""
+        actor = http.staff_actor(engine, request, claims)
+
+        def change(conn: Connection) -> dict:
+            pilots_on(conn, actor)
+            if action not in ("extend", "allowance", "convert", "end"):
+                raise http.CommandRefused(404, "not_found", "There's no such pilot action.")
+            try:
+                changed = pilot_admin.act(
+                    conn, pilot_id, action, body.model_dump(), float(db_now(conn))
+                )
+            except pilot_admin.PilotRefused as error:
+                status = 404 if error.code == "not_found" else 422
+                raise http.CommandRefused(status, error.code, str(error)) from error
+            authz_audit.record(
+                conn, action=f"business.pilot.{action}", result="success",
+                actor_id=actor.user_id, resource_type="business_pilot", resource_id=pilot_id,
+                workspace_id=changed["org_id"], reason=body.reason,
+            )
+            return changed
+
+        return {"pilot": http.run(engine, actor, change)}
 
 
 __all__ = ["install_routes"]

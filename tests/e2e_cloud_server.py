@@ -53,6 +53,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import cloud_db  # noqa: E402
 import e2e_cloud_authkit  # noqa: E402
+import e2e_cloud_business  # noqa: E402
 import e2e_cloud_flags  # noqa: E402
 import e2e_cloud_kiosk  # noqa: E402
 import e2e_cloud_staff  # noqa: E402
@@ -190,7 +191,11 @@ def build(port: int):
     # them and no hosted page reads the flag. `cloud.local_first` stays off: those specs select
     # the shell for their own person only.
     wanted = os.environ.get("SELECTA_FLAGS", "").strip()
-    os.environ["SELECTA_FLAGS"] = f"{wanted} +cloud.local_media".strip()
+    # The business flags too, each with a last "0 percent" rule so only the business specs'
+    # own people see them (e2e_cloud_business).
+    os.environ["SELECTA_FLAGS"] = (
+        f"{wanted} +cloud.local_media {e2e_cloud_business.build_flags()}".strip()
+    )
     selecta_flags.use(None)  # read again, in case anything asked before this point
     base = f"http://127.0.0.1:{port}"
     home = make_home("selecta-cloud-e2e-")
@@ -289,6 +294,7 @@ def build(port: int):
     e2e_cloud_staff.install(app, engine)
     e2e_cloud_authkit.install(app, authkit)
     e2e_cloud_flags.install(app, engine, lambda user: account_of(user)["user"]["id"])
+    e2e_cloud_business.install(app, engine, lambda user: account_of(user)["user"]["id"])
     e2e_cloud_kiosk.install(
         app,
         engine,

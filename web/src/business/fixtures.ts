@@ -44,7 +44,7 @@ export function org(extra: Partial<Org> = {}): Org {
     seats: { included: 9, paid: 1, held: 8 },
     features: {
       'business.orgs': true, 'business.workspaces': true, 'business.console': true, 'business.venue_view': true,
-      'business.staff_controls': true, 'business.kiosk': true, 'business.schedules': true, 'business.content_controls': true,
+      'business.staff_controls': true, 'business.zones': true, 'business.kiosk': true, 'business.schedules': true, 'business.content_controls': true,
       'business.rooms': true, 'business.roles': true, 'business.billing': true, 'business.licensing': true, 'business.devices': true,
     },
     feature_locks: {},

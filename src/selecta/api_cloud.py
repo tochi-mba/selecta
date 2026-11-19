@@ -45,6 +45,7 @@ from selecta.business import admin_routes as business_admin_routes
 from selecta.business import billing_routes as business_billing_routes
 from selecta.business import controls_wiring as business_controls
 from selecta.business import entitlement_routes as business_entitlement_routes
+from selecta.business import library_copy as business_library_copy
 from selecta.business import licensing_routes as business_licensing_routes
 from selecta.business import playlog_routes as business_playlog_routes
 from selecta.business import rollout_routes as business_rollout_routes
@@ -850,6 +851,9 @@ def create_cloud_app(
         app, engine=engine, current_claims=current_claims, principal_for=_principal
     )
     business_start_routes.install_routes(  # ADR-0453 S1: /business/start's pilot contact form
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
+    business_library_copy.install_routes(  # ADR-0453 D6 step 6: copy, never move
         app, engine=engine, current_claims=current_claims, principal_for=_principal
     )
     # Play here (ADR-0443): what a staff browser plays once it holds a zone's lease.

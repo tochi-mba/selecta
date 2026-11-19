@@ -92,7 +92,7 @@ class Player:
 
 @pytest.fixture
 def on():
-    flags.use("+business.orgs +business.kiosk +business.offline")
+    flags.use("+business.orgs +business.kiosk +business.offline +business.zones")
     yield
     flags.use(None)
 
@@ -684,7 +684,7 @@ def test_the_permit_carries_a_payment_stop_and_the_earliest_stop_wins(party, ven
 
 def test_with_business_offline_off_the_kiosk_gets_three_songs_and_no_permit(party, venue):
     player = paired(party, venue)
-    flags.use("+business.orgs +business.kiosk")
+    flags.use("+business.orgs +business.kiosk +business.zones")
     body = player.client.get("/api/kiosk/horizon").json()
     assert body["offline"] is False
     assert "offline_bundle" not in body

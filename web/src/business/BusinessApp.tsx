@@ -203,6 +203,7 @@ export default function BusinessApp({ api, route, account, onLeaveToPersonal, to
     client,
     bizApi,
     api,
+    personalWorkspaceId: account.workspace.id,
     now,
     offline,
     updatedAt,
@@ -211,7 +212,7 @@ export default function BusinessApp({ api, route, account, onLeaveToPersonal, to
     readOnly: isReadOnly(overview.org, now),
     refresh,
     go,
-  }, [overview, client, bizApi, api, now, offline, updatedAt, stream, load, refresh, go]);
+  }, [overview, client, bizApi, api, account.workspace.id, now, offline, updatedAt, stream, load, refresh, go]);
 
   // With `business.workspaces` off, business pages are unreachable: CloudApp shows personal.
   if (!on || !current || current.page === 'start') return null;

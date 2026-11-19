@@ -24,6 +24,9 @@ pytest_plugins = ("cloud_party",)
 
 @pytest.fixture
 def venue(party):
+    from selecta import flags
+
+    flags.use("+business.orgs +business.zones")  # zone routes ship dark (the conftest resets)
     with transaction(party.engine) as conn:
         now = int(db_now(conn))
         alice = conn.execute(

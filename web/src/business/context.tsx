@@ -28,6 +28,8 @@ export type BusinessCtx = {
   bizApi?: BusinessApi;
   /** The signed-in Api helper, for the zone playback routes (Play here, ADR-0443). */
   api?: Api;
+  /** The signed-in person's own workspace, for copying their music in (never moved). */
+  personalWorkspaceId?: string;
 };
 
 export const BusinessContext = createContext<BusinessCtx | null>(null);

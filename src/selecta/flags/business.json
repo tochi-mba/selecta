@@ -48,7 +48,29 @@
         "DELETE /api/business/crates/{crate_id}",
         "GET /api/business/orgs/{org_id}/overview",
         "PATCH /api/business/orgs/{org_id}",
-        "PUT /api/business/orgs/{org_id}/setup"
+        "PUT /api/business/orgs/{org_id}/setup",
+        "POST /api/business/library/copy-from-personal"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.zones": {
+      "label": "Zone playback",
+      "about": "One playback session per business zone: a kiosk or a staff member's browser plays a zone, remotes steer the zones in their scope, and the home kiosk takes its zone back at a song boundary.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": [
+        "GET /api/zones/holding",
+        "GET /api/zones/playback",
+        "GET /api/zones/{zone_id}/playback/session",
+        "POST /api/zones/{zone_id}/playback/heartbeat",
+        "POST /api/zones/{zone_id}/playback/take-over",
+        "POST /api/zones/{zone_id}/playback/reconnect",
+        "POST /api/zones/{zone_id}/playback/commands",
+        "POST /api/zones/{zone_id}/playback/commands/{command_id}/ack",
+        "POST /api/zones/{zone_id}/playback/hand-back"
       ],
       "modes": ["cloud"],
       "scope": "workspace",

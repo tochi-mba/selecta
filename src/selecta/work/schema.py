@@ -84,6 +84,9 @@ jobs = sa.Table(
     sa.Column("created_by", sa.String(64)),
     sa.Column("flag_id", sa.String(64)),
     sa.Column("parent_id", Id),
+    # The business zone this work is for (ADR-0443 BZ-0443-10): zones of one organisation take
+    # turns inside its account, and deadline boosts are counted per zone. None outside zones.
+    sa.Column("zone_id", Id),
     sa.Column("lease_generation", sa.Integer, nullable=False, server_default=sa.text("0")),
     sa.Column("error_class", sa.String(20)),
     sa.Column("error_detail", sa.Text),

@@ -132,6 +132,8 @@ STAFF_ONLY = {
     ("POST", "/api/admin/takedowns/{notice_id}/{command}"),
     ("POST", "/api/admin/upload-restrictions/{workspace_id}/lift"),
     ("POST", "/api/admin/business/pilots"),
+    ("GET", "/api/admin/business/pilots"),
+    ("POST", "/api/admin/business/pilots/{pilot_id}/{action}"),
     ("POST", "/api/admin/business/orgs/{org_id}/billing/credit"),
     ("POST", "/api/admin/business/orgs/{org_id}/billing/refund"),
     # ADR-0448 SLO credit decisions: staff session plus business.billing.refund.
@@ -274,6 +276,7 @@ BUSINESS_SCOPED = {
     ("GET", "/api/business/people"),
     ("DELETE", "/api/business/people/{user_id}"),
     ("PUT", "/api/business/seats"),
+    ("POST", "/api/business/library/copy-from-personal"),
     ("POST", "/api/business/invitations"),
     ("POST", "/api/business/invitations/{invitation_id}/revoke"),
     ("POST", "/api/business/invitations/accept"),
@@ -519,6 +522,11 @@ def world(tmp_path, monkeypatch):
     monkeypatch.setattr(storage_api, "R2Client", lambda *_args, **_kwargs: objects)
     monkeypatch.setenv("SELECTA_CHECKOUT_CONSENT_VERSION", CONSENT)
     monkeypatch.delenv("SELECTA_STRIPE_SECRET_KEY", raising=False)
+    # Zone playback routes ship dark behind `business.zones`; on here, so the matrix proves
+    # their workspace checks rather than the flag guard (the conftest resets flags after).
+    from selecta import flags
+
+    flags.use("+business.orgs +business.zones")
 
     engine = make_engine(f"sqlite:///{tmp_path / 'cloud.sqlite'}")
     migrate.upgrade(engine)
