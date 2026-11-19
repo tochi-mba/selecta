@@ -21,7 +21,7 @@ import { clearVisualState, createVisualState, migrateSpectrumShape, paintVisualF
 import { createFeatureTracker } from './visualizer/features';
 import { createFrameSource, gridOf } from './visualizer/source';
 import { ViewProps } from './shared';
-import { PlayedTransitions, playedKey } from './liveTransitions';
+import { PlayedTransitions, playedKey, StemSurfacesContext } from './liveTransitions';
 import { FirstHandoff } from './FirstHandoff';
 import { Strip, StripPlaceholder } from './NowStrip';
 
@@ -530,6 +530,7 @@ function TransitionTruth({ seam, ready, names, live = false, pair }: { seam: Vie
   const state = seam?.state;
   const rendered = state?.status === 'ready';
   const scheduled = useContext(PlayedTransitions)[pair ?? ''];
+  const stems = useContext(StemSurfacesContext);
   // a browser mix renders nothing ahead: it says what this device has scheduled, or what it will pick
   if (live && state?.status === 'none') {
     return (
@@ -545,6 +546,8 @@ function TransitionTruth({ seam, ready, names, live = false, pair }: { seam: Vie
             {state.why && <p className="hint">{state.why}</p>}
           </>
         )}
+        {pair && stems?.readiness(pair)}
+        {stems?.listenNotice}
       </div>
     );
   }

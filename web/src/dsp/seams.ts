@@ -22,13 +22,16 @@ import {
   fadeOutPoints,
 } from './crossfade';
 import type { TempoEstimate } from './analysis/tempo';
+import type { StemName, StemSeamPlan } from './stemMoves/types';
 
 export const SEAMS_IMPLEMENTATION = 'scripted-seam-windows-v1';
 
 /** `SHORTEST_STAY` from src/selecta/mix.py: a transition never leaves a song earlier. */
 export const LEAVE_AFTER_SECONDS = 30;
-/** The longest prepared seam window a schedule may ask a device to hold. */
-export const MAX_WINDOW_SECONDS = 16;
+/** The longest seam overlap a schedule may ask for: 16 bars at 120 BPM, local mode's usual blend
+ * (planner/choose.py gives most families 8 or 16 bars). A stretched clip covering it plus B's ramp
+ * back stays inside the stretch's own 60 s input limit. */
+export const MAX_WINDOW_SECONDS = 32;
 /** Below this tempo confidence a beatmatched seam is refused in favour of a fade. */
 export const MIN_BEATMATCH_CONFIDENCE = 0.5;
 /** The default beatmatched crossfade length when the spec names none. */
@@ -105,9 +108,54 @@ export interface SeamSchedule {
   bars?: number;
   /** Why SelectaDJ picked this move, when the seam asked it to pick ('auto'). */
   why?: string;
-  /** B's playback speed while it beat-matches A, then eased back to 1 (seamScript.ts varispeed):
-   * held at `value` until `holdUntil`, ramped linearly to 1 by `rampUntil`, both on A's timeline. */
-  rate?: { value: number; holdUntil: number; rampUntil: number };
+  /** B enters stretched to A's tempo without changing its pitch (seamScript.ts, stretch.ts). */
+  stretch?: SeamStretch;
+  /** A stem move (stemSchedule.ts): the recipe's plan and, once prepared, its per-stem audio. */
+  stems?: SeamStems;
+}
+
+/** A stem move's plan (stemMoves/types.ts) and the stems it plays. The events of the schedule
+ * carry the full mixes' hand-offs; the plan's layers carry every stem's own curves. */
+export interface SeamStems {
+  plan: StemSeamPlan;
+  /** Attached by the seam provider just before the schedule is played; never kept in a record. */
+  buffers?: StemBuffers;
+}
+
+/** Per-stem audio, two channels each. A's stems are A's own audio from song second `origin`;
+ * B's are already stretched onto A's bars, so B's sample 0 plays at A-timeline second `at`. */
+export interface StemBuffers {
+  sampleRate: number;
+  a: { origin: number; stems: Partial<Record<StemName, Float32Array[]>> };
+  b: { at: number; stems: Partial<Record<StemName, Float32Array[]>> };
+}
+
+/** A stretched entry, as the Python engine's `in_context` plays one: native A, a pre-rendered
+ * clip of B stretched to A's tempo, then native B. The clip starts with B's 'start' event at
+ * `sourceFrom` and holds `ratio` until `holdUntil`, eases linearly back to 1 by `rampUntil`,
+ * and hands over to native B at `handoverAt` (B's own `handoverSourceAt`) with a 30 ms
+ * crossfade. Times named `...Until`/`...At` are on A's timeline; `source...` are B's seconds. */
+export interface SeamStretch {
+  /** B's tempo ratio through the overlap: A's tempo over B's (new tempo over old). */
+  ratio: number;
+  holdUntil: number;
+  rampUntil: number;
+  sourceFrom: number;
+  /** Seconds of B the clip plays up to the handover: `handoverSourceAt - sourceFrom`. */
+  inputSeconds: number;
+  handoverAt: number;
+  handoverSourceAt: number;
+  /** The rendered clip, attached by the seam provider just before the schedule is played; it is
+   * never kept in a seam record. */
+  clip?: StretchedClip;
+}
+
+/** B's stretched entry clip. `skipSeconds` of lead-in come before the clip's 'start' point, so
+ * the stretch's first frame is warmed up before anyone hears it. */
+export interface StretchedClip {
+  channels: Float32Array[];
+  sampleRate: number;
+  skipSeconds: number;
 }
 
 /** A move the browser tier could not do honestly, and the documented fallback it took. */

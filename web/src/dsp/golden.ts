@@ -18,7 +18,9 @@ import { estimateKey } from './analysis/key';
 import { detectOnsets } from './analysis/onsets';
 import { estimateTempo } from './analysis/tempo';
 import { integratedLoudness, truePeakDb } from './loudness';
+import { fft } from './fft';
 import { scheduleSeam, type SeamSpec, type TrackTiming } from './seams';
+import { timeStretch } from './stretch';
 
 export const GOLDEN_IMPLEMENTATION = 'golden-harness-v1';
 
@@ -264,4 +266,128 @@ export function loadGoldenSet(json: string): GoldenSet {
     }
   }
   return parsed;
+}
+
+// --- Stretch: the browser WSOLA against the Python engine's stretch ---------------------------
+//
+// The Python engine stretches with pedalboard's Rubber Band (src/selecta/render/dsp.py
+// stretch_to_warp), so a sample-exact match is neither expected nor wanted. What must match is
+// what a listener hears: the length, where each hit lands, the pitch, and how sharp hits stay.
+// The measurements below are the same formulas the reference was measured with.
+
+/** One stretch the Python engine ran over the shared synth (a 120 BPM click track for timing
+ * and smearing, a 220 Hz tone for pitch, both 8 s at 44.1 kHz), and what it measured. */
+export interface StretchReference {
+  ratio: number;
+  inputFrames: number;
+  lengthFrames: number;
+  onsetsS: number[];
+  spreadMs: number;
+  dominantHz: number;
+}
+
+export interface StretchTolerances {
+  /** How far each hit may land from the Python engine's, in ms. */
+  onsetMs: number;
+  /** How far the dominant pitch may sit from the Python engine's, as a share (0.005 = 0.5%). */
+  pitchShare: number;
+  /** How much wider than the Python engine's a hit may smear, in ms. */
+  spreadMs: number;
+}
+
+export const STRETCH_CLICKS: SynthElement[] = [{ type: 'clicks', bpm: 120, durS: 8, amplitude: 0.8 }];
+export const STRETCH_TONE: SynthElement[] = [{ type: 'tone', freqHz: 220, amplitude: 0.3, durS: 8 }];
+
+function envelopeMs(signal: Float32Array, sampleRate: number): Float32Array {
+  const width = Math.floor(sampleRate / 1000);
+  const out = new Float32Array(Math.floor(signal.length / width));
+  for (let block = 0; block < out.length; block += 1) {
+    let sum = 0;
+    for (let index = block * width; index < (block + 1) * width; index += 1) sum += signal[index] * signal[index];
+    out[block] = Math.sqrt(sum / width);
+  }
+  return out;
+}
+
+/** Each hit: the strongest 1 ms block in every 250 ms run above 5 percent of the loudest, then
+ * the first block in the 30 ms before it that reaches half that peak. */
+export function stretchOnsets(signal: Float32Array, sampleRate: number): number[] {
+  const env = envelopeMs(signal, sampleRate);
+  let loudest = 0;
+  for (const value of env) loudest = Math.max(loudest, value);
+  const out: number[] = [];
+  let ms = 0;
+  while (ms < env.length) {
+    if (env[ms] < 0.05 * loudest) {
+      ms += 1;
+      continue;
+    }
+    let top = ms;
+    for (let at = ms; at < Math.min(env.length, ms + 250); at += 1) if (env[at] > env[top]) top = at;
+    let first = Math.max(0, top - 30);
+    while (env[first] < 0.5 * env[top]) first += 1;
+    out.push(first / 1000);
+    ms = top + 250;
+  }
+  return out;
+}
+
+/** The widest hit: 1 ms blocks above a tenth of the hit's own peak, from 5 ms before its onset. */
+export function stretchSpreadMs(signal: Float32Array, sampleRate: number, onsets: number[]): number {
+  const env = envelopeMs(signal, sampleRate);
+  let worst = 0;
+  for (const onset of onsets) {
+    const from = Math.max(0, Math.round(onset * 1000) - 5);
+    const to = Math.min(env.length, Math.round(onset * 1000) - 5 + 120);
+    let peak = 0;
+    for (let ms = from; ms < to; ms += 1) peak = Math.max(peak, env[ms]);
+    let wide = 0;
+    for (let ms = from; ms < to; ms += 1) if (env[ms] > 0.1 * peak) wide += 1;
+    worst = Math.max(worst, wide);
+  }
+  return worst;
+}
+
+/** The dominant frequency of the middle 16384 samples: Hann window, FFT, parabolic peak. */
+export function dominantHz(signal: Float32Array, sampleRate: number): number {
+  const size = 16384;
+  const start = Math.floor((signal.length - size) / 2);
+  const real = new Float64Array(size);
+  const imag = new Float64Array(size);
+  for (let index = 0; index < size; index += 1) real[index] = signal[start + index] * (0.5 - 0.5 * Math.cos((2 * Math.PI * index) / size));
+  fft(real, imag);
+  const magnitude = (bin: number) => Math.hypot(real[bin], imag[bin]);
+  let peak = 1;
+  for (let bin = 2; bin < size / 2 - 1; bin += 1) if (magnitude(bin) > magnitude(peak)) peak = bin;
+  const [a, b, c] = [Math.log(magnitude(peak - 1)), Math.log(magnitude(peak)), Math.log(magnitude(peak + 1))];
+  return ((peak + (0.5 * (a - c)) / (a - 2 * b + c)) * sampleRate) / size;
+}
+
+/** Stretch the shared synth with the browser's WSOLA and compare it with the Python engine's
+ * stretch of the same audio, one row per measurement. */
+export function compareStretch(reference: StretchReference, tolerances: StretchTolerances, sampleRate = 44100): GoldenRow[] {
+  const name = `stretch-${reference.ratio}`;
+  const clicks = synthesize(STRETCH_CLICKS, sampleRate, 8);
+  const tone = synthesize(STRETCH_TONE, sampleRate, 8);
+  const stretched = timeStretch([clicks, clicks.slice()], sampleRate, reference.ratio);
+  const pitched = timeStretch([tone], sampleRate, reference.ratio);
+  if (stretched.status !== 'ready' || pitched.status !== 'ready') {
+    return [exactRow(name, 'stretched', 'ready', stretched.status === 'ready' ? pitched.status : stretched.status)];
+  }
+  const out = stretched.channels[0];
+  const onsets = stretchOnsets(out, sampleRate);
+  const rows: GoldenRow[] = [
+    exactRow(name, 'inputFrames', String(reference.inputFrames), String(clicks.length)),
+    numberRow(name, 'lengthFrames', reference.lengthFrames, out.length, 0),
+    numberRow(name, 'onsetCount', reference.onsetsS.length, onsets.length, 0),
+  ];
+  if (onsets.length === reference.onsetsS.length) {
+    const deltas = onsets.map((onset, index) => Math.abs(onset - reference.onsetsS[index]) * 1000);
+    rows.push(numberRow(name, 'worstOnsetMs', 0, Math.max(...deltas), tolerances.onsetMs));
+  }
+  const pitch = dominantHz(pitched.channels[0], sampleRate);
+  rows.push(numberRow(name, 'dominantHz', reference.dominantHz, pitch, reference.dominantHz * tolerances.pitchShare));
+  const spread = stretchSpreadMs(out, sampleRate, onsets);
+  rows.push({ name, metric: 'spreadMs', expected: reference.spreadMs, actual: spread, delta: spread - reference.spreadMs, pass: spread <= reference.spreadMs + tolerances.spreadMs });
+  return rows;
 }

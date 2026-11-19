@@ -7,6 +7,12 @@
  * the local player reads it). Every schedule it hands out is recorded, so a surface and the
  * browser tests can name what was scheduled, never what was heard.
  *
+ * Stretched entries (BF-0459-05): when the script asks for B to be stretched to A's tempo, the
+ * provider renders that clip (B's entry window, along the schedule's ramp) before handing the
+ * schedule over, off-thread in the worker provider. If the stretch fails or runs out of time, the
+ * seam is scripted again without it and the schedule says why, so nothing claims a stretch that
+ * will not play. Records never keep the rendered clip.
+ *
  * Mixed-source seams (ADR-0465): a seam joins a device track and a hosted track only when the
  * capability record says both paths are seam-safe; otherwise it is the plain fade with the
  * reason recorded.
@@ -17,14 +23,24 @@ import { DEFAULT_HORIZON_S, WorkerBudget, workerCalibrationState, WORKER_CALIBRA
 import { estimateTempo } from './analysis/tempo';
 import type { AnalysisResponse } from './workers/analysisWorker';
 import { analyseInWorker, spawnAnalysisWorker } from './workers/spawn';
-import { fadeSchedule, type SeamSchedule, type TrackTiming } from './seams';
-import { scriptSeam, type Ability, type SeamAbilities } from './seamScript';
+import { fadeSchedule, type SeamSchedule, type StretchedClip, type TrackTiming } from './seams';
+import { scriptSeam, type Ability, type ScriptRequest, type SeamAbilities } from './seamScript';
+import { isStemMove, withStemMove, type StemReading, type StemStretcher } from './stemSchedule';
+import { rampCurve, timeStretch } from './stretch';
+import type { StretchRamp } from './stretchLimits';
+import { spawnStretchWorker, stretchInWorker, STRETCH_TIMEOUT_MS } from './workers/stretchSpawn';
 
 /** At most this much of each song is analysed for one seam. */
 export const ANALYSE_SECONDS = 60;
 /** An onset within this distance of a grid line votes for that phase. */
 const PHASE_TOLERANCE_SECONDS = 0.03;
 const PHASE_STEPS = 64;
+
+/** Lead-in and tail rendered around a stretched clip, so the stretch's edge frames are never
+ * heard; the scheduler skips the lead-in and hands over before the tail. */
+export const CLIP_CONTEXT_SECONDS = 0.1;
+/** The clip must reach this far past the handover for the 30 ms crossfade into native B. */
+const HANDOVER_MARGIN_SECONDS = 0.05;
 
 export type MusicSource = 'device' | 'hosted';
 /** The seam settings a mix item carries (api.ts SeamSettings), as far as the browser reads them. */
@@ -144,9 +160,58 @@ export type SeamProviderOptions = {
   onPlanned?(record: SeamRecord): void;
   /** The moves this account has on, read when each seam is planned; every move when absent. */
   allowed?(): readonly string[] | undefined;
+  /** Stem moves (stemSchedule.ts): the prefetcher's cache and the mix's stem settings. Without
+   * it no stem move is weighed. Only the worker provider plays them. */
+  stems?: StemReading;
 };
 
 export type SeamRequestLike = { fromIndex: number; from: PcmLike; toIndex: number; to: PcmLike };
+
+/** B's input window and the ramp for a schedule's stretched entry: the clip's lead-in starts
+ * up to CLIP_CONTEXT_SECONDS before B's entry and its tail runs as far past the handover. */
+export function clipInput(schedule: SeamSchedule, to: PcmLike): { channels: Float32Array[]; ramp: StretchRamp; skipSeconds: number } {
+  const stretch = schedule.stretch;
+  if (!stretch) throw new Error('the seam has no stretched entry');
+  const rate = to.sampleRate;
+  const total = Math.floor(to.duration * rate);
+  const from = Math.max(0, Math.round((stretch.sourceFrom - CLIP_CONTEXT_SECONDS) * rate));
+  const end = Math.min(total, Math.round((stretch.handoverSourceAt + CLIP_CONTEXT_SECONDS) * rate));
+  const skipSeconds = (stretch.sourceFrom - from / rate) / stretch.ratio;
+  const channels: Float32Array[] = [];
+  for (let channel = 0; channel < Math.max(1, to.numberOfChannels); channel += 1) channels.push(to.getChannelData(channel).slice(from, end));
+  const ramp = { ratio: stretch.ratio, holdSeconds: skipSeconds + (stretch.holdUntil - schedule.startSeconds), rampSeconds: stretch.rampUntil - stretch.holdUntil };
+  return { channels, ramp, skipSeconds };
+}
+
+/** The schedule with its rendered clip attached, after checking the clip covers the handover. */
+export function withClip(schedule: SeamSchedule, clip: StretchedClip): SeamSchedule {
+  const stretch = schedule.stretch;
+  if (!stretch) throw new Error('the seam has no stretched entry');
+  const length = clip.channels[0]?.length ?? 0;
+  if (!clip.channels.length || clip.channels.some((channel) => channel.length !== length)) throw new Error('the stretched audio came back malformed');
+  const needed = clip.skipSeconds + (stretch.handoverAt - schedule.startSeconds) + HANDOVER_MARGIN_SECONDS;
+  if (length / clip.sampleRate < needed) throw new Error('the stretched audio came back too short');
+  return { ...schedule, stretch: { ...stretch, clip } };
+}
+
+/** The schedule as a record keeps it: everything but the rendered clip and the stems' audio. */
+export function recordable(schedule: SeamSchedule): SeamSchedule {
+  let kept = schedule;
+  if (kept.stretch?.clip) {
+    const { clip: _clip, ...stretch } = kept.stretch;
+    kept = { ...kept, stretch };
+  }
+  if (kept.stems?.buffers) kept = { ...kept, stems: { plan: kept.stems.plan } };
+  return kept;
+}
+
+/** The same seam scripted again without the stretch, saying why it could not be prepared. */
+function unstretched(request: ScriptRequest, problem: unknown): SeamSchedule {
+  const reason = `the stretch could not be prepared: ${problem instanceof Error ? problem.message : String(problem)}`;
+  const schedule = scriptSeam({ ...request, abilities: { ...request.abilities, stretch: { ok: false, reason } } });
+  const instead = schedule.kind === 'fade' ? 'fade' : 'unstretched';
+  return { ...schedule, degraded: [...(schedule.degraded ?? []), { wanted: 'stretch', instead, reason }] };
+}
 
 /** A SeamProvider (engine/scheduler.ts) over the analysis and the seam script. */
 export function makeSeamProvider(options: SeamProviderOptions) {
@@ -168,7 +233,7 @@ export function makeSeamProvider(options: SeamProviderOptions) {
         degraded: [{ wanted: settings.move || 'blend', instead: 'fade', reason: `one music path is not seam-safe: ${unsafe.reason}` }],
       };
     } else {
-      schedule = scriptSeam({
+      const scripted: ScriptRequest = {
         a, b,
         move: settings.move,
         bars: settings.bars,
@@ -176,9 +241,20 @@ export function makeSeamProvider(options: SeamProviderOptions) {
         entryBar: settings.entry_bar,
         abilities: options.abilities(),
         allowed: options.allowed?.(),
-      });
+      };
+      schedule = scriptSeam(scripted);
+      if (schedule.stretch) {
+        try {
+          const input = clipInput(schedule, request.to);
+          const result = timeStretch(input.channels, request.to.sampleRate, rampCurve(input.ramp));
+          if (result.status !== 'ready') throw new Error(result.reason);
+          schedule = withClip(schedule, { channels: result.channels, sampleRate: request.to.sampleRate, skipSeconds: input.skipSeconds });
+        } catch (problem) {
+          schedule = unstretched(scripted, problem);
+        }
+      }
     }
-    options.onPlanned?.({ fromIndex: request.fromIndex, toIndex: request.toIndex, sources, schedule });
+    options.onPlanned?.({ fromIndex: request.fromIndex, toIndex: request.toIndex, sources, schedule: recordable(schedule) });
     return schedule;
   };
 }
@@ -188,6 +264,10 @@ export type WorkerSeamProvider = ((request: SeamRequestLike) => Promise<SeamSche
 export type WorkerSeamProviderOptions = SeamProviderOptions & {
   /** Override for a worker factory in browser integration and verification harnesses. */
   workerFactory?: () => Worker;
+  /** Override for the stretch worker's factory, likewise. */
+  stretchWorkerFactory?: () => Worker;
+  /** How long a stretched entry may take to render before the seam goes without it. */
+  stretchTimeoutMs?: number;
   /** Per-device worker calibration. Missing, stale, or mismatched evidence keeps Tier 2 off. */
   calibration?: WorkerCalibration | null;
   /** Current local device identity; it must match the calibration record. */
@@ -203,7 +283,9 @@ export type WorkerSeamProviderOptions = SeamProviderOptions & {
  * it emits a labelled fade rather than running a long PCM analysis on the audio/UI thread. */
 export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): WorkerSeamProvider {
   const makeWorker = options.workerFactory ?? spawnAnalysisWorker;
+  const makeStretcher = options.stretchWorkerFactory ?? spawnStretchWorker;
   let worker: Worker | null = null;
+  let stretcher: Worker | null = null;
   let disposed = false;
   const now = options.now ?? (() => Date.now());
   const calibrationState = () => workerCalibrationState(options.calibration, options.deviceId, now());
@@ -275,30 +357,73 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
         if (response.error || !response.tempo) throw new Error(response.error || 'tempo analysis returned no result');
         return timingFromAnalysis(buffer, pcm, offset, response);
       };
-      const a = await analyse(request.from, 'tail');
-      const b = await analyse(request.to, 'head');
+      // an injected analysis (tests, diagnostics) stands in for the worker's
+      const a = options.timing ? options.timing(request.from, 'tail') : await analyse(request.from, 'tail');
+      const b = options.timing ? options.timing(request.to, 'head') : await analyse(request.to, 'head');
       const afterAnalysis = budgetState();
       if (!afterAnalysis.supported) throw new Error(afterAnalysis.reason ?? 'worker budget exhausted');
       if (disposed) return fadeSchedule(Math.max(30, a.durationSeconds - 5), 0, 'seam preparation stopped');
       const unsafe = sources.a && sources.b && sources.a !== sources.b
         ? [sources.a, sources.b].map((source) => options.sourceSafe?.(source) ?? { ok: true as const }).find((ability) => !ability.ok)
         : undefined;
-      const schedule = unsafe && !unsafe.ok
+      const abilities = options.abilities();
+      const scripted: ScriptRequest = {
+        a, b,
+        // a stem move's fallback is the move SelectaDJ would pick without stems
+        move: isStemMove(settings.move) ? 'auto' : settings.move,
+        bars: settings.bars,
+        exitBar: settings.exit_bar,
+        entryBar: settings.entry_bar,
+        abilities,
+        allowed: options.allowed?.(),
+      };
+      let schedule: SeamSchedule = unsafe && !unsafe.ok
         ? {
             ...fadeSchedule(Math.max(30, a.durationSeconds - 5), 0, `mixed-source seam: ${unsafe.reason}`),
             style: settings.move || 'blend',
             degraded: [{ wanted: settings.move || 'blend', instead: 'fade' as const, reason: `one music path is not seam-safe: ${unsafe.reason}` }],
           }
-        : scriptSeam({
-            a, b,
-            move: settings.move,
-            bars: settings.bars,
-            exitBar: settings.exit_bar,
-            entryBar: settings.entry_bar,
-            abilities: options.abilities(),
-            allowed: options.allowed?.(),
+        : scriptSeam(scripted);
+      if (options.stems && !(unsafe && !unsafe.ok)) {
+        const stretchStem: StemStretcher = async (channels, sampleRate, ramp) => {
+          try {
+            if (!stretcher) stretcher = makeStretcher();
+            return await stretchInWorker(stretcher, channels, sampleRate, ramp, { owned: true, timeoutMs: options.stretchTimeoutMs ?? STRETCH_TIMEOUT_MS });
+          } catch (problem) {
+            stretcher?.terminate();
+            stretcher = null;
+            throw problem;
+          }
+        };
+        schedule = await withStemMove({
+          fromIndex: request.fromIndex,
+          toIndex: request.toIndex,
+          a, b,
+          move: settings.move,
+          normal: schedule,
+          abilities,
+          stems: options.stems,
+          stretch: stretchStem,
+        });
+        if (disposed) return fadeSchedule(Math.max(30, a.durationSeconds - 5), 0, 'seam preparation stopped');
+      }
+      if (schedule.stretch && !schedule.stems) {
+        try {
+          const input = clipInput(schedule, request.to);
+          if (!stretcher) stretcher = makeStretcher();
+          const channels = await stretchInWorker(stretcher, input.channels, request.to.sampleRate, input.ramp, {
+            owned: true,
+            timeoutMs: options.stretchTimeoutMs ?? STRETCH_TIMEOUT_MS,
           });
-      options.onPlanned?.({ fromIndex: request.fromIndex, toIndex: request.toIndex, sources, schedule });
+          if (disposed) return fadeSchedule(Math.max(30, a.durationSeconds - 5), 0, 'seam preparation stopped');
+          schedule = withClip(schedule, { channels, sampleRate: request.to.sampleRate, skipSeconds: input.skipSeconds });
+        } catch (problem) {
+          stretcher?.terminate();
+          stretcher = null;
+          schedule = unstretched(scripted, problem);
+        }
+      }
+      options.onPlanned?.({ fromIndex: request.fromIndex, toIndex: request.toIndex, sources, schedule: recordable(schedule) });
       return schedule;
     } catch (problem) {
       worker?.terminate();
@@ -320,6 +445,8 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
       disposed = true;
       worker?.terminate();
       worker = null;
+      stretcher?.terminate();
+      stretcher = null;
     },
   });
 }

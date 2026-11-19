@@ -8,7 +8,7 @@ import { Icon } from '../ui/Icon';
 import { SeamDiagram, SongMotif } from '../ui/MusicObjects';
 import { useStickyClearance } from '../ui/useStickyClearance';
 import { TransitionsWorkedOutLive } from './editorMode';
-import { PlayedTransitions, playedKey } from './liveTransitions';
+import { PlayedTransitions, playedKey, StemSurfacesContext } from './liveTransitions';
 import { useMixPath } from './mixScope';
 import { RequestTag, useRequestComing } from './Requests';
 
@@ -74,7 +74,15 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
   // a browser mix (cloud.browser_moves): the move is chosen right here, and the row says what
   // really played on this device this visit
   const played = useContext(PlayedTransitions)[playedKey(previous.song_id, item.song_id)];
-  const pickable = live && on('cloud.browser_moves') ? Object.entries(names).filter(([move]) => move !== 'blend') : [];
+  const stems = useContext(StemSurfacesContext);
+  const pickable: [string, string, string?][] = live && on('cloud.browser_moves')
+    ? [
+      ...Object.entries(names).filter(([move]) => move !== 'blend').map(([move, words]): [string, string] => [move, words]),
+      ...(stems?.stemMoves ?? []).map((offered): [string, string, string?] => [offered.move, offered.label, offered.disabledReason]),
+    ]
+    : [];
+  const blocked = pickable.find(([, , reason]) => reason)?.[2];
+  const blockedId = `seam-move-why-${rowKey}`;
   const [choosing, setChoosing] = useState(false);
   const [problem, setProblem] = useState('');
   const choose = async (move: string) => {
@@ -140,9 +148,12 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
                 disabled={choosing}
                 aria-busy={choosing || undefined}
                 aria-label={`Move from ${previous.title} into ${item.title}`}
+                aria-describedby={blocked ? blockedId : undefined}
                 onChange={(event) => void choose(event.target.value)}
               >
-                {pickable.map(([move, words]) => <option key={move} value={move}>{words}</option>)}
+                {pickable.map(([move, words, reason]) => (
+                  <option key={move} value={move} disabled={!!reason} title={reason}>{reason ? `${words} (not on this device)` : words}</option>
+                ))}
               </select>
             </label>
           )}
@@ -153,6 +164,8 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
           <b>Scheduled here: {played.label}.</b>{played.detail && ` ${played.detail}`}
         </p>
       )}
+      {live && blocked && <p className="hint" id={blockedId}>{blocked}</p>}
+      {live && stems?.readiness(playedKey(previous.song_id, item.song_id))}
       {problem && <p className="warn" role="alert">{problem}</p>}
       {affected && <p className="drop-affected-note">Changes if the song is dropped there</p>}
       <SeamDiagram seam={seam} from={previous.title} into={item.title} names={names} live={live} compact />

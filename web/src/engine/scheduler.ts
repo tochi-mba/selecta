@@ -8,7 +8,9 @@ import {
 } from '../dsp/crossfade';
 import { applySends, canMakeEffects, makeReturns, type EffectReturn } from '../dsp/seamEffects';
 import { applyMoves, canMakeMoves, makeMovesChain, type MovesChain } from '../dsp/seamMoves';
-import type { SeamEvent, SeamSchedule } from '../dsp/seams';
+import type { SeamEvent, SeamSchedule, SeamStems, SeamStretch, StretchedClip } from '../dsp/seams';
+import { warpAt, type StemLayer } from '../dsp/stemMoves/types';
+import { rampSourceSeconds, stretchRefusal, type StretchRamp } from '../dsp/stretchLimits';
 import type { EngineGraph } from './graph';
 import type { EngineStore } from './state';
 
@@ -25,6 +27,16 @@ import type { EngineStore } from './state';
  *    boundary, as player.ts does;
  *  - when the next song decodes too late for any of that, it fades in over 3 s rather than
  *    leaving silence (player.ts END_FADE).
+ * A stretched entry (dsp/seams.ts SeamStretch) plays as the Python engine's `in_context` does:
+ * B's layer gets a second source, the pre-rendered clip of B stretched to A's tempo, which starts
+ * with the seam and hands over to native B with a 30 ms crossfade once it has eased back to B's
+ * own tempo. Both sources feed the same move chain and fader; only native B's end tears the layer
+ * down, and native B stays the layer's `source`, so the next seam analyses B's own audio.
+ * A stem move (dsp/stemSchedule.ts) plays each stem as its own source with its own move chain,
+ * fader and echo send: A's full mix hands to A's stems, and B's stems (already stretched onto
+ * A's bars) hand to B's full mix at the plan's handover, both through the schedule's ordinary
+ * gain events. The stem sources hang off B's layer, so a stop or a new start silences them with
+ * it, and native B stays the layer's `source`.
  * Pause suspends the context, which freezes its clock, so position accounting stays truthful
  * through a pause. A generation counter makes every await re-check whether it still speaks for
  * the newest start; a stale continuation schedules nothing, so there are never two overlapping
@@ -96,12 +108,20 @@ export type Scheduler = {
   dispose(): void;
 };
 
+/** B's stretched entry clip, its fader, and `hand`, which brings native B in at the handover. */
+type Clip = { source: AudioBufferSourceNode; gain: GainNode; hand: GainNode };
 /** `moves` is the seam move chain (dsp/seamMoves.ts), present when a seam provider may ask for
  * EQ or filter moves and the context can build it; neutral until a schedule moves it. */
-type Layer = { source: AudioBufferSourceNode; gain: GainNode; moves?: MovesChain };
-type Current = Layer & { index: number; startedAt: number; offset: number; duration: number };
-/** `lag`: seconds B's own audio falls behind the output clock while its speed is nudged (varispeed). */
-type Planned = Layer & { index: number; at: number; offset: number; duration: number; lag?: number };
+/** One stem of a stem move: its source, move chain, fader and echo returns. */
+type StemVoice = { source: AudioBufferSourceNode; gain: GainNode; moves?: MovesChain };
+type Layer = { source: AudioBufferSourceNode; gain: GainNode; moves?: MovesChain; clip?: Clip; stems?: StemVoice[] };
+/** While a stretched clip plays, where in the song the listener is; native B's own clock
+ * (`startedAt`, `offset`) is exact from `until` on. */
+type Entering = { until: number; position(now: number): number };
+type Current = Layer & { index: number; startedAt: number; offset: number; duration: number; entering?: Entering };
+/** `at` is when the song becomes audible; `startedAt`/`offset` are native B's own clock. */
+type Planned = Layer & { index: number; at: number; startedAt: number; offset: number; duration: number; entering?: Entering };
+type Entered = { at: number; startedAt: number; offset: number; entering?: Entering };
 
 /** Write a gain point list onto a param: the first point is set, the rest ramp linearly. */
 function applyPoints(param: AudioParam, points: readonly GainPoint[], base = 0): void {
@@ -112,8 +132,93 @@ function applyPoints(param: AudioParam, points: readonly GainPoint[], base = 0):
   });
 }
 
+/** The clip's ramp in its own output seconds from B's entry. */
+const entryRamp = (stretch: SeamStretch, entryAt: number): StretchRamp => ({
+  ratio: stretch.ratio,
+  holdSeconds: stretch.holdUntil - entryAt,
+  rampSeconds: stretch.rampUntil - stretch.holdUntil,
+});
+
+/** Why a stretched entry cannot be played as given, or null. */
+function unusableStretch(stretch: SeamStretch, entryAt: number, sourceAt: number, to: AudioBuffer): string | null {
+  const { ratio, holdUntil, rampUntil, sourceFrom, inputSeconds, handoverAt, handoverSourceAt, clip } = stretch;
+  if (![ratio, holdUntil, rampUntil, sourceFrom, inputSeconds, handoverAt, handoverSourceAt].every(Number.isFinite)) {
+    return 'the seam schedule has an invalid stretch';
+  }
+  const refusal = stretchRefusal(ratio, inputSeconds);
+  if (refusal) return `the seam schedule asks for a stretch outside its limits: ${refusal}`;
+  if (!(holdUntil >= entryAt && rampUntil >= holdUntil && handoverAt >= rampUntil - 1e-6)) return 'the seam schedule has inconsistent stretch timing';
+  if (Math.abs(sourceFrom - sourceAt) > 1e-6) return 'the stretched entry does not start where the next song enters';
+  if (!(inputSeconds > 0) || Math.abs(handoverSourceAt - (sourceFrom + inputSeconds)) > 1e-6 || handoverSourceAt >= to.duration) {
+    return 'the stretched entry hands over outside the next song';
+  }
+  // native B must pick up exactly where the clip has reached, or the handover would jump
+  if (Math.abs(sourceFrom + rampSourceSeconds(entryRamp(stretch, entryAt), handoverAt - entryAt) - handoverSourceAt) > 0.005) {
+    return 'the stretched entry and the next song would not line up at the handover';
+  }
+  if (!clip) return 'the stretched entry was not prepared';
+  const length = clip.channels?.[0]?.length ?? 0;
+  if (!Array.isArray(clip.channels) || !clip.channels.length || clip.channels.some((channel) => !(channel instanceof Float32Array) || channel.length !== length)) {
+    return 'the stretched entry is malformed';
+  }
+  if (!(clip.sampleRate > 0) || !(clip.skipSeconds >= 0) || length / clip.sampleRate < clip.skipSeconds + (handoverAt - entryAt) + SEAM_FADE_SECONDS) {
+    return 'the stretched entry is too short to reach the handover';
+  }
+  return null;
+}
+
+const finitePoints = (points: unknown, low: number, high: number): boolean => Array.isArray(points)
+  && points.every((point) => Array.isArray(point) && Number.isFinite(point[0]) && Number.isFinite(point[1]) && point[1] >= low && point[1] <= high);
+
+/** Why a stem move cannot be played as given, or null. `entryAt`/`sourceAt` are B's full-mix
+ * start, which must be the plan's handover. */
+function unusableStems(stems: SeamStems, entryAt: number, sourceAt: number, can: { moves: boolean; effects: boolean }): string | null {
+  const plan = stems.plan;
+  if (!plan || !Array.isArray(plan.layers) || !plan.layers.length) return 'the stem move has no stems to play';
+  const handover = plan.handoverToNative;
+  if (!handover || ![handover.at, handover.startAt, handover.bSourceAt].every(Number.isFinite)) return 'the stem move has an invalid handover';
+  if (Math.abs(handover.startAt - entryAt) > 1e-6 || Math.abs(handover.bSourceAt - sourceAt) > 1e-6) {
+    return 'the stem move hands over somewhere other than where the next song enters';
+  }
+  if (!Array.isArray(plan.bWarp) || !plan.bWarp.length || !plan.bWarp.every((pin) => Number.isFinite(pin[0]) && Number.isFinite(pin[1]))) {
+    return 'the stem move has an invalid beat map';
+  }
+  const buffers = stems.buffers;
+  if (!buffers) return 'the stems for this transition were not prepared';
+  if (!(buffers.sampleRate > 0) || !Number.isFinite(buffers.a?.origin) || !Number.isFinite(buffers.b?.at)) return 'the stems for this transition are malformed';
+  for (const layer of plan.layers) {
+    if ((layer.side !== 'a' && layer.side !== 'b') || !Number.isFinite(layer.from) || !(layer.until > layer.from) || !Number.isFinite(layer.sourceFrom)) {
+      return 'the stem move has an invalid stem';
+    }
+    if (!finitePoints(layer.gain, 0, 1) || !layer.gain.length) return 'the stem move has an invalid stem gain';
+    if (!(layer.eq ?? []).every((eq) => ['low', 'mid', 'high'].includes(eq.band) && finitePoints(eq.points, 0, 1))) return 'the stem move has an invalid stem EQ';
+    if (!(layer.filter ?? []).every((sweep) => ['highpass', 'lowpass'].includes(sweep.filter) && finitePoints(sweep.points, 1e-9, Infinity))) {
+      return 'the stem move has an invalid stem filter';
+    }
+    if (!(layer.sends ?? []).every((send) => send.effect === 'echo' && finitePoints(send.points, 0, 1))) return 'the stem move has an invalid echo send';
+    if ((layer.eq?.length || layer.filter?.length) && !can.moves) return 'this device cannot shape the stems with EQ and filters';
+    if (layer.sends?.length && (!plan.echo || !can.effects)) return 'the stem move sends to an echo this device cannot make';
+    const channels = (layer.side === 'a' ? buffers.a : buffers.b).stems?.[layer.stem];
+    const length = channels?.[0]?.length ?? 0;
+    if (!Array.isArray(channels) || !length || channels.some((channel) => !(channel instanceof Float32Array) || channel.length !== length)) {
+      return `the ${layer.stem} stem for this transition was not prepared`;
+    }
+    const offset = layer.side === 'a' ? layer.sourceFrom - buffers.a.origin : layer.from - buffers.b.at;
+    if (offset < -1e-6 || offset + (layer.until - layer.from) > length / buffers.sampleRate + 1e-3) {
+      return `the ${layer.stem} stem for this transition does not cover the move`;
+    }
+  }
+  return null;
+}
+
+/** The earliest A-timeline second a schedule sounds anything of its own. */
+function firstSound(schedule: SeamSchedule, entryAt: number): number {
+  if (!schedule.stems) return entryAt;
+  return Math.min(entryAt, ...schedule.stems.plan.layers.map((layer) => layer.from));
+}
+
 /** Check a schedule against the songs it joins; a reason when it cannot be used as given. */
-function unusable(schedule: SeamSchedule, from: Current, to: AudioBuffer, now: number): string | null {
+function unusable(schedule: SeamSchedule, from: Current, to: AudioBuffer, now: number, can = { moves: false, effects: false }): string | null {
   if (!schedule || !Array.isArray(schedule.events) || schedule.events.length === 0) return 'the seam schedule has no events';
   if (schedule.kind !== 'beatmatch' && schedule.kind !== 'fade') return 'the seam schedule has an unknown kind';
   if (typeof schedule.implementation !== 'string' || !schedule.implementation) return 'the seam schedule has no implementation id';
@@ -144,25 +249,28 @@ function unusable(schedule: SeamSchedule, from: Current, to: AudioBuffer, now: n
       return 'the seam schedule has an unknown event';
     }
   }
-  if (schedule.rate) {
-    const { value, holdUntil, rampUntil } = schedule.rate;
-    // a turntable-style nudge, never more than local mode's B-only tempo absorb allows
-    if (!Number.isFinite(value) || value < 0.95 || value > 1.05 || !Number.isFinite(holdUntil) || !(rampUntil >= holdUntil)) {
-      return 'the seam schedule has an invalid speed change';
-    }
-  }
   const entry = schedule.events.find((event) => event.deck === 'b' && event.kind === 'start');
   if (!entry) return 'the seam schedule never starts the next song';
   if (schedule.events.filter((event) => event.deck === 'b' && event.kind === 'start').length !== 1) {
     return 'the seam schedule starts the next song more than once';
   }
-  if (Math.abs(schedule.startSeconds - entry.at) > 1e-6) return 'the seam schedule has inconsistent start timing';
+  if (!schedule.stems && Math.abs(schedule.startSeconds - entry.at) > 1e-6) return 'the seam schedule has inconsistent start timing';
   const sourceAt = entry.sourceAt ?? 0;
   if (!Number.isFinite(sourceAt) || sourceAt < 0 || sourceAt >= to.duration) return 'the seam enters the next song outside its audio';
+  if (schedule.stretch && schedule.stems) return 'the seam asks for a stretched entry and a stem move at once';
+  if (schedule.stretch) {
+    const problem = unusableStretch(schedule.stretch, entry.at, sourceAt, to);
+    if (problem) return problem;
+  }
+  if (schedule.stems) {
+    const problem = unusableStems(schedule.stems, entry.at, sourceAt, can);
+    if (problem) return problem;
+  }
   const base = from.startedAt - from.offset;
-  const startAt = base + entry.at;
+  const startAt = base + firstSound(schedule, entry.at);
   const endAt = from.startedAt + (from.duration - from.offset);
   if (!(startAt > now + START_LEAD)) return 'the seam was prepared too late to start on time';
+  if (from.entering && startAt < from.entering.until) return 'the seam starts before the current song has handed over from its stretched entry';
   if (!(startAt < endAt)) return 'the seam starts after the current song has ended';
   if (schedule.events.some((event) => !Number.isFinite(event.at))) return 'the seam schedule has an invalid time';
   return null;
@@ -228,6 +336,8 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     source.onended = () => {
       letRing(source);
       source.disconnect();
+      dropClip(made);
+      dropStems(made);
       moves?.dispose();
       gain.disconnect();
       layers.delete(made);
@@ -235,23 +345,130 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     return made;
   };
 
-  const stopAt = (made: Layer, when: number) => {
+  const stopSource = (source: AudioBufferSourceNode, when?: number) => {
     try {
-      made.source.stop(when);
+      source.stop(when);
     } catch {
-      // a layer that has not started cannot be stopped, and that is fine
+      // a source that has not started cannot be stopped, and that is fine
     }
+  };
+
+  /** Give B's layer its stretched entry: the clip and native B both feed the move chain. */
+  const addClip = (made: Layer, clip: StretchedClip): Clip => {
+    const buffer = context.createBuffer(clip.channels.length, clip.channels[0].length, clip.sampleRate);
+    clip.channels.forEach((channel, index) => buffer.copyToChannel(channel as Float32Array<ArrayBuffer>, index));
+    const into = made.moves?.input ?? made.gain;
+    const hand = context.createGain();
+    made.source.disconnect();
+    made.source.connect(hand);
+    hand.connect(into);
+    const source = context.createBufferSource();
+    source.buffer = buffer;
+    const gain = context.createGain();
+    source.connect(gain);
+    gain.connect(into);
+    source.onended = () => {
+      source.disconnect();
+      gain.disconnect();
+    };
+    made.clip = { source, gain, hand };
+    return made.clip;
+  };
+
+  const dropClip = (made: Layer) => {
+    if (!made.clip) return;
+    stopSource(made.clip.source);
+    made.clip.source.disconnect();
+    made.clip.gain.disconnect();
+    made.clip.hand.disconnect();
+    made.clip = undefined;
+  };
+
+  const dropStems = (made: Layer) => {
+    for (const voice of made.stems ?? []) {
+      stopSource(voice.source);
+      cutTails(voice.source);
+      voice.source.disconnect();
+      voice.moves?.dispose();
+      voice.gain.disconnect();
+    }
+    made.stems = undefined;
+  };
+
+  /** Build every stem's audio up front, so a failure falls back before anything is scheduled. */
+  const stemAudio = (stems: SeamStems): Map<StemLayer, AudioBuffer> => {
+    const made = new Map<StemLayer, AudioBuffer>();
+    const buffers = stems.buffers!;
+    for (const layer of stems.plan.layers) {
+      const channels = (layer.side === 'a' ? buffers.a : buffers.b).stems[layer.stem]!;
+      const audio = context.createBuffer(channels.length, channels[0].length, buffers.sampleRate);
+      channels.forEach((channel, index) => audio.copyToChannel(channel as Float32Array<ArrayBuffer>, index));
+      made.set(layer, audio);
+    }
+    return made;
+  };
+
+  /** Start every stem of a stem move on its own chain, A's into A's deck, B's into B's. */
+  const playStems = (made: Layer, stems: SeamStems, audio: Map<StemLayer, AudioBuffer>, base: number, outs: { a: AudioNode; b: AudioNode }) => {
+    const { plan, buffers } = stems;
+    const nyquist = context.sampleRate / 2;
+    made.stems = plan.layers.map((layer) => {
+      const source = context.createBufferSource();
+      source.buffer = audio.get(layer) as AudioBuffer;
+      const shaped = layer.eq?.length || layer.filter?.length || layer.sends?.length;
+      const moves = shaped && canMakeMoves(context) ? makeMovesChain(context) : undefined;
+      const gain = context.createGain();
+      if (moves) {
+        source.connect(moves.input);
+        moves.output.connect(gain);
+      } else {
+        source.connect(gain);
+      }
+      const out = outs[layer.side];
+      gain.connect(out);
+      const deck = layer.side;
+      if (moves) {
+        const events: SeamEvent[] = [
+          ...(layer.eq ?? []).flatMap((eq) => eq.points.map(([at, value]) => ({ deck, kind: 'eq' as const, band: eq.band, at, value }))),
+          ...(layer.filter ?? []).flatMap((sweep) => sweep.points.map(([at, hz]) => ({ deck, kind: 'filter' as const, filter: sweep.filter, at, hz }))),
+        ];
+        applyMoves(moves, events, base, nyquist);
+        if (layer.sends?.length && plan.echo && canMakeEffects(context)) {
+          const returns = makeReturns(context, moves.output, out, { echo: plan.echo });
+          tails.set(source, returns);
+          const sends = layer.sends.flatMap((send) => send.points.map(([at, value]) => ({ deck, kind: 'send' as const, effect: 'echo' as const, at, value })));
+          for (const made of returns) applySends(made, sends, base);
+        }
+      }
+      // silent until its first point, whatever lies between the source's start and that point
+      gain.gain.setValueAtTime(layer.gain[0][1], Math.max(0, base + Math.min(layer.from, layer.gain[0][0])));
+      applyPoints(gain.gain, layer.gain, base);
+      const offset = layer.side === 'a' ? layer.sourceFrom - buffers!.a.origin : layer.from - buffers!.b.at;
+      source.start(Math.max(0, base + layer.from), Math.max(0, offset));
+      stopSource(source, base + layer.until);
+      source.onended = () => {
+        letRing(source);
+        source.disconnect();
+        moves?.dispose();
+        gain.disconnect();
+      };
+      return { source, gain, moves };
+    });
+  };
+
+  const stopAt = (made: Layer, when: number) => {
+    stopSource(made.source, when);
+    if (made.clip) stopSource(made.clip.source, when);
+    for (const voice of made.stems ?? []) stopSource(voice.source, when);
   };
 
   const silence = (made: Layer) => {
     made.gain.gain.cancelScheduledValues(context.currentTime);
-    try {
-      made.source.stop();
-    } catch {
-      // a layer that has not started cannot be stopped, and that is fine
-    }
+    stopSource(made.source);
     cutTails(made.source);
     made.source.disconnect();
+    dropClip(made);
+    dropStems(made);
     made.moves?.dispose();
     made.gain.disconnect();
     layers.delete(made);
@@ -279,12 +496,15 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
 
   const songTime = (): number => {
     if (!current) return 0;
-    const played = current.offset + Math.max(0, context.currentTime - current.startedAt);
+    const now = context.currentTime;
+    const played = current.entering && now < current.entering.until
+      ? current.entering.position(now)
+      : current.offset + Math.max(0, now - current.startedAt);
     return Math.min(played, current.duration);
   };
 
   /** Apply a validated schedule: 'a' is the current song, 'b' the entering one. */
-  const applySchedule = (schedule: SeamSchedule, from: Current, made: Layer): { at: number; offset: number; lag?: number } => {
+  const applySchedule = (schedule: SeamSchedule, from: Current, made: Layer, bOut: AudioNode, audio?: Map<StemLayer, AudioBuffer>): Entered => {
     const base = from.startedAt - from.offset;
     const byDeck = (deck: SeamEvent['deck']) => schedule.events
       .filter((event) => event.deck === deck && event.kind === 'gain' && event.value !== undefined)
@@ -306,32 +526,63 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
         applySends(made, schedule.events.filter((event) => event.deck === 'a' && event.kind === 'send' && event.effect === made.effect), base);
       }
     }
-    let entered = { at: base, offset: 0 };
+    let entered: Entered = { at: base, startedAt: base, offset: 0 };
     for (const event of schedule.events) {
       if (event.kind === 'start' && event.deck === 'b') {
-        entered = { at: base + event.at, offset: event.sourceAt ?? 0 };
-        made.source.start(entered.at, entered.offset);
+        const at = base + event.at;
+        const stretch = schedule.stretch;
+        if (stretch?.clip && made.clip) {
+          entered = enterStretched(made, stretch, stretch.clip, at, base, event.at);
+        } else {
+          entered = { at, startedAt: at, offset: event.sourceAt ?? 0 };
+          made.source.start(at, entered.offset);
+        }
       } else if (event.kind === 'stop' && event.deck === 'a') {
         stopAt(from, base + event.at + 0.02);
       }
     }
-    if (schedule.rate) {
-      // varispeed: B plays at A's tempo through the overlap, then eases back to its own speed.
-      // While it runs slow (or fast) its audio falls behind (or ahead of) the clock by `lag`.
-      const { value, holdUntil, rampUntil } = schedule.rate;
-      const rate = made.source.playbackRate;
-      rate.setValueAtTime(value, 0);
-      rate.setValueAtTime(value, base + holdUntil);
-      rate.linearRampToValueAtTime(1, base + rampUntil);
-      const held = Math.max(0, base + holdUntil - entered.at);
-      return { ...entered, lag: (1 - value) * (held + (rampUntil - holdUntil) / 2) };
+    if (schedule.stems && audio) {
+      const { plan } = schedule.stems;
+      const aOut = from.index % 2 === 0 ? deps.graph.deckA : deps.graph.deckB;
+      playStems(made, schedule.stems, audio, base, { a: aOut, b: bOut });
+      // the next song is audible from its first stem; its own clock runs from the handover
+      const heard = Math.min(...plan.layers.filter((layer) => layer.side === 'b').map((layer) => layer.from));
+      return {
+        ...entered,
+        at: base + Math.min(heard, plan.handoverToNative.startAt),
+        entering: { until: entered.startedAt, position: (now) => warpAt(plan.bWarp, now - base) },
+      };
     }
     return entered;
   };
 
+  /** Start B as its stretched clip at `at`, and native B under it 30 ms before the handover,
+   * crossfading linearly: both hold the same audio there (render/engine.py `in_context`). */
+  const enterStretched = (made: Layer, stretch: SeamStretch, prepared: StretchedClip, at: number, base: number, entryAt: number): Entered => {
+    const clip = made.clip as Clip;
+    const handAt = base + stretch.handoverAt;
+    const crossAt = handAt - SEAM_FADE;
+    clip.source.start(at, prepared.skipSeconds);
+    clip.gain.gain.setValueAtTime(1, at);
+    clip.gain.gain.setValueAtTime(1, crossAt);
+    clip.gain.gain.linearRampToValueAtTime(0, handAt);
+    clip.hand.gain.setValueAtTime(0, at);
+    clip.hand.gain.setValueAtTime(0, crossAt);
+    clip.hand.gain.linearRampToValueAtTime(1, handAt);
+    stopSource(clip.source, handAt + 0.02);
+    made.source.start(crossAt, stretch.handoverSourceAt - SEAM_FADE);
+    const ramp = entryRamp(stretch, entryAt);
+    return {
+      at,
+      startedAt: handAt,
+      offset: stretch.handoverSourceAt,
+      entering: { until: handAt, position: (now) => stretch.sourceFrom + rampSourceSeconds(ramp, now - at) },
+    };
+  };
+
   /** A 3 s equal-power crossfade that ends with the current song, or starts now if that is
    * already too close. */
-  const fadeInto = (from: Current, made: Layer, buffer: AudioBuffer, now: number): { at: number; offset: number } => {
+  const fadeInto = (from: Current, made: Layer, buffer: AudioBuffer, now: number): Entered => {
     const endAt = from.startedAt + (from.duration - from.offset);
     const at = Math.max(now + START_LEAD, endAt - END_FADE);
     const fadeEnd = at + Math.min(END_FADE, buffer.duration / 2);
@@ -341,7 +592,7 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
       applyPoints(from.gain.gain, fadeOutPoints(at, Math.min(fadeEnd, endAt)));
       stopAt(from, Math.min(fadeEnd, endAt) + 0.02);
     }
-    return { at, offset: 0 };
+    return { at, startedAt: at, offset: 0 };
   };
 
   /** Prepare the next song and schedule its entrance; a stale generation does nothing. */
@@ -374,17 +625,32 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
       const endAt = from.startedAt + (from.duration - from.offset);
       const seamAt = endAt - SEAM_FADE;
       const made = layer(buffer, nextIndex);
-      let entered: { at: number; offset: number; lag?: number };
-      const problem = schedule ? unusable(schedule, from, buffer, now) : null;
+      let entered: Entered;
+      let problem = schedule ? unusable(schedule, from, buffer, now, { moves: canMakeMoves(context), effects: canMakeEffects(context) }) : null;
+      let audio: Map<StemLayer, AudioBuffer> | undefined;
+      if (schedule?.stems && !problem && seamAt > now + START_LEAD) {
+        try {
+          audio = stemAudio(schedule.stems);
+        } catch (error) {
+          problem = `the stems could not be loaded into audio: ${(error as Error | null)?.message || 'unknown reason'}`;
+        }
+      }
+      if (schedule?.stretch?.clip && !problem && seamAt > now + START_LEAD) {
+        try {
+          addClip(made, schedule.stretch.clip);
+        } catch (error) {
+          problem = `the stretched entry could not be loaded into audio: ${(error as Error | null)?.message || 'unknown reason'}`;
+        }
+      }
       if (seamAt <= now + START_LEAD) {
         // Decoded too late for the boundary: fade in rather than leave a gap or jump-cut.
         const at = now + START_LEAD;
         applyPoints(made.gain.gain, fadeInPoints(at, at + Math.min(END_FADE, buffer.duration / 2)));
         made.source.start(at);
-        entered = { at, offset: 0 };
+        entered = { at, startedAt: at, offset: 0 };
         transition = { kind: 'late_fade', implementation: CROSSFADE_IMPLEMENTATION, reason: 'the next song was ready too late for a seam' };
       } else if (schedule && !problem) {
-        entered = applySchedule(schedule, from, made);
+        entered = applySchedule(schedule, from, made, nextIndex % 2 === 0 ? deps.graph.deckA : deps.graph.deckB, audio);
         transition = { kind: 'seam_schedule', implementation: schedule.implementation, seamKind: schedule.kind, reason: schedule.reason };
       } else if (deps.seam) {
         entered = fadeInto(from, made, buffer, now);
@@ -399,10 +665,10 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
         made.source.start(seamAt);
         applyPoints(from.gain.gain, fadeOutPoints(seamAt, seamAt + SEAM_FADE));
         stopAt(from, seamAt + SEAM_FADE + 0.02);
-        entered = { at: seamAt, offset: 0 };
+        entered = { at: seamAt, startedAt: seamAt, offset: 0 };
         transition = { kind: 'boundary', implementation: CROSSFADE_IMPLEMENTATION };
       }
-      planned = { ...made, index: nextIndex, at: entered.at, offset: entered.offset, duration: buffer.duration, lag: entered.lag };
+      planned = { ...made, index: nextIndex, ...entered, duration: buffer.duration };
     } finally {
       planning = false;
     }
@@ -416,11 +682,12 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
         source: planned.source,
         gain: planned.gain,
         moves: planned.moves,
+        clip: planned.clip,
         index: planned.index,
-        // the clock this song's own timeline runs on once any speed nudge has eased back to 1
-        startedAt: planned.at + (planned.lag ?? 0),
+        startedAt: planned.startedAt,
         offset: planned.offset,
         duration: planned.duration,
+        entering: planned.entering,
       };
       planned = null;
     }
@@ -507,6 +774,11 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
           made.gain.gain.cancelScheduledValues(now);
           made.gain.gain.setValueAtTime(made.gain.gain.value, now);
           made.gain.gain.linearRampToValueAtTime(0, now + fade);
+          for (const voice of made.stems ?? []) {
+            voice.gain.gain.cancelScheduledValues(now);
+            voice.gain.gain.setValueAtTime(voice.gain.gain.value, now);
+            voice.gain.gain.linearRampToValueAtTime(0, now + fade);
+          }
           stopAt(made, now + fade + 0.02);
           layers.delete(made);
         }

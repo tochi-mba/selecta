@@ -15,7 +15,10 @@ import { countOf } from '../ui/format';
 import { showToast } from '../ui/toasts';
 import { Library } from '../views/Library';
 import { Mix } from '../views/Mix';
-import { PlayedTransitions } from '../views/liveTransitions';
+import { PlayedTransitions, StemSurfacesContext } from '../views/liveTransitions';
+import { StemsCard } from './stems/StemsCard';
+import { useSplitterNotices } from './stems/useStems';
+import { useStemsEngine } from './stems/useStemsEngine';
 import { playedByPair } from './playedSeams';
 import { peaksFrom } from '../dsp/waveform';
 import { Mixes } from '../views/Mixes';
@@ -274,11 +277,15 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
     return () => { setJobsSource(true); setFlags(null); };
   }, []);
 
-  const { player, refusal, device: playback, seams: scheduled } = useLocalFirstPlayer({
+  const { player, refusal, device: playback, seams: scheduled, prefetch } = useLocalFirstPlayer({
     api, workspaceId, mix: data.mix, remoteControl: on('devices.remote_control'), resolver,
   });
   // what each transition really played on this device this visit, for the editor (cloud.browser_moves)
   const played = useMemo(() => (on('cloud.browser_moves') ? playedByPair(scheduled) : {}), [scheduled]);
+  // the browser stem splitter (cloud.browser_stems): absent while the stem model's licence is held
+  const songOrder = useMemo(() => data.mix.map((item) => item.song_id), [data.mix]);
+  const stems = useStemsEngine({ role: playback.view?.speaker === 'elsewhere' ? 'controller' : 'speaker', programme: songOrder, prefetch });
+  useSplitterNotices(stems.store, (words) => showToast(words));
   const resolveTrack = useCallback<MediaResolver>(async (songId) => (await resolver())?.(songId) ?? null, [resolver]);
   // Listen's strip: each song's waveform from its own file here, decoded once and kept for the visit
   const waveforms = useRef(new Map<number, Promise<number[] | null>>());
@@ -371,7 +378,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
     if (route.page === 'more') {
       const item = moreItems.find((place) => place.id === route.id);
       if (!item) return <NotOnThisAccount />;
-      if (item.id === 'workspace') return <ThisDevice openStore={openStore}>{connect}</ThisDevice>;
+      if (item.id === 'workspace') return <ThisDevice openStore={openStore}>{connect}<StemsCard enabled={stems.enabled} store={stems.store} /></ThisDevice>;
       return <main className="page" id="main"><h1 className="display small">{item.label}</h1><div className="stack">{more(item.id)}</div></main>;
     }
     if (!shared) {
@@ -433,6 +440,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   return (
     <RequestContext.Provider value={request}>
     <PlayedTransitions.Provider value={played}>
+    <StemSurfacesContext.Provider value={stems.surfaces}>
     <BytesContext.Provider value={noBytesHere}>
       <Shell
         route={route}
@@ -457,6 +465,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
       </Shell>
       {controls.overlays}
     </BytesContext.Provider>
+    </StemSurfacesContext.Provider>
     </PlayedTransitions.Provider>
     </RequestContext.Provider>
   );

@@ -16,6 +16,7 @@ import {
 } from './seamScript';
 import { SEAM_EFFECTS_IMPLEMENTATION } from './seamEffects';
 import { SEAM_MOVES_IMPLEMENTATION } from './seamMoves';
+import { rampSourceSeconds } from './stretchLimits';
 
 function track(bpm: number, confidence = 0.9, ambiguous = false, duration = 180): TrackTiming {
   const period = 60 / bpm;
@@ -30,6 +31,8 @@ const ALL: SeamAbilities = {
   stems: { ok: false, reason: 'stems are not available in the browser' },
   echo: { ok: false, reason: 'the echo and wash returns are not built for the browser yet' },
 };
+
+const STRETCH: SeamAbilities = { ...ALL, stretch: { ok: true } };
 
 const of = (events: SeamEvent[], deck: 'a' | 'b', kind: SeamEvent['kind']) =>
   events.filter((event) => event.deck === deck && event.kind === kind);
@@ -76,27 +79,74 @@ describe('the browser seam script', () => {
   });
 
   it('keeps the window bounded, saying so when the asked-for bars do not fit', () => {
-    const schedule = scriptSeam({ a: track(120), b: track(120), move: 'bass_swap_blend', bars: 16, exitBar: 20, abilities: ALL });
+    // 32 bars at 120 BPM is 64 s; the window holds 16 bars (32 s), local mode's usual blend
+    const schedule = scriptSeam({ a: track(120), b: track(120), move: 'bass_swap_blend', bars: 32, exitBar: 20, abilities: ALL });
     expect(schedule.windowSeconds).toBeLessThanOrEqual(MAX_WINDOW_SECONDS);
-    expect(schedule.degraded?.[0]).toMatchObject({ wanted: '16 bars', instead: '8 bars' });
+    expect(schedule.degraded?.[0]).toMatchObject({ wanted: '32 bars', instead: '16 bars' });
     expect(schedule.degraded?.[0].reason).toContain('at most');
   });
 
-  it('with the nudge on, locks within 3 percent by speed; otherwise keeps the beats within an eighth', () => {
-    expect(barsThatFit(16, 0.5, 0)).toBe(8);
+  it('with the stretch, B plays at A’s tempo for the whole overlap and eases back; otherwise the beats drift at most an eighth', () => {
+    expect(barsThatFit(16, 0.5, 0)).toBe(16);
+    expect(barsThatFit(32, 0.5, 0)).toBe(16);
     expect(barsThatFit(8, 0.5, 0.01)).toBe(2); // 0.125 / (4 * 0.01) = 3.1 bars
-    const nudged = scriptSeam({ a: track(120), b: track(121.2), move: 'bass_swap_blend', bars: 8, exitBar: 20, abilities: { ...ALL, varispeed: { ok: true } } });
-    expect(nudged.windowSeconds).toBeCloseTo(16, 6);
-    expect(nudged.rate?.value).toBeCloseTo(120 / 121.2, 9);
-    expect(nudged.degraded).toBeUndefined();
-    const far = scriptSeam({ a: track(120), b: track(126), move: 'bass_swap_blend', bars: 8, exitBar: 20, abilities: { ...ALL, varispeed: { ok: true } } });
-    // without the nudge a 1 percent gap still shortens the overlap, as before
+    const stretched = scriptSeam({ a: track(120), b: track(121.2), move: 'bass_swap_blend', bars: 8, exitBar: 20, abilities: STRETCH });
+    expect(stretched.windowSeconds).toBeCloseTo(16, 6);
+    expect(stretched.degraded).toBeUndefined();
+    const stretch = stretched.stretch!;
+    expect(stretch.ratio).toBeCloseTo(120 / 121.2, 9);
+    expect(stretch.sourceFrom).toBe(of(stretched.events, 'b', 'start')[0].sourceAt);
+    expect(stretch.holdUntil).toBeCloseTo(stretched.startSeconds + stretched.windowSeconds, 9);
+    // B eases back over 16 of its own beats (timing.py RAMP_BEATS), then native B takes over
+    const beatB = 60 / 121.2;
+    expect(stretch.inputSeconds).toBeCloseTo(stretch.ratio * 16 + 16 * beatB, 9);
+    expect(stretch.handoverSourceAt).toBeCloseTo(stretch.sourceFrom + stretch.inputSeconds, 9);
+    expect(stretch.handoverAt).toBe(stretch.rampUntil);
+    const ramp = { ratio: stretch.ratio, holdSeconds: stretch.holdUntil - stretched.startSeconds, rampSeconds: stretch.rampUntil - stretch.holdUntil };
+    expect(stretch.sourceFrom + rampSourceSeconds(ramp, stretch.handoverAt - stretched.startSeconds)).toBeCloseTo(stretch.handoverSourceAt, 9);
+    // a gap within 0.2 percent settles over 8 beats instead
+    const settled = scriptSeam({ a: track(120), b: track(120.12), move: 'bass_swap_blend', bars: 8, exitBar: 20, abilities: STRETCH }).stretch!;
+    expect(settled.inputSeconds - settled.ratio * 16).toBeCloseTo(8 * 60 / 120.12, 9);
+    // matching tempos need no stretch at all
+    expect(scriptSeam({ a: track(120), b: track(120), move: 'bass_swap_blend', bars: 8, exitBar: 20, abilities: STRETCH }).stretch).toBeUndefined();
+    // without the stretch a 1 percent gap still shortens the overlap, as before
     const plain = scriptSeam({ a: track(120), b: track(121.2), move: 'bass_swap_blend', bars: 8, exitBar: 20, abilities: ALL });
     expect(plain.windowSeconds).toBeCloseTo(4, 6);
-    expect(plain.rate).toBeUndefined();
+    expect(plain.stretch).toBeUndefined();
+    expect(plain.degraded?.[0].reason).toContain('can\'t stretch them to match');
+    // beyond the 8 percent limit the stretch can't help: the old drift bound applies
+    const far = scriptSeam({ a: track(120), b: track(131), move: 'bass_swap_blend', bars: 8, exitBar: 20, abilities: STRETCH });
     expect(far.kind).toBe('fade');
-    expect(far.rate).toBeUndefined();
-    expect(far.degraded?.at(-1)?.reason).toContain('4.8 percent apart');
+    expect(far.stretch).toBeUndefined();
+    expect(far.degraded?.at(-1)?.reason).toContain('more than the 8 percent this browser can stretch');
+  });
+
+  it('stretches B alone to A’s tempo for gaps from 3 to 8 percent, keeping A native', () => {
+    const wide = scriptSeam({ a: track(124), b: track(130), move: 'bass_swap_blend', bars: 8, exitBar: 20, abilities: STRETCH });
+    expect(wide.kind).toBe('beatmatch');
+    expect(wide.stretch?.ratio).toBeCloseTo(124 / 130, 9);
+    // A has no tempo events at all: nothing on deck a moves its speed
+    expect(wide.events.filter((event) => event.deck === 'a').every((event) => ['gain', 'eq', 'filter', 'stop'].includes(event.kind))).toBe(true);
+  });
+
+  it('falls back to an unstretched seam when B ends before it could ease back', () => {
+    const short = scriptSeam({ a: track(120), b: track(121.2, 0.9, false, 20), move: 'bass_swap_blend', bars: 8, exitBar: 20, abilities: STRETCH });
+    expect(short.stretch).toBeUndefined();
+    expect(short.windowSeconds).toBeCloseTo(4, 6);
+    expect(short.degraded?.[0].reason).toContain('too short to ease back');
+  });
+
+  it('plays tempo_ramp with the stretch: a short overlap, then a long ease back over 32 beats', () => {
+    const ramp = scriptSeam({ a: track(120), b: track(127), move: 'tempo_ramp', exitBar: 20, abilities: STRETCH });
+    expect(ramp.style).toBe('tempo_ramp');
+    expect(ramp.bars).toBe(4);
+    expect(ramp.windowSeconds).toBeCloseTo(8, 6);
+    expect(ramp.stretch!.inputSeconds - ramp.stretch!.ratio * 8).toBeCloseTo(32 * 60 / 127, 9);
+    expect(of(ramp.events, 'a', 'eq').length).toBeGreaterThan(0);
+    // without the stretch it is a fade, with the reason
+    const flat = scriptSeam({ a: track(120), b: track(127), move: 'tempo_ramp', exitBar: 20, abilities: ALL });
+    expect(flat.kind).toBe('fade');
+    expect(flat.degraded).toContainEqual(expect.objectContaining({ wanted: 'stretch', instead: 'fade' }));
   });
 
   it('falls back to a labelled fade when the tempos are too far apart for any overlap', () => {
@@ -172,22 +222,24 @@ describe('SelectaDJ picking a move in the browser (cloud.browser_moves)', () => 
     expect(schedule.style).toBe('bass_swap_blend');
     expect(schedule.bars).toBeGreaterThanOrEqual(AUTO_MIN_BARS);
     expect(schedule.why).toMatch(/^The tempos are 0\.1 percent apart, so both play in time for \d+ bars and trade the bass on a bar line\.$/);
-    // a small gap is absorbed by nudging the next song's speed, as local mode lets B absorb it
-    // with cloud.browser_varispeed, a small gap is absorbed by nudging the next song's speed
-    const nudged = scriptSeam({ a: track(124), b: track(126), move: 'auto', abilities: { ...ECHO, varispeed: { ok: true } } });
-    expect(nudged.style).toBe('bass_swap_blend');
-    // a browser seam window is at most 16 s, so 8 bars at 124 BPM
-    expect(nudged.bars).toBe(8);
-    expect(nudged.rate?.value).toBeCloseTo(124 / 126, 9);
-    expect(nudged.rate?.holdUntil).toBeCloseTo(nudged.startSeconds + nudged.windowSeconds, 9);
-    expect(nudged.rate!.rampUntil - nudged.rate!.holdUntil).toBeCloseTo(16 * 60 / 124, 9);
-    expect(nudged.why).toContain('nudge the next song’s speed');
-    // beyond 3 percent a nudge would be heard, so it echoes out instead
-    expect(scriptSeam({ a: track(124), b: track(130), move: 'auto', abilities: { ...ECHO, varispeed: { ok: true } } }).style).toBe('echo_out');
-    // without the nudge (the default, BF-0459-05) even 1.6 percent drifts too far for eight bars
+    // with the stretch, a 1.6 percent gap is absorbed by stretching the next song, as local mode lets B absorb it
+    const stretched = scriptSeam({ a: track(124), b: track(126), move: 'auto', abilities: { ...ECHO, stretch: { ok: true } } });
+    expect(stretched.style).toBe('bass_swap_blend');
+    // 16 bars at 124 BPM is about 31 s, inside the 32 s window: local mode's usual blend
+    expect(stretched.bars).toBe(16);
+    expect(stretched.stretch?.ratio).toBeCloseTo(124 / 126, 9);
+    expect(stretched.stretch?.holdUntil).toBeCloseTo(stretched.startSeconds + stretched.windowSeconds, 9);
+    expect(stretched.why).toBe('The tempos are 1.6 percent apart, so the next song is stretched to match without changing its pitch, and both play in time for 16 bars and trade the bass on a bar line.');
+    // 6 percent is still inside the stretch limit
+    expect(scriptSeam({ a: track(124), b: track(131.5), move: 'auto', abilities: { ...ECHO, stretch: { ok: true } } }).style).toBe('bass_swap_blend');
+    // beyond 8 percent it echoes out, and says the gap is past the limit
+    const far = scriptSeam({ a: track(124), b: track(136), move: 'auto', abilities: { ...ECHO, stretch: { ok: true } } });
+    expect(far.style).toBe('echo_out');
+    expect(far.why).toContain('more than the 8 percent this browser can stretch');
+    // without the stretch even 1.6 percent drifts too far for eight bars
     const plain = scriptSeam({ a: track(124), b: track(126), move: 'auto', abilities: ECHO });
     expect(plain.style).toBe('echo_out');
-    expect(plain.rate).toBeUndefined();
+    expect(plain.stretch).toBeUndefined();
   });
 
   it('never picks a blend shorter than eight bars: a wide tempo gap echoes out instead', () => {

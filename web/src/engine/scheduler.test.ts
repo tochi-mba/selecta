@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { equalPowerIn } from '../dsp/crossfade';
-import { scheduleSeam, SeamSchedule } from '../dsp/seams';
+import { scheduleSeam, SeamSchedule, type SeamStretch } from '../dsp/seams';
+import { rampSourceSeconds } from '../dsp/stretchLimits';
 import { buildGraph } from './graph';
 import { createScheduler, END_FADE, LoadedTrack, SEAM_FADE, SeamProvider } from './scheduler';
 import { createEngineStore } from './state';
-import { bufferOfSeconds, FakeAudioContext, manualTimers, settle } from './testAudio';
+import { bufferOfSeconds, FakeAudioBuffer, FakeAudioContext, manualTimers, settle } from './testAudio';
 
 /** A scheduler over fakes: tracks[index] seconds each, 'failed' for a bad file, the end past
  * the list. With delayLoads every load waits until the test releases it in call order. */
@@ -292,6 +293,129 @@ describe('seam schedules from dsp/seams.ts', () => {
     timers.tick();
     await settle();
     expect(scheduler.lastTransition()).toMatchObject({ kind: 'fallback_fade', reason: expect.stringMatching(/analysis missing/) });
+  });
+});
+
+describe('a stretched entry (in_context: native A, the clip, native B)', () => {
+  const RATIO = 0.98;
+  const stretchFor = (withClip = true): SeamStretch => {
+    const ramp = { ratio: RATIO, holdSeconds: 8, rampSeconds: 4 };
+    const inputSeconds = rampSourceSeconds(ramp, 12);
+    return {
+      ratio: RATIO, holdUntil: 48, rampUntil: 52, sourceFrom: 2, inputSeconds, handoverAt: 52, handoverSourceAt: 2 + inputSeconds,
+      ...(withClip ? { clip: { channels: [new Float32Array(Math.round(12.2 * 44100)), new Float32Array(Math.round(12.2 * 44100))], sampleRate: 44100, skipSeconds: 0.05 } } : {}),
+    };
+  };
+  const stretched = (stretch: SeamStretch): SeamProvider => (request) => (request.fromIndex === 0
+    ? { ...scheduleSeam(grid(request.from.duration), grid(request.to.duration), { exitSeconds: 40, entrySeconds: 2, windowSeconds: 8 }), stretch }
+    : null);
+  const withBuffers = (context: FakeAudioContext) => {
+    const made: FakeAudioBuffer[] = [];
+    Object.assign(context, {
+      createBuffer: (channels: number, length: number, rate: number) => {
+        const buffer = Object.assign(new FakeAudioBuffer(channels, length, rate), {
+          copyToChannel(data: Float32Array, channel: number) { buffer.data[channel].set(data); },
+        });
+        made.push(buffer);
+        return buffer;
+      },
+    });
+    return made;
+  };
+  type Gain = FakeAudioContext['madeGains'][number];
+
+  it('plays the clip from the seam, hands over to native B with a 30 ms crossfade, and keeps song time exact', async () => {
+    const asked: number[] = [];
+    const seam: SeamProvider = (request) => {
+      asked.push(request.from.duration);
+      return stretched(stretchFor())(request);
+    };
+    const { context, scheduler, timers } = rig([60, 50, 40], { seam });
+    const buffers = withBuffers(context);
+    await scheduler.start(0, 0, true);
+    context.advance(20);
+    timers.tick();
+    await settle();
+    expect(scheduler.lastTransition()).toMatchObject({ kind: 'seam_schedule', seamKind: 'beatmatch' });
+    const base = context.madeSources[0].started[0].when;
+    const [, native, clip] = context.madeSources;
+    expect(buffers).toHaveLength(1);
+    expect(clip.buffer).toBe(buffers[0]);
+    expect(native.buffer?.duration).toBe(50);
+    expect(clip.started[0]).toEqual({ when: expect.closeTo(base + 40, 9), offset: 0.05, duration: undefined });
+    expect(clip.stopped[0]).toBeCloseTo(base + 52 + 0.02, 9);
+    const handoverSourceAt = stretchFor().handoverSourceAt;
+    expect(native.started[0]).toEqual({ when: expect.closeTo(base + 52 - SEAM_FADE, 9), offset: expect.closeTo(handoverSourceAt - SEAM_FADE, 9), duration: undefined });
+    // both feed B's fader: the clip fades out as native B fades in, over the same 30 ms
+    const hand = native.connections[0] as Gain;
+    const clipGain = clip.connections[0] as Gain;
+    expect(hand.connections[0]).toBe(clipGain.connections[0]);
+    expect(hand.events.at(-1)).toEqual({ type: 'ramp', value: 1, at: expect.closeTo(base + 52, 9) });
+    expect(hand.events.at(-2)).toEqual({ type: 'set', value: 0, at: expect.closeTo(base + 52 - SEAM_FADE, 9) });
+    expect(clipGain.events.at(-1)).toEqual({ type: 'ramp', value: 0, at: expect.closeTo(base + 52, 9) });
+    // song time follows the clip while it plays, then native B's own clock
+    context.advance(base + 44 - context.currentTime);
+    timers.tick();
+    expect(scheduler.position()).toEqual({ index: 1, offsetMs: Math.round((2 + RATIO * 4) * 1000), paused: false });
+    context.advance(base + 50 - context.currentTime);
+    timers.tick();
+    const easing = 2 + rampSourceSeconds({ ratio: RATIO, holdSeconds: 8, rampSeconds: 4 }, 10);
+    expect(scheduler.position()?.offsetMs).toBe(Math.round(easing * 1000));
+    context.advance(base + 60 - context.currentTime);
+    timers.tick();
+    await settle();
+    expect(scheduler.position()?.offsetMs).toBe(Math.round((handoverSourceAt + 8) * 1000));
+    // the next seam analyses native B, never the clip
+    expect(asked).toEqual([60, 50]);
+  });
+
+  it('tears the whole layer down when native B ends, and a stop silences both sources', async () => {
+    const { context, scheduler, timers } = rig([60, 50], { seam: stretched(stretchFor()) });
+    withBuffers(context);
+    await scheduler.start(0, 0, true);
+    context.advance(20);
+    timers.tick();
+    await settle();
+    const [, native, clip] = context.madeSources;
+    scheduler.stop(0);
+    expect(native.stopped.length).toBeGreaterThan(0);
+    expect(clip.stopped.length).toBeGreaterThan(1);
+    expect(clip.connections).toHaveLength(0);
+
+    const again = rig([60, 50], { seam: stretched(stretchFor()) });
+    withBuffers(again.context);
+    await again.scheduler.start(0, 0, true);
+    again.context.advance(20);
+    again.timers.tick();
+    await settle();
+    const [, nativeAgain, clipAgain] = again.context.madeSources;
+    clipAgain.end();
+    expect(nativeAgain.connections).toHaveLength(1); // the clip ending alone leaves B playing
+    nativeAgain.end();
+    expect(clipAgain.connections).toHaveLength(0);
+    expect(nativeAgain.connections).toHaveLength(0);
+  });
+
+  it('falls back to a fade, with the reason, when the clip is missing, cannot become audio, or would not line up', async () => {
+    const planned = async (seam: SeamProvider, buffers = true) => {
+      const made = rig([60, 50], { seam });
+      if (buffers) withBuffers(made.context);
+      await made.scheduler.start(0, 0, true);
+      made.context.advance(20);
+      made.timers.tick();
+      await settle();
+      return made;
+    };
+    const missing = await planned(stretched(stretchFor(false)));
+    expect(missing.scheduler.lastTransition()).toMatchObject({ kind: 'fallback_fade', reason: 'the stretched entry was not prepared' });
+    const noBuffers = await planned(stretched(stretchFor()), false);
+    expect(noBuffers.scheduler.lastTransition()).toMatchObject({ kind: 'fallback_fade', reason: expect.stringMatching(/could not be loaded into audio/) });
+    expect(noBuffers.context.madeSources).toHaveLength(2);
+    const off = stretchFor();
+    const jumpy = await planned(stretched({ ...off, handoverSourceAt: off.handoverSourceAt + 0.5, inputSeconds: off.inputSeconds + 0.5 }));
+    expect(jumpy.scheduler.lastTransition()).toMatchObject({ kind: 'fallback_fade', reason: expect.stringMatching(/would not line up/) });
+    const wide = await planned(stretched({ ...off, ratio: 1.2 }));
+    expect(wide.scheduler.lastTransition()).toMatchObject({ kind: 'fallback_fade', reason: expect.stringMatching(/outside its limits/) });
   });
 });
 

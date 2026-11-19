@@ -5,8 +5,14 @@ import {
   CapabilityError,
   CapabilityRegistry,
   registerBrowserDspCapabilities,
+  stemSeparationEvidenceState,
+  STEMS_LICENCE_REASON,
+  STEMS_LICENCE_RECORD,
   TIER3_FEATURES,
+  type StemEvidence,
 } from './capability';
+import { STEM_CALIBRATION_IMPLEMENTATION, type StemCalibration } from './stems/gate';
+import { STEM_MODEL_ARTEFACT } from './stems/model';
 import { loadStretchEvidence } from './stretchLoader';
 import { CROSSFADE_IMPLEMENTATION } from './crossfade';
 import { LIMITER_IMPLEMENTATION } from './limiter';
@@ -30,6 +36,23 @@ function workerEvidence(atFloor = false, calibratedAt = CALIBRATION_NOW, deviceI
     atFloor,
     deadlineMisses: 0,
   };
+}
+
+const STEM_SHA = 'ab'.repeat(32);
+function stemBenchmark(secondsPerAudioSecond = 0.2): StemCalibration {
+  return {
+    implementation: STEM_CALIBRATION_IMPLEMENTATION,
+    deviceId: TEST_DEVICE,
+    modelImplementation: 'htdemucs-onnx-v1',
+    modelSha256: STEM_SHA,
+    backend: 'webgpu',
+    calibratedAt: CALIBRATION_NOW,
+    audioSeconds: 7.8,
+    secondsPerAudioSecond,
+  };
+}
+function stemEvidence(licenceRecord: string | null): StemEvidence {
+  return { licenceRecord, modelSha256: STEM_SHA, deviceId: TEST_DEVICE, benchmark: stemBenchmark(), crashGuard: { clear: true } };
 }
 
 describe('capability registry', () => {
@@ -90,11 +113,43 @@ describe('capability registry', () => {
     expect(registry.get('limiter')).toMatchObject({ status: 'ready', implementation: 'dynamics-compressor-safety-v1' });
   });
 
-  it('never makes a Tier 3 feature ready, whatever the evidence', () => {
-    const registry = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: true }, workerBudget: workerEvidence(), now: CALIBRATION_NOW });
+  it('never makes a Tier 3 feature ready in this build, whatever the evidence', () => {
+    const registry = registerBrowserDspCapabilities(new CapabilityRegistry(), {
+      probe: { ok: true }, workerBudget: workerEvidence(), now: CALIBRATION_NOW, stems: stemEvidence('bf-tier3-htdemucs-2026-11-19'),
+    });
     for (const feature of TIER3_FEATURES) {
       expect(registry.get(feature)).toMatchObject({ tier: 3, status: 'unsupported_here' });
     }
+    expect(registry.get('stem_separation')).toMatchObject({ implementation: 'htdemucs-onnx-v1', reason: STEMS_LICENCE_REASON });
+  });
+
+  it('stem separation is pending licence review: no record, no artefact, so unsupported_here on every device', () => {
+    expect(STEMS_LICENCE_RECORD).toBeNull();
+    expect(STEM_MODEL_ARTEFACT).toBeNull();
+    const failedProbe = registerBrowserDspCapabilities(new CapabilityRegistry(), { probe: { ok: false, reason: 'no worklet' } });
+    expect(failedProbe.get('stem_separation')?.reason).toBe(STEMS_LICENCE_REASON);
+    const registry = new CapabilityRegistry();
+    expect(() => registry.register({ feature: 'stem_separation', tier: 3, implementation: 'htdemucs-onnx-v1', status: 'ready' }, stemEvidence('bf-tier3-htdemucs-2026-11-19')))
+      .toThrow(/licence is still under review/);
+  });
+
+  it('the stem evidence check needs every condition once a licence record passes', () => {
+    const passedRecords = ['bf-tier3-htdemucs-pass'];
+    const options = { passedRecords, modelSha256: STEM_SHA, now: CALIBRATION_NOW };
+    expect(stemSeparationEvidenceState(stemEvidence('bf-tier3-htdemucs-pass'), options)).toEqual({ supported: true });
+    expect(stemSeparationEvidenceState(stemEvidence('some-other-record'), options)).toEqual({ supported: false, reason: STEMS_LICENCE_REASON });
+    expect(stemSeparationEvidenceState(stemEvidence('bf-tier3-htdemucs-pass'), { ...options, modelSha256: null }))
+      .toMatchObject({ supported: false, reason: expect.stringMatching(/not been published/) });
+    expect(stemSeparationEvidenceState({ ...stemEvidence('bf-tier3-htdemucs-pass'), modelSha256: 'ff'.repeat(32) }, options))
+      .toMatchObject({ supported: false, reason: expect.stringMatching(/not the published one/) });
+    expect(stemSeparationEvidenceState({ ...stemEvidence('bf-tier3-htdemucs-pass'), crashGuard: { clear: false, reason: 'the last attempt to split stems on this device stopped the page', at: null } }, options))
+      .toMatchObject({ supported: false, reason: expect.stringMatching(/stopped the page/) });
+    expect(stemSeparationEvidenceState({ ...stemEvidence('bf-tier3-htdemucs-pass'), benchmark: stemBenchmark(0.8) }, options))
+      .toMatchObject({ supported: false, reason: expect.stringMatching(/too slowly/) });
+    expect(stemSeparationEvidenceState({ ...stemEvidence('bf-tier3-htdemucs-pass'), deviceId: 'another' }, options))
+      .toMatchObject({ supported: false, reason: expect.stringMatching(/different device/) });
+    expect(stemSeparationEvidenceState({ ...stemEvidence('bf-tier3-htdemucs-pass'), budgetAtFloor: true }, options))
+      .toMatchObject({ supported: false, reason: expect.stringMatching(/headroom/) });
   });
 
   it('keeps Tier 2 unavailable for stale, future-dated or differently bound calibration', () => {
@@ -148,7 +203,9 @@ describe('capability registry', () => {
     expect(registry.get('key')?.implementation).toBe('lightweight-chroma-v1');
   });
 
-  it('refuses a Tier 3 feature marked ready: no benchmark or licence evidence exists', () => {
+  it('refuses a Tier 3 feature marked ready without passing evidence', () => {
+    expect(() => new CapabilityRegistry().register({ feature: 'neural_key', tier: 3, implementation: 'x-v1', status: 'ready' }, stemEvidence('anything')))
+      .toThrow(CapabilityError);
     const registry = new CapabilityRegistry();
     expect(() =>
       registry.register({

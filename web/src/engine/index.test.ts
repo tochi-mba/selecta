@@ -85,5 +85,16 @@ describe('the capability roster', () => {
     expect(roster.get('time_stretch')?.status).toBe('unsupported_here');
     expect(roster.list().filter((record) => record.tier === 3).every((record) => record.status === 'unsupported_here')).toBe(true);
   });
+
+  it('time-stretch is ready only once the engine self-tested it on this device, with the scheduler clip handover wired', async () => {
+    const engine = createEngine();
+    const stretch = await engine.stretchEvidence();
+    expect(stretch).toEqual({ implementation: 'wsola-stretch-v1' });
+    expect(engine.stretchEvidence()).toBe(engine.stretchEvidence());
+    expect(engine.roster({ probe: passed, workerBudget, now: CALIBRATED_AT, stretch }).get('time_stretch')).toMatchObject({ tier: 2, status: 'ready', implementation: 'wsola-stretch-v1' });
+    expect(engine.roster({ probe: passed, workerBudget, now: CALIBRATED_AT, stretch: null }).get('time_stretch')?.reason).toMatch(/self-test/);
+    expect(engine.roster({ probe: passed, stretch }).get('time_stretch')?.status).toBe('unsupported_here');
+    engine.dispose();
+  });
 });
 

@@ -2,8 +2,10 @@
  *
  * Three tiers. Tier 1 is the baseline every qualified player has. Tier 2 features exist only on
  * measured devices. Tier 3 features need per-device benchmark evidence plus a model licence
- * review; in this release no Tier 3 feature is ever `ready`, so the registry refuses to record
- * one. `unsupported_here` is a first-class state with a reason, never an error.
+ * review. The registry refuses a Tier 3 `ready` record unless it arrives with evidence that
+ * passes `stemSeparationEvidenceState`; only stem separation has such a check, and with no
+ * passed licence record in this build it always fails. `unsupported_here` is a first-class
+ * state with a reason, never an error.
  *
  * Every analysis or rendering result produced elsewhere in `web/src/dsp/` carries the
  * implementation id (name + version) of the code that made it, so a cached result imported from
@@ -21,6 +23,8 @@ import { SEAM_MOVES_IMPLEMENTATION } from './seamMoves';
 import { SEAMS_IMPLEMENTATION } from './seams';
 import { STRETCH_IMPLEMENTATION, STRETCH_PLAYBACK_INTEGRATION } from './stretchLimits';
 import { workerBudgetEvidenceState, type WorkerBudgetEvidence } from './budget';
+import { STEM_MODEL, STEM_MODEL_ARTEFACT } from './stems/model';
+import { stemCalibrationState, type CrashGuardState, type StemCalibration } from './stems/gate';
 
 /** How a seam meets a track from either music path: the whole file decoded before planning. */
 export const WHOLE_FILE_DECODE_IMPLEMENTATION = 'whole-file-decode-v1';
@@ -45,7 +49,50 @@ export interface Capability {
 /** Thrown when a record breaks the honesty rules rather than silently stored. */
 export class CapabilityError extends Error {}
 
-function validate(capability: Capability): Capability {
+/** The licence record (docs/verification/bf-tier3-*.md) whose every section says PASS for the
+ * stem model. null: the review is pending (bf-tier3-htdemucs-2026-11-19.md), so stems are
+ * unsupported_here on every device. */
+export const STEMS_LICENCE_RECORD: string | null = null;
+
+/** Record ids that have passed review; a Tier 3 licence claim must name one of these. */
+export const PASSED_TIER3_RECORDS: readonly string[] = STEMS_LICENCE_RECORD ? [STEMS_LICENCE_RECORD] : [];
+
+export const STEMS_LICENCE_REASON = "the stem model's licence is still under review";
+
+/** What stem separation's readiness rests on (ADR-0459 Tier 3, BF-0459-07). */
+export interface StemEvidence {
+  /** The PASS record id the build was cleared under. */
+  licenceRecord: string | null;
+  /** Hash of the model actually verified and loaded on this device. */
+  modelSha256: string | null;
+  deviceId: string | null;
+  /** The 'stem-worker-roundtrip-v1' benchmark for this device and model. */
+  benchmark: StemCalibration | null;
+  crashGuard: CrashGuardState;
+  /** The analysis worker budget has collapsed to its floor. */
+  budgetAtFloor?: boolean;
+}
+
+export type Tier3EvidenceState = { supported: true } | { supported: false; reason: string };
+
+/** Every condition for stem separation, in the order a member would need them explained. */
+export function stemSeparationEvidenceState(
+  evidence: StemEvidence | null | undefined,
+  options: { passedRecords?: readonly string[]; modelSha256?: string | null; now?: number } = {},
+): Tier3EvidenceState {
+  const passed = options.passedRecords ?? PASSED_TIER3_RECORDS;
+  const expectedSha = options.modelSha256 === undefined ? STEM_MODEL_ARTEFACT?.sha256 ?? null : options.modelSha256;
+  if (!evidence?.licenceRecord || !passed.includes(evidence.licenceRecord)) return { supported: false, reason: STEMS_LICENCE_REASON };
+  if (!expectedSha) return { supported: false, reason: 'the stem splitter has not been published yet' };
+  if (evidence.modelSha256 !== expectedSha) return { supported: false, reason: 'the stem splitter on this device is missing or not the published one' };
+  if (!evidence.crashGuard.clear) return { supported: false, reason: evidence.crashGuard.reason };
+  const benchmark = stemCalibrationState(evidence.benchmark, evidence.deviceId, expectedSha, options.now ?? Date.now());
+  if (!benchmark.supported) return benchmark;
+  if (evidence.budgetAtFloor) return { supported: false, reason: 'this device is out of headroom, so stem splitting is paused' };
+  return { supported: true };
+}
+
+function validate(capability: Capability, evidence?: StemEvidence | null): Capability {
   if (!capability.feature) {
     throw new CapabilityError('A capability needs a feature name.');
   }
@@ -56,10 +103,16 @@ function validate(capability: Capability): Capability {
     throw new CapabilityError(`'${capability.feature}' is unsupported_here but gives no reason.`);
   }
   if (capability.tier === 3 && capability.status === 'ready') {
-    throw new CapabilityError(
-      `'${capability.feature}' is Tier 3: per-device benchmark and licence evidence do not ` +
-        'exist in this release, so it cannot be ready anywhere.'
-    );
+    if (capability.feature !== 'stem_separation') {
+      throw new CapabilityError(
+        `'${capability.feature}' is Tier 3: per-device benchmark and licence evidence do not ` +
+          'exist in this release, so it cannot be ready anywhere.'
+      );
+    }
+    const state = stemSeparationEvidenceState(evidence);
+    if (!state.supported) {
+      throw new CapabilityError(`'stem_separation' is Tier 3 and cannot be ready here: ${state.reason}.`);
+    }
   }
   if (capability.confidence !== undefined) {
     if (!Number.isFinite(capability.confidence)) {
@@ -76,8 +129,9 @@ function validate(capability: Capability): Capability {
 export class CapabilityRegistry {
   private readonly records = new Map<string, Capability>();
 
-  register(capability: Capability): Capability {
-    const checked = validate({ ...capability });
+  /** `evidence` is read only for a Tier 3 `ready` record. */
+  register(capability: Capability, evidence?: StemEvidence | null): Capability {
+    const checked = validate({ ...capability }, evidence);
     this.records.set(checked.feature, checked);
     return checked;
   }
@@ -121,9 +175,12 @@ export interface DspEvidence {
   stretchPlaybackIntegration?: string | null;
   /** Injectable epoch clock for checking calibration freshness. */
   now?: number;
+  /** Tier 3 stem separation: licence record, model hash, device benchmark and crash guard. */
+  stems?: StemEvidence | null;
 }
 
-/** Tier 3 features: none may be ready in this release (no benchmark or licence evidence). */
+/** Tier 3 features. Only stem separation has an evidence path, and it needs a passed licence
+ * record that does not exist in this build. */
 export const TIER3_FEATURES = ['neural_beats', 'neural_key', 'stem_separation', 'lyric_alignment'] as const;
 
 const TIER3_REASON = 'needs per-device benchmark evidence and a model licence review, which do not exist yet';
@@ -135,7 +192,8 @@ const NOT_A_PLAYER = (reason: string) => `this device cannot play here: ${reason
  *  - Tier 2 is ready only on a measured device (probe passed and a calibrated budget exists and
  *    is not at its floor); time-stretch additionally needs its module loaded and self-tested
  *    on this device (stretchLoader.ts), else it stays unsupported_here.
- *  - Tier 3 is always unsupported_here. */
+ *  - Tier 3 is unsupported_here, except stem separation when every condition of
+ *    `stemSeparationEvidenceState` holds (never in this build: the licence is pending). */
 export function registerBrowserDspCapabilities(
   registry: CapabilityRegistry = capabilities,
   evidence: DspEvidence = { probe: { ok: false, reason: 'the capability probe has not run' } },
@@ -185,6 +243,13 @@ export function registerBrowserDspCapabilities(
     tier2('time_stretch', STRETCH_IMPLEMENTATION);
   }
 
-  for (const feature of TIER3_FEATURES) registry.markUnsupported(feature, 3, `${feature.replace(/_/g, '-')}-unavailable-v0`, TIER3_REASON);
+  for (const feature of TIER3_FEATURES) {
+    if (feature !== 'stem_separation') registry.markUnsupported(feature, 3, `${feature.replace(/_/g, '-')}-unavailable-v0`, TIER3_REASON);
+  }
+  const stems = stemSeparationEvidenceState(evidence.stems, { now: evidence.now });
+  // The licence comes first: until it passes, that is the reason on every device.
+  const stemsReason = !stems.supported ? stems.reason : !player ? playerReason : '';
+  if (stemsReason) registry.markUnsupported('stem_separation', 3, STEM_MODEL.implementation, stemsReason);
+  else registry.register({ feature: 'stem_separation', tier: 3, implementation: STEM_MODEL.implementation, status: 'ready' }, evidence.stems);
   return registry;
 }

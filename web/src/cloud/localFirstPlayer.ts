@@ -2,8 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MixItem } from '../api';
 import * as provider from '../dsp/seamProvider';
 import { LOAD_NEXT_WITHIN } from '../engine/scheduler';
+import { browserMovesAllowed, browserMovesOn, browserStemMovesAllowed } from './browserMoves';
 import { flagOn } from '../flags';
-import { browserMovesAllowed, browserMovesOn } from './browserMoves';
+import { armCrashGuard, disarmCrashGuard, spawnStemsWorker, STEM_MODEL_ARTEFACT, StemPrefetcher, stemWindow, workerSeparator, type Observable, type PrefetchState } from '../dsp/stems';
+import type { StemReading } from '../dsp/stemSchedule';
+import { stemsFlagOn, stemsLicenceHold } from './stems/flag';
 import type { MusicSource, SeamRecord, SeamSettingsLike } from '../dsp/seamProvider';
 
 /** A scheduled seam and the two songs (by id) it joined when it was planned. */
@@ -312,6 +315,8 @@ export type SeamWiring = {
   onPlanned(record: SeamRecord): void;
   /** The moves this account has on (cloud/browserMoves.ts). */
   allowed?(): readonly string[] | undefined;
+  /** Cached stems for stem moves (cloud.browser_stems); reads only, never splits on the seam path. */
+  stems?: StemReading;
   /** Explicit, device-bound worker calibration; omission keeps Tier 2 on the fade fallback. */
   workerCalibration?: WorkerCalibration | null;
   /** Must be the same stable local identity used when the calibration was recorded. */
@@ -339,17 +344,13 @@ export const startBrowserEngine: EngineStarter = async (resolve, queueLength, se
     let budgetEvidence = seams?.workerCalibration && seams.deviceId
       ? { calibration: seams.workerCalibration, deviceId: seams.deviceId, atFloor: false, deadlineMisses: 0 }
       : null;
-    let roster = engine.roster({ probe, workerBudget: budgetEvidence });
+    const stretch = await engine.stretchEvidence();
+    let roster = engine.roster({ probe, workerBudget: budgetEvidence, stretch });
     const seam = seams ? provider.makeWorkerSeamProvider({
       ...seams,
       calibration: seams.workerCalibration,
       deviceId: seams.deviceId,
-      abilities: () => ({
-        ...provider.abilitiesFrom((feature) => roster.get(feature)),
-        varispeed: flagOn('cloud.browser_varispeed')
-          ? { ok: true as const }
-          : { ok: false as const, reason: 'the speed nudge is off: a pitch-preserving stretch is not built yet' },
-      }),
+      abilities: () => provider.abilitiesFrom((feature) => roster.get(feature)),
       sourceSafe: (source) => provider.abilityOf((feature) => roster.get(feature), `seam_source_${source}`),
       onBudgetState: (state) => {
         if (budgetEvidence) {
@@ -358,7 +359,7 @@ export const startBrowserEngine: EngineStarter = async (resolve, queueLength, se
             atFloor: !state.supported,
             deadlineMisses: state.deadlineMisses,
           };
-          roster = engine.roster({ probe, workerBudget: budgetEvidence });
+          roster = engine.roster({ probe, workerBudget: budgetEvidence, stretch });
         }
       },
     }) : undefined;
@@ -443,13 +444,46 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     return () => { gone = true; };
   }, [workspaceId]);
   const sources = useRef(new Map<number, MusicSource>());
+  // The stem prefetcher (cloud.browser_stems): splits the windows the next transitions need while
+  // this song plays. Only with the flag on, the stem model's licence cleared and a model published.
+  const prefetcher = useMemo(() => {
+    const artefact = STEM_MODEL_ARTEFACT;
+    if (!stemsFlagOn(flagOn) || stemsLicenceHold() || !artefact) return null;
+    return new StemPrefetcher({
+      separate: workerSeparator(spawnStemsWorker(), { sha256: artefact.sha256 }),
+      getAudio: async (songId) => {
+        const track = await (await resolver())?.(songId);
+        if (!track || typeof OfflineAudioContext === 'undefined') return null;
+        return new OfflineAudioContext(2, 1, 44100).decodeAudioData(await track.data());
+      },
+      scope: () => ({ workspaceId, shared: flagOn('cloud.content_cache') }),
+      guard: { arm: () => armCrashGuard(), disarm: () => disarmCrashGuard() },
+    });
+  }, [workspaceId, resolver]);
+  useEffect(() => () => prefetcher?.dispose(), [prefetcher]);
+  const prefetchRef = useRef(prefetcher);
+  prefetchRef.current = prefetcher;
+  const seamsRef = useRef<PlayedRecord[]>([]);
+  const stemReading = useMemo<StemReading>(() => ({
+    read: async (songId, part) => {
+      const song = songs.current.find((item) => item.song_id === songId);
+      const window = song ? stemWindow(song.duration, part) : null;
+      return prefetchRef.current && window ? prefetchRef.current.readStems(songId, window) : null;
+    },
+    songId: (index) => songs.current[index]?.song_id ?? null,
+    allowed: () => browserStemMovesAllowed(flagOn),
+    preference: () => 'sometimes',
+    history: () => seamsRef.current.map((record) => record.schedule.style ?? 'blend'),
+    totalSeams: () => Math.max(1, songs.current.length - 1),
+  }), []);
   const wiring = useMemo<SeamWiring>(() => ({
     settingsFor: (toIndex) => songs.current[toIndex]?.seam?.settings ?? null,
     sourceOf: (index) => sources.current.get(index) ?? null,
     // each record names its two songs, so a later edit of the mix can't pin it on the wrong seam
     onPlanned: (record) => setSeams((kept) => [...kept, { ...record, pair: [songs.current[record.fromIndex]?.song_id ?? null, songs.current[record.toIndex]?.song_id ?? null] as const }].slice(-SEAMS_KEPT)),
     allowed: () => (browserMovesOn() ? browserMovesAllowed() : undefined),
-  }), []);
+    stems: stemReading,
+  }), [stemReading]);
 
   useEffect(() => speaker?.onState(setEngine), [speaker]);
   // the clock moves while playing: redraw the position twice a second, never faster
@@ -536,6 +570,13 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     const clock = window.setInterval(() => player.tick(), 250);
     return () => window.clearInterval(clock);
   }, [speaking, player]);
-  return { player, device: pb, refusal, seams };
+  seamsRef.current = seams;
+  // each time a new song starts here, prepare the stems the next transitions will need
+  const position = player.state.position;
+  useEffect(() => {
+    prefetcher?.plan(mix.map((item) => ({ songId: item.song_id, durationS: item.duration })), position);
+  }, [prefetcher, position, mix]);
+  const prefetch: Observable<PrefetchState> | null = prefetcher?.state ?? null;
+  return { player, device: pb, refusal, seams, prefetch };
 }
 

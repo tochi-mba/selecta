@@ -1,4 +1,4 @@
-import { createContext } from 'react';
+import { createContext, type ReactNode } from 'react';
 
 /** True where every transition is worked out live as the mix plays (the browser runtime, ADR-0459):
  * there is nothing to render ahead, so no render control and no render count, and each transition
@@ -14,3 +14,13 @@ export type PlayedSeam = { label: string; detail: string | null; fellBack: boole
 /** Played transitions by the two songs they joined, `${fromSongId}>${intoSongId}`. */
 export const PlayedTransitions = createContext<Record<string, PlayedSeam>>({});
 export const playedKey = (from: number, into: number) => `${from}>${into}`;
+
+/** What a browser mix's shell adds for stem moves (cloud.browser_stems): the stem moves for the
+ * Move picker, each disabled with its reason where this device can't play it, and the readiness
+ * of each transition's stems. Absent (null) with stems off or the stem model's licence held. */
+export type StemSurfaces = {
+  stemMoves: readonly { move: string; label: string; disabledReason?: string }[];
+  readiness: (key: string) => ReactNode;
+  listenNotice: ReactNode;
+};
+export const StemSurfacesContext = createContext<StemSurfaces | null>(null);

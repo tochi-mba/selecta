@@ -5,10 +5,11 @@ import {
   STRETCH_MAX_TEMPO_RATIO,
   STRETCH_MIN_TEMPO_RATIO,
   stretchGeometry,
+  rampCurve,
   StretchReady,
   timeStretch,
 } from './stretch';
-import { stretchRefusal } from './stretchLimits';
+import { rampRatioAt, rampSourceSeconds, stretchRefusal } from './stretchLimits';
 
 const RATE = 44100;
 
@@ -200,6 +201,43 @@ describe('bounded time-stretch (WSOLA)', () => {
     const perSecond = best / seconds;
     console.info(`stretch cost ${perSecond.toFixed(1)} ms per second of stereo audio`);
     expect(perSecond).toBeLessThan(60);
+  });
+
+  it('follows a ratio curve: held, then eased back to 1, lasting exactly as long as its integral', () => {
+    const ramp = { ratio: 0.95, holdSeconds: 2, rampSeconds: 3 };
+    expect(rampRatioAt(ramp, 1)).toBe(0.95);
+    expect(rampRatioAt(ramp, 3.5)).toBeCloseTo(0.975, 12);
+    expect(rampRatioAt(ramp, 9)).toBe(1);
+    expect(rampSourceSeconds(ramp, 2)).toBeCloseTo(1.9, 12);
+    expect(rampSourceSeconds(ramp, 5)).toBeCloseTo(1.9 + 3 * 0.975, 12);
+    expect(rampSourceSeconds(ramp, 6)).toBeCloseTo(1.9 + 3 * 0.975 + 1, 12);
+    for (const shape of [ramp, { ratio: 1.06, holdSeconds: 1.5, rampSeconds: 4 }, { ratio: 0.92, holdSeconds: 0, rampSeconds: 2 }]) {
+      const input = sine(7, 330);
+      const result = ready(timeStretch([input, input], RATE, rampCurve(shape)));
+      // the output length t solves integral(ratio, 0, t) = input seconds
+      const seconds = result.outputFrames / RATE;
+      expect(Math.abs(rampSourceSeconds(shape, seconds) - 7) * RATE).toBeLessThan(2);
+      expect(result.channels[1]).toHaveLength(result.outputFrames);
+    }
+    // a constant curve matches the constant ratio to the sample
+    expect(ready(timeStretch([sine(2, 220)], RATE, () => 1.04)).outputFrames).toBe(ready(timeStretch([sine(2, 220)], RATE, 1.04)).outputFrames);
+  });
+
+  it('keeps the pitch through a ramp, with no clicks where the ratio changes', () => {
+    const shape = { ratio: 0.93, holdSeconds: 2, rampSeconds: 3 };
+    const out = ready(timeStretch([sine(8, 440)], RATE, rampCurve(shape))).channels[0];
+    // the held part, the middle of the ease, and after it
+    for (const centre of [1, 3.5, 6.5]) {
+      const at = Math.round(centre * RATE) - 8192;
+      expect(Math.abs(dominantFrequency(out.subarray(at, at + 16384)) - 440) / 440).toBeLessThan(0.005);
+    }
+    const { frame } = stretchGeometry(RATE);
+    expect(maxStep(out, frame, out.length - frame)).toBeLessThan(((2 * Math.PI * 440 * 0.5) / RATE) * 1.1);
+  });
+
+  it('refuses a curve that leaves the 8 percent limit, with the reason', () => {
+    const result = timeStretch([sine(3, 220)], RATE, (seconds) => (seconds < 1 ? 1 : 1.12));
+    expect(result).toMatchObject({ status: 'unsupported_here', reason: expect.stringMatching(/8 percent stretch limit/) });
   });
 
   it('never resamples: there is no playbackRate path in the module', () => {

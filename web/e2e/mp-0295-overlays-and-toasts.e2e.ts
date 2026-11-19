@@ -60,9 +60,13 @@ test('MP-0295-01 dialog, sheet, drawer and palette share header, body, footer in
     frames.push(await frame(page));
     await page.keyboard.press('Escape');
     // This case measures the palette's overlay geometry, not the Ctrl+K handler (covered
-    // by S3-0068). Use its ordinary control so the closing Activity overlay cannot race
-    // the shortcut's overlay-arbitration check.
-    await page.locator('.palette-button').click();
+    // by S3-0068). Wait for Activity to be gone so nothing races the overlay arbitration, then
+    // use the ordinary control where the bar shows it; phones hide it (shell.css) and keep the
+    // shortcut.
+    await expect(page.getByRole('dialog', { name: 'Activity' })).toBeHidden();
+    const paletteButton = page.locator('.palette-button');
+    if (await paletteButton.isVisible()) await paletteButton.click();
+    else await page.keyboard.press('Control+k');
     await expect(page.getByRole('dialog', { name: 'Search and commands' })).toBeVisible();
     frames.push(await frame(page));
     await page.keyboard.press('Escape');

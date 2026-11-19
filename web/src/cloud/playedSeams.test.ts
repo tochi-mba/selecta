@@ -9,6 +9,13 @@ describe('what a browser transition really played', () => {
     expect(words).toEqual({ label: 'Blend, 16 bars', detail: 'The tempos are 0.4 percent apart.', fellBack: false });
   });
 
+  it('says the next song was stretched, by how much, when SelectaDJ did not already say why', () => {
+    const stretch = { ratio: 0.979, holdUntil: 48, rampUntil: 56, sourceFrom: 0, inputSeconds: 20, handoverAt: 56, handoverSourceAt: 20 };
+    const words = playedWords({ implementation: 'x', kind: 'beatmatch', startSeconds: 40, windowSeconds: 8, events: [], style: 'bass_swap_blend', bars: 4, stretch });
+    expect(words.detail).toBe('The next song was stretched 2.1 percent to match, without changing its pitch.');
+    expect(playedWords({ implementation: 'x', kind: 'beatmatch', startSeconds: 40, windowSeconds: 8, events: [], stretch, why: 'Picked.' }).detail).toBe('Picked.');
+  });
+
   it('says a fade is a fade, with the reason the move fell back', () => {
     const words = playedWords({ ...fadeSchedule(30, 0, 'x'), style: 'echo_out', degraded: [{ wanted: 'echo', instead: 'fade', reason: 'this device has no echo or reverb returns' }] });
     expect(words).toEqual({ label: 'Faded', detail: 'This device has no echo or reverb returns.', fellBack: true });

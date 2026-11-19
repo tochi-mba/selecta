@@ -3,7 +3,9 @@ import {
   STRETCH_MAX_TEMPO_RATIO,
   STRETCH_MAX_WINDOW_SECONDS,
   STRETCH_MIN_TEMPO_RATIO,
+  rampRatioAt,
   stretchRefusal,
+  type StretchRamp,
   StretchUnsupported,
 } from './stretchLimits';
 
@@ -15,7 +17,9 @@ import {
  * Each frame is read from the input at the nominal position for the tempo ratio, shifted by up
  * to +-10 ms to the spot whose waveform best continues the previous frame, so overlapping frames
  * add in phase instead of cancelling or clicking. Pitch is untouched because samples are never
- * resampled: only which slices of the input are used changes. Multichannel audio shares one
+ * resampled: only which slices of the input are used changes. The ratio may also follow a curve
+ * over the output (a seam entry holds A's tempo, then eases back to 1): each hop then advances the
+ * read position by the curve's ratio at that point. Multichannel audio shares one
  * shift per frame (chosen on the channel sum), so the stereo image does not wander.
  *
  * Bounds (stretchLimits.ts): the tempo ratio must sit inside 0.92 to 1.08, the native engine's
@@ -30,7 +34,7 @@ import {
  */
 
 export { STRETCH_IMPLEMENTATION, STRETCH_MAX_TEMPO_RATIO, STRETCH_MAX_WINDOW_SECONDS, STRETCH_MIN_TEMPO_RATIO };
-export type { StretchUnsupported };
+export type { StretchRamp, StretchUnsupported };
 
 export interface StretchReady {
   status: 'ready';
@@ -87,19 +91,61 @@ function bestShift(guide: Float32Array, nominal: number, natural: number, hop: n
   return fine;
 }
 
-/** Stretch `channels` (equal-length, one Float32Array per channel) by `tempoRatio` (new tempo
- * over old) without changing pitch. The output lasts round(input / tempoRatio) frames. */
-export function timeStretch(channels: Float32Array[], sampleRate: number, tempoRatio: number): StretchResult {
+/** A tempo ratio that changes over the output: `outputSeconds` from the start of the result. */
+export type TempoCurve = (outputSeconds: number) => number;
+
+/** The curve of a held-then-eased ramp (stretchLimits.ts StretchRamp). */
+export function rampCurve(ramp: StretchRamp): TempoCurve {
+  return (outputSeconds) => rampRatioAt(ramp, outputSeconds);
+}
+
+/** Where each frame reads from: frame k's centre in input samples, for k = 0..frames, and the
+ * output length. A curve is sampled at the middle of each hop and summed (exact for a linear
+ * ramp inside each hop), so the output lasts as long as the curve's integral needs. */
+function framePlan(
+  inputFrames: number, sampleRate: number, hop: number, tempo: number | TempoCurve,
+): { centres: Float64Array; outputFrames: number } | { refusal: string } {
+  if (typeof tempo === 'number') {
+    const outputFrames = Math.round(inputFrames / tempo);
+    const frames = Math.ceil(outputFrames / hop) + 1;
+    const centres = new Float64Array(frames + 1);
+    const analysisHop = hop * tempo;
+    for (let k = 0; k <= frames; k += 1) centres[k] = k * analysisHop;
+    return { centres, outputFrames };
+  }
+  const ratios: number[] = [];
+  let position = 0;
+  let outputFrames = -1;
+  for (let k = 0; outputFrames < 0 || k <= Math.ceil(outputFrames / hop) + 1; k += 1) {
+    const ratio = tempo(((k + 0.5) * hop) / sampleRate);
+    const refusal = stretchRefusal(ratio, 0);
+    if (refusal) return { refusal };
+    if (outputFrames < 0 && position + hop * ratio >= inputFrames) outputFrames = Math.round(k * hop + (inputFrames - position) / ratio);
+    ratios.push(ratio);
+    position += hop * ratio;
+  }
+  const frames = Math.ceil(outputFrames / hop) + 1;
+  const centres = new Float64Array(frames + 1);
+  for (let k = 1; k <= frames; k += 1) centres[k] = centres[k - 1] + hop * ratios[k - 1];
+  return { centres, outputFrames };
+}
+
+/** Stretch `channels` (equal-length, one Float32Array per channel) by `tempo` (new tempo over
+ * old: a constant, or a curve over the output) without changing pitch. With a constant the
+ * output lasts round(input / tempo) frames; with a curve, until its integral covers the input. */
+export function timeStretch(channels: Float32Array[], sampleRate: number, tempo: number | TempoCurve): StretchResult {
   if (!channels || channels.length === 0) return unsupported('there is no audio to stretch');
   if (!Number.isFinite(sampleRate) || sampleRate <= 0) return unsupported('the audio has no usable sample rate');
   const inputFrames = channels[0].length;
   if (channels.some((channel) => channel.length !== inputFrames)) return unsupported('every channel must be the same length');
+  const tempoRatio = typeof tempo === 'number' ? tempo : tempo(0);
   const refusal = stretchRefusal(tempoRatio, inputFrames / sampleRate);
   if (refusal) return unsupported(refusal);
 
   const { hop, frame, tolerance } = stretchGeometry(sampleRate);
-  const outputFrames = Math.round(inputFrames / tempoRatio);
-  const analysisHop = hop * tempoRatio;
+  const plan = framePlan(inputFrames, sampleRate, hop, tempo);
+  if ('refusal' in plan) return unsupported(plan.refusal);
+  const { centres, outputFrames } = plan;
   const window = new Float32Array(frame);
   for (let index = 0; index < frame; index += 1) window[index] = 0.5 - 0.5 * Math.cos((2 * Math.PI * index) / frame);
 
@@ -115,7 +161,7 @@ export function timeStretch(channels: Float32Array[], sampleRate: number, tempoR
   const frames = Math.ceil(outputFrames / hop) + 1;
   let previousStart = -hop;
   for (let k = 0; k < frames; k += 1) {
-    const nominal = Math.round(k * analysisHop) - hop;
+    const nominal = Math.round(centres[k]) - hop;
     const start = k === 0 ? nominal : nominal + bestShift(guide, nominal, previousStart + hop, hop, tolerance);
     const outStart = k * hop - hop;
     for (let channel = 0; channel < channels.length; channel += 1) {

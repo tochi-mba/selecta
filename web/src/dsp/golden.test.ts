@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  compareStretch,
   fixtureChannels,
   loadGoldenSet,
   runGoldenSet,
   synthesize,
   type GoldenSet,
   type GoldenTolerances,
+  type StretchReference,
 } from './golden';
 
 const TOLERANCES: GoldenTolerances = {
@@ -111,5 +113,50 @@ describe('golden comparison harness', () => {
   it('validates a parsed golden set', () => {
     expect(() => loadGoldenSet('{"fixtures": "no"}')).toThrow();
     expect(() => loadGoldenSet(JSON.stringify(INLINE))).not.toThrow();
+  });
+});
+
+/**
+ * BF-0459-05: the browser's WSOLA stretch against the Python engine's (pedalboard 0.9.26 Rubber
+ * Band, `time_stretch(stereo, 44100, stretch_factor=ratio, high_quality=True,
+ * transient_mode="crisp")` as src/selecta/render/dsp.py stretch_to_warp calls it), over the
+ * shared synth of tools/bf_golden.py. The reference rows were measured in Python with the same
+ * formulas as golden.ts stretchOnsets / stretchSpreadMs / dominantHz. A sample-exact match is not
+ * expected from two different algorithms; what a listener hears must match.
+ */
+const PYTHON_STRETCH: StretchReference[] = [
+  {
+    ratio: 0.95,
+    inputFrames: 352800,
+    lengthFrames: 371368,
+    onsetsS: [0.003, 0.53, 1.058, 1.586, 2.114, 2.642, 3.17, 3.698, 4.226, 4.754, 5.282, 5.81, 6.338, 6.866, 7.394, 7.922],
+    spreadMs: 9,
+    dominantHz: 219.957,
+  },
+  {
+    ratio: 1.05,
+    inputFrames: 352800,
+    lengthFrames: 336000,
+    onsetsS: [0.002, 0.481, 0.959, 1.437, 1.915, 2.393, 2.871, 3.349, 3.827, 4.305, 4.784, 5.262, 5.74, 6.218, 6.696, 7.174],
+    spreadMs: 9,
+    dominantHz: 219.957,
+  },
+];
+
+describe('the stretch against the Python engine', () => {
+  it.each(PYTHON_STRETCH)('matches length, hit positions, pitch and sharpness at ratio $ratio', (reference) => {
+    // WSOLA picks each frame within +-10 ms of its nominal place, so a hit may land up to that far
+    // from Rubber Band's (measured worst: 10 ms at 0.95); 12 ms allows the 1 ms measuring blocks.
+    // That is under a fiftieth of a beat at 120 BPM, and a fifth of the seams' eighth-beat bound.
+    const rows = compareStretch(reference, { onsetMs: 12, pitchShare: 0.005, spreadMs: 8 });
+    console.info('stretch golden', JSON.stringify(rows.map(({ metric, expected, actual }) => ({ metric, expected, actual }))));
+    expect(rows.map((row) => row.metric)).toEqual(['inputFrames', 'lengthFrames', 'onsetCount', 'worstOnsetMs', 'dominantHz', 'spreadMs']);
+    const failing = rows.filter((row) => !row.pass);
+    expect(failing, JSON.stringify(failing)).toEqual([]);
+  });
+
+  it('really measures: a stretch to the wrong ratio fails the length and hit rows', () => {
+    const rows = compareStretch({ ...PYTHON_STRETCH[1], ratio: 1.04 }, { onsetMs: 10, pitchShare: 0.005, spreadMs: 8 });
+    expect(rows.find((row) => row.metric === 'lengthFrames')?.pass).toBe(false);
   });
 });

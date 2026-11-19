@@ -13,19 +13,26 @@
  *    lands, and reverb_wash: A's last two beats into a room as A fades over one beat
  *    (`exits.py`, with the returns of seamEffects.ts). Both need only A's beat, as in local mode;
  *  - blend: the plain equal-power beatmatched blend of seams.ts;
+ *  - tempo_ramp: a short (4-bar) bass-trading overlap with B stretched to A's tempo, then eased
+ *    back over 32 beats (styles/blend.py RAMP_LONG_BEATS). Local mode also drifts A toward the
+ *    two songs' geometric mean; the browser keeps A native, as for every stretched seam below;
  *  - auto: SelectaDJ picks, in local mode's preference order (chooseMove), and says why.
  * Exits sit on an 8-bar phrase line of A's grid unless the seam names a bar, as local mode
  * leaves on a cue rather than wherever the song happens to end.
  *
  * What the browser cannot do honestly is degraded to a documented fallback and recorded on the
  * schedule's `degraded` list, never silently swapped:
- *  - tempo_ramp needs a pitch-preserving stretch (stretch.ts reports it unsupported) -> a fade;
+ *  - tempo_ramp needs the pitch-preserving stretch (stretch.ts, time_stretch in the roster) -> a fade;
  *  - echo_out and reverb_wash need the echo and wash returns (seamEffects.ts) -> a fade;
  *  - delay_throw needs vocal timing and stems (Tier 3, unsupported) -> a fade;
- *  - a beatmatched blend between songs whose tempos differ needs a stretch, so the overlap is
- *    shortened until the beats drift by at most an eighth of a beat, or becomes a fade. Only with
- *    `cloud.browser_varispeed` (off: BF-0459-05 rules out playbackRate for musical stretch) is B's
- *    speed nudged to A's tempo within 3 percent instead, a small pitch change as on a turntable;
+ *  - a beatmatched blend between songs whose tempos differ needs a stretch. With time_stretch
+ *    ready, B enters as a clip stretched to A's tempo without changing its pitch, plays in time
+ *    for the whole overlap and eases back to its own tempo over 16 beats (styles/timing.py
+ *    beat_lock), then hands over to native B. Local mode splits gaps over 3 percent across both
+ *    songs at their geometric mean; the browser stretches B alone to A's tempo for every gap up to
+ *    the 8 percent limit, because stretching A would mean swapping the song already playing for
+ *    a clip mid-play. Without the stretch (or beyond 8 percent) the overlap is shortened until the
+ *    beats drift by at most an eighth of a beat, or becomes a fade;
  *  - EQ and filter moves need the move chain (seamMoves.ts) -> the plain blend without them;
  *  - low or ambiguous tempo confidence, or no beatmatch capability -> a fade (seams.ts rule).
  * The 30 s `leave_after` settle rule and the 16 s window bound of seams.ts hold for every move.
@@ -34,6 +41,7 @@
 import { fadeInPoints, fadeOutPoints } from './crossfade';
 import { SEAM_EFFECTS_IMPLEMENTATION, type EchoSpec, type WashSpec } from './seamEffects';
 import { SEAM_MOVES_IMPLEMENTATION } from './seamMoves';
+import { stretchRefusal } from './stretchLimits';
 import {
   confident,
   fadeSchedule,
@@ -46,6 +54,7 @@ import {
   type SeamDegrade,
   type SeamEvent,
   type SeamSchedule,
+  type SeamStretch,
   type TrackTiming,
 } from './seams';
 
@@ -78,8 +87,6 @@ export type SeamAbilities = {
   stretch: Ability;
   stems: Ability;
   echo: Ability;
-  /** Nudging B's playback speed to lock the beats (cloud.browser_varispeed); off when absent. */
-  varispeed?: Ability;
 };
 
 export interface ScriptRequest {
@@ -98,7 +105,7 @@ export interface ScriptRequest {
   allowed?: readonly string[];
 }
 
-const DEFAULT_BARS: Record<string, number> = { bass_swap_blend: 16, filter_sweep: 8, blend: 4 };
+const DEFAULT_BARS: Record<string, number> = { bass_swap_blend: 16, filter_sweep: 8, blend: 4, tempo_ramp: 4 };
 const NEEDS: Partial<Record<SeamMove, { ability: keyof SeamAbilities; wanted: string }>> = {
   tempo_ramp: { ability: 'stretch', wanted: 'stretch' },
   echo_out: { ability: 'echo', wanted: 'echo' },
@@ -139,12 +146,17 @@ export function barsThatFit(wanted: number, beatSeconds: number, tempoGap: numbe
 const TEMPO_FREE: readonly SeamMove[] = ['cut_on_one', 'echo_out', 'reverb_wash'];
 /** No family in local mode gets an overlap shorter than this: every rated 4-bar one was disliked. */
 export const AUTO_MIN_BARS = 8;
-/** Local mode lets B alone absorb a tempo gap up to this (styles/timing.py A_NATIVE_MAX_GAP). The
- * browser has no pitch-preserving stretch, so it nudges B's playback speed instead, as a
- * turntable's pitch fader does: the beats lock, and the pitch moves by the same small amount. */
-export const MAX_VARISPEED = 0.03;
-/** After the overlap, B eases back to its own speed over this many beats (timing.py RAMP_BEATS). */
-export const VARISPEED_RAMP_BEATS = 16;
+/** Below this tempo gap the grids barely drift, so nothing is stretched. */
+export const MIN_STRETCH_GAP = 0.0005;
+/** After the overlap, stretched B eases back to its own tempo over this many of its beats
+ * (styles/timing.py RAMP_BEATS), or SETTLE_BEATS when the gap is within SETTLED_GAP. */
+export const STRETCH_RAMP_BEATS = 16;
+export const SETTLED_GAP = 0.002;
+export const SETTLE_BEATS = 8;
+/** tempo_ramp's longer ease (styles/blend.py RAMP_LONG_BEATS). */
+export const TEMPO_RAMP_BEATS = 32;
+/** Native B must still have this much audio left after the handover. */
+const HANDOVER_ROOM_SECONDS = 1;
 /** Exits sit on a phrase line of the beat grid, this many bars apart. */
 export const PHRASE_BARS = 8;
 /** `_next_vocal_room_beats` with vocals unknown (the browser has none) is half a beat, halved. */
@@ -202,22 +214,47 @@ export function chooseMove(request: ScriptRequest, room: number): Choice {
   if (!confident(b)) return tempoFree('The next song’s beat isn’t clear enough to blend in time');
   const beat = 60 / a.tempo.bpm;
   const gap = Math.abs(a.tempo.bpm / b.tempo.bpm - 1);
-  const nudged = !!abilities.varispeed?.ok && gap <= MAX_VARISPEED;
-  const bars = barsThatFit(16, beat, nudged ? 0 : gap, room);
+  const canStretch = stretchable(request);
+  const stretched = canStretch && gap >= MIN_STRETCH_GAP;
+  const bars = barsThatFit(16, beat, canStretch ? 0 : gap, room);
   if (bars >= AUTO_MIN_BARS) {
-    const close = gap < 0.0005
-      ? 'The tempos match'
-      : nudged
-        ? `The tempos are ${percent(gap)} percent apart, close enough to nudge the next song’s speed to match`
-        : `The tempos are ${percent(gap)} percent apart`;
-    if (abilities.eqFilters.ok && may('bass_swap_blend')) return { move: 'bass_swap_blend', bars, why: `${close}, so both play in time for ${bars} bars and trade the bass on a bar line.` };
-    if (abilities.eqFilters.ok && may('filter_sweep')) return { move: 'filter_sweep', bars: Math.min(bars, 8), why: `${close}, so the first song filters away as the next opens up.` };
-    return { move: 'blend', bars, why: `${close}, so both play in time for ${bars} bars.` };
+    const sweepBars = Math.min(bars, 8);
+    const lead = gap < MIN_STRETCH_GAP
+      ? 'The tempos match, so'
+      : stretched
+        ? `The tempos are ${percent(gap)} percent apart, so the next song is stretched to match without changing its pitch, and`
+        : `The tempos are ${percent(gap)} percent apart, so`;
+    if (abilities.eqFilters.ok && may('bass_swap_blend')) return { move: 'bass_swap_blend', bars, why: `${lead} both play in time for ${bars} bars and trade the bass on a bar line.` };
+    if (abilities.eqFilters.ok && may('filter_sweep')) return { move: 'filter_sweep', bars: sweepBars, why: `${lead} the first song filters away as the next opens up over ${sweepBars} bars.` };
+    return { move: 'blend', bars, why: `${lead} both play in time for ${bars} bars.` };
   }
-  const tooFar = barsThatFit(16, beat, gap) < AUTO_MIN_BARS;
-  return tempoFree(tooFar
-    ? `The tempos are ${percent(gap)} percent apart and this browser can’t stretch them`
-    : 'There isn’t room left in the song for a long blend');
+  const tooFar = barsThatFit(16, beat, canStretch ? 0 : gap) < AUTO_MIN_BARS;
+  return tempoFree(!tooFar
+    ? 'There isn’t room left in the song for a long blend'
+    : abilities.stretch.ok
+      ? `The tempos are ${percent(gap)} percent apart, more than the 8 percent this browser can stretch`
+      : `The tempos are ${percent(gap)} percent apart and this browser can’t stretch them`);
+}
+
+/** Whether B may be stretched to A's tempo on this device: the roster has the stretch, and the
+ * tempo ratio sits inside its 8 percent limit. */
+function stretchable(request: ScriptRequest): boolean {
+  return request.abilities.stretch.ok && stretchRefusal(request.a.tempo.bpm / request.b.tempo.bpm, 0) === null;
+}
+
+/** B's stretched entry for an overlap from `start` to `end` that B enters at `entry`: held at
+ * A's tempo through the overlap, eased back over `rampBeats` of B's own beats, then handed to
+ * native B. Null when B's window is past the stretch limits or B ends before the handover. */
+export function entryStretch(a: TrackTiming, b: TrackTiming, start: number, end: number, entry: number, rampBeats: number): SeamStretch | null {
+  const ratio = a.tempo.bpm / b.tempo.bpm;
+  const beatB = 60 / b.tempo.bpm;
+  const hold = end - start;
+  // the ease is linear in output time, so B covers rampBeats of its beats at the mean ratio
+  const rampSeconds = (2 * rampBeats * beatB) / (ratio + 1);
+  const inputSeconds = ratio * hold + rampBeats * beatB;
+  const handoverSourceAt = entry + inputSeconds;
+  if (stretchRefusal(ratio, inputSeconds) || handoverSourceAt > b.durationSeconds - HANDOVER_ROOM_SECONDS) return null;
+  return { ratio, holdUntil: end, rampUntil: end + rampSeconds, sourceFrom: entry, inputSeconds, handoverAt: end + rampSeconds, handoverSourceAt };
 }
 
 /** Build the schedule for the seam from A into B, playing the asked-for move as far as this
@@ -318,16 +355,19 @@ export function scriptSeam(request: ScriptRequest): SeamSchedule {
 
   if (!confident(b)) return fade(exitWanted(3), 'beatmatch', unsure(b, 'the incoming song'));
   const gap = Math.abs(a.tempo.bpm / b.tempo.bpm - 1);
-  // within local mode's B-only absorb, B's speed is nudged to A's tempo, so the grids don't drift
-  const nudge = abilities.varispeed?.ok && gap >= 0.0005 && gap <= MAX_VARISPEED ? a.tempo.bpm / b.tempo.bpm : 1;
-  const drift = nudge === 1 ? gap : 0;
+  const canStretch = stretchable(request);
+  const stretched = canStretch && gap >= MIN_STRETCH_GAP;
+  const drift = canStretch ? 0 : gap;
+  const noStretch = abilities.stretch.ok
+    ? 'that is more than the 8 percent this browser can stretch'
+    : `this browser can't stretch them to match: ${abilities.stretch.reason}`;
 
   let style: SeamMove = move;
-  if ((style === 'bass_swap_blend' || style === 'filter_sweep') && !abilities.eqFilters.ok) {
+  if ((style === 'bass_swap_blend' || style === 'filter_sweep' || style === 'tempo_ramp') && !abilities.eqFilters.ok) {
     degraded.push({ wanted: 'eq', instead: 'blend', reason: abilities.eqFilters.reason });
     style = 'blend';
   }
-  const wantedBars = Math.max(1, Math.round(bars ?? DEFAULT_BARS[style] ?? 8));
+  const wantedBars = Math.max(1, Math.round(bars ?? DEFAULT_BARS[move] ?? DEFAULT_BARS[style] ?? 8));
   // the overlap has to end inside A, after the settle rule and a snap of up to one beat
   const room = roomAfter(beat);
   const fitted = barsThatFit(wantedBars, beat, drift, room);
@@ -335,13 +375,13 @@ export function scriptSeam(request: ScriptRequest): SeamSchedule {
     return fade(exitWanted(3), 'overlap', 'the song is too short after the 30 s settle rule for a beatmatched overlap');
   }
   if (fitted === 0) {
-    return fade(exitWanted(3), 'stretch', `the tempos are ${percent(gap)} percent apart and this browser has no time-stretch to close the gap`);
+    return fade(exitWanted(3), 'stretch', `the tempos are ${percent(gap)} percent apart and ${noStretch}`);
   }
   if (fitted < wantedBars) {
     const reason = fitted < barsThatFit(wantedBars, beat, drift)
       ? 'the song ends too soon after the 30 s settle rule for a longer overlap'
       : fitted < barsThatFit(wantedBars, beat, 0)
-        ? `the tempos are ${percent(gap)} percent apart, more than a speed nudge should cover, so a longer overlap would drift off the beat`
+        ? `the tempos are ${percent(gap)} percent apart and ${noStretch}, so a longer overlap would drift off the beat`
         : `a browser seam window is at most ${MAX_WINDOW_SECONDS} s`;
     degraded.push({ wanted: `${wantedBars} bars`, instead: `${fitted} bars`, reason });
   }
@@ -350,6 +390,16 @@ export function scriptSeam(request: ScriptRequest): SeamSchedule {
   const entry = firstBeatAtOrAfter(b.beats, entryWanted);
   if (start === null || entry === null) return fade(exitWanted(3), 'beatmatch', 'no usable beat near the seam');
   const end = start + window;
+  let stretch: SeamStretch | null = null;
+  if (stretched) {
+    const rampBeats = move === 'tempo_ramp' ? TEMPO_RAMP_BEATS : gap <= SETTLED_GAP ? SETTLE_BEATS : STRETCH_RAMP_BEATS;
+    stretch = entryStretch(a, b, start, end, entry, rampBeats);
+    if (!stretch) {
+      // script it again as an unstretched seam, so the shortened overlap and its reasons hold
+      const reason = 'the next song is too short to ease back to its own tempo after a stretched entry';
+      return scriptSeam({ ...request, abilities: { ...abilities, stretch: { ok: false, reason } } });
+    }
+  }
   const events: SeamEvent[] = [{ deck: 'b', kind: 'start', at: start, sourceAt: entry }];
   if (style === 'blend') {
     events.push(...gainEvents('a', fadeOutPoints(start, end, SCHEDULE_CURVE_STEPS)));
@@ -379,7 +429,7 @@ export function scriptSeam(request: ScriptRequest): SeamSchedule {
   }
   events.push({ deck: 'a', kind: 'stop', at: end + 1e-6 });
   const scheduled: SeamSchedule = { ...finish(events, start, window, style, degraded, style !== 'blend'), bars: fitted };
-  if (nudge !== 1) scheduled.rate = { value: nudge, holdUntil: end, rampUntil: end + VARISPEED_RAMP_BEATS * beat };
+  if (stretch) scheduled.stretch = stretch;
   return done(scheduled);
 }
 

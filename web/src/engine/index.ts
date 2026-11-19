@@ -5,6 +5,8 @@ import { probeCapability, ProbeResult } from './probe';
 import { BrowserSpeaker, BrowserSpeakerOptions } from './speakerAdapter';
 import { createEngineStore, EngineState, EngineStore, registerDeviceOutputStore, UnsupportedHere } from './state';
 import type { WorkerBudgetEvidence, WorkerCalibration } from '../dsp/budget';
+import { STRETCH_PLAYBACK_INTEGRATION } from '../dsp/stretchLimits';
+import { loadStretchEvidence, type StretchEvidence } from '../dsp/stretchLoader';
 
 /** The public surface of the browser audio runtime (ADR-0457), as the interface uses it.
  *
@@ -63,6 +65,7 @@ export type { EncodedWav, PcmChunk, WavBits, WavDetails, WavProblem } from './wa
 export { encodeWav, validateWav } from './wav';
 export type { Capability, CapabilityStatus, DspEvidence, Tier } from '../dsp/capability';
 export { CapabilityRegistry } from '../dsp/capability';
+export type { StretchEvidence } from '../dsp/stretchLoader';
 
 /** What the roster is built from: the probe, the limiter that went in, and (for Tier 2) a
  * benchmark-calibrated worker budget from dsp/budget.ts. */
@@ -70,6 +73,8 @@ export type RosterEvidence = {
   probe: ProbeResult;
   limiter?: LimiterInstall | null;
   workerBudget?: WorkerBudgetEvidence | null;
+  /** The stretch module's self-test on this device (Engine.stretchEvidence). */
+  stretch?: StretchEvidence | null;
   /** Epoch milliseconds; defaults to Date.now() for calibration expiry checks. */
   now?: number;
 };
@@ -87,9 +92,12 @@ export function buildCapabilityRoster(evidence: RosterEvidence, registry = new C
       : { kind: 'compressor_fallback', implementation: COMPRESSOR_FALLBACK_IMPLEMENTATION },
     workerBudget: evidence.workerBudget ?? null,
     now: evidence.now,
-    // Loading and self-testing the DSP module is not proof that the live scheduler applies it.
-    // Until a buffer-preprocessing path is wired into seam execution, never advertise this as
-    // a playback capability (ADR-0459's capability truth contract).
+    stretch: evidence.stretch ?? null,
+    // The integration token now means "the stretch self-tested on this device, and this build's
+    // playback path plays its clips": the seam provider renders B's stretched entry and
+    // scheduler.ts hands it over to native B. Both ship together in this engine, so the token
+    // goes with the self-test's evidence and never without it (ADR-0459 capability truth).
+    stretchPlaybackIntegration: evidence.stretch ? STRETCH_PLAYBACK_INTEGRATION : null,
   });
 }
 
@@ -103,6 +111,8 @@ export type Engine = {
   createSpeaker(options: Omit<BrowserSpeakerOptions, 'store'>): BrowserSpeaker;
   /** The honest capability roster for this device. */
   roster(evidence: RosterEvidence): CapabilityRegistry;
+  /** Load and self-test the time-stretch once per engine; null when it failed (stays off). */
+  stretchEvidence(): Promise<StretchEvidence | null>;
   dispose(): void;
 };
 
@@ -114,6 +124,7 @@ export function createEngine(options: { onState?: (state: EngineState) => void }
   const contexts = new Set<EngineContext>();
   const speakers = new Set<BrowserSpeaker>();
   let disposed = false;
+  let stretch: Promise<StretchEvidence | null> | null = null;
   const dispose = () => {
     if (disposed) return;
     disposed = true;
@@ -141,6 +152,10 @@ export function createEngine(options: { onState?: (state: EngineState) => void }
       return speaker;
     },
     roster: (evidence) => buildCapabilityRoster(evidence),
+    stretchEvidence: () => {
+      stretch ??= loadStretchEvidence();
+      return stretch;
+    },
     dispose,
   };
 }

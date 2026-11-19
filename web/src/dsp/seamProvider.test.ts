@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CapabilityRegistry, registerBrowserDspCapabilities } from './capability';
-import { abilitiesFrom, abilityOf, analyseTiming, beatGrid, calibrateAnalysis, gridSupport, makeSeamProvider, makeWorkerSeamProvider, MIN_PULSE, pulseStrength, sliceMono, type PcmLike, type SeamRecord } from './seamProvider';
+import { abilitiesFrom, abilityOf, analyseTiming, beatGrid, calibrateAnalysis, CLIP_CONTEXT_SECONDS, gridSupport, makeSeamProvider, makeWorkerSeamProvider, MIN_PULSE, pulseStrength, sliceMono, type PcmLike, type SeamRecord } from './seamProvider';
+import { rampSourceSeconds } from './stretchLimits';
 import { MIN_BEATMATCH_CONFIDENCE } from './seams';
 import type { TrackTiming } from './seams';
 import { WORKER_CALIBRATION_IMPLEMENTATION, type WorkerBudgetEvidence } from './budget';
@@ -206,5 +207,117 @@ describe('the seam provider', () => {
     await provider({ fromIndex: 0, from: song, toIndex: 1, to: song });
     expect(pcmLengths[1]).toBe(30 * song.sampleRate);
     provider.dispose();
+  });
+});
+
+describe('stretched entries', () => {
+  const STRETCHY = () => ({ ...abilitiesFrom(status), stretch: { ok: true as const } });
+  const headAndTail = (part: 'head' | 'tail') => timing(part === 'tail' ? 120 : 121.2);
+
+  it('renders B’s entry stretched along the schedule’s ramp, and keeps the clip out of the record', () => {
+    const records: SeamRecord[] = [];
+    const provider = makeSeamProvider({
+      settingsFor: () => ({ move: 'bass_swap_blend', bars: 8, exit_bar: 20 }),
+      abilities: STRETCHY,
+      timing: (_buffer, part) => headAndTail(part),
+      onPlanned: (record) => records.push(record),
+    });
+    const song = clicks(120, 120);
+    const schedule = provider({ fromIndex: 0, from: song, toIndex: 1, to: song });
+    const stretch = schedule.stretch!;
+    expect(stretch.ratio).toBeCloseTo(120 / 121.2, 9);
+    const clip = stretch.clip!;
+    expect(clip.sampleRate).toBe(song.sampleRate);
+    // B enters on its first beat (0 s), so there is no lead-in to skip
+    expect(clip.skipSeconds).toBe(0);
+    const ramp = { ratio: stretch.ratio, holdSeconds: stretch.holdUntil - schedule.startSeconds, rampSeconds: stretch.rampUntil - stretch.holdUntil };
+    const inputSeconds = stretch.handoverSourceAt + CLIP_CONTEXT_SECONDS - stretch.sourceFrom;
+    expect(Math.abs(rampSourceSeconds(ramp, clip.channels[0].length / clip.sampleRate) - inputSeconds) * clip.sampleRate).toBeLessThan(2);
+    expect(records[0].schedule.stretch).not.toHaveProperty('clip');
+    expect(records[0].schedule.stretch?.ratio).toBe(stretch.ratio);
+  });
+
+  it('goes without the stretch, and says so, when the clip cannot be rendered', () => {
+    const records: SeamRecord[] = [];
+    const provider = makeSeamProvider({
+      settingsFor: () => ({ move: 'bass_swap_blend', bars: 8, exit_bar: 20 }),
+      abilities: STRETCHY,
+      timing: (_buffer, part) => headAndTail(part),
+      onPlanned: (record) => records.push(record),
+    });
+    // the analysis says two minutes, but only ten seconds of B decoded: the clip comes back short
+    const short = clicks(120, 10);
+    const schedule = provider({ fromIndex: 0, from: short, toIndex: 1, to: short });
+    expect(schedule.stretch).toBeUndefined();
+    expect(schedule.kind).toBe('beatmatch');
+    expect(schedule.windowSeconds).toBeCloseTo(4, 6);
+    expect(schedule.degraded?.at(-1)).toEqual({ wanted: 'stretch', instead: 'unstretched', reason: 'the stretch could not be prepared: the stretched audio came back too short' });
+    expect(records[0].schedule).toBe(schedule);
+  });
+
+  it('renders off-thread in the worker provider, and falls back when the stretch worker misses its deadline', async () => {
+    const answering = (onsetsFor: (call: number) => number[]) => {
+      let call = 0;
+      return () => {
+        const listeners = new Map<string, (event: MessageEvent) => void>();
+        return {
+          addEventListener: (type: string, listener: EventListenerOrEventListenerObject) => {
+            if (typeof listener === 'function') listeners.set(type, listener as (event: MessageEvent) => void);
+          },
+          removeEventListener: (type: string) => { listeners.delete(type); },
+          postMessage: (request: { id: number }) => {
+            const onsetTimes = onsetsFor(call);
+            const bpm = call === 0 ? 120 : 121.2;
+            call += 1;
+            queueMicrotask(() => listeners.get('message')?.({
+              data: { id: request.id, tempo: { implementation: 'test-tempo', bpm, confidence: 0.9, ambiguous: false }, onsetTimes },
+            } as MessageEvent));
+          },
+          terminate: () => { listeners.clear(); },
+        } as unknown as Worker;
+      };
+    };
+    const grid = (bpm: number, offset: number) => Array.from({ length: Math.floor((60 * bpm) / 60) }, (_, beat) => beat * (60 / bpm) + offset);
+    const song = clicks(120, 120, 22050, 0);
+    const stretchers: string[] = [];
+    let silent = true;
+    const stretchWorkerFactory = () => {
+      const listeners = new Map<string, (event: MessageEvent) => void>();
+      return {
+        addEventListener: (type: string, listener: EventListenerOrEventListenerObject) => {
+          if (typeof listener === 'function') listeners.set(type, listener as (event: MessageEvent) => void);
+        },
+        removeEventListener: (type: string) => { listeners.delete(type); },
+        postMessage: (request: { id: number; channels: Float32Array[] }) => {
+          stretchers.push('asked');
+          if (silent) return;
+          queueMicrotask(() => listeners.get('message')?.({ data: { id: request.id, channels: request.channels.map(() => new Float32Array(30 * 22050)) } } as MessageEvent));
+        },
+        terminate: () => { stretchers.push('terminated'); },
+      } as unknown as Worker;
+    };
+    const make = () => makeWorkerSeamProvider({
+      settingsFor: () => ({ move: 'bass_swap_blend', bars: 8, exit_bar: 20 }),
+      abilities: STRETCHY,
+      calibration: workerEvidence().calibration,
+      deviceId: TEST_DEVICE,
+      now: () => TEST_NOW,
+      workerFactory: answering((call) => (call % 2 === 0 ? grid(120, 0) : grid(121.2, 0))),
+      stretchWorkerFactory,
+      stretchTimeoutMs: 5,
+    });
+    const late = make();
+    const fallen = await late({ fromIndex: 0, from: song, toIndex: 1, to: song });
+    expect(stretchers).toEqual(['asked', 'terminated']);
+    expect(fallen.stretch).toBeUndefined();
+    expect(fallen.degraded?.at(-1)?.reason).toMatch(/^the stretch could not be prepared: the stretch took longer than/);
+    late.dispose();
+
+    silent = false;
+    const prompt = make();
+    const stretched = await prompt({ fromIndex: 0, from: song, toIndex: 1, to: song });
+    expect(stretched.stretch?.clip?.channels[0]).toHaveLength(30 * 22050);
+    prompt.dispose();
+    expect(stretchers.at(-1)).toBe('terminated');
   });
 });

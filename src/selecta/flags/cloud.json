@@ -370,11 +370,11 @@
       "kind": "release",
       "owner": "playback"
     },
-    "cloud.browser_varispeed": {
-      "label": "Browser speed nudge",
-      "about": "Lets a browser blend nudge the incoming song's playback speed (and so its pitch, as a turntable's pitch fader does) by up to 3 percent to lock the beats, then ease it back. Off: ADR-0459 BF-0459-05 rules out playbackRate for musical stretch until the owner decides otherwise.",
-      "requires": ["cloud.browser_moves"],
-      "surfaces": ["cloud.listen"],
+    "cloud.browser_stems": {
+      "label": "Browser stem moves",
+      "about": "Splitting songs into voice, drums, bass and melody on this device, only around each transition, for vocal ride, strip and land and intertwined stems in browser mixes (ADR-0459 Tier 3). Each device reports unsupported until the stem model's licence review and that device's evidence record pass.",
+      "requires": ["cloud.browser_moves", "stems"],
+      "surfaces": ["cloud.listen", "edit", "cloud.settings"],
       "modes": ["cloud"],
       "default": false,
       "kind": "release",
