@@ -63,6 +63,8 @@ export type RecipeStore = {
   edit: (mixId: string, baseRevision: string, change: { songIds?: number[]; name?: string; seamMoves?: Record<number, string | null> }) => Promise<Recipe>;
   /** A saved copy under its own id, so "Save a copy" lands in My Mixes. */
   duplicate: (mixId: string, name?: string) => Promise<Recipe>;
+  /** Delete a saved recipe and all its revisions. Music files are never touched. */
+  remove: (mixId: string) => Promise<void>;
 };
 
 export const DEFAULT_STEERING: Status['steering'] = { mix_language: 'any', stems: 'auto', energy_arc: null, target: null };
@@ -98,6 +100,9 @@ export function recipeStore(cloud: Request, workspaceId: string): RecipeStore {
       method: 'POST',
       body: JSON.stringify(name ? { name } : {}),
     })).mix,
+    remove: async (mixId) => {
+      await cloud(`/local-media/recipes/${encodeURIComponent(mixId)}`, { method: 'DELETE' });
+    },
   };
 }
 

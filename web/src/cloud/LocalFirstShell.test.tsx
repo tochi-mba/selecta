@@ -191,9 +191,9 @@ describe('designed empty states, never a blank table', () => {
 
     render(<CloudApp />);
 
-    expect(await screen.findByText(/No saved drafts yet/)).toBeVisible();
+    expect(await screen.findByText(/A place for your next mix/)).toBeVisible();
     // the saved list sits inside My Mixes' own main landmark, never after it (L1)
-    const saved = screen.getByRole('heading', { name: 'Saved browser mixes' });
+    const saved = screen.getByRole('heading', { name: 'Your saved mixes' });
     expect(screen.getAllByRole('main')).toHaveLength(1);
     expect(screen.getByRole('main')).toContainElement(saved);
     expect(calls).toContain('GET /api/local-media/recipes');

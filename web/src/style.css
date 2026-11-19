@@ -197,7 +197,7 @@ legend { padding: 0; margin-bottom: var(--space-2); font-weight: 600; }
 .seam-actions { display: flex; flex-wrap: wrap; gap: var(--space-1); }
 .seam-actions button { padding: var(--space-1) var(--space-snug); min-height: 34px; font-size: var(--text-sm); }
 /* a browser mix chooses its move in the row (cloud.browser_moves) */
-.seam-move { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--text-sm); color: var(--soft); }
+.seam-move { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--text-sm); color: var(--soft); white-space: nowrap; }
 .seam-move select { min-height: 34px; font-size: var(--text-sm); max-inline-size: 100%; }
 .seam-played { margin: var(--space-1) 0 0; font-size: var(--text-sm); }
 .pair { display: inline-flex; gap: var(--space-hair); }

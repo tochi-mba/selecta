@@ -176,8 +176,15 @@ describe('Make a Mix, MixSetup and My Mixes through the adapted request', () => 
   it('counts the songs that play here as ready, and refuses what it cannot keep', async () => {
     const { request } = adapted();
     expect((await request<Status>('/status')).counts.ready).toBe(3);
-    await expect(request('/vibes/pick/build?count=20&as_draft=true', { method: 'POST', body: '{}' })).rejects.toMatchObject({ code: 'flag_off' });
     await expect(request('/mix?draft=4')).rejects.toMatchObject({ code: 'flag_off' });
+  });
+
+  it('saves a draft to My Mixes without touching the current mix, as local mode does', async () => {
+    const { request, store, kept } = adapted();
+    const made = await request<{ name: string; count: number }>('/vibes/pick/build?count=20&as_draft=true', { method: 'POST', body: '{}' });
+    expect(made).toMatchObject({ count: 3 });
+    expect(kept.size).toBe(1);
+    expect(store.current()).toBeNull();
   });
 
   it('a current mix whose recipe is gone is let go of, not shown as broken', async () => {

@@ -20,7 +20,8 @@ const paths = {
   warning: 'm12 3 10 18H2ZM12 9v5M12 17v.1',
   clock: 'M12 8v5l3 2M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
   minus: 'M5 12h14',
-  more: 'M5 12h.1M12 12h.1M19 12h.1',
+  // three dots as small rings the stroke closes up, so they read at every size, not as specks
+  more: 'M6 12a1 1 0 1 1-2 0 1 1 0 0 1 2 0M13 12a1 1 0 1 1-2 0 1 1 0 0 1 2 0M20 12a1 1 0 1 1-2 0 1 1 0 0 1 2 0',
   help: 'M9 9a3 3 0 0 1 6 0c0 2-3 2-3 5M12 17v.1M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
   up: 'm6 14 6-6 6 6',
   down: 'm6 10 6 6 6-6',

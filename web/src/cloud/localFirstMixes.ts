@@ -69,7 +69,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
   };
 
   const build = async (query: URLSearchParams): Promise<unknown> => {
-    if (query.get('as_draft') === 'true') throw refuse('SelectaDJ can’t keep drafts in your browser yet.', 'flag_off', 404);
+    const asDraft = query.get('as_draft') === 'true';
     const all = await songs();
     const count = Math.max(BROWSER_MIX_NEEDS, Number(query.get('count') ?? 0) || 20);
     const start = query.get('start') ? Number(query.get('start')) : null;
@@ -79,6 +79,8 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
       throw refuse(`A mix needs at least ${BROWSER_MIX_NEEDS} songs you can play on this device. Connect more music first.`, 'not_enough_songs');
     }
     const recipe = await store.create(PICK_NAME, ids);
+    // Save draft keeps it in My Mixes without touching what's playing, as local mode's does
+    if (asDraft) return { id: 0, mix_id: recipe.mix_id, name: recipe.name, count: ids.length };
     store.setCurrent(recipe.mix_id);
     return asMixData(recipe);
   };

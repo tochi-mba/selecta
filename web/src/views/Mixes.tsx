@@ -195,7 +195,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       <h1 className="display small">Make a Mix</h1>
       <LinkTabs label="Make a Mix" items={exploreTabs()} current={exploreTabs().some((tab) => tab.path === here) ? here : '/mixes'} />
       {mix.length > 0 && <CurrentMix mix={mix} mixName={mixName} now={now} player={player} setView={setView} />}
-      {on('mixes.intent_language') && !firstMix && <MixIntentGuide replacing={replacing} mixName={mixName} />}
+      {on('mixes.intent_language') && !firstMix && <MixIntentGuide replacing={replacing} mixName={mixName} savesEveryMix={!analysisAvailable} />}
 
       <div className="mix-paths" role="group" aria-label="Ways to make a mix">
       <section className="hero mix-quick" aria-labelledby="mix-quick-title">
@@ -219,7 +219,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
             disabled={!hero?.ready || (!!building && !building.startsWith('pick'))}
             busy={building.startsWith('pick')}
             working="Building…"
-            title={replacing ? `Replaces ${current}; you can undo that` : undefined}
+            title={replacing ? (analysisAvailable ? `Replaces ${current}; you can undo that` : `Replaces ${current}, which stays in My Mixes`) : undefined}
             run={() => hero && ask({ key: 'pick', name: hero.name, open: false })}
           >
             Play
@@ -245,10 +245,10 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         {shaping && <p className="hint build-summary"><b>Shape</b> · Next mix: {buildSummary(status.steering)}.</p>}
         <p className="hint">
           <b>Commit</b> · {listed(['Play now', on('editor') && 'edit first', on('drafts') && 'save a draft']).replace(' and ', ', or ')}. {songs} songs. How long it really runs depends on where the transitions fall.
-          {replacing ? ` Playing a new mix replaces ${current}; you can undo that.${on('drafts') ? ' To keep it playing, use Save as draft.' : ''}` : ''}
+          {replacing ? ` Playing a new mix replaces ${current}${analysisAvailable ? '; you can undo that' : ', which stays in My Mixes'}.${on('drafts') ? ' To keep it playing, use Save as draft.' : ''}` : ''}
         </p>
       </section>
-      {on('mixes.intent_language') && firstMix && <MixIntentGuide replacing={replacing} mixName={mixName} />}
+      {on('mixes.intent_language') && firstMix && <MixIntentGuide replacing={replacing} mixName={mixName} savesEveryMix={!analysisAvailable} />}
 
       {on('lucy') && (
       <section className="mix-create" aria-labelledby="mix-create-title">
