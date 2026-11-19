@@ -37,7 +37,8 @@ HOSTED_DEV_ENV = "SELECTA_DEV_HOSTED"
 # what `dev.cmd cloud` shows. A developer's own SELECTA_FLAGS wins outright.
 BROWSER_FIRST_FLAGS = (
     "+cloud.local_first +cloud.local_media +devices.browser_player"
-    " +cloud.browser_dsp +cloud.browser_moves +cloud.local_export +cloud.progressive_import +cloud.hosted_shell"
+    " +cloud.browser_dsp +cloud.browser_moves +cloud.local_export"
+    " +cloud.progressive_import +cloud.hosted_shell"
     " +cloud.content_cache"
 )
 

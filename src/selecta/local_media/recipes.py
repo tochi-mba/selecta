@@ -46,7 +46,7 @@ SOURCE = "cloud"
 BROWSER_MOVES = frozenset(
     {"auto", "blend", "bass_swap_blend", "filter_sweep", "cut_on_one", "echo_out", "reverb_wash"}
 )
-"""The moves the browser engine can play (web/src/dsp/seamScript.ts). 'auto' is stored as no move."""
+"""The moves the browser engine can play (web/src/dsp/seamScript.ts); 'auto' is stored as none."""
 
 Pair = tuple[str, str]
 
