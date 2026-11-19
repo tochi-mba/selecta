@@ -9,20 +9,16 @@ from __future__ import annotations
 
 import pytest
 import sqlalchemy as sa
-from test_business_zone_sessions import (  # noqa: F401
-    BAR,
-    ELSEWHERE,
-    engine,
-    phone,
-    tablet,
-    zones,
-)
+from test_business_zone_sessions import BAR, ELSEWHERE
 from test_cloud_playback_fakes import USER, WORKSPACE
 
 from selecta.persistence import transaction
 from selecta.playback import zone_session
 from selecta.playback.model import LEASE_SECONDS, Position, UnknownZone
 from selecta.playback.session import HeartbeatOutcome
+
+# The zone-session fixtures (engine, zones, phone, tablet) without redefining them here.
+pytest_plugins = ("test_business_zone_sessions",)
 
 
 def test_two_kiosks_paired_to_one_zone_one_holds_the_lease(engine, zones, clock):
