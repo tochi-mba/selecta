@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Api, Speaker } from './usePlaybackDevice';
 import { SPEAKER_ROUTES, useZoneSpeaker } from './useZoneSpeaker';
+import { claimFocus, resetTransport, transportState } from '../cloud/cloudTransport';
 
 // Play here for a business zone (ADR-0443 BZ-0443-05): register in the organisation, take the
 // lease (asking first when the server says a kiosk is playing), play the zone's programme,
@@ -37,6 +38,7 @@ const api: Api = (async (path: string, init?: RequestInit, workspaceId?: string)
 }) as Api;
 
 beforeEach(() => {
+  resetTransport();
   vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
   calls = [];
   answers = {
@@ -56,6 +58,19 @@ function mount(speaker = fakeSpeaker()) {
 }
 
 describe('useZoneSpeaker', () => {
+  it('pauses the previous player and stops when another player takes focus', async () => {
+    const pauseLibrary = vi.fn();
+    claimFocus({ id: 'library', pause: pauseLibrary });
+    const { hook, speaker } = mount();
+    await act(async () => { await hook.result.current.playHere(); });
+    expect(pauseLibrary).toHaveBeenCalledOnce();
+    expect(transportState().focus).toBe('zone:crown:bar');
+    act(() => claimFocus({ id: 'device', pause: vi.fn() }));
+    expect(speaker.stopped).toEqual([0]);
+    expect(hook.result.current.phase).toBe('idle');
+    expect(transportState().focus).toBe('device');
+  });
+
   it('takes the zone, plays its programme and heartbeats with the fence', async () => {
     const { hook, speaker } = mount();
     await act(async () => { expect(await hook.result.current.playHere()).toBe('speaking'); });

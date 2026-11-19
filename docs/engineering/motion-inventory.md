@@ -76,3 +76,5 @@ follows the player clock. Their lengths are named tokens in `tokens.css` (`--mot
 `pending-flow`, `request-pulse`, `lucy-slide`, `feeling-reveal`, `skeleton-reveal`, `toast-appear`,
 `overlay-appear`, `route-reveal`, `skeleton-breathe`, `button-working`, `drawer-appear`, `pop-appear`,
 `fade-exit`, `dialog-exit`, `drawer-exit`, `toast-exit`.
+
+Kiosk `k-slide` is a waiting indicator while music is prepared; the dedicated sheet disables it under reduced motion. The playing motif is static.

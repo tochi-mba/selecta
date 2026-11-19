@@ -90,7 +90,7 @@ def test_a_rendered_seam_cuts_song_a_short_and_starts_song_b_later(sqlite_engine
             conn,
             "seam",
             horizon.seam_hash(songs[0]["sha256"], songs[1]["sha256"]),
-            provenance={"cues": cues},
+            provenance={"settings": {"cues": cues}},
         )
         spliced = horizon.splice(conn, WS, songs)
     a, seam, b = spliced

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { claimFocus, releaseFocus, type FocusId } from '../cloud/cloudTransport';
 import { audioSpeaker } from './audioSpeaker';
 import { browserName, capabilities, currentFacts, deviceKind } from './deviceInfo';
 import { Api, extrapolate, FADE_MS, HEARTBEAT_MS, Speaker } from './usePlaybackDevice';
@@ -55,6 +56,7 @@ export function useZoneSpeaker({ api, workspaceId, zoneId, zoneName, speakerFor 
   const segments = useRef<Segment[]>([]);
   const wake = useRef<WakeLockHold | null>(null);
   const speaking = useRef(false);
+  const focusId: FocusId = `zone:${workspaceId}:${zoneId}`;
 
   const serverNow = () => Date.now() / 1000 + offset.current;
   const learnClock = (sentAt: number, serverTime: number) => { offset.current = serverTime - (sentAt + Date.now()) / 2000; };
@@ -93,7 +95,8 @@ export function useZoneSpeaker({ api, workspaceId, zoneId, zoneName, speakerFor 
     setHandBackOffered(false);
     setPhase('idle');
     setMessage(why);
-  }, []);
+    releaseFocus(focusId);
+  }, [focusId]);
 
   const playHere = useCallback(async (confirm = false): Promise<'speaking' | 'confirm' | 'failed'> => {
     setError(''); setMessage(''); setPhase('starting');
@@ -109,6 +112,7 @@ export function useZoneSpeaker({ api, workspaceId, zoneId, zoneName, speakerFor 
       if (typeof moved.session.volume === 'number') speaker.current.setVolume?.(Math.min(1, Math.max(0, moved.session.volume / 100)));
       wake.current = wake.current ?? holdWakeLock();
       speaking.current = true;
+      claimFocus({ id: focusId, pause: () => stop('Zone playback stopped because another player started here.', 0) });
       await speaker.current.start(moved.session.song_index, extrapolate(moved.session, serverNow()), moved.session.state === 'playing');
       setPhase('speaking');
       setMessage(`Playing ${zoneName} here`);
@@ -116,12 +120,11 @@ export function useZoneSpeaker({ api, workspaceId, zoneId, zoneName, speakerFor 
     } catch (problem) {
       const refused = toZoneError(problem);
       if (refused.code === 'confirm_needed') { setPhase('confirm'); return 'confirm'; }
-      speaking.current = false;
-      setPhase('idle');
+      stop('', 0);
       setError(refused.message);
       return 'failed';
     }
-  }, [loadHorizon, register, source, speakerFor, zoneId, zoneName]);
+  }, [focusId, loadHorizon, register, source, speakerFor, stop, zoneId, zoneName]);
 
   const handBack = useCallback(async () => {
     const id = device.current;
@@ -173,6 +176,7 @@ export function useZoneSpeaker({ api, workspaceId, zoneId, zoneName, speakerFor 
   useEffect(() => () => {
     if (speaking.current) void handBackRef.current();
     speaker.current?.dispose?.();
+    releaseFocus(focusId);
   }, []);
 
   return {

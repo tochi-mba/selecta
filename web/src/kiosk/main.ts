@@ -21,6 +21,7 @@ import { markSession, restartReason } from './startup';
 import { registerKioskWorker } from './update';
 import { KIOSK_VERSION } from './version';
 import { wakeController } from './wake';
+import '../styles/tokens.css';
 import './kiosk.css';
 
 const TICK_MS = 250;

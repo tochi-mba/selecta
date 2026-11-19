@@ -354,3 +354,74 @@ These endpoints preserve separate Cloud, business and venue ownership. Each requ
 | `PUT /api/business/zones/{zone_id}/cache-report` | Updates a zone kiosk's cache readiness |
 | `PUT /api/business/zones/{zone_id}/programme` | Replaces a zone's scheduled programme |
 | `POST /api/admin/business/pilots` | Creates a staff-authorised time-limited business pilot |
+
+## Business integration additions
+
+| Route | Side effect |
+|---|---|
+| `DELETE /api/business/content/blocklist/{entry_id}` | Removes a content blocklist entry |
+| `DELETE /api/business/people/{user_id}` | Removes organisation access and revokes personal devices while preserving kiosks |
+| `DELETE /api/business/zones/{zone_id}/content/overrides/{override_id}` | Ends a content-rule override |
+| `DELETE /api/devices/{device_id}/kiosk` | Revokes the kiosk pairing |
+| `PATCH /api/business/orgs/{org_id}` | Updates organisation details |
+| `POST /api/admin/business/orgs/{org_id}/billing/credit` | Issues an audited billing credit |
+| `POST /api/admin/business/orgs/{org_id}/billing/refund` | Issues an audited refund for an organisation-owned charge |
+| `POST /api/admin/business/orgs/{org_id}/contracts` | Records a staff-authorised enterprise contract |
+| `POST /api/admin/business/orgs/{org_id}/contracts/{contract_id}/revoke` | Revokes the named enterprise contract |
+| `POST /api/admin/business/orgs/{org_id}/slo-credits/{proposal_id}/approve` | Approves an SLO credit proposal |
+| `POST /api/admin/business/orgs/{org_id}/slo-credits/{proposal_id}/reject` | Rejects an SLO credit proposal |
+| `POST /api/admin/business/pilots/{pilot_id}/{action}` | Extends, ends or updates a staff-managed pilot |
+| `POST /api/business/billing/checkout` | Starts a business billing checkout session |
+| `POST /api/business/billing/checkout/complete` | Confirms completed business checkout and persists the billing setup |
+| `POST /api/business/billing/downgrade` | Schedules a lower business plan and its quantity changes |
+| `POST /api/business/billing/preview` | Calculates a billing preview without charging |
+| `POST /api/business/billing/stripe-webhook` | Verifies the business Stripe signature and applies the idempotent billing event |
+| `POST /api/business/billing/transfers` | Creates a venue ownership-transfer proposal |
+| `POST /api/business/billing/transfers/{transfer_id}/accept` | Accepts a venue transfer into the destination organisation |
+| `POST /api/business/billing/transfers/{transfer_id}/cancel` | Cancels a pending venue transfer |
+| `POST /api/business/billing/venues/{venue_id}/resume` | Resumes a paused venue with billing checks |
+| `POST /api/business/content/blocklist` | Adds a content blocklist entry |
+| `POST /api/business/content/bulk/apply` | Applies a content-edit batch with an undo record |
+| `POST /api/business/content/bulk/preview` | Calculates content-edit changes without applying them |
+| `POST /api/business/content/bulk/{batch_id}/undo` | Restores the values from a content-edit batch |
+| `POST /api/business/content/import/apply` | Applies a validated content CSV import |
+| `POST /api/business/content/import/preview` | Validates and previews a content CSV import |
+| `POST /api/business/invitations` | Creates and emails a scoped organisation invitation |
+| `POST /api/business/invitations/accept` | Accepts an invitation and adds its scoped membership |
+| `POST /api/business/invitations/{invitation_id}/revoke` | Revokes an unaccepted invitation |
+| `POST /api/business/library/copy-from-personal` | Copies selected personal assets into the organisation library without moving originals |
+| `POST /api/business/library/explicit` | Updates explicit-content classifications in bulk |
+| `POST /api/business/pilot-interest` | Sends a pilot enquiry to the configured sales destination |
+| `POST /api/business/schedules/apply` | Applies programmes across the authorised zones |
+| `POST /api/business/terms/accept` | Records acceptance of the current business terms |
+| `POST /api/business/uploads/attestation` | Records the uploader rights attestation |
+| `POST /api/business/venues/{venue_id}/licence/extend` | Extends the venue licence attestation |
+| `POST /api/business/venues/{venue_id}/pin` | Validates the venue staff PIN with lockout enforcement |
+| `POST /api/business/zone-alerts/{alert_id}/acknowledge` | Acknowledges a venue playback alert |
+| `POST /api/business/zones/{zone_id}/content/overrides` | Creates a scoped content-rule override |
+| `POST /api/business/zones/{zone_id}/speaker/segment-url` | Issues a scoped short-lived URL for a zone speaker segment |
+| `POST /api/kiosk/health` | Records kiosk health and updates alerts |
+| `POST /api/kiosk/heartbeat` | Renews the kiosk lease and reports its current position |
+| `POST /api/kiosk/pair` | Binds a pairing session to an authorised zone |
+| `POST /api/kiosk/pairings` | Creates a short-lived kiosk pairing session |
+| `POST /api/kiosk/pin` | Validates the staff PIN and applies failed-attempt lockout |
+| `POST /api/kiosk/requests/{request_id}/played` | Records a kiosk request as played |
+| `POST /api/kiosk/resync` | Reconciles offline kiosk plays and commands with the zone |
+| `POST /api/kiosk/segment-url` | Issues a scoped short-lived URL for a paired kiosk segment |
+| `POST /api/zones/{zone_id}/requests/{request_id}/played` | Marks a zone room request played |
+| `POST /dev/mail/clear` | Clears the development inbox after the same-site check |
+| `PUT /api/business/always-open` | Updates always-open usage settings |
+| `PUT /api/business/billing/collection-method` | Changes the billing collection method |
+| `PUT /api/business/billing/po-number` | Updates the organisation purchase order reference |
+| `PUT /api/business/billing/venues/{venue_id}/cost-centre` | Updates the venue invoice cost centre |
+| `PUT /api/business/content/rules` | Replaces organisation content rules and invalidates future plans |
+| `PUT /api/business/content/songs/{song_id}/clean-link` | Links a song to its clean edit |
+| `PUT /api/business/content/songs/{song_id}/explicit` | Updates a song explicit-content classification |
+| `PUT /api/business/library/songs/{song_id}/isrc` | Records the song ISRC used in licence reports |
+| `PUT /api/business/orgs/{org_id}/setup` | Saves onboarding progress for the organisation |
+| `PUT /api/business/play-log/retention` | Updates play-log retention |
+| `PUT /api/business/seats` | Updates paid seat quantities with billing enforcement |
+| `PUT /api/business/settings/mix-exports` | Changes whether business mixes may be exported |
+| `PUT /api/business/venues/{venue_id}/closing-mode` | Changes the venue closing behaviour |
+| `PUT /api/business/venues/{venue_id}/content/rules` | Replaces venue content rules and invalidates future plans |
+| `PUT /api/business/venues/{venue_id}/licence` | Saves a venue licence attestation |

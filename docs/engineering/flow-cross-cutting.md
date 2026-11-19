@@ -199,3 +199,5 @@ level, the main navigation before the page, no positive `tabindex`, the skip lin
 page, and that Tab moves down each page in drawn order; `web/e2e/lx-library.e2e.ts` "LX-0340-03 one reading
 order" checks the Library in DOM, Tab and the accessibility outline; `web/e2e/finishing.e2e.ts` "Tab reaches
 everything on every page at" checks focus is always visible and never covered.
+
+Business egress additions: `src/selecta/business/stripe_business.py` sends billing data to Stripe and country/VAT numbers to VIES. `src/selecta/business/content/api_tools.py` performs opt-in LRCLIB lookup of song metadata for advisory lyrics hints. Neither sends audio.

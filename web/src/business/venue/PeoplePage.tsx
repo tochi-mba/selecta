@@ -59,7 +59,7 @@ export function PeoplePage({ venueId }: { venueId?: string }) {
     catch { setError("Couldn't withdraw the invitation. Try again."); }
     finally { setWorking(false); }
   };
-  const canBuySeats = (org.role === 'owner' || org.role === 'admin') && org.features['business.billing'] === true && !readOnly && !offline;
+  const canBuySeats = (org.role === 'owner' || org.role === 'admin') && org.features?.['business.billing'] === true && !readOnly && !offline;
   const seatsFull = Boolean(seats && seats.held >= seats.included + seats.paid);
   const addSeat = async () => {
     if (!seats) return;

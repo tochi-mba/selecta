@@ -227,7 +227,7 @@ def plan_zone(conn: Connection, ref: zone_clock.ZoneRef, now: float, *,
     plan = dict(state.get("plan_json") or {})
     from selecta.business.content import store as content_store
 
-    policy_version = content_store.version(conn, ref.organisation_id)
+    policy_version = content_store.version(conn, ref.workspace_id)
     policy_changed = plan.get("content_policy_version") != policy_version
     steering = dayparts.StaffSteering.from_dict(state.get("steering_json"))
     current_block = next((w.block.name for w in windows

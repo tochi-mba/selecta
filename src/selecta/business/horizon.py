@@ -91,7 +91,8 @@ def _first_key(keys: Any) -> str | None:
 
 def _cues(row) -> tuple[float, float, float] | None:
     """(A hands over at, B takes over at, clip seconds) from the seam's provenance."""
-    cues = (row["provenance"] or {}).get("cues") if row is not None else None
+    provenance = (row["provenance"] or {}) if row is not None else {}
+    cues = (provenance.get("settings") or {}).get("cues")
     if not isinstance(cues, dict):
         return None
     try:

@@ -9,6 +9,7 @@ the caller's scope, answers 404 exactly like a missing one.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
@@ -120,7 +121,7 @@ def _join(engine, org: str, user: str, *, org_role=None, venue_roles=None) -> No
             display_name=user, joined_at=1))
         for venue, role in (venue_roles or {}).items():
             conn.execute(business_venue_roles.insert().values(
-                id=f"r-{user}-{venue}", workspace_id=org, organisation_id=org, user_id=user,
+                id=str(uuid4()), workspace_id=org, organisation_id=org, user_id=user,
                 venue_id=venue, role=role, created_at=1))
 
 
