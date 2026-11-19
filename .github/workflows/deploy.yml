@@ -1,6 +1,7 @@
 name: deploy
 
-# Selecta Cloud deploys (ADR-0409, SC-0409-03). A push to main builds one image, migrates and
+# Selecta Cloud deploys (ADR-0409, SC-0409-03). With the repository credential broker URL
+# configured, a push to main builds one image, migrates and
 # deploys staging, runs the smoke test, then waits for an approval on the protected production
 # environment before doing the same there. Pull requests never trigger this workflow, and no
 # long-lived deploy secret is stored in GitHub: each deploy job trades its OIDC token for
@@ -26,7 +27,11 @@ env:
 jobs:
   image:
     name: Build service image
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    # Automatic deployment starts only after the repository broker is configured. Manual
+    # runs still surface configuration errors through the deployment checks.
+    if: >-
+      github.ref == 'refs/heads/main' && github.event_name != 'pull_request' &&
+      (github.event_name == 'workflow_dispatch' || vars.SELECTA_CREDENTIAL_BROKER_URL != '')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
