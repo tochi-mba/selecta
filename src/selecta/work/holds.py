@@ -19,7 +19,6 @@ through audited commands (`selecta.admin.commands`), never by editing rows.
 
 from __future__ import annotations
 
-import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
 from selecta.work import heads, outbox
@@ -41,17 +40,6 @@ class HoldRefused(ValueError):
 def is_held(job: Job) -> bool:
     return job.state == S.BLOCKED and job.error_class == STAFF_HOLD
 
-
-def hold_pending(connection: Connection, job_id: str) -> bool:
-    """Whether a live attempt of this job has been asked to give way for a staff hold."""
-    row = connection.execute(
-        sa.select(job_attempts.c.id).where(
-            job_attempts.c.job_id == job_id,
-            job_attempts.c.outcome.is_(None),
-            job_attempts.c.cancel_reason == STAFF_HOLD_REASON,
-        )
-    ).first()
-    return row is not None
 
 
 def hold_for_staff(connection: Connection, job_id: str, now: float) -> Job:

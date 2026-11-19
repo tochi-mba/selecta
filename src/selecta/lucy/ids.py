@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import json
 import secrets
-import time
 from datetime import UTC, datetime
 from typing import Any
 
@@ -43,5 +42,3 @@ def now_iso() -> str:
     return datetime.now(UTC).isoformat(timespec="milliseconds")
 
 
-def now_ms() -> int:
-    return int(time.time() * 1000)

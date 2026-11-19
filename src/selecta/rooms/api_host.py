@@ -26,7 +26,7 @@ from selecta.rooms.api_common import item_json, join_path, refusal, too_many
 from selecta.rooms.errors import RoomError
 from selecta.rooms.service import Rooms
 from selecta.rooms.settings import RoomSettings
-from selecta.rooms.store import Guest, Room, RoomRequest
+from selecta.rooms.store import Guest, Room
 from selecta.rooms.views import HostView
 
 
@@ -66,14 +66,6 @@ def room_json(room: Room) -> dict[str, Any]:
 def guest_json(guest: Guest) -> dict[str, Any]:
     return {"id": guest.id, "nickname": guest.nickname, "status": guest.status.value}
 
-
-def request_json(request: RoomRequest) -> dict[str, Any]:
-    return {
-        "request_id": request.id,
-        "song_id": request.song_id,
-        "status": request.status.value,
-        "votes": request.votes,
-    }
 
 
 def host_json(view: HostView) -> dict[str, Any]:

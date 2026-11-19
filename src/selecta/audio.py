@@ -51,9 +51,3 @@ def to_mono(audio: np.ndarray) -> np.ndarray:
     return audio.mean(axis=1) if audio.ndim == 2 else audio
 
 
-def db_to_gain(db: float) -> float:
-    return float(10.0 ** (db / 20.0))
-
-
-def gain_to_db(gain: float, floor: float = -120.0) -> float:
-    return float(20.0 * np.log10(max(gain, 10.0 ** (floor / 20.0))))
