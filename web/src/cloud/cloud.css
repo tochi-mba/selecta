@@ -341,18 +341,7 @@
 .cloud-spine-steps li[aria-current='step'] { color: var(--text); font-weight: var(--weight-strong); }
 .cloud-spine-steps li[data-outcome='done'] { color: var(--status-ready); }
 .cloud-spine-steps li[data-outcome='unverified'] { color: var(--status-warning); }
-/* the same hiding as .visually-hidden (shell.css); the picker inputs use the shared class */
-.cloud-spine-sr {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-  border: 0;
-}
+
 .cloud-spine-step { display: grid; gap: var(--space-3); justify-items: start; }
 .cloud-spine-step p { margin: 0; }
 .cloud-spine-pick {

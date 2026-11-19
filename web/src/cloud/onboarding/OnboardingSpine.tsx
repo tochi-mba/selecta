@@ -169,7 +169,7 @@ function StepList({ state }: { state: SpineState }) {
           <li key={id} aria-current={current ? 'step' : undefined} data-outcome={outcome ?? (current ? 'current' : 'ahead')}>
             <Icon name={mark.icon} size="compact" />
             <span>{STEP_TITLES[id]}</span>
-            <span className="cloud-spine-sr">, {mark.words}</span>
+            <span className="visually-hidden">, {mark.words}</span>
           </li>
         );
       })}
