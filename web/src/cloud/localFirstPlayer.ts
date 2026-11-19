@@ -140,8 +140,19 @@ export class LocalFirstPlayer implements PlayerLike {
     if (said !== undefined) this.facts = { ...this.facts, said };
     const next = nowStateFrom(this.facts, this.sound);
     if (JSON.stringify(next) === JSON.stringify(this.state)) return;
+    // The render loop must never be the clock: a publish re-renders the host, the host's
+    // effect updates this player, and time has moved a little, so publishing on time alone
+    // would feed setState back into render until React trips its update depth. Below the
+    // clock step, time drift stays unpublished; tick() advances it at a bounded rate.
+    const timeless = (state: NowState) => JSON.stringify({ ...state, songTime: 0 });
+    if (timeless(next) === timeless(this.state) && Math.abs(next.songTime - this.state.songTime) < 0.2) return;
     this.state = next;
     this.onChange(next);
+  }
+
+  /** The bounded playback clock: re-reads the facts so played time moves at the tick rate. */
+  tick(): void {
+    this.publish();
   }
 
   private get speaking() { return this.facts.speaking; }
@@ -459,6 +470,14 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   const player = useMemo(() => new LocalFirstPlayer(facts, actions), []);
   // facts change every render; the player tells its listener only when the state moved
   useEffect(() => { player.update(facts, actions); });
+  // While this device speaks, a real clock moves the played time forward; render-driven
+  // updates alone would either freeze the strip or loop (see publish).
+  const speaking = pb.isSpeaker();
+  useEffect(() => {
+    if (!speaking) return;
+    const clock = window.setInterval(() => player.tick(), 250);
+    return () => window.clearInterval(clock);
+  }, [speaking, player]);
   return { player, device: pb, refusal, seams };
 }
 
