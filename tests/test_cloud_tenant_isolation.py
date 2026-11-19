@@ -58,6 +58,14 @@ CAPABILITY_ONLY = {
     ("GET", "/api/guest/rooms/{room_id}/nicknames"),
     ("PUT", "/api/guest/rooms/{room_id}/nickname"),
     ("POST", "/api/guest/rooms/{room_id}/leave"),
+    # Rooms for Business guests (ADR-0451): the table card's code plus the guest's HttpOnly cookie
+    # scoped to /api/venue-rooms; a wrong code gets a visitor cookie and the lockout, never
+    # another room (service rules in tests/test_business_rooms_*.py; no route-level test yet).
+    ("POST", "/api/venue-rooms/{code}/join"),
+    ("GET", "/api/venue-rooms/{code}/state"),
+    ("GET", "/api/venue-rooms/{code}/search"),
+    ("POST", "/api/venue-rooms/{code}/requests"),
+    ("POST", "/api/venue-rooms/{code}/requests/{request_id}/vote"),
     ("POST", "/api/display/pairings"),
     ("GET", "/api/display/view"),
     ("DELETE", "/api/display/pairing"),
@@ -198,6 +206,36 @@ BUSINESS_SCOPED = {
     ("POST", "/api/business/zone-alerts/{alert_id}/acknowledge"),
     ("DELETE", "/api/devices/{device_id}/kiosk"),
     ("GET", "/api/workspaces"),
+    # ADR-0450 content controls: `content/api.py` resolves the caller in the X-Workspace-ID
+    # organisation (guard.actor_for) and checks one permission at the venue or zone, whose
+    # organisation must match, else 404 (tests/test_business_content_routes.py).
+    ("GET", "/api/business/content/rules"),
+    ("PUT", "/api/business/content/rules"),
+    ("GET", "/api/business/venues/{venue_id}/content/rules"),
+    ("PUT", "/api/business/venues/{venue_id}/content/rules"),
+    ("GET", "/api/business/content/blocklist"),
+    ("POST", "/api/business/content/blocklist"),
+    ("DELETE", "/api/business/content/blocklist/{entry_id}"),
+    ("POST", "/api/business/zones/{zone_id}/content/overrides"),
+    ("DELETE", "/api/business/zones/{zone_id}/content/overrides/{override_id}"),
+    ("PUT", "/api/business/content/songs/{song_id}/explicit"),
+    # ADR-0451 Rooms for Business staff routes: `rooms/api.py` finds the zone or venue, resolves
+    # the caller in that zone's organisation (a member, or a kiosk or tablet token) and checks
+    # one permission there with guard.require, so another organisation's zone answers 404
+    # (the service is tested in tests/test_business_rooms_*.py; no route-level test yet).
+    ("GET", "/api/zones/{zone_id}/requests"),
+    ("POST", "/api/zones/{zone_id}/requests/{request_id}/approve"),
+    ("POST", "/api/zones/{zone_id}/requests/{request_id}/pass"),
+    ("GET", "/api/zones/{zone_id}/room"),
+    ("PATCH", "/api/zones/{zone_id}/room"),
+    ("POST", "/api/zones/{zone_id}/room/rotate"),
+    ("GET", "/api/venues/{venue_id}/room-print"),
+    ("GET", "/api/zones/{zone_id}/room/screen-code"),
+    ("POST", "/api/zones/{zone_id}/room/guests/{guest_id}/remove"),
+    ("POST", "/api/zones/{zone_id}/room/guests/{guest_id}/ban"),
+    ("POST", "/api/zones/{zone_id}/room/pause"),
+    ("POST", "/api/zones/{zone_id}/room/resume"),
+    ("POST", "/api/zones/{zone_id}/venue-network"),
     # ADR-0452/0453: people, invitations, overview and setup; every one resolves the caller in
     # the named organisation (guard.actor_for) and its venues by scope, 404 otherwise
     # (tests/test_business_people_routes.py proves another organisation's ids answer 404).

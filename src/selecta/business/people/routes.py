@@ -14,8 +14,9 @@ missing one. Flags (`flags/business.json`):
 - `business.devices.shared`: `POST /api/business/venues/{venue_id}/pin`, the staff PIN check on
   a shared tablet (5 wrong tries lock that venue's PIN check for 10 minutes for this person).
 
-No email is sent. Creating an invitation answers with its accept link, which the page shows for
-the inviter to pass on; the dev stack's only mail sink is `/dev/mail`.
+Creating an invitation emails the accept link through the repository's mail path
+(`invite_mail`: the configured provider, or the dev stack's `/dev/mail` inbox) and also answers
+with the link, which the page shows for the inviter to pass on when no email went out.
 """
 
 from __future__ import annotations
@@ -35,6 +36,7 @@ from selecta import flags
 from selecta.business import workspace_view
 from selecta.business.access import BusinessActor, BusinessError
 from selecta.business.access import guard as business_guard
+from selecta.business.people import invite_mail
 from selecta.business.people import service as people
 from selecta.flags import cloud_gate
 from selecta.flags.rules import RulesCache
@@ -97,8 +99,9 @@ def install_routes(
     current_claims: Callable[..., Claims],
     principal_for: Callable[..., Any],
     rules: RulesCache,
-    site_url: str = "",
+    site_url: str | None = None,
     flag_on: Callable[[Connection, Any, str], bool] | None = None,
+    sender: Any = "environment",
 ) -> None:
     """Mount the people, invitation, overview and setup routes. `flag_on(conn, principal,
     flag)` decides a flag for a principal (the targeting decision unless a test passes one)."""
@@ -187,8 +190,11 @@ def install_routes(
 
     # -- people and invitations ----------------------------------------------------------------
 
+    base_url = invite_mail.site_url() if site_url is None else site_url.rstrip("/")
+    mailer = invite_mail.default_sender() if sender == "environment" else sender
+
     def accept_link(token: str) -> str:
-        return f"{site_url.rstrip('/')}/business/join#{token}"
+        return f"{base_url}/business/join#{token}"
 
     @app.get("/api/business/people")
     def list_people(request: Request, claims: Claims = Depends(current_claims)):  # noqa: B008
@@ -203,7 +209,13 @@ def install_routes(
             invitation, token = people.invite(
                 conn, actor, email=body.email, role=body.role, venue_ids=body.venue_ids, now=now
             )
-        return {"invitation": invitation, "accept_url": accept_link(token), "emailed": False}
+            org_name, venue_names = _names(conn, actor.workspace_id, invitation["venue_ids"])
+        # Sent after the commit, so an email never names an invitation that was rolled back.
+        link = accept_link(token)
+        emailed = bool(base_url) and invite_mail.send(mailer, invite_mail.message_for(
+            to=invitation["email"], org_name=org_name, role=body.role, venues=venue_names,
+            link=link, invitation_id=invitation["id"]))
+        return {"invitation": invitation, "accept_url": link, "emailed": emailed}
 
     @app.post("/api/business/invitations/{invitation_id}/revoke")
     def revoke_invitation(
@@ -258,6 +270,20 @@ def install_routes(
         with acting(request, claims) as (conn, actor, _found, now):
             business_guard.require(conn, actor, "business.zone.control", venue_id=venue_id)
             return _check_pin(conn, actor.workspace_id, venue_id, body.pin, now)
+
+
+def _names(conn: Connection, workspace_id: str, venue_ids: list[str] | None):
+    from selecta.business.schema import venues
+    from selecta.identity.schema import workspaces
+
+    org = conn.execute(
+        sa.select(workspaces.c.name).where(workspaces.c.id == workspace_id)
+    ).scalar() or "your organisation"
+    if not venue_ids:
+        return org, []
+    rows = conn.execute(sa.select(venues.c.name).where(
+        venues.c.workspace_id == workspace_id, venues.c.id.in_(venue_ids)))
+    return org, sorted(row.name for row in rows)
 
 
 def _invited_workspace(engine: Engine, token: str) -> str | None:

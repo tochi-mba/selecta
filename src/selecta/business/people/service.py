@@ -19,10 +19,12 @@ permission registry, so an out-of-scope venue answers 404 exactly like a missing
   row and the venue roles, in one transaction.
 - **Removing** someone (offboarding) at once: marks the member removed (the row stays for the
   audit and for "Former member" on uploads), drops their venue roles and staff PINs, cancels their
-  pending invitations, signs out the devices they registered in this organisation, removes the
-  workspace membership and revokes their sessions (`identity.accounts.revoke_sessions`, so every
-  token issued before now is refused). Kiosks and shared tablets they paired are organisation
-  devices and keep playing. The last owner can never be removed.
+  pending invitations, signs out the devices they registered in this organisation and removes the
+  workspace membership, so their very next request to the organisation answers 404 (every
+  business route resolves membership per request). ADR-0452 says removal "never touches the
+  personal workspace", so their personal SelectaDJ sign-ins are left alone: no account-wide
+  session revocation. Kiosks and shared tablets they paired are organisation devices and keep
+  playing. The last owner can never be removed.
 """
 
 from __future__ import annotations
@@ -572,9 +574,6 @@ def remove(conn: Connection, actor: BusinessActor, user_id: str, *, now: float) 
     conn.execute(workspace_members.delete().where(
         workspace_members.c.workspace_id == workspace_id,
         workspace_members.c.user_id == user_id))
-    from selecta.identity.accounts import revoke_sessions
-
-    revoke_sessions(conn, user_id, actor_id=actor.id, reason="removed from organisation")
     business_audit.record(
         conn, actor, "people.removed",
         organisation_id=actor.organisation_id, workspace_id=workspace_id,
