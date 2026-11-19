@@ -27,6 +27,7 @@ def install(
     current_claims: Callable[..., Claims],
     principal_for: Callable[..., Any],
     directory: Directory | None = None,
+    pepper: bytes | None = None,
 ) -> None:
     from selecta.business.content import api as content_api
     from selecta.business.content import api_tools as content_tools
@@ -41,7 +42,8 @@ def install(
     # nothing allowed in it, and guest search and the request planner read the same songs.
     content_api.install_routes(app, songs_for=library.songs_for, **common)
     content_tools.install_routes(app, **common)
-    rooms_api.install_routes(app, **common)
+    # The Rooms pepper the cloud app was built with (else the environment's), as party rooms use.
+    rooms_api.install_routes(app, pepper=pepper, **common)
 
 
 def zone_volume_cap(

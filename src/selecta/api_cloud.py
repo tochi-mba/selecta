@@ -872,7 +872,8 @@ def create_cloud_app(
         presign=business_kiosk_routes.storage_presign(storage_api.r2_client, storage_api.buckets()),
     )
     business_controls.install(  # ADR-0450 content controls and ADR-0451 Rooms for Business
-        app, engine=engine, current_claims=current_claims, principal_for=_principal
+        app, engine=engine, current_claims=current_claims, principal_for=_principal,
+        pepper=room_ports.pepper,
     )
     playback_api.install_routes(
         app,
