@@ -263,7 +263,9 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
 
       {problem && <p className="warn" role="alert">{problem}</p>}
 
-      {on('mixes.ideas') && (
+      {/* Loaded and empty reflows away: a header with no feelings under it promises nothing
+          (the waiting and nudge sections below say what would unlock ideas). */}
+      {on('mixes.ideas') && (!cards || cardsFailed || ready.length > 0) && (
       <section>
         <div className="vibe-browser-head">
           <div>

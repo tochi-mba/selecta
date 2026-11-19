@@ -131,3 +131,23 @@ input[aria-invalid='true'], select[aria-invalid='true'], textarea[aria-invalid='
 .data-table-card dt { color: var(--text-soft); font: var(--type-label); }
 .data-table-card dd { margin: 0; overflow-wrap: anywhere; min-width: 0; }
 .data-table-stacked-caption { margin: 0 0 var(--space-2); color: var(--text-soft); }
+
+/* Every disclosure says it opens. A summary laid out with flex or grid loses the native
+   triangle, so the foundation draws one: a border chevron that points right closed and
+   down open, inheriting the text colour. It reads in both themes and under forced colours. */
+summary { cursor: pointer; }
+summary::before {
+  content: '';
+  flex: none;
+  display: inline-block;
+  inline-size: 0.4em;
+  block-size: 0.4em;
+  margin-inline-end: var(--space-2);
+  border-inline-end: 2px solid currentColor;
+  border-block-end: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 150ms ease;
+  vertical-align: 0.1em;
+}
+details[open] > summary::before { transform: rotate(45deg); }
+@media (prefers-reduced-motion: reduce) { summary::before { transition: none; } }
