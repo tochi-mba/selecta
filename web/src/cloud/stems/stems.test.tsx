@@ -1,10 +1,9 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { StemPreference } from './StemPreference';
 import { readinessWords, StemReadiness, StemsOffer, StemsTabNotice } from './StemReadiness';
 import { StemsCard, StemsCardView } from './StemsCard';
-import { DOWNLOAD_FAILED, PREFERENCE, READINESS, SPLITTING_PAUSED, STEMS_COPY, TAB_NOTICE } from './stemsCopy';
+import { DOWNLOAD_FAILED, READINESS, SPLITTING_PAUSED, STEMS_COPY, TAB_NOTICE } from './stemsCopy';
 import { memoryStemsStore, splitterNotice, stemsFlagOn, stemsPending, useSplitterNotices } from './useStems';
 import { stemsAbility, type SplitterState, type StemsActions, type StemsSnapshot } from './types';
 
@@ -255,26 +254,6 @@ describe('StemsOffer (first stem move chosen)', () => {
     rerender(<StemsOffer enabled snapshot={snap({ state: 'ready', bytes: 1, implementation: 'WebGPU' })} actions={actions()} onNotNow={() => {}} />);
     expect(container).toBeEmptyDOMElement();
     rerender(<StemsOffer enabled snapshot={snap(ABSENT, { role: 'controller' })} actions={actions()} onNotNow={() => {}} />);
-    expect(container).toBeEmptyDOMElement();
-  });
-});
-
-describe('StemPreference (Make a Mix shaping)', () => {
-  it('offers Never, Sometimes and Often and reports the choice', async () => {
-    const change = vi.fn();
-    render(<StemPreference enabled value="sometimes" onChange={change} />);
-    const select = screen.getByRole('combobox', { name: PREFERENCE.label });
-    expect(select).toHaveValue('sometimes');
-    expect(select).toHaveAccessibleDescription(PREFERENCE.hint);
-    expect([...(select as HTMLSelectElement).options].map((option) => option.text)).toEqual(['Never', 'Sometimes', 'Often']);
-    await userEvent.selectOptions(select, 'often');
-    expect(change).toHaveBeenCalledWith('often');
-  });
-
-  it('says when it takes effect, and renders nothing with the flag off', () => {
-    const { container, rerender } = render(<StemPreference enabled value="never" onChange={() => {}} ready={false} />);
-    expect(screen.getByRole('combobox')).toHaveAccessibleDescription(`${PREFERENCE.hint} ${PREFERENCE.notReady}`);
-    rerender(<StemPreference enabled={false} value="never" onChange={() => {}} />);
     expect(container).toBeEmptyDOMElement();
   });
 });

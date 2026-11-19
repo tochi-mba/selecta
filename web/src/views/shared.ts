@@ -5,7 +5,6 @@ import { PlayerLike } from '../playerContract';
 export type View = 'Mixes' | 'Now' | 'Edit' | 'Library' | 'Words' | 'Workshop';
 
 export type Undo = boolean | (() => Promise<void>);
-export type Toast = { message: string; undo: Undo; id: number };
 
 export type ViewProps = {
   status: Status;
@@ -23,7 +22,7 @@ export type ViewProps = {
   refreshStatus: () => void;
   /** How this view talks to the server (ADR-0462): the local client here, the authenticated
    * Cloud client there. Views never import get/post/del from api.ts; they wrap this with
-   * getVia/postVia/delVia instead, so the same page renders against either server. */
+   * useApi (requestContext.ts) instead, so the same page renders against either server. */
   request?: Request;
   player: PlayerLike;
   now: NowState;

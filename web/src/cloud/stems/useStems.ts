@@ -2,15 +2,8 @@ import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { STEMS_COPY } from './stemsCopy';
 import type { SplitterState, StemsActions, StemsSnapshot, StemsStore } from './types';
 
-import { useFlags } from '../../flags';
-import { stemsFlagOn } from './flag';
 
 export { STEMS_FLAG, stemsFlagOn } from './flag';
-
-/** Whether stems are on, live: pass it as each surface's `enabled`. */
-export function useStemsEnabled(): boolean {
-  return stemsFlagOn(useFlags());
-}
 
 const NOTHING = () => () => {};
 const NO_SNAPSHOT = () => null;

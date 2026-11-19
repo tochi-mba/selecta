@@ -24,11 +24,6 @@ export const CLOUD_ROUTES: readonly CloudRoute[] = [
   { path: '/account/billing', page: 'billing' },
 ];
 
-/** The canonical address of each page. */
-export const PAGE_PATHS: Record<Page, string> = {
-  home: '/', listen: '/listen', library: '/library', uploads: '/upload', billing: '/account/billing', settings: '/account',
-};
-
 /** The path without trailing slashes (the root stays `/`). */
 export function normalizePath(pathname: string): string {
   const trimmed = pathname.replace(/\/+$/, '');

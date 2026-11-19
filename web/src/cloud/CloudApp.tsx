@@ -58,7 +58,7 @@ const HostedShell = lazy(() => import('./HostedShell').then((module) => ({ defau
  * Sign out everywhere, and the button pressed is the one that says it is working. */
 type Operation = 'onboarding' | 'checkout' | 'portal' | 'everywhere' | 'delete';
 
-/** Whether this account gets the local-first shell: `showsLocalFirst`, decided on the account's own
+/** Whether this account gets the local-first shell, decided on the account's own
  * read. The hosted shell reads `cloud.local_first` as off while it is open (it is not the
  * local-first shell), which must not keep a member who has just joined Labs out of it. */
 function localFirstDecided(account: Account | null): boolean {

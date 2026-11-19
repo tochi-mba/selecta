@@ -12,7 +12,6 @@
 export const BAND_EDGES: readonly [number, number][] = [
   [20, 60], [60, 160], [160, 800], [800, 2500], [2500, 6000], [6000, 16000],
 ];
-export const BAND_NAMES = ['sub', 'bass', 'low mids', 'high mids', 'presence', 'air'] as const;
 /** Log-spaced display bins from 30 Hz to 16 kHz. */
 export const LEVEL_COUNT = 64;
 export const WAVE_POINTS = 256;

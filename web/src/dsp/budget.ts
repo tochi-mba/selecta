@@ -8,8 +8,6 @@
  * first symptom. Deadline misses are counted so the state can be surfaced truthfully.
  */
 
-export const BUDGET_IMPLEMENTATION = 'benchmark-calibrated-worker-budget-v1';
-
 export interface ScheduleBudget {
   /** The longest one worker block may take, in milliseconds. */
   msPerBlock: number;

@@ -1,4 +1,4 @@
-import type { DownloadFailure, PauseReason, StemDegradeCode, StemMove, StemPreferenceValue, StemRefusalCode } from './types';
+import type { DownloadFailure, PauseReason, StemDegradeCode, StemMove, StemRefusalCode } from './types';
 
 /** Every word the stems surfaces say, in one place, so the copy audit and the honesty rules can
  * read them all (ADR-0459). The rules: never say a stem move played unless it was scheduled; never
@@ -129,13 +129,6 @@ export function stemRefusal(move: StemMove, reason: StemRefusalCode | string): s
 }
 
 /** Make a Mix shaping: the stem preference. */
-export const PREFERENCE = {
-  label: 'Stem-assisted moves',
-  options: { never: 'Never', sometimes: 'Sometimes', often: 'Often' } satisfies Record<StemPreferenceValue, string>,
-  hint: 'Vocal ride, strip and land, and intertwined stems. They’re only used where the pair fits and the stems are ready in time.',
-  notReady: 'Takes effect once the splitter is downloaded in More, This device.',
-} as const;
-
 /** Editor Move picker: the reasons a stem move is listed but can't be chosen, or needs a step. */
 export const PICKER = {
   unavailable: (reason: string) => `This device can’t split songs into stems: ${reason}`,
@@ -169,10 +162,6 @@ export function allStemsCopy(): string[] {
     READINESS.queued,
     READINESS.ready,
     READINESS.paused,
-    PREFERENCE.label,
-    PREFERENCE.hint,
-    PREFERENCE.notReady,
-    ...Object.values(PREFERENCE.options),
     PICKER.downloadNeeded,
   ];
   return [...fixed, ...built];

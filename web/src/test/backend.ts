@@ -8,10 +8,6 @@ export class Reply {
   constructor(readonly status: number, readonly body: unknown) {}
 }
 
-/** What a server answers for a route whose feature is turned off in its build. */
-export const turnedOff = (flag: string) =>
-  new Reply(403, { detail: 'That is turned off in this build.', code: 'flag_off', flag });
-
 /** A stand-in for the server: answers by route, and remembers what it was asked. */
 export function fakeBackend(routes: Record<string, Answer>) {
   const calls: { method: string; path: string; body: unknown }[] = [];

@@ -165,6 +165,7 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
         </p>
       )}
       {live && blocked && <p className="hint" id={blockedId}>{blocked}</p>}
+      {live && stems?.offer(chosen)}
       {live && stems?.readiness(playedKey(previous.song_id, item.song_id))}
       {problem && <p className="warn" role="alert">{problem}</p>}
       {affected && <p className="drop-affected-note">Changes if the song is dropped there</p>}

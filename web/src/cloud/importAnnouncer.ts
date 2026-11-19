@@ -73,10 +73,3 @@ export function useImportAnnouncer(): void {
     };
   }, []);
 }
-
-/** For tests: forget everything said. */
-export function resetImportAnnouncer(): void {
-  said.clear();
-  run = 0;
-  lastPhase = 'idle';
-}
