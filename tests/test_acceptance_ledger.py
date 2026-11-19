@@ -89,7 +89,9 @@ def test_flagged_rows_say_what_changed():
     assert "restores unfinished quality grades" in LEDGER
     assert "Folder entry is typed, not picked" in LEDGER
     web = ROOT / "web" / "src"
-    sources = "".join(path.read_text(encoding="utf-8") for path in web.rglob("*.tsx"))
+    # The local app types its folder path; Cloud's browser import picks one by design (ADR-0458).
+    local = (path for path in web.rglob("*.tsx") if "cloud" not in path.relative_to(web).parts)
+    sources = "".join(path.read_text(encoding="utf-8") for path in local)
     assert "showDirectoryPicker" not in sources and "webkitdirectory" not in sources
 
 

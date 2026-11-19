@@ -2,7 +2,7 @@ import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { IOS_WARNING } from './deviceInfo';
-import { PlayingBar } from './PlayingBar';
+import { OPTIMISTIC_MS, PlayingBar } from './PlayingBar';
 import type { Api, SessionState, SessionView } from './usePlaybackDevice';
 
 // SC-0415-05: the iOS speaker warning and the screen wake lock, where they apply. The warning is
@@ -114,6 +114,25 @@ describe('overlapping device polls (AV-0419-05)', () => {
 });
 
 describe('the playing bar on a phone (SC-0415-05)', () => {
+  it('calls a lapsed remote speaker uncertain instead of claiming it is playing (ADR-0461)', async () => {
+    const api = (async (path: string) => {
+      if (path === '/devices') return { device: {
+        id: 'phone', name: 'Phone', kind: 'phone', signed_in: true,
+        this_device: true, poor_speaker: false, last_seen_at: 0, warnings: [],
+      }, notice: null };
+      if (path === '/playback/reconnect') return {
+        action: 'stop_moved', session: { ...session, state_confidence: 'uncertain' }, message: null,
+      };
+      if (path.startsWith('/playback/session')) return {
+        ...elsewhere, session: { ...session, state_confidence: 'uncertain' },
+      };
+      throw new Error(`unexpected ${path}`);
+    }) as Api;
+    render(<PlayingBar api={api} workspaceId="ws-uncertain" source={source} />);
+    expect(await screen.findByText(/has not checked in recently and may still be playing/)).toBeVisible();
+    expect(screen.queryByText(/^Playing on /)).toBeNull();
+  });
+
   it('warns an iPhone to keep the screen on when it is asked to play here', async () => {
     render(<PlayingBar api={fakeApi([{ code: 'ios_keep_screen_on', text: IOS_WARNING }])} workspaceId="ws" source={source} />);
     expect(await screen.findByText('Playing on Living-room laptop', {}, { timeout: 8000 })).toBeTruthy();
@@ -146,4 +165,45 @@ describe('the playing bar on a phone (SC-0415-05)', () => {
       Reflect.deleteProperty(navigator, 'wakeLock');
     }
   });
+});
+
+// W3: a remote's Pause shows at once, busy until the server answers, and a refusal puts it back.
+describe('optimistic play and pause', () => {
+  it('shows the press straight away and rolls it back when the server refuses', async () => {
+    let refuse!: (error: Error) => void;
+    const api = (async (path: string) => {
+      if (path === '/devices') return { device: { id: 'phone', name: 'Phone', kind: 'phone', signed_in: true, this_device: true, poor_speaker: false, last_seen_at: 0, warnings: [] }, notice: null };
+      if (path === '/playback/reconnect') return { action: 'stop_moved', session, message: null };
+      if (path.startsWith('/playback/session')) return elsewhere;
+      if (path === '/playback/commands') return new Promise((_, reject) => { refuse = reject; });
+      throw new Error(`unexpected ${path}`);
+    }) as Api;
+    render(<PlayingBar api={api} workspaceId="ws-optimistic" source={source} />);
+    const pause = await screen.findByRole('button', { name: 'Pause' }, { timeout: 8000 });
+    await userEvent.click(pause);
+    const shown = await screen.findByRole('button', { name: 'Play' });
+    expect(shown).toHaveAttribute('aria-busy', 'true');
+    await act(async () => { refuse(new Error('The speaker said no.')); await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(await screen.findByRole('button', { name: 'Pause' })).toBeVisible();
+    expect(screen.getByRole('alert')).toHaveTextContent('The speaker said no.');
+  });
+
+  it('lets an accepted press the speaker never applies lapse back to the reported state (M9)', async () => {
+    // the server takes the command, but the (offline) speaker never moves the session on
+    const api = (async (path: string) => {
+      if (path === '/devices') return { device: { id: 'phone', name: 'Phone', kind: 'phone', signed_in: true, this_device: true, poor_speaker: false, last_seen_at: 0, warnings: [] }, notice: null };
+      if (path === '/playback/reconnect') return { action: 'stop_moved', session, message: null };
+      if (path.startsWith('/playback/session')) return elsewhere;
+      if (path === '/playback/commands') return { command_id: 'c1' };
+      throw new Error(`unexpected ${path}`);
+    }) as Api;
+    render(<PlayingBar api={api} workspaceId="ws-lapse" source={source} />);
+    const pause = await screen.findByRole('button', { name: 'Pause' }, { timeout: 8000 });
+    const pressed = Date.now();
+    await userEvent.click(pause);
+    expect(await screen.findByRole('button', { name: 'Play' })).toBeVisible();
+    // the session still says playing at seq 3, so once the ack window passes the bar says so
+    expect(await screen.findByRole('button', { name: 'Pause' }, { timeout: OPTIMISTIC_MS + 3000 })).toBeVisible();
+    expect(Date.now() - pressed).toBeGreaterThanOrEqual(OPTIMISTIC_MS - 50);
+  }, OPTIMISTIC_MS + 15_000);
 });

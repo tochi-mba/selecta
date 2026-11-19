@@ -349,17 +349,20 @@ async function endClearance(page: Page) {
       const controls = [...document.querySelectorAll<HTMLElement>('main button, main a[href], main input, main select, main summary')]
         // checkVisibility drops controls inside a closed <details>, whose boxes are not drawn
         .filter((element) => { const box = element.getBoundingClientRect(); return box.width > 0 && box.height > 0 && element.checkVisibility({ visibilityProperty: true }); });
-      return controls.sort((a, b) => a.getBoundingClientRect().bottom - b.getBoundingClientRect().bottom).at(-1)!;
+      return controls.sort((a, b) => a.getBoundingClientRect().bottom - b.getBoundingClientRect().bottom).at(-1) ?? null;
     };
-    // late data (drafts, rows) can still arrive: the end is the same control twice, 200ms apart
+    // late data (drafts, rows) can still arrive: the end is the same control twice, 200ms apart.
+    // A page can also be mid-mount with no controls yet, so settling tolerates that and only
+    // fails, by name, when the rounds run out.
     let last = await settle();
     for (let round = 0; round < 6; round += 1) {
-      const before = last.getBoundingClientRect().bottom;
+      const before = last?.getBoundingClientRect().bottom;
       await new Promise((resolve) => setTimeout(resolve, 200));
       const again = await settle();
-      if (again === last && again.getBoundingClientRect().bottom === before) break;
-      last = again;
+      if (again !== null && again === last && again.getBoundingClientRect().bottom === before) break;
+      last = again ?? last;
     }
+    if (!last) throw new Error('MP-0273-07: no visible controls in main after settling');
     const chrome = [...document.querySelectorAll<HTMLElement>('.mini, nav[aria-label="Main"], .now .transport')]
       .map((element) => ({ element, box: element.getBoundingClientRect(), position: getComputedStyle(element).position }))
       .filter((bar) => bar.box.height > 0 && (bar.position === 'fixed' || bar.position === 'sticky') && bar.box.top > window.innerHeight / 2);

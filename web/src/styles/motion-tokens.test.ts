@@ -12,7 +12,8 @@ const fs = node.getBuiltinModule('node:fs') as Fs;
 const SOURCE = `${node.cwd()}/src/`;
 const doc = fs.readFileSync(`${SOURCE}../../docs/engineering/motion-inventory.md`, 'utf8');
 const tokens = fs.readFileSync(`${SOURCE}styles/tokens.css`, 'utf8');
-const FILES = ['style.css', ...fs.readdirSync(`${SOURCE}styles/`).filter((name) => name.endsWith('.css') && name !== 'tokens.css').map((name) => `styles/${name}`)];
+// The Cloud, Rooms and Devices sheets are under the same rule (ADR-0462 BF-0462-07).
+const FILES = ['style.css', ...fs.readdirSync(`${SOURCE}styles/`).filter((name) => name.endsWith('.css') && name !== 'tokens.css').map((name) => `styles/${name}`), 'cloud/cloud.css', 'rooms/rooms.css', 'devices/devices.css'];
 const sheets = FILES.map((file) => ({ file, text: fs.readFileSync(`${SOURCE}${file}`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '') }));
 
 /** Raw durations kept on purpose, each named in the inventory. */

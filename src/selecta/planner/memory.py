@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 
 from selecta.analysis.key import camelot_distance
 from selecta.analysis.song import SongInfo
+from selecta.planner.fit import folded_gap
 
 RULES_VERSION = 1
 SHAPED_MOVES = {"stem_studio", "stem_arrange"}
@@ -33,7 +34,7 @@ def _taste(good: int, bad: int) -> float:
 
 
 def _traits_of_pair(a: SongInfo, b: SongInfo) -> tuple[str, str]:
-    gap = abs(a.bpm / b.bpm - 1.0)
+    gap = folded_gap(a, b)
     tempo = "tempo close" if gap <= 0.04 else "tempo near" if gap <= 0.08 else "tempo far"
     keys = "keys far" if camelot_distance(a.camelot, b.camelot) >= 5 else "keys fine"
     return tempo, keys

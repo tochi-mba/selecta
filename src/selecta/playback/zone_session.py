@@ -34,7 +34,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
 from selecta.persistence import transaction
-from selecta.playback import ports
+from selecta.playback import deferred, fencing, ports
 from selecta.playback.model import (
     LEASE_SECONDS,
     Device,
@@ -112,6 +112,8 @@ class ZoneHeartbeatResult:
     # Set when refused because this device is the live speaker of another zone.
     playing_zone_id: str | None = None
     playing_zone_name: str | None = None
+    delivered: tuple[str, ...] = ()
+    missed: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -215,13 +217,16 @@ def zone_heartbeat(
     device_id: str,
     position: Position,
     *,
+    fence: int | None = None,
+    user_id: str | None = None,
     now: float | None = None,
     events: PlaybackEvents = NO_EVENTS,
 ) -> ZoneHeartbeatResult:
-    """A zone speaker's (or would-be speaker's) regular check-in."""
+    """A zone speaker's (or would-be speaker's) regular check-in. `fence` is the one the device
+    last saw: a stale one can't claim a lapsed lease (ADR-0461, via `heartbeat_in`)."""
     with transaction(engine, workspace_id) as conn:
         now = resolve_now(conn, now)
-        zone = require_zone(conn, zones, workspace_id, zone_id)
+        zone = require_zone(conn, zones, workspace_id, zone_id, user_id=user_id)
         device = _zone_device(conn, workspace_id, device_id, zone)
         lock_device(conn, workspace_id, device_id)
         touch_device(conn, device_id, now)
@@ -252,6 +257,8 @@ def zone_heartbeat(
             now,
             events,
             may_take_over=_may_pick_up(conn, workspace_id, zone, device, now),
+            fence=fence,
+            volume_cap=zones.volume_cap(conn, zone, now),
         )
         session = result.session
         if (
@@ -267,6 +274,8 @@ def zone_heartbeat(
             result.position_accepted,
             result.previous_device_id,
             session.hand_back_to_device_id,
+            delivered=result.delivered,
+            missed=result.missed,
         )
 
 
@@ -289,7 +298,7 @@ def _ask_for_hand_back(
             },
         ),
     )
-    events.publish(conn, session.workspace_id, ports.STATE, session_payload(session))
+    events.publish(conn, session.workspace_id, ports.STATE, session_payload(session, now))
     return session
 
 
@@ -309,6 +318,7 @@ def _hand_back_in(
         active_device_id=home,
         lease_expires_at=now + LEASE_SECONDS,
         seq=session.seq + 1,
+        fence=fencing.fence_after(session, home),  # the lease moves home, so the fence moves
         hand_back_to_device_id=None,
         updated_at=now,
     )
@@ -329,8 +339,9 @@ def _hand_back_in(
             },
         ),
     )
-    events.publish(conn, session.workspace_id, ports.STATE, session_payload(handed))
-    return handed
+    events.publish(conn, session.workspace_id, ports.STATE, session_payload(handed, now))
+    # The fence moved home, so presses held for the standby are superseded and reported.
+    return deferred.reconcile(conn, handed, now, events).session
 
 
 def hand_back(
@@ -341,6 +352,7 @@ def hand_back(
     device_id: str,
     position: Position,
     *,
+    user_id: str | None = None,
     now: float | None = None,
     events: PlaybackEvents = NO_EVENTS,
 ) -> Session:
@@ -348,7 +360,9 @@ def hand_back(
     kiosk) or when the person pressed "Hand back to Bar player" (a staff phone)."""
     with transaction(engine, workspace_id) as conn:
         now = resolve_now(conn, now)
-        zone = require_zone(conn, zones, workspace_id, zone_id, allow_paused=True)
+        zone = require_zone(
+            conn, zones, workspace_id, zone_id, user_id=user_id, allow_paused=True
+        )
         require_signed_in(conn, workspace_id, device_id)
         session = lock_session(conn, workspace_id, now, zone.id)
         if session.active_device_id != device_id:
@@ -400,7 +414,10 @@ def zone_take_over(
             raise ConfirmNeeded(
                 f"Play {zone.name} music from this phone? The {zone.name} player will stop."
             )
-        return take_over_in(conn, session, device_id, now, events, start_playing=start_playing)
+        return take_over_in(
+            conn, session, device_id, now, events, start_playing=start_playing,
+            volume_cap=zones.volume_cap(conn, zone, now),
+        )
 
 
 def zone_reconnect(
@@ -410,12 +427,19 @@ def zone_reconnect(
     zone_id: str,
     device_id: str,
     *,
+    user_id: str | None = None,
     now: float | None = None,
+    events: PlaybackEvents = NO_EVENTS,
 ) -> ReconnectResult:
     with transaction(engine, workspace_id) as conn:
         now = resolve_now(conn, now)
-        zone = require_zone(conn, zones, workspace_id, zone_id, allow_paused=True)
-        return on_reconnect_in(conn, workspace_id, device_id, now, zone_id=zone.id)
+        zone = require_zone(
+            conn, zones, workspace_id, zone_id, user_id=user_id, allow_paused=True
+        )
+        return on_reconnect_in(
+            conn, workspace_id, device_id, now, zone_id=zone.id, events=events,
+            volume_cap=zones.volume_cap(conn, zone, now),
+        )
 
 
 # ---- remotes
@@ -432,13 +456,17 @@ def zone_submit_command(
     based_on_seq: int,
     idempotency_key: str,
     *,
+    fence: int | None = None,
+    ttl_seconds: int | None = None,
     user_id: str | None = None,
     mix: MixControl | None = None,
     now: float | None = None,
     events: PlaybackEvents = NO_EVENTS,
 ) -> CommandResult:
     """A remote's button press for the zone it is looking at. The zone is in the path, so a
-    stale screen can't steer the wrong zone; `set_volume` is clamped to the zone's cap."""
+    stale screen can't steer the wrong zone; `set_volume` is clamped to the zone's cap. The
+    ADR-0461 fence and TTL pass through unchanged: each zone's session carries its own fence,
+    checked exactly as a personal one's."""
     with transaction(engine, workspace_id) as conn:
         now = resolve_now(conn, now)
         zone = require_zone(conn, zones, workspace_id, zone_id, user_id=user_id)
@@ -455,6 +483,8 @@ def zone_submit_command(
             idempotency_key,
             now,
             events,
+            fence=fence,
+            ttl_seconds=ttl_seconds,
             mix=mix,
             volume_cap=zones.volume_cap(conn, zone, now),
         )
@@ -653,7 +683,7 @@ def _move_now(
                     },
                 ),
             )
-            events.publish(conn, workspace_id, ports.STATE, session_payload(released))
+            events.publish(conn, workspace_id, ports.STATE, session_payload(released, now))
         home, standby = source.home_device_id, source.standby_device_id
         if home == device.id:
             home, standby = standby, None

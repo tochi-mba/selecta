@@ -92,7 +92,8 @@ def active_bytes(engine, workspace=WS) -> int:
 
 def test_a_workspace_with_no_quota_row_is_on_the_free_plan_with_nothing_used(cloud_engine):
     found = usage(cloud_engine)
-    assert (found.plan_id, found.plan_version, found.limit_bytes) == ("free", 1, 10 * GB)
+    # A row-less workspace is pinned to the current plan version: plans v2 (BF-0464-01).
+    assert (found.plan_id, found.plan_version, found.limit_bytes) == ("free", 2, 10 * GB)
     assert (found.committed_bytes, found.reserved_bytes, found.used_bytes) == (0, 0, 0)
     assert found.state is QuotaStatus.OK
     assert not found.read_only
@@ -659,3 +660,107 @@ def test_any_sequence_of_quota_operations_keeps_the_books_straight(sqlite_engine
         lambda: QuotaMachine(sqlite_engine, clock),
         settings=settings(stateful_step_count=25, deadline=None),
     )
+
+
+# The hosted-media grant, end to end: the real predicate over the real rule store (ADR-0464,
+# BF-0464-02; `selecta.hosted_coexistence.grant`). Truth table for `storage_binds`:
+#
+#   rules                       grant   stored bytes   binds
+#   none (before the cutover)   on      no             yes
+#   grant + catch-all, named    on      no             yes
+#   grant + catch-all, unnamed  off     no             no
+#   grant + catch-all, unnamed  off     yes            yes   (grandfathered bytes keep their meter)
+#   kill switch                 off     yes            yes
+#   no live owner               off     no             no
+
+
+def owned_workspace(engine, workspace: str, user: str) -> None:
+    from selecta.identity.schema import users, workspaces
+
+    with transaction(engine) as conn:
+        conn.execute(users.insert().values(
+            id=user, auth_subject=f"auth|{user}", email_verified=True, timezone="UTC",
+            age_confirmed=True, created_at=0.0,
+        ))
+        conn.execute(workspaces.insert().values(
+            id=workspace, name="Mine", kind="personal", owner_user_id=user, created_at=0.0,
+        ))
+
+
+def save_hosted_rules(engine, rules) -> None:
+    from selecta.flags import rules as flag_rules
+
+    with transaction(engine) as conn:
+        flag_rules.save(conn, "cloud.hosted_media", rules, author="test", reason="quota truth")
+
+
+def granted_and_binds(engine, workspace: str) -> tuple[bool, bool]:
+    from selecta.hosted_coexistence.grant import hosted_media_granted
+
+    with transaction(engine, workspace) as conn:
+        return (
+            hosted_media_granted(conn, workspace),
+            quota.storage_binds(conn, workspace, hosted_media_granted),
+        )
+
+
+def test_before_the_cutover_rules_every_live_workspace_holds_the_grant(cloud_engine):
+    owned_workspace(cloud_engine, "ws-pre", "u-pre")
+    assert granted_and_binds(cloud_engine, "ws-pre") == (True, True)
+
+
+def test_the_grandfather_rules_bind_storage_only_where_the_grant_or_bytes_are(cloud_engine):
+    from selecta.hosted_coexistence.grandfather import build_grandfather_rules
+
+    for workspace, user in (("ws-named", "u-named"), ("ws-fresh", "u-fresh"),
+                            ("ws-stored", "u-stored")):
+        owned_workspace(cloud_engine, workspace, user)
+    filled(cloud_engine, 2 * GB, workspace="ws-stored")
+    save_hosted_rules(cloud_engine, build_grandfather_rules(["ws-named"]))
+
+    assert granted_and_binds(cloud_engine, "ws-named") == (True, True)
+    assert granted_and_binds(cloud_engine, "ws-fresh") == (False, False)
+    assert granted_and_binds(cloud_engine, "ws-stored") == (False, True)
+
+
+def test_a_kill_switch_revokes_the_grant_but_stored_bytes_still_bind(cloud_engine):
+    from selecta.flags.matching import Rule, RuleKind
+
+    owned_workspace(cloud_engine, "ws-killed", "u-killed")
+    filled(cloud_engine, 1 * GB, workspace="ws-killed")
+    save_hosted_rules(cloud_engine, [Rule(RuleKind.KILL_SWITCH, {})])
+    assert granted_and_binds(cloud_engine, "ws-killed") == (False, True)
+
+
+def test_a_workspace_without_a_live_owner_holds_no_grant(cloud_engine):
+    assert granted_and_binds(cloud_engine, "ws-nobody") == (False, False)
+
+
+def test_the_build_layer_off_means_no_grant_whatever_the_rules_say(cloud_engine):
+    from selecta import flags
+    from selecta.hosted_coexistence.grant import hosted_media_granted
+
+    owned_workspace(cloud_engine, "ws-build", "u-build")
+    off = dict(flags.effective()) | {"cloud.hosted_media": flags.State(on=False, why="test")}
+    with transaction(cloud_engine, "ws-build") as conn:
+        assert hosted_media_granted(conn, "ws-build", build_states=off) is False
+
+
+def test_require_writable_with_the_real_predicate_still_refuses_an_over_quota_workspace(
+    cloud_engine,
+):
+    from selecta.hosted_coexistence.grandfather import build_grandfather_rules
+    from selecta.hosted_coexistence.grant import hosted_media_granted
+
+    owned_workspace(cloud_engine, "ws-over", "u-over")
+    filled(cloud_engine, 45 * GB, workspace="ws-over", plan=STANDARD)
+    set_plan(cloud_engine, FREE, workspace="ws-over")
+    # Not granted, but grandfathered bytes keep today's enforcement exactly.
+    save_hosted_rules(cloud_engine, build_grandfather_rules(["ws-someone-else"]))
+    with pytest.raises(QuotaExceeded):
+        run(cloud_engine, quota.require_writable, "ws-over", workspace="ws-over",
+            hosted_media=hosted_media_granted)
+    owned_workspace(cloud_engine, "ws-empty", "u-empty")
+    current = run(cloud_engine, quota.require_writable, "ws-empty", workspace="ws-empty",
+                  hosted_media=hosted_media_granted)
+    assert current.used_bytes == 0 and not current.read_only

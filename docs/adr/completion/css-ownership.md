@@ -9,10 +9,11 @@ overlap or a new breakpoint fails the test until it is given an owner here.
 | File | Owns | Loaded by |
 |---|---|---|
 | `styles/tokens.css` | palette, meanings, type, space, motion, layers, shell geometry, density, theme switching | `main.tsx` |
+| `styles/boot.css` | runtime and sign-in messages before an app frame exists, the brand mark badge | `main.tsx` |
 | `style.css` | legacy global sheet: base controls, Listen strip/lyrics/handoff, timeline rows, Library rows, Links cards, Workspace metrics | `main.tsx` |
 | `styles/shell.css` | rail/bottom bar, context bar, mini-player, toasts, overlays, menus, tooltips, skeletons, inspector resize | `main.tsx` |
 | `styles/polish.css` | interaction feedback, card disclosure, skeleton reveal, reduced-motion overrides | `main.tsx` |
-| `styles/foundation.css` | base element meanings: primary fill, popovers, word highlight | `main.tsx` |
+| `styles/foundation.css` | base element meanings: primary fill, popovers, word highlight; the shared primitives Meter, ConfirmDialog, Truncate and DataTable (moved here from admin.css and business/console.css) | `main.tsx` |
 | `styles/listening.css` | Listen layout, Stage, seek ghost, energy arc inputs, forced-colour fallbacks for music graphics | `main.tsx` |
 | `styles/creation.css` | editor scope bar, inspector, Studio, Story view, energy overview and thumb | `main.tsx` |
 | `styles/operations.css` | Library columns, Workspace panels, export jobs | `main.tsx` |
@@ -45,7 +46,7 @@ Feature-local sheets live beside the one component that imports them and style n
 | `venueops/staffDashboard.css` | unattended playback dashboard and staff controls | `venueops/StaffDashboard.tsx` |
 | `views/mixIntent.css` | mix intent and setting-scope explanatory surfaces | `views/MixIntent.tsx` |
 
-Load order (`web/src/main.tsx`): tokens, style.css, shell, polish, foundation, listening, creation,
+Load order (`web/src/main.tsx`): tokens, boot, style.css, shell, polish, foundation, listening, creation,
 operations, music-objects, glossary, palette, icons, depth, typography. Later files refine earlier
 ones; feature files come after the legacy sheet so they win at equal specificity. New work goes into
 the file that owns the feature; `style.css` only shrinks.
@@ -96,7 +97,7 @@ wins, and the row says which.
 | `max-width: 1024px` | `style.css` | timeline rows put their actions on a line under the song, so the title keeps its width beside the rail (2026-11-12 tablet review) |
 | `max-width: 1024px` | `styles/creation.css` | timeline grip column follows the stacked timeline row in `style.css` |
 | `max-width: 850px` | `styles/polish.css` | Make a Mix paths stack |
-| `min-width: 768px` | `styles/listening.css` | render queue names and move buttons use consistent columns once the list has room |
+| `min-width: 641px` | `styles/listening.css` | render queue names and move buttons use consistent columns once the list has room: above the canonical 640 phone width (moved from a stray 768 in the BF overhaul; the grid already fitted the narrower 768px-with-rail column, so the 641 to 767 band gains it rather than an upright tablet losing it) |
 | `min-width: 761px` | `styles/listening.css` | Stage visualizer and lyrics fit shorter desktop windows without hiding controls |
 | `min-width: 761px` | `styles/shell.css` | the side rail |
 | `max-width: 760px` | `styles/tokens.css` | shell geometry: no rail offset, bottom bar and smaller header |

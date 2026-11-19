@@ -298,9 +298,11 @@ def test_choice_always_returns_something_playable(pair):
     assert choice.report is not None
 
 
-def test_a_failed_style_falls_back_to_an_echo(tmp_path):
+def test_a_failed_style_falls_back_to_a_cut_on_the_one(tmp_path):
+    # The one last resort is a clean cut: the listener rated every clean cut well and a
+    # reasonless echo badly (planner/choose.py fallback_candidate).
     a = song_from_track(tmp_path, "a", make_track(bpm=120, bars=48, seed=1))
     b = song_from_track(tmp_path, "b", make_track(bpm=85, bars=48, seed=2))
     choice = choose_transition(a, b, style="bass_swap_blend")
     assert choice.fell_back
-    assert choice.candidate.recipe.name == "echo_out"
+    assert choice.candidate.recipe.name == "cut_on_one"

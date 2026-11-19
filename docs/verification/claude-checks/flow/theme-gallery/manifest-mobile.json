@@ -1,0 +1,558 @@
+{
+  "task": "SF-0201-08",
+  "status": "candidate-not-independently-verified",
+  "sourceSha": "207abfb8b068aa7fcdb1124ef0d0cbe02bf47430",
+  "os": "win32 10.0.26300",
+  "fixtureDataVersion": "3bc5fa14c0e149e3",
+  "reviewer": null,
+  "capturedAt": "2026-11-18T12:20:56.005Z",
+  "browser": "msedge",
+  "motion": "still/reduced",
+  "fixture": "tests/e2e_server.py",
+  "excluded": [
+    "Workspace: sources and diagnostics. Paused by the privacy rule of 2026-11-12: the test server showed a local folder path there. Add them once the server roots its library elsewhere.",
+    "Saved draft editor (/mixes/drafts/N/edit): the same editor as Edit the current mix, on a draft."
+  ],
+  "shots": [
+    {
+      "screen": "explore",
+      "title": "Explore (start page)",
+      "path": "/mixes",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-explore-part1.png",
+        "mobile-light-explore-part2.png",
+        "mobile-light-explore-part3.png",
+        "mobile-light-explore-part4.png",
+        "mobile-light-explore-part5.png",
+        "mobile-light-explore-part6.png",
+        "mobile-light-explore-part7.png",
+        "mobile-light-explore-part8.png",
+        "mobile-light-explore-part9.png",
+        "mobile-light-explore-part10.png"
+      ]
+    },
+    {
+      "screen": "my-mixes",
+      "title": "My Mixes",
+      "path": "/mixes/mine",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-my-mixes.png"
+      ]
+    },
+    {
+      "screen": "listen",
+      "title": "Listen",
+      "path": "/listen",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-listen.png"
+      ]
+    },
+    {
+      "screen": "editor",
+      "title": "Edit the current mix",
+      "path": "/mix/current/edit",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-editor.png"
+      ]
+    },
+    {
+      "screen": "library",
+      "title": "Library",
+      "path": "/library",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-library.png"
+      ]
+    },
+    {
+      "screen": "discover-words",
+      "title": "Discover: words",
+      "path": "/discover",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-discover-words.png"
+      ]
+    },
+    {
+      "screen": "discover-harmonic",
+      "title": "Discover: harmonic",
+      "path": "/discover/harmonic",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-discover-harmonic.png"
+      ]
+    },
+    {
+      "screen": "lucy",
+      "title": "Lucy",
+      "path": "/mixes/lucy",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-lucy.png"
+      ]
+    },
+    {
+      "screen": "workspace",
+      "title": "Workspace overview",
+      "path": "/workshop",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-workspace.png"
+      ]
+    },
+    {
+      "screen": "analysis",
+      "title": "Workspace: analysis",
+      "path": "/workshop/analysis",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-analysis.png"
+      ]
+    },
+    {
+      "screen": "storage",
+      "title": "Workspace: storage and backups",
+      "path": "/workshop/storage",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-storage.png"
+      ]
+    },
+    {
+      "screen": "learning",
+      "title": "Workspace: learning",
+      "path": "/workshop/learning",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-learning.png"
+      ]
+    },
+    {
+      "screen": "listening-study",
+      "title": "Listening study",
+      "path": "/listening",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-listening-study.png"
+      ]
+    },
+    {
+      "screen": "missing-page",
+      "title": "Page not found",
+      "path": "/no-such-page",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-missing-page.png"
+      ]
+    },
+    {
+      "screen": "export-dialog",
+      "title": "Export dialog",
+      "path": "/mix/current/edit",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-export-dialog.png"
+      ]
+    },
+    {
+      "screen": "customize-dialog",
+      "title": "Shape the next mix",
+      "path": "/mixes",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-customize-dialog-part1.png",
+        "mobile-light-customize-dialog-part2.png",
+        "mobile-light-customize-dialog-part3.png",
+        "mobile-light-customize-dialog-part4.png",
+        "mobile-light-customize-dialog-part5.png",
+        "mobile-light-customize-dialog-part6.png",
+        "mobile-light-customize-dialog-part7.png",
+        "mobile-light-customize-dialog-part8.png",
+        "mobile-light-customize-dialog-part9.png",
+        "mobile-light-customize-dialog-part10.png"
+      ]
+    },
+    {
+      "screen": "requests-dialog",
+      "title": "Requests",
+      "path": "/listen",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-requests-dialog.png"
+      ]
+    },
+    {
+      "screen": "song-details",
+      "title": "Song details",
+      "path": "/library",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-song-details.png"
+      ]
+    },
+    {
+      "screen": "transition-inspector",
+      "title": "Transition inspector",
+      "path": "/mix/current/edit",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-transition-inspector.png"
+      ]
+    },
+    {
+      "screen": "library-selection",
+      "title": "Library with a selection",
+      "path": "/library",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-library-selection.png"
+      ]
+    },
+    {
+      "screen": "library-no-results",
+      "title": "Library search with no results",
+      "path": "/library?q=nothing-is-called-this",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "files": [
+        "mobile-light-library-no-results.png"
+      ]
+    },
+    {
+      "screen": "explore",
+      "title": "Explore (start page)",
+      "path": "/mixes",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-explore-part1.png",
+        "mobile-dark-explore-part2.png",
+        "mobile-dark-explore-part3.png",
+        "mobile-dark-explore-part4.png",
+        "mobile-dark-explore-part5.png",
+        "mobile-dark-explore-part6.png",
+        "mobile-dark-explore-part7.png",
+        "mobile-dark-explore-part8.png",
+        "mobile-dark-explore-part9.png",
+        "mobile-dark-explore-part10.png"
+      ]
+    },
+    {
+      "screen": "my-mixes",
+      "title": "My Mixes",
+      "path": "/mixes/mine",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-my-mixes.png"
+      ]
+    },
+    {
+      "screen": "listen",
+      "title": "Listen",
+      "path": "/listen",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-listen.png"
+      ]
+    },
+    {
+      "screen": "editor",
+      "title": "Edit the current mix",
+      "path": "/mix/current/edit",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-editor.png"
+      ]
+    },
+    {
+      "screen": "library",
+      "title": "Library",
+      "path": "/library",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-library.png"
+      ]
+    },
+    {
+      "screen": "discover-words",
+      "title": "Discover: words",
+      "path": "/discover",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-discover-words.png"
+      ]
+    },
+    {
+      "screen": "discover-harmonic",
+      "title": "Discover: harmonic",
+      "path": "/discover/harmonic",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-discover-harmonic.png"
+      ]
+    },
+    {
+      "screen": "lucy",
+      "title": "Lucy",
+      "path": "/mixes/lucy",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-lucy.png"
+      ]
+    },
+    {
+      "screen": "workspace",
+      "title": "Workspace overview",
+      "path": "/workshop",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-workspace.png"
+      ]
+    },
+    {
+      "screen": "analysis",
+      "title": "Workspace: analysis",
+      "path": "/workshop/analysis",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-analysis.png"
+      ]
+    },
+    {
+      "screen": "storage",
+      "title": "Workspace: storage and backups",
+      "path": "/workshop/storage",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-storage.png"
+      ]
+    },
+    {
+      "screen": "learning",
+      "title": "Workspace: learning",
+      "path": "/workshop/learning",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-learning.png"
+      ]
+    },
+    {
+      "screen": "listening-study",
+      "title": "Listening study",
+      "path": "/listening",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-listening-study.png"
+      ]
+    },
+    {
+      "screen": "missing-page",
+      "title": "Page not found",
+      "path": "/no-such-page",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-missing-page.png"
+      ]
+    },
+    {
+      "screen": "export-dialog",
+      "title": "Export dialog",
+      "path": "/mix/current/edit",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-export-dialog.png"
+      ]
+    },
+    {
+      "screen": "customize-dialog",
+      "title": "Shape the next mix",
+      "path": "/mixes",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-customize-dialog-part1.png",
+        "mobile-dark-customize-dialog-part2.png",
+        "mobile-dark-customize-dialog-part3.png",
+        "mobile-dark-customize-dialog-part4.png",
+        "mobile-dark-customize-dialog-part5.png",
+        "mobile-dark-customize-dialog-part6.png",
+        "mobile-dark-customize-dialog-part7.png",
+        "mobile-dark-customize-dialog-part8.png",
+        "mobile-dark-customize-dialog-part9.png",
+        "mobile-dark-customize-dialog-part10.png"
+      ]
+    },
+    {
+      "screen": "requests-dialog",
+      "title": "Requests",
+      "path": "/listen",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-requests-dialog.png"
+      ]
+    },
+    {
+      "screen": "song-details",
+      "title": "Song details",
+      "path": "/library",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-song-details.png"
+      ]
+    },
+    {
+      "screen": "transition-inspector",
+      "title": "Transition inspector",
+      "path": "/mix/current/edit",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-transition-inspector.png"
+      ]
+    },
+    {
+      "screen": "library-selection",
+      "title": "Library with a selection",
+      "path": "/library",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-library-selection.png"
+      ]
+    },
+    {
+      "screen": "library-no-results",
+      "title": "Library search with no results",
+      "path": "/library?q=nothing-is-called-this",
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "files": [
+        "mobile-dark-library-no-results.png"
+      ]
+    }
+  ]
+}

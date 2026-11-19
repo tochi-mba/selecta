@@ -43,6 +43,7 @@ GLOBAL_TABLES: dict[str, str] = {
     "worker_controls": "staff holds on workers in the shared platform fleet",
     "rate_buckets": "platform-wide limits on outside services, shared by every workspace",
     "business_pilots": "platform staff pilot grants created before a tenant is activated",
+    "shared_derivations": "machine derivations of file bytes shared by fingerprint (ADR-0469)",
 }
 
 # Tables with a `workspace_id` that may be empty, because some rows belong to no workspace yet.

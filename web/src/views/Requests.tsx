@@ -1,11 +1,12 @@
 import { Icon } from '../ui/Icon';
 import { RouteDiagram, SongMotif } from '../ui/MusicObjects';
-import { Problem, Skeleton } from '../ui/controls';
+import { Action, Problem, Skeleton } from '../ui/controls';
 import { createContext, Fragment, KeyboardEvent, useContext, useEffect, useRef, useState } from 'react';
-import { ApiError, SERVER_FAILED_WORDS, del, get, MixData, MixItem, post, SongRow } from '../api';
+import { ApiError, SERVER_FAILED_WORDS, MixData, MixItem, Request, SongRow } from '../api';
+import { useApi, useRequest } from '../requestContext';
 import { usePreview } from '../audio/focus';
 import { etaWords } from '../lib';
-import { SetPlayer } from '../player';
+import { PlayerLike } from '../playerContract';
 import { operationId } from '../state/async';
 import { orderOf } from '../state/readiness';
 import { AudioPreview } from '../ui/AudioPreview';
@@ -42,7 +43,7 @@ export type BridgeOption = {
   transitions: Transition[];
 };
 export type BridgeSearch = { options: BridgeOption[]; looked_at: number; direct: boolean; unsteady?: boolean };
-type Playback = { mix: MixItem[]; player: SetPlayer; onMix: (data: MixData) => void };
+type Playback = { mix: MixItem[]; player: PlayerLike; onMix: (data: MixData) => void };
 type Notify = (message: string, undo?: boolean | (() => Promise<void>)) => void;
 
 const WORKING = new Set<Stage>(['adding', 'preparing', 'ready', 'analysing']);
@@ -166,6 +167,8 @@ export type RequestsState = {
   error: string;
   message: string;
   playback?: Playback;
+  /** ADR-0462: the client every requests surface shares, so previews and searches use the same one. */
+  request: Request;
   add: (song: SongRow) => Promise<void>;
   cancel: (request: RequestRow) => Promise<void>;
   chooseBridge: (request: RequestRow, allow: boolean) => Promise<void>;
@@ -179,7 +182,11 @@ export const RequestsContext = createContext<RequestsState | null>(null);
 /** Requests stay separate from the playing order until a safe place is ready. This keeps watching
  * for one on every page, while the panel only shows on the pages where it's useful. Everything a
  * person presses shows straight away and is put right if the server says no. */
-export function useRequests(playback?: Playback, notify?: Notify): RequestsState {
+export function useRequests(playback?: Playback, notify?: Notify, override?: Request): RequestsState {
+  // ADR-0462: all reads and writes go through the injected request; standalone local mounts
+  // (and the existing tests) keep the local client by default.
+  const request = useRequest(override);
+  const { get, post, del } = useApi(request);
   // without requests in this build, nothing here asks the server anything
   const on = useFlagHeard('requests');
   const [requests, setRequests] = useState<RequestRow[] | null>(null);
@@ -462,7 +469,7 @@ export function useRequests(playback?: Playback, notify?: Notify): RequestsState
     }
   };
 
-  return { requests, error, message, playback, add, cancel, chooseBridge, addAnyway, findBridges, pickBridge };
+  return { requests, error, message, playback, request, add, cancel, chooseBridge, addAnyway, findBridges, pickBridge };
 }
 
 /** The tag on a song a request put in the mix, wherever that song is shown. */
@@ -546,7 +553,7 @@ export function ComingSongs({ afterSongId }: { afterSongId: number }) {
               <span className="coming-progress" role="status">
                 {stage === 'ready' ? 'Ready - waiting for a valid opening' : seams.length ? `${done} of ${seams.length} ready${wait}` : `Getting it ready${wait}`}
               </span>
-              <button aria-label={`Cancel request for ${title}`} title="Cancel this request" onClick={() => void cancel(request)}>Cancel</button>
+              <Action aria-label={`Cancel request for ${title}`} title="Cancel this request" run={() => cancel(request)} working="Cancelling…">Cancel</Action>
             </div>
             <RouteDiagram songs={songs} requestedId={request.song_id} state={stage === 'ready' ? 'ready' : 'preparing'} compact />
             <ol className="coming-rows">
@@ -671,6 +678,10 @@ function BridgeFinder({ request, onClose }: { request: RequestRow; onClose: () =
 /** Hear what you'd be agreeing to. Pressing shows straight away, renders if it has to, and plays by
  * itself as soon as it's ready. */
 function TransitionPreviews({ request }: { request: RequestRow; playback?: Playback }) {
+  // ADR-0462: previews ask the server through the shared requests client.
+  const state = useContext(RequestsContext);
+  const provided = useRequest();
+  const { get, post } = useApi(state?.request ?? provided);
   const preview = usePreview();
   const [wanted, setWanted] = useState('');
   const [problem, setProblem] = useState('');
@@ -726,9 +737,9 @@ function TransitionPreviews({ request }: { request: RequestRow; playback?: Playb
         <div className="request-preview" key={item.key}>
           <span className="request-pair"><b>{item.from}</b> → <b>{item.to}</b></span>
           <span className={`pill ${item.status}`}>{SEAM_WORDS[item.status] ?? 'Not made yet'}</span>
-          <button aria-label={`Hear ${item.from} into ${item.to}`} aria-pressed={preview.playing === item.key} onClick={() => void hear(item)}>
+          <Action aria-label={`Hear ${item.from} into ${item.to}`} aria-pressed={preview.playing === item.key} run={() => hear(item)}>
             {preview.playing === item.key ? <><Icon name="stop" /> Stop</> : wanted === item.key ? 'Getting it ready…' : <><Icon name="play" /> Hear</>}
-          </button>
+          </Action>
         </div>
       ))}
       {(problem || preview.problem) && <p className="warn" role="alert">{problem || preview.problem}</p>}
@@ -740,6 +751,9 @@ function TransitionPreviews({ request }: { request: RequestRow; playback?: Playb
 export function RequestsPanel() {
   const bridges = useFlag('requests.bridges');
   const state = useContext(RequestsContext);
+  // ADR-0462: the song search goes through the shared requests client.
+  const provided = useRequest();
+  const { get } = useApi(state?.request ?? provided);
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState<SongRow[] | null>(null);
   const [searchError, setSearchError] = useState('');
@@ -921,8 +935,8 @@ export function RequestsPanel() {
                     </ol>
                     <TransitionPreviews request={request} playback={playback} />
                     <div className="row wrap">
-                      <button className="primary" aria-describedby={`request-approve-${request.id}`} onClick={() => void chooseBridge(request, true)}>{(request.route?.length ?? 0) > 2 ? `Add all ${request.route?.length}` : 'Add both'}</button>
-                      <button aria-describedby={`request-decline-${request.id}`} onClick={() => void chooseBridge(request, false)}>No, keep waiting</button>
+                      <Action className="primary" aria-describedby={`request-approve-${request.id}`} run={() => chooseBridge(request, true)} working="Adding…">{(request.route?.length ?? 0) > 2 ? `Add all ${request.route?.length}` : 'Add both'}</Action>
+                      <Action aria-describedby={`request-decline-${request.id}`} run={() => chooseBridge(request, false)} working="Saving…">No, keep waiting</Action>
                     </div>
                     <p className="hint request-consequence" id={`request-approve-${request.id}`}>{(request.route?.length ?? 0) > 2 ? `Add all ${request.route?.length}` : 'Add both'}: {Math.max((request.route?.length ?? 1) - 1, 0) === 1 ? 'one extra song joins' : `${Math.max((request.route?.length ?? 1) - 1, 0)} extra songs join`} with {title}, in the order above.</p>
                     <p className="hint request-consequence" id={`request-decline-${request.id}`}>No, keep waiting: nothing extra joins, and {title} keeps looking for a spot of its own.</p>
@@ -940,9 +954,9 @@ export function RequestsPanel() {
                       </button>
                     )}
                     {CAN_FORCE.has(stage) && (
-                      <button aria-describedby={`request-force-${request.id}`} onClick={() => void addAnyway(request)}>
+                      <Action aria-describedby={`request-force-${request.id}`} run={() => addAnyway(request)} working="Adding…">
                         Add to mix anyway
-                      </button>
+                      </Action>
                     )}
                     {CAN_FORCE.has(stage) && <small className="hint request-consequence" id={`request-force-${request.id}`}>Adding it directly may make a rough transition. This changes the mix; it does not promise immediate playback.</small>}
                   </div>
@@ -961,8 +975,8 @@ export function RequestsPanel() {
 }
 
 /** The panel with its own connection, for showing it on its own. */
-export function Requests({ playback, notify }: { playback?: Playback; notify?: Notify }) {
-  const state = useRequests(playback, notify);
+export function Requests({ playback, notify, request }: { playback?: Playback; notify?: Notify; request?: Request }) {
+  const state = useRequests(playback, notify, request);
   return (
     <RequestsContext.Provider value={state}>
       <RequestsPanel />

@@ -1,0 +1,98 @@
+{
+  "status": "candidate-not-independently-verified",
+  "fixture": "tests/e2e_server.py",
+  "fixedTime": "2026-01-05T10:00:00.000Z",
+  "motion": "reduced, animations disabled",
+  "masks": [
+    "canvas",
+    "time",
+    ".tabular-time",
+    ".toast-stack"
+  ],
+  "candidates": [
+    {
+      "name": "1440-dark-listen",
+      "width": 1440,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-1440-dark-listen.png"
+    },
+    {
+      "name": "1440-dark-mixes",
+      "width": 1440,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-1440-dark-mixes.png"
+    },
+    {
+      "name": "1440-dark-mixes-mine",
+      "width": 1440,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-1440-dark-mixes-mine.png"
+    },
+    {
+      "name": "1440-dark-mix-current-edit",
+      "width": 1440,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-1440-dark-mix-current-edit.png"
+    },
+    {
+      "name": "1440-dark-library",
+      "width": 1440,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-1440-dark-library.png"
+    },
+    {
+      "name": "1440-dark-discover",
+      "width": 1440,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-1440-dark-discover.png"
+    },
+    {
+      "name": "1440-dark-discover-harmonic",
+      "width": 1440,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-1440-dark-discover-harmonic.png"
+    },
+    {
+      "name": "1440-dark-workshop",
+      "width": 1440,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-1440-dark-workshop.png"
+    },
+    {
+      "name": "1440-dark-workshop-analysis",
+      "width": 1440,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-1440-dark-workshop-analysis.png"
+    },
+    {
+      "name": "1440-dark-workshop-storage",
+      "width": 1440,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-1440-dark-workshop-storage.png"
+    },
+    {
+      "name": "1440-dark-workshop-sources",
+      "width": 1440,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-1440-dark-workshop-sources.png"
+    },
+    {
+      "name": "1440-dark-workshop-learning",
+      "width": 1440,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-1440-dark-workshop-learning.png"
+    },
+    {
+      "name": "1440-dark-workshop-diagnostics",
+      "width": 1440,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-1440-dark-workshop-diagnostics.png"
+    },
+    {
+      "name": "1440-dark-listening",
+      "width": 1440,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-1440-dark-listening.png"
+    }
+  ]
+}

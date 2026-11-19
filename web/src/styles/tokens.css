@@ -21,6 +21,27 @@
   --warn: #ff7a4d;
   --ok: #9ed46a;
   --request: #6fd3ff;
+  /* a QR code's quiet zone is white in either theme, or phones cannot read it (rooms, display) */
+  --scan-white: #fff;
+  /* Light's palette, written once. Light is switched on two ways, chosen by hand ([data-theme='light'])
+     or by a light device while the choice is System; both switches below only point here, so the two
+     can never drift apart again. */
+  --light-bg: #f5f2e9;
+  --light-panel: #fffdf6;
+  --light-panel-2: #ece8db;
+  --light-line: #d5cfbd;
+  --light-ink: #16140e;
+  --light-soft: #6a6555;
+  --light-accent: #2b2a14;
+  --light-accent-ink: #f5f2e9;
+  --light-warn: #b93d10;
+  --light-ok: #3f7a1a;
+  --light-request: #086a93;
+  --light-primary-fill: #e8ff3a;
+  --light-primary-ink: #14140a;
+  --light-primary-edge: #16140e;
+  --light-shadow-raised: 0 6px 24px rgb(40 34 20 / 18%);
+  --light-shadow-overlay: 0 1px 2px rgb(40 34 20 / 10%), 0 12px 32px rgb(40 34 20 / 16%);
 
   /* what things mean */
   /* Surface roles (MP-0276-01), from the page up. A background says which one it is, never which
@@ -41,6 +62,8 @@
   --surface-overlay: color-mix(in srgb, var(--ink) 6%, var(--panel));
   --surface-scrim: color-mix(in srgb, var(--bg) 72%, transparent);
   --surface-selected: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  /* scan: behind a code a camera must read (the Room QR); white in both themes on purpose */
+  --surface-scan: var(--scan-white);
   --border: var(--line);
   --border-strong: var(--soft);
   /* Decorative dividers may be quiet; controls and state markers must read against real surfaces. */
@@ -94,6 +117,18 @@
   --text-md: 1rem;
   --text-lg: 1.15rem;
   --text-xl: 1.5rem;
+  --text-2xl: 2rem;                       /* a figure read at a glance: a price, a room code, a metric */
+  --text-hero: clamp(2.8rem, 10vw, 6rem); /* the one headline of a first screen */
+  /* These steps are the only font sizes a stylesheet outside this file may name, either through a
+     role below or as `font-size: var(--text-*)`. The fitted lyric and Stage sizes (listening.css,
+     style.css .stage and .lyrics) are the documented exception: they are fitted to the window. */
+  /* weights: five, by what they mark */
+  --weight-body: 400;     /* running text */
+  --weight-label: 600;    /* a label, a chosen tab, a th */
+  --weight-strong: 700;   /* a name in a row, the current place, an emphasised word */
+  --weight-heading: 800;  /* a heading in the display face */
+  --weight-display: 900;  /* the display face at its loudest */
+  --tracking-eyebrow: 0.075em; /* the one letter-spacing for small capitals over a heading */
   /* The type roles (MP-0275-01), largest first. Each is a whole `font` so a role is one declaration:
        display   a hero headline or the playing song (.display; Listen fits its title, never below 24px)
        page      the one page title (.display.small)
@@ -118,6 +153,13 @@
   --type-label: 600 var(--text-xs) / 1.35 var(--body);
   --type-caption: 400 var(--text-xs) / 1.45 var(--body);
   --type-counter: 500 var(--text-sm) / 1.2 var(--mono);
+  /* Three roles added with the Cloud and Rooms surfaces (BF overhaul, W1):
+       hero      the single headline of a first screen: Start, the Cloud welcome and sign-in states
+       figure    a number or code to read at a glance: a plan price, a room code, a metric
+       eyebrow   small capitals over a heading (with --tracking-eyebrow and uppercase) */
+  --type-hero: 900 var(--text-hero) / 1.03 var(--display);
+  --type-figure: 900 var(--text-2xl) / 1.05 var(--display);
+  --type-eyebrow: 600 var(--text-xs) / 1.35 var(--mono);
   --title-floor: 24px;    /* the smallest a focal song title (Listen, Stage) is ever fitted to */
 
   /* space, shape and depth */
@@ -202,6 +244,22 @@
   --motion-overlay: 220ms;
   --motion-slow: 240ms;
   --motion-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* Leaving (the exit protocol). A closing overlay, toast, menu, tooltip or popover sets data-closing on
+     its root; polish.css animates it at these lengths and the component unmounts on animationend, with
+     a timeout of the same length as a fallback. Leaving is quicker than arriving. Reduced motion swaps
+     each for a short fade (never removes it); Still and low power take them to 0ms. */
+  --motion-exit-dialog: var(--motion-fast);     /* dialog and workspace: fade and shrink 2% */
+  --motion-exit-drawer: var(--motion-handoff);  /* drawer and sheet: slide back out of its side */
+  --motion-exit-toast: var(--motion-fast);      /* toast: fade and drop 4px */
+  --motion-exit-menu: var(--motion-feedback);   /* menu, tooltip, popover: fade */
+  /* Loops and the clock: each runs as long as its state does, so none is a reveal. Named here so no
+     sheet holds a raw duration; Still and reduced motion stop the loops outright. */
+  --motion-loop-working: 0.9s;   /* the busy line under a working button */
+  --motion-loop-breathe: 1.4s;   /* skeleton rows */
+  --motion-loop-slide: 1.6s;     /* Lucy's indeterminate bar */
+  --motion-loop-pulse: 1.8s;     /* a request pill at work */
+  --motion-loop-flow: 2.4s;      /* the pending handoff line */
+  --motion-clock: 70ms;          /* the handoff bar follows the audio clock */
 
   /* what sits on top of what */
   --layer-sticky: 5;
@@ -244,55 +302,58 @@
 /* the Stage has no frame at all */
 :root[data-stage='on'] { --rail-offset: 0px; --nav-bottom: 0px; --player-height: 0px; --header-height: 0px; }
 
+/* The two Light switches. CSS cannot say "a light device OR a chosen Light" in one rule, so there are
+   two selectors, but neither holds a value: each only points at the Light palette above.
+   boundary-roles.test.ts and sf0201ThemeCharacter.test.ts keep the two lists identical. */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark']) {
     color-scheme: light;
-    --bg: #f5f2e9;
-    --panel: #fffdf6;
-    --panel-2: #ece8db;
-    --line: #d5cfbd;
-    --ink: #16140e;
-    --soft: #6a6555;
+    --bg: var(--light-bg);
+    --panel: var(--light-panel);
+    --panel-2: var(--light-panel-2);
+    --line: var(--light-line);
+    --ink: var(--light-ink);
+    --soft: var(--light-soft);
     --edge-interactive: var(--soft);
-    --accent: #2b2a14;
-    --accent-ink: #f5f2e9;
-    --warn: #b93d10;
-    --ok: #3f7a1a;
-    --request: #086a93;
-    --primary-fill: #e8ff3a;
-    --primary-ink: #14140a;
-    --primary-edge: #16140e;
-    --word-fill: #e8ff3a;
-    --word-ink: #14140a;
+    --accent: var(--light-accent);
+    --accent-ink: var(--light-accent-ink);
+    --warn: var(--light-warn);
+    --ok: var(--light-ok);
+    --request: var(--light-request);
+    --primary-fill: var(--light-primary-fill);
+    --primary-ink: var(--light-primary-ink);
+    --primary-edge: var(--light-primary-edge);
+    --word-fill: var(--light-primary-fill);
+    --word-ink: var(--light-primary-ink);
     --word-glow: transparent;
-    --shadow-raised: 0 6px 24px rgb(40 34 20 / 18%);
-    --shadow-overlay: 0 1px 2px rgb(40 34 20 / 10%), 0 12px 32px rgb(40 34 20 / 16%);
+    --shadow-raised: var(--light-shadow-raised);
+    --shadow-overlay: var(--light-shadow-overlay);
     --surface-overlay: var(--panel);
   }
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --bg: #f5f2e9;
-  --panel: #fffdf6;
-  --panel-2: #ece8db;
-  --line: #d5cfbd;
-  --ink: #16140e;
-  --soft: #6a6555;
+  --bg: var(--light-bg);
+  --panel: var(--light-panel);
+  --panel-2: var(--light-panel-2);
+  --line: var(--light-line);
+  --ink: var(--light-ink);
+  --soft: var(--light-soft);
   --edge-interactive: var(--soft);
-  --accent: #2b2a14;
-  --accent-ink: #f5f2e9;
-  --warn: #b93d10;
-  --ok: #3f7a1a;
-  --request: #086a93;
-  --primary-fill: #e8ff3a;
-  --primary-ink: #14140a;
-  --primary-edge: #16140e;
-  --word-fill: #e8ff3a;
-  --word-ink: #14140a;
+  --accent: var(--light-accent);
+  --accent-ink: var(--light-accent-ink);
+  --warn: var(--light-warn);
+  --ok: var(--light-ok);
+  --request: var(--light-request);
+  --primary-fill: var(--light-primary-fill);
+  --primary-ink: var(--light-primary-ink);
+  --primary-edge: var(--light-primary-edge);
+  --word-fill: var(--light-primary-fill);
+  --word-ink: var(--light-primary-ink);
   --word-glow: transparent;
-  --shadow-raised: 0 6px 24px rgb(40 34 20 / 18%);
-  --shadow-overlay: 0 1px 2px rgb(40 34 20 / 10%), 0 12px 32px rgb(40 34 20 / 16%);
+  --shadow-raised: var(--light-shadow-raised);
+  --shadow-overlay: var(--light-shadow-overlay);
   --surface-overlay: var(--panel);
 }
 
@@ -306,17 +367,6 @@ html {
   /* a focused control is never left hiding behind the bars */
   scroll-padding-top: calc(var(--header-block) + var(--space-4));
   scroll-padding-bottom: calc(var(--bottom-chrome) + var(--keyboard-inset) + var(--space-4));
-}
-
-@media (prefers-reduced-motion: reduce) {
-  :root {
-    --motion-feedback: 0ms;
-    --motion-fast: 0ms;
-    --motion-reveal: 0ms;
-    --motion-handoff: 0ms;
-    --motion-overlay: 0ms;
-    --motion-slow: 0ms;
-  }
 }
 
 :root[data-motion='subtle'] {
@@ -360,6 +410,13 @@ html {
     animation: none !important;
     transition: none !important;
     scroll-behavior: auto !important;
+  }
+  /* leaving is swapped for a short fade, never removed (polish.css runs it); Still keeps 0ms */
+  :root:not([data-motion='still']):not([data-low-power='auto']) {
+    --motion-exit-dialog: 120ms;
+    --motion-exit-drawer: 120ms;
+    --motion-exit-toast: 120ms;
+    --motion-exit-menu: 80ms;
   }
 }
 

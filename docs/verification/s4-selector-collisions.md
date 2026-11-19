@@ -1,12 +1,13 @@
 # Selecta 4.0 selector-collision inventory (S4-0091-04)
 
-Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.selector_collisions --write`; `tests/test_s4_selector_collisions.py` fails when it falls behind. Load order: `style.css`, `styles/shell.css`, `styles/polish.css`, `styles/foundation.css`, `styles/listening.css`, `styles/creation.css`, `styles/operations.css`, `styles/music-objects.css`, `styles/glossary.css`, `styles/palette.css`, `styles/icons.css`, `styles/depth.css`, `styles/typography.css`. The proposed owner is the earliest sheet that styles the class unscoped, else the earliest that styles it. Verdicts for the seven shared class names are in `docs/adr/completion/css-ownership.md`. Rules inside media queries count, so a responsive refinement shows here too; each row is for review, not a defect.
+Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.selector_collisions --write`; `tests/test_s4_selector_collisions.py` fails when it falls behind. Load order: `styles/boot.css`, `style.css`, `styles/shell.css`, `styles/polish.css`, `styles/foundation.css`, `styles/listening.css`, `styles/creation.css`, `styles/operations.css`, `styles/music-objects.css`, `styles/glossary.css`, `styles/palette.css`, `styles/icons.css`, `styles/depth.css`, `styles/typography.css`. The proposed owner is the earliest sheet that styles the class unscoped, else the earliest that styles it. Verdicts for the seven shared class names are in `docs/adr/completion/css-ownership.md`. Rules inside media queries count, so a responsive refinement shows here too; each row is for review, not a defect.
 
-## Identical selectors in more than one sheet (166)
+## Identical selectors in more than one sheet (169)
 
 | Selector | Sheets, in load order | Wins the cascade |
 |---|---|---|
 | `*` | style.css, styles/polish.css | styles/polish.css |
+| `.add-gap button` | style.css, styles/creation.css | styles/creation.css |
 | `.artist` | style.css, styles/shell.css | styles/shell.css |
 | `.card` | style.css, styles/polish.css | styles/polish.css |
 | `.card h3` | style.css, styles/polish.css | styles/polish.css |
@@ -72,9 +73,11 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.now .transport` | styles/polish.css, styles/listening.css | styles/listening.css |
 | `.overlay-body` | styles/shell.css, styles/polish.css | styles/polish.css |
 | `.overlay-close` | styles/shell.css, styles/polish.css | styles/polish.css |
+| `.overlay-drawer .overlay-panel` | styles/shell.css, styles/polish.css | styles/polish.css |
 | `.overlay-head` | styles/shell.css, styles/polish.css | styles/polish.css |
 | `.overlay-head h2` | styles/shell.css, styles/typography.css | styles/typography.css |
 | `.overlay-panel` | styles/shell.css, styles/polish.css | styles/polish.css |
+| `.overlay-sheet .overlay-panel` | styles/shell.css, styles/polish.css | styles/polish.css |
 | `.page` | style.css, styles/polish.css | styles/polish.css |
 | `.palette-item.on` | styles/foundation.css, styles/palette.css | styles/palette.css |
 | `.panel` | style.css, styles/polish.css | styles/polish.css |
@@ -169,11 +172,11 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `media (max-width: 620px)` | style.css, styles/polish.css, styles/listening.css, styles/creation.css, styles/operations.css | styles/operations.css |
 | `media (max-width: 760px)` | styles/shell.css, styles/polish.css, styles/listening.css, styles/creation.css | styles/creation.css |
 | `media (pointer: coarse)` | styles/creation.css, styles/operations.css, styles/glossary.css, styles/icons.css | styles/icons.css |
-| `media (prefers-reduced-motion: reduce)` | style.css, styles/shell.css, styles/polish.css | styles/polish.css |
+| `media (prefers-reduced-motion: reduce)` | style.css, styles/shell.css, styles/polish.css, styles/foundation.css | styles/foundation.css |
 | `select` | style.css, styles/polish.css | styles/polish.css |
 | `select:focus-visible` | style.css, styles/polish.css | styles/polish.css |
 
-## Classes styled by more than one sheet (217)
+## Classes styled by more than one sheet (220)
 
 | Class | Sheets, in load order | Proposed owner |
 |---|---|---|
@@ -283,12 +286,15 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.on-stage` | styles/shell.css, styles/polish.css | styles/shell.css |
 | `.open` | style.css, styles/shell.css, styles/creation.css | style.css |
 | `.over` | style.css, styles/shell.css, styles/creation.css | style.css |
+| `.overlay` | styles/shell.css, styles/polish.css | styles/shell.css |
 | `.overlay-body` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/creation.css | styles/shell.css |
 | `.overlay-close` | styles/shell.css, styles/polish.css | styles/shell.css |
 | `.overlay-dialog` | styles/shell.css, styles/glossary.css | styles/shell.css |
+| `.overlay-drawer` | styles/shell.css, styles/polish.css | styles/shell.css |
+| `.overlay-foot` | styles/shell.css, styles/foundation.css | styles/shell.css |
 | `.overlay-head` | styles/shell.css, styles/polish.css, styles/typography.css | styles/shell.css |
-| `.overlay-panel` | styles/shell.css, styles/polish.css, styles/glossary.css, styles/depth.css | styles/shell.css |
-| `.overlay-sheet` | styles/shell.css, styles/creation.css | styles/shell.css |
+| `.overlay-panel` | styles/shell.css, styles/polish.css, styles/foundation.css, styles/glossary.css, styles/depth.css | styles/shell.css |
+| `.overlay-sheet` | styles/shell.css, styles/polish.css, styles/creation.css | styles/shell.css |
 | `.overlay-workspace` | styles/shell.css, styles/creation.css | styles/shell.css |
 | `.page` | style.css, styles/shell.css, styles/polish.css, styles/creation.css | style.css |
 | `.palette-item` | styles/foundation.css, styles/palette.css, styles/depth.css | styles/foundation.css |
@@ -331,7 +337,7 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `.selected` | styles/creation.css, styles/music-objects.css, styles/depth.css | styles/creation.css |
 | `.skeleton` | styles/shell.css, styles/polish.css, styles/listening.css | styles/shell.css |
 | `.skeleton-library` | styles/polish.css, styles/operations.css | styles/operations.css |
-| `.small` | style.css, styles/polish.css, styles/operations.css | style.css |
+| `.small` | styles/boot.css, style.css, styles/polish.css, styles/operations.css | styles/boot.css |
 | `.soft` | style.css, styles/typography.css | style.css |
 | `.song` | style.css, styles/shell.css, styles/polish.css, styles/creation.css, styles/depth.css | style.css |
 | `.song-actions` | style.css, styles/polish.css, styles/creation.css, styles/operations.css, styles/music-objects.css | style.css |

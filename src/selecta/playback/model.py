@@ -9,7 +9,7 @@ moves smoothly. While paused, the anchor is frozen, so a long pause doesn't drif
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import asdict, dataclass, fields, replace
+from dataclasses import asdict, dataclass, field, fields, replace
 from enum import StrEnum
 from typing import Any
 
@@ -17,6 +17,9 @@ LEASE_SECONDS = 20.0  # how long the speaker stays the speaker without a heartbe
 HEARTBEAT_SECONDS = 5.0  # how often the speaker sends one
 MAX_SIGNED_IN_DEVICES = 10
 DEVICE_NAME_MAX = 60
+
+STATE_FRESH = "fresh"  # the speaker's lease is live; the reported state is current
+STATE_UNCERTAIN = "uncertain"  # the lease lapsed; the speaker may still play, or may be dead
 
 
 class Principal(StrEnum):
@@ -80,6 +83,24 @@ class IdempotencyConflict(PlaybackError):
     """The same idempotency key came back with a different command."""
 
     code = "idempotency_conflict"
+
+
+class NotTheSpeaker(PlaybackError):
+    """Only the device holding the speaker lease may acknowledge a command (ADR-0461)."""
+
+    code = "not_the_speaker"
+
+
+class UnknownCommand(PlaybackError):
+    """No such command in this workspace. Another account's looks exactly the same."""
+
+    code = "unknown_command"
+
+
+class BadSignature(PlaybackError):
+    """An ack echoed an envelope signature the server never issued for that command."""
+
+    code = "bad_signature"
 
 
 class UnknownZone(PlaybackError):
@@ -159,6 +180,39 @@ class Device:
         return self.signed_out_at is None
 
 
+OUTPUT_STATUSES = ("playing", "output_unverified", "uncertain", "interrupted")
+
+
+@dataclass(frozen=True)
+class OutputReport:
+    """What a speaker knows about its sound output (ADR-0457 truthful states). "playing" means
+    a person confirmed hearing the check tone at `verified_at` (ADR-0460), never more."""
+
+    status: str
+    verified_at: float | None = None
+
+    def __post_init__(self) -> None:
+        if self.status not in OUTPUT_STATUSES:
+            raise ValueError(f"output status is one of: {', '.join(OUTPUT_STATUSES)}")
+        if self.status == "playing" and self.verified_at is None:
+            # A claim of sound with no confirmation behind it is only unverified.
+            object.__setattr__(self, "status", "output_unverified")
+        if self.status != "playing":
+            object.__setattr__(self, "verified_at", None)
+
+
+@dataclass(frozen=True)
+class SpeakerOutput:
+    """The output report as stored on the session: which device said it."""
+
+    device_id: str
+    status: str
+    verified_at: float | None = None
+
+    def to_json(self) -> dict[str, Any]:
+        return {"device_id": self.device_id, "status": self.status, "verified_at": self.verified_at}
+
+
 @dataclass(frozen=True)
 class Position:
     """Where a device says the music is. `seq` is the session sequence the device has applied, so
@@ -169,6 +223,19 @@ class Position:
     state: PlayState | None = None
     mix_revision_id: str | None = None
     seq: int | None = None
+    output: OutputReport | None = None  # the speaker's sound-output status, if it knows one
+
+
+@dataclass(frozen=True)
+class ProgrammeRef:
+    """One programme entry as an ADR-0458 identity: the workspace's catalogue id and the
+    content hash the speaker resolves locally. Never a path or a URL (BF-0461-05)."""
+
+    song_id: int
+    sha256: str
+
+    def to_json(self) -> dict[str, Any]:
+        return {"song_id": self.song_id, "sha256": self.sha256}
 
 
 @dataclass(frozen=True)
@@ -186,6 +253,14 @@ class Session:
     zone_id: str | None = None  # None: a personal workspace's one session
     volume: int | None = None  # a zone's shared volume, 0 to 100; None keeps volume per device
     hand_back_to_device_id: str | None = None  # the home kiosk waiting for the next song
+    # Moves only when ownership of the lease moves (ADR-0461). A command stamped with an
+    # older fence is superseded; a failed take-over leaves the old fence valid.
+    fence: int = 0
+    # The per-session salt envelope signing keys derive from (server-only), and the programme
+    # as ADR-0458 identities in play order (None: the session points into a mix by index only).
+    signing_salt: str | None = field(default=None, repr=False)
+    programme: tuple[ProgrammeRef, ...] | None = None
+    speaker_output: SpeakerOutput | None = None  # the lease holder's last output report
 
     @property
     def key(self) -> SessionKey:
@@ -215,6 +290,19 @@ def position_at(session: Session, now: float) -> Position:
         mix_revision_id=session.mix_revision_id,
         seq=session.seq,
     )
+
+
+def state_confidence(session: Session, now: float | None) -> str:
+    """How much the reported state is worth (ADR-0461). A speaker whose lease lapsed may have
+    kept playing offline or died; until it is heard from again, every controller is shown
+    "uncertain" and extrapolation stays on the client. With no speaker at all there is nothing
+    to doubt. Without a `now` (an event payload read back later), the answer is as of the
+    moment the session was last written, when its lease had just been renewed."""
+    if now is None:
+        now = session.updated_at
+    if session.active_device_id is None or session.lease_live(now):
+        return STATE_FRESH
+    return STATE_UNCERTAIN
 
 
 def frozen(session: Session, now: float) -> Session:

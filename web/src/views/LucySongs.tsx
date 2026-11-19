@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { clock } from '../lib';
 import type { EditOp, Ledger, LedgerSeam, ProposalSnapshot, PSeam, PSong, Selection } from '../lucy/types';
 import { bpmWords, energyWords, isReadyStatus, keyDistanceWords, keyWords, seamWords, tempoGapWords } from '../lucy/words';
-import { Status } from '../ui/controls';
+import { Action, Status } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { energySummary, measuredEnergy, SongMotif } from '../ui/MusicObjects';
 
@@ -146,22 +146,24 @@ export function SongsAndSeams({ snapshot, ledger, editable, selection, onEdit, o
                 </p>
               </div>
               <div className="lucy-song-actions" role="group" aria-label={`Change ${name}`}>
-                <button type="button" data-act="lock" aria-pressed={song.locked} aria-disabled={busy || !editable || undefined} title={blockedWords}
-                  onClick={() => void change({ op: song.locked ? 'unlock' : 'lock', occurrence: song.occurrence }, { occurrence: song.occurrence, act: 'lock' })}>
+                {/* W5: each change is an Action, so the pressed control says it's working while Lucy's
+                    revision is saved, and the others wait their turn */}
+                <Action type="button" data-act="lock" aria-pressed={song.locked} waiting={busy || !editable} title={blockedWords}
+                  run={() => change({ op: song.locked ? 'unlock' : 'lock', occurrence: song.occurrence }, { occurrence: song.occurrence, act: 'lock' })}>
                   {song.locked ? 'Unlock' : 'Lock'}
-                </button>
-                <button type="button" data-act="up" disabled={index === 0} aria-disabled={busy || !editable || undefined} aria-label={`Move ${name} up`} title={blockedWords ?? `Move ${name} up`}
-                  onClick={() => void change({ op: 'move', occurrence: song.occurrence, to: index - 1 }, { occurrence: song.occurrence, act: 'up' })}>
+                </Action>
+                <Action type="button" data-act="up" disabled={index === 0} waiting={busy || !editable} aria-label={`Move ${name} up`} title={blockedWords ?? `Move ${name} up`}
+                  run={() => change({ op: 'move', occurrence: song.occurrence, to: index - 1 }, { occurrence: song.occurrence, act: 'up' })}>
                   <Icon name="up" />
-                </button>
-                <button type="button" data-act="down" disabled={!nextSong} aria-disabled={busy || !editable || undefined} aria-label={`Move ${name} down`} title={blockedWords ?? `Move ${name} down`}
-                  onClick={() => void change({ op: 'move', occurrence: song.occurrence, to: index + 1 }, { occurrence: song.occurrence, act: 'down' })}>
+                </Action>
+                <Action type="button" data-act="down" disabled={!nextSong} waiting={busy || !editable} aria-label={`Move ${name} down`} title={blockedWords ?? `Move ${name} down`}
+                  run={() => change({ op: 'move', occurrence: song.occurrence, to: index + 1 }, { occurrence: song.occurrence, act: 'down' })}>
                   <Icon name="down" />
-                </button>
-                <button type="button" data-act="remove" aria-disabled={busy || !editable || undefined} aria-label={`Remove ${name}`} title={blockedWords ?? `Remove ${name}`}
-                  onClick={() => void change({ op: 'remove', occurrence: song.occurrence }, (nextSong ?? previous) ? { occurrence: (nextSong ?? previous).occurrence, act: 'remove' } : null)}>
+                </Action>
+                <Action type="button" data-act="remove" waiting={busy || !editable} aria-label={`Remove ${name}`} title={blockedWords ?? `Remove ${name}`}
+                  run={() => change({ op: 'remove', occurrence: song.occurrence }, (nextSong ?? previous) ? { occurrence: (nextSong ?? previous).occurrence, act: 'remove' } : null)}>
                   <Icon name="trash" />
-                </button>
+                </Action>
                 <button type="button" data-act="ask" className="quiet" aria-pressed={songSelected} aria-label={`Ask about ${name}`}
                   onClick={() => onAsk({ occurrence: song.occurrence }, name)}>
                   Ask about this

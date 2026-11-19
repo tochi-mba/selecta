@@ -116,11 +116,13 @@ describe('getting around', () => {
     expect(await screen.findByRole('heading', { name: 'Your music folders' })).toBeInTheDocument();
   });
 
-  it('puts focus at the start of a new page', async () => {
+  it('puts focus on the heading at the start of a new page', async () => {
     backend();
     render(<App />);
     fireEvent.click((await nav()).getByRole('link', { name: 'Library' }));
-    await waitFor(() => expect(document.getElementById('content')).toHaveFocus());
+    await waitFor(() => expect(document.activeElement?.tagName).toBe('H1'));
+    expect(document.getElementById('content')).toContainElement(document.activeElement as HTMLElement);
+    expect(document.activeElement).toHaveAttribute('tabindex', '-1');
   });
 
   it('has a way to skip straight past the navigation', async () => {

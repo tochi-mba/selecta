@@ -15,14 +15,14 @@
   display: grid;
   gap: var(--space-2);
   padding: var(--space-4);
-  border: 1px solid var(--line);
+  border: var(--separator) solid var(--edge-decorative);
   border-radius: var(--radius);
-  background: var(--surface-panel);
+  background: var(--surface-raised);
 }
 
 .mix-intent h3 {
   margin: 0;
-  font-size: var(--text-md);
+  font: var(--type-song);
 }
 
 .mix-intent p {
@@ -58,7 +58,7 @@
 .scope-tag {
   display: inline-block;
   padding: var(--space-hair) var(--space-2);
-  border: 1px solid var(--line);
+  border: var(--separator) solid var(--edge-decorative);
   border-radius: var(--radius-pill);
   background: var(--surface-control);
   color: var(--text-soft);

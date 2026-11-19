@@ -10,7 +10,9 @@ type Fs = { readFileSync(path: string, encoding: 'utf8'): string; readdirSync(pa
 const node = (globalThis as unknown as { process: { cwd(): string; getBuiltinModule(id: string): unknown } }).process;
 const fs = node.getBuiltinModule('node:fs') as Fs;
 const SOURCE = `${node.cwd()}/src/`;
-const SHARED = ['ui', 'state', 'audio'];
+// engine, media and dsp are the browser runtime (ADR-0457/0458/0459): shared by every Cloud
+// surface, so they may never reach up into a page or the app shell either.
+const SHARED = ['ui', 'state', 'audio', 'engine', 'media', 'dsp'];
 
 const sources = (folder: string) => fs.readdirSync(`${SOURCE}${folder}/`)
   .filter((name) => /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name))
@@ -20,7 +22,7 @@ const importsOf = (file: string) => [...fs.readFileSync(`${SOURCE}${file}`, 'utf
   .matchAll(/(?:^|\n)\s*(?:import|export)[^'"]*?from\s+['"]([^'"]+)['"]/g)].map((match) => match[1]);
 
 describe('frontend import direction', () => {
-  it('shared ui, state and audio modules never import a page view or the app shell', () => {
+  it('shared ui, state, audio and browser-runtime modules never import a page view or the app shell', () => {
     const offending = SHARED.flatMap(sources).flatMap((file) => importsOf(file)
       .filter((path) => /(^|\/)views\//.test(path) || /\.\.\/(App|RuntimeApp)$/.test(path))
       .map((path) => `${file} -> ${path}`));
@@ -36,5 +38,46 @@ describe('frontend import direction', () => {
 
   it('the guard sees a real import line', () => {
     expect(importsOf('views/Studio.tsx')).toContain('../audio/focus');
+  });
+
+  it('views reach the server only through the injected request, never get, post or del (ADR-0462)', () => {
+    const offending = sources('views').flatMap((file) => {
+      const source = fs.readFileSync(`${SOURCE}${file}`, 'utf8');
+      const named = [...source.matchAll(/import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*['"]\.\.\/api['"]/g)]
+        .flatMap((match) => match[1].split(',').map((part) => part.trim().replace(/^type\s+/, '').split(/\s+as\s+/)[0]))
+        .filter((imported) => ['get', 'post', 'del'].includes(imported))
+        .map((imported) => `${file}: imports ${imported}`);
+      // a namespace import would hide the same call behind api.get(...)
+      const namespace = /import\s*\*\s*as\s+\w+\s+from\s*['"]\.\.\/api['"]/.test(source) ? [`${file}: imports the whole local client`] : [];
+      return [...named, ...namespace];
+    });
+    expect(offending).toEqual([]);
+  });
+
+  // Modules ADR-0462 lists as mode-specific: they only ever ask this computer's own server, and no
+  // Cloud shell mounts what uses them (exports are local jobs; the early Library read runs before
+  // the app knows its mode, in a local build only).
+  const LOCAL_ONLY = ['views/exportStore.ts', 'views/libraryPrefetch.ts'];
+
+  it('shared views and the shell take bytes and requests from the injected layer, not the local defaults (BF-0462-02)', () => {
+    const offending = [...sources('views'), ...sources('shell')].filter((file) => !LOCAL_ONLY.includes(file)).flatMap((file) => {
+      const source = fs.readFileSync(`${SOURCE}${file}`, 'utf8');
+      const named = [...source.matchAll(/import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*['"]\.\.\/api['"]/g)]
+        .flatMap((match) => match[1].split(',').map((part) => part.trim().replace(/^type\s+/, '').split(/\s+as\s+/)[0]))
+        .filter((imported) => ['get', 'post', 'del', 'request', 'send', 'fetchBytes'].includes(imported))
+        .map((imported) => `${file}: imports ${imported}`);
+      // clientFor() or getVia() with nothing passed falls back to the local client silently
+      const defaulted = [...source.matchAll(/\b(clientFor|getVia|postVia|delVia)\(\s*\)/g)].map((match) => `${file}: ${match[1]}() with no request`);
+      return [...named, ...defaulted];
+    });
+    expect(offending).toEqual([]);
+  });
+
+  it('the local-only list names real modules, so it cannot quietly excuse a renamed view', () => {
+    expect(sources('views')).toEqual(expect.arrayContaining(LOCAL_ONLY));
+  });
+
+  it('the request guard reads every view, not a hand-kept list', () => {
+    expect(sources('views')).toEqual(expect.arrayContaining(['views/Library.tsx', 'views/Drafts.tsx', 'views/libraryPrefetch.ts']));
   });
 });

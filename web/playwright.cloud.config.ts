@@ -13,6 +13,10 @@ const python = process.env.SELECTA_PYTHON ?? 'uv run python';
 const port = process.env.SELECTA_CLOUD_E2E_PORT ?? '8812';
 // SELECTA_CLOUD_E2E_DIST builds into, and serves, another folder so parallel runs never share one.
 const dist = process.env.SELECTA_CLOUD_E2E_DIST ?? 'dist-cloud-e2e';
+// TEMP(2026-11-18): packages.microsoft.com intermittently serves a bad signing key and the Edge
+// install fails in CI. SELECTA_E2E_CHANNEL=chromium runs this suite on Playwright's bundled
+// Chromium instead. Remove once the mirror is reliable.
+const channel = process.env.SELECTA_E2E_CHANNEL === 'chromium' ? undefined : 'msedge';
 
 export default defineConfig({
   testDir: './e2e-cloud',
@@ -27,7 +31,7 @@ export default defineConfig({
   use: {
     baseURL: `http://127.0.0.1:${port}`,
     actionTimeout: 20_000,
-    channel: 'msedge',
+    channel,
     headless: true,
     launchOptions: { args: ['--mute-audio', '--autoplay-policy=no-user-gesture-required'] },
     trace: 'retain-on-failure',

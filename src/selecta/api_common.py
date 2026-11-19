@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import mimetypes
 import os
 import re
 import sqlite3
@@ -20,6 +21,11 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE
 
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "testserver"}
+
+# The installable-app files keep their real types whatever the Windows registry says: Windows can
+# map .svg to text/xml and leave .webmanifest out, and browsers then refuse the icon or manifest.
+mimetypes.add_type("application/manifest+json", ".webmanifest")
+mimetypes.add_type("image/svg+xml", ".svg")
 
 
 LINKS_KEEP_SECONDS = 600.0

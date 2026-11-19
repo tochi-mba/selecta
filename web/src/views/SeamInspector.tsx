@@ -1,5 +1,6 @@
 import { useContext, useEffect, useId, useRef, useState } from 'react';
-import { ApiError, get, MixItem, post, SeamOptions, SeamSettings } from '../api';
+import { ApiError, MixItem, SeamOptions, SeamSettings } from '../api';
+import { useApi } from '../requestContext';
 import { flagOn, useFlags } from '../flags';
 import { clock, triedWords } from '../lib';
 import { AudioPreview } from '../ui/AudioPreview';
@@ -53,6 +54,7 @@ function SeamEditor(props: {
   guard: Record<string, string>;
   names: Record<string, string>;
 }) {
+  const { get, post } = useApi();
   const { position, item, previous, refreshMix, notify, guard, names } = props;
   const [options, setOptions] = useState<SeamOptions | null>(null);
   const [problem, setProblem] = useState('');
@@ -309,6 +311,7 @@ export function SeamInspector(props: {
   autoPlay: boolean;
   onClose: () => void;
 }) {
+  const { get, post } = useApi();
   const { item, previous, names, refreshMix, notify, onListen, guard, tab, setTab, autoPlay } = props;
   const seam = item.seam!;
   const state = seam.state;

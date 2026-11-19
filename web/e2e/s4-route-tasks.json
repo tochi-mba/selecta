@@ -110,8 +110,10 @@
     "views/LucyHistory.tsx": "needs a Lucy conversation; Rename, Archive and Delete are opened in src/views/LucyLx.test.tsx",
     "views/LucyProposal.tsx": "needs a revised Lucy proposal; the revision menu is opened in src/views/LucyLx.test.tsx",
     "ui/ControlGallery.tsx": "the component gallery's own sample menu, not a product action",
+    "ui/gallery/GalleryParts.tsx": "the component gallery's specimen menu (Plain item, Danger item), not a product action; opened in web/e2e/mp-0279-component-gallery.e2e.ts",
     "business/staff/ZoneSwitcher.tsx": "The five-zone menu opens and changes zones in src/business/menuCoverage.test.tsx",
-    "business/switcher/WorkspaceSwitcher.tsx": "The workspace selector opens and changes to a business workspace in src/business/menuCoverage.test.tsx"
+    "business/switcher/WorkspaceSwitcher.tsx": "The workspace selector opens and changes to a business workspace in src/business/menuCoverage.test.tsx",
+    "cloud/SavedBrowserMixes.tsx": "needs a saved browser mix in Cloud; Rename, Copy and Delete are opened in src/cloud/SavedBrowserMixes.test.tsx"
   },
   "menuSources": {
     "views/EditorRows.tsx": "^More for ",

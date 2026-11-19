@@ -32,7 +32,9 @@ export type LibraryEvent =
   | { type: 'request' }
   | { type: 'loaded'; assets: Asset[]; nextCursor: string | null; append: boolean }
   | { type: 'failed'; message: string }
-  | { type: 'removed'; id: string };
+  | { type: 'removed'; id: string }
+  /** A removal taken back inside its Undo window: the song returns to where it was. */
+  | { type: 'restored'; asset: Asset; at: number };
 
 export const INITIAL_LIBRARY: LibraryState = { status: 'loading' };
 
@@ -55,6 +57,13 @@ export function libraryReducer(state: LibraryState, event: LibraryEvent): Librar
       if (state.status !== 'ready') return state;
       const assets = state.assets.filter((asset) => asset.id !== event.id);
       return assets.length || state.nextCursor ? { ...state, assets } : { status: 'empty', refreshing: false };
+    }
+    case 'restored': {
+      if (state.status === 'empty') return { status: 'ready', assets: [event.asset], nextCursor: null, refreshing: state.refreshing, stale: null };
+      if (state.status !== 'ready' || state.assets.some((asset) => asset.id === event.asset.id)) return state;
+      const assets = state.assets.slice();
+      assets.splice(Math.min(event.at, assets.length), 0, event.asset);
+      return { ...state, assets };
     }
   }
 }

@@ -11,6 +11,9 @@
     "e2e:flags": "playwright test -c playwright.flags.config.ts",
     "e2e:mp": "playwright test -c playwright.mp.config.ts",
     "e2e:cloud": "playwright test -c playwright.cloud.config.ts",
+    "e2e:engine-truth": "playwright test -c playwright.engine-truth.config.ts",
+    "e2e:reconcile": "playwright test -c playwright.reconcile.config.ts",
+    "e2e:labs": "playwright test -c playwright.labs.config.ts",
     "e2e:alignment": "playwright test -c playwright.alignment.config.ts",
     "e2e:baseline": "playwright test e2e/visual-baseline.e2e.ts --update-snapshots=all",
     "build:cloud-e2e": "vite build -c vite.cloud-e2e.config.ts && vite build -c vite.cloud-e2e-authkit.config.ts"
@@ -19,6 +22,7 @@
     "@noble/hashes": "^2.4.0",
     "@vitejs/plugin-react": "latest",
     "@workos-inc/authkit-react": "^0.16.3",
+    "onnxruntime-web": "1.31.1",
     "react": "latest",
     "react-dom": "latest",
     "typescript": "latest",

@@ -50,6 +50,8 @@ Each press of play in `usePreview` has a session number. `onended`, `onerror` an
 | Blind study A and B | `web/src/views/Listening.tsx` | `<audio controls>` | `listening-<trial>-a`, `listening-<trial>-b` |
 | A phone or other device chosen as the speaker (later Cloud work) | `web/src/devices/PlayingBar.tsx`, `web/src/devices/audioSpeaker.ts` | One `<audio>` element on that device | The device lease: a device that loses it fades out, so only one device plays |
 | Cloud library player (Cloud mode only) | `web/src/cloud/Library.tsx` | One `<audio controls>` | The Cloud page, which has no local mix player beside it |
+| Browser-first Cloud runtime (Cloud mode only, `devices.browser_player`) | `web/src/engine/context.ts` | One Web Audio context for the browser speaker (ADR-0457) | The playback lease: only the lease holder plays, and the Cloud build mounts no local player beside it |
+| Venue codec probe (Cloud mode only, `cloud.venue_tablet`) | `web/src/cloud/venue/probeSuite.ts` | A detached `Audio` element asked `canPlayType`, never given a source | Nobody: it never plays a sound |
 | Cloud media context ownership (Cloud mode only) | `web/src/cloud/cloudMediaContexts.ts` | Acquires and releases Cloud media contexts | The active Cloud playback lease |
 | Cloud transport dock (Cloud mode only) | `web/src/cloud/CloudTransportDock.tsx` | Dock transport and managed audio controls | The Cloud speaker session |
 

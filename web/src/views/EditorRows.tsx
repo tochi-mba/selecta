@@ -1,11 +1,14 @@
-import { DragEvent, KeyboardEvent, memo, MouseEvent, PointerEvent, RefObject, useEffect, useRef, useState } from 'react';
-import { MixItem, post } from '../api';
+import { DragEvent, KeyboardEvent, memo, MouseEvent, PointerEvent, RefObject, useContext, useEffect, useRef, useState } from 'react';
+import { MixItem } from '../api';
+import { useApi } from '../requestContext';
 import { flagOn, useFlags } from '../flags';
 import { clock, etaWords, seamStatusWords } from '../lib';
 import { Action, announce, Menu } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { SeamDiagram, SongMotif } from '../ui/MusicObjects';
 import { useStickyClearance } from '../ui/useStickyClearance';
+import { TransitionsWorkedOutLive } from './editorMode';
+import { PlayedTransitions, playedKey, StemSurfacesContext } from './liveTransitions';
 import { useMixPath } from './mixScope';
 import { RequestTag, useRequestComing } from './Requests';
 
@@ -54,11 +57,13 @@ type SeamRowProps = {
 /** A transition isn't a song, so it doesn't look like one: it hangs between two songs, with its own
  * state, and selecting it opens it beside the timeline. Nothing here plays unless Hear it is pressed. */
 const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, names, guard, actions, affected = false }: SeamRowProps) {
+  const { post } = useApi();
   const seam = item.seam!;
   const state = seam.state;
   const chosen = seam.settings.move ?? 'auto';
   const at = useMixPath();
-  const label = state.status === 'ready' ? (state.label ?? names[chosen]) : (names[chosen] ?? chosen);
+  const live = useContext(TransitionsWorkedOutLive) && state.status === 'none';
+  const label = state.status === 'ready' || live ? (state.label ?? names[chosen]) : (names[chosen] ?? chosen);
   const rate = async (rating: string) => {
     await post(`/seams/${state.key}/rate`, { rating: state.rating === rating ? 'none' : rating });
     actions.current.refresh();
@@ -66,6 +71,32 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
   const on = useFlags();
   // without the inspector a transition is shown, not opened
   const inspect = on('seam_inspector');
+  // a browser mix (cloud.browser_moves): the move is chosen right here, and the row says what
+  // really played on this device this visit
+  const played = useContext(PlayedTransitions)[playedKey(previous.song_id, item.song_id)];
+  const stems = useContext(StemSurfacesContext);
+  const pickable: [string, string, string?][] = live && on('cloud.browser_moves')
+    ? [
+      ...Object.entries(names).filter(([move]) => move !== 'blend').map(([move, words]): [string, string] => [move, words]),
+      ...(stems?.stemMoves ?? []).map((offered): [string, string, string?] => [offered.move, offered.label, offered.disabledReason]),
+    ]
+    : [];
+  const blocked = pickable.find(([, , reason]) => reason)?.[2];
+  const blockedId = `seam-move-why-${rowKey}`;
+  const [choosing, setChoosing] = useState(false);
+  const [problem, setProblem] = useState('');
+  const choose = async (move: string) => {
+    setChoosing(true);
+    setProblem('');
+    try {
+      await post(at(`/mix/${item.position}/seam`), { move }, guard);
+      actions.current.refresh();
+    } catch (error) {
+      setProblem((error as Error).message);
+    } finally {
+      setChoosing(false);
+    }
+  };
 
   return (
     <li
@@ -83,7 +114,7 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
             <>
               <b>{label}</b>
               <span className={`pill ${state.status} ${state.status === 'ready' && !state.passed ? 'warned' : ''}`}>
-                {seamStatusWords(state.status, state.passed)}
+                {live ? 'Live' : seamStatusWords(state.status, state.passed)}
                 {state.eta !== undefined && etaWords(state.eta) && `, ${etaWords(state.eta)}`}
               </span>
             </>
@@ -94,7 +125,7 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
         })()}
         <div className="seam-actions">
           {inspect && state.status === 'ready' && <button className="seam-hear" aria-description={`Plays only the transition from ${previous.title} into ${item.title}`} onClick={() => actions.current.hearSeam(rowKey)}><Icon name="play" size="compact" /> Hear it</button>}
-          {(state.status === 'none' || state.status === 'failed') && (
+          {!live && (state.status === 'none' || state.status === 'failed') && (
             <Action working="Asking…" run={async () => {
               await post(at(`/mix/${item.position}/render${state.status === 'failed' ? '?retry=true' : ''}`), undefined, guard);
               actions.current.refresh();
@@ -109,10 +140,35 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
             </span>
           )}
           {inspect && <button onClick={() => actions.current.toggleSeam(rowKey)}>{open ? 'Close' : 'Change'}</button>}
+          {pickable.length > 0 && (
+            <label className="seam-move">
+              <span>Move</span>
+              <select
+                value={pickable.some(([move]) => move === chosen) ? chosen : 'auto'}
+                disabled={choosing}
+                aria-busy={choosing || undefined}
+                aria-label={`Move from ${previous.title} into ${item.title}`}
+                aria-describedby={blocked ? blockedId : undefined}
+                onChange={(event) => void choose(event.target.value)}
+              >
+                {pickable.map(([move, words, reason]) => (
+                  <option key={move} value={move} disabled={!!reason} title={reason}>{reason ? `${words} (not on this device)` : words}</option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
       </div>
+      {live && played && (
+        <p className={`seam-played ${played.fellBack ? 'warn' : 'hint'}`}>
+          <b>Scheduled here: {played.label}.</b>{played.detail && ` ${played.detail}`}
+        </p>
+      )}
+      {live && blocked && <p className="hint" id={blockedId}>{blocked}</p>}
+      {live && stems?.readiness(playedKey(previous.song_id, item.song_id))}
+      {problem && <p className="warn" role="alert">{problem}</p>}
       {affected && <p className="drop-affected-note">Changes if the song is dropped there</p>}
-      <SeamDiagram seam={seam} from={previous.title} into={item.title} names={names} compact />
+      <SeamDiagram seam={seam} from={previous.title} into={item.title} names={names} live={live} compact />
       {state.status === 'failed' && <p className="warn">Remembered failed attempt: {state.error}</p>}
     </li>
   );
@@ -302,7 +358,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         {item.locked && flagOn('editor.locks') && <span className="locked-badge"><Icon name="lock" size="compact" /> Locked</span>}
       </div>
       <small className="facts">
-        {item.bpm ? `${Math.round(item.bpm)} BPM` : ''} {item.key ?? ''} · {clock(item.duration)}
+        {[item.bpm ? `${Math.round(item.bpm)} BPM` : '', item.key ?? '', clock(item.duration)].filter(Boolean).join(' · ')}
       </small>
       <div className="song-actions">
         <button onClick={() => actions.current.play(item)} aria-label={`Play from ${item.title}`}><Icon name="play" /> Play</button>

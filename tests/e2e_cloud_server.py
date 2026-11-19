@@ -39,6 +39,7 @@ import hashlib
 import io
 import itertools
 import json
+import mimetypes
 import os
 import sys
 import threading
@@ -70,13 +71,15 @@ from test_cloud_rooms_fakes import (  # noqa: E402
     FakeSongCatalog,
 )
 
+from selecta import flags as selecta_flags  # noqa: E402
 from selecta.api_cloud import CloudSettings, create_cloud_app  # noqa: E402
 from selecta.billing import api as billing_api  # noqa: E402
 from selecta.billing import stripe_sync  # noqa: E402
 from selecta.billing.plans import plan_for  # noqa: E402
 from selecta.identity.tokens import BadSignature, Claims  # noqa: E402
+from selecta.local_media import store as local_media_store  # noqa: E402
 from selecta.persistence import db_now, make_engine, migrate, transaction  # noqa: E402
-from selecta.playback.schema import playback_sessions  # noqa: E402
+from selecta.playback.schema import playback_commands, playback_sessions  # noqa: E402
 from selecta.rooms.cloud_ports import RoomPorts  # noqa: E402
 from selecta.storage import api as storage_api  # noqa: E402
 from selecta.usage import allowances, quota  # noqa: E402
@@ -84,6 +87,9 @@ from selecta.work import outbox  # noqa: E402
 
 # SELECTA_CLOUD_E2E_DIST names another build folder, so parallel runs never share one.
 DIST = ROOT / "web" / os.environ.get("SELECTA_CLOUD_E2E_DIST", "dist-cloud-e2e")
+# The install manifest and SVG icons keep their real types whatever the Windows registry says.
+mimetypes.add_type("application/manifest+json", ".webmanifest")
+mimetypes.add_type("image/svg+xml", ".svg")
 # The same site with the real AuthKit library, served at http://localhost:<port> for the sign-in
 # redirect test (e2e_cloud_authkit.py).
 DIST_AUTHKIT = DIST.with_name(DIST.name + "-authkit")
@@ -178,6 +184,13 @@ class E2EObjects(CloudObjects):
 
 
 def build(port: int):
+    # The metadata-only catalogue (ADR-0458) is off by default and a per-user rule can never grant
+    # what the build denies, so this test build turns its routes on; the local-first specs need
+    # them and no hosted page reads the flag. `cloud.local_first` stays off: those specs select
+    # the shell for their own person only.
+    wanted = os.environ.get("SELECTA_FLAGS", "").strip()
+    os.environ["SELECTA_FLAGS"] = f"{wanted} +cloud.local_media".strip()
+    selecta_flags.use(None)  # read again, in case anything asked before this point
     base = f"http://127.0.0.1:{port}"
     home = make_home("selecta-cloud-e2e-")
     server = cloud_db.postgres_url()
@@ -279,7 +292,10 @@ def build(port: int):
     @app.post("/test/seed")
     def seed(body: dict = Body(default={})):  # noqa: B008
         """Sign up `user` and give them `songs` ready-to-play songs of `seconds` each, on
-        `plan` (free unless it names a paid plan, given as an expiring override)."""
+        `plan` (free unless it names a paid plan, given as an expiring override). With
+        `local_songs`, also register that many metadata-only catalogue songs (ADR-0458),
+        reported present on the seeding device id "e2e-device". `local_titles` names them
+        (default "Local song N"); the last `local_absent` of them are on no device at all."""
         user = str(body["user"])
         auth = {"Authorization": f"Bearer e2e:{user}", "Origin": base}
         made = httpx.post(
@@ -314,7 +330,29 @@ def build(port: int):
             proxy = playback_flac(audio) if body.get("real_proxy") else audio
             add_playback_file(engine, objects, workspace_id, asset_id, proxy)
             ids.append(asset_id)
-        return {"workspace_id": workspace_id, "assets": ids}
+        local_song_ids: list[int] = []
+        if int(body.get("local_songs", 0)):
+            titles = [str(title) for title in body.get("local_titles", [])]
+            entries = [
+                {
+                    "content_sha256": hashlib.sha256(
+                        f"{workspace_id}:local:{number}".encode()
+                    ).hexdigest(),
+                    "title": titles[number] if number < len(titles) else f"Local song {number + 1}",
+                    "artist": "E2E Local",
+                    "duration_s": float(body.get("seconds", 4.0)),
+                }
+                for number in range(int(body["local_songs"]))
+            ]
+            with transaction(engine, workspace_id) as conn:
+                made_songs = local_media_store.register_songs(conn, workspace_id, entries)
+                local_song_ids = [entry["song_id"] for entry in made_songs]
+                absent = int(body.get("local_absent", 0))
+                present = local_song_ids[: len(local_song_ids) - absent]
+                local_media_store.set_availability(
+                    conn, workspace_id, "e2e-device", present, local_song_ids[len(present):]
+                )
+        return {"workspace_id": workspace_id, "assets": ids, "local_songs": local_song_ids}
 
     @app.get("/test/original-audio/{asset_id}")
     def original_audio(asset_id: str):
@@ -388,6 +426,22 @@ def build(port: int):
             )
         return {"ok": True}
 
+    @app.post("/test/expire-held")
+    def expire_held(body: dict = Body(default={})):  # noqa: B008
+        """Let every press held for `user`'s offline speaker run out its TTL now, as waiting
+        a minute would (BF-0461-04)."""
+        workspace_id = workspace_of(str(body["user"]))
+        with transaction(engine, workspace_id) as conn:
+            changed = conn.execute(
+                playback_commands.update()
+                .where(
+                    playback_commands.c.workspace_id == workspace_id,
+                    playback_commands.c.status == "deferred",
+                )
+                .values(expires_at=db_now(conn) - 1)
+            ).rowcount
+        return {"expired": changed}
+
     @app.post("/test/reset-playback")
     def reset_playback(body: dict = Body(default={})):  # noqa: B008
         """Forget `user`'s playback session, so a devices test starts from song 1 with no
@@ -403,6 +457,17 @@ def build(port: int):
     def fail_parts(body: dict = Body(default={})):  # noqa: B008
         objects.failing_parts = {int(number) for number in body.get("parts", [])}
         return {"failing": sorted(objects.failing_parts)}
+
+    @app.get("/test/r2/objects")
+    def r2_objects():
+        """Every stored object by bucket and key, with its size and digest, so a test can prove
+        a flow wrote nothing to object storage (BF-0465-02)."""
+        listed = []
+        for (bucket, key), found in sorted(objects.objects.items()):
+            data = found.bytes()
+            listed.append({"bucket": bucket, "key": key, "size": len(data),
+                           "sha256": hashlib.sha256(data).hexdigest()})
+        return {"objects": listed}
 
     @app.get("/test/r2/log")
     def r2_log():

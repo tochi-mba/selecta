@@ -27,6 +27,7 @@ itself mean that cloud behavior is wired into the running app.
 | [How-to recipes](how-to.md) | Adding a flagged feature, a table, a job type, a permission, a plan entitlement |
 | [Testing](testing.md) | Running tests, the two-database fixtures, Hypothesis, CI and the coverage gate |
 | [Glossary](glossary.md) | Lease, fencing token, lane, workspace, kill switch, speaker device and the rest |
+| [Design system](design-system.md) | Tokens, the type scale, breakpoints, motion and the exit protocol, every shared `ui/` part, the galleries and the guard tests |
 
 ## Current application map
 

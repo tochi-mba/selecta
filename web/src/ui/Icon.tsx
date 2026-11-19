@@ -6,6 +6,7 @@ const paths = {
   stop: 'M6 6h12v12H6Z',
   next: 'm5 5 11 7-11 7ZM19 5v14',
   previous: 'm19 5-11 7 11 7ZM5 5v14',
+  backspace: 'M9 5h12v14H9l-6-7ZM12 9l6 6M18 9l-6 6',
   volume: 'M11 4 6 8H3v8h3l5 4ZM15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14',
   muted: 'M11 4 6 8H3v8h3l5 4ZM16 9l6 6M22 9l-6 6',
   music: 'M9 18V5l11-2v13M9 8l11-2M9 18c0 3-6 4-6 1s6-4 6-1ZM20 16c0 3-6 4-6 1s6-4 6-1Z',
@@ -19,7 +20,8 @@ const paths = {
   warning: 'm12 3 10 18H2ZM12 9v5M12 17v.1',
   clock: 'M12 8v5l3 2M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
   minus: 'M5 12h14',
-  more: 'M5 12h.1M12 12h.1M19 12h.1',
+  // three dots as small rings the stroke closes up, so they read at every size, not as specks
+  more: 'M6 12a1 1 0 1 1-2 0 1 1 0 0 1 2 0M13 12a1 1 0 1 1-2 0 1 1 0 0 1 2 0M20 12a1 1 0 1 1-2 0 1 1 0 0 1 2 0',
   help: 'M9 9a3 3 0 0 1 6 0c0 2-3 2-3 5M12 17v.1M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
   up: 'm6 14 6-6 6 6',
   down: 'm6 10 6 6 6-6',

@@ -29,8 +29,18 @@ function publish(next: JobsSnapshot) {
   for (const listener of listeners) listener();
 }
 
+/** Where the jobs come from: this computer's server. The local-first Cloud shell (ADR-0462) has no
+ * such server, so it sets null and the shell shows no job attention instead of asking a server
+ * that is not there. Local mode never calls this. */
+let ownServer = true;
+export function setJobsSource(local: boolean) {
+  ownServer = local;
+  if (!local) publish({ jobs: null, stale: false, unsupported: true });
+}
+
 export function refreshJobs(): Promise<void> {
   if (reading) return reading;
+  if (!ownServer) return Promise.resolve();
   reading = get<Jobs>('/jobs')
     .then((jobs) => {
       if (completeJobs(jobs)) publish({ jobs, stale: false, unsupported: false });

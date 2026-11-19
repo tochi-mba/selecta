@@ -1,25 +1,46 @@
-/* The big screen: readable from across a room, high contrast, no motion. */
-:root { color-scheme: dark; --ink: #f5f2e9; --muted: #b9b4a6; --bg: #100f0c; --accent: #e8ff3a; }
+/* The big screen: readable from across a room, high contrast, no motion.
+   It loads without tokens.css (its own small entry, rooms.vite.ts), so it keeps a small token block.
+   Every colour below is copied from the tokens.css token of the same name; change tokens.css first,
+   then this block to match. Sizes are in em of a body size fitted to the screen, the big-screen
+   counterpart of the fitted Stage sizes, so they stay relative rather than taking the app's steps. */
+:root {
+  color-scheme: dark;
+  --bg: #100f0c;            /* tokens.css --bg */
+  --ink: #f4f0e4;           /* tokens.css --ink */
+  --soft: #a8a292;          /* tokens.css --soft */
+  --accent: #e8ff3a;        /* tokens.css --accent */
+  --scan-white: #fff;       /* tokens.css --scan-white: the QR quiet zone */
+  --body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; /* tokens.css --body */
+  --weight-strong: 700;     /* tokens.css --weight-strong */
+  --weight-heading: 800;    /* tokens.css --weight-heading */
+  --radius: 10px;           /* tokens.css --radius */
+  --radius-sm: 8px;         /* tokens.css --radius-sm */
+  /* the roles this page paints with, as tokens.css names them */
+  --surface-base: var(--bg);
+  --focus: var(--accent);
+  --selected: var(--accent);
+}
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: clamp(16px, 2vw, 28px)/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+body { margin: 0; background: var(--surface-base); color: var(--ink); font: clamp(1rem, 2vw, 1.75rem)/1.35 var(--body); }
 main { min-height: 100vh; display: grid; place-items: center; padding: 4vmin; }
 h1 { font-size: 2.2em; margin: 0 0 0.3em; overflow-wrap: anywhere; }
-h2 { font-size: 1em; color: var(--muted); margin: 1em 0 0.3em; letter-spacing: 0.04em; }
-.d-eyebrow { letter-spacing: 0.14em; color: var(--accent); font-weight: 700; margin: 0 0 0.6em; }
-.d-muted { color: var(--muted); }
+h2 { font-size: 1em; color: var(--soft); margin: 1em 0 0.3em; letter-spacing: 0.04em; }
+/* small capitals over the code: a frame of lime, the words in ink, never lime as text */
+.d-eyebrow { text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink); font-weight: var(--weight-strong); margin: 0 0 0.6em; }
+.d-muted { color: var(--soft); }
 .d-pair { text-align: center; max-width: 40em; }
-.d-code { font-size: 4.5em; font-weight: 800; letter-spacing: 0.12em; margin: 0.2em 0; font-variant-numeric: tabular-nums; }
+.d-code { font-size: 4.5em; font-weight: var(--weight-heading); letter-spacing: 0.12em; margin: 0.2em 0; font-variant-numeric: tabular-nums; }
 .d-room { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 5vmin; align-items: center; }
-.d-qr { background: #fff; padding: 2vmin; border-radius: 2vmin; width: min(42vmin, 100%); }
+.d-qr { background: var(--scan-white); padding: 2vmin; border-radius: var(--radius); width: min(42vmin, 100%); }
 .d-qr svg { display: block; width: 100%; height: auto; }
-.d-join { color: var(--muted); }
+.d-join { color: var(--soft); }
 .d-join strong { color: var(--ink); letter-spacing: 0.08em; }
-.d-now { font-size: 1.5em; font-weight: 700; overflow-wrap: anywhere; }
+.d-now { font-size: 1.5em; font-weight: var(--weight-strong); overflow-wrap: anywhere; }
 .d-list { margin: 0; padding-left: 1.2em; }
 .d-list li { margin: 0.2em 0; overflow-wrap: anywhere; }
-.d-banner { border: 2px solid var(--accent); border-radius: 0.5em; padding: 0.3em 0.6em; display: inline-block; }
-.d-disconnect { margin-top: 1.5em; font: inherit; font-size: 0.7em; color: var(--muted); background: transparent; border: 1px solid var(--muted); border-radius: 0.5em; padding: 0.4em 0.9em; cursor: pointer; }
+.d-banner { border: 2px solid var(--selected); border-radius: var(--radius-sm); padding: 0.3em 0.6em; display: inline-block; }
+.d-disconnect { margin-top: 1.5em; font: inherit; font-size: 0.7em; color: var(--soft); background: transparent; border: 1px solid var(--soft); border-radius: var(--radius-sm); padding: 0.4em 0.9em; cursor: pointer; }
 .d-disconnect:hover, .d-disconnect:focus-visible { color: var(--ink); border-color: var(--ink); }
-.d-disconnect:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
-.d-reconnecting { position: fixed; top: 2vmin; right: 2vmin; margin: 0; padding: 0.3em 0.8em; border-radius: 0.5em; background: color-mix(in srgb, var(--bg) 85%, transparent); border: 1px solid var(--muted); color: var(--muted); font-size: 0.8em; }
-@media (max-width: 700px) { .d-room { grid-template-columns: 1fr; } }
+.d-disconnect:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.d-reconnecting { position: fixed; top: 2vmin; right: 2vmin; margin: 0; padding: 0.3em 0.8em; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--surface-base) 85%, transparent); border: 1px solid var(--soft); color: var(--soft); font-size: 0.8em; }
+@media (max-width: 640px) { .d-room { grid-template-columns: 1fr; } }

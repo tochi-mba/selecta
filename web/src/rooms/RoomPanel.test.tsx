@@ -132,3 +132,74 @@ describe('presence words', () => {
     expect(presenceChanges(null, { guests: [guest('a', 'A', true, 1)], screens: [] })).toEqual([]);
   });
 });
+
+// W3: the host's buttons are Actions; Remove, Ban and a new code ask first; ending the room says so
+// on the panel it comes back to; the poll pauses in a hidden tab.
+describe('room panel actions', () => {
+  const settle = async () => { await act(async () => { await vi.advanceTimersByTimeAsync(0); }); };
+  const press = async (name: string) => { await act(async () => { screen.getByRole('button', { name }).click(); await vi.advanceTimersByTimeAsync(0); }); };
+
+  it('asks before removing a guest, and sends nothing when the host keeps them', async () => {
+    current = panel({ guests: [guest('g1', 'Creative Lemur', true, 2)] });
+    mount();
+    await settle();
+    await press('Remove Creative Lemur');
+    const dialog = screen.getByRole('alertdialog', { name: 'Remove Creative Lemur?' });
+    expect(dialog).toHaveTextContent('They can scan the code again and join as someone new');
+    expect(calls.some((call) => call.path.endsWith('/remove'))).toBe(false);
+    await act(async () => { within(dialog).getByRole('button', { name: 'Keep it' }).click(); await vi.advanceTimersByTimeAsync(400); });
+    expect(calls.some((call) => call.path.endsWith('/remove'))).toBe(false);
+
+    await press('Ban Creative Lemur');
+    const ban = screen.getByRole('alertdialog', { name: 'Ban Creative Lemur?' });
+    expect(ban).toHaveTextContent('This can’t be undone.');
+    await act(async () => { within(ban).getByRole('button', { name: 'Ban' }).click(); await vi.advanceTimersByTimeAsync(0); });
+    expect(calls).toContainEqual({ path: '/rooms/room-1/guests/g1/ban', method: 'POST' });
+  });
+
+  it('says the old QR code stops working before making a new code', async () => {
+    current = panel();
+    mount();
+    await settle();
+    await press('Make a new code');
+    const dialog = screen.getByRole('alertdialog', { name: 'Make a new code?' });
+    expect(dialog).toHaveTextContent('The old QR code stops working the moment the new one exists.');
+    await act(async () => { within(dialog).getByRole('button', { name: 'Make a new code' }).click(); await vi.advanceTimersByTimeAsync(0); });
+    expect(calls).toContainEqual({ path: '/rooms/room-1/code', method: 'POST' });
+    expect(screen.getByText('New code made. The old one no longer works.')).toBeInTheDocument();
+  });
+
+  it('says Room ended. on the panel it comes back to', async () => {
+    current = panel();
+    mount();
+    await settle();
+    await press('End room');
+    current = panel({ room: { ...(panel().room as object), status: 'ended' } });
+    await press('End room');
+    expect(screen.getByRole('heading', { name: 'Open a room' })).toBeInTheDocument();
+    expect(screen.getByText('Room ended.')).toBeInTheDocument();
+  });
+
+  it('counts votes and renders with the right word', async () => {
+    current = panel({ renders_left: 1, inbox: [{ request_id: 'q1', song: { song_id: 1, title: 'Tune', artist: 'Band', length_s: 200 }, status: 'sent', votes: 1, nickname: 'Fox' }] });
+    mount();
+    await settle();
+    expect(screen.getByText('1 request render left this hour.')).toBeInTheDocument();
+    expect(screen.getByText(/· 1 vote$/)).toBeInTheDocument();
+  });
+
+  it('stops reading the room while the tab is hidden and reads at once on return', async () => {
+    current = panel();
+    mount();
+    await settle();
+    const reads = () => calls.filter((call) => call.path === '/rooms/current').length;
+    const before = reads();
+    const hidden = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    await act(async () => { await vi.advanceTimersByTimeAsync(9000); });
+    expect(reads()).toBe(before);
+    hidden.mockReturnValue('visible');
+    await act(async () => { document.dispatchEvent(new Event('visibilitychange')); await vi.advanceTimersByTimeAsync(0); });
+    expect(reads()).toBe(before + 1);
+    hidden.mockRestore();
+  });
+});

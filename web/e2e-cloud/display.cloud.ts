@@ -29,7 +29,7 @@ test('a paired display shows the room and survives a new code', async ({ browser
   await expect(qr).toHaveAttribute('data-link', `${baseURL}${joinPath}`, { timeout: 15_000 });
   await expect(qr.locator('svg')).toBeVisible();
   await expect(screen.getByRole('heading', { name: 'Garden party' })).toBeVisible();
-  await expect(screen.getByText('SCAN TO REQUEST A SONG')).toBeVisible();
+  await expect(screen.getByText('Scan to request a song')).toBeVisible();
   await expect(screen.getByText("The music's paused.")).toBeVisible();
   await expect(screen.locator('#d-upcoming')).toContainText('No requests yet');
 
@@ -44,6 +44,9 @@ test('a paired display shows the room and survives a new code', async ({ browser
 
   // A new code: the old one stops working, and the paired screen shows the new QR by itself.
   await host.getByRole('button', { name: 'Make a new code' }).click();
+  const ask = host.getByRole('alertdialog', { name: 'Make a new code?' });
+  await expect(ask).toContainText('The old QR code stops working the moment the new one exists.');
+  await ask.getByRole('button', { name: 'Make a new code', exact: true }).click();
   await expect(host.locator('.room-said')).toContainText('New code made');
   const fresh = (await host.getByTestId('room-code').textContent()) ?? '';
   const freshPath = `/r/${fresh.replace('-', '')}`;

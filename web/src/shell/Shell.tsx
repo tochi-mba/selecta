@@ -1,17 +1,19 @@
 import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { MixItem } from '../api';
 import { useFlags } from '../flags';
-import { NowState, SetPlayer } from '../player';
-import { Route, savedScroll, useLocationText } from '../router';
+import { NowState } from '../player';
+import { PlayerLike } from '../playerContract';
+import { savedScroll, useLocationText } from '../router';
 import { setPrefs, usePrefs } from '../state/prefs';
 import { useUnseenActivity } from '../state/activity';
 import { attentionWords, jobAttention, useJobsStatus } from '../state/jobs';
 import { announce, Drawer, LiveRegion } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { playLabel, SEAM_LABEL, songArtist, songTitle, timeLabel, transportClock } from '../audio/transportWords';
+import { pageStart } from '../ui/focusReturn';
 import { ThemeMenu } from '../ui/ThemeChoice';
 import { Toaster } from '../ui/toasts';
-import { aboutOf, classicDestinations, describeRoute, DESTINATIONS, destinationOf, workspaceTabs } from './manifest';
+import { aboutOf, classicDestinations, describeRoute, destinationOf, destinationsFor, type MoreDestination, type ShellMode, type ShellRoute, workspaceTabs } from './manifest';
 import { PageLink } from './PageLink';
 
 export { PageLink };
@@ -20,7 +22,7 @@ export { PageLink };
 // into the fixed mini-player or alter the transport's layout.
 export const clock = transportClock;
 
-export function VolumeControl({ player, now }: { player: SetPlayer; now: NowState }) {
+export function VolumeControl({ player, now }: { player: PlayerLike; now: NowState }) {
   return (
     <div className="volume">
       <button
@@ -48,7 +50,7 @@ export function VolumeControl({ player, now }: { player: SetPlayer; now: NowStat
 /** The song that's playing, on every page but the one that's all about it. It only presents the
  * player. The player itself lives above every page, so nothing here can start or stop the music by
  * appearing or going away. */
-function MiniPlayer({ player, now, song, hasNext, onRequests, waiting }: { player: SetPlayer; now: NowState; song: MixItem; hasNext: boolean; onRequests: () => void; waiting: number }) {
+function MiniPlayer({ player, now, song, hasNext, onRequests, waiting }: { player: PlayerLike; now: NowState; song: MixItem; hasNext: boolean; onRequests: () => void; waiting: number }) {
   const progress = now.duration > 0 && Number.isFinite(now.songTime) ? Math.min(Math.max(now.songTime / now.duration, 0), 1) : 0;
   const on = useFlags();
   return (
@@ -76,7 +78,7 @@ function MiniPlayer({ player, now, song, hasNext, onRequests, waiting }: { playe
 }
 
 /** Where this page sits, and the things you can reach from anywhere. */
-function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting, palette }: { route: Route; onCommands: () => void; onActivity: () => void; onHelp: () => void; onRequests: () => void; waiting: number; palette: boolean }) {
+function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting, palette }: { route: ShellRoute; onCommands: () => void; onActivity: () => void; onHelp: () => void; onRequests: () => void; waiting: number; palette: boolean }) {
   const { crumbs } = describeRoute(route);
   const unseen = useUnseenActivity();
   const { jobs } = useJobsStatus();
@@ -169,6 +171,66 @@ function useHeaderBlock(bar: { current: HTMLElement | null }) {
   }, [bar]);
 }
 
+/** Hands `found` what `look` returns as soon as it returns something: at once if it's already there,
+ * otherwise on the first DOM change that brings it, giving up after `limit` ms. A page that arrives in
+ * a lazy chunk or after a read is waited for, not raced. Returns a function that stops looking. */
+export function whenShown<T>(look: () => T | null | undefined | false, found: (value: T) => void, limit = 3000): () => void {
+  const already = look();
+  if (already) {
+    found(already);
+    return () => {};
+  }
+  if (typeof MutationObserver === 'undefined') return () => {};
+  let done = false;
+  const observer = new MutationObserver(() => {
+    if (done) return;
+    const value = look();
+    if (!value) return;
+    stop();
+    found(value);
+  });
+  const timer = window.setTimeout(() => stop(), limit);
+  function stop() {
+    if (done) return;
+    done = true;
+    observer.disconnect();
+    window.clearTimeout(timer);
+  }
+  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-busy', 'hidden', 'class', 'style'] });
+  return stop;
+}
+
+/** The page's own main heading once the page itself is there: not the loading fallback's, which is
+ * replaced a moment later and would take focus with it. */
+function pageHeading(container: HTMLElement | null): HTMLElement | null {
+  if (!container?.isConnected) return null;
+  const start = pageStart();
+  if (!start || start === container || start.closest('[aria-busy="true"]')) return null;
+  return start;
+}
+
+const SOMEONE_SCROLLS = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const;
+
+/** Scrolls to `target`, and again as the page grows, until it gets there: Back to a page whose rows
+ * are still arriving would otherwise stop short wherever the page ended at that moment. Anyone who
+ * scrolls, taps or types in the meantime wins straight away. */
+function restoreScroll(target: number): () => void {
+  window.scrollTo?.(0, target);
+  if (target <= 0) return () => {};
+  const arrived = () => Math.abs(window.scrollY - target) <= 1;
+  let stopLooking = () => {};
+  const leave = () => {
+    stopLooking();
+    for (const kind of SOMEONE_SCROLLS) window.removeEventListener(kind, leave);
+  };
+  for (const kind of SOMEONE_SCROLLS) window.addEventListener(kind, leave, { passive: true });
+  stopLooking = whenShown(() => {
+    if (!arrived()) window.scrollTo?.(0, target);
+    return arrived();
+  }, leave);
+  return leave;
+}
+
 /** Keeps everything fixed to the bottom above an on-screen keyboard, or out of its way, by working out
  * how much of the window the keyboard is covering. The first screen uses it too (MI-0141-07). */
 export function useKeyboardInset() {
@@ -228,9 +290,11 @@ export function Shell({
   onActivity = () => {},
   banner,
   children,
+  mode = 'local',
+  more = [],
 }: {
-  route: Route;
-  player: SetPlayer;
+  route: ShellRoute;
+  player: PlayerLike;
   now: NowState;
   song?: MixItem;
   showPlayer: boolean;
@@ -244,11 +308,14 @@ export function Shell({
   onActivity?: () => void;
   banner?: ReactNode;
   children: ReactNode;
+  /** ADR-0462: which world this shell serves. Local is the default and renders exactly as before. */
+  mode?: ShellMode;
+  /** Cloud only: the account-shaped places the manifest puts behind More (ADR-0463). */
+  more?: readonly MoreDestination[];
 }) {
   const place = useLocationText().split('?')[0];
   const content = useRef<HTMLDivElement>(null);
   const first = useRef(true);
-  const [popped, setPopped] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   // MP-0282-04: on a phone the Workspace warning is a dot on More, not one more button in the top bar
   const attention = jobAttention(useJobsStatus().jobs);
@@ -256,23 +323,30 @@ export function Shell({
   const on = useFlags();
   useKeyboardInset();
 
-  useEffect(() => {
-    const pop = () => setPopped(true);
-    window.addEventListener('popstate', pop);
-    return () => window.removeEventListener('popstate', pop);
-  }, []);
-
-  // A new page starts at the top with focus at its start, and says where you are. Back and Forward
-  // return to where you were.
+  // A new page starts at the top with focus on its heading, and says where you are. Back and Forward
+  // return to where you were. The history entry itself says which: a page left by navigating away
+  // carries the scroll it was left at, and a new entry carries none. (A popstate flag set in a listener
+  // was read too late: the router's own listener renders the new page, effects included, first.)
   useEffect(() => {
     if (first.current) {
       first.current = false;
       return;
     }
-    window.scrollTo?.(0, popped ? savedScroll() : 0);
-    setPopped(false);
-    content.current?.focus({ preventScroll: true });
+    const container = content.current;
+    const stopScroll = restoreScroll(savedScroll());
+    // focus never drops to the body while the page arrives; the heading takes it once it's painted.
+    // Someone already typing in the new page (the '/' shortcut's search box) keeps their place.
+    const typing = document.activeElement?.matches('input, textarea, select, [contenteditable="true"]') && container?.contains(document.activeElement);
+    if (!typing) container?.focus({ preventScroll: true });
+    const stopFocus = whenShown(() => pageHeading(container), (heading) => {
+      const now = document.activeElement;
+      if (!now || now === document.body || now === container) heading.focus({ preventScroll: true });
+    });
     announce(`${describeRoute(route).title} page`);
+    return () => {
+      stopScroll();
+      stopFocus();
+    };
   }, [place]);
 
   // the shape of the frame lives in one place, on the root, so everything is measured from the same numbers
@@ -288,8 +362,12 @@ export function Shell({
   const editing = route.page === 'edit';
   const here = destinationOf(route);
   const collapsed = prefs.railCollapsed;
-  const primaryDestinations = DESTINATIONS.filter((item) => item.id !== 'workspace');
-  const workspace = DESTINATIONS.find((item) => item.id === 'workspace');
+  // One manifest for both modes: in local mode every requirement is permissive, so this is the
+  // same list as before; in Cloud the requirements decide (Workspace moves into More).
+  const destinations = destinationsFor({ mode, feature: on });
+  const primaryDestinations = destinations.filter((item) => item.id !== 'workspace');
+  const workspace = destinations.find((item) => item.id === 'workspace');
+  const cloudMore = mode === 'cloud' && more.length > 0;
   const classic = prefs.classicNav && on('app.classic_nav');
   return (
     <div className={`shell ${stage ? 'on-stage' : ''} ${withPlayer ? 'with-player' : ''}`}>
@@ -301,7 +379,7 @@ export function Shell({
             {classic
               ? classicDestinations().map((item) => (
                   <li key={item.path}>
-                    <PageLink to={item.path} data-tip={item.label} aria-label={item.label} aria-current={item.pages.includes(route.page) && !editing ? 'page' : undefined}>
+                    <PageLink to={item.path} data-tip={item.label} aria-label={item.label} aria-current={(item.pages as string[]).includes(route.page) && !editing ? 'page' : undefined}>
                       <Icon name={item.icon} />
                       <span className="nav-label">{item.label}</span>
                     </PageLink>
@@ -324,6 +402,18 @@ export function Shell({
                 <button className="nav-more-mobile" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={here === workspace.id ? 'page' : undefined} aria-description={attention > 0 ? 'Workspace needs your attention' : undefined} onClick={() => setMoreOpen(true)}>
                   <Icon name={workspace.icon} />
                   {attention > 0 && <span className="nav-attention" aria-hidden="true" />}
+                  <span className="nav-label">More</span>
+                </button>
+              </li>
+            )}
+            {!classic && cloudMore && (
+              <li className="nav-more">
+                <button className="nav-more-desktop" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={route.page === 'more' ? 'page' : undefined} data-tip="More" aria-label="More" onClick={() => setMoreOpen(true)}>
+                  <Icon name="settings" />
+                  <span className="nav-label">More</span>
+                </button>
+                <button className="nav-more-mobile" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={route.page === 'more' ? 'page' : undefined} onClick={() => setMoreOpen(true)}>
+                  <Icon name="settings" />
                   <span className="nav-label">More</span>
                 </button>
               </li>
@@ -361,7 +451,21 @@ export function Shell({
         {children}
       </div>
       {withPlayer && song && <MiniPlayer player={player} now={now} song={song} hasNext={hasNext ?? true} onRequests={onRequests} waiting={waitingRequests} />}
-      {moreOpen && (
+      {moreOpen && cloudMore && (
+        <Drawer title="More" onClose={() => setMoreOpen(false)}>
+          <nav className="more-nav" aria-label="More">
+            <ul>
+              {more.map((item) => (
+                <li key={item.id}>
+                  <PageLink to={item.path} aria-current={route.page === 'more' && route.id === item.id ? 'page' : undefined} onClick={() => setMoreOpen(false)}>{item.label}</PageLink>
+                  <p className="hint">{item.about}.</p>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </Drawer>
+      )}
+      {moreOpen && !cloudMore && (
         <Drawer title="More" onClose={() => setMoreOpen(false)}>
           <nav className="more-nav" aria-label="Workspace">
             <p className="eyebrow">Workspace</p>

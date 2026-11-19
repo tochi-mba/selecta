@@ -320,3 +320,25 @@ test('MP-0280-07 history, older addresses, drafts and playback survive moving ar
     await expect(page.locator('.crumbs [aria-current="page"]'), old).toHaveText(title);
   }
 });
+
+test('W5 a new page puts focus on its heading, and Back returns to the scroll it was left at', async ({ page }) => {
+  // W5: measured first with a probe. The old popstate flag was read after the router had already
+  // rendered the page, so Back scrolled to the top and the browser's own restore landed short on a
+  // page still filling in (My Mixes came back 60px above where it was left).
+  for (const [from, to] of [['/mixes/mine', 'Library'], ['/library', 'Workspace']] as const) {
+    await open(page, from, 1280, 420);
+    await page.waitForLoadState('networkidle');
+    const left = await page.evaluate(() => {
+      window.scrollTo(0, Math.min(600, document.documentElement.scrollHeight - window.innerHeight));
+      return window.scrollY;
+    });
+    expect(left, `${from}: the page is long enough to scroll`).toBeGreaterThan(100);
+    await nav(page).getByRole('link', { name: to, exact: true }).click();
+    await expect(page.locator('#content h1').first(), `${to}: focus on the heading`).toBeFocused();
+    expect(await page.evaluate(() => window.scrollY), `${to}: starts at the top`).toBe(0);
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`${from}$`));
+    await expect.poll(() => page.evaluate(() => Math.round(window.scrollY)), { message: `${from}: Back restores the scroll` }).toBe(Math.round(left));
+    await expect(page.locator('#content h1').first(), `${from}: focus on the heading after Back`).toBeFocused();
+  }
+});

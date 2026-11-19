@@ -297,7 +297,23 @@ def mark_physical_done(conn: Connection, deletion_id: str) -> bool:
         conn.execute(sessions.where(upload_sessions.c.id == deletion.ref))
     elif deletion.kind is DeletionKind.ACCOUNT:
         conn.execute(sessions)
+    _drop_shared_derivations(conn, deletion)
     return True
+
+
+def _drop_shared_derivations(conn: Connection, deletion: Deletion) -> None:
+    """ADR-0469: once the last live asset holding some bytes is erased, what was derived from
+    those bytes and shared by fingerprint goes too."""
+    from selecta.storage.shared_derivations import drop_unreferenced
+
+    if deletion.kind not in (DeletionKind.SONG, DeletionKind.ACCOUNT):
+        return
+    query = sa.select(assets.c.sha256).where(
+        assets.c.workspace_id == deletion.workspace_id, assets.c.deleted_at.is_not(None)
+    )
+    if deletion.kind is DeletionKind.SONG:
+        query = query.where(assets.c.id == deletion.ref)
+    drop_unreferenced(conn, [str(sha) for sha in conn.execute(query).scalars()])
 
 
 def mark_backup_done(conn: Connection, deletion_id: str) -> bool:

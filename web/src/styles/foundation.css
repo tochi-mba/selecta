@@ -67,9 +67,89 @@ input[aria-invalid='true'], select[aria-invalid='true'], textarea[aria-invalid='
 .setup-steps li::before { content: counter(step); display: inline-grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--border-strong); border-radius: var(--radius-pill); font-variant-numeric: tabular-nums; }
 .setup-steps li[aria-current='step'] { color: var(--text); font-weight: 700; }
 .setup-steps li[aria-current='step']::before { background: var(--primary-fill); color: var(--primary-ink); border-color: var(--primary-edge); }
-.setup-steps li.done::before { content: '✓'; color: var(--status-ready); border-color: var(--status-ready); }
+/* a finished step trades its number for the shared check glyph (Setup.tsx), in the same circle */
+.setup-steps li.done::before { content: none; }
+.setup-step-mark { display: inline-grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--status-ready); border-radius: var(--radius-pill); color: var(--status-ready); }
 /* MP-0282-07: on a phone a finished step is just its tick (its name is still read out), so the steps
    take one line and the next action stays in the first screen */
 @media (max-width: 520px) {
   .setup-steps li.done .setup-step-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
+
+/* Meter (ui/Meter.tsx): the one progress and quantity bar. Its words always say what the colour
+   says; data-status picks the fill from the status tokens, data-indeterminate slides a short bar
+   when the length is unknown. */
+.meter { display: grid; gap: var(--field-gap); min-width: 0; }
+.meter-label { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-hair) var(--space-3); font: var(--type-meta); color: var(--text); }
+.meter-value { color: var(--text-soft); font-variant-numeric: tabular-nums; }
+.meter-track { position: relative; block-size: var(--space-2); overflow: hidden; border-radius: var(--radius-pill); background: var(--surface-control); }
+.meter-fill { display: block; block-size: 100%; border-radius: inherit; background: var(--status-working); transition: inline-size var(--motion-reveal) var(--motion-ease); }
+.meter[data-status='ready'] .meter-fill { background: var(--status-ready); }
+.meter[data-status='warning'] .meter-fill { background: var(--status-warning); }
+.meter[data-status='danger'] .meter-fill { background: var(--status-failed); }
+.meter[data-indeterminate] .meter-fill { inline-size: 30%; animation: lucy-slide var(--motion-loop-slide) ease-in-out infinite; }
+/* reduced motion keeps the short bar still at the start: still working, length unknown, nothing sliding */
+@media (prefers-reduced-motion: reduce) { .meter[data-indeterminate] .meter-fill { animation: none; } }
+.meter-detail { margin: 0; font: var(--type-caption); color: var(--text-soft); }
+
+/* ConfirmDialog (ui/ConfirmDialog.tsx): a narrow dialog that asks one question. The consequence line
+   says plainly whether it can be undone; a destructive answer is never the first focus. */
+.confirm-dialog > .overlay-panel { inline-size: min(420px, 100%); }
+.confirm-dialog-body { display: grid; gap: var(--rhythm-related); }
+.confirm-dialog-body p { margin: 0; }
+.confirm-dialog-consequence { color: var(--text-soft); }
+.confirm-dialog .overlay-foot .destructive { border-color: var(--edge-error); color: var(--danger); }
+
+/* Truncate (ui/format.ts): one line, an ellipsis, the full text in its title. */
+.truncate { display: block; min-inline-size: 0; max-inline-size: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the indeterminate slide, shared by Meter and Lucy's progress (lucy.css loads only with Lucy) */
+@keyframes lucy-slide { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+
+/* DataTable (ui/DataTable.tsx): the shared table, so its rules live with the other primitives (they
+   were in admin.css and business/console.css, where a table elsewhere went unstyled and scrolled the page). */
+.data-table-wrap { overflow-x: auto; max-width: 100%; }
+.data-table-wrap:focus-visible { outline: 2px solid var(--focus); outline-offset: var(--space-hair); }
+.data-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.data-table caption { text-align: left; color: var(--text-soft); font: var(--type-caption); padding-bottom: var(--space-dense); }
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: var(--space-dense) var(--space-2);
+  border-bottom: var(--separator) solid var(--edge-decorative);
+  vertical-align: top;
+}
+.data-table th { color: var(--text-soft); font-weight: var(--weight-label); }
+.data-table .numeric { text-align: right; font-variant-numeric: tabular-nums; }
+.data-table-empty { color: var(--text-soft); font-style: italic; }
+/* a row's name that opens it: words that go somewhere, so the link role, not raw lime */
+.data-table-pick { border: 0; background: none; padding: 0; color: var(--link); text-decoration: underline; cursor: pointer; font: inherit; }
+/* DataTable stacked mode (used under 600 px with stacked="auto", always with stacked) */
+.data-table-stacked { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.data-table-card { border: var(--separator) solid var(--edge-decorative); border-radius: var(--radius); background: var(--surface-raised); padding: var(--space-3); }
+.data-table-card dl { margin: 0; display: grid; gap: var(--space-1); }
+.data-table-field { display: grid; grid-template-columns: minmax(6rem, 30%) minmax(0, 1fr); gap: var(--space-3); }
+.data-table-card dt { color: var(--text-soft); font: var(--type-label); }
+.data-table-card dd { margin: 0; overflow-wrap: anywhere; min-width: 0; }
+.data-table-stacked-caption { margin: 0 0 var(--space-2); color: var(--text-soft); }
+
+/* Every disclosure says it opens. A summary laid out with flex or grid loses the native
+   triangle, so the foundation draws one: a border chevron that points right closed and
+   down open, inheriting the text colour. It reads in both themes and under forced colours.
+   The native marker goes everywhere, so a summary left as a list item never shows two. */
+summary { cursor: pointer; list-style: none; }
+summary::-webkit-details-marker { display: none; }
+summary::before {
+  content: '';
+  flex: none;
+  display: inline-block;
+  inline-size: 0.4em;
+  block-size: 0.4em;
+  margin-inline-end: var(--space-2);
+  border-inline-end: 2px solid currentColor;
+  border-block-end: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--motion-reveal) var(--motion-ease);
+  vertical-align: 0.1em;
+}
+details[open] > summary::before { transform: rotate(45deg); }
+@media (prefers-reduced-motion: reduce) { summary::before { transition: none; } }

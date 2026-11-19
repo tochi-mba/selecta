@@ -3,8 +3,8 @@
 .venue-setup h2, .venue-setup h3 { margin: 0; }
 .venue-setup-help, .venue-setup-version { margin: 0; color: var(--text-soft); }
 .venue-setup-steps { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
-.venue-setup-steps button[aria-current='step'] { border-color: var(--accent); }
-.venue-setup-form { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius); }
+.venue-setup-steps button[aria-current='step'] { border-color: var(--edge-selected); }
+.venue-setup-form { display: grid; gap: var(--space-3); padding: var(--space-4); border: var(--separator) solid var(--edge-decorative); border-radius: var(--radius); }
 .venue-setup-field { display: grid; gap: var(--space-1); }
 .venue-setup-field input, .venue-setup-field select { min-height: 44px; max-width: 100%; }
 .venue-setup-check { display: flex; gap: var(--space-2); align-items: center; min-height: 44px; }

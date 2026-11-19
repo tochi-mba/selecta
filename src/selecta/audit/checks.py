@@ -8,6 +8,7 @@ for. Each failure names the fix most likely to help.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import numpy as np
 import soxr
@@ -135,7 +136,11 @@ def _vocal_overlap(script: TransitionScript, count: int) -> Check | None:
     a, b = script.a.song, script.b.song
     if script.overlap[1] - script.overlap[0] < 0.5 or script.meta.get("wordplay"):
         return None
-    if not (a.vocals_known and b.vocals_known):
+    time_step = 0.05
+    times = np.arange(script.overlap[0], script.overlap[1], time_step)
+    vocal_gains = script.meta.get("vocal_gains", {})
+    sensed = _sensed_spans(script) if not (a.vocals_known and b.vocals_known) else {}
+    if not (a.vocals_known and b.vocals_known) and not sensed:
         return Check(
             "vocal overlap",
             script.overlap[1] - script.overlap[0] <= 8.0,
@@ -145,17 +150,19 @@ def _vocal_overlap(script: TransitionScript, count: int) -> Check | None:
             fix="shorten",
             detail="vocals unknown for one song, so a long overlap isn't safe",
         )
-    time_step = 0.05
-    times = np.arange(script.overlap[0], script.overlap[1], time_step)
-    vocal_gains = script.meta.get("vocal_gains", {})
 
     def singing(part: Part, side: str) -> np.ndarray:
         source = np.asarray(part.warp.source_at(times))
         gain = vocal_gains.get(side, part.gain)
         audible = np.interp(times, gain.times, gain.values) >= 0.25
         mask = np.zeros(times.size, dtype=bool)
-        for line in part.song.lines:
-            mask |= (source >= line.start) & (source <= line.end)
+        spans = (
+            sensed.get(side)
+            if side in sensed
+            else [(line.start, line.end) for line in part.song.lines]
+        )
+        for start, end in spans or []:
+            mask |= (source >= start) & (source <= end)
         return mask & audible
 
     seconds = float((singing(script.a, "a") & singing(script.b, "b")).sum() * time_step)
@@ -166,7 +173,30 @@ def _vocal_overlap(script: TransitionScript, count: int) -> Check | None:
         VOCAL_OVERLAP_LIMIT,
         "s",
         fix="shorten",
+        detail="measured from the separated voice" if sensed else "",
     )
+
+
+def _sensed_spans(script: TransitionScript) -> dict[str, list[tuple[float, float]]]:
+    """Singing measured from the voice stem, for each side whose lyrics don't say. Empty when the
+    build can't hear voices, which sends the caller down the old careful path."""
+    from selecta.analysis.vocal_sense import sense_on, singing_spans
+    from selecta.config import Settings, default_home
+
+    if not sense_on():
+        return {}
+    found: dict[str, list[tuple[float, float]]] = {}
+    settings = Settings(home=default_home())
+    for side, part in (("a", script.a), ("b", script.b)):
+        if part.song.vocals_known:
+            continue
+        source = np.asarray(part.warp.source)
+        start, end = float(source.min()), float(source.max())
+        spans = singing_spans(settings, Path(part.song.path), start, end - start)
+        if spans is None:
+            return {}
+        found[side] = spans
+    return found
 
 
 def _phrase_integrity(script: TransitionScript) -> Check:
@@ -324,6 +354,17 @@ def _roughness(chroma_a: np.ndarray, chroma_b: np.ndarray) -> float:
     b = chroma_b / np.maximum(chroma_b.sum(axis=0, keepdims=True), 1e-9)
     kernel = np.stack([np.roll(_ROUGHNESS_BY_INTERVAL, i) for i in range(12)])
     return float(np.mean(np.einsum("it,ij,jt->t", a, kernel, b)))
+
+
+def excess_roughness(profile_a: np.ndarray, profile_b: np.ndarray) -> float:
+    """How rough two averaged chroma profiles sound together, over how rough each is alone.
+    The same interval kernel as the rendered harmony check, so a planner can ask before paying
+    for a render what the render's own check will roughly say."""
+    a = np.asarray(profile_a, dtype=np.float64).reshape(12, 1)
+    b = np.asarray(profile_b, dtype=np.float64).reshape(12, 1)
+    together = _roughness(a, b)
+    alone = (_roughness(a, a) + _roughness(b, b)) / 2
+    return together - alone
 
 
 def _harmony(rendered: Rendered) -> Check | None:

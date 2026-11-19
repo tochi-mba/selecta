@@ -1,5 +1,6 @@
 import { Icon } from './Icon';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { playExit } from './exitMotion';
 import { createPortal } from 'react-dom';
 import { canUndo, clearActivity, recordActivity, runUndo } from '../state/activity';
 
@@ -104,7 +105,7 @@ function subscribe(listener: () => void) {
   };
 }
 
-function ToastRow({ toast }: { toast: Toast }) {
+function ToastRow({ toast, closing = false, onGone }: { toast: Toast; closing?: boolean; onGone?: (id: number) => void }) {
   const row = useRef<HTMLDivElement>(null);
   // When Undo or Dismiss removes the focused button, return to the nearest
   // active overlay rather than abandoning keyboard focus on document.body.
@@ -132,6 +133,18 @@ function ToastRow({ toast }: { toast: Toast }) {
     start();
     return hold;
   }, []);
+  // On its way out (the exit-animation protocol): no timers, no focus, nothing to read, and gone once
+  // its fade has played, or at once where nothing animates.
+  useLayoutEffect(() => {
+    if (!closing) return undefined;
+    hold();
+    const node = row.current;
+    if (!node) {
+      onGone?.(toast.id);
+      return undefined;
+    }
+    return playExit(node, () => onGone?.(toast.id), '--motion-exit-toast');
+  }, [closing]);
   const undo = async () => {
     // The toast is an opportunity to undo, not permission to reverse an
     // unrelated newer edit. If blocked, keep this action in place and say why.
@@ -162,10 +175,13 @@ function ToastRow({ toast }: { toast: Toast }) {
       className={`toast-row ${toast.tone}`}
       aria-busy={undoing || undefined}
       role={toast.tone === 'problem' ? 'alert' : 'status'}
-      onMouseEnter={hold}
-      onMouseLeave={start}
-      onFocus={hold}
-      onBlur={start}
+      data-closing={closing ? '' : undefined}
+      aria-hidden={closing || undefined}
+      inert={closing || undefined}
+      onMouseEnter={closing ? undefined : hold}
+      onMouseLeave={closing ? undefined : start}
+      onFocus={closing ? undefined : hold}
+      onBlur={closing ? undefined : start}
     >
       <span>{toast.message}</span>
       {toast.where && <small className="toast-where">In {toast.where}.</small>}
@@ -184,10 +200,21 @@ function ToastRow({ toast }: { toast: Toast }) {
 /** Outside the page, so a message and its Undo stay usable while a dialog has the page inert. */
 export function Toaster() {
   const shown = useSyncExternalStore(subscribe, () => toasts);
-  if (!shown.length) return null;
+  // Toasts that have just been dismissed stay in place while they animate out, then go.
+  const [leaving, setLeaving] = useState<Toast[]>([]);
+  const before = useRef<Toast[]>(shown);
+  useLayoutEffect(() => {
+    const gone = before.current.filter((toast) => !shown.includes(toast));
+    before.current = shown;
+    if (gone.length) setLeaving((now) => [...now.filter((toast) => !shown.includes(toast)), ...gone.filter((toast) => !now.includes(toast))]);
+  }, [shown]);
+  const finished = (id: number) => setLeaving((now) => now.filter((toast) => toast.id !== id));
+  const rows = [...shown.map((toast) => ({ toast, closing: false })), ...leaving.filter((toast) => !shown.includes(toast)).map((toast) => ({ toast, closing: true }))]
+    .sort((a, b) => a.toast.id - b.toast.id);
+  if (!rows.length) return null;
   return createPortal(
     <div className="toasts" aria-label="Notifications">
-      {shown.map((toast) => <ToastRow key={toast.id} toast={toast} />)}
+      {rows.map(({ toast, closing }) => <ToastRow key={toast.id} toast={toast} closing={closing} onGone={finished} />)}
     </div>,
     document.body,
   );

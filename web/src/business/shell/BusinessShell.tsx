@@ -6,6 +6,7 @@
 import type { MouseEvent, ReactNode } from 'react';
 import type { Account, Api } from '../../cloud/api';
 import { Status } from '../../ui/controls';
+import { BrandMark } from '../../ui/BrandMark';
 import { PilotBadge } from '../components/Notices';
 import type { BusinessRoute } from '../context';
 import { SHELL_COPY } from '../copy/shell';
@@ -49,7 +50,7 @@ export function BusinessShell({ org, route, api, account, now, readOnly, offline
       </header>
       {items.length > 0 && (
         <nav className="biz-shell-nav" aria-label={SHELL_COPY.navLabel}>
-          <span className="biz-shell-brand" aria-hidden="true"><span className="cloud-mark">S</span>{SHELL_COPY.brand}</span>
+          <span className="biz-shell-brand" aria-hidden="true"><BrandMark className="cloud-mark" />{SHELL_COPY.brand}</span>
           <ul>
             {items.map((item) => (
               <li key={item.id}>

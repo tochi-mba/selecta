@@ -20,6 +20,10 @@ MOVED = "playback.moved"
 COMMAND = "playback.command"
 STOPPED = "playback.stopped"
 SIGNED_OUT = "device.signed_out"
+# BF-0461-04: presses held for an offline speaker that were dropped instead of applied late.
+MISSED = "playback.missed"
+# BF-0461-05: the speaker could not play a song here; controllers get alternatives.
+UNAVAILABLE = "playback.unavailable"
 
 
 class PlaybackEvents(Protocol):

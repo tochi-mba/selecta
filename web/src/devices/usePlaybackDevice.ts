@@ -15,9 +15,73 @@ import { holdWakeLock, WakeLockHold } from './wakeLock';
 export type Api = <T>(path: string, init?: RequestInit, workspaceId?: string) => Promise<T>;
 export type Warning = { code: string; text: string };
 export type Device = { id: string; name: string; kind: string; signed_in: boolean; this_device: boolean; poor_speaker: boolean; last_seen_at: number; warnings: Warning[] };
-export type SessionState = { mix_revision_id: string | null; song_index: number; offset_ms: number; anchor_at: number | null; state: 'playing' | 'paused' | 'stopped'; active_device_id: string | null; lease_expires_at: number | null; seq: number };
-export type SessionView = { session: SessionState | null; speaker: 'here' | 'elsewhere' | 'offline' | 'none'; speaker_device_id: string | null; speaker_name: string | null; ask_before_playing_here: boolean; server_time: number };
+/** A programme entry as an ADR-0458 identity: resolved locally on the speaker, never a path. */
+export type ProgrammeRef = { song_id: number; sha256: string };
+export type SessionState = { mix_revision_id: string | null; song_index: number; offset_ms: number; anchor_at: number | null; state: 'playing' | 'paused' | 'stopped'; active_device_id: string | null; lease_expires_at: number | null; seq: number; fence?: number; state_confidence?: 'fresh' | 'uncertain'; programme?: ProgrammeRef[]; track?: ProgrammeRef | null; output_status?: OutputWire; output_verified_at?: number | null; volume?: number | null };
+/** The speaker's sound-output status as it reaches controllers (ADR-0457 truthful states, BF-0457-03). */
+export type OutputWire = 'playing' | 'output_unverified' | 'uncertain' | 'interrupted';
+/** A press held for an offline speaker (BF-0461-04): `reason` is deferred while it waits, or why it was dropped. */
+export type HeldPress = { command_id: string; command: string; args?: Record<string, unknown>; issued_by: string; reason: 'deferred' | 'expired' | 'superseded' | 'stale'; created_at: number; expires_at: number | null; resolved_at: number | null };
+export type Alternative = { song_id: number; title: string; artist: string; programme_index: number | null; same_song: boolean };
+export type Unavailable = { command_id: string; command: string; issued_by: string; acked_at: number; song_id: number | null; alternatives: Alternative[] };
+export type Notices = { missed: HeldPress[]; waiting: HeldPress[]; unavailable: Unavailable[] };
+export type SessionView = { session: SessionState | null; speaker: 'here' | 'elsewhere' | 'offline' | 'none'; speaker_device_id: string | null; speaker_name: string | null; ask_before_playing_here: boolean; server_time: number; notices?: Notices | null; envelope_key?: string | null };
 export type Position = { song_index: number; offset_ms: number; state: 'playing' | 'paused' };
+/** The ADR-0461 envelope a speaker receives as a `playback.command` event and checks before acking. */
+export type CommandEvent = { device_id: string | null; command: string; args?: Record<string, unknown>; seq: number; command_id: string; fence?: number | null; expires_at?: number | null; issued_by?: string; zone_id?: string | null; envelope?: string; signature?: string | null };
+/** The signed fields inside `envelope` (BF-0461-01). */
+type SignedEnvelope = { v: number; workspace_id: string; zone_id: string | null; device_id: string | null; issued_by: string; command: string; args: Record<string, unknown>; seq: number; command_id: string; fence: number; expires_at: number };
+export type AckResult = 'applied' | 'unavailable_here';
+
+/** Fired on window by the Cloud event stream for each `playback.command` event, so the speaker
+ * hook hears commands without owning a second stream. `detail` is the event payload. */
+export const PLAYBACK_COMMAND_EVENT = 'selecta-playback-command';
+/** Commands the speaker carries out itself by following the session; anything else (mix
+ * steering, requests) is the server's to apply, so the speaker says unavailable_here. */
+export const SPEAKER_COMMANDS = new Set(['play', 'pause', 'skip', 'seek', 'set_programme', 'set_volume']);
+/** Commands that move the speaker to a (possibly missing) track. */
+const MOVES_TRACK = new Set(['skip', 'seek', 'set_programme']);
+/** A refused press the controller answers by redrawing from where the music is now. */
+export const RETRY_CODES = new Set(['stale_command', 'superseded_command', 'expired_command']);
+
+/** Whether a delivered command may still be acted on here: exactly this speaker's current fence,
+ * and not past its expiry by the server's clock (ADR-0461). A future fence is no more ours than
+ * an old one; learn ownership from a session response before acting on it. */
+export function commandStillValid(event: Pick<CommandEvent, 'fence' | 'expires_at'>, knownFence: number | null, serverNow: number): boolean {
+  if (event.expires_at != null && serverNow >= event.expires_at) return false;
+  if (event.fence != null && event.fence !== knownFence) return false;
+  return true;
+}
+
+const hexBytes = (hex: string) => {
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  return out;
+};
+
+/** Check an envelope's HMAC-SHA256 against this speaker's lease key (BF-0461-01). The HMAC is
+ * over the exact text received, so no re-encoding can disagree with the server. */
+export async function verifyEnvelope(keyHex: string, text: string, signature: string | null | undefined): Promise<boolean> {
+  if (!signature || !/^[0-9a-f]{64}$/.test(signature) || !/^[0-9a-f]+$/.test(keyHex) || typeof crypto === 'undefined' || !crypto.subtle) return false;
+  try {
+    const key = await crypto.subtle.importKey('raw', hexBytes(keyHex), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
+    return await crypto.subtle.verify('HMAC', key, hexBytes(signature), new TextEncoder().encode(text));
+  } catch {
+    return false;
+  }
+}
+
+/** The command a speaker may act on: with a lease key, only a correctly signed envelope scoped
+ * to this workspace and device, read from the signed text itself; without one (an older
+ * server), the clear fields as before. Null: refuse it. */
+export async function openEnvelope(event: CommandEvent, keyHex: string | null, workspaceId: string, deviceId: string): Promise<CommandEvent | null> {
+  if (!keyHex) return event;
+  if (!event.envelope || !(await verifyEnvelope(keyHex, event.envelope, event.signature))) return null;
+  let signed: SignedEnvelope;
+  try { signed = JSON.parse(event.envelope) as SignedEnvelope; } catch { return null; }
+  if (signed.workspace_id !== workspaceId || signed.device_id !== deviceId || signed.command_id !== event.command_id) return null;
+  return { device_id: signed.device_id, command: signed.command, args: signed.args, seq: signed.seq, command_id: signed.command_id, fence: signed.fence, expires_at: signed.expires_at, issued_by: signed.issued_by, zone_id: signed.zone_id, envelope: event.envelope, signature: event.signature };
+}
 
 /** What actually makes sound on this device. */
 export interface Speaker {
@@ -25,10 +89,26 @@ export interface Speaker {
   stop(fadeMs: number): void;
   pause(): void;
   resume(): void;
+  /** Apply a venue's shared volume as a normalized output level from 0 (muted) to 1. */
+  setVolume?(level: number): void;
   position(): Position | null;
   active(): boolean;
   /** Release listeners and locally cached audio when the device UI unmounts. */
   dispose?(): void;
+  /** The engine's truthful output status (BrowserSpeaker), reported with each heartbeat. */
+  state?(): { phase?: string; output: { status: string; at?: number } };
+  /** A wake lock that was granted and then revoked makes audibility uncertain. */
+  wakeLockLost?(): void;
+}
+
+/** The heartbeat fields for what this speaker knows about its output: 'playing' only with the
+ * time a person confirmed the check tone (ADR-0460), never inferred. Nothing when it can't say. */
+export function outputReport(speaker: Speaker | null): { output_status: OutputWire; output_verified_at?: number } | Record<string, never> {
+  const output = speaker?.state?.().output;
+  if (!output) return {};
+  if (output.status === 'verified_at' && typeof output.at === 'number') return { output_status: 'playing', output_verified_at: output.at };
+  if (output.status === 'output_unverified' || output.status === 'uncertain' || output.status === 'interrupted') return { output_status: output.status };
+  return {};
 }
 
 /** Fired on window once this browser has registered, so the devices list can mark it. */
@@ -61,9 +141,12 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const [device, setDevice] = useState<Device | null>(null);
   const [notice, setNotice] = useState('');
   const [view, setView] = useState<SessionView | null>(null);
+  const viewSnapshot = useRef<SessionView | null>(null);
   const [message, setMessage] = useState('');
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
+  // A refused press explains itself; the follow-up poll must not wipe that answer.
+  const commandRefused = useRef(false);
   const clockOffset = useRef(0);
   // A slow poll must never overwrite a newer ownership decision.
   const latestPoll = useRef(0);
@@ -75,7 +158,17 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const claiming = useRef(false);
   const speaking = useRef(false);
   const appliedSeq = useRef(-1);
+  // ADR-0461: the newest fence this device has seen, sent with heartbeats and checked on commands.
+  const fence = useRef<number | null>(null);
+  const acked = useRef(new Set<string>());
+  // BF-0461-01: the key this device verifies command envelopes with while it holds the lease.
+  const envelopeKey = useRef<string | null>(null);
+  const learnKey = (key: string | null | undefined) => { if (key) envelopeKey.current = key; };
+  const adopt = (session: SessionState | null | undefined) => {
+    if (session && typeof session.fence === 'number' && (fence.current === null || session.fence >= fence.current)) fence.current = session.fence;
+  };
   const wake = useRef<WakeLockHold | null>(null);
+  const wakeWasHeld = useRef(false);
   const deviceId = device?.id ?? null;
 
   useEffect(() => {
@@ -105,11 +198,13 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const becomeRemote = useCallback((why: string, fadeMs = FADE_MS) => {
     if (!speaking.current) return;
     speaking.current = false;
+    envelopeKey.current = null;
     leaseDeadline.current = null;
     expiredSpeaker.current = false;
     speaker?.stop(fadeMs);
     wake.current?.release();
     wake.current = null;
+    wakeWasHeld.current = false;
     setMessage(why);
   }, [speaker]);
 
@@ -117,9 +212,12 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     if (!speaker) return;
     speaking.current = true;
     expiredSpeaker.current = false;
+    adopt(session);
     leaseDeadline.current = session.lease_expires_at;
     appliedSeq.current = session.seq;
     if (!wake.current) wake.current = holdWakeLock();
+    wakeWasHeld.current = false;
+    if (typeof session.volume === 'number') speaker.setVolume?.(Math.min(1, Math.max(0, session.volume / 100)));
     await speaker.start(session.song_index, extrapolate(session, serverNow()), session.state === 'playing');
   }, [speaker]);
 
@@ -128,6 +226,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     if (!speaker || session.seq <= appliedSeq.current) return;
     appliedSeq.current = session.seq;
     if (!remoteControl) return;
+    if (typeof session.volume === 'number') speaker.setVolume?.(Math.min(1, Math.max(0, session.volume / 100)));
     const here = speaker.position();
     const target = extrapolate(session, serverNow());
     const moved = !here || here.song_index !== session.song_index || Math.abs(here.offset_ms - target) > 2500;
@@ -143,7 +242,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     if (!expiredSpeaker.current || recoveringExpired.current || !deviceId || !speaker) return;
     recoveringExpired.current = true;
     try {
-      const answer = await api<{ action: string; session: SessionState | null; message: string | null }>(
+      const answer = await api<{ action: string; session: SessionState | null; message: string | null; envelope_key?: string | null }>(
         '/playback/reconnect',
         { method: 'POST', body: JSON.stringify({ device_id: deviceId }) },
         workspaceId,
@@ -151,6 +250,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       if (!expiredSpeaker.current) return;
       expiredSpeaker.current = false;
       if (answer.action === 'continue' && answer.session) {
+        learnKey(answer.envelope_key);
         await startSpeaking(answer.session);
         setMessage('');
       } else {
@@ -174,8 +274,11 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
       // taking an existing lease. Only the most recent response changes shared state.
       if (requestId !== latestPoll.current) return forDecision ? next : null;
       learnClock(sentAt, next.server_time);
+      adopt(next.session);
+      if (next.speaker === 'here') learnKey(next.envelope_key);
+      viewSnapshot.current = next;
       setView(next);
-      setError('');
+      if (!commandRefused.current) setError('');
       if (expiredSpeaker.current) {
         if (next.speaker === 'here') void recoverExpired();
         else {
@@ -206,10 +309,11 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   useEffect(() => {
     if (!deviceId || !speaker) return;
     let current = true;
-    api<{ action: string; session: SessionState | null; message: string | null }>('/playback/reconnect', {
+    api<{ action: string; session: SessionState | null; message: string | null; envelope_key?: string | null }>('/playback/reconnect', {
       method: 'POST', body: JSON.stringify({ device_id: deviceId }),
     }, workspaceId).then(async (answer) => {
       if (current && answer.action === 'continue' && answer.session) {
+        learnKey(answer.envelope_key);
         // The device may have lost the lease while its reconnect response was in
         // flight. Never resurrect audio from that earlier grant on a reloaded tab.
         const verified = await poll(true);
@@ -248,17 +352,46 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
 
   useEffect(() => {
     if (!deviceId) return;
+    // WakeLockHold intentionally owns its browser sentinel, so sample its public state here.
+    // A granted lock that disappears is evidence of uncertainty; an unsupported wake-lock API
+    // (always false) does not by itself downgrade output.
+    const watchWakeLock = window.setInterval(() => {
+      const held = wake.current?.held() ?? false;
+      if (speaking.current && wakeWasHeld.current && !held) speaker?.wakeLockLost?.();
+      wakeWasHeld.current = held;
+    }, 1000);
+    return () => window.clearInterval(watchWakeLock);
+  }, [deviceId, speaker]);
+
+  useEffect(() => {
+    if (!deviceId) return;
     const beat = window.setInterval(async () => {
       if (!speaking.current || !speaker) return;
-      const at = speaker.position();
+      const at = speaker.position() ?? (() => {
+        // A route switch or interruption can pause the graph and make its position
+        // unavailable for a beat. Keep the lease and output report current from the last
+        // server snapshot, while reporting the engine's phase truthfully.
+        const session = viewSnapshot.current?.session;
+        if (!session) return null;
+        const phase = speaker.state?.().phase;
+        return {
+          song_index: session.song_index,
+          offset_ms: extrapolate(session, serverNow()),
+          state: phase === 'idle' ? 'stopped' as const : phase === 'paused' ? 'paused' as const : session.state,
+        };
+      })();
       if (!at) return;
       const sentAt = Date.now();
       try {
-        const answer = await api<{ outcome: string; session: SessionState; server_time: number }>('/playback/heartbeat', {
-          method: 'POST', body: JSON.stringify({ device_id: deviceId, ...at, seq: appliedSeq.current }),
+        const answer = await api<{ outcome: string; session: SessionState; server_time: number; envelope_key?: string | null }>('/playback/heartbeat', {
+          method: 'POST', body: JSON.stringify({ device_id: deviceId, ...at, seq: appliedSeq.current, ...(fence.current === null ? {} : { fence: fence.current }), ...outputReport(speaker) }),
         }, workspaceId);
         learnClock(sentAt, answer.server_time);
-        if (answer.outcome !== 'refused') leaseDeadline.current = answer.session.lease_expires_at;
+        if (answer.outcome !== 'refused') {
+          leaseDeadline.current = answer.session.lease_expires_at;
+          adopt(answer.session);
+          learnKey(answer.envelope_key);
+        }
         if (answer.outcome === 'refused') {
           // Another device took over: the session says which, so the message can name it.
           await poll();
@@ -274,16 +407,18 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     speaker?.stop(0);
     speaker?.dispose?.();
     wake.current?.release();
+    wakeWasHeld.current = false;
   }, [speaker]);
 
   const playHere = useCallback(async (observedOwnerId?: string | null) => {
     if (!deviceId || !speaker || claiming.current) return;
     expiredSpeaker.current = false;
     claiming.current = true;
+    commandRefused.current = false;
     setStarting(true); setMessage('Starting here...'); setError('');
     try {
       const sentAt = Date.now();
-      const moved = await api<{ session: SessionState; previous_device: { name: string } | null; server_time: number }>('/playback/take-over', {
+      const moved = await api<{ session: SessionState; previous_device: { name: string } | null; server_time: number; envelope_key?: string | null }>('/playback/take-over', {
         method: 'POST', body: JSON.stringify({
           device_id: deviceId, start_playing: true,
           ...(observedOwnerId === undefined ? {} : {
@@ -292,6 +427,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
         }),
       }, workspaceId);
       learnClock(sentAt, moved.server_time);
+      adopt(moved.session);
+      learnKey(moved.envelope_key);
       if (moved.previous_device) await new Promise((resolve) => window.setTimeout(resolve, START_DELAY_MS));
       // A rapid second takeover (or a reload) can happen during the old speaker's
       // fade. Verify current ownership before producing audio: an old response does
@@ -314,21 +451,91 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     }
   }, [api, deviceId, poll, speaker, startSpeaking, workspaceId]);
 
-  const command = useCallback(async (name: string, args?: Record<string, unknown>) => {
-    if (!deviceId || !view?.session) return;
+  /** Sends a press; true when the server took it, false when it was refused or never sent. */
+  const send = useCallback(async (name: string, args?: Record<string, unknown>): Promise<boolean> => {
+    if (!deviceId || !view?.session) return false;
     try {
       await api('/playback/commands', {
         method: 'POST',
-        body: JSON.stringify({ device_id: deviceId, command: name, args, based_on_seq: view.session.seq, idempotency_key: newKey() }),
+        body: JSON.stringify({
+          device_id: deviceId,
+          command: name,
+          args,
+          based_on_seq: view.session.seq,
+          fence: view.session.fence,
+          ttl_seconds: 60,
+          idempotency_key: newKey(),
+        }),
       }, workspaceId);
+      commandRefused.current = false;
       setError('');
+      return true;
     } catch (problem) {
       const code = (problem as { code?: string }).code;
-      setError(code === 'stale_command' ? "Something changed just then. Here's where it is now; try again." : (problem as Error).message);
+      commandRefused.current = true;
+      setError(code && RETRY_CODES.has(code) ? "Something changed just then. Here's where it is now; try again." : (problem as Error).message);
+      return false;
     } finally {
       void poll();
     }
   }, [api, deviceId, poll, view?.session, workspaceId]);
+  const command = useCallback(async (name: string, args?: Record<string, unknown>) => { await send(name, args); }, [send]);
 
-  return { device, notice, view, message, starting, error, playHere, refreshSession: () => poll(true), command, serverNow, isSpeaker: () => speaking.current };
+  // ADR-0461: the speaker checks each delivered command against its own fence and the server's
+  // clock, carries it out by following the session, then acks what it actually did. A command
+  // for another device, an expired or superseded one, or one heard while not the speaker is
+  // never acked: the server records its own verdict for those.
+  const handleCommand = useCallback(async (raw: CommandEvent): Promise<AckResult | null> => {
+    if (!deviceId || !speaker || !remoteControl || raw.device_id !== deviceId) return null;
+    if (!speaking.current || acked.current.has(raw.command_id)) return null;
+    // A forged, mis-scoped or tampered envelope is never acted on and never acked.
+    const event = await openEnvelope(raw, envelopeKey.current, workspaceId, deviceId);
+    if (!event) return null;
+    if (!commandStillValid(event, fence.current, serverNow())) return null;
+    let result: AckResult = 'unavailable_here';
+    let songId: number | null = null;
+    if (event.command === 'set_volume' && typeof speaker.setVolume !== 'function') {
+      result = 'unavailable_here';
+    } else if (SPEAKER_COMMANDS.has(event.command)) {
+      const now = await poll(true);
+      // Applied only when this device is still the speaker and has followed the session to (or
+      // past) the command; otherwise it says it could not, never that it did.
+      if (!now || now.speaker !== 'here' || !now.session || !speaking.current) return null;
+      if (now.session.seq >= event.seq) {
+        await follow(now.session);
+        if (appliedSeq.current >= event.seq) result = 'applied';
+        // Moved to a track this device could not resolve (ADR-0458): say so, naming it, so
+        // controllers can offer alternatives instead of a silent skip.
+        if (result === 'applied' && MOVES_TRACK.has(event.command) && now.session.state !== 'stopped' && !speaker.position()) {
+          result = 'unavailable_here';
+          songId = now.session.track?.song_id ?? null;
+        }
+      }
+    }
+    acked.current.add(event.command_id);
+    try {
+      const ackPath = event.zone_id
+        ? `/zones/${encodeURIComponent(event.zone_id)}/playback/commands/${encodeURIComponent(event.command_id)}/ack`
+        : `/playback/commands/${encodeURIComponent(event.command_id)}/ack`;
+      await api(ackPath, {
+        method: 'POST', body: JSON.stringify({
+          device_id: deviceId, result,
+          ...(event.signature ? { signature: event.signature } : {}),
+          ...(songId === null ? {} : { song_id: songId }),
+        }),
+      }, workspaceId);
+    } catch {
+      // A lost ack is retried on the next delivery of the same id; the server replays the first.
+      acked.current.delete(event.command_id);
+    }
+    return result;
+  }, [api, deviceId, follow, poll, remoteControl, speaker, workspaceId]);
+
+  useEffect(() => {
+    const hear = (event: Event) => { void handleCommand((event as CustomEvent<CommandEvent>).detail); };
+    window.addEventListener(PLAYBACK_COMMAND_EVENT, hear);
+    return () => window.removeEventListener(PLAYBACK_COMMAND_EVENT, hear);
+  }, [handleCommand]);
+
+  return { device, notice, view, message, starting, error, playHere, handleCommand, knownFence: () => fence.current, refreshSession: () => poll(true), command, send, serverNow, isSpeaker: () => speaking.current };
 }

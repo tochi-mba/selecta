@@ -45,7 +45,7 @@ from selecta.storage.uploads import (
     Uploads,
     UploadSession,
 )
-from selecta.usage import quota
+from selecta.usage import ledger, observability, quota
 
 UPLOAD_NOT_FOUND = {"code": "upload_not_found"}
 GENERIC_REJECTION = "The uploaded file could not be safely read as supported audio."
@@ -328,6 +328,13 @@ def install_routes(
                 urls = uploads.presign_parts(session, body.part_numbers)
         except (SessionNotFound, InvalidState, R2Error, ValueError) as error:
             raise map_error(error) from error
+        if urls:
+            # These are authorizations for browser PUTs, not proof that R2 received a part.
+            with transaction(engine, workspace_id) as conn:
+                observability.observe(
+                    conn, workspace_id, ledger.Kind.OBJECT_WRITE_AUTH_OPS, len(urls),
+                    source="presigned_multipart_put_issued", ref=session_id,
+                )
         return {"part_urls": {str(number): url for number, url in urls.items()}}
 
     @app.post("/api/uploads/{session_id}/complete")
@@ -347,7 +354,19 @@ def install_routes(
                     session = outcome.session
                 with tempfile.TemporaryDirectory(prefix="selecta-upload-") as temporary:
                     staged_path = Path(temporary) / "source.audio"
-                    client.get_object(uploads.buckets.staging, session.staging_key, staged_path)
+                    downloaded = client.get_object(
+                        uploads.buckets.staging, session.staging_key, staged_path
+                    )
+                    with transaction(engine, workspace_id) as conn:
+                        observability.observe(
+                            conn, workspace_id, ledger.Kind.OBJECT_READ_OPS, 1,
+                            source="server_staging_get_completed", ref=session_id,
+                        )
+                        observability.observe(
+                            conn, workspace_id, ledger.Kind.OBJECT_READ_BYTES,
+                            int(downloaded.size), source="server_staging_get_completed",
+                            ref=session_id,
+                        )
                     try:
                         audio_probe = probe(staged_path)
                     except Exception as error:

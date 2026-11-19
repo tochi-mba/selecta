@@ -40,5 +40,5 @@
   .request-row.stuck { border-inline-start: var(--marker) solid Mark; }
   :is(.palette-item.on, .lucy-history-list li > a[aria-current='page']) { border-inline-start: var(--marker) solid Highlight; }
   /* overlays keep an edge against the page, since their shadow is gone */
-  :is(.overlay-panel, .popover-panel, .menu-list, dialog.lucy-dialog, .toast-row) { border: 1px solid CanvasText; }
+  :is(.overlay-panel, .popover-panel, .menu-list, .toast-row) { border: 1px solid CanvasText; }
 }

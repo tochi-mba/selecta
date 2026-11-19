@@ -1,5 +1,6 @@
 import { type PointerEvent, useEffect, useRef, useState } from 'react';
-import { ApiError, get, MixItem, post, SongRow, Status } from '../api';
+import { ApiError, MixItem, SongRow, Status } from '../api';
+import { useApi } from '../requestContext';
 import { flagOn, useFlags } from '../flags';
 import { ScopeTag } from './MixIntent';
 import { Action, Dialog, Problem } from '../ui/controls';
@@ -38,6 +39,7 @@ export function MixSetup({ status, mix, refreshStatus, notify, onClose, songs, o
   songs?: number;
   onSongs?: (songs: number) => void;
 }) {
+  const { get, post } = useApi();
   const [problem, setProblem] = useState('');
   const [mixLanguage, setMixLanguage] = useState(status.steering.mix_language);
   const [stemFrequency, setStemFrequency] = useState(status.steering.stems);

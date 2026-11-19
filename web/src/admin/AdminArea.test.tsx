@@ -114,7 +114,7 @@ describe('the six pages', () => {
   it('Overview shows each number with its freshness and engages a control with a reason', async () => {
     await enter();
     expect(await screen.findByText('jobs.waiting (pool gpu, lane standard)')).toBeInTheDocument();
-    expect(screen.getByText('Stale: 5 min ago')).toBeInTheDocument();
+    expect(screen.getByText('Stale: 5 minutes ago')).toBeInTheDocument();
     expect(screen.getAllByText('never measured').length).toBeGreaterThan(0);
     expect(screen.getByText('Kill switch on rooms')).toBeInTheDocument();
     await command('Engage app.read_only', 'database incident');
@@ -230,9 +230,9 @@ describe('freshness and tables', () => {
   it('withholds an unknown value and labels a stale one', () => {
     render(<><Fresh reading={{ value: 9, as_of: 1, age_s: 900, state: 'unknown' }} /><Fresh reading={{ value: 4, as_of: 1, age_s: 180, state: 'stale' }} /></>);
     expect(screen.queryByText('9')).toBeNull();
-    expect(screen.getByText('last measured 15 min ago')).toBeInTheDocument();
+    expect(screen.getByText('last measured 15 minutes ago')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
-    expect(screen.getByText('Stale: 3 min ago')).toBeInTheDocument();
+    expect(screen.getByText('Stale: 3 minutes ago')).toBeInTheDocument();
   });
 
   it('says so in words when a table is empty', () => {

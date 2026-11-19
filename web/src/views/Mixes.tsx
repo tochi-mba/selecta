@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ApiError, get, MixData, post, VibeCard } from '../api';
+import { ApiError, MixData, VibeCard } from '../api';
+import { useApi, useRequest } from '../requestContext';
 import { flagOn, useFlags } from '../flags';
 import { analysisWords, length, SET_LENGTHS } from '../lib';
 import { useLocationText } from '../router';
@@ -11,8 +12,8 @@ import { Action, Dialog, Problem, Skeleton } from '../ui/controls';
 import { LinkTabs } from '../ui/primitives';
 import { CurrentMix } from './CurrentMix';
 import { buildSummary, MixSetup } from './MixSetup';
-import { MixIntentGuide, ScopeTag } from './MixIntent';
-import { LengthScale, VibeMotif } from '../ui/MusicObjects';
+import { MixIntentGuide, ScopeTag, scopedSettings } from './MixIntent';
+import { VibeMotif } from '../ui/MusicObjects';
 import { Icon } from '../ui/Icon';
 import { askToAnalyse, hasStartedAMix, Preparing, READY_NEEDED, rememberStartedAMix, SetupSteps } from './Setup';
 import { ViewProps } from './shared';
@@ -40,7 +41,10 @@ function rememberLength(songs: number) {
 }
 
 /** The front door. One tap plays something good, and everything can be changed afterwards. */
-export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshMix, refreshStatus }: ViewProps) {
+export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshMix, refreshStatus, request, readyNeeded = READY_NEEDED, analysisAvailable = true, transitionEditingAvailable = true }: ViewProps) {
+  // ADR-0462: this page's own reads and writes go through the injected request, never the local client.
+  const via = useRequest(request);
+  const { get, post } = useApi(via);
   const [cards, setCards] = useState<VibeCard[] | null>(null);
   const [songs, setSongsState] = useState(rememberedLength);
   const setSongs = (next: number) => { setSongsState(next); rememberLength(next); };
@@ -139,7 +143,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   };
 
   const analyse = async () => {
-    await askToAnalyse();
+    await askToAnalyse(via);
     refreshStatus();
     notify('Analysing the rest of your library in the background.');
   };
@@ -153,6 +157,10 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
   const readyCount = counts.ready;
   // a mix that's playing or paused is what would be replaced, so that's when to ask (EX-0117-04: idle builds straight away)
   const replacing = mix.length > 0 && now.phase !== 'idle';
+  // the current mix by name, quoted, so a name like "Your songs, in your browser" never reads as
+  // part of the sentence around it
+  const current = `your current mix, “${mixName}”`;
+  const lengthScope = scopedSettings(on).find((setting) => setting.id === 'length');
   const ask = (asked: Asked) => {
     const choice = { ...asked, order: orderOf(mix) };
     if (replacing) {
@@ -178,7 +186,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
     );
   }
 
-  if (readyCount < READY_NEEDED) return <Preparing status={status} onAnalyse={analyse} />;
+  if (readyCount < readyNeeded) return <Preparing status={status} onAnalyse={analyse} />;
 
   const firstMix = !mix.length && !hasStartedAMix();
   return (
@@ -187,7 +195,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       <h1 className="display small">Make a Mix</h1>
       <LinkTabs label="Make a Mix" items={exploreTabs()} current={exploreTabs().some((tab) => tab.path === here) ? here : '/mixes'} />
       {mix.length > 0 && <CurrentMix mix={mix} mixName={mixName} now={now} player={player} setView={setView} />}
-      {on('mixes.intent_language') && !firstMix && <MixIntentGuide replacing={replacing} mixName={mixName} />}
+      {on('mixes.intent_language') && !firstMix && <MixIntentGuide replacing={replacing} mixName={mixName} savesEveryMix={!analysisAvailable} />}
 
       <div className="mix-paths" role="group" aria-label="Ways to make a mix">
       <section className="hero mix-quick" aria-labelledby="mix-quick-title">
@@ -211,7 +219,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
             disabled={!hero?.ready || (!!building && !building.startsWith('pick'))}
             busy={building.startsWith('pick')}
             working="Building…"
-            title={replacing ? `Replaces ${mixName}, which you can undo` : undefined}
+            title={replacing ? (analysisAvailable ? `Replaces ${current}; you can undo that` : `Replaces ${current}, which stays in My Mixes`) : undefined}
             run={() => hero && ask({ key: 'pick', name: hero.name, open: false })}
           >
             Play
@@ -222,11 +230,11 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
                 About {option.label}
               </button>
             ))}
-            <LengthScale songs={songs} most={SET_LENGTHS[SET_LENGTHS.length - 1].songs} />
-            {on('mixes.intent_language') && <ScopeTag scope={on('mixes.shaping.remember_length') ? 'saved-default' : 'this-visit'} />}
           </div>
           {shaping && <button aria-label="Customize: Shape this mix (optional)" onClick={() => setCustomizing(true)}>Shape this mix <span className="soft">(optional)</span></button>}
         </div>
+        {/* the length chips' scope, said beside its own words rather than as a loose badge in the chips */}
+        {on('mixes.intent_language') && lengthScope && <p className="hint mix-length-scope"><ScopeTag scope={lengthScope.scope} /> How long: {lengthScope.detail}</p>}
         {/* MP-0282-07: the first-run reassurance sits under Play, so Play stays in the first screen on a phone */}
         {firstMix && (
           <p className="notice" role="status">
@@ -237,10 +245,10 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         {shaping && <p className="hint build-summary"><b>Shape</b> · Next mix: {buildSummary(status.steering)}.</p>}
         <p className="hint">
           <b>Commit</b> · {listed(['Play now', on('editor') && 'edit first', on('drafts') && 'save a draft']).replace(' and ', ', or ')}. {songs} songs. How long it really runs depends on where the transitions fall.
-          {replacing ? ` Playing a new mix replaces ${mixName}, which you can undo.${on('drafts') ? ' To keep it playing, use Save as draft.' : ''}` : ''}
+          {replacing ? ` Playing a new mix replaces ${current}${analysisAvailable ? '; you can undo that' : ', which stays in My Mixes'}.${on('drafts') ? ' To keep it playing, use Save as draft.' : ''}` : ''}
         </p>
       </section>
-      {on('mixes.intent_language') && firstMix && <MixIntentGuide replacing={replacing} mixName={mixName} />}
+      {on('mixes.intent_language') && firstMix && <MixIntentGuide replacing={replacing} mixName={mixName} savesEveryMix={!analysisAvailable} />}
 
       {on('lucy') && (
       <section className="mix-create" aria-labelledby="mix-create-title">
@@ -255,7 +263,9 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
 
       {problem && <p className="warn" role="alert">{problem}</p>}
 
-      {on('mixes.ideas') && (
+      {/* Loaded and empty reflows away: a header with no feelings under it promises nothing
+          (the waiting and nudge sections below say what would unlock ideas). */}
+      {on('mixes.ideas') && (!cards || cardsFailed || ready.length > 0) && (
       <section>
         <div className="vibe-browser-head">
           <div>
@@ -361,7 +371,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
         </section>
       )}
 
-      {left > 0 && (
+      {left > 0 && analysisAvailable && (
         <section className="nudge">
           <p>
             <b>{counts.analysed} of {counts.music} songs have audio analysis; {counts.ready ?? 0} are ready for mixes.</b> The rest will mean more variety{on('discover.word_links') ? ' and word links' : ''}. {analysisWords(status.eta?.analysis)}
@@ -371,6 +381,15 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           ) : (
             <Action run={analyse}>Analyse the rest</Action>
           )}
+        </section>
+      )}
+
+      {!analysisAvailable && readyCount < counts.music && (
+        <section className="nudge" aria-label="Songs available on this device">
+          <p>
+            <b>{readyCount} of {counts.music} songs can play on this device.</b> Connect more music from your Library to add variety. Browser mixes work out transitions as they play, so audio analysis is not required.
+          </p>
+          <PageLink className="button" to="/library">See your library</PageLink>
         </section>
       )}
 

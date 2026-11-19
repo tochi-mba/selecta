@@ -146,7 +146,14 @@ def test_a_heartbeat_sent_before_a_remote_command_arrived_can_not_undo_it(
 ):
     held = _beat(engine, laptop, 0, 4000, seq=1).session
     seek = session.submit_command(
-        engine, WORKSPACE, phone.id, "seek", {"offset_ms": 60_000}, held.seq, "seek-1"
+        engine,
+        WORKSPACE,
+        phone.id,
+        "seek",
+        {"offset_ms": 60_000},
+        held.seq,
+        "seek-1",
+        fence=held.fence,
     )
     clock.advance(1)
 
@@ -264,7 +271,9 @@ def test_taking_over_without_playing_keeps_a_pause_and_turns_a_stop_into_a_pause
 ):
     fresh = session.take_over(engine, WORKSPACE, laptop.id, start_playing=False).session
     assert fresh.state is PlayState.PAUSED and fresh.active_device_id == laptop.id
-    session.submit_command(engine, WORKSPACE, laptop.id, "play", None, fresh.seq, "play-1")
+    session.submit_command(
+        engine, WORKSPACE, laptop.id, "play", None, fresh.seq, "play-1", fence=fresh.fence
+    )
     clock.advance(3)
     still_playing = session.take_over(engine, WORKSPACE, phone.id, start_playing=False).session
     assert still_playing.state is PlayState.PLAYING
@@ -288,6 +297,7 @@ def _send(engine, device, command, args=None, based_on=None, key=None, **more):
     if based_on is None:
         based_on = _current(engine).seq
     key = key or f"{command}-{based_on}-{device.id}"
+    more.setdefault("fence", _current(engine).fence)
     return session.submit_command(
         engine, WORKSPACE, device.id, command, args, based_on, key, **more
     )
@@ -360,7 +370,9 @@ def test_a_reused_key_with_a_different_command_is_a_conflict(engine, laptop, pho
 def test_every_command_needs_an_idempotency_key_of_up_to_128_characters(engine, laptop, key):
     _playing(engine, laptop)
     with pytest.raises(session.InvalidCommand):
-        session.submit_command(engine, WORKSPACE, laptop.id, "pause", None, 1, key)
+        session.submit_command(
+            engine, WORKSPACE, laptop.id, "pause", None, 1, key, fence=_current(engine).fence
+        )
 
 
 def test_keys_are_per_workspace_so_another_account_can_not_replay_yours(engine, laptop):
@@ -370,7 +382,14 @@ def test_keys_are_per_workspace_so_another_account_can_not_replay_yours(engine, 
     other = elsewhere.device
     session.take_over(engine, OTHER_WORKSPACE, other.id)
     result = session.submit_command(
-        engine, OTHER_WORKSPACE, other.id, "skip", None, 1, "shared-key"
+        engine,
+        OTHER_WORKSPACE,
+        other.id,
+        "skip",
+        None,
+        1,
+        "shared-key",
+        fence=session.get_session(engine, OTHER_WORKSPACE).fence,
     )
     assert result.status is CommandStatus.APPLIED and not result.replayed
 
@@ -385,8 +404,20 @@ def test_pause_freezes_the_position_where_the_music_was(engine, clock, laptop, p
     paused = result.session
     assert paused.state is PlayState.PAUSED
     assert paused.offset_ms == 9500 and paused.anchor_at == clock.now
-    command = events.of(ports.COMMAND)[0]
-    assert command == {"device_id": laptop.id, "command": "pause", "args": {}, "seq": 2}
+    command = dict(events.of(ports.COMMAND)[0])
+    # The ADR-0461 envelope: signed canonical text plus the same fields in the clear.
+    assert command.pop("envelope").startswith("{")
+    assert len(command.pop("signature")) == 64
+    assert command == {
+        "device_id": laptop.id,
+        "issued_by": phone.id,
+        "command": "pause",
+        "args": {},
+        "seq": 2,
+        "command_id": result.command_id,
+        "fence": 1,
+        "expires_at": result.expires_at,
+    }
     assert events.kinds() == [ports.COMMAND, ports.STATE]
 
 
@@ -413,7 +444,7 @@ def test_pausing_a_stopped_session_changes_nothing_but_the_sequence(engine, lapt
 
 def test_skip_goes_to_the_next_song_or_the_one_asked_for(engine, clock, laptop, phone):
     _playing(engine, laptop)
-    clock.advance(30)
+    clock.advance(15)  # inside the 20 s lease: a lapsed one holds presses (BF-0461-04)
     skipped = _send(engine, phone, "skip").session
     assert (skipped.song_index, skipped.offset_ms, skipped.anchor_at) == (1, 0, clock.now)
     jumped = _send(engine, phone, "skip", {"song_index": 6}).session
@@ -589,11 +620,11 @@ def test_a_remote_sees_the_position_move_while_playing_and_hold_while_paused(
     engine, clock, laptop, phone
 ):
     _playing(engine, laptop)
-    clock.advance(30)
-    assert session.session_view(engine, WORKSPACE, phone.id).position.offset_ms == 30_000
+    clock.advance(15)  # inside the 20 s lease: a lapsed one holds presses (BF-0461-04)
+    assert session.session_view(engine, WORKSPACE, phone.id).position.offset_ms == 15_000
     _send(engine, phone, "pause")
     clock.advance(3600)
-    assert session.session_view(engine, WORKSPACE, phone.id).position.offset_ms == 30_000
+    assert session.session_view(engine, WORKSPACE, phone.id).position.offset_ms == 15_000
 
 
 # ---- what each device shows

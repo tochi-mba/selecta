@@ -1,5 +1,6 @@
 import type { LibrarySong } from '../api';
 import type { StatusKind } from '../ui/controls';
+import { availabilityFacts } from './availability';
 import { trackReadiness } from './readiness';
 
 /** SF-0227-03: one song can be ready for one thing and not another. Playing needs only the file;
@@ -10,13 +11,16 @@ export type Capability = { name: 'Play' | 'Mixes' | 'Stems' | 'Lyrics'; kind: St
 const UNREACHABLE = ['missing', 'set_aside', 'excluded'];
 
 export function capabilities(
-  song: Pick<LibrarySong, 'bpm' | 'readiness' | 'lyric_status' | 'priority'>,
+  song: Pick<LibrarySong, 'bpm' | 'readiness' | 'lyric_status' | 'priority'> & Pick<Partial<LibrarySong>, 'availability'>,
   { lyrics = true }: { lyrics?: boolean } = {},
 ): Capability[] {
   const status = song.readiness?.status ?? 'unknown';
   const track = trackReadiness(song);
   const analysed = song.bpm !== null && song.bpm !== undefined;
-  const play: Capability = status === 'missing'
+  const where = availabilityFacts(song.availability);
+  const play: Capability = where
+    ? { name: 'Play', kind: where.kind, words: where.canPlay ? where.reason : where.words }
+    : status === 'missing'
     ? { name: 'Play', kind: 'failed', words: 'File is missing' }
     : track.words === 'State unknown'
       ? { name: 'Play', kind: 'unavailable', words: 'State unknown' }

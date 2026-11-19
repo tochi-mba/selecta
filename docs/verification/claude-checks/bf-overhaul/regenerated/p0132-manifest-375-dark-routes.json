@@ -1,0 +1,98 @@
+{
+  "status": "candidate-not-independently-verified",
+  "fixture": "tests/e2e_server.py",
+  "fixedTime": "2026-01-05T10:00:00.000Z",
+  "motion": "reduced, animations disabled",
+  "masks": [
+    "canvas",
+    "time",
+    ".tabular-time",
+    ".toast-stack"
+  ],
+  "candidates": [
+    {
+      "name": "375-dark-listen",
+      "width": 375,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-375-dark-listen.png"
+    },
+    {
+      "name": "375-dark-mixes",
+      "width": 375,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-375-dark-mixes.png"
+    },
+    {
+      "name": "375-dark-mixes-mine",
+      "width": 375,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-375-dark-mixes-mine.png"
+    },
+    {
+      "name": "375-dark-mix-current-edit",
+      "width": 375,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-375-dark-mix-current-edit.png"
+    },
+    {
+      "name": "375-dark-library",
+      "width": 375,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-375-dark-library.png"
+    },
+    {
+      "name": "375-dark-discover",
+      "width": 375,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-375-dark-discover.png"
+    },
+    {
+      "name": "375-dark-discover-harmonic",
+      "width": 375,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-375-dark-discover-harmonic.png"
+    },
+    {
+      "name": "375-dark-workshop",
+      "width": 375,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-375-dark-workshop.png"
+    },
+    {
+      "name": "375-dark-workshop-analysis",
+      "width": 375,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-375-dark-workshop-analysis.png"
+    },
+    {
+      "name": "375-dark-workshop-storage",
+      "width": 375,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-375-dark-workshop-storage.png"
+    },
+    {
+      "name": "375-dark-workshop-sources",
+      "width": 375,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-375-dark-workshop-sources.png"
+    },
+    {
+      "name": "375-dark-workshop-learning",
+      "width": 375,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-375-dark-workshop-learning.png"
+    },
+    {
+      "name": "375-dark-workshop-diagnostics",
+      "width": 375,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-375-dark-workshop-diagnostics.png"
+    },
+    {
+      "name": "375-dark-listening",
+      "width": 375,
+      "scheme": "dark",
+      "screenshot": "candidate-p0132-375-dark-listening.png"
+    }
+  ]
+}

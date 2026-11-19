@@ -1,15 +1,15 @@
-import { lazy, startTransition, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { ApiError, get, MixData, MixItem, OFFLINE_WORDS, post, problemKind, Status } from './api';
+import { lazy, type ReactNode, startTransition, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { ApiError, get, MixData, MixItem, OFFLINE_WORDS, post, problemKind, request, Status } from './api';
 import { getDraftNames } from './state/draftNames';
 import { audioOwner, connectMainPlayer, mainPlayerTouched, stopPreviewsOnly } from './audio/focus';
-import { bindMediaSession, syncMediaSession } from './audio/mediaSession';
 import { setFlags, useFlags } from './flags';
 import { loadResume } from './lib';
 import { NowState, SetPlayer } from './player';
 import { navigate, useRoute } from './router';
 import { buildCommands } from './shell/commands';
+import { useMediaKeys } from './shell/useMediaKeys';
 import { describeRoute, shownRoute } from './shell/manifest';
-import { PageLink, Shell } from './shell/Shell';
+import { PageLink, Shell, whenShown } from './shell/Shell';
 import { markNewestUndone } from './state/activity';
 import { keepIfSame, keepUnchangedMix } from './state/keepUnchanged';
 import { prefs, readFlagFromAddress, setPrefs, usePrefs } from './state/prefs';
@@ -21,9 +21,9 @@ import { openGlossary } from './state/glossaryRequests';
 import { sayThisTabIsPlaying, whenAnotherTabPlays } from './state/tabs';
 import { ActivityPanel } from './ui/ActivityPanel';
 import { CommandPalette } from './ui/CommandPalette';
-import { Action, announce, Dialog, Drawer, Section, Skeleton } from './ui/controls';
+import { Action, announce, Dialog, Drawer, LiveRegion, Section, Skeleton } from './ui/controls';
 import { GlossaryHost } from './ui/Glossary';
-import { setToastsQuiet, showProblem, showToast } from './ui/toasts';
+import { setToastsQuiet, showProblem, showToast, Toaster } from './ui/toasts';
 import { useVisiblePoll } from './ui/useVisiblePoll';
 import { ExportJobs } from './views/ExportJobs';
 import { Library } from './views/Library';
@@ -71,6 +71,19 @@ function rememberSetUp() {
 const scopeKey = (scope: number | null) => (scope === null ? 'current' : `draft:${scope}`);
 
 const nameOfControl = (control: HTMLElement) => (control.getAttribute('aria-label') ?? control.textContent ?? '').trim();
+
+/** The screens shown before the shell exists (the first folder, a server that can't be reached) still
+ * get the toasts and the screen reader's live region, so a failed Action or an announcement isn't
+ * lost on the very first screen. */
+function Frame({ children }: { children: ReactNode }) {
+  return (
+    <>
+      {children}
+      <Toaster />
+      <LiveRegion />
+    </>
+  );
+}
 
 export function App({ initialMix = null }: { initialMix?: MixData | null } = {}) {
   // a page whose feature is off in this build is Not Found, as if it had never been built
@@ -285,7 +298,7 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
     }
     return activateDraft(id, from, order);
   }, [activateDraft, data.name, player]);
-  const requests = useRequests({ mix, player, onMix: setMixData }, notify);
+  const requests = useRequests({ mix, player, onMix: setMixData }, notify, request);
   const foundAt = useRef<number | null>(null);
   useEffect(() => {
     const found = status?.new_songs;
@@ -420,25 +433,9 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
     if (setUp) rememberSetUp();
   }, [setUp]);
 
-  // Register media keys just once. Handlers read live state so they cannot act on a stale song.
-  const mediaKeys = on('listen.media_keys');
-  useEffect(() => {
-    if (!('mediaSession' in navigator) || !mediaKeys) return;
-    return bindMediaSession(navigator.mediaSession, player, () => mixRef.current);
-  }, [player, mediaKeys]);
-
-  // The OS advances at playbackRate 1 between these authoritative one-second updates.
-  // Preview ownership never turns the paused mix into a second apparent player.
-  useEffect(() => {
-    if (!('mediaSession' in navigator) || !mediaKeys) return;
-    const update = () => {
-      const state = player.state;
-      syncMediaSession(navigator.mediaSession, state, mixRef.current[state.position], data.name, !!audioOwner());
-    };
-    update();
-    const timer = window.setInterval(update, 1000);
-    return () => window.clearInterval(timer);
-  }, [player, mediaKeys, now.phase, now.position, playing?.song_id, playing?.title, playing?.artist, data.name]);
+  // Media keys and what the OS shows as playing (shared with the other shells: shell/useMediaKeys.ts)
+  const currentMix = useCallback(() => mixRef.current, []);
+  useMediaKeys({ on: on('listen.media_keys'), player, getMix: currentMix, mixName: data.name, now });
 
   // Going on stage hides everything that had focus, so coming back puts focus back where it was.
   const beforeStage = useRef<{ element: HTMLElement | null; name: string } | null>(null);
@@ -503,6 +500,9 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
     (again ?? document.getElementById('main'))?.focus({ preventScroll: !again });
   }, [stage]);
 
+  // the '/' shortcut waits for the Library's search box; a newer press, or leaving, stops the wait
+  const searchWait = useRef<() => void>(() => {});
+  useEffect(() => () => searchWait.current(), []);
   useEffect(() => {
     const keys = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -578,11 +578,13 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
           event.preventDefault();
           navigate('/library');
           // The shortcut is an action, not just a route: when Library is already open it
-          // must still put the person in the search box. Defer until navigation has painted
-          // so the same path also works from every other page.
-          window.setTimeout(() => {
-            document.querySelector<HTMLInputElement>('input[type="search"][aria-label="Search your library"]')?.focus();
-          }, 0);
+          // must still put the person in the search box. From any other page the box only exists
+          // once the Library has arrived and painted, so it is waited for, not guessed at.
+          searchWait.current();
+          searchWait.current = whenShown(
+            () => document.querySelector<HTMLInputElement>('input[type="search"][aria-label="Search your library"]'),
+            (box) => box.focus(),
+          );
           break;
       }
     };
@@ -600,18 +602,20 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
 
   if (problem && !status) {
     return (
-      <main className="page" id="main">
-        <h1 className="display">Can’t reach SelectaDJ.</h1>
-        <p className="lede">
-          {problem === OFFLINE_WORDS ? '' : `${problem}. `}It may have stopped running. Start it again, and this page will pick up by itself.
-          {hasBeenSetUp() ? ' Your library, mixes and ratings are safe, and you won’t have to set anything up again.' : ''}
-        </p>
-        <Action className="primary" run={refreshStatus} working="Trying…">Try now</Action>
-      </main>
+      <Frame>
+        <main className="page" id="main">
+          <h1 className="display">Can’t reach SelectaDJ.</h1>
+          <p className="lede">
+            {problem === OFFLINE_WORDS ? '' : `${problem}. `}It may have stopped running. Start it again, and this page will pick up by itself.
+            {hasBeenSetUp() ? ' Your library, mixes and ratings are safe, and you won’t have to set anything up again.' : ''}
+          </p>
+          <Action className="primary" run={refreshStatus} working="Trying…">Try now</Action>
+        </main>
+      </Frame>
     );
   }
   if (!status) return <main className="page" aria-busy="true"><Skeleton label="Starting up" /></main>;
-  if (status.counts.total === 0) return <Start status={status} onChange={() => void refreshStatus()} />;
+  if (status.counts.total === 0) return <Frame><Start status={status} onChange={() => void refreshStatus()} /></Frame>;
 
   const shared = {
     status,
@@ -623,6 +627,8 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
     refreshMix,
     setMixData,
     refreshStatus: refreshStatusQuietly,
+    // ADR-0462: views reach the server only through this; locally it is the relative /api client
+    request,
     player,
     now,
     setView: goTo,
@@ -703,7 +709,7 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
       >
         <Section name={pageTitle} key={route.page}>
           {/* a split page names itself straight away, so the loading shell is never a page without a heading */}
-          <Suspense fallback={<main className="page" id="main" aria-busy="true"><h1 className="display small">{pageTitle}</h1><Skeleton label={`Opening ${pageTitle}`} /></main>}>
+          <Suspense fallback={<main className={`page${route.page === 'edit' ? ' mix' : ''}`} id="main" aria-busy="true"><h1 className="display small">{pageTitle}</h1><Skeleton label={`Opening ${pageTitle}`} /></main>}>
           {route.page === 'mixes' && route.tab === 'mine' && <MyMixes {...shared} />}
           {route.page === 'mixes' && route.tab === 'browse' && <Mixes {...shared} />}
           {nothingToHear && <ListenEmpty />}
@@ -737,7 +743,7 @@ export function App({ initialMix = null }: { initialMix?: MixData | null } = {})
           {route.page === 'discover' && <Links {...shared} tab={route.tab} />}
           {route.page === 'workshop' && <Workshop {...shared} tab={route.tab} />}
           {route.page === 'listening' && <Workshop {...shared} tab="learning" />}
-          {route.page === 'lucy' && <Lucy conversation={route.conversation} setMixData={setMixData} player={player} />}
+          {route.page === 'lucy' && <Lucy conversation={route.conversation} setMixData={setMixData} player={player} request={request} />}
           {route.page === 'missing' && (
             <main className="page" id="main">
               <h1 className="display small">There’s nothing at this address.</h1>

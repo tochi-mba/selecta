@@ -33,5 +33,6 @@
 - [ ] Tests prove the new behaviour, including failure paths and edge cases from `docs/saas/18-test-plan.md`
 - [ ] No secrets, signed URLs, tokens or personal data in logs, errors or the diff
 - [ ] Local mode still behaves as before (or the change says why not)
+- [ ] BF shared-shell/refactor work ran both the every-flag-off sweep and the full local E2E oracle
 - [ ] Docs and ADR checklist lines updated; ticked boxes cite `Evidence:`
 - [ ] No file over 1,000 lines, and no em dashes

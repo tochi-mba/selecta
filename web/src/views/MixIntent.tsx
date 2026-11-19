@@ -44,7 +44,9 @@ export function ScopeTag({ scope }: { scope: SettingScope }) {
   return <span className="scope-tag" data-scope={scope}>{SCOPE_WORDS[scope]}</span>;
 }
 
-export function MixIntentGuide({ replacing, mixName }: { replacing: boolean; mixName: string }) {
+/** `savesEveryMix`: the browser runtime, where every mix made is saved to My Mixes and each
+ * transition is worked out as it plays rather than prepared ahead. */
+export function MixIntentGuide({ replacing, mixName, savesEveryMix = false }: { replacing: boolean; mixName: string; savesEveryMix?: boolean }) {
   const on = useFlags();
   const editor = on('editor');
   const drafts = on('drafts');
@@ -56,7 +58,9 @@ export function MixIntentGuide({ replacing, mixName }: { replacing: boolean; mix
       <div className="mix-intent-pair">
         <article className="mix-intent" data-intent="quick-listen">
           <h3>Quick listen</h3>
-          <p>Press Play on SelectaDJ’s pick or any feeling. It starts at once{replacing ? ` and replaces ${mixName}, which you can undo` : ''}. Nothing new is saved to My Mixes.</p>
+          {savesEveryMix
+            ? <p>Press Play on SelectaDJ’s pick. It starts at once and becomes your current mix{replacing ? `; “${mixName}” stays in My Mixes` : ''}. Every mix you make is saved there.</p>
+            : <p>Press Play on SelectaDJ’s pick or any feeling. It starts at once{replacing ? ` and replaces your current mix, “${mixName}”; you can undo that` : ''}. Nothing new is saved to My Mixes.</p>}
           <p className="hint"><ScopeTag scope="this-mix" /> Play makes one mix to listen to now. Your saved defaults stay as they are.</p>
         </article>
         {keep && (
@@ -94,8 +98,14 @@ export function MixIntentGuide({ replacing, mixName }: { replacing: boolean; mix
         <ul className="scope-list">
           <li data-queue="next"><b>Next song</b><span className="hint">The next song in your current mix, in the order shown on Listen{editor ? ' and in Edit' : ''}. Making a new mix starts it from its first song.</span></li>
           {on('requests') && <li data-queue="request"><b>A song request</b><span className="hint">Doesn’t jump the queue. SelectaDJ looks for a place after an upcoming song where it fits, sometimes through bridge songs, and asks you first when a route needs your choice. Until then it has no play time.</span></li>}
-          <li data-queue="render"><b>Preparing transitions</b><span className="hint">The mix that’s playing is always prepared first{drafts ? '; drafts wait in the render line in their order' : ''}. That order is preparation only, not the order songs play.</span></li>
-          <li data-queue="analysis"><b>Song analysis</b><span className="hint">Which songs are analysed first only decides which ones become mix-ready sooner. It never changes what plays next.</span></li>
+          {savesEveryMix ? (
+            <li data-queue="render"><b>Transitions</b><span className="hint">Each one is worked out in your browser a little before it plays, from the audio of the two songs. Nothing is prepared ahead, so nothing waits in a line.</span></li>
+          ) : (
+            <>
+              <li data-queue="render"><b>Preparing transitions</b><span className="hint">The mix that’s playing is always prepared first{drafts ? '; drafts wait in the render line in their order' : ''}. That order is preparation only, not the order songs play.</span></li>
+              <li data-queue="analysis"><b>Song analysis</b><span className="hint">Which songs are analysed first only decides which ones become mix-ready sooner. It never changes what plays next.</span></li>
+            </>
+          )}
         </ul>
       </details>
     </section>

@@ -1,3 +1,4 @@
+import { accountFlagOn } from '../flags';
 import { useMemo } from 'react';
 import { PlayingBar } from '../devices/PlayingBar';
 import type { Api } from '../devices/usePlaybackDevice';
@@ -41,17 +42,17 @@ export function CloudListen({ api, account }: { api: Api; account: Account }) {
   const library = useMemo(() => librarySource(api, workspaceId), [api, workspaceId]);
   const roomsHidden = account.features.rooms === false && !account.feature_locks.rooms;
   const devices = account.features.devices !== false;
-  const inDock = account.features['cloud.single_audio_owner'] !== false;
+  const inDock = accountFlagOn('cloud.single_audio_owner', account.features);
   return (
     <div className="cloud-listen">
-      {devices && !inDock && <PlayingBar api={api} workspaceId={workspaceId} source={library.source} songName={library.name} remoteControl={account.features['devices.remote_control'] !== false} />}
+      {devices && !inDock && <PlayingBar api={api} workspaceId={workspaceId} source={library.source} songName={library.name} remoteControl={accountFlagOn('devices.remote_control', account.features)} />}
       {!roomsHidden && (
         <RoomPanel
           api={api}
           workspaceId={workspaceId}
           locked={account.feature_locks.rooms}
-          votesOn={account.features['rooms.votes'] !== false}
-          displayOn={account.features['rooms.display'] !== false}
+          votesOn={accountFlagOn('rooms.votes', account.features)}
+          displayOn={accountFlagOn('rooms.display', account.features)}
           playHereOn={devices}
           freshOnly={account.features['rooms.nickname_confirm'] === true}
         />

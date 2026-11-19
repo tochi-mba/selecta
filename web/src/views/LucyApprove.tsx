@@ -4,8 +4,7 @@ import { lucy, newId } from '../lucy/client';
 import type { CommitNote } from '../lucy/reducer';
 import type { Approval, ApproveAction, Commit, Revision } from '../lucy/types';
 import { PageLink } from '../shell/PageLink';
-import { Action } from '../ui/controls';
-import { NativeDialog } from './LucyDialog';
+import { Action, Dialog } from '../ui/controls';
 import { LifecyclePill } from './LucyProposal';
 
 /** Turning a proposal into something real. Saving and saving-then-playing are separate buttons, each
@@ -282,7 +281,7 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
       )}
 
       {activeApproval && preflight && (
-        <NativeDialog
+        <Dialog
           title={playing ? 'Save this mix and play it?' : 'Save this mix as a draft?'}
           onClose={() => setApproval(null)}
           footer={(
@@ -318,7 +317,7 @@ export function Approve({ revision, isCurrent, blocked, seen, onStale, startPlay
           ) : (
             <p className="hint">Saving doesn’t change what’s playing.</p>
           )}
-        </NativeDialog>
+        </Dialog>
       )}
     </div>
   );

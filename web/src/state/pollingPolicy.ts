@@ -24,6 +24,7 @@ export const POLLING: readonly PollRule[] = [
   { file: 'business/BusinessApp.tsx', reads: 'business overview while streaming is unavailable', everyMs: 'TICK_MS', hidden: 'continues', why: 'the visual clock keeps ticking while useVisiblePoll pauses network reads in hidden tabs' },
   { file: 'business/console/HqConsole.tsx', reads: 'HQ venue state when the stream is unavailable', everyMs: 10000, hidden: 'pauses', why: 'useVisiblePoll pauses requests when the tab is hidden and refreshes on return' },
   { file: 'business/staff/useStaffCommands.ts', reads: null, everyMs: 'SWEEP_MS', hidden: 'continues', why: 'the offline command queue still expires stale commands even when the page is hidden' },
+  { file: 'shell/useMediaKeys.ts', reads: null, everyMs: 1000, hidden: 'continues', why: 'tells the OS media controls where the song is; it reads no server and the OS shows it with the tab hidden' },
   { file: 'App.tsx', reads: '/status, /mix, /drafts/{id}', everyMs: '4000 status, 1500 mix while busy, 2000 draft while busy', hidden: 'pauses', why: 'the app shell owns status, the current mix and the open draft (useVisiblePoll)' },
   { file: 'state/async.ts', reads: 'whatever a page reads with useAsync', everyMs: 'options.every', hidden: 'pauses', why: 'checks visibilityState and reads again on return' },
   { file: 'state/jobs.ts', reads: '/jobs', everyMs: 'per subscriber', hidden: 'pauses', why: 'one shared jobs snapshot for every page that shows work' },
@@ -41,11 +42,14 @@ export const POLLING: readonly PollRule[] = [
   { file: 'ui/ActivityPanel.tsx', reads: null, everyMs: 30000, hidden: 'continues', why: 'refreshes "x minutes ago" wording only' },
   { file: 'cloud/events.ts', reads: 'cloud events fallback', everyMs: 'pollMs', hidden: 'pauses', why: 'useVisiblePoll when the event stream is unavailable (Cloud programme)' },
   { file: 'cloud/checkout.ts', reads: 'checkout confirmation', everyMs: 'bounded tries', hidden: 'continues', why: 'a payment confirmation must finish; it stops after a set number of tries (Cloud programme)' },
-  { file: 'devices/DevicesPanel.tsx', reads: 'devices', everyMs: 15000, hidden: 'continues', why: 'Cloud programme' },
+  { file: 'cloud/LocalFirstShell.tsx', reads: 'device availability snapshot and /status after local catalogue sweep', everyMs: 'AVAILABILITY_REFRESH_MS', hidden: 'pauses', why: 'checks local media permissions while visible, reports the metadata-only device snapshot at its cadence, and retries after the next foreground event (ADR-0457)' },
+  { file: 'devices/DevicesPanel.tsx', reads: '/devices', everyMs: 15000, hidden: 'pauses', why: 'useVisiblePoll: the device list is presentation only, read again on return (W3 adoption)' },
   { file: 'devices/usePlaybackDevice.ts', reads: 'remote playback state and heartbeat', everyMs: '1000 or 2000', hidden: 'continues', why: 'remote playback keeps going while this tab is hidden (Cloud programme)' },
   { file: 'devices/PlayingBar.tsx', reads: null, everyMs: 1000, hidden: 'continues', why: 'clock text only' },
   { file: 'devices/audioSpeaker.ts', reads: null, everyMs: 'fade steps', hidden: 'continues', why: 'volume fade' },
-  { file: 'rooms/RoomPanel.tsx', reads: 'room state', everyMs: 3000, hidden: 'continues', why: 'Cloud programme' },
+  { file: 'rooms/RoomPanel.tsx', reads: '/rooms/current', everyMs: 3000, hidden: 'pauses', why: 'useVisiblePoll: the host panel reads the room only while it is on screen, and at once on return (W3 adoption)' },
+  { file: 'cloud/localFirstPlayer.ts', reads: null, everyMs: 500, hidden: 'continues', why: 'redraws the browser player position only; never reads the server (ADR-0457)' },
+  { file: 'engine/scheduler.ts', reads: null, everyMs: 'audio clock tick', hidden: 'continues', why: 'schedules the next song and seam on the audio clock while music plays in a hidden tab (ADR-0457)' },
 ];
 
 /** Who keeps each shared piece of server data. Anything else is read by the page that shows it. */
@@ -54,6 +58,7 @@ export const CACHE_OWNERS: readonly { resource: string; owner: string; others: s
   { resource: 'current mix', owner: 'App.tsx', others: 'pages get `mix` and replace it only through `setMixData` with a server answer' },
   { resource: 'open draft', owner: 'App.tsx', others: 'the editor gets it as `draftData`' },
   { resource: 'jobs and failures', owner: 'state/jobs.ts', others: 'useJobsStatus subscribers share one snapshot and one timer' },
+  { resource: 'import progress (this device)', owner: 'cloud/importSession.ts', others: 'ConnectMusic, the onboarding spine and the shell import chip subscribe to one snapshot' },
   { resource: 'export jobs', owner: 'views/exportStore.ts', others: 'Export panels subscribe to one store' },
   { resource: 'preferences', owner: 'state/prefs.ts', others: 'kept in this browser, not on the server' },
 ];

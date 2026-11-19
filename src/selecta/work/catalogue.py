@@ -40,16 +40,19 @@ CATALOGUE = MappingProxyType(
         job.name: job
         for job in (
             JobType("ingest.validate", CPU_LIGHT, Lane.STANDARD, "core.library", 120.0, 3.0),
+            # Hosted-media processing is owned by `cloud.hosted_media` (ADR-0456): analyse.song,
+            # seam.render and export.render admit new work only under the grant. `play.proxy`
+            # stays on `core.playback` because playback of stored media is not gated.
             JobType("play.proxy", CPU_LIGHT, Lane.STANDARD, "core.playback", 180.0, 6.0),
-            JobType("analyse.song", CPU_HEAVY, Lane.STANDARD, "core.analysis", 1_200.0, 40.0),
+            JobType("analyse.song", CPU_HEAVY, Lane.STANDARD, "cloud.hosted_media", 1_200.0, 40.0),
             JobType("lyrics.fetch", CPU_LIGHT, Lane.STANDARD, "lyrics.lookup", 60.0, 1.0),
             JobType("lyrics.align", CPU_HEAVY, Lane.STANDARD, "lyrics.word_timing", 300.0, 25.0),
             JobType("stems.window", GPU, Lane.STANDARD, "stems", 600.0, 5.0),
-            JobType("seam.render", CPU_HEAVY, Lane.STANDARD, "core.make_a_mix", 600.0, 40.0),
+            JobType("seam.render", CPU_HEAVY, Lane.STANDARD, "cloud.hosted_media", 600.0, 40.0),
             JobType(
                 "mix.prepare", INTERNAL, Lane.STANDARD, "core.make_a_mix", 0.0, 0.0, workflow=True
             ),
-            JobType("export.render", EXPORT, Lane.STANDARD, "export", 7_200.0, 300.0),
+            JobType("export.render", EXPORT, Lane.STANDARD, "cloud.hosted_media", 7_200.0, 300.0),
             JobType(
                 "discover.sweep", CPU_HEAVY, Lane.SPECULATIVE, "discover.word_links", 900.0, 60.0
             ),

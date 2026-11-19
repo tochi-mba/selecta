@@ -127,6 +127,9 @@
 .timeline .add-gap button:hover, .timeline .add-gap button:focus-visible { color: var(--text); border-color: var(--border-strong); }
 @media (pointer: coarse) {
   .timeline .add-gap button { min-height: 44px; }
+  /* the bare gap adder (a 24px circle) and a song name outside the timeline reach 44px as well */
+  .add-gap button { min-width: 44px; min-height: 44px; height: auto; }
+  .song-select { min-height: 44px; }
   /* S4-0094-02: a song's name is a 44px target on a touch screen; a mouse keeps the 30px line */
   .timeline .song-select { min-height: 44px; display: flex; align-items: center; gap: var(--space-1); }
 }

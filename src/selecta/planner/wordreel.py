@@ -25,7 +25,7 @@ from selecta.config import ANALYSIS_VERSION, SAMPLE_RATE, Settings
 from selecta.lyrics.align import Aligner, Word, settle_edges
 from selecta.lyrics.lrclib import Line
 from selecta.lyrics.match import LyricLink, normalise
-from selecta.planner.fit import TimbreSpace, level_step
+from selecta.planner.fit import ROLL_MAX_KEYS, STEADY_GRID, TimbreSpace, level_step
 from selecta.render.engine import Rendered, SongCache, render
 from selecta.stems import band_of, separate_window
 from selecta.styles.wordplay import (
@@ -58,8 +58,10 @@ EDGE_WORD_SECONDS = 0.3
 MAX_WORD_SECONDS = 3.5
 
 BLEND_MAX_GAP = 0.08
+"""The widest gap stretching can close at all (the audit refuses more than 8%). Taste is stricter:
+outside a wordplay showcase the planner holds blends to fit.CLOSE_TEMPO."""
 BLEND_MAX_KEY_DISTANCE = 2
-BLEND_MIN_GRID = 0.55
+BLEND_MIN_GRID = STEADY_GRID
 ROLL_MIN_TEMPO_RATIO = 0.88
 """A roll promises a drop. Reel 2's hype song into a much slower one felt like a broken promise."""
 CUT_MAX_GAP = 0.06
@@ -424,8 +426,13 @@ def modes_for(a: SongInfo, b: SongInfo, space: TimbreSpace | None = None) -> tup
 
 def roll_suits(a: SongInfo, b: SongInfo) -> bool:
     """A stutter promises a drop, and B has to arrive on something. On the reels, every roll out of
-    a rock song failed, and a hype song into a much slower one felt like a broken promise."""
-    return a.family != "rock" and felt_bpm(b) >= felt_bpm(a) * ROLL_MIN_TEMPO_RATIO
+    a rock song failed, and a hype song into a much slower one felt like a broken promise. Rolls
+    across four or more keys were disliked almost every time, so those are out too."""
+    return (
+        a.family != "rock"
+        and felt_bpm(b) >= felt_bpm(a) * ROLL_MIN_TEMPO_RATIO
+        and camelot_distance(a.camelot, b.camelot) <= ROLL_MAX_KEYS
+    )
 
 
 def music_fit(a: SongInfo, b: SongInfo, space: TimbreSpace | None = None) -> float:

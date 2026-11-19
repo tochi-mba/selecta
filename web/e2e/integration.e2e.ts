@@ -289,7 +289,7 @@ test.describe('P0138 integrated failure and recovery', () => {
         : route.fulfill({ json: { jobs: [failedJob] } });
     });
     await page.goto('/workshop');
-    const lost = page.locator('section.panel').filter({ hasText: 'Couldn’t check on your exports.' });
+    const lost = page.locator('section.panel').filter({ hasText: "Couldn't check on your exports." });
     await expect(lost).toBeVisible();
     jobs = 'failed';
     await lost.getByRole('button', { name: 'Try again' }).click();

@@ -17,8 +17,10 @@ from selecta.admin import actions, emergency, flags_admin, http, takedowns
 from selecta.admin import state as emergency_state
 from selecta.authz.check import Actor, authorize
 from selecta.authz.scopes import ResourceRef
+from selecta.flags import rules as flag_rules
 from selecta.flags.matching import Rule
 from selecta.flags.rules import RulesCache
+from selecta.hosted_coexistence.grandfather import HOSTED_MEDIA, audit_grandfather_rules
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now
 
@@ -146,6 +148,23 @@ def install_routes(
         return run(
             request, claims, lambda conn, actor: flags_admin.explain_user(conn, actor, user_id)
         )
+
+    @app.get("/api/admin/flags/cloud.hosted_media/grandfather-audit")
+    def admin_hosted_media_grandfather_audit(request: Request, claims: SignedIn):
+        """The completed-upload population compared with the live grant rules (ADR-0465,
+        BF-0465-01): who is grandfathered, which rule decided each, what is missing or stale.
+
+        Read-only, `flags.read`, ids and counts only. Operators save rules through the reviewed
+        flag-change path; this view is the runbook step 4 evidence before the
+        `[grandfather-verified]` marker is recorded (`flags.flip_guard` re-checks it).
+        """
+
+        def read(conn: Connection, actor: Actor) -> dict[str, Any]:
+            authorize(conn, actor, "flags.read")
+            rules = flag_rules.current_rules(conn, HOSTED_MEDIA)
+            return audit_grandfather_rules(conn, rules).as_dict()
+
+        return {"audit": run(request, claims, read)}
 
     @app.post("/api/admin/flags/{flag_id}/impact")
     def admin_flag_impact(flag_id: str, body: FlagChange, request: Request, claims: SignedIn):

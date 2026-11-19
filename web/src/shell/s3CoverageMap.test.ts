@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import inventory from '../../../docs/adr/mp-0272-surface-inventory.json' with { type: 'json' };
 import map from '../../../docs/adr/s3-0075-coverage-map.json' with { type: 'json' };
+import persistentCoverage from '../../../docs/adr/s3-0075-persistent-coverage.json' with { type: 'json' };
+import overlaysCoverage from '../../../docs/adr/s3-0075-overlay-coverage.json' with { type: 'json' };
+import routesCoverage from '../../../docs/adr/s3-0075-route-coverage.json' with { type: 'json' };
 import mp from '../../e2e/mp-baseline.mp.ts?raw';
 import p0132 from '../../e2e/polish-p0132-baselines.e2e.ts?raw';
 import fp0271 from '../../e2e/fp-0271-paired-states.e2e.ts?raw';
@@ -8,8 +11,8 @@ import states from '../../e2e/s3-0075-01-state-candidates.e2e.ts?raw';
 import regression from '../../e2e/s3-0075-visual-regression.e2e.ts?raw';
 import helpers from '../../e2e/helpers.ts?raw';
 
-/** S3-0075-01: docs/adr/s3-0075-coverage-map.json names every state of every surface in the MP-0272
- * inventory, with the review candidates that capture it or the reason none does yet. The candidates
+/** S3-0075-01: docs/adr/s3-0075-coverage-map.json indexes route, overlay and persistent coverage
+ * segments that name each inventory state, with the candidates that capture it or a reason none does. The candidates
  * come from specs that save images marked candidate-not-independently-verified and never compare
  * against a golden, so nothing here can turn an unreviewed capture into a baseline. */
 
@@ -24,7 +27,8 @@ const SPECS: Record<string, string> = {
   'web/e2e/s3-0075-01-state-candidates.e2e.ts': states,
   'web/e2e/s3-0075-visual-regression.e2e.ts': regression,
 };
-const entries = map.entries as Entry[];
+const segments = [routesCoverage, overlaysCoverage, persistentCoverage];
+const entries = segments.flatMap((segment) => segment.entries) as Entry[];
 const surfaces = [...inventory.routes, ...inventory.overlays, ...inventory.persistent] as Surface[];
 const key = (surface: string, state: string) => `${surface} / ${state}`;
 
@@ -35,6 +39,22 @@ describe('S3-0075-01 visual coverage map', () => {
     expect(new Set(listed).size).toBe(listed.length);
     expect([...listed].sort()).toEqual(expected);
     expect(map.inventory).toBe('docs/adr/mp-0272-surface-inventory.json');
+    expect(map.segments).toEqual({
+      routes: 'docs/adr/s3-0075-route-coverage.json',
+      overlays: 'docs/adr/s3-0075-overlay-coverage.json',
+      persistent: 'docs/adr/s3-0075-persistent-coverage.json',
+    });
+    expect(segments.map((segment) => segment.inventory)).toEqual([map.inventory, map.inventory, map.inventory]);
+    const grouped = [
+      { name: 'routes', segment: routesCoverage, surfaces: inventory.routes },
+      { name: 'overlays', segment: overlaysCoverage, surfaces: inventory.overlays },
+      { name: 'persistent', segment: persistentCoverage, surfaces: inventory.persistent },
+    ];
+    for (const { name, segment, surfaces: groupSurfaces } of grouped) {
+      expect(segment.group).toBe(name);
+      const ids = new Set(groupSurfaces.map((surface) => surface.id));
+      expect(segment.entries.every((entry) => ids.has(entry.surface))).toBe(true);
+    }
   });
 
   it('captures a state or says which written reason leaves it uncovered, and the totals add up', () => {

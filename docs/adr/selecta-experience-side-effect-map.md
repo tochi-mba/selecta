@@ -14,6 +14,13 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 
 | Key | Storage | Written by | Holds | Owner |
 |---|---|---|---|---|
+| `selecta.dsp.calibration.` | local | `web/src/cloud/localFirstPlayer.ts` | This device's worker-analysis calibration (one entry per device identity), re-measured when missing or 30 days old | Listen |
+| `selecta.dsp.stems.model` | local | `web/src/dsp/stems/model.ts` | Which stem splitter file this browser downloaded and checked (implementation, checksum, size, when), so a ready splitter is not downloaded again; removed when the member removes the splitter | This device |
+| `selecta.dsp.stems.crashGuard` | local | `web/src/dsp/stems/gate.ts` | Written just before a stem split runs and removed after, so a page that loads with it still present knows the last split stopped the page | This device |
+| `selecta.dsp.stems.crashTripped` | local | `web/src/dsp/stems/gate.ts` | That a stem split stopped the page here, so stems stay off on this device until the member chooses to try again | This device |
+| `selecta.dsp.stems.calibration.` | local | `web/src/dsp/stems/gate.ts` | This device's stem-splitting benchmark (one entry per device identity), re-measured when missing or 30 days old | This device |
+| `selecta.persist.asked` | local | `web/src/cloud/persistence.ts` | That the one storage-persistence ask after the first import has been made, so no browser re-asks on every import | Cloud storage card |
+| `selecta.` | local | `web/src/cloud/deviceData.ts` | A clearing prefix, not a key: Clear everything in this browser removes every `selecta.`-prefixed entry | Cloud device data |
 | `selecta.prefs` | local | `web/src/state/prefs.ts` | Theme, motion, density, rail and library layout choices | Shared foundation |
 | `selecta.sound` | local | `web/src/player.ts` | Volume and mute | Listen |
 | `selecta-now` | local | `web/src/lib.ts` | Where playback was, so a reload resumes without a surprise | Listen |
@@ -36,6 +43,13 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.device.<workspace>` | local | `web/src/devices/usePlaybackDevice.ts`, `web/src/devices/DevicesPanel.tsx` | This browser's playback device id (Cloud) | Cloud playback |
 | `selecta.cloud.last-event-id` | session | `web/src/cloud/events.ts` | The last Cloud event seen, to resume the stream (Cloud) | Cloud |
 | `selecta.guest.room.<code>` | local | `web/src/guest/main.ts` (through `store` in `web/src/rooms/dom.ts`) | The guest's room id for a party code (Cloud) | Requests (guest rooms) |
+| `selecta.cutover-notice.<account>` | local | `web/src/cloud/migration/CutoverNotice.tsx` | That this account dismissed the hosted-media cutover notice on this browser (Cloud, ADR-0465) | Cloud |
+| `selecta.media-profile.<workspace>` | local | `web/src/cloud/ConnectMusic.tsx` | The workspace's chosen media profile (local-first or hosted), so the shell draws the right home (Cloud, ADR-0463) | Cloud |
+| `selecta.import.<workspace>` | local | `web/src/cloud/importSession.ts` | Whether a workspace import is in progress, so an interrupted import can be resumed safely | Cloud |
+| `selecta.labs.feedback-draft` | local | `web/src/cloud/labs/LocalFirstLabs.tsx` | Unsubmitted feedback text from the local-first labs page | Cloud |
+| `selecta.onboarding.<workspace>` | local | `web/src/cloud/onboarding/state.ts` | How far local-first Cloud onboarding got, so an interrupted step resumes (Cloud, ADR-0463) | Cloud |
+| `selecta.venue.last-heard.<workspace>` | local | `web/src/cloud/venue/deps.ts` | When a person last confirmed hearing the venue check tone, shown only as history and never trusted as a current check (Cloud, ADR-0460) | Cloud |
+| `selecta.venue.record.<workspace>` | local | `web/src/cloud/venue/deps.ts` | The newest capability record measured on this device, filed under its full tuple (Cloud, ADR-0460) | Cloud |
 | `selecta-cloud-dev:refresh` | local | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The local identity service's refresh token, so a reload signs back in; removed on sign-out or a failed refresh | Cloud (local dev stack) |
 | `selecta-cloud-dev:login` | session | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The PKCE verifier, CSRF state and return path of a sign-in in flight; removed when the code comes back | Cloud (local dev stack) |
 
@@ -170,6 +184,9 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | Route | Side effect |
 |---|---|
 | `PUT /api/account/labs/{flag_id}` | Turns a Labs feature on or off for the account |
+| `POST /api/account/labs/local-first/join` | Adds the member's user id to the Labs cohort rule on `cloud.local_first` (a new rule version), only if that really turns browser-first Cloud on |
+| `POST /api/account/labs/local-first/leave` | Removes the member's user id from the Labs cohort rule on `cloud.local_first` (a new rule version when it changed) |
+| `POST /api/account/labs/local-first/feedback` | Records the member's Labs feedback as a `labs.local_first.feedback` audit event |
 | `POST /api/onboarding/complete` | Marks Cloud onboarding done |
 | `POST /api/account/sign-out-everywhere` | Revokes every session |
 | `DELETE /api/account` | Hides the account and queues its deletion |
@@ -191,6 +208,13 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/playback/take-over` | Moves playback to this device |
 | `POST /api/playback/reconnect` | Reclaims playback after a drop |
 | `POST /api/playback/commands` | Sends a transport command to the playing device |
+| `POST /api/playback/commands/{command_id}/ack` | Records that the playing device received a command, never that it was audible (ADR-0461) |
+| `POST /api/zones/{zone_id}/playback/heartbeat` | Updates a zone's active device lease and accepted playback position |
+| `POST /api/zones/{zone_id}/playback/take-over` | Transfers the zone playback lease to this device |
+| `POST /api/zones/{zone_id}/playback/reconnect` | Reclaims or reports the zone playback lease after a device reconnects |
+| `POST /api/zones/{zone_id}/playback/commands` | Sends a fenced transport command to the zone's active device |
+| `POST /api/zones/{zone_id}/playback/commands/{command_id}/ack` | Records delivery acknowledgement for a zone command, never that it was audible |
+| `POST /api/zones/{zone_id}/playback/hand-back` | Hands zone playback back and records the current position |
 | `POST /api/uploads/plan` | Plans an upload |
 | `POST /api/uploads/{session_id}/parts` | Signs upload parts |
 | `POST /api/uploads/{session_id}/complete` | Finishes an upload |
@@ -198,6 +222,20 @@ Every route that changes something. GET routes only read and are not listed. Pat
 | `POST /api/storage/derived-playback-url` | Signs a playback URL |
 | `DELETE /api/assets/{asset_id}` | Deletes an uploaded asset |
 | `POST /api/assets/{asset_id}/playback-proxy` | Asks for a playback proxy to be made |
+
+### Local media catalogue (`src/selecta/local_media/api.py`) - Cloud library (ADR-0458)
+
+Metadata only: no audio leaves the member's devices. Dark in the build until `cloud.local_media` ships.
+
+| Route | Side effect |
+|---|---|
+| `POST /api/local-media/songs` | Registers songs on the member's own devices in the workspace catalogue |
+| `DELETE /api/local-media/songs/{song_id}` | Soft-deletes a catalogue entry |
+| `POST /api/local-media/availability` | Reports which catalogue songs a device holds right now |
+| `POST /api/local-media/recipes` | Saves a new portable recipe (a mix over catalogue songs) as its first immutable revision |
+| `POST /api/local-media/recipes/{mix_id}/revisions` | Saves the next immutable revision of a recipe, refused when made from a stale one |
+| `POST /api/local-media/recipes/{mix_id}/duplicate` | Copies the latest recipe revision into a new recipe with a fresh identity |
+| `DELETE /api/local-media/recipes/{mix_id}` | Deletes a recipe and its revisions from this workspace |
 
 ### Rooms (`src/selecta/rooms/api_host.py`, `src/selecta/rooms/api_guest.py`) - Requests (guest rooms)
 

@@ -25,6 +25,8 @@ class Recipe:
     max_gap: float | None = None
     description: str = ""
     options: dict = field(default_factory=dict)
+    on_request: bool = False
+    """Only made when a person asks for this move by name, never offered by the planner."""
 
 
 def all_recipes() -> dict[str, Recipe]:
@@ -65,6 +67,9 @@ def all_recipes() -> dict[str, Recipe]:
             lengths=(4,),
             max_gap=0.16,
             description="Ride both songs to a shared tempo for a short overlap",
+            # every rated ramp was disliked, and its design forces the 4-bar overlap the
+            # ratings also ruled out, so it only renders when a person asks for it by name
+            on_request=True,
         ),
     ]
     return {recipe.name: recipe for recipe in recipes}

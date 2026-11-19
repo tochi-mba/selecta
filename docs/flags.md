@@ -121,6 +121,12 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `move.intertwined_stems` | **Intertwined stems.** Drums, bass and harmony trade over sixteen bars, with the vocals taking turns. | `stems` |
 | `render.repair` | **Second takes.** A transition that fails a check is tried again, or with another move, before you hear it. |  |
 | `render.spare_time` | **Spare-time transitions.** With nothing else to do, the best transitions across the library are tried out ahead of time. |  |
+| `analysis.phrases` | **Phrase lines.** Transitions land on 8-bar phrase lines instead of any 4-bar mark, the way a DJ counts a song. |  |
+| `analysis.vocal_sense` | **Hear the voices.** When a song has no synced lyrics, listen to its separated voice to tell when someone sings, so it can still earn long blends and clashing voices are caught. | `stems` |
+| `planner.true_key` | **Heard harmony.** Key scoring also hears the measured chroma of the exact bars that will play together, not just the two key labels. |  |
+| `planner.arrival` | **Rolls land on arrivals.** A phrase roll promises a drop, so the next song has to arrive on one: a chorus coming in, or its energy stepping up. |  |
+| `planner.motivated_punctuation` | **Motivated punctuation.** An echo, cut or wash needs an audible reason - a line just finished or the song's structure turned - or it scores far lower. |  |
+| `planner.energy_intent` | **No unintended drops.** A punchy move from a hot exit into a much colder landing is refused unless the landing is a chorus. |  |
 
 ## Requests
 
@@ -215,7 +221,16 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `account.data_export` | **Account data export.** Download a portable copy of available account data and original files. **Core:** People must be able to take a copy of their personal data. |  |
 | `account.lucy_settings` | **Lucy settings in Cloud.** Choose whether to use Lucy, its phases and what it may share; see this month's Lucy turns. | `lucy` |
 | `cloud.signups` | **New accounts.** Allow new Cloud users to complete account onboarding. |  |
-| `cloud.uploads` | **Cloud uploads.** Upload private audio files to a Cloud workspace. |  |
+| `cloud.hosted_media` | **Hosted media.** The umbrella grant for uploading and processing audio in Cloud (ADR-0456). The build ships on; per-account gating is a cutover allowlist rule followed by a catch-all off rule, since rules can never grant what the build denies (ADR-0414). |  |
+| `cloud.uploads` | **Cloud uploads.** Upload private audio files to a Cloud workspace. | `cloud.hosted_media` |
+| `cloud.stored_media` | **Stored media.** List, play, export and delete audio already stored in Cloud. Reads of stored media stay open without the hosted media grant, so nobody's library goes dark (ADR-0456). |  |
+| `cloud.local_first` | **Browser-first personal Cloud.** Selects the local-first navigation and browser-owned playback in personal Cloud; the legacy pages remain when off (ADR-0455). |  |
+| `cloud.hosted_shell` | **Hosted Cloud on the shared shell.** Draws the hosted Cloud pages (overview, Listen, Make a Mix, Library and the account places in More) inside the same shell as browser-first Cloud; the legacy side rail remains when off. |  |
+| `cloud.progressive_import` | **Import continues in the background.** A folder import keeps running while the member moves on: onboarding unlocks as songs land, a shell chip shows progress, and an interrupted import offers to carry on (ADR-0463 BF-0463-02). |  |
+| `cloud.content_cache` | **Reuse work on the same song by fingerprint.** Derived data on this device (cached song bytes) is keyed by the song's content hash, computed here from the file itself, so the same file under another account or another title reuses it; off, the cache is keyed per workspace and nothing is shared (ADR-0469). |  |
+| `cloud.hosted_dedupe` | **Share machine-derived data across accounts by fingerprint.** Server side of ADR-0469: deterministic derivations of a hosted file's bytes may be reused by another workspace that holds the same bytes as a server-hashed upload; titles, ratings and history never join, and a client-claimed hash grants nothing. Off, every workspace keeps its own derived data as before. |  |
+| `cloud.local_first_labs` | **Labs: browser-first Cloud.** Lets a beta cohort opt into browser-first Cloud themselves, give feedback and opt out again; opting in adds the member to a cloud.local_first targeting rule (ADR-0467 step 3). |  |
+| `cloud.local_media` | **Local media catalogue.** The metadata-only catalogue of songs on the member's own devices; no audio is uploaded (ADR-0458). |  |
 | `billing.checkout` | **Plan checkout.** Start or change a paid Selecta Cloud subscription. |  |
 | `billing.portal` | **Subscription portal.** Manage or cancel an existing paid Selecta Cloud subscription. |  |
 | `cloud.operations` | **Cloud operations.** Schema migrations, the worker gateway, and the maintenance and recovery commands that keep the service correct. **Core:** The cloud service can't run, recover or erase data on time without them. |  |
@@ -231,6 +246,12 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `billing.webhooks` | **Billing updates.** Accept signed subscription state changes from Stripe. **Core:** Billing changes must be applied even when checkout is paused. |  |
 | `devices` | **Playback devices.** Sign browsers in as devices, list, rename and sign them out, and move playback between them with Play here. |  |
 | `devices.remote_control` | **Remote playback control.** Control the account's active playback session from another device. | `devices` |
+| `devices.browser_player` | **Browser player.** The in-browser audio engine registered as a playback device (ADR-0457). | `devices` |
+| `cloud.browser_dsp` | **Browser DSP.** The browser player's mixing DSP tiers, labelled honestly where they differ musically (ADR-0459). | `devices.browser_player` |
+| `cloud.browser_moves` | **Browser transition moves.** Local mode's moves in a browser mix: SelectaDJ picks a bass swap, filter sweep, cut, echo out or reverb wash for each transition from the audio as it plays, the member can choose one, and each transition says what really played (ADR-0459). | `cloud.browser_dsp` |
+| `cloud.browser_stems` | **Browser stem moves.** Splitting songs into voice, drums, bass and melody on this device, only around each transition, for vocal ride, strip and land and intertwined stems in browser mixes (ADR-0459 Tier 3). Each device reports unsupported until the stem model's licence review and that device's evidence record pass. | `cloud.browser_moves`, `stems` |
+| `cloud.venue_tablet` | **Venue tablet posture.** The single-tablet venue posture: capability checks and readiness guidance for a browser device playing a venue (ADR-0460). | `devices.browser_player` |
+| `cloud.local_export` | **Local export.** Render a mix to a file in the browser player and save it on the member's own device; nothing is uploaded. | `devices.browser_player` |
 | `rooms` | **Rooms.** Let Premium hosts share a request room with guests. |  |
 | `rooms.votes` | **Room votes.** Let room guests vote on song requests. | `rooms` |
 | `rooms.display` | **Room display.** Pair a screen to show the room QR code and playback queue. | `rooms` |

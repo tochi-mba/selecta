@@ -1,0 +1,137 @@
+# Candidates produced by the regeneration run
+
+Built from 514946cf (the gallery build, VITE_SELECTA_GALLERY=1) on 2026-11-18. The images stay test artifacts, as the specs require; this lists every one produced. Their review is a person's job (P0133, S3-0075 visual-evidence log).
+
+## visual-baseline.e2e.ts (24 candidates)
+
+- candidate-editor-1280-dark.png
+- candidate-editor-1280-light.png
+- candidate-editor-375-dark.png
+- candidate-editor-375-light.png
+- candidate-explore-1280-dark.png
+- candidate-explore-1280-light.png
+- candidate-explore-375-dark.png
+- candidate-explore-375-light.png
+- candidate-library-1280-dark.png
+- candidate-library-1280-light.png
+- candidate-library-375-dark.png
+- candidate-library-375-light.png
+- candidate-listen-1280-dark.png
+- candidate-listen-1280-light.png
+- candidate-listen-375-dark.png
+- candidate-listen-375-light.png
+- candidate-my-mixes-1280-dark.png
+- candidate-my-mixes-1280-light.png
+- candidate-my-mixes-375-dark.png
+- candidate-my-mixes-375-light.png
+- candidate-workspace-1280-dark.png
+- candidate-workspace-1280-light.png
+- candidate-workspace-375-dark.png
+- candidate-workspace-375-light.png
+
+## s3-0075-visual-regression.e2e.ts (28 candidates)
+
+- candidate-dark-desktop-library.png
+- candidate-dark-desktop-listen.png
+- candidate-dark-desktop-mixes.png
+- candidate-dark-desktop-palette.png
+- candidate-dark-desktop-theme-menu.png
+- candidate-dark-desktop-workshop.png
+- candidate-dark-large-text-library.png
+- candidate-dark-large-text-listen.png
+- candidate-dark-phone-library.png
+- candidate-dark-phone-listen.png
+- candidate-dark-phone-mixes.png
+- candidate-dark-phone-palette.png
+- candidate-dark-phone-theme-menu.png
+- candidate-dark-phone-workshop.png
+- candidate-light-desktop-library.png
+- candidate-light-desktop-listen.png
+- candidate-light-desktop-mixes.png
+- candidate-light-desktop-palette.png
+- candidate-light-desktop-theme-menu.png
+- candidate-light-desktop-workshop.png
+- candidate-light-large-text-library.png
+- candidate-light-large-text-listen.png
+- candidate-light-phone-library.png
+- candidate-light-phone-listen.png
+- candidate-light-phone-mixes.png
+- candidate-light-phone-palette.png
+- candidate-light-phone-theme-menu.png
+- candidate-light-phone-workshop.png
+
+## polish-p0132-baselines.e2e.ts (72 candidates)
+
+- candidate-p0132-1440-dark-discover-harmonic.png
+- candidate-p0132-1440-dark-discover.png
+- candidate-p0132-1440-dark-library-empty.png
+- candidate-p0132-1440-dark-library-failed.png
+- candidate-p0132-1440-dark-library-loading.png
+- candidate-p0132-1440-dark-library-recovered.png
+- candidate-p0132-1440-dark-library.png
+- candidate-p0132-1440-dark-listen.png
+- candidate-p0132-1440-dark-listening.png
+- candidate-p0132-1440-dark-mix-current-edit.png
+- candidate-p0132-1440-dark-mixes-mine.png
+- candidate-p0132-1440-dark-mixes.png
+- candidate-p0132-1440-dark-workshop-analysis.png
+- candidate-p0132-1440-dark-workshop-diagnostics.png
+- candidate-p0132-1440-dark-workshop-learning.png
+- candidate-p0132-1440-dark-workshop-sources.png
+- candidate-p0132-1440-dark-workshop-storage.png
+- candidate-p0132-1440-dark-workshop.png
+- candidate-p0132-1440-light-discover-harmonic.png
+- candidate-p0132-1440-light-discover.png
+- candidate-p0132-1440-light-library-empty.png
+- candidate-p0132-1440-light-library-failed.png
+- candidate-p0132-1440-light-library-loading.png
+- candidate-p0132-1440-light-library-recovered.png
+- candidate-p0132-1440-light-library.png
+- candidate-p0132-1440-light-listen.png
+- candidate-p0132-1440-light-listening.png
+- candidate-p0132-1440-light-mix-current-edit.png
+- candidate-p0132-1440-light-mixes-mine.png
+- candidate-p0132-1440-light-mixes.png
+- candidate-p0132-1440-light-workshop-analysis.png
+- candidate-p0132-1440-light-workshop-diagnostics.png
+- candidate-p0132-1440-light-workshop-learning.png
+- candidate-p0132-1440-light-workshop-sources.png
+- candidate-p0132-1440-light-workshop-storage.png
+- candidate-p0132-1440-light-workshop.png
+- candidate-p0132-375-dark-discover-harmonic.png
+- candidate-p0132-375-dark-discover.png
+- candidate-p0132-375-dark-library-empty.png
+- candidate-p0132-375-dark-library-failed.png
+- candidate-p0132-375-dark-library-loading.png
+- candidate-p0132-375-dark-library-recovered.png
+- candidate-p0132-375-dark-library.png
+- candidate-p0132-375-dark-listen.png
+- candidate-p0132-375-dark-listening.png
+- candidate-p0132-375-dark-mix-current-edit.png
+- candidate-p0132-375-dark-mixes-mine.png
+- candidate-p0132-375-dark-mixes.png
+- candidate-p0132-375-dark-workshop-analysis.png
+- candidate-p0132-375-dark-workshop-diagnostics.png
+- candidate-p0132-375-dark-workshop-learning.png
+- candidate-p0132-375-dark-workshop-sources.png
+- candidate-p0132-375-dark-workshop-storage.png
+- candidate-p0132-375-dark-workshop.png
+- candidate-p0132-375-light-discover-harmonic.png
+- candidate-p0132-375-light-discover.png
+- candidate-p0132-375-light-library-empty.png
+- candidate-p0132-375-light-library-failed.png
+- candidate-p0132-375-light-library-loading.png
+- candidate-p0132-375-light-library-recovered.png
+- candidate-p0132-375-light-library.png
+- candidate-p0132-375-light-listen.png
+- candidate-p0132-375-light-listening.png
+- candidate-p0132-375-light-mix-current-edit.png
+- candidate-p0132-375-light-mixes-mine.png
+- candidate-p0132-375-light-mixes.png
+- candidate-p0132-375-light-workshop-analysis.png
+- candidate-p0132-375-light-workshop-diagnostics.png
+- candidate-p0132-375-light-workshop-learning.png
+- candidate-p0132-375-light-workshop-sources.png
+- candidate-p0132-375-light-workshop-storage.png
+- candidate-p0132-375-light-workshop.png
+

@@ -445,8 +445,11 @@ describe('LX-0363 conversation history', () => {
     const items = screen.getAllByRole('menuitem').map((item) => item.textContent);
     expect(items).toEqual(['Rename', 'Archive', 'Delete']);
     await userEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Delete this conversation?' });
+    // W5: on the shared overlay stack as a destructive confirmation; the safe answer has focus
+    const dialog = await screen.findByRole('alertdialog', { name: 'Delete this conversation?' });
     expect(dialog.textContent).toContain('Drafts you already saved from it are kept in My Mixes, and your music is never touched.');
-    expect(within(dialog).getByRole('button', { name: 'Keep it' })).toBeInTheDocument();
+    expect(dialog.textContent).toContain('This can’t be undone.');
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Keep it' })).toHaveFocus());
+    expect(within(dialog).getByRole('button', { name: 'Delete conversation' })).toBeInTheDocument();
   });
 });

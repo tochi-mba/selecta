@@ -1,5 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { DataTable } from '../ui/DataTable';
+import { ELLIPSIS } from '../ui/format';
 import { AdminFetch, post, when } from './adminApi';
 import { EmergencyControls } from './OverviewPage';
 import { Command, Failure, Panel, useLoad } from './parts';
@@ -14,7 +15,7 @@ export function AiPage({ api, can }: { api: AdminFetch; can: (permission: string
     <div className="admin-page">
       <Failure error={routing.error} />
       {routing.data?.lucy_disabled && <p className="admin-error" role="status">Lucy is switched off by an emergency control.</p>}
-      <Panel title={`Tier routing (version ${routing.data?.routing_version ?? '...'})`}>
+      <Panel title={`Tier routing (version ${routing.data?.routing_version ?? ELLIPSIS})`}>
         <DataTable caption="Tier to deployment" rows={rows} rowKey={(r) => `${r.tier}/${r.cls}`} empty="No routing."
           columns={[{ key: 'tier', label: 'Tier' }, { key: 'cls', label: 'Request class' }, { key: 'ids', label: 'Deployments, in order', render: (r) => r.ids.join(' then ') }]} />
       </Panel>

@@ -1,4 +1,6 @@
-import { Account, Allowance, bytes, featureOn, isOverQuota, resetWords } from './api';
+import { accountFlagOn } from '../flags';
+import { Meter as Bar } from '../ui/Meter';
+import { Account, Allowance, bytes, isOverQuota, resetWords } from './api';
 
 // The usage meters on Plan & billing (docs/saas/11-ui-ux.md §11.1): storage used of the limit,
 // songs analysed today, Lucy turns this month and exports this month, each with when it resets.
@@ -16,7 +18,7 @@ function Meter({ label, used, limit, words, reset, warn }: { label: string; used
       <p className="cloud-eyebrow">{label.toUpperCase()}</p>
       <h2>{words}</h2>
       {limit !== null
-        ? <div className="cloud-meter" role="progressbar" aria-label={label} aria-valuenow={Math.round(percent)} aria-valuemin={0} aria-valuemax={100} aria-valuetext={words}><i style={{ width: `${percent}%` }} /></div>
+        ? <Bar kind="meter" label={label} showLabel={false} value={Math.round(percent)} max={100} valueText={words} warnAt={0.8} dangerAt={1} tone={warn ? 'danger' : undefined} />
         : <p className="cloud-meter-free">Fair use: counted, never cut off.</p>}
       {reset && <p className="cloud-meter-reset">{reset}</p>}
     </section>
@@ -27,7 +29,29 @@ function allowanceWords(allowance: Allowance, unit: string) {
   return allowance.limit === null ? `${allowance.used} ${unit}` : `${allowance.used} of ${allowance.limit} ${unit}`;
 }
 
+/** Where the meters payload says whether this account has hosted storage at all (ADR-0464,
+ * BF-0456-06): "none" means nothing is stored and nothing can be, so there is no quota to warn
+ * about; "hosted", or a server that doesn't say, keeps the storage meter exactly as it was. */
+export type StorageMode = 'hosted' | 'none';
+
+export function storageMode(account: Pick<Account, 'usage'>): StorageMode {
+  const mode = (account.usage as (Account['usage'] & { storage_mode?: string }) | undefined)?.storage_mode;
+  return mode === 'none' ? 'none' : 'hosted';
+}
+
+/** The truthful card for an account with no hosted storage: no bar, no zero-byte limit, no warning. */
+export function NoHostedStorage() {
+  return (
+    <section className="cloud-card cloud-meter-card cloud-meter-none" aria-label="Storage">
+      <p className="cloud-eyebrow">Storage</p>
+      <h2>No hosted storage</h2>
+      <p className="cloud-meter-free">Your music stays on your own devices, so SelectaDJ Cloud keeps no audio for you and there is nothing here to fill up.</p>
+    </section>
+  );
+}
+
 export function StorageMeter({ account }: { account: Account }) {
+  if (storageMode(account) === 'none') return <NoHostedStorage />;
   const storage = account.usage?.storage;
   const used = storage?.used_bytes ?? account.entitlement.storage_used_bytes;
   const limit = storage?.limit_bytes ?? account.entitlement.storage_limit_bytes;
@@ -47,12 +71,12 @@ export function Meters({ account }: { account: Account }) {
       <StorageMeter account={account} />
       <Meter label="Analysis today" used={usage.analysis_today.used} limit={usage.analysis_today.limit}
         words={allowanceWords(usage.analysis_today, 'songs')} reset={resetWords(usage.analysis_today.resets_at, 'day', zone)} />
-      {featureOn(account, 'lucy') && <Meter label="Lucy turns this month" used={lucy.used} limit={lucy.limit}
+      {accountFlagOn('lucy', account.features) && <Meter label="Lucy turns this month" used={lucy.used} limit={lucy.limit}
         words={lucy.limit === null ? `${lucy.used} turns` : `${lucy.used} of ${lucy.limit} turns${lucy.fair_use ? ', plus fair-use quick turns' : ''}`}
         reset={lucy.resets_at ? resetWords(lucy.resets_at, 'month', zone) : undefined} />}
-      {featureOn(account, 'export') && <Meter label="Exports this month" used={exports.used} limit={exports.limit} warn={exports.blocked}
+      {accountFlagOn('export', account.features) && <Meter label="Exports this month" used={exports.used} limit={exports.limit} warn={exports.blocked}
         words={exports.limit === null ? `${exports.used} exports` : `${exports.used} of ${exports.limit} exports`}
-        reset={exports.blocked ? 'Paused while you are over your storage limit' : `${resetWords(exports.resets_at, 'month', zone)} · kept ${exports.retention_days} days`} />}
+        reset={exports.blocked && storageMode(account) === 'hosted' ? 'Paused while you are over your storage limit' : `${resetWords(exports.resets_at, 'month', zone)} · kept ${exports.retention_days} days`} />}
     </div>
   );
 }

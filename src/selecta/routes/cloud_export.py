@@ -253,7 +253,14 @@ def install_routes(
                     "schema_version": 1,
                     "workspace_id": workspace.id,
                     "asset_count": len(exported_assets),
-                    "originals": "included and SHA-256 verified",
+                    # BF-0456-07: a workspace with no stored originals still gets a complete
+                    # metadata, settings and recipes archive; the loop above never touched the
+                    # object client because the assets query returned no rows.
+                    "originals": (
+                        "included and SHA-256 verified"
+                        if exported_assets
+                        else "none stored for this workspace"
+                    ),
                     "settings": "included in settings.json",
                     "mixes": {
                         "available": False,

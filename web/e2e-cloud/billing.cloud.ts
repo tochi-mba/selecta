@@ -14,7 +14,7 @@ test('Plan & billing shows storage, analysis today, Lucy turns and exports, with
   await expect(page.getByRole('region', { name: 'Analysis today' })).toContainText('12 of 150 songs');
   await expect(page.getByRole('region', { name: 'Analysis today' })).toContainText('Resets');
   await expect(page.getByRole('region', { name: 'Lucy turns this month' })).toContainText('9 of 40 turns');
-  await expect(page.getByRole('region', { name: 'Lucy turns this month' })).toContainText(/Resets \d+ \w+/);
+  await expect(page.getByRole('region', { name: 'Lucy turns this month' })).toContainText(/Resets (\d+ \w+|\w+ \d+)/);
   await expect(page.getByRole('region', { name: 'Exports this month' })).toContainText('1 of 3 exports');
   await expect(page.getByText('Includes Lucy Basic.')).toBeVisible();
   await accessible(page, 'billing');

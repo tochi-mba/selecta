@@ -309,7 +309,7 @@
 .line-place { font-variant-numeric: tabular-nums; }
 /* every place takes the room of the longest ("10th in line"), so the names share one column (MP-0286-05) */
 .line-place { flex: 0 0 9.5em; width: 9.5em; }
-@media (min-width: 768px) {
+@media (min-width: 641px) {
   .line-controls { display: grid; grid-template-columns: 9.5em minmax(0, 1fr) auto; }
   .line-name { min-width: 0; }
   .line-buttons { justify-self: end; }

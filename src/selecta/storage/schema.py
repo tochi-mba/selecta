@@ -119,3 +119,25 @@ deletion_mirror_outbox = sa.Table(
     sa.CheckConstraint("attempt_count >= 0", name="attempt_count_nonnegative"),
     sa.Index(None, "delivered_at", "created_at"),
 )
+
+# Shared machine derivations by fingerprint (ADR-0469). The one table keyed by content with no
+# workspace: it holds ONLY deterministic derivations of a file's bytes (analysis, waveform, beat
+# grid), never anything a person typed or did (titles, ratings, play history). Possession-proof
+# rule: a workspace may read a row only for a sha256 it holds as a live `assets` row, whose hash
+# the server computed from bytes it received; a client-claimed hash (a metadata-only
+# `local_songs` registration) never grants a read. Only server-computed results, or client
+# results the server re-verified against bytes it holds, are written here. Reads and writes go
+# through `selecta.storage.shared_derivations`, which enforces both rules.
+shared_derivations = sa.Table(
+    "shared_derivations",
+    metadata,
+    sa.Column("content_sha256", sa.String(64), primary_key=True),
+    sa.Column("kind", sa.String(32), primary_key=True),
+    sa.Column("analysis_version", sa.String(32), primary_key=True),
+    sa.Column("payload", sa.JSON, nullable=False),
+    # How the row earned its place: computed by the server, or verified by it against held bytes.
+    sa.Column("source", sa.String(16), nullable=False),
+    sa.Column("created_at", Epoch, nullable=False),
+    sa.CheckConstraint("length(content_sha256) = 64", name="content_sha256"),
+    sa.CheckConstraint(_one_of("source", ("server", "verified")), name="source"),
+)

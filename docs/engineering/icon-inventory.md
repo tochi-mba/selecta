@@ -2,7 +2,7 @@
 
 Every glyph in `web/src/ui/Icon.tsx`, what it means, the slot it is drawn at, who draws it and where its words come from. Every icon is `aria-hidden`; the words that name it always belong to the control or line it sits in. Owner: ADR-0277 (MP-0277-01 to -08).
 
-`web/src/styles/icon-geometry.test.ts` fails when a glyph has no row here, when a row names a slot that does not exist, or when a source file draws a glyph at a slot or from a file this page does not list. `web/e2e/mp-0277-icon-geometry.e2e.ts` checks the same in the browser: every visible icon is drawn at a slot, and every control holding one has a name.
+`web/src/styles/icon-geometry.test.ts` fails when a glyph has no row here, when a row names a slot that does not exist, or when a source file in `ui/`, `views/` or `shell/` draws a glyph at a slot or from a file this page does not list. The Cloud owners (`cloud/onboarding/`, `cloud/venue/`, `cloud/migration/`) are listed here by hand and checked against the source on 2026-11-18; the test does not scan `cloud/` yet (ADR-0468 BF-0468-08). `web/e2e/mp-0277-icon-geometry.e2e.ts` checks the same in the browser: every visible icon is drawn at a slot, and every control holding one has a name.
 
 ## Slots (MP-0277-02)
 
@@ -19,43 +19,44 @@ The box and stroke live in `ICON_SLOTS` and `ICON_STROKES` (`web/src/ui/Icon.tsx
 
 | Icon | Purpose | Slots | Owners | Named by |
 | --- | --- | --- | --- | --- |
-| `play` | Start playing or previewing | standard, compact | `shell/Shell.tsx`, `views/EditorRows.tsx`, `views/EditorStory.tsx`, `views/Links.tsx`, `views/Requests.tsx`, `views/Studio.tsx` | The button's words or `aria-label`; "Playing now" tag words |
-| `pause` | Pause playback | standard | `shell/Shell.tsx` | Mini-player button `aria-label` |
+| `play` | Start playing or previewing | standard, compact | `shell/Shell.tsx`, `views/EditorRows.tsx`, `views/EditorStory.tsx`, `views/Links.tsx`, `views/Requests.tsx`, `views/Studio.tsx`, `cloud/onboarding/steps.tsx`, `cloud/venue/VenuePosture.tsx` | The button's words or `aria-label`; "Playing now" tag words |
+| `pause` | Pause playback | standard | `shell/Shell.tsx`, `harness/CloudGallery.tsx` | Mini-player button `aria-label` |
 | `stop` | Stop a preview, voice input or Lucy run | standard | `views/Links.tsx`, `views/LucyComposer.tsx`, `views/Requests.tsx`, `views/Studio.tsx` | The button's words, or the mic button's hidden words |
-| `next` | Go to the next song | standard | `shell/Shell.tsx`, `views/Now.tsx` | `aria-label` "Next song" and `title` |
+| `next` | Go to the next song | standard | `shell/Shell.tsx`, `views/Now.tsx`, `harness/CloudGallery.tsx` | `aria-label` "Next song" and `title` |
 | `previous` | Go back a song | standard | `views/Now.tsx` | `aria-label` "Previous song" and `title` |
-| `volume` | Sound is on; press to mute | standard | `shell/Shell.tsx` | `aria-label` and `title` |
+| `backspace` | Take back the last PIN digit on the staff keypad | standard | `business/staff/PinKeypad.tsx` | `aria-label` and `title` "Back one digit" |
+| `volume` | Sound is on; press to mute; play the sound-check tone | standard, toolbar | `shell/Shell.tsx`, `cloud/onboarding/steps.tsx`, `cloud/venue/VenuePosture.tsx` | `aria-label` and `title`, or the button's words |
 | `muted` | Sound is off; press to restore | standard | `shell/Shell.tsx` | `aria-label` and `title` |
-| `music` | Listen destination | standard | `shell/manifest.ts` | The destination label |
+| `music` | Listen destination; choosing music files to import; decorative art beside the hero and the library rows | standard, toolbar, hero | `shell/manifest.ts`, `cloud/onboarding/steps.tsx`, `harness/CloudGallery.tsx`, `cloud/CloudApp.tsx`, `cloud/Library.tsx` | The destination label, or the button's words; the decorative uses are aria-hidden |
 | `mixes` | My Mixes and classic Mixes destination | standard | `shell/manifest.ts` | The destination label |
 | `library` | Library destination | standard | `shell/manifest.ts` | The destination label |
 | `discover` | Classic Discover destination | standard | `shell/manifest.ts` | The destination label |
-| `settings` | Workspace destination; Lucy settings | standard, toolbar | `shell/manifest.ts`, `views/Lucy.tsx` | The destination label; the button's words |
+| `settings` | Workspace destination; Lucy settings; the Cloud More menu | standard, toolbar | `shell/manifest.ts`, `shell/Shell.tsx`, `views/Lucy.tsx` | The destination label; the button's words |
 | `edit` | Open the editor or edit one part | standard, toolbar | `shell/Shell.tsx`, `views/EditorStory.tsx`, `ui/ControlGallery.tsx` | The link or button words; gallery `aria-label` |
-| `close` | Close, dismiss, cancel or remove; a failed status mark | standard, toolbar, compact | `ui/controls.tsx`, `ui/primitives.tsx`, `ui/toasts.tsx`, `views/Lucy.tsx`, `views/LucyDialog.tsx`, `views/LucyProposal.tsx`, `views/Mix.tsx`, `views/Requests.tsx` | `aria-label` and `title`, or the status words |
-| `check` | Done, passed or ready | compact, toolbar | `ui/controls.tsx`, `views/LucyProposal.tsx`, `views/LucySongs.tsx`, `views/Requests.tsx`, `views/SeamInspector.tsx` | The words beside it |
-| `warning` | Needs attention, blocked or a failed check | standard, compact | `shell/Shell.tsx`, `ui/controls.tsx`, `views/Mix.tsx`, `views/SeamInspector.tsx` | The link `aria-label`, button words or status words |
+| `close` | Close, dismiss, cancel or remove; a failed status mark | standard, toolbar, compact | `ui/controls.tsx`, `ui/primitives.tsx`, `ui/toasts.tsx`, `views/Lucy.tsx`, `views/LucyProposal.tsx`, `views/Mix.tsx`, `views/Requests.tsx`, `cloud/migration/CutoverNotice.tsx` | `aria-label` and `title`, or the status words |
+| `check` | Done, passed or ready | compact, toolbar | `ui/controls.tsx`, `views/LucyProposal.tsx`, `views/LucySongs.tsx`, `views/Requests.tsx`, `views/SeamInspector.tsx`, `views/Setup.tsx`, `cloud/onboarding/OnboardingSpine.tsx`, `cloud/onboarding/steps.tsx`, `cloud/venue/VenuePosture.tsx`, `harness/CloudGallery.tsx` | The words beside it; a finished setup step's "(done)" |
+| `warning` | Needs attention, blocked or a failed check | standard, compact, toolbar | `shell/Shell.tsx`, `ui/controls.tsx`, `views/Mix.tsx`, `views/SeamInspector.tsx`, `cloud/onboarding/OnboardingSpine.tsx`, `cloud/onboarding/steps.tsx`, `cloud/venue/VenueFallback.tsx`, `harness/CloudGallery.tsx` | The link `aria-label`, button words, status words or the heading beside it |
 | `clock` | Queued status mark | compact | `ui/controls.tsx` | The status words |
-| `minus` | Unavailable status mark | compact | `ui/controls.tsx` | The status words |
-| `more` | Open a row's menu | standard | `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/LibraryRow.tsx`, `views/LucyHistory.tsx` | Hidden words in the trigger, and `title` |
+| `minus` | Unavailable status mark | compact | `ui/controls.tsx`, `cloud/onboarding/OnboardingSpine.tsx` | The status words |
+| `more` | Open a row's menu | standard | `cloud/SavedBrowserMixes.tsx`, `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/LibraryRow.tsx`, `views/LucyHistory.tsx` | Hidden words in the trigger, and `title` |
 | `help` | Keyboard shortcuts | standard | `shell/Shell.tsx` | `aria-label` and `title` |
 | `up` | Move up; collapse a disclosure | standard, toolbar | `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/EditorStory.tsx`, `views/LucySongs.tsx` | `aria-label` and `title`, or the disclosure words |
 | `down` | Move down; expand a disclosure or menu | standard, toolbar, compact | `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/EditorStory.tsx`, `views/LucyProposal.tsx`, `views/LucySongs.tsx` | `aria-label` and `title`, or the disclosure or menu words |
-| `trash` | Delete or remove | standard | `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/LucySongs.tsx`, `views/Mix.tsx` | The item words, or `aria-label` and `title` |
+| `trash` | Delete or remove | standard | `cloud/SavedBrowserMixes.tsx`, `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/LucySongs.tsx`, `views/Mix.tsx` | The item words, or `aria-label` and `title` |
 | `plus` | Add a song, start a new chat, request | standard, toolbar, compact | `views/EditorRows.tsx`, `views/LucyHistory.tsx`, `views/Requests.tsx` | The words beside it |
 | `search` | Search and commands; a search field | standard | `shell/Shell.tsx`, `ui/primitives.tsx` | The button's `aria-label`; the field's label |
 | `grip` | Drag handle | standard | `views/EditorRows.tsx` | The handle's `aria-label` and `title` |
 | `bell` | Activity and Undo | standard | `shell/Shell.tsx` | `aria-label` (with the count) and `title` |
 | `expand` | Not drawn anywhere; kept in the set | standard | - | - |
 | `explore` | Make a Mix destination | standard | `shell/manifest.ts` | The destination label |
-| `folder` | Not drawn anywhere; kept in the set | standard | - | - |
+| `folder` | Choose a folder of music to import | toolbar | `cloud/onboarding/steps.tsx`, `harness/CloudGallery.tsx` | The button's words "Choose a folder" |
 | `rail` | Collapse or expand the side bar | standard | `shell/Shell.tsx` | `aria-label` and `title` |
 | `command` | Not drawn anywhere; kept in the set | standard | - | - |
 | `lock` | Locked song; lock and unlock | standard, compact | `views/EditorRows.tsx`, `views/LucySongs.tsx` | The words "Locked", "Lock" or "Unlock" |
 | `request` | Request a song | standard | `shell/Shell.tsx` | `aria-label` (with the count) and `title` |
-| `circle` | Planned status mark; an idea's scope | compact | `ui/controls.tsx`, `views/Mixes.tsx` | The status or scope words |
-| `half` | Working and recovering status mark | compact | `ui/controls.tsx` | The status words |
-| `dot` | Needs-you status mark | compact | `ui/controls.tsx` | The status words |
+| `circle` | Planned status mark; an idea's scope | compact | `ui/controls.tsx`, `views/Mixes.tsx`, `cloud/onboarding/OnboardingSpine.tsx`, `cloud/venue/VenuePosture.tsx` | The status or scope words |
+| `half` | Working and recovering status mark | compact | `ui/controls.tsx`, `harness/CloudGallery.tsx` | The status words |
+| `dot` | Needs-you status mark | compact | `ui/controls.tsx`, `cloud/onboarding/OnboardingSpine.tsx`, `cloud/venue/VenuePosture.tsx` | The status words |
 | `sun` | Light theme | standard | `ui/ThemeChoice.tsx` | The option words, or the trigger's hidden words and `title` |
 | `moon` | Dark theme | standard | `ui/ThemeChoice.tsx` | The option words, or the trigger's hidden words and `title` |
 | `system` | Match this computer's theme | standard | `ui/ThemeChoice.tsx` | The option words, or the trigger's hidden words and `title` |

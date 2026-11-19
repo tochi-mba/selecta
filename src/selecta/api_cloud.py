@@ -36,6 +36,7 @@ from selecta import flags
 from selecta.admin import guard as admin_guard
 from selecta.admin import routes as admin_routes
 from selecta.admin import routes_controls as admin_control_routes
+from selecta.admin import routes_economics as admin_economics_routes
 from selecta.admin.state import EmergencyCache
 from selecta.autopilot import routes_autopilot as autopilot_routes
 from selecta.billing import api as billing_api
@@ -58,20 +59,26 @@ from selecta.identity.tokens import (
     authkit_verifier,
 )
 from selecta.identity.workos import WorkOSClient
+from selecta.local_media import api as local_media_routes
+from selecta.local_media import recipe_api as local_recipe_routes
+from selecta.local_media.catalog import LocalMediaCatalog
 from selecta.lucy import cloud_settings as lucy_cloud_settings
 from selecta.observability import errors, metrics, tracing
 from selecta.persistence import db_now, make_engine, transaction
 from selecta.persistence.listen import PgListener
 from selecta.persistence.migrate import current as migration_current
 from selecta.persistence.migrate import head as migration_head
+from selecta.playback import api as device_playback_routes
+from selecta.playback.zones import SQL_ZONES
 from selecta.rooms import wiring as rooms_wiring
-from selecta.rooms.cloud_ports import RoomPorts
+from selecta.rooms.cloud_ports import OutboxPlaybackEvents, RoomPorts
 from selecta.routes import business_hours as business_hours_routes
 from selecta.routes import business_zones as business_zones_routes
 from selecta.routes import cloud_assets as cloud_assets_routes
 from selecta.routes import cloud_export as cloud_export_routes
 from selecta.routes import cloud_mixes as cloud_mix_routes
 from selecta.routes import cloud_proxy as cloud_proxy_routes
+from selecta.routes import local_first_labs as local_first_labs_routes
 from selecta.storage import api as storage_api
 from selecta.storage import playback_api as playback_api
 from selecta.usage import meters, quota
@@ -279,6 +286,10 @@ def create_cloud_app(
     verifier = verifier or settings.verifier()
     owns_workos = workos is None
     workos = workos or settings.workos_client()
+    # Without explicit ports, Rooms read the metadata-only local media catalogue (ADR-0458), so
+    # a local-first account can host a Room from its device-available tracks. The pepper still
+    # comes from `rooms.wiring.pepper_from_environment` when the ports carry none.
+    room_ports = room_ports or RoomPorts(catalog=LocalMediaCatalog(engine))
 
     # One LISTEN connection per instance wakes event streams and reloads flag rules the moment
     # another instance commits (ADR-0407, ADR-0414). None on SQLite, which keeps polling.
@@ -320,17 +331,53 @@ def create_cloud_app(
     # `playback/api.py`), on purpose leaving some reads open, such as a downgraded host's room.
     self_gated = ("rooms", "devices")
 
+    # A self-gated route (rooms and playback heartbeats, device polling) is refused or allowed
+    # by its own handler, so this middleware only needs the metrics cohort for it. Deciding that
+    # cohort costs a principal lookup and a transaction, which such routes previously never paid,
+    # so the answer is remembered briefly per credential pair. Gated routes never use this cache:
+    # `cloud_gate.require` still runs on every request, keeping the 5 s kill-switch contract.
+    cohort_cache: dict[tuple[str, str], tuple[str, float]] = {}
+    cohort_cache_ttl = 30.0
+
+    def _cohort_remembered(key: tuple[str, str]) -> str | None:
+        kept = cohort_cache.get(key)
+        if kept is None or time.monotonic() - kept[1] >= cohort_cache_ttl:
+            return None
+        return kept[0]
+
+    def _remember_cohort(key: tuple[str, str], cohort: str) -> None:
+        if len(cohort_cache) > 4096:
+            now = time.monotonic()
+            for stale in [k for k, (_, at) in cohort_cache.items() if now - at >= cohort_cache_ttl]:
+                cohort_cache.pop(stale, None)
+            if len(cohort_cache) > 4096:
+                cohort_cache.clear()
+        cohort_cache[key] = (cohort, time.monotonic())
+
     @app.middleware("http")
     async def account_feature_flags(request: Request, call_next):
         if not request.url.path.startswith("/api/") or not request.headers.get("authorization"):
             return await call_next(request)
         flag_id = flag_guard.owner_of(request.app, request.scope)
         flag = flags.registry().get(flag_id) if flag_id else None
-        if (flag is None or flag.core or flag_rules.is_untargetable(flag_id)
-                or flag_id.split(".")[0] in self_gated):
-            return await call_next(request)
+        route_is_self_gated = (
+            flag is None
+            or flag.core
+            or flag_rules.is_untargetable(flag_id)
+            or flag_id.split(".")[0] in self_gated
+        )
 
-        def check() -> None:
+        cohort_key = (
+            request.headers.get("authorization", ""),
+            request.headers.get("x-workspace-id") or "",
+        )
+        if route_is_self_gated:
+            remembered = _cohort_remembered(cohort_key)
+            if remembered is not None:
+                request.state.local_first_cohort = remembered
+                return await call_next(request)
+
+        def check() -> tuple[str, HTTPException | None]:
             principal = _principal(
                 engine,
                 _bearer(request, verifier),
@@ -338,15 +385,59 @@ def create_cloud_app(
                 allow_suspended=True,
             )
             with transaction(engine, principal.workspace.id) as conn:
-                cloud_gate.require(conn, principal, flag_id, rule_cache)
+                # The same live decision drives the per-cohort request metric. This keeps the
+                # rollout dashboard tied to actual account targeting instead of browser claims,
+                # request parameters or an inferred account identity.
+                local_first = cloud_gate.decide(
+                    conn, principal, "cloud.local_first", rule_cache
+                ).on
+                cohort = "browser_first" if local_first else "hosted"
+                if route_is_self_gated:
+                    return cohort, None
+                try:
+                    cloud_gate.require(conn, principal, flag_id, rule_cache)
+                except HTTPException as refused:
+                    return cohort, refused
+                return cohort, None
 
         try:
-            await asyncio.to_thread(check)
+            cohort, refused = await asyncio.to_thread(check)
+            request.state.local_first_cohort = cohort
+            _remember_cohort(cohort_key, cohort)
+            if refused is not None:
+                detail = refused.detail if isinstance(refused.detail, dict) else {}
+                return JSONResponse({"detail": detail}, status_code=refused.status_code)
         except HTTPException as refused:
             detail = refused.detail if isinstance(refused.detail, dict) else {}
             if refused.status_code == 403 and detail.get("code") in {"flag_off", "plan_required"}:
                 return JSONResponse({"detail": detail}, status_code=403)
         return await call_next(request)
+
+    @app.middleware("http")
+    async def browser_first_cohort_metrics(request: Request, call_next):
+        """Record only low-cardinality request outcomes for the rollout cohort dashboard.
+
+        Workspace and user ids, paths and query strings are deliberately excluded. Requests which
+        cannot be tied to a signed-in account stay in the `unknown` cohort and are excluded from
+        the browser-first versus hosted comparison.
+        """
+        if not request.url.path.startswith("/api/"):
+            return await call_next(request)
+
+        def record(status_code: int) -> None:
+            cohort = getattr(request.state, "local_first_cohort", "unknown")
+            status_class = f"{status_code // 100}xx" if 100 <= status_code < 600 else "unknown"
+            metrics.add(
+                "selecta_api_requests_total", cohort=cohort, status_class=status_class
+            )
+
+        try:
+            response = await call_next(request)
+        except Exception:
+            record(500)
+            raise
+        record(response.status_code)
+        return response
 
     flag_guard.install(app, strict=True)
     emergency_cache = EmergencyCache(engine)
@@ -538,7 +629,6 @@ def create_cloud_app(
             entitlement = stripe_sync.effective_entitlement(conn, principal.workspace.id)
             plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
             storage = quota.usage(conn, principal.workspace.id)
-            usage = meters.meters(conn, principal.workspace.id, plan, principal.user.timezone)
             now = db_now(conn)
             preferences = flag_rules.user_preferences(conn, principal.user.id)
             decisions = targeting.decide_all(
@@ -550,6 +640,15 @@ def create_cloud_app(
                 user_prefs=preferences,
                 now=now,
                 lock_plans=plans.unlocking_plans(),
+            )
+            # The meter and the shell read one hosted decision (BF-0456-06, BF-0464-02).
+            hosted = decisions.snapshot().get("cloud.hosted_media") is not False
+            usage = meters.meters(
+                conn,
+                principal.workspace.id,
+                plan,
+                principal.user.timezone,
+                hosted_media_granted=hosted,
             )
         return {
             "user": {
@@ -582,6 +681,11 @@ def create_cloud_app(
             },
             "lucy": {"tier": meters.lucy_tier(plan)},
             "features": decisions.snapshot(),
+            # BF-0455-03: the decided Cloud experience, so the web shell renders from one answer.
+            "experience": {
+                "local_first": decisions.snapshot().get("cloud.local_first") is not False,
+                "hosted": hosted,
+            },
             "feature_locks": dict(decisions.locks),
             "feature_rule_version": decisions.version,
         }
@@ -704,6 +808,14 @@ def create_cloud_app(
     cloud_mix_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal
     )
+    # The metadata-only song catalogue (ADR-0458); refused while cloud.local_media is off.
+    local_media_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
+    # Portable recipes over that catalogue (BF-0462-05); refused while cloud.local_media is off.
+    local_recipe_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
     business_org_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal,
         rules=rule_cache,
@@ -719,6 +831,17 @@ def create_cloud_app(
         principal_for=_principal,
         object_client_factory=storage_api.r2_client,
         buckets=storage_api.buckets(),
+    )
+    # Browser devices and fenced playback sessions (ADR-0461). This is distinct from the
+    # storage playback-URL routes above: it owns device registration, leases, commands and zones.
+    device_playback_routes.install_routes(
+        app,
+        engine=engine,
+        current_claims=current_claims,
+        principal_for=_principal,
+        rules=rule_cache,
+        events=OutboxPlaybackEvents(),
+        zones=SQL_ZONES,
     )
     cloud_export_routes.install_routes(
         app,
@@ -741,7 +864,7 @@ def create_cloud_app(
         object_client_factory=storage_api.r2_client, buckets=storage_api.buckets(),
     )
 
-    # Devices, the playback session, Rooms, guests and displays (ADR-0415, ADR-0416). Tests and
+    # Rooms, guests and displays (ADR-0415, ADR-0416). Tests and
     # the browser-test server pass `room_ports` with a song library; see `rooms.cloud_ports`.
     rooms_wiring.install(
         app, engine=engine, current_claims=current_claims, principal_for=_principal,
@@ -763,6 +886,13 @@ def create_cloud_app(
         current_claims=current_claims,
         emergency_cache=emergency_cache,
         rule_cache=rule_cache,
+    )
+    # Unit economics and step-4 readiness for Browser-first Cloud (BF-0464-04/05, BF-0467-04).
+    admin_economics_routes.install_routes(app, engine=engine, current_claims=current_claims)
+    # The Labs opening for browser-first Cloud (BF-0467-05).
+    local_first_labs_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal,
+        rules=rule_cache,
     )
 
     flag_guard.assert_cloud_api_routes_owned(app)

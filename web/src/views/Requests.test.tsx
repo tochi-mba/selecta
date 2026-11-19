@@ -602,6 +602,16 @@ describe('a request that needs an extra song', () => {
     expect(button).toHaveTextContent('Stop');
   });
 
+  it('is a shared Action: busy while asking, and a second press then sends nothing more (L2)', async () => {
+    const { calls } = open({}, { 'POST /requests/7/hear': { seams: [] }, 'GET /seams/one': { status: 'queued' } });
+    const button = await screen.findByRole('button', { name: 'Hear Song 1 into Bridge' });
+    fireEvent.click(button);
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    fireEvent.click(button);
+    await waitFor(() => expect(button).not.toHaveAttribute('aria-busy'));
+    expect(calls.filter((call) => call.path === '/requests/7/hear')).toHaveLength(1);
+  });
+
   it('says so if a transition can’t be made', async () => {
     open({}, { 'POST /requests/7/hear': { seams: [] }, 'GET /seams/one': { status: 'failed' } });
     fireEvent.click(await screen.findByRole('button', { name: 'Hear Song 1 into Bridge' }));
@@ -611,7 +621,8 @@ describe('a request that needs an extra song', () => {
   it('stops when pressed again', async () => {
     open();
     const button = await screen.findByRole('button', { name: 'Hear Bridge into Wanted' });
-    fireEvent.click(button);
+    // a shared Action: the first press settles before the second is heard (L2)
+    await act(async () => { fireEvent.click(button); });
     fireEvent.click(button);
     expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();
     expect(button).toHaveTextContent('Hear');

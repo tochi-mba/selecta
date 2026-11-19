@@ -16,7 +16,13 @@ from selecta.persistence import Epoch, Id, metadata, new_id
 DEVICE_KINDS = ("laptop", "desktop", "phone", "tablet", "tv")
 DEVICE_PRINCIPALS = ("person", "kiosk")
 PLAY_STATES = ("playing", "paused", "stopped")
-COMMAND_STATUSES = ("applied", "stale", "no_speaker")
+# "superseded" and "expired" are ADR-0461 refusals: the fence moved, or the TTL ran out.
+# "deferred" is a press held while the speaker was offline (BF-0461-04): it is delivered when the
+# speaker comes back with its fence, or dropped (expired, superseded, stale) and reported missed.
+COMMAND_STATUSES = ("applied", "stale", "no_speaker", "superseded", "expired", "deferred")
+# What an ack recorded: the speaker's claim ("applied", "unavailable_here"), or the server's
+# verdict when the claim came from an older fence ("superseded") or after the TTL ("expired").
+COMMAND_ACK_RESULTS = ("applied", "unavailable_here", "superseded", "expired")
 
 
 def _one_of(column: str, values: tuple[str, ...]) -> str:
@@ -72,6 +78,18 @@ playback_sessions = sa.Table(
     ),
     sa.Column("lease_expires_at", Epoch, nullable=True),
     sa.Column("seq", sa.BigInteger, nullable=False, default=0),
+    # The fencing token (ADR-0461): moves only when ownership of the lease moves.
+    sa.Column("fence", sa.BigInteger, nullable=False, default=0, server_default="0"),
+    # Random per-session salt the command-envelope signing key is derived from (ADR-0461). It
+    # never leaves the server; the speaker only ever gets a key bound to its device and fence.
+    sa.Column("signing_salt", sa.String(64), nullable=True),
+    # The programme as ADR-0458 identities: [{"song_id": int, "sha256": str}, ...], in play
+    # order, so the speaker resolves each locally. Never a path or URL. Empty: index only.
+    sa.Column("programme", sa.JSON, nullable=True),
+    # What the lease holder last reported about its sound output (ADR-0457, BF-0457-03):
+    # {"device_id", "status", "verified_at"}. Shown to controllers only while that device
+    # still holds the lease, and downgraded to "uncertain" when the lease lapses.
+    sa.Column("speaker_output", sa.JSON, nullable=True),
     sa.Column("updated_at", Epoch, nullable=False),
     sa.CheckConstraint(_one_of("state", PLAY_STATES), name="state"),
     sa.CheckConstraint("volume IS NULL OR (volume >= 0 AND volume <= 100)", name="volume"),
@@ -101,7 +119,25 @@ playback_commands = sa.Table(
     sa.Column("idempotency_key", sa.String(128), nullable=False),
     sa.Column("status", sa.String(16), nullable=False),
     sa.Column("applied_seq", sa.BigInteger, nullable=True),
+    # ADR-0461: how long the press stays executable (server time), the session fence it was
+    # issued under, and when and how its ack was recorded. Old rows keep all five empty.
+    sa.Column("ttl_seconds", sa.Integer, nullable=True),
+    sa.Column("expires_at", Epoch, nullable=True),
+    sa.Column("fence", sa.BigInteger, nullable=True),
+    sa.Column("acked_at", Epoch, nullable=True),
+    sa.Column("ack_result", sa.String(24), nullable=True),
+    # BF-0461: the envelope signature as delivered (hex HMAC-SHA256), when a press was held for
+    # an offline speaker and when it was finally delivered or dropped, and what an ack said
+    # beyond its result (the unavailable song and the alternatives offered to controllers).
+    sa.Column("signature", sa.String(64), nullable=True),
+    sa.Column("deferred_at", Epoch, nullable=True),
+    sa.Column("resolved_at", Epoch, nullable=True),
+    sa.Column("ack_detail", sa.JSON, nullable=True),
     sa.Column("created_at", Epoch, nullable=False, index=True),
     sa.UniqueConstraint("workspace_id", "idempotency_key"),
     sa.CheckConstraint(_one_of("status", COMMAND_STATUSES), name="status"),
+    sa.CheckConstraint(
+        "ack_result IS NULL OR " + _one_of("ack_result", COMMAND_ACK_RESULTS),
+        name="ack_result",
+    ),
 )

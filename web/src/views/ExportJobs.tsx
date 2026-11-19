@@ -5,6 +5,7 @@ import { LinkIfThere } from '../shell/PageLink';
 import { Action, Skeleton, Status, StatusKind } from '../ui/controls';
 import { cancelExport, isExportActive, refreshExports, useExports } from './exportStore';
 import { words } from '../copy';
+import { useRequest } from '../requestContext';
 
 const STATES: Record<ExportJobState, { kind: StatusKind; words: string }> = {
   preparing: { kind: 'working', words: 'Preparing transitions' },
@@ -33,7 +34,7 @@ function snapshotWords(job: ExportJob): string {
   return `${scope}${identity}, ${job.songs.length} songs${first && last ? `, ${first} to ${last}` : ''}${job.revision ? `, revision ${job.revision}` : ''}. Started ${when}.`;
 }
 
-function Row({ job }: { job: ExportJob }) {
+function Row({ job, request }: { job: ExportJob; request: ReturnType<typeof useRequest> }) {
   const stage = exportStage(job);
   const editor = job.scope === 'draft' && job.draft !== null ? `/mixes/drafts/${job.draft}/edit` : '/mix/current/edit';
   const needsAnother = ['failed', 'interrupted', 'expired', 'cancelled'].includes(job.state);
@@ -71,7 +72,7 @@ function Row({ job }: { job: ExportJob }) {
       <div className="row wrap export-job-actions">
         {job.state === 'ready' && <a href={`/api/exports/${encodeURIComponent(job.name)}`} download>download {job.name}</a>}
         {job.state === 'ready' && job.seconds != null && <small className="soft">{length(job.seconds)} long</small>}
-        {job.can_cancel && <Action working="Cancelling…" aria-label={`Cancel the export of ${job.mix_name}`} run={() => cancelExport(job.id)}>Cancel export</Action>}
+        {job.can_cancel && <Action working="Cancelling…" aria-label={`Cancel the export of ${job.mix_name}`} run={() => cancelExport(job.id, request)}>Cancel export</Action>}
         {/* a new file is always someone's own choice, from the mix as it is by then */}
         {needsAnother && <LinkIfThere to={editor}>Open this mix to export it again</LinkIfThere>}
       </div>
@@ -82,15 +83,16 @@ function Row({ job }: { job: ExportJob }) {
 /** The exports Selecta knows about, wherever they were started. Shown in Activity and in Workspace,
  * and in Workspace it also says so when there are none. */
 export function ExportJobs({ always = false }: { always?: boolean }) {
-  const { jobs, stale, unsupported } = useExports();
+  const request = useRequest();
+  const { jobs, stale, unsupported } = useExports(request);
   const [shown, setShown] = useState(12);
   if (unsupported) {
     return always ? <section className="panel stack"><h2>Exports</h2><p className="hint">{words().exportsNeedRestart}</p></section> : null;
   }
   if (!jobs) {
     if (!always) return null;
-    if (stale) return <section className="panel stack"><h2>Exports</h2><p className="warn">Couldn’t check on your exports.</p><Action run={refreshExports}>Try again</Action></section>;
-    return <section className="panel stack"><h2>Exports</h2><Skeleton variant="metrics" lines={1} label="Looking for your exports" retry={refreshExports} /></section>;
+    if (stale) return <section className="panel stack"><h2>Exports</h2><p className="warn">Couldn't check on your exports.</p><Action run={() => refreshExports(request)}>Try again</Action></section>;
+    return <section className="panel stack"><h2>Exports</h2><Skeleton variant="metrics" lines={1} label="Looking for your exports" retry={() => refreshExports(request)} /></section>;
   }
   if (!jobs.length && !always) return null;
   const going = jobs.filter(isExportActive).length;
@@ -100,7 +102,7 @@ export function ExportJobs({ always = false }: { always?: boolean }) {
       {stale && <p className="warn" role="status">Can’t check on these right now, so what’s shown may be out of date.</p>}
       {!jobs.length && <p className="hint">Nothing yet. Choose Download audio while editing a mix to save it as a FLAC file.</p>}
       {going > 0 && <p className="hint">These keep going if you close this or reload. Your mix always renders first.</p>}
-      {!!jobs.length && <ul className="export-jobs">{jobs.slice(0, shown).map((job) => <Row key={job.id} job={job} />)}</ul>}
+      {!!jobs.length && <ul className="export-jobs">{jobs.slice(0, shown).map((job) => <Row key={job.id} job={job} request={request} />)}</ul>}
       {jobs.length > shown && (
         <button onClick={() => setShown((count) => count + 12)}>
           Show older exports ({jobs.length - shown} more)

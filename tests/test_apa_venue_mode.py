@@ -4,6 +4,7 @@ truthful availability claims (AV-0424-01 to AV-0424-05)."""
 from __future__ import annotations
 
 import json
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -271,13 +272,20 @@ def test_scan_finds_claims_of_unbuilt_capabilities():
     assert len(found) == 2
 
 
+# A BANNED_CLAIMS denylist (web/src/copy.ts, web/src/dsp/honesty.ts) enumerates the very
+# phrases nobody may show, so it is the one place such a phrase may legitimately sit in the
+# source. Scanning it would flag the guard itself.
+_DENYLIST = re.compile(r"BANNED_CLAIMS[^=]*=\s*\[[^\]]*\]", re.S)
+
+
 def _user_facing_copy() -> dict[str, str]:
     texts: dict[str, str] = {}
     web = ROOT / "web" / "src"
     for path in list(web.rglob("*.tsx")) + list(web.rglob("*.ts")):
         if ".test." in path.name or "__snapshots__" in path.parts:
             continue
-        texts[str(path.relative_to(ROOT))] = path.read_text(encoding="utf-8", errors="ignore")
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        texts[str(path.relative_to(ROOT))] = _DENYLIST.sub("", text)
     for path in (ROOT / "src" / "selecta" / "flags").glob("*.json"):
         data = json.loads(path.read_text(encoding="utf-8"))
         for flag_id, spec in data.get("flags", {}).items():

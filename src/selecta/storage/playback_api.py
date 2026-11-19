@@ -18,6 +18,7 @@ from selecta.storage.ids import require_id
 from selecta.storage.keys import Bucket, UnsafeKey, original_key, validate_key, workspace_of
 from selecta.storage.objects import ObjectClient, R2Error, R2NotFound
 from selecta.storage.schema import assets, upload_sessions
+from selecta.usage import ledger, observability
 
 ASSET_NOT_FOUND = {"code": "asset_not_found"}
 ARTIFACT_NOT_FOUND = {"code": "artifact_not_found"}
@@ -138,6 +139,17 @@ def install_routes(
                 )
         except R2Error as error:
             raise storage_error(error) from error
+        # This measures a signed URL issued, not a completed browser transfer. R2 serves the
+        # bytes directly, so successful delivery and egress remain provider-side evidence.
+        with transaction(engine, workspace_id) as conn:
+            observability.observe(
+                conn, workspace_id, ledger.Kind.OBJECT_READ_AUTH_OPS, 1,
+                source="presigned_original_get_issued", ref=asset_id,
+            )
+            observability.observe(
+                conn, workspace_id, ledger.Kind.OBJECT_READ_AUTH_BYTES, int(asset.size),
+                source="presigned_original_get_issued", ref=asset_id,
+            )
         return {
             "url": url,
             "expires_in": ttl,
@@ -161,10 +173,20 @@ def install_routes(
             raise HTTPException(status_code=404, detail=ARTIFACT_NOT_FOUND)
         try:
             with client_context() as client:
-                client.head_object(buckets.name(bucket), body.key)
+                head = client.head_object(buckets.name(bucket), body.key)
                 url = client.presign_get(buckets.name(bucket), body.key, body.ttl)
         except R2Error as error:
             raise storage_error(error) from error
+        # The URL only authorizes a possible later transfer; it is not a read or egress meter.
+        with transaction(engine, workspace_id) as conn:
+            observability.observe(
+                conn, workspace_id, ledger.Kind.OBJECT_READ_AUTH_OPS, 1,
+                source="presigned_derived_get_issued",
+            )
+            observability.observe(
+                conn, workspace_id, ledger.Kind.OBJECT_READ_AUTH_BYTES, int(head.size),
+                source="presigned_derived_get_issued",
+            )
         return {"url": url, "expires_in": body.ttl, "disposition": "inline"}
 
 

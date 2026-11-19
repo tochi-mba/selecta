@@ -1,5 +1,6 @@
-import { MixEta, MixData, MixItem, Status } from '../api';
-import { NowState, SetPlayer } from '../player';
+import { MixEta, MixData, MixItem, Request, Status } from '../api';
+import { NowState } from '../player';
+import { PlayerLike } from '../playerContract';
 
 export type View = 'Mixes' | 'Now' | 'Edit' | 'Library' | 'Words' | 'Workshop';
 
@@ -20,7 +21,11 @@ export type ViewProps = {
   refreshMix: () => void;
   setMixData: (data: MixData) => void;
   refreshStatus: () => void;
-  player: SetPlayer;
+  /** How this view talks to the server (ADR-0462): the local client here, the authenticated
+   * Cloud client there. Views never import get/post/del from api.ts; they wrap this with
+   * getVia/postVia/delVia instead, so the same page renders against either server. */
+  request?: Request;
+  player: PlayerLike;
   now: NowState;
   setView: (view: View) => void;
   notify: (message: string, undo?: Undo) => void;
@@ -31,6 +36,19 @@ export type ViewProps = {
   openRequests?: () => void;
   /** Take back the newest change in this mix: `null` is the current mix, a number is that draft. */
   undo?: (scope: number | null) => Promise<void>;
+  /** How many ready songs Make a Mix needs before it offers a mix. Local mode leaves it to the
+   * page's own number; a browser mix needs only two songs it can play (BF-0462-05). */
+  readyNeeded?: number;
+  /** Whether this mode runs the local background audio-analysis pipeline. Browser-first Cloud
+   * works transitions out while playing and must not offer the local-only Analyse action. */
+  analysisAvailable?: boolean;
+  /** Whether this mode supports editing individual songs and transitions after building a mix. */
+  transitionEditingAvailable?: boolean;
+  /** Whether this player's runtime exposes measured audio-frequency data for the visualizer. */
+  visualizerAvailable?: boolean;
+  /** Where songs aren't analysed (browser-first Cloud), a song's waveform drawn from its own file
+   * on this device, for Listen's strip; null when the file can't be read here. */
+  waveformOf?: (songId: number) => Promise<number[] | null>;
   /** The name of the current mix, whatever is being edited, for saying what a change will or won't touch. */
   currentMixName?: string;
 };

@@ -64,7 +64,7 @@ function drawPairing(): void {
   shownCode = '';
   replace(root,
     h('section', { className: 'd-pair' },
-      h('p', { className: 'd-eyebrow' }, 'SELECTA DISPLAY'),
+      h('p', { className: 'd-eyebrow' }, 'SelectaDJ display'),
       h('h1', {}, 'Pair this screen'),
       h('p', {}, 'In SelectaDJ, open your room on Listen, choose Big screen, and type this code:'),
       h('p', { className: 'd-code', id: 'd-pairing', 'aria-label': `Pairing code ${pairingCode.split('').join(' ')}` }, pairingCode),
@@ -78,7 +78,7 @@ function drawRoom(view: View): void {
     replace(root,
       h('section', { className: 'd-room' },
         h('div', { className: 'd-left' },
-          h('p', { className: 'd-eyebrow' }, 'SCAN TO REQUEST A SONG'),
+          h('p', { className: 'd-eyebrow' }, 'Scan to request a song'),
           h('div', { className: 'd-qr', id: 'd-qr' }),
           h('p', { className: 'd-join', id: 'd-join' }),
           h('button', { type: 'button', className: 'd-disconnect', id: 'd-disconnect', onclick: (event: Event) => void disconnect(event.currentTarget as HTMLButtonElement) }, 'Disconnect this screen')),

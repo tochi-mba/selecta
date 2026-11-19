@@ -10,6 +10,9 @@ notice.
   `user` by this control (an empty list clears them), leaving every other rule alone.
 - `POST /test/flags/reset {"flags": [...]}` clears every rule on `flags`, for tests that change a
   flag for everyone through the admin page and must leave it as they found it.
+- `POST /test/flags/catch-all {"flag"}` ends `flag`'s rules with the cutover catch-all (a 0%
+  rollout), so a build that turns the flag on still leaves it off for everyone no earlier rule
+  names: the shape a Labs cohort is opened in (playwright.labs.config.ts).
 """
 
 from __future__ import annotations
@@ -71,4 +74,17 @@ def install(app: FastAPI, engine: Engine, user_of: Callable[[str], str]) -> None
                 if flag_rules.current_rules(conn, str(flag_id)):
                     flag_rules.save(conn, str(flag_id), [], author="e2e",
                                     reason="browser test clean-up")
+        return {"version": settled()}
+
+    @app.post("/test/flags/catch-all")
+    def catch_all(body: dict = Body(default={})):  # noqa: B008
+        flag_id = str(body["flag"])
+        if flag_id not in flags.registry():
+            return {"error": f"unknown flag {flag_id}"}
+        last = Rule(RuleKind.PERCENTAGE, {"percent": 0, "salt": "e2e", "note": "e2e catch-all"})
+        with transaction(engine) as conn:
+            current = list(flag_rules.load_snapshot(conn).for_flag(flag_id))
+            if not current or current[-1].to_dict() != last.to_dict():
+                flag_rules.save(conn, flag_id, [*current, last], author="e2e",
+                                reason="browser test catch-all")
         return {"version": settled()}

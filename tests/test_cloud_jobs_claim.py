@@ -20,8 +20,11 @@ from test_cloud_jobs_support import (
 
 from selecta.persistence import transaction
 from selecta.scheduling.policy import PolicyConfig
+from selecta.work.catalogue import lookup as _lookup
 from selecta.work.enqueue import JobSpec
 from selecta.work.schema import fair_heads, jobs
+
+ANALYSIS_FLAG = _lookup("analyse.song").flag_id
 
 PREMIUM = 40.0 / 6.0
 """V charged for one 40 s analysis at Premium's weight of 6."""
@@ -161,7 +164,7 @@ def test_a_job_not_due_yet_is_left_for_later(sqlite_engine, clock):
 def test_an_account_level_refusal_blocks_its_jobs_and_no_one_else(cloud_engine, block):
     plans, flags = Plans(caps=UNLIMITED), Flags()
     if block == "flag":
-        flags.off.add(("w1", "core.analysis"))
+        flags.off.add(("w1", ANALYSIS_FLAG))
     elif block == "entitlement":
         plans.set("w1", caps=UNLIMITED, blocked_types=frozenset({"analyse.song"}))
     else:
@@ -180,21 +183,21 @@ def test_a_queued_job_waits_while_its_flag_is_off_and_runs_when_it_returns(cloud
     queued = store.enqueue(JobSpec("w1", "analyse.song")).job
 
     store.flag_resume_s = 0.0
-    feature_flags.off.add(("w1", "core.analysis"))
+    feature_flags.off.add(("w1", ANALYSIS_FLAG))
     assert store.claim("cpu-heavy", worker()) is None
     with transaction(cloud_engine) as connection:
         held = connection.execute(sa.select(jobs).where(jobs.c.id == queued.id)).one()
-    # core.analysis drains (ADR-0414): its queued work is set aside, never cancelled.
+    # the analysis flag drains (ADR-0414): its queued work is set aside, never cancelled.
     assert (held.state, held.error_class) == ("blocked", "flag_off")
 
-    feature_flags.off.remove(("w1", "core.analysis"))
+    feature_flags.off.remove(("w1", ANALYSIS_FLAG))
     claimed = store.claim("cpu-heavy", worker())
     assert claimed is not None and claimed.job.id == queued.id
 
 
 def test_a_job_with_no_owning_flag_is_never_held_back_by_flags(cloud_engine):
     flags = Flags()
-    flags.off.add(("w1", "core.analysis"))
+    flags.off.add(("w1", ANALYSIS_FLAG))
     store = make_store(cloud_engine, flags=flags)
     store.enqueue(JobSpec("w1", "analyse.song", flag_id=None))
     assert store.claim("cpu-heavy", worker()) is not None

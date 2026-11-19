@@ -3,6 +3,7 @@ import { returnFocus } from './focusReturn';
 import { createPortal } from 'react-dom';
 import { showProblem } from './toasts';
 import { Icon, IconName } from './Icon';
+import { exitGhost, usePresence } from './exitMotion';
 export { Skeleton } from './Skeleton';
 
 /** A button that does something that takes time. It shows it's working from the moment it's pressed
@@ -176,6 +177,9 @@ function Overlay({
   children,
   footer,
   keepsChrome,
+  className,
+  role = 'dialog',
+  describedBy,
 }: {
   title: string;
   onClose: () => void;
@@ -184,6 +188,12 @@ function Overlay({
   footer?: ReactNode;
   /** stops above the tab bar and mini-player and leaves them working, for a side task beside the music */
   keepsChrome?: boolean;
+  /** an extra class on the overlay's root, such as `confirm-dialog` */
+  className?: string;
+  /** `alertdialog` for a question that interrupts, such as a confirmation */
+  role?: 'dialog' | 'alertdialog';
+  /** the id of the text that explains the dialog, read with its title */
+  describedBy?: string;
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const holder = useRef<HTMLDivElement>(null);
@@ -219,6 +229,8 @@ function Overlay({
     // a pressed button that turns itself off while it works (Save it, then Saving...) drops focus too
     if (own) lost.observe(own, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'hidden', 'inert'] });
     return () => {
+      // the exit animation plays on a copy, since whoever opened this has already let it go
+      exitGhost(mine, '--motion-exit-drawer');
       lost.disconnect();
       if (--openOverlays === 0) document.body.style.overflow = previousOverflow;
       if (mine) {
@@ -268,8 +280,8 @@ function Overlay({
     }
   };
   return createPortal(
-    <div ref={holder} className={`overlay overlay-${kind}${keepsChrome ? ' overlay-keeps-chrome' : ''}`} data-keeps-chrome={keepsChrome ? 'true' : undefined} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <div ref={panel} className="overlay-panel" role="dialog" aria-modal={keepsChrome ? undefined : 'true'} aria-labelledby={titleId} tabIndex={-1} onKeyDown={keys}>
+    <div ref={holder} className={`overlay overlay-${kind}${keepsChrome ? ' overlay-keeps-chrome' : ''}${className ? ` ${className}` : ''}`} data-keeps-chrome={keepsChrome ? 'true' : undefined} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div ref={panel} className="overlay-panel" role={role} aria-modal={keepsChrome ? undefined : 'true'} aria-labelledby={titleId} aria-describedby={describedBy} tabIndex={-1} onKeyDown={keys}>
         <header className="overlay-head">
           <h2 id={titleId}>{title}</h2>
           <button className="overlay-close" aria-label={`Close ${title}`} title={`Close ${title}`} onClick={onClose}><Icon name="close" /></button>
@@ -282,7 +294,7 @@ function Overlay({
   );
 }
 
-export function Dialog(props: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
+export function Dialog(props: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; className?: string; role?: 'dialog' | 'alertdialog'; describedBy?: string }) {
   return <Overlay kind="dialog" {...props} />;
 }
 
@@ -307,6 +319,7 @@ export function Menu({ label, children, className, title }: { label: ReactNode; 
   const opener = useRef<HTMLButtonElement>(null);
   const menuId = useId();
   const firstOnOpen = useRef<'first' | 'last'>('first');
+  const shown = usePresence<HTMLDivElement>(open);
   useEffect(() => {
     if (!open) return;
     const away = (event: MouseEvent) => {
@@ -365,9 +378,19 @@ export function Menu({ label, children, className, title }: { label: ReactNode; 
   return (
     <div className={`menu ${className ?? ''}`} ref={holder} onKeyDown={keys}>
       <button ref={opener} type="button" title={title} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => { firstOnOpen.current = 'first'; setOpen(!open); }}>{label}</button>
-      {open && (
+      {shown.present && (
         // a press on anything inside closes it, because each item is the end of the job
-        <div id={menuId} role="menu" className="menu-list" onClick={() => { setOpen(false); returnFocus(opener.current); }}>{children}</div>
+        <div
+          ref={shown.ref}
+          id={shown.closing ? undefined : menuId}
+          role="menu"
+          className="menu-list"
+          data-motion="pop"
+          data-closing={shown.closing ? '' : undefined}
+          aria-hidden={shown.closing || undefined}
+          inert={shown.closing || undefined}
+          onClick={() => { if (!shown.closing) { setOpen(false); returnFocus(opener.current); } }}
+        >{children}</div>
       )}
     </div>
   );
@@ -378,6 +401,7 @@ export function Menu({ label, children, className, title }: { label: ReactNode; 
 export function Tooltip({ text, children }: { text: string; children: ReactElement<{ 'aria-describedby'?: string }> }) {
   const id = useId();
   const [dismissed, setDismissed] = useState(false);
+  const shown = usePresence<HTMLSpanElement>(!dismissed);
   return (
     <span
       className="tooltip-anchor"
@@ -395,7 +419,7 @@ export function Tooltip({ text, children }: { text: string; children: ReactEleme
       {cloneElement(children, {
         'aria-describedby': [children.props['aria-describedby'], dismissed ? null : id].filter(Boolean).join(' ') || undefined,
       })}
-      <span role="tooltip" id={id} className="tooltip" hidden={dismissed}>{text}</span>
+      <span ref={shown.ref} role="tooltip" id={id} className="tooltip" data-motion="pop" data-closing={shown.closing ? '' : undefined} hidden={!shown.present}>{text}</span>
     </span>
   );
 }

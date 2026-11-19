@@ -1,5 +1,6 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { get, MixData, MixItem } from '../api';
+import { memo, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { MixData, MixItem } from '../api';
+import { useApi } from '../requestContext';
 import { useFlags } from '../flags';
 import { getDraftNames } from '../state/draftNames';
 import { occurrenceKeys, orderOf } from '../state/readiness';
@@ -7,6 +8,7 @@ import { CurrentMix, NoCurrentMix } from './CurrentMix';
 import { Drafts } from './Drafts';
 import { selectInEditor } from './Mix';
 import { ViewProps } from './shared';
+import { Action } from '../ui/controls';
 
 const RECENT_DRAFT_KEY = 'selecta.recentDraft';
 // r8a: My Mixes redraws with the music clock (the current mix says Playing or Paused), and its list of
@@ -38,7 +40,9 @@ export function transitionsWaiting(mix: MixItem[]): WaitingTransition[] {
 
 /** An optional return shortcut. Trust the server's exact order, never a stored title,
  * selected transition, or optimistic snapshot from a previous browser session. */
-export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft, playDraft }: ViewProps) {
+export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft, playDraft, request, suppressDrafts = false, analysisAvailable = true, children }: ViewProps & { suppressDrafts?: boolean; children?: ReactNode }) {
+  // ADR-0462: reads go through the injected request, never the local client.
+  const { get } = useApi(request);
   const [recent, setRecent] = useState<RecentDraft | null>(null);
   const [checking, setChecking] = useState(false);
   const [problem, setProblem] = useState('');
@@ -106,6 +110,7 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
   const stableSetView = useCallback<ViewProps['setView']>((...args) => latest.current.setView(...args), []);
 
   const on = useFlags();
+  const showDrafts = !suppressDrafts && on('drafts');
   // SF-0204-02: one primary action. Continue editing leads when offered, then the drafts (first Edit or
   // Start your first draft), and the current mix only when drafts are off.
   const continuing = !!recent && on('mymixes.continue_working') && on('editor');
@@ -116,9 +121,9 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
         <h2>Continue working</h2>
         <p>Return to <b>{recent.name}</b> at its last saved song order. This only opens the editor - no playback starts and no pending Studio edits are applied.</p>
         <div className="row wrap">
-          <button className="primary" disabled={checking} onClick={() => void continueEditing()}>
-            {checking ? 'Checking draft…' : 'Continue editing draft'}
-          </button>
+          <Action className="primary" waiting={checking} working="Checking draft…" run={() => continueEditing()}>
+            Continue editing draft
+          </Action>
           <button onClick={forget}>Forget shortcut</button>
         </div>
         {!!recent.waiting.length && (
@@ -128,10 +133,10 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
               {recent.waiting.slice(0, 3).map((transition) => (
                 <li key={`${transition.a}>${transition.b}`}>
                   <span>{transition.from} into {transition.into}: {transition.why}.</span>{' '}
-                  <button disabled={checking} onClick={() => void continueEditing(transition)}
+                  <Action waiting={checking} run={() => continueEditing(transition)}
                     aria-label={`Open the transition from ${transition.from} into ${transition.into}`}>
                     Open this transition
-                  </button>
+                  </Action>
                 </li>
               ))}
             </ul>
@@ -141,9 +146,11 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
       </section>}
       {problem && <p className="warn" role="alert">{problem}</p>}
       {mix.length > 0
-        ? <CurrentMix prominent lead={!continuing && !on('drafts')} mix={mix} mixName={mixName} now={now} player={player} setView={setView} />
+        ? <CurrentMix prominent lead={!continuing && !showDrafts} mix={mix} mixName={mixName} now={now} player={player} setView={setView} analysisAvailable={analysisAvailable} />
         : <NoCurrentMix lead={!continuing && !on('drafts')} />}
-      {on('drafts') && <StableDrafts lead={!continuing} notify={stableNotify} openDraft={stableOpen} playDraft={stablePlay} setView={stableSetView} />}
+      {showDrafts && <StableDrafts lead={!continuing} notify={stableNotify} openDraft={stableOpen} playDraft={stablePlay} setView={stableSetView} />}
+      {/* a shell's own additions to this page, inside its main landmark */}
+      {children}
     </main>
   );
 }

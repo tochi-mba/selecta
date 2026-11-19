@@ -1,38 +1,87 @@
-/* The guest page: one column, large touch targets, readable on a 320 px phone in a dark room. */
-:root { color-scheme: dark; --ink: #f5f2e9; --muted: #b9b4a6; --bg: #100f0c; --card: #1c1a15; --line: #3a362c; --accent: #e8ff3a; --accent-ink: #100f0c; --bad: #ffb4a8; }
-@media (prefers-color-scheme: light) { :root { color-scheme: light; --ink: #17150f; --muted: #5d584c; --bg: #f5f2e9; --card: #fffdf6; --line: #d6d0c0; --accent: #3d4a00; --accent-ink: #fffdf6; --bad: #8c1d10; } }
+/* The guest page: one column, large touch targets, readable on a 320 px phone in a dark room.
+   It loads without tokens.css (bundle budget, guest/budget.ts), so it keeps a small token block of
+   its own. Every value below is copied from the tokens.css token of the same name, so the guest
+   page and the app are one palette; change tokens.css first, then this block to match. */
+:root {
+  color-scheme: dark;
+  --bg: #100f0c;            /* tokens.css --bg */
+  --panel: #1a1814;         /* tokens.css --panel */
+  --line: #3a362c;          /* tokens.css --line */
+  --ink: #f4f0e4;           /* tokens.css --ink */
+  --soft: #a8a292;          /* tokens.css --soft */
+  --accent: #e8ff3a;        /* tokens.css --accent: focus and the chosen vote */
+  --warn: #ff7a4d;          /* tokens.css --warn */
+  --ok: #9ed46a;            /* tokens.css --ok */
+  --primary-fill: #e8ff3a;  /* tokens.css --primary-fill (Dark: var(--accent)) */
+  --primary-ink: #14140a;   /* tokens.css --primary-ink (Dark: var(--accent-ink)) */
+  --primary-edge: #e8ff3a;  /* tokens.css --primary-edge (Dark: var(--accent)) */
+  --body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; /* tokens.css --body */
+  --text-xs: 0.75rem;       /* tokens.css --text-xs */
+  --text-sm: 0.875rem;      /* tokens.css --text-sm */
+  --text-md: 1rem;          /* tokens.css --text-md */
+  --text-lg: 1.15rem;       /* tokens.css --text-lg */
+  --text-xl: 1.5rem;        /* tokens.css --text-xl */
+  --weight-label: 600;      /* tokens.css --weight-label */
+  --weight-strong: 700;     /* tokens.css --weight-strong */
+  --tracking-eyebrow: 0.075em; /* tokens.css --tracking-eyebrow */
+  --radius: 10px;           /* tokens.css --radius */
+  --radius-sm: 8px;         /* tokens.css --radius-sm */
+  /* the roles this page paints with, as tokens.css names them */
+  --surface-base: var(--bg);
+  --surface-raised: var(--panel);
+  --focus: var(--accent);
+  --selected: var(--accent);
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #f5f2e9;            /* tokens.css --light-bg */
+    --panel: #fffdf6;         /* tokens.css --light-panel */
+    --line: #d5cfbd;          /* tokens.css --light-line */
+    --ink: #16140e;           /* tokens.css --light-ink */
+    --soft: #6a6555;          /* tokens.css --light-soft */
+    --accent: #2b2a14;        /* tokens.css --light-accent */
+    --warn: #b93d10;          /* tokens.css --light-warn */
+    --ok: #3f7a1a;            /* tokens.css --light-ok */
+    --primary-fill: #e8ff3a;  /* tokens.css --light-primary-fill */
+    --primary-ink: #14140a;   /* tokens.css --light-primary-ink */
+    --primary-edge: #16140e;  /* tokens.css --light-primary-edge */
+  }
+}
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+body { margin: 0; background: var(--surface-base); color: var(--ink); font: var(--text-md)/1.45 var(--body); }
 main { max-width: 34rem; margin: 0 auto; padding: max(16px, env(safe-area-inset-top)) 16px 32px; }
-h1 { font-size: 1.6rem; line-height: 1.15; margin: 0.2rem 0 0.4rem; overflow-wrap: anywhere; }
-h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
+h1 { font-size: var(--text-xl); line-height: 1.15; margin: 0.2rem 0 0.4rem; overflow-wrap: anywhere; }
+h2 { font-size: var(--text-md); margin: 0 0 0.5rem; }
 p { margin: 0.4rem 0; }
-.g-eyebrow { font-size: 0.75rem; letter-spacing: 0.12em; color: var(--muted); margin: 0; }
-.g-muted { color: var(--muted); }
-.g-small { font-size: 0.85rem; color: var(--muted); }
-.g-card, .g-section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin: 12px 0; }
-.g-banner { border: 1px solid var(--accent); border-radius: 10px; padding: 10px 12px; }
+.g-eyebrow { font-size: var(--text-xs); letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; color: var(--soft); margin: 0; }
+.g-muted { color: var(--soft); }
+.g-small { font-size: var(--text-sm); color: var(--soft); }
+.g-card, .g-section { background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin: 12px 0; }
+.g-banner { border: 1px solid var(--selected); border-radius: var(--radius); padding: 10px 12px; }
 .g-notice:empty { display: none; }
-.g-notice { font-weight: 600; }
-.g-error { color: var(--bad); }
-.g-now { font-size: 1.1rem; font-weight: 600; overflow-wrap: anywhere; }
+.g-notice { font-weight: var(--weight-label); }
+.g-error { color: var(--warn); }
+.g-now { font-size: var(--text-lg); font-weight: var(--weight-label); overflow-wrap: anywhere; }
 .g-list { list-style: none; margin: 0; padding: 0; }
 .g-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); }
 .g-list li:first-child { border-top: 0; }
 .g-song { display: flex; flex-direction: column; flex: 1 1 10rem; min-width: 0; overflow-wrap: anywhere; }
-.g-status { font-size: 0.9rem; flex-basis: 100%; }
-.g-accepted, .g-played { color: var(--accent); }
-.g-passed, .g-unfit { color: var(--muted); }
-label { display: block; font-weight: 600; margin-bottom: 6px; }
-input[type="search"] { width: 100%; min-height: 48px; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
-button { font: inherit; min-height: 44px; min-width: 44px; border-radius: 10px; cursor: pointer; }
-.g-primary { background: var(--accent); color: var(--accent-ink); border: 0; padding: 10px 18px; font-weight: 700; }
+.g-status { font-size: var(--text-sm); flex-basis: 100%; }
+.g-accepted, .g-played { color: var(--ok); }
+.g-passed, .g-unfit { color: var(--soft); }
+label { display: block; font-weight: var(--weight-label); margin-bottom: 6px; }
+input[type="search"] { width: 100%; min-height: 48px; font: inherit; color: var(--ink); background: var(--surface-base); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
+button { font: inherit; min-height: 44px; min-width: 44px; border-radius: var(--radius-sm); cursor: pointer; }
+.g-primary { background: var(--primary-fill); color: var(--primary-ink); border: 1px solid var(--primary-edge); padding: 10px 18px; font-weight: var(--weight-strong); }
 .g-primary:disabled { opacity: 0.6; }
 .g-small-button { padding: 8px 14px; }
 .g-quiet, .g-vote, .g-choice { background: transparent; color: var(--ink); border: 1px solid var(--line); padding: 8px 14px; }
-.g-vote[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+/* the up mark before the count is drawn, not typed, so no glyph font can change it */
+.g-vote::before { content: ''; display: inline-block; border-inline: 0.35em solid transparent; border-bottom: 0.5em solid currentColor; margin-inline-end: 0.4em; vertical-align: 0.05em; }
+.g-vote[aria-pressed="true"] { border-color: var(--selected); box-shadow: inset 0 0 0 1px var(--selected); }
 .g-link { background: none; border: 0; color: var(--ink); text-decoration: underline; padding: 0 4px; min-height: 44px; }
 .g-choices { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
-:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

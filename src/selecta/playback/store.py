@@ -9,6 +9,7 @@ a second writer would try to create it. Waiting for the one row is what's wanted
 
 from __future__ import annotations
 
+import secrets
 from collections.abc import Iterable, Mapping
 from dataclasses import replace
 from typing import Any
@@ -25,9 +26,12 @@ from selecta.playback.model import (
     DeviceSignedOut,
     PlayState,
     Principal,
+    ProgrammeRef,
     Session,
+    SpeakerOutput,
     UnknownDevice,
     frozen,
+    state_confidence,
 )
 from selecta.playback.ports import PlaybackEvents
 from selecta.playback.schema import devices, playback_sessions
@@ -68,9 +72,36 @@ def session_from_row(row: Mapping[str, Any]) -> Session:
         seq=row["seq"],
         updated_at=row["updated_at"],
         zone_id=row.get("zone_id"),
-        volume=row.get("volume"),
+        # Legacy zone sessions predate the shared-volume column and may still have NULL.
+        # Treat those as the documented full-volume default; personal sessions keep NULL
+        # because their level belongs to each device.
+        volume=(
+            100
+            if row.get("zone_id") is not None and row.get("volume") is None
+            else row.get("volume")
+        ),
         hand_back_to_device_id=row.get("hand_back_to_device_id"),
+        fence=row.get("fence") or 0,
+        signing_salt=row.get("signing_salt"),
+        programme=programme_from_json(row.get("programme")),
+        speaker_output=_output_from_json(row.get("speaker_output")),
     )
+
+
+def _output_from_json(raw: Any) -> SpeakerOutput | None:
+    if not raw:
+        return None
+    return SpeakerOutput(str(raw["device_id"]), str(raw["status"]), raw.get("verified_at"))
+
+
+def programme_from_json(raw: Any) -> tuple[ProgrammeRef, ...] | None:
+    if raw is None:
+        return None
+    return tuple(ProgrammeRef(int(item["song_id"]), str(item["sha256"])) for item in raw)
+
+
+def programme_json(programme: tuple[ProgrammeRef, ...] | None) -> list[dict[str, Any]] | None:
+    return None if programme is None else [ref.to_json() for ref in programme]
 
 
 def load_device(conn: Connection, workspace_id: str, device_id: str) -> Device | None:
@@ -155,6 +186,8 @@ def lock_session(
                         offset_ms=0,
                         state=PlayState.STOPPED.value,
                         seq=0,
+                        fence=0,
+                        signing_salt=secrets.token_hex(32),
                         updated_at=now,
                     )
                 )
@@ -204,6 +237,12 @@ def save_session(conn: Connection, session: Session) -> None:
             active_device_id=session.active_device_id,
             lease_expires_at=session.lease_expires_at,
             seq=session.seq,
+            fence=session.fence,
+            signing_salt=session.signing_salt,
+            programme=programme_json(session.programme),
+            speaker_output=None
+            if session.speaker_output is None
+            else session.speaker_output.to_json(),
             updated_at=session.updated_at,
             volume=session.volume,
             hand_back_to_device_id=session.hand_back_to_device_id,
@@ -211,9 +250,14 @@ def save_session(conn: Connection, session: Session) -> None:
     )
 
 
-def session_payload(session: Session) -> dict[str, Any]:
+def session_payload(session: Session, now: float | None = None) -> dict[str, Any]:
     """The session as every device sees it on its event stream. A zone session also names its
-    zone and carries the zone's shared volume; a personal one looks exactly as before."""
+    zone and carries the zone's shared volume; a personal one looks exactly as before.
+
+    `fence` and `state_confidence` are the ADR-0461 truth: which ownership regime commands
+    must be fenced to, and whether the lease backs what's shown ("fresh") or lapsed
+    ("uncertain"). Give `now` (server time) when you have it; without one, confidence is as
+    of the session's last write."""
     payload: dict[str, Any] = {
         "mix_revision_id": session.mix_revision_id,
         "song_index": session.song_index,
@@ -223,7 +267,22 @@ def session_payload(session: Session) -> dict[str, Any]:
         "active_device_id": session.active_device_id,
         "lease_expires_at": session.lease_expires_at,
         "seq": session.seq,
+        "fence": session.fence,
+        "state_confidence": state_confidence(session, now),
     }
+    output = session.speaker_output
+    if output is not None and output.device_id == session.active_device_id:
+        # The speaker's own report, never stronger than the lease backing it (ADR-0457/0461).
+        status = "uncertain" if payload["state_confidence"] != "fresh" else output.status
+        payload["output_status"] = status
+        payload["output_verified_at"] = output.verified_at if status == "playing" else None
+    if session.programme is not None:
+        # ADR-0458 identities only: each device resolves them against its own library.
+        payload["programme"] = programme_json(session.programme)
+        playing = session.song_index
+        payload["track"] = (
+            session.programme[playing].to_json() if 0 <= playing < len(session.programme) else None
+        )
     if session.zone_id is not None:
         payload["zone_id"] = session.zone_id
         payload["volume"] = session.volume
@@ -262,7 +321,7 @@ def stop_playback(
             {"device_id": session.active_device_id, "reason": reason, "seq": stopped.seq},
         ),
     )
-    events.publish(conn, session.workspace_id, ports.STATE, session_payload(stopped))
+    events.publish(conn, session.workspace_id, ports.STATE, session_payload(stopped, now))
     return stopped
 
 

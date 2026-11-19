@@ -51,11 +51,19 @@ def test_many_processes_together_never_exceed_the_global_rate(postgres_engine):
     granted: list[float] = []
     lock = threading.Lock()
     errors: list[BaseException] = []
-    started = time.monotonic()
+    callers = len(engines) * 3
+    # The clock starts once every caller holds a connection, so a slow runner's connection
+    # setup is not counted against the rate the test measures.
+    clock: list[float] = []
+    ready = threading.Barrier(callers, action=lambda: clock.append(time.monotonic()))
 
     def worker(engine) -> None:
         bucket = DbTokenBucket(engine, "lrclib", rate_per_s=RATE, burst=BURST)
         try:
+            with engine.connect():
+                pass
+            ready.wait(30)
+            started = clock[0]
             while time.monotonic() - started < RUN_S:
                 bucket.acquire()
                 with lock:
@@ -76,6 +84,7 @@ def test_many_processes_together_never_exceed_the_global_rate(postgres_engine):
             engine.dispose()
 
     assert errors == []
+    started = clock[0]
     elapsed = max(granted) - started
     assert len(granted) <= BURST + RATE * elapsed + 1
     assert len(granted) >= 0.7 * RATE * RUN_S, "twelve callers still got the full rate"

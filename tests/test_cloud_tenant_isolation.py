@@ -108,6 +108,10 @@ STAFF_ONLY = {
     ("POST", "/api/admin/takedowns/{notice_id}/{command}"),
     ("POST", "/api/admin/upload-restrictions/{workspace_id}/lift"),
     ("POST", "/api/admin/business/pilots"),
+    ("GET", "/api/admin/flags/cloud.hosted_media/grandfather-audit"),
+    ("GET", "/api/admin/flags/cloud.local_first/percentage-readiness"),
+    ("GET", "/api/admin/economics/cost-per-mode"),
+    ("GET", "/api/admin/economics/lucy-ceiling"),
 }
 # Business routes require an organisation workspace and membership, not merely a
 # personal library workspace. The dedicated Business tests exercise their tenant
@@ -163,6 +167,30 @@ BUSINESS_SCOPED = {
     ("POST", "/api/autopilot/venues/{venue_id}/candidates"),
 }
 
+# The local-media catalogue ships dark (`cloud.local_media` is off in the build), so the build
+# guard answers 403 before any workspace check can. Its tenant checks are proved with the flag
+# forced on in `test_bf_local_media.py` (Bob cannot read, delete or report availability on
+# Alice's songs), the same arrangement the Business routes have.
+FLAG_DARK = {
+    ("POST", "/api/local-media/songs"),
+    ("GET", "/api/local-media/songs"),
+    ("GET", "/api/local-media/songs/{song_id}"),
+    ("DELETE", "/api/local-media/songs/{song_id}"),
+    ("POST", "/api/local-media/availability"),
+    # Portable recipes ride the same flag; Bob cannot list, read or edit Alice's recipes
+    # (`test_bf_local_recipes.py`).
+    ("GET", "/api/local-media/recipes"),
+    ("POST", "/api/local-media/recipes"),
+    ("GET", "/api/local-media/recipes/{mix_id}"),
+    ("POST", "/api/local-media/recipes/{mix_id}/revisions"),
+    ("POST", "/api/local-media/recipes/{mix_id}/duplicate"),
+    ("DELETE", "/api/local-media/recipes/{mix_id}"),
+    # The Labs opening for browser-first Cloud ships dark (`cloud.local_first_labs` off); its
+    # routes act only on the caller's own user id and workspace (`test_bf_local_first_labs.py`).
+    ("POST", "/api/account/labs/local-first/join"),
+    ("POST", "/api/account/labs/local-first/feedback"),
+}
+
 # Every route that can reach a workspace's data, with a body valid enough to get past
 # validation, so the refusal we see comes from the workspace check and not from a 422.
 SCOPED: dict[tuple[str, str], dict | None] = {
@@ -177,6 +205,8 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("GET", "/api/account"): None,
     ("GET", "/api/account/labs"): None,
     ("PUT", "/api/account/labs/{flag_id}"): {"enabled": False},
+    ("GET", "/api/account/labs/local-first"): None,
+    ("POST", "/api/account/labs/local-first/leave"): None,
     ("GET", "/api/account/export"): None,
     ("GET", "/api/account/lucy"): None,
     ("PUT", "/api/account/lucy"): {
@@ -222,7 +252,40 @@ SCOPED: dict[tuple[str, str], dict | None] = {
         "device_id": "missing",
         "command": "pause",
         "based_on_seq": 0,
+        "fence": 0,
         "idempotency_key": "tenant-matrix",
+    },
+    ("POST", "/api/playback/commands/{command_id}/ack"): {
+        "device_id": "missing",
+        "result": "applied",
+    },
+    # Zone playback (venue zones; the same workspace principal as personal playback, so a
+    # caller naming another workspace is refused before the zone is looked up).
+    ("GET", "/api/zones/playback"): None,
+    ("GET", "/api/zones/holding"): None,
+    ("GET", "/api/zones/{zone_id}/playback/session"): None,
+    ("POST", "/api/zones/{zone_id}/playback/heartbeat"): {
+        "device_id": "missing",
+        "song_index": 0,
+        "offset_ms": 0,
+    },
+    ("POST", "/api/zones/{zone_id}/playback/take-over"): {"device_id": "missing"},
+    ("POST", "/api/zones/{zone_id}/playback/reconnect"): {"device_id": "missing"},
+    ("POST", "/api/zones/{zone_id}/playback/commands"): {
+        "device_id": "missing",
+        "command": "pause",
+        "based_on_seq": 0,
+        "fence": 0,
+        "idempotency_key": "tenant-matrix-zone",
+    },
+    ("POST", "/api/zones/{zone_id}/playback/commands/{command_id}/ack"): {
+        "device_id": "missing",
+        "result": "applied",
+    },
+    ("POST", "/api/zones/{zone_id}/playback/hand-back"): {
+        "device_id": "missing",
+        "song_index": 0,
+        "offset_ms": 0,
     },
     ("POST", "/api/rooms"): {"name": "Party", "settings": {}},
     ("GET", "/api/rooms/current"): None,
@@ -385,6 +448,9 @@ def world(tmp_path, monkeypatch):
                 "display_id": new_id(),
                 "request_id": new_id(),
                 "guest_id": new_id(),
+                "command_id": new_id(),
+                "zone_id": new_id(),
+                "song_id": 1,
             },
             "derived": derived,
             "alice_keys": {original_key(alice_ws, asset_id), derived, f"s/{session_id}/object"},
@@ -434,7 +500,10 @@ def test_every_cloud_route_is_classified(world):
         if isinstance(route, APIRoute) and route.path.startswith("/api")
         for method in route.methods - {"HEAD"}
     }
-    classified = PUBLIC | CAPABILITY_ONLY | SELF_ONLY | STAFF_ONLY | BUSINESS_SCOPED | set(SCOPED)
+    classified = (
+        PUBLIC | CAPABILITY_ONLY | SELF_ONLY | STAFF_ONLY | BUSINESS_SCOPED | FLAG_DARK
+        | set(SCOPED)
+    )
     assert routes - classified == set(), "new routes must join the tenant isolation matrix"
     assert classified - routes == set(), "the matrix names routes that no longer exist"
 

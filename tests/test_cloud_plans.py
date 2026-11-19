@@ -13,10 +13,13 @@ from selecta import flags
 from selecta.billing import plans
 from selecta.billing.plans import (
     FREE_1,
+    FREE_2,
     GB,
     MB,
     PREMIUM_1,
+    PREMIUM_2,
     STANDARD_1,
+    STANDARD_2,
     Discovery,
     LucyTurns,
     RoomsAllowance,
@@ -25,7 +28,9 @@ from selecta.billing.plans import (
 )
 from selecta.flags import Flag
 
-# §3.1, row by row: Free, Standard, Premium.
+# §3.1, row by row: Free, Standard, Premium - the current (v2) catalogue. From v2 the storage,
+# upload, export and analysis rows are hosted-only semantics (ADR-0464): same values as v1,
+# binding only for accounts holding the `cloud.hosted_media` grant.
 TABLE = {
     "storage_bytes": (10 * GB, 50 * GB, 100 * GB),
     "scheduling_weight": (1, 3, 6),
@@ -38,12 +43,12 @@ TABLE = {
     "export_retention_days": (7, 30, 90),
     "max_upload_bytes": (200 * MB, 500 * MB, 1 * GB),
     "max_upload_seconds": (20 * 60, 60 * 60, 120 * 60),
-    "library_soft_cap_songs": (3_000, 15_000, 40_000),
+    "library_soft_cap_songs": (10_000, 40_000, 100_000),
     "discovery": (Discovery.SAMPLED, Discovery.SCHEDULED, Discovery.LARGE),
     "devices_signed_in": (10, 10, 10),
     "devices_playing": (1, 1, 1),
 }
-CURRENT = (FREE_1, STANDARD_1, PREMIUM_1)
+CURRENT = (FREE_2, STANDARD_2, PREMIUM_2)
 
 
 def value(plan: plans.Plan, row: str):
@@ -69,15 +74,15 @@ def test_storage_is_counted_in_decimal_bytes():
 
 
 def test_free_previews_stems_in_a_few_windows_a_day_and_the_others_are_not_limited():
-    assert FREE_1.stem_preview_windows_per_day is not None
-    assert FREE_1.stem_preview_windows_per_day > 0
-    assert STANDARD_1.stem_preview_windows_per_day is None
-    assert PREMIUM_1.stem_preview_windows_per_day is None
+    assert FREE_2.stem_preview_windows_per_day is not None
+    assert FREE_2.stem_preview_windows_per_day > 0
+    assert STANDARD_2.stem_preview_windows_per_day is None
+    assert PREMIUM_2.stem_preview_windows_per_day is None
 
 
 @pytest.mark.parametrize(
     ("plan", "haiku", "sonnet", "opus"),
-    [(FREE_1, 40, 0, 0), (STANDARD_1, 400, 40, 0), (PREMIUM_1, None, 150, 25)],
+    [(FREE_2, 40, 0, 0), (STANDARD_2, 400, 40, 0), (PREMIUM_2, None, 150, 25)],
 )
 def test_lucy_turns_match_the_plan_table(plan, haiku, sonnet, opus):
     assert plan.lucy_turns("haiku") == haiku
@@ -86,12 +91,12 @@ def test_lucy_turns_match_the_plan_table(plan, haiku, sonnet, opus):
 
 
 def test_lucy_purposes_and_capabilities_rise_with_the_plan():
-    assert [a.purpose for a in FREE_1.lucy] == ["everyday"]
-    assert {a.model_class: a.purpose for a in STANDARD_1.lucy} == {
+    assert [a.purpose for a in FREE_2.lucy] == ["everyday"]
+    assert {a.model_class: a.purpose for a in STANDARD_2.lucy} == {
         "haiku": "everyday",
         "sonnet": "planning",
     }
-    assert {a.model_class: a.purpose for a in PREMIUM_1.lucy} == {
+    assert {a.model_class: a.purpose for a in PREMIUM_2.lucy} == {
         "sonnet": "everyday",
         "opus": "deep_plan",
         "haiku": "quick",
@@ -100,9 +105,9 @@ def test_lucy_purposes_and_capabilities_rise_with_the_plan():
 
 
 def test_only_premium_runs_rooms_with_the_table_limits():
-    assert FREE_1.rooms is None
-    assert STANDARD_1.rooms is None
-    assert PREMIUM_1.rooms == RoomsAllowance(
+    assert FREE_2.rooms is None
+    assert STANDARD_2.rooms is None
+    assert PREMIUM_2.rooms == RoomsAllowance(
         open_rooms=1, max_guests=100, max_hours=12, request_renders_per_hour=60
     )
 
@@ -113,9 +118,9 @@ def test_premium_alone_includes_rooms_and_deep_plans_and_every_plan_includes_the
         assert plan.includes("devices.remote_control")
         assert plan.includes("account.data_export")
     for flag_id in ("rooms", "rooms.votes", "rooms.display", "lucy.deep_plan"):
-        assert PREMIUM_1.includes(flag_id)
-        assert not FREE_1.includes(flag_id)
-        assert not STANDARD_1.includes(flag_id)
+        assert PREMIUM_2.includes(flag_id)
+        assert not FREE_2.includes(flag_id)
+        assert not STANDARD_2.includes(flag_id)
 
 
 def test_plans_are_ranked_cheapest_first_with_their_labels():
@@ -141,11 +146,12 @@ def test_a_plan_cannot_be_changed_in_place():
 
 def test_no_plan_means_the_default_plan():
     assert plans.DEFAULT_PLAN == "free"
-    assert plans.plan_for(None) is FREE_1
+    assert plans.plan_for(None) is FREE_2
 
 
 def test_a_plan_without_a_version_is_its_current_one_and_with_one_is_that_exact_one():
-    assert plans.plan_for("standard") is STANDARD_1
+    assert plans.plan_for("standard") is STANDARD_2
+    assert plans.plan_for("standard", 2) is STANDARD_2
     assert plans.plan_for("standard", 1) is STANDARD_1
 
 
@@ -159,16 +165,17 @@ def test_an_unknown_version_raises():
         plans.plan_for("premium", 7)
 
 
-def test_a_new_version_becomes_current_and_the_old_one_stays_for_its_subscribers(monkeypatch):
-    bigger = dataclasses.replace(FREE_1, version=2, storage_bytes=15 * GB)
+def test_a_new_version_becomes_current_and_the_old_ones_stay_for_their_subscribers(monkeypatch):
+    bigger = dataclasses.replace(FREE_2, version=3, storage_bytes=15 * GB)
     monkeypatch.setattr(
         plans,
         "CATALOGUE",
-        MappingProxyType({**plans.CATALOGUE, "free": (FREE_1, bigger)}),
+        MappingProxyType({**plans.CATALOGUE, "free": (FREE_1, FREE_2, bigger)}),
     )
     assert plans.plan_for("free") is bigger
     assert plans.plan_for(None).storage_bytes == 15 * GB
     assert plans.plan_for("free", 1) is FREE_1
+    assert plans.plan_for("free", 2) is FREE_2
     assert plans.problems() == []
 
 
@@ -193,7 +200,7 @@ def test_an_account_is_entitled_to_its_plan_versions_flags():
 
 @pytest.mark.parametrize(("plan_id", "version"), [("gold", None), ("premium", 99), ("", None)])
 def test_a_bad_plan_id_or_version_never_unlocks_more_than_free(plan_id, version):
-    assert plans.entitled_flags(plan_id, version) == FREE_1.flags
+    assert plans.entitled_flags(plan_id, version) == FREE_2.flags
 
 
 def test_the_unlocking_plan_is_the_cheapest_that_includes_a_flag():
@@ -205,12 +212,12 @@ def test_the_unlocking_plan_is_the_cheapest_that_includes_a_flag():
 
 def test_a_cheaper_plan_that_gains_a_feature_becomes_its_unlocking_plan(monkeypatch):
     standard = dataclasses.replace(
-        STANDARD_1, version=2, flags=STANDARD_1.flags | {"lucy.deep_plan"}
+        STANDARD_2, version=3, flags=STANDARD_2.flags | {"lucy.deep_plan"}
     )
     monkeypatch.setattr(
         plans,
         "CATALOGUE",
-        MappingProxyType({**plans.CATALOGUE, "standard": (STANDARD_1, standard)}),
+        MappingProxyType({**plans.CATALOGUE, "standard": (STANDARD_1, STANDARD_2, standard)}),
     )
     assert plans.unlocking_plans()["lucy.deep_plan"] == "standard"
     assert plans.unlocking_plans()["rooms"] == "premium"

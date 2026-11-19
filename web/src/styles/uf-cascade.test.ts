@@ -13,6 +13,9 @@ const SOURCE = `${node.cwd()}/src/`;
 const doc = fs.readFileSync(`${SOURCE}../../docs/engineering/css-ownership.md`, 'utf8');
 const main = fs.readFileSync(`${SOURCE}main.tsx`, 'utf8');
 const SHEETS = ['style.css', ...fs.readdirSync(`${SOURCE}styles/`).filter((name) => name.endsWith('.css')).map((name) => `styles/${name}`)];
+/** The Cloud, Rooms and Devices sheets joined the token regime (ADR-0462 BF-0462-07): they load with
+ * their components, not from main.tsx, but take every colour and role from tokens.css. */
+const FEATURE_SHEETS = ['cloud/cloud.css', 'rooms/rooms.css', 'devices/devices.css'];
 const css = (sheet: string) => fs.readFileSync(`${SOURCE}${sheet}`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const section = (title: string) => doc.split(`## ${title}`)[1].split('\n## ')[0];
 const rows = (text: string) => text.split('\n').filter((line) => /^\| (\d+|`)/.test(line)).map((line) => line.split('|').map((cell) => cell.trim()));
@@ -26,24 +29,25 @@ describe('UF cascade ownership', () => {
   });
 
   it('every app stylesheet is documented, including the ones a page imports itself', () => {
-    for (const sheet of SHEETS) expect(doc, `${sheet} has no owner in css-ownership.md`).toContain(`\`${sheet}\``);
+    for (const sheet of [...SHEETS, ...FEATURE_SHEETS]) expect(doc, `${sheet} has no owner in css-ownership.md`).toContain(`\`${sheet}\``);
   });
 
   it('every !important is a listed exception, with its exact count', () => {
     const listed = Object.fromEntries(rows(section('`!important` exceptions')).map((cells) => [name(cells[1]), Number(cells[2])]));
-    const found = Object.fromEntries(SHEETS.map((sheet) => [sheet, (css(sheet).match(/!important/g) ?? []).length]).filter(([, count]) => count));
+    const found = Object.fromEntries([...SHEETS, ...FEATURE_SHEETS].map((sheet) => [sheet, (css(sheet).match(/!important/g) ?? []).length]).filter(([, count]) => count));
     expect(found).toEqual(listed);
   });
 
   it('raw colours appear only in tokens.css', () => {
-    for (const sheet of SHEETS.filter((sheet) => sheet !== 'styles/tokens.css')) {
+    expect(FEATURE_SHEETS.every((sheet) => css(sheet).length > 0)).toBe(true);
+    for (const sheet of [...SHEETS, ...FEATURE_SHEETS].filter((sheet) => sheet !== 'styles/tokens.css')) {
       expect(css(sheet).match(/#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?)\(/g), sheet).toBeNull();
     }
   });
 
   it('text, surface, focus, selection, status, border, edge and spacing tokens are defined only in tokens.css', () => {
     const role = /(?:^|[;{\s])(--(?:text|surface|focus|selected|selection|status|border|edge|space|danger|playing)[a-z0-9-]*)\s*:/g;
-    for (const sheet of SHEETS.filter((sheet) => sheet !== 'styles/tokens.css')) {
+    for (const sheet of [...SHEETS, ...FEATURE_SHEETS].filter((sheet) => sheet !== 'styles/tokens.css')) {
       expect([...css(sheet).matchAll(role)].map((match) => match[1]), sheet).toEqual([]);
     }
     const base = css('styles/tokens.css').split(/\n\}/)[0];

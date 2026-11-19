@@ -63,6 +63,12 @@ Ranges widen with scale because Lucy and processing depend on behaviour, which b
 - After any restore: replay the deletions ledger, run storage reconciliation, re-run Stripe reconciliation, expire leases, then reopen.
 - Targets to prove in drills: recovery time under 60 minutes for a database restore; zero accepted jobs lost in covered failures (whole-region loss is out of scope for beta).
 
+### 13.6 Update 2026-11-17: cost structure under Browser-first Cloud (ADR-0464)
+
+*Added for the Browser-first Cloud programme; §13.1 to §13.5 stay as the accepted hosted-mode baseline and keep describing accounts holding the `cloud.hosted_media` grant (ADR-0456).*
+
+With local-first as the default, cost no longer scales with every member's media. It scales with two things: Lucy use (allowance-bounded, 40% rule) and the grandfathered hosted population, which only shrinks. A default account's marginal cost is roughly zero outside Lucy: metadata rows, SSE traffic and Lucy turns. A hosted-grant account carries today's full stack, dominated by R2 storage at $0.015/GB-month Standard class ($0.01 Infrequent Access for the backup copy), with egress free, which is why playback of stored media stays cheap, and Class A/B operations at $4.50/$0.36 per million. A full Standard quota costs about $0.75/month to hold and a full Premium quota about $1.50/month, plus roughly two thirds again for the backup copy. The §13.4 break-even sketch therefore updates from "costs scale with every member's media" to "costs scale with Lucy and the shrinking hosted population"; the per-mode cost dashboard (BF-0464-05) replaces the sketch with measured numbers. Rates and sources: ADR-0464, checked 2026-11-17, to be re-verified before implementation.
+
 ---
 
 [← 12-security-privacy-legal.md](12-security-privacy-legal.md) · [Contents](README.md#chapters) · [14-operations.md →](14-operations.md)

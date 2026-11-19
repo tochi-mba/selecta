@@ -1,10 +1,11 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useContext, useEffect, useState } from 'react';
 import { MixEta, MixItem } from '../api';
 import { flagOn, useFlag } from '../flags';
 import { etaRangeWords, length, nth } from '../lib';
 import { DraftNames, getDraftNames } from '../state/draftNames';
 import { MixReadiness, orderOf } from '../state/readiness';
 import { Status, StatusKind } from '../ui/controls';
+import { TransitionsWorkedOutLive } from './liveTransitions';
 
 /** A short name for this exact order of songs, so "the mix I was looking at" and "the mix now" can be
  * told apart at a glance. It's a label, not a security check: the x-mix-order header is what guards a
@@ -18,8 +19,10 @@ export function revisionOf(mix: Pick<MixItem, 'song_id'>[]): string {
   return (hash >>> 0).toString(16).padStart(8, '0').slice(0, 4);
 }
 
-function readinessWords(state: MixReadiness): { kind: StatusKind; words: string } {
+function readinessWords(state: MixReadiness, live: boolean): { kind: StatusKind; words: string } {
   if (!state.seams) return { kind: 'planned', words: 'Add another song to make a transition' };
+  // nothing is rendered ahead here, so a count of rendered transitions would only ever read zero
+  if (live) return { kind: 'planned', words: 'Transitions worked out as it plays' };
   if (state.allReady) return { kind: 'ready', words: 'All transitions ready' };
   const done = `${state.ready} of ${state.seams} transitions made`;
   if (state.failed) return { kind: 'warning', words: `${done}, ${state.failed} couldn’t be made` };
@@ -74,7 +77,8 @@ export function EditorHeader(props: {
 }) {
   const { draftId, mix, mixName, mixEta, draftPlace, currentMixName, readiness, totalSeconds, switcher, actions, view, viewName } = props;
   const inDraft = draftId !== null;
-  const facts = readinessWords(readiness);
+  const live = useContext(TransitionsWorkedOutLive);
+  const facts = readinessWords(readiness, live);
   const { seams, ready } = readiness;
   return (
     <header className="editor-head">
@@ -96,7 +100,7 @@ export function EditorHeader(props: {
           <h1 className="display small">{mixName}</h1>
           <p className="lede">
             {mix.length} {mix.length === 1 ? 'song' : 'songs'}, about {length(totalSeconds)}.
-            {seams > 0 && ` ${ready} of ${seams} transitions are ready.`}
+            {seams > 0 && (live ? ' Each transition is worked out in your browser as the mix plays.' : ` ${ready} of ${seams} transitions are ready.`)}
             {!inDraft && mixEta && mixEta.seams > 0 && (mixEta.late ? ' The rest are taking longer than usual.' : ` The rest take ${etaRangeWords(mixEta)}.`)}
             {inDraft && flagOn('render_line') && mixEta && mixEta.seams > 0 && (draftPlace
               ? ` ${nth(draftPlace)} in line. All ready in ${etaRangeWords(mixEta)}.`

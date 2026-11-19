@@ -310,6 +310,58 @@ export async function send<T>(path: string, init?: RequestInit): Promise<T> {
   }
 }
 
+/** How a view asks the server for anything (ADR-0462): the exact shape of the injected client.
+ * Locally it is `send` over the relative `/api`; in Cloud it is the authenticated client with the
+ * bearer token and workspace header. Views receive one on `ViewProps.request` and never import the
+ * local client directly (importBoundaries.test.ts holds them to it). */
+export type Request = <T>(path: string, init?: RequestInit) => Promise<T>;
+
+/** The local client as a `Request`: what App injects, and what standalone local surfaces default to. */
+export const request: Request = (path, init) => send(path, init);
+
+export type Client = {
+  get: <T>(path: string) => Promise<T>;
+  post: <T>(path: string, body?: unknown, headers?: Record<string, string>) => Promise<T>;
+  del: <T>(path: string, headers?: Record<string, string>) => Promise<T>;
+};
+
+/** One client per request, made once: a view calling `getVia(request)` on every render gets the
+ * same function back, so it is as stable in hook dependencies as the old module-level `get`. */
+const clients = new WeakMap<Request, Client>();
+
+/** get/post/del over an injected request, with the local helpers' exact semantics. */
+export function clientFor(via: Request = request): Client {
+  const known = clients.get(via);
+  if (known) return known;
+  const made: Client = {
+    get: <T,>(path: string): Promise<T> => via<T>(path),
+    // The operation-id behaviour is identical to the local `post`: every change carries one
+    // (T0094), and an id made up here is remembered so an ApiError does not present it as
+    // something Diagnostics could look up (T0244).
+    post: <T,>(path: string, body?: unknown, headers?: Record<string, string>): Promise<T> => {
+      const init: RequestInit = {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-operation-id': newOperationId(), ...headers },
+        body: JSON.stringify(body ?? {}),
+      };
+      if (!headers || !('x-operation-id' in headers)) madeUpIds.add(init);
+      return via<T>(path, init);
+    },
+    del: <T,>(path: string, headers?: Record<string, string>): Promise<T> => via<T>(path, { method: 'DELETE', headers }),
+  };
+  clients.set(via, made);
+  return made;
+}
+
+/** `get` over an injected request, with the local `get`'s exact semantics. */
+export const getVia = (via: Request = request) => clientFor(via).get;
+
+/** `post` over an injected request, with the local `post`'s exact semantics. */
+export const postVia = (via: Request = request) => clientFor(via).post;
+
+/** `del` over an injected request, with the local `del`'s exact semantics. */
+export const delVia = (via: Request = request) => clientFor(via).del;
+
 export const get = <T,>(path: string) => send<T>(path);
 
 /** T0068: raw bytes from the local server (song and stem audio, seam clips, backups), which the JSON
@@ -320,18 +372,10 @@ export const fetchBytes = (path: string, init?: RequestInit): Promise<Response> 
 /** Requests whose operation id post() made up, rather than the page choosing it. */
 const madeUpIds = new WeakSet<RequestInit>();
 
-export const post = <T,>(path: string, body?: unknown, headers?: Record<string, string>) => {
-  const init: RequestInit = {
-    method: 'POST',
-    // T0094: every change carries an operation id, so resending it after a lost answer is safe
-    headers: { 'content-type': 'application/json', 'x-operation-id': newOperationId(), ...headers },
-    body: JSON.stringify(body ?? {}),
-  };
-  if (!headers || !('x-operation-id' in headers)) madeUpIds.add(init);
-  return send<T>(path, init);
-};
+// T0094: every change carries an operation id, so resending it after a lost answer is safe.
+export const post = <T,>(path: string, body?: unknown, headers?: Record<string, string>) => clientFor(request).post<T>(path, body, headers);
 
-export const del = <T,>(path: string, headers?: Record<string, string>) => send<T>(path, { method: 'DELETE', headers });
+export const del = <T,>(path: string, headers?: Record<string, string>) => clientFor(request).del<T>(path, headers);
 
 export type LibrarySong = {
   id: number;
@@ -353,7 +397,17 @@ export type LibrarySong = {
   priority: boolean;
   match?: string | null;
   readiness: { status: string; reason: string };
+  /** Where this song can play from, in a shell whose music lives on the member's devices
+   * (local-first Cloud, BF-0462-04). The local server never sends it: its files are on this computer. */
+  availability?: SongAvailability;
 };
+
+/** here: a file on this device that opens; reauth: on this device, but the browser needs the
+ * member's permission again; hosted: a hosted copy in SelectaDJ Cloud plays it; elsewhere: on
+ * another of the member's devices, not this one; nowhere: on none of their devices right now. */
+/** `reconnect`: connected on this device before, by files picked for one visit; picking them
+ * again plays them (the browser keeps no lasting access to picked files). */
+export type SongAvailability = 'here' | 'reauth' | 'reconnect' | 'hosted' | 'elsewhere' | 'nowhere';
 
 export type LibraryPage = { songs: LibrarySong[]; total: number; next: string | null };
 

@@ -9,7 +9,7 @@
   padding-inline: var(--page-gutter);
   padding-block-end: var(--page-end);
   color: var(--text);
-  background: var(--bg);
+  background: var(--surface-base);
   min-inline-size: 0;
 }
 
@@ -61,7 +61,7 @@
   background: var(--surface-raised);
   color: var(--danger);
   font: var(--type-label);
-  font-weight: 700;
+  font-weight: var(--weight-strong);
   cursor: pointer;
 }
 .staff-stop:disabled { background: var(--surface-control); color: var(--text-soft); cursor: default; }

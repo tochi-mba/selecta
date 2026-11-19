@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { audioSpeaker } from './audioSpeaker';
-import { Api, extrapolate, Speaker, usePlaybackDevice } from './usePlaybackDevice';
+import { ControllerNotices } from './ControllerNotices';
+import { PlaybackStatus, playbackStatusText } from '../copy';
+import { Action } from '../ui/controls';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { ELLIPSIS } from '../ui/format';
+import { Api, extrapolate, HEARTBEAT_MS, REMOTE_POLL_MS, SessionState, Speaker, usePlaybackDevice } from './usePlaybackDevice';
 import './devices.css';
 
 // The "Playing on ..." bar (ADR-0415): every device sees where the music is and can steer it.
@@ -9,6 +14,20 @@ import './devices.css';
 // iPhone is told plainly to keep the screen on.
 
 export type SongName = (index: number) => string | null;
+
+/** The speaker's reported output as the shared PLAYBACK_STATUS vocabulary, or null. */
+export function speakerOutput(session: SessionState | null): PlaybackStatus | null {
+  const status = session?.output_status;
+  if (!status) return null;
+  if (status === 'playing') return typeof session?.output_verified_at === 'number' ? { state: 'playing', verifiedAt: session.output_verified_at } : { state: 'output_unverified' };
+  return { state: status };
+}
+
+/** How long a pressed play/pause is shown before the bar falls back to what the speaker reports.
+ * An online speaker applies a command within one heartbeat and a remote sees it within one poll;
+ * past that the press was accepted but never applied (an offline speaker), so the button must
+ * stop claiming it. */
+export const OPTIMISTIC_MS = HEARTBEAT_MS + REMOTE_POLL_MS;
 
 function clock(ms: number) {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -28,6 +47,10 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
   const [asking, setAsking] = useState(false);
   const [observedOwner, setObservedOwner] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
+  // Optimistic play/pause: the bar shows the press at once, tied to the session seq it was based
+  // on. A newer seq from the server replaces it; a refusal takes it back straight away; and a press
+  // the speaker never applies lapses after OPTIMISTIC_MS, back to the reported state.
+  const [wanted, setWanted] = useState<{ playing: boolean; seq: number } | null>(null);
   const [, tick] = useState(0);
   useEffect(() => { const t = window.setInterval(() => tick((n) => n + 1), 1000); return () => window.clearInterval(t); }, []);
 
@@ -37,15 +60,34 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
   const warning = pb.device?.warnings.find((w) => w.code === 'ios_keep_screen_on' || w.code === 'no_audio');
   const name = session ? songName?.(session.song_index) ?? `Song ${session.song_index + 1}` : null;
   const position = session ? extrapolate(session, pb.serverNow()) : 0;
-  const playing = session?.state === 'playing';
+  const shownWanted = wanted && session && session.seq === wanted.seq ? wanted : null;
+  const playing = shownWanted ? shownWanted.playing : session?.state === 'playing';
+  useEffect(() => { if (wanted && session && session.seq !== wanted.seq) setWanted(null); }, [session, wanted]);
+  useEffect(() => {
+    if (!wanted) return;
+    const t = window.setTimeout(() => setWanted((now) => (now === wanted ? null : now)), OPTIMISTIC_MS);
+    return () => window.clearTimeout(t);
+  }, [wanted]);
+  const steer = async (name: 'play' | 'pause') => {
+    if (session) setWanted({ playing: name === 'play', seq: session.seq });
+    const ok = await pb.send(name);
+    if (!ok) setWanted(null);
+  };
 
   const where = useMemo(() => {
-    if (!view) return 'Connecting...';
-    if (here || view.speaker === 'here') return 'Playing here';
-    if (view.speaker === 'elsewhere') return `Playing on ${view.speaker_name ?? 'another device'}`;
+    if (!view) return `Connecting${ELLIPSIS}`;
+    // This device knows its own speaker is running; anyone else only knows what the server last
+    // heard, so a lapsed lease (state_confidence uncertain, ADR-0461) is never shown as playing.
+    if (here) return 'Playing here';
+    // The server already judged the lease lapsed: say plainly the speaker is offline.
     if (view.speaker === 'offline') return `${view.speaker_name ?? 'The speaker'} is offline and may still be playing`;
+    if (session?.state_confidence === 'uncertain') {
+      return `${view.speaker_name ?? 'The speaker'} has not checked in recently and may still be playing`;
+    }
+    if (view.speaker === 'here') return 'Playing here';
+    if (view.speaker === 'elsewhere') return `Playing on ${view.speaker_name ?? 'another device'}`;
     return 'Nothing is playing';
-  }, [here, view]);
+  }, [here, session?.state_confidence, view]);
 
   const pressPlayHere = async () => {
     if (asking) {
@@ -73,7 +115,12 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
       setChecking(false);
     }
   };
-  const remote = remoteControl && (view?.speaker === 'elsewhere' || (here && Boolean(session)));
+  // An offline speaker can still be steered: the press is held and reaches it if it comes back
+  // in time, or is shown as missed (BF-0461-04), so the buttons stay.
+  const remote = remoteControl && (view?.speaker === 'elsewhere' || view?.speaker === 'offline' || (here && Boolean(session)));
+  // What the speaker says about its sound output (BF-0457-03). Only a browser-engine speaker
+  // reports one, so with that player off nothing renders here.
+  const output = !here ? speakerOutput(session) : null;
 
   return (
     <section className="playing-bar" aria-label="Playback">
@@ -85,8 +132,8 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
       <div className="playing-bar-controls">
         {remote && session && (
           <>
-            <button type="button" onClick={() => void pb.command(playing ? 'pause' : 'play')} aria-label={playing ? 'Pause' : 'Play'}>{playing ? 'Pause' : 'Play'}</button>
-            <button type="button" onClick={() => void pb.command('skip')}>Skip</button>
+            <Action type="button" run={() => steer(playing ? 'pause' : 'play')} aria-label={playing ? 'Pause' : 'Play'}>{playing ? 'Pause' : 'Play'}</Action>
+            <Action type="button" run={() => pb.command('skip')}>Skip</Action>
           </>
         )}
         {!here && !pb.starting && (
@@ -94,11 +141,19 @@ export function PlayingBar({ api, workspaceId, source, songName, remoteControl =
         )}
       </div>
       {asking && (
-        <div className="playing-bar-ask" role="alertdialog" aria-label="Move playback here?">
-          <span>{`Playing on ${view?.speaker_name ?? 'another device'}. Play here instead?`}</span>
-          <button type="button" className="primary" onClick={() => void pressPlayHere()}>Play here instead</button>
-          <button type="button" onClick={() => setAsking(false)}>Cancel</button>
-        </div>
+        <ConfirmDialog
+          title="Move playback here?"
+          body={`Playing on ${view?.speaker_name ?? 'another device'}. Play here instead?`}
+          confirmLabel="Play here instead"
+          cancelLabel="Cancel"
+          working={`Moving${ELLIPSIS}`}
+          onConfirm={pressPlayHere}
+          onClose={() => setAsking(false)}
+        />
+      )}
+      {output && <p className="playing-bar-output" data-testid="speaker-output">{playbackStatusText(output)}</p>}
+      {remoteControl && !here && (
+        <ControllerNotices notices={view?.notices} speakerName={view?.speaker_name ?? null} session={session} send={(name, args) => void pb.command(name, args)} />
       )}
       {warning && (here || pb.starting || asking) && <p className="playing-bar-warning" role="note">{warning.text}</p>}
       <p className="playing-bar-message" role="status">{pb.message || pb.notice}</p>

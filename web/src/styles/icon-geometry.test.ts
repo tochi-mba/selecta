@@ -29,10 +29,11 @@ const rows = new Map([...inventory.slice(inventory.indexOf('## Glyphs')).matchAl
   owners: [...row[3].matchAll(/`([\w/]+\.tsx?)`/g)].map((owner) => owner[1]),
 }]));
 
-/** Every <Icon /> in the app's own views whose name is written out, with the slot it asks for. */
+/** Every <Icon /> in any web/src component whose name is written out, with the slot it asks for. */
 function drawn() {
   const files = fs.readdirSync(SOURCE, { recursive: true }).map((file) => file.replace(/\\/g, '/'))
-    .filter((file) => file.endsWith('.tsx') && !file.includes('.test.') && /^(ui|views|shell)\//.test(file));
+    // every component in web/src, the Cloud, Rooms, devices, admin and business surfaces included (BF overhaul W6)
+    .filter((file) => file.endsWith('.tsx') && !file.includes('.test.') && !file.startsWith('test/'));
   const uses: Array<{ file: string; name: string; size: string; raw: string }> = [];
   for (const file of files) {
     for (const tag of read(file).matchAll(/<Icon\b([^>]*?)\/>/g)) {

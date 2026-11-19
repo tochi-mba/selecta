@@ -236,8 +236,15 @@ def test_transport_and_routes_each_have_one_owner() -> None:
     sources = _web_sources()
     contexts = sorted(name for name, text in sources.items() if "new AudioContext(" in text)
     elements = sorted(name for name, text in sources.items() if "new Audio(" in text)
-    assert contexts == ["player.ts", "studio.ts"], "the main player, and the Studio preview engine"
-    assert elements == ["audio/focus.ts"], "every preview shares the one element audio focus owns"
+    # engine/context.ts is the Browser-first Cloud runtime (ADR-0457); it is the only audio
+    # context in the Cloud build, which never mounts the local player or the Studio.
+    assert contexts == ["engine/context.ts", "player.ts", "studio.ts"], (
+        "the main player, the Studio preview engine and the Cloud browser runtime"
+    )
+    # cloud/venue/probeSuite.ts makes a detached element only to ask canPlayType; it never plays.
+    assert elements == ["audio/focus.ts", "cloud/venue/probeSuite.ts"], (
+        "every preview shares the one element audio focus owns"
+    )
     # everything that can make its own sound asks audio focus first
     for name in (
         "views/Studio.tsx",

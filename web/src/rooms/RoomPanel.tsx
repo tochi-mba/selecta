@@ -1,4 +1,8 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { Action } from '../ui/controls';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { countOf, ELLIPSIS } from '../ui/format';
+import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { groupGuests, guestPresence, guestsHeading, presenceChanges, screenPresence } from './presence';
 import { qrSvg } from './qr';
 import './rooms.css';
@@ -9,14 +13,17 @@ import './rooms.css';
 // what it is and which plan has it.
 //
 // Guests and screens show whether they are really here ("Here now", "Away · last seen 5 min
-// ago", "Screen 1 · offline since 21:04") from the server's heartbeat, updated by the 3 s poll;
-// changes are announced politely, at most once every 10 s.
+// ago", "Screen 1 · offline since 21:04") from the server's heartbeat, updated by the 3 s poll
+// (useVisiblePoll: paused while the tab is hidden, read at once on return); changes are announced
+// politely, at most once every 10 s. Every button is an Action, busy until its answer is back;
+// Remove, Ban and a new code ask first in a ConfirmDialog, since none of them can be undone.
 
 type Api = <T>(path: string, init?: RequestInit, workspaceId?: string) => Promise<T>;
 type Song = { song_id: number; title: string; artist: string; length_s: number };
 type Item = { request_id: string; song: Song | null; status: string; votes: number; nickname: string | null };
 type Guest = { id: string; nickname: string; status: string; joined_at?: number; last_seen_at?: number; online?: boolean };
 type Screen = { id: string; label: string; paired_at: number | null; last_seen_at: number | null; online: boolean };
+type Confirm = { title: string; body: string; confirmLabel: string; run: () => Promise<unknown> };
 type Settings = { join_mode: string; request_mode: string; votes: boolean; names_shown: boolean; display: boolean };
 type Panel = {
   room: { id: string; name: string; status: string; settings: Settings; ends_at: number };
@@ -41,6 +48,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
   const [pairing, setPairing] = useState('');
   const [removeEveryone, setRemoveEveryone] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [error, setError] = useState('');
   const [said, setSaid] = useState('');
   const [presenceSaid, setPresenceSaid] = useState('');
@@ -79,11 +87,9 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
     } catch (problem) { setError((problem as Error).message); setLoaded(true); }
   }, [api, workspaceId, freshOnly]);
   useEffect(() => {
-    if (locked) return;
-    void load();
-    const timer = window.setInterval(() => void load(), POLL_MS);
-    return () => window.clearInterval(timer);
+    if (!locked) void load();
   }, [load, locked]);
+  useVisiblePoll(load, POLL_MS, !locked);
 
   const act = async (path: string, init: RequestInit = { method: 'POST' }, success = '') => {
     hostChanges.current += 1;
@@ -105,18 +111,21 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
     );
   }
 
-  if (!loaded) return <section className="room-panel" aria-busy="true"><h2 id="room-title">Room</h2><p>Loading...</p></section>;
+  if (!loaded) return <section className="room-panel" aria-busy="true"><h2 id="room-title">Room</h2><p>{`Loading${ELLIPSIS}`}</p></section>;
 
   if (!panel) {
-    const open = (event: FormEvent) => { event.preventDefault(); void act('/rooms', { method: 'POST', body: JSON.stringify({ name: name || 'Party', settings: {} }) }, 'Room open.'); };
+    const open = () => act('/rooms', { method: 'POST', body: JSON.stringify({ name: name || 'Party', settings: {} }) }, 'Room open.');
     return (
       <section className="room-panel" aria-labelledby="room-title">
         <h2 id="room-title">Open a room</h2>
+        {/* After End room the panel comes back here, so the ending is said here, not lost. */}
+        {said && <p className="room-said" role="status">{said}</p>}
         <p>Guests scan a QR code and request songs from their phones. No app, no account, and nothing plays on their phones.</p>
-        <form onSubmit={open} className="room-row">
+        {/* one field, so Enter still sends the form; the button is an Action so it shows it's busy */}
+        <form onSubmit={(event: FormEvent) => { event.preventDefault(); void open(); }} className="room-row">
           <label htmlFor="room-name">Room name guests will see</label>
           <input id="room-name" value={name} maxLength={40} placeholder="Party" onChange={(event) => setName(event.target.value)} />
-          <button type="submit" className="primary">Open room</button>
+          <Action type="button" className="primary" run={open} working={`Opening${ELLIPSIS}`}>Open room</Action>
         </form>
         {error && <p className="room-error" role="alert">{error}</p>}
       </section>
@@ -130,14 +139,25 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
   const save = (change: Partial<Settings>) => void act(`${base}/settings`, { method: 'PATCH', body: JSON.stringify(change) }, 'Saved.');
   const now = panel.now ?? Date.now() / 1000;
   const groups = groupGuests(panel.guests, now);
+  const pair = () => act(`${base}/displays`, { method: 'POST', body: JSON.stringify({ pairing_code: pairing }) }, 'Screen paired.').then((ok) => { if (ok) setPairing(''); });
   const screens = panel.screens ?? [];
   const guestRow = (guest: Guest) => (
     <li key={guest.id} data-testid="room-guest" data-presence={guest.online ? 'here' : 'away'}>
       <span>{guest.nickname}{guest.status === 'pending' ? ' · waiting to be let in' : ''}
         <span className={guest.online ? 'room-presence room-here' : 'room-presence room-muted'} data-testid="room-guest-presence"> · {guestPresence(guest, now)}</span></span>
-      {guest.status === 'pending' && <button type="button" className="primary" onClick={() => void act(`${base}/guests/${guest.id}/approve`)}>Let in</button>}
-      <button type="button" onClick={() => void act(`${base}/guests/${guest.id}/remove`)} aria-label={`Remove ${guest.nickname}`}>Remove</button>
-      <button type="button" onClick={() => void act(`${base}/guests/${guest.id}/ban`, { method: 'POST' }, `${guest.nickname} is banned for this room.`)} aria-label={`Ban ${guest.nickname}`}>Ban</button></li>
+      {guest.status === 'pending' && <Action type="button" className="primary" run={() => act(`${base}/guests/${guest.id}/approve`)}>Let in</Action>}
+      <Action type="button" aria-label={`Remove ${guest.nickname}`} run={() => setConfirm({
+        title: `Remove ${guest.nickname}?`,
+        body: 'They leave the room now and their requests stay. They can scan the code again and join as someone new; to keep them out, ban them instead.',
+        confirmLabel: 'Remove',
+        run: () => act(`${base}/guests/${guest.id}/remove`, { method: 'POST' }, `${guest.nickname} was removed.`),
+      })}>Remove</Action>
+      <Action type="button" aria-label={`Ban ${guest.nickname}`} run={() => setConfirm({
+        title: `Ban ${guest.nickname}?`,
+        body: "They can't come back to this room. Their waiting requests are withdrawn and their votes taken back.",
+        confirmLabel: 'Ban',
+        run: () => act(`${base}/guests/${guest.id}/ban`, { method: 'POST' }, `${guest.nickname} is banned for this room.`),
+      })}>Ban</Action></li>
   );
 
   return (
@@ -154,8 +174,13 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
           <p className="room-code" data-testid="room-code">{panel.code}</p>
           <p className="room-link"><a href={link} target="_blank" rel="noreferrer">{link}</a></p>
           <div className="room-row">
-            <button type="button" onClick={() => void act(`${base}/${room.status === 'locked' ? 'unlock' : 'lock'}`)}>{room.status === 'locked' ? 'Unlock' : 'Lock room'}</button>
-            <button type="button" onClick={() => void act(`${base}/code`, { method: 'POST', body: JSON.stringify({ remove_everyone: removeEveryone }) }, 'New code made. The old one no longer works.')}>Make a new code</button>
+            <Action type="button" run={() => act(`${base}/${room.status === 'locked' ? 'unlock' : 'lock'}`)}>{room.status === 'locked' ? 'Unlock' : 'Lock room'}</Action>
+            <Action type="button" run={() => setConfirm({
+              title: 'Make a new code?',
+              body: `The old QR code stops working the moment the new one exists.${removeEveryone ? ' Everyone in the room is removed too.' : ''}`,
+              confirmLabel: 'Make a new code',
+              run: () => act(`${base}/code`, { method: 'POST', body: JSON.stringify({ remove_everyone: removeEveryone }) }, 'New code made. The old one no longer works.'),
+            })}>Make a new code</Action>
             <label className="room-check"><input type="checkbox" checked={removeEveryone} onChange={(event) => setRemoveEveryone(event.target.checked)} /> and remove everyone</label>
           </div>
         </div>
@@ -180,9 +205,9 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
         <h3 id="inbox-title">Requests waiting for you ({panel.inbox.length})</h3>
         {panel.inbox.length === 0 ? <p className="room-muted">Nothing waiting.</p> : (
           <ul className="room-list">{panel.inbox.map((item) => (
-            <li key={item.request_id}><span>{songText(item.song)}<span className="room-muted"> · {item.nickname}{votesOn && settings.votes ? ` · ${item.votes} votes` : ''}</span></span>
-              <button type="button" className="primary" onClick={() => void act(`${base}/requests/${item.request_id}/approve`)} aria-label={`Approve ${songText(item.song)}`}>Approve</button>
-              <button type="button" onClick={() => void act(`${base}/requests/${item.request_id}/pass`)} aria-label={`Pass on ${songText(item.song)}`}>Pass</button></li>
+            <li key={item.request_id}><span>{songText(item.song)}<span className="room-muted"> · {item.nickname}{votesOn && settings.votes ? ` · ${countOf(item.votes, 'vote')}` : ''}</span></span>
+              <Action type="button" className="primary" run={() => act(`${base}/requests/${item.request_id}/approve`)} aria-label={`Approve ${songText(item.song)}`}>Approve</Action>
+              <Action type="button" run={() => act(`${base}/requests/${item.request_id}/pass`)} aria-label={`Pass on ${songText(item.song)}`}>Pass</Action></li>
           ))}</ul>
         )}
       </section>
@@ -194,10 +219,10 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
         {panel.unfit.length > 0 && (<>
           <h3>Couldn't fit</h3>
           <ul className="room-list">{panel.unfit.map((item) => (
-            <li key={item.request_id}><span>{songText(item.song)}</span><button type="button" onClick={() => void act(`${base}/requests/${item.request_id}/approve`)}>Try again</button></li>
+            <li key={item.request_id}><span>{songText(item.song)}</span><Action type="button" run={() => act(`${base}/requests/${item.request_id}/approve`)}>Try again</Action></li>
           ))}</ul>
         </>)}
-        <p className="room-muted">{panel.renders_left} request renders left this hour.</p>
+        <p className="room-muted">{countOf(panel.renders_left, 'request render')} left this hour.</p>
       </section>
       <section aria-labelledby="guests-title">
         <h3 id="guests-title" data-testid="room-guests-heading">{guestsHeading(groups)}</h3>
@@ -218,24 +243,28 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
             <ul className="room-list" data-testid="room-screens">{screens.map((screen) => (
               <li key={screen.id} data-testid="room-screen" data-presence={screen.online ? 'online' : 'offline'}>
                 <span className={screen.online ? 'room-here' : 'room-muted'}>{screenPresence(screen)}</span>
-                <button type="button" onClick={() => void act(`${base}/displays/${encodeURIComponent(screen.id)}`, { method: 'DELETE' }, `${screen.label} disconnected.`)} aria-label={`Disconnect ${screen.label}`}>Disconnect</button></li>
+                <Action type="button" run={() => act(`${base}/displays/${encodeURIComponent(screen.id)}`, { method: 'DELETE' }, `${screen.label} disconnected.`)} aria-label={`Disconnect ${screen.label}`}>Disconnect</Action></li>
             ))}</ul>
           )}
-          <form className="room-row" onSubmit={(event) => { event.preventDefault(); void act(`${base}/displays`, { method: 'POST', body: JSON.stringify({ pairing_code: pairing }) }, 'Screen paired.').then((ok) => { if (ok) setPairing(''); }); }}>
+          <form className="room-row" onSubmit={(event) => { event.preventDefault(); void pair(); }}>
             <label htmlFor="pairing-code">Code on the screen</label>
             <input id="pairing-code" value={pairing} maxLength={8} autoComplete="off" onChange={(event) => setPairing(event.target.value)} />
-            <button type="submit">Pair screen</button>
-            {panel.displays > 0 && <button type="button" onClick={() => void act(`${base}/displays`, { method: 'DELETE' }, 'Screens disconnected.')}>Disconnect screens</button>}
+            <Action type="button" run={pair} working={`Pairing${ELLIPSIS}`}>Pair screen</Action>
+            {panel.displays > 0 && <Action type="button" run={() => act(`${base}/displays`, { method: 'DELETE' }, 'Screens disconnected.')}>Disconnect screens</Action>}
           </form>
         </section>
       )}
       <div className="room-row room-end">
         {confirmEnd ? (<>
           <span>End the room for everyone? Waiting requests are withdrawn.</span>
-          <button type="button" className="danger" onClick={() => void act(`${base}/end`, { method: 'POST' }, 'Room ended.').then(() => setConfirmEnd(false))}>End room</button>
-          <button type="button" onClick={() => setConfirmEnd(false)}>Keep it open</button>
-        </>) : <button type="button" onClick={() => setConfirmEnd(true)}>End room</button>}
+          <Action type="button" className="danger" run={() => act(`${base}/end`, { method: 'POST' }, 'Room ended.').then(() => setConfirmEnd(false))} working={`Ending${ELLIPSIS}`}>End room</Action>
+          <Action type="button" run={() => setConfirmEnd(false)}>Keep it open</Action>
+        </>) : <Action type="button" run={() => setConfirmEnd(true)}>End room</Action>}
       </div>
+      {confirm && (
+        <ConfirmDialog title={confirm.title} body={confirm.body} confirmLabel={confirm.confirmLabel} destructive
+          onConfirm={confirm.run} onClose={() => setConfirm(null)} />
+      )}
     </section>
   );
 }

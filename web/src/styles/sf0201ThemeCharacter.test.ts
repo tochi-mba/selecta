@@ -21,10 +21,16 @@ function block(opening: string): string {
   const end = tokens.indexOf('}', start);
   return tokens.slice(start, end);
 }
+/** A palette value, following one var() into the base :root (Light's switches point at --light-*). */
+function raw(body: string, name: string): string | undefined {
+  const value = body.match(new RegExp(`--${name}:\\s*([^;]+);`))?.[1].trim();
+  const ref = value?.match(/^var\(--([\w-]+)\)$/)?.[1];
+  return ref ? raw(block(':root {'), ref) : value;
+}
 function palette(body: string): Record<string, Rgb> {
   const out: Record<string, Rgb> = {};
   for (const name of PALETTE) {
-    const hex = body.match(new RegExp(`--${name}:\\s*#([0-9a-f]{6});`, 'i'))?.[1];
+    const hex = raw(body, name)?.match(/^#([0-9a-f]{6})$/i)?.[1];
     if (hex) out[name] = [0, 2, 4].map((at) => parseInt(hex.slice(at, at + 2), 16)) as Rgb;
   }
   return out;

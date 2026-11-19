@@ -22,7 +22,9 @@
       "about": "Opt into preview features that your plan is allowed to use.",
       "routes": [
         "GET /api/account/labs",
-        "PUT /api/account/labs/{flag_id}"
+        "PUT /api/account/labs/{flag_id}",
+        "GET /api/account/labs/local-first",
+        "POST /api/account/labs/local-first/leave"
       ],
       "modes": ["cloud"],
       "kind": "release",
@@ -62,6 +64,15 @@
       "kind": "ops",
       "owner": "platform"
     },
+    "cloud.hosted_media": {
+      "label": "Hosted media",
+      "about": "The umbrella grant for uploading and processing audio in Cloud (ADR-0456). The build ships on; per-account gating is a cutover allowlist rule followed by a catch-all off rule, since rules can never grant what the build denies (ADR-0414).",
+      "surfaces": ["cloud.uploads"],
+      "modes": ["cloud"],
+      "default": true,
+      "kind": "release",
+      "owner": "playback"
+    },
     "cloud.uploads": {
       "label": "Cloud uploads",
       "about": "Upload private audio files to a Cloud workspace.",
@@ -71,7 +82,19 @@
         "GET /api/uploads/{session_id}",
         "POST /api/uploads/{session_id}/parts",
         "POST /api/uploads/{session_id}/complete",
-        "DELETE /api/uploads/{session_id}",
+        "DELETE /api/uploads/{session_id}"
+      ],
+      "requires": ["cloud.hosted_media"],
+      "surfaces": ["cloud.home", "cloud.library", "cloud.uploads"],
+      "words": ["Upload tracks"],
+      "modes": ["cloud"],
+      "kind": "release",
+      "owner": "storage"
+    },
+    "cloud.stored_media": {
+      "label": "Stored media",
+      "about": "List, play, export and delete audio already stored in Cloud. Reads of stored media stay open without the hosted media grant, so nobody's library goes dark (ADR-0456).",
+      "routes": [
         "GET /api/assets",
         "GET /api/assets/{asset_id}",
         "DELETE /api/assets/{asset_id}",
@@ -80,11 +103,90 @@
         "GET /api/assets/{asset_id}/playback-proxy",
         "POST /api/storage/derived-playback-url"
       ],
-      "surfaces": ["cloud.home", "cloud.library", "cloud.uploads"],
-      "words": ["Upload tracks"],
+      "surfaces": ["cloud.library", "cloud.listen"],
       "modes": ["cloud"],
       "kind": "release",
       "owner": "storage"
+    },
+    "cloud.local_first": {
+      "label": "Browser-first personal Cloud",
+      "about": "Selects the local-first navigation and browser-owned playback in personal Cloud; the legacy pages remain when off (ADR-0455).",
+      "surfaces": ["cloud.home", "cloud.listen", "cloud.library", "cloud.settings"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
+    "cloud.hosted_shell": {
+      "label": "Hosted Cloud on the shared shell",
+      "about": "Draws the hosted Cloud pages (overview, Listen, Make a Mix, Library and the account places in More) inside the same shell as browser-first Cloud; the legacy side rail remains when off.",
+      "surfaces": ["cloud.home", "cloud.listen", "cloud.library", "cloud.settings"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
+    "cloud.progressive_import": {
+      "label": "Import continues in the background",
+      "about": "A folder import keeps running while the member moves on: onboarding unlocks as songs land, a shell chip shows progress, and an interrupted import offers to carry on (ADR-0463 BF-0463-02).",
+      "surfaces": ["cloud.home", "cloud.library", "cloud.listen"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
+    "cloud.content_cache": {
+      "label": "Reuse work on the same song by fingerprint",
+      "about": "Derived data on this device (cached song bytes) is keyed by the song's content hash, computed here from the file itself, so the same file under another account or another title reuses it; off, the cache is keyed per workspace and nothing is shared (ADR-0469).",
+      "surfaces": ["cloud.library", "cloud.listen"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
+    "cloud.hosted_dedupe": {
+      "label": "Share machine-derived data across accounts by fingerprint",
+      "about": "Server side of ADR-0469: deterministic derivations of a hosted file's bytes may be reused by another workspace that holds the same bytes as a server-hashed upload; titles, ratings and history never join, and a client-claimed hash grants nothing. Off, every workspace keeps its own derived data as before.",
+      "surfaces": ["cloud.library"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
+    "cloud.local_first_labs": {
+      "label": "Labs: browser-first Cloud",
+      "about": "Lets a beta cohort opt into browser-first Cloud themselves, give feedback and opt out again; opting in adds the member to a cloud.local_first targeting rule (ADR-0467 step 3).",
+      "routes": [
+        "POST /api/account/labs/local-first/join",
+        "POST /api/account/labs/local-first/feedback"
+      ],
+      "surfaces": ["cloud.settings"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "platform"
+    },
+    "cloud.local_media": {
+      "label": "Local media catalogue",
+      "about": "The metadata-only catalogue of songs on the member's own devices; no audio is uploaded (ADR-0458).",
+      "routes": [
+        "POST /api/local-media/songs",
+        "GET /api/local-media/songs",
+        "GET /api/local-media/songs/{song_id}",
+        "DELETE /api/local-media/songs/{song_id}",
+        "POST /api/local-media/availability",
+        "GET /api/local-media/recipes",
+        "POST /api/local-media/recipes",
+        "GET /api/local-media/recipes/{mix_id}",
+        "POST /api/local-media/recipes/{mix_id}/revisions",
+        "POST /api/local-media/recipes/{mix_id}/duplicate",
+        "DELETE /api/local-media/recipes/{mix_id}"
+      ],
+      "surfaces": ["cloud.library"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
     },
     "billing.checkout": {
       "label": "Plan checkout",
@@ -208,7 +310,13 @@
         "GET /api/playback/session",
         "POST /api/playback/heartbeat",
         "POST /api/playback/take-over",
-        "POST /api/playback/reconnect"
+        "POST /api/playback/reconnect",
+        "GET /api/zones/holding",
+        "GET /api/zones/playback",
+        "GET /api/zones/{zone_id}/playback/session",
+        "POST /api/zones/{zone_id}/playback/heartbeat",
+        "POST /api/zones/{zone_id}/playback/take-over",
+        "POST /api/zones/{zone_id}/playback/reconnect"
       ],
       "surfaces": ["cloud.listen", "cloud.settings"],
       "words": ["Play here"],
@@ -219,10 +327,76 @@
     "devices.remote_control": {
       "label": "Remote playback control",
       "about": "Control the account's active playback session from another device.",
-      "routes": ["POST /api/playback/commands"],
+      "routes": [
+        "POST /api/playback/commands",
+        "POST /api/playback/commands/{command_id}/ack",
+        "POST /api/zones/{zone_id}/playback/commands",
+        "POST /api/zones/{zone_id}/playback/commands/{command_id}/ack",
+        "POST /api/zones/{zone_id}/playback/hand-back"
+      ],
       "requires": ["devices"],
       "surfaces": ["cloud.listen"],
       "modes": ["cloud"],
+      "kind": "release",
+      "owner": "playback"
+    },
+    "devices.browser_player": {
+      "label": "Browser player",
+      "about": "The in-browser audio engine registered as a playback device (ADR-0457).",
+      "requires": ["devices"],
+      "surfaces": ["cloud.listen"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
+    "cloud.browser_dsp": {
+      "label": "Browser DSP",
+      "about": "The browser player's mixing DSP tiers, labelled honestly where they differ musically (ADR-0459).",
+      "requires": ["devices.browser_player"],
+      "surfaces": ["cloud.listen"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
+    "cloud.browser_moves": {
+      "label": "Browser transition moves",
+      "about": "Local mode's moves in a browser mix: SelectaDJ picks a bass swap, filter sweep, cut, echo out or reverb wash for each transition from the audio as it plays, the member can choose one, and each transition says what really played (ADR-0459).",
+      "requires": ["cloud.browser_dsp"],
+      "surfaces": ["cloud.listen", "edit"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
+    "cloud.browser_stems": {
+      "label": "Browser stem moves",
+      "about": "Splitting songs into voice, drums, bass and melody on this device, only around each transition, for vocal ride, strip and land and intertwined stems in browser mixes (ADR-0459 Tier 3). Each device reports unsupported until the stem model's licence review and that device's evidence record pass.",
+      "requires": ["cloud.browser_moves", "stems"],
+      "surfaces": ["cloud.listen", "edit", "cloud.settings"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
+    "cloud.venue_tablet": {
+      "label": "Venue tablet posture",
+      "about": "The single-tablet venue posture: capability checks and readiness guidance for a browser device playing a venue (ADR-0460).",
+      "requires": ["devices.browser_player"],
+      "surfaces": ["cloud.listen", "cloud.settings"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
+    "cloud.local_export": {
+      "label": "Local export",
+      "about": "Render a mix to a file in the browser player and save it on the member's own device; nothing is uploaded.",
+      "requires": ["devices.browser_player"],
+      "surfaces": ["cloud.listen"],
+      "modes": ["cloud"],
+      "default": false,
       "kind": "release",
       "owner": "playback"
     },
@@ -334,6 +508,10 @@
           "POST /api/admin/emergency/{control}/{command}",
           "GET /api/admin/flags",
           "GET /api/admin/flags/history",
+          "GET /api/admin/flags/cloud.hosted_media/grandfather-audit",
+          "GET /api/admin/flags/cloud.local_first/percentage-readiness",
+          "GET /api/admin/economics/cost-per-mode",
+          "GET /api/admin/economics/lucy-ceiling",
           "POST /api/admin/flags/rollback",
           "GET /api/admin/flags/explain/{user_id}",
           "POST /api/admin/flags/{flag_id}/impact",

@@ -1,5 +1,6 @@
 import { KeyboardEvent, PointerEvent, ReactElement, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ApiError, get, MixData, post, SongDetail } from '../api';
+import { ApiError, MixData, SongDetail } from '../api';
+import { useApi } from '../requestContext';
 import { flagOn, useFlags } from '../flags';
 import { listed } from '../shell/manifest';
 import { clock } from '../lib';
@@ -20,6 +21,7 @@ import { clearVisualState, createVisualState, migrateSpectrumShape, paintVisualF
 import { createFeatureTracker } from './visualizer/features';
 import { createFrameSource, gridOf } from './visualizer/source';
 import { ViewProps } from './shared';
+import { PlayedTransitions, playedKey, StemSurfacesContext } from './liveTransitions';
 import { FirstHandoff } from './FirstHandoff';
 import { Strip, StripPlaceholder } from './NowStrip';
 
@@ -523,10 +525,32 @@ function WhyThisTransition({ from, into, names }: { from?: ViewProps['mix'][numb
 
 /** What's coming, what was asked for, and what will really play, kept apart. Whether it exists as
  * audio yet comes from the render, not from the plan. */
-function TransitionTruth({ seam, ready, names }: { seam: ViewProps['mix'][number]['seam']; ready: boolean; names: Record<string, string> }) {
+function TransitionTruth({ seam, ready, names, live = false, pair }: { seam: ViewProps['mix'][number]['seam']; ready: boolean; names: Record<string, string>; live?: boolean; pair?: string }) {
   const facts = seamFacts(seam, names);
   const state = seam?.state;
   const rendered = state?.status === 'ready';
+  const scheduled = useContext(PlayedTransitions)[pair ?? ''];
+  const stems = useContext(StemSurfacesContext);
+  // a browser mix renders nothing ahead: it says what this device has scheduled, or what it will pick
+  if (live && state?.status === 'none') {
+    return (
+      <div className="transition-truth">
+        {scheduled ? (
+          <>
+            <p><Status kind={scheduled.fellBack ? 'warning' : 'ready'}>Scheduled here: {scheduled.label}</Status><TermHint term="transition" /></p>
+            {scheduled.detail && <p className="hint">{scheduled.detail}</p>}
+          </>
+        ) : (
+          <>
+            <p><Status kind="planned">{state.label ?? 'Worked out as it plays'}</Status><TermHint term="transition" /></p>
+            {state.why && <p className="hint">{state.why}</p>}
+          </>
+        )}
+        {pair && stems?.readiness(pair)}
+        {stems?.listenNotice}
+      </div>
+    );
+  }
   return (
     <div className="transition-truth">
       <p><Status kind={facts.kind}>{facts.words}</Status><TermHint term="transition" /></p>
@@ -539,7 +563,9 @@ function TransitionTruth({ seam, ready, names }: { seam: ViewProps['mix'][number
 }
 
 export function Now(props: ViewProps) {
-  const { mix, mixName, now, player, setView, refreshMix, setMixData, notify, stage, stageFallback, toggleStage, status, openRequests } = props;
+  const { mix, mixName, now, player, setView, refreshMix, setMixData, notify, stage, stageFallback, toggleStage, status, openRequests, request, analysisAvailable, visualizerAvailable, waveformOf } = props;
+  // ADR-0462: the song detail read and the rating/swap writes go through the injected request.
+  const { get, post } = useApi(request);
   const requests = useContext(RequestsContext);
   const item = mix[now.position];
   const next = mix[now.position + 1];
@@ -596,7 +622,20 @@ export function Now(props: ViewProps) {
   };
 
   useEffect(() => {
-    if (!item) return;
+    // Browser-first Cloud has catalogue metadata and playback, but no server-side song analysis
+    // endpoint. Don't request `/songs/{id}` there: the adapter correctly refuses that route, and
+    // treating this expected capability gap as a load error produces a permanent warning on Listen.
+    if (!item || analysisAvailable === false) {
+      setDetail(null);
+      setDetailFailed(false);
+      if (!item || !waveformOf) return;
+      // no analysis here: the strip is the song's own waveform, with no sections claimed
+      let live = true;
+      void waveformOf(item.song_id).then((peaks) => {
+        if (live && peaks) setDetail({ id: item.song_id, artist: item.artist, title: item.title, duration: item.duration, bpm: 0, key: '', peaks, sections: [], lines: [] });
+      }).catch(() => undefined);
+      return () => { live = false; };
+    }
     let live = true;
     setDetail(null);
     setDetailFailed(false);
@@ -604,7 +643,7 @@ export function Now(props: ViewProps) {
     return () => {
       live = false;
     };
-  }, [item?.song_id, detailAttempt]);
+  }, [item?.song_id, detailAttempt, analysisAvailable, waveformOf]);
 
   useEffect(() => setRated(''), [now.lastSeamKey]);
 
@@ -679,14 +718,14 @@ export function Now(props: ViewProps) {
   const showChanged = changed && changed.id === next?.song_id ? changed : null;
   const on = useFlags();
   const keys = on('app.shortcuts');
-  const hasLyrics = on('listen.lyrics');
+  const hasLyrics = analysisAvailable !== false && on('listen.lyrics');
   const lyricFocus = view.lyrics && hasLyrics;
-  const spectrum = view.spectrum && on('listen.visualizers');
-  const timing = view.timing && on('listen.beat_countdown');
+  const spectrum = visualizerAvailable !== false && view.spectrum && on('listen.visualizers');
+  const timing = analysisAvailable !== false && view.timing && on('listen.beat_countdown');
   const editing = on('editor');
   // the display choices there are, so the row of them closes up around any that aren't
-  const toggles = [hasLyrics && 'lyrics', on('listen.visualizers') && 'spectrum', on('listen.beat_countdown') && 'timing'].filter(Boolean);
-  const display = toggles.length > 0 || on('listen.visualizers') || on('listen.stage');
+  const toggles = [hasLyrics && 'lyrics', visualizerAvailable !== false && on('listen.visualizers') && 'spectrum', analysisAvailable !== false && on('listen.beat_countdown') && 'timing'].filter(Boolean);
+  const display = toggles.length > 0 || (visualizerAvailable !== false && on('listen.visualizers')) || on('listen.stage');
   const thumbs = on('ratings') && !!now.lastSeamKey && !rated;
   const steering = !!next && on('listen.steering');
   const why = !!next && on('listen.why_transition');
@@ -733,14 +772,15 @@ export function Now(props: ViewProps) {
           )}
 
           {shown && !stage && <Strip detail={shown} time={now.songTime} seamAt={now.seamAt} seekBlocked={now.inSeam} onSeek={(seconds) => void player.seek(seconds)} />}
-          {!shown && item && !detailFailed && !stage && <StripPlaceholder />}
-          {(on('listen.visualizers') && view.intensity !== 'quiet' && (stage || (spectrum && !lyricFocus))) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} intensity={view.intensity} spectrumShape={view.spectrumShape} detail={shown} />}
+          {!shown && item && analysisAvailable !== false && !detailFailed && !stage && <StripPlaceholder />}
+          {(visualizerAvailable !== false && on('listen.visualizers') && view.intensity !== 'quiet' && (stage || (spectrum && !lyricFocus))) && <MusicVisualizer player={player} active={now.phase === 'playing'} stage={stage} intensity={view.intensity} spectrumShape={view.spectrumShape} detail={shown} />}
           {detailFailed && !shown && <Problem retry={() => setDetailAttempt((attempt) => attempt + 1)}>{hasLyrics ? 'Couldn’t load lyrics and song details.' : 'Couldn’t load this song’s details.'} Playback controls are still available.</Problem>}
           {hasLyrics && (shown ? <Lyrics detail={shown} time={now.songTime} focus={lyricFocus && !stage} canBrowse /> : item && !detailFailed && <Skeleton variant="listen" lines={2} label="Loading this song" retry={() => setDetailAttempt((attempt) => attempt + 1)} />)}
         </div>
 
         <aside className="listen-side" aria-label="Coming up">
-          {shown && on('listen.beat_countdown') && (stage || (timing && !lyricFocus)) && (
+          {/* a browser mix has no beat grid here, so it counts the scheduled hand-off in minutes and seconds */}
+          {shown && on('listen.beat_countdown') && (stage || (timing && !lyricFocus) || analysisAvailable === false) && (
             <TransitionCountdown
               detail={shown}
               time={now.songTime}
@@ -771,7 +811,7 @@ export function Now(props: ViewProps) {
                   <RequestTag item={next} />
                 </div>
               )}
-              <TransitionTruth seam={next.seam} ready={now.nextReady} names={names} />
+              <TransitionTruth seam={next.seam} ready={now.nextReady} names={names} live={analysisAvailable === false} pair={item ? playedKey(item.song_id, next.song_id) : undefined} />
               {steering && controls && !djControlsOpen && (
                 <button type="button" className="quiet next-steer-open" aria-describedby="next-steer-open-hint"
                   onClick={() => { setDjControlsOpen(true); setSteerFocus(true); }}>

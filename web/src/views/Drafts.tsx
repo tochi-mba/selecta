@@ -1,6 +1,7 @@
 import { Icon } from '../ui/Icon';
 import { FormEvent, memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { del, DraftInfo, DraftList, get, post } from '../api';
+import { DraftInfo, DraftList } from '../api';
+import { useApi } from '../requestContext';
 import { useFlags } from '../flags';
 import { etaRangeWords, length, nth } from '../lib';
 import { PageLink } from '../shell/PageLink';
@@ -169,6 +170,7 @@ const DraftRow = memo(function DraftRow({ draft, twin, failure, renaming, editor
 /** Mixes being worked on. Nothing here touches what's playing until you press Play. Saved and able to
  * be heard are different things, so a draft says each of them. */
 export function Drafts({ notify, openDraft, playDraft, lead = true }: Props) {
+  const { get, post, del } = useApi();
   const [list, setList] = useState<DraftList | null>(null);
   const [problem, setProblem] = useState('');
   const [failures, setFailures] = useState<Record<number, string>>({});
@@ -460,6 +462,7 @@ export function Drafts({ notify, openDraft, playDraft, lead = true }: Props) {
 /** Keeps a name while it's being typed, and saves it when you're done. If saving fails the typing stays
  * right there, with the reason. */
 export function RenameDraft({ id, name, onDone }: { id: number; name: string; onDone: (name: string) => void }) {
+  const { post } = useApi();
   const [text, setText] = useState(name);
   const [problem, setProblem] = useState('');
   const [saving, setSaving] = useState(false);

@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { words } from '../copy';
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
-import { ApiError, get, LibraryPage, LibrarySong, MixData, post, problemKind } from '../api';
+import { ApiError, LibraryPage, LibrarySong, MixData, problemKind } from '../api';
+import { useApi } from '../requestContext';
 import { Gate, useFlags, visible } from '../flags';
 import { analysisWords, askedToAnalyse } from '../lib';
 import { setQuery as setAddressQuery, useQueryParam } from '../router';
@@ -14,12 +16,13 @@ import { hasEarlyLibrary, libraryUrl, takeEarlyLibrary } from './libraryPrefetch
 import { ViewProps } from './shared';
 import { SongDetails } from './SongDetails';
 
-const FILTERS: ({ name: string; label: string } & Gate)[] = [
+/** `measures`: only where SelectaDJ analyses songs; a browser library is never analysed. */
+const FILTERS: ({ name: string; label: string; measures?: true } & Gate)[] = [
   { name: 'all', label: 'Everything' },
   { name: 'ready', label: 'Ready' },
-  { name: 'not_yet', label: 'Not analysed yet' },
+  { name: 'not_yet', label: 'Not analysed yet', measures: true },
   { name: 'attention', label: 'Needs attention' },
-  { name: 'priority', label: 'Priority list', flag: 'library.priority' },
+  { name: 'priority', label: 'Priority list', flag: 'library.priority', measures: true },
   { name: 'set_aside', label: 'Set aside' },
 ];
 
@@ -46,7 +49,10 @@ const pagesFrom = (text: string | null) => {
   return Number.isInteger(pages) && pages > 1 ? Math.min(pages, 200) : 1;
 };
 
-export function Library({ mix, now, player, setMixData, setView, notify, status, refreshMix, refreshStatus }: ViewProps) {
+/** `lead`: what a shell puts first under the header, such as connecting music again in a browser. */
+export function Library({ mix, now, player, setMixData, setView, notify, status, refreshMix, refreshStatus, request, analysisAvailable = true, lead }: ViewProps & { lead?: ReactNode }) {
+  // ADR-0462: every read and write on this page goes through the injected request.
+  const { get, post } = useApi(request);
   const query = useQueryParam('q') ?? '';
   // S4-0105-10: only filters the server supports count, so an old or hand-typed `?show=genre` (or
   // tempo, key) never reads as a filter that exists; it shows everything instead.
@@ -572,7 +578,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         <h1 className="display small">Library</h1>
         <p className="library-summary">
           <Counter value={counts.ready} words="ready for mixes" />
-          <Counter value={counts.analysed} words="analysed" />
+          {analysisAvailable && <Counter value={counts.analysed} words="analysed" />}
           <Counter value={counts.music} words="songs" />
           {/* LX-0341-07: an attention count opens exactly the songs it counts */}
           {!!counts.set_aside && Number.isFinite(counts.set_aside) && (
@@ -582,8 +588,9 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
             </button>
           )}
         </p>
-        <p className="library-readiness-help">Analysed means audio has been measured. Ready for mixes means a song has the cues needed to plan a mix; it does not mean transitions are already rendered.</p>
+        <p className="library-readiness-help">{words().libraryReadyMeaning}</p>
       </header>
+      {lead}
       <div className="library-find">
         <SearchField label="Search your library" value={typed} onChange={setTyped} placeholder="Search titles, artists, remixes, credits or recording ID" />
         <label className="library-sort">
@@ -604,7 +611,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
         )}
       </div>
       <div className="chips library-filters" role="group" aria-label="Filter Library recordings">
-        {visible(FILTERS).map((option) => (
+        {visible(FILTERS).filter((option) => analysisAvailable || !option.measures).map((option) => (
           <button key={option.name} aria-pressed={filter === option.name} onClick={() => setAddressQuery({ show: option.name === 'all' ? null : option.name, pages: null }, { push: true })}>
             {option.label}
           </button>
@@ -690,7 +697,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
       {!!committedRows?.length && !cardLayout && (
         <div className="library-column-head" aria-hidden="true">
           <span>Song and artist</span>
-          <span>Tempo · Key · Length</span>
+          <span>{analysisAvailable ? 'Tempo · Key · Length' : 'Length'}</span>
           <span>Mix readiness</span>
           <span>Actions</span>
         </div>
@@ -703,7 +710,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
             duplicate={duplicateIds.has(song.id)} sharedTitle={sharedTitles.has(song.title ?? 'Untitled')}
             inMix={inMix.has(song.id)} searched={!!query} playing={now.phase !== 'idle'}
             linePlace={linePlaces.get(song.id) ?? -1} eta={status.eta?.line[song.id]}
-            lyricsFlag={on('lyrics.lookup')} priorityFlag={on('library.priority')} neverFlag={on('library.never_play')} />
+            lyricsFlag={on('lyrics.lookup')} priorityFlag={on('library.priority') && analysisAvailable} neverFlag={on('library.never_play')} measured={analysisAvailable} />
         ))}
       </ul>
       {pageProblem && <p role="alert" className="warn">{pageProblem}</p>}
@@ -718,7 +725,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           {' '}<button type="button" onClick={closeDetails}>Dismiss</button>
         </p>
       )}
-      {shownDetails && <SongDetails song={shownDetails} onClose={closeDetails} onChanged={() => void load()} notify={notify} onPriority={setPriority} onNever={never} />}
+      {shownDetails && <SongDetails song={shownDetails} onClose={closeDetails} onChanged={() => void load()} notify={notify} onPriority={setPriority} onNever={never} measured={analysisAvailable} />}
       {confirmBatch && <Dialog title="Apply batch Library action?" onClose={() => setConfirmBatch(null)}
         footer={<>
           <button onClick={() => setConfirmBatch(null)}>Cancel - change nothing</button>

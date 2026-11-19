@@ -1,5 +1,5 @@
 import { APIRequestContext, expect, Page, test } from '@playwright/test';
-import { stickingOut } from '../e2e/helpers';
+import { rewriteJson, stickingOut } from '../e2e/helpers';
 import { layoutProblems } from '../e2e/layout';
 import { FLAG_IDS, REGISTRY, type FlagId } from '../src/flags';
 import { listener, signedIn } from './cloud';
@@ -19,7 +19,14 @@ import { listener, signedIn } from './cloud';
 // locked teaser naming the plan, and the teaser pass checks it does. A feature a rule switched
 // off is always hidden, never teased.
 
-const WIDTHS = [[375, 812], [1280, 900]] as const;
+// BF-0456-05: 320 px and both themes. Every page is checked at the narrowest phone width SelectaDJ
+// supports and in both colour schemes (tokens.css follows prefers-color-scheme). The one-flag
+// tests run two views, 320 px light and desktop dark, so each scheme and both ends of the width
+// range are met by every flag; the all-off, cloud-defaults and Browser-first sweeps run all six.
+type Scheme = 'light' | 'dark';
+type View = { width: number; height: number; scheme: Scheme };
+const VIEWS: View[] = [{ width: 320, height: 720, scheme: 'light' }, { width: 1280, height: 900, scheme: 'dark' }];
+const FULL_VIEWS: View[] = (['light', 'dark'] as const).flatMap((scheme) => [[320, 720], [375, 812], [1280, 900]].map(([width, height]) => ({ width, height, scheme })));
 type Plan = 'free' | 'premium';
 const PLANS: Plan[] = ['free', 'premium'];
 
@@ -35,7 +42,7 @@ const SURFACES: Record<string, { at: string; title: string }> = {
 const EVERYWHERE = Object.keys(SURFACES);
 
 /** Menu entries that are whole pages, and the flag each needs (web/src/cloud/api.ts PAGE_FLAGS). */
-const MENU: Record<string, FlagId> = { Library: 'cloud.uploads', 'Add music': 'cloud.uploads' };
+const MENU: Record<string, FlagId> = { Library: 'cloud.stored_media', 'Add music': 'cloud.uploads' };
 
 /** Parts of a page that belong to one feature: with it off (and not teased), they're gone. Words
  * can't say this for every feature, since the local site uses some of the same words. */
@@ -97,9 +104,9 @@ async function switchOff(request: APIRequestContext, user: string, flags: FlagId
 
 /** A new person on `plan`, signed in on `page`; a Premium one also has a room open, so the room
  * panel's own parts (votes, big screen, the paused-music note) are on the page to check. */
-async function person(page: Page, request: APIRequestContext, plan: Plan, path = '/') {
+async function person(page: Page, request: APIRequestContext, plan: Plan, path = '/', seed: Record<string, unknown> = {}) {
   const user = listener(`sweep-${plan}`);
-  const seeded = await request.post('/test/seed', { data: { user, plan } });
+  const seeded = await request.post('/test/seed', { data: { ...seed, user, plan } });
   expect(seeded.ok(), await seeded.text()).toBeTruthy();
   if (plan === 'premium') {
     const opened = await request.post('/api/rooms', {
@@ -166,25 +173,41 @@ async function open(page: Page, surface: string) {
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
 }
 
-/** Switch `flags` off for a new person on each plan and check every page in `surfaces`. */
-async function sweep(page: Page, request: APIRequestContext, flags: FlagId[], surfaces: string[], plans: Plan[] = PLANS) {
+/** The page's own background token, so a sweep can prove the colour scheme really changed. */
+const background = (page: Page) => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim());
+
+type SweepOptions = { plans?: Plan[]; views?: View[]; seed?: Record<string, unknown>; extra?: (page: Page, where: string) => Promise<string[]> };
+
+/** Switch `flags` off for a new person on each plan and check every page in `surfaces`, in each
+ * view (width and colour scheme). `seed` adds to the person's seed; `extra` adds a caller's own
+ * checks on every page. */
+async function sweep(page: Page, request: APIRequestContext, flags: FlagId[], surfaces: string[], { plans = PLANS, views = VIEWS, seed, extra }: SweepOptions = {}) {
   const found: string[] = [];
   for (const plan of plans) {
-    const user = await person(page, request, plan);
-    await switchOff(request, user, flags);
+    const user = await person(page, request, plan, '/', seed);
+    // No rule to write for a sweep of the build's own decisions (and nothing to clear after).
+    if (flags.length) await switchOff(request, user, flags);
     const account = await accountOf(request, user);
     for (const id of flags) {
       if (!off(account, id)) found.push(`${plan}: ${id} is still on after a rule switched it off`);
       if (teased(account, id)) found.push(`${plan}: ${id} is switched off by a rule but still teased`);
     }
     const seen = watch(page);
-    for (const [width, height] of WIDTHS) {
+    const schemes = new Map<Scheme, string>();
+    for (const { width, height, scheme } of views) {
+      await page.emulateMedia({ colorScheme: scheme });
       await page.setViewportSize({ width, height });
       for (const surface of surfaces) {
         await open(page, surface);
-        found.push(...(await problems(page, `${flags.join(' ') || 'cloud defaults'} · ${plan} · ${surface} at ${width}px`, account)));
+        const where = `${flags.join(' ') || 'cloud defaults'} · ${plan} · ${surface} at ${width}px ${scheme}`;
+        if (!schemes.has(scheme)) schemes.set(scheme, await background(page));
+        found.push(...(await problems(page, where, account)));
+        if (extra) found.push(...(await extra(page, where)));
       }
     }
+    // Both schemes asked for must really have rendered differently, or the theme pass is a no-op.
+    if (schemes.size > 1 && new Set(schemes.values()).size < schemes.size) found.push(`${plan}: light and dark rendered the same background (${[...schemes.values()].join(', ')})`);
+    await page.emulateMedia({ colorScheme: 'light' });
     const routes = FLAG_IDS.filter((id) => off(account, id)).flatMap((id) => (spec(id).routes ?? []).map((route) => ({ id, ...asPattern(route) })));
     for (const asked of seen.requests) {
       const gone = routes.find((route) => route.method === asked.method && route.path.test(asked.path));
@@ -193,7 +216,7 @@ async function sweep(page: Page, request: APIRequestContext, flags: FlagId[], su
     found.push(...seen.refused.map((refusal) => `${plan}: the server refused ${refusal}`));
     page.removeAllListeners('request');
     page.removeAllListeners('response');
-    await switchOff(request, user, []);
+    if (flags.length) await switchOff(request, user, []);
   }
   return [...new Set(found)];
 }
@@ -248,6 +271,7 @@ test('each venue flag names its real nonvisual Cloud ownership, without fabricat
 });
 
 test('with the cloud defaults, lyric display is off and every page closes up around it', async ({ page, request }) => {
+  test.setTimeout(600_000); // all six views
   // SC-0406-03: `lyrics.display` has `cloud_default: false`, so it and everything that shows
   // lyric text are off for every plan, with no rule at all; lookups stay on for internal use.
   const lyrics: FlagId[] = ['lyrics.display', 'listen.lyrics', 'listen.word_focus', 'listen.stage', 'discover.word_links'];
@@ -259,11 +283,12 @@ test('with the cloud defaults, lyric display is off and every page closes up aro
     expect(lyrics.filter((id) => teased(account, id))).toEqual([]);
     expect(account.features['lyrics.lookup']).toBe(true);
   }
-  expect(await sweep(page, request, [], EVERYWHERE)).toEqual([]);
+  expect(await sweep(page, request, [], EVERYWHERE, { views: FULL_VIEWS })).toEqual([]);
 });
 
 test('with every swept cloud feature off for one account, every page still holds together', async ({ page, request }) => {
-  expect(await sweep(page, request, SWEPT, EVERYWHERE)).toEqual([]);
+  test.setTimeout(600_000); // all six views
+  expect(await sweep(page, request, SWEPT, EVERYWHERE, { views: FULL_VIEWS })).toEqual([]);
 });
 
 for (const id of SWEPT) {
@@ -327,7 +352,8 @@ test('a feature switched off while its page is open closes up at once, without a
   await expect(menu.getByRole('button', { name: 'Add music' })).toBeVisible();
   await switchOff(request, user, ['cloud.uploads']);
   await expect(menu.getByRole('button', { name: 'Add music' })).toHaveCount(0, { timeout: 10_000 });
-  await expect(menu.getByRole('button', { name: 'Library' })).toHaveCount(0);
+  // The Library reads stored media (cloud.stored_media, ADR-0456), so it stays.
+  await expect(menu.getByRole('button', { name: 'Library' })).toBeVisible();
 
   // Back on: everything comes back the same way.
   await switchOff(request, user, []);
@@ -335,3 +361,141 @@ test('a feature switched off while its page is open closes up at once, without a
   await expect(page.locator('.room-panel').getByRole('heading', { name: 'Big screen' })).toBeVisible({ timeout: 10_000 });
   expect(await page.evaluate(() => (window as unknown as { stayed?: boolean }).stayed)).toBe(true);
 });
+
+test('hosted media is an account grant: revoking it hides uploads but keeps stored-library access', async ({ page, request }) => {
+  const user = await person(page, request, 'premium', '/library');
+  const menu = page.getByRole('navigation', { name: 'Cloud workspace' });
+  await expect(menu.getByRole('button', { name: 'Add music' })).toBeVisible();
+  await expect(menu.getByRole('button', { name: 'Library' })).toBeVisible();
+
+  // cloud.uploads requires this umbrella grant. The live flag event must remove every upload
+  // entry without reloading, while cloud.stored_media remains independently reachable so an
+  // existing customer's library never goes dark (ADR-0456).
+  await switchOff(request, user, ['cloud.hosted_media']);
+  await expect(menu.getByRole('button', { name: 'Add music' })).toHaveCount(0, { timeout: 10_000 });
+  await page.goto('/library');
+  await expect(page.getByRole('heading', { name: 'Your library', exact: true })).toBeVisible();
+  await expect(page.getByText(/upload tracks|add music/i)).toHaveCount(0);
+
+  await switchOff(request, user, []);
+  await expect(menu.getByRole('button', { name: 'Add music' })).toBeVisible({ timeout: 10_000 });
+});
+
+// -- Browser-first Cloud (BF-0463-05, BF-0456-05) ----------------------------------------------
+//
+// Every Browser-first flag declares its `surfaces` in the registry, and the sweep proves, in all
+// six views (320, 375 and 1280 px, light and dark), that with the flag off nothing of it is left
+// on any page it names: none of its marks below, no request to a route it owns, and the page
+// still closes up. The person is seeded with a stored song and catalogue songs on a device, so a
+// mark that leaked would have something to show.
+//
+// Honest scope: a flag on for a new account on this server (`cloud.hosted_media` and
+// `cloud.stored_media` ship on; this test build also turns `cloud.local_media` on) is switched
+// off by a real per-user rule. The others ship off and a rule can never grant past the build
+// (ADR-0414), so off is every account's state and the sweep checks that state as is. Where a
+// flag has a visible on-state (the local-first shell, its catalogue, the upload entry), the
+// "marks are real" test first shows each mark with the flag on, so an absent mark means
+// something. `devices.browser_player`, `cloud.browser_dsp`, `cloud.venue_tablet` and
+// `cloud.local_export` have no Cloud UI of their own yet; their marks are their own names and the
+// player refusal, and the sweep proves only that none appears.
+
+type Mark = { text?: RegExp; role?: { role: 'navigation' | 'heading' | 'button' | 'link' | 'region'; name: string } };
+
+/** Each BF flag: the `cloud.*` pages it must name in the registry, and its marks on them. */
+const BF: Record<string, { surfaces: string[]; marks: Mark[]; ships: boolean }> = {
+  'cloud.hosted_media': { surfaces: ['cloud.uploads'], ships: true, marks: [{ role: { role: 'button', name: 'Add music' } }, { text: /upload tracks/i }] },
+  'cloud.stored_media': { surfaces: ['cloud.library', 'cloud.listen'], ships: true, marks: [{ role: { role: 'button', name: 'Library' } }] },
+  'cloud.local_first': { surfaces: ['cloud.home', 'cloud.listen', 'cloud.library', 'cloud.settings'], ships: false, marks: [{ role: { role: 'navigation', name: 'Main' } }, { role: { role: 'link', name: 'Make a Mix' } }] },
+  // Its on-state (the shared shell's Main navigation and More for a hosted account) is shown below
+  // and in hosted-shell.cloud.ts; off, the legacy rail is all there is.
+  'cloud.hosted_shell': { surfaces: ['cloud.home', 'cloud.listen', 'cloud.library', 'cloud.settings'], ships: false, marks: [{ role: { role: 'navigation', name: 'Main' } }, { role: { role: 'button', name: 'More' } }] },
+  'cloud.local_media': { surfaces: ['cloud.library'], ships: false, marks: [{ role: { role: 'heading', name: 'Connect music' } }, { text: /Local song \d/ }] },
+  'devices.browser_player': { surfaces: ['cloud.listen'], ships: false, marks: [{ text: /Browser player/ }, { text: /This device can.t play mixes/ }] },
+  'cloud.browser_dsp': { surfaces: ['cloud.listen'], ships: false, marks: [{ text: /Browser DSP/ }] },
+  'cloud.venue_tablet': { surfaces: ['cloud.listen', 'cloud.settings'], ships: false, marks: [{ text: /Venue tablet/ }] },
+  'cloud.local_export': { surfaces: ['cloud.listen'], ships: false, marks: [{ text: /Local export/ }] },
+  // Its on-state (the shell import chip, the carry-on offer) is drawn by the onboarding and shell
+  // work; these marks are that copy, so with the flag off none of it may appear.
+  'cloud.progressive_import': { surfaces: ['cloud.home', 'cloud.library', 'cloud.listen'], ships: false, marks: [{ text: /Checking your music: \d+ of/ }, { text: /Keep checking / }, { text: /Continue while it finishes/ }] },
+  // Its on-state (join, leave, the closed refusal) is local-first-labs.labs.ts, on a server whose
+  // build turns it on (playwright.labs.config.ts).
+  'cloud.local_first_labs': { surfaces: ['cloud.settings'], ships: false, marks: [{ role: { role: 'region', name: 'Labs: browser-first Cloud' } }, { role: { role: 'button', name: 'Join Labs' } }] },
+};
+const BF_IDS = Object.keys(BF) as FlagId[];
+const BF_SEED = { songs: 1, local_songs: 2 };
+
+async function marksShown(page: Page, marks: Mark[]): Promise<string[]> {
+  const shown: string[] = [];
+  for (const mark of marks) {
+    const found = mark.role ? page.getByRole(mark.role.role, { name: mark.role.name, exact: true }) : page.getByText(mark.text!);
+    if (await found.count()) shown.push(mark.role ? `${mark.role.role} "${mark.role.name}"` : String(mark.text));
+  }
+  return shown;
+}
+
+test('every Browser-first flag declares its Cloud surfaces, and the sweep covers each of them', () => {
+  for (const id of BF_IDS) {
+    expect(FLAG_IDS, id).toContain(id);
+    expect([...cloudSurfaces(id)].sort(), `${id} surfaces`).toEqual([...BF[id].surfaces].sort());
+    for (const surface of BF[id].surfaces) expect(SURFACES[surface], `${id}: ${surface}`).toBeTruthy();
+    // The registry default: only hosted and stored media ship on; the rest ship dark.
+    expect(spec(id).default !== false, `${id} default`).toBe(BF[id].ships);
+  }
+});
+
+test('each Browser-first mark is real: shown with its flag on', async ({ page, request }) => {
+  // The account answer is amended in the browser for the flags a rule cannot grant (as
+  // local-first-shell.cloud.ts does); hosted and stored media are on for everyone already.
+  const user = listener('bf-marks');
+  const seeded = await request.post('/test/seed', { data: { user, plan: 'premium', ...BF_SEED } });
+  expect(seeded.ok(), await seeded.text()).toBeTruthy();
+  await page.addInitScript((name) => localStorage.setItem('selecta-e2e-user', name), user);
+  await page.goto('/library');
+  const menu = page.getByRole('navigation', { name: 'Cloud workspace' });
+  await expect(menu.getByRole('button', { name: 'Add music' })).toBeVisible();
+  await expect(menu.getByRole('button', { name: 'Library' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Upload tracks' })).toBeVisible();
+
+  await page.route('**/api/account', (route) => rewriteJson(route, (account) => ({
+    ...account,
+    experience: { ...(account.experience ?? {}), local_first: true },
+    features: { ...account.features, 'cloud.local_first': true, 'cloud.local_media': true },
+  })));
+  await page.goto('/library');
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Make a Mix', exact: true }).first()).toBeVisible();
+  // This test build turns the catalogue on (tests/e2e_cloud_server.py), so its marks show.
+  await expect(page.getByRole('heading', { name: 'Connect music' })).toBeVisible();
+  await expect(page.getByText('Local song 1', { exact: true }).first()).toBeVisible();
+});
+
+test('the hosted shell marks are real: shown with cloud.hosted_shell on for a hosted account', async ({ page, request }) => {
+  const user = listener('bf-hosted-shell-marks');
+  const seeded = await request.post('/test/seed', { data: { user, plan: 'premium', ...BF_SEED } });
+  expect(seeded.ok(), await seeded.text()).toBeTruthy();
+  await page.route('**/api/account', (route) => rewriteJson(route, (account) => ({
+    ...account,
+    experience: { ...(account.experience ?? {}), local_first: false },
+    features: { ...account.features, 'cloud.hosted_shell': true },
+  })));
+  await page.addInitScript((name) => localStorage.setItem('selecta-e2e-user', name), user);
+  await page.goto('/library');
+  // marksShown never waits, so let the shell finish booting first (as the local-first test does)
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
+  expect(await marksShown(page, BF['cloud.hosted_shell'].marks)).toEqual(['navigation "Main"', 'button "More"']);
+});
+
+for (const id of BF_IDS) {
+  test(`with ${id} off, its Cloud pages hold together at 320 px and in both themes, with no trace of it`, async ({ page, request }) => {
+    test.setTimeout(480_000); // all six views
+    const extra = async (current: Page, where: string) => (await marksShown(current, BF[id].marks)).map((mark) => `${where}: shows ${mark}, but ${id} is off`);
+    // On for a new account here: a real per-user rule switches it off. Off already (the build
+    // ships it dark): no rule, the sweep checks the state every account is in.
+    const fresh = listener('bf-check');
+    expect((await request.post('/test/seed', { data: { user: fresh } })).ok()).toBeTruthy();
+    const account = await accountOf(request, fresh);
+    const flags = account.features[id] === false ? [] : [id];
+    expect(teased(account, id), `${id} is teased`).toBe(false);
+    expect(await sweep(page, request, flags, BF[id].surfaces, { views: FULL_VIEWS, seed: BF_SEED, extra })).toEqual([]);
+  });
+}

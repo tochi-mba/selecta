@@ -13,11 +13,14 @@ from test_cloud_jobs_support import Flags, drift, head, make_store, outbox, work
 
 from selecta.persistence import transaction
 from selecta.work import flag_gates
+from selecta.work.catalogue import lookup
 from selecta.work.enqueue import JobSpec
 from selecta.work.holds import hold_for_staff
 from selecta.work.schema import jobs
 
-FLAG = "core.analysis"
+# the flag the catalogue gives analysis jobs (cloud.hosted_media since ADR-0456), so these
+# tests follow the catalogue rather than a copy of it
+FLAG = lookup("analyse.song").flag_id
 
 
 @pytest.fixture

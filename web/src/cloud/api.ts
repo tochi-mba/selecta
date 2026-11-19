@@ -1,3 +1,5 @@
+import { accountFlagOn, type FlagId } from '../flags';
+import { userLocale } from '../ui/format';
 // What the Cloud site knows about the API: the shapes it answers with, how a refusal is read,
 // and the few formatting helpers every Cloud page shares.
 
@@ -16,19 +18,50 @@ export type Account = {
   usage?: Usage;
   billing?: { consent_version: string };
   lucy?: { tier: string };
+  /** One server-decided answer for the two independent Cloud grants (BF-0455-03). */
+  experience?: { local_first: boolean; hosted: boolean };
   features: Record<string, boolean>;
   feature_locks: Record<string, string>;
 };
+
+export type CloudModeCopy = {
+  heading: string;
+  privacy: string;
+  source: 'device' | 'hosted' | 'both' | 'none';
+};
+
+/** Member-facing words for the decided Cloud experience (BF-0455-06).
+ *
+ * Keep this keyed by the account snapshot rather than scattering flag checks and jargon through
+ * pages. Hosted mode is intentionally described as available, never legacy or deprecated.
+ */
+export function cloudModeCopy(account: Pick<Account, 'experience'> | null): CloudModeCopy {
+  const local = account?.experience?.local_first === true;
+  const hosted = account?.experience?.hosted === true;
+  if (local && hosted) return {
+    heading: 'Use music on this device or from your Cloud library',
+    privacy: 'Music you connect locally stays on this device. Your hosted library remains available in SelectaDJ Cloud.',
+    source: 'both',
+  };
+  if (local) return {
+    heading: 'Use music on this device',
+    privacy: 'Your music stays on this device. SelectaDJ Cloud keeps only the details needed for your library and mixes.',
+    source: 'device',
+  };
+  if (hosted) return {
+    heading: 'Use your SelectaDJ Cloud library',
+    privacy: 'Your hosted music remains available in SelectaDJ Cloud.',
+    source: 'hosted',
+  };
+  return {
+    heading: 'Connect music to begin',
+    privacy: 'SelectaDJ has not been given access to music for this account.',
+    source: 'none',
+  };
+}
 export type Asset = { id: string; name: string; size: number; sha256: string | null; format: string | null; duration_seconds: number | null; sample_rate: number | null; channels: number | null; created_at: number };
 export type Api = <T>(path: string, init?: RequestInit, workspaceId?: string) => Promise<T>;
 export type Page = 'home' | 'listen' | 'library' | 'uploads' | 'billing' | 'settings';
-
-/** Whether a feature is on for this account. The server decides, per account, and says so in
- * `/api/account` (again after each `flags.changed`); a flag it doesn't mention is on, as with an
- * older server. Off means gone: no page, button or word for it (ADR-0414, ADR-0390). */
-export function featureOn(account: Pick<Account, 'features'> | null, flag: string) {
-  return account?.features[flag] !== false;
-}
 
 /** The plan that unlocks a feature this account can see only as a teaser, or undefined. */
 export function lockedTo(account: Pick<Account, 'feature_locks'> | null, flag: string): string | undefined {
@@ -36,11 +69,18 @@ export function lockedTo(account: Pick<Account, 'feature_locks'> | null, flag: s
 }
 
 /** The flag a page needs, if any: with it off the page is gone, from the menu and the address. */
-const PAGE_FLAGS: Partial<Record<Page, string>> = { library: 'cloud.uploads', uploads: 'cloud.uploads' };
+// Reading an existing library is independent from the hosted-media write grant (ADR-0456).
+// Revoking uploads must never make somebody's stored music disappear.
+const PAGE_FLAGS: Partial<Record<Page, FlagId>> = {
+  library: 'cloud.stored_media',
+  uploads: 'cloud.uploads',
+};
 
 export function pageShown(account: Pick<Account, 'features'> | null, page: Page) {
   const flag = PAGE_FLAGS[page];
-  return !flag || featureOn(account, flag);
+  // the server decides per account, in `/api/account` (again after each `flags.changed`); off
+  // means gone: no page, button or word for it (ADR-0414, ADR-0390)
+  return !flag || accountFlagOn(flag, account?.features ?? null);
 }
 
 export const apiOrigin =(import.meta.env.VITE_SELECTA_API_ORIGIN ?? '').replace(/\/$/, '');
@@ -72,7 +112,7 @@ export function bytes(value: number) {
   return `${(value / (unit === 'GB' ? 1_000_000_000 : 1_000_000)).toFixed(1)} ${unit}`;
 }
 
-/** When an allowance resets, in the listener's own words: "Resets 11 Nov", or with the time for
+/** When an allowance resets, in the listener's own language: "Resets 11 Nov" (or "Dec 1"), or with the time for
  * a daily one. `timeZone` is the account's, so the date matches the server's period. */
 export function resetWords(epochSeconds: number, period: 'day' | 'month', timeZone?: string) {
   const when = new Date(epochSeconds * 1000);
@@ -80,9 +120,9 @@ export function resetWords(epochSeconds: number, period: 'day' | 'month', timeZo
     ? { hour: 'numeric', minute: '2-digit', weekday: 'short' }
     : { day: 'numeric', month: 'short' };
   try {
-    return `Resets ${when.toLocaleString('en-GB', { ...options, timeZone })}`;
+    return `Resets ${when.toLocaleString(userLocale(), { ...options, timeZone })}`;
   } catch {
-    return `Resets ${when.toLocaleString('en-GB', options)}`;
+    return `Resets ${when.toLocaleString(userLocale(), options)}`;
   }
 }
 
