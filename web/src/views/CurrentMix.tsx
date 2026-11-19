@@ -22,7 +22,7 @@ export function CurrentMix({ mix, mixName, now, player, setView, prominent, lead
         <h2>{mixName}</h2>
         <div className="mix-identity">
           <MixSignature items={mix} />
-          {prominent && <small className="soft">Song-order identity · decorative, not an audio waveform</small>}
+          {prominent && <small className="soft">A picture of the song order, not the sound</small>}
         </div>
         <p className="soft">{mix.length} {mix.length === 1 ? 'song' : 'songs'}{prominent && mix.length ? `, about ${length(runningTime(mix))}` : ''}</p>
         {prominent && facts.seams > 0 && (

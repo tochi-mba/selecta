@@ -349,7 +349,7 @@ export function KeepAwakeStep({ state, onChange, deps, session }: StepProps) {
   const words = {
     held: 'The browser agreed to keep the screen on while this page is open and in front. It can still change its mind, for example on low battery, and SelectaDJ will say so.',
     unsupported: 'This browser can’t keep the screen on by itself. Turn off auto-lock in the device’s settings instead.',
-    refused: `The browser said no${reason ? `: ${reason}` : '.'} Turn off auto-lock in the device’s settings instead.`,
+    refused: `The browser said no${reason ? `: ${reason.replace(/[.\s]*$/, '')}.` : '.'} Turn off auto-lock in the device’s settings instead.`,
   };
   return (
     <>

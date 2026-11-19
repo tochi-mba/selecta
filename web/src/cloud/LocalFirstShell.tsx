@@ -1,7 +1,7 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MixData, Request, Status } from '../api';
 import { setFlags, useFlags } from '../flags';
-import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, reportDeviceAvailability, deviceAvailabilitySnapshot, type LapsedWhy, type MediaResolver } from '../media';
+import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, reportDeviceAvailability, deviceAvailabilitySnapshot, runImport, type ImportEvent, type ImportSource, type LapsedWhy, type MediaResolver } from '../media';
 import type { NowState } from '../player';
 import { BytesContext, noBytesHere, RequestContext } from '../requestContext';
 import { navigate, parseRoute, useLocationText } from '../router';
@@ -322,6 +322,13 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   const controls = useServerFreeControls({ places, player: shellPlayer, now, hasMix: data.mix.length > 0, hasNext: data.mix.length > now.position + 1 });
   const currentMix = useCallback(() => data.mix, [data.mix]);
   useMediaKeys({ on: on('listen.media_keys'), player: shellPlayer, getMix: currentMix, mixName: data.name, now });
+  // The spine must import into the same index instance this shell reads (memory mirror and
+  // session files are per-instance), or freshly connected songs read as on another device
+  // until the page reloads.
+  const spineDeps = useMemo(() => ({
+    importMusic: async (source: ImportSource, onProgress: (event: ImportEvent) => void, signal: AbortSignal) =>
+      runImport({ source, request: media, store: await openStore(), deviceId: mediaDeviceId(workspaceId), onProgress, signal }),
+  }), [media, openStore, workspaceId]);
   const connect = <ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} onAvailabilityChanged={() => sweepLapsed(true)} />;
 
   const page = (): ReactNode => {
@@ -338,8 +345,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
       return (
         <main className="page" id="main">
           <h1 className="display small">Welcome to SelectaDJ</h1>
-          <OnboardingSpine request={media} workspaceId={workspaceId} onDone={() => { setSpine(false); refreshStatus(); }} />
-          <button className="quiet" onClick={() => setSpine(false)}>Look around first</button>
+          <OnboardingSpine request={media} workspaceId={workspaceId} deps={spineDeps} onDone={() => { setSpine(false); refreshStatus(); }} />
         </main>
       );
     }

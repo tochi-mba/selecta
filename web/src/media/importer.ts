@@ -1,4 +1,5 @@
 import { assertNoPath, fileSha256, normalise } from './identity';
+import { readFileTags } from './tags';
 import { isQuotaError, MediaStore } from './store';
 import type { DirectoryHandleLike, FileHandleLike, FileRef } from './store';
 
@@ -94,14 +95,31 @@ function stemOf(name: string): string {
   return dot > 0 ? name.slice(0, dot) : name;
 }
 
-/** The fallback tag reader: "Artist - Title.mp3" patterns, else the stem as the title. Wrong
- * tags are fine by design (ADR-0458 "metadata lies"): identity rides on the content hash, and
- * display metadata stays editable. */
+/** Names from the filename alone: "Artist - Title" patterns, with a leading track number
+ * ("01." or "001 - ") dropped from either slot, else the stem as the title. */
+export function namesFromFilename(name: string): { artist: string; title: string } {
+  const trackNumber = /^\s*\d{1,4}\s*[.)-]?\s*$/;
+  const split = stemOf(name).split(' - ').filter((part) => part.trim());
+  if (split.length && trackNumber.test(split[0])) split.shift();
+  const title = (split.length >= 2 ? split.slice(1).join(' - ') : split[0] ?? '').replace(/^\s*\d{1,4}[.)]\s+/, '').trim();
+  return split.length >= 2
+    ? { artist: split[0].trim(), title }
+    : { artist: 'Unknown artist', title };
+}
+
+/** The default tag reader: the file's own tags (ID3v2/v1, FLAC, M4A) first, the filename as
+ * the fallback. Wrong tags are fine by design (ADR-0458 "metadata lies"): identity rides on
+ * the content hash, and display metadata stays editable. */
 export const defaultTagReader: TagReader = async (file) => {
-  const base = stemOf(file.name);
-  const split = base.split(' - ');
-  const names = split.length >= 2 ? { artist: split[0], title: split.slice(1).join(' - ') } : { artist: 'Unknown artist', title: base };
-  return { ...names, duration_s: await probeDuration(file), codec: extensionOf(file.name) || undefined };
+  const tags = (await readFileTags(file)) ?? {};
+  const names = namesFromFilename(file.name);
+  return {
+    title: tags.title ?? names.title,
+    artist: tags.artist ?? names.artist,
+    ...(tags.album ? { album: tags.album } : {}),
+    duration_s: await probeDuration(file),
+    codec: extensionOf(file.name) || undefined,
+  };
 };
 
 /** Duration through a metadata-only audio element, with a timeout so a codec the browser will
