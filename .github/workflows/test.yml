@@ -197,12 +197,12 @@ jobs:
   cloud:
     # Cloud code on Linux against a real PostgreSQL: row locks, SKIP LOCKED, LISTEN/NOTIFY,
     # advisory locks and row-level security only exist there. The Windows shards run the same
-    # tests on SQLite. See docs/saas/18-test-plan.md. Four shards, each under half its limit;
-    # verify combines their coverage and runs the gate.
+    # tests on SQLite. See docs/saas/18-test-plan.md. Four shards of about 15 to 20 minutes of
+    # tests after about 11 minutes of setup; verify combines their coverage and runs the gate.
     name: Cloud / PostgreSQL (shard ${{ matrix.shard }}/4)
     needs: [lint]
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -519,7 +519,7 @@ jobs:
         # steps pass on as SELECTA_E2E_CHANNEL. Remove once the mirror is reliable.
         run: |
           for attempt in 1 2 3; do
-            if pnpm exec playwright install --with-deps chrome msedge firefox webkit; then
+            if pnpm exec playwright install --with-deps chrome msedge chromium firefox webkit; then
               echo "channel=" >> "$GITHUB_OUTPUT"
               exit 0
             fi
@@ -542,6 +542,15 @@ jobs:
         working-directory: web
         env:
           SELECTA_E2E_CHANNEL: ${{ steps.browsers.outputs.channel }}
+      # Firefox only starts an AudioContext when there is an output device, and the runner has
+      # none, so engine truth gets a silent PulseAudio sink. Chromium and WebKit fake their own.
+      - name: Give Firefox a silent audio output
+        if: ${{ matrix.shard == 1 }}
+        run: |
+          sudo apt-get install -y --no-install-recommends pulseaudio
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=silent
+          pactl set-default-sink silent
       - name: Browser engine truth in Chromium, Firefox and WebKit, muted
         id: engine-truth
         if: ${{ matrix.shard == 1 }}
