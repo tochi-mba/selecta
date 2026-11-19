@@ -8,7 +8,7 @@ import { ViewProps } from './shared';
 
 /** The one mix that's really yours to hear right now. Its transitions being ready is a different thing
  * from its songs being saved, so it says which. */
-export function CurrentMix({ mix, mixName, now, player, setView, prominent, lead }: Pick<ViewProps, 'mix' | 'mixName' | 'now' | 'player' | 'setView'> & {
+export function CurrentMix({ mix, mixName, now, player, setView, prominent, lead, analysisAvailable = true }: Pick<ViewProps, 'mix' | 'mixName' | 'now' | 'player' | 'setView' | 'analysisAvailable'> & {
   prominent?: boolean;
   /** whether Play/Open is the page's one primary action (SF-0204-02); on My Mixes the drafts usually lead */
   lead?: boolean;
@@ -27,9 +27,14 @@ export function CurrentMix({ mix, mixName, now, player, setView, prominent, lead
         <p className="soft">{mix.length} {mix.length === 1 ? 'song' : 'songs'}{prominent && mix.length ? `, about ${length(runningTime(mix))}` : ''}</p>
         {prominent && facts.seams > 0 && (
           <p>
-            <Status kind={facts.failed ? 'warning' : facts.allReady ? 'ready' : facts.rendering ? 'working' : 'planned'}>
-              {facts.allReady ? 'Every transition is ready' : `${facts.ready} of ${facts.seams} transitions ready${facts.failed ? `, ${facts.failed} couldn’t be made` : ''}`}
-            </Status>
+            {analysisAvailable ? (
+              <Status kind={facts.failed ? 'warning' : facts.allReady ? 'ready' : facts.rendering ? 'working' : 'planned'}>
+                {facts.allReady ? 'Every transition is ready' : `${facts.ready} of ${facts.seams} transitions ready${facts.failed ? `, ${facts.failed} couldn’t be made` : ''}`}
+              </Status>
+            ) : (
+              // nothing renders ahead in a browser mix, so a 0-of-N counter would read as failure
+              <Status kind="planned">Transitions are worked out as the mix plays</Status>
+            )}
           </p>
         )}
       </div>

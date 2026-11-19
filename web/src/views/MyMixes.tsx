@@ -40,7 +40,7 @@ export function transitionsWaiting(mix: MixItem[]): WaitingTransition[] {
 
 /** An optional return shortcut. Trust the server's exact order, never a stored title,
  * selected transition, or optimistic snapshot from a previous browser session. */
-export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft, playDraft, request, suppressDrafts = false, children }: ViewProps & { suppressDrafts?: boolean; children?: ReactNode }) {
+export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft, playDraft, request, suppressDrafts = false, analysisAvailable = true, children }: ViewProps & { suppressDrafts?: boolean; children?: ReactNode }) {
   // ADR-0462: reads go through the injected request, never the local client.
   const { get } = useApi(request);
   const [recent, setRecent] = useState<RecentDraft | null>(null);
@@ -146,7 +146,7 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
       </section>}
       {problem && <p className="warn" role="alert">{problem}</p>}
       {mix.length > 0
-        ? <CurrentMix prominent lead={!continuing && !showDrafts} mix={mix} mixName={mixName} now={now} player={player} setView={setView} />
+        ? <CurrentMix prominent lead={!continuing && !showDrafts} mix={mix} mixName={mixName} now={now} player={player} setView={setView} analysisAvailable={analysisAvailable} />
         : <NoCurrentMix lead={!continuing && !on('drafts')} />}
       {showDrafts && <StableDrafts lead={!continuing} notify={stableNotify} openDraft={stableOpen} playDraft={stablePlay} setView={stableSetView} />}
       {/* a shell's own additions to this page, inside its main landmark */}
