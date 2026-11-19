@@ -14,6 +14,7 @@ import { Section, Skeleton } from '../ui/controls';
 import { countOf } from '../ui/format';
 import { showToast } from '../ui/toasts';
 import { Library } from '../views/Library';
+import { Mix } from '../views/Mix';
 import { Mixes } from '../views/Mixes';
 import { MyMixes } from '../views/MyMixes';
 import { Now } from '../views/Now';
@@ -51,7 +52,12 @@ import { useServerFreeControls } from './serverFreeControls';
  * (serverFreeControls.tsx), which needs nothing but this browser and its own player. */
 export const NOT_IN_THE_BROWSER = {
   requests: false,
-  editor: false,
+  // The editor is here (reorder, add, remove, clear, Save a copy, through the recipe store).
+  // What it can't do in a browser: lock songs to analysed positions, draw an energy horizon
+  // from measurements, or open a transition to re-render it (every one is worked out live).
+  'editor.energy_horizon': false,
+  'editor.locks': false,
+  seam_inspector: false,
   'app.activity': false,
   export: false,
   lucy: false,
@@ -370,6 +376,11 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
             {on('cloud.local_media') && data.mix.length > 0 && <div className="page"><QueueSources mix={data.mix} book={book} /></div>}
           </>
         );
+      case 'edit':
+        // Saved browser mixes are opened as the current mix from My Mixes, so only the current
+        // mix has an editor here.
+        if (route.draft !== null) return <OnlyOnYourComputer title="Editing a saved draft" nearest={{ label: 'My Mixes', path: '/mixes/mine' }} />;
+        return <Mix {...shared} key="current" />;
       case 'missing':
         return <OnlyOnYourComputer title="That page" nearest={{ label: 'Library', path: '/library' }} />;
       default: {

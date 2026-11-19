@@ -57,6 +57,10 @@ export type RecipeStore = {
   create: (name: string, songIds: number[]) => Promise<Recipe>;
   read: (mixId: string) => Promise<Recipe>;
   list: () => Promise<RecipeSummary[]>;
+  /** A new revision of the recipe: the editor's writes, checked against `baseRevision`. */
+  edit: (mixId: string, baseRevision: string, change: { songIds?: number[]; name?: string }) => Promise<Recipe>;
+  /** A saved copy under its own id, so "Save a copy" lands in My Mixes. */
+  duplicate: (mixId: string, name?: string) => Promise<Recipe>;
 };
 
 export const DEFAULT_STEERING: Status['steering'] = { mix_language: 'any', stems: 'auto', energy_arc: null, target: null };
@@ -79,6 +83,18 @@ export function recipeStore(cloud: Request, workspaceId: string): RecipeStore {
     })).mix,
     read: async (mixId) => (await cloud<{ mix: Recipe }>(`/local-media/recipes/${encodeURIComponent(mixId)}`)).mix,
     list: async () => (await cloud<{ recipes: RecipeSummary[] }>('/local-media/recipes')).recipes,
+    edit: async (mixId, baseRevision, change) => (await cloud<{ mix: Recipe }>(`/local-media/recipes/${encodeURIComponent(mixId)}/revisions`, {
+      method: 'POST',
+      body: JSON.stringify({
+        base_revision: baseRevision,
+        ...(change.songIds ? { song_ids: change.songIds } : {}),
+        ...(change.name ? { name: change.name } : {}),
+      }),
+    })).mix,
+    duplicate: async (mixId, name) => (await cloud<{ mix: Recipe }>(`/local-media/recipes/${encodeURIComponent(mixId)}/duplicate`, {
+      method: 'POST',
+      body: JSON.stringify(name ? { name } : {}),
+    })).mix,
   };
 }
 

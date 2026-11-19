@@ -97,20 +97,23 @@ export function seamFamily(move: string | null | undefined): SeamFamily {
 
 /** One truthful transition diagram used at the song edge and in the Inspector.
  * The chosen move is a plan until an actual rendered style is returned. */
-export function SeamDiagram({ seam, from, into, names = {}, compact = false }: {
+export function SeamDiagram({ seam, from, into, names = {}, compact = false, live: workedOutLive = false }: {
   seam: NonNullable<MixItem['seam']>;
   from: string;
   into: string;
   names?: Record<string, string>;
   compact?: boolean;
+  /** the transition is worked out as the mix plays (the browser runtime), not rendered ahead */
+  live?: boolean;
 }) {
   const state = seam.state;
   const made = state.status === 'ready';
   const move = made ? state.style : seam.settings.move;
   const family = seamFamily(move);
   const chosenName = names[seam.settings.move ?? 'auto'] ?? (seam.settings.move === 'auto' || !seam.settings.move ? 'SelectaDJ’s choice' : seam.settings.move.replaceAll('_', ' '));
-  const displayName = made ? state.label ?? (move ? names[move] ?? move.replaceAll('_', ' ') : 'Transition') : chosenName;
-  const status = made ? (seam.too_soon ? 'Rendered; would be missed' : 'Rendered transition') : state.status === 'failed' ? 'Render failed' : state.status === 'rendering' ? 'Rendering' : state.status === 'queued' ? 'Queued to render' : 'Planned, not rendered';
+  const live = workedOutLive && state.status === 'none';
+  const displayName = made || live ? state.label ?? (move ? names[move] ?? move.replaceAll('_', ' ') : 'Transition') : chosenName;
+  const status = made ? (seam.too_soon ? 'Rendered; would be missed' : 'Rendered transition') : live ? 'Worked out as it plays' : state.status === 'failed' ? 'Render failed' : state.status === 'rendering' ? 'Rendering' : state.status === 'queued' ? 'Queued to render' : 'Planned, not rendered';
   const fallback = made && (state.fell_back || (seam.settings.move && seam.settings.move !== 'auto' && state.style && state.style !== seam.settings.move));
   const meaning = [status, displayName, 'from ' + from + ' into ' + into, fallback ? 'Different from the requested move' : ''].filter(Boolean).join('. ');
   return (

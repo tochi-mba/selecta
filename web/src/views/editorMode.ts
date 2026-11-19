@@ -3,6 +3,9 @@ import type { MixItem } from '../api';
 import { setQuery, useQueryParam } from '../router';
 import type { StatusKind } from '../ui/controls';
 import { seamFacts, seamLayers } from '../ui/seam';
+import { LIVE_SEAM_WORDS } from './liveTransitions';
+
+export { TransitionsWorkedOutLive } from './liveTransitions';
 
 /** Three ways of looking at the same mix. They are views only: switching never changes the mix, what's
  * playing, which mix is being edited or what is selected. */
@@ -36,8 +39,9 @@ export type StorySeamWords = { kind: StatusKind; headline: string; detail: strin
 
 /** A transition in plain words, from what the server says about it and nothing else. What was asked for
  * and what will really play are kept apart, as everywhere else. */
-export function storySeamWords(seam: MixItem['seam'] | undefined, names: Record<string, string>, from: string): StorySeamWords {
+export function storySeamWords(seam: MixItem['seam'] | undefined, names: Record<string, string>, from: string, live = false): StorySeamWords {
   if (!seam) return { kind: 'unavailable', headline: 'No transition', detail: null };
+  if (live && seam.state.status === 'none') return { kind: 'planned', headline: seam.state.label ?? 'Browser blend', detail: seam.state.why ?? LIVE_SEAM_WORDS };
   const layers = seamLayers(seam, names);
   const facts = seamFacts(seam, names);
   const state = seam.state;

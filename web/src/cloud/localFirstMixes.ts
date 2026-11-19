@@ -1,4 +1,4 @@
-import { ApiError, MixData, SongRow, Status, VibeCard } from '../api';
+import { ApiError, MixData, SongRow, Status, Suggestion, VibeCard } from '../api';
 import { asMixData, RecipeStore, WORKED_OUT_LIVE } from './recipeStore';
 
 /** The mix route family of the local-first adapter (ADR-0462 "one adapter per route family",
@@ -102,6 +102,56 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     return next;
   };
 
+  // ---------- the editor family (ADR-0462 parity): the same Edit page local mode has, ----------
+  // writing new revisions of the current recipe. Reorder, add, remove, clear and Save a copy
+  // work here; nothing in them needs analysis or a rendered seam.
+
+  const orderHeader = (init?: RequestInit): string | null => {
+    try { return new Headers(init?.headers).get('x-mix-order'); } catch { return null; }
+  };
+
+  const editCurrent = async (init: RequestInit | undefined, change: (ids: number[]) => number[]): Promise<MixData> => {
+    const id = store.current();
+    if (!id) throw refuse('There is no current browser mix to edit. Press Play on Make a Mix first.', 'no_mix', 404);
+    const recipe = await store.read(id);
+    const ids = recipe.songs.map((song) => song.song_id);
+    const expected = orderHeader(init);
+    if (expected !== null && expected !== ids.join(',')) {
+      throw refuse('The mix changed under this press, so nothing happened. It has been redrawn.', 'mix_changed', 409);
+    }
+    const next = change(ids);
+    if (next.length === ids.length && next.every((songId, at) => songId === ids[at])) return asMixData(recipe);
+    if (next.length < BROWSER_MIX_NEEDS) {
+      throw refuse(`A browser mix keeps at least ${BROWSER_MIX_NEEDS} songs. To start over, clear the mix instead.`, 'too_few_songs');
+    }
+    return asMixData(await store.edit(id, recipe.revision, { songIds: next }));
+  };
+
+  const suggest = async (query: URLSearchParams): Promise<{ songs: Suggestion[] }> => {
+    const wanted = (query.get('q') ?? '').trim().toLowerCase();
+    const limit = Math.max(1, Number(query.get('limit') ?? 8) || 8);
+    const inMix = new Set<number>();
+    const id = store.current();
+    if (id) {
+      try { for (const song of (await store.read(id)).songs) inMix.add(song.song_id); } catch { /* suggest from the library anyway */ }
+    }
+    return {
+      songs: (await songs())
+        .filter((song) => song.playable && !inMix.has(song.id) && `${song.title} ${song.artist}`.toLowerCase().includes(wanted))
+        .slice(0, limit)
+        .map((song) => ({ song_id: song.id, artist: song.artist, title: song.title, bpm: null, key: null, duration: song.duration, reason: 'Plays on this device', analysed: true })),
+    };
+  };
+
+  const saveCopy = async (init?: RequestInit): Promise<{ name: string }> => {
+    const body = JSON.parse(String(init?.body ?? '{}')) as { name?: string; copy_current?: boolean };
+    if (!body.copy_current) throw refuse('SelectaDJ can’t make that kind of draft in your browser yet.', 'flag_off', 404);
+    const id = store.current();
+    if (!id) throw refuse('There is no current browser mix to copy. Press Play on Make a Mix first.', 'no_mix', 404);
+    const made = await store.duplicate(id, body.name?.trim() || undefined);
+    return { name: made.name };
+  };
+
   const destinations = async (query: URLSearchParams): Promise<SongRow[]> => {
     const wanted = (query.get('q') ?? '').trim().toLowerCase();
     const limit = Math.max(1, Number(query.get('limit') ?? 20) || 20);
@@ -121,6 +171,60 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
       }
       if (method === 'POST' && route === '/steer') return steer(init);
       if (method === 'GET' && route === '/songs') return destinations(query);
+      if (method === 'GET' && route === '/mix/suggest') return suggest(query);
+      if (method === 'POST' && route === '/mix/move') {
+        const body = JSON.parse(String(init?.body ?? '{}')) as { source?: number; target?: number };
+        return editCurrent(init, (ids) => {
+          const source = Number(body.source);
+          const target = Number(body.target);
+          if (!Number.isInteger(source) || !Number.isInteger(target) || source < 0 || source >= ids.length || target < 0 || target >= ids.length) {
+            throw refuse('That position isn’t in this mix any more.', 'mix_changed', 409);
+          }
+          const next = [...ids];
+          const [moved] = next.splice(source, 1);
+          next.splice(target, 0, moved);
+          return next;
+        });
+      }
+      if (method === 'POST' && route === '/mix/songs') {
+        const body = JSON.parse(String(init?.body ?? '{}')) as { song_id?: number; position?: number };
+        return (async () => {
+          const all = await songs();
+          const song = all.find((one) => one.id === Number(body.song_id));
+          if (!song || !song.playable) throw refuse('Choose a song that plays on this device.', 'not_playable');
+          return editCurrent(init, (ids) => {
+            const next = [...ids];
+            const at = Number.isInteger(body.position) ? Math.max(0, Math.min(ids.length, Number(body.position))) : ids.length;
+            next.splice(at, 0, song.id);
+            return next;
+          });
+        })();
+      }
+      if (method === 'DELETE' && /^\/mix\/songs\/\d+$/.test(route)) {
+        const position = Number(route.split('/').pop());
+        return editCurrent(init, (ids) => {
+          if (position < 0 || position >= ids.length) throw refuse('That position isn’t in this mix any more.', 'mix_changed', 409);
+          return ids.filter((_, at) => at !== position);
+        });
+      }
+      if (method === 'POST' && route === '/mix/clear') {
+        return (async () => {
+          const id = store.current();
+          if (id) {
+            const expected = orderHeader(init);
+            if (expected !== null) {
+              const recipe = await store.read(id).catch(() => null);
+              if (recipe && expected !== recipe.songs.map((song) => song.song_id).join(',')) {
+                throw refuse('The mix changed under this press, so nothing was cleared. It has been redrawn.', 'mix_changed', 409);
+              }
+            }
+          }
+          // the saved recipe stays in My Mixes; only the current pointer is let go of
+          store.setCurrent(null);
+          return { mix: [], name: 'Current mix', can_undo: false } as MixData;
+        })();
+      }
+      if (method === 'POST' && route === '/drafts') return saveCopy(init);
       return undefined;
     },
   };

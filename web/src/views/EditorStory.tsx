@@ -1,11 +1,11 @@
-import { useId, useState } from 'react';
+import { useContext, useId, useState } from 'react';
 import type { MixItem } from '../api';
 import { clock } from '../lib';
 import { Status } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { flagOn } from '../flags';
 import { EnergyOverview, EnergyThumb, MixHorizon } from '../ui/MusicObjects';
-import { EDITOR_MODES, EditorMode, EditorSelection, storySeamWords } from './editorMode';
+import { EDITOR_MODES, EditorMode, EditorSelection, storySeamWords, TransitionsWorkedOutLive } from './editorMode';
 
 /** Story, Arrange or Detail. Ordinary radio buttons, so there's one tab stop and the arrow keys move
  * between them. Choosing one only changes how the same mix is shown. */
@@ -16,14 +16,14 @@ export function ViewSwitch({ mode, onChange }: { mode: EditorMode; onChange: (ne
     <fieldset className="view-switch" aria-describedby={about}>
       <legend>View</legend>
       <div className="view-switch-options">
-        {EDITOR_MODES.map((option) => (
+        {EDITOR_MODES.filter((option) => option.id !== 'detail' || flagOn('seam_inspector')).map((option) => (
           <label className="view-switch-option" key={option.id}>
             <input type="radio" name={name} value={option.id} checked={mode === option.id} onChange={() => onChange(option.id)} />
             <span>{option.label}</span>
           </label>
         ))}
       </div>
-      <p className="hint view-switch-about" id={about}>{EDITOR_MODES.find((option) => option.id === mode)?.about}</p>
+      <p className="hint view-switch-about" id={about}>{mode === 'arrange' && !flagOn('seam_inspector') ? 'Reorder, add and remove songs.' : EDITOR_MODES.find((option) => option.id === mode)?.about}</p>
     </fieldset>
   );
 }
@@ -84,20 +84,21 @@ export function EditorStory(props: {
   scope?: 'current' | 'draft';
 }) {
   const { mix, keys, names, selected, playingIndex, headingId, onSelectSong, onEditSong, onEditSeam } = props;
+  const live = useContext(TransitionsWorkedOutLive);
   const selectedSongIndex = selected?.kind === 'song' ? keys.indexOf(selected.key) : -1;
   return (
     <section className={`editor-story ${mix.length > 40 ? 'long' : ''}`} aria-labelledby={headingId}>
       <h2 id={headingId} className="editor-story-title" tabIndex={-1} data-mode-heading="story">Song by song</h2>
       <p className="hint">Each song in order, and how it leads into the next. To change something, choose Edit.</p>
       {mix.length > 1 && flagOn('editor.energy_horizon') && <MixHorizon items={mix} scope={props.scope ?? 'current'} />}
-      {mix.length > 1 && <EnergyOverview items={mix} selectedIndex={selectedSongIndex} playingIndex={playingIndex} onSelect={onSelectSong} />}
+      {mix.length > 1 && !live && <EnergyOverview items={mix} selectedIndex={selectedSongIndex} playingIndex={playingIndex} onSelect={onSelectSong} />}
       <ol className="story-chapters">
         {mix.map((item, index) => {
           const key = keys[index];
           const previous = mix[index - 1];
           const songSelected = selected?.kind === 'song' && selected.key === key;
           const seamSelected = !!previous && selected?.kind === 'seam' && selected.a === keys[index - 1] && selected.b === key;
-          const words = previous ? storySeamWords(item.seam, names, previous.title) : null;
+          const words = previous ? storySeamWords(item.seam, names, previous.title, live) : null;
           const playing = playingIndex === index;
           return (
             <li className="story-chapter" key={key} data-story-song={key}>
@@ -109,9 +110,11 @@ export function EditorStory(props: {
                     {seamSelected && <span className="story-tag">Selected</span>}
                   </p>
                   {words.detail && <p className="hint story-seam-detail">{words.detail}</p>}
-                  <button type="button" className="story-edit" aria-label={`Edit this transition: ${previous.title} into ${item.title}`} onClick={() => onEditSeam(keys[index - 1], key)}>
-                    <Icon name="edit" size="toolbar" /> Edit this transition
-                  </button>
+                  {flagOn('seam_inspector') && (
+                    <button type="button" className="story-edit" aria-label={`Edit this transition: ${previous.title} into ${item.title}`} onClick={() => onEditSeam(keys[index - 1], key)}>
+                      <Icon name="edit" size="toolbar" /> Edit this transition
+                    </button>
+                  )}
                 </div>
               )}
               <div className={`story-song ${songSelected ? 'selected' : ''} ${playing ? 'playing' : ''}`} aria-current={songSelected ? 'true' : undefined}>

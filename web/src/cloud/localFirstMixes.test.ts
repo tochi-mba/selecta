@@ -34,6 +34,24 @@ function fakeCloud() {
       kept.set(recipe.mix_id, recipe);
       return { mix: recipe };
     }
+    const revised = /^\/local-media\/recipes\/([^/]+)\/revisions$/.exec(path);
+    if (revised && init?.method === 'POST') {
+      const was = kept.get(decodeURIComponent(revised[1]))!;
+      const body = JSON.parse(String(init.body)) as { base_revision: string; song_ids?: number[] };
+      if (body.base_revision !== was.revision) throw Object.assign(new Error('stale'), { status: 409 });
+      const recipe = { ...recipeOf(body.song_ids ?? was.songs.map((song) => song.song_id), was.name, was.mix_id) };
+      kept.set(recipe.mix_id, recipe);
+      return { mix: recipe };
+    }
+    const copied = /^\/local-media\/recipes\/([^/]+)\/duplicate$/.exec(path);
+    if (copied && init?.method === 'POST') {
+      const was = kept.get(decodeURIComponent(copied[1]))!;
+      const body = JSON.parse(String(init.body)) as { name?: string };
+      made += 1;
+      const recipe = recipeOf(was.songs.map((song) => song.song_id), body.name ?? `${was.name} copy`, `mix-${made}`);
+      kept.set(recipe.mix_id, recipe);
+      return { mix: recipe };
+    }
     const one = /^\/local-media\/recipes\/([^/]+)$/.exec(path);
     if (one) {
       const recipe = kept.get(decodeURIComponent(one[1]));
@@ -153,6 +171,58 @@ describe('Make a Mix, MixSetup and My Mixes through the adapted request', () => 
     const request = localFirstRequest(fake.cloud, { here: async () => new Map([[1, 'here']]), recipes: recipeStore(fake.cloud, 'ws-1') });
     await expect(request('/vibes/pick/build?count=20', { method: 'POST', body: '{}' })).rejects.toMatchObject({ code: 'not_enough_songs' });
     expect(fake.kept.size).toBe(0);
+  });
+});
+
+describe('the Edit page on a browser mix (editor parity with local mode)', () => {
+  const editing = async () => {
+    const fake = fakeCloud();
+    const store = recipeStore(fake.cloud, 'ws-1');
+    const request = localFirstRequest(fake.cloud, { here: async () => new Map([[1, 'here'], [2, 'here'], [3, 'here']]), recipes: store });
+    await request<MixData>('/vibes/pick/build?count=20', { method: 'POST', body: '{}' });
+    const order = (data: MixData) => data.mix.map((item) => item.song_id);
+    const guard = (ids: number[]) => ({ 'x-mix-order': ids.join(',') });
+    return { ...fake, store, request, order, guard };
+  };
+
+  it('reorders, removes and adds songs as new revisions of the same recipe', async () => {
+    const { request, order, guard, kept, store } = await editing();
+    const moved = await request<MixData>('/mix/move', { method: 'POST', body: JSON.stringify({ source: 0, target: 2 }), headers: guard([1, 2, 3]) });
+    expect(order(moved)).toEqual([2, 3, 1]);
+    const removed = await request<MixData>('/mix/songs/1', { method: 'DELETE', headers: guard([2, 3, 1]) });
+    expect(order(removed)).toEqual([2, 1]);
+    const added = await request<MixData>('/mix/songs', { method: 'POST', body: JSON.stringify({ song_id: 3, position: 0 }), headers: guard([2, 1]) });
+    expect(order(added)).toEqual([3, 2, 1]);
+    expect(kept.size).toBe(1);
+    expect(store.current()).toBe('mix-1');
+    // every transition still says how it is made, and nothing claims an undo the browser lacks
+    expect(added.can_undo).toBe(false);
+    expect(added.mix[1].seam?.state).toMatchObject({ status: 'none', why: WORKED_OUT_LIVE });
+  });
+
+  it('refuses a press made against a mix that has since changed, and keeps two songs at least', async () => {
+    const { request, guard } = await editing();
+    await expect(request('/mix/move', { method: 'POST', body: JSON.stringify({ source: 0, target: 1 }), headers: guard([3, 2, 1]) })).rejects.toMatchObject({ code: 'mix_changed' });
+    await request('/mix/songs/0', { method: 'DELETE', headers: guard([1, 2, 3]) });
+    await expect(request('/mix/songs/0', { method: 'DELETE', headers: guard([2, 3]) })).rejects.toMatchObject({ code: 'too_few_songs' });
+  });
+
+  it('suggests only songs that play here and are not already in the mix', async () => {
+    const { request, guard } = await editing();
+    await request('/mix/songs/1', { method: 'DELETE', headers: guard([1, 2, 3]) });
+    const { songs } = await request<{ songs: { song_id: number; analysed: boolean; bpm: number | null }[] }>('/mix/suggest?position=1&q=&limit=8');
+    expect(songs).toEqual([expect.objectContaining({ song_id: 2, analysed: true, bpm: null })]);
+  });
+
+  it('clears the current mix but keeps its recipe, and saves a named copy', async () => {
+    const { request, guard, kept, store } = await editing();
+    expect(await request('/drafts', { method: 'POST', body: JSON.stringify({ name: 'Friday', copy_current: true }) })).toEqual({ name: 'Friday' });
+    expect([...kept.values()].map((recipe) => recipe.name)).toContain('Friday');
+    expect(store.current()).toBe('mix-1');
+    const empty = await request<MixData>('/mix/clear', { method: 'POST', headers: guard([1, 2, 3]) });
+    expect(empty.mix).toEqual([]);
+    expect(store.current()).toBeNull();
+    expect(kept.has('mix-1')).toBe(true);
   });
 });
 

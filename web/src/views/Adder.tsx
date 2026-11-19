@@ -1,8 +1,9 @@
-import { KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { KeyboardEvent, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Suggestion } from '../api';
 import { useApi } from '../requestContext';
 import { analysingWords, askedToAnalyse } from '../lib';
 import { Action, Problem, Skeleton } from '../ui/controls';
+import { TransitionsWorkedOutLive } from './liveTransitions';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { useMixPath } from './mixScope';
 
@@ -22,6 +23,8 @@ export function Adder(props: {
   const [songs, setSongs] = useState<Suggestion[] | null>(null);
   const at = useMixPath();
   const [failed, setFailed] = useState(false);
+  // without analysis nothing is ranked by fit: these are the songs that play here, in library order
+  const unranked = useContext(TransitionsWorkedOutLive);
   const asked = useRef(0);
   // MI-0138-08: the chosen song is marked at once, and only goes in when the server has added it
   const [adding, setAdding] = useState<Suggestion | null>(null);
@@ -83,12 +86,14 @@ export function Adder(props: {
         />
         <button onClick={onClose}>Cancel</button>
       </div>
-      <p className="hint">{query ? 'Best fit first' : 'These would fit best here'}</p>
+      <p className="hint">{unranked ? 'Songs that play on this device and aren’t in the mix yet' : query ? 'Best fit first' : 'These would fit best here'}</p>
       {position >= 0 && <p className="hint adder-where">It goes in as number {position + 1}.</p>}
       {adding && <p className="hint" role="status">Adding {adding.title}…</p>}
       {failed && <Problem retry={load}>Couldn’t find songs for this position. Try again.</Problem>}
       {songs === null && !failed && <Skeleton variant="library" lines={2} label="Finding what fits" />}
-      {songs?.length === 0 && <p className="hint">Nothing matches that.</p>}
+      {songs?.length === 0 && (
+        <p className="hint">{query ? 'Nothing matches that.' : unranked ? 'Every song that plays on this device is already in the mix. Connect more music in Library to add others.' : 'Nothing to suggest here yet.'}</p>
+      )}
       <ul className="suggestions">
         {songs?.map((song) => (
           <li key={song.song_id}>

@@ -13,7 +13,7 @@ import { RenameDraft } from './Drafts';
 import { AddGap, MoveHow, RowActions, SeamUnlessReplaced, SongInspector, SongLine } from './EditorRows';
 import { affectedSeams, newNeighbours } from './dropPreview';
 import { EditorHeader, MixSwitcher } from './EditorHeader';
-import { EDITOR_MODES, EditorMode, useEditorMode } from './editorMode';
+import { EDITOR_MODES, EditorMode, TransitionsWorkedOutLive, useEditorMode } from './editorMode';
 import { EditorStory, EnergyDisclosure, ViewSwitch } from './EditorStory';
 import { ExportPanel } from './ExportPanel';
 import { MixScope, useMixPath } from './mixScope';
@@ -89,7 +89,7 @@ function FragmentRow({ children }: { children: React.ReactNode }) {
 const seamKeyOf = (a: string, b: string) => `${a}>${b}`;
 
 function MixView(props: ViewProps) {
-  const { mix, mixName, refreshMix, setMixData, player, now, setView, notify, status, refreshStatus, mixEta, draftPlace, openDraft, closeDraft, playDraft, renamedDraft, canUndo, undo, currentMixName, request } = props;
+  const { mix, mixName, refreshMix, setMixData, player, now, setView, notify, status, refreshStatus, mixEta, draftPlace, openDraft, closeDraft, playDraft, renamedDraft, canUndo, undo, currentMixName, request, analysisAvailable = true } = props;
   // ADR-0462: every editor write goes through the injected request, never the local client.
   const { post, del } = useApi(request);
   const draftId = useContext(MixScope);
@@ -101,7 +101,9 @@ function MixView(props: ViewProps) {
   const keys = useMemo(() => occurrenceKeys(mix), [order]);
   const guard = useMemo(() => ({ 'x-mix-order': order }), [order]);
   // Story, Arrange or Detail is only how this same mix, scope and selection are shown.
-  const [mode, setMode] = useEditorMode();
+  const [chosenMode, setMode] = useEditorMode();
+  // Detail is a transition opened beside the timeline; without the inspector it is Arrange
+  const mode: EditorMode = chosenMode === 'detail' && !flagOn('seam_inspector') ? 'arrange' : chosenMode;
   const reduceMotion = useReducedMotion();
   const page = useRef<HTMLElement>(null);
   const storyHeading = useId();
@@ -545,7 +547,7 @@ function MixView(props: ViewProps) {
     try {
       const made = await post<{ name: string }>('/drafts', { name: clean, copy_current: true }, guard);
       setNaming(false);
-      notify(`Saved a copy as a draft: ${made.name}. It’s in My Mixes.`);
+      notify(analysisAvailable ? `Saved a copy as a draft: ${made.name}. It’s in My Mixes.` : `Saved a copy: ${made.name}. It’s in My Mixes.`);
     } catch (error) {
       setProblem((error as Error).message);
     } finally {
@@ -632,7 +634,9 @@ function MixView(props: ViewProps) {
       </>
     )}>
       <p>This stops playback and clears the current mix only. Your saved drafts and original music files stay untouched.</p>
-      <p className="hint">Undo can bring back the cleared mix before any newer edit replaces that restore point.</p>
+      <p className="hint">{analysisAvailable
+        ? 'Undo can bring back the cleared mix before any newer edit replaces that restore point.'
+        : 'The mix stays saved in My Mixes, so you can make it the current mix again from there.'}</p>
     </Dialog>
   );
 
@@ -688,10 +692,11 @@ function MixView(props: ViewProps) {
     return (
       <main className="page" id="main">
         <h1 className="display small">Nothing here yet</h1>
-        <p className="lede">Start from one of SelectaDJ’s mixes, or add songs yourself.</p>
+        {/* a browser mix starts from Make a Mix (it needs two songs that play here), then is edited here */}
+        <p className="lede">{analysisAvailable ? 'Start from one of SelectaDJ’s mixes, or add songs yourself.' : 'Make a mix from your songs first, then change it here.'}</p>
         <div className="row wrap">
-          <button className="primary" onClick={() => setView('Mixes')}>See the mixes</button>
-          <button onClick={() => setAdding('start')}>Add a song</button>
+          <button className="primary" onClick={() => setView('Mixes')}>{analysisAvailable ? 'See the mixes' : 'Make a Mix'}</button>
+          {analysisAvailable && <button onClick={() => setAdding('start')}>Add a song</button>}
         </div>
         {problem && <p className="warn" role="alert">{problem}</p>}
         {adding === 'start' && adder('start')}
@@ -777,7 +782,7 @@ function MixView(props: ViewProps) {
       )}
       {canUndo && undo && <Action working="Undoing…" run={() => undo(draftId)}>Undo last change</Action>}
       {readiness.firstProblem !== null && on('seam_inspector') && <button onClick={jumpToProblem}><Icon name="warning" /> Jump to first problem</button>}
-      {!inDraft && ready < seams && (
+      {!inDraft && ready < seams && analysisAvailable && (
         <Action run={renderAll} disabled={!waiting}>
           {waiting ? 'Render every transition' : rendering ? `Rendering ${ready} of ${seams}…` : readiness.blocked ? 'Fix transition timing to continue' : 'Change failed transitions to continue'}
         </Action>
@@ -799,6 +804,7 @@ function MixView(props: ViewProps) {
   );
 
   return (
+    <TransitionsWorkedOutLive.Provider value={!analysisAvailable}>
     <main className="page mix" id="main" ref={page}>
       <EditorHeader
         draftId={draftId}
@@ -809,7 +815,8 @@ function MixView(props: ViewProps) {
         currentMixName={currentMixName}
         readiness={readiness}
         totalSeconds={total}
-        switcher={<MixSwitcher draftId={draftId} openDraft={openDraft} closeDraft={backToCurrent} />}
+        // a browser mix has no local drafts to switch between, and the list lives on this computer's server
+        switcher={analysisAvailable ? <MixSwitcher draftId={draftId} openDraft={openDraft} closeDraft={backToCurrent} /> : null}
         actions={actions}
         view={<ViewSwitch mode={mode} onChange={chooseMode} />}
         viewName={EDITOR_MODES.find((option) => option.id === mode)?.label}
@@ -849,7 +856,7 @@ function MixView(props: ViewProps) {
         <h2 id={arrangeHeading} className="editor-mode-heading" tabIndex={-1} data-mode-heading="arrange">
           {mode === 'detail' ? 'Timeline, with a transition open' : 'Timeline'}
         </h2>
-        {mix.length > 1 && <EnergyDisclosure items={mix} selectedIndex={selectedSongIndex} playingIndex={playingIndex} onSelect={selectSongAt} />}
+        {mix.length > 1 && analysisAvailable && <EnergyDisclosure items={mix} selectedIndex={selectedSongIndex} playingIndex={playingIndex} onSelect={selectSongAt} />}
 
         <div className={`edit-layout ${inspecting && !narrow ? 'has-inspector' : ''}`} style={inspecting && !narrow ? { '--inspector-width': `${inspectorWidth}px` } as React.CSSProperties : undefined}>
           {dropPreview && <p className="drop-preview" role="status">{dropPreview.words}</p>}
@@ -916,6 +923,7 @@ function MixView(props: ViewProps) {
         <Sheet title={seamInspector ? 'Transition' : 'Song'} onClose={() => setSelected(null)} keepsChrome>{seamInspector || songInspector}</Sheet>
       )}
     </main>
+    </TransitionsWorkedOutLive.Provider>
   );
 }
 

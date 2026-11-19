@@ -1,4 +1,4 @@
-import { DragEvent, KeyboardEvent, memo, MouseEvent, PointerEvent, RefObject, useEffect, useRef, useState } from 'react';
+import { DragEvent, KeyboardEvent, memo, MouseEvent, PointerEvent, RefObject, useContext, useEffect, useRef, useState } from 'react';
 import { MixItem } from '../api';
 import { useApi } from '../requestContext';
 import { flagOn, useFlags } from '../flags';
@@ -7,6 +7,7 @@ import { Action, announce, Menu } from '../ui/controls';
 import { Icon } from '../ui/Icon';
 import { SeamDiagram, SongMotif } from '../ui/MusicObjects';
 import { useStickyClearance } from '../ui/useStickyClearance';
+import { TransitionsWorkedOutLive } from './editorMode';
 import { useMixPath } from './mixScope';
 import { RequestTag, useRequestComing } from './Requests';
 
@@ -60,7 +61,8 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
   const state = seam.state;
   const chosen = seam.settings.move ?? 'auto';
   const at = useMixPath();
-  const label = state.status === 'ready' ? (state.label ?? names[chosen]) : (names[chosen] ?? chosen);
+  const live = useContext(TransitionsWorkedOutLive) && state.status === 'none';
+  const label = state.status === 'ready' || live ? (state.label ?? names[chosen]) : (names[chosen] ?? chosen);
   const rate = async (rating: string) => {
     await post(`/seams/${state.key}/rate`, { rating: state.rating === rating ? 'none' : rating });
     actions.current.refresh();
@@ -85,7 +87,7 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
             <>
               <b>{label}</b>
               <span className={`pill ${state.status} ${state.status === 'ready' && !state.passed ? 'warned' : ''}`}>
-                {seamStatusWords(state.status, state.passed)}
+                {live ? 'Worked out as it plays' : seamStatusWords(state.status, state.passed)}
                 {state.eta !== undefined && etaWords(state.eta) && `, ${etaWords(state.eta)}`}
               </span>
             </>
@@ -96,7 +98,7 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
         })()}
         <div className="seam-actions">
           {inspect && state.status === 'ready' && <button className="seam-hear" aria-description={`Plays only the transition from ${previous.title} into ${item.title}`} onClick={() => actions.current.hearSeam(rowKey)}><Icon name="play" size="compact" /> Hear it</button>}
-          {(state.status === 'none' || state.status === 'failed') && (
+          {!live && (state.status === 'none' || state.status === 'failed') && (
             <Action working="Asking…" run={async () => {
               await post(at(`/mix/${item.position}/render${state.status === 'failed' ? '?retry=true' : ''}`), undefined, guard);
               actions.current.refresh();
@@ -114,7 +116,7 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
         </div>
       </div>
       {affected && <p className="drop-affected-note">Changes if the song is dropped there</p>}
-      <SeamDiagram seam={seam} from={previous.title} into={item.title} names={names} compact />
+      <SeamDiagram seam={seam} from={previous.title} into={item.title} names={names} compact live={live} />
       {state.status === 'failed' && <p className="warn">Remembered failed attempt: {state.error}</p>}
     </li>
   );
@@ -304,7 +306,7 @@ export const SongLine = memo(function SongLine({ item, rowKey, total, playing, s
         {item.locked && flagOn('editor.locks') && <span className="locked-badge"><Icon name="lock" size="compact" /> Locked</span>}
       </div>
       <small className="facts">
-        {item.bpm ? `${Math.round(item.bpm)} BPM` : ''} {item.key ?? ''} · {clock(item.duration)}
+        {[item.bpm ? `${Math.round(item.bpm)} BPM` : '', item.key ?? '', clock(item.duration)].filter(Boolean).join(' · ')}
       </small>
       <div className="song-actions">
         <button onClick={() => actions.current.play(item)} aria-label={`Play from ${item.title}`}><Icon name="play" /> Play</button>

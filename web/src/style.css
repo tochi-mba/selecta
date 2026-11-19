@@ -332,6 +332,9 @@ legend { padding: 0; margin-bottom: var(--space-2); font-weight: 600; }
 
 /* Adder */
 .adder { background: var(--surface-raised); border: 1px solid var(--edge-interactive); border-radius: var(--radius); padding: var(--space-3); margin: var(--space-dense) 0; }
+/* the search field takes the room; Cancel keeps its word whole */
+.adder > .row > input { flex: 1 1 auto; min-width: 0; }
+.adder > .row > button { flex: none; }
 .adder-row { list-style: none; margin: var(--space-dense) 0 var(--space-dense) var(--timeline-indent); padding-left: var(--space-4); border-left: 3px solid var(--selected); }
 .suggestions { list-style: none; margin: var(--space-dense) 0 0; padding: 0; display: grid; gap: var(--space-hair); }
 .suggestions li { display: flex; gap: var(--space-dense); align-items: center; }

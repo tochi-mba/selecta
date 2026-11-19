@@ -6,7 +6,7 @@ import { MediaStore } from './store';
 import { bytesFile, captureRequest, fakeDirectory, fakeHandle } from './testFixtures';
 
 // BF-0458-06 (ADR-0458): source files are proven untouched. The import path is importer.ts,
-// identity.ts (hashing) and MediaStore.put; nothing on it may delete, move, rename, truncate or
+// identity.ts (hashing), tags.ts (reading display tags) and MediaStore.put; nothing on it may delete, move, rename, truncate or
 // write a member's file. Proven twice: by reading the source of every module on the path, and at
 // run time with handles that record every member reached on them during a whole import.
 
@@ -22,12 +22,13 @@ const code = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/
 
 describe('the import path never deletes or moves a member file', () => {
   it('has no destructive call in the importer or the hashing it uses', () => {
-    for (const name of ['importer.ts', 'identity.ts']) {
+    for (const name of ['importer.ts', 'identity.ts', 'tags.ts']) {
       expect(code(source(name)).match(DESTRUCTIVE) ?? [], name).toEqual([]);
     }
-    // The importer reaches only identity and the store (never a file-system helper).
+    // The importer reaches only identity, the tag reader and the store (never a file-system helper).
+    expect([...code(source('tags.ts')).matchAll(/from '([^']+)'/g)]).toEqual([]);
     const imports = [...code(source('importer.ts')).matchAll(/from '([^']+)'/g)].map((found) => found[1]);
-    expect([...new Set(imports)].sort()).toEqual(['./identity', './store']);
+    expect([...new Set(imports)].sort()).toEqual(['./identity', './store', './tags']);
   });
 
   it('keeps the store\'s only file removal inside its own OPFS cache, never on a member handle', () => {
