@@ -172,7 +172,7 @@ Generated from the sheets `web/src/main.tsx` loads by `python -m selecta.audit.s
 | `media (max-width: 620px)` | style.css, styles/polish.css, styles/listening.css, styles/creation.css, styles/operations.css | styles/operations.css |
 | `media (max-width: 760px)` | styles/shell.css, styles/polish.css, styles/listening.css, styles/creation.css | styles/creation.css |
 | `media (pointer: coarse)` | styles/creation.css, styles/operations.css, styles/glossary.css, styles/icons.css | styles/icons.css |
-| `media (prefers-reduced-motion: reduce)` | style.css, styles/shell.css, styles/polish.css | styles/polish.css |
+| `media (prefers-reduced-motion: reduce)` | style.css, styles/shell.css, styles/polish.css, styles/foundation.css | styles/foundation.css |
 | `select` | style.css, styles/polish.css | styles/polish.css |
 | `select:focus-visible` | style.css, styles/polish.css | styles/polish.css |
 

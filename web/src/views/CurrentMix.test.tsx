@@ -15,7 +15,7 @@ describe('current mix identity', () => {
     const { container, rerender } = render(view(original));
     const initial = container.querySelector('.mix-signature')?.innerHTML;
     expect(initial).toBeTruthy();
-    expect(screen.getByText(/decorative, not an audio waveform/)).toBeInTheDocument();
+    expect(screen.getByText(/A picture of the song order, not the sound/)).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Current mix' })).toBeInTheDocument();
 
     rerender(view(original.map((song, index) => ({
