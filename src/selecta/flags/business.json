@@ -23,6 +23,7 @@
         "GET /api/business/venues/{venue_id}",
         "PATCH /api/business/venues/{venue_id}",
         "POST /api/business/venues/{venue_id}/archive",
+        "GET /api/business/venues/{venue_id}/activity",
         "GET /api/business/zones",
         "POST /api/business/zones",
         "PATCH /api/business/zones/{zone_id}",
@@ -87,6 +88,24 @@
       "kind": "release",
       "owner": "business"
     },
+    "business.billing": {
+      "label": "Business billing",
+      "about": "The owner and admin billing page: quantities and prices, a cost preview before adding venues, zones or seats, PO number and cost centres for invoices, a cost breakdown CSV, and dunning that stops a venue only at its close after warnings. Stripe test mode only.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": [
+        "GET /api/business/billing",
+        "POST /api/business/billing/preview",
+        "PUT /api/business/billing/po-number",
+        "PUT /api/business/billing/venues/{venue_id}/cost-centre",
+        "PUT /api/business/billing/collection-method",
+        "GET /api/business/billing/cost-breakdown"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
     "business.pilots": {
       "label": "Business pilots",
       "about": "REX Technologies staff create free pilot organisations with their venues and zones, using the same model a paying venue will.",
@@ -95,6 +114,92 @@
       "modes": ["cloud"],
       "scope": "global",
       "kind": "ops",
+      "owner": "business"
+    },
+    "business.content_controls": {
+      "label": "Venue content controls",
+      "about": "Organisation and venue music rules, the blocklist, 24-hour overrides, explicit flags from managers and file tags, and each zone's volume cap with quiet hours.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": [
+        "GET /api/business/content/rules",
+        "PUT /api/business/content/rules",
+        "GET /api/business/venues/{venue_id}/content/rules",
+        "PUT /api/business/venues/{venue_id}/content/rules",
+        "GET /api/business/content/blocklist",
+        "POST /api/business/content/blocklist",
+        "DELETE /api/business/content/blocklist/{entry_id}",
+        "POST /api/business/zones/{zone_id}/content/overrides",
+        "DELETE /api/business/zones/{zone_id}/content/overrides/{override_id}",
+        "PUT /api/business/content/songs/{song_id}/explicit"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.rooms": {
+      "label": "Rooms for Business",
+      "about": "Standing guest request rooms for business zones: guests join with a table-card code, staff approve or pass requests, and managers set modes and limits.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": [
+        "GET /api/zones/{zone_id}/requests",
+        "POST /api/zones/{zone_id}/requests/{request_id}/approve",
+        "POST /api/zones/{zone_id}/requests/{request_id}/pass",
+        "GET /api/zones/{zone_id}/room",
+        "PATCH /api/zones/{zone_id}/room",
+        "POST /api/zones/{zone_id}/room/rotate",
+        "POST /api/zones/{zone_id}/room/guests/{guest_id}/remove",
+        "POST /api/zones/{zone_id}/room/guests/{guest_id}/ban",
+        "POST /api/zones/{zone_id}/room/pause",
+        "POST /api/zones/{zone_id}/room/resume",
+        "POST /api/zones/{zone_id}/venue-network",
+        "POST /api/venue-rooms/{code}/join",
+        "GET /api/venue-rooms/{code}/state",
+        "GET /api/venue-rooms/{code}/search",
+        "POST /api/venue-rooms/{code}/requests",
+        "POST /api/venue-rooms/{code}/requests/{request_id}/vote"
+      ],
+      "modes": ["cloud"],
+      "scope": "global",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.rooms.branding": {
+      "label": "Rooms for Business branding",
+      "about": "The venue's logo, colour and welcome line on the guest request page.",
+      "default": false,
+      "requires": ["business.rooms"],
+      "modes": ["cloud"],
+      "scope": "global",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.rooms.print": {
+      "label": "Rooms for Business print sheet",
+      "about": "A printable sheet of table cards with each zone's join code.",
+      "default": false,
+      "requires": ["business.rooms"],
+      "routes": [
+        "GET /api/venues/{venue_id}/room-print"
+      ],
+      "modes": ["cloud"],
+      "scope": "global",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.rooms.screen_code": {
+      "label": "Rooms for Business screen code",
+      "about": "A rotating join code shown on the zone's display screen.",
+      "default": false,
+      "requires": ["business.rooms"],
+      "routes": [
+        "GET /api/zones/{zone_id}/room/screen-code"
+      ],
+      "modes": ["cloud"],
+      "scope": "global",
+      "kind": "release",
       "owner": "business"
     }
   }

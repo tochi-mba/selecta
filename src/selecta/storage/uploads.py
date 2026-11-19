@@ -176,6 +176,8 @@ class Probe:
     channels: int
     sha256: str
     size: int | None = None
+    explicit_tag: str | None = None
+    """`explicit`, `clean` or `unknown` from the file's advisory tags (ADR-0450), when read."""
 
     def __post_init__(self) -> None:
         if not re.fullmatch(r"[a-z0-9]{1,16}", self.format or ""):

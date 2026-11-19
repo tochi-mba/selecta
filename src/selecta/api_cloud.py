@@ -42,6 +42,8 @@ from selecta.autopilot import routes_autopilot as autopilot_routes
 from selecta.billing import api as billing_api
 from selecta.billing import plans, stripe_sync
 from selecta.business import admin_routes as business_admin_routes
+from selecta.business import billing_routes as business_billing_routes
+from selecta.business import controls_wiring as business_controls
 from selecta.business import routes as business_org_routes
 from selecta.devstack import guard as dev_guard
 from selecta.flags import cloud_gate, targeting
@@ -824,6 +826,9 @@ def create_cloud_app(
         business_routes.install_routes(
             app, engine=engine, current_claims=current_claims, principal_for=_principal
         )
+    business_controls.install(  # ADR-0450 content controls and ADR-0451 Rooms for Business
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
     playback_api.install_routes(
         app,
         engine=engine,
@@ -873,6 +878,10 @@ def create_cloud_app(
 
     business_admin_routes.install_routes(
         app, engine=engine, current_claims=current_claims,
+    )
+    # Business billing (ADR-0447); refused while business.billing is off, Stripe test mode only.
+    business_billing_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
     )
     admin_routes.install_routes(
         app,

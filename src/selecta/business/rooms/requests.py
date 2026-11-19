@@ -267,29 +267,6 @@ class RequestsMixin:
                 status="withdrawn", reason="content", resolved_at=now))
         return ok
 
-    # ---- the planner ---------------------------------------------------------------------
-
-    def slot_up(self, zone_id: str) -> dict | None:
-        """The next approved request for the planner, re-checked now; refused ones are
-        withdrawn on the way. Bridges the planner adds are its own allowed songs."""
-        with transaction(self.engine) as conn:
-            room = self.room_row(conn, zone_id)
-            if room is None:
-                return None
-            now = self.clock()
-            for row in self.approved_order(conn, room):
-                if self._still_fits(conn, room, row, now):
-                    return {"id": row["id"], "song_id": row["song_id"], "title": row["title"],
-                            "artist": row["artist"], "votes": row["votes"]}
-            return None
-
-    def mark_played(self, zone_id: str, request_id: str) -> None:
-        with transaction(self.engine) as conn:
-            conn.execute(requests_t.update().where(
-                requests_t.c.id == request_id, requests_t.c.zone_id == zone_id,
-                requests_t.c.status == "approved").values(status="played",
-                                                          resolved_at=self.clock()))
-
 
 def room_ids(room) -> dict:
     return {"workspace_id": room["workspace_id"], "organisation_id": room["organisation_id"]}

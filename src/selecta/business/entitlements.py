@@ -147,15 +147,6 @@ def add_counter(conn: Connection, org: OrgFacts, meter: str, period_key: str, de
                        zone_id=zone_id)
 
 
-def set_counter(conn: Connection, org: OrgFacts, meter: str, period_key: str, amount: float,
-                now: float, *, venue_id: str = "", zone_id: str = "") -> None:
-    _ensure(conn, org, meter, period_key, venue_id, zone_id, now)
-    where = _where(org.organisation_id, meter, period_key, venue_id, zone_id)
-    conn.execute(
-        sa.update(biz_usage_counters).where(where).values(amount=float(amount), updated_at=now)
-    )
-
-
 def get_counter(conn: Connection, organisation_id: str, meter: str, period_key: str, *,
                 venue_id: str = "", zone_id: str = "") -> float:
     row = conn.execute(

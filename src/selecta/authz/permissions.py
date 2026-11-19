@@ -148,6 +148,11 @@ _DECLARED: tuple[Permission, ...] = (
         "Create a free pilot organisation with its venues and zones (ADR-0452).",
         S,
     ),
+    Permission(
+        "business.billing.refund",
+        "Refund a business charge or credit a business's Stripe balance, with a reason.",
+        S,
+    ),
 )
 
 del R, C, S, D

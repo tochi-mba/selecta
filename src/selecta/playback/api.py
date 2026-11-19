@@ -35,6 +35,7 @@ from selecta.playback.model import (
     DeviceInOtherZone,
     DeviceKind,
     DeviceSignedOut,
+    HoldingZoneLease,
     IdempotencyConflict,
     InvalidCommand,
     NotTheSpeaker,
@@ -226,6 +227,31 @@ def install_routes(
             raise HTTPException(status_code=404, detail=NOT_FOUND)
         return device_id
 
+    def org_devices(found, request: Request) -> list[tuple[str, str]]:
+        """This person's own devices in their organisation workspaces, from this browser's
+        per-workspace device cookies, as `(workspace_id, device_id)` pairs. Personal only:
+        an organisation workspace has no other workspace's lease to check."""
+        if found.workspace.kind != "personal":
+            return []
+        from selecta.business import orgs
+
+        with transaction(engine, found.workspace.id) as conn:
+            others = [
+                item["id"]
+                for item in orgs.list_for_user(conn, found.user.id)
+                if item["kind"] != "personal"
+            ]
+        pairs: list[tuple[str, str]] = []
+        for workspace_id in others:
+            device_id = request.cookies.get(device_cookie.cookie_name(workspace_id))
+            if not device_id:
+                continue
+            with transaction(engine, workspace_id) as conn:
+                device = load_device(conn, workspace_id, device_id)
+            if device is not None and device.user_id == found.user.id:
+                pairs.append((workspace_id, device_id))
+        return pairs
+
     def server_time() -> float:
         # through the store module, which holds playback's one reference to database time, so a
         # test clock pointed there moves every view of a lease at once
@@ -274,6 +300,10 @@ def install_routes(
             return HTTPException(
                 status_code=409, detail={"code": error.code, "message": str(error)}
             )
+        if isinstance(error, zone_session.BillingStopped):
+            return HTTPException(
+                status_code=409, detail={"code": error.code, "message": str(error)}
+            )
         if isinstance(error, zone_session.ZoneFull):
             return HTTPException(
                 status_code=409, detail={"code": "zone_full", "message": str(error)}
@@ -307,6 +337,11 @@ def install_routes(
             return HTTPException(
                 status_code=422,
                 detail={"code": error.code, "message": str(error)},
+            )
+        if isinstance(error, HoldingZoneLease):
+            return HTTPException(
+                status_code=409,
+                detail={"code": error.code, "message": str(error), "zone_id": error.zone_id},
             )
         if isinstance(error, (CommandUnavailable, IdempotencyConflict, OwnershipChanged)):
             return HTTPException(
@@ -475,6 +510,11 @@ def install_routes(
         found = principal(request, claims)
         here = mine(found, body.device_id, request)
         try:
+            # A browser that is a zone's speaker hands the zone back before playing personal
+            # music here (ADR-0443): one browser plays one session at a time.
+            zone_session.refuse_personal_while_holding(
+                engine, zones, org_devices(found, request), now=server_time()
+            )
             result = session.take_over(
                 engine, found.workspace.id, here,
                 start_playing=body.start_playing,

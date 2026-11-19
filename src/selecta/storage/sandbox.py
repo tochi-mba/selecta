@@ -133,6 +133,9 @@ def run_child(path: Path, limits: Limits, command: Sequence[str] | None = None) 
     return answer
 
 
+EXPLICIT_TAGS = ("explicit", "clean", "unknown")
+
+
 def probe_in_sandbox(
     path: Path, limits: Limits = DEFAULT_LIMITS, *, command: Sequence[str] | None = None
 ) -> Probe:
@@ -155,6 +158,7 @@ def probe_in_sandbox(
             int(answer["channels"]),
             digest,
             size,
+            explicit_tag=tag if (tag := answer.get("explicit_tag")) in EXPLICIT_TAGS else None,
         )
     except (KeyError, TypeError, ValueError) as error:
         raise Rejected(FAILED) from error

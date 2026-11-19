@@ -194,6 +194,12 @@ export const VENUE_COPY = {
 
   // Play log and requests page
   playLogHeading: 'Play log',
+  activityHeading: 'Recent venue activity',
+  activityIntro: 'What happened at this venue in the last 90 days, newest first.',
+  activityEmpty: 'Nothing has happened here in the last 90 days.',
+  activityLoading: 'Loading activity',
+  activityFailed: "Couldn't load the activity.",
+  activityRetry: 'Retry',
   requestsPageHeading: 'Requests',
   requestsPageEmpty: 'No requests waiting anywhere you manage',
   loading: 'Loading',

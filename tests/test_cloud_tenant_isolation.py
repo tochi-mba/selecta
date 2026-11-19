@@ -108,6 +108,8 @@ STAFF_ONLY = {
     ("POST", "/api/admin/takedowns/{notice_id}/{command}"),
     ("POST", "/api/admin/upload-restrictions/{workspace_id}/lift"),
     ("POST", "/api/admin/business/pilots"),
+    ("POST", "/api/admin/business/orgs/{org_id}/billing/credit"),
+    ("POST", "/api/admin/business/orgs/{org_id}/billing/refund"),
     ("GET", "/api/admin/flags/cloud.hosted_media/grandfather-audit"),
     ("GET", "/api/admin/flags/cloud.local_first/percentage-readiness"),
     ("GET", "/api/admin/economics/cost-per-mode"),
@@ -117,6 +119,12 @@ STAFF_ONLY = {
 # personal library workspace. The dedicated Business tests exercise their tenant
 # checks and the flag-guard suite proves they are disabled before rollout.
 BUSINESS_SCOPED = {
+    ("GET", "/api/business/billing"),
+    ("POST", "/api/business/billing/preview"),
+    ("PUT", "/api/business/billing/po-number"),
+    ("PUT", "/api/business/billing/venues/{venue_id}/cost-centre"),
+    ("PUT", "/api/business/billing/collection-method"),
+    ("GET", "/api/business/billing/cost-breakdown"),
     ("GET", "/api/business/orgs"),
     ("POST", "/api/business/orgs"),
     ("GET", "/api/business/orgs/{org_id}"),
@@ -125,6 +133,7 @@ BUSINESS_SCOPED = {
     ("GET", "/api/business/venues/{venue_id}"),
     ("PATCH", "/api/business/venues/{venue_id}"),
     ("POST", "/api/business/venues/{venue_id}/archive"),
+    ("GET", "/api/business/venues/{venue_id}/activity"),
     ("GET", "/api/business/zones"),
     ("POST", "/api/business/zones"),
     ("PATCH", "/api/business/zones/{zone_id}"),

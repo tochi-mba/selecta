@@ -26,7 +26,7 @@ inside the same transaction as the session change:
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, replace
 from typing import Any
 
@@ -39,6 +39,7 @@ from selecta.playback.model import (
     LEASE_SECONDS,
     Device,
     DeviceInOtherZone,
+    HoldingZoneLease,
     PersonSpeakerOff,
     PlaybackError,
     PlayState,
@@ -84,6 +85,27 @@ class ConfirmNeeded(PlaybackError):
     """A phone asked to play a zone a kiosk is playing, without the person confirming first."""
 
     code = "confirm_needed"
+
+
+class BillingStopped(PlaybackError):
+    """The venue's music was stopped at its close after the billing grace period and its
+    warnings (ADR-0447 dunning); it plays again once payment goes through."""
+
+    code = "billing_stopped"
+
+
+def _billing_stopped(conn: Connection, zone: ZoneInfo) -> bool:
+    """Whether dunning stopped this zone's venue, checked only while `business.billing` is on."""
+    from selecta import flags
+
+    try:
+        if not flags.on("business.billing"):
+            return False
+    except KeyError:
+        return False
+    from selecta.business import dunning
+
+    return dunning.is_venue_stopped(conn, zone.workspace_id, zone.venue_id)
 
 
 class ZoneFull(PlaybackError):
@@ -392,6 +414,11 @@ def zone_take_over(
     with transaction(engine, workspace_id) as conn:
         now = resolve_now(conn, now)
         zone = require_zone(conn, zones, workspace_id, zone_id, user_id=user_id)
+        if start_playing and _billing_stopped(conn, zone):
+            raise BillingStopped(
+                f"{zone.venue_name or zone.name} is stopped until the SelectaDJ payment "
+                "goes through"
+            )
         device = _zone_device(conn, workspace_id, device_id, zone)
         if not device.is_kiosk and not allow_person_speakers(conn, workspace_id, zone.id):
             raise PersonSpeakerOff(f"{zone.name} plays only from its own player")
@@ -575,6 +602,28 @@ def holding_zone(
             )
         ).first()
         return row.zone_id if row else None
+
+
+def refuse_personal_while_holding(
+    engine: Engine,
+    zones: ZoneDirectory,
+    held_devices: Iterable[tuple[str, str]],
+    *,
+    now: float | None = None,
+) -> None:
+    """Raise `HoldingZoneLease` when any of this browser's organisation devices, given as
+    `(workspace_id, device_id)` pairs, is a zone's live speaker. A phone that is playing Bar
+    hands Bar back before it plays the person's own music (ADR-0443 BZ-0443-05)."""
+    for workspace_id, device_id in held_devices:
+        zone_id = holding_zone(engine, workspace_id, device_id, now=now)
+        if zone_id is None:
+            continue
+        with transaction(engine, workspace_id) as conn:
+            name = _zone_name(conn, zones, workspace_id, zone_id)
+        raise HoldingZoneLease(
+            f"This device is playing {name}. Hand {name} back before playing your own music here.",
+            zone_id,
+        )
 
 
 def set_person_speakers(
@@ -772,6 +821,7 @@ __all__ = [
     "hand_back",
     "holding_zone",
     "move_device",
+    "refuse_personal_while_holding",
     "require_zone",
     "set_person_speakers",
     "zone_heartbeat",

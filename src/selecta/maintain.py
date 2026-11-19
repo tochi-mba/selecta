@@ -24,6 +24,7 @@ depends on a cron somebody forgot:
 | `dmca_renewal` | 24 h | Owner alert as the DMCA agent's renewal nears (`admin.dmca`) |
 | `emails` | 60 s | Long-job and over-quota emails, each once (`notify.emails`) |
 | `business.zone_clock` | 30 s | Each venue zone's next opening or closing change |
+| `business.billing` | 15 min | Business dunning and the VAT recheck before renewal |
 | `queue_metrics`, `lost_jobs`, `backup_freshness` | 15 s, 10 min, 10 min | The SLO and alert
   series only the leader sees (`observability.leader_metrics`) |
 
@@ -351,6 +352,23 @@ def _business_hours(engine: Engine, plan: Plan) -> None:
     plan.tasks.append(Task(zone_clock.TASK_NAME, zone_clock.EVERY_S, run))
 
 
+def _business_billing(engine: Engine, env: Mapping[str, str], plan: Plan) -> None:
+    """Business dunning and VAT rechecks (ADR-0447), only while `business.billing` is on.
+    Dunning needs no Stripe; the VAT recheck runs only with a test-mode Stripe key."""
+    from selecta.business import billing_jobs, stripe_business
+
+    client = stripe_business.from_environment(env)
+    if isinstance(client, str):
+        plan.disabled["business.billing.vat_recheck"] = client
+
+    def run(_fence: TermFence) -> object:
+        if not _flag_on("business.billing"):
+            return None
+        return billing_jobs.run_pass(engine, None if isinstance(client, str) else client)
+
+    plan.tasks.append(Task(billing_jobs.TASK_NAME, billing_jobs.EVERY_S, run))
+
+
 def cloud_plan(engine: Engine, env: Mapping[str, str] | None = None) -> Plan:
     """Every recurring cloud task this environment can run."""
     env = os.environ if env is None else env
@@ -364,6 +382,7 @@ def cloud_plan(engine: Engine, env: Mapping[str, str] | None = None) -> Plan:
     _dmca(engine, env, plan)
     _emails(engine, env, plan)
     _business_hours(engine, plan)
+    _business_billing(engine, env, plan)
     from selecta.observability import leader_metrics
 
     made, off = leader_metrics.tasks(engine, env)

@@ -13,6 +13,8 @@ import { CloudEvent, StreamState, useCloudEvents } from '../cloud/events';
 import { LiveRegion, Problem } from '../ui/controls';
 import { showToast, Toaster } from '../ui/toasts';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
+import { heldZoneName, useHeldZone } from '../devices/zonePlayback';
+import { businessApi } from './api';
 import { businessClient } from './client';
 import { AssertiveRegion } from './components/Notices';
 import { BusinessContext, BusinessCtx, businessOn, BusinessRoute, parseBusinessPath } from './context';
@@ -100,6 +102,7 @@ export default function BusinessApp({ api, route, account, onLeaveToPersonal, to
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const workspaceId = overview?.org.workspace_id;
   const client = useMemo(() => businessClient(api, workspaceId), [api, workspaceId]);
+  const bizApi = useMemo(() => (workspaceId ? businessApi(api, workspaceId) : undefined), [api, workspaceId]);
 
   const read = useCallback(async (target: string, scoped?: string) => {
     const org = scoped ? null : await businessClient(api).org(target);
@@ -180,12 +183,23 @@ export default function BusinessApp({ api, route, account, onLeaveToPersonal, to
     }
   }, [org, current]);
 
+  // This browser may be one of the organisation's zone speakers (ADR-0443): the switcher must
+  // not leave the workspace while it is, so ask the server and name the zone it holds.
+  const heldZoneId = useHeldZone(api, on ? workspaceId : null, updatedAt);
+  const switcherDevice = useMemo<SwitcherDevice | undefined>(() => {
+    const zones = (overview?.venues ?? []).flatMap((venue) => venue.zones ?? []);
+    const held = heldZoneName(heldZoneId, zones);
+    if (!held) return device;
+    return { ...device, leaseZone: device?.leaseZone ?? held };
+  }, [device, heldZoneId, overview]);
+
   const value = useMemo<BusinessCtx | null>(() => overview && {
     org: overview.org,
     venues: overview.venues,
     devices: overview.devices ?? [],
     activity: overview.activity ?? [],
     client,
+    bizApi,
     now,
     offline,
     updatedAt,
@@ -194,7 +208,7 @@ export default function BusinessApp({ api, route, account, onLeaveToPersonal, to
     readOnly: isReadOnly(overview.org, now),
     refresh,
     go,
-  }, [overview, client, now, offline, updatedAt, stream, load, refresh, go]);
+  }, [overview, client, bizApi, now, offline, updatedAt, stream, load, refresh, go]);
 
   // With `business.workspaces` off, business pages are unreachable: CloudApp shows personal.
   if (!on || !current || current.page === 'start') return null;
@@ -217,7 +231,7 @@ export default function BusinessApp({ api, route, account, onLeaveToPersonal, to
   return (
     <BusinessContext.Provider value={value}>
       <BusinessShell org={value.org} route={page} api={api} account={account} now={now} readOnly={value.readOnly} offline={offline}
-        wall={wall} device={device} go={go} onLeaveToPersonal={() => leave.current()}>
+        wall={wall} device={switcherDevice} go={go} onLeaveToPersonal={() => leave.current()}>
         {staff && !staffVenue
           ? <section className="biz-stack"><h1>Staff controls</h1><p>{SHELL_COPY.staffNoVenue}</p></section>
           : <BusinessPage route={page} org={value.org} wall={wall} />}

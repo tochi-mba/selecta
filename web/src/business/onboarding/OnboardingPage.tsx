@@ -2,22 +2,22 @@ import { useState } from 'react';
 import { useBusiness, PATHS } from '../context';
 import { BusinessDetailsForm } from './BusinessDetailsForm';
 import { OpeningHoursEditor } from '../forms/OpeningHoursEditor';
+import { emptyWeek } from '../forms/hours';
 import { VenueForm } from '../forms/VenueForm';
 import { ZoneListEditor } from '../forms/ZoneListEditor';
 import { LicenceAttestationForm } from '../forms/LicenceAttestationForm';
 import { PairingCodeEntry } from '../forms/PairingCodeEntry';
-import { SETUP_COPY, STEP_COPY, SERVICE_COPY } from '../copy/onboarding';
+import { MUSIC_COPY, SETUP_COPY, STEP_COPY, SERVICE_COPY } from '../copy/onboarding';
 import type { SetupStepId, WeekHours, Holiday } from '../types';
 
 const steps: SetupStepId[] = ['business', 'venue', 'hours', 'zones', 'licence', 'music', 'pair', 'service'];
-const emptyHours = (): WeekHours => ({ mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] });
 
 export function OnboardingPage() {
   const { org, venues, client, now, refresh, go, readOnly, offline } = useBusiness();
   const setup = org.setup;
   const current = setup?.current ?? 'business';
   const venue = venues.find((v) => v.id === setup?.venue_id) ?? venues[0];
-  const [hours, setHours] = useState<WeekHours>(() => venue?.hours ?? emptyHours());
+  const [hours, setHours] = useState<WeekHours>(() => venue?.hours ?? emptyWeek());
   const [holidays, setHolidays] = useState<Holiday[]>(() => venue?.holidays ?? []);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -62,8 +62,8 @@ export function OnboardingPage() {
       </>}
       {current === 'licence' && venue && <LicenceAttestationForm initial={venue.licence} now={now} disabled={disabled}
         onSave={async (licence) => { await client.saveLicence(org.id, venue.id, licence); await advance(true); }} />}
-      {current === 'music' && <><p>Add music to the organisation library before the first service.</p>
-        <button type="button" onClick={() => go(PATHS.section(org.id, 'library'))}>Open business library</button>
+      {current === 'music' && <><p>{MUSIC_COPY.intro}</p>
+        <button type="button" onClick={() => go(PATHS.section(org.id, 'library'))}>{MUSIC_COPY.libraryLink}</button>
         <button type="button" disabled={!!disabled || busy} onClick={() => { void advance(true); }}>Continue</button>
       </>}
       {current === 'pair' && venue && <><PairingCodeEntry zones={venue.zones} onPair={async (code, zone_id, name) => {

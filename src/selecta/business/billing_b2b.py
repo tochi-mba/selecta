@@ -504,8 +504,15 @@ def cost_breakdown_csv(conn: Connection, org: OrgFacts, *, interval: str | None 
     writer = csv.DictWriter(buffer, fieldnames=list(CSV_COLUMNS), lineterminator="\n")
     writer.writeheader()
     for line in cost_breakdown(conn, org, interval=interval):
-        writer.writerow(line)
+        writer.writerow({k: _cell(v) if k in ("venue", "cost_centre") else v
+                         for k, v in line.items()})
     return buffer.getvalue()
+
+
+def _cell(value: Any) -> str:
+    """Names typed by people: a cell a spreadsheet would read as a formula gets a quote."""
+    text = str(value or "")
+    return "'" + text if text.startswith(("=", "+", "-", "@", "\t", "\r")) else text
 
 
 def _major(minor: int) -> str:

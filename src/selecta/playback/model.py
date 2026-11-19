@@ -133,9 +133,15 @@ class PersonSpeakerOff(PlaybackError):
 
 
 class HoldingZoneLease(PlaybackError):
-    """A phone holding a zone's lease must hand it back before playing personal music."""
+    """A phone holding a zone's lease must hand it back before playing personal music.
+    `zone_id` names the zone it is playing. Raised by `zone_session.refuse_personal_while_holding`
+    on the personal take-over route."""
 
     code = "holding_zone_lease"
+
+    def __init__(self, message: str, zone_id: str | None = None) -> None:
+        super().__init__(message)
+        self.zone_id = zone_id
 
 
 @dataclass(frozen=True)

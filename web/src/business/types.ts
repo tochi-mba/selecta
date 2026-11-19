@@ -172,3 +172,26 @@ export type Health = {
 export type ActivityEntry = { id: string; at: number; venue_id: string; zone_id?: string | null; words: string };
 
 export type Overview = { org: Org; venues: Venue[]; devices?: Device[]; activity?: ActivityEntry[] };
+
+/** The billing page's server summary (`GET /business/billing`, ADR-0447). Items are
+ * `business_venue`, `business_extra_zone` and `business_extra_seat`; amounts are minor units. */
+export type BillingItem = 'business_venue' | 'business_extra_zone' | 'business_extra_seat';
+export type BillingSummary = {
+  currency: 'GBP' | 'USD' | 'EUR';
+  interval: 'month' | 'year';
+  subscribed: boolean;
+  status: string | null;
+  quantities: Record<BillingItem, number>;
+  enterprise: boolean;
+  prices: { item: BillingItem; unit_amount: number; interval: 'month' | 'year' }[];
+  estimate: { lines: Record<BillingItem, number>; subtotal_minor: number; discount_minor: number; total_minor: number } | null;
+  profile: { company_name: string; country: string; po_number: string | null; collection_method: 'charge_automatically' | 'send_invoice'; net_days: number | null; tax_treatment: string; can_send_invoice: boolean } | null;
+  venues: { venue_id: string; name: string; cost_centre: string | null; stop_at: number | null }[];
+  banner: { message: string; grace_ends_at: number | null; read_only: boolean; stops: { venue_id: string; stop_at: number }[] } | null;
+  read_only: boolean;
+};
+
+/** What adding venues, zones or seats costs: from Stripe with a subscription, else the price list. */
+export type CostPreview =
+  | { source: 'stripe'; currency: string; charged_now_minor: number; next_invoice_minor: number }
+  | { source: 'estimate'; currency: string; interval: 'month' | 'year'; period_total_minor: number };

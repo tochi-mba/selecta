@@ -1,6 +1,6 @@
 /* SelectaDJ for Business: shared pieces (ADR-0453 D5, D14). Tokens only, no new colours.
    Surface stylesheets (onboarding.css, console.css, venue.css, staff.css, shell.css) sit beside
-   this one. The kiosk has its own stylesheet in web/src/kiosk and never loads this file. */
+   this one. */
 
 .biz {
   --control-height-big: 64px;

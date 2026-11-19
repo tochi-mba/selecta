@@ -9,6 +9,7 @@ import { ScheduleTab, TodayTab } from './ScheduleTabs';
 import { useVenueView } from './useVenue';
 import { PeoplePage } from './PeoplePage';
 import { RequestsPage } from './RequestsPage';
+import { VenueActivity } from './VenueActivity';
 
 export function VenueManager({ venueId, tab }: { venueId: string; tab?: string }) {
   const { ctx, venue, disabled } = useVenueView(venueId);
@@ -45,9 +46,6 @@ export function VenueManager({ venueId, tab }: { venueId: string; tab?: string }
       }} />
       {error && <p role="alert">{error}</p>}
     </section>}
-    {chosen === 'log' && <section className="biz-card"><h2>Play log</h2>
-      <p>Recent venue activity</p>
-      <ul>{ctx.activity.filter((item) => item.venue_id === venue.id).map((item) => <li key={item.id}>{new Date(item.at * 1000).toLocaleString()}: {item.words}</li>)}</ul>
-    </section>}
+    {chosen === 'log' && <VenueActivity venueId={venue.id} />}
   </section>;
 }

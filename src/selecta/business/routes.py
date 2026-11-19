@@ -9,6 +9,8 @@ missing organisation, so a personal account learns nothing about organisations. 
   a targeting rule, the account-flag middleware in `api_cloud.py` refuses them the same way.
 - `POST /api/business/orgs` (self-serve sign-up) also needs `business.signups`; while selling is
   off, organisations come only from the staff pilot route (`business.admin_routes`).
+- `GET /api/business/venues/{venue_id}/activity` reads the venue's 90-day activity log (skip,
+  steer, volume, approve; ADR-0452 BZ-0452-12) for a member holding `business.activity.read` there.
 - `GET /api/workspaces` is owned by `business.workspaces` and lists a business workspace only
   when `business.orgs` is on for that organisation.
 
@@ -29,6 +31,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection, Engine
 
 from selecta.business import crates, hours_hook, orgs, venues, zones
+from selecta.business.access import BusinessForbidden, BusinessNotFound
+from selecta.business.access import audit as business_audit
+from selecta.business.access import guard as business_guard
 from selecta.business.errors import (
     BusinessError,
     Conflict,
@@ -294,6 +299,33 @@ def install_routes(
                 )
             return {"venue": venues.get(conn, workspace_id, venue_id), "archive_at": closing}
 
+    @app.get("/api/business/venues/{venue_id}/activity")
+    def venue_activity(
+        venue_id: str,
+        request: Request,
+        limit: int = 100,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ):
+        """The venue's everyday-control log, newest first (shown on the venue page)."""
+        with org(request, claims) as (conn, workspace_id, found, _now):
+            venues.get(conn, workspace_id, venue_id)
+            try:
+                actor = business_guard.actor_for(
+                    conn, user_id=found.user.id, organisation_id=workspace_id,
+                    workspace_id=workspace_id,
+                )
+                business_guard.require(
+                    conn, actor, "business.activity.read", venue_id=venue_id
+                )
+            except BusinessNotFound as error:
+                raise HTTPException(status_code=404, detail=dict(NOT_FOUND)) from error
+            except BusinessForbidden as error:
+                raise HTTPException(status_code=403, detail={"code": "forbidden"}) from error
+            rows = business_audit.recent_activity(
+                conn, workspace_id=workspace_id, venue_id=venue_id, limit=limit
+            )
+        return {"activity": [_activity_line(row) for row in rows]}
+
     # -- zones -----------------------------------------------------------------------------
 
     @app.get("/api/business/zones")
@@ -425,6 +457,18 @@ def install_routes(
         with org(request, claims) as (conn, workspace_id, _found, _now):
             crates.delete(conn, workspace_id, crate_id)
         return {"deleted": crate_id}
+
+
+def _activity_line(row: dict) -> dict:
+    """One activity line as the venue page shows it; actor ids stay on the server."""
+    return {
+        "id": row["id"],
+        "at": float(row["created_at"]),
+        "venue_id": row["venue_id"],
+        "zone_id": row.get("zone_id") or None,
+        "kind": row["kind"],
+        "words": row["words"],
+    }
 
 
 def _not_in_library(conn: Connection, workspace_id: str, song_ids: list[str]) -> list[str]:

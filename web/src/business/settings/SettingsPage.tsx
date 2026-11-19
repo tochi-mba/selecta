@@ -1,30 +1,58 @@
 import { useState } from 'react';
 import { PATHS, useBusiness } from '../context';
+import { SETTINGS_COPY } from '../copy/shell';
 import { BusinessDetailsForm } from '../onboarding/BusinessDetailsForm';
+import { daysUntil, LICENCE_WARN_DAYS } from '../state';
+import { isoDayWords } from '../time';
+import type { Venue } from '../types';
+
+/** One venue's licence in words: none yet, valid, ending soon or past its date. */
+export function licenceWords(venue: Venue, now: number): string {
+  const ends = venue.licence?.expires_on;
+  if (!ends) return SETTINGS_COPY.noLicence;
+  const days = daysUntil(ends, now);
+  const day = isoDayWords(ends);
+  if (days < 0) return SETTINGS_COPY.licenceExpired(day);
+  return days <= LICENCE_WARN_DAYS ? SETTINGS_COPY.licenceExpiring(day) : SETTINGS_COPY.licenceOk(day);
+}
 
 export function SettingsPage() {
-  const { org, client, refresh, go, readOnly, offline } = useBusiness();
+  const { org, venues, client, refresh, go, readOnly, offline, now } = useBusiness();
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const canEdit = org.role === 'owner' || org.role === 'admin';
-  const disabled = readOnly ? 'This organisation is read-only' : offline ? "You're offline" : !canEdit ? 'Only an owner or admin can edit settings' : null;
-  return <section className="biz biz-stack"><h1>Organisation settings</h1>
-    <section className="biz-card"><h2>Business details</h2>
-      <BusinessDetailsForm initial={{ name: org.name, country: org.country }} disabled={disabled} submitLabel="Save business details"
+  const disabled = readOnly ? SETTINGS_COPY.readOnly : offline ? SETTINGS_COPY.offline : !canEdit ? SETTINGS_COPY.notAdmin : null;
+  return <section className="biz biz-stack"><h1>{SETTINGS_COPY.title}</h1>
+    <section className="biz-card"><h2>{SETTINGS_COPY.detailsHeading}</h2>
+      <BusinessDetailsForm initial={{ name: org.name, country: org.country }} disabled={disabled} submitLabel={SETTINGS_COPY.saveDetails}
         onSave={async (details) => {
           setError(''); setSaved(false);
           try { await client.saveBusinessDetails(org.id, details); await refresh(); setSaved(true); }
-          catch { setError("Couldn't save business details. Try again."); }
+          catch { setError(SETTINGS_COPY.detailsFailed); }
         }} />
-      {saved && <p role="status">Business details saved</p>}
+      {saved && <p role="status">{SETTINGS_COPY.detailsSaved}</p>}
       {error && <p role="alert">{error}</p>}
     </section>
-    <section className="biz-card"><h2>Management</h2>
-      <p>Organisation: {org.name}</p>
-      <p>Country: {org.country}</p>
-      <p>Role: {org.role.replaceAll('_', ' ')}</p>
-      <button type="button" onClick={() => go(PATHS.section(org.id, 'people'))}>People and permissions</button>
-      <button type="button" onClick={() => go(PATHS.section(org.id, 'billing'))}>Billing and invoices</button>
+    <section className="biz-card" aria-labelledby="biz-settings-licences"><h2 id="biz-settings-licences">{SETTINGS_COPY.licencesHeading}</h2>
+      <p>{SETTINGS_COPY.licencesIntro}</p>
+      {!venues.length && <p>{SETTINGS_COPY.noVenues}</p>}
+      {Boolean(venues.length) && <ul>{venues.map((venue) => <li key={venue.id}>
+        {venue.name}: {licenceWords(venue, now)}{' '}
+        <button type="button" onClick={() => go(PATHS.venue(org.id, venue.id, 'licence'))}>{SETTINGS_COPY.openLicence(venue.name)}</button>
+      </li>)}</ul>}
+    </section>
+    {Boolean(venues.length) && <section className="biz-card" aria-labelledby="biz-settings-rules"><h2 id="biz-settings-rules">{SETTINGS_COPY.rulesHeading}</h2>
+      <p>{SETTINGS_COPY.rulesIntro}</p>
+      <ul>{venues.map((venue) => <li key={venue.id}>
+        <button type="button" onClick={() => go(PATHS.venue(org.id, venue.id, 'rules'))}>{SETTINGS_COPY.openRules(venue.name)}</button>
+      </li>)}</ul>
+    </section>}
+    <section className="biz-card"><h2>{SETTINGS_COPY.managementHeading}</h2>
+      <p>{SETTINGS_COPY.orgLine(org.name)}</p>
+      <p>{SETTINGS_COPY.countryLine(org.country)}</p>
+      <p>{SETTINGS_COPY.roleLine(org.role.replaceAll('_', ' '))}</p>
+      <button type="button" onClick={() => go(PATHS.section(org.id, 'people'))}>{SETTINGS_COPY.peopleLink}</button>
+      <button type="button" onClick={() => go(PATHS.section(org.id, 'billing'))}>{SETTINGS_COPY.billingLink}</button>
     </section>
   </section>;
 }

@@ -35,7 +35,6 @@ from selecta.business.billing_catalogue import (
     ITEM_VENUE,
     ITEM_ZONE,
     ITEMS,
-    TRIAL_DAYS,
     TRIAL_VENUES,
     TRIAL_ZONES,
     VOLUME_COUPON_ID,
@@ -163,6 +162,8 @@ class BusinessStripe(Protocol):
         self, customer: str, *, amount: int, currency: str, description: str,
         idempotency_key: str,
     ) -> dict[str, Any]: ...
+
+    def get_charge(self, charge_id: str) -> dict[str, Any] | None: ...
 
     def refund_charge(
         self, charge_id: str, *, amount: int, idempotency_key: str,
@@ -675,42 +676,7 @@ def reconcile(
     return report
 
 
-# Trials -----------------------------------------------------------------------------------
-
-
-def start_trial(
-    conn: Connection, client: BusinessStripe, org: OrgFacts, *, payment_method_id: str,
-    price_map: BusinessPriceMap, now: float, actor: str, interval: str = "month",
-) -> dict:
-    """A 14-day trial with 1 venue and 1 zone and a card; one per organisation and per card."""
-    if conn.execute(sa.select(biz_trials.c.id).where(
-            biz_trials.c.organisation_id == org.organisation_id)).first():
-        raise TrialRefused("This organisation has already had its SelectaDJ for Business trial.")
-    existing = subscription_row(conn, org.organisation_id)
-    if existing and existing.get("stripe_subscription_id"):
-        raise TrialRefused("This organisation already has a subscription.")
-    method = client.get_payment_method(payment_method_id)
-    fingerprint = ((method or {}).get("card") or {}).get("fingerprint")
-    if not fingerprint:
-        raise TrialRefused("The trial needs a card.")
-    if conn.execute(sa.select(biz_trials.c.id).where(
-            biz_trials.c.card_fingerprint == fingerprint)).first():
-        raise TrialRefused("This card has already been used for a SelectaDJ for Business trial.")
-    quantities = billed_quantities(conn, org)
-    if quantities[ITEM_VENUE] != TRIAL_VENUES or quantities[ITEM_ZONE] != 0:
-        raise TrialRefused("The trial covers 1 venue with 1 zone.")
-    ends = now + TRIAL_DAYS * 86_400
-    row = ensure_subscription(
-        conn, client, org, price_map=price_map, now=now, actor=actor, interval=interval,
-        payment_method=payment_method_id, trial_end=ends,
-    )
-    conn.execute(sa.insert(biz_trials).values(
-        id=new_id(), workspace_id=org.workspace_id, organisation_id=org.organisation_id,
-        card_fingerprint=fingerprint, started_at=now, ends_at=ends, outcome="running",
-    ))
-    audit(conn, workspace_id=org.workspace_id, organisation_id=org.organisation_id,
-          action="billing.trial.started", actor=actor, now=now, detail={"ends_at": ends})
-    return row
+# Trials: settled from Stripe; starting one needs the business checkout (ADR-0447 BZ-0447-04) --
 
 
 def trial_row(conn: Connection, organisation_id: str) -> dict | None:

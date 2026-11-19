@@ -2,13 +2,10 @@
 // functions, never through raw paths, so when the BZ-1 to BZ-5 routes land with different paths
 // only ROUTES changes. Each call names the organisation's workspace (X-Workspace-ID) so personal
 // and business data never mix (ADR-0442).
-//
-// Until those routes exist, `fixtures.ts` provides `demoApi`, a stub with the same answers, used
-// by the tests and the e2e harness.
 
 import type { Api } from '../cloud/api';
 import type {
-  ContentRules, Daypart, Device, GuestRequest, Holiday, Licence, Member, Org, Overview, PlayLogExportJob,
+  BillingSummary, ContentRules, CostPreview, Daypart, Device, GuestRequest, Holiday, Licence, Member, Org, Overview, PlayLogExportJob,
   Role, SetupProgress, Venue, WeekHours, WorkspaceSummary, Zone, ZoneSchedule,
 } from './types';
 
@@ -44,6 +41,12 @@ export const ROUTES = {
   requestSettings: (org: string, venue: string) => `/orgs/${enc(org)}/venues/${enc(venue)}/request-settings`,
   librarySongs: (org: string) => `/orgs/${enc(org)}/library/songs`,
   explicitBulk: (org: string) => `/orgs/${enc(org)}/library/explicit`,
+  billing: '/business/billing',
+  billingPreview: '/business/billing/preview',
+  billingPoNumber: '/business/billing/po-number',
+  billingCostCentre: (venue: string) => `/business/billing/venues/${enc(venue)}/cost-centre`,
+  billingCollection: '/business/billing/collection-method',
+  billingBreakdown: '/business/billing/cost-breakdown',
 } as const;
 
 function enc(value: string) { return encodeURIComponent(value); }
@@ -107,6 +110,12 @@ export function businessClient(api: Api, workspaceId?: string) {
     saveRequestSettings: (org: string, venue: string, settings: RequestSettings) => call<RequestSettings>(ROUTES.requestSettings(org, venue), json('PUT', settings)),
     librarySongs: (org: string) => call<LibrarySong[] | null>(ROUTES.librarySongs(org)),
     markExplicit: (org: string, body: { song_ids: string[]; explicit: 'explicit' | 'clean' }) => call<{ updated: number } | null>(ROUTES.explicitBulk(org), json('POST', body)),
+    billingSummary: () => call<BillingSummary>(ROUTES.billing),
+    previewCost: (add: { venues: number; zones: number; seats: number }) => call<CostPreview>(ROUTES.billingPreview, json('POST', add)),
+    savePoNumber: (poNumber: string) => call<{ po_number: string | null }>(ROUTES.billingPoNumber, json('PUT', { po_number: poNumber })),
+    saveCostCentre: (venue: string, costCentre: string) => call<{ venue_id: string; cost_centre: string | null }>(ROUTES.billingCostCentre(venue), json('PUT', { cost_centre: costCentre })),
+    saveCollectionMethod: (method: 'charge_automatically' | 'send_invoice') => call<{ collection_method: string; net_days: number | null }>(ROUTES.billingCollection, json('PUT', { method })),
+    costBreakdown: () => call<{ filename: string; csv: string }>(ROUTES.billingBreakdown),
   };
 }
 

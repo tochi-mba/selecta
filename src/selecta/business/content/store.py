@@ -256,6 +256,27 @@ def record_tag_reading(conn: Connection, *, organisation_id: str, workspace_id: 
     return True
 
 
+def record_upload_tag(conn: Connection, workspace_id: str, song_id: str, reading: str, *,
+                      now: float) -> bool:
+    """A song uploaded to an organisation library takes its file's tag reading (BZ-0450-02).
+
+    Personal workspaces, and organisations while `business.content_controls` is off, keep no
+    flags, so this does nothing for them. An organisation's id is its workspace id (BZ-1).
+    """
+    from selecta.business import orgs
+    from selecta.business.errors import NotFound
+    from selecta.business.rooms.service import default_flag_on
+
+    if not default_flag_on("business.content_controls"):
+        return False
+    try:
+        orgs.get(conn, workspace_id)
+    except NotFound:
+        return False
+    return record_tag_reading(conn, organisation_id=workspace_id, workspace_id=workspace_id,
+                              song_id=song_id, reading=reading, now=now)
+
+
 def clean_links_map(conn: Connection, organisation_id: str) -> dict[str, str]:
     rows = conn.execute(sa.select(t.clean_links.c.song_id, t.clean_links.c.clean_song_id)
                         .where(t.clean_links.c.organisation_id == organisation_id))

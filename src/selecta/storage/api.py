@@ -16,8 +16,9 @@ from sqlalchemy.engine import Connection, Engine
 
 from selecta.admin import state as emergency_state
 from selecta.billing import plans, stripe_sync
+from selecta.business.content.store import record_upload_tag
 from selecta.identity.tokens import Claims
-from selecta.persistence import transaction
+from selecta.persistence import db_now, transaction
 from selecta.storage.artifacts import Buckets
 from selecta.storage.audio_check import Rejected
 from selecta.storage.ids import require_id
@@ -387,6 +388,11 @@ def install_routes(
                             audio_probe,
                             workspace_id=workspace_id,
                         )
+                        if outcome.asset_id and audio_probe.explicit_tag:
+                            record_upload_tag(
+                                conn, workspace_id, outcome.asset_id, audio_probe.explicit_tag,
+                                now=db_now(conn),
+                            )
         except (SessionNotFound, InvalidState, R2Error, ValueError) as error:
             raise map_error(error) from error
         return _outcome_json(outcome)

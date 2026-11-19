@@ -90,3 +90,11 @@
   .hq-grid-scroll, .hq-grid-row, .sched-block, .sched-scroll, .data-table-card, .hq-line { border-color: CanvasText; }
   .hq-grid [tabindex]:focus-visible { outline-color: Highlight; }
 }
+
+/* Billing page (ADR-0447): tables scroll inside their card at 320 px, never the page. */
+.biz-table-wrap { overflow-x: auto; max-width: 100%; }
+.biz-table { border-collapse: collapse; width: 100%; }
+.biz-table caption { text-align: start; font-weight: 600; padding-block-end: var(--space-2); }
+.biz-table th, .biz-table td { text-align: start; padding: var(--space-1) var(--space-2); border-block-end: var(--separator) solid var(--edge-decorative); }
+.biz-field { display: grid; gap: var(--space-1); min-width: 0; }
+.biz-field input { min-width: 0; max-width: 100%; }

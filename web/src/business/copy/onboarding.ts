@@ -1,33 +1,6 @@
-// S1 sign-up and onboarding copy (ADR-0453 D6, D15). Plain words, no blame, no exclamation marks,
+// S1 onboarding copy (ADR-0453 D6, D15). Plain words, no blame, no exclamation marks,
 // says what happens, when and what to do. Manager-facing only: the kiosk, guest and display
 // bundles never import this module.
-
-export const START_COPY = {
-  pilotTitle: 'SelectaDJ for Business is in private pilot',
-  pilotLead: 'Tell us about your venue',
-  pilotBody: 'REX Technologies is setting up a few venues by hand while SelectaDJ for Business is in pilot. Leave your details and someone will reply by email.',
-  name: 'Your name',
-  email: 'Email',
-  venue: 'Venue name',
-  venues: 'Number of venues',
-  message: 'Anything we should know (optional)',
-  send: 'Send',
-  sending: 'Sending',
-  sent: 'Thanks. REX Technologies will reply by email, usually within two working days.',
-  sendFailed: "We couldn't send this. Check your connection and try again.",
-  needName: 'Enter your name',
-  needEmail: 'Enter an email address we can reply to',
-  needVenue: 'Enter the venue name',
-  needVenues: 'Enter how many venues, 1 or more',
-  trialTitle: 'Start your 14-day SelectaDJ for Business trial',
-  trialLead: 'The trial covers one venue and one zone. You add a card through Stripe Checkout and you are not charged until the trial ends.',
-  startTrial: 'Start the trial',
-  starting: 'Starting',
-  trialFailed: "The trial didn't start. Check the details and try again.",
-  signIn: 'Sign in to SelectaDJ first, then come back to this page to start the trial.',
-  signInLink: 'Sign in',
-  goingToCheckout: 'Taking you to Stripe Checkout to add your card',
-} as const;
 
 export const BUSINESS_COPY = {
   orgName: 'Business name',
@@ -162,21 +135,8 @@ export const LICENCE_COPY = {
 } as const;
 
 export const MUSIC_COPY = {
-  uploadTitle: 'Upload music',
-  uploadTo: (org: string) => `Uploads go to ${org}'s library, not your personal library.`,
+  intro: 'Add music to the business library before the first service.',
   libraryLink: 'Open the business library',
-  copyTitle: 'Copy from my personal library',
-  copyNote: 'Copies are made, nothing is moved. Personal downloads are often licensed for personal use only, so copy only music your business has the rights to play.',
-  crates: 'Crates',
-  songs: 'Songs',
-  nothingPersonal: 'Your personal library has nothing to copy yet.',
-  personalUnavailable: "Your personal library couldn't be read here. You can upload instead.",
-  copy: (count: number) => `Copy ${count} item${count === 1 ? '' : 's'}`,
-  chooseSome: 'Choose at least one crate or song',
-  copying: 'Copying',
-  copied: (count: number) => `Copied ${count} song${count === 1 ? '' : 's'} to the business library. Your personal library is unchanged.`,
-  copyFailed: "The copy didn't start. Try again.",
-  loading: 'Reading your personal library',
 } as const;
 
 export const PAIR_COPY = {

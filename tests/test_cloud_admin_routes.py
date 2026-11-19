@@ -265,6 +265,8 @@ EVERY_FIELD = {
     "owner_user_id": "u-none",
     "org_name": "Permission sweep pilot",
     "venues": [{"name": "Test venue", "timezone": "Europe/London", "country": "GB"}],
+    "amount_minor": 100,
+    "charge_id": "ch_none",
 }
 # Routes any signed-in staff member may call: starting the admin session and reading who you are.
 SELF_ONLY = {"POST /api/admin/session", "GET /api/admin/me"}

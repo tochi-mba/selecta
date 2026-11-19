@@ -13,8 +13,9 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from sqlalchemy import and_, or_, select
 from sqlalchemy.engine import Connection, Engine
 
+from selecta.business import crates
 from selecta.identity.tokens import Claims
-from selecta.persistence import transaction
+from selecta.persistence import db_now, transaction
 from selecta.storage.deletion import DeletionKind, tombstone
 from selecta.storage.ids import require_id
 from selecta.storage.schema import assets, upload_sessions
@@ -197,6 +198,9 @@ def install_routes(
                 )
             except LookupError:
                 raise HTTPException(status_code=404, detail={"code": "asset_not_found"}) from None
+            if result.created:
+                # A deleted song leaves every crate of an organisation at once (BZ-0442-06).
+                crates.tombstone_song(conn, workspace_id, asset_id, now=int(db_now(conn)))
         return {
             "id": asset_id,
             "deleted": True,

@@ -300,4 +300,10 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `business.schedules` | **Venue schedules and programmes.** Opening hours, holiday exceptions, stay-open-late and close-now overrides, plus zone programmes and state. | `business.orgs` |
 | `business.offline` | **Offline zone controls.** Kiosk offline manifests, idempotent command resync and device cache reports for business zones. | `business.schedules` |
 | `business.workspaces` | **Workspace switcher.** Switch between your personal SelectaDJ and the organisations you belong to. Personal and business data never mix. | `business.orgs` |
+| `business.billing` | **Business billing.** The owner and admin billing page: quantities and prices, a cost preview before adding venues, zones or seats, PO number and cost centres for invoices, a cost breakdown CSV, and dunning that stops a venue only at its close after warnings. Stripe test mode only. | `business.orgs` |
 | `business.pilots` | **Business pilots.** REX Technologies staff create free pilot organisations with their venues and zones, using the same model a paying venue will. | `admin.console`, `business.orgs` |
+| `business.content_controls` | **Venue content controls.** Organisation and venue music rules, the blocklist, 24-hour overrides, explicit flags from managers and file tags, and each zone's volume cap with quiet hours. | `business.orgs` |
+| `business.rooms` | **Rooms for Business.** Standing guest request rooms for business zones: guests join with a table-card code, staff approve or pass requests, and managers set modes and limits. | `business.orgs` |
+| `business.rooms.branding` | **Rooms for Business branding.** The venue's logo, colour and welcome line on the guest request page. | `business.rooms` |
+| `business.rooms.print` | **Rooms for Business print sheet.** A printable sheet of table cards with each zone's join code. | `business.rooms` |
+| `business.rooms.screen_code` | **Rooms for Business screen code.** A rotating join code shown on the zone's display screen. | `business.rooms` |

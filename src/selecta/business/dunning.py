@@ -249,13 +249,6 @@ def stop_plan(
             for v in org.billable_venues if v.id not in skipped]
 
 
-def stop_time_for(
-    conn: Connection, org: OrgFacts, venue_id: str, hours: HoursSource, now: float,
-) -> float | None:
-    return next((s.stop_at for s in stop_plan(conn, org, hours, now) if s.venue_id == venue_id),
-                None)
-
-
 def is_venue_stopped(conn: Connection, organisation_id: str, venue_id: str) -> bool:
     state = grace_state(conn, organisation_id)
     if state is None or not state.in_grace:
