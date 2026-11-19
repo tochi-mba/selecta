@@ -74,6 +74,8 @@ None were added for this work: no runtime dependency, no UI library, no font and
 
 Audit on 2026-11-10: two runtime dependencies have been added since, both by the Cloud programme. `@noble/hashes` 2.4.0 (MIT) hashes upload parts in the browser and makes no request. `@workos-inc/authkit-react` 0.16.3 (MIT) signs a Cloud listener in through WorkOS, which is a remote host, and is covered by [Cloud authentication](../saas/07a-authentication.md). Both are imported only under `web/src/cloud/`, which `RuntimeApp.tsx` loads lazily in Cloud mode, so the built local page never loads them: in a local build they sit only in the `CloudRoot` chunk. `web/e2e/s3-0072-local-requests.e2e.ts` and `web/e2e/pages.e2e.ts` 'the page only ever talks to this computer' fail on any request from the local app that isn't to the local server.
 
+Audit on 2026-11-19: `onnxruntime-web` 1.31.1 (MIT) runs the browser stem splitter (ADR-0459 Tier 3). `web/src/dsp/stems/runtime.ts` imports it dynamically only when a song is split into stems, which needs the `cloud.browser_stems` flag (off) and a published splitter file (none yet), so no page loads it today. It runs on this device, single-threaded, and is given only the downloaded model and the song audio already in the browser; it sends nothing anywhere.
+
 There's no Content Security Policy header today. Nothing here needs external sources, so one could be added later without changing the app, as its own reviewed change.
 
 ## Diagnostics and shared material

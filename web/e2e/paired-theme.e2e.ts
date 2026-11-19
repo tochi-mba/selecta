@@ -90,7 +90,9 @@ for (const viewport of VIEWPORTS) {
         // route data to settle, while preserving the strict equality assertion.
         await page.waitForTimeout(180);
         const semantics = () => main.evaluate((element) =>
-          JSON.stringify([...element.querySelectorAll('button, input, select, textarea, summary, [role="tab"], a[href]')].map((node) => ({
+          // The gallery's theme specimens show the theme in use, so they differ by design.
+          JSON.stringify([...element.querySelectorAll('button, input, select, textarea, summary, [role="tab"], a[href]')]
+            .filter((node) => !node.closest('.theme-specimens')).map((node) => ({
             tag: node.tagName,
             role: node.getAttribute('role'),
             label: (node.getAttribute('aria-label') ?? node.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 120),
