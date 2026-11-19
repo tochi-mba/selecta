@@ -19,6 +19,7 @@ function summary(extra: Partial<BillingSummary> = {}): BillingSummary {
     estimate: { lines: { business_venue: 15800, business_extra_zone: 2500, business_extra_seat: 0 }, subtotal_minor: 18300, discount_minor: 0, total_minor: 18300 },
     profile: null,
     venues: [{ venue_id: 'camden', name: 'Camden', cost_centre: null, stop_at: null }],
+    checkout: { selling: false, terms_version: '2026-11-12', trial: { days: 14, venues: 1, zones: 1 }, trial_available: false },
     banner: null, read_only: false, ...extra,
   };
 }

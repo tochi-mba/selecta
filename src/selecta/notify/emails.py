@@ -9,6 +9,9 @@ stream carries it; the outbox keeps rows seven days, longer than every look-back
 - **Over quota**: a workspace that went over its storage limit within the last `QUOTA_LOOKBACK_S`
   (`quota_state.over_since`), mailed to its owner once per time it goes over.
 
+- **Business billing notices** (`business.billing_emails`): dunning reminders and stop
+  warnings, a failed VAT recheck and Enterprise contract expiry, from `biz_notices`.
+
 Storage deletion warnings and silent-zone alerts have their words (`templates`) and go through
 `send_once`, but nothing schedules them yet: the retention deletion they warn of and the silent
 zone detector are not built, and an email must never promise something the code won't do.
@@ -162,6 +165,16 @@ def send_once(
     already.add(key)
 
 
+def _business_billing_on() -> bool:
+    """Business billing notices (dunning, VAT recheck, contracts) mail only with its flag."""
+    from selecta import flags
+
+    try:
+        return flags.on("business.billing")
+    except KeyError:
+        return False
+
+
 def run(engine: Engine, sender: Sender, site_url: str = "", fence=None) -> RunResult:
     """One pass: every due email, each sent at most once."""
     result = RunResult()
@@ -171,6 +184,10 @@ def run(engine: Engine, sender: Sender, site_url: str = "", fence=None) -> RunRe
         now = db_now(conn)
         already = sent_keys(conn, now - outbox.KEEP_S)
         due = due_job_emails(conn, now, site_url) + due_quota_emails(conn, now, site_url)
+        if _business_billing_on():
+            from selecta.business import billing_emails
+
+            due += billing_emails.due(conn, now, site_url)
     for message in due:
         send_once(engine, sender, message, already, result, fence)
     return result

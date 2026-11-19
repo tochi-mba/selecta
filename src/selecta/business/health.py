@@ -48,14 +48,38 @@ COMMITTED_COUNT = 3
 HORIZON_S = 4 * 3600.0
 
 VIEW_FIELDS = (
-    "venue_name", "zone_name", "state", "now", "next", "opens_at", "theme",
-    "screen_sleep_when_closed", "burn_in", "diagnostic_code", "device_name", "pins_on",
-    "version", "server_time", "volume",
+    "venue_name",
+    "zone_name",
+    "state",
+    "now",
+    "next",
+    "opens_at",
+    "theme",
+    "screen_sleep_when_closed",
+    "burn_in",
+    "diagnostic_code",
+    "device_name",
+    "pins_on",
+    "version",
+    "server_time",
+    "volume",
 )
 REPORT_FIELDS = (
-    "kiosk_version", "browser", "audio_context", "autoplay_allowed", "wake_lock", "output_dbfs",
-    "playing_state", "hours_ahead", "storage_used_bytes", "storage_available_bytes", "network",
-    "clock_offset_ms", "restarted_at", "restart_reason", "battery",
+    "kiosk_version",
+    "browser",
+    "audio_context",
+    "autoplay_allowed",
+    "wake_lock",
+    "output_dbfs",
+    "playing_state",
+    "hours_ahead",
+    "storage_used_bytes",
+    "storage_available_bytes",
+    "network",
+    "clock_offset_ms",
+    "restarted_at",
+    "restart_reason",
+    "battery",
 )
 RESTART_REASONS = ("power_or_crash", "crash", "update", "staff_reload", "first_start")
 
@@ -90,7 +114,9 @@ def clean_report(raw: Mapping[str, Any]) -> dict[str, Any]:
         "kiosk_version": _text(raw.get("kiosk_version"), 32),
         "browser": _text(raw.get("browser"), 60),
         "audio_context": context if context in AUDIO_CONTEXT_STATES else "unknown",
-        "autoplay_allowed": raw.get("autoplay_allowed") if isinstance(raw.get("autoplay_allowed"), bool) else None,
+        "autoplay_allowed": raw.get("autoplay_allowed")
+        if isinstance(raw.get("autoplay_allowed"), bool)
+        else None,
         "wake_lock": raw.get("wake_lock") if isinstance(raw.get("wake_lock"), bool) else None,
         "output_dbfs": _float(raw.get("output_dbfs")),
         "playing_state": playing if playing in PLAYING_STATES else "error",
@@ -103,7 +129,8 @@ def clean_report(raw: Mapping[str, Any]) -> dict[str, Any]:
         "restart_reason": reason if reason in RESTART_REASONS else None,
         "battery": (
             {k: battery[k] for k in ("level", "charging") if k in battery}
-            if isinstance(battery, Mapping) else None
+            if isinstance(battery, Mapping)
+            else None
         ),
     }
 
@@ -153,11 +180,17 @@ def record_health(
         if row is None:
             conn.execute(
                 device_health_history.insert().values(
-                    device_id=auth.device_id, bucket_at=bucket, workspace_id=auth.workspace_id,
-                    zone_id=auth.zone_id, reports=1, playing_reports=int(playing),
-                    silent_reports=int(silent), blocked_reports=int(blocked),
+                    device_id=auth.device_id,
+                    bucket_at=bucket,
+                    workspace_id=auth.workspace_id,
+                    zone_id=auth.zone_id,
+                    reports=1,
+                    playing_reports=int(playing),
+                    silent_reports=int(silent),
+                    blocked_reports=int(blocked),
                     no_wake_lock_reports=int(report["wake_lock"] is False),
-                    min_output_dbfs=level, kiosk_version=report["kiosk_version"],
+                    min_output_dbfs=level,
+                    kiosk_version=report["kiosk_version"],
                 )
             )
         else:
@@ -165,12 +198,15 @@ def record_health(
             if level is not None:
                 lowest = level if lowest is None else min(lowest, level)
             conn.execute(
-                sa.update(device_health_history).where(*key).values(
+                sa.update(device_health_history)
+                .where(*key)
+                .values(
                     reports=row["reports"] + 1,
                     playing_reports=row["playing_reports"] + int(playing),
                     silent_reports=row["silent_reports"] + int(silent),
                     blocked_reports=row["blocked_reports"] + int(blocked),
-                    no_wake_lock_reports=row["no_wake_lock_reports"] + int(report["wake_lock"] is False),
+                    no_wake_lock_reports=row["no_wake_lock_reports"]
+                    + int(report["wake_lock"] is False),
                     min_output_dbfs=lowest,
                     kiosk_version=report["kiosk_version"] or row["kiosk_version"],
                 )
@@ -195,8 +231,12 @@ def touch_heartbeat(engine: Engine, auth: KioskAuth, now: float) -> None:
         if not updated:
             conn.execute(
                 device_health.insert().values(
-                    device_id=auth.device_id, workspace_id=auth.workspace_id, zone_id=auth.zone_id,
-                    reported_at=now, heartbeat_at=now, audio_context="unknown",
+                    device_id=auth.device_id,
+                    workspace_id=auth.workspace_id,
+                    zone_id=auth.zone_id,
+                    reported_at=now,
+                    heartbeat_at=now,
+                    audio_context="unknown",
                     playing_state="stopped",
                 )
             )
@@ -211,11 +251,14 @@ def _songs(conn: Connection, workspace_id: str, ids: list[int]) -> dict[int, dic
     if not ids:
         return {}
     rows = conn.execute(
-        sa.select(local_songs.c.id, local_songs.c.title, local_songs.c.artist,
-                  local_songs.c.duration_s)
-        .where(local_songs.c.workspace_id == workspace_id, local_songs.c.id.in_(ids))
+        sa.select(
+            local_songs.c.id, local_songs.c.title, local_songs.c.artist, local_songs.c.duration_s
+        ).where(local_songs.c.workspace_id == workspace_id, local_songs.c.id.in_(ids))
     ).all()
-    return {row.id: {"title": row.title, "artist": row.artist, "duration_s": row.duration_s} for row in rows}
+    return {
+        row.id: {"title": row.title, "artist": row.artist, "duration_s": row.duration_s}
+        for row in rows
+    }
 
 
 def _files(conn: Connection, workspace_id: str, hashes: list[str]) -> dict[str, dict[str, Any]]:
@@ -224,15 +267,16 @@ def _files(conn: Connection, workspace_id: str, hashes: list[str]) -> dict[str, 
     if not hashes:
         return {}
     rows = conn.execute(
-        sa.select(assets.c.original_key, assets.c.size, assets.c.sha256, assets.c.duration_s)
-        .where(
+        sa.select(assets.c.original_key, assets.c.size, assets.c.sha256, assets.c.duration_s).where(
             assets.c.workspace_id == workspace_id,
             assets.c.sha256.in_(hashes),
             assets.c.deleted_at.is_(None),
         )
     ).all()
-    return {row.sha256: {"key": row.original_key, "bytes": int(row.size),
-                         "duration_s": row.duration_s} for row in rows}
+    return {
+        row.sha256: {"key": row.original_key, "bytes": int(row.size), "duration_s": row.duration_s}
+        for row in rows
+    }
 
 
 def programme_horizon(engine: Engine, workspace_id: str, zone_id: str) -> list[dict[str, Any]]:
@@ -245,7 +289,7 @@ def programme_horizon(engine: Engine, workspace_id: str, zone_id: str) -> list[d
         session = load_session(conn, workspace_id, zone_id)
         if session is None or not session.programme:
             return []
-        ahead = list(session.programme[max(0, session.song_index):])
+        ahead = list(session.programme[max(0, session.song_index) :])
         songs = _songs(conn, workspace_id, [ref.song_id for ref in ahead])
         files = _files(conn, workspace_id, [ref.sha256 for ref in ahead])
     offset_s = session.offset_ms / 1000.0
@@ -259,20 +303,22 @@ def programme_horizon(engine: Engine, workspace_id: str, zone_id: str) -> list[d
         duration = (file or {}).get("duration_s") or song.get("duration_s")
         if file is None or not duration:
             continue
-        segments.append({
-            "id": f"{zone_id}:{session.song_index + position}:{ref.song_id}",
-            "key": file["key"],
-            "kind": "song",
-            "song_index": session.song_index + position,
-            "song_id": ref.song_id,
-            "title": song.get("title") or "",
-            "artist": song.get("artist") or "",
-            "starts_at": cursor,
-            "duration_s": float(duration),
-            "bytes": file["bytes"],
-            "sha256": ref.sha256,
-            "committed": position < COMMITTED_COUNT,
-        })
+        segments.append(
+            {
+                "id": f"{zone_id}:{session.song_index + position}:{ref.song_id}",
+                "key": file["key"],
+                "kind": "song",
+                "song_index": session.song_index + position,
+                "song_id": ref.song_id,
+                "title": song.get("title") or "",
+                "artist": song.get("artist") or "",
+                "starts_at": cursor,
+                "duration_s": float(duration),
+                "bytes": file["bytes"],
+                "sha256": ref.sha256,
+                "committed": position < COMMITTED_COUNT,
+            }
+        )
         cursor += float(duration)
         if cursor - now > HORIZON_S:
             break
@@ -287,9 +333,12 @@ def _venue_and_zone(conn: Connection, auth: KioskAuth):
 
     return conn.execute(
         sa.select(
-            zones.c.name.label("zone_name"), zones.c.status.label("zone_status"),
-            venues.c.name.label("venue_name"), venues.c.status.label("venue_status"),
-            venues.c.timezone, venues.c.id.label("venue_id"),
+            zones.c.name.label("zone_name"),
+            zones.c.status.label("zone_status"),
+            venues.c.name.label("venue_name"),
+            venues.c.status.label("venue_status"),
+            venues.c.timezone,
+            venues.c.id.label("venue_id"),
         )
         .select_from(zones.join(venues, zones.c.venue_id == venues.c.id))
         .where(zones.c.workspace_id == auth.workspace_id, zones.c.id == auth.zone_id)
@@ -308,7 +357,9 @@ def _pins_on(conn: Connection, workspace_id: str, venue_id: str) -> bool:
     return bool(row and row.staff_pins)
 
 
-def _zone_day(conn: Connection, workspace_id: str, venue_id: str, zone_id: str, tz: str, now: float):
+def _zone_day(
+    conn: Connection, workspace_id: str, venue_id: str, zone_id: str, tz: str, now: float
+):
     """(state, opens_at local "HH:MM" or None) from the venue's hours; open when it has none."""
     from selecta.business import hours, zone_clock
 
@@ -348,7 +399,12 @@ def kiosk_view(
             state, opens_at = "zone_paused", None
         elif state == "open" and session is not None and session.state is PlayState.PAUSED:
             state = "paused"
-        elif state == "open" and session is not None and session.state is PlayState.STOPPED and not session.programme:
+        elif (
+            state == "open"
+            and session is not None
+            and session.state is PlayState.STOPPED
+            and not session.programme
+        ):
             state = "empty"
         silent = conn.execute(
             sa.select(zone_alerts.c.id).where(
@@ -363,7 +419,7 @@ def kiosk_view(
         now_song = next_song = None
         if session is not None and session.programme:
             index = session.song_index
-            ids = [ref.song_id for ref in session.programme[index:index + 2]]
+            ids = [ref.song_id for ref in session.programme[index : index + 2]]
             songs = _songs(conn, auth.workspace_id, ids)
             pick = lambda i: songs.get(ids[i]) if i < len(ids) else None  # noqa: E731
             now_song, next_song = pick(0), pick(1)
@@ -406,8 +462,12 @@ def resync_plays(
     from selecta.business.commercial_facts import SqlFacts
 
     plays = [
-        {**entry, "zone_id": auth.zone_id, "device_id": auth.device_id,
-         "source": entry.get("source") if entry.get("source") in playlog.SOURCES else "schedule"}
+        {
+            **entry,
+            "zone_id": auth.zone_id,
+            "device_id": auth.device_id,
+            "source": entry.get("source") if entry.get("source") in playlog.SOURCES else "schedule",
+        }
         for entry in entries
         if entry.get("kind", "play") == "play"
     ]

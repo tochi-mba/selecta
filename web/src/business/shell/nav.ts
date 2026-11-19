@@ -27,7 +27,7 @@ const FLAGS: Partial<Record<NavId, string[]>> = {
   venues: ['business.console', 'business.venue_view'],
   schedules: ['business.schedules'],
   requests: ['business.rooms'],
-  people: ['business.people'],
+  people: ['business.roles'],
   billing: ['business.billing'],
 };
 

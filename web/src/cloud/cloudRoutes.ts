@@ -50,3 +50,14 @@ export function resolveRoute(pathname: string): Resolved {
   const page = routeFor(pathname);
   return page ? { kind: 'page', page } : { kind: 'not-found', path: pathname };
 }
+
+/** The business workspace's addresses (ADR-0453 D2): `/b/{org}` and its pages, and the
+ * invitation page `/business/join`. CloudApp answers them only with `business.workspaces` on;
+ * off, they are not found like any other unknown address. */
+export const BUSINESS_FLAG = 'business.workspaces';
+export const BUSINESS_JOIN_PATH = '/business/join';
+
+export function isBusinessPath(pathname: string): boolean {
+  const path = normalizePath(pathname);
+  return /^\/b\/[^/]+(\/.*)?$/.test(path) || path === BUSINESS_JOIN_PATH;
+}

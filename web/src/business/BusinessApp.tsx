@@ -1,5 +1,5 @@
 // The SelectaDJ for Business app (ADR-0453 D2, BZ-0453-01). CloudApp renders it, as its own lazy
-// chunk, for `/b/{org}/...` when `business.workspaces` is on for the account.
+// chunk, for `/b/{org}/...` when `business.workspaces` is on for the account (cloudRoutes.ts).
 //
 // It loads the organisation named in the route (its `workspace_id` then goes as X-Workspace-ID on
 // every call), keeps `now` ticking every 10 s, tracks Offline (browser events plus three failed
@@ -104,11 +104,10 @@ export default function BusinessApp({ api, route, account, onLeaveToPersonal, to
   const client = useMemo(() => businessClient(api, workspaceId), [api, workspaceId]);
   const bizApi = useMemo(() => (workspaceId ? businessApi(api, workspaceId) : undefined), [api, workspaceId]);
 
+  // One read: the organisation id is its workspace id, so the overview names both.
   const read = useCallback(async (target: string, scoped?: string) => {
-    const org = scoped ? null : await businessClient(api).org(target);
-    const wsId = scoped ?? org!.workspace_id;
-    const next = await businessClient(api, wsId).overview(target);
-    return { org: org ?? next.org, next };
+    const next = await businessClient(api, scoped ?? target).overview(target);
+    return { org: next.org, next };
   }, [api]);
 
   useEffect(() => {
@@ -200,6 +199,7 @@ export default function BusinessApp({ api, route, account, onLeaveToPersonal, to
     activity: overview.activity ?? [],
     client,
     bizApi,
+    api,
     now,
     offline,
     updatedAt,
@@ -208,7 +208,7 @@ export default function BusinessApp({ api, route, account, onLeaveToPersonal, to
     readOnly: isReadOnly(overview.org, now),
     refresh,
     go,
-  }, [overview, client, bizApi, now, offline, updatedAt, stream, load, refresh, go]);
+  }, [overview, client, bizApi, api, now, offline, updatedAt, stream, load, refresh, go]);
 
   // With `business.workspaces` off, business pages are unreachable: CloudApp shows personal.
   if (!on || !current || current.page === 'start') return null;

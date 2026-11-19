@@ -79,3 +79,21 @@ def test_staff_without_the_permission_are_refused_before_the_flag(admin_world, b
     assert refused.json()["detail"]["permission"] == "business.billing.refund"
     off = admin_world.http.post(path, headers=admin_world.headers, json=body)
     assert (off.status_code, off.json()["detail"]["code"]) == (403, "flag_off")
+
+
+def test_staff_record_and_revoke_an_enterprise_contract(admin_world, business):  # noqa: F811
+    org_id, fake = business
+    body = {"term_start": 1_800_000_000, "term_end": 1_830_000_000, "venue_count": 30,
+            "zone_count": 60, "seat_count": 90, "price_minor": 1_200_000, "currency": "GBP",
+            "invoice_terms": "net 30", "reason": "Signed Enterprise deal"}
+    made = admin_world.http.post(f"/api/admin/business/orgs/{org_id}/contracts",
+                                 headers=admin_world.headers, json=body)
+    assert made.status_code == 201, made.text
+    contract = made.json()["contract"]["id"]
+    revoked = admin_world.http.post(
+        f"/api/admin/business/orgs/{org_id}/contracts/{contract}/revoke",
+        headers=admin_world.headers, json={"reason": "Entered by mistake"})
+    assert revoked.json()["contract"]["revoked"] is True
+    assert fake.calls == []  # a contract never touches Stripe
+    with transaction(admin_world.engine) as conn:
+        assert audit_rows(conn, org_id, "billing.contract.recorded")

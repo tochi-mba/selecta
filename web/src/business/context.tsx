@@ -2,6 +2,7 @@
 // network state that drives Offline and Degraded (ADR-0453 D3). The shell (BusinessApp) provides it.
 
 import { createContext, useContext } from 'react';
+import type { Api } from '../cloud/api';
 import type { BusinessClient } from './client';
 import type { BusinessApi } from './api';
 import type { Health, Org, Venue, Device, ActivityEntry } from './types';
@@ -25,6 +26,8 @@ export type BusinessCtx = {
   go: (path: string) => void;
   /** The BZ-1 typed routes (zones, crates) bound to this workspace, when the shell provides them. */
   bizApi?: BusinessApi;
+  /** The signed-in Api helper, for the zone playback routes (Play here, ADR-0443). */
+  api?: Api;
 };
 
 export const BusinessContext = createContext<BusinessCtx | null>(null);

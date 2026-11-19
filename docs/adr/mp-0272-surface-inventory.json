@@ -313,16 +313,17 @@
    {
     "id": "site.business.app",
     "site": "business",
-    "path": "(not mounted by any entry yet)",
+    "path": "/b/{org}",
     "owner": [
-     "web/src/business/BusinessApp.tsx"
+     "web/src/business/BusinessApp.tsx",
+     "web/src/business/JoinOrganisation.tsx"
     ],
     "states": [
      "initial"
     ],
     "denominator": 1,
     "axe": null,
-    "gap": "BusinessApp is not mounted by any shipped or test entry yet, so there is no page to load; its components are unit tested in web/src/business and the business harness (site.business.harness) is its only browser surface."
+    "gap": "CloudApp mounts BusinessApp at /b/{org} (and the invitation page at /business/join) only for an account with business.workspaces on and a membership in an organisation; no axe spec signs into such an organisation yet, so its pages are checked by Vitest in web/src/business and the harness (site.business.harness) is the browser surface axe loads."
    },
    {
     "id": "site.guest.join",

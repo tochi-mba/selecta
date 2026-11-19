@@ -60,6 +60,7 @@ class FakeStripe:
     calls: list[tuple[str, dict]] = field(default_factory=list)
     tax_status: str = "valid"
     charges: dict[str, dict] = field(default_factory=dict)
+    period_end: float | None = None
 
     def _log(self, name: str, **kwargs: Any) -> dict:
         self.calls.append((name, kwargs))
@@ -67,7 +68,8 @@ class FakeStripe:
 
     def get_subscription(self, subscription_id: str) -> dict:
         return {"id": subscription_id, "customer": "cus_1", "currency": "gbp",
-                "status": "active", "items": {"data": []}}
+                "status": "active", "items": {"data": []},
+                "current_period_end": self.period_end}
 
     def preview_upcoming_invoice(self, **kwargs: Any) -> dict:
         self.calls.append(("preview", kwargs))
@@ -87,6 +89,13 @@ class FakeStripe:
 
     def update_subscription(self, subscription_id: str, **kwargs: Any) -> dict:
         return self._log("update_subscription", subscription_id=subscription_id, **kwargs)
+
+    def add_subscription_item(self, subscription_id: str, **kwargs: Any) -> dict:
+        return {**self._log("add_item", subscription_id=subscription_id, **kwargs),
+                "price": kwargs["price"]}
+
+    def update_subscription_item(self, item_id: str, **kwargs: Any) -> dict:
+        return self._log("update_item", item_id=item_id, **kwargs)
 
     def verify_tax_id(self, *, country: str, value: str) -> dict:
         return {"status": self.tax_status, "reference": "vies-1"}
@@ -303,17 +312,24 @@ def test_the_pass_warns_then_stops_a_venue_at_its_close_and_playback_is_refused(
             flags.use(None)
 
 
-def test_the_pass_rechecks_an_eu_vat_number_before_renewal_and_holds_it(world):
+def test_the_pass_reconciles_and_rechecks_an_eu_vat_number_before_renewal(world, monkeypatch):
+    prices = {f"price_{item}": {"item": item, "currency": "GBP", "interval": "month"}
+              for item in ("business_venue", "business_extra_zone", "business_extra_seat")}
+    monkeypatch.setenv("SELECTA_BUSINESS_STRIPE_PRICES", json.dumps(prices))
     engine, clock = world["engine"], world["clock"]
     profile(engine, clock.now, country="DE", tax_id="DE123456789", tax_id_status="valid",
             reverse_charge=True, tax_id_checked_at=clock.now - 300 * DAY)
     subscribe(engine, clock.now, current_period_end=clock.now + 3 * DAY)
     fake = world["fake"]
     fake.tax_status = "invalid"
+    fake.period_end = clock.now + 3 * DAY
 
     report = billing_jobs.run_pass(engine, fake, facts=world["facts"], hours=FixedHours())
 
     assert report.tax_checked == [ORG]
+    assert report.reconciled == [ORG]  # Stripe had no items; two venues and two zones are due
+    assert {"price_business_venue", "price_business_extra_zone"} <= {
+        call["price"] for name, call in fake.calls if name == "add_item"}
     held = dict(fake.calls)["update_subscription"]
     assert held["pause_collection"] == {"behavior": "keep_as_draft"}
     with transaction(engine) as conn:

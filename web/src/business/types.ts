@@ -139,6 +139,12 @@ export type Device = {
   saved_hours_ahead?: number | null;
   version?: string | null;
   network?: string | null;
+  /** Kiosk players (ADR-0445): home or standby in their zone, and what their health says. */
+  role?: 'home' | 'standby' | null;
+  not_seen_since?: number | null;
+  wake_lock?: boolean | null;
+  autoplay_allowed?: boolean | null;
+  warning?: string | null;
 };
 
 export type Daypart = { id: string; name: string; start: number; end: number; energy: 'calm' | 'steady' | 'lifted' | 'peak'; crate_ids?: string[] };
@@ -185,7 +191,8 @@ export type BillingSummary = {
   prices: { item: BillingItem; unit_amount: number; interval: 'month' | 'year' }[];
   estimate: { lines: Record<BillingItem, number>; subtotal_minor: number; discount_minor: number; total_minor: number } | null;
   profile: { company_name: string; country: string; po_number: string | null; collection_method: 'charge_automatically' | 'send_invoice'; net_days: number | null; tax_treatment: string; can_send_invoice: boolean } | null;
-  venues: { venue_id: string; name: string; cost_centre: string | null; stop_at: number | null }[];
+  organisation_id?: string;
+  venues: { venue_id: string; name: string; cost_centre: string | null; stop_at: number | null; state?: 'active' | 'pausing' | 'paused'; pause_at?: number | null }[];
   checkout: { selling: boolean; terms_version: string; trial: { days: number; venues: number; zones: number }; trial_available: boolean };
   banner: { message: string; grace_ends_at: number | null; read_only: boolean; stops: { venue_id: string; stop_at: number }[] } | null;
   read_only: boolean;
@@ -203,3 +210,6 @@ export type CheckoutRequest = {
   tax_id?: string; interval: 'month' | 'year'; trial: boolean;
 };
 export type CheckoutAnswer = { blocked: boolean; url?: string; message?: string | null };
+
+/** A venue moving between organisations (ADR-0447 BZ-0447-11). */
+export type VenueTransfer = { id: string; venue_id: string; source_organisation_id: string; target_organisation_id: string; state: 'proposed' | 'agreed'; effective_at: number | null };

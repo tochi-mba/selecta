@@ -2,7 +2,7 @@
 // 2 minutes idle (or the first action at all) asks for a PIN; the action then runs, attributed to
 // the PIN holder. With PINs off, actions go straight through and are attributed to the tablet.
 //
-// The signal: `business.staff_pins` in org.features, read strictly with businessOn (off unless the
+// The signal: `business.devices.shared` in org.features, read strictly with businessOn (off unless the
 // server says on). Venue has no PIN field yet; when one lands, OR it in at the call site.
 
 import { useCallback, useEffect, useRef, useState } from 'react';

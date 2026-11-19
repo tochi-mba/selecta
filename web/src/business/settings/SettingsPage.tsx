@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { PATHS, useBusiness } from '../context';
 import { SETTINGS_COPY } from '../copy/shell';
 import { BusinessDetailsForm } from '../onboarding/BusinessDetailsForm';
+import { PlayLogExport } from './PlayLogExport';
 import { daysUntil, LICENCE_WARN_DAYS } from '../state';
 import { isoDayWords } from '../time';
 import type { Venue } from '../types';
@@ -41,6 +42,7 @@ export function SettingsPage() {
         <button type="button" onClick={() => go(PATHS.venue(org.id, venue.id, 'licence'))}>{SETTINGS_COPY.openLicence(venue.name)}</button>
       </li>)}</ul>}
     </section>
+    <PlayLogExport />
     {Boolean(venues.length) && <section className="biz-card" aria-labelledby="biz-settings-rules"><h2 id="biz-settings-rules">{SETTINGS_COPY.rulesHeading}</h2>
       <p>{SETTINGS_COPY.rulesIntro}</p>
       <ul>{venues.map((venue) => <li key={venue.id}>

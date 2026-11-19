@@ -46,6 +46,9 @@ from selecta.business import billing_routes as business_billing_routes
 from selecta.business import controls_wiring as business_controls
 from selecta.business import playlog_routes as business_playlog_routes
 from selecta.business import routes as business_org_routes
+from selecta.business import workspace_routes as business_workspace_routes
+from selecta.business import zone_speaker_routes as business_zone_speaker_routes
+from selecta.business.people import routes as business_people_routes
 from selecta.devstack import guard as dev_guard
 from selecta.flags import cloud_gate, targeting
 from selecta.flags import guard as flag_guard
@@ -76,6 +79,7 @@ from selecta.playback.zones import SQL_ZONES
 from selecta.rooms import wiring as rooms_wiring
 from selecta.rooms.cloud_ports import OutboxPlaybackEvents, RoomPorts
 from selecta.routes import business_hours as business_hours_routes
+from selecta.routes import business_kiosk as business_kiosk_routes
 from selecta.routes import business_zones as business_zones_routes
 from selecta.routes import cloud_assets as cloud_assets_routes
 from selecta.routes import cloud_export as cloud_export_routes
@@ -823,10 +827,29 @@ def create_cloud_app(
         app, engine=engine, current_claims=current_claims, principal_for=_principal,
         rules=rule_cache,
     )
+    # ADR-0452 people and invitations, the workspace overview and setup (ADR-0453 D2/D6).
+    business_people_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal,
+        rules=rule_cache,
+    )
+    business_workspace_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
+    # Play here (ADR-0443): what a staff browser plays once it holds a zone's lease.
+    business_zone_speaker_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal,
+        presign=business_kiosk_routes.storage_presign(storage_api.r2_client, storage_api.buckets()),
+    )
     for business_routes in (business_hours_routes, business_zones_routes):
         business_routes.install_routes(
             app, engine=engine, current_claims=current_claims, principal_for=_principal
         )
+    # Kiosk players (ADR-0445); refused while business.kiosk is off.
+    business_kiosk_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal,
+        pepper=room_ports.pepper or rooms_wiring.pepper_from_environment(),
+        presign=business_kiosk_routes.storage_presign(storage_api.r2_client, storage_api.buckets()),
+    )
     business_controls.install(  # ADR-0450 content controls and ADR-0451 Rooms for Business
         app, engine=engine, current_claims=current_claims, principal_for=_principal
     )

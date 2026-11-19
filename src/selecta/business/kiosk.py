@@ -227,7 +227,9 @@ def _alert_needs_pairing_again(conn: Connection, machine: str, now: float) -> No
     ).all()
     for row in rows:
         if row.zone_id:
-            open_alert(conn, row.workspace_id, row.zone_id, row.id, "needs_pairing", "pairing_lost", now)
+            open_alert(
+                conn, row.workspace_id, row.zone_id, row.id, "needs_pairing", "pairing_lost", now
+            )
 
 
 def collect(engine: Engine, status_secret: str, *, now: float | None = None) -> dict[str, Any]:
@@ -235,11 +237,15 @@ def collect(engine: Engine, status_secret: str, *, now: float | None = None) -> 
     kiosk token (once) and the first nonce to sign."""
     with transaction(engine) as conn:
         now = db_now(conn) if now is None else now
-        row = conn.execute(
-            sa.select(kiosk_pairings).where(
-                kiosk_pairings.c.status_secret_hash == _hash(status_secret or "")
+        row = (
+            conn.execute(
+                sa.select(kiosk_pairings).where(
+                    kiosk_pairings.c.status_secret_hash == _hash(status_secret or "")
+                )
             )
-        ).mappings().first()
+            .mappings()
+            .first()
+        )
         if row is None:
             return {"state": "unknown", "server_time": now}
         if row["revoked_at"] is not None:
@@ -289,9 +295,13 @@ def _actor(conn: Connection, workspace_id: str, user_id: str):
 def _zone_row(conn: Connection, workspace_id: str, zone_id: str):
     from selecta.business.schema import zones
 
-    return conn.execute(
-        sa.select(zones).where(zones.c.workspace_id == workspace_id, zones.c.id == zone_id)
-    ).mappings().first()
+    return (
+        conn.execute(
+            sa.select(zones).where(zones.c.workspace_id == workspace_id, zones.c.id == zone_id)
+        )
+        .mappings()
+        .first()
+    )
 
 
 def _live_kiosks(conn: Connection, workspace_id: str, zone_id: str | None = None) -> list[str]:
@@ -343,15 +353,22 @@ def pair(
                 f"{zone['name']} already has a home and a standby player. Replace one instead.",
                 409,
             )
-        if replace_device_id is None and len(_live_kiosks(conn, workspace_id)) >= MAX_KIOSKS_PER_ORG:
+        if (
+            replace_device_id is None
+            and len(_live_kiosks(conn, workspace_id)) >= MAX_KIOSKS_PER_ORG
+        ):
             raise KioskError("kiosk_limit", "This organisation has reached its player limit.", 409)
-        pairing = conn.execute(
-            sa.select(kiosk_pairings).where(
-                kiosk_pairings.c.pairing_code_hash == digest,
-                kiosk_pairings.c.paired_at.is_(None),
-                kiosk_pairings.c.expires_at > now,
+        pairing = (
+            conn.execute(
+                sa.select(kiosk_pairings).where(
+                    kiosk_pairings.c.pairing_code_hash == digest,
+                    kiosk_pairings.c.paired_at.is_(None),
+                    kiosk_pairings.c.expires_at > now,
+                )
             )
-        ).mappings().first()
+            .mappings()
+            .first()
+        )
         if pairing is None:
             raise KioskError("no_such_pairing", "That code has expired or was already used.", 404)
         warning = _machine_warning(conn, workspace_id, pairing["machine_fingerprint"], zone_id)
@@ -432,7 +449,9 @@ def _machine_warning(conn: Connection, workspace_id: str, machine: str, zone_id:
     ).first()
     if row is None:
         return None
-    return f"This machine is also the {row.name} player. One machine can only play one zone at a time."
+    return (
+        f"This machine is also the {row.name} player. One machine can only play one zone at a time."
+    )
 
 
 # ---- tokens and heartbeats
@@ -513,8 +532,14 @@ def verify_heartbeat(
     if not signature or not nonce or not signature_valid(auth.public_key, nonce, signature):
         with transaction(engine, auth.workspace_id) as conn:
             open_alert(
-                conn, auth.workspace_id, auth.zone_id, auth.device_id, "key_mismatch",
-                "copied_sign_in", now, notify_now=True,
+                conn,
+                auth.workspace_id,
+                auth.zone_id,
+                auth.device_id,
+                "key_mismatch",
+                "copied_sign_in",
+                now,
+                notify_now=True,
             )
         raise KioskError("kiosk_key_mismatch", "This player's sign-in was refused.", 401)
     if not version_supported(kiosk_version, now):
@@ -616,7 +641,11 @@ def unpair(
 
 
 def list_kiosks(
-    engine: Engine, *, workspace_id: str, user_id: str, venue_id: str | None = None,
+    engine: Engine,
+    *,
+    workspace_id: str,
+    user_id: str,
+    venue_id: str | None = None,
     now: float | None = None,
 ) -> list[dict[str, Any]]:
     """The organisation's kiosks this person may see, newest first, with their latest health."""
@@ -628,11 +657,19 @@ def list_kiosks(
         actor = _actor(conn, workspace_id, user_id)
         rows = conn.execute(
             sa.select(
-                devices.c.id, devices.c.name, devices.c.zone_id, devices.c.last_seen_at,
-                devices.c.signed_out_at, zones.c.venue_id, zones.c.home_device_id,
-                device_health.c.kiosk_version, device_health.c.hours_ahead,
-                device_health.c.network, device_health.c.wake_lock,
-                device_health.c.autoplay_allowed, device_health.c.browser,
+                devices.c.id,
+                devices.c.name,
+                devices.c.zone_id,
+                devices.c.last_seen_at,
+                devices.c.signed_out_at,
+                zones.c.venue_id,
+                zones.c.home_device_id,
+                device_health.c.kiosk_version,
+                device_health.c.hours_ahead,
+                device_health.c.network,
+                device_health.c.wake_lock,
+                device_health.c.autoplay_allowed,
+                device_health.c.browser,
             )
             .select_from(
                 devices.join(zones, zones.c.id == devices.c.zone_id).outerjoin(

@@ -39,6 +39,8 @@ from selecta.business import (
     billing,
     billing_b2b,
     billing_checkout_routes,
+    billing_manage_routes,
+    billing_plan,
     dunning,
     stripe_business,
 )
@@ -169,6 +171,7 @@ def summary(conn: Connection, org: Any, role: str, hours: HoursSource, now: floa
     stops = {s.venue_id: s.stop_at for s in plan}
     state = dunning.grace_state(conn, org.organisation_id)
     return {
+        "organisation_id": org.organisation_id,
         "currency": currency,
         "interval": interval,
         "subscribed": bool(sub.get("stripe_subscription_id")),
@@ -190,6 +193,8 @@ def summary(conn: Connection, org: Any, role: str, hours: HoursSource, now: floa
         "venues": [
             {"venue_id": v.id, "name": v.name,
              "cost_centre": (rows.get(v.id) or {}).get("cost_centre"),
+             "state": (rows.get(v.id) or {}).get("state", "active"),
+             "pause_at": (rows.get(v.id) or {}).get("pause_at"),
              "stop_at": stops.get(v.id)}
             for v in org.billable_venues
         ],
@@ -335,6 +340,11 @@ def install_routes(
             text = billing_b2b.cost_breakdown_csv(conn, org)
         return {"filename": CSV_NAME, "csv": text}
 
+    billing_manage_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, owner=owner, stripe=stripe,
+        facts=facts_source, hours=hours_source,
+    )
+    billing_plan.install_change_hook(app, engine=engine, stripe=stripe, facts=facts_source)
     billing_checkout_routes.install_routes(
         app, engine=engine, current_claims=current_claims, owner=owner, stripe=stripe,
         facts=facts_source, allowed_origins=allowed_origins,

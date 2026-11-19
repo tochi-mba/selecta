@@ -1,0 +1,68 @@
+/* The kiosk player screen (ADR-0453 S5): calm, readable from behind a bar, dark by default.
+   It loads without tokens.css (its own small entry, rooms.vite.ts), so it keeps a small token
+   block copied from tokens.css; change tokens.css first, then this block to match. */
+:root {
+  color-scheme: dark;
+  --bg: #100f0c;            /* tokens.css --bg */
+  --ink: #f4f0e4;           /* tokens.css --ink */
+  --soft: #a8a292;          /* tokens.css --soft */
+  --accent: #e8ff3a;        /* tokens.css --accent */
+  --scan-white: #fff;       /* tokens.css --scan-white */
+  --panel: #1c1a15;
+  --body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --radius: 10px;
+}
+:root[data-theme="light"] { color-scheme: light; --bg: #f7f4ea; --ink: #1a1813; --soft: #5f5a4c; --panel: #fff; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: clamp(1rem, 2.2vw, 2rem)/1.35 var(--body); overflow: hidden; }
+#kiosk { min-height: 100vh; position: relative; }
+.k-stage { min-height: 100vh; display: grid; place-items: center; padding: 5vmin; }
+.k-screen { width: 100%; max-width: 60em; text-align: center; transition: opacity 2s ease; }
+.k-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.k-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.k-quiet { color: var(--soft); }
+.k-big, .k-title { font-size: 2.6em; font-weight: 800; margin: 0.2em 0; }
+.k-where, .k-artist, .k-next { color: var(--soft); margin: 0.3em 0; }
+.k-artist { font-size: 1.4em; color: var(--ink); }
+/* pairing */
+.k-pairing { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 5vmin; align-items: center; text-align: left; }
+.k-code { font-size: 5em; font-weight: 800; letter-spacing: 0.14em; margin: 0.1em 0; font-variant-numeric: tabular-nums; }
+.k-qr { background: var(--scan-white); padding: 2vmin; border-radius: var(--radius); width: min(40vmin, 100%); }
+.k-qr svg { display: block; width: 100%; height: auto; }
+/* tap to start */
+.k-tap-button { font: inherit; font-size: 1.8em; font-weight: 800; padding: 1em 1.6em; border-radius: 999px; border: 3px solid var(--accent); background: transparent; color: var(--ink); cursor: pointer; }
+.k-tap-button:focus-visible, .k-plain:focus-visible, .k-corner:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+.k-guide { display: block; margin-top: 1.5em; color: var(--soft); }
+.k-progress { height: 4px; width: 40%; margin: 1em auto; background: var(--panel); overflow: hidden; border-radius: 2px; }
+.k-progress span { display: block; height: 100%; width: 30%; background: var(--accent); animation: k-slide 2.4s ease-in-out infinite; }
+@keyframes k-slide { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+.k-code-small { color: var(--soft); font-size: 0.8em; }
+.k-message[data-sleep="allowed"] { opacity: 0.6; }
+/* the playing motif and the saved-music mark */
+.k-motif { display: flex; gap: 0.4em; justify-content: center; margin-top: 1.2em; }
+.k-motif span { width: 0.5em; height: 0.5em; border-radius: 50%; background: var(--accent); opacity: 0.5; animation: k-pulse 3s ease-in-out infinite; }
+.k-motif span:nth-child(2) { animation-delay: 1s; }
+.k-motif span:nth-child(3) { animation-delay: 2s; }
+@keyframes k-pulse { 50% { opacity: 1; } }
+.k-saved { position: fixed; right: 3vmin; bottom: 3vmin; width: 1.4em; height: 1.4em; color: var(--soft); }
+/* the hidden staff corner and panel */
+.k-corner { position: fixed; left: 0; top: 0; width: 64px; height: 64px; background: transparent; border: 0; opacity: 0; z-index: 2; }
+.k-corner:focus-visible { opacity: 1; }
+.k-panel-layer { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, 0.6); z-index: 3; }
+.k-panel { background: var(--panel); color: var(--ink); border-radius: var(--radius); padding: 1.2em 1.4em; max-width: min(32em, 92vw); text-align: left; }
+.k-panel dl { margin: 0; }
+.k-panel-row { display: flex; justify-content: space-between; gap: 1em; padding: 0.25em 0; }
+.k-panel-row dt { color: var(--soft); }
+.k-panel-row dd { margin: 0; overflow-wrap: anywhere; }
+.k-panel-actions { display: flex; flex-wrap: wrap; gap: 0.6em; margin-top: 1em; }
+.k-plain { font: inherit; padding: 0.4em 0.9em; border-radius: var(--radius); border: 1px solid var(--soft); background: transparent; color: var(--ink); }
+.k-panel input { font: inherit; width: 100%; padding: 0.4em; margin: 0.4em 0; }
+@media (max-width: 700px) {
+  .k-pairing { grid-template-columns: 1fr; text-align: center; }
+  .k-qr { margin: 0 auto; }
+  .k-code { font-size: 3.2em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .k-screen { transition: none; }
+  .k-progress span, .k-motif span { animation: none; }
+}

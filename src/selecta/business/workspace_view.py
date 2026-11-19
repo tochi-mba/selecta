@@ -186,7 +186,7 @@ def _licence(conn: Connection, venue_id: str) -> dict[str, Any] | None:
         "number": found.get("licence_number") or "",
         "expires_on": datetime.fromtimestamp(float(expires), UTC).date().isoformat()
         if expires else "",
-        "attested_at": found.get("created_at"),
+        "attested_at": found.get("attested_at"),
     }
 
 

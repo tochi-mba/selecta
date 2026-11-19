@@ -32,7 +32,10 @@
         "POST /api/business/crates",
         "GET /api/business/crates/{crate_id}",
         "PUT /api/business/crates/{crate_id}/songs",
-        "DELETE /api/business/crates/{crate_id}"
+        "DELETE /api/business/crates/{crate_id}",
+        "GET /api/business/orgs/{org_id}/overview",
+        "PATCH /api/business/orgs/{org_id}",
+        "PUT /api/business/orgs/{org_id}/setup"
       ],
       "modes": ["cloud"],
       "scope": "workspace",
@@ -55,7 +58,8 @@
         "POST /api/business/venues/{venue_id}/close-now/{override_id}/undo",
         "GET /api/business/zones/{zone_id}/state",
         "GET /api/business/zones/{zone_id}/programme",
-        "PUT /api/business/zones/{zone_id}/programme"
+        "PUT /api/business/zones/{zone_id}/programme",
+        "POST /api/business/schedules/apply"
       ],
       "modes": ["cloud"],
       "scope": "workspace",
@@ -77,12 +81,36 @@
       "kind": "release",
       "owner": "business"
     },
+    "business.kiosk": {
+      "label": "Kiosk players",
+      "about": "Pair a small dedicated player to a zone with a code; it starts the music by itself, reports its health, keeps saved music for outages and tells managers when a zone goes quiet.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": [
+        "POST /api/kiosk/pairings",
+        "GET /api/kiosk/pairings/status",
+        "POST /api/kiosk/pair",
+        "POST /api/kiosk/heartbeat",
+        "POST /api/kiosk/health",
+        "GET /api/kiosk/view",
+        "GET /api/kiosk/horizon",
+        "POST /api/kiosk/segment-url",
+        "POST /api/kiosk/resync",
+        "POST /api/kiosk/pin",
+        "GET /api/business/kiosks",
+        "DELETE /api/devices/{device_id}/kiosk"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
     "business.workspaces": {
       "label": "Workspace switcher",
       "about": "Switch between your personal SelectaDJ and the organisations you belong to. Personal and business data never mix.",
       "default": false,
       "requires": ["business.orgs"],
-      "routes": ["GET /api/workspaces"],
+      "routes": ["GET /api/workspaces", "POST /api/business/invitations/accept"],
       "modes": ["cloud"],
       "scope": "user",
       "kind": "release",
@@ -102,7 +130,13 @@
         "GET /api/business/billing/cost-breakdown",
         "POST /api/business/billing/checkout",
         "POST /api/business/billing/checkout/complete",
-        "POST /api/business/billing/stripe-webhook"
+        "POST /api/business/billing/stripe-webhook",
+        "POST /api/business/billing/downgrade",
+        "POST /api/business/billing/venues/{venue_id}/resume",
+        "GET /api/business/billing/transfers",
+        "POST /api/business/billing/transfers",
+        "POST /api/business/billing/transfers/{transfer_id}/accept",
+        "POST /api/business/billing/transfers/{transfer_id}/cancel"
       ],
       "modes": ["cloud"],
       "scope": "workspace",
@@ -114,7 +148,68 @@
       "about": "Owners, admins and venue managers download a venue's play log for chosen days as CSV, with totals per track, for licensing returns.",
       "default": false,
       "requires": ["business.orgs"],
-      "routes": ["GET /api/business/play-log/export"],
+      "routes": ["GET /api/business/play-log/export", "PUT /api/business/venues/{venue_id}/licence"],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.roles": {
+      "label": "Business people and roles",
+      "about": "The People page: owners, admins and venue managers invite people by link into a role at chosen venues, see seats, revoke invitations and remove someone, which signs them out at once.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": [
+        "GET /api/business/people",
+        "POST /api/business/invitations",
+        "POST /api/business/invitations/{invitation_id}/revoke",
+        "DELETE /api/business/people/{user_id}"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.devices.shared": {
+      "label": "Shared staff tablets and PINs",
+      "about": "A staff member confirms an action on a shared tablet with their personal venue PIN, so the activity log names them.",
+      "default": false,
+      "requires": ["business.roles"],
+      "routes": ["POST /api/business/venues/{venue_id}/pin"],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.console": {
+      "label": "Business HQ console",
+      "about": "The multi-venue overview for owners, admins and viewers: venue health, zone states and what needs attention.",
+      "default": false,
+      "requires": ["business.workspaces"],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.venue_view": {
+      "label": "Venue manager view",
+      "about": "One venue's page for its managers: now playing, schedule, rules, devices and people.",
+      "default": false,
+      "requires": ["business.workspaces"],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.staff_controls": {
+      "label": "Staff quick controls",
+      "about": "The staff screen for a venue: skip, steer, volume within the cap, requests, and Play here to make this browser the zone's speaker.",
+      "default": false,
+      "requires": ["business.workspaces"],
+      "routes": [
+        "GET /api/business/zones/{zone_id}/speaker/horizon",
+        "POST /api/business/zones/{zone_id}/speaker/segment-url"
+      ],
       "modes": ["cloud"],
       "scope": "workspace",
       "kind": "release",
@@ -145,7 +240,9 @@
         "DELETE /api/business/content/blocklist/{entry_id}",
         "POST /api/business/zones/{zone_id}/content/overrides",
         "DELETE /api/business/zones/{zone_id}/content/overrides/{override_id}",
-        "PUT /api/business/content/songs/{song_id}/explicit"
+        "PUT /api/business/content/songs/{song_id}/explicit",
+        "GET /api/business/library/songs",
+        "POST /api/business/library/explicit"
       ],
       "modes": ["cloud"],
       "scope": "workspace",

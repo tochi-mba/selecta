@@ -120,7 +120,8 @@ def _venue_roles(conn: Connection, workspace_id: str) -> dict[str, dict[str, str
         sa.select(business_venue_roles).where(business_venue_roles.c.workspace_id == workspace_id)
     ).mappings():
         held = found.setdefault(row["user_id"], {})
-        held[row["venue_id"]] = roles.broadest(held.get(row["venue_id"]), row["role"]) or row["role"]
+        broadest = roles.broadest(held.get(row["venue_id"]), row["role"])
+        held[row["venue_id"]] = broadest or row["role"]
     return found
 
 
@@ -174,7 +175,8 @@ def list_people(conn: Connection, actor: BusinessActor, *, now: float) -> dict[s
             )
         ).mappings()
     ]
-    people += _founders(conn, workspace_id, {p["id"] for p in people} | _removed(conn, workspace_id))
+    known = {p["id"] for p in people} | _removed(conn, workspace_id)
+    people += _founders(conn, workspace_id, known)
     shown = [person for person in people if _sees(actor, person)]
     shown.sort(key=lambda p: (-roles.RANK[p["role"]], (p["name"] or "").casefold()))
     invites = [
@@ -395,7 +397,9 @@ def accept(
 ) -> dict[str, Any]:
     """Join the organisation the token invites to. Runs in a system transaction."""
     row = conn.execute(
-        sa.select(business_invitations).where(business_invitations.c.token_hash == token_hash(token))
+        sa.select(business_invitations).where(
+            business_invitations.c.token_hash == token_hash(token)
+        )
     ).mappings().first()
     if row is None or row["cancelled_at"] is not None:
         raise BusinessNotFound()

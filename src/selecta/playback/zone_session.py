@@ -108,6 +108,15 @@ def _billing_stopped(conn: Connection, zone: ZoneInfo) -> bool:
     return dunning.is_venue_stopped(conn, zone.workspace_id, zone.venue_id)
 
 
+def _log_play(conn: Connection, zone: ZoneInfo, before, after, now: float) -> None:
+    """The business play log (ADR-0449): the song that just ended, when the zone moved on."""
+    if before.song_index == after.song_index and before.mix_revision_id == after.mix_revision_id:
+        return
+    from selecta.business import playlog_writer
+
+    playlog_writer.record(conn, zone, before, after, now)
+
+
 class ZoneFull(PlaybackError):
     """A zone already has its home and standby kiosks."""
 
@@ -270,6 +279,7 @@ def zone_heartbeat(
         ):
             # The standby reached the next song: give the zone back now, at the boundary.
             handed = _hand_back_in(conn, session, position, now, events)
+            _log_play(conn, zone, session, handed, now)
             return ZoneHeartbeatResult(HeartbeatOutcome.HANDED_BACK, handed, True)
         result = heartbeat_in(
             conn,
@@ -282,6 +292,8 @@ def zone_heartbeat(
             fence=fence,
             volume_cap=zones.volume_cap(conn, zone, now),
         )
+        if result.position_accepted:
+            _log_play(conn, zone, session, result.session, now)
         session = result.session
         if (
             result.outcome is HeartbeatOutcome.REFUSED

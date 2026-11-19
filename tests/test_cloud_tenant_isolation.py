@@ -61,6 +61,17 @@ CAPABILITY_ONLY = {
     ("POST", "/api/display/pairings"),
     ("GET", "/api/display/view"),
     ("DELETE", "/api/display/pairing"),
+    # Kiosk players (ADR-0445) carry an HttpOnly kiosk token (or, unpaired, a pairing secret)
+    # bound to one zone; `test_business_kiosk.py` proves one zone's token cannot reach another.
+    ("POST", "/api/kiosk/pairings"),
+    ("GET", "/api/kiosk/pairings/status"),
+    ("POST", "/api/kiosk/heartbeat"),
+    ("POST", "/api/kiosk/health"),
+    ("GET", "/api/kiosk/view"),
+    ("GET", "/api/kiosk/horizon"),
+    ("POST", "/api/kiosk/segment-url"),
+    ("POST", "/api/kiosk/resync"),
+    ("POST", "/api/kiosk/pin"),
 }
 # Routes that act only on the signed-in person, whatever workspace a request names.
 SELF_ONLY = {
@@ -111,6 +122,8 @@ STAFF_ONLY = {
     ("POST", "/api/admin/business/pilots"),
     ("POST", "/api/admin/business/orgs/{org_id}/billing/credit"),
     ("POST", "/api/admin/business/orgs/{org_id}/billing/refund"),
+    ("POST", "/api/admin/business/orgs/{org_id}/contracts"),
+    ("POST", "/api/admin/business/orgs/{org_id}/contracts/{contract_id}/revoke"),
     ("GET", "/api/admin/flags/cloud.hosted_media/grandfather-audit"),
     ("GET", "/api/admin/flags/cloud.local_first/percentage-readiness"),
     ("GET", "/api/admin/economics/cost-per-mode"),
@@ -128,6 +141,12 @@ BUSINESS_SCOPED = {
     ("GET", "/api/business/billing/cost-breakdown"),
     ("POST", "/api/business/billing/checkout"),
     ("POST", "/api/business/billing/checkout/complete"),
+    ("POST", "/api/business/billing/downgrade"),
+    ("POST", "/api/business/billing/venues/{venue_id}/resume"),
+    ("GET", "/api/business/billing/transfers"),
+    ("POST", "/api/business/billing/transfers"),
+    ("POST", "/api/business/billing/transfers/{transfer_id}/accept"),
+    ("POST", "/api/business/billing/transfers/{transfer_id}/cancel"),
     ("GET", "/api/business/play-log/export"),
     ("GET", "/api/business/orgs"),
     ("POST", "/api/business/orgs"),
@@ -161,7 +180,28 @@ BUSINESS_SCOPED = {
     ("GET", "/api/business/zones/{zone_id}/offline-manifest"),
     ("POST", "/api/business/zones/{zone_id}/commands"),
     ("PUT", "/api/business/zones/{zone_id}/cache-report"),
+    ("POST", "/api/kiosk/pair"),
+    ("GET", "/api/business/kiosks"),
+    ("DELETE", "/api/devices/{device_id}/kiosk"),
     ("GET", "/api/workspaces"),
+    # ADR-0452/0453: people, invitations, overview and setup; every one resolves the caller in
+    # the named organisation (guard.actor_for) and its venues by scope, 404 otherwise
+    # (tests/test_business_people_routes.py proves another organisation's ids answer 404).
+    ("GET", "/api/business/orgs/{org_id}/overview"),
+    ("PATCH", "/api/business/orgs/{org_id}"),
+    ("PUT", "/api/business/orgs/{org_id}/setup"),
+    ("GET", "/api/business/people"),
+    ("DELETE", "/api/business/people/{user_id}"),
+    ("POST", "/api/business/invitations"),
+    ("POST", "/api/business/invitations/{invitation_id}/revoke"),
+    ("POST", "/api/business/invitations/accept"),
+    ("POST", "/api/business/venues/{venue_id}/pin"),
+    ("POST", "/api/business/schedules/apply"),
+    ("GET", "/api/business/library/songs"),
+    ("POST", "/api/business/library/explicit"),
+    ("PUT", "/api/business/venues/{venue_id}/licence"),
+    ("GET", "/api/business/zones/{zone_id}/speaker/horizon"),
+    ("POST", "/api/business/zones/{zone_id}/speaker/segment-url"),
     # Autopilot requires membership in a Business workspace. Stateful routes also
     # check that each named venue actually belongs to that organisation.
     ("GET", "/api/autopilot/availability"),

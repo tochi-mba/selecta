@@ -485,6 +485,8 @@
           "POST /api/admin/business/pilots",
           "POST /api/admin/business/orgs/{org_id}/billing/credit",
           "POST /api/admin/business/orgs/{org_id}/billing/refund",
+          "POST /api/admin/business/orgs/{org_id}/contracts",
+          "POST /api/admin/business/orgs/{org_id}/contracts/{contract_id}/revoke",
           "GET /api/admin/overview",
           "GET /api/admin/jobs",
           "GET /api/admin/jobs/{job_id}",

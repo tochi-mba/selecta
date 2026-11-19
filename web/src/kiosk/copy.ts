@@ -12,6 +12,7 @@ export const KIOSK_COPY = {
   pairQrLabel: 'QR code to pair this player',
   thisPlayer: (name: string) => `This player: ${name}`,
   tapToStart: 'Tap to start the music',
+  timeUnknown: 'Time unknown',
   guideLink: 'Setting up a player',
   closedAt: (time: string) => `Closed. Music starts at ${time}`,
   closedSoon: 'Closed. Music starts soon',

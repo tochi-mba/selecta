@@ -10,6 +10,8 @@ import { canManageBilling } from '../state';
 import { dayWords, money, venueTime } from '../time';
 import type { BillingSummary, CostPreview, Org } from '../types';
 import { useLoad } from '../venue/useVenue';
+import { CheckoutCard, useCheckoutReturn } from './CheckoutCard';
+import { DowngradeCard, TransferCard } from './PlanChanges';
 import './console.css';
 
 const day = (epoch: number) => dayWords(epoch);
@@ -74,15 +76,20 @@ function InvoicesCard({ org }: { org: Org }) {
 function BillingDetails() {
   const { client } = useBusiness();
   const summary = useLoad<BillingSummary>(() => client.billingSummary(), [client]);
+  const returned = useCheckoutReturn(summary.reload);
   if (summary.loading && !summary.data) return <p className="biz-quiet" role="status">{COPY.detailsLoading}</p>;
   if (!summary.data) return <p className="biz-quiet" role="status">{COPY.detailsUnavailable}</p>;
   const data = summary.data;
   return <>
+    {returned && <p role="status">{returned}</p>}
     {data.banner && <DunningCard summary={data} />}
+    {!data.subscribed && !data.enterprise && <CheckoutCard summary={data} />}
     {data.enterprise
       ? <section className="biz-card"><p>{COPY.enterprise}</p></section>
       : <><PricesCard summary={data} /><PreviewCard /></>}
     <InvoiceDetailsCard summary={data} onSaved={summary.reload} />
+    {data.subscribed && <DowngradeCard summary={data} onChanged={summary.reload} />}
+    <TransferCard summary={data} />
   </>;
 }
 

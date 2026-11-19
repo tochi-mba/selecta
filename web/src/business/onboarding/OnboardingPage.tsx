@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useBusiness, PATHS } from '../context';
+import { businessOn, useBusiness, PATHS } from '../context';
 import { BusinessDetailsForm } from './BusinessDetailsForm';
 import { OpeningHoursEditor } from '../forms/OpeningHoursEditor';
 import { emptyWeek } from '../forms/hours';
@@ -66,9 +66,9 @@ export function OnboardingPage() {
         <button type="button" onClick={() => go(PATHS.section(org.id, 'library'))}>{MUSIC_COPY.libraryLink}</button>
         <button type="button" disabled={!!disabled || busy} onClick={() => { void advance(true); }}>Continue</button>
       </>}
-      {current === 'pair' && venue && <><PairingCodeEntry zones={venue.zones} onPair={async (code, zone_id, name) => {
+      {current === 'pair' && venue && <>{businessOn(org.features, 'business.kiosk') ? <PairingCodeEntry zones={venue.zones} onPair={async (code, zone_id, name) => {
         const device = await client.pair({ code, zone_id, name }); await refresh(); return device;
-      }} />
+      }} /> : <p className="biz-quiet">Players can be paired once kiosk players are switched on for your organisation.</p>}
         <button type="button" disabled={!!disabled || busy} onClick={() => { void advance(true); }}>Continue</button>
       </>}
       {current === 'service' && <><p>Review each zone's schedule before your first service.</p>
