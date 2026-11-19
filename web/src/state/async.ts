@@ -70,18 +70,6 @@ export function useLoaded<T>(
   return { ...(entry.key === key ? entry.value : INITIAL), retry: run };
 }
 
-/** True once something has taken longer than it should, so a wait can say so instead of spinning. */
-export function useStalled(busy: boolean, afterMs = 10000): boolean {
-  const [stalled, setStalled] = useState(false);
-  useEffect(() => {
-    setStalled(false);
-    if (!busy) return;
-    const timer = window.setTimeout(() => setStalled(true), afterMs);
-    return () => window.clearTimeout(timer);
-  }, [busy, afterMs]);
-  return stalled;
-}
-
 let counter = 0;
 
 /** Names one press of a button. Sending the same name again gets the first answer back, so retrying

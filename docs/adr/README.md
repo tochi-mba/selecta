@@ -21,7 +21,7 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 | [Unified finish (UF)](selecta-unified-finish-implementation-checklist.md) | 192 | 192 | 0 | 0 | 0 | 0 | 123 | 0 |
 | [Selecta Cloud (SC)](selecta-cloud-implementation-checklist.md) | 136 | 93 | 38 | 5 | 0 | 0 | 91 | 0 |
 | [selecta-autopilot-implementation-checklist.md](selecta-autopilot-implementation-checklist.md) | 120 | 10 | 0 | 110 | 0 | 0 | 0 | 0 |
-| [selecta-business-implementation-checklist.md](selecta-business-implementation-checklist.md) | 179 | 0 | 0 | 179 | 0 | 0 | 0 | 0 |
+| [selecta-business-implementation-checklist.md](selecta-business-implementation-checklist.md) | 179 | 23 | 1 | 155 | 0 | 0 | 0 | 0 |
 <!-- checklist-summary:end -->
 
 ---
@@ -31,6 +31,12 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 **Strictly additive docs-only set, accepted by the owner on 2026-11-17:** 13 ADRs, [ADR-0455](adr-0455-browser-first-cloud-goal-and-two-cloud-modes.md) to [ADR-0467](adr-0467-rollout-order-refactor-sequence-and-governance.md), programme prefix BF, baseline `main` at `7d7f7932`, joined on 2026-11-18 by [ADR-0468](adr-0468-one-shell-and-design-system-consolidation.md) (one shell for hosted Cloud behind `cloud.hosted_shell` and the UI/UX overhaul's design-system consolidation; entry page [docs/engineering/design-system.md](../engineering/design-system.md)) and [ADR-0469](adr-0469-one-song-one-fingerprint.md) (per-workspace device storage, fingerprint-keyed derived-data reuse behind `cloud.content_cache`, and the cross-tenant sharing rules). The local-first personal Cloud becomes the default Cloud experience: the browser owns audio (import, playback, DSP, render, export) and Cloud holds metadata, portable recipes, Rooms, billing and signed commands, receiving audio only from hosted-flag accounts. The existing hosted media plane is kept, admin-granted per account behind a new `cloud.hosted_media` flag (gating new uploads and processing only; stored media stays playable); every account that ever uploaded is grandfathered before the default flips; nothing is retired, deleted or repriced. Phones remote-control a playing browser device with signed, fenced, TTL-limited metadata commands. Standalone local SelectaDJ is unchanged. All ADR decisions Accepted; of the 126 BF tasks (95 in ADR-0455 to ADR-0467, 12 in ADR-0468, 19 in ADR-0469), 90 Implemented, 25 In progress, 9 Not started and 2 recorded follow-ups (recounted from each ADR's Implementation header on PR #96, 2026-11-19); 0 independently Verified; checklists are inline in the ADRs (no separate checklist file, so this programme does not appear in the table above). ADR numbers 0455 to 0485 used on the abandoned, never-merged PR #64 branch are superseded by this set.
 
 **Start here:** [goal and two Cloud modes (0455)](adr-0455-browser-first-cloud-goal-and-two-cloud-modes.md), [hosted-media gating (0456)](adr-0456-hosted-media-mode-preservation-and-flag-gating.md), [remote-control fencing (0461)](adr-0461-remote-control-protocol-commands-fencing-takeover.md), [release gates (0466)](adr-0466-release-gates-tests-and-independent-verification.md), [one shell and the design system (0468)](adr-0468-one-shell-and-design-system-consolidation.md).
+
+---
+
+# SelectaDJ for Business (2026-11-12)
+
+**Proposed programme, prefix BZ:** [ADR-0441](adr-0441-business-goal-boundary-and-pricing.md) (goal, product boundary and per-venue pricing) to [ADR-0454](adr-0454-business-edge-cases-stress-and-release-gates.md) (edge cases, stress and the two release gates), chapter [docs/saas/19-business-venues.md](../saas/19-business-venues.md). Venues pay per venue for unattended, automatically mixed music from their own library; nothing is sold until the owner turns `business.signups` on after Gate S (docs/verification/bz-gate-register.md) and a signed GO record. Individual Free, Standard and Premium plans, local SelectaDJ and every personal guarantee are unchanged; the business plan entry sits beside the individual catalogue, never inside it. Each ADR's header carries its own implementation count; 0 independently Verified.
 
 ---
 

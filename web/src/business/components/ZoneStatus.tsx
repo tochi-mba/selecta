@@ -2,7 +2,7 @@
 
 import { Status, StatusKind } from '../../ui/controls';
 import { MANAGER_COPY } from '../copy/states';
-import { duration, venueTime } from '../time';
+import { duration, venueTime, weekdayTime } from '../time';
 import type { Venue, Zone, ZonePlayState } from '../types';
 
 const MARK: Record<ZonePlayState, StatusKind> = {
@@ -10,12 +10,17 @@ const MARK: Record<ZonePlayState, StatusKind> = {
   silent: 'blocked', not_paired: 'needs-action', not_reporting: 'unavailable', plan_paused: 'unavailable',
 };
 
+/** Today's opening as a time; a later day's with its weekday ("Sat 10:00"), so it is never ambiguous. */
+function opensAt(at: number, timeZone: string, now: number): string {
+  return at - now < 86_400 ? venueTime(at, timeZone) : weekdayTime(at, timeZone);
+}
+
 /** The words a zone state reads as. Never colour alone; the mark comes with the words. */
 export function zoneWords(state: ZonePlayState, zone: Zone, venue: Venue, now: number): string {
   switch (state) {
     case 'playing': return 'Playing';
     case 'paused_by_staff': return `Paused by ${zone.paused_by ?? 'staff'}${zone.state_since ? ` for ${duration(now - zone.state_since)}` : ''}`;
-    case 'closed': return venue.next_open_at ? `Closed. Opens ${venueTime(venue.next_open_at, venue.time_zone)}` : 'Closed';
+    case 'closed': return venue.next_open_at ? `Closed. Opens ${opensAt(venue.next_open_at, venue.time_zone, now)}` : 'Closed';
     case 'quiet_hours': return 'Quiet hours';
     case 'playing_saved': return 'Playing from saved music';
     case 'silent': return `Silent${zone.state_since ? ` for ${duration(now - zone.state_since)}` : ''}`;

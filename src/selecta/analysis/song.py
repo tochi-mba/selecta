@@ -127,8 +127,6 @@ class SongInfo:
     def beat_index_of_bar(self, bar: int) -> int:
         return int(self.bar_starts[int(np.clip(bar, 0, self.bar_starts.size - 1))])
 
-    def singing_at(self, time: float, margin: float = VOCAL_MARGIN) -> bool:
-        return any(line.start - margin < time < line.end + margin for line in self.lines)
 
     def mid_line(self, time: float, margin: float = 0.15) -> bool:
         """Whether a line is under way here. A boundary between two lines is a fine place to cut,

@@ -5,8 +5,6 @@
  * are 1024 to 4096, where a simple radix-2 kernel is fast enough off the audio thread.
  */
 
-export const FFT_IMPLEMENTATION = 'radix2-iterative-fft-v1';
-
 export function isPowerOfTwo(size: number): boolean {
   return Number.isInteger(size) && size > 0 && (size & (size - 1)) === 0;
 }

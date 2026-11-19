@@ -242,7 +242,8 @@ def test_transport_and_routes_each_have_one_owner() -> None:
         "the main player, the Studio preview engine and the Cloud browser runtime"
     )
     # cloud/venue/probeSuite.ts makes a detached element only to ask canPlayType; it never plays.
-    assert elements == ["audio/focus.ts", "cloud/venue/probeSuite.ts"], (
+    assert elements == ["audio/focus.ts", "cloud/venue/probeSuite.ts",
+                        "devices/useZoneSpeaker.ts", "kiosk/player.ts"], (
         "every preview shares the one element audio focus owns"
     )
     # everything that can make its own sound asks audio focus first

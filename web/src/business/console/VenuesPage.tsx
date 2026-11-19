@@ -23,7 +23,7 @@ export function addVenueBlocked(org: Org, venueCount: number, now: number, offli
   if (org.role !== 'owner' && org.role !== 'admin') return CONSOLE_COPY.viewerReadOnly;
   if (org.billing.plan === 'trial' && venueCount >= 1) return CONSOLE_COPY.trialOneVenue;
   const pilot = org.pilot;
-  if (pilot && pilot.status !== 'converted' && venueCount >= pilot.allowance.venues) return CONSOLE_COPY.pilotVenueLimit(pilot.allowance.venues);
+  if (pilot && pilot.status !== 'converted' && pilot.allowance && venueCount >= pilot.allowance.venues) return CONSOLE_COPY.pilotVenueLimit(pilot.allowance.venues);
   return null;
 }
 

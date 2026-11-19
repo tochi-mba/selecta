@@ -26,7 +26,7 @@ inside the same transaction as the session change:
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, replace
 from typing import Any
 
@@ -39,6 +39,7 @@ from selecta.playback.model import (
     LEASE_SECONDS,
     Device,
     DeviceInOtherZone,
+    HoldingZoneLease,
     PersonSpeakerOff,
     PlaybackError,
     PlayState,
@@ -86,6 +87,60 @@ class ConfirmNeeded(PlaybackError):
     code = "confirm_needed"
 
 
+class BillingStopped(PlaybackError):
+    """The venue's music was stopped at its close after the billing grace period and its
+    warnings (ADR-0447 dunning); it plays again once payment goes through."""
+
+    code = "billing_stopped"
+
+
+def _billing_stopped(conn: Connection, zone: ZoneInfo) -> bool:
+    """Whether dunning stopped this zone's venue, checked only while `business.billing` is on."""
+    from selecta import flags
+
+    try:
+        if not flags.on("business.billing"):
+            return False
+    except KeyError:
+        return False
+    from selecta.business import dunning
+
+    return dunning.is_venue_stopped(conn, zone.workspace_id, zone.venue_id)
+
+
+class LicenceMissing(PlaybackError):
+    """The venue has no music licence attestation in force (ADR-0449 BZ-0449-02): a zone does
+    not start until one is entered; a zone already playing finishes to its close."""
+
+    code = "licence_required"
+
+
+def _licence_refuses(conn: Connection, zone: ZoneInfo, now: float) -> str | None:
+    """Why the venue may not start playing, checked only while `business.licensing` is on."""
+    from selecta import flags
+
+    try:
+        if not flags.on("business.licensing"):
+            return None
+    except KeyError:
+        return None
+    from selecta.business import licensing
+
+    current = load_session(conn, zone.workspace_id, zone.id)
+    playing = current is not None and current.lease_live(now)
+    decision = licensing.can_start_scheduled_playback(conn, zone.venue_id, now, playing)
+    return None if decision.allowed else decision.reason
+
+
+def _log_play(conn: Connection, zone: ZoneInfo, before, after, now: float) -> None:
+    """The business play log (ADR-0449): the song that just ended, when the zone moved on."""
+    if before.song_index == after.song_index and before.mix_revision_id == after.mix_revision_id:
+        return
+    from selecta.business import playlog_writer
+
+    playlog_writer.record(conn, zone, before, after, now)
+
+
 class ZoneFull(PlaybackError):
     """A zone already has its home and standby kiosks."""
 
@@ -100,6 +155,30 @@ class MoveAcrossVenues(PlaybackError):
 
 class NotAKiosk(PlaybackError):
     code = "not_a_kiosk"
+
+
+class SpeakerOffline(PlaybackError):
+    """A transport press for a zone whose kiosk is unreachable (ADR-0446). Refused at once and
+    never queued, so a skip can't fire an hour later; the kiosk plays its saved music."""
+
+    code = "speaker_offline"
+
+
+# Transport presses only mean something live; state changes (volume, steering, programme)
+# still apply on the server and reach the kiosk when it is back.
+TRANSPORT_COMMANDS = frozenset({"play", "pause", "skip", "seek"})
+
+
+def _kiosk_unreachable(conn: Connection, session: Session, device_id: str, now: float) -> bool:
+    speaker = session.active_device_id
+    if speaker is None or speaker == device_id or session.lease_live(now):
+        return False
+    principal = conn.execute(
+        sa.select(devices.c.principal).where(
+            devices.c.workspace_id == session.workspace_id, devices.c.id == speaker
+        )
+    ).scalar()
+    return principal == "kiosk"
 
 
 @dataclass(frozen=True)
@@ -248,6 +327,7 @@ def zone_heartbeat(
         ):
             # The standby reached the next song: give the zone back now, at the boundary.
             handed = _hand_back_in(conn, session, position, now, events)
+            _log_play(conn, zone, session, handed, now)
             return ZoneHeartbeatResult(HeartbeatOutcome.HANDED_BACK, handed, True)
         result = heartbeat_in(
             conn,
@@ -260,6 +340,8 @@ def zone_heartbeat(
             fence=fence,
             volume_cap=zones.volume_cap(conn, zone, now),
         )
+        if result.position_accepted:
+            _log_play(conn, zone, session, result.session, now)
         session = result.session
         if (
             result.outcome is HeartbeatOutcome.REFUSED
@@ -392,6 +474,16 @@ def zone_take_over(
     with transaction(engine, workspace_id) as conn:
         now = resolve_now(conn, now)
         zone = require_zone(conn, zones, workspace_id, zone_id, user_id=user_id)
+        if start_playing and _billing_stopped(conn, zone):
+            raise BillingStopped(
+                f"{zone.venue_name or zone.name} is stopped until the SelectaDJ payment "
+                "goes through"
+            )
+        if start_playing and _licence_refuses(conn, zone, now):
+            raise LicenceMissing(
+                f"{zone.venue_name or zone.name} needs a music licence in force before it "
+                "plays. Enter it on the venue's Licence page"
+            )
         device = _zone_device(conn, workspace_id, device_id, zone)
         if not device.is_kiosk and not allow_person_speakers(conn, workspace_id, zone.id):
             raise PersonSpeakerOff(f"{zone.name} plays only from its own player")
@@ -472,7 +564,23 @@ def zone_submit_command(
         zone = require_zone(conn, zones, workspace_id, zone_id, user_id=user_id)
         require_signed_in(conn, workspace_id, device_id)
         touch_device(conn, device_id, now)
+        if command == "set_programme" and isinstance(args, Mapping):
+            # ADR-0450: staff play-next and steering pick only songs the zone's rules allow.
+            from selecta.business.content.playback_gate import refused_in_programme
+            from selecta.playback.model import InvalidCommand
+
+            songs = args.get("songs")
+            refused = refused_in_programme(
+                conn, workspace_id, zone.id,
+                [s for s in songs if isinstance(s, int)] if isinstance(songs, list) else [], now)
+            if refused:
+                raise InvalidCommand(refused)
         session = lock_session(conn, workspace_id, now, zone.id)
+        if command in TRANSPORT_COMMANDS and _kiosk_unreachable(conn, session, device_id, now):
+            raise SpeakerOffline(
+                f"The {zone.name} player is offline. It's still playing saved music. Use the "
+                "player's own screen, or try again when it's back."
+            )
         return submit_command_in(
             conn,
             session,
@@ -575,6 +683,28 @@ def holding_zone(
             )
         ).first()
         return row.zone_id if row else None
+
+
+def refuse_personal_while_holding(
+    engine: Engine,
+    zones: ZoneDirectory,
+    held_devices: Iterable[tuple[str, str]],
+    *,
+    now: float | None = None,
+) -> None:
+    """Raise `HoldingZoneLease` when any of this browser's organisation devices, given as
+    `(workspace_id, device_id)` pairs, is a zone's live speaker. A phone that is playing Bar
+    hands Bar back before it plays the person's own music (ADR-0443 BZ-0443-05)."""
+    for workspace_id, device_id in held_devices:
+        zone_id = holding_zone(engine, workspace_id, device_id, now=now)
+        if zone_id is None:
+            continue
+        with transaction(engine, workspace_id) as conn:
+            name = _zone_name(conn, zones, workspace_id, zone_id)
+        raise HoldingZoneLease(
+            f"This device is playing {name}. Hand {name} back before playing your own music here.",
+            zone_id,
+        )
 
 
 def set_person_speakers(
@@ -772,11 +902,14 @@ __all__ = [
     "hand_back",
     "holding_zone",
     "move_device",
+    "refuse_personal_while_holding",
     "require_zone",
     "set_person_speakers",
     "zone_heartbeat",
     "zone_reconnect",
     "zone_submit_command",
+    "SpeakerOffline",
+    "TRANSPORT_COMMANDS",
     "zone_take_over",
     "zone_view",
     "zones_overview",

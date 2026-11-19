@@ -12,6 +12,7 @@ export const KIOSK_COPY = {
   pairQrLabel: 'QR code to pair this player',
   thisPlayer: (name: string) => `This player: ${name}`,
   tapToStart: 'Tap to start the music',
+  timeUnknown: 'Time unknown',
   guideLink: 'Setting up a player',
   closedAt: (time: string) => `Closed. Music starts at ${time}`,
   closedSoon: 'Closed. Music starts soon',
@@ -24,6 +25,7 @@ export const KIOSK_COPY = {
   next: (line: string) => `Next: ${line}`,
   songLine: (title: string, artist: string) => (artist ? `${title} by ${artist}` : title),
   codeFor: (code: string) => `Code ${code}`,
+  requestCode: (code: string) => `Request a song with code ${code}`,
   // the hidden staff panel (read only)
   staffCorner: 'Player details. Press and hold for 3 seconds',
   pinTitle: 'Staff PIN',
@@ -45,6 +47,8 @@ export const KIOSK_COPY = {
   close: 'Close',
   done: 'Done',
   networkWords: { online: 'Connected', offline: 'Not connected', unknown: 'Unknown' },
+  offlinePlay: 'Plays without internet',
+  offlineWords: { ready: 'Yes', newer: 'No, it needs a newer browser', not_yet: 'Not yet', off: 'Not switched on' },
 } as const;
 
 /** The pairing link a manager's phone opens from the QR. */

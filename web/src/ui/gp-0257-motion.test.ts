@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 type Severity = 'answers-you' | 'arrives' | 'waiting';
 const INVENTORY: Record<string, Severity> = {
   'button-working': 'waiting',
+  'k-slide': 'waiting', // kiosk waiting for saved music; disabled under reduced motion
   'overlay-appear': 'answers-you',
   'route-reveal': 'arrives',
   'skeleton-reveal': 'arrives',

@@ -104,8 +104,3 @@ export function browserMovesOffered(ability: StemsAbility, on: (id: FlagId) => b
   });
   return [...plain, ...stems];
 }
-
-/** The stem moves Auto may pick on this device: only when the splitter is ready. */
-export function stemMovesAutoMayPick(ability: StemsAbility, on: (id: FlagId) => boolean = flagOn): StemMove[] {
-  return ability?.state === 'ready' ? browserStemMovesAllowed(on) : [];
-}

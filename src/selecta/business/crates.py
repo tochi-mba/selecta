@@ -3,10 +3,10 @@
 A crate is organisation-wide (`venue_id` empty) or owned by one venue. A venue sees organisation
 crates and its own, never another venue's: asking for another venue's crate is NotFound.
 
-Deleting a song tombstones its rows (`removed_at`) in every crate, so it leaves each effective
-list at once and comes back to the same place if the song is restored. Deleting a crate that
-something still uses (a schedule block, a zone default, a content rule) is refused with the list
-of uses; those packages report uses through `register_use_finder`.
+Deleting a song (`DELETE /api/assets/{id}`) tombstones its rows (`removed_at`) in every crate,
+so it leaves each effective list at once. Deleting a crate that something still uses (a schedule
+block, a zone default, a content rule) is refused with the list of uses; those packages report
+uses through `register_use_finder`.
 """
 
 from __future__ import annotations
@@ -194,34 +194,6 @@ def set_songs(conn: Connection, workspace_id: str, crate_id: str, ids: Iterable[
     return song_ids(conn, workspace_id, crate_id)
 
 
-def add_songs(conn: Connection, workspace_id: str, crate_id: str, ids: Iterable[str]) -> list:
-    """Append songs not already in the crate, keeping the given order."""
-    _live(conn, workspace_id, crate_id)
-    present = set(song_ids(conn, workspace_id, crate_id))
-    wanted = [song_id for song_id in _unique(ids) if song_id not in present]
-    if wanted:
-        scope = (crate_songs.c.workspace_id == workspace_id, crate_songs.c.crate_id == crate_id)
-        last = conn.execute(
-            sa.select(sa.func.max(crate_songs.c.position)).where(*scope)
-        ).scalar()
-        start = -1 if last is None else int(last)
-        conn.execute(crate_songs.delete().where(*scope, crate_songs.c.song_id.in_(wanted)))
-        conn.execute(
-            crate_songs.insert(),
-            [
-                {
-                    "crate_id": crate_id,
-                    "workspace_id": workspace_id,
-                    "song_id": song_id,
-                    "position": start + 1 + offset,
-                    "removed_at": None,
-                }
-                for offset, song_id in enumerate(wanted)
-            ],
-        )
-    return song_ids(conn, workspace_id, crate_id)
-
-
 def tombstone_song(conn: Connection, workspace_id: str, song_id: str, *, now: int) -> int:
     """A deleted song leaves every crate of the organisation at once. Returns rows touched."""
     result = conn.execute(
@@ -232,20 +204,6 @@ def tombstone_song(conn: Connection, workspace_id: str, song_id: str, *, now: in
             crate_songs.c.removed_at.is_(None),
         )
         .values(removed_at=now)
-    )
-    return int(result.rowcount or 0)
-
-
-def restore_song(conn: Connection, workspace_id: str, song_id: str) -> int:
-    """A restored song returns to every crate it was in, at its old place."""
-    result = conn.execute(
-        crate_songs.update()
-        .where(
-            crate_songs.c.workspace_id == workspace_id,
-            crate_songs.c.song_id == song_id,
-            crate_songs.c.removed_at.is_not(None),
-        )
-        .values(removed_at=None)
     )
     return int(result.rowcount or 0)
 

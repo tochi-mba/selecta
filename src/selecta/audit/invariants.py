@@ -298,6 +298,22 @@ def _storage_allowed(plan_id: str, version: int | None) -> int | None:
         return None
 
 
+def _business_pool(connection: Connection, workspace_id: str) -> int:
+    """A business organisation's pooled storage (ADR-0448): 250 GB plus 50 GB per entitled
+    venue. 0 for any other workspace, so personal plans are checked exactly as before."""
+    from selecta.business import entitlements as business_entitlements
+    from selecta.business.commercial_facts import SqlFacts
+
+    try:
+        org = SqlFacts().organisation(connection, workspace_id)
+    except sa.exc.SQLAlchemyError:
+        return 0
+    if org is None:
+        return 0
+    entitled = len(business_entitlements.entitled_venues(connection, org))
+    return business_entitlements.storage_limit_bytes(entitled)
+
+
 def entitlements(connection: Connection) -> list[Violation]:
     found: list[Violation] = []
     now = persistence.db_now(connection)
@@ -320,6 +336,7 @@ def entitlements(connection: Connection) -> list[Violation]:
             [
                 plan_bytes,
                 *(_storage_allowed(plan_id, None) or 0 for plan_id in overrides[row.workspace_id]),
+                _business_pool(connection, row.workspace_id),
             ]
         )
         if int(row.limit_bytes) > allowed:

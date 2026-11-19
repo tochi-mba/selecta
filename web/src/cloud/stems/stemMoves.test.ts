@@ -7,7 +7,7 @@ vi.mock('../../flags', async (original) => {
   return { ...real, REGISTRY: { ...real.REGISTRY, 'cloud.browser_stems': { area: 'cloud', label: 'Browser stems', about: '' } } };
 });
 
-const { browserMoveNames, browserMovesOffered, browserStemMovesAllowed, moveWords, stemMovesAutoMayPick, STEM_MOVE_WORDS } = await import('../browserMoves');
+const { browserMoveNames, browserMovesOffered, browserStemMovesAllowed, moveWords, STEM_MOVE_WORDS } = await import('../browserMoves');
 
 const all = () => true;
 const without = (...off: string[]) => (id: FlagId) => !off.includes(id);
@@ -42,14 +42,11 @@ describe('stem moves in the Move picker', () => {
     expect(stems.map((offer) => offer.move)).toEqual(['vocal_ride', 'stem_arrange', 'stem_intertwine']);
     expect(stems[0].disabledReason).toBe('This device can’t split songs into stems: it has no WebGPU');
     expect(offered.filter((offer) => !offer.disabledReason).map((offer) => offer.move)).toEqual(PLAIN);
-    expect(stemMovesAutoMayPick({ state: 'unavailable', reason: 'x' }, all)).toEqual([]);
   });
 
-  it('marks stem moves as needing the download, and lets Auto pick them only when ready', () => {
+  it('marks stem moves as needing the download until the splitter is ready', () => {
     const offered = browserMovesOffered({ state: 'download_needed' }, all);
     expect(offered.filter((offer) => offer.needsDownload).map((offer) => offer.move)).toEqual(['vocal_ride', 'stem_arrange', 'stem_intertwine']);
-    expect(stemMovesAutoMayPick({ state: 'download_needed' }, all)).toEqual([]);
-    expect(stemMovesAutoMayPick({ state: 'ready' }, all)).toEqual(['vocal_ride', 'stem_arrange', 'stem_intertwine']);
     const ready = browserMovesOffered({ state: 'ready' }, all);
     expect(ready.every((offer) => !offer.disabledReason && !offer.needsDownload)).toBe(true);
     expect(ready).toHaveLength(PLAIN.length + 3);

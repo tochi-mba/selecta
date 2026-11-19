@@ -12,6 +12,7 @@
 import { resolve } from 'node:path';
 import type { Plugin } from 'vite';
 import { BundleItem, GUEST_JS_LIMIT, jsBytesFor } from './src/guest/budget.ts';
+import { FenceItem, forbiddenModules } from './src/kiosk/bundleFence.ts';
 
 export { GUEST_JS_LIMIT, jsBytesFor };
 
@@ -46,6 +47,9 @@ export function roomPages(root: string): Plugin {
       if (bytes > GUEST_JS_LIMIT) {
         this.error(`The guest page loads ${bytes} bytes of JavaScript; the limit is ${GUEST_JS_LIMIT} (SC-0416-02).`);
       }
+      // the kiosk player carries no React and no manager code (ADR-0453 D1, BZ-0445-01)
+      const leaked = forbiddenModules(bundle as unknown as Record<string, FenceItem>, 'kiosk');
+      if (leaked.length) this.error(`The kiosk page loads code it must never carry: ${leaked.slice(0, 5).join(', ')}`);
       this.emitFile({ type: 'asset', fileName: 'guest-size.json', source: JSON.stringify({ guest_js_bytes: bytes, limit: GUEST_JS_LIMIT }) });
     },
   };

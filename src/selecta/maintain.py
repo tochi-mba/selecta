@@ -24,6 +24,10 @@ depends on a cron somebody forgot:
 | `dmca_renewal` | 24 h | Owner alert as the DMCA agent's renewal nears (`admin.dmca`) |
 | `emails` | 60 s | Long-job and over-quota emails, each once (`notify.emails`) |
 | `business.zone_clock` | 30 s | Each venue zone's next opening or closing change |
+| `business.zone_autoplan` | 60 s | Each live zone's music planned ahead from its dayparts |
+| `business.billing` | 15 min | Business dunning and the VAT recheck before renewal |
+| `business.licensing` | 1 h | Licence reminders and play-log retention |
+| `business.entitlements` | 5 min | Pooled storage limits, continuity and credit proposals |
 | `queue_metrics`, `lost_jobs`, `backup_freshness` | 15 s, 10 min, 10 min | The SLO and alert
   series only the leader sees (`observability.leader_metrics`) |
 
@@ -259,9 +263,16 @@ def _rooms(engine: Engine, env: Mapping[str, str], plan: Plan) -> None:
         events=OutboxRoomEvents(),
     )
 
+    from selecta.business.access.directory import SqlDirectory
+    from selecta.business.rooms.service import ZoneRooms
+
+    # ADR-0451: venue room guests go 30 days after their last activity, as party guests do.
+    zone_rooms = ZoneRooms(engine, pepper, directory=SqlDirectory())
+
     def sweep(_fence: TermFence) -> object:
         ended = rooms.expire_rooms()
         purge_guest_data(rooms)
+        zone_rooms.purge()
         return len(ended)
 
     plan.tasks.append(Task("rooms", 60.0, sweep))
@@ -350,6 +361,86 @@ def _business_hours(engine: Engine, plan: Plan) -> None:
 
     plan.tasks.append(Task(zone_clock.TASK_NAME, zone_clock.EVERY_S, run))
 
+    from selecta.business import zone_autoplan
+
+    def plan_zones(fence: TermFence) -> object:
+        if not _flag_on(zone_autoplan.FLAG):
+            return None
+        return zone_autoplan.tick(engine)
+
+    plan.tasks.append(Task(zone_autoplan.TASK_NAME, zone_autoplan.EVERY_S, plan_zones))
+
+
+def _business_entitlements(engine: Engine, plan: Plan) -> None:
+    """Pooled storage, continuity and credit proposals (ADR-0448), while
+    `business.entitlements` is on."""
+    from selecta.business import entitlement_gates, entitlement_jobs
+
+    def run(_fence: TermFence) -> object:
+        if not _flag_on(entitlement_gates.FLAG):
+            return None
+        return entitlement_jobs.run_pass(engine)
+
+    plan.tasks.append(Task(entitlement_jobs.TASK_NAME, entitlement_jobs.EVERY_S, run))
+
+
+def _business_kiosk_alerts(engine: Engine, env: Mapping[str, str], plan: Plan) -> None:
+    """Silent-zone and offline alerts for kiosk zones (ADR-0445), while business.kiosk is on.
+    Emails go through the configured provider, or the dev stack's /dev/mail inbox."""
+    from selecta.business import alert_mail, alerts
+
+    sender = alert_mail.sender_for(env)
+
+    def run(_fence: TermFence) -> object:
+        if not _flag_on(alerts.FLAG):
+            return None
+        return alerts.sweep(engine, sender=sender)
+
+    plan.tasks.append(Task(alerts.TASK_NAME, alerts.EVERY_S, run))
+
+
+def _business_horizons(engine: Engine, plan: Plan) -> None:
+    """Seam render work for each open kiosk zone's 4-hour horizon (ADR-0446), while
+    business.kiosk is on."""
+    from selecta.business import alerts, horizon
+
+    def run(_fence: TermFence) -> object:
+        if not _flag_on(alerts.FLAG):
+            return None
+        return horizon.tick(engine)
+
+    plan.tasks.append(Task(horizon.TASK_NAME, horizon.EVERY_S, run))
+
+
+def _business_billing(engine: Engine, env: Mapping[str, str], plan: Plan) -> None:
+    """Business dunning and VAT rechecks (ADR-0447), only while `business.billing` is on.
+    Dunning needs no Stripe; the VAT recheck runs only with a test-mode Stripe key."""
+    from selecta.business import billing_jobs, stripe_business
+
+    client = stripe_business.from_environment(env)
+    if isinstance(client, str):
+        plan.disabled["business.billing.vat_recheck"] = client
+
+    def run(_fence: TermFence) -> object:
+        if not _flag_on("business.billing"):
+            return None
+        return billing_jobs.run_pass(engine, None if isinstance(client, str) else client)
+
+    plan.tasks.append(Task(billing_jobs.TASK_NAME, billing_jobs.EVERY_S, run))
+
+
+def _business_licensing(engine: Engine, plan: Plan) -> None:
+    """Licence reminders and play-log retention (ADR-0449), only while `business.licensing`
+    is on."""
+    from selecta.business import licensing_jobs
+
+    def run(_fence: TermFence) -> object:
+        if not _flag_on("business.licensing"):
+            return None
+        return licensing_jobs.run_pass(engine)
+
+    plan.tasks.append(Task(licensing_jobs.TASK_NAME, licensing_jobs.EVERY_S, run))
+
 
 def cloud_plan(engine: Engine, env: Mapping[str, str] | None = None) -> Plan:
     """Every recurring cloud task this environment can run."""
@@ -364,6 +455,11 @@ def cloud_plan(engine: Engine, env: Mapping[str, str] | None = None) -> Plan:
     _dmca(engine, env, plan)
     _emails(engine, env, plan)
     _business_hours(engine, plan)
+    _business_entitlements(engine, plan)
+    _business_kiosk_alerts(engine, env, plan)
+    _business_horizons(engine, plan)
+    _business_billing(engine, env, plan)
+    _business_licensing(engine, plan)
     from selecta.observability import leader_metrics
 
     made, off = leader_metrics.tasks(engine, env)

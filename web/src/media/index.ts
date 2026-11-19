@@ -2,8 +2,6 @@
 // Everything here is behind the `cloud.local_media` flag; the UI gates on it and reflows
 // without a trace when it is off.
 
-export const LOCAL_MEDIA_FLAG = 'cloud.local_media';
-
 export { directoryInput, dirPicker, fileInput, opfs, storageSpace } from './capabilities';
 export type { Capability, StorageSpace } from './capabilities';
 export { AVAILABILITY_REPORT_BATCH, deviceAvailabilitySnapshot, refreshDeviceAvailability, reportDeviceAvailability } from './availability';

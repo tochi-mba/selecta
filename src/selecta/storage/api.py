@@ -16,8 +16,10 @@ from sqlalchemy.engine import Connection, Engine
 
 from selecta.admin import state as emergency_state
 from selecta.billing import plans, stripe_sync
+from selecta.business import terms, upload_rights
+from selecta.business.content.store import record_upload_tag
 from selecta.identity.tokens import Claims
-from selecta.persistence import transaction
+from selecta.persistence import db_now, transaction
 from selecta.storage.artifacts import Buckets
 from selecta.storage.audio_check import Rejected
 from selecta.storage.ids import require_id
@@ -60,6 +62,19 @@ class UploadFileInput(BaseModel):
 
 class PlanUploadsRequest(BaseModel):
     files: list[UploadFileInput] = Field(max_length=500)
+    # The business venue these files are for, when uploaded from a venue page (ADR-0448).
+    venue_id: str | None = Field(default=None, max_length=36)
+
+
+def _own_venue(conn, workspace_id: str, venue_id: str | None) -> str | None:
+    """The venue when it is one of this workspace's, else None (never another tenant's)."""
+    if not venue_id:
+        return None
+    from selecta.business.schema import venues
+
+    found = conn.execute(select(venues.c.id).where(
+        venues.c.workspace_id == workspace_id, venues.c.id == venue_id)).scalar()
+    return found
 
 
 class PartsRequest(BaseModel):
@@ -218,6 +233,12 @@ def install_routes(
         principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
         return principal.workspace.id
 
+    def uploader(request: Request, claims: Claims) -> str | None:
+        """The uploading person, or None for a principal with no person (a service or test
+        principal): the upload then records no uploader."""
+        found = principal_for(engine, claims, request.headers.get("x-workspace-id"))
+        return getattr(getattr(found, "user", None), "id", None)
+
     def refuse_if_restricted(workspace_id: str) -> None:
         """Staff suspended this workspace's uploads (the repeat-infringer policy, §12.3)."""
         with transaction(engine, workspace_id) as conn:
@@ -251,12 +272,28 @@ def install_routes(
         workspace_id = workspace(request, claims)
         refuse_if_restricted(workspace_id)
         try:
+            with transaction(engine, workspace_id) as conn:
+                upload_rights.require_batch(conn, workspace_id,
+                                            request.headers.get(upload_rights.HEADER),
+                                            len(body.files))
+        except upload_rights.AttestationRequired as error:
+            raise HTTPException(status_code=403, detail={
+                "code": error.code, "message": str(error),
+                "statement": terms.UPLOAD_STATEMENT,
+                "statement_version": terms.CURRENT_UPLOAD_STATEMENT_VERSION,
+            }) from error
+        # Read before the plan's transaction: on SQLite a second one would wait on the first.
+        uploaded_by = uploader(request, claims)
+        try:
             with service() as (uploads, _client):
                 with transaction(engine, workspace_id) as conn:
+                    venue_id = _own_venue(conn, workspace_id, body.venue_id)
                     results = uploads.plan_batch(
                         conn,
                         workspace_id,
                         [FileSpec(**item.model_dump()) for item in body.files],
+                        uploaded_by=uploaded_by,
+                        venue_id=venue_id,
                     )
         except BatchTooLarge as error:
             raise HTTPException(status_code=422, detail={"code": "batch_too_large"}) from error
@@ -387,6 +424,16 @@ def install_routes(
                             audio_probe,
                             workspace_id=workspace_id,
                         )
+                        if outcome.asset_id and audio_probe.explicit_tag:
+                            record_upload_tag(
+                                conn, workspace_id, outcome.asset_id, audio_probe.explicit_tag,
+                                now=db_now(conn),
+                            )
+                        if outcome.asset_id and audio_probe.isrc_tag:
+                            upload_rights.record_isrc(
+                                conn, workspace_id, outcome.asset_id, audio_probe.isrc_tag,
+                                actor=f"upload:{session_id}", now=db_now(conn),
+                            )
         except (SessionNotFound, InvalidState, R2Error, ValueError) as error:
             raise map_error(error) from error
         return _outcome_json(outcome)

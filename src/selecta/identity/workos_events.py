@@ -9,6 +9,7 @@ user, Selecta re-reads the user from WorkOS and acts on that, never on the paylo
 | `user.deleted` | If WorkOS confirms the user is gone, start account deletion (once) |
 | `session.revoked` | Add the session id to `revoked_sessions` (revocation only ever adds) |
 | password reset succeeded | Revoke the user's other sessions, keeping one made since the reset |
+| `dsync.user.updated`, `.deleted` | Re-read the directory user; offboard if gone or inactive |
 
 The password-reset event's name is still to be confirmed in the WorkOS dashboard, so both
 `password_reset.succeeded` and `user.password_reset_succeeded` are accepted. Anything else is
@@ -40,7 +41,9 @@ from selecta.persistence import db_now, new_id, transaction
 
 USER_SYNC_EVENTS = frozenset({"user.updated", "email_verification.succeeded"})
 PASSWORD_RESET_EVENTS = frozenset({"password_reset.succeeded", "user.password_reset_succeeded"})
-HANDLED = USER_SYNC_EVENTS | PASSWORD_RESET_EVENTS | {"user.deleted", "session.revoked"}
+DIRECTORY_EVENTS = frozenset({"dsync.user.updated", "dsync.user.deleted"})
+HANDLED = (USER_SYNC_EVENTS | PASSWORD_RESET_EVENTS | DIRECTORY_EVENTS
+           | {"user.deleted", "session.revoked"})
 MAX_ID_LENGTH = 255
 MAX_TYPE_LENGTH = 128
 
@@ -221,6 +224,10 @@ def process(engine: Engine, client: WorkOSClient, event: WorkOSEvent) -> Outcome
             return _session_revoked(engine, event.data)
         if event.type in PASSWORD_RESET_EVENTS:
             return _password_reset(engine, client, event)
+        if event.type in DIRECTORY_EVENTS:
+            from selecta.business.people import directory_sync
+
+            return Outcome(directory_sync.handle(engine, client, event.type, event.data))
     except WorkOSError as problem:
         return Outcome("failed", f"{type(problem).__name__}: {problem}"[:255], problem.retryable)
     return Outcome("ignored", "not an event Selecta acts on")

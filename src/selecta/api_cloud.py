@@ -42,7 +42,18 @@ from selecta.autopilot import routes_autopilot as autopilot_routes
 from selecta.billing import api as billing_api
 from selecta.billing import plans, stripe_sync
 from selecta.business import admin_routes as business_admin_routes
+from selecta.business import billing_routes as business_billing_routes
+from selecta.business import controls_wiring as business_controls
+from selecta.business import entitlement_routes as business_entitlement_routes
+from selecta.business import library_copy as business_library_copy
+from selecta.business import licensing_routes as business_licensing_routes
+from selecta.business import playlog_routes as business_playlog_routes
+from selecta.business import rollout_routes as business_rollout_routes
 from selecta.business import routes as business_org_routes
+from selecta.business import start_routes as business_start_routes
+from selecta.business import workspace_routes as business_workspace_routes
+from selecta.business import zone_speaker_routes as business_zone_speaker_routes
+from selecta.business.people import routes as business_people_routes
 from selecta.devstack import guard as dev_guard
 from selecta.flags import cloud_gate, targeting
 from selecta.flags import guard as flag_guard
@@ -73,6 +84,7 @@ from selecta.playback.zones import SQL_ZONES
 from selecta.rooms import wiring as rooms_wiring
 from selecta.rooms.cloud_ports import OutboxPlaybackEvents, RoomPorts
 from selecta.routes import business_hours as business_hours_routes
+from selecta.routes import business_kiosk as business_kiosk_routes
 from selecta.routes import business_zones as business_zones_routes
 from selecta.routes import cloud_assets as cloud_assets_routes
 from selecta.routes import cloud_export as cloud_export_routes
@@ -466,6 +478,7 @@ def create_cloud_app(
             "X-Workspace-ID",
             "X-Operation-ID",
             "X-Admin-Session",
+            "X-Upload-Batch",
         ],
         expose_headers=["X-Request-ID"],
         max_age=600,
@@ -545,6 +558,13 @@ def create_cloud_app(
                     .limit(100)
                 )
                 batch = [dict(row._mapping) for row in rows]
+                # ADR-0443 BZ-0443-09: a person scoped to some venues never hears another
+                # venue's zone events; hidden rows still move the replay cursor.
+                from selecta.business.event_scope import zone_filter
+
+                sees = zone_filter(connection, workspace_id, principal.user.id)
+                for row in batch:
+                    row["hidden"] = not sees(row["payload"])
             # The rules version too, so the stream can say when this page's flags may have changed.
             return batch, rule_snapshot().version
 
@@ -589,6 +609,8 @@ def create_cloud_app(
                 rules_seen = rules_version
                 for row in batch:
                     cursor = row["id"]
+                    if row.get("hidden"):
+                        continue
                     frame = {
                         "id": cursor,
                         "topic": row["topic"],
@@ -820,10 +842,39 @@ def create_cloud_app(
         app, engine=engine, current_claims=current_claims, principal_for=_principal,
         rules=rule_cache,
     )
+    # ADR-0452 people and invitations, the workspace overview and setup (ADR-0453 D2/D6).
+    business_people_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal,
+        rules=rule_cache,
+    )
+    business_workspace_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
+    business_start_routes.install_routes(  # ADR-0453 S1: /business/start's pilot contact form
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
+    business_library_copy.install_routes(  # ADR-0453 D6 step 6: copy, never move
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
+    # Play here (ADR-0443): what a staff browser plays once it holds a zone's lease.
+    business_zone_speaker_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal,
+        presign=business_kiosk_routes.storage_presign(storage_api.r2_client, storage_api.buckets()),
+    )
     for business_routes in (business_hours_routes, business_zones_routes):
         business_routes.install_routes(
             app, engine=engine, current_claims=current_claims, principal_for=_principal
         )
+    # Kiosk players (ADR-0445); refused while business.kiosk is off.
+    business_kiosk_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal,
+        pepper=room_ports.pepper or rooms_wiring.pepper_from_environment(),
+        presign=business_kiosk_routes.storage_presign(storage_api.r2_client, storage_api.buckets()),
+    )
+    business_controls.install(  # ADR-0450 content controls and ADR-0451 Rooms for Business
+        app, engine=engine, current_claims=current_claims, principal_for=_principal,
+        pepper=room_ports.pepper,
+    )
     playback_api.install_routes(
         app,
         engine=engine,
@@ -874,6 +925,22 @@ def create_cloud_app(
     business_admin_routes.install_routes(
         app, engine=engine, current_claims=current_claims,
     )
+    # Business billing (ADR-0447); refused while business.billing is off, Stripe test mode only.
+    business_billing_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal,
+        allowed_origins=settings.allowed_origins,
+    )
+    # Usage meters, continuity and SLO credits (ADR-0448), behind business.entitlements.
+    business_entitlement_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
+    # Play-log export for licensing returns (ADR-0449); refused while business.licensing is off.
+    business_playlog_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
+    business_licensing_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
     admin_routes.install_routes(
         app,
         engine=engine,
@@ -886,6 +953,11 @@ def create_cloud_app(
         current_claims=current_claims,
         emergency_cache=emergency_cache,
         rule_cache=rule_cache,
+    )
+    # Business pricing behind business.signups, and the release-gate readout (BZ-0441, BZ-0454).
+    business_rollout_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal,
+        rules=rule_cache,
     )
     # Unit economics and step-4 readiness for Browser-first Cloud (BF-0464-04/05, BF-0467-04).
     admin_economics_routes.install_routes(app, engine=engine, current_claims=current_claims)

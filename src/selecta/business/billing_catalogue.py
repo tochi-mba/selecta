@@ -57,7 +57,6 @@ VOLUME_COUPON_ID = "selectadj_business_volume_10"
 TRIAL_DAYS = 14
 TRIAL_VENUES = 1
 TRIAL_ZONES = 1
-TRIAL_REQUIRES_CARD = True
 
 SALES_FORM_PATH = "/business/enterprise"
 
@@ -128,13 +127,9 @@ def estimate(quantities: Mapping[str, int], currency: str, interval: str) -> Est
 
 
 def trial_terms() -> dict[str, Any]:
-    return {
-        "days": TRIAL_DAYS,
-        "venues": TRIAL_VENUES,
-        "zones": TRIAL_ZONES,
-        "card_required": TRIAL_REQUIRES_CARD,
-        "one_per": ["organisation", "card"],
-    }
+    """What the trial offers, as the billing page shows it."""
+    return {"days": TRIAL_DAYS, "venues": TRIAL_VENUES, "zones": TRIAL_ZONES,
+            "card_required": True, "one_per": ["organisation", "card"]}
 
 
 def catalogue_prices() -> list[dict[str, Any]]:
@@ -199,18 +194,6 @@ def load_price_map(environ: Mapping[str, str] | None = None) -> dict[str, Busine
     env = os.environ if environ is None else environ
     raw = env.get(PRICE_MAP_ENV)
     return parse_price_map(json.loads(raw)) if raw else {}
-
-
-def price_map_json(price_map: BusinessPriceMap) -> str:
-    return json.dumps(
-        {
-            pid: {"item": p.item, "version": p.version, "currency": p.currency,
-                  "interval": p.interval}
-            for pid, p in price_map.items()
-        },
-        indent=2,
-        sort_keys=True,
-    )
 
 
 def price_id_for(

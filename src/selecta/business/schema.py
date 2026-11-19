@@ -11,7 +11,7 @@ the forced `workspace_isolation` policy in migration `bz0442orgs01`, like every 
   `standby_device_id` are the zone's kiosks (ADR-0445).
 - `crates`: a named, ordered set of songs. `venue_id` empty means organisation-wide.
 - `crate_songs`: a crate's songs in order. A deleted song keeps its row with `removed_at` set (a
-  tombstone), so restoring the song puts it back in the same crates at the same place.
+  tombstone), so it leaves every crate at once.
 """
 
 from __future__ import annotations

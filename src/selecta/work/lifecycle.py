@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
+from selecta.business.weight import lane_tier
 from selecta.work import artifacts, dependents, heads, outbox, provenance
 from selecta.work.errors import (
     CompletionRejected,
@@ -114,7 +115,7 @@ def free_slot(
 ) -> None:
     """Release the attempt's place in its head and correct V by what it really cost."""
     config = store.config
-    tier = store.entitlements.standing(attempt.workspace_id).tier
+    tier = lane_tier(store.entitlements.standing(attempt.workspace_id).tier, attempt.lane)
     heads.job_finished(
         connection,
         attempt.pool,

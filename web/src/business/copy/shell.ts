@@ -1,10 +1,10 @@
-// Copy for the business shell, the workspace switcher and band (S7), the business library and
-// settings sections, and the pilot admin page (S8) (ADR-0453 D2, D9, D13, D15). Manager and staff
+// Copy for the business shell, the workspace switcher and band (S7), and the business library and
+// settings sections (ADR-0453 D2, D9, D13, D15). Manager and staff
 // copy only: plain words, no exclamation marks, no blame, says SelectaDJ and REX Technologies.
 
 import type { Role } from '../types';
 
-export type NavId = 'overview' | 'venues' | 'schedules' | 'library' | 'requests' | 'people' | 'billing' | 'settings';
+export type NavId = 'overview' | 'venues' | 'schedules' | 'library' | 'requests' | 'people' | 'usage' | 'billing' | 'settings';
 
 export const NAV_LABELS: Record<NavId, string> = {
   overview: 'Overview',
@@ -13,6 +13,7 @@ export const NAV_LABELS: Record<NavId, string> = {
   library: 'Library',
   requests: 'Requests',
   people: 'People',
+  usage: 'Usage',
   billing: 'Billing',
   settings: 'Settings',
 };
@@ -72,22 +73,27 @@ export const SWITCHER_COPY = {
   failedList: "Couldn't load your workspaces.",
 } as const;
 
-export const UPLOAD_COPY = {
-  destination: (name: string) => `These songs go to ${name}`,
-  uploading: (count: number, name: string) => `Uploading ${count} ${count === 1 ? 'song' : 'songs'} to ${name}`,
-} as const;
-
 export const LIBRARY_COPY = {
-  title: 'Library',
-  intro: (org: string) => `Music in ${org}'s shared library. Venues choose from it with their own crates.`,
-  readOnly: 'You can look through the library. Only owners, admins and managers can change it.',
-  addMusic: 'Add music',
-  readOnlyAfterGrace: 'Update payment to make changes',
+  title: (org: string) => `${org} music library`,
+  intro: 'Music you manage here belongs to the organisation, not your personal library.',
+  loading: 'Loading music library',
+  loadFailed: "Couldn't load music.",
+  retry: 'Retry',
+  empty: 'No music here yet. Add music to your organisation to make a mix.',
+  explicitHeading: 'Explicit markings',
+  readOnly: 'This organisation is read-only',
   offline: "You're offline",
 } as const;
 
 export const SETTINGS_COPY = {
-  title: 'Settings',
+  title: 'Organisation settings',
+  detailsHeading: 'Business details',
+  saveDetails: 'Save business details',
+  detailsSaved: 'Business details saved',
+  detailsFailed: "Couldn't save business details. Try again.",
+  readOnly: 'This organisation is read-only',
+  offline: "You're offline",
+  notAdmin: 'Only an owner or admin can edit settings',
   licencesHeading: 'Music licences',
   licencesIntro: 'Each venue needs its own licence to play music in public.',
   noLicence: 'No licence yet',
@@ -97,70 +103,12 @@ export const SETTINGS_COPY = {
   openLicence: (venue: string) => `Open ${venue} licence`,
   noVenues: 'No venues yet. Add a venue to record its licence.',
   rulesHeading: 'Music rules',
-  rulesIntro: 'Each venue sets which songs can play, when, and how loud. Open a venue to change its rules.',
+  rulesIntro: 'Each venue sets its own music rules. Open a venue to change them.',
   openRules: (venue: string) => `Music rules for ${venue}`,
-  ssoHeading: 'Single sign-on',
-  ssoLocked: (plan: string) => `Single sign-on is part of ${plan}`,
-  ssoTalk: 'Talk to REX Technologies about it',
-  ssoOn: 'Single sign-on is set up by REX Technologies for your organisation.',
-  auditHeading: 'Activity',
-  auditEmpty: 'Nothing has happened yet.',
-  auditIntro: 'Recent changes and events across your venues.',
-} as const;
-
-export type PilotStatus = 'active' | 'ending' | 'ended' | 'converted';
-
-export const PILOT_COPY = {
-  title: 'Pilots',
-  intro: 'Friendly pilot venues for SelectaDJ for Business. Every change asks for a reason and is recorded.',
-  caption: 'Pilot organisations',
-  empty: 'No pilots yet. Create one',
-  loading: 'Loading pilots',
-  loadFailed: "Couldn't load the pilots.",
-  offline: "You're offline. The list shows what was last loaded",
-  create: 'Create pilot',
-  createTitle: 'Create a pilot',
-  createNote: 'The owner gets an invitation to set up their first venue.',
-  orgName: 'Organisation name',
-  ownerEmail: 'Owner email',
-  venues: 'Venues allowed',
-  zones: 'Zones allowed',
-  endDate: 'End date',
-  endDateHelp: 'At most 180 days from today. The default is 60 days.',
-  note: 'Note (optional)',
-  reason: 'Reason',
-  reasonHelp: 'Recorded in the audit log.',
-  reasonNeeded: 'Give a reason for this change.',
-  nameNeeded: 'Enter the organisation name.',
-  emailNeeded: 'Enter the owner email.',
-  allowanceNeeded: 'Allow at least 1 venue and 1 zone.',
-  dateNeeded: 'Choose an end date after today, at most 180 days away.',
-  save: 'Save',
-  cancel: 'Cancel',
-  created: (name: string) => `Pilot created for ${name}. The owner has been invited.`,
-  columns: {
-    org: 'Organisation', owner: 'Owner email', venues: 'Venues', zones: 'Zones', start: 'Start', end: 'End',
-    status: 'Status', activity: 'Last activity', actions: 'Actions',
-  },
-  used: (used: number, allowed: number) => `${used} of ${allowed}`,
-  never: 'None yet',
-  status: { active: 'Active', ending: 'Ending soon', ended: 'Ended', converted: 'Converted' } as Record<PilotStatus, string>,
-  extend: 'Extend',
-  allowance: 'Change allowance',
-  convert: 'Convert to paid',
-  end: 'End now',
-  rowAction: (action: string, org: string) => `${action}: ${org}`,
-  extendTitle: (org: string) => `Extend the pilot for ${org}`,
-  allowanceTitle: (org: string) => `Change the allowance for ${org}`,
-  convertTitle: (org: string) => `Convert ${org} to paid`,
-  convertNote: 'The owner gets a link to subscribe. The pilot keeps running until they do.',
-  endTitle: (org: string) => `End the pilot for ${org} now`,
-  endNote: "Management turns read-only straight away. Music keeps playing tonight and stops at each venue's next closing time, so no venue goes silent mid-service. The owner is told.",
-  endConfirm: 'End pilot',
-  done: {
-    extend: (org: string) => `Pilot for ${org} extended.`,
-    allowance: (org: string) => `Allowance for ${org} changed.`,
-    convert: (org: string) => `Subscribe link sent to the owner of ${org}.`,
-    end: (org: string) => `Pilot for ${org} ended. Music stops at each venue's next closing time.`,
-  },
+  managementHeading: 'Management',
+  orgLine: (name: string) => `Organisation: ${name}`,
+  countryLine: (country: string) => `Country: ${country}`,
+  roleLine: (role: string) => `Role: ${role}`,
+  peopleLink: 'People and permissions',
+  billingLink: 'Billing and invoices',
 } as const;

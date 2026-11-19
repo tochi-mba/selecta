@@ -15,7 +15,6 @@ from selecta.persistence import new_id
 
 BUSINESS = "business"
 OWNER = "owner"
-MEMBER = "business_member"
 
 _KIND_ORDER = {"personal": 0}
 
@@ -83,18 +82,6 @@ def get(conn: Connection, workspace_id: str) -> dict:
     if row is None:
         raise NotFound("organisation not found")
     return _org(row)
-
-
-def add_member(conn: Connection, workspace_id: str, user_id: str, *, now: int) -> None:
-    """Make `user_id` a member of the organisation. Idempotent: an existing member is kept."""
-    get(conn, workspace_id)
-    if is_member(conn, workspace_id, user_id):
-        return
-    conn.execute(
-        workspace_members.insert().values(
-            workspace_id=workspace_id, user_id=user_id, role=MEMBER, created_at=now
-        )
-    )
 
 
 def is_member(conn: Connection, workspace_id: str, user_id: str) -> bool:

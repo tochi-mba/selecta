@@ -1,9 +1,11 @@
 // Browser-only fixtures for the business UI. This entry is bundled only when
 // SELECTA_CLOUD_E2E or SELECTA_BUSINESS_E2E is set; it never ships to customers.
 // Invented data is labelled as such, not presented as live venue or billing state.
-import { useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { scenario, type Scenario } from '../fixtures';
+import { arrangeVenues, DEFAULT_OPTIONS } from '../console/consoleLogic';
+import { VenueHealthGrid } from '../console/VenueHealthGrid';
+import { NOW, scenario, stressVenues, type Scenario } from '../fixtures';
 import '../business.css';
 
 const CASES: Scenario[] = [
@@ -13,7 +15,39 @@ const CASES: Scenario[] = [
   'pilot_ended', 'degraded', 'stress',
 ];
 
+// `?grid=500`: the HQ health grid over 500 invented venues with a search box and a sort, for the
+// ADR-0454 UI test "500 venues grid sorts and searches under 100 ms". After each change the time
+// from the input to the grid's committed render goes on `data-arrange-ms` on the grid section.
+function GridStress({ count }: { count: number }) {
+  const venues = useMemo(() => stressVenues(count), [count]);
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<'severity' | 'name' | 'region'>('severity');
+  const started = useRef(0);
+  const section = useRef<HTMLElement>(null);
+  const shown = useMemo(() => arrangeVenues(venues, { ...DEFAULT_OPTIONS, query, sort }, NOW), [venues, query, sort]);
+  useLayoutEffect(() => {
+    if (started.current) section.current?.setAttribute('data-arrange-ms', String(performance.now() - started.current));
+  }, [shown]);
+  return (
+    <main className="biz" style={{ padding: '1rem' }}>
+      <h1>Venue grid fixture: {count} invented venues</h1>
+      <label htmlFor="grid-search">Search venues</label>
+      <input id="grid-search" value={query} onChange={(event) => { started.current = performance.now(); setQuery(event.target.value); }} />
+      <label htmlFor="grid-sort">Sort</label>
+      <select id="grid-sort" value={sort} onChange={(event) => { started.current = performance.now(); setSort(event.target.value as typeof sort); }}>
+        <option value="severity">severity</option><option value="name">name</option><option value="region">region</option>
+      </select>
+      <section ref={section} aria-label="Venue grid"><VenueHealthGrid venues={shown} now={NOW} /></section>
+    </main>
+  );
+}
+
 function BusinessHarness() {
+  const grid = Number(new URLSearchParams(location.search).get('grid') ?? 0);
+  return grid > 0 ? <GridStress count={grid} /> : <ScenarioHarness />;
+}
+
+function ScenarioHarness() {
   const parameters = new URLSearchParams(location.search);
   const initial = parameters.get('scenario') as Scenario | null;
   const [selected, setSelected] = useState<Scenario>(

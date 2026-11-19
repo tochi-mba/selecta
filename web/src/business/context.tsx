@@ -2,6 +2,7 @@
 // network state that drives Offline and Degraded (ADR-0453 D3). The shell (BusinessApp) provides it.
 
 import { createContext, useContext } from 'react';
+import type { Api } from '../cloud/api';
 import type { BusinessClient } from './client';
 import type { BusinessApi } from './api';
 import type { Health, Org, Venue, Device, ActivityEntry } from './types';
@@ -25,6 +26,10 @@ export type BusinessCtx = {
   go: (path: string) => void;
   /** The BZ-1 typed routes (zones, crates) bound to this workspace, when the shell provides them. */
   bizApi?: BusinessApi;
+  /** The signed-in Api helper, for the zone playback routes (Play here, ADR-0443). */
+  api?: Api;
+  /** The signed-in person's own workspace, for copying their music in (never moved). */
+  personalWorkspaceId?: string;
 };
 
 export const BusinessContext = createContext<BusinessCtx | null>(null);
@@ -49,7 +54,7 @@ export const PATHS = {
   venues: (org: string) => `/b/${org}/venues`,
   venue: (org: string, venue: string, tab?: string) => `/b/${org}/v/${venue}${tab ? `/${tab}` : ''}`,
   control: (org: string, venue: string) => `/b/${org}/v/${venue}/control`,
-  section: (org: string, section: 'schedules' | 'library' | 'requests' | 'people' | 'billing' | 'settings') => `/b/${org}/${section}`,
+  section: (org: string, section: 'schedules' | 'library' | 'requests' | 'people' | 'usage' | 'billing' | 'settings') => `/b/${org}/${section}`,
   pilots: '/admin/business/pilots',
 } as const;
 
@@ -60,7 +65,7 @@ export type BusinessRoute =
   | { page: 'venues'; org: string }
   | { page: 'venue'; org: string; venue: string; tab?: string }
   | { page: 'control'; org: string; venue: string }
-  | { page: 'section'; org: string; section: 'schedules' | 'library' | 'requests' | 'people' | 'billing' | 'settings' }
+  | { page: 'section'; org: string; section: 'schedules' | 'library' | 'requests' | 'people' | 'usage' | 'billing' | 'settings' }
   | null;
 
 export function parseBusinessPath(pathname: string): BusinessRoute {
@@ -78,7 +83,7 @@ export function parseBusinessPath(pathname: string): BusinessRoute {
     if (venue[2] === 'control') return { page: 'control', org, venue: id };
     return { page: 'venue', org, venue: id, tab: venue[2] };
   }
-  const section = /^\/(schedules|library|requests|people|billing|settings)$/.exec(rest);
+  const section = /^\/(schedules|library|requests|people|usage|billing|settings)$/.exec(rest);
   if (section) return { page: 'section', org, section: section[1] as 'schedules' };
   return { page: 'hq', org };
 }

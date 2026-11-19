@@ -3,7 +3,7 @@
 // a count, and Stay open late when the venue has an allowance. Nothing destructive lives here.
 // While the zone's state is unknown the deck is a skeleton with no buttons at all.
 
-import { STAFF_COPY, STEER_LABEL, requestsLabel, type SteerWord } from '../copy/staff';
+import { STAFF_COPY, STEER_LABEL, type SteerWord } from '../copy/staff';
 import { BigAction } from './BigAction';
 import { VolumeLimitSlider } from './VolumeLimitSlider';
 import './staff.css';
@@ -45,7 +45,7 @@ export function StaffControlDeck({ zoneName, paused, steerable, onSteer, onSkip,
       {paused
         ? <BigAction run={onResume}>{STAFF_COPY.resume}</BigAction>
         : <BigAction run={onPause} disabled={steerable ? null : undefined}>{STAFF_COPY.pause}</BigAction>}
-      <BigAction run={onRequests} aria-label={`${requestsLabel(requests)} waiting`} detail={`${requests} waiting`}>{STAFF_COPY.requests}</BigAction>
+      <BigAction run={onRequests} detail={`${requests} waiting`}>{STAFF_COPY.requests}</BigAction>
       {stayLate?.kind === 'offer' && <BigAction className="biz-deck-wide" run={stayLate.run} disabled={stayLate.disabled}>{stayLate.words}</BigAction>}
       {stayLate?.kind === 'on' && <p className="biz-staff-line biz-deck-wide">{stayLate.words}</p>}
       <VolumeLimitSlider label={STAFF_COPY.volume} value={volume} cap={cap} onChange={onVolume} />

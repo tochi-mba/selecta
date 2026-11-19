@@ -21,6 +21,8 @@ export type PollRule = {
 };
 
 export const POLLING: readonly PollRule[] = [
+  { file: 'devices/useZoneSpeaker.ts', reads: 'zone lease heartbeat', everyMs: 5000, hidden: 'continues', why: 'the active speaker must renew its fenced lease while the tab is hidden' },
+  { file: 'kiosk/main.ts', reads: 'kiosk heartbeat, view, horizon and updates', everyMs: '250 tick; controller cadences', hidden: 'continues', why: 'the dedicated venue speaker keeps its offline horizon and lease current while hidden' },
   { file: 'business/BusinessApp.tsx', reads: 'business overview while streaming is unavailable', everyMs: 'TICK_MS', hidden: 'continues', why: 'the visual clock keeps ticking while useVisiblePoll pauses network reads in hidden tabs' },
   { file: 'business/console/HqConsole.tsx', reads: 'HQ venue state when the stream is unavailable', everyMs: 10000, hidden: 'pauses', why: 'useVisiblePoll pauses requests when the tab is hidden and refreshes on return' },
   { file: 'business/staff/useStaffCommands.ts', reads: null, everyMs: 'SWEEP_MS', hidden: 'continues', why: 'the offline command queue still expires stale commands even when the page is hidden' },

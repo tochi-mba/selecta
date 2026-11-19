@@ -44,3 +44,5 @@ Not Cloud media contexts, listed so nobody adds them by mistake:
 Turn `cloud.single_audio_owner` off (`SELECTA_FLAGS=-cloud.single_audio_owner`). `CloudApp`
 stops mounting the dock, `CloudListen` renders its own bar with the original one-page source and
 `LibraryPanel` plays through its own element, exactly as before.
+
+`web/src/devices/useZoneSpeaker.ts`: one audio element, owned by the leased business zone speaker, stopped on lease expiry, handback, focus transfer or unmount.

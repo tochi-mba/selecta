@@ -111,3 +111,49 @@ def mix_exports_allowed(
     conn: Connection, organisation_id: str, is_flag_on: Callable[[str], bool]
 ) -> bool:
     return mix_export_decision(conn, organisation_id, is_flag_on).allowed
+
+
+def set_mix_exports(conn: Connection, org, enabled: bool, *, actor: str, now: float) -> None:
+    """The owner's organisation setting for business mix exports. Audited."""
+    from selecta.business.commercial_audit import audit
+
+    exists = conn.execute(sa.select(biz_org_settings.c.organisation_id).where(
+        biz_org_settings.c.organisation_id == org.organisation_id)).first()
+    if exists:
+        conn.execute(sa.update(biz_org_settings).where(
+            biz_org_settings.c.organisation_id == org.organisation_id).values(
+            mix_exports_enabled=bool(enabled), updated_at=now))
+    else:
+        conn.execute(sa.insert(biz_org_settings).values(
+            organisation_id=org.organisation_id, workspace_id=org.workspace_id,
+            playlog_retention_days=1095, mix_exports_enabled=bool(enabled),
+            always_open_confirmed=False, quiet_point_local=None, updated_at=now))
+    audit(conn, workspace_id=org.workspace_id, organisation_id=org.organisation_id,
+          action="mix_exports.set", actor=actor, now=now, detail={"enabled": bool(enabled)})
+
+
+def business_budget_bytes(conn: Connection, workspace_id: str) -> int | None:
+    """A business organisation's derived-audio budget (15% of pooled storage for its paid
+    venues), or None for any other workspace."""
+    from selecta.business.billing import billed_quantities
+    from selecta.business.commercial_facts import SqlFacts
+
+    org = SqlFacts().organisation(conn, workspace_id)
+    if org is None:
+        return None
+    return derived_budget_bytes(billed_quantities(conn, org)["business_venue"])
+
+
+class MixExportsOff(ValueError):
+    """A business mix export while the owner's setting or `business.mix_exports` is off."""
+
+
+def require_mix_exports(conn: Connection, workspace_id: str,
+                        is_flag_on: Callable[[str], bool]) -> None:
+    """Refuse a mix export for a business organisation unless both switches are on."""
+    from selecta.identity.schema import workspaces
+
+    kind = conn.execute(sa.select(workspaces.c.kind).where(workspaces.c.id == workspace_id)
+                        ).scalar()
+    if kind == "business" and not mix_exports_allowed(conn, workspace_id, is_flag_on):
+        raise MixExportsOff("Business mix exports are off for this organisation.")

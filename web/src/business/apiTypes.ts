@@ -25,6 +25,9 @@ export type OrgRecord = {
   created_at?: number;
 };
 
+/** One line of a venue's 90-day activity log (skip, steer, volume, approve), newest first. */
+export type ActivityLine = { id: string; at: number; venue_id: string; zone_id: string | null; kind: string; words: string };
+
 export type VenueStatus = 'active' | 'paused' | 'archived';
 
 export type VenueAddress = { line1?: string; line2?: string; city?: string; postcode?: string; region?: string; [field: string]: string | undefined };
@@ -73,6 +76,3 @@ export type Crate = {
 
 /** One place a crate is used: a schedule block, a zone default or a content rule. */
 export type CrateUse = { kind?: string; id?: string; label?: string; venue_id?: string | null; zone_id?: string | null; [field: string]: unknown };
-
-/** The 409 body of a refused crate delete. */
-export type CrateInUseBody = { uses: CrateUse[] };

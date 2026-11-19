@@ -325,8 +325,8 @@ export type Client = {
   del: <T>(path: string, headers?: Record<string, string>) => Promise<T>;
 };
 
-/** One client per request, made once: a view calling `getVia(request)` on every render gets the
- * same function back, so it is as stable in hook dependencies as the old module-level `get`. */
+/** One client per request, made once: a view calling `clientFor(request)` on every render gets the
+ * same client back, so it is as stable in hook dependencies as the old module-level `get`. */
 const clients = new WeakMap<Request, Client>();
 
 /** get/post/del over an injected request, with the local helpers' exact semantics. */
@@ -352,15 +352,6 @@ export function clientFor(via: Request = request): Client {
   clients.set(via, made);
   return made;
 }
-
-/** `get` over an injected request, with the local `get`'s exact semantics. */
-export const getVia = (via: Request = request) => clientFor(via).get;
-
-/** `post` over an injected request, with the local `post`'s exact semantics. */
-export const postVia = (via: Request = request) => clientFor(via).post;
-
-/** `del` over an injected request, with the local `del`'s exact semantics. */
-export const delVia = (via: Request = request) => clientFor(via).del;
 
 export const get = <T,>(path: string) => send<T>(path);
 

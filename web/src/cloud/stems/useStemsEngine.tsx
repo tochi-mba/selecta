@@ -5,7 +5,7 @@ import type { StemSurfaces } from '../../views/liveTransitions';
 import { browserMovesOffered, BROWSER_STEM_MOVES } from '../browserMoves';
 import { engineStemsStore } from './engineStore';
 import { stemsFlagOn, stemsLicenceHold } from './flag';
-import { StemReadiness, StemsTabNotice } from './StemReadiness';
+import { StemReadiness, StemsOffer, StemsTabNotice } from './StemReadiness';
 import { stemsAbility, type StemsRole } from './types';
 import { useStems } from './useStems';
 
@@ -53,15 +53,19 @@ export function useStemsEngine({ role, programme, prefetch }: { role: StemsRole;
     });
   }, [enabled, manager, pausedByMember, prefetch, programme, role]);
   const snapshot = useStems(store);
+  const [notNow, setNotNow] = useState(false);
   const surfaces = useMemo<StemSurfaces | null>(() => {
     const ability = snapshot ? stemsAbility(snapshot.splitter, snapshot.role) : null;
-    if (!enabled || !snapshot || !ability) return null;
+    if (!enabled || !snapshot || !ability || !store) return null;
     const stemMoves = browserMovesOffered(ability, on).filter((offered) => (BROWSER_STEM_MOVES as readonly string[]).includes(offered.move));
     return {
       stemMoves,
       readiness: (key) => <StemReadiness enabled status={snapshot.windows[key]} splitter={snapshot.splitter} role={snapshot.role} />,
+      offer: (move) => ((BROWSER_STEM_MOVES as readonly string[]).includes(move) && !notNow
+        ? <StemsOffer enabled snapshot={snapshot} actions={store.actions} onNotNow={() => setNotNow(true)} />
+        : null),
       listenNotice: <StemsTabNotice enabled snapshot={snapshot} />,
     };
-  }, [enabled, snapshot, on]);
+  }, [enabled, snapshot, on, store, notNow]);
   return { enabled, store, surfaces };
 }

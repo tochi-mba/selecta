@@ -27,7 +27,7 @@ def test_business_schedule_and_offline_routes_have_distinct_disabled_rollout_fla
     owners = flags.route_owners()
     for flag_id, dependency in (
         ("business.schedules", "business.orgs"),
-        ("business.offline", "business.schedules"),
+        ("business.offline", "business.kiosk"),
     ):
         flag = registry[flag_id]
         assert flag.default is False

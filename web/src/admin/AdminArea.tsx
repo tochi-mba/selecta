@@ -5,11 +5,12 @@ import { AiPage, SecurityPage } from './AiSecurityPages';
 import { FlagsPage } from './FlagsPage';
 import { JobsPage } from './JobsPage';
 import { OverviewPage } from './OverviewPage';
+import { PilotsPage } from './PilotsPage';
 import './admin.css';
 
-export type AdminPage = 'overview' | 'jobs' | 'accounts' | 'ai' | 'security' | 'flags';
+export type AdminPage = 'overview' | 'jobs' | 'accounts' | 'ai' | 'security' | 'flags' | 'pilots';
 
-/** The six pages (§7.5), each shown only to roles that can read it. The server checks again. */
+/** The pages (§7.5, plus Business pilots, ADR-0453 S8), each shown only to roles that can read it. The server checks again. */
 export const PAGES: { id: AdminPage; label: string; needs: string }[] = [
   { id: 'overview', label: 'Overview', needs: 'platform.dashboard.read' },
   { id: 'jobs', label: 'Jobs & workers', needs: 'jobs.read' },
@@ -17,6 +18,7 @@ export const PAGES: { id: AdminPage; label: string; needs: string }[] = [
   { id: 'ai', label: 'AI routing', needs: 'models.read' },
   { id: 'security', label: 'Security', needs: 'security.audit.read' },
   { id: 'flags', label: 'Flags', needs: 'flags.read' },
+  { id: 'pilots', label: 'Business pilots', needs: 'business.pilots.create' },
 ];
 
 export function adminPageFor(pathname: string): AdminPage {
@@ -86,6 +88,7 @@ export default function AdminArea({ token, onLeave, origin }: { token: TokenSour
         {current?.id === 'ai' && <AiPage api={api} can={can} />}
         {current?.id === 'security' && <SecurityPage api={api} can={can} me={me.user_id} />}
         {current?.id === 'flags' && <FlagsPage api={api} can={can} />}
+        {current?.id === 'pilots' && <PilotsPage api={api} />}
       </main>
     </div>
   );

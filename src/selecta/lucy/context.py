@@ -13,7 +13,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from selecta.lucy import conversations, intent, memory, policy, proposals
+from selecta.lucy import conversations, memory, policy, proposals
 from selecta.lucy import settings as lucy_settings
 from selecta.lucy.ids import now_iso
 
@@ -164,5 +164,3 @@ def history(conn: sqlite3.Connection, conversation: str, upto_turn: str | None) 
     return turns
 
 
-def constraints_text(rules: list[intent.Constraint]) -> str:
-    return "; ".join(intent.describe(rule) for rule in intent.active(rules))

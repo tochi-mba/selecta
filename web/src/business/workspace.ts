@@ -97,8 +97,6 @@ export function canSwitch(state: WorkspaceState, targetId?: string): string | nu
   return switchBlock(state, targetId)?.reason ?? null;
 }
 
-export type WorkspaceStore = ReturnType<typeof createWorkspaceStore>;
-
 export function createWorkspaceStore(init: { userId: string | null; workspaces?: Workspace[]; online?: boolean }) {
   const workspaces = init.workspaces ?? [];
   let state: WorkspaceState = {

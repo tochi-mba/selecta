@@ -10,6 +10,7 @@ import { daysUntil, LICENCE_WARN_DAYS } from '../state';
 import { isoDayWords } from '../time';
 import type { Licence } from '../types';
 import './forms.css';
+import { LicenceGuide } from './LicenceGuide';
 
 export type LicenceCheck = { ok: true; soon: boolean } | { ok: false; error: string };
 
@@ -61,6 +62,7 @@ export function LicenceAttestationForm({ initial, now, onSave, disabled, onDraft
 
   return <form className="bzf-form" onSubmit={(event: FormEvent) => { event.preventDefault(); void submit(); }} noValidate>
     <p className="bzf-note"><Status kind="needs-action">Before music plays</Status> {LICENCE_COPY.noPlayUntil}</p>
+    <LicenceGuide />
     <Select label={LICENCE_COPY.kind} value={kind} onChange={setKind} disabled={off} options={[{ value: 'themusiclicence', label: LICENCE_COPY.tml }, { value: 'other', label: LICENCE_COPY.other }]} />
     {kind === 'other' && <TextField label={LICENCE_COPY.otherName} value={otherName} onChange={setOtherName} disabled={off} required error={errors.other} />}
     <TextField label={LICENCE_COPY.number} value={number} onChange={setNumber} disabled={off} required error={errors.number} />

@@ -284,6 +284,32 @@ def job_key(
     )
 
 
+def zone_fair_order(rows: list, key=None, served: dict | None = None) -> list:
+    """One account's jobs in claim order with its zones taking turns (ADR-0443 BZ-0443-10).
+
+    Within an urgency, each zone's jobs keep `job_key` order (deadline, line, age) and the zones
+    interleave: every zone's first job, then every zone's second, and so on; jobs with the same
+    turn go by `job_key`. A flood of work for one zone therefore waits behind the next job of
+    every other zone instead of in front of it. Jobs without a zone (personal accounts, work
+    for the whole organisation) are one group, so an account without zones keeps the plain
+    `job_key` order. Rows need `urgency`, `needed_by`, `line_position`, `created_at` and
+    `zone_id` attributes. `served` maps a zone to how many of its jobs started recently, so the
+    turns carry on from one claim to the next instead of restarting."""
+    key = key or (lambda r: job_key(r.urgency, r.needed_by, r.line_position, r.created_at))
+    ordered = sorted(rows, key=key)
+    turns: dict[tuple[int, object], int] = {}
+    ranked = []
+    for row in ordered:
+        zone = getattr(row, "zone_id", None)
+        group = (row.urgency, zone)
+        start = (served or {}).get(zone, 0) if zone is not None else 0
+        turn = turns.get(group, start)
+        turns[group] = turn + 1
+        ranked.append(((row.urgency, turn, key(row)), row))
+    ranked.sort(key=lambda pair: pair[0])
+    return [row for _, row in ranked]
+
+
 # --- Lanes -------------------------------------------------------------------------------------
 
 

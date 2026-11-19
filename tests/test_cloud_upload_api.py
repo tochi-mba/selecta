@@ -368,7 +368,7 @@ def test_a_batch_over_500_files_is_refused_before_planning(cloud_engine):
     ],
 )
 def test_planning_errors_map_to_clear_statuses(cloud_engine, monkeypatch, error, status, code):
-    def failing(self, conn, workspace_id, files):
+    def failing(self, conn, workspace_id, files, **_named):  # uploaded_by, venue_id
         raise error
 
     monkeypatch.setattr(Uploads, "plan_batch", failing)

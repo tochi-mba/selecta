@@ -10,6 +10,7 @@ import sqlalchemy as sa
 
 from selecta import flags
 from selecta.billing import plans, stripe_sync
+from selecta.business import entitlement_gates
 from selecta.flags import targeting
 from selecta.flags.matching import Context
 from selecta.flags.rules import RulesCache, user_preferences
@@ -40,8 +41,11 @@ class CloudJobEntitlements(Entitlements):
             entitlement = stripe_sync.effective_entitlement(conn, workspace_id)
             plan = plans.plan_for(entitlement.plan_id, entitlement.plan_version)
             caps = dict(plan.concurrency) | {"speculative": 1}
+            # ADR-0448: a business organisation's work runs at the open-hours weight while one
+            # of its venues is open (from 30 minutes before), else at the business weight.
+            business_tier = entitlement_gates.scheduler_tier(conn, workspace_id, db_now(conn))
             return AccountStanding(
-                tier=plan.id,
+                tier=business_tier or plan.id,
                 suspended=owner.deleted_at is not None,
                 entitlement_version=entitlement.snapshot_version,
                 caps=caps,

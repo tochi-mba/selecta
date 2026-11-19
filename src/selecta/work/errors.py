@@ -48,9 +48,6 @@ class UnknownJob(KeyError):
     pass
 
 
-class UnknownAttempt(KeyError):
-    pass
-
 
 class ConcurrentChange(RuntimeError):
     """A job changed between being read and being written, which a row lock should prevent."""

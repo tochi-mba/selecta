@@ -53,6 +53,12 @@ def test_every_core_cloud_task_runs_cleanly_and_missing_secrets_are_named(sqlite
     names = {task.name for task in plan.tasks}
     assert names == {
         "business.zone_clock",
+        "business.entitlements",
+        "business.zone_autoplan",
+        "business.kiosk_alerts",
+        "business.kiosk_horizons",
+        "business.billing",
+        "business.licensing",
         "actions",
         "reservations",
         "lucy_runs",
@@ -65,6 +71,7 @@ def test_every_core_cloud_task_runs_cleanly_and_missing_secrets_are_named(sqlite
     }
     assert set(plan.disabled) == {
         "stripe_events",
+        "business.billing.vat_recheck",
         "stripe_reconcile",
         "storage_deletions",
         "account_deletions",

@@ -43,6 +43,7 @@ PUBLIC = {
     ("GET", "/api/ready"),
     ("POST", "/api/webhooks/stripe"),
     ("POST", "/api/webhooks/workos"),
+    ("POST", "/api/business/billing/stripe-webhook"),
 }
 # Anonymous routes are isolated by an unguessable guest/display capability cookie rather than a
 # signed-in workspace. Their own API suite proves a cookie for one room cannot address another.
@@ -57,17 +58,43 @@ CAPABILITY_ONLY = {
     ("GET", "/api/guest/rooms/{room_id}/nicknames"),
     ("PUT", "/api/guest/rooms/{room_id}/nickname"),
     ("POST", "/api/guest/rooms/{room_id}/leave"),
+    # Rooms for Business guests (ADR-0451): the table card's code plus the guest's HttpOnly cookie
+    # scoped to /api/venue-rooms; a wrong code gets a visitor cookie and the lockout, never
+    # another room (service rules in tests/test_business_rooms_*.py; no route-level test yet).
+    ("POST", "/api/venue-rooms/{code}/join"),
+    ("GET", "/api/venue-rooms/{code}/state"),
+    ("GET", "/api/venue-rooms/{code}/search"),
+    ("POST", "/api/venue-rooms/{code}/requests"),
+    ("POST", "/api/venue-rooms/{code}/requests/{request_id}/vote"),
     ("POST", "/api/display/pairings"),
     ("GET", "/api/display/view"),
     ("DELETE", "/api/display/pairing"),
+    # Kiosk players (ADR-0445) carry an HttpOnly kiosk token (or, unpaired, a pairing secret)
+    # bound to one zone; `test_business_kiosk.py` proves one zone's token cannot reach another.
+    ("POST", "/api/kiosk/pairings"),
+    ("GET", "/api/kiosk/pairings/status"),
+    ("POST", "/api/kiosk/heartbeat"),
+    ("POST", "/api/kiosk/health"),
+    ("GET", "/api/kiosk/view"),
+    ("GET", "/api/kiosk/horizon"),
+    ("POST", "/api/kiosk/segment-url"),
+    ("POST", "/api/kiosk/resync"),
+    ("POST", "/api/kiosk/pin"),
+    ("GET", "/api/kiosk/requests/next"),
+    ("POST", "/api/kiosk/requests/{request_id}/played"),
+    ("GET", "/api/kiosk/screen-code"),
 }
 # Routes that act only on the signed-in person, whatever workspace a request names.
 SELF_ONLY = {
     ("POST", "/api/onboarding/complete"),
     ("POST", "/api/account/sign-out-everywhere"),
     ("DELETE", "/api/account"),
+    # ADR-0453 S1: emails REX Technologies sales from the signed-in person; reads no workspace.
+    ("POST", "/api/business/pilot-interest"),
     # Staff only: starts the caller's own admin session and never reads a customer workspace.
     ("POST", "/api/admin/session"),
+    # The business price list: catalogue figures only, behind business.signups targeting.
+    ("GET", "/api/business/pricing"),
 }
 # Staff-console routes never trust a customer workspace header. Every one first requires the
 # caller's server-side privileged session; the admin route tests exercise its scoped commands.
@@ -108,15 +135,55 @@ STAFF_ONLY = {
     ("POST", "/api/admin/takedowns/{notice_id}/{command}"),
     ("POST", "/api/admin/upload-restrictions/{workspace_id}/lift"),
     ("POST", "/api/admin/business/pilots"),
+    ("GET", "/api/admin/business/pilots"),
+    ("POST", "/api/admin/business/pilots/{pilot_id}/{action}"),
+    ("POST", "/api/admin/business/orgs/{org_id}/billing/credit"),
+    ("POST", "/api/admin/business/orgs/{org_id}/billing/refund"),
+    # ADR-0448 SLO credit decisions: staff session plus business.billing.refund.
+    ("GET", "/api/admin/business/orgs/{org_id}/slo-credits"),
+    ("POST", "/api/admin/business/orgs/{org_id}/slo-credits/{proposal_id}/approve"),
+    ("POST", "/api/admin/business/orgs/{org_id}/slo-credits/{proposal_id}/reject"),
+    ("POST", "/api/admin/business/orgs/{org_id}/contracts"),
+    ("POST", "/api/admin/business/orgs/{org_id}/contracts/{contract_id}/revoke"),
     ("GET", "/api/admin/flags/cloud.hosted_media/grandfather-audit"),
     ("GET", "/api/admin/flags/cloud.local_first/percentage-readiness"),
     ("GET", "/api/admin/economics/cost-per-mode"),
     ("GET", "/api/admin/economics/lucy-ceiling"),
+    # The business release-gate readout reads repository records and flag rules only.
+    ("GET", "/api/admin/business/rollout"),
 }
 # Business routes require an organisation workspace and membership, not merely a
 # personal library workspace. The dedicated Business tests exercise their tenant
 # checks and the flag-guard suite proves they are disabled before rollout.
 BUSINESS_SCOPED = {
+    ("GET", "/api/business/billing"),
+    ("POST", "/api/business/billing/preview"),
+    ("PUT", "/api/business/billing/po-number"),
+    ("PUT", "/api/business/billing/venues/{venue_id}/cost-centre"),
+    ("PUT", "/api/business/billing/collection-method"),
+    ("GET", "/api/business/billing/cost-breakdown"),
+    ("POST", "/api/business/billing/checkout"),
+    ("POST", "/api/business/billing/checkout/complete"),
+    ("POST", "/api/business/billing/downgrade"),
+    ("POST", "/api/business/billing/venues/{venue_id}/resume"),
+    ("GET", "/api/business/billing/transfers"),
+    ("POST", "/api/business/billing/transfers"),
+    ("POST", "/api/business/billing/transfers/{transfer_id}/accept"),
+    ("POST", "/api/business/billing/transfers/{transfer_id}/cancel"),
+    ("GET", "/api/business/play-log/export"),
+    ("GET", "/api/business/play-log/retention"),
+    ("PUT", "/api/business/play-log/retention"),
+    ("GET", "/api/business/venues/{venue_id}/licence/state"),
+    ("POST", "/api/business/venues/{venue_id}/licence/extend"),
+    ("PUT", "/api/business/library/songs/{song_id}/isrc"),
+    ("GET", "/api/business/venues/{venue_id}/isrc-coverage"),
+    ("GET", "/api/business/venues/{venue_id}/isrc-tracks"),
+    ("GET", "/api/business/terms"),
+    ("POST", "/api/business/terms/accept"),
+    ("GET", "/api/business/uploads/statement"),
+    ("POST", "/api/business/uploads/attestation"),
+    ("GET", "/api/business/settings/mix-exports"),
+    ("PUT", "/api/business/settings/mix-exports"),
     ("GET", "/api/business/orgs"),
     ("POST", "/api/business/orgs"),
     ("GET", "/api/business/orgs/{org_id}"),
@@ -125,6 +192,7 @@ BUSINESS_SCOPED = {
     ("GET", "/api/business/venues/{venue_id}"),
     ("PATCH", "/api/business/venues/{venue_id}"),
     ("POST", "/api/business/venues/{venue_id}/archive"),
+    ("GET", "/api/business/venues/{venue_id}/activity"),
     ("GET", "/api/business/zones"),
     ("POST", "/api/business/zones"),
     ("PATCH", "/api/business/zones/{zone_id}"),
@@ -136,6 +204,7 @@ BUSINESS_SCOPED = {
     ("DELETE", "/api/business/crates/{crate_id}"),
     ("GET", "/api/business/venues/{venue_id}/hours"),
     ("PUT", "/api/business/venues/{venue_id}/hours"),
+    ("PUT", "/api/business/venues/{venue_id}/closing-mode"),
     ("POST", "/api/business/venues/{venue_id}/hour-exceptions"),
     ("DELETE", "/api/business/venues/{venue_id}/hour-exceptions/{exception_id}"),
     ("GET", "/api/business/venues/{venue_id}/holiday-suggestions"),
@@ -143,12 +212,86 @@ BUSINESS_SCOPED = {
     ("POST", "/api/business/venues/{venue_id}/close-now"),
     ("POST", "/api/business/venues/{venue_id}/close-now/{override_id}/undo"),
     ("GET", "/api/business/zones/{zone_id}/state"),
+    # ADR-0448 usage meters, continuity and always-open: business workspace and membership.
+    ("GET", "/api/business/usage"),
+    ("GET", "/api/business/slo"),
+    ("PUT", "/api/business/always-open"),
     ("GET", "/api/business/zones/{zone_id}/programme"),
     ("PUT", "/api/business/zones/{zone_id}/programme"),
     ("GET", "/api/business/zones/{zone_id}/offline-manifest"),
     ("POST", "/api/business/zones/{zone_id}/commands"),
     ("PUT", "/api/business/zones/{zone_id}/cache-report"),
+    ("POST", "/api/kiosk/pair"),
+    ("GET", "/api/business/kiosks"),
+    ("GET", "/api/business/zone-alerts"),
+    ("POST", "/api/business/zone-alerts/{alert_id}/acknowledge"),
+    ("DELETE", "/api/devices/{device_id}/kiosk"),
     ("GET", "/api/workspaces"),
+    # ADR-0450 content controls: `content/api.py` resolves the caller in the X-Workspace-ID
+    # organisation (guard.actor_for) and checks one permission at the venue or zone, whose
+    # organisation must match, else 404 (tests/test_business_content_routes.py).
+    ("GET", "/api/business/content/rules"),
+    ("PUT", "/api/business/content/rules"),
+    ("GET", "/api/business/venues/{venue_id}/content/rules"),
+    ("PUT", "/api/business/venues/{venue_id}/content/rules"),
+    ("GET", "/api/business/content/blocklist"),
+    ("POST", "/api/business/content/blocklist"),
+    ("DELETE", "/api/business/content/blocklist/{entry_id}"),
+    ("POST", "/api/business/zones/{zone_id}/content/overrides"),
+    ("DELETE", "/api/business/zones/{zone_id}/content/overrides/{override_id}"),
+    ("PUT", "/api/business/content/songs/{song_id}/explicit"),
+    # `content/api_tools.py`: the same organisation resolution; zones, songs and batches of
+    # another organisation answer 404 (tests/test_business_content_tools.py).
+    ("GET", "/api/business/zones/{zone_id}/content/pool"),
+    ("GET", "/api/business/zones/{zone_id}/content/snapshot"),
+    ("GET", "/api/business/content/artist-variants"),
+    ("PUT", "/api/business/content/songs/{song_id}/clean-link"),
+    ("GET", "/api/business/content/songs/{song_id}"),
+    ("POST", "/api/business/content/bulk/preview"),
+    ("POST", "/api/business/content/bulk/apply"),
+    ("POST", "/api/business/content/bulk/{batch_id}/undo"),
+    ("POST", "/api/business/content/import/preview"),
+    ("POST", "/api/business/content/import/apply"),
+    ("GET", "/api/business/content/worth-checking"),
+    # ADR-0451 Rooms for Business staff routes: `rooms/api.py` finds the zone or venue, resolves
+    # the caller in that zone's organisation (a member, or a kiosk or tablet token) and checks
+    # one permission there with guard.require, so another organisation's zone answers 404
+    # (the service is tested in tests/test_business_rooms_*.py; no route-level test yet).
+    ("GET", "/api/zones/{zone_id}/requests"),
+    ("GET", "/api/zones/{zone_id}/requests/next"),
+    ("POST", "/api/zones/{zone_id}/requests/{request_id}/played"),
+    ("POST", "/api/zones/{zone_id}/requests/{request_id}/approve"),
+    ("POST", "/api/zones/{zone_id}/requests/{request_id}/pass"),
+    ("GET", "/api/zones/{zone_id}/room"),
+    ("PATCH", "/api/zones/{zone_id}/room"),
+    ("POST", "/api/zones/{zone_id}/room/rotate"),
+    ("GET", "/api/venues/{venue_id}/room-print"),
+    ("GET", "/api/zones/{zone_id}/room/screen-code"),
+    ("POST", "/api/zones/{zone_id}/room/guests/{guest_id}/remove"),
+    ("POST", "/api/zones/{zone_id}/room/guests/{guest_id}/ban"),
+    ("POST", "/api/zones/{zone_id}/room/pause"),
+    ("POST", "/api/zones/{zone_id}/room/resume"),
+    ("POST", "/api/zones/{zone_id}/venue-network"),
+    # ADR-0452/0453: people, invitations, overview and setup; every one resolves the caller in
+    # the named organisation (guard.actor_for) and its venues by scope, 404 otherwise
+    # (tests/test_business_people_routes.py proves another organisation's ids answer 404).
+    ("GET", "/api/business/orgs/{org_id}/overview"),
+    ("PATCH", "/api/business/orgs/{org_id}"),
+    ("PUT", "/api/business/orgs/{org_id}/setup"),
+    ("GET", "/api/business/people"),
+    ("DELETE", "/api/business/people/{user_id}"),
+    ("PUT", "/api/business/seats"),
+    ("POST", "/api/business/library/copy-from-personal"),
+    ("POST", "/api/business/invitations"),
+    ("POST", "/api/business/invitations/{invitation_id}/revoke"),
+    ("POST", "/api/business/invitations/accept"),
+    ("POST", "/api/business/venues/{venue_id}/pin"),
+    ("POST", "/api/business/schedules/apply"),
+    ("GET", "/api/business/library/songs"),
+    ("POST", "/api/business/library/explicit"),
+    ("PUT", "/api/business/venues/{venue_id}/licence"),
+    ("GET", "/api/business/zones/{zone_id}/speaker/horizon"),
+    ("POST", "/api/business/zones/{zone_id}/speaker/segment-url"),
     # Autopilot requires membership in a Business workspace. Stateful routes also
     # check that each named venue actually belongs to that organisation.
     ("GET", "/api/autopilot/availability"),
@@ -384,6 +527,11 @@ def world(tmp_path, monkeypatch):
     monkeypatch.setattr(storage_api, "R2Client", lambda *_args, **_kwargs: objects)
     monkeypatch.setenv("SELECTA_CHECKOUT_CONSENT_VERSION", CONSENT)
     monkeypatch.delenv("SELECTA_STRIPE_SECRET_KEY", raising=False)
+    # Zone playback routes ship dark behind `business.zones`; on here, so the matrix proves
+    # their workspace checks rather than the flag guard (the conftest resets flags after).
+    from selecta import flags
+
+    flags.use("+business.orgs +business.zones")
 
     engine = make_engine(f"sqlite:///{tmp_path / 'cloud.sqlite'}")
     migrate.upgrade(engine)

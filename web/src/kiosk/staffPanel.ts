@@ -16,6 +16,8 @@ export type PanelInfo = {
   savedHours: number;
   lastSync: number | null;
   version: string;
+  /** Whether this player can play from saved music with no internet (ADR-0446). */
+  offline?: 'ready' | 'newer' | 'not_yet' | 'off';
 };
 
 export type StaffPanelOptions = {
@@ -128,7 +130,8 @@ export function mountStaffPanel(options: StaffPanelOptions): StaffPanel {
         row(C.network, C.networkWords[info.network]),
         row(C.savedAhead, C.hours(info.savedHours)),
         row(C.lastSync, info.lastSync ? timeWords(info.lastSync) : C.never),
-        row(C.version, info.version)),
+        row(C.version, info.version),
+        info.offline ? row(C.offlinePlay, C.offlineWords[info.offline]) : null),
       h('div', { className: 'k-panel-actions' },
         h('button', { type: 'button', className: 'k-plain', id: 'k-reload', onclick: () => options.onReload() }, C.reload),
         h('button', { type: 'button', className: 'k-plain', id: 'k-show-code', onclick: () => { close(); options.onShowCode(); } }, C.showCode),

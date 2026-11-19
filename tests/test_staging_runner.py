@@ -89,3 +89,22 @@ def test_the_list_names_every_task(capsys):
     assert staging.main(["--list"], env={}) == 0
     out = capsys.readouterr().out
     assert all(name in out for name in staging.TASKS)
+
+
+def test_every_business_scenario_has_a_staging_task_that_masks_the_owner_token(capsys):
+    """ADR-0454 BZ-0454-15: ST1 to ST10 each have a staging command, and the dry run never
+    prints the pilot owner's token."""
+    import sys
+
+    sys.path.insert(0, str(ROOT / "tests" / "load"))
+    import business_scenarios
+
+    assert {name for name, _id, _about in staging.BUSINESS_SCENARIOS} == set(
+        business_scenarios.SCENARIOS
+    )
+    env = {"STAGING_BASE_URL": "https://api.staging.example", "BUSINESS_SEED": "seed.json",
+           "BUSINESS_OWNER_TOKEN": "owner-secret"}
+    assert staging.main(["business_peak", "--dry-run"], env=env, run=lambda c: 1 / 0) == 0
+    out = capsys.readouterr().out
+    assert "business_scenarios.py staging business_peak" in out
+    assert "owner-secret" not in out and "***" in out

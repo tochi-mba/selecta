@@ -357,7 +357,31 @@ def inspect(path: str, limits: Limits) -> dict[str, Any]:
         "duration_s": decoded_s,
         "sample_rate": rate,
         "channels": channels,
+        "explicit_tag": _explicit_tag(path),
+        "isrc_tag": _isrc_tag(path),
     }
+
+
+def _isrc_tag(path: str) -> str | None:
+    """The file's ISRC tag (ADR-0449 BZ-0449-07), normalised, or None; read in the sandbox for
+    the same reason as the explicit tag. A tag problem never refuses a good file."""
+    from selecta.business.isrc import read_from_file
+
+    try:
+        return read_from_file(path)
+    except Exception:  # noqa: BLE001 - a tag problem never refuses an otherwise good file
+        return None
+
+
+def _explicit_tag(path: str) -> str:
+    """The file's own advisory tag (ADR-0450 BZ-0450-02), read here inside the sandbox so the
+    server never parses an uploaded file's tags itself. Unreadable tags read as `unknown`."""
+    from selecta.business.content.tags import explicit_from_tags
+
+    try:
+        return explicit_from_tags(path)
+    except Exception:  # noqa: BLE001 - a tag problem never refuses an otherwise good file
+        return "unknown"
 
 
 def apply_limits(limits: Limits) -> dict[str, int]:

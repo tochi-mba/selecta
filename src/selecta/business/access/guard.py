@@ -268,14 +268,22 @@ def device_actor(
 
 
 def _kiosk_row(conn: Connection, digest: str):
-    try:
-        from selecta.playback.zone_schema import kiosk_pairings as k
-    except ImportError:  # BZ-2 not landed
-        return None
+    """The paired kiosk whose live token hashes to `digest`. The token lives in `kiosk_tokens`
+    (ADR-0445); the pairing row carries the zone, the venue and the device name."""
+    from selecta.playback.zone_schema import kiosk_pairings as k
+    from selecta.playback.zone_schema import kiosk_tokens as t
+
     return (
         conn.execute(
-            sa.select(k).where(
-                k.c.token_hash == digest,
+            sa.select(k)
+            .select_from(
+                t.join(
+                    k, sa.and_(k.c.device_id == t.c.device_id, k.c.workspace_id == t.c.workspace_id)
+                )
+            )
+            .where(
+                t.c.token_hash == digest,
+                t.c.revoked_at.is_(None),
                 k.c.revoked_at.is_(None),
                 k.c.paired_at.is_not(None),
             )

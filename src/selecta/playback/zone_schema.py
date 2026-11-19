@@ -18,7 +18,13 @@
   condition is `pending` until it has lasted its threshold, then `open`, then `closed` when it
   ends. Closed rows stay as the venue's activity history and carry the silent seconds.
 
-Every table here carries `workspace_id` and gets the forced workspace policy in `bz0443zone01`.
+- `device_log_entries`: what a kiosk did while offline (ADR-0446 resync): fallback hand-offs,
+  urgent updates and other local actions, each once per (device, device sequence) and once per
+  idempotency key, with the device's time and the server's (`approximate_time` when the device
+  had no trusted time). Plays go to the play log (`biz_play_log`) instead.
+
+Every table here carries `workspace_id` and gets the forced workspace policy in `bz0443zone01`
+(`device_log_entries` in `bz0446log01`).
 """
 
 from __future__ import annotations
@@ -173,4 +179,22 @@ zone_alerts = sa.Table(
     sa.CheckConstraint(_one_of("kind", ALERT_KINDS), name="kind"),
     sa.CheckConstraint(_one_of("status", ALERT_STATUSES), name="status"),
     sa.Index("ix_zone_alerts_workspace_id_zone_id_status", "workspace_id", "zone_id", "status"),
+)
+
+device_log_entries = sa.Table(
+    "device_log_entries",
+    metadata,
+    sa.Column("id", Id, primary_key=True),
+    sa.Column("workspace_id", Id, nullable=False, index=True),
+    sa.Column("zone_id", Id, nullable=False),
+    sa.Column("device_id", Id, nullable=False),
+    sa.Column("device_seq", sa.BigInteger, nullable=False),
+    sa.Column("idempotency_key", sa.String(128), nullable=False),
+    sa.Column("kind", sa.String(24), nullable=False),
+    sa.Column("payload", sa.JSON, nullable=False),
+    sa.Column("device_time", Epoch, nullable=False),
+    sa.Column("server_time", Epoch, nullable=False),
+    sa.Column("approximate_time", sa.Boolean, nullable=False, default=False),
+    sa.UniqueConstraint("device_id", "device_seq", name="uq_device_log_entries_device_seq"),
+    sa.UniqueConstraint("workspace_id", "idempotency_key", name="uq_device_log_entries_key"),
 )

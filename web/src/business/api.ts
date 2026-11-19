@@ -4,7 +4,7 @@
 
 import type { Api } from '../cloud/api';
 import type {
-  Crate, CrateUse, NewVenue, OrgRecord, VenueChange, VenueRecord, Workspace, ZoneArchive, ZoneChange, ZoneRecord,
+  ActivityLine, Crate, CrateUse, NewVenue, OrgRecord, VenueChange, VenueRecord, Workspace, ZoneArchive, ZoneChange, ZoneRecord,
 } from './apiTypes';
 
 /** A crate delete the server refused because schedules, zone defaults or rules still use it. */
@@ -75,6 +75,9 @@ export function businessApi(api: Api, workspaceId: string) {
       one<VenueRecord>(await call(`/business/venues/${enc(venueId)}`, json('PATCH', change)), 'venue'),
     archiveVenue: async (venueId: string, when?: 'now' | 'closing') =>
       one<VenueRecord>(await call(`/business/venues/${enc(venueId)}/archive`, json('POST', when ? { when } : {})), 'venue'),
+    /** The venue's 90-day activity log, newest first. */
+    venueActivity: async (venueId: string) =>
+      list<ActivityLine>(await call(`/business/venues/${enc(venueId)}/activity`), 'activity'),
 
     listZones: async (venueId: string) => list<ZoneRecord>(await call(`/business/zones${venueQuery(venueId)}`), 'zones'),
     createZone: async (venueId: string, name: string) =>

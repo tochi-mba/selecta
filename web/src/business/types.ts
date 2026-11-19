@@ -18,7 +18,8 @@ export type Pilot = {
   status: 'active' | 'ending' | 'ended' | 'converted';
   /** Epoch seconds. */
   ends_at: number;
-  allowance: { venues: number; zones: number };
+  /** Null when the pilot has no recorded allowance (made before pilot rows existed). */
+  allowance: { venues: number; zones: number } | null;
 };
 
 export type BillingState = {
@@ -27,7 +28,8 @@ export type BillingState = {
   /** Epoch seconds when grace ends (and playback stops at that venue's next close). */
   grace_ends_at?: number | null;
   currency: 'GBP' | 'USD' | 'EUR';
-  plan: 'trial' | 'business' | 'business_annual' | 'enterprise' | 'pilot';
+  /** `none`: no subscription, trial, contract or pilot yet. */
+  plan: 'trial' | 'business' | 'business_annual' | 'enterprise' | 'pilot' | 'none';
   trial_ends_at?: number | null;
   payments_available?: boolean;
   lines?: { item: 'venue' | 'zone' | 'seat'; quantity: number; unit_amount: number; interval: 'month' | 'year' }[];
@@ -139,6 +141,25 @@ export type Device = {
   saved_hours_ahead?: number | null;
   version?: string | null;
   network?: string | null;
+  /** Kiosk players (ADR-0445): home or standby in their zone, and what their health says. */
+  role?: 'home' | 'standby' | null;
+  not_seen_since?: number | null;
+  wake_lock?: boolean | null;
+  autoplay_allowed?: boolean | null;
+  warning?: string | null;
+};
+
+/** An open kiosk alert as the server words it (ADR-0445 BZ-0445-10). */
+export type ZoneAlert = {
+  id: string;
+  kind: 'silent' | 'unreachable' | 'needs_tap' | 'needs_pairing' | 'key_mismatch';
+  zone_id: string;
+  venue_id: string;
+  zone_name: string;
+  venue_name: string;
+  started_at: number;
+  acknowledged_at: number | null;
+  text: string;
 };
 
 export type Daypart = { id: string; name: string; start: number; end: number; energy: 'calm' | 'steady' | 'lifted' | 'peak'; crate_ids?: string[] };
@@ -157,7 +178,6 @@ export type ContentRules = {
 
 export type Member = { id: string; name: string; email: string; role: Role; venue_ids: string[] | null; pin_set?: boolean };
 
-export type PlayLogExportJob = { id: string; status: 'queued' | 'working' | 'ready' | 'failed'; done_venues: number; total_venues: number; url?: string | null; expires_at?: number | null; created_at: number; range: { from: string; to: string } };
 
 export type Health = {
   /** Server said live updates are paused (events.ts fallback). */
@@ -172,3 +192,42 @@ export type Health = {
 export type ActivityEntry = { id: string; at: number; venue_id: string; zone_id?: string | null; words: string };
 
 export type Overview = { org: Org; venues: Venue[]; devices?: Device[]; activity?: ActivityEntry[] };
+
+/** The billing page's server summary (`GET /business/billing`, ADR-0447). Items are
+ * `business_venue`, `business_extra_zone` and `business_extra_seat`; amounts are minor units. */
+export type BillingItem = 'business_venue' | 'business_extra_zone' | 'business_extra_seat';
+export type BillingSummary = {
+  currency: 'GBP' | 'USD' | 'EUR';
+  interval: 'month' | 'year';
+  subscribed: boolean;
+  status: string | null;
+  quantities: Record<BillingItem, number>;
+  enterprise: boolean;
+  prices: { item: BillingItem; unit_amount: number; interval: 'month' | 'year' }[];
+  estimate: { lines: Record<BillingItem, number>; subtotal_minor: number; discount_minor: number; total_minor: number } | null;
+  profile: { company_name: string; country: string; po_number: string | null; collection_method: 'charge_automatically' | 'send_invoice'; net_days: number | null; tax_treatment: string; can_send_invoice: boolean } | null;
+  organisation_id?: string;
+  venues: { venue_id: string; name: string; cost_centre: string | null; stop_at: number | null; state?: 'active' | 'pausing' | 'paused'; pause_at?: number | null }[];
+  checkout: { selling: boolean; terms_version: string; trial: { days: number; venues: number; zones: number }; trial_available: boolean };
+  banner: { message: string; grace_ends_at: number | null; read_only: boolean; stops: { venue_id: string; stop_at: number }[] } | null;
+  read_only: boolean;
+};
+
+/** What adding venues, zones or seats costs: from Stripe with a subscription, else the price list. */
+export type CostPreview =
+  | { source: 'stripe'; currency: string; charged_now_minor: number; next_invoice_minor: number }
+  | { source: 'estimate'; currency: string; interval: 'month' | 'year'; period_total_minor: number };
+
+/** The B2B checkout answers (ADR-0447 BZ-0447-06); the card itself is entered on Stripe. */
+export type CheckoutRequest = {
+  business_confirmed: boolean; terms_version: string; company_name: string;
+  billing_address: { line1: string; line2?: string; city: string; postal_code: string; country: string };
+  tax_id?: string; interval: 'month' | 'year'; trial: boolean;
+};
+export type CheckoutAnswer = { blocked: boolean; url?: string; message?: string | null };
+
+/** A venue moving between organisations (ADR-0447 BZ-0447-11). */
+export type VenueTransfer = { id: string; venue_id: string; source_organisation_id: string; target_organisation_id: string; state: 'proposed' | 'agreed'; effective_at: number | null };
+
+/** The business terms (ADR-0449 BZ-0449-09): playback never waits on them. */
+export type TermsAccess = { current_version: string; accepted: boolean; management_blocked: boolean; playback_allowed: boolean; terms_path: string; can_accept?: boolean };

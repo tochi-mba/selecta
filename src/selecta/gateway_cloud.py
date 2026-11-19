@@ -15,6 +15,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from selecta.admin.state import DbWorkControls
 from selecta.billing.plans import validate_catalogue
+from selecta.business.weight import business_policy
 from selecta.flags.rules import RulesCache
 from selecta.observability import errors, metrics, tracing
 from selecta.persistence import make_engine
@@ -84,6 +85,7 @@ def create_gateway_app(*, engine: Engine | None = None) -> FastAPI:
     app.state.flag_rules = rules
     store = JobStore(
         engine,
+        business_policy(),  # ADR-0448 business tiers; other plans unchanged
         entitlements=cloud_ports.CloudJobEntitlements(engine),
         flags=cloud_ports.CloudJobFlags(engine, rules),
         verifier=cloud_ports.R2OutputVerifier(),

@@ -535,6 +535,18 @@ def maintain(
         raise typer.BadParameter(str(problem)) from problem
 
 
+@app.command("business-stripe-setup")
+def business_stripe_setup() -> None:
+    """Create SelectaDJ for Business prices in Stripe test mode and print the price map."""
+    from selecta.business import stripe_setup
+
+    try:
+        typer.echo(stripe_setup.run(os.environ))
+    except ValueError as problem:
+        typer.echo(f"Not set up: {problem}", err=True)
+        raise typer.Exit(2) from problem
+
+
 @app.command("billing-maintenance")
 def billing_maintenance(
     limit: int = typer.Option(50, min=1, max=500, help="Maximum webhook events to drain."),

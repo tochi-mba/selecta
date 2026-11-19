@@ -59,6 +59,7 @@ Every remaining sheet loads with its own component or entry. All of them take th
 | `autopilot/autopilot.css` | `autopilot/VenueSetup.tsx` | Venue setup. |
 | `guest/guest.css` | `guest/main.ts` (its own entry) | The Rooms guest page. Loads without `tokens.css` for its bundle budget, so it keeps a token block whose every value is copied from the `tokens.css` token of the same name (`22f6881a`); its reduced-motion reset uses `!important`. |
 | `display/display.css` | `display/main.ts` (its own entry) | The big-screen Room display, with the same copied token block; sizes are em of a body size fitted to the screen, as the Stage's are. |
+| `kiosk/kiosk.css` | Dedicated kiosk screens and staff panel, shared tokens, fitted room-scale type | `kiosk/main.ts` |
 
 A drift guard that compares the guest and display blocks with `tokens.css` is ADR-0468 BF-0468-02.
 

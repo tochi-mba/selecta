@@ -15,7 +15,7 @@ type Item = UploadResult;
 // outcome (added, already there, skipped, needs attention, not uploaded), one file's failure
 // doesn't stop the rest, and the closing message counts them instead of one "Upload finished".
 
-export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, onAccepted, perFile = true }: {
+export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, onAccepted, perFile = true, venueId }: {
   api: Api;
   workspaceId: string;
   setError: (value: string) => void;
@@ -23,6 +23,8 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
   blocked: string | null;
   onAccepted?: () => void;
   perFile?: boolean;
+  /** A business venue the files are for (ADR-0448 per-venue storage); none for the whole library. */
+  venueId?: string;
 }) {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -41,6 +43,18 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
     answer.current = null;
     setQuestion(null);
     resolve?.(keep);
+  };
+  const [rights, setRights] = useState<string | null>(null);
+  const rightsAnswer = useRef<((yes: boolean) => void) | null>(null);
+  const askRights = (statement: string) => new Promise<boolean>((resolve) => {
+    rightsAnswer.current = resolve;
+    setRights(statement);
+  });
+  const answeredRights = (yes: boolean) => {
+    const resolve = rightsAnswer.current;
+    rightsAnswer.current = null;
+    setRights(null);
+    resolve?.(yes);
   };
   const selected = useCallback((event: ChangeEvent<HTMLInputElement>) => setFiles(Array.from(event.target.files ?? [])), []);
 
@@ -86,7 +100,18 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
         }
       }
       if (fresh.length) {
-        const planned = await api<{ uploads: UploadEntry[] }>('/uploads/plan', { method: 'POST', body: JSON.stringify({ files: fresh.map((item) => item.spec) }) }, workspaceId);
+        const plan = (headers?: Record<string, string>) => api<{ uploads: UploadEntry[] }>('/uploads/plan', { method: 'POST', body: JSON.stringify({ files: fresh.map((item) => item.spec), ...(venueId ? { venue_id: venueId } : {}) }), headers }, workspaceId);
+        let planned: { uploads: UploadEntry[] };
+        try {
+          planned = await plan();
+        } catch (problem) {
+          // A business organisation asks for the upload rights statement first (ADR-0449
+          // BZ-0449-04): confirm it for this batch, then plan again naming the batch.
+          const detail = attestationAsked(problem);
+          if (!detail || !(await askRights(detail.statement))) throw problem;
+          const batch = await api<{ batch_id: string }>('/business/uploads/attestation', { method: 'POST', body: JSON.stringify({ file_count: fresh.length, statement_version: detail.statement_version, attested: true }) }, workspaceId);
+          planned = await plan({ 'X-Upload-Batch': batch.batch_id });
+        }
         const one = async (entry: UploadEntry) => {
           if (entry.refused) { next.push({ name: entry.name, status: 'Skipped', detail: entry.refused, outcome: 'skipped' }); return; }
           let session = entry.session;
@@ -165,6 +190,16 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
         {progress && <span role="status">{progress}</span>}
       </div>
       {items.length > 0 && <ul className="cloud-upload-list" aria-label={perFile ? 'Each file’s result' : undefined}>{items.map((item, index) => <li key={`${item.name}-${index}`} data-outcome={perFile ? item.outcome : undefined}><Truncate text={item.name} /><b>{item.status}</b>{item.detail && <small>{item.detail}</small>}</li>)}</ul>}
+      {rights !== null && (
+        <ConfirmDialog
+          title="Confirm the upload rights"
+          body={rights}
+          confirmLabel="I confirm"
+          cancelLabel="Don't upload"
+          onConfirm={() => answeredRights(true)}
+          onClose={() => answeredRights(false)}
+        />
+      )}
       {question !== null && (
         <ConfirmDialog
           title={`Keep another copy of ${question}?`}
@@ -177,4 +212,14 @@ export function UploadsPanel({ api, workspaceId, setError, setNotice, blocked, o
       )}
     </section>
   );
+}
+
+/** The upload rights statement a business organisation asks for, from a refused plan. */
+export function attestationAsked(problem: unknown): { statement: string; statement_version: string } | null {
+  const value = (problem ?? {}) as { code?: string; payload?: unknown };
+  const payload = (value.payload ?? {}) as { detail?: unknown };
+  const detail = (payload.detail ?? payload) as { code?: string; statement?: unknown; statement_version?: unknown };
+  const code = value.code ?? detail.code;
+  if (code !== 'upload_attestation_required' || typeof detail.statement !== 'string' || typeof detail.statement_version !== 'string') return null;
+  return { statement: detail.statement, statement_version: detail.statement_version };
 }

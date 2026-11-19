@@ -18,7 +18,8 @@ import { Billing } from './Billing';
 import { PrivacyNoticeDraft, showsPrivacyDraft } from './PrivacyNoticeDraft';
 import { checkoutBody, Consent, consentVersionFor, useCheckoutReturn } from './checkout';
 import { CloudTransportDock, singleAudioOwner } from './CloudTransportDock';
-import { ACCOUNT_STATES_FLAG, resolveRoute } from './cloudRoutes';
+import { ACCOUNT_STATES_FLAG, BUSINESS_FLAG, BUSINESS_JOIN_PATH, isBusinessPath, resolveRoute } from './cloudRoutes';
+import { parseBusinessPath } from '../business/context';
 import { AccountProblemNote, AccountProblemPage, NotFound, SuspendedPanel } from './CloudStates';
 import { CloudEvent, useCloudEvents } from './events';
 import { LIBRARY_STATES_FLAG } from './libraryState';
@@ -53,12 +54,25 @@ const VenuePosture = lazy(() => import('./venue/VenuePosture').then((module) => 
 // The hosted pages on the shared shell (`cloud.hosted_shell`): the shell loads only with the flag
 // on, so the legacy rail's bundle is unchanged with it off. It carries no engine.
 const HostedShell = lazy(() => import('./HostedShell').then((module) => ({ default: module.HostedShell })));
+// SelectaDJ for Business (ADR-0453 D2): the workspace at `/b/{org}`, the invitation page and the
+// switcher are their own chunks, fetched only for an account with `business.workspaces` on.
+const BusinessApp = lazy(() => import('../business/BusinessApp'));
+const JoinOrganisation = lazy(() => import('../business/JoinOrganisation'));
+const PersonalSwitcher = lazy(() => import('../business/switcher/PersonalSwitcher'));
+const StartPage = lazy(() => import('../business/start/StartPage'));
+// The business price list (BZ-0441-05), only for an account `business.signups` reaches.
+const BusinessPricing = lazy(() => import('../business/pricing/BusinessPricing'));
+
+/** Whether this account has the business workspace (decided on by the server, never assumed). */
+export function businessShown(account: Account | null): boolean {
+  return account?.features?.[BUSINESS_FLAG] === true;
+}
 
 /** The work a button starts. Each has its own busy state, so a slow checkout never greys out
  * Sign out everywhere, and the button pressed is the one that says it is working. */
 type Operation = 'onboarding' | 'checkout' | 'portal' | 'everywhere' | 'delete';
 
-/** Whether this account gets the local-first shell: `showsLocalFirst`, decided on the account's own
+/** Whether this account gets the local-first shell, decided on the account's own
  * read. The hosted shell reads `cloud.local_first` as off while it is open (it is not the
  * local-first shell), which must not keep a member who has just joined Labs out of it. */
 function localFirstDecided(account: Account | null): boolean {
@@ -135,6 +149,12 @@ export function CloudApp() {
     }
     return payload as T;
   }, [getAccessToken]);
+
+  // A token getter that keeps its identity across renders, for the business app's event stream
+  // (a new function every render would reconnect the stream every render).
+  const tokenRef = useRef(getAccessToken);
+  tokenRef.current = getAccessToken;
+  const stableToken = useCallback(() => tokenRef.current(), []);
 
   // One operation at a time per button: its own busy state, and a refusal said in the page feedback.
   const operate = useCallback(async (operation: Operation, work: () => Promise<void>) => {
@@ -332,6 +352,29 @@ export function CloudApp() {
     return <Suspense fallback={<main className="cloud-runtime-message"><p>Opening the staff console…</p></main>}><AdminArea token={getAccessToken} onLeave={leave} origin={apiOrigin} /></Suspense>;
   }
 
+  // The business workspace (`/b/{org}`) and its invitation page, only with the flag on; off, the
+  // address is not found like any other and nothing business is fetched.
+  const openPath = (next: string) => { window.history.pushState({}, '', next); setPath(next); setPage(pageFor(next)); };
+  if (account && account.features?.['business.signups'] === true && path.replace(/\/+$/, '') === '/business/pricing') {
+    return <Suspense fallback={<main className="cloud-runtime-message"><p>Loading prices…</p></main>}><BusinessPricing api={api} onLeave={() => openPath('/')} /></Suspense>;
+  }
+  // `/business/start` (ADR-0453 S1): the pilot contact form, or naming an organisation once
+  // sign-up is on; only with `business.start` on.
+  if (account && account.features['business.start'] === true && path.replace(/\/+$/, '') === '/business/start') {
+    return <Suspense fallback={null}><StartPage api={api} signups={account.features['business.signups'] === true} onOpen={openPath} /></Suspense>;
+  }
+  if (account && businessShown(account) && isBusinessPath(path)) {
+    const leaveBusiness = () => openPath('/');
+    const businessRoute = parseBusinessPath(path);
+    return (
+      <Suspense fallback={<main className="cloud-runtime-message"><p>Opening your organisation…</p></main>}>
+        {normalizedJoin(path)
+          ? <JoinOrganisation api={api} onOpen={openPath} />
+          : businessRoute && businessRoute.page !== 'start' && <BusinessApp api={api} route={businessRoute} account={account} onLeaveToPersonal={leaveBusiness} token={stableToken} />}
+      </Suspense>
+    );
+  }
+  const businessEntry = account && businessShown(account) ? <Suspense fallback={null}><PersonalSwitcher api={api} account={account} open={openPath} /></Suspense> : null;
   const quotaBlock = blockedByQuota(account);
   const signOutHere = () => signOut({ returnTo: window.location.origin });
   const openAdmin = () => { setInAdmin(true); window.history.pushState({}, '', '/admin'); setPath('/admin'); };
@@ -340,7 +383,7 @@ export function CloudApp() {
   const goShell = (next: Page) => navigate(PATHS[next]);
   // the shared shells have no rail, so the account page says who is signed in and offers leaving
   const framed = localFirst || hostedShell;
-  const settingsPanel = account ? <div className="cloud-settings">{framed && <AccountStrip email={user.email} onSignOut={signOutHere} onStaffConsole={showsAdmin(account) ? openAdmin : undefined} />}{framed && lockedTo(account, 'rooms') && <RoomsCard account={account} go={goShell} />}{localFirst && isHostedAccount(account) && accountFlagOn('cloud.stored_media', account.features) && <ReconciliationPanel request={workspaceRequest} />}<AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} />{flagOn('devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{accountFlagOn('lucy', account.features) && accountFlagOn('account.lucy_settings', account.features) && <LucyCloudSettings request={workspaceRequest} features={account.features} />}{showsDeviceCheck(account.features) && <DeviceCheck />}{flagOn('cloud.venue_tablet') && <Suspense fallback={null}><VenuePosture workspaceId={account.workspace.id} places={{ localFirst, devices: flagOn('devices'), rooms: flagOn('rooms'), library: localFirst || pageShown(account, 'library') }} /></Suspense>}{(flagOn('cloud.local_first_labs') || account.experience?.local_first === true) && <LocalFirstLabs request={<T,>(path: string, init?: RequestInit) => api<T>(path, init, account.workspace.id)} onChanged={() => void refreshAccount()} />}{showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />}{flagOn('autopilot.venue_mode') && flagOn('autopilot.venue_policy') && <VenueSetup api={api} workspaceId={account.workspace.id} />}{localFirst && flagOn('cloud.local_media') && <DeviceDataCard workspaceId={account.workspace.id} onCleared={() => window.location.reload()} />}{(exact || hostedShell) && <AccountDanger busy={busy('everywhere') || busy('delete')} onSignOutEverywhere={() => void signOutEverywhere()} onDelete={() => void deleteAccount()} />}</div> : null;
+  const settingsPanel = account ? <div className="cloud-settings">{framed && <AccountStrip email={user.email} onSignOut={signOutHere} onStaffConsole={showsAdmin(account) ? openAdmin : undefined} />}{framed && businessEntry}{framed && lockedTo(account, 'rooms') && <RoomsCard account={account} go={goShell} />}{localFirst && isHostedAccount(account) && accountFlagOn('cloud.stored_media', account.features) && <ReconciliationPanel request={workspaceRequest} />}<AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} />{flagOn('devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{accountFlagOn('lucy', account.features) && accountFlagOn('account.lucy_settings', account.features) && <LucyCloudSettings request={workspaceRequest} features={account.features} />}{showsDeviceCheck(account.features) && <DeviceCheck />}{flagOn('cloud.venue_tablet') && <Suspense fallback={null}><VenuePosture workspaceId={account.workspace.id} places={{ localFirst, devices: flagOn('devices'), rooms: flagOn('rooms'), library: localFirst || pageShown(account, 'library') }} /></Suspense>}{(flagOn('cloud.local_first_labs') || account.experience?.local_first === true) && <LocalFirstLabs request={<T,>(path: string, init?: RequestInit) => api<T>(path, init, account.workspace.id)} onChanged={() => void refreshAccount()} />}{showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />}{flagOn('autopilot.venue_mode') && flagOn('autopilot.venue_policy') && <VenueSetup api={api} workspaceId={account.workspace.id} />}{localFirst && flagOn('cloud.local_media') && <DeviceDataCard workspaceId={account.workspace.id} onCleared={() => window.location.reload()} />}{(exact || hostedShell) && <AccountDanger busy={busy('everywhere') || busy('delete')} onSignOutEverywhere={() => void signOutEverywhere()} onDelete={() => void deleteAccount()} />}</div> : null;
   const billing = account && <Billing account={account} busy={busy('checkout') || busy('portal')} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} />;
   const uploads = account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} perFile={flagOn(LIBRARY_STATES_FLAG)} />;
   // The account places behind More, one drawing for both shared shells.
@@ -414,7 +457,7 @@ export function CloudApp() {
             <button key={target} aria-current={view === target ? 'page' : undefined} onClick={() => choosePage(target)}>{LABELS[target]}</button>
           ))}
         </nav>
-        <div className="cloud-rail-bottom">{showsAdmin(account) && <button onClick={openAdmin}>Staff console</button>}<span>{user.email}</span>{exact && <button onClick={signOutHere}>Sign out</button>}
+        <div className="cloud-rail-bottom">{businessEntry}{showsAdmin(account) && <button onClick={openAdmin}>Staff console</button>}<span>{user.email}</span>{exact && <button onClick={signOutHere}>Sign out</button>}
           <Action run={signOutEverywhere} disabled={busy('everywhere')}>Sign out everywhere</Action>
           <button className="cloud-delete-account" onClick={() => setConfirmingDelete(true)} disabled={busy('delete')}>Delete account</button></div>
       </aside>
@@ -497,4 +540,8 @@ function RoomsCard({ account, go }: { account: Account; go: (page: Page) => void
   }
   if (!flagOn('rooms')) return null;
   return <section className="cloud-card cloud-locked"><div><p className="cloud-eyebrow cloud-caps">Rooms</p><h2>Host a request room</h2><p>Share a QR code so guests can add requests to your set.</p></div><button onClick={() => go('listen')}>Open a room</button></section>;
+}
+
+function normalizedJoin(path: string) {
+  return path.replace(/\/+$/, '') === BUSINESS_JOIN_PATH;
 }

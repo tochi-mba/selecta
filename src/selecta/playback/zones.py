@@ -161,6 +161,20 @@ def _first(table: sa.Table, *names: str) -> sa.Column | None:
     return None
 
 
+def _playable_status(zone_status: str | None, venue_status: str | None) -> str:
+    """The zone's own status, but paused when its venue is paused or archived: a zone in a
+    venue that isn't active plays nothing (BZ-1's `is_playable`)."""
+    from selecta.business.zones import is_playable
+
+    zone_status = zone_status or ZONE_ACTIVE
+    venue_status = venue_status or ZONE_ACTIVE
+    if zone_status == ZONE_ACTIVE and not is_playable(
+        {"status": zone_status}, {"status": venue_status}
+    ):
+        return ZONE_PAUSED
+    return zone_status
+
+
 class SqlZones:
     """Reads BZ-1's `venues` and `zones` tables by column name; asks BZ-3's zone clock whether a
     zone is open and BZ-5's rules for a volume cap and scope, when those exist."""
@@ -171,6 +185,7 @@ class SqlZones:
             return []
         tz = _first(venues, "timezone", "time_zone", "tz")
         status = _first(zones, "status")
+        venue_status = _first(venues, "status")
         home = _first(zones, "home_device_id")
         standby = _first(zones, "standby_device_id")
         columns = [
@@ -181,6 +196,9 @@ class SqlZones:
             venues.c.name.label("venue_name"),
             (tz if tz is not None else sa.literal("Europe/London")).label("tz"),
             (status if status is not None else sa.literal(ZONE_ACTIVE)).label("status"),
+            (venue_status if venue_status is not None else sa.literal(ZONE_ACTIVE)).label(
+                "venue_status"
+            ),
             (home if home is not None else sa.literal(None)).label("home"),
             (standby if standby is not None else sa.literal(None)).label("standby"),
         ]
@@ -195,7 +213,7 @@ class SqlZones:
                 workspace_id=row["workspace_id"],
                 venue_id=row["venue_id"],
                 name=row["zone_name"],
-                status=row["status"] or ZONE_ACTIVE,
+                status=_playable_status(row["status"], row["venue_status"]),
                 venue_name=row["venue_name"] or "",
                 time_zone=row["tz"] or "Europe/London",
                 home_device_id=row["home"],

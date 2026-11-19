@@ -70,16 +70,20 @@ def default_zone_source(connection: Connection) -> list[ZoneRef]:
     zones = getattr(org_schema, "zones", None)
     if venues is None or zones is None:
         return []
-    closing = venues.c.get("closing_mode")
+    from selecta.business.hours_schema import venue_closing_modes as modes
+
     columns = [
         zones.c.workspace_id,
         zones.c.venue_id,
         zones.c.id.label("zone_id"),
         venues.c.timezone.label("tz") if "timezone" in venues.c else venues.c.tz.label("tz"),
+        modes.c.closing_mode.label("closing_mode"),
     ]
-    if closing is not None:
-        columns.append(closing.label("closing_mode"))
-    query = sa.select(*columns).select_from(zones.join(venues, zones.c.venue_id == venues.c.id))
+    query = sa.select(*columns).select_from(
+        zones.join(venues, zones.c.venue_id == venues.c.id).outerjoin(
+            modes, modes.c.venue_id == venues.c.id
+        )
+    )
     for table in (zones, venues):
         if "archived_at" in table.c:
             query = query.where(table.c.archived_at.is_(None))

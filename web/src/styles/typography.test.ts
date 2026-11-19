@@ -103,7 +103,7 @@ describe('one type scale (BF overhaul cross-wave contract)', () => {
   const FITTED = /\.(?:lyrics|countdown-number|phrase|stage|now|listen-identity)(?![\w-])/;
   const exempt = (file: string, selector: string, value: string) =>
     (['style.css', 'styles/listening.css'].includes(file) && FITTED.test(selector) && /clamp\(/.test(value))
-    || (file === 'display/display.css' && (/^[\d.]+em$/.test(value) || (selector === 'body' && /^clamp\(/.test(value))));
+    || (['display/display.css', 'kiosk/kiosk.css'].includes(file) && (/^[\d.]+em$/.test(value) || (selector === 'body' && /^clamp\(/.test(value))));
 
   it('every font size outside tokens.css is a type role or a step, or one of the named fitted exceptions', () => {
     const sizes = rulesOf(COMPONENT_SHEETS).flatMap((rule) => [...rule.body.matchAll(/(?:^|;|\s)(font-size|font)\s*:\s*([^;]+)/g)]
@@ -116,6 +116,6 @@ describe('one type scale (BF overhaul cross-wave contract)', () => {
 
   it('the fitted exceptions stay where they are named, and no other sheet uses one', () => {
     const fitted = rulesOf(COMPONENT_SHEETS).filter((rule) => /(?:^|;|\s)font(?:-size)?\s*:[^;]*clamp\(/.test(rule.body)).map((rule) => rule.file);
-    expect([...new Set(fitted)].sort()).toEqual(['display/display.css', 'style.css', 'styles/listening.css']);
+    expect([...new Set(fitted)].sort()).toEqual(['display/display.css', 'kiosk/kiosk.css', 'style.css', 'styles/listening.css']);
   });
 });

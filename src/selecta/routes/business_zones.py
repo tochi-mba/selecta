@@ -25,7 +25,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection, Engine
 
-from selecta.business import dayparts, hours, offline, zone_clock
+from selecta.business import dayparts, hours, offline, zone_autoplan, zone_clock
 from selecta.business.hours_schema import (
     zone_cache_reports,
     zone_commands,
@@ -34,6 +34,13 @@ from selecta.business.hours_schema import (
 )
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, new_id, transaction
+from selecta.routes.business_hours import (
+    MANAGERS,
+    RoleFor,
+    audit_change,
+    business_role,
+    user_id_of,
+)
 
 HorizonFor = Callable[[Engine, str, str], list[dict[str, Any]]]
 """(engine, workspace_id, zone_id) -> the zone's planned, rendered segments in play order.
@@ -142,9 +149,12 @@ def install_routes(
     principal_for: Callable[..., Any],
     horizon_for: HorizonFor = no_horizon,
     state_for: StateFor = empty_state,
+    role_for: RoleFor = business_role,
 ) -> None:
     def scope(request: Request, claims: Claims) -> str:
         principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
+        user = getattr(getattr(principal, "user", None), "id", None)
+        request.state.user_id = user or user_id_of(engine, claims)
         return principal.workspace.id
 
     @app.get("/api/business/zones/{zone_id}/programme")
@@ -172,6 +182,14 @@ def install_routes(
         claims: Claims = Depends(current_claims),  # noqa: B008
     ) -> dict[str, Any]:
         workspace_id = scope(request, claims)
+        with transaction(engine, workspace_id) as conn:
+            venue_id = _zone(conn, workspace_id, zone_id).venue_id
+        if role_for(engine, claims, workspace_id, venue_id) not in MANAGERS:
+            raise HTTPException(status_code=403, detail={
+                "code": "programme",
+                "message": "Only owners, admins and venue managers can change a zone's music "
+                "through the day.",
+            })
         try:
             programme = dayparts.Programme.from_dict(body.model_dump())
         except (dayparts.ProgrammeError, KeyError, ValueError, TypeError) as error:
@@ -188,7 +206,7 @@ def install_routes(
                     workspace_id=workspace_id,
                     zone_id=zone_id,
                     blocks_json=programme.to_dict(),
-                    created_by=claims.subject,
+                    created_by=request.state.user_id,
                     created_at=now,
                 )
             )
@@ -208,6 +226,10 @@ def install_routes(
                         updated_at=now,
                     )
                 )
+            zone_autoplan.mark_dirty(conn, workspace_id, [zone_id], now)
+            audit_change(conn, workspace_id, request.state.user_id, "schedule.edit", ref.venue_id,
+                         resource_type="zone_programme_version", resource_id=version_id,
+                         metadata={"zone_id": zone_id})
         return {"version_id": version_id, "programme": programme.to_dict()}
 
     @app.get("/api/business/zones/{zone_id}/offline-manifest")
@@ -273,6 +295,11 @@ def install_routes(
                         reason=reasons.get(command.id),
                     )
                 )
+                word = str((command.payload or {}).get("word") or "")
+                if command.kind == "steer" and command.id not in reasons and word in (
+                    dayparts.STAFF_ACTIONS
+                ):  # ADR-0444: the zone's planned energy follows the press, then decays
+                    zone_autoplan.press(conn, workspace_id, zone_id, word, now)
         state = {k: v for k, v in result["state"].items() if k != "applied_ids"}
         return {
             "applied": result["applied"],

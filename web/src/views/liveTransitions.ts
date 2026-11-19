@@ -21,6 +21,8 @@ export const playedKey = (from: number, into: number) => `${from}>${into}`;
 export type StemSurfaces = {
   stemMoves: readonly { move: string; label: string; disabledReason?: string }[];
   readiness: (key: string) => ReactNode;
+  /** Shown on a transition whose chosen move needs the splitter this device hasn't downloaded. */
+  offer: (move: string) => ReactNode;
   listenNotice: ReactNode;
 };
 export const StemSurfacesContext = createContext<StemSurfaces | null>(null);

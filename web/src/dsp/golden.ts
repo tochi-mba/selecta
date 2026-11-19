@@ -22,8 +22,6 @@ import { fft } from './fft';
 import { scheduleSeam, type SeamSpec, type TrackTiming } from './seams';
 import { timeStretch } from './stretch';
 
-export const GOLDEN_IMPLEMENTATION = 'golden-harness-v1';
-
 // --- Synthesis spec: the shared contract with tools/bf_golden.py ------------------------------
 
 export interface ToneElement {

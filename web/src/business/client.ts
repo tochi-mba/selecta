@@ -1,53 +1,93 @@
 // Typed calls to the business routes (ADR-0442 to ADR-0452). Every page goes through these
-// functions, never through raw paths, so when the BZ-1 to BZ-5 routes land with different paths
-// only ROUTES changes. Each call names the organisation's workspace (X-Workspace-ID) so personal
-// and business data never mix (ADR-0442).
-//
-// Until those routes exist, `fixtures.ts` provides `demoApi`, a stub with the same answers, used
-// by the tests and the e2e harness.
+// functions, never through raw paths. Each path in ROUTES is a route the server registers;
+// `tests/test_business_client_routes.py` reads this file and api.ts and fails when one is not,
+// so the two cannot drift again. Where the server's wire shape differs from the page's view
+// model, clientAdapters.ts reshapes it. Each call names the organisation's workspace
+// (X-Workspace-ID) so personal and business data never mix (ADR-0442); the organisation id is
+// its workspace id.
 
 import type { Api } from '../cloud/api';
+import {
+  applyParts, blocklistDiff, exceptionBody, hoursBody, membersOf, programmeBody, rulesBody, rulesOf, scheduleOf,
+  type BlockEntry, type PeopleAnswer, type ProgrammeAnswer, type VenueRulesAnswer,
+} from './clientAdapters';
+import type { CloseNowAnswer, HolidaySuggestion, HoursAnswer, SloAnswer, UsageAnswer, ZoneDayState } from './hoursAdapters';
+import { TEMPLATES } from './forms/DaypartBar';
 import type {
-  ContentRules, Daypart, Device, GuestRequest, Holiday, Licence, Member, Org, Overview, PlayLogExportJob,
+  ZoneAlert,
+  BillingSummary, CheckoutAnswer, TermsAccess, VenueTransfer, CheckoutRequest, ContentRules, CostPreview, Daypart, Device, GuestRequest, Holiday, Licence, Member, Org, Overview,
   Role, SetupProgress, Venue, WeekHours, WorkspaceSummary, Zone, ZoneSchedule,
 } from './types';
 
 export const ROUTES = {
-  workspaces: '/business/workspaces',
-  pilotInterest: '/business/pilot-interest',
-  start: '/business/start',
-  org: (org: string) => `/orgs/${enc(org)}`,
-  overview: (org: string) => `/orgs/${enc(org)}/overview`,
-  setup: (org: string) => `/orgs/${enc(org)}/setup`,
-  venues: (org: string) => `/orgs/${enc(org)}/venues`,
-  venue: (org: string, venue: string) => `/orgs/${enc(org)}/venues/${enc(venue)}`,
-  hours: (org: string, venue: string) => `/orgs/${enc(org)}/venues/${enc(venue)}/hours`,
-  zones: (org: string, venue: string) => `/orgs/${enc(org)}/venues/${enc(venue)}/zones`,
-  licence: (org: string, venue: string) => `/orgs/${enc(org)}/venues/${enc(venue)}/licence`,
-  rules: (org: string, venue: string) => `/orgs/${enc(org)}/venues/${enc(venue)}/rules`,
-  stayLate: (org: string, venue: string) => `/orgs/${enc(org)}/venues/${enc(venue)}/stay-open-late`,
-  copyPersonal: (org: string) => `/orgs/${enc(org)}/library/copy-from-personal`,
-  devices: (org: string) => `/orgs/${enc(org)}/devices`,
+  workspaces: '/workspaces',
+  org: (org: string) => `/business/orgs/${enc(org)}`,
+  overview: (org: string) => `/business/orgs/${enc(org)}/overview`,
+  setup: (org: string) => `/business/orgs/${enc(org)}/setup`,
+  venues: '/business/venues',
+  hours: (venue: string) => `/business/venues/${enc(venue)}/hours`,
+  hourExceptions: (venue: string) => `/business/venues/${enc(venue)}/hour-exceptions`,
+  hourException: (venue: string, id: string) => `/business/venues/${enc(venue)}/hour-exceptions/${enc(id)}`,
+  holidaySuggestions: (venue: string, country: string, year: number) => `/business/venues/${enc(venue)}/holiday-suggestions?country=${enc(country)}&year=${year}`,
+  closeNow: (venue: string) => `/business/venues/${enc(venue)}/close-now`,
+  closingMode: (venue: string) => `/business/venues/${enc(venue)}/closing-mode`,
+  closeNowUndo: (venue: string, id: string) => `/business/venues/${enc(venue)}/close-now/${enc(id)}/undo`,
+  zoneState: (zone: string) => `/business/zones/${enc(zone)}/state`,
+  usage: '/business/usage',
+  slo: (month?: string) => `/business/slo${month ? `?month=${enc(month)}` : ''}`,
+  alwaysOpen: '/business/always-open',
+  zones: '/business/zones',
+  zonesOf: (venue: string) => `/business/zones?venue_id=${enc(venue)}`,
+  zone: (zone: string) => `/business/zones/${enc(zone)}`,
+  licence: (venue: string) => `/business/venues/${enc(venue)}/licence`,
+  rules: (venue: string) => `/business/venues/${enc(venue)}/content/rules`,
+  blocklist: '/business/content/blocklist',
+  blocklistEntry: (entry: string) => `/business/content/blocklist/${enc(entry)}`,
+  stayLate: (venue: string) => `/business/venues/${enc(venue)}/stay-open-late`,
   unpair: (device: string) => `/devices/${enc(device)}/kiosk`,
   pair: '/kiosk/pair',
-  schedule: (zone: string) => `/zones/${enc(zone)}/schedule`,
-  scheduleApply: (org: string) => `/orgs/${enc(org)}/schedules/apply`,
-  commands: (zone: string) => `/zones/${enc(zone)}/playback/commands`,
+  kiosks: (venue?: string) => `/business/kiosks${venue ? `?venue_id=${enc(venue)}` : ''}`,
+  zoneAlerts: (venue?: string) => `/business/zone-alerts${venue ? `?venue_id=${enc(venue)}` : ''}`,
+  zoneAlertAck: (id: string) => `/business/zone-alerts/${enc(id)}/acknowledge`,
+  schedule: (zone: string) => `/business/zones/${enc(zone)}/programme`,
+  scheduleApply: '/business/schedules/apply',
+  commands: (zone: string) => `/business/zones/${enc(zone)}/commands`,
   requests: (zone: string) => `/zones/${enc(zone)}/requests`,
   request: (zone: string, id: string, verdict: 'approve' | 'pass') => `/zones/${enc(zone)}/requests/${enc(id)}/${verdict}`,
-  members: (org: string) => `/orgs/${enc(org)}/members`,
-  member: (org: string, id: string) => `/orgs/${enc(org)}/members/${enc(id)}`,
-  exports: (org: string) => `/orgs/${enc(org)}/play-log-exports`,
-  pinCheck: (org: string, venue: string) => `/orgs/${enc(org)}/venues/${enc(venue)}/pin`,
-  adminPilots: '/admin/business/pilots',
-  adminPilot: (id: string, action: 'extend' | 'allowance' | 'convert' | 'end') => `/admin/business/pilots/${enc(id)}/${action}`,
-  requestSettings: (org: string, venue: string) => `/orgs/${enc(org)}/venues/${enc(venue)}/request-settings`,
-  librarySongs: (org: string) => `/orgs/${enc(org)}/library/songs`,
-  explicitBulk: (org: string) => `/orgs/${enc(org)}/library/explicit`,
+  people: '/business/people',
+  person: (user: string) => `/business/people/${enc(user)}`,
+  seats: '/business/seats',
+  invitations: '/business/invitations',
+  revokeInvitation: (id: string) => `/business/invitations/${enc(id)}/revoke`,
+  acceptInvitation: '/business/invitations/accept',
+  playLogRetention: '/business/play-log/retention',
+  isrcCoverage: (venue: string) => `/business/venues/${enc(venue)}/isrc-coverage`,
+  isrcTracks: (venue: string) => `/business/venues/${enc(venue)}/isrc-tracks`,
+  songIsrc: (song: string) => `/business/library/songs/${enc(song)}/isrc`,
+  terms: '/business/terms',
+  licenceExtend: (venue: string) => `/business/venues/${enc(venue)}/licence/extend`,
+  playLogExport: (venue: string, from: string, to: string) => `/business/play-log/export?venue_id=${enc(venue)}&from=${enc(from)}&to=${enc(to)}`,
+  pinCheck: (venue: string) => `/business/venues/${enc(venue)}/pin`,
+  librarySongs: '/business/library/songs',
+  explicitBulk: '/business/library/explicit',
+  copyPersonal: '/business/library/copy-from-personal',
+  billing: '/business/billing',
+  billingPreview: '/business/billing/preview',
+  billingPoNumber: '/business/billing/po-number',
+  billingCostCentre: (venue: string) => `/business/billing/venues/${enc(venue)}/cost-centre`,
+  billingCollection: '/business/billing/collection-method',
+  billingBreakdown: '/business/billing/cost-breakdown',
+  billingCheckout: '/business/billing/checkout',
+  billingCheckoutComplete: '/business/billing/checkout/complete',
+  billingDowngrade: '/business/billing/downgrade',
+  billingResume: (venue: string) => `/business/billing/venues/${enc(venue)}/resume`,
+  billingTransfers: '/business/billing/transfers',
+  billingTransfer: (id: string, action: 'accept' | 'cancel') => `/business/billing/transfers/${enc(id)}/${action}`,
 } as const;
 
 function enc(value: string) { return encodeURIComponent(value); }
 const json = (method: string, body?: unknown): RequestInit => ({ method, body: body === undefined ? undefined : JSON.stringify(body) });
+const newKey = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
 
 export type ZoneCommand =
   | { kind: 'skip' }
@@ -55,72 +95,151 @@ export type ZoneCommand =
   | { kind: 'undo'; command_id: string }
   | { kind: 'pause' } | { kind: 'resume' }
   | { kind: 'volume'; level: number }
-  | { kind: 'test' }
-  | { kind: 'play_here'; device_id: string };
+  | { kind: 'test' };
 
 export type ApplyPreview = { venues: number; open_now: number; conflicts: { venue_id: string; zone_id: string; updated_by: string; updated_at: number; theirs: Daypart[]; ours: Daypart[] }[] };
 
-export type PilotRow = { id: string; org_name: string; owner_email: string; venues_used: number; zones_used: number; allowance: { venues: number; zones: number }; starts_at: number; ends_at: number; status: 'active' | 'ending' | 'ended' | 'converted'; last_activity_at?: number | null; note?: string | null };
+/** A pending invitation as the People page lists it. No email is sent: the accept link is
+ * shown to the inviter to pass on. */
+export type Invitation = { id: string; email: string; role: Role; venue_ids: string[] | null; created_at: number; expires_at: number };
+export type People = { members: Member[]; invitations: Invitation[]; seats: PeopleAnswer['seats'] };
+
+/** A page's ZoneCommand as one entry for the zone command route (offline.Command). */
+export function commandBody(command: ZoneCommand, id: string, nowSeconds = Date.now() / 1000) {
+  const base = { id, issued_at: nowSeconds, origin: 'staff' };
+  switch (command.kind) {
+    case 'resume': return { ...base, kind: 'play', payload: {} };
+    case 'steer': return { ...base, kind: 'steer', payload: { word: command.word } };
+    case 'volume': return { ...base, kind: 'volume', payload: { level: command.level } };
+    case 'undo': return { ...base, kind: 'undo', payload: { command_id: command.command_id } };
+    default: return { ...base, kind: command.kind, payload: {} };
+  }
+}
+
+function templateParts(template?: string, dayparts?: Daypart[]): Daypart[] {
+  if (dayparts?.length) return dayparts;
+  return TEMPLATES.find((item) => item.id === template)?.dayparts ?? [];
+}
 
 /** The business client for one organisation workspace. */
 export function businessClient(api: Api, workspaceId?: string) {
   const call = <T,>(path: string, init?: RequestInit) => api<T>(path, init, workspaceId);
+  const inOrg = <T,>(org: string, path: string, init?: RequestInit) => api<T>(path, init, workspaceId ?? org);
+  const blocklist = async () => (await call<{ entries: BlockEntry[] }>(ROUTES.blocklist)).entries ?? [];
   return {
-    workspaces: () => api<WorkspaceSummary[]>(ROUTES.workspaces),
-    pilotInterest: (body: { name: string; email: string; venue: string; venues: number; message?: string }) => api<{ ok: true }>(ROUTES.pilotInterest, json('POST', body)),
-    startTrial: (body: { name: string; country: string; billing_email: string; vat_number?: string; po_number?: string }) => api<{ org: Org; checkout_url?: string | null }>(ROUTES.start, json('POST', body)),
-    org: (org: string) => call<Org>(ROUTES.org(org)),
-    overview: (org: string) => call<Overview>(ROUTES.overview(org)),
-    saveSetup: (org: string, progress: Partial<SetupProgress>) => call<SetupProgress>(ROUTES.setup(org), json('PUT', progress)),
-    saveBusinessDetails: (org: string, body: { name: string; country: string; billing_email: string; vat_number?: string; po_number?: string }) => call<Org>(ROUTES.org(org), json('PATCH', body)),
-    createVenue: (org: string, body: Pick<Venue, 'name' | 'address' | 'time_zone' | 'phone'>) => call<Venue>(ROUTES.venues(org), json('POST', body)),
-    updateVenue: (org: string, venue: string, body: Partial<Pick<Venue, 'name' | 'address' | 'time_zone' | 'phone' | 'region' | 'tags'>>) => call<Venue>(ROUTES.venue(org, venue), json('PATCH', body)),
-    venue: (org: string, venue: string) => call<Venue>(ROUTES.venue(org, venue)),
-    saveHours: (org: string, venue: string, hours: WeekHours, holidays: Holiday[]) => call<Venue>(ROUTES.hours(org, venue), json('PUT', { hours, holidays })),
-    addZone: (org: string, venue: string, name: string) => call<Zone>(ROUTES.zones(org, venue), json('POST', { name })),
-    renameZone: (org: string, venue: string, zone: string, name: string) => call<Zone>(`${ROUTES.zones(org, venue)}/${enc(zone)}`, json('PATCH', { name })),
-    saveLicence: (org: string, venue: string, licence: Licence & { rights_confirmed: true }) => call<Venue>(ROUTES.licence(org, venue), json('PUT', licence)),
-    rules: (org: string, venue: string) => call<ContentRules>(ROUTES.rules(org, venue)),
-    saveRules: (org: string, venue: string, rules: ContentRules) => call<ContentRules>(ROUTES.rules(org, venue), json('PUT', rules)),
-    stayOpenLate: (org: string, venue: string, minutes: number) => call<Venue>(ROUTES.stayLate(org, venue), json('POST', { minutes })),
-    copyFromPersonal: (org: string, body: { personal_workspace_id: string; crate_ids: string[]; song_ids: string[] }) => call<{ copied: number; job_id?: string }>(ROUTES.copyPersonal(org), json('POST', body)),
-    devices: (org: string) => call<Device[]>(ROUTES.devices(org)),
+    workspaces: async (): Promise<WorkspaceSummary[]> => {
+      const answer = await api<{ workspaces?: { id: string; name: string; kind: string; role: Role; pilot_until: number | null }[] }>(ROUTES.workspaces);
+      return (answer?.workspaces ?? []).map((item) => ({ id: item.id, name: item.name, kind: item.kind === 'business' ? 'business' : 'personal', role: item.role, marks: { pilot: item.pilot_until != null } }));
+    },
+    org: async (org: string) => (await inOrg<Overview>(org, ROUTES.overview(org))).org,
+    overview: (org: string) => inOrg<Overview>(org, ROUTES.overview(org)),
+    saveSetup: (org: string, progress: Partial<SetupProgress>) => inOrg<SetupProgress>(org, ROUTES.setup(org), json('PUT', progress)),
+    saveBusinessDetails: (org: string, body: { name: string; country: string; billing_email: string; vat_number?: string; po_number?: string }) => inOrg<Org>(org, ROUTES.org(org), json('PATCH', body)),
+    createVenue: async (_org: string, body: Pick<Venue, 'name' | 'address' | 'time_zone' | 'phone'> & { country?: string }) => {
+      const answer = await call<{ venue: Venue }>(ROUTES.venues, json('POST', {
+        name: body.name, timezone: body.time_zone, country: (body.country ?? 'GB').toUpperCase(), address: body.address ? { line1: body.address } : undefined,
+      }));
+      return answer.venue;
+    },
+    saveHours: async (_org: string, venue: string, hours: WeekHours, holidays: Holiday[]) => {
+      await call(ROUTES.hours(venue), json('PUT', hoursBody(hours)));
+      for (const holiday of holidays) await call(ROUTES.hourExceptions(venue), json('POST', exceptionBody(holiday)));
+      return null;
+    },
+    addZone: async (_org: string, venue: string, name: string) => (await call<{ zone: Zone }>(ROUTES.zones, json('POST', { venue_id: venue, name }))).zone,
+    renameZone: async (_org: string, _venue: string, zone: string, name: string) => (await call<{ zone: Zone }>(ROUTES.zone(zone), json('PATCH', { name }))).zone,
+    saveLicence: (_org: string, venue: string, licence: Licence & { rights_confirmed: true }) => call<{ venue_id: string }>(ROUTES.licence(venue), json('PUT', {
+      kind: licence.kind, other_name: licence.other_name ?? null, number: licence.number, expires_on: licence.expires_on, rights_confirmed: licence.rights_confirmed,
+    })),
+    rules: async (_org: string, venue: string): Promise<ContentRules> => {
+      const [answer, entries] = await Promise.all([call<VenueRulesAnswer>(ROUTES.rules(venue)), blocklist()]);
+      return rulesOf(answer, entries, venue);
+    },
+    /** `confirm` saves past the server's "under 2 hours of music" warning (ADR-0450). */
+    saveRules: async (_org: string, venue: string, rules: ContentRules, confirm = false): Promise<ContentRules> => {
+      const [zones, current] = await Promise.all([call<{ zones: { id: string }[] }>(ROUTES.zonesOf(venue)), call<VenueRulesAnswer>(ROUTES.rules(venue))]);
+      await call(`${ROUTES.rules(venue)}${confirm ? '?confirm=true' : ''}`, json('PUT', rulesBody(rules, (zones.zones ?? []).map((zone) => zone.id), current)));
+      const change = blocklistDiff(rules.blocklist, await blocklist(), venue);
+      for (const entry of change.add) await call(ROUTES.blocklist, json('POST', entry));
+      for (const id of change.remove) await call(ROUTES.blocklistEntry(id), json('DELETE'));
+      return rules;
+    },
+    stayOpenLate: (_org: string, venue: string, minutes: number) => call<unknown>(ROUTES.stayLate(venue), json('POST', { minutes })),
+    /** Opening hours and date exceptions as the server stores them (ADR-0444). */
+    hours: (venue: string) => call<HoursAnswer>(ROUTES.hours(venue)),
+    saveWeek: (venue: string, hours: WeekHours) => call<HoursAnswer>(ROUTES.hours(venue), json('PUT', hoursBody(hours))),
+    addException: (venue: string, holiday: Holiday) => call<{ id: string }>(ROUTES.hourExceptions(venue), json('POST', exceptionBody(holiday))),
+    removeException: (venue: string, id: string) => call<{ deleted: string }>(ROUTES.hourException(venue, id), json('DELETE')),
+    /** Public holidays as suggestions only: nothing changes until one is added as an exception. */
+    holidaySuggestions: async (venue: string, country: string, year: number) => (await call<{ suggestions: HolidaySuggestion[] }>(ROUTES.holidaySuggestions(venue, country, year))).suggestions ?? [],
+    closeNow: (venue: string) => call<CloseNowAnswer>(ROUTES.closeNow(venue), json('POST')),
+    setClosingMode: (venue: string, mode: 'natural' | 'exact') => call<{ closing_mode: string }>(ROUTES.closingMode(venue), json('PUT', { closing_mode: mode })),
+    undoCloseNow: (venue: string, id: string) => call<{ id: string; undone: boolean }>(ROUTES.closeNowUndo(venue, id), json('POST')),
+    zoneState: (zone: string) => call<ZoneDayState>(ROUTES.zoneState(zone)),
+    /** Organisation and per-venue meters (ADR-0448); managers only, the server refuses others. */
+    usage: () => call<UsageAnswer>(ROUTES.usage),
+    slo: (month?: string) => call<SloAnswer>(ROUTES.slo(month)),
+    setAlwaysOpen: (confirmed: boolean) => call<{ always_open_confirmed: boolean }>(ROUTES.alwaysOpen, json('PUT', { confirmed })),
     unpair: (device: string) => call<null>(ROUTES.unpair(device), json('DELETE')),
-    pair: (body: { code: string; zone_id: string; name: string }) => call<Device>(ROUTES.pair, json('POST', body)),
-    schedule: (zone: string) => call<ZoneSchedule>(ROUTES.schedule(zone)),
-    saveSchedule: (zone: string, schedule: ZoneSchedule) => call<ZoneSchedule>(ROUTES.schedule(zone), json('PUT', schedule)),
-    previewApply: (org: string, body: { venue_ids: string[]; template?: string; dayparts?: Daypart[] }) => call<ApplyPreview>(ROUTES.scheduleApply(org), json('POST', { ...body, preview: true })),
-    apply: (org: string, body: { venue_ids: string[]; template?: string; dayparts?: Daypart[]; versions: Record<string, number> }) => call<{ applied: number }>(ROUTES.scheduleApply(org), json('POST', body)),
-    command: (zone: string, command: ZoneCommand, idempotency: string) => call<{ id: string; accepted: boolean }>(ROUTES.commands(zone), { ...json('POST', command), headers: { 'Idempotency-Key': idempotency } }),
+    pair: (body: { code: string; zone_id: string; name: string; replace_device_id?: string }) => call<Device>(ROUTES.pair, json('POST', body)),
+    /** The kiosk players this person may see, with their latest health (ADR-0445). */
+    kiosks: async (venue?: string) => (await call<{ kiosks: Device[] }>(ROUTES.kiosks(venue))).kiosks,
+    /** Open player alerts (ADR-0445 BZ-0445-10): silent, offline, needs a tap, needs pairing, refused copy. */
+    zoneAlerts: async (venue?: string) => (await call<{ alerts: ZoneAlert[] }>(ROUTES.zoneAlerts(venue))).alerts,
+    acknowledgeZoneAlert: (id: string) => call<{ id: string }>(ROUTES.zoneAlertAck(id), json('POST')),
+    schedule: async (zone: string) => scheduleOf(zone, await call<ProgrammeAnswer>(ROUTES.schedule(zone))),
+    saveSchedule: async (zone: string, schedule: ZoneSchedule) => scheduleOf(zone, await call<ProgrammeAnswer>(ROUTES.schedule(zone), json('PUT', programmeBody(schedule.dayparts)))),
+    previewApply: (_org: string, body: { venue_ids: string[]; template?: string; dayparts?: Daypart[] }) =>
+      call<ApplyPreview>(ROUTES.scheduleApply, json('POST', { venue_ids: body.venue_ids, dayparts: applyParts(templateParts(body.template, body.dayparts)), preview: true })),
+    apply: (_org: string, body: { venue_ids: string[]; template?: string; dayparts?: Daypart[]; versions: Record<string, number> }) =>
+      call<{ applied: number }>(ROUTES.scheduleApply, json('POST', { venue_ids: body.venue_ids, dayparts: applyParts(templateParts(body.template, body.dayparts)), versions: body.versions })),
+    command: async (zone: string, command: ZoneCommand, idempotency: string = newKey()) => {
+      const answer = await call<{ applied?: string[]; duplicates?: string[] }>(ROUTES.commands(zone), json('POST', { commands: [commandBody(command, idempotency)] }));
+      return { id: idempotency, accepted: (answer?.applied ?? []).includes(idempotency) || (answer?.duplicates ?? []).includes(idempotency) };
+    },
     requests: (zone: string) => call<GuestRequest[]>(ROUTES.requests(zone)),
     decide: (zone: string, id: string, verdict: 'approve' | 'pass') => call<null>(ROUTES.request(zone, id, verdict), json('POST')),
-    members: (org: string) => call<Member[]>(ROUTES.members(org)),
-    invite: (org: string, body: { email: string; role: Role; venue_ids: string[] | null }) => call<Member>(ROUTES.members(org), json('POST', body)),
-    removeMember: (org: string, id: string) => call<null>(ROUTES.member(org, id), json('DELETE')),
-    exports: (org: string) => call<PlayLogExportJob[]>(ROUTES.exports(org)),
-    startExport: (org: string, body: { venue_ids: string[] | null; from: string; to: string; format: 'csv' }) => call<PlayLogExportJob>(ROUTES.exports(org), json('POST', body)),
-    checkPin: (org: string, venue: string, pin: string) => call<{ ok: boolean; member_name?: string; role?: Role }>(ROUTES.pinCheck(org, venue), json('POST', { pin })),
-    pilots: () => api<PilotRow[]>(ROUTES.adminPilots),
-    createPilot: (body: { org_name: string; owner_email: string; allowance: { venues: number; zones: number }; ends_at: number; note?: string; reason: string }) => api<PilotRow>(ROUTES.adminPilots, json('POST', body)),
-    pilotAction: (id: string, action: 'extend' | 'allowance' | 'convert' | 'end', body: { reason: string; ends_at?: number; allowance?: { venues: number; zones: number } }) => api<PilotRow>(ROUTES.adminPilot(id, action), json('POST', body)),
-    requestSettings: (org: string, venue: string) => call<RequestSettings | null>(ROUTES.requestSettings(org, venue)),
-    saveRequestSettings: (org: string, venue: string, settings: RequestSettings) => call<RequestSettings>(ROUTES.requestSettings(org, venue), json('PUT', settings)),
-    librarySongs: (org: string) => call<LibrarySong[] | null>(ROUTES.librarySongs(org)),
-    markExplicit: (org: string, body: { song_ids: string[]; explicit: 'explicit' | 'clean' }) => call<{ updated: number } | null>(ROUTES.explicitBulk(org), json('POST', body)),
+    people: async (): Promise<People> => {
+      const answer = await call<PeopleAnswer>(ROUTES.people);
+      return { members: membersOf(answer), invitations: answer.invitations ?? [], seats: answer.seats };
+    },
+    invite: (_org: string, body: { email: string; role: Role; venue_ids: string[] | null }) =>
+      call<{ invitation: Invitation; accept_url: string; emailed: boolean }>(ROUTES.invitations, json('POST', body)),
+    setPaidSeats: (paidSeats: number) => call<PeopleAnswer['seats']>(ROUTES.seats, json('PUT', { paid_seats: paidSeats })),
+    revokeInvitation: (id: string) => call<{ revoked: string }>(ROUTES.revokeInvitation(id), json('POST')),
+    acceptInvitation: (token: string, name?: string) => api<{ org_id: string; workspace_id: string }>(ROUTES.acceptInvitation, json('POST', { token, name })),
+    removeMember: (_org: string, id: string) => call<{ removed: string }>(ROUTES.person(id), json('DELETE')),
+    isrcTracks: (venue: string) => call<{ tracks: { song_id: string; title: string; artist: string; isrc: string | null }[] }>(ROUTES.isrcTracks(venue)),
+    saveIsrc: (song: string, isrc: string) => call<{ song_id: string; isrc: string | null }>(ROUTES.songIsrc(song), json('PUT', { isrc: isrc.trim() || null })),
+    isrcCoverage: (venue: string) => call<{ tracks: number; with_isrc: number; share: number }>(ROUTES.isrcCoverage(venue)),
+    playLogRetention: () => call<{ days: number; default_days: number }>(ROUTES.playLogRetention),
+    setPlayLogRetention: (days: number) => call<{ days: number }>(ROUTES.playLogRetention, json('PUT', { days })),
+    termsAccess: () => call<TermsAccess>(ROUTES.terms),
+    acceptTerms: () => call<TermsAccess>(`${ROUTES.terms}/accept`, json('POST')),
+    extendLicenceGrace: (venue: string, reason: string) => call<{ extended_until: number }>(ROUTES.licenceExtend(venue), json('POST', { reason })),
+    exportPlayLog: (venue: string, from: string, to: string) => call<{ filename: string; csv: string }>(ROUTES.playLogExport(venue, from, to)),
+    checkPin: (_org: string, venue: string, pin: string) => call<{ ok: boolean; member_name?: string; role?: Role }>(ROUTES.pinCheck(venue), json('POST', { pin })),
+    librarySongs: async (_org: string) => (await call<{ songs: LibrarySong[] }>(ROUTES.librarySongs)).songs ?? [],
+    copyFromPersonal: (songIds: string[]) => call<{ copied: number; skipped: number; refused: number; missing: number; song_ids: string[] }>(ROUTES.copyPersonal, json('POST', { song_ids: songIds })),
+    markExplicit: (_org: string, body: { song_ids: string[]; explicit: 'explicit' | 'clean' }) => call<{ updated: number }>(ROUTES.explicitBulk, json('POST', body)),
+    billingSummary: () => call<BillingSummary>(ROUTES.billing),
+    previewCost: (add: { venues: number; zones: number; seats: number }) => call<CostPreview>(ROUTES.billingPreview, json('POST', add)),
+    savePoNumber: (poNumber: string) => call<{ po_number: string | null }>(ROUTES.billingPoNumber, json('PUT', { po_number: poNumber })),
+    saveCostCentre: (venue: string, costCentre: string) => call<{ venue_id: string; cost_centre: string | null }>(ROUTES.billingCostCentre(venue), json('PUT', { cost_centre: costCentre })),
+    saveCollectionMethod: (method: 'charge_automatically' | 'send_invoice') => call<{ collection_method: string; net_days: number | null }>(ROUTES.billingCollection, json('PUT', { method })),
+    costBreakdown: () => call<{ filename: string; csv: string }>(ROUTES.billingBreakdown),
+    startCheckout: (body: CheckoutRequest) => call<CheckoutAnswer>(ROUTES.billingCheckout, json('POST', body)),
+    downgrade: (keepVenueIds: string[], paidZones: Record<string, number> = {}, keepZoneIds: Record<string, string[]> = {}) => call<{ pausing: { venue_id: string; pause_at: number }[] }>(ROUTES.billingDowngrade, json('POST', { keep_venue_ids: keepVenueIds, paid_zones: paidZones, ...(Object.keys(keepZoneIds).length ? { keep_zone_ids: keepZoneIds } : {}) })),
+    resumeVenue: (venue: string) => call<{ venue_id: string; state: string }>(ROUTES.billingResume(venue), json('POST')),
+    transfers: () => call<{ organisation_id: string; transfers: VenueTransfer[] }>(ROUTES.billingTransfers),
+    proposeTransfer: (venue: string, target: string) => call<{ transfer: { id: string; state: string } }>(ROUTES.billingTransfers, json('POST', { venue_id: venue, target_organisation_id: target })),
+    answerTransfer: (id: string, action: 'accept' | 'cancel') => call<unknown>(ROUTES.billingTransfer(id, action), json('POST')),
+    completeCheckout: (sessionId: string) => call<{ subscribed: boolean; status: string | null }>(ROUTES.billingCheckoutComplete, json('POST', { session_id: sessionId })),
   };
 }
 
 export type BusinessClient = ReturnType<typeof businessClient>;
 
-/** Rooms for Business settings for one venue (ADR-0451): request mode per zone, limits, guest page look. */
-export type RequestMode = 'approve' | 'auto' | 'off';
-export type RequestSettings = {
-  modes: Record<string, RequestMode>;
-  limits: { per_guest: number; per_guest_hour: number; cooldown_minutes: number; zone_pending: number; accepted_hour: number };
-  branding: { welcome: string; accent?: string | null; logo_url?: string | null };
-  /** Stable join codes per zone, for the print sheet. */
-  codes?: Record<string, string>;
-};
-
-/** A song in the organisation library as the explicit editor and blocklist read it (ADR-0450). */
+/** A song in the organisation library as the explicit editor and blocklist read it (ADR-0450).
+ * Title and artist come from the song's catalogue entry; an upload with none has an empty artist. */
 export type LibrarySong = { id: string; title: string; artist: string; explicit: 'explicit' | 'clean' | 'unknown' };

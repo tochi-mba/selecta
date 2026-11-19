@@ -10,7 +10,8 @@ artifact is protected when:
 - a revision playing now uses it: any of the workspace's playback sessions (one per business
   zone, ADR-0443) names that revision and is playing or paused; or
 - a kiosk reports that revision cached for offline playback (ADR-0446), through the provider
-  installed with `set_cached_revisions` (none until offline playback installs one).
+  installed with `set_cached_revisions` (none until offline playback installs one); or
+- it is a seam or analysis a business zone's kiosk horizon uses (`business.horizon`).
 
 `pin` records which artifacts a revision uses and `unpin` forgets a revision. `evict` takes the
 workspace's artifact rows in least-recently-used order (`last_used_at`, which every reuse
@@ -57,7 +58,13 @@ class Evicted:
 
 
 def budget_for(connection: Connection, workspace_id: str) -> int:
-    """The workspace's derived-data budget: its share of the storage limit it's on."""
+    """The workspace's derived-data budget: its share of the storage limit it's on. A business
+    organisation's is 15% of its pooled storage for its paid venues (ADR-0449 BZ-0449-10)."""
+    from selecta.business.derived_limits import business_budget_bytes
+
+    business = business_budget_bytes(connection, workspace_id)
+    if business is not None:
+        return business
     return int(quota.usage(connection, workspace_id).limit_bytes * DERIVED_SHARE)
 
 
@@ -156,7 +163,18 @@ def protected_ids(
     marked = sa.select(artifacts.c.id).where(
         artifacts.c.workspace_id == workspace_id, artifacts.c.protected.is_(True)
     )
-    return set(connection.execute(held).scalars()) | set(connection.execute(marked).scalars())
+    return (
+        set(connection.execute(held).scalars())
+        | set(connection.execute(marked).scalars())
+        | _horizon_artifacts(connection, workspace_id)
+    )
+
+
+def _horizon_artifacts(connection: Connection, workspace_id: str) -> set[str]:
+    """Seams and analyses a business zone's kiosk horizon uses (ADR-0446 BZ-0446-11)."""
+    from selecta.business.horizon import protected_artifact_ids
+
+    return protected_artifact_ids(connection, workspace_id)
 
 
 def evict(

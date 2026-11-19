@@ -22,6 +22,7 @@ from typing import Any, Protocol
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
+from selecta.business.weight import lane_tier
 from selecta.observability import tracing
 from selecta.persistence import db_now, new_id, transaction
 from selecta.scheduling import admission
@@ -249,7 +250,7 @@ class JobStore:
             self.config,
             job_type=spec.type,
             lane=lane,
-            tier=standing.tier,
+            tier=lane_tier(standing.tier, lane),
             queued_of_type=queued_of_type,
             backlog_drain_s=admission.drain_seconds(float(backlog or 0.0), max(slots, 1)),
             speculative_used_s=used,

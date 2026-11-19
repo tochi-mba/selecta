@@ -347,6 +347,11 @@ async function leave(): Promise<void> {
   screen('You left the room', 'The host still sees the songs you asked for.', h('button', { type: 'button', className: 'g-primary', onclick: () => joinScreen() }, 'Join again'));
 }
 
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && roomId) void refresh(); });
-window.addEventListener('online', () => { if (roomId) void refresh(); });
-void refresh();
+// A venue's table card (ADR-0451) links to /r/{code}?at=venue: its own small page, loaded only then.
+if (new URLSearchParams(location.search).get('at') === 'venue') {
+  void import('./venue').then((venue) => venue.startVenue(root, code));
+} else {
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && roomId) void refresh(); });
+  window.addEventListener('online', () => { if (roomId) void refresh(); });
+  void refresh();
+}

@@ -18,7 +18,6 @@ from selecta.admin import state as emergency_state
 from selecta.authz.check import Actor, authorize
 from selecta.authz.scopes import ResourceRef
 from selecta.flags import rules as flag_rules
-from selecta.flags.matching import Rule
 from selecta.flags.rules import RulesCache
 from selecta.hosted_coexistence.grandfather import HOSTED_MEDIA, audit_grandfather_rules
 from selecta.identity.tokens import Claims
@@ -277,9 +276,6 @@ def install_routes(
         )
         return {"workspace_id": workspace_id, "lifted": lifted}
 
-
-def parse_rules(items: list[dict[str, Any]]) -> list[Rule]:
-    return [Rule.from_dict(item) for item in items]
 
 
 __all__ = ["install_routes"]

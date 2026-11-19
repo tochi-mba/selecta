@@ -52,33 +52,3 @@ export function copyDay(hours: WeekHours, from: DayKey, to: DayKey[]): WeekHours
   for (const day of to) next[day] = (hours[from] ?? []).map((span) => ({ ...span }));
   return next;
 }
-
-/** The weekday key and minutes after midnight at `epochSeconds` in a time zone. */
-export function localDayMinutes(epochSeconds: number, timeZone: string): { day: DayKey; minutes: number; date: string } {
-  const parts = new Intl.DateTimeFormat('en-GB', { timeZone, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit' })
-    .formatToParts(new Date(epochSeconds * 1000));
-  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
-  const day = get('weekday').slice(0, 3).toLowerCase() as DayKey;
-  return { day, minutes: Number(get('hour')) * 60 + Number(get('minute')), date: `${get('year')}-${get('month')}-${get('day')}` };
-}
-
-/** The next opening after `now`: today if it opens later today, otherwise the next open day. */
-export function nextOpening(hours: WeekHours, now: number, timeZone: string, closedDates: string[] = []): { day: DayKey; open: number; inDays: number } | null {
-  const here = localDayMinutes(now, timeZone);
-  const start = DAYS.indexOf(here.day);
-  for (let offset = 0; offset < 8; offset += 1) {
-    const day = DAYS[(start + offset) % 7];
-    const date = isoPlusDays(here.date, offset);
-    if (closedDates.includes(date)) continue;
-    const spans = [...(hours[day] ?? [])].sort((a, b) => a.open - b.open);
-    const span = spans.find((item) => offset > 0 || item.open > here.minutes);
-    if (span) return { day, open: span.open, inDays: offset };
-  }
-  return null;
-}
-
-function isoPlusDays(iso: string, days: number) {
-  const date = new Date(`${iso}T12:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
-}

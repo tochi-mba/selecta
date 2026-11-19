@@ -58,6 +58,7 @@ class SongFacts:
     set_aside: bool = False
     never_play: bool = False
     analysed: bool = True
+    length_s: float | None = None
 
 
 @dataclass(frozen=True)

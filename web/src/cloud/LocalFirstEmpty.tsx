@@ -63,19 +63,6 @@ export function MixesEmpty({ connected, checking }: { connected: number; checkin
   );
 }
 
-export function MyMixesEmpty({ connected }: { connected: number }) {
-  return (
-    <main className="page" id="main">
-      <h1 className="display small">My Mixes</h1>
-      <section className="empty-state" aria-labelledby="my-mixes-empty-title">
-        <h2 id="my-mixes-empty-title">No mixes yet</h2>
-        <p>{connected === 0 ? 'Connect your music, then the mixes you make are kept here.' : 'The mixes you make are kept here, ready to play on any of your devices.'}</p>
-        <PageLink to={connected === 0 ? '/library' : '/mixes'} className="button primary">{connected === 0 ? 'Connect music' : 'Make a Mix'}</PageLink>
-      </section>
-    </main>
-  );
-}
-
 export function ListenEmpty({ connected }: { connected: number }) {
   return (
     <main className="page" id="main">

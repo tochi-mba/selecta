@@ -406,3 +406,22 @@ def test_one_million_decisions_take_under_sixty_seconds():
 
 def test_the_module_exports_its_public_names():
     assert set(simulator.__all__) <= set(dir(simulator))
+
+
+def test_twenty_kiosk_zones_opening_at_once_render_their_horizons_near_seams_first():
+    # ADR-0446 BZ-0446-01: twenty zones open together. Each asks for its next two seams as
+    # INTERACTIVE work due within two minutes and the rest of its four hours (46 more seams)
+    # as STANDARD work, as `business.horizon.request_seams` does (both kept waiting, the
+    # simulator's backlog). On eight render slots the near seams get about four fifths of the
+    # compute, the far horizon still moves, and no zone waits past its bound.
+    zones = tuple(
+        AccountSpec(f"zone{i:02d}", "premium", (
+            Demand(lane="interactive", backlog=2, est_cost_s=30.0, needed_in_s=120.0),
+            Demand(lane="standard", backlog=46, est_cost_s=30.0),
+        ))
+        for i in range(20)
+    )
+    report = simulate(Scenario(zones, slots=8, duration_s=4 * HOUR, config=NO_CAPS))
+    assert report.lane_service_s["interactive"] > report.lane_service_s["standard"] > 0
+    assert all(0.75 <= value <= 0.85 for value in report.lane_shares)
+    assert report.max_wait_ratio <= 1.0

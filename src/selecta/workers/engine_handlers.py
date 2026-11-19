@@ -305,10 +305,17 @@ def render_seam(job: Job, ctx: JobContext, *, ffmpeg: str = "ffmpeg") -> dict:
     sf.write(output, choice.rendered.audio, SAMPLE_RATE, subtype="PCM_24")
     hashes = {"a": ref["a"]["source_sha256"], "b": ref["b"]["source_sha256"]}
     input_hash = _hash({**hashes, "style": style, **_versions()})
+    # Where native playback of A hands over to the clip and of B takes over after it, so a
+    # player that plays the songs and the clip as separate files can join them (ADR-0446).
+    cues = {
+        "a_source_start": round(choice.rendered.script.a_source_start, 4),
+        "b_source_end": round(choice.rendered.script.b_source_end, 4),
+        "seconds": round(choice.rendered.seconds, 4),
+    }
     provenance = build_provenance(
         inputs=hashes,
         versions=_versions(),
-        settings={"style": style or "auto"},
+        settings={"style": style or "auto", "cues": cues},
     )
     artifact = ctx.publish("seam", input_hash, output, "seam.flac", provenance=provenance)
     ctx.progress(2, 2)
