@@ -32,7 +32,8 @@ HEADERS = {"X-Workspace-ID": WS}
 def directory() -> StaticDirectory:
     return StaticDirectory(
         venues=[VenueRef(VENUE, WS, WS, "The Crown"), VenueRef("venue-2", "ws-2", "ws-2", "Away")],
-        zones=[ZoneRef(BAR, VENUE, WS, WS, "Bar"), ZoneRef(ELSEWHERE, "venue-2", "ws-2", "ws-2", "X")],
+        zones=[ZoneRef(BAR, VENUE, WS, WS, "Bar"),
+               ZoneRef(ELSEWHERE, "venue-2", "ws-2", "ws-2", "X")],
     )
 
 
@@ -102,7 +103,8 @@ def test_venue_rules_save_zone_dayparts_and_volume_then_read_back(setup):
         "venue": {"filter_mode": "clean_only"},
         "zones": {BAR: {"energy_max": 0.7, "dayparts": {
             "brunch": {"label": "Brunch", "windows": [[6, 600, 720]], "bpm_max": 110}}}},
-        "volume": {BAR: {"cap": 0.8, "quiet_hours": [{"start": "22:00", "end": "07:00", "cap": 0.4}]}},
+        "volume": {BAR: {"cap": 0.8,
+                         "quiet_hours": [{"start": "22:00", "end": "07:00", "cap": 0.4}]}},
     }
     saved = client.put(f"/api/business/venues/{VENUE}/content/rules", headers=HEADERS, json=body)
     assert saved.status_code == 200, saved.text
@@ -131,13 +133,15 @@ def test_blocklist_entries_are_added_listed_and_removed(setup, engine):
     removed = client.delete(f"/api/business/content/blocklist/{entry_id}", headers=HEADERS)
     assert removed.status_code == 200
     assert client.get("/api/business/content/blocklist", headers=HEADERS).json()["entries"] == []
-    assert {"business.content.blocklist.add", "business.content.blocklist.remove"} <= set(audit_actions(engine))
+    assert {"business.content.blocklist.add", "business.content.blocklist.remove"} <= set(
+        audit_actions(engine))
 
 
 def test_an_override_is_created_and_ended_in_one_zone(setup):
     client, checked, _ = setup
     made = client.post(f"/api/business/zones/{BAR}/content/overrides", headers=HEADERS,
-                       json={"kind": "song", "value": "song-1", "reason": "Birthday", "minutes": 30})
+                       json={"kind": "song", "value": "song-1", "reason": "Birthday",
+                             "minutes": 30})
     assert made.status_code == 201, made.text
     override_id = made.json()["id"]
     assert ("business.rules.override", None, BAR) in checked

@@ -30,7 +30,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 
 from selecta import flags
-from selecta.business import alerts, health, kiosk, offline, permits, zone_clock
+from selecta.business import alerts, health, kiosk, kiosk_rooms, offline, permits, zone_clock
 from selecta.business.access import BusinessForbidden, BusinessNotFound
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, transaction
@@ -351,6 +351,13 @@ def install_routes(
         auth = kiosk_auth(request)
         with transaction(engine) as conn:
             now = db_now(conn)
+        # the venue network for Rooms (ADR-0451 BZ-0451-07), as a keyed hash only
+        try:
+            kiosk_rooms.record_network(
+                engine, pepper, auth, request.cookies.get(kiosk.TOKEN_COOKIE), address(request)
+            )
+        except (BusinessNotFound, BusinessForbidden, ValueError):
+            pass  # the health report never fails for Rooms
         return health.record_health(
             engine,
             auth,
@@ -448,6 +455,39 @@ def install_routes(
         except Exception as error:  # noqa: BLE001 - a bad entry refuses the batch, plainly
             code = getattr(error, "code", "bad_entry")
             raise HTTPException(status_code=422, detail={"code": code}) from None
+
+    # -- Rooms for Business on the zone's player (ADR-0451; the bridge is business.kiosk_rooms)
+
+    def rooms_call(run: Callable[[], Any]) -> Any:
+        try:
+            return run()
+        except (BusinessNotFound, BusinessForbidden):
+            raise HTTPException(status_code=404, detail={"code": "not_found"}) from None
+        except ValueError:  # Rooms can't start without its pepper
+            raise HTTPException(status_code=503, detail={"code": "rooms_unavailable"}) from None
+
+    @app.get("/api/kiosk/requests/next")
+    def kiosk_next_request(request: Request) -> dict[str, Any]:
+        auth = kiosk_auth(request)
+        token = request.cookies.get(kiosk.TOKEN_COOKIE)
+        return {
+            "request": rooms_call(lambda: kiosk_rooms.next_request(engine, pepper, auth, token))
+        }
+
+    @app.post("/api/kiosk/requests/{request_id}/played")
+    def kiosk_request_played(request_id: str, request: Request) -> dict[str, Any]:
+        auth = kiosk_auth(request)
+        token = request.cookies.get(kiosk.TOKEN_COOKIE)
+        played = rooms_call(
+            lambda: kiosk_rooms.mark_played(engine, pepper, auth, token, request_id)
+        )
+        return {"id": request_id, "played": played}
+
+    @app.get("/api/kiosk/screen-code")
+    def kiosk_screen_code(request: Request) -> dict[str, Any]:
+        auth = kiosk_auth(request)
+        token = request.cookies.get(kiosk.TOKEN_COOKIE)
+        return rooms_call(lambda: kiosk_rooms.screen_code(engine, pepper, auth, token))
 
     @app.post("/api/kiosk/pin")
     def pin(body: PinIn, request: Request) -> dict[str, Any]:

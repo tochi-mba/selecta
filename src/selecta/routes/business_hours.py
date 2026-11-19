@@ -79,14 +79,27 @@ def staff_role(_engine: Engine, _claims: Claims, _workspace_id: str, _venue_id: 
     return "staff"
 
 
+def user_id_of(engine: Engine, claims: Claims) -> str:
+    """The signed-in person's user id. Tokens carry the sign-in subject, not the user id, so it
+    is read from `users`; a test token whose subject is already a user id answers itself."""
+    from selecta.identity.schema import users
+
+    with transaction(engine) as conn:
+        found = conn.execute(
+            sa.select(users.c.id).where(users.c.auth_subject == claims.subject)
+        ).scalar()
+    return found or claims.subject
+
+
 def business_role(engine: Engine, claims: Claims, workspace_id: str, venue_id: str) -> str:
     """The caller's broadest business role at the venue; not a member answers 404."""
     from selecta.business.access import BusinessNotFound, guard
 
+    uid = user_id_of(engine, claims)
     with transaction(engine, workspace_id) as conn:
         try:
             actor = guard.actor_for(
-                conn, user_id=claims.subject, organisation_id=workspace_id,
+                conn, user_id=uid, organisation_id=workspace_id,
                 workspace_id=workspace_id,
             )
         except BusinessNotFound:
@@ -217,6 +230,8 @@ def install_routes(
 
     def scope(request: Request, claims: Claims) -> str:
         principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
+        user = getattr(getattr(principal, "user", None), "id", None)
+        request.state.user_id = user or user_id_of(engine, claims)
         return principal.workspace.id
 
     def manager(claims: Claims, workspace_id: str, venue_id: str) -> str:
@@ -308,7 +323,7 @@ def install_routes(
                         all_day=period.all_day,
                     )
                 )
-            audit_change(conn, workspace_id, claims.subject, "hours.edit", venue_id,
+            audit_change(conn, workspace_id, request.state.user_id, "hours.edit", venue_id,
                          resource_type="venue_hours", resource_id=body.zone_id or venue_id,
                          metadata={"periods": len(periods), "zone_id": body.zone_id or ""})
         _recompute(engine, workspace_id, venue_id)
@@ -330,7 +345,7 @@ def install_routes(
         manager(claims, workspace_id, venue_id)
         with transaction(engine, workspace_id) as conn:
             now = db_now(conn)
-            values = {"closing_mode": body.closing_mode, "updated_by": claims.subject,
+            values = {"closing_mode": body.closing_mode, "updated_by": request.state.user_id,
                       "updated_at": now}
             updated = conn.execute(
                 sa.update(modes).where(modes.c.workspace_id == workspace_id,
@@ -339,7 +354,7 @@ def install_routes(
             if not updated:
                 conn.execute(modes.insert().values(venue_id=venue_id, workspace_id=workspace_id,
                                                    **values))
-            audit_change(conn, workspace_id, claims.subject, "hours.closing_mode", venue_id,
+            audit_change(conn, workspace_id, request.state.user_id, "hours.closing_mode", venue_id,
                          resource_type="venue_closing_mode", resource_id=venue_id,
                          metadata={"closing_mode": body.closing_mode})
         _recompute(engine, workspace_id, venue_id)
@@ -373,11 +388,11 @@ def install_routes(
                     periods_json=[list(pair) for pair in body.periods],
                     repeat_yearly=body.repeat_yearly,
                     note=body.note,
-                    created_by=claims.subject,
+                    created_by=request.state.user_id,
                     created_at=db_now(conn),
                 )
             )
-            audit_change(conn, workspace_id, claims.subject, "hours.exception_add", venue_id,
+            audit_change(conn, workspace_id, request.state.user_id, "hours.exception_add", venue_id,
                          resource_type="venue_hour_exception", resource_id=exception_id,
                          metadata={"date": body.date.isoformat(), "closed": body.closed})
         _recompute(engine, workspace_id, venue_id)
@@ -400,7 +415,7 @@ def install_routes(
                 .where(venue_hour_exceptions.c.id == exception_id)
             ).rowcount
             if gone:
-                audit_change(conn, workspace_id, claims.subject, "hours.exception_remove",
+                audit_change(conn, workspace_id, request.state.user_id, "hours.exception_remove",
                              venue_id, resource_type="venue_hour_exception",
                              resource_id=exception_id)
         if not gone:
@@ -490,7 +505,7 @@ def install_routes(
             until = datetime.fromtimestamp(base.timestamp() + (body.minutes or 60) * 60, UTC)
         try:
             override = hours.stay_open_late(
-                intervals, now, until=until, role=role, by=claims.subject
+                intervals, now, until=until, role=role, by=request.state.user_id
             )
         except hours.HoursError as error:
             raise _bad(str(error)) from None
@@ -507,7 +522,7 @@ def install_routes(
         now = _now(workspace_id)
         try:
             override = hours.close_now(
-                _tonight(workspace_id, venue_id, now), now, by=claims.subject
+                _tonight(workspace_id, venue_id, now), now, by=request.state.user_id
             )
         except hours.HoursError as error:
             raise _bad(str(error)) from None
@@ -552,9 +567,10 @@ def install_routes(
             conn.execute(
                 sa.update(venue_hour_overrides)
                 .where(venue_hour_overrides.c.id == override_id)
-                .values(undone_at=undone.undone_at.timestamp(), undone_by=claims.subject)
+                .values(undone_at=undone.undone_at.timestamp(), undone_by=request.state.user_id)
             )
-            audit_change(conn, workspace_id, claims.subject, "hours.close_now_undo", venue_id,
+            audit_change(
+                conn, workspace_id, request.state.user_id, "hours.close_now_undo", venue_id,
                          resource_type="venue_hour_override", resource_id=override_id)
         _recompute(engine, workspace_id, venue_id)
         return {"id": override_id, "undone": True}

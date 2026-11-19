@@ -14,6 +14,9 @@ export type BulkApplied = { batch_id: string; count: number; version: number; su
 export type CsvRow = { line: string; isrc?: string; artist?: string; title?: string; explicit?: string; why?: string; by?: string };
 export type CsvMatch = { matched: CsvRow[]; ambiguous: CsvRow[]; unmatched: CsvRow[]; invalid: CsvRow[]; counts: Record<'matched' | 'ambiguous' | 'unmatched' | 'invalid', number> };
 export type Hint = { song_id: string; title: string; artist: string; explicit: Explicit; words?: string[]; why?: string };
+export type SongSheet = { song_id: string; title: string; artist: string; explicit: Explicit; source: string | null; clean_song_id: string | null };
+export type BlockKind = 'song' | 'artist' | 'album' | 'tag';
+export type BlockRow = { id: string; kind: BlockKind; value: string; label: string; scope: 'organisation' | 'venue' | 'zone'; scope_id: string; reason: string | null; ends_at: number | null };
 export type WorthChecking = { worth_checking: Hint[]; not_checked: Hint[]; checked: number; library: number };
 
 const enc = encodeURIComponent;
@@ -24,8 +27,11 @@ export const CONTENT_ROUTES = {
   overrides: (zone: string) => `/business/zones/${enc(zone)}/content/overrides`,
   override: (zone: string, id: string) => `/business/zones/${enc(zone)}/content/overrides/${enc(id)}`,
   variants: (name: string) => `/business/content/artist-variants?name=${enc(name)}`,
-  cleanLink: (song: string) => `/business/content/songs/${enc(song)}/clean-link`,
+  song: (song: string, venue?: string) => `/business/content/songs/${enc(song)}${venue ? `?venue_id=${enc(venue)}` : ''}`,
+  cleanLink: (song: string, venue?: string) => `/business/content/songs/${enc(song)}/clean-link${venue ? `?venue_id=${enc(venue)}` : ''}`,
   songFlag: (song: string) => `/business/content/songs/${enc(song)}/explicit`,
+  blocklist: '/business/content/blocklist',
+  blockEntry: (id: string) => `/business/content/blocklist/${enc(id)}`,
   bulkPreview: '/business/content/bulk/preview',
   bulkApply: '/business/content/bulk/apply',
   bulkUndo: (batch: string) => `/business/content/bulk/${enc(batch)}/undo`,
@@ -42,8 +48,12 @@ export function contentClient(api: Api, workspaceId: string) {
     addOverride: (zone: string, body: { kind: 'song' | 'artist'; value: string; label?: string; reason: string; minutes: number }) => call<{ id: string; ends_at: number }>(CONTENT_ROUTES.overrides(zone), post(body)),
     endOverride: (zone: string, id: string) => call<{ ended: string }>(CONTENT_ROUTES.override(zone, id), { method: 'DELETE' }),
     variants: async (name: string) => (await call<{ variants: string[] }>(CONTENT_ROUTES.variants(name))).variants,
-    setCleanLink: (song: string, clean: string | null) => call<{ version: number }>(CONTENT_ROUTES.cleanLink(song), { method: 'PUT', body: JSON.stringify({ clean_song_id: clean }) }),
-    setFlag: (song: string, explicit: Explicit) => call<{ version: number }>(CONTENT_ROUTES.songFlag(song), { method: 'PUT', body: JSON.stringify({ explicit }) }),
+    song: (song: string, venue?: string) => call<SongSheet>(CONTENT_ROUTES.song(song, venue)),
+    setCleanLink: (song: string, clean: string | null, venue?: string) => call<{ version: number }>(CONTENT_ROUTES.cleanLink(song, venue), { method: 'PUT', body: JSON.stringify({ clean_song_id: clean }) }),
+    setFlag: (song: string, explicit: Explicit, venue?: string) => call<{ version: number }>(CONTENT_ROUTES.songFlag(song), { method: 'PUT', body: JSON.stringify({ explicit, venue_id: venue ?? null }) }),
+    blocklist: async () => (await call<{ entries: BlockRow[] }>(CONTENT_ROUTES.blocklist)).entries ?? [],
+    addBlock: (body: { kind: BlockKind; value: string; label?: string; scope: 'organisation' | 'venue'; scope_id: string; reason?: string | null; ends_at?: number | null }) => call<{ id: string; ended_overrides: string[] }>(CONTENT_ROUTES.blocklist, post(body)),
+    removeBlock: (id: string) => call<{ removed: string }>(CONTENT_ROUTES.blockEntry(id), { method: 'DELETE' }),
     bulkPreview: (selection: Selection) => call<BulkPreview>(CONTENT_ROUTES.bulkPreview, post(selection)),
     bulkApply: (selection: Selection) => call<BulkApplied>(CONTENT_ROUTES.bulkApply, post(selection)),
     bulkUndo: (batch: string) => call<{ restored: number }>(CONTENT_ROUTES.bulkUndo(batch), post({})),

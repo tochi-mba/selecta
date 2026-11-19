@@ -196,6 +196,25 @@ describe('the horizon the player is given', () => {
   });
 });
 
+describe('guest requests and the on-screen code (ADR-0451)', () => {
+  it('a request put into the programme is fetched at once, and marked played when its song plays', async () => {
+    const k = setup({ paired: true });
+    const extra = k.api as unknown as Record<string, unknown>;
+    extra.screenCode = vi.fn(async () => ({ on: true, code: 'K7QD', changes_at: null }));
+    extra.nextRequest = vi.fn(async () => ({ id: 'req-1', local_song_id: 7, title: 'Song', artist: 'Band', queued: true }));
+    const played = vi.fn(async () => undefined);
+    extra.requestPlayed = played;
+    const extras: { roomCode: string | null }[] = [];
+    const c = createController({ ...k.deps, render: (_s, _v, e) => { extras.push(e); } });
+    await c.boot();
+    expect(k.api.horizon).toHaveBeenCalledTimes(2); // once at boot, once for the request
+    expect(extras[extras.length - 1].roomCode).toBe('K7QD');
+    (k.player as unknown as { current: () => unknown }).current = () => ({ song_id: 7 });
+    await c.every('tick');
+    expect(played).toHaveBeenCalledWith('req-1');
+  });
+});
+
 describe('kiosk screens and panel', () => {
   it('the view keeps only allowlisted fields', () => {
     const view = sanitiseKioskView({ state: 'open', zone_name: 'Bar', billing_status: 'grace', seats: 3, now_playing: { title: 'A', artist: 'B', isrc: 'X' } });

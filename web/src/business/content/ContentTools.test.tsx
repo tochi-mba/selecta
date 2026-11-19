@@ -1,6 +1,6 @@
 // The ADR-0450 content tools under Music rules: the zone pool with its relaxations and unchecked
 // count, overrides, the bulk editor with undo, the CSV import preview and "Worth checking", each
-// shown only while its flag is on, and a notice instead while content controls are off.
+// shown only while its flag is on; with content controls off the tools disappear.
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -20,8 +20,14 @@ const POOL: ZonePool = {
 };
 
 function fakeApi() {
-  return vi.fn(async (path: string) => {
+  let sheetMark = 'unknown';
+  return vi.fn(async (path: string, init?: RequestInit) => {
     if (path.endsWith('/content/pool')) return POOL;
+    if (path === CONTENT_ROUTES.blocklist && !init?.method) return { entries: [{ id: 'e1', kind: 'album', value: 'loud', label: 'Loud Album', scope: 'venue', scope_id: 'camden', reason: 'Brand', ends_at: null }] };
+    if (path === CONTENT_ROUTES.blocklist) return { id: 'e2', ended_overrides: [] };
+    if (path.startsWith('/business/content/artist-variants')) return { variants: ['Beyoncé', 'Beyoncé feat. Jay-Z'] };
+    if (path.startsWith('/business/content/songs/s1') && !init?.method) return { song_id: 's1', title: 'Golden Hour', artist: 'Beyoncé', explicit: sheetMark, source: 'tag', clean_song_id: null };
+    if (path.startsWith('/business/content/songs/s1')) { sheetMark = JSON.parse(String(init?.body)).explicit ?? sheetMark; return { version: 2 }; }
     if (path === CONTENT_ROUTES.bulkPreview) return { count: 214, changing: 200, explicit: 'clean', summary: 'Marking 214 songs as clean', songs: [] };
     if (path === CONTENT_ROUTES.bulkApply) return { batch_id: 'b1', count: 214, version: 4, summary: 'Marking 214 songs as clean' };
     if (path === CONTENT_ROUTES.bulkUndo('b1')) return { restored: 214 };
@@ -31,10 +37,11 @@ function fakeApi() {
   });
 }
 
-function show(features: Record<string, boolean>, api = fakeApi()) {
+function show(features: Record<string, boolean>, api = fakeApi(), role: 'owner' | 'staff' = 'owner') {
   const one = venue('camden', 'Camden');
   const value = {
-    org: org({ features }), venues: [one], devices: [], activity: [], client: {} as BusinessCtx['client'],
+    org: org({ features, role }), venues: [one], devices: [], activity: [],
+    client: { librarySongs: async () => [{ id: 's1', title: 'Golden Hour', artist: 'Beyoncé', explicit: 'unknown' }, { id: 's2', title: 'Golden Hour (Clean)', artist: 'Beyoncé', explicit: 'clean' }] } as unknown as BusinessCtx['client'],
     now: NOW, offline: false, updatedAt: NOW, health: { stream: 'live' }, loading: false, readOnly: false,
     refresh: async () => {}, go: vi.fn(), api: api as unknown as Api,
   } as BusinessCtx;
@@ -43,9 +50,9 @@ function show(features: Record<string, boolean>, api = fakeApi()) {
 }
 
 describe('content tools', () => {
-  it('tells managers zones refuse rather than play unchecked while content controls are off', () => {
+  it('disappears while content controls are off', () => {
     const api = show({});
-    expect(screen.getByRole('status')).toHaveTextContent("zones won't start new music");
+    expect(screen.queryByText('What each zone can play')).toBeNull();
     expect(api).not.toHaveBeenCalled();
   });
 
@@ -83,6 +90,37 @@ describe('content tools', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Check more songs' }));
     expect(await screen.findByText(/Rude Song by X/)).toBeInTheDocument();
     expect(api.mock.calls.map(([path]) => path).some((path) => String(path).includes('/explicit'))).toBe(false);
+  });
+
+  it('shows every artist spelling before an artist can be blocked, and lists album entries', async () => {
+    const api = show({ 'business.content_controls': true });
+    expect(await screen.findByText(/Album: Loud Album/)).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Artist to block'), 'Beyonce');
+    const add = screen.getByRole('button', { name: 'Add to the blocklist' });
+    expect(add).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Check spellings' }));
+    expect(await screen.findByText('Beyoncé feat. Jay-Z')).toBeInTheDocument();
+    await userEvent.click(add);
+    const posted = api.mock.calls.find(([path, init]) => path === CONTENT_ROUTES.blocklist && (init as RequestInit | undefined)?.method === 'POST');
+    expect(JSON.parse(String((posted?.[1] as RequestInit).body))).toMatchObject({ kind: 'artist', value: 'Beyonce', scope: 'venue', scope_id: 'camden' });
+  });
+
+  it('opens a song sheet and marks the song, with the clean edit picker', async () => {
+    const api = show({ 'business.content_controls': true });
+    await userEvent.type(await screen.findByLabelText('Find a song'), 'golden');
+    await userEvent.click(await screen.findByRole('button', { name: 'Golden Hour by Beyoncé' }));
+    expect(await screen.findByText("Marked by the file's own tags.")).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText('Explicit lyrics'), 'explicit');
+    expect(api.mock.calls.some(([path, init]) => path === CONTENT_ROUTES.songFlag('s1') && (init as RequestInit | undefined)?.method === 'PUT')).toBe(true);
+    expect(screen.getByLabelText('Clean edit')).toHaveTextContent('Golden Hour (Clean) by Beyoncé');
+  });
+
+  it('shows the song sheet read-only to staff', async () => {
+    show({ 'business.content_controls': true }, fakeApi(), 'staff');
+    await userEvent.type(await screen.findByLabelText('Find a song'), 'golden');
+    await userEvent.click(await screen.findByRole('button', { name: 'Golden Hour by Beyoncé' }));
+    expect(await screen.findByLabelText('Explicit lyrics')).toBeDisabled();
+    expect(screen.getByText('Venue managers and above can change this.')).toBeInTheDocument();
   });
 
   it('says when an override ends', () => {

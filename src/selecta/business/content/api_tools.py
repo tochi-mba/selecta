@@ -126,17 +126,19 @@ def install_routes(
         return guard.actor_for(conn, user_id=claims.subject, organisation_id=workspace_id,
                                workspace_id=workspace_id)
 
-    def check(conn, actor, permissions: tuple[str, ...], zone_id: str | None) -> None:
+    def check(conn, actor, permissions: tuple[str, ...], zone_id: str | None,
+              venue_id: str | None = None) -> None:
         last: BusinessError | None = None
         for permission in permissions:
             try:
                 if authorize is not None:
-                    authorize(conn, actor, permission, venue_id=None, zone_id=zone_id,
+                    authorize(conn, actor, permission, venue_id=venue_id, zone_id=zone_id,
                               directory=directory)
                 else:
                     from selecta.business.access import guard
 
-                    guard.require(conn, actor, permission, zone_id=zone_id, directory=directory)
+                    guard.require(conn, actor, permission, venue_id=venue_id, zone_id=zone_id,
+                                  directory=directory)
                 return
             except BusinessError as error:
                 last = error
@@ -145,6 +147,7 @@ def install_routes(
 
     def run(request: Request, flags: tuple[str, ...], permissions: tuple[str, ...],
             work: Callable[[Connection, BusinessActor], Any], *, zone_id: str | None = None,
+            venue_id: str | None = None,
             device_ok: bool = False) -> Any:
         for flag in flags:
             if not flag_on(flag):
@@ -157,12 +160,12 @@ def install_routes(
 
                 with transaction(engine) as conn:
                     actor = guard.device_actor(conn, token=token)
-                    check(conn, actor, permissions, zone_id)
+                    check(conn, actor, permissions, zone_id, venue_id)
                     return work(conn, actor)
             workspace_id = workspace_of(request)
             with transaction(engine, workspace_id) as conn:
                 actor = resolve(request, conn, workspace_id)
-                check(conn, actor, permissions, zone_id)
+                check(conn, actor, permissions, zone_id, venue_id)
                 return work(conn, actor)
         except BusinessError as error:
             raise _error(error) from error
@@ -221,8 +224,23 @@ def install_routes(
             return {"name": name, "variants": artist_variants(name[:400], names)}
         return run(request, engine_flag, ("business.rules.read",), work)
 
+    @app.get("/api/business/content/songs/{song_id}")
+    def song_sheet(song_id: str, request: Request, venue_id: str | None = None) -> dict:
+        """The song sheet: its explicit mark, where the mark came from and its clean edit."""
+        def work(conn, actor):
+            found = library.facts(conn, actor.workspace_id, [song_id]).get(song_id)
+            if found is None:
+                raise BusinessNotFound()
+            flag = store.get_flag(conn, actor.organisation_id, song_id) or {}
+            return {"song_id": song_id, "title": found.title, "artist": found.artist,
+                    "explicit": flag.get("explicit", "unknown"), "source": flag.get("source"),
+                    "clean_song_id": store.clean_links_map(conn, actor.organisation_id)
+                    .get(song_id)}
+        return run(request, engine_flag, ("business.rules.read",), work, venue_id=venue_id)
+
     @app.put("/api/business/content/songs/{song_id}/clean-link")
-    def clean_link(song_id: str, body: CleanLink, request: Request) -> dict[str, Any]:
+    def clean_link(song_id: str, body: CleanLink, request: Request,
+                   venue_id: str | None = None) -> dict[str, Any]:
         def work(conn, actor):
             known = {s.song_id for s in all_songs(conn, actor)}
             if song_id not in known or (body.clean_song_id and body.clean_song_id not in known):
@@ -232,7 +250,7 @@ def install_routes(
                 workspace_id=actor.workspace_id, song_id=song_id,
                 clean_song_id=body.clean_song_id)
             return {"song_id": song_id, "clean_song_id": body.clean_song_id, "version": version}
-        return run(request, engine_flag, ("business.songs.flag",), work)
+        return run(request, engine_flag, ("business.songs.flag",), work, venue_id=venue_id)
 
     # -- the bulk editor and CSV import ------------------------------------------------------
 

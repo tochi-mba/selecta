@@ -72,9 +72,11 @@ async function start(): Promise<void> {
       document.documentElement.dataset.theme = view.theme ?? 'dark';
       // what the player is doing, for staff tools and the browser tests (no words on screen)
       document.documentElement.dataset.audible = extra.audible ? 'yes' : 'no';
+      document.documentElement.dataset.savedHours = String(extra.savedHours);
       const node = renderScreen(screen, view, {
         deviceName: view.device_name ?? 'Player',
         pairingCode: extra.pairingCode,
+        roomCode: extra.roomCode,
         onTap: () => void controller.tap(),
         onDonePairing: screen.kind === 'unpaired' && controller.state().paired ? () => controller.showCode(false) : undefined,
       });

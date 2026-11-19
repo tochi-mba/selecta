@@ -139,13 +139,14 @@ def install_routes(
 
     @contextmanager
     def member(request: Request, claims: Claims,
-               allowed: frozenset[str]) -> Iterator[tuple[Connection, Any, str, float]]:
+               allowed: frozenset[str]) -> Iterator[tuple[Connection, Any, str, float, str]]:
         found = principal_for(engine, claims, request.headers.get("x-workspace-id"))
         if found.workspace.kind != "business":
             raise HTTPException(status_code=404, detail=dict(NOT_FOUND))
         with transaction(engine, found.workspace.id) as conn:
             org = facts_source.organisation(conn, found.workspace.id)
-            role = role_in(conn, found.workspace.id, claims.subject)
+            user = getattr(getattr(found, "user", None), "id", None) or claims.subject
+            role = role_in(conn, found.workspace.id, user)
             if org is None or role is None:
                 raise HTTPException(status_code=404, detail=dict(NOT_FOUND))
             if role not in allowed:
@@ -153,12 +154,12 @@ def install_routes(
                     "code": "usage_not_permitted",
                     "message": usage_meters.MetersRefused().message,
                 })
-            yield conn, org, role, float(db_now(conn))
+            yield conn, org, role, float(db_now(conn)), user
 
     @app.get("/api/business/usage")
     def usage(request: Request, claims: Claims = Depends(current_claims)  # noqa: B008
               ) -> dict[str, Any]:
-        with member(request, claims, MANAGER_ROLES) as (conn, org, role, now):
+        with member(request, claims, MANAGER_ROLES) as (conn, org, role, now, _user):
             entitlement_gates.sync_storage(conn, org, now)
             answer = usage_meters.usage_for(conn, org, role, now)
             confirmed = weight.always_open_confirmed(conn, org.organisation_id)
@@ -174,15 +175,15 @@ def install_routes(
         if month is not None and not re.match(_MONTH, month):
             raise HTTPException(status_code=400, detail={
                 "code": "bad_month", "message": "Choose a month as YYYY-MM."})
-        with member(request, claims, MANAGER_ROLES) as (conn, org, _role, now):
+        with member(request, claims, MANAGER_ROLES) as (conn, org, _role, now, _user):
             return slo_view(conn, org, month or ent.local_month(org.time_zone, now))
 
     @app.put("/api/business/always-open")
     def always_open(body: AlwaysOpenBody, request: Request,
                     claims: Claims = Depends(current_claims)  # noqa: B008
                     ) -> dict[str, Any]:
-        with member(request, claims, BILLING_ROLES) as (conn, org, _role, now):
-            set_always_open(conn, org, body.confirmed, actor=claims.subject, now=now)
+        with member(request, claims, BILLING_ROLES) as (conn, org, _role, now, user):
+            set_always_open(conn, org, body.confirmed, actor=user, now=now)
         return {"always_open_confirmed": body.confirmed}
 
     # Staff ---------------------------------------------------------------------------------

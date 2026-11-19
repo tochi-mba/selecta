@@ -74,7 +74,8 @@ function savedMark(): HTMLElement {
   return mark;
 }
 
-export function KioskPlaying(view: KioskView, saved: boolean): HTMLElement {
+/** `roomCode`: the zone's rotating on-screen request code (ADR-0451), when on-screen mode is on. */
+export function KioskPlaying(view: KioskView, saved: boolean, roomCode: string | null = null): HTMLElement {
   const where = [view.venue_name, view.zone_name].filter(Boolean).join(' · ');
   const now = view.now;
   const next = view.next;
@@ -86,10 +87,11 @@ export function KioskPlaying(view: KioskView, saved: boolean): HTMLElement {
       now?.artist ? clamp('p', 'k-artist', now.artist) : null),
     next ? clamp('p', 'k-next', C.next(C.songLine(next.title, next.artist))) : null,
     h('div', { className: 'k-motif', 'aria-hidden': 'true' }, h('span', {}), h('span', {}), h('span', {})),
+    roomCode ? h('p', { className: 'k-room-code', id: 'k-room-code' }, C.requestCode(roomCode)) : null,
     saved ? savedMark() : null);
 }
 
-export type RenderContext = { deviceName: string; pairingCode: string | null; onTap: () => void; onDonePairing?: () => void };
+export type RenderContext = { deviceName: string; pairingCode: string | null; onTap: () => void; onDonePairing?: () => void; roomCode?: string | null };
 
 export function renderScreen(screen: KioskScreen, view: KioskView, ctx: RenderContext): HTMLElement {
   switch (screen.kind) {
@@ -97,7 +99,7 @@ export function renderScreen(screen: KioskScreen, view: KioskView, ctx: RenderCo
     case 'needs_tap': return KioskTapToStart(ctx.onTap);
     case 'closed': return KioskClosed(screen.opensAt, screen.sleep);
     case 'starting': return KioskStarting();
-    case 'playing': return KioskPlaying(view, screen.saved);
+    case 'playing': return KioskPlaying(view, screen.saved, ctx.roomCode ?? null);
     case 'paused': return KioskPaused();
     case 'problem': return KioskProblem(screen.code);
     case 'updating': return KioskUpdating();

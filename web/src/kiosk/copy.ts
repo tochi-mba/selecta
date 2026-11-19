@@ -25,6 +25,7 @@ export const KIOSK_COPY = {
   next: (line: string) => `Next: ${line}`,
   songLine: (title: string, artist: string) => (artist ? `${title} by ${artist}` : title),
   codeFor: (code: string) => `Code ${code}`,
+  requestCode: (code: string) => `Request a song with code ${code}`,
   // the hidden staff panel (read only)
   staffCorner: 'Player details. Press and hold for 3 seconds',
   pinTitle: 'Staff PIN',

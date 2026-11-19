@@ -15,6 +15,10 @@ export const KIOSK_ROUTES = {
   horizon: '/api/kiosk/horizon',
   segmentUrl: '/api/kiosk/segment-url',
   resync: '/api/kiosk/resync',
+  // Rooms for Business on the zone's player (ADR-0451)
+  nextRequest: '/api/kiosk/requests/next',
+  requestPlayed: (id: string) => `/api/kiosk/requests/${encodeURIComponent(id)}/played`,
+  screenCode: '/api/kiosk/screen-code',
   // Not named by ADR-0445: checks the venue's staff PIN for the hidden panel.
   pin: '/api/kiosk/pin',
 } as const;
@@ -66,6 +70,10 @@ export type HealthReport = {
   battery: { level: number; charging: boolean } | null;
   persisted?: boolean;
 };
+
+/** A guest request whose turn has come, already put into the zone's programme by the server. */
+export type NextRequest = { id: string; local_song_id: number | null; title: string; artist: string; queued: boolean };
+export type ScreenCode = { on: boolean; code: string | null; changes_at: number | null };
 
 export type HorizonManifest = Manifest & { issued_at?: number; valid_until?: number; server_time?: number; state?: string };
 
@@ -195,6 +203,19 @@ export function kioskApi(options: KioskApiOptions = {}) {
     async resync(entries: unknown[]): Promise<{ inserted: number; duplicates: number }> {
       const body = await post(KIOSK_ROUTES.resync, { entries });
       return { inserted: num(body.inserted) ?? 0, duplicates: num(body.duplicates) ?? 0 };
+    },
+    async nextRequest(): Promise<NextRequest | null> {
+      const body = await send(KIOSK_ROUTES.nextRequest);
+      const raw = body.request as Record<string, unknown> | null | undefined;
+      if (!raw || !str(raw.id)) return null;
+      return { id: String(raw.id), local_song_id: num(raw.local_song_id), title: str(raw.title) ?? '', artist: str(raw.artist) ?? '', queued: raw.queued === true };
+    },
+    async requestPlayed(id: string): Promise<void> {
+      await post(KIOSK_ROUTES.requestPlayed(id), {});
+    },
+    async screenCode(): Promise<ScreenCode> {
+      const body = await send(KIOSK_ROUTES.screenCode);
+      return { on: body.on === true, code: str(body.code), changes_at: num(body.changes_at) };
     },
     /** True when the staff PIN matches. The PIN is never stored on the page. */
     async checkPin(pin: string): Promise<boolean> {

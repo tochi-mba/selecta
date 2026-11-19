@@ -148,6 +148,9 @@
         "POST /api/kiosk/segment-url",
         "POST /api/kiosk/resync",
         "POST /api/kiosk/pin",
+        "GET /api/kiosk/requests/next",
+        "POST /api/kiosk/requests/{request_id}/played",
+        "GET /api/kiosk/screen-code",
         "GET /api/business/kiosks",
         "GET /api/business/zone-alerts",
         "POST /api/business/zone-alerts/{alert_id}/acknowledge",
@@ -327,7 +330,8 @@
         "GET /api/business/zones/{zone_id}/content/pool",
         "GET /api/business/zones/{zone_id}/content/snapshot",
         "GET /api/business/content/artist-variants",
-        "PUT /api/business/content/songs/{song_id}/clean-link"
+        "PUT /api/business/content/songs/{song_id}/clean-link",
+        "GET /api/business/content/songs/{song_id}"
       ],
       "modes": ["cloud"],
       "scope": "workspace",

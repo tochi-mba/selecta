@@ -99,7 +99,7 @@ export default function BusinessPricing({ api, onLeave }: { api: Api; onLeave: (
   const [load, setLoad] = useState<Load>({ state: 'loading' });
   const fetchPrices = useCallback(() => {
     setLoad({ state: 'loading' });
-    api<{ pricing: Pricing }>(`/api/business/pricing?currency=${currency}`)
+    api<{ pricing: Pricing }>(`/business/pricing?currency=${currency}`)
       .then((body) => setLoad({ state: 'ready', pricing: body.pricing }))
       .catch(() => setLoad({ state: 'failed' }));
   }, [api, currency]);

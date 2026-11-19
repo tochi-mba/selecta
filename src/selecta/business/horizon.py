@@ -148,10 +148,13 @@ def splice(
 def planned_horizon(engine: Engine, workspace_id: str, zone_id: str) -> list[dict[str, Any]]:
     """The kiosk's horizon: the programme's songs with rendered seams spliced in (a
     `HorizonFor` for the kiosk routes)."""
+    from selecta.business.content.zone_planner import content_horizon
     from selecta.business.health import programme_horizon
 
     songs = programme_horizon(engine, workspace_id, zone_id)
     with transaction(engine, workspace_id) as conn:
+        # ADR-0450: re-checked against the zone's rules on every read, filled from its pool
+        songs = content_horizon(conn, workspace_id, zone_id, songs, db_now(conn))
         return splice(conn, workspace_id, songs)
 
 
@@ -307,6 +310,9 @@ def tick(engine: Engine) -> dict[str, int]:
             continue  # nothing is rendered for a closed zone
         songs = programme_horizon(engine, workspace_id, zone_id)
         with transaction(engine, workspace_id) as conn:
+            from selecta.business.content.zone_planner import content_horizon
+
+            songs = content_horizon(conn, workspace_id, zone_id, songs, now)
             counts = request_seams(conn, workspace_id, zone_id, songs, now, close_at=close_at,
                                    venue_id=venue_id)
         total["zones"] += 1

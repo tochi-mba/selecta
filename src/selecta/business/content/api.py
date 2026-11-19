@@ -233,7 +233,7 @@ def install_routes(
                 workspace_id=actor.workspace_id, song_id=song_id, explicit=body.explicit,
                 venue_id=body.venue_id)
             return {"song_id": song_id, "explicit": body.explicit, "version": version}
-        return run(request, "business.songs.flag", work)
+        return run(request, "business.songs.flag", work, venue_id=body.venue_id)
 
 
 __all__ = ["FLAG", "install_routes", "no_songs"]

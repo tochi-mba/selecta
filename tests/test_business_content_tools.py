@@ -291,10 +291,10 @@ def test_a_zone_programme_is_refused_song_by_song(engine, monkeypatch):
         assert playback_gate.refused_in_programme(conn, WS, BAR, [99], now) == \
             playback_gate.UNKNOWN
         assert playback_gate.refused_in_programme(conn, "personal", "zone-x", [2], now) is None
-    monkeypatch.setattr(gate, "on", lambda flag: flag == "business.orgs")
+    monkeypatch.setattr(gate, "on", lambda flag: False)  # off: the check disappears
     with transaction(engine) as conn:
-        assert playback_gate.refused_in_programme(conn, WS, BAR, [1], now) == \
-            playback_gate.ENGINE_OFF
+        assert playback_gate.refused_in_programme(conn, WS, BAR, [2], now) is None
+        assert playback_gate.refused_in_programme(conn, WS, BAR, [99], now) is None
 
 
 def test_every_song_choosing_path_goes_through_the_engine():

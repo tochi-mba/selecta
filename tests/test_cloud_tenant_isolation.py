@@ -80,6 +80,9 @@ CAPABILITY_ONLY = {
     ("POST", "/api/kiosk/segment-url"),
     ("POST", "/api/kiosk/resync"),
     ("POST", "/api/kiosk/pin"),
+    ("GET", "/api/kiosk/requests/next"),
+    ("POST", "/api/kiosk/requests/{request_id}/played"),
+    ("GET", "/api/kiosk/screen-code"),
 }
 # Routes that act only on the signed-in person, whatever workspace a request names.
 SELF_ONLY = {
@@ -243,6 +246,7 @@ BUSINESS_SCOPED = {
     ("GET", "/api/business/zones/{zone_id}/content/snapshot"),
     ("GET", "/api/business/content/artist-variants"),
     ("PUT", "/api/business/content/songs/{song_id}/clean-link"),
+    ("GET", "/api/business/content/songs/{song_id}"),
     ("POST", "/api/business/content/bulk/preview"),
     ("POST", "/api/business/content/bulk/apply"),
     ("POST", "/api/business/content/bulk/{batch_id}/undo"),

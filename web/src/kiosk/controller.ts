@@ -50,7 +50,7 @@ export type ControllerDeps = {
   version: string;
   restart: RestartReason;
   wallNow: () => number;
-  render: (screen: KioskScreen, view: KioskView, extra: { pairingCode: string | null; timeUnknown: boolean; audible: boolean }) => void;
+  render: (screen: KioskScreen, view: KioskView, extra: { pairingCode: string | null; timeUnknown: boolean; audible: boolean; roomCode: string | null; savedHours: number }) => void;
   storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null;
   reload?: () => void;
   /** The signed offline bundle's keys and the held bundle (ADR-0446); absent in some tests. */
@@ -125,6 +125,8 @@ export function createController(deps: ControllerDeps) {
     return typeof until !== 'number' || at === null || at <= until;
   };
   let permitProblem: string | null = null;
+  let roomCode: string | null = null;
+  const requests = new Map<string, number>(); // request id to the catalogue song it plays
   /** The horizon without songs the content policy now refuses (ADR-0446, from the verified
    * bundle), and without the rendered seams that lead into or out of them. */
   const playable = (segments: PlayableSegment[]): PlayableSegment[] => {
@@ -166,10 +168,11 @@ export function createController(deps: ControllerDeps) {
   function draw(): void {
     const current = screen();
     const audible = deps.audio.player.playing();
-    const key = JSON.stringify([current, effectiveView().now, effectiveView().next, pairingCode, deps.clock.status(), audible]);
+    const savedHours = Math.round(deps.audio.savedHoursAhead() * 10) / 10;
+    const key = JSON.stringify([current, effectiveView().now, effectiveView().next, pairingCode, deps.clock.status(), audible, roomCode, savedHours]);
     if (key === lastScreenKey) return;
     lastScreenKey = key;
-    deps.render(current, effectiveView(), { pairingCode, timeUnknown: deps.clock.status() === 'untrusted', audible });
+    deps.render(current, effectiveView(), { pairingCode, timeUnknown: deps.clock.status() === 'untrusted', audible, roomCode: online ? roomCode : null, savedHours });
   }
 
   // -- playing
@@ -225,11 +228,12 @@ export function createController(deps: ControllerDeps) {
 
   async function pairingStep(): Promise<void> {
     try {
-      if (!pairingCode || deps.wallNow() >= pairingExpires) {
+      // the code's expiry is server time: a device clock hours out must not renew it every poll
+      if (!pairingCode || (deps.clock.now() ?? deps.wallNow()) >= pairingExpires) {
         const started = await deps.api.startPairing({ public_key: deps.key.publicKey, machine_id: deps.key.machineId });
         pairingCode = started.code;
-        pairingExpires = started.expiresAt ?? deps.wallNow() + 600;
         if (started.serverTime) deps.clock.sync(started.serverTime);
+        pairingExpires = started.expiresAt ?? (deps.clock.now() ?? deps.wallNow()) + 600;
       }
       const status = await deps.api.pairingStatus();
       online = true;
@@ -300,6 +304,45 @@ export function createController(deps: ControllerDeps) {
       if (view.state === 'unpaired') await forgetPairing();
     } catch (error) {
       if (isRevoked(error)) await forgetPairing();
+      return;
+    }
+    await rooms();
+  }
+
+  /** Guest requests and the on-screen code (ADR-0451), with the view. A request whose turn has
+   * come is put into the programme by the server; the horizon is read again so it is saved and
+   * played (and checked against the permit's refused songs like every other song). */
+  async function rooms(): Promise<void> {
+    try {
+      const code = await deps.api.screenCode();
+      roomCode = code.on ? code.code : null;
+    } catch {
+      roomCode = null;
+    }
+    if (!speaker) return;
+    try {
+      const next = await deps.api.nextRequest();
+      if (next && next.local_song_id !== null && !requests.has(next.id)) {
+        requests.set(next.id, next.local_song_id);
+        if (next.queued) await refreshHorizon();
+      }
+    } catch {
+      // Rooms is off or not reachable: the music carries on without requests
+    }
+  }
+
+  /** Tell the server a request was played once its song starts here. */
+  async function requestsPlayed(): Promise<void> {
+    const playing = (deps.audio.player.current() as PlayableSegment | null)?.song_id;
+    if (playing === undefined || !deps.audio.player.playing()) return;
+    for (const [id, songId] of requests) {
+      if (songId !== playing) continue;
+      requests.delete(id);
+      try {
+        await deps.api.requestPlayed(id);
+      } catch {
+        // marked again next time is harmless; the server only moves approved requests
+      }
     }
   }
 
@@ -424,6 +467,7 @@ export function createController(deps: ControllerDeps) {
         syncPlayback();
         await deps.audio.player.tick();
         await health(false);
+        if (online && requests.size) await requestsPlayed();
         // a newer version is known: fetch it in the background, apply it only when allowed
         if (latest && latest.version !== deps.version) await maybeUpdate();
       }

@@ -86,8 +86,10 @@ function Suggestions({ venue, exceptions, disabled, onAdded }: {
     <legend>{COPY.suggestionsHeading}</legend>
     <p className="biz-quiet">{COPY.suggestionsNote}</p>
     <div className="biz-row">
-      <label>{COPY.country} <select value={country} onChange={(event) => setCountry(event.target.value)}>{COUNTRIES.map((code) => <option key={code} value={code}>{code}</option>)}</select></label>
-      <label>{COPY.year} <select value={year} onChange={(event) => setYear(Number(event.target.value))}>{[thisYear, thisYear + 1].map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+      <label htmlFor={`holiday-country-${venue.id}`}>{COPY.country}</label>
+      <select id={`holiday-country-${venue.id}`} value={country} onChange={(event) => setCountry(event.target.value)}>{COUNTRIES.map((code) => <option key={code} value={code}>{code}</option>)}</select>
+      <label htmlFor={`holiday-year-${venue.id}`}>{COPY.year}</label>
+      <select id={`holiday-year-${venue.id}`} value={year} onChange={(event) => setYear(Number(event.target.value))}>{[thisYear, thisYear + 1].map((item) => <option key={item} value={item}>{item}</option>)}</select>
       <Action run={async () => setFound(await client.holidaySuggestions(venue.id, country, year))}>{COPY.showSuggestions}</Action>
     </div>
     {shown && (!shown.length ? <p className="biz-quiet">{COPY.noSuggestions}</p> : <ul className="bzf-plain">
@@ -104,7 +106,10 @@ function Suggestions({ venue, exceptions, disabled, onAdded }: {
 
 function ClosingMode({ venue, mode, disabled, onSaved }: { venue: Venue; mode: 'natural' | 'exact'; disabled: string | null; onSaved: () => Promise<void> }) {
   const { client } = useBusiness();
+  const [chosen, setChosen] = useState(mode);
+  useEffect(() => { setChosen(mode); }, [mode]);
   const choose = async (next: 'natural' | 'exact') => {
+    setChosen(next);
     await client.setClosingMode(venue.id, next);
     showToast(COPY.closingSaved);
     await onSaved();
@@ -112,7 +117,7 @@ function ClosingMode({ venue, mode, disabled, onSaved }: { venue: Venue; mode: '
   return <fieldset disabled={disabled != null}>
     <legend>{COPY.closingHeading}</legend>
     {(['natural', 'exact'] as const).map((value) => <label key={value} className="bzf-check">
-      <input type="radio" name={`closing-${venue.id}`} checked={mode === value} onChange={() => void choose(value)} />
+      <input type="radio" name={`closing-${venue.id}`} checked={chosen === value} onChange={() => void choose(value)} />
       {' '}{value === 'natural' ? COPY.closingNatural : COPY.closingExact}
     </label>)}
   </fieldset>;

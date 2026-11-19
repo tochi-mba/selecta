@@ -4,9 +4,9 @@ A business zone's programme is set by a controller's `set_programme` (staff play
 kiosk's own planner). `playback.zone_session.zone_submit_command` calls `refused_in_programme`
 before the command applies: every song in the new programme must be in the organisation library
 and allowed in the zone now, else the whole command is refused with the first refused song
-named. With `business.content_controls` off an organisation zone refuses every new programme
-rather than play unfiltered (ADR-0450 "Feature flags"). Songs the library can't place (a catalogue
-entry with no upload behind it) are refused too: the rules can't vouch for them.
+named. Songs the library can't place (a catalogue entry with no upload behind it) are refused
+too: the rules can't vouch for them. With `business.content_controls` off the check is skipped
+entirely: the feature disappears and zones play as they did (the owner's flag rule).
 
 Personal sessions and zones outside an organisation are never touched.
 """
@@ -21,16 +21,14 @@ from sqlalchemy.engine import Connection
 from selecta.business.content import gate
 
 DOESNT_FIT = "{title} doesn't fit this zone's music rules right now."
-ENGINE_OFF = ("Venue content controls are off, so this zone won't start new music. An owner can "
-              "turn them on in the organisation's settings.")
 UNKNOWN = "A song in that list isn't in the organisation library, so the rules can't check it."
 
 
 def refused_in_programme(conn: Connection, workspace_id: str, zone_id: str,
                          song_ids: Sequence[int], now: float) -> str | None:
     """Why the programme can't play in the zone now, or None when every song is allowed."""
-    if not song_ids or not gate.on("business.orgs"):
-        return None
+    if not song_ids or not gate.on(gate.ENGINE):
+        return None  # the feature is off: it disappears and zones play as they did
     from selecta.business.access.directory import SqlDirectory
     from selecta.business.content import service
     from selecta.business.content.engine import allowed
@@ -44,8 +42,6 @@ def refused_in_programme(conn: Connection, workspace_id: str, zone_id: str,
         return None
     if zone is None or zone.workspace_id != workspace_id:
         return None  # not an organisation zone: personal rules apply
-    if not gate.on(gate.ENGINE):
-        return ENGINE_OFF  # never unfiltered (ADR-0450): the zone refuses instead
     library = SqlSongFacts()
     at = datetime.fromtimestamp(now, UTC)
     snapshot = service.zone_snapshot(conn, zone_id, directory=directory, at=at)

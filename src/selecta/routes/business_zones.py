@@ -34,7 +34,13 @@ from selecta.business.hours_schema import (
 )
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, new_id, transaction
-from selecta.routes.business_hours import MANAGERS, RoleFor, audit_change, business_role
+from selecta.routes.business_hours import (
+    MANAGERS,
+    RoleFor,
+    audit_change,
+    business_role,
+    user_id_of,
+)
 
 HorizonFor = Callable[[Engine, str, str], list[dict[str, Any]]]
 """(engine, workspace_id, zone_id) -> the zone's planned, rendered segments in play order.
@@ -147,6 +153,8 @@ def install_routes(
 ) -> None:
     def scope(request: Request, claims: Claims) -> str:
         principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
+        user = getattr(getattr(principal, "user", None), "id", None)
+        request.state.user_id = user or user_id_of(engine, claims)
         return principal.workspace.id
 
     @app.get("/api/business/zones/{zone_id}/programme")
@@ -198,7 +206,7 @@ def install_routes(
                     workspace_id=workspace_id,
                     zone_id=zone_id,
                     blocks_json=programme.to_dict(),
-                    created_by=claims.subject,
+                    created_by=request.state.user_id,
                     created_at=now,
                 )
             )
@@ -219,7 +227,7 @@ def install_routes(
                     )
                 )
             zone_autoplan.mark_dirty(conn, workspace_id, [zone_id], now)
-            audit_change(conn, workspace_id, claims.subject, "schedule.edit", ref.venue_id,
+            audit_change(conn, workspace_id, request.state.user_id, "schedule.edit", ref.venue_id,
                          resource_type="zone_programme_version", resource_id=version_id,
                          metadata={"zone_id": zone_id})
         return {"version_id": version_id, "programme": programme.to_dict()}

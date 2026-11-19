@@ -10,6 +10,8 @@ import { showToast } from '../../ui/toasts';
 import { businessOn, useBusiness } from '../context';
 import type { Venue, Zone } from '../types';
 import { useLoad } from '../venue/useVenue';
+import { BlocklistMore } from './BlocklistMore';
+import { SongSheet } from './SongSheet';
 import { contentClient, endsWords, type BulkApplied, type ContentClient, type CsvMatch, type Explicit, type Selection, type WorthChecking } from './contentClient';
 
 const EXPLICIT_CHOICES: { value: Explicit; label: string }[] = [
@@ -141,17 +143,18 @@ function WorthCheckingList({ tools, disabled }: { tools: ContentClient; disabled
 }
 
 export function ContentTools({ venue, disabled }: { venue: Venue; disabled: string | null }) {
-  const { api, org, now } = useBusiness();
+  const { api, org, now, client } = useBusiness();
+  const songs = useLoad(async () => (await client.librarySongs?.(org.id).catch(() => [])) ?? [], [client, org.id]);
   const tools = useMemo(() => (api ? contentClient(api, org.id) : null), [api, org.id]);
-  if (!businessOn(org.features, 'business.content_controls')) {
-    return <p className="biz-card warn" role="status">Venue content controls are off, so zones won't start new music rather than play anything unchecked. An owner can turn them on.</p>;
-  }
-  if (!tools) return null;
+  if (!tools || !businessOn(org.features, 'business.content_controls')) return null;
   return <div className="biz-stack">
     <div className="biz-card biz-stack">
       <h3>What each zone can play</h3>
       {venue.zones.map((zone) => <ZonePool key={zone.id} zone={zone} tools={tools} disabled={disabled} now={now} />)}
     </div>
+    <div className="biz-card"><BlocklistMore tools={tools} venueId={venue.id} disabled={disabled} /></div>
+    <div className="biz-card"><SongSheet tools={tools} songs={songs.data ?? []} venueId={venue.id} disabled={disabled}
+      canEdit={['owner', 'admin', 'venue_manager'].includes(org.role)} /></div>
     {businessOn(org.features, 'business.content_controls.bulk') && <>
       <div className="biz-card"><BulkByFilter tools={tools} disabled={disabled} /></div>
       <div className="biz-card"><CsvImport tools={tools} disabled={disabled} /></div>

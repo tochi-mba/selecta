@@ -46,7 +46,7 @@ describe('BusinessPricing', () => {
     const api = vi.fn().mockResolvedValue({ pricing: PRICING });
     render(<BusinessPricing api={api as never} onLeave={() => undefined} />);
     expect(await screen.findByTestId('pricing-venue')).toHaveTextContent('£79');
-    expect(api).toHaveBeenCalledWith('/api/business/pricing?currency=GBP');
+    expect(api).toHaveBeenCalledWith('/business/pricing?currency=GBP');
     expect(screen.getByText(PRICING_COPY.exVat)).toBeInTheDocument();
     for (const line of Object.values(BOUNDARY_COPY)) expect(screen.getByText(line)).toBeInTheDocument();
     expect(screen.getByTestId('pricing-total')).toHaveTextContent('£79');
@@ -63,6 +63,6 @@ describe('BusinessPricing', () => {
     fireEvent.click(await screen.findByRole('button', { name: PRICING_COPY.retry }));
     await waitFor(() => expect(screen.getByTestId('pricing-venue')).toHaveTextContent('$79'));
     fireEvent.change(screen.getByLabelText(PRICING_COPY.currency), { target: { value: 'EUR' } });
-    await waitFor(() => expect(api).toHaveBeenLastCalledWith('/api/business/pricing?currency=EUR'));
+    await waitFor(() => expect(api).toHaveBeenLastCalledWith('/business/pricing?currency=EUR'));
   });
 });
