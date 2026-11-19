@@ -395,7 +395,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
           <>
             {refusal && <div className="page"><CannotPlayHere reason={refusal} /></div>}
             {data.mix.length ? <Now {...shared} /> : <ListenEmpty connected={connected} />}
-            {on('cloud.local_media') && data.mix.length > 0 && <div className="page"><QueueSources mix={data.mix} book={book} /></div>}
+            {on('cloud.local_media') && data.mix.length > 0 && <QueueSources mix={data.mix} book={book} problemsOnly={!coexisting} />}
           </>
         );
       case 'edit':
