@@ -26,6 +26,7 @@ depends on a cron somebody forgot:
 | `business.zone_clock` | 30 s | Each venue zone's next opening or closing change |
 | `business.billing` | 15 min | Business dunning and the VAT recheck before renewal |
 | `business.licensing` | 1 h | Licence reminders and play-log retention |
+| `business.entitlements` | 5 min | Pooled storage limits, continuity and credit proposals |
 | `queue_metrics`, `lost_jobs`, `backup_freshness` | 15 s, 10 min, 10 min | The SLO and alert
   series only the leader sees (`observability.leader_metrics`) |
 
@@ -353,6 +354,19 @@ def _business_hours(engine: Engine, plan: Plan) -> None:
     plan.tasks.append(Task(zone_clock.TASK_NAME, zone_clock.EVERY_S, run))
 
 
+def _business_entitlements(engine: Engine, plan: Plan) -> None:
+    """Pooled storage, continuity and credit proposals (ADR-0448), while
+    `business.entitlements` is on."""
+    from selecta.business import entitlement_gates, entitlement_jobs
+
+    def run(_fence: TermFence) -> object:
+        if not _flag_on(entitlement_gates.FLAG):
+            return None
+        return entitlement_jobs.run_pass(engine)
+
+    plan.tasks.append(Task(entitlement_jobs.TASK_NAME, entitlement_jobs.EVERY_S, run))
+
+
 def _business_kiosk_alerts(engine: Engine, env: Mapping[str, str], plan: Plan) -> None:
     """Silent-zone and offline alerts for kiosk zones (ADR-0445), while business.kiosk is on.
     Emails go through the configured provider, or the dev stack's /dev/mail inbox."""
@@ -424,6 +438,7 @@ def cloud_plan(engine: Engine, env: Mapping[str, str] | None = None) -> Plan:
     _dmca(engine, env, plan)
     _emails(engine, env, plan)
     _business_hours(engine, plan)
+    _business_entitlements(engine, plan)
     _business_kiosk_alerts(engine, env, plan)
     _business_horizons(engine, plan)
     _business_billing(engine, env, plan)

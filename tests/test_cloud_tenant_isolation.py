@@ -88,6 +88,8 @@ SELF_ONLY = {
     ("DELETE", "/api/account"),
     # Staff only: starts the caller's own admin session and never reads a customer workspace.
     ("POST", "/api/admin/session"),
+    # The business price list: catalogue figures only, behind business.signups targeting.
+    ("GET", "/api/business/pricing"),
 }
 # Staff-console routes never trust a customer workspace header. Every one first requires the
 # caller's server-side privileged session; the admin route tests exercise its scoped commands.
@@ -136,6 +138,8 @@ STAFF_ONLY = {
     ("GET", "/api/admin/flags/cloud.local_first/percentage-readiness"),
     ("GET", "/api/admin/economics/cost-per-mode"),
     ("GET", "/api/admin/economics/lucy-ceiling"),
+    # The business release-gate readout reads repository records and flag rules only.
+    ("GET", "/api/admin/business/rollout"),
 }
 # Business routes require an organisation workspace and membership, not merely a
 # personal library workspace. The dedicated Business tests exercise their tenant
@@ -220,11 +224,25 @@ BUSINESS_SCOPED = {
     ("POST", "/api/business/zones/{zone_id}/content/overrides"),
     ("DELETE", "/api/business/zones/{zone_id}/content/overrides/{override_id}"),
     ("PUT", "/api/business/content/songs/{song_id}/explicit"),
+    # `content/api_tools.py`: the same organisation resolution; zones, songs and batches of
+    # another organisation answer 404 (tests/test_business_content_tools.py).
+    ("GET", "/api/business/zones/{zone_id}/content/pool"),
+    ("GET", "/api/business/zones/{zone_id}/content/snapshot"),
+    ("GET", "/api/business/content/artist-variants"),
+    ("PUT", "/api/business/content/songs/{song_id}/clean-link"),
+    ("POST", "/api/business/content/bulk/preview"),
+    ("POST", "/api/business/content/bulk/apply"),
+    ("POST", "/api/business/content/bulk/{batch_id}/undo"),
+    ("POST", "/api/business/content/import/preview"),
+    ("POST", "/api/business/content/import/apply"),
+    ("GET", "/api/business/content/worth-checking"),
     # ADR-0451 Rooms for Business staff routes: `rooms/api.py` finds the zone or venue, resolves
     # the caller in that zone's organisation (a member, or a kiosk or tablet token) and checks
     # one permission there with guard.require, so another organisation's zone answers 404
     # (the service is tested in tests/test_business_rooms_*.py; no route-level test yet).
     ("GET", "/api/zones/{zone_id}/requests"),
+    ("GET", "/api/zones/{zone_id}/requests/next"),
+    ("POST", "/api/zones/{zone_id}/requests/{request_id}/played"),
     ("POST", "/api/zones/{zone_id}/requests/{request_id}/approve"),
     ("POST", "/api/zones/{zone_id}/requests/{request_id}/pass"),
     ("GET", "/api/zones/{zone_id}/room"),

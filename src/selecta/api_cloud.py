@@ -44,8 +44,10 @@ from selecta.billing import plans, stripe_sync
 from selecta.business import admin_routes as business_admin_routes
 from selecta.business import billing_routes as business_billing_routes
 from selecta.business import controls_wiring as business_controls
+from selecta.business import entitlement_routes as business_entitlement_routes
 from selecta.business import licensing_routes as business_licensing_routes
 from selecta.business import playlog_routes as business_playlog_routes
+from selecta.business import rollout_routes as business_rollout_routes
 from selecta.business import routes as business_org_routes
 from selecta.business import workspace_routes as business_workspace_routes
 from selecta.business import zone_speaker_routes as business_zone_speaker_routes
@@ -910,6 +912,10 @@ def create_cloud_app(
         app, engine=engine, current_claims=current_claims, principal_for=_principal,
         allowed_origins=settings.allowed_origins,
     )
+    # Usage meters, continuity and SLO credits (ADR-0448), behind business.entitlements.
+    business_entitlement_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
     # Play-log export for licensing returns (ADR-0449); refused while business.licensing is off.
     business_playlog_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal
@@ -929,6 +935,11 @@ def create_cloud_app(
         current_claims=current_claims,
         emergency_cache=emergency_cache,
         rule_cache=rule_cache,
+    )
+    # Business pricing behind business.signups, and the release-gate readout (BZ-0441, BZ-0454).
+    business_rollout_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal,
+        rules=rule_cache,
     )
     # Unit economics and step-4 readiness for Browser-first Cloud (BF-0464-04/05, BF-0467-04).
     admin_economics_routes.install_routes(app, engine=engine, current_claims=current_claims)

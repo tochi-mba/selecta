@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.engine import Engine
 
 from selecta.admin.state import DbWorkControls
+from selecta.business.weight import business_policy
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, transaction
 from selecta.scheduling.policy import Lane
@@ -33,7 +34,8 @@ def install_routes(
     buckets: Buckets,
 ) -> None:
     store = JobStore(
-        engine, entitlements=CloudJobEntitlements(engine), controls=DbWorkControls()
+        engine, business_policy(), entitlements=CloudJobEntitlements(engine),
+        controls=DbWorkControls(),
     )
 
     def prepare(asset_id: str, request: Request, claims: Claims, *, submit: bool):

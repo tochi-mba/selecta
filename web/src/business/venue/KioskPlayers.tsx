@@ -5,16 +5,17 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Action } from '../../ui/controls';
-import { useBusiness } from '../context';
+import { businessOn, useBusiness } from '../context';
 import { PairingCodeEntry } from '../forms/PairingCodeEntry';
 import type { Device, Venue } from '../types';
 
 const time = (epoch: number) => new Date(epoch * 1000).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' });
 
-export function kioskLine(device: Device): string {
+export function kioskLine(device: Device, offlineOn = true): string {
   const parts = [device.role === 'standby' ? 'Standby' : 'Home'];
   parts.push(device.online ? 'Online' : device.not_seen_since ? `Not seen since ${time(device.not_seen_since)}` : 'Not seen yet');
-  if (typeof device.saved_hours_ahead === 'number') parts.push(`${Math.round(device.saved_hours_ahead * 10) / 10} h of music saved`);
+  // saved hours only mean something with offline-first playback on (business.offline)
+  if (offlineOn && typeof device.saved_hours_ahead === 'number') parts.push(`${Math.round(device.saved_hours_ahead * 10) / 10} h of music saved`);
   if (device.autoplay_allowed === false) parts.push('Needs a tap to start after a restart');
   if (device.wake_lock === false) parts.push('Screen may sleep: turn sleep off on the device');
   return parts.join(' · ');
@@ -43,7 +44,7 @@ export function KioskPlayers({ venue, disabled }: { venue: Venue; disabled: bool
     {kiosks.length === 0 ? <p className="biz-quiet">No players are paired to this venue yet.</p> : <ul className="biz-list">
       {kiosks.map((device) => <li key={device.id}>
         <strong>{device.name}</strong> <span className="biz-quiet">{zoneName(device.zone_id)}</span>
-        <p className="biz-quiet">{kioskLine(device)}</p>
+        <p className="biz-quiet">{kioskLine(device, businessOn(ctx.org.features, 'business.offline'))}</p>
         {!disabled && <div className="biz-row">
           <button type="button" onClick={() => setReplacing(device)}>Replace {device.name}</button>
           <Action run={async () => { await ctx.client.unpair(device.id); await load(); }} working="Unpairing">Unpair</Action>

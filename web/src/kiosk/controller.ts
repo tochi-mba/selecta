@@ -114,6 +114,15 @@ export function createController(deps: ControllerDeps) {
     return typeof until !== 'number' || at === null || at <= until;
   };
   let permitProblem: string | null = null;
+  /** The horizon without songs the content policy now refuses (ADR-0446, from the verified
+   * bundle), and without the rendered seams that lead into or out of them. */
+  const playable = (segments: PlayableSegment[]): PlayableSegment[] => {
+    const refused = new Set(held()?.content?.refused_song_ids ?? []);
+    if (!refused.size) return segments;
+    const ordered = [...segments].sort((a, b) => a.starts_at - b.starts_at);
+    const out = (s: PlayableSegment | undefined) => s !== undefined && s.song_id !== undefined && refused.has(s.song_id);
+    return ordered.filter((s, i) => !out(s) && !((s.kind ?? 'song') === 'transition' && (out(ordered[i - 1]) || out(ordered[i + 1]))));
+  };
   let checkedFor: string | null = null;
 
   /** The view the screen uses: the server's when online; offline, the saved schedule decides. */
@@ -240,6 +249,8 @@ export function createController(deps: ControllerDeps) {
     if (!paired) return;
     try {
       const answer = await deps.api.heartbeat(position());
+      // back after an outage: a volume changed meanwhile ramps over 30 s rather than jumping
+      const cameBack = !online;
       online = true;
       lastSync = deps.wallNow();
       deps.clock.sync(answer.serverTime);
@@ -247,7 +258,7 @@ export function createController(deps: ControllerDeps) {
       speaker = answer.outcome !== 'refused';
       if (answer.session) {
         sessionPaused = answer.session.state === 'paused';
-        if (typeof answer.session.volume === 'number' && deps.clock.status() !== 'untrusted') deps.audio.player.setVolume(answer.session.volume, 2);
+        if (typeof answer.session.volume === 'number' && deps.clock.status() !== 'untrusted') deps.audio.player.setVolume(answer.session.volume, cameBack ? 30 : 2);
       }
       await uploadLog();
     } catch (error) {
@@ -287,14 +298,15 @@ export function createController(deps: ControllerDeps) {
       await deps.cache.setManifest(manifest);
       if (deps.permits) {
         const signed = (manifest as { offline_bundle?: SignedBundle }).offline_bundle;
-        const verdict = signed ? await deps.permits.accept(signed) : { ok: false as const, reason: 'forged' as const };
+        const missing = (manifest as { offline?: boolean }).offline === false ? 'offline_off' : 'missing';
+        const verdict = signed ? await deps.permits.accept(signed) : { ok: false as const, reason: missing };
         permitProblem = verdict.ok ? null : verdict.reason;
         const bundle = held();
         if (bundle) deps.clock.setBundle(bundle.permit.issued_at, bundle.permit.valid_until);
       } else if (typeof manifest.issued_at === 'number' && typeof manifest.valid_until === 'number') {
         deps.clock.setBundle(manifest.issued_at, manifest.valid_until);
       }
-      deps.audio.player.setSegments(segments);
+      deps.audio.player.setSegments(playable(segments));
       await deps.cache.enforceCap();
       void fillCache(deps.cache, { urlFor: (key) => deps.api.segmentUrl(key), online: () => online });
     } catch (error) {
@@ -368,7 +380,7 @@ export function createController(deps: ControllerDeps) {
       await deps.cache.load();
       const saved = deps.cache.manifest();
       if (saved) {
-        deps.audio.player.setSegments(saved.segments as PlayableSegment[]);
+        deps.audio.player.setSegments(playable(saved.segments as PlayableSegment[]));
         const bundle = saved as { issued_at?: number; valid_until?: number };
         const verified = held();
         if (verified) deps.clock.setBundle(verified.permit.issued_at, verified.permit.valid_until);
@@ -420,6 +432,8 @@ export function createController(deps: ControllerDeps) {
       savedHours: deps.audio.savedHoursAhead(),
       lastSync: lastSync === null ? null : lastSync * 1000,
       version: deps.version,
+      // a browser without Ed25519 can't check the offline permit: it plays only while connected
+      offline: permitProblem === 'unsupported' ? 'newer' as const : permitProblem === 'offline_off' ? 'off' as const : held() ? 'ready' as const : 'not_yet' as const,
     }),
     view: () => effectiveView(),
     screen,

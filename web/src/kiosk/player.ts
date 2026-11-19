@@ -16,7 +16,8 @@
 import type { Segment } from '../business/offline/zoneCache';
 import { outputMeter } from './meter';
 
-export type PlayableSegment = Segment & { title?: string; artist?: string; song_index?: number; song_id?: number };
+/** `from_s`: where in its file this segment starts playing (a song cut by a rendered seam). */
+export type PlayableSegment = Segment & { title?: string; artist?: string; song_index?: number; song_id?: number; from_s?: number };
 
 export const CROSSFADE_S = 8;
 export const DRIFT_S = 2;
@@ -172,7 +173,7 @@ export function createPlayer(options: PlayerOptions) {
     incoming.segment = segment;
     incoming.startedAt = at - offsetS;
     try {
-      incoming.el.currentTime = Math.max(0, offsetS);
+      incoming.el.currentTime = Math.max(0, (segment.from_s ?? 0) + offsetS);
     } catch {
       // not seekable until metadata loads; the drift check corrects it on the next tick
     }
@@ -211,7 +212,8 @@ export function createPlayer(options: PlayerOptions) {
     try {
       if (target) {
         if (deck.segment?.id === target.segment.id) {
-          if (Math.abs(deck.el.currentTime - target.offsetS) > DRIFT_S) deck.el.currentTime = target.offsetS;
+          const from = target.segment.from_s ?? 0;
+          if (Math.abs(deck.el.currentTime - from - target.offsetS) > DRIFT_S) deck.el.currentTime = from + target.offsetS;
         } else {
           const boundary = target.offsetS < 1 && deck.segment !== null;
           const fade = fadeInS > 0 ? fadeInS : boundary ? 0.05 : 1.5;
@@ -266,7 +268,7 @@ export function createPlayer(options: PlayerOptions) {
     mode: () => mode,
     playing: () => wanted && !paused && !!decks[active].segment && !decks[active].el.paused,
     current: () => decks[active].segment,
-    position: () => ({ segment: decks[active].segment, offsetS: decks[active].el.currentTime || 0 }),
+    position: () => ({ segment: decks[active].segment, offsetS: Math.max(0, (decks[active].el.currentTime || 0) - (decks[active].segment?.from_s ?? 0)) }),
     level: () => meter.level(),
     contextState: (): string => (context ? context.state : 'unknown'),
   };

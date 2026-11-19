@@ -46,3 +46,11 @@
 @media (forced-colors: active) {
   .biz-notice, .biz-silent, .biz-attention, .biz-card, .biz-pilot-badge { border-color: CanvasText; }
 }
+/* Business pricing page (BZ-0441-05): one column that reflows to 320 px and at 400% zoom. */
+.biz-pricing { max-width: 48rem; margin: 0 auto; padding: 1rem; display: grid; gap: 1rem; }
+.biz-pricing-fields { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: end; }
+.biz-pricing-field { display: grid; gap: 0.25rem; min-width: 0; }
+.biz-pricing-field input, .biz-pricing-field select { max-width: 100%; }
+.biz-pricing-interval { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.biz-pricing-quote { display: grid; grid-template-columns: 1fr auto; gap: 0.25rem 1rem; margin: 1rem 0 0; }
+.biz-pricing-quote dd { margin: 0; text-align: end; }

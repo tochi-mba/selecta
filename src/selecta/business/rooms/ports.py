@@ -5,9 +5,10 @@
   build without BZ-3's tables) is treated as open.
 - `StaffPresence`: when a staff person or shared device for the venue was last seen. The default
   reads `business_staff_presence`, which the staff routes touch on every call.
-- `Dayparts`: the zone's daypart name now (for per-daypart request modes). Default: none.
+- `Dayparts`: the zone's daypart name now (for per-daypart request modes). Default: none; the
+  cloud wiring passes `ContentDayparts` (the zone's ADR-0450 daypart windows).
 - `ZonePlayback`: is the zone's music paused (by staff or because the kiosk is silent) and what
-  is playing. Default: playing, nothing known.
+  is playing. Default: playing, nothing known; the cloud wiring passes `SessionPlayback`.
 - `Content`: ADR-0450's engine (`selecta.business.content.service.check` / `filter_allowed`),
   imported when first used so this package loads before the content package does.
 - `Recorder`: business audit rows and the activity log (`selecta.business.access.audit`).
@@ -147,6 +148,57 @@ class AlwaysPlaying:
         return Playback()
 
 
+class ContentDayparts:
+    """The zone's daypart now, from its content rules (ADR-0450 daypart windows, venue time).
+
+    Per-daypart request modes are keyed by the same daypart ids the rules page saves."""
+
+    def __init__(self, directory: Directory) -> None:
+        self.directory = directory
+
+    def current(self, conn: Connection, zone_id: str, at: datetime) -> str | None:
+        from selecta.business.content import service
+        from selecta.business.content.engine import daypart_at
+
+        try:
+            with conn.begin_nested():
+                snapshot = service.zone_snapshot(conn, zone_id, directory=self.directory, at=at)
+        except Exception:  # noqa: BLE001 - no rules tables or no such zone: no daypart
+            return None
+        return daypart_at(snapshot, at)
+
+
+class SessionPlayback:
+    """The zone's playback session (ADR-0443): paused unless it is playing, and the song on."""
+
+    def state(self, conn: Connection, zone_id: str) -> Playback:
+        from selecta.local_media.schema import local_songs
+        from selecta.playback.model import PlayState
+        from selecta.playback.schema import playback_sessions as t
+        from selecta.playback.store import session_from_row
+
+        try:
+            with conn.begin_nested():
+                row = conn.execute(sa.select(t).where(t.c.zone_id == zone_id)).mappings().first()
+                session = session_from_row(row) if row else None
+                if session is None:
+                    return Playback()
+                programme = session.programme or ()
+                playing = None
+                if 0 <= session.song_index < len(programme):
+                    song = conn.execute(sa.select(
+                        local_songs.c.title, local_songs.c.artist, local_songs.c.duration_s,
+                    ).where(local_songs.c.id == programme[session.song_index].song_id,
+                            local_songs.c.workspace_id == session.workspace_id)).first()
+                    if song is not None:
+                        playing = {"title": song.title, "artist": song.artist,
+                                   "length_s": song.duration_s}
+                return Playback(paused=session.state is not PlayState.PLAYING,
+                                now_playing=playing)
+        except sa.exc.SQLAlchemyError:
+            return Playback()
+
+
 class EngineContent:
     """ADR-0450's content service, imported on first use."""
 
@@ -159,6 +211,12 @@ class EngineContent:
         from selecta.business.content import service
 
         return service.filter_allowed(conn, zone_id, songs, at, directory=directory)
+
+    def clean_swap(self, conn, zone_id, song_id, *, directory):
+        from selecta.business.content import service
+        from selecta.business.content.engine import clean_swap
+
+        return clean_swap(song_id, service.zone_snapshot(conn, zone_id, directory=directory))
 
 
 class AccessRecorder:
@@ -193,6 +251,7 @@ __all__ = [
     "AccessRecorder",
     "AlwaysPlaying",
     "Content",
+    "ContentDayparts",
     "Dayparts",
     "DefaultZoneHours",
     "EmptySongs",
@@ -200,6 +259,7 @@ __all__ = [
     "NoDayparts",
     "Playback",
     "Recorder",
+    "SessionPlayback",
     "SqlStaffPresence",
     "StaffPresence",
     "ZoneHours",

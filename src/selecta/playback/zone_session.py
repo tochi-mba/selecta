@@ -564,6 +564,17 @@ def zone_submit_command(
         zone = require_zone(conn, zones, workspace_id, zone_id, user_id=user_id)
         require_signed_in(conn, workspace_id, device_id)
         touch_device(conn, device_id, now)
+        if command == "set_programme" and isinstance(args, Mapping):
+            # ADR-0450: staff play-next and steering pick only songs the zone's rules allow.
+            from selecta.business.content.playback_gate import refused_in_programme
+            from selecta.playback.model import InvalidCommand
+
+            songs = args.get("songs")
+            refused = refused_in_programme(
+                conn, workspace_id, zone.id,
+                [s for s in songs if isinstance(s, int)] if isinstance(songs, list) else [], now)
+            if refused:
+                raise InvalidCommand(refused)
         session = lock_session(conn, workspace_id, now, zone.id)
         if command in TRANSPORT_COMMANDS and _kiosk_unreachable(conn, session, device_id, now):
             raise SpeakerOffline(

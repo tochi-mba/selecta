@@ -13,6 +13,8 @@ export type Permit = {
   device_id: string;
   plan_state: string;
   stop_at: number | null;
+  /** Why `stop_at` is set: a pilot end or a payment grace (ADR-0447). */
+  stop_reason?: 'pilot_end' | 'payment' | null;
   licence_expires_at: number | null;
   licence_grace_ends_at: number | null;
   issued_at: number;
@@ -25,6 +27,8 @@ export type Bundle = {
   periods: { opens_at: number; closes_at: number }[];
   programme_version: string | null;
   volume: number | null;
+  /** The zone's content policy offline: its version and the programme songs it refuses now. */
+  content?: { version: number | null; refused_song_ids: number[]; unavailable?: boolean };
   permit: Permit;
   keys: { key_id: string; public_key: string }[];
 };

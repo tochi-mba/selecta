@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Row
 
+from selecta.business.weight import lane_tier
 from selecta.persistence import lock_rows, new_id
 from selecta.scheduling import policy
 from selecta.scheduling.policy import Lane, WorkerCaps
@@ -125,7 +126,7 @@ class ClaimSession:
     def cap(self, standing: AccountStanding, lane: str) -> int:
         if standing.caps is not None and lane in standing.caps:
             return int(standing.caps[lane])
-        return self.config.cap(standing.tier, lane, self.pool)
+        return self.config.cap(lane_tier(standing.tier, lane), lane, self.pool)
 
     def _flag_on(self, workspace_id: str, flag_id: str | None) -> bool:
         if flag_id is None:
@@ -292,7 +293,7 @@ class ClaimSession:
             self.connection,
             head,
             job.est_cost_s,
-            config.weight(standing.tier),
+            config.weight(lane_tier(standing.tier, job.lane)),
             config.lane_weight(job.lane),
             self.now,
         )

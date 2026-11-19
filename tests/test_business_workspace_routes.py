@@ -189,3 +189,28 @@ def test_staff_read_their_zones_music_for_play_here(client_for, world):
                       json={"key": "originals/ws/other.mp3"}).status_code == 404
     # Terrace is at Soho, outside Sam's scope: it answers like a missing zone.
     assert staff.get(f"/api/business/zones/{world['terrace']}/speaker/horizon").status_code == 404
+
+
+def test_library_songs_carry_title_and_artist_from_the_catalogue(client_for, world,
+                                                                 sqlite_engine):
+    from selecta.local_media.schema import local_songs
+    from selecta.persistence import new_id
+    from selecta.storage.keys import original_key
+    from selecta.storage.schema import assets
+
+    crown = world["crown"]
+    a1, a2 = new_id(), new_id()
+    with transaction(sqlite_engine, crown) as conn:
+        for asset_id, digest in ((a1, "1" * 64), (a2, "2" * 64)):
+            conn.execute(assets.insert().values(
+                id=asset_id, workspace_id=crown, original_key=original_key(crown, asset_id),
+                size=10, sha256=digest, format="mp3", created_at=1))
+        conn.execute(local_songs.insert().values(
+            workspace_id=crown, content_sha256="1" * 64, title="Harbour Lights",
+            artist="The Paper Kites Collective", created_at=1, updated_at=1))
+    songs = client_for().get("/api/business/library/songs").json()["songs"]
+    assert {(s["id"], s["title"], s["artist"]) for s in songs} == {
+        (a1, "Harbour Lights", "The Paper Kites Collective"), (a2, "Untitled", "")}
+    marked = client_for().post("/api/business/library/explicit",
+                               json={"song_ids": [a1], "explicit": "clean"})
+    assert marked.json() == {"updated": 1}

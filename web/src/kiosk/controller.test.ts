@@ -182,6 +182,20 @@ describe('kiosk controller with the signed offline bundle (ADR-0446)', () => {
   });
 });
 
+describe('the horizon the player is given', () => {
+  it('drops songs the verified content snapshot refuses, with the seams around them', async () => {
+    const k = setup({ paired: true });
+    const seg = (id: string, at: number, extra: Partial<PlayableSegment> = {}): PlayableSegment =>
+      ({ id, key: id, kind: 'song', starts_at: at, duration_s: 10, bytes: 1, sha256: '', committed: false, ...extra });
+    const segments = [seg('a', 0, { song_id: 1 }), seg('a>seam', 10, { kind: 'transition' }), seg('b', 20, { song_id: 2 }), seg('c', 30, { song_id: 3 })];
+    k.api.horizon.mockResolvedValue({ zone_id: 'z', version: 'v', segments, schedule: { periods: [OPEN] } } as never);
+    const permits = { held: () => ({ content: { version: 3, refused_song_ids: [2] }, periods: [OPEN], permit: { issued_at: 0, valid_until: 1e12, stop_at: null, licence_grace_ends_at: null } }), accept: vi.fn(async () => ({ ok: true })), pin: vi.fn(), clear: vi.fn(), trusted: () => [] };
+    const c = createController({ ...k.deps, permits: permits as never });
+    await c.boot();
+    expect(k.player.segments.map((s) => s.id)).toEqual(['a', 'c']);
+  });
+});
+
 describe('kiosk screens and panel', () => {
   it('the view keeps only allowlisted fields', () => {
     const view = sanitiseKioskView({ state: 'open', zone_name: 'Bar', billing_status: 'grace', seats: 3, now_playing: { title: 'A', artist: 'B', isrc: 'X' } });

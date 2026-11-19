@@ -311,6 +311,8 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `business.mix_exports` | **Business mix exports.** Lets a business organisation save a mix as a file, which could be redistributed. Off by default; also needs the owner's setting. | `business.licensing` |
 | `business.pilots` | **Business pilots.** REX Technologies staff create free pilot organisations with their venues and zones, using the same model a paying venue will. | `admin.console`, `business.orgs` |
 | `business.content_controls` | **Venue content controls.** Organisation and venue music rules, the blocklist, 24-hour overrides, explicit flags from managers and file tags, and each zone's volume cap with quiet hours. | `business.orgs` |
+| `business.content_controls.bulk` | **Bulk explicit editor and CSV import.** Mark many organisation songs explicit, clean or not checked at once with a count and undo, and import marks from a CSV matched by ISRC, then artist and title. | `business.content_controls` |
+| `business.content_controls.lyrics_hint` | **Worth checking list.** Lists organisation songs whose lyrics contain words on a review list, for a person to check. It never marks a song clean or explicit by itself. | `business.content_controls` |
 | `business.rooms` | **Rooms for Business.** Standing guest request rooms for business zones: guests join with a table-card code, staff approve or pass requests, and managers set modes and limits. | `business.orgs` |
 | `business.rooms.branding` | **Rooms for Business branding.** The venue's logo, colour and welcome line on the guest request page. | `business.rooms` |
 | `business.rooms.print` | **Rooms for Business print sheet.** A printable sheet of table cards with each zone's join code. | `business.rooms` |

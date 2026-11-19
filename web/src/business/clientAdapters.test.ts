@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  blocklistDiff, clockOf, energyWord, exceptionBody, hoursBody, membersOf, programmeBody, rulesBody, rulesOf, scheduleOf,
+  blocklistDiff, clockOf, DAYTIME_PART, energyWord, exceptionBody, hoursBody, membersOf, programmeBody, rulesBody, rulesOf, scheduleOf,
 } from './clientAdapters';
 import { businessClient, commandBody, ROUTES } from './client';
 import type { ContentRules } from './types';
@@ -41,11 +41,27 @@ describe('client adapters (page view models to server wire shapes)', () => {
     expect(rules.blocklist.map((item) => item.id)).toEqual(['Loud Band', 's9']);
     expect(rules.volume_caps).toEqual({ bar: 70 });
     expect(rules.quiet_hours).toEqual([{ zone_id: 'bar', start: 1320, end: 1410, cap: 40 }]);
+    const current = {
+      venue: { filter_mode: 'off' as const, song_spacing_hours: 4 },
+      zones: { bar: { rules: { crate_ids: ['brand'], bpm_min: 90 }, dayparts: [{ daypart_id: 'brunch', daypart_label: 'Brunch', windows: [[5, 600, 720]], filter_mode: 'clean_only' as const }] } },
+      volume: {},
+    };
     const next: ContentRules = { ...rules, explicit: 'block_daytime', blocklist: [{ kind: 'song', id: 's10', label: 'Song 10' }] };
-    const body = rulesBody(next, ['bar']);
-    expect(body.venue.filter_mode).toBe('no_explicit');
-    expect(body.zones).toEqual({ bar: { crate_ids: ['brand'] } });
+    const body = rulesBody(next, ['bar'], current);
+    // Daytime-only is the venue allowing explicit songs plus a 06:00 to 21:00 daypart that doesn't.
+    expect(body.venue).toMatchObject({ filter_mode: 'off', song_spacing_hours: 4 });
+    const bar = body.zones.bar as { crate_ids: string[]; bpm_min: number; dayparts: Record<string, { filter_mode: string; windows: number[][]; label: string }> };
+    expect(bar.crate_ids).toEqual(['brand']);
+    expect(bar.bpm_min).toBe(90);
+    expect(bar.dayparts.brunch).toMatchObject({ label: 'Brunch', filter_mode: 'clean_only', windows: [[5, 600, 720]] });
+    expect(bar.dayparts[DAYTIME_PART].windows).toHaveLength(7);
+    expect(bar.dayparts[DAYTIME_PART].windows[0]).toEqual([0, 360, 1260]);
     expect(body.volume.bar).toEqual({ cap: 0.7, quiet_hours: [{ start: '22:00', end: '23:30', cap: 0.4 }] });
+    // ...and it reads back as itself.
+    const saved = { venue: body.venue as never, zones: { bar: { rules: { crate_ids: ['brand'] }, dayparts: [{ daypart_id: DAYTIME_PART, filter_mode: 'no_explicit' as const, windows: bar.dayparts[DAYTIME_PART].windows }] } }, volume: {} };
+    expect(rulesOf(saved, [], 'camden').explicit).toBe('block_daytime');
+    expect(rulesBody({ ...next, explicit: 'block' }, ['bar'], current).venue.filter_mode).toBe('no_explicit');
+    expect(Object.keys((rulesBody({ ...next, explicit: 'allow' }, ['bar'], current).zones.bar as { dayparts: object }).dayparts)).toEqual(['brunch']);
     const change = blocklistDiff(next.blocklist, [{ id: 'e2', kind: 'song', value: 's9', label: 'Song 9', scope: 'venue', scope_id: 'camden' }], 'camden');
     expect(change).toEqual({ add: [{ kind: 'song', value: 's10', label: 'Song 10', scope: 'venue', scope_id: 'camden' }], remove: ['e2'] });
   });

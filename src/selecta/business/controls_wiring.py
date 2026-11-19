@@ -29,18 +29,19 @@ def install(
     directory: Directory | None = None,
 ) -> None:
     from selecta.business.content import api as content_api
+    from selecta.business.content import api_tools as content_tools
+    from selecta.business.content import library
     from selecta.business.rooms import api as rooms_api
 
     directory = directory or SqlDirectory()
     app.state.business_directory = directory
-    for module in (content_api, rooms_api):
-        module.install_routes(
-            app,
-            engine=engine,
-            current_claims=current_claims,
-            principal_for=principal_for,
-            directory=directory,
-        )
+    common = {"engine": engine, "current_claims": current_claims, "principal_for": principal_for,
+              "directory": directory}
+    # The organisation library is the song-facts source: venue rule saves refuse a block with
+    # nothing allowed in it, and guest search and the request planner read the same songs.
+    content_api.install_routes(app, songs_for=library.songs_for, **common)
+    content_tools.install_routes(app, **common)
+    rooms_api.install_routes(app, **common)
 
 
 def zone_volume_cap(

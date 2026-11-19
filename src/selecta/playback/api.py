@@ -19,7 +19,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 
-from selecta.business import device_cookie
+from selecta.business import device_cookie, entitlement_gates
 from selecta.flags import cloud_gate
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
@@ -788,6 +788,12 @@ def install_routes(
     ) -> dict[str, Any]:
         found = principal(request, claims, "devices")
         here = zone_holder(found, request, body.device_id, zone_id)
+        with transaction(engine, found.workspace.id) as conn:  # ADR-0448 paid zones
+            refused = entitlement_gates.zone_start_refusal(
+                conn, found.workspace.id, zone_id, server_time())
+        if refused is not None:
+            raise HTTPException(status_code=403, detail={"code": "zone_not_paid",
+                                                         "message": refused})
         try:
             result = zone_session.zone_take_over(
                 engine, zones, found.workspace.id, zone_id, here,

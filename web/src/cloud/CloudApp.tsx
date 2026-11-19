@@ -59,6 +59,8 @@ const HostedShell = lazy(() => import('./HostedShell').then((module) => ({ defau
 const BusinessApp = lazy(() => import('../business/BusinessApp'));
 const JoinOrganisation = lazy(() => import('../business/JoinOrganisation'));
 const PersonalSwitcher = lazy(() => import('../business/switcher/PersonalSwitcher'));
+// The business price list (BZ-0441-05), only for an account `business.signups` reaches.
+const BusinessPricing = lazy(() => import('../business/pricing/BusinessPricing'));
 
 /** Whether this account has the business workspace (decided on by the server, never assumed). */
 export function businessShown(account: Account | null): boolean {
@@ -352,6 +354,9 @@ export function CloudApp() {
   // The business workspace (`/b/{org}`) and its invitation page, only with the flag on; off, the
   // address is not found like any other and nothing business is fetched.
   const openPath = (next: string) => { window.history.pushState({}, '', next); setPath(next); setPage(pageFor(next)); };
+  if (account && account.features?.['business.signups'] === true && path.replace(/\/+$/, '') === '/business/pricing') {
+    return <Suspense fallback={<main className="cloud-runtime-message"><p>Loading prices…</p></main>}><BusinessPricing api={api} onLeave={() => openPath('/')} /></Suspense>;
+  }
   if (account && businessShown(account) && isBusinessPath(path)) {
     const leaveBusiness = () => openPath('/');
     const businessRoute = parseBusinessPath(path);

@@ -8,6 +8,7 @@ owns an organisation with one venue and a Bar zone and pairs players from her ow
 from __future__ import annotations
 
 import base64
+import json
 
 import pytest
 import sqlalchemy as sa
@@ -598,3 +599,93 @@ def test_horizon_bundle_is_signed_with_the_keys_given_at_pairing(party, venue):
     tampered = {**signed, "bundle": signed["bundle"].replace(venue["zone"], "another-zone")}
     with pytest.raises(permits.PermitRefused):
         permits.verify(tampered, keys)
+
+
+# ---- ADR-0446: commands while the kiosk is offline, the permit's stops, the offline flag
+
+
+def _phone(party, org: str) -> str:
+    from cloud_party import made_up
+
+    answer = party.client.post(
+        "/api/devices",
+        headers=auth(ALICE, org),
+        json={"name": "Phone", "kind": "phone", "device_id": made_up()},
+    )
+    assert answer.status_code == 201, answer.text
+    return answer.json()["device"]["id"]
+
+
+def _press(party, venue, phone: str, command: str, session: dict, args=None):
+    return party.client.post(
+        f"/api/zones/{venue['zone']}/playback/commands",
+        headers=auth(ALICE, venue["org"]),
+        json={
+            "device_id": phone,
+            "command": command,
+            "args": args,
+            "fence": session["fence"],
+            "based_on_seq": session["seq"],
+            "idempotency_key": f"k-{command}-{session['seq']}",
+        },
+    )
+
+
+def test_a_skip_for_an_unreachable_kiosk_is_refused_at_once_and_never_queued(party, venue):
+    from selecta.playback.schema import playback_commands
+
+    player = paired(party, venue)
+    session = player.heartbeat().json()["session"]
+    phone = _phone(party, venue["org"])
+    with transaction(party.engine, venue["org"]) as conn:
+        conn.execute(sa.update(playback_sessions_table()).values(lease_expires_at=db_now(conn) - 1))
+    refused = _press(party, venue, phone, "skip", session)
+    assert refused.status_code == 409, refused.text
+    detail = refused.json()["detail"]
+    assert detail["code"] == "speaker_offline"
+    assert "still playing saved music" in detail["message"]
+    with transaction(party.engine, venue["org"]) as conn:
+        queued = conn.execute(
+            sa.select(sa.func.count())
+            .select_from(playback_commands)
+            .where(playback_commands.c.command == "skip")
+        ).scalar()
+    assert queued == 0
+    # a state change still applies on the server, and reaches the kiosk when it is back
+    volume = _press(party, venue, phone, "set_volume", session, {"volume": 40})
+    assert volume.status_code == 200, volume.text
+
+
+def playback_sessions_table():
+    from selecta.playback.schema import playback_sessions
+
+    return playback_sessions
+
+
+def test_the_permit_carries_a_payment_stop_and_the_earliest_stop_wins(party, venue, monkeypatch):
+    from selecta.business import dunning, permits
+
+    player = paired(party, venue)
+    monkeypatch.setattr(
+        dunning,
+        "stop_plan",
+        lambda _conn, _org, _hours, now: [
+            dunning.VenueStop(venue["venue"], now + 3600, None, None)
+        ],
+    )
+    signed = player.client.get("/api/kiosk/horizon").json()["offline_bundle"]
+    keys = [k["public_key"] for k in json.loads(signed["bundle"])["keys"]]
+    body = permits.verify(signed, keys)
+    permit = body["permit"]
+    assert permit["plan_state"] == "grace" and permit["stop_reason"] == "payment"
+    assert permit["stop_at"] - permit["issued_at"] == pytest.approx(3600, abs=5)
+    assert body["content"]["refused_song_ids"] == []
+
+
+def test_with_business_offline_off_the_kiosk_gets_three_songs_and_no_permit(party, venue):
+    player = paired(party, venue)
+    flags.use("+business.orgs +business.kiosk")
+    body = player.client.get("/api/kiosk/horizon").json()
+    assert body["offline"] is False
+    assert "offline_bundle" not in body
+    assert len(body["segments"]) <= 3

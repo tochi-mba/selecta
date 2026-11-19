@@ -6,8 +6,13 @@ routes answer as unknown and zones play only when started by hand.
 
 Every query runs in the venue's workspace transaction (forced row-level security) and also
 filters by `workspace_id` itself. Who may change hours, and how far a role may stay open late,
-comes from `role_for` (BZ-5 business roles); without it the caller is treated as staff, the most
-limited role, so nothing is ever more permissive than the roles allow.
+comes from `role_for`, by default `business_role`: the caller's broadest ADR-0452 role at the
+venue (`business.access.guard`). A viewer may read but never change anything; staff may stay
+open late within their allowance and close now; owners, admins and venue managers edit hours.
+
+Every change is written to the business audit log (`business.access.audit`), with who did it.
+Installing the routes also gives "archive at closing time" (ADR-0442) the venue's real next
+closing instant through `hours_hook`, while `business.schedules` is on.
 """
 
 from __future__ import annotations
@@ -22,7 +27,8 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 
-from selecta.business import hours, zone_clock
+from selecta import flags
+from selecta.business import hours, hours_hook, zone_clock
 from selecta.business.hours_schema import (
     venue_hour_exceptions,
     venue_hour_overrides,
@@ -31,7 +37,9 @@ from selecta.business.hours_schema import (
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, new_id, transaction
 
+FLAG = "business.schedules"
 MANAGERS = frozenset({"owner", "admin", "venue_manager"})
+CONTROLLERS = frozenset(hours.ALLOWANCE_MIN)
 RoleFor = Callable[[Engine, Claims, str, str], str]
 """(engine, claims, workspace_id, venue_id) -> business role in that venue."""
 
@@ -65,6 +73,79 @@ class StayLateIn(BaseModel):
 
 def staff_role(_engine: Engine, _claims: Claims, _workspace_id: str, _venue_id: str) -> str:
     return "staff"
+
+
+def business_role(engine: Engine, claims: Claims, workspace_id: str, venue_id: str) -> str:
+    """The caller's broadest business role at the venue; not a member answers 404."""
+    from selecta.business.access import BusinessNotFound, guard
+
+    with transaction(engine, workspace_id) as conn:
+        try:
+            actor = guard.actor_for(
+                conn, user_id=claims.subject, organisation_id=workspace_id,
+                workspace_id=workspace_id,
+            )
+        except BusinessNotFound:
+            raise HTTPException(status_code=404, detail={"code": "venue_not_found"}) from None
+    return guard.role_at(actor, venue_id) or "viewer"
+
+
+def audit_change(
+    conn: Any,
+    workspace_id: str,
+    by: str,
+    action: str,
+    venue_id: str,
+    *,
+    resource_type: str,
+    resource_id: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    """One business audit row for a schedule change, in the caller's transaction."""
+    from selecta.business.access import BusinessActor
+    from selecta.business.access import audit as business_audit
+
+    actor = BusinessActor(kind="person", id=by, organisation_id=workspace_id,
+                          workspace_id=workspace_id)
+    business_audit.record(
+        conn, actor, action, organisation_id=workspace_id, workspace_id=workspace_id,
+        venue_id=venue_id, resource_type=resource_type, resource_id=resource_id,
+        metadata=metadata,
+    )
+
+
+def next_closing_at(conn: Any, workspace_id: str, venue_id: str, now: int) -> int | None:
+    """The venue's next closing instant after `now` (epoch seconds), for `hours_hook`.
+
+    None while `business.schedules` is off, when the venue has no hours, or when it is open
+    24 hours with no close in the next 14 days."""
+    if not flags.on(FLAG):
+        return None
+    from selecta.business.schema import venues
+
+    tz = conn.execute(
+        sa.select(venues.c.timezone).where(
+            venues.c.workspace_id == workspace_id, venues.c.id == venue_id
+        )
+    ).scalar()
+    if tz is None:
+        return None
+    ref = zone_clock.ZoneRef(workspace_id=workspace_id, venue_id=venue_id, zone_id="", tz=tz)
+    start = datetime.fromtimestamp(now, UTC)
+    try:
+        venue, _zone, overrides = zone_clock.load_hours(conn, ref, start.date())
+        if not venue.weekly and not venue.exceptions:
+            return None
+        intervals = hours.periods_between(
+            venue, start, datetime.fromtimestamp(now + hours.WINDOW_DAYS * 86_400, UTC),
+            overrides,
+        )
+    except hours.HoursError:
+        return None
+    for interval in intervals:
+        if interval.end is not None and interval.end.timestamp() > now:
+            return int(interval.end.timestamp())
+    return None
 
 
 def _bad(message: str, status: int = 400) -> HTTPException:
@@ -121,8 +202,10 @@ def install_routes(
     engine: Engine,
     current_claims: Callable[..., Claims],
     principal_for: Callable[..., Any],
-    role_for: RoleFor = staff_role,
+    role_for: RoleFor = business_role,
 ) -> None:
+    hours_hook.set_next_closing_at(next_closing_at)
+
     def scope(request: Request, claims: Claims) -> str:
         principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
         return principal.workspace.id
@@ -131,6 +214,12 @@ def install_routes(
         role = role_for(engine, claims, workspace_id, venue_id)
         if role not in MANAGERS:
             raise _bad("Only owners, admins and venue managers can change opening hours.", 403)
+        return role
+
+    def controller(claims: Claims, workspace_id: str, venue_id: str) -> str:
+        role = role_for(engine, claims, workspace_id, venue_id)
+        if role not in CONTROLLERS:
+            raise _bad("Your role can look at this venue but not change when it closes.", 403)
         return role
 
     @app.get("/api/business/venues/{venue_id}/hours")
@@ -209,6 +298,9 @@ def install_routes(
                         all_day=period.all_day,
                     )
                 )
+            audit_change(conn, workspace_id, claims.subject, "hours.edit", venue_id,
+                         resource_type="venue_hours", resource_id=body.zone_id or venue_id,
+                         metadata={"periods": len(periods), "zone_id": body.zone_id or ""})
         _recompute(engine, workspace_id, venue_id)
         return get_hours(venue_id, request, claims)
 
@@ -244,6 +336,9 @@ def install_routes(
                     created_at=db_now(conn),
                 )
             )
+            audit_change(conn, workspace_id, claims.subject, "hours.exception_add", venue_id,
+                         resource_type="venue_hour_exception", resource_id=exception_id,
+                         metadata={"date": body.date.isoformat(), "closed": body.closed})
         _recompute(engine, workspace_id, venue_id)
         return {"id": exception_id}
 
@@ -263,6 +358,10 @@ def install_routes(
                 .where(venue_hour_exceptions.c.venue_id == venue_id)
                 .where(venue_hour_exceptions.c.id == exception_id)
             ).rowcount
+            if gone:
+                audit_change(conn, workspace_id, claims.subject, "hours.exception_remove",
+                             venue_id, resource_type="venue_hour_exception",
+                             resource_id=exception_id)
         if not gone:
             raise HTTPException(status_code=404, detail={"code": "exception_not_found"})
         _recompute(engine, workspace_id, venue_id)
@@ -310,6 +409,12 @@ def install_routes(
                     created_at=override.created_at.timestamp(),
                 )
             )
+            audit_change(
+                conn, workspace_id, override.created_by, f"hours.{override.kind}", venue_id,
+                resource_type="venue_hour_override", resource_id=override_id,
+                metadata={"opening_date": override.opening_date.isoformat(),
+                          "until": override.ends_at.isoformat() if override.ends_at else ""},
+            )
         _recompute(engine, workspace_id, venue_id)
         return override_id
 
@@ -350,6 +455,8 @@ def install_routes(
         venue_id: str, request: Request, claims: Claims = Depends(current_claims)  # noqa: B008
     ) -> dict[str, Any]:
         workspace_id = scope(request, claims)
+        _venue_ref(engine, workspace_id, venue_id)
+        controller(claims, workspace_id, venue_id)
         now = _now(workspace_id)
         try:
             override = hours.close_now(
@@ -372,6 +479,7 @@ def install_routes(
         claims: Claims = Depends(current_claims),  # noqa: B008
     ) -> dict[str, Any]:
         workspace_id = scope(request, claims)
+        controller(claims, workspace_id, venue_id)
         with transaction(engine, workspace_id) as conn:
             row = conn.execute(
                 sa.select(venue_hour_overrides)
@@ -399,6 +507,8 @@ def install_routes(
                 .where(venue_hour_overrides.c.id == override_id)
                 .values(undone_at=undone.undone_at.timestamp(), undone_by=claims.subject)
             )
+            audit_change(conn, workspace_id, claims.subject, "hours.close_now_undo", venue_id,
+                         resource_type="venue_hour_override", resource_id=override_id)
         _recompute(engine, workspace_id, venue_id)
         return {"id": override_id, "undone": True}
 

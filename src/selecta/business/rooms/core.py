@@ -30,7 +30,8 @@ BRANDING_KEYS = ("welcome", "accent", "logo_url")
 
 
 def join_path(code: str) -> str:
-    return f"/r/{code}"
+    """The table card's link: the guest page at `/r/{code}`, told it is a venue's room."""
+    return f"/r/{code}?at=venue"
 
 
 class RoomsCore:

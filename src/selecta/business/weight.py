@@ -102,6 +102,14 @@ def scheduling_tier(lane: Lane | str, *, open_now: bool) -> str:
     return TIER_OPEN if open_now and str(lane) == Lane.INTERACTIVE else TIER_CLOSED
 
 
+def lane_tier(tier: str | None, lane: Lane | str) -> str | None:
+    """The tier one lane of an account is charged to: an open business's interactive lane runs
+    at the open weight, its other lanes at the business weight; other tiers are unchanged."""
+    if tier == TIER_OPEN:
+        return scheduling_tier(lane, open_now=True)
+    return tier
+
+
 def zone_weight(hours: HoursSource, conn: Connection | None, venue: VenueFacts,
                 organisation_id: str, lane: Lane | str, now: float,
                 config: BusinessWeightConfig = DEFAULT) -> float:

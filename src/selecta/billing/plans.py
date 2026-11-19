@@ -343,6 +343,10 @@ def problems(registry: Mapping[str, flags.Flag] | None = None) -> list[str]:
         if flag is not None and flag.core:
             found.append(f"{flag_id} is core, so every plan has it; no plan can leave it out")
     found += _requires_problems(gated, registry)
+    # The per-venue business plan sits beside these plans, never in CATALOGUE (BZ-0441-03).
+    from selecta.business import plan_catalogue
+
+    found += plan_catalogue.problems(registry)
     return found
 
 

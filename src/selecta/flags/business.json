@@ -5,6 +5,9 @@
       "label": "SelectaDJ for Business sign-up",
       "about": "Self-serve business sign-up and selling of business plans. Off until the legal review passes; pilots work without it.",
       "default": false,
+      "routes": [
+        "GET /api/business/pricing"
+      ],
       "modes": ["cloud"],
       "scope": "global",
       "kind": "release",
@@ -60,6 +63,21 @@
         "GET /api/business/zones/{zone_id}/programme",
         "PUT /api/business/zones/{zone_id}/programme",
         "POST /api/business/schedules/apply"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.entitlements": {
+      "label": "Business allowances and continuity",
+      "about": "Pooled storage that grows with venues, paid zone limits, the opening-hours processing weight, the usage meters for managers, and the monthly continuity figure with service credits proposed for staff approval.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": [
+        "GET /api/business/usage",
+        "GET /api/business/slo",
+        "PUT /api/business/always-open"
       ],
       "modes": ["cloud"],
       "scope": "workspace",
@@ -272,7 +290,41 @@
         "DELETE /api/business/zones/{zone_id}/content/overrides/{override_id}",
         "PUT /api/business/content/songs/{song_id}/explicit",
         "GET /api/business/library/songs",
-        "POST /api/business/library/explicit"
+        "POST /api/business/library/explicit",
+        "GET /api/business/zones/{zone_id}/content/pool",
+        "GET /api/business/zones/{zone_id}/content/snapshot",
+        "GET /api/business/content/artist-variants",
+        "PUT /api/business/content/songs/{song_id}/clean-link"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.content_controls.bulk": {
+      "label": "Bulk explicit editor and CSV import",
+      "about": "Mark many organisation songs explicit, clean or not checked at once with a count and undo, and import marks from a CSV matched by ISRC, then artist and title.",
+      "default": false,
+      "requires": ["business.content_controls"],
+      "routes": [
+        "POST /api/business/content/bulk/preview",
+        "POST /api/business/content/bulk/apply",
+        "POST /api/business/content/bulk/{batch_id}/undo",
+        "POST /api/business/content/import/preview",
+        "POST /api/business/content/import/apply"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.content_controls.lyrics_hint": {
+      "label": "Worth checking list",
+      "about": "Lists organisation songs whose lyrics contain words on a review list, for a person to check. It never marks a song clean or explicit by itself.",
+      "default": false,
+      "requires": ["business.content_controls"],
+      "routes": [
+        "GET /api/business/content/worth-checking"
       ],
       "modes": ["cloud"],
       "scope": "workspace",
@@ -286,6 +338,8 @@
       "requires": ["business.orgs"],
       "routes": [
         "GET /api/zones/{zone_id}/requests",
+        "GET /api/zones/{zone_id}/requests/next",
+        "POST /api/zones/{zone_id}/requests/{request_id}/played",
         "POST /api/zones/{zone_id}/requests/{request_id}/approve",
         "POST /api/zones/{zone_id}/requests/{request_id}/pass",
         "GET /api/zones/{zone_id}/room",

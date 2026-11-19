@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from selecta.admin.state import DbWorkControls
+from selecta.business.weight import business_policy
 from selecta.devstack import guard
 from selecta.devstack.cloud_app import use_disk_storage
 from selecta.devstack.settings import DevSettings
@@ -122,6 +123,7 @@ def main() -> None:
             ),
             scratch=settings.data / "scratch",
         ),
+        config=business_policy(),
         entitlements=cloud_ports.CloudJobEntitlements(engine),
         flags=cloud_ports.CloudJobFlags(engine, rules),
         verifier=cloud_ports.R2OutputVerifier(),

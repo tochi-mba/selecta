@@ -217,3 +217,23 @@ describe('the local play log (ADR-0446 resync, kiosk side)', () => {
     expect(log.pending().map((e) => e.idempotency_key)).toEqual(['b']);
   });
 });
+
+describe('a song cut by a rendered seam (ADR-0446 BZ-0446-01, kiosk side)', () => {
+  it('starts the file at its seam cue plus the offset the schedule says', async () => {
+    const { createPlayer } = await import('./player');
+    const elements: { currentTime: number; play: () => Promise<void>; pause: () => void; volume: number; src: string; preload: string; paused: boolean; ended: boolean; duration: number }[] = [];
+    const createAudio = () => {
+      const el = { currentTime: 0, play: async () => { el.paused = false; }, pause: () => { el.paused = true; }, volume: 1, src: '', preload: '', paused: true, ended: false, duration: 200 };
+      elements.push(el);
+      return el as unknown as HTMLAudioElement;
+    };
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: () => 'blob:x', revokeObjectURL: () => undefined }));
+    const player = createPlayer({ now: () => 1_030, saved: () => true, blob: async () => new Blob(['x']), createAudio, context: null });
+    player.setSegments([seg('b', 1_000, 100, { from_s: 12 })]);
+    player.start(0); // starts its first tick itself
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const playing = elements.find((el) => !el.paused);
+    expect(playing?.currentTime).toBe(42);
+    expect(player.position().offsetS).toBe(30);
+  });
+});

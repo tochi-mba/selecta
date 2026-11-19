@@ -46,6 +46,8 @@ export const KIOSK_COPY = {
   close: 'Close',
   done: 'Done',
   networkWords: { online: 'Connected', offline: 'Not connected', unknown: 'Unknown' },
+  offlinePlay: 'Plays without internet',
+  offlineWords: { ready: 'Yes', newer: 'No, it needs a newer browser', not_yet: 'Not yet', off: 'Not switched on' },
 } as const;
 
 /** The pairing link a manager's phone opens from the QR. */
