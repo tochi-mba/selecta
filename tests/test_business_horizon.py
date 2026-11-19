@@ -125,6 +125,8 @@ def test_render_work_carries_zone_and_deadline_and_the_next_two_are_urgent(sqlit
         )
     assert made["seams"] == 4 and again["seams"] == 0  # idempotent by seam
     assert [r["input_ref"]["zone_id"] for r in rows] == ["zone-bar"] * 4
+    # The job row itself names the zone, so zones take turns in the claim (ADR-0443 BZ-0443-10).
+    assert [r["zone_id"] for r in rows] == ["zone-bar"] * 4
     assert [r["needed_by"] for r in rows] == [T0 + 200 * n for n in range(1, 5)]
     assert [r["lane"] for r in rows] == ["interactive", "interactive", "standard", "standard"]
     side = rows[0]["input_ref"]["a"]

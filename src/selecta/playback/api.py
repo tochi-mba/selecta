@@ -788,9 +788,10 @@ def install_routes(
     ) -> dict[str, Any]:
         found = principal(request, claims, "devices")
         here = zone_holder(found, request, body.device_id, zone_id)
+        started_at = server_time()  # read first: one transaction at a time on SQLite
         with transaction(engine, found.workspace.id) as conn:  # ADR-0448 paid zones
             refused = entitlement_gates.zone_start_refusal(
-                conn, found.workspace.id, zone_id, server_time())
+                conn, found.workspace.id, zone_id, started_at)
         if refused is not None:
             raise HTTPException(status_code=403, detail={"code": "zone_not_paid",
                                                          "message": refused})

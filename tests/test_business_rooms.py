@@ -69,10 +69,11 @@ def test_code_guessing_never_locks_out_the_venue_network(make, engine):
 def test_flood_switches_zone_to_staff_approval(make, engine, clock):
     svc = make()
     seen(svc)
-    configure(svc, {"mode": settings.AUTO_ACCEPT, "limits": {"accepted_per_hour": 1}})
+    configure(svc, {"limits": {"accepted_per_hour": 1}})  # the flood line: 3 in 10 minutes
     crowd = [svc.join(code_of(svc), f"198.51.100.{40 + i}") for i in range(4)]
     for index, person in enumerate(crowd[:3]):
         svc.place(person.token, f"s{30 + index}")
+    configure(svc, {"mode": settings.AUTO_ACCEPT})  # the manager asks for auto-accept
     assert svc.place(crowd[3].token, "s40")["status"] == "sent"  # waits for staff now
     assert configure(svc, {})["effective_mode"] == settings.STAFF_APPROVE
     assert "rooms.flood_switch" in rr.activity_kinds(engine)

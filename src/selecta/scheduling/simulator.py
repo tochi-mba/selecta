@@ -69,6 +69,9 @@ class Demand:
     """A playback seam: due this long after it arrives, which makes it a candidate for a boost."""
     start_s: float = 0.0
     stop_s: float = math.inf
+    zone: str | None = None
+    """The business zone this stream's work is for (ADR-0443 BZ-0443-10): an account's zones take
+    turns, and deadline boosts count per zone, as `claims.ClaimSession` does."""
 
 
 @dataclass(frozen=True)
@@ -162,11 +165,13 @@ class Report:
     max_wait_ratio: float
     """That wait against the account's bound (see the module notes); 1 or less is kept."""
     invariant_checks: int
+    late_by_zone: Mapping[str, int] = field(default_factory=dict)
+    """Seams per zone that started after their `needed_by` (zones only)."""
 
 
 class _Job:
     __slots__ = ("id", "workspace_id", "lane", "key", "needed_by", "est", "actual", "state",
-                 "queued_at", "attempts", "crashes", "attempt", "stream", "enqueued")
+                 "queued_at", "attempts", "crashes", "attempt", "stream", "enqueued", "zone")
 
     def __init__(self, job_id, workspace_id, lane, key, needed_by, est, actual, stream):
         self.id = job_id
@@ -177,6 +182,7 @@ class _Job:
         self.est = est
         self.actual = actual
         self.stream = stream
+        self.zone = stream.demand.zone
         self.state = QUEUED
         self.queued_at = 0.0
         self.attempts = 0
@@ -298,6 +304,9 @@ class Simulation:
         self.lane_cost = defaultdict(lambda: [0.0, 0])
         self.waits_tier: dict[str, list[float]] = defaultdict(list)
         self.waits_account: dict[str, list[float]] = defaultdict(list)
+        # Zone turns and lateness (ADR-0443 BZ-0443-10).
+        self.zone_served: dict[tuple[str, str], int] = defaultdict(int)
+        self.zone_late: dict[str, int] = defaultdict(int)
         self.max_wait = 0.0
         self.max_ratio = 0.0
         self.service: dict[int, dict[tuple[str, str], float]] = defaultdict(
@@ -509,8 +518,26 @@ class Simulation:
             heapq.heappush(heap, entry)
         return found
 
-    def _boosts_in_window(self, workspace_id: str) -> int:
-        times = self.boost_times[workspace_id]
+    def _next_in(self, head: _Head) -> _Job:
+        """The account's next job: by `job_key`, or with zones, zones in turn within an urgency
+        (fewest started first, then `job_key`), as `policy.zone_fair_order` orders claims."""
+        live = [entry for entry in head.queue
+                if self.jobs[entry[1]].state == QUEUED and self.jobs[entry[1]].enqueued == entry[2]]
+        if not any(self.jobs[entry[1]].zone for entry in live):
+            while True:
+                _, job_id, enqueued = heapq.heappop(head.queue)
+                job = self.jobs[job_id]
+                if job.state == QUEUED and job.enqueued == enqueued:
+                    return job
+        best = min(live, key=lambda entry: (
+            entry[0][0], self.zone_served[(head.workspace_id, self.jobs[entry[1]].zone or "")],
+            entry[0], entry[1]))
+        head.queue.remove(best)
+        heapq.heapify(head.queue)
+        return self.jobs[best[1]]
+
+    def _boosts_in_window(self, workspace_id: str, zone: str | None = None) -> int:
+        times = self.boost_times[(workspace_id, zone) if zone else workspace_id]
         while times and times[0] < self.now - self.config.boost_window_s:
             times.popleft()
         return len(times)
@@ -530,7 +557,8 @@ class Simulation:
             head = self.heads[(job.lane, job.workspace_id)]
             if policy.why_ineligible(self.candidate, self.caps, self._context(head)) is not None:
                 continue
-            if not policy.boost_allowed(self._boosts_in_window(job.workspace_id), config):
+            if not policy.boost_allowed(self._boosts_in_window(job.workspace_id, job.zone),
+                                        config):
                 continue
             chosen = (head, job)
             break
@@ -538,7 +566,9 @@ class Simulation:
             heapq.heappush(heap, entry)
         if chosen is None:
             return False
-        self.boost_times[chosen[1].workspace_id].append(self.now)
+        boosted = chosen[1]
+        self.boost_times[(boosted.workspace_id, boosted.zone) if boosted.zone
+                         else boosted.workspace_id].append(self.now)
         self.boosts += 1
         self._start(*chosen)
         return True
@@ -546,11 +576,11 @@ class Simulation:
     def _start(self, head: _Head, job: _Job | None = None) -> None:
         scenario, config = self.scenario, self.config
         if job is None:
-            while True:
-                _, job_id, enqueued = heapq.heappop(head.queue)
-                job = self.jobs[job_id]
-                if job.state == QUEUED and job.enqueued == enqueued:
-                    break
+            job = self._next_in(head)
+        if job.zone:
+            self.zone_served[(head.workspace_id, job.zone)] += 1
+            if job.needed_by is not None and self.now > job.needed_by:
+                self.zone_late[job.zone] += 1
         tier = self.tiers[head.workspace_id]
         if head.running >= self.cap[(tier, head.lane)]:
             raise InvariantViolation(f"{head.workspace_id} went past its {head.lane} cap.")
@@ -828,6 +858,7 @@ class Simulation:
             max_wait_s=self.max_wait,
             max_wait_ratio=self.max_ratio,
             invariant_checks=self.checks,
+            late_by_zone=dict(sorted(self.zone_late.items())),
         )
 
     # --- invariants ---
