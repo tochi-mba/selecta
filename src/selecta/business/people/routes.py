@@ -144,7 +144,9 @@ def install_routes(
             features = decided(conn, found)
             org = workspace_view.org_view(conn, actor, features=features, now=now)
             venues = workspace_view.venues_view(conn, actor, now=now)
-        return {"org": org, "venues": venues, "devices": [], "activity": []}
+            activity = workspace_view.activity_view(conn, actor, [v["id"] for v in venues])
+        return {"org": org, "venues": venues, "devices": _kiosks(engine, found, now),
+                "activity": activity}
 
     @app.patch("/api/business/orgs/{org_id}")
     def save_details(
@@ -270,6 +272,20 @@ def install_routes(
         with acting(request, claims) as (conn, actor, _found, now):
             business_guard.require(conn, actor, "business.zone.control", venue_id=venue_id)
             return _check_pin(conn, actor.workspace_id, venue_id, body.pin, now)
+
+
+def _kiosks(engine: Engine, found, now: float) -> list[dict[str, Any]]:
+    """The kiosks this person may see (`kiosk.list_kiosks`, as `GET /api/business/kiosks`)."""
+    from selecta.business import kiosk
+
+    try:
+        rows = kiosk.list_kiosks(engine, workspace_id=found.workspace.id, user_id=found.user.id,
+                                 now=now)
+    except BusinessError:
+        return []
+    keep = ("id", "name", "kind", "zone_id", "online", "last_seen_at", "saved_hours_ahead",
+            "version", "network")
+    return [{name: row.get(name) for name in keep} for row in rows]
 
 
 def _names(conn: Connection, workspace_id: str, venue_ids: list[str] | None):

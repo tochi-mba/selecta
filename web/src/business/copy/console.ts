@@ -103,7 +103,7 @@ export const BILLING_COPY = {
   title: 'Billing',
   noRights: 'Billing is handled by your owner or admin. Ask them about invoices and payment',
   plan: 'Plan',
-  planNames: { trial: 'Trial', business: 'Business, monthly', business_annual: 'Business, yearly', enterprise: 'Enterprise', pilot: 'Pilot' } as Record<string, string>,
+  planNames: { trial: 'Trial', business: 'Business, monthly', business_annual: 'Business, yearly', enterprise: 'Enterprise', pilot: 'Pilot', none: 'No plan yet' } as Record<string, string>,
   paymentStatus: 'Payment status',
   statusWords: { ok: 'Paid up', grace: "A payment didn't go through", grace_ended: 'Grace period ended' } as Record<string, string>,
   graceEnds: (day: string) => `Payment grace ends ${day}`,

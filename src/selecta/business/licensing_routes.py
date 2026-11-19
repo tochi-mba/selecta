@@ -10,6 +10,8 @@
   with a reason, audited.
 - `PUT /api/business/library/songs/{song_id}/isrc`: enter or correct a track's ISRC by hand,
   audited; exports show the correction and the original stays in the history.
+- `GET /api/business/venues/{venue_id}/isrc-tracks`: the songs played there and their ISRC,
+  for the in-page editor.
 - `GET /api/business/venues/{venue_id}/isrc-coverage`: the share of tracks played there with
   an ISRC.
 - `GET /api/business/uploads/statement`, `POST /api/business/uploads/attestation`: the upload
@@ -26,12 +28,14 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from typing import Any
 
+import sqlalchemy as sa
 from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection, Engine
 
-from selecta.business import derived_limits, isrc, licensing, playlog, terms
+from selecta.business import derived_limits, isrc, licensing, playlog, terms, terms_gate
 from selecta.business.commercial_facts import MANAGER_ROLES, FactsSource, SqlFacts
+from selecta.business.commercial_schema import biz_play_log
 from selecta.business.errors import BusinessError
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, new_id, transaction
@@ -90,6 +94,7 @@ def install_routes(
     principal_for: Callable[..., Any], facts: FactsSource | None = None,
 ) -> None:
     facts_source: FactsSource = facts or SqlFacts()
+    terms_gate.install(app, engine=engine)
 
     @contextmanager
     def member(
@@ -159,6 +164,29 @@ def install_routes(
                             isrc=body.isrc, actor=found.user.id, now=now)
             current = isrc.current_isrc(conn, org.workspace_id, song_id)
         return {"song_id": song_id, "isrc": current}
+
+    @app.get("/api/business/venues/{venue_id}/isrc-tracks")
+    def isrc_tracks(
+        venue_id: str, request: Request, claims: Claims = Depends(current_claims),  # noqa: B008
+    ):
+        """The songs played at the venue with their ISRC (corrections applied), missing first,
+        for the in-page editor. At most 500."""
+        with member(request, claims) as (conn, org, _found, _now):
+            venue_of(org, venue_id)
+            rows = conn.execute(sa.select(
+                biz_play_log.c.track_id, biz_play_log.c.title, biz_play_log.c.artist,
+                biz_play_log.c.isrc,
+            ).where(biz_play_log.c.organisation_id == org.organisation_id,
+                    biz_play_log.c.venue_id == venue_id,
+                    biz_play_log.c.track_id.is_not(None))).all()
+            seen: dict[str, dict] = {}
+            for track_id, title, artist, logged in rows:
+                seen.setdefault(track_id, {"song_id": track_id, "title": title,
+                                           "artist": artist, "isrc": logged})
+            fixes = isrc.corrections(conn, org.workspace_id, sorted(seen))
+        tracks = [{**t, "isrc": fixes.get(t["song_id"], t["isrc"])} for t in seen.values()]
+        tracks.sort(key=lambda t: (bool(t["isrc"]), t["title"].casefold()))
+        return {"tracks": tracks[:500]}
 
     @app.get("/api/business/venues/{venue_id}/isrc-coverage")
     def isrc_coverage(

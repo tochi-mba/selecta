@@ -55,7 +55,7 @@ export function OnboardingPage() {
         }}>Save hours and continue</button>
       </>}
       {current === 'zones' && venue && <><ZoneListEditor zones={venue.zones} included={1}
-        allowance={org.pilot?.allowance.zones ?? null} extraPrice={org.billing.plan === 'trial' ? null : '£25'}
+        allowance={org.pilot?.allowance?.zones ?? null} extraPrice={org.billing.plan === 'trial' ? null : '£25'}
         disabled={disabled} onAdd={async (name) => { await client.addZone(org.id, venue.id, name); await refresh(); }}
         onRename={async (id, name) => { await client.renameZone(org.id, venue.id, id, name); await refresh(); }} />
         <button type="button" disabled={!!disabled || busy || !venue.zones.length} onClick={() => { void advance(true); }}>Continue</button>

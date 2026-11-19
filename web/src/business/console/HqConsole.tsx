@@ -85,7 +85,7 @@ export function HqConsole({ wall: wallProp = false }: { wall?: boolean }) {
 
   if (!loading && venues.length === 0) {
     const noAccess = org.role === 'viewer' || (org.venue_scope != null && org.role !== 'owner' && org.role !== 'admin');
-    const pilotWords = org.pilot && org.pilot.status !== 'converted' ? CONSOLE_COPY.pilotFirstVenue(org.pilot.allowance.venues) : null;
+    const pilotWords = org.pilot && org.pilot.status !== 'converted' && org.pilot.allowance ? CONSOLE_COPY.pilotFirstVenue(org.pilot.allowance.venues) : null;
     return <div className="biz hq" data-wall={wall || undefined}>
       {heading}
       <StateBanners banners={banners} ctx={ctx} actions={actions} />

@@ -146,8 +146,8 @@ export function businessClient(api: Api, workspaceId?: string) {
       return rulesOf(answer, entries, venue);
     },
     saveRules: async (_org: string, venue: string, rules: ContentRules): Promise<ContentRules> => {
-      const zones = await call<{ zones: { id: string }[] }>(ROUTES.zonesOf(venue));
-      await call(ROUTES.rules(venue), json('PUT', rulesBody(rules, (zones.zones ?? []).map((zone) => zone.id))));
+      const [zones, current] = await Promise.all([call<{ zones: { id: string }[] }>(ROUTES.zonesOf(venue)), call<VenueRulesAnswer>(ROUTES.rules(venue))]);
+      await call(ROUTES.rules(venue), json('PUT', rulesBody(rules, (zones.zones ?? []).map((zone) => zone.id), current)));
       const change = blocklistDiff(rules.blocklist, await blocklist(), venue);
       for (const entry of change.add) await call(ROUTES.blocklist, json('POST', entry));
       for (const id of change.remove) await call(ROUTES.blocklistEntry(id), json('DELETE'));
@@ -212,5 +212,5 @@ export function businessClient(api: Api, workspaceId?: string) {
 export type BusinessClient = ReturnType<typeof businessClient>;
 
 /** A song in the organisation library as the explicit editor and blocklist read it (ADR-0450).
- * The server has no artist for an uploaded file yet, so `artist` is empty. */
+ * Title and artist come from the song's catalogue entry; an upload with none has an empty artist. */
 export type LibrarySong = { id: string; title: string; artist: string; explicit: 'explicit' | 'clean' | 'unknown' };

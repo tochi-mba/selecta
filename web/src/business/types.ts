@@ -18,7 +18,8 @@ export type Pilot = {
   status: 'active' | 'ending' | 'ended' | 'converted';
   /** Epoch seconds. */
   ends_at: number;
-  allowance: { venues: number; zones: number };
+  /** Null when the pilot has no recorded allowance (made before pilot rows existed). */
+  allowance: { venues: number; zones: number } | null;
 };
 
 export type BillingState = {
@@ -27,7 +28,8 @@ export type BillingState = {
   /** Epoch seconds when grace ends (and playback stops at that venue's next close). */
   grace_ends_at?: number | null;
   currency: 'GBP' | 'USD' | 'EUR';
-  plan: 'trial' | 'business' | 'business_annual' | 'enterprise' | 'pilot';
+  /** `none`: no subscription, trial, contract or pilot yet. */
+  plan: 'trial' | 'business' | 'business_annual' | 'enterprise' | 'pilot' | 'none';
   trial_ends_at?: number | null;
   payments_available?: boolean;
   lines?: { item: 'venue' | 'zone' | 'seat'; quantity: number; unit_amount: number; interval: 'month' | 'year' }[];

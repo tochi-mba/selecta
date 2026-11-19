@@ -13,7 +13,15 @@ shapes `web/src/business/types.ts` declares. Everything here is read from the ta
   `plan_paused` when the zone is paused, `playing` or `paused_by_staff` while a speaker holds a
   live lease, `not_paired` with no home kiosk and no speaker, else `silent`.
 
-Billing state is `ok` unless the billing module says otherwise; nothing here invents amounts.
+- **billing**: from the billing tables (ADR-0447): `grace` while a failed payment's 14-day grace
+  runs, `grace_ended` once it is over or management is read-only (`dunning.grace_state`); the
+  plan from the pilot, a live Enterprise contract, the subscription (monthly or yearly), or a
+  running trial; `none` when there is none of those. No amounts are invented here; the billing
+  page reads them from `GET /api/business/billing`.
+- **pilot**: dates and the venue and zone allowance from `business_pilots`.
+- **activity**: the venues' 90-day everyday-control log (`audit.recent_activity`), only for
+  venues where the caller holds `business.activity.read`. The route adds the kiosks
+  (`kiosk.list_kiosks`, the same reading as `GET /api/business/kiosks`).
 """
 
 from __future__ import annotations
@@ -98,16 +106,79 @@ def _setup_json(row: dict[str, Any] | None) -> dict[str, Any] | None:
     }
 
 
-def _pilot(pilot_until: float | None, now: float) -> dict[str, Any] | None:
-    if pilot_until is None:
+def _pilot(conn: Connection, organisation_id: str, pilot_until: float | None,
+           now: float) -> dict[str, Any] | None:
+    from selecta.business.people.schema import business_pilots
+
+    row = conn.execute(
+        sa.select(business_pilots).where(business_pilots.c.organisation_id == organisation_id)
+    ).mappings().first()
+    ends_at = row["ends_at"] if row is not None else pilot_until
+    if ends_at is None:
         return None
-    if now >= pilot_until:
+    if row is not None and row["status"] == "converted":
+        status = "converted"
+    elif (row is not None and row["status"] == "ended") or now >= ends_at:
         status = "ended"
-    elif pilot_until - now <= PILOT_ENDING_S:
+    elif ends_at - now <= PILOT_ENDING_S:
         status = "ending"
     else:
         status = "active"
-    return {"status": status, "ends_at": float(pilot_until), "allowance": {"venues": 1, "zones": 3}}
+    allowance = None
+    if row is not None:
+        allowance = {"venues": int(row["venue_allowance"]), "zones": int(row["zone_allowance"])}
+    return {"status": status, "ends_at": float(ends_at), "allowance": allowance}
+
+
+def billing_view(conn: Connection, organisation_id: str, pilot: dict[str, Any] | None,
+                 now: float) -> dict[str, Any]:
+    """The organisation's billing state from the billing tables (see the module docstring)."""
+    from selecta.business import billing, dunning
+
+    sub = billing.subscription_row(conn, organisation_id)
+    trial = billing.trial_row(conn, organisation_id)
+    contract = billing.active_contract(conn, organisation_id, now)
+    state = dunning.grace_state(conn, organisation_id)
+    status, grace_ends_at = "ok", None
+    if state is not None and state.in_grace:
+        grace_ends_at = state.grace_ends_at
+        ended = dunning.is_management_read_only(conn, organisation_id, now)
+        status = "grace_ended" if ended else "grace"
+    if pilot is not None and pilot["status"] != "converted":
+        plan = "pilot"
+    elif contract is not None:
+        plan = "enterprise"
+    elif sub is not None and sub.get("stripe_subscription_id"):
+        plan = "business_annual" if sub.get("interval") == "year" else "business"
+    elif trial is not None and trial.get("outcome") == "running":
+        plan = "trial"
+    else:
+        plan = "none"
+    currency = (contract or {}).get("currency") or (sub or {}).get("currency") or "GBP"
+    return {
+        "status": status,
+        "grace_ends_at": grace_ends_at,
+        "currency": str(currency).upper(),
+        "plan": plan,
+        "trial_ends_at": (trial or {}).get("ends_at") if plan == "trial" else None,
+    }
+
+
+def activity_view(conn: Connection, actor: BusinessActor, venue_ids: list[str],
+                  limit: int = 50) -> list[dict[str, Any]]:
+    from selecta.business.access import audit, guard
+
+    lines: list[dict[str, Any]] = []
+    for venue_id in venue_ids:
+        if not guard.can(actor, "business.activity.read", venue_id=venue_id):
+            continue
+        for row in audit.recent_activity(conn, workspace_id=actor.workspace_id,
+                                         venue_id=venue_id, limit=limit):
+            lines.append({"id": row["id"], "at": float(row["created_at"]),
+                          "venue_id": row["venue_id"], "zone_id": row.get("zone_id") or None,
+                          "words": row["words"]})
+    lines.sort(key=lambda line: line["at"], reverse=True)
+    return lines[:limit]
 
 
 def org_view(
@@ -123,7 +194,7 @@ def org_view(
     ).mappings().first()
     setup = setup_row(conn, actor.workspace_id)
     details = (setup or {}).get("details") or {}
-    pilot = _pilot(row["pilot_until"], now) if row else None
+    pilot = _pilot(conn, actor.organisation_id, row["pilot_until"] if row else None, now)
     return {
         "id": actor.organisation_id,
         "workspace_id": actor.workspace_id,
@@ -132,7 +203,7 @@ def org_view(
         "role": role_of(actor),
         "venue_scope": scope_of(actor),
         "pilot": pilot,
-        "billing": {"status": "ok", "currency": "GBP", "plan": "pilot" if pilot else "business"},
+        "billing": billing_view(conn, actor.organisation_id, pilot, now),
         "seats": people.seats(conn, actor.workspace_id, now=now),
         "features": features,
         "feature_locks": {},
@@ -248,4 +319,7 @@ def venues_view(conn: Connection, actor: BusinessActor, *, now: float) -> list[d
     return out
 
 
-__all__ = ["org_view", "role_of", "save_setup", "scope_of", "setup_row", "venues_view"]
+__all__ = [
+    "activity_view", "billing_view", "org_view", "role_of", "save_setup", "scope_of", "setup_row",
+    "venues_view",
+]

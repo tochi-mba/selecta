@@ -91,22 +91,39 @@ export function applyParts(dayparts: Daypart[]) {
   return dayparts.map(({ name, start, end, energy, crate_ids }) => ({ name, start, end, energy, crate_ids: crate_ids ?? [] }));
 }
 
-type RuleValues = { filter_mode?: 'off' | 'no_explicit' | 'clean_only' | null; crate_ids?: string[] | null; bpm_min?: number | null; bpm_max?: number | null; energy_max?: number | null };
+type RuleValues = { filter_mode?: 'off' | 'no_explicit' | 'clean_only' | null; crate_ids?: string[] | null; bpm_min?: number | null; bpm_max?: number | null; energy_min?: number | null; energy_max?: number | null; song_spacing_hours?: number | null; artist_spacing_minutes?: number | null; half_double?: boolean | null };
+type DaypartRow = RuleValues & { daypart_id?: string | null; daypart_label?: string | null; windows?: number[][] | null };
 export type VenueRulesAnswer = {
   venue: RuleValues | null;
-  zones: Record<string, { rules: RuleValues | null; dayparts?: unknown[] }>;
+  zones: Record<string, { rules: RuleValues | null; dayparts?: DaypartRow[] }>;
   volume: Record<string, { cap: number; quiet_hours: { start: string; end: string; cap: number }[] }>;
   version?: number;
 };
 export type BlockEntry = { id: string; kind: string; value: string; label: string; scope: string; scope_id: string };
 
-/** Venue rules plus the organisation blocklist as the page's ContentRules. The server has no
- * "explicit blocked by day only" mode, so it never comes back as `block_daytime`. */
+/** "Block explicit in the daytime" is a daypart rule on every zone: no explicit songs from 06:00
+ * to 21:00 venue time, every day, with the venue itself allowing them. */
+export const DAYTIME_PART = 'explicit-daytime';
+export const DAYTIME = { start: 6 * 60, end: 21 * 60 };
+const RULE_KEYS: (keyof RuleValues)[] = ['filter_mode', 'crate_ids', 'bpm_min', 'bpm_max', 'energy_min', 'energy_max', 'song_spacing_hours', 'artist_spacing_minutes', 'half_double'];
+
+function kept(values: RuleValues | null | undefined): RuleValues {
+  const out: Record<string, unknown> = {};
+  for (const key of RULE_KEYS) if (values?.[key] !== null && values?.[key] !== undefined) out[key] = values[key];
+  return out as RuleValues;
+}
+
+function daytimeOn(answer: VenueRulesAnswer): boolean {
+  const zones = Object.values(answer.zones ?? {});
+  return zones.length > 0 && zones.every((zone) => (zone.dayparts ?? []).some((part) => part.daypart_id === DAYTIME_PART && part.filter_mode === 'no_explicit'));
+}
+
+/** Venue rules plus the organisation blocklist as the page's ContentRules. */
 export function rulesOf(answer: VenueRulesAnswer, entries: BlockEntry[], venueId: string): ContentRules {
   const mode = answer.venue?.filter_mode;
   const volume = answer.volume ?? {};
   return {
-    explicit: mode === 'off' ? 'allow' : 'block',
+    explicit: mode === 'off' || !mode ? (daytimeOn(answer) ? 'block_daytime' : mode === 'off' ? 'allow' : 'block') : 'block',
     blocklist: entries
       .filter((entry) => (entry.kind === 'song' || entry.kind === 'artist') && (entry.scope === 'organisation' || (entry.scope === 'venue' && entry.scope_id === venueId)))
       .map((entry) => ({ kind: entry.kind as 'song' | 'artist', id: entry.value, label: entry.label })),
@@ -121,11 +138,23 @@ export function rulesOf(answer: VenueRulesAnswer, entries: BlockEntry[], venueId
   };
 }
 
-/** ContentRules as a `PUT /business/venues/{id}/content/rules` body. `block_daytime` saves as
- * `no_explicit` (the stricter rule) because the server has no daytime-only mode. */
-export function rulesBody(rules: ContentRules, zoneIds: string[]) {
+/** ContentRules as a `PUT /business/venues/{id}/content/rules` body. Whatever the page does not
+ * edit (other zone rules, other dayparts) is carried over from `current`, so saving never
+ * wipes rules set elsewhere. */
+export function rulesBody(rules: ContentRules, zoneIds: string[], current?: VenueRulesAnswer | null) {
   const crates = new Map(rules.allowed_crates.filter((item) => !item.daypart_id).map((item) => [item.zone_id, item.crate_ids]));
-  const zones = Object.fromEntries(zoneIds.map((zoneId) => [zoneId, crates.get(zoneId)?.length ? { crate_ids: crates.get(zoneId) } : {}]));
+  const daytime = rules.explicit === 'block_daytime';
+  const zones = Object.fromEntries(zoneIds.map((zoneId) => {
+    const before = current?.zones?.[zoneId];
+    const values = { ...kept(before?.rules), crate_ids: crates.get(zoneId)?.length ? crates.get(zoneId)! : null };
+    const dayparts: Record<string, unknown> = {};
+    for (const part of before?.dayparts ?? []) {
+      if (!part.daypart_id || part.daypart_id === DAYTIME_PART) continue;
+      dayparts[part.daypart_id] = { ...kept(part), label: part.daypart_label ?? null, windows: part.windows ?? [] };
+    }
+    if (daytime) dayparts[DAYTIME_PART] = { label: 'Daytime: no explicit songs', filter_mode: 'no_explicit', windows: [0, 1, 2, 3, 4, 5, 6].map((day) => [day, DAYTIME.start, DAYTIME.end]) };
+    return [zoneId, { ...values, dayparts }];
+  }));
   const capped = new Set([...Object.keys(rules.volume_caps), ...rules.quiet_hours.map((quiet) => quiet.zone_id)]);
   const volume = Object.fromEntries([...capped].filter((zoneId) => zoneIds.includes(zoneId)).map((zoneId) => [zoneId, {
     cap: Math.min(1, Math.max(0, (rules.volume_caps[zoneId] ?? 100) / 100)),
@@ -135,7 +164,7 @@ export function rulesBody(rules: ContentRules, zoneIds: string[]) {
   }]));
   const brand = rules.brand ?? {};
   return {
-    venue: { filter_mode: rules.explicit === 'allow' ? 'off' : 'no_explicit', bpm_min: brand.bpm_min ?? null, bpm_max: brand.bpm_max ?? null, energy_max: brand.energy_max ?? null },
+    venue: { ...kept(current?.venue), filter_mode: rules.explicit === 'block' ? 'no_explicit' : 'off', bpm_min: brand.bpm_min ?? null, bpm_max: brand.bpm_max ?? null, energy_max: brand.energy_max ?? null },
     zones,
     volume,
   };

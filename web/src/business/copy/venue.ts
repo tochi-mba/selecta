@@ -67,7 +67,7 @@ export const VENUE_COPY = {
   explicitLabel: 'Explicit songs',
   explicitAllow: 'Allow',
   explicitBlock: 'Block',
-  explicitDaytime: 'Block in the daytime',
+  explicitDaytime: 'Block from 06:00 to 21:00',
   allowedCrates: (zone: string) => `Crates allowed in ${zone}`,
   allowedCratesDaypart: (zone: string, part: string) => `Crates allowed in ${zone} during ${part}`,
   allCrates: 'Every crate',

@@ -162,6 +162,7 @@ BUSINESS_SCOPED = {
     ("POST", "/api/business/venues/{venue_id}/licence/extend"),
     ("PUT", "/api/business/library/songs/{song_id}/isrc"),
     ("GET", "/api/business/venues/{venue_id}/isrc-coverage"),
+    ("GET", "/api/business/venues/{venue_id}/isrc-tracks"),
     ("GET", "/api/business/terms"),
     ("POST", "/api/business/terms/accept"),
     ("GET", "/api/business/uploads/statement"),
