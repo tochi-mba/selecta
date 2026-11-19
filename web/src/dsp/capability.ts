@@ -16,6 +16,7 @@ import { TEMPO_IMPLEMENTATION } from './analysis/tempo';
 import { CROSSFADE_IMPLEMENTATION } from './crossfade';
 import { LIMITER_IMPLEMENTATION } from './limiter';
 import { LOUDNESS_IMPLEMENTATION, TRUE_PEAK_IMPLEMENTATION } from './loudness';
+import { SEAM_EFFECTS_IMPLEMENTATION } from './seamEffects';
 import { SEAM_MOVES_IMPLEMENTATION } from './seamMoves';
 import { SEAMS_IMPLEMENTATION } from './seams';
 import { STRETCH_IMPLEMENTATION, STRETCH_PLAYBACK_INTEGRATION } from './stretchLimits';
@@ -153,6 +154,8 @@ export function registerBrowserDspCapabilities(
   tier1('limiter', limiter.kind === 'worklet' ? LIMITER_IMPLEMENTATION : limiter.implementation);
   // The seam move chain (seamMoves.ts): reduced minimum-phase biquads, under their own id.
   tier1('eq_filters', SEAM_MOVES_IMPLEMENTATION);
+  // The echo and wash returns (seamEffects.ts): a delay loop and a generated room, under their own id.
+  tier1('echo_returns', SEAM_EFFECTS_IMPLEMENTATION);
   // Both music paths decode the whole file before a seam is planned, so either may meet the
   // other mid-seam (ADR-0465 coexistence: the capability record says both paths are seam-safe).
   tier1('seam_source_device', WHOLE_FILE_DECODE_IMPLEMENTATION);

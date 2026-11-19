@@ -1,4 +1,5 @@
 import type { MixData, MixItem, Request, Status } from '../api';
+import { BROWSER_MOVE_WORDS, browserMovesOn, defaultBrowserMove, type BrowserMove } from './browserMoves';
 
 /** The local-first recipe store (ADR-0458 portable recipes, BF-0462-05).
  *
@@ -21,7 +22,8 @@ export type RecipeSong = {
   in_library: boolean;
   available_on: number;
 };
-export type RecipeSeam = { into: number; method: string; bars: number; basis: string; intelligent: boolean; reason: string };
+/** `settings.move` is the member's chosen move for this seam (cloud.browser_moves); none means SelectaDJ picks. */
+export type RecipeSeam = { into: number; method: string; bars: number; basis: string; intelligent: boolean; reason: string; settings?: { move?: string } };
 export type Recipe = {
   mix_id: string;
   name: string;
@@ -58,7 +60,7 @@ export type RecipeStore = {
   read: (mixId: string) => Promise<Recipe>;
   list: () => Promise<RecipeSummary[]>;
   /** A new revision of the recipe: the editor's writes, checked against `baseRevision`. */
-  edit: (mixId: string, baseRevision: string, change: { songIds?: number[]; name?: string }) => Promise<Recipe>;
+  edit: (mixId: string, baseRevision: string, change: { songIds?: number[]; name?: string; seamMoves?: Record<number, string | null> }) => Promise<Recipe>;
   /** A saved copy under its own id, so "Save a copy" lands in My Mixes. */
   duplicate: (mixId: string, name?: string) => Promise<Recipe>;
 };
@@ -89,6 +91,7 @@ export function recipeStore(cloud: Request, workspaceId: string): RecipeStore {
         base_revision: baseRevision,
         ...(change.songIds ? { song_ids: change.songIds } : {}),
         ...(change.name ? { name: change.name } : {}),
+        ...(change.seamMoves ? { seam_moves: change.seamMoves } : {}),
       }),
     })).mix,
     duplicate: async (mixId, name) => (await cloud<{ mix: Recipe }>(`/local-media/recipes/${encodeURIComponent(mixId)}/duplicate`, {
@@ -98,8 +101,21 @@ export function recipeStore(cloud: Request, workspaceId: string): RecipeStore {
   };
 }
 
+/** Words for a seam SelectaDJ picks as it plays (cloud.browser_moves). */
+export const PICKED_LIVE = 'SelectaDJ picks the move from the audio as the mix plays.';
+
+/** A seam's move and the words the editor shows before it plays: the member's chosen move, or
+ * SelectaDJ picking, or (with cloud.browser_moves off) the browser's plain blend. */
+export function seamPlan(recipe: Recipe, position: number): { move: string; label: string; why: string } {
+  if (!browserMovesOn()) return { move: 'blend', label: 'Browser blend', why: WORKED_OUT_LIVE };
+  const chosen = recipe.seams.find((seam) => seam.into === position)?.settings?.move;
+  const move = chosen && chosen in BROWSER_MOVE_WORDS ? chosen : defaultBrowserMove();
+  if (move === 'auto') return { move, label: 'Picked as it plays', why: PICKED_LIVE };
+  return { move, label: BROWSER_MOVE_WORDS[move as BrowserMove | 'blend'].label, why: `You chose this. ${WORKED_OUT_LIVE}` };
+}
+
 /** A recipe as the shared views' current mix. Songs carry no tempo or key (nothing is analysed
- * on the server), and each seam is planned as the browser's own blend, worked out as it plays. */
+ * on the server), and each seam carries its move, worked out in the browser as it plays. */
 export function asMixData(recipe: Recipe): MixData {
   const mix: MixItem[] = recipe.songs.map((song, position) => ({
     position,
@@ -110,10 +126,13 @@ export function asMixData(recipe: Recipe): MixData {
     bpm: null,
     key: null,
     locked: false,
-    seam: position === 0 ? null : {
-      settings: { move: 'blend' },
-      state: { status: 'none', key: `${recipe.revision}:${position}`, label: 'Browser blend', why: WORKED_OUT_LIVE },
-    },
+    seam: position === 0 ? null : (() => {
+      const plan = seamPlan(recipe, position);
+      return {
+        settings: { move: plan.move },
+        state: { status: 'none' as const, key: `${recipe.revision}:${position}`, label: plan.label, why: plan.why },
+      };
+    })(),
   }));
   return { mix, name: recipe.name, can_undo: false };
 }

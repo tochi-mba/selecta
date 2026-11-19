@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MixData, Request, SongRow, Status, VibeCard } from '../api';
 import { BROWSER_MIX_NEEDS, chooseSongs, mixFamily, pickCard, type PlayableSong } from './localFirstMixes';
 import { localFirstRequest } from './localFirstRequest';
-import { asMixData, DEFAULT_STEERING, recipeStore, WORKED_OUT_LIVE, type Recipe } from './recipeStore';
+import { setFlags } from '../flags';
+import { asMixData, DEFAULT_STEERING, PICKED_LIVE, recipeStore, WORKED_OUT_LIVE, type Recipe } from './recipeStore';
 
 // BF-0462-05: Make a Mix, MixSetup and My Mixes in local-first Cloud, against the recipe store.
 // Recipes live on the server (portable across devices); this browser keeps only which recipe is
@@ -37,9 +38,15 @@ function fakeCloud() {
     const revised = /^\/local-media\/recipes\/([^/]+)\/revisions$/.exec(path);
     if (revised && init?.method === 'POST') {
       const was = kept.get(decodeURIComponent(revised[1]))!;
-      const body = JSON.parse(String(init.body)) as { base_revision: string; song_ids?: number[] };
+      const body = JSON.parse(String(init.body)) as { base_revision: string; song_ids?: number[]; seam_moves?: Record<string, string | null> };
       if (body.base_revision !== was.revision) throw Object.assign(new Error('stale'), { status: 409 });
       const recipe = { ...recipeOf(body.song_ids ?? was.songs.map((song) => song.song_id), was.name, was.mix_id) };
+      // as the server keeps them: by seam, with no move meaning SelectaDJ picks
+      for (const [into, move] of Object.entries(body.seam_moves ?? {})) {
+        const at = recipe.seams.findIndex((seam) => seam.into === Number(into));
+        recipe.seams[at] = { ...recipe.seams[at], ...(move ? { settings: { move } } : {}) };
+        recipe.revision += `:${into}=${move}`;
+      }
       kept.set(recipe.mix_id, recipe);
       return { mix: recipe };
     }
@@ -96,7 +103,22 @@ describe('the recipe store', () => {
     expect(data.mix.map((item) => item.song_id)).toEqual([4, 5, 6]);
     expect(data.mix.every((item) => item.bpm === null && item.key === null)).toBe(true);
     expect(data.mix[0].seam).toBeNull();
-    expect(data.mix[1].seam?.state.why).toBe(WORKED_OUT_LIVE);
+    // SelectaDJ picks each move as it plays (cloud.browser_moves), and says so before it has
+    expect(data.mix[1].seam).toMatchObject({ settings: { move: 'auto' }, state: { status: 'none', label: 'Picked as it plays', why: PICKED_LIVE } });
+  });
+
+  it('keeps a chosen move on its seam, and every seam a plain browser blend with the flag off', () => {
+    const recipe = recipeOf([4, 5, 6]);
+    recipe.seams[1] = { ...recipe.seams[1], settings: { move: 'echo_out' } };
+    expect(asMixData(recipe).mix[2].seam).toMatchObject({ settings: { move: 'echo_out' }, state: { label: 'Echo out' } });
+    setFlags({ 'cloud.browser_moves': false });
+    try {
+      const off = asMixData(recipe);
+      expect(off.mix.slice(1).map((item) => item.seam?.settings.move)).toEqual(['blend', 'blend']);
+      expect(off.mix[2].seam?.state).toMatchObject({ label: 'Browser blend', why: WORKED_OUT_LIVE });
+    } finally {
+      setFlags(null);
+    }
   });
 
   it('keeps the current mix and the shaping per workspace, and survives storage refusing', () => {
@@ -197,7 +219,7 @@ describe('the Edit page on a browser mix (editor parity with local mode)', () =>
     expect(store.current()).toBe('mix-1');
     // every transition still says how it is made, and nothing claims an undo the browser lacks
     expect(added.can_undo).toBe(false);
-    expect(added.mix[1].seam?.state).toMatchObject({ status: 'none', why: WORKED_OUT_LIVE });
+    expect(added.mix[1].seam?.state).toMatchObject({ status: 'none', why: PICKED_LIVE });
   });
 
   it('refuses a press made against a mix that has since changed, and keeps two songs at least', async () => {
@@ -212,6 +234,24 @@ describe('the Edit page on a browser mix (editor parity with local mode)', () =>
     await request('/mix/songs/1', { method: 'DELETE', headers: guard([1, 2, 3]) });
     const { songs } = await request<{ songs: { song_id: number; analysed: boolean; bpm: number | null }[] }>('/mix/suggest?position=1&q=&limit=8');
     expect(songs).toEqual([expect.objectContaining({ song_id: 2, analysed: true, bpm: null })]);
+  });
+
+  it('chooses the move into a song, and lets SelectaDJ pick again', async () => {
+    const { request, guard } = await editing();
+    const chosen = await request<MixData>('/mix/2/seam', { method: 'POST', body: JSON.stringify({ move: 'reverb_wash' }), headers: guard([1, 2, 3]) });
+    expect(chosen.mix[2].seam).toMatchObject({ settings: { move: 'reverb_wash' }, state: { label: 'Reverb wash' } });
+    expect(chosen.mix[1].seam?.settings.move).toBe('auto');
+    const again = await request<MixData>('/mix/2/seam', { method: 'POST', body: JSON.stringify({ move: 'auto' }), headers: guard([1, 2, 3]) });
+    expect(again.mix[2].seam?.settings.move).toBe('auto');
+    // a move the browser can't play, or one whose flag is off, is refused rather than guessed at
+    await expect(request('/mix/2/seam', { method: 'POST', body: JSON.stringify({ move: 'word_cut' }), headers: guard([1, 2, 3]) })).rejects.toMatchObject({ code: 'move_unavailable' });
+    setFlags({ 'move.echo_out': false });
+    try {
+      await expect(request('/mix/1/seam', { method: 'POST', body: JSON.stringify({ move: 'echo_out' }), headers: guard([1, 2, 3]) })).rejects.toMatchObject({ code: 'move_unavailable' });
+    } finally {
+      setFlags(null);
+    }
+    await expect(request('/mix/0/seam', { method: 'POST', body: JSON.stringify({ move: 'cut_on_one' }), headers: guard([1, 2, 3]) })).rejects.toMatchObject({ code: 'mix_changed' });
   });
 
   it('clears the current mix but keeps its recipe, and saves a named copy', async () => {

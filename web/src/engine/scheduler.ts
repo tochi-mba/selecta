@@ -6,6 +6,7 @@ import {
   GainPoint,
   SEAM_FADE_SECONDS,
 } from '../dsp/crossfade';
+import { applySends, canMakeEffects, makeReturns, type EffectReturn } from '../dsp/seamEffects';
 import { applyMoves, canMakeMoves, makeMovesChain, type MovesChain } from '../dsp/seamMoves';
 import type { SeamEvent, SeamSchedule } from '../dsp/seams';
 import type { EngineGraph } from './graph';
@@ -99,7 +100,8 @@ export type Scheduler = {
  * EQ or filter moves and the context can build it; neutral until a schedule moves it. */
 type Layer = { source: AudioBufferSourceNode; gain: GainNode; moves?: MovesChain };
 type Current = Layer & { index: number; startedAt: number; offset: number; duration: number };
-type Planned = Layer & { index: number; at: number; offset: number; duration: number };
+/** `lag`: seconds B's own audio falls behind the output clock while its speed is nudged (varispeed). */
+type Planned = Layer & { index: number; at: number; offset: number; duration: number; lag?: number };
 
 /** Write a gain point list onto a param: the first point is set, the rest ramp linearly. */
 function applyPoints(param: AudioParam, points: readonly GainPoint[], base = 0): void {
@@ -133,8 +135,20 @@ function unusable(schedule: SeamSchedule, from: Current, to: AudioBuffer, now: n
       if ((event.filter !== 'highpass' && event.filter !== 'lowpass') || !Number.isFinite(event.hz) || (event.hz as number) <= 0) {
         return 'the seam schedule has an invalid filter';
       }
+    } else if (event.kind === 'send') {
+      if ((event.effect !== 'echo' && event.effect !== 'wash') || !Number.isFinite(event.value) || (event.value as number) < 0 || (event.value as number) > 1) {
+        return 'the seam schedule has an invalid effect send';
+      }
+      if (!schedule.effects?.[event.effect]) return 'the seam schedule sends to an effect it does not describe';
     } else if (event.kind !== 'start' && event.kind !== 'stop') {
       return 'the seam schedule has an unknown event';
+    }
+  }
+  if (schedule.rate) {
+    const { value, holdUntil, rampUntil } = schedule.rate;
+    // a turntable-style nudge, never more than local mode's B-only tempo absorb allows
+    if (!Number.isFinite(value) || value < 0.95 || value > 1.05 || !Number.isFinite(holdUntil) || !(rampUntil >= holdUntil)) {
+      return 'the seam schedule has an invalid speed change';
     }
   }
   const entry = schedule.events.find((event) => event.deck === 'b' && event.kind === 'start');
@@ -179,6 +193,23 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
   };
   let transition: Transition | null = null;
   const layers = new Set<Layer>();
+  // echo and wash returns, by the source that feeds them: a tail rings on after its song stops
+  const tails = new Map<AudioBufferSourceNode, EffectReturn[]>();
+  // tails still ringing after their song stopped; a pause or stop silences them at once
+  const ringing = new Set<EffectReturn>();
+  const letRing = (source: AudioBufferSourceNode) => {
+    const returns = tails.get(source);
+    if (!returns) return;
+    tails.delete(source);
+    for (const made of returns) {
+      ringing.add(made);
+      globalThis.setTimeout(() => { if (ringing.delete(made)) made.dispose(); }, Math.ceil(made.tailSeconds * 1000) + 100);
+    }
+  };
+  const cutTails = (source: AudioBufferSourceNode) => {
+    for (const made of tails.get(source) ?? []) made.dispose();
+    tails.delete(source);
+  };
 
   const layer = (buffer: AudioBuffer, index: number): Layer => {
     const source = context.createBufferSource();
@@ -195,6 +226,7 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     const made: Layer = { source, gain, moves };
     layers.add(made);
     source.onended = () => {
+      letRing(source);
       source.disconnect();
       moves?.dispose();
       gain.disconnect();
@@ -218,6 +250,7 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     } catch {
       // a layer that has not started cannot be stopped, and that is fine
     }
+    cutTails(made.source);
     made.source.disconnect();
     made.moves?.dispose();
     made.gain.disconnect();
@@ -226,6 +259,8 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
 
   const silenceAll = () => {
     for (const made of [...layers]) silence(made);
+    for (const made of ringing) made.dispose();
+    ringing.clear();
     current = null;
     planned = null;
     atEnd = false;
@@ -249,7 +284,7 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
   };
 
   /** Apply a validated schedule: 'a' is the current song, 'b' the entering one. */
-  const applySchedule = (schedule: SeamSchedule, from: Current, made: Layer): { at: number; offset: number } => {
+  const applySchedule = (schedule: SeamSchedule, from: Current, made: Layer): { at: number; offset: number; lag?: number } => {
     const base = from.startedAt - from.offset;
     const byDeck = (deck: SeamEvent['deck']) => schedule.events
       .filter((event) => event.deck === deck && event.kind === 'gain' && event.value !== undefined)
@@ -261,6 +296,16 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     const nyquist = context.sampleRate / 2;
     if (from.moves) applyMoves(from.moves, schedule.events.filter((event) => event.deck === 'a'), base, nyquist);
     if (made.moves) applyMoves(made.moves, schedule.events.filter((event) => event.deck === 'b'), base, nyquist);
+    // echo and wash: the returns hang off A's moves and come back past its fader, so the tail
+    // outlives the fade; the scripter only sends effects to a device whose roster has them
+    if (schedule.effects && from.moves && canMakeEffects(context)) {
+      const out = from.index % 2 === 0 ? deps.graph.deckA : deps.graph.deckB;
+      const returns = makeReturns(context, from.moves.output, out, schedule.effects);
+      tails.set(from.source, [...(tails.get(from.source) ?? []), ...returns]);
+      for (const made of returns) {
+        applySends(made, schedule.events.filter((event) => event.deck === 'a' && event.kind === 'send' && event.effect === made.effect), base);
+      }
+    }
     let entered = { at: base, offset: 0 };
     for (const event of schedule.events) {
       if (event.kind === 'start' && event.deck === 'b') {
@@ -269,6 +314,17 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
       } else if (event.kind === 'stop' && event.deck === 'a') {
         stopAt(from, base + event.at + 0.02);
       }
+    }
+    if (schedule.rate) {
+      // varispeed: B plays at A's tempo through the overlap, then eases back to its own speed.
+      // While it runs slow (or fast) its audio falls behind (or ahead of) the clock by `lag`.
+      const { value, holdUntil, rampUntil } = schedule.rate;
+      const rate = made.source.playbackRate;
+      rate.setValueAtTime(value, 0);
+      rate.setValueAtTime(value, base + holdUntil);
+      rate.linearRampToValueAtTime(1, base + rampUntil);
+      const held = Math.max(0, base + holdUntil - entered.at);
+      return { ...entered, lag: (1 - value) * (held + (rampUntil - holdUntil) / 2) };
     }
     return entered;
   };
@@ -318,7 +374,7 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
       const endAt = from.startedAt + (from.duration - from.offset);
       const seamAt = endAt - SEAM_FADE;
       const made = layer(buffer, nextIndex);
-      let entered: { at: number; offset: number };
+      let entered: { at: number; offset: number; lag?: number };
       const problem = schedule ? unusable(schedule, from, buffer, now) : null;
       if (seamAt <= now + START_LEAD) {
         // Decoded too late for the boundary: fade in rather than leave a gap or jump-cut.
@@ -346,7 +402,7 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
         entered = { at: seamAt, offset: 0 };
         transition = { kind: 'boundary', implementation: CROSSFADE_IMPLEMENTATION };
       }
-      planned = { ...made, index: nextIndex, at: entered.at, offset: entered.offset, duration: buffer.duration };
+      planned = { ...made, index: nextIndex, at: entered.at, offset: entered.offset, duration: buffer.duration, lag: entered.lag };
     } finally {
       planning = false;
     }
@@ -361,7 +417,8 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
         gain: planned.gain,
         moves: planned.moves,
         index: planned.index,
-        startedAt: planned.at,
+        // the clock this song's own timeline runs on once any speed nudge has eased back to 1
+        startedAt: planned.at + (planned.lag ?? 0),
         offset: planned.offset,
         duration: planned.duration,
       };

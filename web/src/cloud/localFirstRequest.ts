@@ -1,4 +1,5 @@
 import { ApiError, LibraryPage, LibrarySong, MixData, Request, SongAvailability, Status } from '../api';
+import { browserMoveNames, browserMovesOn } from './browserMoves';
 import { mixFamily, type PlayableSong } from './localFirstMixes';
 import { DEFAULT_STEERING, WORKED_OUT_LIVE, type RecipeStore } from './recipeStore';
 
@@ -123,7 +124,8 @@ export function statusFrom(songs: CatalogueSong[], known: Availability = NO_AVAI
   return {
     counts: { total: songs.length, music: songs.length, analysed: 0, ready, lyrics: 0, set_aside: 0, missing: songs.length - available },
     steering,
-    moves: {},
+    // the browser's moves by name, so the shared views can say which one a seam asks for
+    moves: browserMovesOn() ? browserMoveNames() : {},
     analysis_running: false,
     analysing: [],
     mix_rendering: false,

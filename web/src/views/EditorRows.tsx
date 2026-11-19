@@ -8,6 +8,7 @@ import { Icon } from '../ui/Icon';
 import { SeamDiagram, SongMotif } from '../ui/MusicObjects';
 import { useStickyClearance } from '../ui/useStickyClearance';
 import { TransitionsWorkedOutLive } from './editorMode';
+import { PlayedTransitions, playedKey } from './liveTransitions';
 import { useMixPath } from './mixScope';
 import { RequestTag, useRequestComing } from './Requests';
 
@@ -70,6 +71,24 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
   const on = useFlags();
   // without the inspector a transition is shown, not opened
   const inspect = on('seam_inspector');
+  // a browser mix (cloud.browser_moves): the move is chosen right here, and the row says what
+  // really played on this device this visit
+  const played = useContext(PlayedTransitions)[playedKey(previous.song_id, item.song_id)];
+  const pickable = live && on('cloud.browser_moves') ? Object.entries(names).filter(([move]) => move !== 'blend') : [];
+  const [choosing, setChoosing] = useState(false);
+  const [problem, setProblem] = useState('');
+  const choose = async (move: string) => {
+    setChoosing(true);
+    setProblem('');
+    try {
+      await post(at(`/mix/${item.position}/seam`), { move }, guard);
+      actions.current.refresh();
+    } catch (error) {
+      setProblem((error as Error).message);
+    } finally {
+      setChoosing(false);
+    }
+  };
 
   return (
     <li
@@ -113,10 +132,30 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
             </span>
           )}
           {inspect && <button onClick={() => actions.current.toggleSeam(rowKey)}>{open ? 'Close' : 'Change'}</button>}
+          {pickable.length > 0 && (
+            <label className="seam-move">
+              <span>Move</span>
+              <select
+                value={pickable.some(([move]) => move === chosen) ? chosen : 'auto'}
+                disabled={choosing}
+                aria-busy={choosing || undefined}
+                aria-label={`Move from ${previous.title} into ${item.title}`}
+                onChange={(event) => void choose(event.target.value)}
+              >
+                {pickable.map(([move, words]) => <option key={move} value={move}>{words}</option>)}
+              </select>
+            </label>
+          )}
         </div>
       </div>
+      {live && played && (
+        <p className={`seam-played ${played.fellBack ? 'warn' : 'hint'}`}>
+          <b>Played here: {played.label}.</b>{played.detail && ` ${played.detail}`}
+        </p>
+      )}
+      {problem && <p className="warn" role="alert">{problem}</p>}
       {affected && <p className="drop-affected-note">Changes if the song is dropped there</p>}
-      <SeamDiagram seam={seam} from={previous.title} into={item.title} names={names} compact live={live} />
+      <SeamDiagram seam={seam} from={previous.title} into={item.title} names={names} live={live} compact />
       {state.status === 'failed' && <p className="warn">Remembered failed attempt: {state.error}</p>}
     </li>
   );

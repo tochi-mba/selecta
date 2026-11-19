@@ -142,6 +142,8 @@ export type SeamProviderOptions = {
   /** Analysis, injectable for tests. */
   timing?(buffer: PcmLike, part: 'head' | 'tail'): TrackTiming;
   onPlanned?(record: SeamRecord): void;
+  /** The moves this account has on, read when each seam is planned; every move when absent. */
+  allowed?(): readonly string[] | undefined;
 };
 
 export type SeamRequestLike = { fromIndex: number; from: PcmLike; toIndex: number; to: PcmLike };
@@ -173,6 +175,7 @@ export function makeSeamProvider(options: SeamProviderOptions) {
         exitBar: settings.exit_bar,
         entryBar: settings.entry_bar,
         abilities: options.abilities(),
+        allowed: options.allowed?.(),
       });
     }
     options.onPlanned?.({ fromIndex: request.fromIndex, toIndex: request.toIndex, sources, schedule });
@@ -293,6 +296,7 @@ export function makeWorkerSeamProvider(options: WorkerSeamProviderOptions): Work
             exitBar: settings.exit_bar,
             entryBar: settings.entry_bar,
             abilities: options.abilities(),
+            allowed: options.allowed?.(),
           });
       options.onPlanned?.({ fromIndex: request.fromIndex, toIndex: request.toIndex, sources, schedule });
       return schedule;
@@ -421,6 +425,6 @@ export function abilitiesFrom(status: StatusOf): SeamAbilities {
     eqFilters: of('eq_filters', 'this device has no EQ or filters'),
     stretch: of('time_stretch', 'no vetted pitch-preserving stretch is bundled'),
     stems: of('stem_separation', 'stems are not available in the browser'),
-    echo: { ok: false, reason: 'the echo and wash returns are not built for the browser yet' },
+    echo: of('echo_returns', 'this device has no echo or reverb returns'),
   };
 }

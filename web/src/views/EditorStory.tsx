@@ -6,6 +6,7 @@ import { Icon } from '../ui/Icon';
 import { flagOn } from '../flags';
 import { EnergyOverview, EnergyThumb, MixHorizon } from '../ui/MusicObjects';
 import { EDITOR_MODES, EditorMode, EditorSelection, storySeamWords, TransitionsWorkedOutLive } from './editorMode';
+import { PlayedTransitions, playedKey } from './liveTransitions';
 
 /** Story, Arrange or Detail. Ordinary radio buttons, so there's one tab stop and the arrow keys move
  * between them. Choosing one only changes how the same mix is shown. */
@@ -85,6 +86,7 @@ export function EditorStory(props: {
 }) {
   const { mix, keys, names, selected, playingIndex, headingId, onSelectSong, onEditSong, onEditSeam } = props;
   const live = useContext(TransitionsWorkedOutLive);
+  const played = useContext(PlayedTransitions);
   const selectedSongIndex = selected?.kind === 'song' ? keys.indexOf(selected.key) : -1;
   return (
     <section className={`editor-story ${mix.length > 40 ? 'long' : ''}`} aria-labelledby={headingId}>
@@ -98,7 +100,7 @@ export function EditorStory(props: {
           const previous = mix[index - 1];
           const songSelected = selected?.kind === 'song' && selected.key === key;
           const seamSelected = !!previous && selected?.kind === 'seam' && selected.a === keys[index - 1] && selected.b === key;
-          const words = previous ? storySeamWords(item.seam, names, previous.title, live) : null;
+          const words = previous ? storySeamWords(item.seam, names, previous.title, live, played[playedKey(previous.song_id, item.song_id)]) : null;
           const playing = playingIndex === index;
           return (
             <li className="story-chapter" key={key} data-story-song={key}>

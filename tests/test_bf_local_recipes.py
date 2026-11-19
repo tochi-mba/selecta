@@ -100,6 +100,80 @@ def test_edits_make_new_revisions_and_refuse_a_stale_base(party, local_media_on)
     assert read["history"][1]["songs"] == 3
 
 
+def test_a_chosen_move_follows_its_two_songs_and_a_copy_keeps_it(party, local_media_on):
+    ids = _songs(party, ALICE, 4)
+    first = _make(party, ALICE, ids)
+    path = f"/api/local-media/recipes/{first['mix_id']}/revisions"
+
+    def moves(mix: dict) -> list:
+        return [seam["settings"].get("move") for seam in mix["seams"]]
+
+    chosen = party.client.post(
+        path,
+        headers=auth(ALICE),
+        json={"base_revision": first["revision"], "seam_moves": {"2": "echo_out"}},
+    )
+    assert chosen.status_code == 200, chosen.text
+    second = chosen.json()["mix"]
+    assert moves(second) == [None, "echo_out", None]
+    # still unanalysed: a member's choice never dresses the seam up as SelectaDJ's analysis
+    assert [seam["basis"] for seam in second["seams"]] == ["unanalysed"] * 3
+    assert second["revision"] != first["revision"]
+
+    # moving the last song to the front keeps songs 2 and 3 together, so their move stays
+    reordered = party.client.post(
+        path,
+        headers=auth(ALICE),
+        json={"base_revision": second["revision"], "song_ids": [ids[3], ids[0], ids[1], ids[2]]},
+    ).json()["mix"]
+    assert moves(reordered) == [None, None, "echo_out"]
+    # parting them lets the move go: it belonged to that pair
+    parted = party.client.post(
+        path,
+        headers=auth(ALICE),
+        json={"base_revision": reordered["revision"], "song_ids": [ids[1], ids[3], ids[2], ids[0]]},
+    ).json()["mix"]
+    assert moves(parted) == [None, None, None]
+
+    kept = party.client.post(
+        path,
+        headers=auth(ALICE),
+        json={"base_revision": parted["revision"], "seam_moves": {"1": "reverb_wash"}},
+    ).json()["mix"]
+    copied = party.client.post(
+        f"/api/local-media/recipes/{first['mix_id']}/duplicate", headers=auth(ALICE)
+    ).json()["mix"]
+    assert moves(copied) == moves(kept) == ["reverb_wash", None, None]
+
+    # 'auto' (or null) is SelectaDJ picking again, stored as no move at all
+    again = party.client.post(
+        path,
+        headers=auth(ALICE),
+        json={"base_revision": kept["revision"], "seam_moves": {"1": "auto"}},
+    ).json()["mix"]
+    assert moves(again) == [None, None, None]
+
+
+def test_a_move_the_browser_cannot_play_or_a_missing_seam_is_refused(party, local_media_on):
+    ids = _songs(party, ALICE)
+    first = _make(party, ALICE, ids)
+    path = f"/api/local-media/recipes/{first['mix_id']}/revisions"
+    unknown = party.client.post(
+        path,
+        headers=auth(ALICE),
+        json={"base_revision": first["revision"], "seam_moves": {"1": "word_cut"}},
+    )
+    assert unknown.status_code == 400
+    assert unknown.json()["detail"]["code"] == "invalid_move"
+    missing = party.client.post(
+        path,
+        headers=auth(ALICE),
+        json={"base_revision": first["revision"], "seam_moves": {"3": "echo_out"}},
+    )
+    assert missing.status_code == 409
+    assert missing.json()["detail"]["code"] == "invalid_seam"
+
+
 def test_duplicate_starts_an_independent_recipe_from_latest_revision(party, local_media_on):
     ids = _songs(party, ALICE)
     original = _make(party, ALICE, ids)

@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MixItem } from '../api';
 import * as provider from '../dsp/seamProvider';
+import { flagOn } from '../flags';
+import { browserMovesAllowed, browserMovesOn } from './browserMoves';
 import type { MusicSource, SeamRecord, SeamSettingsLike } from '../dsp/seamProvider';
+
+/** A scheduled seam and the two songs (by id) it joined when it was planned. */
+export type PlayedRecord = SeamRecord & { pair?: readonly [number | null, number | null] };
 import { playbackStatusText, type PlaybackStatus } from '../copy';
 import { Api, extrapolate, Position, SessionView, usePlaybackDevice } from '../devices/usePlaybackDevice';
 import { createEngine, type BrowserSpeaker, type Engine, type EngineState } from '../engine';
@@ -263,6 +268,8 @@ export type SeamWiring = {
   /** Which music path a resolved song came from. */
   sourceOf(index: number): MusicSource | null;
   onPlanned(record: SeamRecord): void;
+  /** The moves this account has on (cloud/browserMoves.ts). */
+  allowed?(): readonly string[] | undefined;
   /** Explicit, device-bound worker calibration; omission keeps Tier 2 on the fade fallback. */
   workerCalibration?: WorkerCalibration | null;
   /** Must be the same stable local identity used when the calibration was recorded. */
@@ -295,7 +302,12 @@ export const startBrowserEngine: EngineStarter = async (resolve, queueLength, se
       ...seams,
       calibration: seams.workerCalibration,
       deviceId: seams.deviceId,
-      abilities: () => provider.abilitiesFrom((feature) => roster.get(feature)),
+      abilities: () => ({
+        ...provider.abilitiesFrom((feature) => roster.get(feature)),
+        varispeed: flagOn('cloud.browser_varispeed')
+          ? { ok: true as const }
+          : { ok: false as const, reason: 'the speed nudge is off: a pitch-preserving stretch is not built yet' },
+      }),
       sourceSafe: (source) => provider.abilityOf((feature) => roster.get(feature), `seam_source_${source}`),
       onBudgetState: (state) => {
         if (budgetEvidence) {
@@ -318,7 +330,7 @@ export const startBrowserEngine: EngineStarter = async (resolve, queueLength, se
 };
 
 /** How many scheduled seams the hook remembers for surfaces and tests. */
-export const SEAMS_KEPT = 8;
+export const SEAMS_KEPT = 128;
 
 /** The hook the local-first shell uses: one stable LocalFirstPlayer over the device session. */
 /** Worker calibration is device evidence (ADR-0457): measured on this device, at most 30 days
@@ -366,7 +378,7 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   // State, not a ref: the speaker usually lands (and this effect runs) before the session refresh
   // decides the lease is wanted, so the decision itself must re-run the effect.
   const [wantHere, setWantHere] = useState(false);
-  const [seams, setSeams] = useState<SeamRecord[]>([]);
+  const [seams, setSeams] = useState<PlayedRecord[]>([]);
   const calibration = useRef<{ deviceId: string; record: WorkerCalibration | null; measuring: Promise<WorkerCalibration | null> | null } | null>(null);
   useEffect(() => {
     let gone = false;
@@ -390,7 +402,9 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   const wiring = useMemo<SeamWiring>(() => ({
     settingsFor: (toIndex) => songs.current[toIndex]?.seam?.settings ?? null,
     sourceOf: (index) => sources.current.get(index) ?? null,
-    onPlanned: (record) => setSeams((kept) => [...kept, record].slice(-SEAMS_KEPT)),
+    // each record names its two songs, so a later edit of the mix can't pin it on the wrong seam
+    onPlanned: (record) => setSeams((kept) => [...kept, { ...record, pair: [songs.current[record.fromIndex]?.song_id ?? null, songs.current[record.toIndex]?.song_id ?? null] as const }].slice(-SEAMS_KEPT)),
+    allowed: () => (browserMovesOn() ? browserMovesAllowed() : undefined),
   }), []);
 
   useEffect(() => speaker?.onState(setEngine), [speaker]);

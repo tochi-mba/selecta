@@ -6,6 +6,11 @@ device opens on any other holding the same files. The browser has no analysis fa
 server, so every seam is planned honestly as `unanalysed` (a plain crossfade in the contract);
 the browser works out each transition from the audio as it plays (ADR-0459) and says so.
 
+A member may choose the move for any seam (`cloud.browser_moves`): it is kept in that seam's
+settings as `{"move": ...}`, the basis stays `unanalysed`, and the browser plays it as far as the
+device honestly can. A chosen move belongs to the two songs it joins, so it follows them through a
+reorder and is let go of when they are no longer next to each other. No move means SelectaDJ picks.
+
 Revisions are insert-only rows: an edit names the revision it was made from and is refused as
 stale when that is no longer the latest, so a change made from an older view never overwrites a
 newer one. Songs deleted from the catalogue later stay in the revisions that hold them and read
@@ -14,7 +19,9 @@ back as unavailable, which is the repair flow's starting point (ADR-0458, BF-045
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import json
+from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from typing import Any
 
 import sqlalchemy as sa
@@ -28,12 +35,20 @@ from selecta.mix_contract import (
     ContractError,
     MixContract,
     SongRef,
+    canonical,
     from_json,
     new_contract,
 )
 from selecta.persistence import db_now, new_id
 
 SOURCE = "cloud"
+
+BROWSER_MOVES = frozenset(
+    {"auto", "blend", "bass_swap_blend", "filter_sweep", "cut_on_one", "echo_out", "reverb_wash"}
+)
+"""The moves the browser engine can play (web/src/dsp/seamScript.ts). 'auto' is stored as no move."""
+
+Pair = tuple[str, str]
 
 
 class RecipeError(Exception):
@@ -76,6 +91,38 @@ def _songs(conn: Connection, workspace_id: str, song_ids: Sequence[int]) -> list
             "songs_not_found", "Some of those songs are not in your library.", 404, missing=missing
         )
     return found
+
+
+def _pair_moves(contract: MixContract) -> dict[Pair, str]:
+    """The moves chosen in a contract, by the two songs each one joins."""
+    moves: dict[Pair, str] = {}
+    for seam in contract.seams:
+        move = json.loads(seam.settings).get("move")
+        if isinstance(move, str) and move:
+            moves[(contract.songs[seam.into - 1].id, contract.songs[seam.into].id)] = move
+    return moves
+
+
+def _with_moves(
+    contract: MixContract, kept: Mapping[Pair, str], chosen: Mapping[int, str | None]
+) -> MixContract:
+    """The contract with each seam's move: newly chosen, else kept for the same two songs."""
+    for into, move in chosen.items():
+        if not 1 <= into < len(contract.songs):
+            raise RecipeError("invalid_seam", "That transition isn't in this mix any more.", 409)
+        if move is not None and move not in BROWSER_MOVES:
+            raise RecipeError("invalid_move", "SelectaDJ in the browser can't play that move.")
+    seams = []
+    for seam in contract.seams:
+        pair = (contract.songs[seam.into - 1].id, contract.songs[seam.into].id)
+        move = chosen[seam.into] if seam.into in chosen else kept.get(pair)
+        settings = json.loads(seam.settings)
+        if move and move != "auto":
+            settings["move"] = move
+        else:
+            settings.pop("move", None)
+        seams.append(replace(seam, settings=canonical(settings)))
+    return replace(contract, seams=tuple(seams))
 
 
 def _chain(conn: Connection, workspace_id: str, mix_id: str) -> list[MixContract]:
@@ -144,6 +191,7 @@ def edit(
     base_revision: str,
     song_ids: Sequence[int] | None = None,
     name: str | None = None,
+    seam_moves: Mapping[int, str | None] | None = None,
 ) -> dict[str, Any]:
     chain = _chain(conn, workspace_id, mix_id)
     if not chain:
@@ -158,7 +206,11 @@ def edit(
         )
     songs = _songs(conn, workspace_id, song_ids) if song_ids is not None else list(latest.songs)
     try:
-        contract = latest.edited(songs=songs, name=None if name is None else name.strip())
+        contract = _with_moves(
+            latest.edited(songs=songs, name=None if name is None else name.strip()),
+            _pair_moves(latest),
+            seam_moves or {},
+        )
     except ContractError as error:
         raise RecipeError("invalid_mix", str(error)) from error
     _store(conn, workspace_id, user_id, contract)
@@ -193,7 +245,9 @@ def duplicate(
         else f"{original.name[: NAME_LIMIT - len(suffix)]}{suffix}"
     )
     try:
-        contract = new_contract(new_id(), copied_name, SOURCE, original.songs)
+        contract = _with_moves(
+            new_contract(new_id(), copied_name, SOURCE, original.songs), _pair_moves(original), {}
+        )
     except ContractError as error:
         raise RecipeError("invalid_mix", str(error)) from error
     _store(conn, workspace_id, user_id, contract)

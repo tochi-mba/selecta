@@ -6,3 +6,11 @@ import { createContext } from 'react';
  * prop, since they keep no state of their own. */
 export const TransitionsWorkedOutLive = createContext(false);
 export const LIVE_SEAM_WORDS = 'Worked out in your browser as the mix plays.';
+
+/** What a transition really played on this device this visit, in words (cloud.browser_moves):
+ * the move and its length, or the fade it fell back to and why. Never stored: a reload starts
+ * with nothing played. */
+export type PlayedSeam = { label: string; detail: string | null; fellBack: boolean };
+/** Played transitions by the two songs they joined, `${fromSongId}>${intoSongId}`. */
+export const PlayedTransitions = createContext<Record<string, PlayedSeam>>({});
+export const playedKey = (from: number, into: number) => `${from}>${into}`;

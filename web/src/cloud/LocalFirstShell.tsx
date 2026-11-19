@@ -15,6 +15,8 @@ import { countOf } from '../ui/format';
 import { showToast } from '../ui/toasts';
 import { Library } from '../views/Library';
 import { Mix } from '../views/Mix';
+import { PlayedTransitions } from '../views/liveTransitions';
+import { playedByPair } from './playedSeams';
 import { Mixes } from '../views/Mixes';
 import { MyMixes } from '../views/MyMixes';
 import { Now } from '../views/Now';
@@ -263,9 +265,11 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
     return () => { setJobsSource(true); setFlags(null); };
   }, []);
 
-  const { player, refusal, device: playback } = useLocalFirstPlayer({
+  const { player, refusal, device: playback, seams: scheduled } = useLocalFirstPlayer({
     api, workspaceId, mix: data.mix, remoteControl: on('devices.remote_control'), resolver,
   });
+  // what each transition really played on this device this visit, for the editor (cloud.browser_moves)
+  const played = useMemo(() => (on('cloud.browser_moves') ? playedByPair(scheduled) : {}), [scheduled]);
   const resolveTrack = useCallback<MediaResolver>(async (songId) => (await resolver())?.(songId) ?? null, [resolver]);
   // Make a Mix sets the new mix and asks to play it in the same breath (local mode's player reads
   // the mix from its server). Here the engine learns the mix from the next render, so a play asked
@@ -392,6 +396,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
 
   return (
     <RequestContext.Provider value={request}>
+    <PlayedTransitions.Provider value={played}>
     <BytesContext.Provider value={noBytesHere}>
       <Shell
         route={route}
@@ -416,6 +421,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
       </Shell>
       {controls.overlays}
     </BytesContext.Provider>
+    </PlayedTransitions.Provider>
     </RequestContext.Provider>
   );
 }

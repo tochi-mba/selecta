@@ -1,4 +1,5 @@
 import { ApiError, MixData, SongRow, Status, Suggestion, VibeCard } from '../api';
+import { browserMovesAllowed, browserMovesOn } from './browserMoves';
 import { asMixData, RecipeStore, WORKED_OUT_LIVE } from './recipeStore';
 
 /** The mix route family of the local-first adapter (ADR-0462 "one adapter per route family",
@@ -127,6 +128,25 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     return asMixData(await store.edit(id, recipe.revision, { songIds: next }));
   };
 
+  // the move into one song (cloud.browser_moves): the same route local mode's editor posts to
+  const chooseMove = async (position: number, init?: RequestInit): Promise<MixData> => {
+    if (!browserMovesOn()) throw refuse('SelectaDJ can’t change transitions in your browser yet.', 'flag_off', 404);
+    const body = JSON.parse(String(init?.body ?? '{}')) as { move?: string };
+    const move = body.move ?? 'auto';
+    if (!(browserMovesAllowed() as string[]).includes(move)) {
+      throw refuse('SelectaDJ in your browser can’t play that move. Choose another, or let SelectaDJ pick.', 'move_unavailable');
+    }
+    const id = store.current();
+    if (!id) throw refuse('There is no current browser mix to change. Press Play on Make a Mix first.', 'no_mix', 404);
+    const recipe = await store.read(id);
+    const expected = orderHeader(init);
+    if (expected !== null && expected !== recipe.songs.map((song) => song.song_id).join(',')) {
+      throw refuse('The mix changed under this press, so nothing happened. It has been redrawn.', 'mix_changed', 409);
+    }
+    if (!(position >= 1 && position < recipe.songs.length)) throw refuse('That transition isn’t in this mix any more.', 'mix_changed', 409);
+    return asMixData(await store.edit(id, recipe.revision, { seamMoves: { [position]: move === 'auto' ? null : move } }));
+  };
+
   const suggest = async (query: URLSearchParams): Promise<{ songs: Suggestion[] }> => {
     const wanted = (query.get('q') ?? '').trim().toLowerCase();
     const limit = Math.max(1, Number(query.get('limit') ?? 8) || 8);
@@ -225,6 +245,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
         })();
       }
       if (method === 'POST' && route === '/drafts') return saveCopy(init);
+      if (method === 'POST' && /^\/mix\/\d+\/seam$/.test(route)) return chooseMove(Number(route.split('/')[2]), init);
       return undefined;
     },
   };

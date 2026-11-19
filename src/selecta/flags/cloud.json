@@ -360,6 +360,26 @@
       "kind": "release",
       "owner": "playback"
     },
+    "cloud.browser_moves": {
+      "label": "Browser transition moves",
+      "about": "Local mode's moves in a browser mix: SelectaDJ picks a bass swap, filter sweep, cut, echo out or reverb wash for each transition from the audio as it plays, the member can choose one, and each transition says what really played (ADR-0459).",
+      "requires": ["cloud.browser_dsp"],
+      "surfaces": ["cloud.listen", "edit"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
+    "cloud.browser_varispeed": {
+      "label": "Browser speed nudge",
+      "about": "Lets a browser blend nudge the incoming song's playback speed (and so its pitch, as a turntable's pitch fader does) by up to 3 percent to lock the beats, then ease it back. Off: ADR-0459 BF-0459-05 rules out playbackRate for musical stretch until the owner decides otherwise.",
+      "requires": ["cloud.browser_moves"],
+      "surfaces": ["cloud.listen"],
+      "modes": ["cloud"],
+      "default": false,
+      "kind": "release",
+      "owner": "playback"
+    },
     "cloud.venue_tablet": {
       "label": "Venue tablet posture",
       "about": "The single-tablet venue posture: capability checks and readiness guidance for a browser device playing a venue (ADR-0460).",

@@ -13,6 +13,7 @@
  * and a fade fallback crosses over 3 s (web/src/player.ts).
  */
 
+import type { SeamEffects } from './seamEffects';
 import {
   CROSSFADE_IMPLEMENTATION,
   FALLBACK_FADE_SECONDS,
@@ -42,12 +43,16 @@ export const SCHEDULE_CURVE_STEPS = 48;
  *  - 'stop':  the deck stops at `at`.
  *  - 'eq':    the deck's `band` gain (linear, 1 untouched, 0 removed) ramps to `value` at `at`.
  *  - 'filter': the deck's `filter` cutoff sweeps (exponentially) to `hz` at `at`.
+ *  - 'send': the deck's `effect` send (echo or wash, seamEffects.ts) ramps to `value` at `at`.
  * 'eq' and 'filter' are the scripted moves of seamScript.ts; a device without the move chain
- * (seamMoves.ts) never receives them, because the scripter degrades the move first.
+ * (seamMoves.ts) never receives them, because the scripter degrades the move first. 'send'
+ * events come only with the schedule's `effects`, and only to a device with the returns.
  */
 export interface SeamEvent {
   deck: 'a' | 'b';
-  kind: 'start' | 'gain' | 'stop' | 'eq' | 'filter';
+  kind: 'start' | 'gain' | 'stop' | 'eq' | 'filter' | 'send';
+  /** For 'send': which return the send feeds. */
+  effect?: 'echo' | 'wash';
   /** For 'eq': which of the reference's three bands. */
   band?: 'low' | 'mid' | 'high';
   /** For 'filter': which filter moves. */
@@ -94,6 +99,15 @@ export interface SeamSchedule {
   style?: string;
   /** Every part of the asked-for move this device could not do, and what it did instead. */
   degraded?: SeamDegrade[];
+  /** The returns deck A's sends feed (seamEffects.ts), for an echo or wash move. */
+  effects?: SeamEffects;
+  /** Bars of overlap for a beatmatched move, as scheduled. */
+  bars?: number;
+  /** Why SelectaDJ picked this move, when the seam asked it to pick ('auto'). */
+  why?: string;
+  /** B's playback speed while it beat-matches A, then eased back to 1 (seamScript.ts varispeed):
+   * held at `value` until `holdUntil`, ramped linearly to 1 by `rampUntil`, both on A's timeline. */
+  rate?: { value: number; holdUntil: number; rampUntil: number };
 }
 
 /** A move the browser tier could not do honestly, and the documented fallback it took. */

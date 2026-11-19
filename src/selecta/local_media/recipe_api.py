@@ -35,6 +35,8 @@ class RecipeEdit(BaseModel):
     base_revision: str = Field(min_length=1, max_length=64)
     name: str | None = Field(default=None, min_length=1, max_length=NAME_LIMIT)
     song_ids: list[int] | None = Field(default=None, min_length=2, max_length=MAX_SONGS)
+    # the move into song `into` (1-based position after the first); null lets SelectaDJ pick
+    seam_moves: dict[int, str | None] | None = Field(default=None, max_length=MAX_SONGS)
 
 
 class RecipeDuplicate(BaseModel):
@@ -118,6 +120,7 @@ def install_routes(
                     base_revision=body.base_revision,
                     song_ids=body.song_ids,
                     name=body.name,
+                    seam_moves=body.seam_moves,
                 )
                 return {"mix": mix}
         except recipes.RecipeError as error:
