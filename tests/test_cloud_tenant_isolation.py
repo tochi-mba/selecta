@@ -43,6 +43,7 @@ PUBLIC = {
     ("GET", "/api/ready"),
     ("POST", "/api/webhooks/stripe"),
     ("POST", "/api/webhooks/workos"),
+    ("POST", "/api/business/billing/stripe-webhook"),
 }
 # Anonymous routes are isolated by an unguessable guest/display capability cookie rather than a
 # signed-in workspace. Their own API suite proves a cookie for one room cannot address another.
@@ -125,6 +126,9 @@ BUSINESS_SCOPED = {
     ("PUT", "/api/business/billing/venues/{venue_id}/cost-centre"),
     ("PUT", "/api/business/billing/collection-method"),
     ("GET", "/api/business/billing/cost-breakdown"),
+    ("POST", "/api/business/billing/checkout"),
+    ("POST", "/api/business/billing/checkout/complete"),
+    ("GET", "/api/business/play-log/export"),
     ("GET", "/api/business/orgs"),
     ("POST", "/api/business/orgs"),
     ("GET", "/api/business/orgs/{org_id}"),

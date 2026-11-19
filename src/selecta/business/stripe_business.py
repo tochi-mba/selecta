@@ -236,6 +236,27 @@ class HttpBusinessStripe:
     def get_dispute(self, dispute_id: str) -> dict[str, Any] | None:
         return self._get(f"/v1/disputes/{dispute_id}")
 
+    # Checkout ----------------------------------------------------------------------------
+
+    def create_setup_session(
+        self, *, customer: str, currency: str, success_url: str, cancel_url: str,
+        metadata: Mapping[str, str], idempotency_key: str,
+    ) -> dict[str, Any]:
+        """Stripe Checkout in setup mode: the owner enters a card on Stripe's page; nothing is
+        charged until the subscription is created from it."""
+        data = form(
+            mode="setup", customer=customer, currency=currency.lower(),
+            payment_method_types=["card"], success_url=success_url, cancel_url=cancel_url,
+            metadata=dict(metadata), setup_intent_data={"metadata": dict(metadata)},
+        )
+        session = self._post("/v1/checkout/sessions", data, idempotency_key)
+        url = HttpStripeClient._require_session_url(session)
+        HttpStripeClient._require_stripe_host(url, "checkout.stripe.com")
+        return session
+
+    def get_checkout_session(self, session_id: str) -> dict[str, Any] | None:
+        return self._get(f"/v1/checkout/sessions/{session_id}", [("expand[]", "setup_intent")])
+
     # Staff money actions -----------------------------------------------------------------
 
     def create_balance_credit(

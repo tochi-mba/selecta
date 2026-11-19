@@ -35,6 +35,7 @@ from selecta.business.billing_catalogue import (
     ITEM_VENUE,
     ITEM_ZONE,
     ITEMS,
+    TRIAL_DAYS,
     TRIAL_VENUES,
     TRIAL_ZONES,
     VOLUME_COUPON_ID,
@@ -164,6 +165,15 @@ class BusinessStripe(Protocol):
     ) -> dict[str, Any]: ...
 
     def get_charge(self, charge_id: str) -> dict[str, Any] | None: ...
+
+    def create_setup_session(
+        self, *, customer: str, currency: str, success_url: str, cancel_url: str,
+        metadata: Mapping[str, str], idempotency_key: str,
+    ) -> dict[str, Any]:
+        """A Stripe Checkout session in setup mode: it collects a card, charges nothing."""
+        ...
+
+    def get_checkout_session(self, session_id: str) -> dict[str, Any] | None: ...
 
     def refund_charge(
         self, charge_id: str, *, amount: int, idempotency_key: str,
@@ -329,6 +339,43 @@ def _interval_of(sub: Mapping[str, Any], price_map: BusinessPriceMap) -> str | N
 # Subscription -----------------------------------------------------------------------------
 
 
+def ensure_customer(
+    conn: Connection, client: BusinessStripe, org: OrgFacts, *, now: float,
+    email: str | None = None,
+) -> str:
+    """The organisation's Stripe customer, created once from the checkout's billing profile
+    (reverse-charge customers are tax exempt with the note on every invoice). Until the
+    subscription exists the row says `incomplete`."""
+    row = subscription_row(conn, org.organisation_id)
+    if row and row.get("stripe_customer_id"):
+        return str(row["stripe_customer_id"])
+    profile = profile_row(conn, org.organisation_id)
+    if profile is None or not profile.get("business_confirmed_at"):
+        raise CheckoutIncomplete("Finish the SelectaDJ for Business checkout first.")
+    customer = client.create_customer(
+        name=profile["company_name"], email=email, address=profile["billing_address"],
+        metadata={"organisation_id": org.organisation_id},
+        idempotency_key=f"bzcus:{org.organisation_id}",
+    )
+    customer_id = str(customer["id"])
+    if profile["reverse_charge"]:
+        client.update_customer(
+            customer_id, tax_exempt="reverse", invoice_footer=REVERSE_CHARGE_NOTE,
+            idempotency_key=f"bzcus-tax:{org.organisation_id}",
+        )
+    if row is None:
+        conn.execute(sa.insert(biz_subscriptions).values(
+            id=new_id(), workspace_id=org.workspace_id, organisation_id=org.organisation_id,
+            stripe_customer_id=customer_id, currency=org.currency.upper(), interval="month",
+            status="incomplete", quantities={}, raw={}, created_at=now, updated_at=now,
+        ))
+    else:
+        conn.execute(sa.update(biz_subscriptions).where(
+            biz_subscriptions.c.organisation_id == org.organisation_id).values(
+            stripe_customer_id=customer_id, updated_at=now))
+    return customer_id
+
+
 def ensure_subscription(
     conn: Connection, client: BusinessStripe, org: OrgFacts, *, price_map: BusinessPriceMap,
     now: float, actor: str, interval: str = "month", payment_method: str | None = None,
@@ -353,19 +400,7 @@ def ensure_subscription(
     if quantities[ITEM_VENUE] < 1:
         raise BillingError("Add a venue before choosing a plan.")
     check_self_serve(quantities[ITEM_VENUE])
-    customer_id = (row or {}).get("stripe_customer_id")
-    if not customer_id:
-        customer = client.create_customer(
-            name=profile["company_name"], email=email, address=profile["billing_address"],
-            metadata={"organisation_id": org.organisation_id},
-            idempotency_key=f"bzcus:{org.organisation_id}",
-        )
-        customer_id = customer["id"]
-        if profile["reverse_charge"]:
-            client.update_customer(
-                customer_id, tax_exempt="reverse", invoice_footer=REVERSE_CHARGE_NOTE,
-                idempotency_key=f"bzcus-tax:{org.organisation_id}",
-            )
+    customer_id = ensure_customer(conn, client, org, now=now, email=email)
     currency = org.currency.upper()
     items = [
         {"price": price_id_for(price_map, item, currency, interval), "quantity": qty}
@@ -676,7 +711,42 @@ def reconcile(
     return report
 
 
-# Trials: settled from Stripe; starting one needs the business checkout (ADR-0447 BZ-0447-04) --
+# Trials -----------------------------------------------------------------------------------
+
+
+def start_trial(
+    conn: Connection, client: BusinessStripe, org: OrgFacts, *, payment_method_id: str,
+    price_map: BusinessPriceMap, now: float, actor: str, interval: str = "month",
+) -> dict:
+    """A 14-day trial with 1 venue and 1 zone and a card; one per organisation and per card."""
+    if conn.execute(sa.select(biz_trials.c.id).where(
+            biz_trials.c.organisation_id == org.organisation_id)).first():
+        raise TrialRefused("This organisation has already had its SelectaDJ for Business trial.")
+    existing = subscription_row(conn, org.organisation_id)
+    if existing and existing.get("stripe_subscription_id"):
+        raise TrialRefused("This organisation already has a subscription.")
+    method = client.get_payment_method(payment_method_id)
+    fingerprint = ((method or {}).get("card") or {}).get("fingerprint")
+    if not fingerprint:
+        raise TrialRefused("The trial needs a card.")
+    if conn.execute(sa.select(biz_trials.c.id).where(
+            biz_trials.c.card_fingerprint == fingerprint)).first():
+        raise TrialRefused("This card has already been used for a SelectaDJ for Business trial.")
+    quantities = billed_quantities(conn, org)
+    if quantities[ITEM_VENUE] != TRIAL_VENUES or quantities[ITEM_ZONE] != 0:
+        raise TrialRefused("The trial covers 1 venue with 1 zone.")
+    ends = now + TRIAL_DAYS * 86_400
+    row = ensure_subscription(
+        conn, client, org, price_map=price_map, now=now, actor=actor, interval=interval,
+        payment_method=payment_method_id, trial_end=ends,
+    )
+    conn.execute(sa.insert(biz_trials).values(
+        id=new_id(), workspace_id=org.workspace_id, organisation_id=org.organisation_id,
+        card_fingerprint=fingerprint, started_at=now, ends_at=ends, outcome="running",
+    ))
+    audit(conn, workspace_id=org.workspace_id, organisation_id=org.organisation_id,
+          action="billing.trial.started", actor=actor, now=now, detail={"ends_at": ends})
+    return row
 
 
 def trial_row(conn: Connection, organisation_id: str) -> dict | None:
@@ -766,13 +836,18 @@ def handle_event(
 ) -> dict[str, Any]:
     """Handle one verified Stripe event by re-fetching. `orgs` maps or `.organisation()`s ids."""
     org_id = organisation_for_event(conn, event)
+    obj = (event.get("data") or {}).get("object") or {}
+    if org_id is None and obj.get("charge") and str(obj.get("object")) == "dispute":
+        # A dispute names its charge, not the customer: ask Stripe whose charge it was.
+        charge = client.get_charge(str(obj["charge"])) or {}
+        org_id = organisation_for_event(conn, {"data": {"object": {
+            "customer": charge.get("customer")}}})
     if org_id is None:
         return {"handled": False, "reason": "unknown_organisation"}
     org = orgs.get(org_id) if isinstance(orgs, Mapping) else orgs.organisation(conn, org_id)
     if org is None:
         return {"handled": False, "reason": "unknown_organisation"}
     kind = str(event.get("type", ""))
-    obj = (event.get("data") or {}).get("object") or {}
     if kind.startswith("charge.dispute."):
         from selecta.business import billing_ops
 

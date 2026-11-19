@@ -99,8 +99,22 @@
         "PUT /api/business/billing/po-number",
         "PUT /api/business/billing/venues/{venue_id}/cost-centre",
         "PUT /api/business/billing/collection-method",
-        "GET /api/business/billing/cost-breakdown"
+        "GET /api/business/billing/cost-breakdown",
+        "POST /api/business/billing/checkout",
+        "POST /api/business/billing/checkout/complete",
+        "POST /api/business/billing/stripe-webhook"
       ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.licensing": {
+      "label": "Licensing and play logs",
+      "about": "Owners, admins and venue managers download a venue's play log for chosen days as CSV, with totals per track, for licensing returns.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": ["GET /api/business/play-log/export"],
       "modes": ["cloud"],
       "scope": "workspace",
       "kind": "release",

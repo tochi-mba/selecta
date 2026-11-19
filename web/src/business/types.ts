@@ -157,7 +157,6 @@ export type ContentRules = {
 
 export type Member = { id: string; name: string; email: string; role: Role; venue_ids: string[] | null; pin_set?: boolean };
 
-export type PlayLogExportJob = { id: string; status: 'queued' | 'working' | 'ready' | 'failed'; done_venues: number; total_venues: number; url?: string | null; expires_at?: number | null; created_at: number; range: { from: string; to: string } };
 
 export type Health = {
   /** Server said live updates are paused (events.ts fallback). */
@@ -187,6 +186,7 @@ export type BillingSummary = {
   estimate: { lines: Record<BillingItem, number>; subtotal_minor: number; discount_minor: number; total_minor: number } | null;
   profile: { company_name: string; country: string; po_number: string | null; collection_method: 'charge_automatically' | 'send_invoice'; net_days: number | null; tax_treatment: string; can_send_invoice: boolean } | null;
   venues: { venue_id: string; name: string; cost_centre: string | null; stop_at: number | null }[];
+  checkout: { selling: boolean; terms_version: string; trial: { days: number; venues: number; zones: number }; trial_available: boolean };
   banner: { message: string; grace_ends_at: number | null; read_only: boolean; stops: { venue_id: string; stop_at: number }[] } | null;
   read_only: boolean;
 };
@@ -195,3 +195,11 @@ export type BillingSummary = {
 export type CostPreview =
   | { source: 'stripe'; currency: string; charged_now_minor: number; next_invoice_minor: number }
   | { source: 'estimate'; currency: string; interval: 'month' | 'year'; period_total_minor: number };
+
+/** The B2B checkout answers (ADR-0447 BZ-0447-06); the card itself is entered on Stripe. */
+export type CheckoutRequest = {
+  business_confirmed: boolean; terms_version: string; company_name: string;
+  billing_address: { line1: string; line2?: string; city: string; postal_code: string; country: string };
+  tax_id?: string; interval: 'month' | 'year'; trial: boolean;
+};
+export type CheckoutAnswer = { blocked: boolean; url?: string; message?: string | null };

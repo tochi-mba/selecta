@@ -5,7 +5,7 @@
 
 import type { Api } from '../cloud/api';
 import type {
-  BillingSummary, ContentRules, CostPreview, Daypart, Device, GuestRequest, Holiday, Licence, Member, Org, Overview, PlayLogExportJob,
+  BillingSummary, CheckoutAnswer, CheckoutRequest, ContentRules, CostPreview, Daypart, Device, GuestRequest, Holiday, Licence, Member, Org, Overview,
   Role, SetupProgress, Venue, WeekHours, WorkspaceSummary, Zone, ZoneSchedule,
 } from './types';
 
@@ -34,7 +34,7 @@ export const ROUTES = {
   request: (zone: string, id: string, verdict: 'approve' | 'pass') => `/zones/${enc(zone)}/requests/${enc(id)}/${verdict}`,
   members: (org: string) => `/orgs/${enc(org)}/members`,
   member: (org: string, id: string) => `/orgs/${enc(org)}/members/${enc(id)}`,
-  exports: (org: string) => `/orgs/${enc(org)}/play-log-exports`,
+  playLogExport: (venue: string, from: string, to: string) => `/business/play-log/export?venue_id=${enc(venue)}&from=${enc(from)}&to=${enc(to)}`,
   pinCheck: (org: string, venue: string) => `/orgs/${enc(org)}/venues/${enc(venue)}/pin`,
   adminPilots: '/admin/business/pilots',
   adminPilot: (id: string, action: 'extend' | 'allowance' | 'convert' | 'end') => `/admin/business/pilots/${enc(id)}/${action}`,
@@ -47,6 +47,8 @@ export const ROUTES = {
   billingCostCentre: (venue: string) => `/business/billing/venues/${enc(venue)}/cost-centre`,
   billingCollection: '/business/billing/collection-method',
   billingBreakdown: '/business/billing/cost-breakdown',
+  billingCheckout: '/business/billing/checkout',
+  billingCheckoutComplete: '/business/billing/checkout/complete',
 } as const;
 
 function enc(value: string) { return encodeURIComponent(value); }
@@ -100,8 +102,7 @@ export function businessClient(api: Api, workspaceId?: string) {
     members: (org: string) => call<Member[]>(ROUTES.members(org)),
     invite: (org: string, body: { email: string; role: Role; venue_ids: string[] | null }) => call<Member>(ROUTES.members(org), json('POST', body)),
     removeMember: (org: string, id: string) => call<null>(ROUTES.member(org, id), json('DELETE')),
-    exports: (org: string) => call<PlayLogExportJob[]>(ROUTES.exports(org)),
-    startExport: (org: string, body: { venue_ids: string[] | null; from: string; to: string; format: 'csv' }) => call<PlayLogExportJob>(ROUTES.exports(org), json('POST', body)),
+    exportPlayLog: (venue: string, from: string, to: string) => call<{ filename: string; csv: string }>(ROUTES.playLogExport(venue, from, to)),
     checkPin: (org: string, venue: string, pin: string) => call<{ ok: boolean; member_name?: string; role?: Role }>(ROUTES.pinCheck(org, venue), json('POST', { pin })),
     pilots: () => api<PilotRow[]>(ROUTES.adminPilots),
     createPilot: (body: { org_name: string; owner_email: string; allowance: { venues: number; zones: number }; ends_at: number; note?: string; reason: string }) => api<PilotRow>(ROUTES.adminPilots, json('POST', body)),
@@ -116,6 +117,8 @@ export function businessClient(api: Api, workspaceId?: string) {
     saveCostCentre: (venue: string, costCentre: string) => call<{ venue_id: string; cost_centre: string | null }>(ROUTES.billingCostCentre(venue), json('PUT', { cost_centre: costCentre })),
     saveCollectionMethod: (method: 'charge_automatically' | 'send_invoice') => call<{ collection_method: string; net_days: number | null }>(ROUTES.billingCollection, json('PUT', { method })),
     costBreakdown: () => call<{ filename: string; csv: string }>(ROUTES.billingBreakdown),
+    startCheckout: (body: CheckoutRequest) => call<CheckoutAnswer>(ROUTES.billingCheckout, json('POST', body)),
+    completeCheckout: (sessionId: string) => call<{ subscribed: boolean; status: string | null }>(ROUTES.billingCheckoutComplete, json('POST', { session_id: sessionId })),
   };
 }
 

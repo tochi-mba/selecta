@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import hashlib
 import os
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from typing import Any, Literal
 
@@ -35,7 +35,13 @@ from selecta import flags
 from selecta.admin import http
 from selecta.authz.check import authorize
 from selecta.billing.stripe_sync import StripeUnavailable
-from selecta.business import billing, billing_b2b, dunning, stripe_business
+from selecta.business import (
+    billing,
+    billing_b2b,
+    billing_checkout_routes,
+    dunning,
+    stripe_business,
+)
 from selecta.business.billing_catalogue import (
     ITEM_SEAT,
     ITEM_VENUE,
@@ -46,6 +52,7 @@ from selecta.business.billing_catalogue import (
     estimate,
     is_enterprise,
     load_price_map,
+    trial_terms,
 )
 from selecta.business.commercial_audit import audit
 from selecta.business.commercial_facts import (
@@ -55,6 +62,7 @@ from selecta.business.commercial_facts import (
     HoursSource,
     SqlFacts,
 )
+from selecta.business.terms import CURRENT_BUSINESS_TERMS_VERSION
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, transaction
 
@@ -186,6 +194,14 @@ def summary(conn: Connection, org: Any, role: str, hours: HoursSource, now: floa
             for v in org.billable_venues
         ],
         "banner": dunning.banner_from(state, role, "web", now, plan),
+        "checkout": {
+            "selling": flags.on("business.signups"),
+            "terms_version": CURRENT_BUSINESS_TERMS_VERSION,
+            "trial": trial_terms(),
+            "trial_available": not sub.get("stripe_subscription_id")
+            and billing.trial_row(conn, org.organisation_id) is None
+            and quantities[ITEM_VENUE] == 1 and quantities[ITEM_ZONE] == 0,
+        },
         "read_only": dunning.is_management_read_only(conn, org.organisation_id, now),
     }
 
@@ -199,8 +215,10 @@ def install_routes(
     stripe_factory: Callable[[], billing.BusinessStripe] | None = None,
     facts: FactsSource | None = None,
     hours: HoursSource | None = None,
+    allowed_origins: Sequence[str] = (),
 ) -> None:
-    """Mount the owner and admin billing routes and the staff credit and refund routes."""
+    """Mount the owner and admin billing routes, checkout and the Stripe webhook
+    (`billing_checkout_routes`), and the staff credit and refund routes."""
     facts_source: FactsSource = facts or SqlFacts()
     hours_source: HoursSource = hours or Bz3Hours()
 
@@ -316,6 +334,11 @@ def install_routes(
         with owner(request, claims) as (conn, org, _found, _now):
             text = billing_b2b.cost_breakdown_csv(conn, org)
         return {"filename": CSV_NAME, "csv": text}
+
+    billing_checkout_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, owner=owner, stripe=stripe,
+        facts=facts_source, allowed_origins=allowed_origins,
+    )
 
     # Staff --------------------------------------------------------------------------------
 

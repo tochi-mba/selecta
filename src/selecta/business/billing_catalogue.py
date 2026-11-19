@@ -54,6 +54,7 @@ VOLUME_PERCENT_OFF = 10
 ENTERPRISE_MIN_VENUES = 25
 VOLUME_COUPON_ID = "selectadj_business_volume_10"
 
+TRIAL_DAYS = 14
 TRIAL_VENUES = 1
 TRIAL_ZONES = 1
 
@@ -123,6 +124,12 @@ def estimate(quantities: Mapping[str, int], currency: str, interval: str) -> Est
     off = discount_percent(int(quantities.get(ITEM_VENUE, 0)))
     discount = subtotal * off // 100
     return Estimate(currency.upper(), interval, lines, subtotal, discount, subtotal - discount)
+
+
+def trial_terms() -> dict[str, Any]:
+    """What the trial offers, as the billing page shows it."""
+    return {"days": TRIAL_DAYS, "venues": TRIAL_VENUES, "zones": TRIAL_ZONES,
+            "card_required": True, "one_per": ["organisation", "card"]}
 
 
 def catalogue_prices() -> list[dict[str, Any]]:
