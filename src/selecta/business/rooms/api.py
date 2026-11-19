@@ -104,9 +104,11 @@ def install_routes(
         token = request.headers.get(DEVICE_HEADER)
         if token:
             return guard.device_actor(conn, token=token)
+        from selecta.business.content.claims import user_id_for
+
         claims = current_claims(request)
-        return guard.actor_for(conn, user_id=claims.subject, organisation_id=organisation_id,
-                               workspace_id=workspace_id)
+        return guard.actor_for(conn, user_id=user_id_for(conn, claims),
+                               organisation_id=organisation_id, workspace_id=workspace_id)
 
     def staff(request: Request, zone_id: str | None, permissions: tuple[str, ...],
               work: Callable[[ZoneRooms, Any, BusinessActor], Any], *,

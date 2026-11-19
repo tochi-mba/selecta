@@ -159,9 +159,10 @@ export function businessClient(api: Api, workspaceId?: string) {
       const [answer, entries] = await Promise.all([call<VenueRulesAnswer>(ROUTES.rules(venue)), blocklist()]);
       return rulesOf(answer, entries, venue);
     },
-    saveRules: async (_org: string, venue: string, rules: ContentRules): Promise<ContentRules> => {
+    /** `confirm` saves past the server's "under 2 hours of music" warning (ADR-0450). */
+    saveRules: async (_org: string, venue: string, rules: ContentRules, confirm = false): Promise<ContentRules> => {
       const [zones, current] = await Promise.all([call<{ zones: { id: string }[] }>(ROUTES.zonesOf(venue)), call<VenueRulesAnswer>(ROUTES.rules(venue))]);
-      await call(ROUTES.rules(venue), json('PUT', rulesBody(rules, (zones.zones ?? []).map((zone) => zone.id), current)));
+      await call(`${ROUTES.rules(venue)}${confirm ? '?confirm=true' : ''}`, json('PUT', rulesBody(rules, (zones.zones ?? []).map((zone) => zone.id), current)));
       const change = blocklistDiff(rules.blocklist, await blocklist(), venue);
       for (const entry of change.add) await call(ROUTES.blocklist, json('POST', entry));
       for (const id of change.remove) await call(ROUTES.blocklistEntry(id), json('DELETE'));
@@ -233,7 +234,7 @@ export function businessClient(api: Api, workspaceId?: string) {
     saveCollectionMethod: (method: 'charge_automatically' | 'send_invoice') => call<{ collection_method: string; net_days: number | null }>(ROUTES.billingCollection, json('PUT', { method })),
     costBreakdown: () => call<{ filename: string; csv: string }>(ROUTES.billingBreakdown),
     startCheckout: (body: CheckoutRequest) => call<CheckoutAnswer>(ROUTES.billingCheckout, json('POST', body)),
-    downgrade: (keepVenueIds: string[], paidZones: Record<string, number> = {}) => call<{ pausing: { venue_id: string; pause_at: number }[] }>(ROUTES.billingDowngrade, json('POST', { keep_venue_ids: keepVenueIds, paid_zones: paidZones })),
+    downgrade: (keepVenueIds: string[], paidZones: Record<string, number> = {}, keepZoneIds: Record<string, string[]> = {}) => call<{ pausing: { venue_id: string; pause_at: number }[] }>(ROUTES.billingDowngrade, json('POST', { keep_venue_ids: keepVenueIds, paid_zones: paidZones, ...(Object.keys(keepZoneIds).length ? { keep_zone_ids: keepZoneIds } : {}) })),
     resumeVenue: (venue: string) => call<{ venue_id: string; state: string }>(ROUTES.billingResume(venue), json('POST')),
     transfers: () => call<{ organisation_id: string; transfers: VenueTransfer[] }>(ROUTES.billingTransfers),
     proposeTransfer: (venue: string, target: string) => call<{ transfer: { id: string; state: string } }>(ROUTES.billingTransfers, json('POST', { venue_id: venue, target_organisation_id: target })),

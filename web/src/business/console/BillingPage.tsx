@@ -11,7 +11,7 @@ import { dayWords, money, venueTime } from '../time';
 import type { BillingSummary, CostPreview, Org } from '../types';
 import { useLoad } from '../venue/useVenue';
 import { CheckoutCard, useCheckoutReturn } from './CheckoutCard';
-import { DowngradeCard, TransferCard } from './PlanChanges';
+import { DowngradeCard, TransferCard, ZoneDowngradeCard } from './PlanChanges';
 import './console.css';
 
 const day = (epoch: number) => dayWords(epoch);
@@ -89,6 +89,7 @@ function BillingDetails() {
       : <><PricesCard summary={data} /><PreviewCard /></>}
     <InvoiceDetailsCard summary={data} onSaved={summary.reload} />
     {data.subscribed && <DowngradeCard summary={data} onChanged={summary.reload} />}
+    {data.subscribed && <ZoneDowngradeCard summary={data} onChanged={summary.reload} />}
     <TransferCard summary={data} />
   </>;
 }

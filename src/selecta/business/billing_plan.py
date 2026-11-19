@@ -116,9 +116,15 @@ def _flag_on() -> bool:
 def downgrade(
     conn: Connection, client: billing.BusinessStripe | None, org: OrgFacts, *,
     keep_venue_ids: list[str], paid_zones: Mapping[str, int], hours: HoursSource, now: float,
-    actor: str,
+    actor: str, keep_zone_ids: Mapping[str, list[str]] | None = None,
 ) -> dict[str, Any]:
-    """Keep the chosen venues; the rest pause at their next close. Bills less from now on."""
+    """Keep the chosen venues; the rest pause at their next close. Bills less from now on.
+
+    `keep_zone_ids` names, per kept venue, the zones the owner keeps paid (as many as
+    `paid_zones` says, or that many when `paid_zones` is left out); the other zones pause at
+    the venue's close. Without it the oldest zones are kept."""
+    chosen = _chosen_zones(conn, org, keep_zone_ids or {}, paid_zones)
+    paid_zones = {**paid_zones, **{venue: len(ids) for venue, ids in chosen.items()}}
     billable = {v.id: v for v in org.billable_venues}
     unknown = [v for v in keep_venue_ids + list(paid_zones) if v not in billable]
     if unknown:
@@ -134,6 +140,7 @@ def downgrade(
             pausing.append({"venue_id": venue.id, "pause_at": values["pause_at"]})
         if venue.id in paid_zones:
             values["paid_zones"] = max(1, min(int(paid_zones[venue.id]), venue.zones))
+            values["keep_zone_ids"] = chosen.get(venue.id)
             if venue.id in keep_venue_ids and values["paid_zones"] < venue.zones:
                 # A kept venue with fewer paid zones: its extra zones pause at its close.
                 values["pause_at"] = next_close(hours, conn, venue, now)
@@ -141,9 +148,28 @@ def downgrade(
             biz_venue_billing.c.venue_id == venue.id).values(**values))
     audit(conn, workspace_id=org.workspace_id, organisation_id=org.organisation_id,
           action="billing.downgrade", actor=actor, now=now,
-          detail={"keep": keep_venue_ids, "paid_zones": dict(paid_zones), "pausing": pausing})
+          detail={"keep": keep_venue_ids, "paid_zones": dict(paid_zones), "pausing": pausing,
+                  "keep_zone_ids": chosen})
     changes = _apply(conn, client, org, now, actor, "downgrade")
     return {"pausing": pausing, "changes": len(changes)}
+
+
+def _chosen_zones(conn: Connection, org: OrgFacts, keep: Mapping[str, list[str]],
+                  paid_zones: Mapping[str, int]) -> dict[str, list[str]]:
+    """Check the owner's zone choice: each named zone is a live zone of that venue, at least one
+    per venue, and as many as `paid_zones` says when both are given."""
+    chosen: dict[str, list[str]] = {}
+    for venue_id, ids in keep.items():
+        wanted = list(dict.fromkeys(ids))
+        live = set(conn.execute(sa.select(zone_table.c.id).where(
+            zone_table.c.workspace_id == org.workspace_id, zone_table.c.venue_id == venue_id,
+            zone_table.c.status == "active")).scalars())
+        if org.venue(venue_id) is None or not wanted or not set(wanted) <= live:
+            raise billing.BillingError("Choose at least one of that venue's own zones to keep.")
+        if venue_id in paid_zones and int(paid_zones[venue_id]) != len(wanted):
+            raise billing.BillingError("Pick as many zones to keep as you pay for.")
+        chosen[venue_id] = wanted
+    return chosen
 
 
 def resume(
@@ -163,7 +189,7 @@ def resume(
     for zone in _paused_zones(conn, org.workspace_id, venue_id):
         zones.resume(conn, org.workspace_id, zone)
     conn.execute(sa.update(biz_venue_billing).where(biz_venue_billing.c.venue_id == venue_id)
-                 .values(state="active", pause_at=None, paused_at=None,
+                 .values(state="active", pause_at=None, paused_at=None, keep_zone_ids=None,
                          paid_zones=max(venue.zones, 1), decided_by=actor, updated_at=now))
     audit(conn, workspace_id=org.workspace_id, organisation_id=org.organisation_id,
           action="billing.venue.resumed", actor=actor, now=now, venue_id=venue_id)
@@ -227,7 +253,10 @@ def apply_due_pauses(
                 zone_table.c.workspace_id == org.workspace_id,
                 zone_table.c.venue_id == venue_id, zone_table.c.status == "active",
             ).order_by(zone_table.c.created_at)).scalars().all()
-            for zone_id in live[max(int(row["paid_zones"]), 1):]:
+            keep = row.get("keep_zone_ids")
+            pausing = ([z for z in live if z not in set(keep)] if keep
+                       else live[max(int(row["paid_zones"]), 1):])
+            for zone_id in pausing:
                 zones.pause(conn, org.workspace_id, zone_id)
                 paused.append(zone_id)
     return paused

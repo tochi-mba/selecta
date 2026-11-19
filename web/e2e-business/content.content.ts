@@ -59,8 +59,12 @@ test('BZ-0450-09: the staff volume slider ends at the zone cap', async ({ page, 
   await signedIn(page, request, owner);
   const seeded = await seed(page, owner);
   await venueTab(page, seeded, 'rules');
-  await page.getByLabel('Volume cap for Bar').fill('60');
+  await page.getByLabel('Highest volume in Bar').fill('60');
   await page.getByRole('button', { name: 'Save rules' }).click();
+  // six songs are under 2 hours of music, so the save warns first (ADR-0450)
+  await expect(page.getByRole('alert').filter({ hasText: 'under 2 hours' })).toBeVisible();
+  await page.getByRole('button', { name: 'Save anyway' }).click();
+  await expect(page.getByText('Save anyway')).toHaveCount(0);
   await page.goto(`/b/${seeded.org}/v/${seeded.venues[0]}/control`);
   const slider = page.getByRole('slider').first();
   await expect(slider).toHaveAttribute('aria-valuemax', '60');
@@ -129,11 +133,11 @@ test('flag sweep: content and rooms controls vanish with their flags and the pag
   const seeded = await seed(page, owner, { without: [...CONTENT, ...ROOMS] });
   for (const width of [375, 1280]) {
     await page.setViewportSize({ width, height: 900 });
-    await venueTab(page, seeded, 'rules');
-    await expect(page.getByRole('heading', { name: 'Music rules' }).first()).toBeVisible();
-    await expect(page.getByText('What each zone can play')).toHaveCount(0);
-    await expect(page.getByText('Song sheet')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Requests' })).toHaveCount(0);
+    await venueTab(page, seeded, 'now');
+    await expect(page.getByRole('heading', { name: 'Harbour Street' })).toBeVisible();
+    const tabs = page.getByRole('navigation', { name: 'Venue sections' });
+    await expect(tabs.getByRole('button', { name: 'Music rules' })).toHaveCount(0);
+    await expect(tabs.getByRole('button', { name: 'Requests' })).toHaveCount(0);
     expect(await sideways(page)).toBeLessThanOrEqual(1);
   }
   const on = listener('content-on');

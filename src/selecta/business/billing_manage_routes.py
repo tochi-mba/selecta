@@ -35,6 +35,8 @@ CONTRACT_PERMISSION = "business.billing.contracts"
 class DowngradeBody(BaseModel):
     keep_venue_ids: list[str] = Field(min_length=1, max_length=500)
     paid_zones: dict[str, int] = Field(default_factory=dict)
+    # Per kept venue, the zones the owner keeps paid; the rest pause at its close.
+    keep_zone_ids: dict[str, list[str]] = Field(default_factory=dict)
 
 
 class TransferBody(BaseModel):
@@ -76,7 +78,7 @@ def install_routes(
             return billing_plan.downgrade(
                 conn, _client(conn, org.organisation_id, stripe), org,
                 keep_venue_ids=body.keep_venue_ids, paid_zones=body.paid_zones, hours=hours,
-                now=now, actor=found.user.id)
+                now=now, actor=found.user.id, keep_zone_ids=body.keep_zone_ids)
 
     @app.post("/api/business/billing/venues/{venue_id}/resume")
     def resume(

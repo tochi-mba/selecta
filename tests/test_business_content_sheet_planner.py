@@ -185,3 +185,19 @@ def test_lucy_can_only_suggest_a_rule_change(engine):
     operations = lucy_venue.venue_operations()
     assert policy.audit(operations) == []
     assert {policy.tier_of(op.name) for op in operations} <= {"read", "propose"}
+
+
+def test_a_sign_in_subject_resolves_to_the_user_id(engine):
+    from types import SimpleNamespace
+
+    from selecta.business.content.claims import user_id_for
+
+    raw = engine.raw_connection()
+    raw.execute("PRAGMA foreign_keys=OFF")
+    raw.execute("INSERT INTO users (id, auth_subject, email_verified, timezone, age_confirmed, "
+                "created_at) VALUES ('user-9', 'authkit|abc', 0, 'UTC', 1, 0)")
+    raw.commit()
+    raw.close()
+    with transaction(engine) as conn:
+        assert user_id_for(conn, SimpleNamespace(subject="authkit|abc")) == "user-9"
+        assert user_id_for(conn, SimpleNamespace(subject="planted")) == "planted"

@@ -42,6 +42,43 @@ export function DowngradeCard({ summary, onChanged }: { summary: BillingSummary;
   </section>;
 }
 
+/** Pay for fewer zones at a kept venue (ADR-0454): the owner ticks the zones that stay paid;
+ * the others pause at that venue's next close. */
+export function ZoneDowngradeCard({ summary, onChanged }: { summary: BillingSummary; onChanged: () => Promise<void> }) {
+  const { client, venues } = useBusiness();
+  const billedLive = new Set(summary.venues.filter((venue) => (venue.state ?? 'active') === 'active').map((venue) => venue.venue_id));
+  const many = venues.filter((venue) => billedLive.has(venue.id) && venue.zones.filter((zone) => zone.paid !== false).length > 1);
+  const [kept, setKept] = useState<Record<string, string[]>>(() => Object.fromEntries(many.map((venue) => [venue.id, venue.zones.map((zone) => zone.id)])));
+  const [status, setStatus] = useState('');
+  const [busy, setBusy] = useState(false);
+  if (!many.length) return null;
+  const save = async (venueId: string, name: string) => {
+    const keep = kept[venueId] ?? [];
+    if (!keep.length) { setStatus(COPY.zonesKeepOne); return; }
+    setBusy(true);
+    try {
+      await client.downgrade([...billedLive], {}, { [venueId]: keep });
+      setStatus(COPY.zonesDowngraded(name));
+      await onChanged();
+    } catch (problem) { setStatus((problem as Error).message); } finally { setBusy(false); }
+  };
+  return <section className="biz-card" aria-labelledby="biz-billing-zones">
+    <h2 id="biz-billing-zones">{COPY.zonesTitle}</h2>
+    <p className="biz-quiet">{COPY.zonesIntro}</p>
+    {many.map((venue) => {
+      const keep = kept[venue.id] ?? [];
+      return <form key={venue.id} onSubmit={(event) => { event.preventDefault(); void save(venue.id, venue.name); }}>
+        <fieldset><legend>{venue.name}</legend>
+          {venue.zones.map((zone) => <label key={zone.id}><input type="checkbox" checked={keep.includes(zone.id)}
+            onChange={(event) => setKept({ ...kept, [venue.id]: event.target.checked ? [...keep, zone.id] : keep.filter((id) => id !== zone.id) })} />{COPY.keepZone(zone.name)}</label>)}
+        </fieldset>
+        <div className="biz-row"><button type="submit" disabled={busy || keep.length === venue.zones.length}>{COPY.zonesButton(venue.name)}</button></div>
+      </form>;
+    })}
+    <p role="status" aria-live="polite">{status}</p>
+  </section>;
+}
+
 export function TransferCard({ summary }: { summary: BillingSummary }) {
   const { client } = useBusiness();
   const list = useLoad(() => client.transfers(), [client]);

@@ -35,7 +35,7 @@ export function VenueManager({ venueId, tab }: { venueId: string; tab?: string }
     {disabled && <p className="biz-quiet">{disabled}</p>}
     {kioskOn && <PlayerAlerts venueId={venue.id} />}
     <nav className="biz-row" aria-label="Venue sections">
-      {(Object.keys(VENUE_TABS) as VenueTab[]).filter((key) => key !== 'requests' || businessOn(ctx.org.features, 'business.rooms')).filter((key) => schedulesOn || !SCHEDULE_TABS.includes(key)).filter((key) => key !== 'music' || (entitlementsOn && ctx.api != null)).map((key) => <button key={key} type="button" aria-current={key === chosen ? 'page' : undefined} onClick={() => ctx.go(PATHS.venue(ctx.org.id, venue.id, key))}>{VENUE_TABS[key]}</button>)}
+      {(Object.keys(VENUE_TABS) as VenueTab[]).filter((key) => key !== 'requests' || businessOn(ctx.org.features, 'business.rooms')).filter((key) => key !== 'rules' || businessOn(ctx.org.features, 'business.content_controls')).filter((key) => schedulesOn || !SCHEDULE_TABS.includes(key)).filter((key) => key !== 'music' || (entitlementsOn && ctx.api != null)).map((key) => <button key={key} type="button" aria-current={key === chosen ? 'page' : undefined} onClick={() => ctx.go(PATHS.venue(ctx.org.id, venue.id, key))}>{VENUE_TABS[key]}</button>)}
     </nav>
     {chosen === 'now' && <NowTab venue={venue} disabled={disabled} />}
     {chosen === 'today' && <TodayTab venue={venue} />}

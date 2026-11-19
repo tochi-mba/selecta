@@ -98,10 +98,11 @@ def install_routes(
             return actor_resolver(request, conn, organisation_id=workspace_id,
                                   workspace_id=workspace_id)
         from selecta.business.access import guard
+        from selecta.business.content.claims import user_id_for
 
         claims = current_claims(request)
-        return guard.actor_for(conn, user_id=claims.subject, organisation_id=workspace_id,
-                               workspace_id=workspace_id)
+        return guard.actor_for(conn, user_id=user_id_for(conn, claims),
+                               organisation_id=workspace_id, workspace_id=workspace_id)
 
     def run(request: Request, permission: str, work: Callable[..., Any], *,
             venue_id: str | None = None, zone_id: str | None = None) -> Any:

@@ -97,6 +97,8 @@ biz_venue_billing = sa.Table(
     sa.Column("pause_at", Epoch),
     sa.Column("paused_at", Epoch),
     sa.Column("paid_zones", sa.Integer, nullable=False),
+    # The zones the owner chose to keep paid on a downgrade (ADR-0454); null keeps the oldest.
+    sa.Column("keep_zone_ids", Json),
     sa.Column("decided_by", sa.String(256)),
     sa.Column("updated_at", Epoch, nullable=False),
 )

@@ -122,10 +122,10 @@ def test_removed_zone_stops_at_its_next_close(sqlite_engine):
 
 
 def test_downgrade_pauses_zones_over_the_paid_count_owner_picks(sqlite_engine):
-    """The owner picks how many zones stay paid; the rest pause at the venue's close, never
-    mid-service. Gap noted in ADR-0454: the owner cannot yet pick which zones (the newest
-    pause first)."""
-    from selecta.business import billing_plan
+    """The owner picks which zones stay paid; the others pause at the venue's close, never
+    mid-service. A choice that is not the venue's own live zones, or not as many as paid for,
+    is refused."""
+    from selecta.business import billing, billing_plan
     from selecta.business.commercial_facts import FixedHours, OrgFacts, VenueFacts
     from selecta.business.schema import zones as zone_table
 
@@ -134,12 +134,40 @@ def test_downgrade_pauses_zones_over_the_paid_count_owner_picks(sqlite_engine):
     hours = FixedHours(daily={venue_id: ("10:00", "23:00")})
     noon = 1_795_000_000.0 - (1_795_000_000.0 % 86_400) + 12 * 3600  # 12:00 UTC, open
     with transaction(sqlite_engine, org_id) as conn:
-        billing_plan.downgrade(conn, None, org, keep_venue_ids=[venue_id],
-                               paid_zones={venue_id: 1}, hours=hours, now=noon, actor="owner")
+        for wrong in ({venue_id: ["zone-of-someone-else"]}, {venue_id: []}):
+            with pytest.raises(billing.BillingError):
+                billing_plan.downgrade(conn, None, org, keep_venue_ids=[venue_id], paid_zones={},
+                                       hours=hours, now=noon, actor="owner",
+                                       keep_zone_ids=wrong)
+        with pytest.raises(billing.BillingError):
+            billing_plan.downgrade(conn, None, org, keep_venue_ids=[venue_id],
+                                   paid_zones={venue_id: 2}, hours=hours, now=noon,
+                                   actor="owner", keep_zone_ids={venue_id: [garden]})
+    with transaction(sqlite_engine, org_id) as conn:
+        billing_plan.downgrade(conn, None, org, keep_venue_ids=[venue_id], paid_zones={},
+                               hours=hours, now=noon, actor="owner",
+                               keep_zone_ids={venue_id: [garden]})  # the newest, by choice
         assert billing_plan.apply_due_pauses(conn, org, now=noon + 60, hours=hours) == []
         status = dict(conn.execute(sa.select(zone_table.c.id, zone_table.c.status)).all())
         assert set(status.values()) == {"active"}  # nothing pauses during service
         billing_plan.apply_due_pauses(conn, org, now=noon + 12 * 3600, hours=hours)
         status = dict(conn.execute(sa.select(zone_table.c.id, zone_table.c.status)).all())
-    assert status[bar] == "active"
-    assert status[terrace] == status[garden] == "paused"
+    assert status[garden] == "active"
+    assert status[bar] == status[terrace] == "paused"
+
+
+def test_downgrade_without_a_choice_keeps_the_oldest_zones(sqlite_engine):
+    from selecta.business import billing_plan
+    from selecta.business.commercial_facts import FixedHours, OrgFacts, VenueFacts
+    from selecta.business.schema import zones as zone_table
+
+    org_id, venue_id, (bar, terrace, garden) = _org(sqlite_engine)
+    org = OrgFacts(org_id, org_id, "Crown Group", (VenueFacts(venue_id, "Camden", zones=3),))
+    hours = FixedHours(daily={venue_id: ("10:00", "23:00")})
+    noon = 1_795_000_000.0 - (1_795_000_000.0 % 86_400) + 12 * 3600
+    with transaction(sqlite_engine, org_id) as conn:
+        billing_plan.downgrade(conn, None, org, keep_venue_ids=[venue_id],
+                               paid_zones={venue_id: 1}, hours=hours, now=noon, actor="owner")
+        billing_plan.apply_due_pauses(conn, org, now=noon + 12 * 3600, hours=hours)
+        status = dict(conn.execute(sa.select(zone_table.c.id, zone_table.c.status)).all())
+    assert status[bar] == "active" and status[terrace] == status[garden] == "paused"
