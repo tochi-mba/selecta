@@ -68,6 +68,8 @@ export const NOT_IN_THE_BROWSER = {
   'lyrics.lookup': false,
   // harmonic matches pair songs by measured key; a browser library has no keys measured
   'discover.harmonic': false,
+  // tempo and key corrections and "is it music?" are written to this computer's own analysis
+  'library.corrections': false,
   // a browser mix has no measured feel, energy or stems to shape by; its ending can be chosen
   'mixes.shaping.feel': false,
   'mixes.shaping.energy_arc': false,
@@ -168,13 +170,16 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   const sources = useMemo<AvailabilitySources>(() => ({
     here: async () => {
       const opened = await openStore();
-      const found = new Map<number, 'here' | 'reauth'>();
+      const found = new Map<number, 'here' | 'reauth' | 'reconnect'>();
       for (const song of await opened.all()) {
         const why = lapsed.current.get(song.songId);
         // a file the sweep found gone is not on this device; a lapsed permission asks again;
         // a song picked without a durable handle plays only while this visit holds its file
         if (why === 'missing' || why === 'changed' || song.availabilityIssue === 'changed') continue;
-        if (song.ref.kind !== 'handle' && !opened.sessionFile(song.songId)) continue;
+        if (song.ref.kind !== 'handle' && !opened.sessionFile(song.songId)) {
+          found.set(song.songId, 'reconnect');
+          continue;
+        }
         found.set(song.songId, why === 'permission' ? 'reauth' : 'here');
       }
       return found;
@@ -366,7 +371,17 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
       case 'library':
         return connected === 0
           ? <main className="page" id="main"><h1 className="display small">Library</h1><LibraryEmpty />{connect}</main>
-          : <><Library {...shared} /><div className="page">{connect}</div></>;
+          // nothing playable this visit (picked files close with the page): connecting comes first
+          : (status?.counts.ready ?? 0) === 0
+            ? (
+              <Library {...shared} lead={(
+                <div className="stack library-reconnect">
+                  <p className="notice" role="status">None of your songs can play here right now. Music you pick in the browser stays open only while the page does, so choose your folder or songs again to play them.</p>
+                  {connect}
+                </div>
+              )} />
+            )
+            : <><Library {...shared} /><div className="page">{connect}</div></>;
       case 'mixes':
         if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts>{on('drafts') && <SavedBrowserMixes workspaceId={workspaceId} recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} player={shellPlayer} notify={notify} />}</MyMixes>{localExport}</>;
         return <>{(status?.counts.ready ?? 0) >= BROWSER_MIX_NEEDS ? <Mixes {...shared} /> : (

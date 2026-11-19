@@ -61,8 +61,10 @@ const lyricWords = (status: string | null) => (status === 'synced' ? 'Timed' : s
 /** Everything about one song, and the only place its details are worked out. The badge and the buttons
  * come from the same answer, and what was measured stays separate from what's in use, so a correction
  * can always be seen for what it is and taken back. */
-export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNever }: {
+export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNever, measured = true }: {
   song: LibrarySong;
+  /** songs here are analysed (local mode); a browser library has no tempo, key or stems to show */
+  measured?: boolean;
   onClose: () => void;
   onChanged: () => void;
   notify: ViewProps['notify'];
@@ -145,20 +147,24 @@ export function SongDetails({ song, onClose, onChanged, notify, onPriority, onNe
       </div>
       <p><Status kind={facts.kind}>{facts.words}</Status></p>
       {facts.reason && <p className="hint">{facts.reason}</p>}
-      {nextStep(song.readiness?.status) && <p className="hint song-next-step">{nextStep(song.readiness?.status)}</p>}
+      {measured && nextStep(song.readiness?.status) && <p className="hint song-next-step">{nextStep(song.readiness?.status)}</p>}
       {flagOn('library.capability_readiness') && (
         <dl className="song-facts song-capabilities" aria-label="What it’s ready for">
-          {capabilities(song, { lyrics: flagOn('lyrics.lookup') }).map((item) => (
+          {capabilities(song, { lyrics: flagOn('lyrics.lookup') }).filter((item) => measured || item.name !== 'Stems').map((item) => (
             <div key={item.name}><dt>{item.name}</dt><dd><Status kind={item.kind}>{item.words}</Status></dd></div>
           ))}
         </dl>
       )}
       <dl className="song-facts song-facts-table">
         <div><dt>Length</dt><dd>{clock(song.duration)}</dd></div>
-        <div><dt>Tempo in use</dt><dd>{song.bpm ? `${Math.round(song.bpm)} BPM` : 'Not measured yet'}{song.override_bpm ? ' (your correction)' : ''}</dd></div>
-        <div><dt>Tempo measured</dt><dd>{detectedTempo ? `${detectedTempo} BPM` : 'Not measured yet'}</dd></div>
-        <div><dt>Key in use</dt><dd>{song.camelot ?? 'Not measured yet'}{song.override_camelot ? ' (your correction)' : ''}</dd></div>
-        <div><dt>Key measured</dt><dd>{song.detected_camelot ?? 'Not measured yet'}</dd></div>
+        {measured && (
+          <>
+            <div><dt>Tempo in use</dt><dd>{song.bpm ? `${Math.round(song.bpm)} BPM` : 'Not measured yet'}{song.override_bpm ? ' (your correction)' : ''}</dd></div>
+            <div><dt>Tempo measured</dt><dd>{detectedTempo ? `${detectedTempo} BPM` : 'Not measured yet'}</dd></div>
+            <div><dt>Key in use</dt><dd>{song.camelot ?? 'Not measured yet'}{song.override_camelot ? ' (your correction)' : ''}</dd></div>
+            <div><dt>Key measured</dt><dd>{song.detected_camelot ?? 'Not measured yet'}</dd></div>
+          </>
+        )}
         {flagOn('lyrics.lookup') && <div><dt>Lyrics</dt><dd>{lyricWords(song.lyric_status)}</dd></div>}
       </dl>
       {flagOn('library.related_links') && <SongRelated song={song} />}

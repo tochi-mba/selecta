@@ -46,13 +46,15 @@ export type LibraryRowProps = {
   lyricsFlag: boolean;
   priorityFlag: boolean;
   neverFlag: boolean;
+  /** songs here are analysed (local mode); a browser library shows only the length */
+  measured?: boolean;
 };
 
 const lineWords = (place: number) => place < 0 ? 'Analyse now' : place === 0 ? 'Analysing…' : `Waiting, ${place} ahead`;
 
 export const LibraryRow = memo(function LibraryRow({
   song, page, actions, selectable, selected, selectionFull, searching, failed, building, duplicate, sharedTitle,
-  inMix, searched, playing, linePlace, eta, lyricsFlag, priorityFlag, neverFlag,
+  inMix, searched, playing, linePlace, eta, lyricsFlag, priorityFlag, neverFlag, measured = true,
 }: LibraryRowProps) {
   const facts = trackReadiness(song);
   const where = availabilityFacts(song.availability);
@@ -80,21 +82,23 @@ export const LibraryRow = memo(function LibraryRow({
       <small className="facts song-columns">
         {/* S4-0091-05: the spaces between facts are dropped by the flex layout but keep NVDA from
             running them together ("120 BPM8A1:30Ready") when it reads the row as one line */}
-        <span>{song.bpm !== null ? `${Math.round(song.bpm)} BPM` : 'Not analysed'}</span>{' '}
+        {/* a browser library is never analysed, so its rows don't say "not yet" about every song */}
+        {measured && <><span>{song.bpm !== null ? `${Math.round(song.bpm)} BPM` : 'Not analysed'}</span>{' '}</>}
         {/* LX-0344-03: an unknown key says so, rather than leaving a bare dash */}
-        <span>{song.camelot ?? (song.bpm !== null ? 'Key unknown' : 'No key yet')}</span>{' '}
+        {measured && <><span>{song.camelot ?? (song.bpm !== null ? 'Key unknown' : 'No key yet')}</span>{' '}</>}
         <span>{clock(song.duration)}</span>{' '}
         {lyricsFlag && song.lyric_status === 'synced' && <><span>lyrics</span>{' '}</>}
       </small>{' '}
       <div className="song-readiness">
         {where && <Status kind={where.kind}>{where.words}</Status>}
         {where && !where.canPlay && <small className="hint song-why">{where.reason}</small>}
-        <Status kind={facts.kind}>{facts.words}</Status>
-        {facts.reason && !facts.canStartMix && <small className="hint song-why">{facts.reason}</small>}
+        {/* a song that can't play here is explained by where it is; its readiness would only repeat it */}
+        {!(where && !where.canPlay) && <Status kind={facts.kind}>{facts.words}</Status>}
+        {!(where && !where.canPlay) && facts.reason && !facts.canStartMix && <small className="hint song-why">{facts.reason}</small>}
       </div>
       <div className="song-actions">
         {facts.canStartMix && <Action title="Build a mix that starts here" working="Building your mix…" disabled={building || searching} run={() => actions.start(song)}>Start a mix</Action>}
-        {facts.canAnalyse && (
+        {facts.canAnalyse && measured && (
           <Action disabled={queued} working="Asking…" run={() => actions.analyse(song)}>
             {song.readiness?.status === 'needs_attention' && !queued ? 'Try analysing again' : lineWords(linePlace)}
             {eta !== undefined && `, ${etaWords(eta)}`}

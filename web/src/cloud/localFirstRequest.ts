@@ -49,12 +49,12 @@ export async function readCatalogue(cloud: Request): Promise<CatalogueSong[]> {
  * connected files (`here`: song id to whether the file opens or needs permission again) and the
  * content hashes of the account's hosted copies, for a grandfathered account. Either may be absent. */
 export type AvailabilitySources = {
-  here?: () => Promise<ReadonlyMap<number, 'here' | 'reauth'>>;
+  here?: () => Promise<ReadonlyMap<number, 'here' | 'reauth' | 'reconnect'>>;
   hosted?: (songs: readonly CatalogueSong[]) => Promise<ReadonlySet<number>>;
   /** Where browser mixes are kept (BF-0462-05); without it the current mix is empty. */
   recipes?: RecipeStore;
 };
-export type Availability = { here: ReadonlyMap<number, 'here' | 'reauth'>; hosted: ReadonlySet<number> };
+export type Availability = { here: ReadonlyMap<number, 'here' | 'reauth' | 'reconnect'>; hosted: ReadonlySet<number> };
 export const NO_AVAILABILITY: Availability = { here: new Map(), hosted: new Set() };
 
 /** One song's availability: this device first, then a hosted copy, then the member's other devices. */
@@ -63,6 +63,8 @@ export function availabilityOf(song: CatalogueSong, known: Availability): SongAv
   if (device === 'here') return 'here';
   if (known.hosted.has(song.id)) return 'hosted';
   if (device === 'reauth') return 'reauth';
+  // picked on this device in an earlier visit: it is here, the browser just needs it chosen again
+  if (device === 'reconnect') return 'reconnect';
   return (song.available_on ?? 0) > 0 ? 'elsewhere' : 'nowhere';
 }
 
@@ -84,7 +86,7 @@ export function asLibrarySong(song: CatalogueSong, known: Availability = NO_AVAI
     readiness: playable
       ? { status: 'mix_ready', reason: WORKED_OUT_LIVE }
       : here
-        ? { status: 'analysed_incomplete', reason: 'Plays once it is on this device.' }
+        ? { status: 'analysed_incomplete', reason: availability === 'reconnect' ? 'Plays once you connect it again.' : 'Plays once it is on this device.' }
         : { status: 'missing', reason: '' },
   };
 }
@@ -105,7 +107,7 @@ export function libraryPage(songs: CatalogueSong[], search: URLSearchParams, kno
       if (state === 'all' || state === 'not_yet') return true;
       const where = availabilityOf(song, known);
       if (state === 'ready') return where === 'here' || where === 'hosted';
-      if (state === 'attention') return where === 'reauth' || where === 'nowhere';
+      if (state === 'attention') return where === 'reauth' || where === 'reconnect' || where === 'nowhere';
       return state === 'missing' && where === 'nowhere';
     })
     .sort((one, other) => {

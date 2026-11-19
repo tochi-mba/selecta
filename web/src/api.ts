@@ -405,7 +405,9 @@ export type LibrarySong = {
 /** here: a file on this device that opens; reauth: on this device, but the browser needs the
  * member's permission again; hosted: a hosted copy in SelectaDJ Cloud plays it; elsewhere: on
  * another of the member's devices, not this one; nowhere: on none of their devices right now. */
-export type SongAvailability = 'here' | 'reauth' | 'hosted' | 'elsewhere' | 'nowhere';
+/** `reconnect`: connected on this device before, by files picked for one visit; picking them
+ * again plays them (the browser keeps no lasting access to picked files). */
+export type SongAvailability = 'here' | 'reauth' | 'reconnect' | 'hosted' | 'elsewhere' | 'nowhere';
 
 export type LibraryPage = { songs: LibrarySong[]; total: number; next: string | null };
 
