@@ -284,17 +284,27 @@ def apply(
 
 
 def sweep(
-    engine: Engine, now: float | None = None, notify: Notify = outbox_notify
+    engine: Engine,
+    now: float | None = None,
+    notify: Notify | None = None,
+    sender: Any = None,
 ) -> dict[str, int]:
-    """One pass over every kiosk zone; each zone in its own workspace's transaction."""
+    """One pass over every kiosk zone; each zone in its own workspace's transaction. Without a
+    `notify`, alerts write the `zone.alert` event and email through `sender` after each commit
+    (`business.alert_mail`)."""
+    from selecta.business import alert_mail
+
+    outgoing = alert_mail.Outgoing()
+    chosen = notify or alert_mail.collecting_notify(outgoing)
     with transaction(engine) as conn:
         now = db_now(conn) if now is None else now
         found = zone_facts(conn, now)
-    total = {"zones": len(found), "opened": 0, "told": 0, "escalated": 0, "closed": 0}
+    total = {"zones": len(found), "opened": 0, "told": 0, "escalated": 0, "closed": 0, "emailed": 0}
     for facts in found:
         with transaction(engine, facts.workspace_id) as conn:
-            for key, value in apply(conn, facts, now, notify).items():
+            for key, value in apply(conn, facts, now, chosen).items():
                 total[key] += value
+        total["emailed"] += alert_mail.send(sender, outgoing)
     return total
 
 
@@ -307,7 +317,70 @@ def acknowledge(engine: Engine, workspace_id: str, alert_id: str, user_id: str) 
         )
 
 
+def open_for(
+    engine: Engine, *, workspace_id: str, user_id: str, venue_id: str | None = None
+) -> list[dict[str, Any]]:
+    """Open (told) alerts in zones this person may see, newest first, with plain copy. Pending
+    conditions younger than their threshold are not shown: they may still clear by themselves."""
+    from selecta.business.access import guard
+    from selecta.business.schema import venues, zones
+
+    with transaction(engine, workspace_id) as conn:
+        actor = guard.actor_for(
+            conn, user_id=user_id, organisation_id=workspace_id, workspace_id=workspace_id
+        )
+        rows = (
+            conn.execute(
+                sa.select(
+                    zone_alerts,
+                    zones.c.name.label("zone_name"),
+                    zones.c.venue_id.label("zone_venue"),
+                    venues.c.name.label("venue_name"),
+                    devices.c.name.label("player"),
+                )
+                .select_from(
+                    zone_alerts.join(zones, zones.c.id == zone_alerts.c.zone_id)
+                    .join(venues, venues.c.id == zones.c.venue_id)
+                    .outerjoin(devices, devices.c.id == zone_alerts.c.device_id)
+                )
+                .where(zone_alerts.c.workspace_id == workspace_id, zone_alerts.c.status == "open")
+                .order_by(zone_alerts.c.started_at.desc())
+            )
+            .mappings()
+            .all()
+        )
+    out = []
+    for row in rows:
+        if venue_id is not None and row["zone_venue"] != venue_id:
+            continue
+        if not guard.can(
+            actor, "business.devices.read", venue_id=row["zone_venue"], zone_id=row["zone_id"]
+        ):
+            continue
+        player = row["player"] or f"{row['zone_name']} player"
+        from datetime import UTC, datetime
+
+        since = datetime.fromtimestamp(row["started_at"], UTC).strftime("%H:%M UTC")
+        out.append(
+            {
+                "id": row["id"],
+                "kind": row["kind"],
+                "zone_id": row["zone_id"],
+                "venue_id": row["zone_venue"],
+                "zone_name": row["zone_name"],
+                "venue_name": row["venue_name"],
+                "started_at": row["started_at"],
+                "acknowledged_at": row["acknowledged_at"],
+                "text": COPY.get(row["kind"], "{player} needs a look.").format(
+                    player=player, since=since
+                ),
+            }
+        )
+    return out
+
+
 __all__ = [
+    "open_for",
     "COPY",
     "EVERY_S",
     "FLAG",

@@ -352,14 +352,17 @@ def _business_hours(engine: Engine, plan: Plan) -> None:
     plan.tasks.append(Task(zone_clock.TASK_NAME, zone_clock.EVERY_S, run))
 
 
-def _business_kiosk_alerts(engine: Engine, plan: Plan) -> None:
-    """Silent-zone and offline alerts for kiosk zones (ADR-0445), while business.kiosk is on."""
-    from selecta.business import alerts
+def _business_kiosk_alerts(engine: Engine, env: Mapping[str, str], plan: Plan) -> None:
+    """Silent-zone and offline alerts for kiosk zones (ADR-0445), while business.kiosk is on.
+    Emails go through the configured provider, or the dev stack's /dev/mail inbox."""
+    from selecta.business import alert_mail, alerts
+
+    sender = alert_mail.sender_for(env)
 
     def run(_fence: TermFence) -> object:
         if not _flag_on(alerts.FLAG):
             return None
-        return alerts.sweep(engine)
+        return alerts.sweep(engine, sender=sender)
 
     plan.tasks.append(Task(alerts.TASK_NAME, alerts.EVERY_S, run))
 
@@ -394,7 +397,7 @@ def cloud_plan(engine: Engine, env: Mapping[str, str] | None = None) -> Plan:
     _dmca(engine, env, plan)
     _emails(engine, env, plan)
     _business_hours(engine, plan)
-    _business_kiosk_alerts(engine, plan)
+    _business_kiosk_alerts(engine, env, plan)
     _business_billing(engine, env, plan)
     from selecta.observability import leader_metrics
 

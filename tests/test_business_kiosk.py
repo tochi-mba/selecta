@@ -487,3 +487,23 @@ def test_with_the_flag_off_every_kiosk_route_is_refused(party):
     ):
         assert answer.status_code == 403
         assert answer.json()["code"] == "flag_off"
+
+
+# ---- the kiosk as a business device principal (ADR-0452, guard.device_actor)
+
+
+def test_a_paired_kiosk_token_resolves_to_its_zone_as_a_device_actor(party, venue):
+    from selecta.business.access import BusinessNotFound
+    from selecta.business.access import guard
+
+    player = paired(party, venue)
+    token = player.client.cookies.get(kiosk.TOKEN_COOKIE)
+    with transaction(party.engine) as conn:
+        actor = guard.device_actor(conn, token=token)
+    assert actor.device_id == player.device_id
+    assert actor.device_zone_id == venue["zone"]
+    assert actor.device_venue_id == venue["venue"]
+
+    party.client.delete(f"/api/devices/{player.device_id}/kiosk", headers=auth(ALICE, venue["org"]))
+    with transaction(party.engine) as conn, pytest.raises(BusinessNotFound):
+        guard.device_actor(conn, token=token)

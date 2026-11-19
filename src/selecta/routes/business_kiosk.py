@@ -28,7 +28,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 
-from selecta.business import health, kiosk, offline, zone_clock
+from selecta.business import alerts, health, kiosk, offline, zone_clock
 from selecta.business.access import BusinessForbidden, BusinessNotFound
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, transaction
@@ -248,6 +248,36 @@ def install_routes(
             )
         )
         return {"kiosks": found}
+
+    @app.get("/api/business/zone-alerts")
+    def zone_alerts_open(
+        request: Request,
+        venue_id: str | None = None,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ) -> dict[str, Any]:
+        """The players that need a look (ADR-0453 Needs attention); refreshed on `zone.alert`."""
+        workspace_id, user_id = organisation(request, claims)
+        found = business_call(
+            lambda: alerts.open_for(
+                engine, workspace_id=workspace_id, user_id=user_id, venue_id=venue_id
+            )
+        )
+        return {"alerts": found}
+
+    @app.post("/api/business/zone-alerts/{alert_id}/acknowledge")
+    def zone_alert_acknowledge(
+        alert_id: str,
+        request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ) -> dict[str, Any]:
+        workspace_id, user_id = organisation(request, claims)
+        visible = business_call(
+            lambda: alerts.open_for(engine, workspace_id=workspace_id, user_id=user_id)
+        )
+        if alert_id not in {item["id"] for item in visible}:
+            raise HTTPException(status_code=404, detail={"code": "not_found"})
+        alerts.acknowledge(engine, workspace_id, alert_id, user_id)
+        return {"id": alert_id, "acknowledged": True}
 
     @app.delete("/api/devices/{device_id}/kiosk")
     def unpair(device_id: str, request: Request, claims: Claims = Depends(current_claims)):  # noqa: B008

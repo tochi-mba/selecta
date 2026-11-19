@@ -1,7 +1,8 @@
 """Create the SelectaDJ for Business products, prices and volume coupon in Stripe test mode
 (ADR-0447 BZ-0447-01), and print the price map for `SELECTA_BUSINESS_STRIPE_PRICES`.
 
-Run `uv run selecta business-stripe-setup` with a test-mode key in `SELECTA_STRIPE_SECRET_KEY`.
+Run `SELECTA_FLAGS="+business.orgs +business.billing" uv run selecta business-stripe-setup`
+with a test-mode key in `SELECTA_STRIPE_SECRET_KEY` (the command belongs to `business.billing`).
 It is safe to run again: a price is found by its lookup key before anything is created, the
 coupon by its id, and every create carries an idempotency key. A live key is refused.
 """

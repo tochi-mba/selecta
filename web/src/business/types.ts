@@ -147,6 +147,19 @@ export type Device = {
   warning?: string | null;
 };
 
+/** An open kiosk alert as the server words it (ADR-0445 BZ-0445-10). */
+export type ZoneAlert = {
+  id: string;
+  kind: 'silent' | 'unreachable' | 'needs_tap' | 'needs_pairing' | 'key_mismatch';
+  zone_id: string;
+  venue_id: string;
+  zone_name: string;
+  venue_name: string;
+  started_at: number;
+  acknowledged_at: number | null;
+  text: string;
+};
+
 export type Daypart = { id: string; name: string; start: number; end: number; energy: 'calm' | 'steady' | 'lifted' | 'peak'; crate_ids?: string[] };
 export type ZoneSchedule = { zone_id: string; version: number; updated_by?: string | null; updated_at?: number | null; dayparts: Daypart[] };
 

@@ -98,6 +98,8 @@
         "POST /api/kiosk/resync",
         "POST /api/kiosk/pin",
         "GET /api/business/kiosks",
+        "GET /api/business/zone-alerts",
+        "POST /api/business/zone-alerts/{alert_id}/acknowledge",
         "DELETE /api/devices/{device_id}/kiosk"
       ],
       "modes": ["cloud"],
@@ -138,6 +140,7 @@
         "POST /api/business/billing/transfers/{transfer_id}/accept",
         "POST /api/business/billing/transfers/{transfer_id}/cancel"
       ],
+      "cli": ["business-stripe-setup"],
       "modes": ["cloud"],
       "scope": "workspace",
       "kind": "release",

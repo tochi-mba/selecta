@@ -182,6 +182,8 @@ BUSINESS_SCOPED = {
     ("PUT", "/api/business/zones/{zone_id}/cache-report"),
     ("POST", "/api/kiosk/pair"),
     ("GET", "/api/business/kiosks"),
+    ("GET", "/api/business/zone-alerts"),
+    ("POST", "/api/business/zone-alerts/{alert_id}/acknowledge"),
     ("DELETE", "/api/devices/{device_id}/kiosk"),
     ("GET", "/api/workspaces"),
     # ADR-0452/0453: people, invitations, overview and setup; every one resolves the caller in

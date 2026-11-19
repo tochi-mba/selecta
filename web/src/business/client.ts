@@ -13,6 +13,7 @@ import {
 } from './clientAdapters';
 import { TEMPLATES } from './forms/DaypartBar';
 import type {
+  ZoneAlert,
   BillingSummary, CheckoutAnswer, VenueTransfer, CheckoutRequest, ContentRules, CostPreview, Daypart, Device, GuestRequest, Holiday, Licence, Member, Org, Overview,
   Role, SetupProgress, Venue, WeekHours, WorkspaceSummary, Zone, ZoneSchedule,
 } from './types';
@@ -38,6 +39,8 @@ export const ROUTES = {
   unpair: (device: string) => `/devices/${enc(device)}/kiosk`,
   pair: '/kiosk/pair',
   kiosks: (venue?: string) => `/business/kiosks${venue ? `?venue_id=${enc(venue)}` : ''}`,
+  zoneAlerts: (venue?: string) => `/business/zone-alerts${venue ? `?venue_id=${enc(venue)}` : ''}`,
+  zoneAlertAck: (id: string) => `/business/zone-alerts/${enc(id)}/acknowledge`,
   schedule: (zone: string) => `/business/zones/${enc(zone)}/programme`,
   scheduleApply: '/business/schedules/apply',
   commands: (zone: string) => `/business/zones/${enc(zone)}/commands`,
@@ -151,6 +154,9 @@ export function businessClient(api: Api, workspaceId?: string) {
     pair: (body: { code: string; zone_id: string; name: string; replace_device_id?: string }) => call<Device>(ROUTES.pair, json('POST', body)),
     /** The kiosk players this person may see, with their latest health (ADR-0445). */
     kiosks: async (venue?: string) => (await call<{ kiosks: Device[] }>(ROUTES.kiosks(venue))).kiosks,
+    /** Open player alerts (ADR-0445 BZ-0445-10): silent, offline, needs a tap, needs pairing, refused copy. */
+    zoneAlerts: async (venue?: string) => (await call<{ alerts: ZoneAlert[] }>(ROUTES.zoneAlerts(venue))).alerts,
+    acknowledgeZoneAlert: (id: string) => call<{ id: string }>(ROUTES.zoneAlertAck(id), json('POST')),
     schedule: async (zone: string) => scheduleOf(zone, await call<ProgrammeAnswer>(ROUTES.schedule(zone))),
     saveSchedule: async (zone: string, schedule: ZoneSchedule) => scheduleOf(zone, await call<ProgrammeAnswer>(ROUTES.schedule(zone), json('PUT', programmeBody(schedule.dayparts)))),
     previewApply: (_org: string, body: { venue_ids: string[]; template?: string; dayparts?: Daypart[] }) =>
