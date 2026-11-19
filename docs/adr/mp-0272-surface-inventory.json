@@ -360,6 +360,12 @@
     "owner": "web/src/cloud/serverFreeControls.tsx"
    },
    {
+    "id": "site.overlay.cloud.delete-saved-mix",
+    "title": "Delete (saved mix name)?",
+    "kind": "dialog",
+    "owner": "web/src/cloud/SavedBrowserMixes.tsx"
+   },
+   {
     "id": "site.overlay.business.add-venue",
     "title": "Add a venue",
     "kind": "dialog",
