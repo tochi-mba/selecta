@@ -187,6 +187,11 @@ export function chooseMove(request: ScriptRequest, room: number): Choice {
   const may = (move: SeamMove) => !request.allowed || request.allowed.includes(move);
   if (!abilities.beatmatch.ok) return { fade: abilities.beatmatch.reason, wanted: 'beatmatch' };
   if (!confident(a)) {
+    // local mode still plays a tempo-free move when it can't lock the beat; a room forgives an
+    // unsure beat where an echo would repeat off it
+    const unsure = 'The first song’s beat isn’t clear enough to blend or echo in time';
+    if (abilities.echo.ok && may('reverb_wash')) return { move: 'reverb_wash', why: `${unsure}, so it washes out into a room as the next song arrives.` };
+    if (may('cut_on_one')) return { move: 'cut_on_one', why: `${unsure}, so it cuts across to the next song.` };
     return { fade: a.tempo.ambiguous ? 'its tempo is half/double-time ambiguous on the outgoing song' : 'its tempo confidence is low on the outgoing song', wanted: 'beatmatch' };
   }
   const tempoFree = (why: string): Choice => {
@@ -258,11 +263,14 @@ export function scriptSeam(request: ScriptRequest): SeamSchedule {
   }
   if (!abilities.beatmatch.ok) return fade(exitWanted(3), 'beatmatch', abilities.beatmatch.reason);
   const unsure = (track: TrackTiming, side: string) => `${track.tempo.ambiguous ? 'its tempo is half/double-time ambiguous' : 'its tempo confidence is low'} on ${side}`;
-  if (!confident(a)) return fade(exitWanted(3), 'beatmatch', unsure(a, 'the outgoing song'));
-  const beat = 60 / a.tempo.bpm;
+  const aSure = confident(a);
+  // a wash or a cut can land without a sure beat (not on it); everything else needs one
+  if (!aSure && move !== 'reverb_wash' && move !== 'cut_on_one') return fade(exitWanted(3), 'beatmatch', unsure(a, 'the outgoing song'));
+  const beat = aSure ? 60 / a.tempo.bpm : Math.min(1, Math.max(0.3, a.tempo.bpm > 0 ? 60 / a.tempo.bpm : 0.5));
 
   if (TEMPO_FREE.includes(move)) {
-    const cut = firstBeatAtOrAfter(a.beats, exitWanted(move === 'reverb_wash' ? beat : 0));
+    const exitAt = exitWanted(move === 'reverb_wash' ? beat : 0);
+    const cut = aSure ? firstBeatAtOrAfter(a.beats, exitAt) : exitAt;
     const entry = confident(b) ? firstBeatAtOrAfter(b.beats, entryWanted) ?? entryWanted : entryWanted;
     if (cut === null) return fade(exitWanted(3), 'beatmatch', 'no usable beat near the seam');
     if (move === 'cut_on_one') {

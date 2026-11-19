@@ -451,7 +451,10 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     const loaded = await deps.load(index);
     if (mine !== generation || disposed) return;
     if (loaded.kind === 'missing') {
-      deps.store.set({ phase: 'idle', notice: '' });
+      // reached by skipping songs this device can't play: say so, rather than stop in silence
+      deps.store.set(clearNotice
+        ? { phase: 'idle', notice: '' }
+        : { phase: 'idle', notice: 'None of the songs left in this mix can play on this device right now. Connect your music in Library, then press Play.' });
       return;
     }
     if (loaded.kind === 'failed') {

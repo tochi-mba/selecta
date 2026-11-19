@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MixItem } from '../api';
 import * as provider from '../dsp/seamProvider';
+import { LOAD_NEXT_WITHIN } from '../engine/scheduler';
 import { flagOn } from '../flags';
 import { browserMovesAllowed, browserMovesOn } from './browserMoves';
 import type { MusicSource, SeamRecord, SeamSettingsLike } from '../dsp/seamProvider';
@@ -77,10 +78,15 @@ export function nowStateFrom(facts: PlayerFacts, sound: { volume: number; muted:
   } else if (elsewhere && session && session.state_confidence !== 'uncertain') {
     phase = session.state === 'playing' ? 'playing' : session.state === 'paused' ? 'paused' : 'idle';
   }
-  const position = facts.speaking && facts.here ? facts.here.song_index : session?.song_index ?? 0;
-  const offsetMs = facts.speaking && facts.here
-    ? facts.here.offset_ms
-    : session && phase !== 'idle' ? extrapolate(session, facts.serverNow) : 0;
+  const engineHere = facts.speaking && facts.here;
+  // a session left on a song past the end of this mix (an older, longer mix) points at nothing:
+  // it reads as this mix's start, never as an "Untitled" last song
+  const remembered = session?.song_index ?? 0;
+  const stale = !engineHere && facts.mix.length > 0 && remembered >= facts.mix.length;
+  const position = engineHere ? facts.here!.song_index : stale ? 0 : remembered;
+  const offsetMs = engineHere
+    ? facts.here!.offset_ms
+    : session && phase !== 'idle' && !stale ? extrapolate(session, facts.serverNow) : 0;
   const status = statusOf(facts);
   const words = status ? playbackStatusText(status) : '';
   // only a schedule this device's engine was handed, out of the song playing here, counts
@@ -139,6 +145,21 @@ export class LocalFirstPlayer implements PlayerLike {
     }
     if (actions.speaker) actions.speaker.setVolume(this.sound.muted ? 0 : this.sound.volume);
     this.publish();
+    this.landJump();
+  }
+
+  /** The song a "jump to the transition" is waiting on, until its seam has been scheduled. */
+  private jumping: number | null = null;
+
+  /** Once the engine has scheduled the seam out of the song a jump was asked in, land a few
+   * seconds before it, so the jump plays the transition as local mode's does. */
+  private landJump() {
+    if (this.jumping === null) return;
+    const seam = this.state.seamAt;
+    if (this.state.position !== this.jumping) { this.jumping = null; return; }
+    if (seam === null) return;
+    this.jumping = null;
+    if (this.state.songTime < seam - JUMP_LEAD_SECONDS) void this.seekTo(this.state.position, Math.max(0, seam - JUMP_LEAD_SECONDS));
   }
 
   private publish(said?: string) {
@@ -184,9 +205,19 @@ export class LocalFirstPlayer implements PlayerLike {
   async togglePause(): Promise<void> {
     if (!this.facts.mix.length) return this.publish(NOTHING_TO_PLAY);
     const playing = this.state.phase === 'playing';
+    // a session left past the end of this mix (an older, longer mix) names no song: this mix
+    // starts from its first song instead of stopping in silence
+    const pastEnd = (this.facts.view?.session?.song_index ?? 0) >= this.facts.mix.length && !(this.speaking && this.facts.here);
     if (!this.speaking && this.facts.view?.speaker !== 'elsewhere') {
       const problem = await this.actions.playHere();
+      if (!problem && pastEnd) return this.seekTo(0, 0);
       return this.publish(problem);
+    }
+    if (pastEnd && this.speaking) {
+      // this device is the speaker: its engine starts the first song and its heartbeat tells the
+      // session, rather than a seek and a play racing each other through the server
+      await this.actions.speaker?.start(0, 0, true);
+      return this.publish('');
     }
     if (this.actions.remoteControl) await this.actions.command(playing ? 'pause' : 'play');
     else if (this.speaking) {
@@ -209,9 +240,20 @@ export class LocalFirstPlayer implements PlayerLike {
     await this.seekTo(target, 0);
   }
 
-  /** The browser engine plans no transitions yet, so the jump goes to the next song's start. */
+  /** Jump to the transition, as local mode's does: a few seconds before it. The browser plans a
+   * seam only as its song nears the end, so a jump first moves to where planning starts, then
+   * lands before the seam once it is scheduled. Elsewhere (no engine here) it goes to the next song. */
   async skip(): Promise<void> {
-    await this.next();
+    if (!this.speaking || this.state.position + 1 >= this.facts.mix.length) return this.next();
+    const seam = this.state.seamAt;
+    if (seam !== null) {
+      if (this.state.songTime < seam - JUMP_LEAD_SECONDS) return this.seekTo(this.state.position, seam - JUMP_LEAD_SECONDS);
+      return this.next();
+    }
+    const duration = this.facts.mix[this.state.position]?.duration ?? 0;
+    const planFrom = Math.max(0, duration - LOAD_NEXT_WITHIN + 1);
+    this.jumping = this.state.position;
+    if (this.state.songTime < planFrom) await this.seekTo(this.state.position, planFrom);
   }
 
   async seek(seconds: number): Promise<void> {
@@ -331,6 +373,8 @@ export const startBrowserEngine: EngineStarter = async (resolve, queueLength, se
 
 /** How many scheduled seams the hook remembers for surfaces and tests. */
 export const SEAMS_KEPT = 128;
+/** A jump to the transition lands this long before the seam starts. */
+export const JUMP_LEAD_SECONDS = 4;
 
 /** The hook the local-first shell uses: one stable LocalFirstPlayer over the device session. */
 /** Worker calibration is device evidence (ADR-0457): measured on this device, at most 30 days

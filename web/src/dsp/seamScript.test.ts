@@ -209,10 +209,15 @@ describe('SelectaDJ picking a move in the browser (cloud.browser_moves)', () => 
     expect(nothing.kind).toBe('fade');
   });
 
-  it('fades, saying why, when the outgoing song has no sure beat', () => {
-    const schedule = scriptSeam({ a: track(120, 0.2), b: track(120), move: 'auto', abilities: ECHO });
-    expect(schedule.kind).toBe('fade');
-    expect(schedule.degraded?.at(-1)?.reason).toContain('outgoing song');
+  it('without a sure beat on the first song, washes it out (or cuts), as local mode still moves', () => {
+    const washed = scriptSeam({ a: track(120, 0.2), b: track(120), move: 'auto', abilities: ECHO });
+    expect(washed.style).toBe('reverb_wash');
+    expect(washed.why).toContain('isn’t clear enough to blend or echo in time');
+    expect(scriptSeam({ a: track(120, 0.2), b: track(120), move: 'auto', abilities: ALL }).style).toBe('cut_on_one');
+    // an echo needs the beat it repeats on: asked for by name, it fades and says why
+    const echo = scriptSeam({ a: track(120, 0.2), b: track(120), move: 'echo_out', abilities: ECHO });
+    expect(echo.kind).toBe('fade');
+    expect(echo.degraded?.at(-1)?.reason).toContain('outgoing song');
   });
 
   it('echoes out: A’s last beat into the send, A cut on the beat, B landing under the tail', () => {

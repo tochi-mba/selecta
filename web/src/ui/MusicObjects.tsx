@@ -113,7 +113,7 @@ export function SeamDiagram({ seam, from, into, names = {}, compact = false, liv
   const chosenName = names[seam.settings.move ?? 'auto'] ?? (seam.settings.move === 'auto' || !seam.settings.move ? 'SelectaDJ’s choice' : seam.settings.move.replaceAll('_', ' '));
   const live = workedOutLive && state.status === 'none';
   const displayName = made || live ? state.label ?? (move ? names[move] ?? move.replaceAll('_', ' ') : 'Transition') : chosenName;
-  const status = made ? (seam.too_soon ? 'Rendered; would be missed' : 'Rendered transition') : live ? 'Worked out as it plays' : state.status === 'failed' ? 'Render failed' : state.status === 'rendering' ? 'Rendering' : state.status === 'queued' ? 'Queued to render' : 'Planned, not rendered';
+  const status = made ? (seam.too_soon ? 'Rendered; would be missed' : 'Rendered transition') : live ? 'Live' : state.status === 'failed' ? 'Render failed' : state.status === 'rendering' ? 'Rendering' : state.status === 'queued' ? 'Queued to render' : 'Planned, not rendered';
   const fallback = made && (state.fell_back || (seam.settings.move && seam.settings.move !== 'auto' && state.style && state.style !== seam.settings.move));
   const meaning = [status, displayName, 'from ' + from + ' into ' + into, fallback ? 'Different from the requested move' : ''].filter(Boolean).join('. ');
   return (

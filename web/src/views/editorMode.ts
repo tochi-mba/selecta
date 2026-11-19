@@ -42,7 +42,7 @@ export type StorySeamWords = { kind: StatusKind; headline: string; detail: strin
 export function storySeamWords(seam: MixItem['seam'] | undefined, names: Record<string, string>, from: string, live = false, played?: PlayedSeam): StorySeamWords {
   if (!seam) return { kind: 'unavailable', headline: 'No transition', detail: null };
   if (live && seam.state.status === 'none' && played) {
-    return { kind: played.fellBack ? 'warning' : 'ready', headline: `Played here: ${played.label}`, detail: played.detail ?? seam.state.why ?? null };
+    return { kind: played.fellBack ? 'warning' : 'ready', headline: `Scheduled here: ${played.label}`, detail: played.detail ?? seam.state.why ?? null };
   }
   if (live && seam.state.status === 'none') return { kind: 'planned', headline: seam.state.label ?? 'Browser blend', detail: seam.state.why ?? LIVE_SEAM_WORDS };
   const layers = seamLayers(seam, names);

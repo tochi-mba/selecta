@@ -21,6 +21,7 @@ import { clearVisualState, createVisualState, migrateSpectrumShape, paintVisualF
 import { createFeatureTracker } from './visualizer/features';
 import { createFrameSource, gridOf } from './visualizer/source';
 import { ViewProps } from './shared';
+import { PlayedTransitions, playedKey } from './liveTransitions';
 import { FirstHandoff } from './FirstHandoff';
 import { Strip, StripPlaceholder } from './NowStrip';
 
@@ -524,10 +525,29 @@ function WhyThisTransition({ from, into, names }: { from?: ViewProps['mix'][numb
 
 /** What's coming, what was asked for, and what will really play, kept apart. Whether it exists as
  * audio yet comes from the render, not from the plan. */
-function TransitionTruth({ seam, ready, names }: { seam: ViewProps['mix'][number]['seam']; ready: boolean; names: Record<string, string> }) {
+function TransitionTruth({ seam, ready, names, live = false, pair }: { seam: ViewProps['mix'][number]['seam']; ready: boolean; names: Record<string, string>; live?: boolean; pair?: string }) {
   const facts = seamFacts(seam, names);
   const state = seam?.state;
   const rendered = state?.status === 'ready';
+  const scheduled = useContext(PlayedTransitions)[pair ?? ''];
+  // a browser mix renders nothing ahead: it says what this device has scheduled, or what it will pick
+  if (live && state?.status === 'none') {
+    return (
+      <div className="transition-truth">
+        {scheduled ? (
+          <>
+            <p><Status kind={scheduled.fellBack ? 'warning' : 'ready'}>Scheduled here: {scheduled.label}</Status><TermHint term="transition" /></p>
+            {scheduled.detail && <p className="hint">{scheduled.detail}</p>}
+          </>
+        ) : (
+          <>
+            <p><Status kind="planned">{state.label ?? 'Worked out as it plays'}</Status><TermHint term="transition" /></p>
+            {state.why && <p className="hint">{state.why}</p>}
+          </>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="transition-truth">
       <p><Status kind={facts.kind}>{facts.words}</Status><TermHint term="transition" /></p>
@@ -781,7 +801,7 @@ export function Now(props: ViewProps) {
                   <RequestTag item={next} />
                 </div>
               )}
-              <TransitionTruth seam={next.seam} ready={now.nextReady} names={names} />
+              <TransitionTruth seam={next.seam} ready={now.nextReady} names={names} live={analysisAvailable === false} pair={item ? playedKey(item.song_id, next.song_id) : undefined} />
               {steering && controls && !djControlsOpen && (
                 <button type="button" className="quiet next-steer-open" aria-describedby="next-steer-open-hint"
                   onClick={() => { setDjControlsOpen(true); setSteerFocus(true); }}>

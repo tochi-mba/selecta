@@ -106,7 +106,7 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
             <>
               <b>{label}</b>
               <span className={`pill ${state.status} ${state.status === 'ready' && !state.passed ? 'warned' : ''}`}>
-                {live ? 'Worked out as it plays' : seamStatusWords(state.status, state.passed)}
+                {live ? 'Live' : seamStatusWords(state.status, state.passed)}
                 {state.eta !== undefined && etaWords(state.eta) && `, ${etaWords(state.eta)}`}
               </span>
             </>
@@ -150,7 +150,7 @@ const SeamRow = memo(function SeamRow({ item, previous, rowKey, seamKey, open, n
       </div>
       {live && played && (
         <p className={`seam-played ${played.fellBack ? 'warn' : 'hint'}`}>
-          <b>Played here: {played.label}.</b>{played.detail && ` ${played.detail}`}
+          <b>Scheduled here: {played.label}.</b>{played.detail && ` ${played.detail}`}
         </p>
       )}
       {problem && <p className="warn" role="alert">{problem}</p>}
