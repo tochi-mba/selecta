@@ -131,7 +131,7 @@ def zone(party, signer):
                 created_at=now,
                 last_used_at=now,
                 provenance={
-                    "settings": {"cues": {"a_source_start": 190.0, "b_source_end": 8.0, "seconds": 14.0}}
+                    "settings": {\n                        "cues": {\n                            "a_source_start": 190.0,\n                            "b_source_end": 8.0,\n                            "seconds": 14.0,\n                        }\n                    }
                 },
             )
         )
