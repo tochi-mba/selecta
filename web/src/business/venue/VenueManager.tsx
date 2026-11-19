@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
+import { timeZones } from '../forms/VenueForm';
 import { businessOn, PATHS } from '../context';
 import { VENUE_TABS, type VenueTab } from '../copy/venue';
 import { LicenceAttestationForm } from '../forms/LicenceAttestationForm';
@@ -25,6 +26,8 @@ export function VenueManager({ venueId, tab }: { venueId: string; tab?: string }
   const entitlementsOn = businessOn(ctx.org.features, 'business.entitlements');
   const chosen = tab && tab in VENUE_TABS && (schedulesOn || !SCHEDULE_TABS.includes(tab as VenueTab)) ? tab as VenueTab : 'now';
   const [error, setError] = useState('');
+  const [savingDetails, setSavingDetails] = useState(false);
+  const [detailsMessage, setDetailsMessage] = useState('');
   // kiosk pairing and health ride on business.kiosk (ADR-0445); off, the tab shows tablets only
   const kioskOn = businessOn(ctx.org.features, 'business.kiosk');
   if (!venue) return <section className="biz biz-stack"><h1>Venue unavailable</h1><p>This venue does not exist or is outside your access.</p></section>;
@@ -33,6 +36,36 @@ export function VenueManager({ venueId, tab }: { venueId: string; tab?: string }
       <button type="button" onClick={() => ctx.go(PATHS.venues(ctx.org.id))}>All venues</button>
     </header>
     {disabled && <p className="biz-quiet">{disabled}</p>}
+    {ctx.bizApi && (ctx.org.role === 'owner' || ctx.org.role === 'admin') && <details>
+      <summary>Edit venue details</summary>
+      <form className="biz-row" key={venue.id} onSubmit={async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (disabled || savingDetails || !ctx.bizApi) return;
+        const fields = new FormData(event.currentTarget);
+        const name = String(fields.get('name') ?? '').trim();
+        if (!name) { setDetailsMessage('Enter a venue name.'); return; }
+        setSavingDetails(true);
+        setDetailsMessage('');
+        try {
+          await ctx.bizApi.updateVenue(venue.id, { name, timezone: String(fields.get('timezone')) });
+          await ctx.refresh();
+          setDetailsMessage('Venue details saved.');
+        } catch {
+          setDetailsMessage("Venue details couldn't be saved. Try again.");
+        } finally {
+          setSavingDetails(false);
+        }
+      }}>
+        <fieldset className="biz-row" disabled={Boolean(disabled) || savingDetails}>
+          <label>Venue name <input name="name" required defaultValue={venue.name} /></label>
+          <label>Time zone <select name="timezone" defaultValue={venue.time_zone}>
+            {[...new Set([venue.time_zone, ...timeZones()])].map((zone) => <option key={zone}>{zone}</option>)}
+          </select></label>
+          <button type="submit">Save venue details</button>
+        </fieldset>
+        <p role="status">{detailsMessage}</p>
+      </form>
+    </details>}
     {kioskOn && <PlayerAlerts venueId={venue.id} />}
     <nav className="biz-row" aria-label="Venue sections">
       {(Object.keys(VENUE_TABS) as VenueTab[]).filter((key) => key !== 'requests' || businessOn(ctx.org.features, 'business.rooms')).filter((key) => key !== 'rules' || businessOn(ctx.org.features, 'business.content_controls')).filter((key) => schedulesOn || !SCHEDULE_TABS.includes(key)).filter((key) => key !== 'music' || (entitlementsOn && ctx.api != null)).map((key) => <button key={key} type="button" aria-current={key === chosen ? 'page' : undefined} onClick={() => ctx.go(PATHS.venue(ctx.org.id, venue.id, key))}>{VENUE_TABS[key]}</button>)}
