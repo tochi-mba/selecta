@@ -291,11 +291,12 @@ export function createController(deps: ControllerDeps) {
     }
   }
 
-  /** Upload the plays logged here. Back after an outage, the player also sends where it is
+  /** Upload everything logged here (plays, fallback hand-offs, local actions). Back after an outage, the player also sends where it is
    * on the plan (not while on the fallback reel), so the server replans the horizon from the
    * device's position: what played is a fact (ADR-0446 resync). */
   async function uploadLog(backFromOutage = false): Promise<void> {
-    const pending = deps.log.pending().filter((entry) => entry.kind === 'play');
+    // plays for the play log, fallback hand-offs and local actions for the device log
+    const pending = deps.log.pending();
     const here = backFromOutage && deps.audio.player.mode() === 'horizon' ? position() : null;
     if (!pending.length && !here) return;
     try {

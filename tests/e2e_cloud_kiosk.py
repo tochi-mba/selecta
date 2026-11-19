@@ -13,8 +13,9 @@ that server with `business.orgs`, `business.schedules` and `business.kiosk` on.
 - `POST /test/kiosk/silence {"zone", "silent"}`: from now on the alert pass reads that zone's
   kiosk as playing digital silence (output below -60 dBFS), or stops doing so. Only the alert
   facts are changed; the player keeps playing and reporting as it does.
-- `POST /test/kiosk/sweep {"advance_s"}`: run the silent-zone alert pass once, as if
-  `advance_s` seconds later than now (the pass the maintenance loop runs every 30 s).
+- `POST /test/kiosk/sweep {"age_s"}`: run the silent-zone alert pass once (the pass the
+  maintenance loop runs every 30 s), after moving the start of the zone's alert conditions
+  `age_s` seconds into the past, so a test need not wait out the 60 s silence threshold.
 """
 
 from __future__ import annotations
@@ -214,9 +215,14 @@ def install(
 
     @app.post("/test/kiosk/sweep")
     def sweep(body: dict = Body(default={})) -> dict[str, Any]:  # noqa: B008
-        with transaction(engine) as conn:
-            now = db_now(conn) + float(body.get("advance_s", 0))
-        return alerts.sweep(engine, now=now, notify=lambda *_args: None)
+        from selecta.playback.zone_schema import zone_alerts
+
+        age = float(body.get("age_s", 0))
+        if age:
+            with transaction(engine) as conn:
+                conn.execute(sa.update(zone_alerts).where(zone_alerts.c.status == "pending")
+                             .values(started_at=zone_alerts.c.started_at - age))
+        return alerts.sweep(engine, notify=lambda *_args: None)
 
     @app.post("/test/kiosk/release")
     def release(body: dict = Body(default={})) -> dict[str, Any]:  # noqa: B008

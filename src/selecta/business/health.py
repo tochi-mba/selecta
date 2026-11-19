@@ -471,10 +471,55 @@ def kiosk_view(
 # ---- resync and the staff PIN
 
 
+LOG_KINDS = frozenset({"offline_fallback", "urgent_update", "local_action"})
+
+
+def _store_log(conn: Connection, auth: KioskAuth, entries: list[Mapping[str, Any]], now: float):
+    """Fallback hand-offs and local actions, once per device sequence and once per key."""
+    from selecta.persistence import new_id
+    from selecta.playback.zone_schema import device_log_entries as t
+
+    inserted = duplicates = 0
+    for entry in sorted(entries, key=lambda e: int(e.get("device_seq") or 0)):
+        key = _text(entry.get("idempotency_key"), 128)
+        seq = _int(entry.get("device_seq"))
+        when = _float(entry.get("started_at")) or _float(entry.get("recorded_at"))
+        if key is None or seq is None or when is None:
+            continue
+        payload = {
+            k: v
+            for k, v in entry.items()
+            if k not in ("idempotency_key", "device_seq", "kind")
+            and isinstance(v, (str, int, float, bool))
+        }
+        try:
+            with conn.begin_nested():
+                conn.execute(
+                    t.insert().values(
+                        id=new_id(),
+                        workspace_id=auth.workspace_id,
+                        zone_id=auth.zone_id,
+                        device_id=auth.device_id,
+                        device_seq=seq,
+                        idempotency_key=key,
+                        kind=str(entry["kind"]),
+                        payload=payload,
+                        device_time=when,
+                        server_time=now,
+                        approximate_time=entry.get("approximate_time") is True,
+                    )
+                )
+            inserted += 1
+        except sa.exc.IntegrityError:
+            duplicates += 1
+    return inserted, duplicates
+
+
 def resync_plays(
     engine: Engine, auth: KioskAuth, entries: list[Mapping[str, Any]], *, now: float
 ) -> dict[str, Any]:
-    """Upload plays logged while offline; idempotent by key, ordered by device sequence."""
+    """Upload the kiosk's offline log: plays go to the play log (ADR-0449), fallback hand-offs and
+    local actions to `device_log_entries`; both idempotent, ordered by device sequence."""
     from selecta.business import playlog
     from selecta.business.commercial_facts import SqlFacts
 
@@ -488,12 +533,21 @@ def resync_plays(
         for entry in entries
         if entry.get("kind", "play") == "play"
     ]
+    others = [entry for entry in entries if entry.get("kind") in LOG_KINDS]
+    answer: dict[str, Any] = {
+        "inserted": 0,
+        "duplicates": 0,
+        "log_inserted": 0,
+        "log_duplicates": 0,
+        "server_time": now,
+    }
     with transaction(engine, auth.workspace_id) as conn:
+        answer["log_inserted"], answer["log_duplicates"] = _store_log(conn, auth, others, now)
         org = SqlFacts().organisation(conn, auth.workspace_id)
-        if org is None or auth.venue_id is None or not plays:
-            return {"inserted": 0, "duplicates": 0, "server_time": now}
-        result = playlog.sync_batch(conn, org, auth.venue_id, plays, now=now)
-    return {"inserted": result.inserted, "duplicates": result.duplicates, "server_time": now}
+        if org is not None and auth.venue_id is not None and plays:
+            result = playlog.sync_batch(conn, org, auth.venue_id, plays, now=now)
+            answer["inserted"], answer["duplicates"] = result.inserted, result.duplicates
+    return answer
 
 
 PIN_ROUNDS = 100_000

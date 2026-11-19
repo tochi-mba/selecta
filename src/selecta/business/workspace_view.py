@@ -296,9 +296,10 @@ def venues_view(conn: Connection, actor: BusinessActor, *, now: float) -> list[d
     workspace_id = actor.workspace_id
     sessions = {s.zone_id: s for s in zone_sessions(conn, workspace_id)}
     # An open silent alert (digital silence, a suspended audio context, a long pause) makes the
-    # zone silent on manager screens even while its kiosk still holds the lease (ADR-0454 UI).
+    # zone silent on manager screens even while its kiosk still holds the lease (ADR-0454 UI),
+    # silent since the moment the silence began.
     silent_alerts = dict(conn.execute(
-        sa.select(zone_alerts.c.zone_id, zone_alerts.c.opened_at).where(
+        sa.select(zone_alerts.c.zone_id, zone_alerts.c.started_at).where(
             zone_alerts.c.workspace_id == workspace_id, zone_alerts.c.kind == "silent",
             zone_alerts.c.status == "open")).all())
     scope = scope_of(actor)
