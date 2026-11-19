@@ -175,12 +175,15 @@ def request_seams(
     now: float,
     *,
     close_at: float | None = None,
+    venue_id: str | None = None,
 ) -> dict[str, int]:
-    """Create the render work this horizon still needs (module notes). Returns counts."""
+    """Create the render work this horizon still needs (module notes). Returns counts.
+    With `venue_id`, seams beyond the next one stay within the zone's render-ahead budget
+    (ADR-0448, `entitlement_gates.render_allowed`): the very next transition is never refused."""
     from selecta.work import enqueue
     from selecta.work.enqueue import JobSpec
 
-    made = {"seams": 0, "analyses": 0, "ready": 0}
+    made = {"seams": 0, "analyses": 0, "ready": 0, "held": 0}
 
     def submit(spec: JobSpec) -> bool:
         try:
@@ -200,6 +203,7 @@ def request_seams(
                 type="analyse.song",
                 idempotency_key=analysis_hash(sha256),
                 lane=Lane.STANDARD,
+                zone_id=zone_id,
                 needed_by=needed_by,
                 input_ref={"source_key": key, "source_sha256": sha256, "zone_id": zone_id},
             )
@@ -226,6 +230,15 @@ def request_seams(
         b_analysis = analysed(b["sha256"], b_key, heard_at)
         if a_analysis is None or b_analysis is None:
             continue
+        if venue_id is not None:
+            from selecta.business import entitlement_gates
+
+            allowed, _reason = entitlement_gates.render_allowed(
+                conn, workspace_id, venue_id, zone_id, ahead_s=max(0.0, heard_at - now),
+                next_transition=index == 0, now=now)
+            if not allowed:
+                made["held"] += 1
+                break
         lane = Lane.INTERACTIVE if index < URGENT_SEAMS else Lane.STANDARD
         if submit(
             JobSpec(
@@ -233,6 +246,7 @@ def request_seams(
                 type="seam.render",
                 idempotency_key=f"kiosk-seam:{digest}",
                 lane=lane,
+                zone_id=zone_id,
                 needed_by=heard_at,
                 input_ref={
                     "zone_id": zone_id,
@@ -293,10 +307,11 @@ def tick(engine: Engine) -> dict[str, int]:
             continue  # nothing is rendered for a closed zone
         songs = programme_horizon(engine, workspace_id, zone_id)
         with transaction(engine, workspace_id) as conn:
-            counts = request_seams(conn, workspace_id, zone_id, songs, now, close_at=close_at)
+            counts = request_seams(conn, workspace_id, zone_id, songs, now, close_at=close_at,
+                                   venue_id=venue_id)
         total["zones"] += 1
         for key, value in counts.items():
-            total[key] += value
+            total[key] = total.get(key, 0) + value
     return total
 
 

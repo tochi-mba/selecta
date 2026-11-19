@@ -25,7 +25,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection, Engine
 
-from selecta.business import dayparts, hours, offline, zone_clock
+from selecta.business import dayparts, hours, offline, zone_autoplan, zone_clock
 from selecta.business.hours_schema import (
     zone_cache_reports,
     zone_commands,
@@ -218,6 +218,7 @@ def install_routes(
                         updated_at=now,
                     )
                 )
+            zone_autoplan.mark_dirty(conn, workspace_id, [zone_id], now)
             audit_change(conn, workspace_id, claims.subject, "schedule.edit", ref.venue_id,
                          resource_type="zone_programme_version", resource_id=version_id,
                          metadata={"zone_id": zone_id})
@@ -286,6 +287,11 @@ def install_routes(
                         reason=reasons.get(command.id),
                     )
                 )
+                word = str((command.payload or {}).get("word") or "")
+                if command.kind == "steer" and command.id not in reasons and word in (
+                    dayparts.STAFF_ACTIONS
+                ):  # ADR-0444: the zone's planned energy follows the press, then decays
+                    zone_autoplan.press(conn, workspace_id, zone_id, word, now)
         state = {k: v for k, v in result["state"].items() if k != "applied_ids"}
         return {
             "applied": result["applied"],

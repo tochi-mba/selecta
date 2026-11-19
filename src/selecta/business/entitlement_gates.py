@@ -10,6 +10,11 @@ not a business organisation, so personal accounts never see a difference:
   It also mirrors the committed bytes into the meter rows `usage_meters` reads.
 - `zone_start_refusal`: a zone may start playing only within the venue's paid zones.
 - `scheduler_tier` and `lane_tier`: the opening-hours processing weight (ADR-0395 scheduler).
+- `lucy_start` and `lucy_refund`: business Lucy turns count against the venues' pooled
+  allowance (`ai.gateway` asks here first; None or False means "not a business, use the plan").
+- `analysis_not_before`: new songs past the organisation's 10,000 a day wait for local
+  midnight (`work.enqueue` asks for every new `analyse.song`).
+- `render_allowed` and `charge_renders`: the kiosk horizon's render-ahead budget.
 """
 
 from __future__ import annotations
@@ -57,11 +62,36 @@ def sync_storage(conn: Connection, org: OrgFacts, now: float) -> int:
     if current.limit_bytes != limit:
         quota.set_limit(conn, org.workspace_id, plan_for(current.plan_id, current.plan_version),
                         limit_bytes=limit)
-    mirrored = ent.get_counter(conn, org.organisation_id, ent.M_STORAGE, ent.CURRENT)
-    delta = current.committed_bytes - mirrored
-    if delta:
-        ent.record_storage(conn, org, int(delta), now)
+    for venue_id, stored in storage_by_venue(conn, org, current.committed_bytes).items():
+        have = ent.get_counter(conn, org.organisation_id, ent.M_STORAGE, ent.CURRENT,
+                               venue_id=venue_id)
+        if stored != have:
+            ent.record_storage(conn, org, int(stored - have), now, venue_id=venue_id)
     return limit
+
+
+def storage_by_venue(conn: Connection, org: OrgFacts, committed: int) -> dict[str, int]:
+    """Committed bytes per venue: originals uploaded for a venue count there (`assets.venue_id`,
+    set when uploading from a venue page); everything else, and kept exports, is "" (the
+    organisation's shared library). The parts always add up to the committed total."""
+    from selecta.storage.schema import assets
+
+    known = {v.id for v in org.venues}
+    rows = conn.execute(
+        sa.select(assets.c.venue_id, sa.func.sum(assets.c.size))
+        .where(assets.c.workspace_id == org.workspace_id, assets.c.deleted_at.is_(None),
+               assets.c.venue_id.is_not(None))
+        .group_by(assets.c.venue_id)
+    ).all()
+    found = {venue_id: int(total or 0) for venue_id, total in rows if venue_id in known}
+    attributed = min(sum(found.values()), max(0, committed))
+    if attributed < sum(found.values()):  # deletions not yet released: scale down, never over
+        scale = attributed / max(1, sum(found.values()))
+        found = {k: int(v * scale) for k, v in found.items()}
+    found[""] = max(0, committed - sum(found.values()))
+    for venue in org.venues:
+        found.setdefault(venue.id, 0)
+    return found
 
 
 def sync_storage_for(conn: Connection, workspace_id: str, now: float) -> int | None:
@@ -144,3 +174,122 @@ def scheduler_tier(conn: Connection, workspace_id: str, now: float,
 def lane_tier(tier: str | None, lane: object) -> str | None:
     """Only the interactive lane runs at the open weight (`weight.lane_tier`)."""
     return weight.lane_tier(tier, str(lane))
+
+
+# ---------------------------------------------------------------------------------------------
+# Lucy
+
+
+def lucy_start(conn: Connection, workspace_id: str, served: object, month: str):
+    """A `TurnStart` from the business pool, or None for anyone the pool does not cover."""
+    if not enabled():
+        return None
+    org = org_for(conn, workspace_id)
+    if org is None:
+        return None
+    from selecta.ai.allowance import TurnStart
+    from selecta.ai.registry import RequestClass
+    from selecta.persistence import db_now
+
+    served_class = RequestClass(str(getattr(served, "value", served)))
+    now = db_now(conn)
+    decision = ent.take_lucy_turn(conn, org, workspace_id, served_class.value, now)
+    pool = ent.lucy_pools(conn, org, now)[decision.pool_class]
+    return TurnStart(decision.allowed, served_class, month, pool.used, pool.limit)
+
+
+def lucy_refund(conn: Connection, workspace_id: str, bucket: object) -> bool:
+    """Give a failed business turn back to the pool; False when the pool does not apply."""
+    if not enabled() or bucket is None:
+        return False
+    org = org_for(conn, workspace_id)
+    if org is None:
+        return False
+    from selecta.persistence import db_now
+
+    ent.give_back_lucy_turn(conn, org, str(getattr(bucket, "value", bucket)), db_now(conn))
+    return True
+
+
+# ---------------------------------------------------------------------------------------------
+# Analysis
+
+
+def analysis_not_before(conn: Connection, workspace_id: str, song_key: str, priority: bool,
+                        now: float) -> float | None:
+    """None when the song may be analysed now (and is counted); otherwise when it may start."""
+    if not enabled():
+        return None
+    org = org_for(conn, workspace_id)
+    if org is None:
+        return None
+    grant = ent.take_analysis(conn, org, [(song_key, priority)], now)
+    return None if grant.accepted else grant.resets_at
+
+
+# ---------------------------------------------------------------------------------------------
+# Render-ahead
+
+
+def render_allowed(conn: Connection, workspace_id: str, venue_id: str, zone_id: str, *,
+                   ahead_s: float, next_transition: bool, now: float,
+                   est_cpu_s: float = 20.0) -> tuple[bool, str]:
+    """May the kiosk horizon ask for one more seam this far ahead? (allowed, reason)."""
+    if not enabled():
+        return True, "flag_off"
+    org = org_for(conn, workspace_id)
+    venue = org.venue(venue_id) if org is not None else None
+    if org is None or venue is None:
+        return True, "not_business"
+    decision = ent.check_render(conn, org, venue, zone_id, est_cpu_s=est_cpu_s,
+                                rendered_ahead_s=ahead_s, zone_open=True,
+                                next_transition=next_transition, now=now)
+    return decision.allowed, decision.reason
+
+
+def charge_renders(conn: Connection, org: OrgFacts, now: float) -> int:
+    """Bring each zone's render CPU and skipped counters for today up to the job records:
+    `seam.render` attempts charge their real CPU seconds, cancelled renders count as skipped.
+    Returns how many zones were charged."""
+    from selecta.work.schema import job_attempts, jobs
+
+    charged = 0
+    for venue in org.venues:
+        day = ent.local_date(venue.time_zone, now)
+        start = ent.next_local_midnight(venue.time_zone, now) - 86_400
+        zone_ids = _venue_zone_ids(conn, org.workspace_id, venue.id)
+        cpu: dict[str, float] = {}
+        skipped: dict[str, int] = {}
+        rows = conn.execute(
+            sa.select(jobs.c.id, jobs.c.zone_id, jobs.c.state).where(
+                jobs.c.workspace_id == org.workspace_id, jobs.c.type == "seam.render",
+                jobs.c.zone_id.is_not(None), jobs.c.created_at >= start)
+        ).all()
+        costs = dict(conn.execute(
+            sa.select(job_attempts.c.job_id, sa.func.sum(job_attempts.c.cost_s))
+            .where(job_attempts.c.job_id.in_([r.id for r in rows] or [""]))
+            .group_by(job_attempts.c.job_id)
+        ).all())
+        for row in rows:
+            if row.zone_id not in zone_ids:
+                continue
+            cpu[row.zone_id] = cpu.get(row.zone_id, 0.0) + float(costs.get(row.id) or 0.0)
+            if str(getattr(row.state, "value", row.state)) == "cancelled":
+                skipped[row.zone_id] = skipped.get(row.zone_id, 0) + 1
+        for zone_id in zone_ids:
+            for meter, value in ((ent.M_RENDER_CPU, cpu.get(zone_id, 0.0)),
+                                 (ent.M_RENDER_SKIPPED, float(skipped.get(zone_id, 0)))):
+                have = ent.get_counter(conn, org.organisation_id, meter, day, venue_id=venue.id,
+                                       zone_id=zone_id)
+                if value != have:
+                    ent.add_counter(conn, org, meter, day, value - have, now,
+                                    venue_id=venue.id, zone_id=zone_id)
+            charged += 1
+    return charged
+
+
+def _venue_zone_ids(conn: Connection, workspace_id: str, venue_id: str) -> set[str]:
+    from selecta.business.schema import zones
+
+    return set(conn.execute(sa.select(zones.c.id).where(
+        zones.c.workspace_id == workspace_id, zones.c.venue_id == venue_id)).scalars())

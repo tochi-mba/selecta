@@ -53,6 +53,8 @@ upload_sessions = sa.Table(
     sa.Column("duplicate_of", sa.String(64)),
     # Who started the upload, so the kept asset records `uploaded_by` (ADR-0442 BZ-0442-05).
     sa.Column("uploaded_by", Id, nullable=True),
+    # The venue the upload was made for, from a venue page (ADR-0448 per-venue storage).
+    sa.Column("venue_id", Id, nullable=True),
     sa.Column("error", sa.Text),
     sa.Column("created_at", Epoch, nullable=False),
     sa.Column("updated_at", Epoch, nullable=False),
@@ -82,6 +84,8 @@ assets = sa.Table(
     # Who uploaded it (ADR-0442): in an organisation, staff uploads keep their uploader; a person
     # who has since left shows as "Former member". Empty for rows from before it was recorded.
     sa.Column("uploaded_by", Id, nullable=True),
+    # The venue it was uploaded for (ADR-0448); empty for organisation-wide and older uploads.
+    sa.Column("venue_id", Id, nullable=True),
     sa.CheckConstraint("size > 0", name="size"),
     sa.Index(None, "workspace_id", "sha256"),
 )

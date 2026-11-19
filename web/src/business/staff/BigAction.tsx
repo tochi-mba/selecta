@@ -27,7 +27,7 @@ export function BigAction({ disabled, detail, big = true, pressed, className = '
       data-big={big || undefined}
     >
       <span className="biz-big-label">{children}</span>
-      {detail != null && <span className="biz-big-detail">{detail}</span>}
+      {detail != null && <>{' '}<span className="biz-big-detail">{detail}</span></>}
       {disabled && <span className="visually-hidden">. {disabled}</span>}
     </Action>
   );

@@ -24,6 +24,7 @@ depends on a cron somebody forgot:
 | `dmca_renewal` | 24 h | Owner alert as the DMCA agent's renewal nears (`admin.dmca`) |
 | `emails` | 60 s | Long-job and over-quota emails, each once (`notify.emails`) |
 | `business.zone_clock` | 30 s | Each venue zone's next opening or closing change |
+| `business.zone_autoplan` | 60 s | Each live zone's music planned ahead from its dayparts |
 | `business.billing` | 15 min | Business dunning and the VAT recheck before renewal |
 | `business.licensing` | 1 h | Licence reminders and play-log retention |
 | `business.entitlements` | 5 min | Pooled storage limits, continuity and credit proposals |
@@ -359,6 +360,15 @@ def _business_hours(engine: Engine, plan: Plan) -> None:
         return zone_clock.tick(engine, fence)
 
     plan.tasks.append(Task(zone_clock.TASK_NAME, zone_clock.EVERY_S, run))
+
+    from selecta.business import zone_autoplan
+
+    def plan_zones(fence: TermFence) -> object:
+        if not _flag_on(zone_autoplan.FLAG):
+            return None
+        return zone_autoplan.tick(engine)
+
+    plan.tasks.append(Task(zone_autoplan.TASK_NAME, zone_autoplan.EVERY_S, plan_zones))
 
 
 def _business_entitlements(engine: Engine, plan: Plan) -> None:

@@ -36,7 +36,8 @@ test('an owner opens the HQ console with the business navigation at phone and de
     await page.setViewportSize({ width, height: 900 });
     await page.goto(`/b/${seeded.org}`);
     await expect(page.getByText('Harbour Street').first()).toBeVisible();
-    await expect(page.getByRole('grid')).toBeVisible();
+    // Phones get a list of venue cards (D7); wider screens the keyboard grid.
+    if (width >= 768) await expect(page.getByRole('grid')).toBeVisible();
     expect(await sideways(page)).toBeLessThanOrEqual(1);
   }
   await accessible(page, 'business HQ');

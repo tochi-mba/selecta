@@ -11,8 +11,15 @@ Every `EVERY_S` the leader, for each business organisation:
 3. Proposes service credits for last month (`slo.propose_credits`) for staff to approve, from
    each billable venue's monthly fee. Pilot venues pay nothing, so they get no credit.
 
-Readiness needs a record of when each transition was ready; no such record exists yet, so
-`transitions` is 0 and readiness is unmeasured (None), which never earns or costs a credit.
+Readiness comes from the kiosk horizon's own render work (ADR-0446): each `seam.render` job
+for the zone carries the moment the transition is heard (`needed_by`); it was ready when the
+job had succeeded at least 60 s before that. A transition whose job never succeeded was not
+ready. Transitions rendered before any job was needed (already cached) are not counted.
+
+4. Feeds the cost guard (`entitlements.check_cost`) the month's real metered cost from the same
+   meters the unit economics read (`usage.unit_economics`): stored bytes, upload writes and
+   Lucy dollars, priced at its researched rates and converted to the organisation's currency.
+   Worker compute has no researched rate yet, so it is not priced (the same named gap).
 """
 
 from __future__ import annotations
@@ -26,6 +33,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
 from selecta.business import entitlement_gates, slo
+from selecta.business import entitlements as ent
 from selecta.business.commercial_facts import Bz3Hours, HoursSource, OrgFacts, SqlFacts
 from selecta.persistence import db_now, transaction
 
@@ -67,6 +75,62 @@ def heartbeats(conn: Connection, workspace_id: str, zone_id: str, start: float,
     return beats
 
 
+def transitions(conn: Connection, workspace_id: str, zone_id: str, start: float,
+                end: float) -> list[slo.Transition]:
+    """The zone's rendered transitions heard in [start, end), from its `seam.render` jobs."""
+    from selecta.work.schema import jobs
+
+    rows = conn.execute(
+        sa.select(jobs.c.needed_by, jobs.c.state, jobs.c.finished_at).where(
+            jobs.c.workspace_id == workspace_id, jobs.c.zone_id == zone_id,
+            jobs.c.type == "seam.render", jobs.c.needed_by >= start, jobs.c.needed_by < end,
+        )
+    ).all()
+    found = []
+    for needed_by, state, finished_at in rows:
+        done = str(getattr(state, "value", state)) == "succeeded" and finished_at is not None
+        found.append(slo.Transition(float(needed_by), float(finished_at) if done else None))
+    return found
+
+
+USD_PER_MINOR = {"GBP": 1.27 / 100, "USD": 1.0 / 100, "EUR": 1.08 / 100}
+"""US dollars per minor unit. GBP is `usage.lucy_ceiling.DEFAULT_USD_PER_GBP`; EUR is an
+estimate of the same kind. Rates are inputs, reconciled against invoices by a person."""
+
+
+def month_cost_usd(conn: Connection, workspace_id: str, month: str) -> float:
+    """The organisation's metered month at the ADR-0464 rates (compute not priced)."""
+    from selecta.ai.schema import ai_usage
+    from selecta.usage import unit_economics
+    from selecta.usage.schema import quota_state, usage_ledger
+
+    since, until = unit_economics.month_bounds(month)
+    stored = conn.execute(sa.select(quota_state.c.committed_bytes).where(
+        quota_state.c.workspace_id == workspace_id)).scalar() or 0
+    writes = conn.execute(sa.select(sa.func.count()).select_from(usage_ledger).where(
+        usage_ledger.c.workspace_id == workspace_id, usage_ledger.c.kind == "storage_bytes",
+        usage_ledger.c.amount > 0, usage_ledger.c.occurred_at >= since,
+        usage_ledger.c.occurred_at < until)).scalar() or 0
+    lucy = conn.execute(sa.select(sa.func.sum(ai_usage.c.cost_usd)).where(
+        ai_usage.c.workspace_id == workspace_id, ai_usage.c.month == month)).scalar() or 0.0
+    usage = unit_economics.AccountUsage(workspace_id, "hosted", stored_bytes=int(stored),
+                                        upload_writes=int(writes), lucy_usd=float(lucy))
+    return unit_economics.price(usage, unit_economics.DEFAULT_RATES).total_usd
+
+
+def guard_cost(conn: Connection, org: OrgFacts, now: float) -> ent.CostGuard | None:
+    """Bring the month's cost meter up to the real metered cost, then check the guard."""
+    rate = USD_PER_MINOR.get(org.currency.upper())
+    if rate is None:
+        return None
+    month = ent.local_month(org.time_zone, now)
+    cost_minor = month_cost_usd(conn, org.workspace_id, month) / rate
+    have = ent.meter_total(conn, org.organisation_id, ent.M_COST, month)
+    if round(cost_minor - have, 2):
+        ent.record_cost(conn, org, cost_minor - have, now)
+    return ent.check_cost(conn, org, sum(venue_fees(org).values()), now)
+
+
 def zone_ids(conn: Connection, workspace_id: str, venue_id: str) -> list[str]:
     from selecta.business.schema import zones
 
@@ -94,7 +158,8 @@ def measure_org(conn: Connection, org: OrgFacts, month: str, now: float,
             result = slo.measure(
                 venue.id, zone_id, month, scheduled,
                 heartbeats(conn, org.workspace_id, zone_id, start, end),
-                slo.played_minutes(conn, zone_id, start, end), (),
+                slo.played_minutes(conn, zone_id, start, end),
+                transitions(conn, org.workspace_id, zone_id, start, end),
             )
             slo.save_month(conn, org, result, now)
             saved += 1
@@ -118,6 +183,8 @@ def run_org(conn: Connection, org: OrgFacts, now: float, hours: HoursSource) -> 
     saved = measure_org(conn, org, this_month, now, hours)
     saved += measure_org(conn, org, last_month, now, hours)
     proposed = slo.propose_credits(conn, org, last_month, venue_fees(org), now)
+    entitlement_gates.charge_renders(conn, org, now)
+    guard_cost(conn, org, now)
     return {"zones": saved, "credits": len(proposed)}
 
 

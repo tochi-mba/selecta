@@ -66,6 +66,10 @@ class ExceptionIn(BaseModel):
     zone_id: str | None = Field(default=None, max_length=36)
 
 
+class ClosingModeIn(BaseModel):
+    closing_mode: str = Field(pattern=r"^(natural|exact)$")
+
+
 class StayLateIn(BaseModel):
     minutes: int | None = Field(default=None, ge=1, le=12 * 60)
     until: datetime | None = None
@@ -166,8 +170,13 @@ def _venue_ref(engine: Engine, workspace_id: str, venue_id: str) -> zone_clock.Z
 
 
 def _recompute(engine: Engine, workspace_id: str, venue_id: str) -> None:
-    for ref in _zone_refs(engine, workspace_id, venue_id):
+    refs = _zone_refs(engine, workspace_id, venue_id)
+    for ref in refs:
         zone_clock.recompute_zone(engine, ref)
+    from selecta.business import zone_autoplan
+
+    with transaction(engine, workspace_id) as conn:  # replan after the committed window
+        zone_autoplan.mark_dirty(conn, workspace_id, [ref.zone_id for ref in refs], db_now(conn))
 
 
 def _period_json(row: Any) -> dict[str, Any]:
@@ -243,6 +252,7 @@ def install_routes(
             ).mappings().all()
         return {
             "time_zone": ref.tz,
+            "closing_mode": ref.closing_mode,
             "periods": [_period_json(row) for row in rows],
             "exceptions": [
                 {
@@ -303,6 +313,37 @@ def install_routes(
                          metadata={"periods": len(periods), "zone_id": body.zone_id or ""})
         _recompute(engine, workspace_id, venue_id)
         return get_hours(venue_id, request, claims)
+
+    @app.put("/api/business/venues/{venue_id}/closing-mode")
+    def put_closing_mode(
+        venue_id: str,
+        body: ClosingModeIn,
+        request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+    ) -> dict[str, Any]:
+        """Natural: the song plays to its end (at most 4 minutes) then fades. Exact: the fade
+        ends at the closing time, for strict licence hours."""
+        from selecta.business.hours_schema import venue_closing_modes as modes
+
+        workspace_id = scope(request, claims)
+        _venue_ref(engine, workspace_id, venue_id)
+        manager(claims, workspace_id, venue_id)
+        with transaction(engine, workspace_id) as conn:
+            now = db_now(conn)
+            values = {"closing_mode": body.closing_mode, "updated_by": claims.subject,
+                      "updated_at": now}
+            updated = conn.execute(
+                sa.update(modes).where(modes.c.workspace_id == workspace_id,
+                                       modes.c.venue_id == venue_id).values(**values)
+            ).rowcount
+            if not updated:
+                conn.execute(modes.insert().values(venue_id=venue_id, workspace_id=workspace_id,
+                                                   **values))
+            audit_change(conn, workspace_id, claims.subject, "hours.closing_mode", venue_id,
+                         resource_type="venue_closing_mode", resource_id=venue_id,
+                         metadata={"closing_mode": body.closing_mode})
+        _recompute(engine, workspace_id, venue_id)
+        return {"venue_id": venue_id, "closing_mode": body.closing_mode}
 
     @app.post("/api/business/venues/{venue_id}/hour-exceptions")
     def add_exception(
