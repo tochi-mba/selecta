@@ -129,6 +129,20 @@ def is_management_read_only(conn: Connection, organisation_id: str, now: float) 
     )
 
 
+def stay_open_late_refusal(conn: Connection, workspace_id: str, now: float) -> str | None:
+    """Why staff may not keep a venue open late now, or None (ADR-0454
+    `test_stay_open_late_disabled_after_grace_end`): once grace has ended and management is
+    read-only, extending tonight would only push the planned stop later."""
+    organisation_id = conn.execute(
+        sa.select(biz_subscriptions.c.organisation_id)
+        .where(biz_subscriptions.c.workspace_id == workspace_id)
+    ).scalar()
+    if organisation_id is None or not is_management_read_only(conn, organisation_id, now):
+        return None
+    return ("Payment is overdue and the grace period has ended, so the venue cannot stay open "
+            "late. Update payment to keep playing.")
+
+
 # Banner -----------------------------------------------------------------------------------
 
 

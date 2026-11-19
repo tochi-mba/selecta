@@ -357,3 +357,19 @@ def test_two_hundred_thousand_songs_check_without_scanning_the_blocklist():
     allowed_count = sum(1 for s in library if allowed(s, rules, NOW).allowed)
     assert allowed_count == 200_000
     assert (datetime.now(UTC) - started).total_seconds() < 30
+
+
+def test_the_hint_list_never_marks_and_reports_songs_it_could_not_check():
+    from selecta.business.content.lyrics_hint import worth_checking
+
+    items = [
+        (song("rude", explicit="unknown"), "you fucking know it", "en"),
+        (song("quiet"), None, None),
+        (song("spanish"), "la noche es nuestra y bailamos hasta el amanecer otra vez", "es"),
+        (song("fine"), "love is all we need tonight under the stars", None),
+    ]
+    found = worth_checking(items, flags={"rude": "unknown"})
+    assert [hint["song_id"] for hint in found["worth_checking"]] == ["rude"]
+    reasons = {hint["song_id"]: hint["why"] for hint in found["not_checked"]}
+    assert reasons == {"quiet": "no_lyrics", "spanish": "other_language"}
+    assert found["worth_checking"][0]["explicit"] == "unknown"  # a hint never sets the flag

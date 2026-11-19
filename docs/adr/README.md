@@ -34,6 +34,12 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 
 ---
 
+# SelectaDJ for Business (2026-11-12)
+
+**Proposed programme, prefix BZ:** [ADR-0441](adr-0441-business-goal-boundary-and-pricing.md) (goal, product boundary and per-venue pricing) to [ADR-0454](adr-0454-business-edge-cases-stress-and-release-gates.md) (edge cases, stress and the two release gates), chapter [docs/saas/19-business-venues.md](../saas/19-business-venues.md). Venues pay per venue for unattended, automatically mixed music from their own library; nothing is sold until the owner turns `business.signups` on after Gate S (docs/verification/bz-gate-register.md) and a signed GO record. Individual Free, Standard and Premium plans, local SelectaDJ and every personal guarantee are unchanged; the business plan entry sits beside the individual catalogue, never inside it. Each ADR's header carries its own implementation count; 0 independently Verified.
+
+---
+
 # Selecta - proposed Autopilot and full-product UX integration (2026-11-12)
 
 **Strictly additive docs-only proposal:** [24 ADRs, ADR-0417–0440](selecta-autopilot-roadmap.md), [120 implementation checklist items](selecta-autopilot-implementation-checklist.md), [feature-preservation map](selecta-autopilot-feature-parity.md), [evidence ledger](selecta-autopilot-implementation-evidence.md), [release gates](selecta-autopilot-release-gates.md). All new ADRs Proposed, all new tasks Not started, 0 Independently Verified. Existing functionality, code, audio, historic ADRs and previous project statuses remain unchanged. No existing feature is authorized for removal.

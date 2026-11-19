@@ -13,8 +13,8 @@ import pytest
 import sqlalchemy as sa
 from test_business_rooms_support import (  # noqa: F401
     BAR,
-    Clock,
     TERRACE,
+    Clock,
     Flags,
     activity_kinds,
     code_of,

@@ -432,6 +432,12 @@ def install_routes(
         workspace_id = scope(request, claims)
         role = role_for(engine, claims, workspace_id, venue_id)
         now = _now(workspace_id)
+        with transaction(engine, workspace_id) as conn:
+            from selecta.business import dunning
+
+            refusal = dunning.stay_open_late_refusal(conn, workspace_id, now.timestamp())
+        if refusal is not None:
+            raise _bad(refusal)
         intervals = _tonight(workspace_id, venue_id, now)
         if body.until is not None:
             until = body.until if body.until.tzinfo else body.until.replace(tzinfo=UTC)

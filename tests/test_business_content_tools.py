@@ -7,10 +7,10 @@ permission check, like `test_business_content_routes.py`.
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 
 import pytest
-import sqlalchemy as sa
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -78,8 +78,8 @@ def plant_library(engine) -> None:
                  "base_urgency, input_ref, est_cost_s, state, max_attempts, max_run_s, result, "
                  "created_at, updated_at) VALUES ('job-b', :ws, 'analyse.song', 'cpu', "
                  "'standard', 'standard', 0, 0, '{}', 1, 'succeeded', 1, 60, :result, 0, 0)",
-                 {"ws": WS, "result": '{"input_hash": "%s", "bpm": 92.5}'
-                  % library.analysis_hash(SHA["b"])}))
+                 {"ws": WS, "result": json.dumps({"input_hash": library.analysis_hash(SHA["b"]),
+                                                  "bpm": 92.5})}))
     rows.append(("INSERT INTO crate_songs (crate_id, song_id, workspace_id, position) "
                  "VALUES ('crate-brunch', 'song-b', :ws, 0)", {"ws": WS}))
     rows.append(("INSERT INTO biz_isrc_edits (id, workspace_id, track_id, new_isrc, source, "

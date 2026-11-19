@@ -266,6 +266,8 @@ def install_routes(
                 "statement": terms.UPLOAD_STATEMENT,
                 "statement_version": terms.CURRENT_UPLOAD_STATEMENT_VERSION,
             }) from error
+        # Read before the plan's transaction: on SQLite a second one would wait on the first.
+        uploaded_by = uploader(request, claims)
         try:
             with service() as (uploads, _client):
                 with transaction(engine, workspace_id) as conn:
@@ -273,7 +275,7 @@ def install_routes(
                         conn,
                         workspace_id,
                         [FileSpec(**item.model_dump()) for item in body.files],
-                        uploaded_by=uploader(request, claims),
+                        uploaded_by=uploaded_by,
                     )
         except BatchTooLarge as error:
             raise HTTPException(status_code=422, detail={"code": "batch_too_large"}) from error

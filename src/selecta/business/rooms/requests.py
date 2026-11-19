@@ -198,8 +198,9 @@ class RequestsMixin:
             .order_by(requests_t.c.votes.desc(), requests_t.c.created_at, requests_t.c.id)
         ).mappings().all()
         return [{"id": r["id"], "zone_id": zone.id, "title": r["title"], "artist": r["artist"],
-                 "nickname": r["nickname"], "guest_id": r["guest_id"], "waited_seconds": int(now - r["created_at"]),
-                 "votes": r["votes"]} for r in rows]
+                 "nickname": r["nickname"], "guest_id": r["guest_id"],
+                 "waited_seconds": int(now - r["created_at"]), "votes": r["votes"]}
+                for r in rows]
 
     def seen_staff(self, conn: Connection, actor: BusinessActor, zone) -> None:
         kind, actor_id, _name = decider(actor)

@@ -181,7 +181,8 @@ def build_body(
     ]
     payment_stop = _payment_stop(conn, workspace_id, venue_id, now)
     stops = [
-        (float(pilot_until), "pilot_end") if pilot_until else None,
+        (_pilot_stop(conn, workspace_id, venue_id, float(pilot_until)), "pilot_end")
+        if pilot_until else None,
         (payment_stop, "payment") if payment_stop is not None else None,
     ]
     earliest = min((stop for stop in stops if stop), default=None)
@@ -206,6 +207,13 @@ def build_body(
             "valid_until": now + PERMIT_S,
         },
     }
+
+
+def _pilot_stop(conn: Any, workspace_id: str, venue_id: str | None, pilot_until: float) -> float:
+    """A pilot end stops at the venue's next close, like a payment grace (ADR-0454 B6)."""
+    from selecta.business.pilot import pilot_stop
+
+    return pilot_stop(conn, workspace_id, venue_id, pilot_until)
 
 
 def _payment_stop(conn: Any, workspace_id: str, venue_id: str | None, now: float) -> float | None:

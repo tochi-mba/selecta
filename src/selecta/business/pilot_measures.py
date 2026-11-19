@@ -8,8 +8,8 @@ product already writes; the fifth is a person's answer:
 | Silent minutes | `zone_alerts` of kind `silent` (`silent_seconds`, or still open: now - started) |
 | Staff interventions per opening day | applied `zone_commands` from staff remotes |
 | Requests per opening day | `business_zone_room_requests` created in the window |
-| Kiosk uptime | 5-minute `device_health_history` buckets with a report, over the buckets from each |
-|   | kiosk's first to last report in the window |
+| Kiosk uptime | 5-minute `device_health_history` buckets with a report, over every |
+|   | bucket from each kiosk's first to last report in the window |
 | Staff satisfaction | the feedback card, by hand (`staff_satisfaction` stays None here) |
 
 An opening day is a venue-local date with at least one `biz_play_log` row, so a closed day never
