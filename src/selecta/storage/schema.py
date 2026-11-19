@@ -51,6 +51,8 @@ upload_sessions = sa.Table(
     sa.Column("reservation_id", sa.String(64)),
     # An asset (or song) the person already has with the same SHA-256, from the duplicate check.
     sa.Column("duplicate_of", sa.String(64)),
+    # Who started the upload, so the kept asset records `uploaded_by` (ADR-0442 BZ-0442-05).
+    sa.Column("uploaded_by", Id, nullable=True),
     sa.Column("error", sa.Text),
     sa.Column("created_at", Epoch, nullable=False),
     sa.Column("updated_at", Epoch, nullable=False),

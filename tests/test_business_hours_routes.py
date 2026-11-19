@@ -15,6 +15,7 @@ import sqlalchemy as sa
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from selecta.authz.schema import audit_events
 from selecta.business import zone_clock
 from selecta.business.hours_schema import zone_commands, zone_programme_versions
 from selecta.identity.tokens import Claims
@@ -63,7 +64,8 @@ def client(sqlite_engine, clock, monkeypatch, role):
         role_for=lambda *_args: role["value"],
     )
     business_zones.install_routes(
-        app, engine=sqlite_engine, current_claims=_claims, principal_for=principal_for
+        app, engine=sqlite_engine, current_claims=_claims, principal_for=principal_for,
+        role_for=lambda *_args: role["value"],
     )
     return TestClient(app)
 
@@ -251,3 +253,108 @@ def test_a_cache_report_is_kept_per_device(client):
     assert client.put(f"/api/business/zones/{ZONE}/cache-report", json=report).status_code == 200
     report["seconds_ahead"] = 7200.0
     assert client.put(f"/api/business/zones/{ZONE}/cache-report", json=report).status_code == 200
+
+
+# --- ADR-0444 wiring: edits during service, roles, audit, archive at closing time -------------
+
+
+def test_hours_edit_during_service_takes_effect_at_the_next_boundary(client, clock):
+    put_hours(client)
+    clock.advance(13.5 * 3600)  # 21:30, open until 23:00
+    before = client.get(f"/api/business/zones/{ZONE}/state").json()
+    assert before["state"] == "open"
+    assert before["next_change"].startswith("2027-01-15T23:00")
+
+    earlier = [{"weekday": day, "opens": "10:00", "closes": "22:00"} for day in range(7)]
+    assert put_hours(client, earlier).status_code == 200
+    after = client.get(f"/api/business/zones/{ZONE}/state").json()
+
+    # Nothing cuts at 21:30: the zone plays on and closes at the new, still future, 22:00.
+    assert after["state"] == "open"
+    assert after["next_state"] == "closing"
+    assert after["next_change"].startswith("2027-01-15T22:00")
+
+
+def test_hours_edit_that_opens_earlier_starts_warming_at_once(client, clock):
+    put_hours(client)  # 10:00 opening; at 08:00 warming starts at 09:15
+    earlier = [{"weekday": day, "opens": "08:30", "closes": "23:00"} for day in range(7)]
+    put_hours(client, earlier)
+
+    assert client.get(f"/api/business/zones/{ZONE}/state").json()["state"] == "warming"
+
+
+@pytest.mark.parametrize("who", ["viewer"])
+def test_a_viewer_can_read_but_not_close_now(client, clock, role, who):
+    put_hours(client)
+    clock.advance(6 * 3600)
+    role["value"] = who
+
+    assert client.get(f"/api/business/venues/{VENUE}/hours").status_code == 200
+    assert client.post(f"/api/business/venues/{VENUE}/close-now").status_code == 403
+    late = client.post(f"/api/business/venues/{VENUE}/stay-open-late", json={"minutes": 30})
+    assert late.status_code == 400
+
+
+def test_staff_may_close_now(client, clock, role):
+    put_hours(client)
+    clock.advance(6 * 3600)
+    role["value"] = "staff"
+
+    assert client.post(f"/api/business/venues/{VENUE}/close-now").status_code == 200
+
+
+def test_staff_cannot_change_a_zone_programme(client, role):
+    role["value"] = "staff"
+    response = client.put(
+        f"/api/business/zones/{ZONE}/programme", json={"weekly": {"4": [BRUNCH]}}
+    )
+    assert response.status_code == 403
+
+
+def test_every_change_is_audited_with_who_did_it(client, clock, sqlite_engine):
+    put_hours(client)
+    client.post(f"/api/business/venues/{VENUE}/hour-exceptions",
+                json={"date": "2027-12-25", "closed": True})
+    clock.advance(14 * 3600)
+    client.post(f"/api/business/venues/{VENUE}/stay-open-late", json={"minutes": 30})
+    client.put(f"/api/business/zones/{ZONE}/programme", json={"weekly": {"4": [BRUNCH]}})
+
+    with transaction(sqlite_engine, WORKSPACE) as conn:
+        rows = conn.execute(
+            sa.select(audit_events.c.action, audit_events.c.actor_id)
+        ).all()
+    actions = {action for action, _ in rows}
+    assert {"business.hours.edit", "business.hours.exception_add",
+            "business.hours.stay_open_late", "business.schedule.edit"} <= actions
+    assert {actor for _, actor in rows} == {"user-sam"}
+
+
+def test_archive_at_closing_time_gets_the_real_next_close(client, clock, sqlite_engine,
+                                                         monkeypatch):
+    from selecta import flags
+    from selecta.business import hours_hook
+    from selecta.business.schema import venues
+
+    put_hours(client)
+    from selecta.identity.schema import users, workspaces
+
+    with transaction(sqlite_engine) as conn:
+        conn.execute(users.insert().values(
+            id="user-sam", auth_subject="auth|sam", email="sam@example.test",
+            email_verified=True, timezone="UTC", age_confirmed=True, created_at=0.0))
+        conn.execute(workspaces.insert().values(
+            id=WORKSPACE, name="Camden Group", kind="business", owner_user_id="user-sam",
+            created_at=0.0))
+    with transaction(sqlite_engine, WORKSPACE) as conn:
+        conn.execute(sa.insert(venues).values(
+            id=VENUE, workspace_id=WORKSPACE, name="Camden", timezone="Europe/London",
+            country="GB", status="active", created_at=0))
+    flags.use("+business.orgs,+business.schedules")
+    try:
+        with transaction(sqlite_engine, WORKSPACE) as conn:
+            close = hours_hook.next_closing_at(conn, WORKSPACE, VENUE, int(clock.now))
+    finally:
+        flags.use(None)
+    assert close == int(datetime(2027, 1, 15, 23, 0, tzinfo=UTC).timestamp())
+    with transaction(sqlite_engine, WORKSPACE) as conn:
+        assert hours_hook.next_closing_at(conn, WORKSPACE, VENUE, int(clock.now)) is None

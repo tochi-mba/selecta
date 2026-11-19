@@ -84,4 +84,17 @@ describe('business routes in the Cloud app', () => {
     expect(await screen.findByRole('heading', { name: 'People' }, { timeout: 4000 })).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: 'People' }).length + screen.queryAllByRole('button', { name: 'People' }).length).toBeGreaterThan(0);
   });
+
+  it('/business/start shows the pilot contact form only with business.start on', async () => {
+    window.history.replaceState({}, '', '/business/start');
+    const { unmount } = render(<CloudApp />);
+    await waitFor(() => expect(requests).toContain('GET /api/account'));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole('heading', { name: 'SelectaDJ for Business' })).toBeNull();
+    unmount();
+    account = { ...cloudAccount(), features: { 'business.start': true } };
+    render(<CloudApp />);
+    expect(await screen.findByRole('heading', { name: 'SelectaDJ for Business' }, { timeout: 4000 })).toBeInTheDocument();
+    expect(screen.getByText(/in private pilot/)).toBeInTheDocument();
+  });
 });

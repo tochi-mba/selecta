@@ -257,9 +257,11 @@ class Uploads:
     # -- 1. plan ----------------------------------------------------------------------------
 
     def plan_batch(
-        self, conn: Connection, workspace_id: str, files: Sequence[FileSpec]
+        self, conn: Connection, workspace_id: str, files: Sequence[FileSpec],
+        *, uploaded_by: str | None = None,
     ) -> list[PlannedFile]:
-        """Plan up to 500 files, one result per file in the order given."""
+        """Plan up to 500 files, one result per file in the order given. `uploaded_by` is the
+        person uploading; the kept asset records it (an organisation names its uploader)."""
         files = list(files)
         if len(files) > MAX_BATCH:
             raise BatchTooLarge(
@@ -311,7 +313,7 @@ class Uploads:
                     conn.execute(
                         sa.update(upload_sessions)
                         .where(upload_sessions.c.id == session_id)
-                        .values(reservation_id=reservation)
+                        .values(reservation_id=reservation, uploaded_by=uploaded_by)
                     )
             except QuotaExceeded as exc:
                 results.append(PlannedFile(index, name, refused=str(exc)))
@@ -481,9 +483,12 @@ class Uploads:
         now = db_now(conn)
         known = conn.execute(sa.select(assets.c.id).where(assets.c.id == asset_id)).first()
         if known is None:
+            uploader = conn.execute(sa.select(upload_sessions.c.uploaded_by).where(
+                upload_sessions.c.id == session.id)).scalar()
             conn.execute(
                 sa.insert(assets).values(
                     id=asset_id,
+                    uploaded_by=uploader,
                     workspace_id=session.workspace_id,
                     original_key=key,
                     size=session.declared_size,

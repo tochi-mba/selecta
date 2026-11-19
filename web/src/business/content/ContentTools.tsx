@@ -143,7 +143,10 @@ function WorthCheckingList({ tools, disabled }: { tools: ContentClient; disabled
 export function ContentTools({ venue, disabled }: { venue: Venue; disabled: string | null }) {
   const { api, org, now } = useBusiness();
   const tools = useMemo(() => (api ? contentClient(api, org.id) : null), [api, org.id]);
-  if (!tools || !businessOn(org.features, 'business.content_controls')) return null;
+  if (!businessOn(org.features, 'business.content_controls')) {
+    return <p className="biz-card warn" role="status">Venue content controls are off, so zones won't start new music rather than play anything unchecked. An owner can turn them on.</p>;
+  }
+  if (!tools) return null;
   return <div className="biz-stack">
     <div className="biz-card biz-stack">
       <h3>What each zone can play</h3>

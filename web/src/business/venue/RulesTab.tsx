@@ -7,6 +7,7 @@ import { showToast } from '../../ui/toasts';
 import { businessOn, useBusiness } from '../context';
 import { VENUE_COPY } from '../copy/venue';
 import type { ContentRules, Daypart, Venue } from '../types';
+import { ContentTools } from '../content/ContentTools';
 import { BlocklistEditor } from './BlocklistEditor';
 import { ContentRulesEditor, type CrateChoice } from './ContentRulesEditor';
 import { ExplicitBulkEditor } from './ExplicitBulkEditor';
@@ -67,5 +68,6 @@ export function RulesTab({ venue, disabled }: { venue: Venue; disabled: string |
         }} />
       )}
     </div>}
+    <ContentTools venue={venue} disabled={disabled} />
   </div>;
 }

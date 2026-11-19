@@ -49,6 +49,7 @@ from selecta.business import licensing_routes as business_licensing_routes
 from selecta.business import playlog_routes as business_playlog_routes
 from selecta.business import rollout_routes as business_rollout_routes
 from selecta.business import routes as business_org_routes
+from selecta.business import start_routes as business_start_routes
 from selecta.business import workspace_routes as business_workspace_routes
 from selecta.business import zone_speaker_routes as business_zone_speaker_routes
 from selecta.business.people import routes as business_people_routes
@@ -556,6 +557,13 @@ def create_cloud_app(
                     .limit(100)
                 )
                 batch = [dict(row._mapping) for row in rows]
+                # ADR-0443 BZ-0443-09: a person scoped to some venues never hears another
+                # venue's zone events; hidden rows still move the replay cursor.
+                from selecta.business.event_scope import zone_filter
+
+                sees = zone_filter(connection, workspace_id, principal.user.id)
+                for row in batch:
+                    row["hidden"] = not sees(row["payload"])
             # The rules version too, so the stream can say when this page's flags may have changed.
             return batch, rule_snapshot().version
 
@@ -600,6 +608,8 @@ def create_cloud_app(
                 rules_seen = rules_version
                 for row in batch:
                     cursor = row["id"]
+                    if row.get("hidden"):
+                        continue
                     frame = {
                         "id": cursor,
                         "topic": row["topic"],
@@ -837,6 +847,9 @@ def create_cloud_app(
         rules=rule_cache,
     )
     business_workspace_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
+    business_start_routes.install_routes(  # ADR-0453 S1: /business/start's pilot contact form
         app, engine=engine, current_claims=current_claims, principal_for=_principal
     )
     # Play here (ADR-0443): what a staff browser plays once it holds a zone's lease.

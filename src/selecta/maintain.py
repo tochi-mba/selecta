@@ -262,9 +262,16 @@ def _rooms(engine: Engine, env: Mapping[str, str], plan: Plan) -> None:
         events=OutboxRoomEvents(),
     )
 
+    from selecta.business.access.directory import SqlDirectory
+    from selecta.business.rooms.service import ZoneRooms
+
+    # ADR-0451: venue room guests go 30 days after their last activity, as party guests do.
+    zone_rooms = ZoneRooms(engine, pepper, directory=SqlDirectory())
+
     def sweep(_fence: TermFence) -> object:
         ended = rooms.expire_rooms()
         purge_guest_data(rooms)
+        zone_rooms.purge()
         return len(ended)
 
     plan.tasks.append(Task("rooms", 60.0, sweep))

@@ -220,6 +220,9 @@ def install_routes(
         principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
         return principal.workspace.id
 
+    def uploader(request: Request, claims: Claims) -> str:
+        return principal_for(engine, claims, request.headers.get("x-workspace-id")).user.id
+
     def refuse_if_restricted(workspace_id: str) -> None:
         """Staff suspended this workspace's uploads (the repeat-infringer policy, §12.3)."""
         with transaction(engine, workspace_id) as conn:
@@ -270,6 +273,7 @@ def install_routes(
                         conn,
                         workspace_id,
                         [FileSpec(**item.model_dump()) for item in body.files],
+                        uploaded_by=uploader(request, claims),
                     )
         except BatchTooLarge as error:
             raise HTTPException(status_code=422, detail={"code": "batch_too_large"}) from error

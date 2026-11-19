@@ -4,7 +4,7 @@
 
 import type { Role } from '../types';
 
-export type NavId = 'overview' | 'venues' | 'schedules' | 'library' | 'requests' | 'people' | 'billing' | 'settings';
+export type NavId = 'overview' | 'venues' | 'schedules' | 'library' | 'requests' | 'people' | 'usage' | 'billing' | 'settings';
 
 export const NAV_LABELS: Record<NavId, string> = {
   overview: 'Overview',
@@ -13,6 +13,7 @@ export const NAV_LABELS: Record<NavId, string> = {
   library: 'Library',
   requests: 'Requests',
   people: 'People',
+  usage: 'Usage',
   billing: 'Billing',
   settings: 'Settings',
 };

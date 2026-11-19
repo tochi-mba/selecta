@@ -59,6 +59,7 @@ const HostedShell = lazy(() => import('./HostedShell').then((module) => ({ defau
 const BusinessApp = lazy(() => import('../business/BusinessApp'));
 const JoinOrganisation = lazy(() => import('../business/JoinOrganisation'));
 const PersonalSwitcher = lazy(() => import('../business/switcher/PersonalSwitcher'));
+const StartPage = lazy(() => import('../business/start/StartPage'));
 // The business price list (BZ-0441-05), only for an account `business.signups` reaches.
 const BusinessPricing = lazy(() => import('../business/pricing/BusinessPricing'));
 
@@ -356,6 +357,11 @@ export function CloudApp() {
   const openPath = (next: string) => { window.history.pushState({}, '', next); setPath(next); setPage(pageFor(next)); };
   if (account && account.features?.['business.signups'] === true && path.replace(/\/+$/, '') === '/business/pricing') {
     return <Suspense fallback={<main className="cloud-runtime-message"><p>Loading prices…</p></main>}><BusinessPricing api={api} onLeave={() => openPath('/')} /></Suspense>;
+  }
+  // `/business/start` (ADR-0453 S1): the pilot contact form, or naming an organisation once
+  // sign-up is on; only with `business.start` on.
+  if (account && account.features['business.start'] === true && path.replace(/\/+$/, '') === '/business/start') {
+    return <Suspense fallback={null}><StartPage api={api} signups={account.features['business.signups'] === true} onOpen={openPath} /></Suspense>;
   }
   if (account && businessShown(account) && isBusinessPath(path)) {
     const leaveBusiness = () => openPath('/');

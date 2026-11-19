@@ -138,8 +138,8 @@ export function startVenue(root: HTMLElement, code: string): void {
     parts.push(h('p', { className: 'g-notice', role: 'status' }, notice));
     parts.push(h('footer', { className: 'g-small g-muted' }, `You're ${state.nickname}. ${brand.footer}`));
     replace(root, h('section', { className: 'g-card' }, ...parts));
-    const search = root.querySelector('input[type=search]') as HTMLInputElement | null;
-    if (search && query) { search.focus(); search.setSelectionRange(query.length, query.length); }
+    const box = root.querySelector('input[type=search]') as HTMLInputElement | null;
+    if (box && query) { box.focus(); box.setSelectionRange(query.length, query.length); }
   }
 
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && state) void refresh(); });

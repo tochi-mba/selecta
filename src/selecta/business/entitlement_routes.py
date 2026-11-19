@@ -34,7 +34,7 @@ from sqlalchemy.engine import Connection, Engine
 
 from selecta.admin import http
 from selecta.authz.check import authorize
-from selecta.business import entitlement_gates, slo, usage_meters
+from selecta.business import entitlement_gates, slo, usage_meters, weight
 from selecta.business import entitlements as ent
 from selecta.business.commercial_audit import audit
 from selecta.business.commercial_facts import BILLING_ROLES, MANAGER_ROLES, FactsSource, SqlFacts
@@ -161,10 +161,11 @@ def install_routes(
         with member(request, claims, MANAGER_ROLES) as (conn, org, role, now):
             entitlement_gates.sync_storage(conn, org, now)
             answer = usage_meters.usage_for(conn, org, role, now)
+            confirmed = weight.always_open_confirmed(conn, org.organisation_id)
         if isinstance(answer, usage_meters.MetersRefused):
             raise HTTPException(status_code=answer.status, detail={
                 "code": "usage_not_permitted", "message": answer.message})
-        return answer
+        return {**answer, "always_open_confirmed": confirmed}
 
     @app.get("/api/business/slo")
     def continuity(request: Request, month: str | None = None,

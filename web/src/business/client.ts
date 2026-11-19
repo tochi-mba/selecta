@@ -11,6 +11,7 @@ import {
   applyParts, blocklistDiff, exceptionBody, hoursBody, membersOf, programmeBody, rulesBody, rulesOf, scheduleOf,
   type BlockEntry, type PeopleAnswer, type ProgrammeAnswer, type VenueRulesAnswer,
 } from './clientAdapters';
+import type { CloseNowAnswer, HolidaySuggestion, HoursAnswer, SloAnswer, UsageAnswer, ZoneDayState } from './hoursAdapters';
 import { TEMPLATES } from './forms/DaypartBar';
 import type {
   ZoneAlert,
@@ -28,6 +29,14 @@ export const ROUTES = {
   venue: (venue: string) => `/business/venues/${enc(venue)}`,
   hours: (venue: string) => `/business/venues/${enc(venue)}/hours`,
   hourExceptions: (venue: string) => `/business/venues/${enc(venue)}/hour-exceptions`,
+  hourException: (venue: string, id: string) => `/business/venues/${enc(venue)}/hour-exceptions/${enc(id)}`,
+  holidaySuggestions: (venue: string, country: string, year: number) => `/business/venues/${enc(venue)}/holiday-suggestions?country=${enc(country)}&year=${year}`,
+  closeNow: (venue: string) => `/business/venues/${enc(venue)}/close-now`,
+  closeNowUndo: (venue: string, id: string) => `/business/venues/${enc(venue)}/close-now/${enc(id)}/undo`,
+  zoneState: (zone: string) => `/business/zones/${enc(zone)}/state`,
+  usage: '/business/usage',
+  slo: (month?: string) => `/business/slo${month ? `?month=${enc(month)}` : ''}`,
+  alwaysOpen: '/business/always-open',
   zones: '/business/zones',
   zonesOf: (venue: string) => `/business/zones?venue_id=${enc(venue)}`,
   zone: (zone: string) => `/business/zones/${enc(zone)}`,
@@ -157,6 +166,20 @@ export function businessClient(api: Api, workspaceId?: string) {
       return rules;
     },
     stayOpenLate: (_org: string, venue: string, minutes: number) => call<unknown>(ROUTES.stayLate(venue), json('POST', { minutes })),
+    /** Opening hours and date exceptions as the server stores them (ADR-0444). */
+    hours: (venue: string) => call<HoursAnswer>(ROUTES.hours(venue)),
+    saveWeek: (venue: string, hours: WeekHours) => call<HoursAnswer>(ROUTES.hours(venue), json('PUT', hoursBody(hours))),
+    addException: (venue: string, holiday: Holiday) => call<{ id: string }>(ROUTES.hourExceptions(venue), json('POST', exceptionBody(holiday))),
+    removeException: (venue: string, id: string) => call<{ deleted: string }>(ROUTES.hourException(venue, id), json('DELETE')),
+    /** Public holidays as suggestions only: nothing changes until one is added as an exception. */
+    holidaySuggestions: async (venue: string, country: string, year: number) => (await call<{ suggestions: HolidaySuggestion[] }>(ROUTES.holidaySuggestions(venue, country, year))).suggestions ?? [],
+    closeNow: (venue: string) => call<CloseNowAnswer>(ROUTES.closeNow(venue), json('POST')),
+    undoCloseNow: (venue: string, id: string) => call<{ id: string; undone: boolean }>(ROUTES.closeNowUndo(venue, id), json('POST')),
+    zoneState: (zone: string) => call<ZoneDayState>(ROUTES.zoneState(zone)),
+    /** Organisation and per-venue meters (ADR-0448); managers only, the server refuses others. */
+    usage: () => call<UsageAnswer>(ROUTES.usage),
+    slo: (month?: string) => call<SloAnswer>(ROUTES.slo(month)),
+    setAlwaysOpen: (confirmed: boolean) => call<{ always_open_confirmed: boolean }>(ROUTES.alwaysOpen, json('PUT', { confirmed })),
     unpair: (device: string) => call<null>(ROUTES.unpair(device), json('DELETE')),
     pair: (body: { code: string; zone_id: string; name: string; replace_device_id?: string }) => call<Device>(ROUTES.pair, json('POST', body)),
     /** The kiosk players this person may see, with their latest health (ADR-0445). */

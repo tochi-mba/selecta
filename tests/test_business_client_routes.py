@@ -21,8 +21,11 @@ ROOT = Path(__file__).resolve().parents[1]
 CLIENT_FILES = (
     "web/src/business/client.ts",
     "web/src/business/api.ts",
+    "web/src/business/content/contentClient.ts",
+    "web/src/business/rooms/roomsClient.ts",
     "web/src/devices/zonePlayback.ts",
     "web/src/devices/useZoneSpeaker.ts",
+    "web/src/business/start/StartPage.tsx",
 )
 COMMENTS = re.compile(r"/\*.*?\*/|(?<![:'\"`])//[^\n]*", re.S)
 SLOT = "\u0001"

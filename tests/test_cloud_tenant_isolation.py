@@ -86,6 +86,8 @@ SELF_ONLY = {
     ("POST", "/api/onboarding/complete"),
     ("POST", "/api/account/sign-out-everywhere"),
     ("DELETE", "/api/account"),
+    # ADR-0453 S1: emails REX Technologies sales from the signed-in person; reads no workspace.
+    ("POST", "/api/business/pilot-interest"),
     # Staff only: starts the caller's own admin session and never reads a customer workspace.
     ("POST", "/api/admin/session"),
     # The business price list: catalogue figures only, behind business.signups targeting.
@@ -132,6 +134,10 @@ STAFF_ONLY = {
     ("POST", "/api/admin/business/pilots"),
     ("POST", "/api/admin/business/orgs/{org_id}/billing/credit"),
     ("POST", "/api/admin/business/orgs/{org_id}/billing/refund"),
+    # ADR-0448 SLO credit decisions: staff session plus business.billing.refund.
+    ("GET", "/api/admin/business/orgs/{org_id}/slo-credits"),
+    ("POST", "/api/admin/business/orgs/{org_id}/slo-credits/{proposal_id}/approve"),
+    ("POST", "/api/admin/business/orgs/{org_id}/slo-credits/{proposal_id}/reject"),
     ("POST", "/api/admin/business/orgs/{org_id}/contracts"),
     ("POST", "/api/admin/business/orgs/{org_id}/contracts/{contract_id}/revoke"),
     ("GET", "/api/admin/flags/cloud.hosted_media/grandfather-audit"),
@@ -200,6 +206,10 @@ BUSINESS_SCOPED = {
     ("POST", "/api/business/venues/{venue_id}/close-now"),
     ("POST", "/api/business/venues/{venue_id}/close-now/{override_id}/undo"),
     ("GET", "/api/business/zones/{zone_id}/state"),
+    # ADR-0448 usage meters, continuity and always-open: business workspace and membership.
+    ("GET", "/api/business/usage"),
+    ("GET", "/api/business/slo"),
+    ("PUT", "/api/business/always-open"),
     ("GET", "/api/business/zones/{zone_id}/programme"),
     ("PUT", "/api/business/zones/{zone_id}/programme"),
     ("GET", "/api/business/zones/{zone_id}/offline-manifest"),

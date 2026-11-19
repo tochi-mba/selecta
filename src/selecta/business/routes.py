@@ -30,7 +30,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection, Engine
 
-from selecta.business import crates, hours_hook, orgs, venues, zones
+from selecta.business import crates, entitlement_gates, hours_hook, orgs, venues, zones
 from selecta.business.access import BusinessForbidden, BusinessNotFound
 from selecta.business.access import audit as business_audit
 from selecta.business.access import guard as business_guard
@@ -156,6 +156,34 @@ def install_routes(
         except (BusinessError, ValueError) as error:
             raise _answer(error) from error
 
+    def need(conn: Connection, found, workspace_id: str, permission: str, *,
+             venue_id: str | None = None, zone_id: str | None = None):
+        """ADR-0452 BZ-0452-02: one business permission at the venue (or zone) for this person.
+        Out of scope answers 404 like a missing venue; in scope without the role answers 403."""
+        try:
+            actor = business_guard.actor_for(
+                conn, user_id=found.user.id, organisation_id=workspace_id,
+                workspace_id=workspace_id,
+            )
+            business_guard.require(conn, actor, permission, venue_id=venue_id, zone_id=zone_id)
+        except BusinessNotFound as error:
+            raise NotFound("not found") from error
+        except BusinessForbidden as error:
+            raise HTTPException(status_code=403, detail={"code": "forbidden"}) from error
+        return actor
+
+    def visible(conn: Connection, found, workspace_id: str, items: list[dict],
+                key: str = "id") -> list[dict]:
+        """Only the venues (or rows of venues) this person's roles reach."""
+        try:
+            actor = business_guard.actor_for(
+                conn, user_id=found.user.id, organisation_id=workspace_id,
+                workspace_id=workspace_id,
+            )
+        except BusinessNotFound as error:
+            raise NotFound("not found") from error
+        return [item for item in items if business_guard.in_scope(actor, item.get(key))]
+
     def org_on(conn: Connection, found, workspace: dict) -> bool:
         """Whether `business.orgs` is on for this person in that organisation."""
         there = dataclasses.replace(
@@ -228,15 +256,17 @@ def install_routes(
         include_archived: bool = False,
         claims: Claims = Depends(current_claims),  # noqa: B008
     ):
-        with org(request, claims) as (conn, workspace_id, _found, _now):
+        with org(request, claims) as (conn, workspace_id, found, _now):
             items = venues.list_venues(conn, workspace_id, include_archived=include_archived)
+            items = visible(conn, found, workspace_id, items)
         return {"venues": items}
 
     @app.post("/api/business/venues", status_code=201)
     def create_venue(
         body: VenueBody, request: Request, claims: Claims = Depends(current_claims)  # noqa: B008
     ):
-        with org(request, claims) as (conn, workspace_id, _found, now):
+        with org(request, claims) as (conn, workspace_id, found, now):
+            need(conn, found, workspace_id, "business.venues.manage")
             venue = venues.create(
                 conn,
                 workspace_id,
@@ -246,13 +276,15 @@ def install_routes(
                 address=body.address,
                 now=now,
             )
+            entitlement_gates.sync_storage_for(conn, workspace_id, now)  # ADR-0448 pooled
         return {"venue": venue}
 
     @app.get("/api/business/venues/{venue_id}")
     def get_venue(
         venue_id: str, request: Request, claims: Claims = Depends(current_claims)  # noqa: B008
     ):
-        with org(request, claims) as (conn, workspace_id, _found, _now):
+        with org(request, claims) as (conn, workspace_id, found, _now):
+            need(conn, found, workspace_id, "business.venue.read", venue_id=venue_id)
             venue = venues.get(conn, workspace_id, venue_id)
             venue["zones"] = zones.list_zones(conn, workspace_id, venue_id)
         return {"venue": venue}
@@ -264,7 +296,8 @@ def install_routes(
         request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
     ):
-        with org(request, claims) as (conn, workspace_id, _found, _now):
+        with org(request, claims) as (conn, workspace_id, found, now):
+            need(conn, found, workspace_id, "business.venues.manage", venue_id=venue_id)
             venue = venues.get(conn, workspace_id, venue_id)
             if body.name is not None:
                 venue = venues.rename(conn, workspace_id, venue_id, name=body.name)
@@ -274,6 +307,8 @@ def install_routes(
                 venue = venues.pause(conn, workspace_id, venue_id)
             elif body.status == "active":
                 venue = venues.resume(conn, workspace_id, venue_id)
+            if body.status is not None:
+                entitlement_gates.sync_storage_for(conn, workspace_id, now)  # ADR-0448
         return {"venue": venue}
 
     @app.post("/api/business/venues/{venue_id}/archive")
@@ -284,14 +319,16 @@ def install_routes(
         claims: Claims = Depends(current_claims),  # noqa: B008
     ):
         body = body or ArchiveBody()
-        with org(request, claims) as (conn, workspace_id, _found, now):
+        with org(request, claims) as (conn, workspace_id, found, now):
+            need(conn, found, workspace_id, "business.venues.manage", venue_id=venue_id)
             venues.get(conn, workspace_id, venue_id)
             closing = _closing_at(conn, workspace_id, venue_id, body, now)
             if closing is None:
                 for zone in zones.list_zones(conn, workspace_id, venue_id):
                     zones.archive(conn, workspace_id, zone["id"], when="now", now=now)
-                return {"venue": venues.archive(conn, workspace_id, venue_id, now=now),
-                        "archive_at": now}
+                archived = venues.archive(conn, workspace_id, venue_id, now=now)
+                entitlement_gates.sync_storage_for(conn, workspace_id, now)  # ADR-0448
+                return {"venue": archived, "archive_at": now}
             # At closing time: each zone stops at the close; the venue stays listed until then.
             for zone in zones.list_zones(conn, workspace_id, venue_id):
                 zones.archive(
@@ -335,19 +372,22 @@ def install_routes(
         include_archived: bool = False,
         claims: Claims = Depends(current_claims),  # noqa: B008
     ):
-        with org(request, claims) as (conn, workspace_id, _found, _now):
+        with org(request, claims) as (conn, workspace_id, found, _now):
             if venue_id is not None:
+                need(conn, found, workspace_id, "business.venue.read", venue_id=venue_id)
                 venues.get(conn, workspace_id, venue_id)
             items = zones.list_zones(
                 conn, workspace_id, venue_id, include_archived=include_archived
             )
-        return {"zones": items}
+            visible_zones = visible(conn, found, workspace_id, items, key="venue_id")
+        return {"zones": visible_zones}
 
     @app.post("/api/business/zones", status_code=201)
     def create_zone(
         body: ZoneBody, request: Request, claims: Claims = Depends(current_claims)  # noqa: B008
     ):
-        with org(request, claims) as (conn, workspace_id, _found, now):
+        with org(request, claims) as (conn, workspace_id, found, now):
+            need(conn, found, workspace_id, "business.zones.edit", venue_id=body.venue_id)
             venue = venues.get(conn, workspace_id, body.venue_id)
             if venue["status"] == "archived":
                 raise NotFound("venue not found")
@@ -361,8 +401,9 @@ def install_routes(
         request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
     ):
-        with org(request, claims) as (conn, workspace_id, _found, _now):
+        with org(request, claims) as (conn, workspace_id, found, _now):
             zone = zones.get(conn, workspace_id, zone_id)
+            need(conn, found, workspace_id, "business.zones.edit", venue_id=zone["venue_id"])
             if body.name is not None:
                 zone = zones.rename(conn, workspace_id, zone_id, name=body.name)
             if body.status == "paused":
@@ -379,8 +420,9 @@ def install_routes(
         claims: Claims = Depends(current_claims),  # noqa: B008
     ):
         body = body or ArchiveBody()
-        with org(request, claims) as (conn, workspace_id, _found, now):
+        with org(request, claims) as (conn, workspace_id, found, now):
             zone = zones.get(conn, workspace_id, zone_id)
+            need(conn, found, workspace_id, "business.zones.edit", venue_id=zone["venue_id"])
             closing = _closing_at(conn, workspace_id, zone["venue_id"], body, now)
             if closing is None:
                 zone = zones.archive(conn, workspace_id, zone_id, when="now", now=now)
@@ -398,7 +440,8 @@ def install_routes(
         venue_id: str | None = None,
         claims: Claims = Depends(current_claims),  # noqa: B008
     ):
-        with org(request, claims) as (conn, workspace_id, _found, _now):
+        with org(request, claims) as (conn, workspace_id, found, _now):
+            need(conn, found, workspace_id, "business.rules.read", venue_id=venue_id)
             if venue_id is None:
                 items = crates.list_org(conn, workspace_id)
             else:
@@ -410,6 +453,7 @@ def install_routes(
         body: CrateBody, request: Request, claims: Claims = Depends(current_claims)  # noqa: B008
     ):
         with org(request, claims) as (conn, workspace_id, found, now):
+            need(conn, found, workspace_id, "business.rules.edit", venue_id=body.venue_id)
             crate = crates.create(
                 conn,
                 workspace_id,
@@ -427,7 +471,8 @@ def install_routes(
         venue_id: str | None = None,
         claims: Claims = Depends(current_claims),  # noqa: B008
     ):
-        with org(request, claims) as (conn, workspace_id, _found, _now):
+        with org(request, claims) as (conn, workspace_id, found, _now):
+            need(conn, found, workspace_id, "business.rules.read", venue_id=venue_id)
             if venue_id is not None:
                 venues.get(conn, workspace_id, venue_id)
             crate = crates.get(conn, workspace_id, crate_id, venue_id=venue_id)
@@ -440,7 +485,9 @@ def install_routes(
         request: Request,
         claims: Claims = Depends(current_claims),  # noqa: B008
     ):
-        with org(request, claims) as (conn, workspace_id, _found, _now):
+        with org(request, claims) as (conn, workspace_id, found, _now):
+            owner_venue = crates.get(conn, workspace_id, crate_id).get("venue_id")
+            need(conn, found, workspace_id, "business.rules.edit", venue_id=owner_venue)
             unknown = _not_in_library(conn, workspace_id, body.song_ids)
             if unknown:
                 raise HTTPException(
@@ -454,7 +501,9 @@ def install_routes(
     def delete_crate(
         crate_id: str, request: Request, claims: Claims = Depends(current_claims)  # noqa: B008
     ):
-        with org(request, claims) as (conn, workspace_id, _found, _now):
+        with org(request, claims) as (conn, workspace_id, found, _now):
+            owner_venue = crates.get(conn, workspace_id, crate_id).get("venue_id")
+            need(conn, found, workspace_id, "business.rules.edit", venue_id=owner_venue)
             crates.delete(conn, workspace_id, crate_id)
         return {"deleted": crate_id}
 

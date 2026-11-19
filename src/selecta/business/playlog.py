@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import csv
 import io
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import ROUND_HALF_EVEN, Decimal
@@ -294,21 +294,60 @@ def export_csv(
     """CSV of every play at the venue in [start, end), then a per-track totals section.
 
     `venue_ids` are the venues a venue manager manages. The totals are computed from exactly the
-    rows above them, with seconds rounded to milliseconds the same way in both sections.
+    rows above them, with seconds rounded to milliseconds the same way in both sections. This is
+    `iter_export_csv` joined; large ranges should stream the chunks instead.
     """
+    return "".join(iter_export_csv(conn, org, venue_id, start, end, role, venue_ids=venue_ids))
+
+
+EXPORT_BATCH = 2_000
+CRLF = "\r\n"
+
+
+def iter_export_csv(
+    conn: Connection,
+    org: OrgFacts,
+    venue_id: str,
+    start: float,
+    end: float,
+    role: str,
+    *,
+    venue_ids: Iterable[str] | None = None,
+    batch: int = EXPORT_BATCH,
+) -> Iterator[str]:
+    """`export_csv` as chunks of at most `batch` rows, reading the play log with a server-side
+    cursor, so memory grows with the number of distinct tracks (the totals), never with the
+    number of plays (ADR-0454 ST8: a month of 500 venues is about 8 million rows). Permission and
+    range are checked before the first chunk."""
     if not can_export(org, role, venue_id, venue_ids):
         raise PlayLogForbidden("Only owners, admins and this venue's managers can export.")
     if end <= start:
         raise PlayLogError("The end of the range must be after the start.", code="bad_range")
-    plays = rows(conn, org.organisation_id, venue_id, start, end)
-    fixes = isrc_mod.corrections(
-        conn, org.workspace_id, sorted({r["track_id"] for r in plays if r["track_id"]})
-    )
+    return _export_chunks(conn, org, venue_id, start, end, batch)
+
+
+def _export_chunks(conn: Connection, org: OrgFacts, venue_id: str, start: float, end: float,
+                   batch: int) -> Iterator[str]:
+    # Every ISRC edit in the workspace: bounded by edits made, not by plays.
+    fixes = isrc_mod.corrections(conn, org.workspace_id)
     out = io.StringIO()
-    writer = csv.writer(out, lineterminator="\r\n")
+    writer = csv.writer(out, lineterminator=CRLF)
     writer.writerow(ROW_HEADER)
     totals: dict[str, dict[str, Any]] = {}
-    for r in plays:
+    query = (
+        sa.select(biz_play_log)
+        .where(
+            biz_play_log.c.organisation_id == org.organisation_id,
+            biz_play_log.c.venue_id == venue_id,
+            biz_play_log.c.started_at >= start,
+            biz_play_log.c.started_at < end,
+        )
+        .order_by(biz_play_log.c.started_at, biz_play_log.c.device_id,
+                  biz_play_log.c.device_seq, biz_play_log.c.id)
+    )
+    result = conn.execution_options(stream_results=True, yield_per=batch).execute(query)
+    written = 0
+    for r in result.mappings():
         code = fixes[r["track_id"]] if r["track_id"] in fixes else r["isrc"]
         secs = _seconds(r["seconds_played"])
         utc = datetime.fromtimestamp(r["started_at"], UTC).isoformat(timespec="seconds")
@@ -324,6 +363,11 @@ def export_csv(
         })
         bucket["plays"] += 1
         bucket["seconds"] += secs
+        written += 1
+        if written % batch == 0:
+            yield out.getvalue()
+            out.seek(0)
+            out.truncate(0)
     writer.writerow([])
     writer.writerow(["Totals per track"])
     writer.writerow(TOTALS_HEADER)
@@ -334,4 +378,4 @@ def export_csv(
             bucket["title"], bucket["artist"], bucket["album"], bucket["isrc"],
             bucket["label"], bucket["plays"], f"{bucket['seconds']}",
         )])
-    return out.getvalue()
+    yield out.getvalue()

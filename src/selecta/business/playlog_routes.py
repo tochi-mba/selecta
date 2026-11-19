@@ -5,18 +5,21 @@ venue's play log for those days (in the venue's own time zone, both days include
 inside JSON, with the per-track totals section (`playlog.export_csv`). Owners and admins may
 export any venue; a venue manager only the venues they manage; everyone else gets 403. The
 export is built in the request: one venue and at most `MAX_DAYS` days, so it never needs a
-background job, and every export is audited.
+background job, and every export is audited. `&format=csv` streams the same CSV as a download
+(`playlog.iter_export_csv`, a server-side cursor in batches), so a long range is never held in
+memory (ADR-0454 ST8).
 """
 
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from datetime import date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy.engine import Engine
 
 from selecta.business import playlog
@@ -80,6 +83,7 @@ def install_routes(
         venue_id: str = Query(min_length=1, max_length=64),
         first: str = Query(alias="from", min_length=10, max_length=10),
         last: str = Query(alias="to", min_length=10, max_length=10),
+        output: str = Query("json", alias="format", pattern="^(json|csv)$"),
         claims: Claims = Depends(current_claims),  # noqa: B008
     ):
         found = principal_for(engine, claims, request.headers.get("x-workspace-id"))
@@ -99,8 +103,14 @@ def install_routes(
             managed = (_managed_venues(conn, found.workspace.id, found.user.id)
                        if role == "venue_manager" else None)
             try:
-                text = playlog.export_csv(conn, org, venue_id, start, end, role,
-                                          venue_ids=managed)
+                if output == "csv":
+                    # Checked now; the rows stream later in their own read (ADR-0454 ST8).
+                    playlog.iter_export_csv(conn, org, venue_id, start, end, role,
+                                            venue_ids=managed)
+                    text = ""
+                else:
+                    text = playlog.export_csv(conn, org, venue_id, start, end, role,
+                                              venue_ids=managed)
             except playlog.PlayLogForbidden as error:
                 raise HTTPException(status_code=403, detail={
                     "code": "forbidden", "message": str(error)}) from error
@@ -108,7 +118,18 @@ def install_routes(
                   action="playlog.exported", actor=found.user.id, now=float(db_now(conn)),
                   venue_id=venue_id, detail={"from": first, "to": last})
         name = re.sub(r"[^A-Za-z0-9]+", "-", venue.name).strip("-").lower() or "venue"
-        return {"filename": f"selectadj-play-log-{name}-{first}-to-{last}.csv", "csv": text}
+        filename = f"selectadj-play-log-{name}-{first}-to-{last}.csv"
+        if output == "csv":
+            workspace_id = found.workspace.id
+
+            def chunks() -> Iterator[str]:
+                with transaction(engine, workspace_id) as read:
+                    yield from playlog.iter_export_csv(read, org, venue_id, start, end, role,
+                                                       venue_ids=managed)
+
+            return StreamingResponse(chunks(), media_type="text/csv; charset=utf-8", headers={
+                "Content-Disposition": f'attachment; filename="{filename}"'})
+        return {"filename": filename, "csv": text}
 
 
 __all__ = ["FLAG", "MAX_DAYS", "day_range", "install_routes"]

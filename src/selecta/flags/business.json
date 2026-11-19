@@ -13,6 +13,16 @@
       "kind": "release",
       "owner": "business"
     },
+    "business.start": {
+      "label": "Business start page",
+      "about": "The /business/start page: while sign-up is off, a pilot contact form that emails REX Technologies; once sign-up is on, naming a new organisation.",
+      "default": false,
+      "routes": ["POST /api/business/pilot-interest"],
+      "modes": ["cloud"],
+      "scope": "user",
+      "kind": "release",
+      "owner": "business"
+    },
     "business.orgs": {
       "label": "Organisations, venues, zones and crates",
       "about": "An organisation workspace with its venues, each venue's zones, and organisation and venue crates drawn from one shared library.",

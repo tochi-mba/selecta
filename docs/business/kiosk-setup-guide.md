@@ -64,6 +64,9 @@ managers are told. One tap lasts until the page is reloaded. To remove the tap e
 - The player keeps up to about four hours of music saved ahead and plays it with no internet.
   Ask the browser to keep that storage: the player requests persistent storage when it is
   paired and reports whether it was granted.
+- Playing without internet needs a browser that can check SelectaDJ's signed offline permit
+  (Ed25519 in WebCrypto, in current Chrome, Edge, Firefox and Safari). An older browser plays
+  only while connected; the staff panel says so under "Plays without internet".
 - Past its saved music it replays saved songs with simple crossfades. Only when nothing saved
   is left does it show "The music will be back shortly".
 
