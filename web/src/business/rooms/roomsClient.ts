@@ -32,7 +32,6 @@ export const ROOM_ROUTES = {
   print: (venue: string) => `/venues/${enc(venue)}/room-print`,
   screenCode: (zone: string) => `/zones/${enc(zone)}/room/screen-code`,
   next: (zone: string) => `/zones/${enc(zone)}/requests/next`,
-  played: (zone: string, id: string) => `/zones/${enc(zone)}/requests/${enc(id)}/played`,
 } as const;
 
 export function roomsClient(api: Api, workspaceId: string) {
@@ -48,7 +47,6 @@ export function roomsClient(api: Api, workspaceId: string) {
     print: (venue: string) => call<PrintSheet>(ROOM_ROUTES.print(venue)),
     screenCode: (zone: string) => call<ScreenCode>(ROOM_ROUTES.screenCode(zone)),
     next: async (zone: string) => (await call<{ request: NextRequest | null }>(ROOM_ROUTES.next(zone))).request,
-    played: (zone: string, id: string) => call<{ played: boolean }>(ROOM_ROUTES.played(zone, id), post()),
   };
 }
 
