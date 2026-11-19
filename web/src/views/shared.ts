@@ -46,6 +46,9 @@ export type ViewProps = {
   transitionEditingAvailable?: boolean;
   /** Whether this player's runtime exposes measured audio-frequency data for the visualizer. */
   visualizerAvailable?: boolean;
+  /** Where songs aren't analysed (browser-first Cloud), a song's waveform drawn from its own file
+   * on this device, for Listen's strip; null when the file can't be read here. */
+  waveformOf?: (songId: number) => Promise<number[] | null>;
   /** The name of the current mix, whatever is being edited, for saying what a change will or won't touch. */
   currentMixName?: string;
 };

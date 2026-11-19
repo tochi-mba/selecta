@@ -560,7 +560,7 @@ function TransitionTruth({ seam, ready, names, live = false, pair }: { seam: Vie
 }
 
 export function Now(props: ViewProps) {
-  const { mix, mixName, now, player, setView, refreshMix, setMixData, notify, stage, stageFallback, toggleStage, status, openRequests, request, analysisAvailable, visualizerAvailable } = props;
+  const { mix, mixName, now, player, setView, refreshMix, setMixData, notify, stage, stageFallback, toggleStage, status, openRequests, request, analysisAvailable, visualizerAvailable, waveformOf } = props;
   // ADR-0462: the song detail read and the rating/swap writes go through the injected request.
   const { get, post } = useApi(request);
   const requests = useContext(RequestsContext);
@@ -625,7 +625,13 @@ export function Now(props: ViewProps) {
     if (!item || analysisAvailable === false) {
       setDetail(null);
       setDetailFailed(false);
-      return;
+      if (!item || !waveformOf) return;
+      // no analysis here: the strip is the song's own waveform, with no sections claimed
+      let live = true;
+      void waveformOf(item.song_id).then((peaks) => {
+        if (live && peaks) setDetail({ id: item.song_id, artist: item.artist, title: item.title, duration: item.duration, bpm: 0, key: '', peaks, sections: [], lines: [] });
+      }).catch(() => undefined);
+      return () => { live = false; };
     }
     let live = true;
     setDetail(null);
@@ -634,7 +640,7 @@ export function Now(props: ViewProps) {
     return () => {
       live = false;
     };
-  }, [item?.song_id, detailAttempt, analysisAvailable]);
+  }, [item?.song_id, detailAttempt, analysisAvailable, waveformOf]);
 
   useEffect(() => setRated(''), [now.lastSeamKey]);
 
@@ -770,7 +776,8 @@ export function Now(props: ViewProps) {
         </div>
 
         <aside className="listen-side" aria-label="Coming up">
-          {shown && on('listen.beat_countdown') && (stage || (timing && !lyricFocus)) && (
+          {/* a browser mix has no beat grid here, so it counts the scheduled hand-off in minutes and seconds */}
+          {shown && on('listen.beat_countdown') && (stage || (timing && !lyricFocus) || analysisAvailable === false) && (
             <TransitionCountdown
               detail={shown}
               time={now.songTime}

@@ -17,6 +17,7 @@ import { Library } from '../views/Library';
 import { Mix } from '../views/Mix';
 import { PlayedTransitions } from '../views/liveTransitions';
 import { playedByPair } from './playedSeams';
+import { peaksFrom } from '../dsp/waveform';
 import { Mixes } from '../views/Mixes';
 import { MyMixes } from '../views/MyMixes';
 import { Now } from '../views/Now';
@@ -279,6 +280,23 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   // what each transition really played on this device this visit, for the editor (cloud.browser_moves)
   const played = useMemo(() => (on('cloud.browser_moves') ? playedByPair(scheduled) : {}), [scheduled]);
   const resolveTrack = useCallback<MediaResolver>(async (songId) => (await resolver())?.(songId) ?? null, [resolver]);
+  // Listen's strip: each song's waveform from its own file here, decoded once and kept for the visit
+  const waveforms = useRef(new Map<number, Promise<number[] | null>>());
+  const waveformOf = useCallback((songId: number) => {
+    let made = waveforms.current.get(songId);
+    if (!made) {
+      made = (async () => {
+        const track = await resolveTrack(songId);
+        if (!track || typeof OfflineAudioContext === 'undefined') return null;
+        const decoded = await new OfflineAudioContext(1, 1, 44100).decodeAudioData(await track.data());
+        return peaksFrom(decoded);
+      })().catch(() => null);
+      waveforms.current.set(songId, made);
+      // a song not readable yet (not connected this visit) is tried again next time
+      void made.then((peaks) => { if (!peaks) waveforms.current.delete(songId); });
+    }
+    return made;
+  }, [resolveTrack]);
   // Make a Mix sets the new mix and asks to play it in the same breath (local mode's player reads
   // the mix from its server). Here the engine learns the mix from the next render, so a play asked
   // for straight after a new mix waits for that render instead of playing the old one.
@@ -326,7 +344,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   const shared: ViewProps | null = status && {
     status, mix: data.mix, mixName: data.name, currentMixName: data.name, canUndo: data.can_undo, mixEta: data.eta,
     refreshMix, setMixData, refreshStatus, request, player: shellPlayer, now, readyNeeded: BROWSER_MIX_NEEDS,
-    analysisAvailable: false, transitionEditingAvailable: false, visualizerAvailable: false,
+    analysisAvailable: false, transitionEditingAvailable: false, visualizerAvailable: false, waveformOf,
     setView: (view: View) => navigate(VIEW_PATHS[view]), notify, stage: false, toggleStage: IDLE,
   };
   const song = data.mix[now.position];

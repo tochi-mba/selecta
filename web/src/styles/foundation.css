@@ -134,8 +134,10 @@ input[aria-invalid='true'], select[aria-invalid='true'], textarea[aria-invalid='
 
 /* Every disclosure says it opens. A summary laid out with flex or grid loses the native
    triangle, so the foundation draws one: a border chevron that points right closed and
-   down open, inheriting the text colour. It reads in both themes and under forced colours. */
-summary { cursor: pointer; }
+   down open, inheriting the text colour. It reads in both themes and under forced colours.
+   The native marker goes everywhere, so a summary left as a list item never shows two. */
+summary { cursor: pointer; list-style: none; }
+summary::-webkit-details-marker { display: none; }
 summary::before {
   content: '';
   flex: none;

@@ -38,11 +38,11 @@ The box and stroke live in `ICON_SLOTS` and `ICON_STROKES` (`web/src/ui/Icon.tsx
 | `warning` | Needs attention, blocked or a failed check | standard, compact, toolbar | `shell/Shell.tsx`, `ui/controls.tsx`, `views/Mix.tsx`, `views/SeamInspector.tsx`, `cloud/onboarding/OnboardingSpine.tsx`, `cloud/onboarding/steps.tsx`, `cloud/venue/VenueFallback.tsx`, `harness/CloudGallery.tsx` | The link `aria-label`, button words, status words or the heading beside it |
 | `clock` | Queued status mark | compact | `ui/controls.tsx` | The status words |
 | `minus` | Unavailable status mark | compact | `ui/controls.tsx`, `cloud/onboarding/OnboardingSpine.tsx` | The status words |
-| `more` | Open a row's menu | standard | `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/LibraryRow.tsx`, `views/LucyHistory.tsx` | Hidden words in the trigger, and `title` |
+| `more` | Open a row's menu | standard | `cloud/SavedBrowserMixes.tsx`, `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/LibraryRow.tsx`, `views/LucyHistory.tsx` | Hidden words in the trigger, and `title` |
 | `help` | Keyboard shortcuts | standard | `shell/Shell.tsx` | `aria-label` and `title` |
 | `up` | Move up; collapse a disclosure | standard, toolbar | `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/EditorStory.tsx`, `views/LucySongs.tsx` | `aria-label` and `title`, or the disclosure words |
 | `down` | Move down; expand a disclosure or menu | standard, toolbar, compact | `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/EditorStory.tsx`, `views/LucyProposal.tsx`, `views/LucySongs.tsx` | `aria-label` and `title`, or the disclosure or menu words |
-| `trash` | Delete or remove | standard | `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/LucySongs.tsx`, `views/Mix.tsx` | The item words, or `aria-label` and `title` |
+| `trash` | Delete or remove | standard | `cloud/SavedBrowserMixes.tsx`, `views/Drafts.tsx`, `views/EditorRows.tsx`, `views/LucySongs.tsx`, `views/Mix.tsx` | The item words, or `aria-label` and `title` |
 | `plus` | Add a song, start a new chat, request | standard, toolbar, compact | `views/EditorRows.tsx`, `views/LucyHistory.tsx`, `views/Requests.tsx` | The words beside it |
 | `search` | Search and commands; a search field | standard | `shell/Shell.tsx`, `ui/primitives.tsx` | The button's `aria-label`; the field's label |
 | `grip` | Drag handle | standard | `views/EditorRows.tsx` | The handle's `aria-label` and `title` |
