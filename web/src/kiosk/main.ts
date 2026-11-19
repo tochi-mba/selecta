@@ -13,6 +13,7 @@ import { startBurnIn } from './burnIn';
 import { createController, HEALTH_MS, HEARTBEAT_MS, HORIZON_MS, UPDATE_CHECK_MS, VIEW_MS } from './controller';
 import { KIOSK_COPY } from './copy';
 import { deviceKey, openKeyStore } from './deviceKey';
+import { permitStore } from './permit';
 import { playLog } from './playLog';
 import { renderScreen } from './screens';
 import { mountStaffPanel } from './staffPanel';
@@ -53,6 +54,7 @@ async function start(): Promise<void> {
 
   const controller = createController({
     api, key, cache, clock, audio, log, worker,
+    permits: permitStore(storage()),
     wake: wakeController(),
     version: KIOSK_VERSION,
     restart,
@@ -68,6 +70,8 @@ async function start(): Promise<void> {
     },
     render: (screen, view, extra) => {
       document.documentElement.dataset.theme = view.theme ?? 'dark';
+      // what the player is doing, for staff tools and the browser tests (no words on screen)
+      document.documentElement.dataset.audible = extra.audible ? 'yes' : 'no';
       const node = renderScreen(screen, view, {
         deviceName: view.device_name ?? 'Player',
         pairingCode: extra.pairingCode,

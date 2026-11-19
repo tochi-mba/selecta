@@ -1,0 +1,119 @@
+{
+  "note": "Shared test vectors for the kiosk offline bundle (ADR-0446 BZ-0446-05, 06). Test-only keys; regenerate with tests/test_business_permits.py helpers.",
+  "trusted": [
+    "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg"
+  ],
+  "good": {
+    "bundle": "{\"keys\":[{\"key_id\":\"56475aa75463474c\",\"public_key\":\"A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg\"}],\"periods\":[{\"closes_at\":1800043200.0,\"opens_at\":1800003600.0}],\"permit\":{\"device_id\":\"dev\",\"issued_at\":1800000000.0,\"licence_expires_at\":null,\"licence_grace_ends_at\":null,\"organisation_id\":\"org\",\"plan_state\":\"paid\",\"stop_at\":null,\"valid_until\":1800604800.0,\"venue_id\":\"venue\",\"zone_id\":\"zone\"},\"programme_version\":null,\"time_zone\":\"Europe/London\",\"v\":1,\"volume\":70}",
+    "signature": "mANIrZhOWM0in_LbJU_K_tl3m5opjGrERhMYpLhVFeTrLHOJvphleY_2AJuWuBd94E2t0ikXHRpPp-EwCJUYBw",
+    "key_id": "56475aa75463474c"
+  },
+  "older": {
+    "bundle": "{\"keys\":[{\"key_id\":\"56475aa75463474c\",\"public_key\":\"A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg\"}],\"periods\":[{\"closes_at\":1799043200.0,\"opens_at\":1799003600.0}],\"permit\":{\"device_id\":\"dev\",\"issued_at\":1799000000.0,\"licence_expires_at\":null,\"licence_grace_ends_at\":null,\"organisation_id\":\"org\",\"plan_state\":\"paid\",\"stop_at\":null,\"valid_until\":1799604800.0,\"venue_id\":\"venue\",\"zone_id\":\"zone\"},\"programme_version\":null,\"time_zone\":\"Europe/London\",\"v\":1,\"volume\":70}",
+    "signature": "WN_btlS9vEhAmrjTbuPNXaAaHPT9-gMULWSjFruwwfG0_v3WxKEUj7zqG6sRIquhAAosff9D0jJNFYGoOmA7Ag",
+    "key_id": "56475aa75463474c"
+  },
+  "forged": {
+    "bundle": "{\"keys\":[{\"key_id\":\"56475aa75463474c\",\"public_key\":\"A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg\"}],\"periods\":[{\"closes_at\":1800043200.0,\"opens_at\":1800003600.0}],\"permit\":{\"device_id\":\"dev\",\"issued_at\":1800000000.0,\"licence_expires_at\":null,\"licence_grace_ends_at\":null,\"organisation_id\":\"org\",\"plan_state\":\"paid\",\"stop_at\":null,\"valid_until\":1800604800.0,\"venue_id\":\"venue\",\"zone_id\":\"zone\"},\"programme_version\":null,\"time_zone\":\"Europe/London\",\"v\":1,\"volume\":100}",
+    "signature": "mANIrZhOWM0in_LbJU_K_tl3m5opjGrERhMYpLhVFeTrLHOJvphleY_2AJuWuBd94E2t0ikXHRpPp-EwCJUYBw",
+    "key_id": "56475aa75463474c"
+  },
+  "wrong_key": {
+    "bundle": "{\"keys\":[{\"key_id\":\"65b60673d6ed884b\",\"public_key\":\"ebVWLo_mVPlAeLES6KmLp5AfhTrmlb7X4OORC60ElmQ\"}],\"periods\":[{\"closes_at\":1800043200.0,\"opens_at\":1800003600.0}],\"permit\":{\"device_id\":\"dev\",\"issued_at\":1800000000.0,\"licence_expires_at\":null,\"licence_grace_ends_at\":null,\"organisation_id\":\"org\",\"plan_state\":\"paid\",\"stop_at\":null,\"valid_until\":1800604800.0,\"venue_id\":\"venue\",\"zone_id\":\"zone\"},\"programme_version\":null,\"time_zone\":\"Europe/London\",\"v\":1,\"volume\":70}",
+    "signature": "-s4G4J0Y_BOxqPyZZoLvJKxyl8epwJnhDQ7PC7pVvGIf0_gNiFxtVdYxSn8qs_xGuBroZk9AVeB70M7-NFbHBw",
+    "key_id": "65b60673d6ed884b"
+  },
+  "held_issued_at": 1800000000.0,
+  "may_play": [
+    {
+      "name": "inside valid_until",
+      "permit": {
+        "device_id": "dev",
+        "issued_at": 1800000000.0,
+        "licence_expires_at": null,
+        "licence_grace_ends_at": null,
+        "organisation_id": "org",
+        "plan_state": "paid",
+        "stop_at": null,
+        "valid_until": 1800604800.0,
+        "venue_id": "venue",
+        "zone_id": "zone"
+      },
+      "now": 1800604799.0,
+      "close": null,
+      "expect": true
+    },
+    {
+      "name": "past valid_until, not playing",
+      "permit": {
+        "device_id": "dev",
+        "issued_at": 1800000000.0,
+        "licence_expires_at": null,
+        "licence_grace_ends_at": null,
+        "organisation_id": "org",
+        "plan_state": "paid",
+        "stop_at": null,
+        "valid_until": 1800604800.0,
+        "venue_id": "venue",
+        "zone_id": "zone"
+      },
+      "now": 1800604810.0,
+      "close": null,
+      "expect": false
+    },
+    {
+      "name": "past valid_until, plays to the end of the open period",
+      "permit": {
+        "device_id": "dev",
+        "issued_at": 1800000000.0,
+        "licence_expires_at": null,
+        "licence_grace_ends_at": null,
+        "organisation_id": "org",
+        "plan_state": "paid",
+        "stop_at": null,
+        "valid_until": 1800604800.0,
+        "venue_id": "venue",
+        "zone_id": "zone"
+      },
+      "now": 1800604810.0,
+      "close": 1800604900.0,
+      "expect": true
+    },
+    {
+      "name": "stops at a pilot end",
+      "permit": {
+        "device_id": "dev",
+        "issued_at": 1800000000.0,
+        "licence_expires_at": null,
+        "licence_grace_ends_at": null,
+        "organisation_id": "org",
+        "plan_state": "paid",
+        "stop_at": 1800604700.0,
+        "valid_until": 1800604800.0,
+        "venue_id": "venue",
+        "zone_id": "zone"
+      },
+      "now": 1800604750.0,
+      "close": null,
+      "expect": false
+    },
+    {
+      "name": "stops after the licence grace",
+      "permit": {
+        "device_id": "dev",
+        "issued_at": 1800000000.0,
+        "licence_expires_at": null,
+        "licence_grace_ends_at": 1800604700.0,
+        "organisation_id": "org",
+        "plan_state": "paid",
+        "stop_at": null,
+        "valid_until": 1800604800.0,
+        "venue_id": "venue",
+        "zone_id": "zone"
+      },
+      "now": 1800604750.0,
+      "close": 1800604800.0,
+      "expect": false
+    }
+  ]
+}

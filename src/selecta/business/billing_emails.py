@@ -59,6 +59,24 @@ def words(kind: str, org: str, detail: dict) -> tuple[str, str] | None:
                 f"The SelectaDJ Enterprise contract for {org} ends on "
                 f"{_day(detail.get('term_end'))}. REX Technologies sales will be in touch "
                 "about renewing.")
+    if kind == "licence.expiry_reminder":
+        venue = detail.get("venue_name") or "A venue"
+        return (f"{venue}: the music licence ends {_day(detail.get('expires_at'))}",
+                f"The music licence entered for {venue} ends on "
+                f"{_day(detail.get('expires_at'))}. Renew it and enter the new one on the "
+                "venue's Licence page in SelectaDJ, so the venue keeps playing.")
+    if kind == "licence.grace_reminder":
+        venue = detail.get("venue_name") or "A venue"
+        return (f"{venue}: the music licence has run out",
+                f"The music licence for {venue} has run out. Music keeps playing until "
+                f"{_day(detail.get('grace_ends_at'))}; after that the venue does not start at "
+                "its next opening until a licence is entered in SelectaDJ.")
+    if kind == "licence.lapsed":
+        venue = detail.get("venue_name") or "A venue"
+        return (f"{venue} will not start playing until a licence is entered",
+                f"The licence grace period for {venue} has ended. A zone playing now finishes "
+                "at its close; the venue does not start again until a music licence is entered "
+                "in SelectaDJ.")
     return None
 
 

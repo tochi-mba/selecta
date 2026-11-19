@@ -14,7 +14,7 @@ import {
 import { TEMPLATES } from './forms/DaypartBar';
 import type {
   ZoneAlert,
-  BillingSummary, CheckoutAnswer, VenueTransfer, CheckoutRequest, ContentRules, CostPreview, Daypart, Device, GuestRequest, Holiday, Licence, Member, Org, Overview,
+  BillingSummary, CheckoutAnswer, TermsAccess, VenueTransfer, CheckoutRequest, ContentRules, CostPreview, Daypart, Device, GuestRequest, Holiday, Licence, Member, Org, Overview,
   Role, SetupProgress, Venue, WeekHours, WorkspaceSummary, Zone, ZoneSchedule,
 } from './types';
 
@@ -51,6 +51,9 @@ export const ROUTES = {
   invitations: '/business/invitations',
   revokeInvitation: (id: string) => `/business/invitations/${enc(id)}/revoke`,
   acceptInvitation: '/business/invitations/accept',
+  playLogRetention: '/business/play-log/retention',
+  terms: '/business/terms',
+  licenceExtend: (venue: string) => `/business/venues/${enc(venue)}/licence/extend`,
   playLogExport: (venue: string, from: string, to: string) => `/business/play-log/export?venue_id=${enc(venue)}&from=${enc(from)}&to=${enc(to)}`,
   pinCheck: (venue: string) => `/business/venues/${enc(venue)}/pin`,
   librarySongs: '/business/library/songs',
@@ -179,6 +182,11 @@ export function businessClient(api: Api, workspaceId?: string) {
     revokeInvitation: (id: string) => call<{ revoked: string }>(ROUTES.revokeInvitation(id), json('POST')),
     acceptInvitation: (token: string, name?: string) => api<{ org_id: string; workspace_id: string }>(ROUTES.acceptInvitation, json('POST', { token, name })),
     removeMember: (_org: string, id: string) => call<{ removed: string }>(ROUTES.person(id), json('DELETE')),
+    playLogRetention: () => call<{ days: number; default_days: number }>(ROUTES.playLogRetention),
+    setPlayLogRetention: (days: number) => call<{ days: number }>(ROUTES.playLogRetention, json('PUT', { days })),
+    termsAccess: () => call<TermsAccess>(ROUTES.terms),
+    acceptTerms: () => call<TermsAccess>(`${ROUTES.terms}/accept`, json('POST')),
+    extendLicenceGrace: (venue: string, reason: string) => call<{ extended_until: number }>(ROUTES.licenceExtend(venue), json('POST', { reason })),
     exportPlayLog: (venue: string, from: string, to: string) => call<{ filename: string; csv: string }>(ROUTES.playLogExport(venue, from, to)),
     checkPin: (_org: string, venue: string, pin: string) => call<{ ok: boolean; member_name?: string; role?: Role }>(ROUTES.pinCheck(venue), json('POST', { pin })),
     librarySongs: async (_org: string) => (await call<{ songs: LibrarySong[] }>(ROUTES.librarySongs)).songs ?? [],

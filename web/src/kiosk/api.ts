@@ -25,6 +25,8 @@ export type PairingStatus = {
   deviceId: string | null;
   nonce: string | null;
   serverTime: number | null;
+  /** The offline-bundle keys to pin, handed over once with the token. */
+  permitKeys: string[];
 };
 
 export type SessionWire = {
@@ -135,7 +137,8 @@ export function kioskApi(options: KioskApiOptions = {}) {
       const body = await send(KIOSK_ROUTES.pairingStatus);
       const state = str(body.state) as PairingStatus['state'] | null;
       if (str(body.nonce)) nonce = str(body.nonce);
-      return { state: state ?? 'unknown', deviceId: str(body.device_id), nonce, serverTime: num(body.server_time) };
+      const keys = Array.isArray(body.permit_keys) ? body.permit_keys.filter((k): k is string => typeof k === 'string') : [];
+      return { state: state ?? 'unknown', deviceId: str(body.device_id), nonce, serverTime: num(body.server_time), permitKeys: keys };
     },
     /** The zone's view, already through the allowlist. */
     async view(): Promise<KioskView> {

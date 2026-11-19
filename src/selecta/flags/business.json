@@ -148,10 +148,21 @@
     },
     "business.licensing": {
       "label": "Licensing and play logs",
-      "about": "Owners, admins and venue managers download a venue's play log for chosen days as CSV, with totals per track, for licensing returns.",
+      "about": "Music licences gate when a venue may start playing, with reminders and the owner's one-off extension; every play is logged with its source and kept 3 years by default; owners, admins and venue managers download a venue's play log as CSV; ISRC entry and coverage; acceptance of the business terms.",
       "default": false,
       "requires": ["business.orgs"],
-      "routes": ["GET /api/business/play-log/export", "PUT /api/business/venues/{venue_id}/licence"],
+      "routes": [
+        "GET /api/business/play-log/export",
+        "PUT /api/business/venues/{venue_id}/licence",
+        "GET /api/business/play-log/retention",
+        "PUT /api/business/play-log/retention",
+        "GET /api/business/venues/{venue_id}/licence/state",
+        "POST /api/business/venues/{venue_id}/licence/extend",
+        "PUT /api/business/library/songs/{song_id}/isrc",
+        "GET /api/business/venues/{venue_id}/isrc-coverage",
+        "GET /api/business/terms",
+        "POST /api/business/terms/accept"
+      ],
       "modes": ["cloud"],
       "scope": "workspace",
       "kind": "release",

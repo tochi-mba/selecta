@@ -10,6 +10,7 @@ import { browserName, isRevoked, KioskCallError, type HealthReport, type KioskAp
 import type { ZoneAudio } from './audio';
 import type { DeviceKey } from './deviceKey';
 import { fillCache } from './download';
+import { mayPlay, type PermitStore, type SignedBundle } from './permit';
 import type { PlayableSegment } from './player';
 import type { PlayLog } from './playLog';
 import { dayStateAt, markSession, startupAction, type DayState, type Period, type RestartReason } from './startup';
@@ -39,9 +40,11 @@ export type ControllerDeps = {
   version: string;
   restart: RestartReason;
   wallNow: () => number;
-  render: (screen: KioskScreen, view: KioskView, extra: { pairingCode: string | null; timeUnknown: boolean }) => void;
+  render: (screen: KioskScreen, view: KioskView, extra: { pairingCode: string | null; timeUnknown: boolean; audible: boolean }) => void;
   storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null;
   reload?: () => void;
+  /** The signed offline bundle's keys and the held bundle (ADR-0446); absent in some tests. */
+  permits?: PermitStore;
   estimate?: () => Promise<{ usage?: number; quota?: number } | null>;
   battery?: () => Promise<{ level: number; charging: boolean } | null>;
 };
@@ -84,20 +87,34 @@ export function createController(deps: ControllerDeps) {
   let healthDue = 0;
 
   const now = () => deps.clock.now();
+  // With a permit store (the real page), offline rules come only from the verified bundle.
+  const held = () => deps.permits?.held() ?? null;
+  const closedLike = (state: KioskView['state']) => state === 'closed' || state === 'stopped' || state === 'zone_paused' || state === 'empty';
   const day = (): { state: DayState; closeAt: number | null } => {
     const at = now();
-    const periods = (deps.cache.manifest()?.schedule as { periods?: Period[] } | undefined)?.periods;
+    // Online, the server's view decides (it applies close-now, stay-open-late and pauses at once).
+    if (online && view.state !== undefined) return { state: closedLike(view.state) ? 'closed' : view.state === 'starting' ? 'warming' : 'open', closeAt: null };
+    const periods = deps.permits
+      ? held()?.periods
+      : (deps.cache.manifest()?.schedule as { periods?: Period[] } | undefined)?.periods;
     if (at === null || !periods) {
       // no schedule saved: follow the last view
-      return { state: view.state === 'closed' || view.state === 'stopped' || view.state === 'zone_paused' || view.state === 'empty' ? 'closed' : 'open', closeAt: null };
+      return { state: closedLike(view.state) ? 'closed' : 'open', closeAt: null };
     }
     return dayStateAt(periods, at);
   };
   const permitValid = () => {
-    const until = deps.cache.manifest()?.valid_until;
     const at = now();
+    if (deps.permits) {
+      const bundle = held();
+      if (!bundle) return false;
+      return at === null || mayPlay(bundle.permit, at, started ? day().closeAt : null);
+    }
+    const until = deps.cache.manifest()?.valid_until;
     return typeof until !== 'number' || at === null || at <= until;
   };
+  let permitProblem: string | null = null;
+  let checkedFor: string | null = null;
 
   /** The view the screen uses: the server's when online; offline, the saved schedule decides. */
   function effectiveView(): KioskView {
@@ -128,10 +145,11 @@ export function createController(deps: ControllerDeps) {
 
   function draw(): void {
     const current = screen();
-    const key = JSON.stringify([current, effectiveView().now, effectiveView().next, pairingCode, deps.clock.status()]);
+    const audible = deps.audio.player.playing();
+    const key = JSON.stringify([current, effectiveView().now, effectiveView().next, pairingCode, deps.clock.status(), audible]);
     if (key === lastScreenKey) return;
     lastScreenKey = key;
-    deps.render(current, effectiveView(), { pairingCode, timeUnknown: deps.clock.status() === 'untrusted' });
+    deps.render(current, effectiveView(), { pairingCode, timeUnknown: deps.clock.status() === 'untrusted', audible });
   }
 
   // -- playing
@@ -176,6 +194,7 @@ export function createController(deps: ControllerDeps) {
     await deps.cache.enforceCap();
     deps.audio.player.setSegments([]);
     await deps.key.forget();
+    deps.permits?.clear();
     deps.api.setNonce(null);
     pairingCode = null;
   }
@@ -192,11 +211,16 @@ export function createController(deps: ControllerDeps) {
       online = true;
       if (status.serverTime) deps.clock.sync(status.serverTime);
       if (status.state === 'paired' || status.state === 'collected') {
+        if (status.permitKeys?.length) deps.permits?.pin(status.permitKeys);
         paired = true;
         remember(true);
         pairingCode = null;
         showingCode = false;
         void deps.cache.requestPersistence();
+        // start at once: the first check-in, the zone's view and its saved music
+        await heartbeat();
+        await refreshView();
+        await refreshHorizon();
       } else if (status.state === 'expired' || status.state === 'revoked' || status.state === 'unknown') {
         pairingCode = null;
       }
@@ -261,7 +285,13 @@ export function createController(deps: ControllerDeps) {
       deps.cache.setCap(capFromEstimate(estimate));
       const segments = manifest.segments as PlayableSegment[];
       await deps.cache.setManifest(manifest);
-      if (typeof manifest.issued_at === 'number' && typeof manifest.valid_until === 'number') {
+      if (deps.permits) {
+        const signed = (manifest as { offline_bundle?: SignedBundle }).offline_bundle;
+        const verdict = signed ? await deps.permits.accept(signed) : { ok: false as const, reason: 'forged' as const };
+        permitProblem = verdict.ok ? null : verdict.reason;
+        const bundle = held();
+        if (bundle) deps.clock.setBundle(bundle.permit.issued_at, bundle.permit.valid_until);
+      } else if (typeof manifest.issued_at === 'number' && typeof manifest.valid_until === 'number') {
         deps.clock.setBundle(manifest.issued_at, manifest.valid_until);
       }
       deps.audio.player.setSegments(segments);
@@ -311,7 +341,10 @@ export function createController(deps: ControllerDeps) {
   async function maybeUpdate(): Promise<void> {
     if (!deps.worker || !latest || latest.version === deps.version) return;
     if (!deps.worker.ready()) {
-      deps.worker.check();
+      if (checkedFor !== latest.version) {
+        checkedFor = latest.version; // one background fetch per new version
+        deps.worker.check();
+      }
       return;
     }
     const segment = deps.audio.player.position();
@@ -337,7 +370,9 @@ export function createController(deps: ControllerDeps) {
       if (saved) {
         deps.audio.player.setSegments(saved.segments as PlayableSegment[]);
         const bundle = saved as { issued_at?: number; valid_until?: number };
-        if (typeof bundle.issued_at === 'number' && typeof bundle.valid_until === 'number') deps.clock.setBundle(bundle.issued_at, bundle.valid_until);
+        const verified = held();
+        if (verified) deps.clock.setBundle(verified.permit.issued_at, verified.permit.valid_until);
+        else if (!deps.permits && typeof bundle.issued_at === 'number' && typeof bundle.valid_until === 'number') deps.clock.setBundle(bundle.issued_at, bundle.valid_until);
       }
       autoplay = await deps.audio.unlock();
       if (paired) await heartbeat();
@@ -362,6 +397,8 @@ export function createController(deps: ControllerDeps) {
         syncPlayback();
         await deps.audio.player.tick();
         await health(false);
+        // a newer version is known: fetch it in the background, apply it only when allowed
+        if (latest && latest.version !== deps.version) await maybeUpdate();
       }
       draw();
     },
@@ -386,7 +423,7 @@ export function createController(deps: ControllerDeps) {
     }),
     view: () => effectiveView(),
     screen,
-    state: () => ({ paired, online, started, tapped, autoplay, speaker, updatingSince }),
+    state: () => ({ paired, online, started, tapped, autoplay, speaker, updatingSince, permitProblem }),
   };
 }
 

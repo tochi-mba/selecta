@@ -147,6 +147,12 @@ export function CloudApp() {
     return payload as T;
   }, [getAccessToken]);
 
+  // A token getter that keeps its identity across renders, for the business app's event stream
+  // (a new function every render would reconnect the stream every render).
+  const tokenRef = useRef(getAccessToken);
+  tokenRef.current = getAccessToken;
+  const stableToken = useCallback(() => tokenRef.current(), []);
+
   // One operation at a time per button: its own busy state, and a refusal said in the page feedback.
   const operate = useCallback(async (operation: Operation, work: () => Promise<void>) => {
     setRunning((now) => new Set(now).add(operation));
@@ -353,7 +359,7 @@ export function CloudApp() {
       <Suspense fallback={<main className="cloud-runtime-message"><p>Opening your organisation…</p></main>}>
         {normalizedJoin(path)
           ? <JoinOrganisation api={api} onOpen={openPath} />
-          : businessRoute && businessRoute.page !== 'start' && <BusinessApp api={api} route={businessRoute} account={account} token={getAccessToken} onLeaveToPersonal={leaveBusiness} />}
+          : businessRoute && businessRoute.page !== 'start' && <BusinessApp api={api} route={businessRoute} account={account} onLeaveToPersonal={leaveBusiness} token={stableToken} />}
       </Suspense>
     );
   }

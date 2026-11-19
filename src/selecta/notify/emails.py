@@ -166,11 +166,12 @@ def send_once(
 
 
 def _business_billing_on() -> bool:
-    """Business billing notices (dunning, VAT recheck, contracts) mail only with its flag."""
+    """Business notices (billing: dunning, VAT, contracts; licensing: licence reminders) mail
+    only while one of their flags is on."""
     from selecta import flags
 
     try:
-        return flags.on("business.billing")
+        return flags.on("business.billing") or flags.on("business.licensing")
     except KeyError:
         return False
 

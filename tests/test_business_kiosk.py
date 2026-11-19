@@ -493,8 +493,7 @@ def test_with_the_flag_off_every_kiosk_route_is_refused(party):
 
 
 def test_a_paired_kiosk_token_resolves_to_its_zone_as_a_device_actor(party, venue):
-    from selecta.business.access import BusinessNotFound
-    from selecta.business.access import guard
+    from selecta.business.access import BusinessNotFound, guard
 
     player = paired(party, venue)
     token = player.client.cookies.get(kiosk.TOKEN_COOKIE)
@@ -507,3 +506,95 @@ def test_a_paired_kiosk_token_resolves_to_its_zone_as_a_device_actor(party, venu
     party.client.delete(f"/api/devices/{player.device_id}/kiosk", headers=auth(ALICE, venue["org"]))
     with transaction(party.engine) as conn, pytest.raises(BusinessNotFound):
         guard.device_actor(conn, token=token)
+
+
+# ---- BZ-0445-10 alerts reach managers: the in-app list and the email
+
+
+def _open_silent_alert(party, venue, player) -> str:
+    with transaction(party.engine, venue["org"]) as conn:
+        return kiosk.open_alert(
+            conn,
+            venue["org"],
+            venue["zone"],
+            player.device_id,
+            "silent",
+            "digital_silence",
+            db_now(conn),
+            notify_now=True,
+            venue_id=venue["venue"],
+        )
+
+
+def test_managers_see_open_player_alerts_and_can_acknowledge_them(party, venue):
+    player = paired(party, venue)
+    alert_id = _open_silent_alert(party, venue, player)
+    listed = party.client.get(
+        f"/api/business/zone-alerts?venue_id={venue['venue']}", headers=auth(ALICE, venue["org"])
+    )
+    assert listed.status_code == 200, listed.text
+    [item] = listed.json()["alerts"]
+    assert item["id"] == alert_id and item["kind"] == "silent"
+    assert "no music is coming out of SelectaDJ" in item["text"]
+    acked = party.client.post(
+        f"/api/business/zone-alerts/{alert_id}/acknowledge", headers=auth(ALICE, venue["org"])
+    )
+    assert acked.status_code == 200
+    stranger = party.client.post(
+        f"/api/business/zone-alerts/{alert_id}/acknowledge", headers=auth(BOB, venue["org"])
+    )
+    assert stranger.status_code in (403, 404)
+
+
+def test_alert_email_goes_to_verified_managers_through_the_mail_path(party, venue, tmp_path):
+    from selecta.business import alert_mail
+    from selecta.notify.mail import RecordingSender
+
+    player = paired(party, venue)
+    with transaction(party.engine) as conn:
+        conn.execute(
+            sa.update(users)
+            .where(users.c.auth_subject == "user_alice")
+            .values(email="alice@example.test", email_verified=True)
+        )
+    alert_id = _open_silent_alert(party, venue, player)
+    outgoing = alert_mail.Outgoing()
+    notify = alert_mail.collecting_notify(outgoing)
+    with transaction(party.engine, venue["org"]) as conn:
+        alert = dict(
+            conn.execute(sa.select(zone_alerts).where(zone_alerts.c.id == alert_id))
+            .mappings()
+            .one()
+        )
+        notify(conn, alert, "managers", db_now(conn))
+    recorder = RecordingSender()
+    assert alert_mail.send(recorder, outgoing) == 1
+    [message] = recorder.sent
+    assert message.to == "alice@example.test"
+    assert "Bar at High Street" in message.subject
+    assert "cannot hear the room" in message.text
+    assert message.idempotency_key.startswith(f"zone-alert:{alert_id}:managers")
+
+    # in the dev stack the same email lands in the local inbox, never delivered
+    inbox = alert_mail.sender_for({"SELECTA_DEV_DATA": str(tmp_path)})
+    assert isinstance(inbox, alert_mail.DevInboxSender)
+    inbox.send(message)
+    assert [m["subject"] for m in inbox.store.mail()] == [message.subject]
+    assert alert_mail.sender_for({}) is None
+
+
+def test_horizon_bundle_is_signed_with_the_keys_given_at_pairing(party, venue):
+    from selecta.business import permits
+
+    player = Player(party, "machine-permit-1")
+    assert pair(party, venue, player).status_code == 201
+    status = player.client.get("/api/kiosk/pairings/status").json()
+    keys = status["permit_keys"]
+    assert keys
+    signed = player.client.get("/api/kiosk/horizon").json()["offline_bundle"]
+    body = permits.verify(signed, keys)
+    assert body["permit"]["zone_id"] == venue["zone"]
+    assert body["permit"]["device_id"] == status["device_id"]
+    tampered = {**signed, "bundle": signed["bundle"].replace(venue["zone"], "another-zone")}
+    with pytest.raises(permits.PermitRefused):
+        permits.verify(tampered, keys)

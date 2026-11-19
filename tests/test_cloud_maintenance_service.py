@@ -55,6 +55,7 @@ def test_every_core_cloud_task_runs_cleanly_and_missing_secrets_are_named(sqlite
         "business.zone_clock",
         "business.kiosk_alerts",
         "business.billing",
+        "business.licensing",
         "actions",
         "reservations",
         "lucy_runs",

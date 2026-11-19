@@ -55,7 +55,10 @@ export type BusinessAppProps = {
 export default function BusinessApp({ api, route, account, onLeaveToPersonal, token, clock, forceOffline, stream: forcedStream, device }: BusinessAppProps) {
   const on = businessOn(account.features, 'business.workspaces');
   const [current, setCurrent] = useState<BusinessRoute>(route);
-  useEffect(() => { setCurrent(route); }, [route]);
+  // The host may hand a fresh route object on every render; follow it only when it says
+  // something new, or the landing redirect below and the host would undo each other forever.
+  const routeKey = JSON.stringify(route);
+  useEffect(() => { setCurrent(JSON.parse(routeKey) as BusinessRoute); }, [routeKey]);
   const leave = useRef(onLeaveToPersonal);
   leave.current = onLeaveToPersonal;
 

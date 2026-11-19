@@ -300,6 +300,10 @@ def install_routes(
             return HTTPException(
                 status_code=409, detail={"code": error.code, "message": str(error)}
             )
+        if isinstance(error, zone_session.LicenceMissing):
+            return HTTPException(
+                status_code=409, detail={"code": error.code, "message": str(error)}
+            )
         if isinstance(error, zone_session.BillingStopped):
             return HTTPException(
                 status_code=409, detail={"code": error.code, "message": str(error)}

@@ -44,6 +44,7 @@ from selecta.billing import plans, stripe_sync
 from selecta.business import admin_routes as business_admin_routes
 from selecta.business import billing_routes as business_billing_routes
 from selecta.business import controls_wiring as business_controls
+from selecta.business import licensing_routes as business_licensing_routes
 from selecta.business import playlog_routes as business_playlog_routes
 from selecta.business import routes as business_org_routes
 from selecta.business import workspace_routes as business_workspace_routes
@@ -910,6 +911,9 @@ def create_cloud_app(
     )
     # Play-log export for licensing returns (ADR-0449); refused while business.licensing is off.
     business_playlog_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
+    business_licensing_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal
     )
     admin_routes.install_routes(

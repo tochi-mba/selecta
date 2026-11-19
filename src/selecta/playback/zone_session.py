@@ -108,6 +108,30 @@ def _billing_stopped(conn: Connection, zone: ZoneInfo) -> bool:
     return dunning.is_venue_stopped(conn, zone.workspace_id, zone.venue_id)
 
 
+class LicenceMissing(PlaybackError):
+    """The venue has no music licence attestation in force (ADR-0449 BZ-0449-02): a zone does
+    not start until one is entered; a zone already playing finishes to its close."""
+
+    code = "licence_required"
+
+
+def _licence_refuses(conn: Connection, zone: ZoneInfo, now: float) -> str | None:
+    """Why the venue may not start playing, checked only while `business.licensing` is on."""
+    from selecta import flags
+
+    try:
+        if not flags.on("business.licensing"):
+            return None
+    except KeyError:
+        return None
+    from selecta.business import licensing
+
+    current = load_session(conn, zone.workspace_id, zone.id)
+    playing = current is not None and current.lease_live(now)
+    decision = licensing.can_start_scheduled_playback(conn, zone.venue_id, now, playing)
+    return None if decision.allowed else decision.reason
+
+
 def _log_play(conn: Connection, zone: ZoneInfo, before, after, now: float) -> None:
     """The business play log (ADR-0449): the song that just ended, when the zone moved on."""
     if before.song_index == after.song_index and before.mix_revision_id == after.mix_revision_id:
@@ -430,6 +454,11 @@ def zone_take_over(
             raise BillingStopped(
                 f"{zone.venue_name or zone.name} is stopped until the SelectaDJ payment "
                 "goes through"
+            )
+        if start_playing and _licence_refuses(conn, zone, now):
+            raise LicenceMissing(
+                f"{zone.venue_name or zone.name} needs a music licence in force before it "
+                "plays. Enter it on the venue's Licence page"
             )
         device = _zone_device(conn, workspace_id, device_id, zone)
         if not device.is_kiosk and not allow_person_speakers(conn, workspace_id, zone.id):

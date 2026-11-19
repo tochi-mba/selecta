@@ -12,10 +12,12 @@ import { mountStaffPanel } from './staffPanel';
 import { startBurnIn } from './burnIn';
 import type { KioskScreen } from './state';
 import { sanitiseKioskView } from './view';
+import { permitStore, type SignedBundle } from './permit';
+import vectors from './permitVectors.json';
 
 const OPEN = { opens_at: 1_000, closes_at: 50_000 };
 
-function setup(over: { paired?: boolean; autoplay?: boolean; online?: boolean; wall?: number } = {}) {
+function setup(over: { paired?: boolean; autoplay?: boolean; online?: boolean; wall?: number; bundle?: SignedBundle; trusted?: string[] } = {}) {
   let wall = over.wall ?? 10_000;
   let mono = 0;
   const clock = new OfflineClock({ monotonic: () => mono, wall: () => wall });
@@ -44,7 +46,7 @@ function setup(over: { paired?: boolean; autoplay?: boolean; online?: boolean; w
     pairingStatus: vi.fn(async () => { if (!online) throw offline(); return { state: 'waiting', deviceId: null, nonce: null, serverTime: wall }; }),
     heartbeat: vi.fn(async () => { if (!online) throw offline(); return { outcome: 'renewed', serverTime: wall, session: { state: 'playing', volume: 70 }, latest: null, role: 'home' }; }),
     view: vi.fn(async () => { if (!online) throw offline(); return { state: 'open', zone_name: 'Bar', now: { title: 'Song', artist: 'Band' } }; }),
-    horizon: vi.fn(async () => { if (!online) throw offline(); return { zone_id: 'z', version: 'v1', segments: [], schedule: { periods: [OPEN] }, issued_at: wall - 10, valid_until: wall + 7 * 86_400 }; }),
+    horizon: vi.fn(async () => { if (!online) throw offline(); return { zone_id: 'z', version: 'v1', segments: [], schedule: { periods: [OPEN] }, issued_at: wall - 10, valid_until: wall + 7 * 86_400, offline_bundle: over.bundle }; }),
     health: vi.fn(async (_report: unknown) => { if (!online) throw offline(); }),
     resync: vi.fn(async () => ({ inserted: 0, duplicates: 0 })),
     segmentUrl: vi.fn(async (k: string) => k),
@@ -58,6 +60,7 @@ function setup(over: { paired?: boolean; autoplay?: boolean; online?: boolean; w
     log: playLog(null), worker: null, version: '2026.11.1', restart: 'power_or_crash',
     wallNow: () => wall, storage,
     render: (screen) => { screens.push(screen); },
+    ...(over.bundle ? { permits: permitStore(null, over.trusted ?? []) } : {}),
   };
   const controller = createController(deps);
   return {
@@ -150,6 +153,32 @@ describe('kiosk controller', () => {
     k.api.heartbeat.mockResolvedValue({ outcome: 'refused', serverTime: 10_000, session: null, latest: null, role: 'standby' } as never);
     await k.controller.boot();
     expect(k.player.start).not.toHaveBeenCalled();
+  });
+});
+
+describe('kiosk controller with the signed offline bundle (ADR-0446)', () => {
+  const v = vectors as unknown as { trusted: string[]; good: SignedBundle; forged: SignedBundle };
+  // the vectors' bundle: issued at 1.8e9, open from +1 h to +12 h
+  const OPEN_AT = 1_800_000_000 + 7200;
+
+  it('a verified bundle keeps the player playing offline on its own schedule', async () => {
+    const k = setup({ paired: true, wall: OPEN_AT, bundle: v.good, trusted: v.trusted });
+    await k.controller.boot();
+    expect(k.controller.state().permitProblem).toBeNull();
+    k.online = false;
+    await k.controller.every('heartbeat');
+    await k.controller.every('tick');
+    expect(k.player.started).toBe(true);
+  });
+
+  it('a forged bundle is refused: offline the player does not start from it', async () => {
+    const k = setup({ paired: true, wall: OPEN_AT, bundle: v.forged, trusted: v.trusted, autoplay: false });
+    await k.controller.boot();
+    expect(k.controller.state().permitProblem).toBe('forged');
+    k.online = false;
+    await k.controller.every('heartbeat');
+    await k.controller.tap();
+    expect(k.player.started).toBe(false);
   });
 });
 

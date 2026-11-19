@@ -25,6 +25,7 @@ depends on a cron somebody forgot:
 | `emails` | 60 s | Long-job and over-quota emails, each once (`notify.emails`) |
 | `business.zone_clock` | 30 s | Each venue zone's next opening or closing change |
 | `business.billing` | 15 min | Business dunning and the VAT recheck before renewal |
+| `business.licensing` | 1 h | Licence reminders and play-log retention |
 | `queue_metrics`, `lost_jobs`, `backup_freshness` | 15 s, 10 min, 10 min | The SLO and alert
   series only the leader sees (`observability.leader_metrics`) |
 
@@ -384,6 +385,19 @@ def _business_billing(engine: Engine, env: Mapping[str, str], plan: Plan) -> Non
     plan.tasks.append(Task(billing_jobs.TASK_NAME, billing_jobs.EVERY_S, run))
 
 
+def _business_licensing(engine: Engine, plan: Plan) -> None:
+    """Licence reminders and play-log retention (ADR-0449), only while `business.licensing`
+    is on."""
+    from selecta.business import licensing_jobs
+
+    def run(_fence: TermFence) -> object:
+        if not _flag_on("business.licensing"):
+            return None
+        return licensing_jobs.run_pass(engine)
+
+    plan.tasks.append(Task(licensing_jobs.TASK_NAME, licensing_jobs.EVERY_S, run))
+
+
 def cloud_plan(engine: Engine, env: Mapping[str, str] | None = None) -> Plan:
     """Every recurring cloud task this environment can run."""
     env = os.environ if env is None else env
@@ -399,6 +413,7 @@ def cloud_plan(engine: Engine, env: Mapping[str, str] | None = None) -> Plan:
     _business_hours(engine, plan)
     _business_kiosk_alerts(engine, env, plan)
     _business_billing(engine, env, plan)
+    _business_licensing(engine, plan)
     from selecta.observability import leader_metrics
 
     made, off = leader_metrics.tasks(engine, env)

@@ -226,3 +226,6 @@ export type CheckoutAnswer = { blocked: boolean; url?: string; message?: string 
 
 /** A venue moving between organisations (ADR-0447 BZ-0447-11). */
 export type VenueTransfer = { id: string; venue_id: string; source_organisation_id: string; target_organisation_id: string; state: 'proposed' | 'agreed'; effective_at: number | null };
+
+/** The business terms (ADR-0449 BZ-0449-09): playback never waits on them. */
+export type TermsAccess = { current_version: string; accepted: boolean; management_blocked: boolean; playback_allowed: boolean; terms_path: string; can_accept?: boolean };

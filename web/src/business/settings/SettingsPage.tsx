@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { PATHS, useBusiness } from '../context';
 import { SETTINGS_COPY } from '../copy/shell';
 import { BusinessDetailsForm } from '../onboarding/BusinessDetailsForm';
+import { ExtendGrace, RetentionCard, TermsCard } from './LicensingCards';
 import { PlayLogExport } from './PlayLogExport';
 import { daysUntil, LICENCE_WARN_DAYS } from '../state';
 import { isoDayWords } from '../time';
@@ -24,6 +25,7 @@ export function SettingsPage() {
   const canEdit = org.role === 'owner' || org.role === 'admin';
   const disabled = readOnly ? SETTINGS_COPY.readOnly : offline ? SETTINGS_COPY.offline : !canEdit ? SETTINGS_COPY.notAdmin : null;
   return <section className="biz biz-stack"><h1>{SETTINGS_COPY.title}</h1>
+    <TermsCard />
     <section className="biz-card"><h2>{SETTINGS_COPY.detailsHeading}</h2>
       <BusinessDetailsForm initial={{ name: org.name, country: org.country }} disabled={disabled} submitLabel={SETTINGS_COPY.saveDetails}
         onSave={async (details) => {
@@ -40,9 +42,11 @@ export function SettingsPage() {
       {Boolean(venues.length) && <ul>{venues.map((venue) => <li key={venue.id}>
         {venue.name}: {licenceWords(venue, now)}{' '}
         <button type="button" onClick={() => go(PATHS.venue(org.id, venue.id, 'licence'))}>{SETTINGS_COPY.openLicence(venue.name)}</button>
+        {venue.licence?.expires_on && daysUntil(venue.licence.expires_on, now) < 0 && <ExtendGrace venue={venue} />}
       </li>)}</ul>}
     </section>
     <PlayLogExport />
+    <RetentionCard />
     {Boolean(venues.length) && <section className="biz-card" aria-labelledby="biz-settings-rules"><h2 id="biz-settings-rules">{SETTINGS_COPY.rulesHeading}</h2>
       <p>{SETTINGS_COPY.rulesIntro}</p>
       <ul>{venues.map((venue) => <li key={venue.id}>

@@ -24,16 +24,18 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+import sqlalchemy as sa
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 
-from selecta.business import alerts, health, kiosk, offline, zone_clock
+from selecta.business import alerts, health, kiosk, offline, permits, zone_clock
 from selecta.business.access import BusinessForbidden, BusinessNotFound
 from selecta.identity.tokens import Claims
 from selecta.persistence import db_now, transaction
 from selecta.playback import zone_session
 from selecta.playback.model import PlaybackError, PlayState, Position
+from selecta.playback.schema import playback_sessions
 from selecta.playback.store import session_payload
 from selecta.playback.zones import SQL_ZONES, ZoneDirectory
 from selecta.rooms import codes
@@ -41,7 +43,6 @@ from selecta.rooms.limits import Limited, Limiter, Window
 
 PAIRING_PER_IP = Window(10, 60.0)
 PIN_PER_DEVICE = Window(5, 300.0)
-PERMIT_S = 7 * 86_400.0
 
 Presign = Callable[[str, str], str | None]
 """(workspace_id, object key) -> a short-lived GET URL, or None when storage isn't set up."""
@@ -138,8 +139,10 @@ def install_routes(
     horizon_for: HorizonFor = health.programme_horizon,
     zones: ZoneDirectory = SQL_ZONES,
     limiter: Limiter | None = None,
+    keyring: permits.Keyring | None = None,
 ) -> None:
     limits = limiter or Limiter()
+    ring = keyring or permits.default_keyring()
 
     def peppered() -> bytes:
         if len(pepper) < codes.MIN_PEPPER_BYTES:
@@ -209,6 +212,8 @@ def install_routes(
         found = kiosk.collect(engine, request.cookies.get(kiosk.PAIRING_COOKIE) or "")
         token = found.pop("token", None)
         if token:
+            # the keys this player pins for its offline bundles, given once over the pairing
+            found["permit_keys"] = [key["public_key"] for key in ring.public()]
             _cookie(response, kiosk.TOKEN_COOKIE, token, 400 * 86_400)
             response.delete_cookie(kiosk.PAIRING_COOKIE, path=kiosk.COOKIE_PATH)
         return found
@@ -377,6 +382,22 @@ def install_routes(
                     schedule = schedule_for(conn, ref, now)
                 except (ValueError, LookupError):
                     schedule = {}
+            volume = conn.execute(
+                sa.select(playback_sessions.c.volume).where(
+                    playback_sessions.c.workspace_id == auth.workspace_id,
+                    playback_sessions.c.zone_id == auth.zone_id,
+                )
+            ).scalar()
+            body = permits.build_body(
+                conn,
+                workspace_id=auth.workspace_id,
+                venue_id=auth.venue_id,
+                zone_id=auth.zone_id,
+                device_id=auth.device_id,
+                schedule=schedule,
+                volume=volume,
+                now=now,
+            )
         items = horizon_for(engine, auth.workspace_id, auth.zone_id)
         manifest = offline.horizon_manifest(
             auth.zone_id, items, now, schedule or None, offline.device_cap_bytes(quota_bytes)
@@ -387,8 +408,10 @@ def install_routes(
             for name in ("title", "artist", "song_index", "song_id"):
                 if name in extra:
                     segment[name] = extra[name]
-        manifest["issued_at"] = now
-        manifest["valid_until"] = now + PERMIT_S
+        # The signed bundle is what the kiosk trusts offline; these copies are for display only.
+        manifest["offline_bundle"] = permits.sign(body, ring)
+        manifest["issued_at"] = body["permit"]["issued_at"]
+        manifest["valid_until"] = body["permit"]["valid_until"]
         manifest["server_time"] = now
         return manifest
 
