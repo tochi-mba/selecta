@@ -21,8 +21,8 @@ export function ImportChip({ onView, workspaceId }: { onView: () => void; worksp
   return (
     <div className="cloud-import-chip">
       <Status kind={paused ? 'paused' : 'working'}>{words}</Status>
-      <button type="button" className="quiet" onClick={onView}>Show import details</button>
-      <button type="button" className="quiet" onClick={() => setHiddenIn(live.phase)}>Hide import details</button>
+      <button type="button" className="quiet" onClick={onView}>See import progress</button>
+      <button type="button" className="quiet" onClick={() => setHiddenIn(live.phase)}>Hide this notice</button>
     </div>
   );
 }
