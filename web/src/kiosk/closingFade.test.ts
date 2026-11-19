@@ -35,3 +35,31 @@ describe('the player stops with the fade it is given', () => {
     expect(elements.every((el) => el.paused)).toBe(true);
   });
 });
+
+describe('stay open late during a fade (ADR-0444)', () => {
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('turns the fade round instead of starting the song again', async () => {
+    const elements: { currentTime: number; play: () => Promise<void>; pause: () => void; volume: number; src: string; preload: string; paused: boolean; ended: boolean; duration: number }[] = [];
+    const createAudio = () => {
+      const el = { currentTime: 0, play: async () => { el.paused = false; }, pause: () => { el.paused = true; }, volume: 1, src: '', preload: '', paused: true, ended: false, duration: 200 };
+      elements.push(el);
+      return el as unknown as HTMLAudioElement;
+    };
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: () => 'blob:x', revokeObjectURL: () => undefined }));
+    const blob = vi.fn(async () => new Blob(['x']));
+    const player = createPlayer({ now: () => 1_030, saved: () => true, blob, createAudio, context: null });
+    player.setSegments([{ id: 'a', key: 'k', kind: 'song', starts_at: 1_000, duration_s: 200, bytes: 1, sha256: 'x' } as never]);
+    player.start(0);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    vi.useFakeTimers();
+    player.stop(60);
+    vi.advanceTimersByTime(30_000);
+    expect(player.fadingOut()).toBe(true);
+    player.start(10);
+    await vi.advanceTimersByTimeAsync(40_000);
+    expect(player.fadingOut()).toBe(false);
+    expect(elements.some((el) => !el.paused)).toBe(true);
+    expect(blob).toHaveBeenCalledTimes(1); // the same song carried on; nothing was loaded again
+  });
+});

@@ -358,3 +358,27 @@ def test_archive_at_closing_time_gets_the_real_next_close(client, clock, sqlite_
     assert close == int(datetime(2027, 1, 15, 23, 0, tzinfo=UTC).timestamp())
     with transaction(sqlite_engine, WORKSPACE) as conn:
         assert hours_hook.next_closing_at(conn, WORKSPACE, VENUE, int(clock.now)) is None
+
+
+
+def test_the_kiosk_fades_close_now_over_60_seconds_and_an_exact_close_over_20():
+    from datetime import timedelta
+
+    from selecta.business import health, hours
+
+    week = hours.Hours(tz="Europe/London", weekly=tuple(
+        hours.Period(day, "10:00", "23:00") for day in range(7)))
+    at = datetime(2027, 1, 15, 14, 0, tzinfo=UTC)
+    intervals = hours.periods_between(week, at - timedelta(days=1), at + timedelta(days=1))
+    closed = hours.close_now(intervals, at, by="user-sam")
+    after = hours.periods_between(week, at - timedelta(days=1), at + timedelta(days=1), [closed])
+    ten_in = at + timedelta(seconds=10)
+    day = hours.state_at(after, ten_in)
+    assert day.state == "closing"
+    assert health.closing_fade_s(day, ten_in.timestamp()) == 50.0
+
+    near = datetime(2027, 1, 15, 22, 59, 50, tzinfo=UTC)
+    exact = hours.state_at(intervals, near, closing_mode="exact")
+    natural = hours.state_at(intervals, datetime(2027, 1, 15, 23, 1, tzinfo=UTC))
+    assert health.closing_fade_s(exact, near.timestamp()) == 10.0
+    assert health.closing_fade_s(natural, near.timestamp()) is None

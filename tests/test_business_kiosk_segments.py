@@ -181,3 +181,78 @@ def test_the_signer_refuses_another_workspaces_or_a_staging_key():
     assert presign(ws, own) is not None
     assert presign(new_id(), own) is None
     assert presign(ws, "staging/whatever") is None
+
+
+# ---- BZ-0446-09: resync replans from where the kiosk really is
+
+
+def _session(party, zone):
+    with transaction(party.engine, zone["org"]) as conn:
+        return (
+            conn.execute(
+                sa.select(playback_sessions).where(playback_sessions.c.zone_id == zone["zone"])
+            )
+            .mappings()
+            .one()
+        )
+
+
+def test_reconnect_resync_moves_the_zone_to_the_kiosks_position(party, zone, signer):
+    player = Player(party, "machine-resync-1")
+    assert pair(party, zone, player).status_code == 201
+    player.collect()
+    assert player.heartbeat().status_code == 200  # the kiosk holds the zone
+    answer = player.client.post(
+        "/api/kiosk/resync",
+        json={"entries": [], "position": {"song_index": 1, "offset_ms": 30_000}},
+    )
+    assert answer.status_code == 200, answer.text
+    assert answer.json()["replan"] == {"replanned": True, "song_index": 1}
+    session = _session(party, zone)
+    assert (session["song_index"], session["offset_ms"]) == (1, 30_000)
+    # the horizon now starts from the device's song
+    segments = player.client.get("/api/kiosk/horizon").json()["segments"]
+    assert segments[0]["song_index"] == 1
+
+
+def test_reconnect_after_lease_taken_keeps_the_new_speakers_position(party, zone, signer):
+    player = Player(party, "machine-resync-2")
+    assert pair(party, zone, player).status_code == 201
+    player.collect()
+    with transaction(party.engine, zone["org"]) as conn:
+        conn.execute(
+            sa.update(playback_sessions)
+            .where(playback_sessions.c.zone_id == zone["zone"])
+            .values(active_device_id=None, lease_expires_at=db_now(conn) + 60)
+        )
+        conn.execute(
+            sa.update(playback_sessions)
+            .where(playback_sessions.c.zone_id == zone["zone"])
+            .values(active_device_id=_other_device(conn, zone["org"]))
+        )
+    answer = player.client.post(
+        "/api/kiosk/resync", json={"entries": [], "position": {"song_index": 1, "offset_ms": 5_000}}
+    )
+    assert answer.json()["replan"] == {"replanned": False, "reason": "another_speaker"}
+    assert _session(party, zone)["song_index"] == 0
+
+
+def _other_device(conn, workspace_id: str) -> str:
+    from selecta.playback.schema import devices
+
+    device_id = new_id()
+    now = db_now(conn)
+    conn.execute(
+        devices.insert().values(
+            id=device_id,
+            workspace_id=workspace_id,
+            user_id=None,
+            principal="person",
+            name="Staff phone",
+            kind="phone",
+            capabilities={},
+            created_at=now,
+            last_seen_at=now,
+        )
+    )
+    return device_id

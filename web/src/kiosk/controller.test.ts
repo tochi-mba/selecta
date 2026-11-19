@@ -33,7 +33,7 @@ function setup(over: { paired?: boolean; autoplay?: boolean; online?: boolean; w
     stop: vi.fn(() => { player.started = false; player.stopped += 1; }),
     setSegments: vi.fn((s: PlayableSegment[]) => { player.segments = s; }),
     setPaused: vi.fn(), setVolume: vi.fn(), tick: vi.fn(async () => undefined),
-    mode: () => 'horizon' as const, playing: () => player.started,
+    mode: () => 'horizon' as const, playing: () => player.started, fadingOut: () => false,
     position: () => ({ segment: null, offsetS: 0 }), level: () => -20, contextState: () => 'running', current: () => null,
   };
   const audio = {
@@ -212,6 +212,23 @@ describe('guest requests and the on-screen code (ADR-0451)', () => {
     (k.player as unknown as { current: () => unknown }).current = () => ({ song_id: 7 });
     await c.every('tick');
     expect(played).toHaveBeenCalledWith('req-1');
+  });
+});
+
+describe('resync after an outage (ADR-0446 BZ-0446-09)', () => {
+  it('sends where the player is, and reads the replanned horizon', async () => {
+    const k = setup({ paired: true });
+    const resync = vi.fn(async () => ({ inserted: 0, duplicates: 0, replanned: true }));
+    (k.api as unknown as Record<string, unknown>).resync = resync;
+    (k.player as unknown as { position: () => unknown }).position = () => ({ segment: { song_index: 2 }, offsetS: 30 });
+    await k.controller.boot();
+    const before = k.api.horizon.mock.calls.length;
+    k.online = false;
+    await k.controller.every('heartbeat');
+    k.online = true;
+    await k.controller.every('heartbeat');
+    expect(resync).toHaveBeenCalledWith([], { song_index: 2, offset_ms: 30_000 });
+    expect(k.api.horizon.mock.calls.length).toBe(before + 1);
   });
 });
 

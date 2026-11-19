@@ -200,9 +200,11 @@ export function kioskApi(options: KioskApiOptions = {}) {
       if (!url) throw new KioskCallError(503, 'storage_unavailable');
       return url;
     },
-    async resync(entries: unknown[]): Promise<{ inserted: number; duplicates: number }> {
-      const body = await post(KIOSK_ROUTES.resync, { entries });
-      return { inserted: num(body.inserted) ?? 0, duplicates: num(body.duplicates) ?? 0 };
+    /** Upload the local log; with `position`, the zone moves to where this player really is. */
+    async resync(entries: unknown[], position?: { song_index: number; offset_ms: number } | null): Promise<{ inserted: number; duplicates: number; replanned: boolean }> {
+      const body = await post(KIOSK_ROUTES.resync, position ? { entries, position } : { entries });
+      const replan = body.replan as { replanned?: unknown } | undefined;
+      return { inserted: num(body.inserted) ?? 0, duplicates: num(body.duplicates) ?? 0, replanned: replan?.replanned === true };
     },
     async nextRequest(): Promise<NextRequest | null> {
       const body = await send(KIOSK_ROUTES.nextRequest);

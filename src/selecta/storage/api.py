@@ -233,8 +233,11 @@ def install_routes(
         principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
         return principal.workspace.id
 
-    def uploader(request: Request, claims: Claims) -> str:
-        return principal_for(engine, claims, request.headers.get("x-workspace-id")).user.id
+    def uploader(request: Request, claims: Claims) -> str | None:
+        """The uploading person, or None for a principal with no person (a service or test
+        principal): the upload then records no uploader."""
+        found = principal_for(engine, claims, request.headers.get("x-workspace-id"))
+        return getattr(getattr(found, "user", None), "id", None)
 
     def refuse_if_restricted(workspace_id: str) -> None:
         """Staff suspended this workspace's uploads (the repeat-infringer policy, §12.3)."""

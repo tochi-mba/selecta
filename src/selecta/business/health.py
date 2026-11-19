@@ -63,6 +63,7 @@ VIEW_FIELDS = (
     "version",
     "server_time",
     "volume",
+    "closing_fade_s",
 )
 REPORT_FIELDS = (
     "kiosk_version",
@@ -357,28 +358,42 @@ def _pins_on(conn: Connection, workspace_id: str, venue_id: str) -> bool:
     return bool(row and row.staff_pins)
 
 
+def closing_fade_s(day: Any, now: float) -> float | None:
+    """Seconds the kiosk's fade-out should take now, when this close fades on a clock: close now
+    (60 s, ADR-0444) or an exact close (the last 20 s). None for a natural close, where the song
+    plays on and the 20 s fade starts at the close."""
+    if day.state != "closing" or day.next_change is None or day.interval is None:
+        return None
+    left = max(0.0, day.next_change.timestamp() - now)
+    exact = day.interval.end is not None and day.next_change == day.interval.end
+    if day.interval.closed_early_at is not None or exact:
+        return round(left, 1)
+    return None
+
+
 def _zone_day(
     conn: Connection, workspace_id: str, venue_id: str, zone_id: str, tz: str, now: float
 ):
-    """(state, opens_at local "HH:MM" or None) from the venue's hours; open when it has none."""
+    """(state, opens_at local "HH:MM" or None, closing fade seconds or None) from the venue's
+    hours; open when it has none."""
     from selecta.business import hours, zone_clock
 
     ref = zone_clock.ZoneRef(workspace_id=workspace_id, venue_id=venue_id, zone_id=zone_id, tz=tz)
     try:
         day = zone_clock.compute(conn, ref, now)
     except (hours.HoursError, LookupError, ValueError):
-        return "open", None
+        return "open", None, None
     if day.state in ("open", "opening", "closing"):
-        return "open", None
+        return "open", None, closing_fade_s(day, now)
     if day.state == "warming":
-        return "starting", None
+        return "starting", None, None
     opens = None
     if day.next_change is not None and day.next_state in ("warming", "opening", "open"):
         moment = day.next_change
         if day.next_state == "warming" and day.interval is not None:
             moment = day.interval.start
         opens = moment.astimezone(ZoneInfo(tz)).strftime("%H:%M")
-    return "closed", opens
+    return "closed", opens, None
 
 
 def kiosk_view(
@@ -392,7 +407,7 @@ def kiosk_view(
         if place is None:
             return {"state": "unpaired", "server_time": now}
         session = load_session(conn, auth.workspace_id, auth.zone_id)
-        state, opens_at = _zone_day(
+        state, opens_at, fade_s = _zone_day(
             conn, auth.workspace_id, place.venue_id, auth.zone_id, place.timezone, now
         )
         if place.zone_status != "active" or place.venue_status != "active":
@@ -447,6 +462,8 @@ def kiosk_view(
         "version": version,
         "server_time": now,
         "volume": volume,
+        # ADR-0444: close now fades over 60 s, an exact close over its last 20 s.
+        "closing_fade_s": fade_s if state == "open" else None,
     }
     return {key: view[key] for key in VIEW_FIELDS}
 

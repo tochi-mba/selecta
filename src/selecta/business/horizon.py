@@ -14,6 +14,8 @@ mixes use (`workers/engine_handlers.render_seam`):
   takes over, written by the worker into the artifact's provenance) cut song A short and start
   song B later, with the seam clip between them. A pair without a rendered seam meets with the
   player's own crossfade, as before.
+- **Resync.** `replan_from_device` moves the zone session to where a returning kiosk really is,
+  so the horizon is planned again from its position.
 - **Eviction.** `protected_artifact_ids` names every seam and analysis artifact a zone's horizon
   uses, so storage eviction never removes one a kiosk is about to play.
 """
@@ -237,8 +239,14 @@ def request_seams(
             from selecta.business import entitlement_gates
 
             allowed, _reason = entitlement_gates.render_allowed(
-                conn, workspace_id, venue_id, zone_id, ahead_s=max(0.0, heard_at - now),
-                next_transition=index == 0, now=now)
+                conn,
+                workspace_id,
+                venue_id,
+                zone_id,
+                ahead_s=max(0.0, heard_at - now),
+                next_transition=index == 0,
+                now=now,
+            )
             if not allowed:
                 made["held"] += 1
                 break
@@ -313,8 +321,9 @@ def tick(engine: Engine) -> dict[str, int]:
             from selecta.business.content.zone_planner import content_horizon
 
             songs = content_horizon(conn, workspace_id, zone_id, songs, now)
-            counts = request_seams(conn, workspace_id, zone_id, songs, now, close_at=close_at,
-                                   venue_id=venue_id)
+            counts = request_seams(
+                conn, workspace_id, zone_id, songs, now, close_at=close_at, venue_id=venue_id
+            )
         total["zones"] += 1
         for key, value in counts.items():
             total[key] = total.get(key, 0) + value
@@ -355,12 +364,61 @@ def protected_artifact_ids(conn: Connection, workspace_id: str) -> set[str]:
     return found
 
 
+def replan_from_device(
+    engine: Engine,
+    workspace_id: str,
+    zone_id: str,
+    device_id: str,
+    *,
+    song_index: int,
+    offset_ms: int,
+    now: float | None = None,
+) -> dict[str, Any]:
+    """Resync (ADR-0446): what played is a fact, so the zone session moves to where the kiosk
+    actually is, and the horizon (planned from the session) follows from there. Only while the
+    kiosk is the zone's speaker or nobody else holds a live lease: if a standby or a staff phone
+    took the zone meanwhile, the server keeps their position and the kiosk fades out (ADR-0415)."""
+    from selecta.playback.schema import playback_sessions as t
+
+    with transaction(engine, workspace_id) as conn:
+        now = db_now(conn) if now is None else now
+        row = (
+            conn.execute(
+                sa.select(t).where(t.c.workspace_id == workspace_id, t.c.zone_id == zone_id)
+            )
+            .mappings()
+            .first()
+        )
+        if row is None or not row["programme"]:
+            return {"replanned": False, "reason": "no_programme"}
+        holder = row["active_device_id"]
+        live = row["lease_expires_at"] is not None and row["lease_expires_at"] > now
+        if holder not in (None, device_id) and live:
+            return {"replanned": False, "reason": "another_speaker"}
+        if not 0 <= song_index < len(row["programme"]):
+            return {"replanned": False, "reason": "outside_programme"}
+        conn.execute(
+            sa.update(t)
+            .where(t.c.id == row["id"])
+            .values(
+                song_index=song_index,
+                offset_ms=max(0, offset_ms),
+                anchor_at=now,
+                state="playing",
+                seq=row["seq"] + 1,
+                updated_at=now,
+            )
+        )
+    return {"replanned": True, "song_index": song_index}
+
+
 __all__ = [
     "EVERY_S",
     "TASK_NAME",
     "analysis_hash",
     "planned_horizon",
     "protected_artifact_ids",
+    "replan_from_device",
     "request_seams",
     "seam_hash",
     "splice",

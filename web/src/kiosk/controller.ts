@@ -21,6 +21,8 @@ import type { WakeController } from './wake';
 
 /** The closing fade (ADR-0444): 20 s, ending at the close in "exact" mode. */
 export const CLOSING_FADE_S = 20;
+/** Stay open late pressed during a closing fade turns it round over 10 s (ADR-0444). */
+export const REVERSE_FADE_S = 10;
 
 /** Whether an "exact" close has begun its fade, and how long the fade has left. */
 export function exactClosing(mode: unknown, closeAt: number | null, now: number | null): number | null {
@@ -185,6 +187,7 @@ export function createController(deps: ControllerDeps) {
     if (d === 'closed') return false;
     if (!online && !permitValid() && !started) return false;
     if (exactClosing(closingMode(), day().closeAt, now()) !== null) return false;
+    if (online && typeof view.closing_fade_s === 'number') return false; // close now, exact close
     return d === 'open';
   }
 
@@ -194,13 +197,15 @@ export function createController(deps: ControllerDeps) {
       started = true;
       const untrusted = deps.clock.status() === 'untrusted';
       if (untrusted) deps.audio.player.setVolume(UNTRUSTED_VOLUME);
-      deps.audio.player.start(5);
+      deps.audio.player.start(deps.audio.player.fadingOut() ? REVERSE_FADE_S : 5);
     } else if (!want && started) {
       started = false;
       // At closing time the music fades over 20 s (ending at the close in exact mode); a
       // pause, an unpairing or a refused permit stops within a second.
+      // Online, the server says how long a close now (60 s) or an exact close has left.
+      const served = online && typeof view.closing_fade_s === 'number' ? Math.max(0.05, view.closing_fade_s) : null;
       const exact = exactClosing(closingMode(), day().closeAt, now());
-      deps.audio.player.stop(exact ?? (day().state === 'closed' ? CLOSING_FADE_S : 1));
+      deps.audio.player.stop(served ?? exact ?? (day().state === 'closed' ? CLOSING_FADE_S : 1));
     }
     deps.audio.player.setPaused(sessionPaused);
     deps.wake.sync(want);
@@ -279,19 +284,24 @@ export function createController(deps: ControllerDeps) {
         sessionPaused = answer.session.state === 'paused';
         if (typeof answer.session.volume === 'number' && deps.clock.status() !== 'untrusted') deps.audio.player.setVolume(answer.session.volume, cameBack ? 30 : 2);
       }
-      await uploadLog();
+      await uploadLog(cameBack && speaker);
     } catch (error) {
       if (isRevoked(error)) await forgetPairing();
       else if (error instanceof KioskCallError && error.status === 0) online = false;
     }
   }
 
-  async function uploadLog(): Promise<void> {
+  /** Upload the plays logged here. Back after an outage, the player also sends where it is
+   * on the plan (not while on the fallback reel), so the server replans the horizon from the
+   * device's position: what played is a fact (ADR-0446 resync). */
+  async function uploadLog(backFromOutage = false): Promise<void> {
     const pending = deps.log.pending().filter((entry) => entry.kind === 'play');
-    if (!pending.length) return;
+    const here = backFromOutage && deps.audio.player.mode() === 'horizon' ? position() : null;
+    if (!pending.length && !here) return;
     try {
-      await deps.api.resync(pending);
+      const answer = await deps.api.resync(pending, here ? { song_index: here.song_index, offset_ms: here.offset_ms } : null);
       deps.log.acknowledge(pending.map((entry) => entry.idempotency_key));
+      if (answer.replanned) await refreshHorizon();
     } catch {
       // kept for the next try
     }

@@ -77,8 +77,15 @@ class SegmentIn(BaseModel):
     key: str = Field(min_length=1, max_length=255)
 
 
+class ResyncPosition(BaseModel):
+    song_index: int = Field(ge=0)
+    offset_ms: int = Field(ge=0)
+
+
 class ResyncIn(BaseModel):
     entries: list[dict[str, Any]] = Field(default_factory=list, max_length=2000)
+    # Where the kiosk is now, after playing offline; the session follows it (ADR-0446 resync).
+    position: ResyncPosition | None = None
 
 
 class PinIn(BaseModel):
@@ -451,10 +458,22 @@ def install_routes(
         with transaction(engine) as conn:
             now = db_now(conn)
         try:
-            return health.resync_plays(engine, auth, body.entries, now=now)
+            answer = health.resync_plays(engine, auth, body.entries, now=now)
         except Exception as error:  # noqa: BLE001 - a bad entry refuses the batch, plainly
             code = getattr(error, "code", "bad_entry")
             raise HTTPException(status_code=422, detail={"code": code}) from None
+        if body.position is not None:
+            from selecta.business import horizon as horizon_plan
+
+            answer["replan"] = horizon_plan.replan_from_device(
+                engine,
+                auth.workspace_id,
+                auth.zone_id,
+                auth.device_id,
+                song_index=body.position.song_index,
+                offset_ms=body.position.offset_ms,
+            )
+        return answer
 
     # -- Rooms for Business on the zone's player (ADR-0451; the bridge is business.kiosk_rooms)
 

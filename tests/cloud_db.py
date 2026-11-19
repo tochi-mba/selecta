@@ -155,6 +155,16 @@ def check_invariants(request: pytest.FixtureRequest, engine: Engine) -> None:
             f"docs/saas/15-stress-testing.md §15.2:\n{broken}",
             pytrace=False,
         )
+    from selecta.audit import business_db_invariants
+
+    try:
+        business_db_invariants.assert_db_clean(engine)
+    except AssertionError as broken:
+        pytest.fail(
+            "The test passed but left the database breaking a business invariant "
+            f"(ADR-0454 B6, B7 or B8):\n{broken}",
+            pytrace=False,
+        )
 
 
 def _checked_postgres(request: pytest.FixtureRequest) -> Iterator[Engine]:

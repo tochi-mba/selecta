@@ -26,14 +26,14 @@ test('BZ-0450-04: the bulk editor selects, applies and undoes', async ({ page, r
   const seeded = await seed(page, owner);
   await venueTab(page, seeded, 'rules');
   await page.getByRole('button', { name: 'Count songs' }).click();
-  await expect(page.getByText('Marking 6 songs as clean')).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Marking 6 songs as clean' })).toBeVisible();
   await page.getByRole('button', { name: 'Mark them' }).click();
   await expect(page.getByRole('button', { name: 'Undo last change' })).toBeVisible();
   await page.getByRole('button', { name: 'Count songs' }).click();
-  await expect(page.getByText('Marking 0 songs as clean')).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Marking 0 songs as clean' })).toBeVisible();
   await page.getByRole('button', { name: 'Undo last change' }).click();
   await page.getByRole('button', { name: 'Count songs' }).click();
-  await expect(page.getByText('Marking 6 songs as clean')).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Marking 6 songs as clean' })).toBeVisible();
 });
 
 test('BZ-0450-03 and -06: the song sheet and an artist block with its spellings', async ({ page, request }) => {
@@ -41,7 +41,7 @@ test('BZ-0450-03 and -06: the song sheet and an artist block with its spellings'
   await signedIn(page, request, owner);
   const seeded = await seed(page, owner);
   await venueTab(page, seeded, 'rules');
-  await page.getByLabel('Find a song').fill('Harbour Song 1');
+  await page.getByLabel('Find a song', { exact: true }).fill('Harbour Song 1');
   await page.getByRole('button', { name: 'Harbour Song 1 by Rude Words' }).click();
   await page.getByLabel('Explicit lyrics').selectOption('explicit');
   await expect(page.getByLabel('Explicit lyrics')).toHaveValue('explicit');
@@ -50,7 +50,7 @@ test('BZ-0450-03 and -06: the song sheet and an artist block with its spellings'
   await page.getByRole('button', { name: 'Check spellings' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'This also blocks' })).toContainText('Harbour Band 1');
   await page.getByRole('button', { name: 'Add to the blocklist' }).click();
-  await expect(page.getByText(/Artist: Harbour Band 1/)).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Blocked artists, albums and tags' })).toContainText('Artist: Harbour Band 1');
   await accessible(page, 'music rules');
 });
 
@@ -66,8 +66,7 @@ test('BZ-0450-09: the staff volume slider ends at the zone cap', async ({ page, 
   await page.getByRole('button', { name: 'Save anyway' }).click();
   await expect(page.getByText('Save anyway')).toHaveCount(0);
   await page.goto(`/b/${seeded.org}/v/${seeded.venues[0]}/control`);
-  const slider = page.getByRole('slider').first();
-  await expect(slider).toHaveAttribute('aria-valuemax', '60');
+  await expect(page.getByRole('slider', { name: 'Volume' }).first()).toHaveAttribute('max', '60');
 });
 
 test('BZ-0451-02: rotating warns first, and the print sheet carries each zone code', async ({ page, request, context }) => {
@@ -95,7 +94,7 @@ test('BZ-0451-04 and -08: a guest asks at 320 px in both themes and staff approv
   await signedIn(page, request, owner);
   const seeded = await seed(page, owner, { staff });
   await venueTab(page, seeded, 'requests');
-  const text = (await page.getByText(/^Table card code:/).first().textContent()) ?? '';
+  const text = (await page.getByRole('region', { name: 'Bar requests' }).getByText(/^Table card code:/).textContent()) ?? '';
   const code = text.replace(/^Table card code:\s*/, '').replace(/-/g, '').trim();
 
   const staffContext = await browser.newContext();

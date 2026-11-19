@@ -119,6 +119,10 @@ export function createPlayer(options: PlayerOptions) {
   let wanted = false;
   let fadeInS = 0;
   let fadeOutS = 1;
+  // A fade-out in progress (closing, close now, a pause): pressing play again reverses it from
+  // where it is instead of starting the song over (ADR-0444 stay open late).
+  let fading: { deck: Deck; timer: ReturnType<typeof setTimeout> } | null = null;
+  let reverseS = 1;
   let mode: Mode = 'idle';
   let segments: PlayableSegment[] = [];
   let paused = false;
@@ -138,6 +142,15 @@ export function createPlayer(options: PlayerOptions) {
     } else {
       deck.el.volume = typeof curve === 'number' ? curve : curve[curve.length - 1];
     }
+  };
+
+  /** From wherever the gain is now back up to full over `seconds`. */
+  const rampUp = (deck: Deck, seconds: number) => {
+    const current = deck.gain ? deck.gain.gain.value : deck.el.volume;
+    const steps = 32;
+    const curve = new Float32Array(steps);
+    for (let i = 0; i < steps; i += 1) curve[i] = current + (1 - current) * Math.sin(((i + 1) / steps) * (Math.PI / 2));
+    ramp(deck, curve, seconds);
   };
 
   const log = (deck: Deck, at: number) => {
@@ -200,13 +213,23 @@ export function createPlayer(options: PlayerOptions) {
     if (switching) return;
     const deck = decks[active];
     if (!wanted || paused) {
-      if (deck.segment) {
+      if (deck.segment && fading?.deck !== deck) {
         const seconds = paused ? 1 : fadeOutS;
         ramp(deck, curves.fadeOut, seconds);
-        setTimeout(() => { if (!wanted || paused) release(deck, options.now() ?? Date.now() / 1000); }, seconds * 1000);
+        const timer = setTimeout(() => {
+          if (fading?.timer === timer) fading = null;
+          if (!wanted || paused) release(deck, options.now() ?? Date.now() / 1000);
+        }, seconds * 1000);
+        fading = { deck, timer };
       }
       mode = 'idle';
       return;
+    }
+    if (fading) {
+      clearTimeout(fading.timer);
+      if (fading.deck.segment) rampUp(fading.deck, reverseS);
+      fading = null;
+      fadeInS = 0;
     }
     const now = options.now();
     const target = now === null ? null : segmentAt(segments, now, options.saved);
@@ -249,8 +272,11 @@ export function createPlayer(options: PlayerOptions) {
     start(fadeIn = 5) {
       wanted = true;
       fadeInS = fadeIn;
+      reverseS = fadeIn > 0 ? fadeIn : 1;
       void tick();
     },
+    /** Whether a fade-out is still in progress (it can be reversed). */
+    fadingOut() { return fading !== null && fading.deck.segment !== null; },
     /** Stop with a fade-out: 1 s by default, 20 s at closing time (ADR-0444). */
     stop(fadeOut = 1) {
       wanted = false;

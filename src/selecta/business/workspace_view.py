@@ -261,6 +261,18 @@ def _licence(conn: Connection, venue_id: str) -> dict[str, Any] | None:
     }
 
 
+def _volume_cap(conn: Connection, workspace_id: str, venue_id: str, zone_id: str,
+                now: float) -> dict:
+    from selecta.business.controls_wiring import zone_volume_cap
+
+    try:
+        with conn.begin_nested():
+            cap = zone_volume_cap(conn, workspace_id, venue_id, zone_id, now)
+    except Exception:  # noqa: BLE001 - no content-rule tables: no cap to show
+        return {}
+    return {} if cap is None else {"volume_cap": cap}
+
+
 def _zone_state(zone: dict, session, is_open: bool | None, now: float) -> tuple[str, float | None]:
     if zone["status"] == "paused":
         return "plan_paused", None
@@ -279,9 +291,16 @@ def _zone_state(zone: dict, session, is_open: bool | None, now: float) -> tuple[
 
 def venues_view(conn: Connection, actor: BusinessActor, *, now: float) -> list[dict[str, Any]]:
     from selecta.playback.store import zone_sessions
+    from selecta.playback.zone_schema import zone_alerts
 
     workspace_id = actor.workspace_id
     sessions = {s.zone_id: s for s in zone_sessions(conn, workspace_id)}
+    # An open silent alert (digital silence, a suspended audio context, a long pause) makes the
+    # zone silent on manager screens even while its kiosk still holds the lease (ADR-0454 UI).
+    silent_alerts = dict(conn.execute(
+        sa.select(zone_alerts.c.zone_id, zone_alerts.c.opened_at).where(
+            zone_alerts.c.workspace_id == workspace_id, zone_alerts.c.kind == "silent",
+            zone_alerts.c.status == "open")).all())
     scope = scope_of(actor)
     out = []
     for venue in venue_store.list_venues(conn, workspace_id):
@@ -294,6 +313,8 @@ def venues_view(conn: Connection, actor: BusinessActor, *, now: float) -> list[d
         for zone in zones:
             session = sessions.get(zone["id"])
             state, since = _zone_state(zone, session, is_open, now)
+            if zone["id"] in silent_alerts and state not in ("closed", "plan_paused"):
+                state, since = "silent", silent_alerts[zone["id"]]
             zone_views.append({
                 "id": zone["id"],
                 "venue_id": venue["id"],
@@ -301,6 +322,8 @@ def venues_view(conn: Connection, actor: BusinessActor, *, now: float) -> list[d
                 "state": state,
                 "state_since": since,
                 "volume": session.volume if session and session.volume is not None else None,
+                # ADR-0450: the zone's cap now (quiet hours included); absent while it has none
+                **_volume_cap(conn, workspace_id, venue["id"], zone["id"], now),
                 "paid": True,
                 "speaker_device_id": session.active_device_id if session else None,
             })

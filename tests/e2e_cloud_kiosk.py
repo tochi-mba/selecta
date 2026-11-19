@@ -10,6 +10,11 @@ that server with `business.orgs`, `business.schedules` and `business.kiosk` on.
 - `POST /test/kiosk/hours {"org", "venue", "open"}`: open all week, or closed all week.
 - `POST /test/kiosk/release {"version", "urgent"}`: publish a newer kiosk version, so a player
   sees an update waiting.
+- `POST /test/kiosk/silence {"zone", "silent"}`: from now on the alert pass reads that zone's
+  kiosk as playing digital silence (output below -60 dBFS), or stops doing so. Only the alert
+  facts are changed; the player keeps playing and reporting as it does.
+- `POST /test/kiosk/sweep {"advance_s"}`: run the silent-zone alert pass once, as if
+  `advance_s` seconds later than now (the pass the maintenance loop runs every 30 s).
 """
 
 from __future__ import annotations
@@ -184,6 +189,34 @@ def install(
         with transaction(engine, org) as conn:
             _hours(conn, org, venue, bool(body.get("open", True)))
         return {"open": bool(body.get("open", True))}
+
+    silenced: set[str] = set()
+    from dataclasses import replace
+
+    from selecta.business import alerts
+
+    real_facts = alerts.zone_facts
+
+    def facts_with_silence(conn, now):
+        return [replace(f, playing_state="playing", output_dbfs=-90.0)
+                if f.zone_id in silenced else f for f in real_facts(conn, now)]
+
+    alerts.zone_facts = facts_with_silence
+
+    @app.post("/test/kiosk/silence")
+    def silence(body: dict = Body(default={})) -> dict[str, Any]:  # noqa: B008
+        zone_id = str(body["zone"])
+        if body.get("silent", True):
+            silenced.add(zone_id)
+        else:
+            silenced.discard(zone_id)
+        return {"silenced": sorted(silenced)}
+
+    @app.post("/test/kiosk/sweep")
+    def sweep(body: dict = Body(default={})) -> dict[str, Any]:  # noqa: B008
+        with transaction(engine) as conn:
+            now = db_now(conn) + float(body.get("advance_s", 0))
+        return alerts.sweep(engine, now=now, notify=lambda *_args: None)
 
     @app.post("/test/kiosk/release")
     def release(body: dict = Body(default={})) -> dict[str, Any]:  # noqa: B008

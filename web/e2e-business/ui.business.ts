@@ -42,9 +42,8 @@ test('staff view has no destructive control', async ({ page, request }) => {
   await expect(page.getByRole('button', { name: /Delete|Unpair|Archive|Remove/i })).toHaveCount(0);
 });
 
-test('silent zone alert appears within 70 seconds and clears', async () => {
-  test.fixme(true, 'Needs a paired kiosk that reports digital silence; the kiosk e2e server (playwright.kiosk.config.ts) has no control to silence a player yet. The alert timing is tests/test_business_kiosk_alerts.py.');
-});
+// 'silent zone alert appears within 70 seconds and clears' needs a paired, playing kiosk, so it
+// runs on the kiosk e2e server: web/e2e-cloud/silent-alert.kiosk.ts.
 
 test('workspace band on every business page', async ({ page, request }) => {
   const owner = listener('ui-band');
