@@ -225,6 +225,10 @@ def plan_zone(conn: Connection, ref: zone_clock.ZoneRef, now: float, *,
 
     state = _state(conn, ref.zone_id) or {}
     plan = dict(state.get("plan_json") or {})
+    from selecta.business.content import store as content_store
+
+    policy_version = content_store.version(conn, ref.organisation_id)
+    policy_changed = plan.get("content_policy_version") != policy_version
     steering = dayparts.StaffSteering.from_dict(state.get("steering_json"))
     current_block = next((w.block.name for w in windows
                           if w.start.timestamp() <= now < w.end.timestamp()), windows[0].block.name)
@@ -239,10 +243,15 @@ def plan_zone(conn: Connection, ref: zone_clock.ZoneRef, now: float, *,
     changed = (
         bool(state.get("dirty", True))
         or plan.get("version_id") != row["id"]
+        or policy_changed
         or plan.get("close") != close
         or round(float(plan.get("offset", 0.0)), 3) != round(steering.offset, 3)
     )
     kept = existing[:keep_until] if changed else existing
+    if policy_changed:
+        # Let the song already on the speaker finish, then rebuild the future against the stricter
+        # snapshot. A previously committed next song may have just become forbidden.
+        kept = existing[:max(0, session.song_index) + 1]
     source = songs_source
     if source is None:
         from selecta.business.content.library import SqlSongFacts
@@ -297,7 +306,8 @@ def plan_zone(conn: Connection, ref: zone_clock.ZoneRef, now: float, *,
                       updated_at=now)
         save_session(conn, new)
     _save_state(conn, ref.workspace_id, ref.zone_id, now, steering=steering.to_dict(), dirty=False,
-                plan={"version_id": row["id"], "close": close, "offset": steering.offset,
+                plan={"version_id": row["id"], "content_policy_version": policy_version,
+                      "close": close, "offset": steering.offset,
                       "song_index": session.song_index, "block": current_block,
                       "planned_at": now, "targets": [round(t, 3) for _s, t, _b in picks[:12]]})
     return {"zone_id": ref.zone_id, "planned": len(added), "replanned": changed}
