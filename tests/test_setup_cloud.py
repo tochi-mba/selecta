@@ -107,6 +107,22 @@ def test_stripe_test_catalog_matches_the_accepted_adr_prices():
     }
 
 
+def test_stripe_business_catalog_matches_the_accepted_adr_prices():
+    assert setup_cloud.STRIPE_BUSINESS_TEST_CATALOG["business_venue"]["prices"] == {
+        "month": 7900,
+        "year": 79000,
+    }
+    assert setup_cloud.STRIPE_BUSINESS_TEST_CATALOG["business_extra_zone"]["prices"] == {
+        "month": 2500,
+        "year": 25000,
+    }
+    assert setup_cloud.STRIPE_BUSINESS_TEST_CATALOG["business_extra_seat"]["prices"] == {
+        "month": 500,
+        "year": 5000,
+    }
+    assert len(setup_cloud.STRIPE_REQUIRED_WEBHOOK_EVENTS) == 12
+
+
 def test_checklist_hides_configured_names_by_default(capsys):
     setup_cloud.checklist("staging", {"ANTHROPIC_API_KEY": "never print me"})
     output = capsys.readouterr().out

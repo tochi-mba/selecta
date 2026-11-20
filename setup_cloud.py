@@ -417,6 +417,38 @@ STRIPE_TEST_CATALOG = {
     },
 }
 
+STRIPE_BUSINESS_TEST_CATALOG = {
+    "business_venue": {
+        "name": "SelectaDJ Business venue",
+        "prices": {"month": 7900, "year": 79000},
+    },
+    "business_extra_zone": {
+        "name": "SelectaDJ Business extra zone",
+        "prices": {"month": 2500, "year": 25000},
+    },
+    "business_extra_seat": {
+        "name": "SelectaDJ Business extra staff seat",
+        "prices": {"month": 500, "year": 5000},
+    },
+}
+
+STRIPE_REQUIRED_WEBHOOK_EVENTS = frozenset(
+    {
+        "checkout.session.completed",
+        "customer.subscription.created",
+        "customer.subscription.updated",
+        "customer.subscription.deleted",
+        "customer.subscription.paused",
+        "customer.subscription.resumed",
+        "invoice.paid",
+        "invoice.payment_failed",
+        "invoice.payment_action_required",
+        "charge.refunded",
+        "charge.dispute.created",
+        "charge.dispute.closed",
+    }
+)
+
 # These are deliberately provider-level URLs: dashboard subpaths change frequently, while the
 # click-path text tells the operator what object to look for. No credential value is fetched here.
 SETUP_GUIDES = {
@@ -986,6 +1018,152 @@ def provision_stripe_test_catalog() -> dict[str, dict[str, object]]:
     return price_map
 
 
+def provision_stripe_business_test_catalog() -> dict[str, dict[str, object]]:
+    """Create/reuse the accepted GBP business catalogue and save its staging map."""
+    values = load_values("staging")
+    key = values.get("SELECTA_STRIPE_SECRET_KEY", "")
+    if not key.startswith("sk_test_"):
+        raise ValueError("staging vault needs a Stripe sk_test_ key; live keys are refused")
+
+    products = _stripe_list(key, "/v1/products", {"active": "true"})
+    price_map: dict[str, dict[str, object]] = {}
+    for item, definition in STRIPE_BUSINESS_TEST_CATALOG.items():
+        product = next(
+            (
+                candidate
+                for candidate in products
+                if isinstance(candidate.get("metadata"), dict)
+                and candidate["metadata"].get("selecta_business_item") == item
+                and candidate["metadata"].get("plan_version") == "1"
+            ),
+            None,
+        )
+        if product is None:
+            product = stripe_request(
+                key,
+                "POST",
+                "/v1/products",
+                {
+                    "name": str(definition["name"]),
+                    "description": "SelectaDJ for Business quantity subscription item",
+                    "metadata[selecta_business_item]": item,
+                    "metadata[plan_version]": "1",
+                    "metadata[environment]": "staging",
+                },
+                idempotency_key=f"selectadj-staging-product-{item}-v1",
+            )
+            products.append(product)
+            print(f"Created Stripe test product: {definition['name']}")
+        else:
+            print(f"Reused Stripe test product: {definition['name']}")
+        product_id = product.get("id")
+        if not isinstance(product_id, str):
+            raise RuntimeError(f"Stripe business product for {item} has no ID")
+
+        prices = _stripe_list(key, "/v1/prices", {"active": "true", "product": product_id})
+        configured_prices = definition["prices"]
+        if not isinstance(configured_prices, dict):
+            raise RuntimeError(f"Invalid local business price definition for {item}")
+        for interval, amount in configured_prices.items():
+            price = next(
+                (
+                    candidate
+                    for candidate in prices
+                    if candidate.get("currency") == "gbp"
+                    and candidate.get("unit_amount") == amount
+                    and isinstance(candidate.get("recurring"), dict)
+                    and candidate["recurring"].get("interval") == interval
+                ),
+                None,
+            )
+            if price is None:
+                price = stripe_request(
+                    key,
+                    "POST",
+                    "/v1/prices",
+                    {
+                        "product": product_id,
+                        "currency": "gbp",
+                        "unit_amount": str(amount),
+                        "recurring[interval]": interval,
+                        "nickname": f"{definition['name']} {interval} v1",
+                        "lookup_key": f"selectadj_{item}_{interval}_gbp_v1",
+                        "metadata[selecta_business_item]": item,
+                        "metadata[plan_version]": "1",
+                        "metadata[environment]": "staging",
+                    },
+                    idempotency_key=f"selectadj-staging-price-{item}-{interval}-gbp-v1",
+                )
+                prices.append(price)
+                print(f"Created Stripe test price: {item} {interval} GBP {amount / 100:.2f}")
+            else:
+                print(f"Reused Stripe test price: {item} {interval} GBP {amount / 100:.2f}")
+            price_id = price.get("id")
+            if not isinstance(price_id, str):
+                raise RuntimeError(f"Stripe price for {item}/{interval} has no ID")
+            price_map[price_id] = {
+                "item": item,
+                "version": 1,
+                "currency": "GBP",
+                "interval": interval,
+            }
+
+    try:
+        stripe_request(key, "GET", "/v1/coupons/selectadj_business_volume_10")
+        print("Reused Stripe test coupon: 10% business volume discount")
+    except RuntimeError as exc:
+        if "HTTP 404" not in str(exc):
+            raise
+        stripe_request(
+            key,
+            "POST",
+            "/v1/coupons",
+            {
+                "id": "selectadj_business_volume_10",
+                "name": "SelectaDJ Business 10-24 venue discount",
+                "percent_off": "10",
+                "duration": "forever",
+                "metadata[environment]": "staging",
+            },
+            idempotency_key="selectadj-staging-business-volume-10-v1",
+        )
+        print("Created Stripe test coupon: 10% business volume discount")
+
+    values["SELECTA_BUSINESS_STRIPE_PRICES"] = json.dumps(
+        price_map, separators=(",", ":"), sort_keys=True
+    )
+    save_values("staging", values)
+    print("Saved six GBP Stripe business test prices to the encrypted staging vault.")
+    return price_map
+
+
+def audit_stripe_test_webhook() -> bool:
+    """Check the staging destination without changing or revealing its signing secret."""
+    values = load_values("staging")
+    key = values.get("SELECTA_STRIPE_SECRET_KEY", "")
+    if not key.startswith("sk_test_"):
+        raise ValueError("staging vault needs a Stripe sk_test_ key; live keys are refused")
+    expected_url = (
+        values.get("SELECTA_API_URL", "https://api.staging.selectadj.app").rstrip("/")
+        + "/api/webhooks/stripe"
+    )
+    endpoints = _stripe_list(key, "/v1/webhook_endpoints", {})
+    endpoint = next((item for item in endpoints if item.get("url") == expected_url), None)
+    if endpoint is None:
+        print(f"Stripe test webhook is missing for {expected_url}")
+        return False
+    enabled = endpoint.get("enabled_events")
+    enabled_set = set(enabled) if isinstance(enabled, list) else set()
+    missing = sorted(STRIPE_REQUIRED_WEBHOOK_EVENTS - enabled_set)
+    status = endpoint.get("status")
+    print(f"Stripe test webhook found; status={status}; URL is correct.")
+    if missing:
+        print("Missing webhook events: " + ", ".join(missing))
+        return False
+    print("All required Stripe webhook events are enabled.")
+    return True
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--environment", "-e", choices=("staging", "production"), default="staging")
@@ -1024,6 +1202,16 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="create/reuse the ADR v1 Stripe test catalogue and save its price map",
     )
+    parser.add_argument(
+        "--provision-stripe-business-test",
+        action="store_true",
+        help="create/reuse the GBP business test catalogue and save its price map",
+    )
+    parser.add_argument(
+        "--audit-stripe-webhook",
+        action="store_true",
+        help="check the staging Stripe destination URL and required events",
+    )
     return parser.parse_args()
 
 
@@ -1039,6 +1227,11 @@ def main() -> int:
         if args.provision_stripe_test:
             provision_stripe_test_catalog()
             return 0
+        if args.provision_stripe_business_test:
+            provision_stripe_business_test_catalog()
+            return 0
+        if args.audit_stripe_webhook:
+            return 0 if audit_stripe_test_webhook() else 1
         values = load_values(args.environment)
         if args.unset:
             if args.unset not in values:
