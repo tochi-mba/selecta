@@ -99,7 +99,7 @@ Each refusal has its own code, so the app can show the right message instead of 
 | `user.deleted` | Mark the account for deletion, if it isn't already being deleted |
 | `session.revoked` | Add the session id to the revoked list |
 | password reset succeeded | Revoke the user's other sessions |
-| `email_verification.succeeded` | Mark the email verified |
+| `authentication.email_verification_succeeded` | Mark the email verified (`email_verification.succeeded` remains accepted for older queued events) |
 
 Unknown event types are stored and ignored. Events can arrive late, twice or out of order, so each one is a "poke": Selecta re-reads the user from WorkOS rather than trusting the payload's snapshot. The route is owned by a core cloud flag, so it can't be switched off.
 

@@ -614,14 +614,16 @@ def test_user_updated_syncs_email_and_verified_status_by_re_reading_workos(world
     assert (row.email, row.email_verified) == ("changed@example.test", False)
 
 
-def test_email_verification_succeeded_marks_the_email_verified(world):
+@pytest.mark.parametrize(
+    "event_type",
+    ["authentication.email_verification_succeeded", "email_verification.succeeded"],
+)
+def test_email_verification_succeeded_marks_the_email_verified(world, event_type):
     onboard(world)
     world.fake.add_user(USER, "changed@example.test", verified=False)
     deliver(world, "user.updated", {"id": USER})
     world.fake.users[USER]["email_verified"] = True
-    deliver(
-        world, "email_verification.succeeded", {"user_id": USER, "email": "changed@example.test"}
-    )
+    deliver(world, event_type, {"user_id": USER, "email": "changed@example.test"})
     assert user_row(world).email_verified is True
 
 

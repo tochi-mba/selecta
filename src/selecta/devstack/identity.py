@@ -228,7 +228,7 @@ class LocalIdentity:
         if owner is None:
             return None
         self.store.mark_verified(owner)
-        self.notify("email_verification.succeeded", {"user_id": owner})
+        self.notify("authentication.email_verification_succeeded", {"user_id": owner})
         return self.store.person(owner)
 
     def reset_password(self, token: str, password: str) -> Person | None:

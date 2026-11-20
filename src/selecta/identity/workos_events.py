@@ -5,7 +5,7 @@ user, Selecta re-reads the user from WorkOS and acts on that, never on the paylo
 
 | Event | Selecta does |
 |---|---|
-| `user.updated`, `email_verification.succeeded` | Re-read the user; sync email and verified |
+| `user.updated`, `authentication.email_verification_succeeded` | Re-read the user; sync email and verified |
 | `user.deleted` | If WorkOS confirms the user is gone, start account deletion (once) |
 | `session.revoked` | Add the session id to `revoked_sessions` (revocation only ever adds) |
 | password reset succeeded | Revoke the user's other sessions, keeping one made since the reset |
@@ -38,7 +38,14 @@ from selecta.identity.schema import workos_events
 from selecta.identity.workos import WorkOSClient, WorkOSError, WorkOSNotFound, epoch
 from selecta.persistence import db_now, new_id, transaction
 
-USER_SYNC_EVENTS = frozenset({"user.updated", "email_verification.succeeded"})
+USER_SYNC_EVENTS = frozenset(
+    {
+        "user.updated",
+        "authentication.email_verification_succeeded",
+        # Retain the pre-2026 name for queued deliveries and development fixtures.
+        "email_verification.succeeded",
+    }
+)
 PASSWORD_RESET_EVENTS = frozenset({"password_reset.succeeded", "user.password_reset_succeeded"})
 HANDLED = USER_SYNC_EVENTS | PASSWORD_RESET_EVENTS | {"user.deleted", "session.revoked"}
 MAX_ID_LENGTH = 255
