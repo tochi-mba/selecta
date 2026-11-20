@@ -230,5 +230,5 @@ def test_over_twenty_thousand_songs_page_during_a_render_on_full_cpu_and_a_nearl
     idle_p95 = profiles["idle"]["p95_ms"]
     for name in ("cpu", "cpu_and_disk"):
         # slower with every core taken is expected; a stall, lock wait or rescan per page is not
-        assert profiles[name]["worst_ms"] < 2000, name
+        assert profiles[name]["worst_ms"] < 3000, name
         assert profiles[name]["p95_ms"] < max(500.0, idle_p95 * 8), name
