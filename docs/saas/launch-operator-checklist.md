@@ -56,11 +56,11 @@ Repository: [Cloudflare OpenTofu](../../infra/cloudflare/main.tf), [env variable
 Repository: [Render Blueprint](../../infra/render/render.yaml), [Cloud engineering guide](../engineering/README.md).
 
 - [ ] Create **staging** and **production** Render projects/services in Frankfurt, separate PostgreSQL databases, backups/PITR and connection policies.
-- [ ] Confirm the checked-in Render Blueprint matches Render's current available syntax/plans before provisioning.
+- [ ] Validate the checked-in Blueprint with `render blueprints validate infra/render/render.yaml --workspace <workspace-id>` before provisioning (Render CLI 2.7.1 or newer).
 - [ ] Deploy separate `selecta-api-ENV`, `selecta-gateway-ENV`, and `selecta-maintain-ENV` (two maintenance instances, one fenced leader); never route bulky audio through Render.
 - [ ] Give API requests pooled DB connections; use direct DB connections for PostgreSQL `LISTEN` and leader locks. Use separate privileged maintenance/migration credentials.
-- [ ] Configure Render secret groups (`selecta-staging-api`, `-gateway`, `-maintenance`, and production equivalents). Every `sync: false` value is operator-supplied; see Section 11.
-- [ ] Set `SELECTA_MODE=cloud`, exact host/origin allowlists and R2/WorkOS/Stripe settings (full list in Section 11). The Render Blueprint declares every value each service reads at start (`tests/test_cloud_infra.py` checks it); type each `sync: false` value in once per environment.
+- [ ] Supply every service-level `sync: false` value when Render creates the Blueprint resources; see Section 11. Render does not support `sync: false` inside environment groups, so these prompts intentionally live on the API, gateway and maintenance services.
+- [ ] Set `SELECTA_MODE=cloud`, exact host/origin allowlists and R2/WorkOS/Stripe settings (full list in Section 11). The Render Blueprint declares every value each service reads at start (`tests/test_cloud_infra.py` checks it).
 - [ ] Run `selecta db upgrade`; check `/api/ready` on both API and gateway and migrations. Prove cross-tenant isolation and multiple-instance operation.
 - [ ] `selecta maintain` logs every task it left out and the setting it needs (Stripe, WorkOS, deletion-ledger bucket, room pepper, backup bucket, Modal token). Read that start-up log on both instances; an empty "disabled" list is the goal.
 

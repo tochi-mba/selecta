@@ -39,7 +39,8 @@ def environments() -> dict[str, dict]:
 def test_render_has_staging_and_a_protected_production():
     found = environments()
     assert set(found) == set(ENVIRONMENTS)
-    assert found["production"]["protectedEnvironment"] is True
+    assert found["staging"]["permissions"]["protection"] == "disabled"
+    assert found["production"]["permissions"]["protection"] == "enabled"
 
 
 @pytest.mark.parametrize("name", ENVIRONMENTS)
@@ -66,12 +67,15 @@ def test_no_audio_worker_runs_on_render():
 
 
 def test_render_never_holds_a_secret_value_in_the_repo():
-    for group in blueprint()["envVarGroups"]:
-        for item in group["envVars"]:
-            secretish = re.search(r"KEY|SECRET|TOKEN|PEPPER|HEADERS|URL|HOSTS|ORIGINS|ISSUER|"
-                                  r"AUDIENCE|PRICES|CLIENT_ID", item["key"])
-            if secretish:
-                assert item.get("sync") is False and "value" not in item, item["key"]
+    for env in environments().values():
+        for service in env["services"]:
+            for item in service["envVars"]:
+                if "key" not in item:
+                    continue
+                secretish = re.search(r"KEY|SECRET|TOKEN|PEPPER|HEADERS|URL|HOSTS|ORIGINS|ISSUER|"
+                                      r"AUDIENCE|PRICES|CLIENT_ID", item["key"])
+                if secretish and "fromDatabase" not in item:
+                    assert item.get("sync") is False and "value" not in item, item["key"]
 
 
 def test_every_env_var_render_sets_is_one_the_code_reads():
@@ -82,8 +86,7 @@ def test_every_env_var_render_sets_is_one_the_code_reads():
     read.add("OTEL_EXPORTER_OTLP_HEADERS")  # read by the OpenTelemetry exporter itself
     # storage.api._bucket constructs these four names from the bucket kind at runtime.
     read.update(name for name in _R2 if name.startswith("SELECTA_R2_BUCKET_"))
-    set_by_render = {item["key"] for group in blueprint()["envVarGroups"]
-                     for item in group["envVars"]}
+    set_by_render = set()
     for env in environments().values():
         for service in env["services"]:
             set_by_render |= {item["key"] for item in service["envVars"] if "key" in item}
@@ -96,13 +99,8 @@ def render_service(env: dict, command: str) -> dict:
 
 
 def render_items(env: dict, command: str) -> list[dict]:
-    """Every variable a service gets: its own and those of the groups it pulls in."""
-    service = render_service(env, command)
-    groups = {group["name"]: group["envVars"] for group in blueprint()["envVarGroups"]}
-    found = []
-    for item in service["envVars"]:
-        found += groups[item["fromGroup"]] if "fromGroup" in item else [item]
-    return found
+    """Every variable declared directly on a Render service."""
+    return render_service(env, command)["envVars"]
 
 
 def render_values(env: dict, command: str) -> dict[str, str]:

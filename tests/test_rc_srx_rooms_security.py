@@ -39,11 +39,14 @@ def test_sec_rx_1_edge_join_rule_matches_the_real_join_route(party):
 
 def _deployed_ip_header() -> str | None:
     blueprint = yaml.safe_load((ROOT / "infra" / "render" / "render.yaml").read_text("utf-8"))
-    for group in blueprint["envVarGroups"]:
-        if group["name"].endswith("-api"):
-            for item in group["envVars"]:
-                if item["key"] == CLIENT_IP_HEADER:
-                    return item.get("value")
+    for project in blueprint["projects"]:
+        for environment in project["environments"]:
+            for service in environment["services"]:
+                if " web " not in f" {service['dockerCommand']} ":
+                    continue
+                for item in service["envVars"]:
+                    if item["key"] == CLIENT_IP_HEADER:
+                        return item.get("value")
     return None
 
 
