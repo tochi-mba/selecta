@@ -96,6 +96,17 @@ def test_fill_known_values_preserves_existing_and_copies_workos_client(tmp_path,
     assert generated <= production.keys()
 
 
+def test_stripe_test_catalog_matches_the_accepted_adr_prices():
+    assert setup_cloud.STRIPE_TEST_CATALOG["standard"]["prices"] == {
+        "month": 699,
+        "year": 5900,
+    }
+    assert setup_cloud.STRIPE_TEST_CATALOG["premium"]["prices"] == {
+        "month": 1299,
+        "year": 10900,
+    }
+
+
 def test_checklist_hides_configured_names_by_default(capsys):
     setup_cloud.checklist("staging", {"ANTHROPIC_API_KEY": "never print me"})
     output = capsys.readouterr().out

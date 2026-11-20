@@ -17,6 +17,9 @@ import secrets
 import stat
 import subprocess
 import sys
+import urllib.error
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -400,6 +403,19 @@ SETTINGS = (
 )
 
 BY_NAME = {item.name: item for item in SETTINGS}
+
+STRIPE_TEST_CATALOG = {
+    "standard": {
+        "name": "SelectaDJ Standard",
+        "description": "SelectaDJ Standard consumer subscription",
+        "prices": {"month": 699, "year": 5900},
+    },
+    "premium": {
+        "name": "SelectaDJ Premium",
+        "description": "SelectaDJ Premium consumer subscription",
+        "prices": {"month": 1299, "year": 10900},
+    },
+}
 
 # These are deliberately provider-level URLs: dashboard subpaths change frequently, while the
 # click-path text tells the operator what object to look for. No credential value is fetched here.
@@ -833,6 +849,143 @@ def fill_known_values(email_provider: str | None, email_from: str | None) -> Non
         )
 
 
+def stripe_request(
+    key: str,
+    method: str,
+    path: str,
+    fields: dict[str, str] | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> dict[str, object]:
+    """Call Stripe without ever putting the API key in a command or URL."""
+    encoded = urllib.parse.urlencode(fields or {}).encode()
+    url = f"https://api.stripe.com{path}"
+    if method == "GET" and fields:
+        url = f"{url}?{encoded.decode()}"
+        encoded = None
+    headers = {"Authorization": f"Bearer {key}", "User-Agent": "SelectaDJ-setup/1"}
+    if idempotency_key:
+        headers["Idempotency-Key"] = idempotency_key
+    request = urllib.request.Request(url, data=encoded, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            result = json.loads(response.read())
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode(errors="replace")
+        raise RuntimeError(f"Stripe API returned HTTP {exc.code}: {detail}") from exc
+    if not isinstance(result, dict):
+        raise RuntimeError("Stripe API returned an unexpected response")
+    return result
+
+
+def _stripe_list(key: str, path: str, fields: dict[str, str]) -> list[dict[str, object]]:
+    items: list[dict[str, object]] = []
+    query = {**fields, "limit": "100"}
+    while True:
+        page = stripe_request(key, "GET", path, query)
+        data = page.get("data")
+        if not isinstance(data, list):
+            raise RuntimeError("Stripe list response has no data array")
+        items.extend(item for item in data if isinstance(item, dict))
+        if not page.get("has_more") or not data:
+            return items
+        last = data[-1]
+        if not isinstance(last, dict) or not isinstance(last.get("id"), str):
+            raise RuntimeError("Stripe pagination response has no final object ID")
+        query["starting_after"] = last["id"]
+
+
+def provision_stripe_test_catalog() -> dict[str, dict[str, object]]:
+    """Create/reuse the ADR v1 consumer catalogue and save its staging price map."""
+    values = load_values("staging")
+    key = values.get("SELECTA_STRIPE_SECRET_KEY", "")
+    if not key.startswith("sk_test_"):
+        raise ValueError("staging vault needs a Stripe sk_test_ key; live keys are refused")
+
+    products = _stripe_list(key, "/v1/products", {"active": "true"})
+    price_map: dict[str, dict[str, object]] = {}
+    for plan, definition in STRIPE_TEST_CATALOG.items():
+        product = next(
+            (
+                item
+                for item in products
+                if isinstance(item.get("metadata"), dict)
+                and item["metadata"].get("selecta_plan") == plan
+                and item["metadata"].get("plan_version") == "1"
+            ),
+            None,
+        )
+        if product is None:
+            product = stripe_request(
+                key,
+                "POST",
+                "/v1/products",
+                {
+                    "name": str(definition["name"]),
+                    "description": str(definition["description"]),
+                    "metadata[selecta_plan]": plan,
+                    "metadata[plan_version]": "1",
+                    "metadata[environment]": "staging",
+                },
+                idempotency_key=f"selectadj-staging-product-{plan}-v1",
+            )
+            products.append(product)
+            print(f"Created Stripe test product: {definition['name']}")
+        else:
+            print(f"Reused Stripe test product: {definition['name']}")
+        product_id = product.get("id")
+        if not isinstance(product_id, str):
+            raise RuntimeError(f"Stripe product for {plan} has no ID")
+
+        prices = _stripe_list(key, "/v1/prices", {"active": "true", "product": product_id})
+        configured_prices = definition["prices"]
+        if not isinstance(configured_prices, dict):
+            raise RuntimeError(f"Invalid local price definition for {plan}")
+        for interval, amount in configured_prices.items():
+            price = next(
+                (
+                    item
+                    for item in prices
+                    if item.get("currency") == "gbp"
+                    and item.get("unit_amount") == amount
+                    and isinstance(item.get("recurring"), dict)
+                    and item["recurring"].get("interval") == interval
+                ),
+                None,
+            )
+            if price is None:
+                price = stripe_request(
+                    key,
+                    "POST",
+                    "/v1/prices",
+                    {
+                        "product": product_id,
+                        "currency": "gbp",
+                        "unit_amount": str(amount),
+                        "recurring[interval]": interval,
+                        "nickname": f"{definition['name']} {interval} v1",
+                        "lookup_key": f"selectadj_{plan}_{interval}_v1",
+                        "metadata[selecta_plan]": plan,
+                        "metadata[plan_version]": "1",
+                        "metadata[environment]": "staging",
+                    },
+                    idempotency_key=f"selectadj-staging-price-{plan}-{interval}-v1",
+                )
+                prices.append(price)
+                print(f"Created Stripe test price: {plan} {interval} GBP {amount / 100:.2f}")
+            else:
+                print(f"Reused Stripe test price: {plan} {interval} GBP {amount / 100:.2f}")
+            price_id = price.get("id")
+            if not isinstance(price_id, str):
+                raise RuntimeError(f"Stripe price for {plan}/{interval} has no ID")
+            price_map[price_id] = {"plan": plan, "version": 1, "interval": interval}
+
+    values["SELECTA_STRIPE_PRICES"] = json.dumps(price_map, separators=(",", ":"), sort_keys=True)
+    save_values("staging", values)
+    print("Saved four Stripe test prices to the encrypted staging vault.")
+    return price_map
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--environment", "-e", choices=("staging", "production"), default="staging")
@@ -866,6 +1019,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--email-provider", help="provider to save with --fill-known")
     parser.add_argument("--email-from", help="verified sender to save with --fill-known")
+    parser.add_argument(
+        "--provision-stripe-test",
+        action="store_true",
+        help="create/reuse the ADR v1 Stripe test catalogue and save its price map",
+    )
     return parser.parse_args()
 
 
@@ -877,6 +1035,9 @@ def main() -> int:
             return 0
         if args.fill_known:
             fill_known_values(args.email_provider, args.email_from)
+            return 0
+        if args.provision_stripe_test:
+            provision_stripe_test_catalog()
             return 0
         values = load_values(args.environment)
         if args.unset:
