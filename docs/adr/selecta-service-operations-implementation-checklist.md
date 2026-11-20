@@ -1,5 +1,7 @@
 # Selecta Service Operations implementation checklist (ADR-0470 to ADR-0474)
 
+**Task status (recounted from the task lines by `src/selecta/audit/checklist_summary.py`):** 30 tasks: 0 Implemented, 4 In progress, 26 Not started, 0 Needs a person, 0 Superseded. 0 name a person-only step. 0 ticked. 0 independently Verified.
+
 **Task status:** 30 tasks: 0 Implemented, 5 In progress, 25 Not started, 0 independently Verified.
 
 **Status:** Five proposed ADRs written on 2026-11-20. They refine ADR-0410 without changing its accepted SLOs or emergency-control contract. Existing admin health scaffolding is recorded as In progress, never as working production monitoring.
