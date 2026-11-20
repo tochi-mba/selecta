@@ -5,7 +5,7 @@ user, Selecta re-reads the user from WorkOS and acts on that, never on the paylo
 
 | Event | Selecta does |
 |---|---|
-| `user.updated`, `authentication.email_verification_succeeded` | Re-read the user; sync email and verified |
+| `user.updated`, `authentication.email_verification_succeeded` | Re-read and sync the user |
 | `user.deleted` | If WorkOS confirms the user is gone, start account deletion (once) |
 | `session.revoked` | Add the session id to `revoked_sessions` (revocation only ever adds) |
 | password reset succeeded | Revoke the user's other sessions, keeping one made since the reset |
