@@ -97,7 +97,7 @@ Severity order for manager surfaces, highest first: silent zone, licence expired
 | 4. Zones | **ZoneListEditor**: name each zone (Bar, Terrace); first zone included, extra zones show their price (or pilot allowance) before adding | One zone required |
 | 5. Music licence | **LicenceAttestationForm** (ADR-0449): licence type (TheMusicLicence or other), number, expiry, a tick box in plain words that the venue holds the rights to play its music in public | Required before any zone plays music in the venue |
 | 6. Your music | Upload (existing `Uploads.tsx` tray, destination shown as the organisation) or **Copy from my personal library** (choose crates or songs; copies, never moves; a plain note that personal downloads are often licensed for personal use only) | At least the planner's minimum ready songs before the first service |
-| 7. Pair a kiosk player | **PairingCodeEntry**: "On the player, open selecta.app/kiosk and type the code it shows", a picture of each device type, links to the kiosk setup guide (autoplay flags, wake lock, auto-start), live confirmation "Bar player paired and ready" | Required before auto-start |
+| 7. Pair a kiosk player | **PairingCodeEntry**: "On the player, open app.selectadj.app/kiosk and type the code it shows", a picture of each device type, links to the kiosk setup guide (autoplay flags, wake lock, auto-start), live confirmation "Bar player paired and ready" | Required before auto-start |
 | 8. First scheduled service | **DaypartBar** with three starter templates (Cafe day, Bar evening, Restaurant), then a summary: "Bar starts by itself on Saturday at 10:00 with Brunch calm" and a "Play a test now" button | Done |
 
 After step 8 the owner lands on S3 for that venue with the checklist collapsed to a chip ("Setup done") and an optional short tour.
@@ -227,7 +227,7 @@ After step 8 the owner lands on S3 for that venue with the checklist collapsed t
 
 | Kiosk state | Screen |
 |---|---|
-| Unpaired | **KioskPairing**: a six-character code in very large type, "Pair this player at selecta.app/pair", the device name, and a QR for the manager's phone; the code renews every 10 minutes |
+| Unpaired | **KioskPairing**: a six-character code in very large type, "Pair this player at app.selectadj.app/pair", the device name, and a QR for the manager's phone; the code renews every 10 minutes |
 | Paired, needs a tap | **KioskTapToStart**: one full-screen button "Tap to start the music" (browsers block sound until a person taps once), with the kiosk-flags guide link for managers |
 | Closed | "Closed. Music starts at 10:00" (venue time), dimmed, screen allowed to sleep if the venue chose that |
 | Starting | "Starting the music" with a quiet progress line while the first songs download |

@@ -6,7 +6,7 @@ const origin = 'https://app.selecta.test';
 describe('AuthKit configuration', () => {
   it('turns development mode on only for vite dev', () => {
     expect(authKitConfig({ DEV: true })).toEqual({ devMode: true, apiHostname: undefined });
-    expect(authKitConfig({ DEV: false, VITE_WORKOS_API_HOSTNAME: 'auth.selecta.app' })).toEqual({ devMode: false, apiHostname: 'auth.selecta.app' });
+    expect(authKitConfig({ DEV: false, VITE_WORKOS_API_HOSTNAME: 'auth.selectadj.app' })).toEqual({ devMode: false, apiHostname: 'auth.selectadj.app' });
   });
 
   it('refuses a production build without a custom auth domain instead of falling back to dev mode', () => {

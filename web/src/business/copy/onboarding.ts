@@ -180,7 +180,7 @@ export const MUSIC_COPY = {
 } as const;
 
 export const PAIR_COPY = {
-  how: 'On the player, open selecta.app/kiosk. It shows a code. Type the code shown on the player here.',
+  how: 'On the player, open app.selectadj.app/kiosk. It shows a code. Type the code shown on the player here.',
   code: 'Code shown on the player',
   codeHelp: '6 letters and numbers.',
   badCode: 'Enter the 6 letters and numbers shown on the player',

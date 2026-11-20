@@ -49,8 +49,8 @@ def test_a_slow_or_disordered_run_fails():
 
 def test_production_and_stray_ports_are_refused():
     with pytest.raises(SystemExit):
-        fanout.refuse_production("https://api.selecta.app")
-    fanout.refuse_production("https://api.staging.selecta.app")
+        fanout.refuse_production("https://api.selectadj.app")
+    fanout.refuse_production("https://api.staging.selectadj.app")
     with pytest.raises(SystemExit):
         fanout.start_server(8812)
 

@@ -60,6 +60,8 @@ Thumbs.db
 .claude/
 .env
 .env.*
+# Explicit local exports from setup_cloud.py (the encrypted vault is outside the repo).
+selecta-cloud-*.env
 
 # Local PostgreSQL for tests (docs/engineering/testing.md)
 .pgdata/
