@@ -59,6 +59,26 @@ address updates, and tax-ID collection. Before taking payments, configure the St
 business address, registrations and product tax codes, then enforce the UK-only beta sales boundary
 in account-level controls.
 
+#### Checkout consent wording register
+
+The current staging and production configuration uses the immutable version
+`uk-consumer-checkout-2026-11-20-v1`. It identifies the wording rendered by
+`web/src/cloud/Billing.tsx` on 20 November 2026:
+
+- "I agree to the subscription terms."
+- "I ask for access to start immediately."
+- "I understand my 14-day cancellation right and when I may lose it."
+
+The explanatory paragraph says that UK law gives the customer 14 days to cancel a digital
+subscription and that requesting immediate access may cause that right to be lost once the service
+has been fully provided. Both `SELECTA_CHECKOUT_CONSENT_VERSION` and the public build value
+`VITE_CHECKOUT_CONSENT_VERSION` must be exactly `uk-consumer-checkout-2026-11-20-v1` for this
+wording. The identifier is an audit key, not editable copy: any change to the paragraph, checkbox
+wording, linked subscription terms, or cancellation effect requires a new dated `v2` (or later)
+identifier in both settings. Preserve the old wording/version association for existing consent
+records. This records the implemented text; qualified UK consumer-law review remains a paid-launch
+gate.
+
 ### 8.2 Event handling
 
 - Webhook endpoint verifies the signature, stores the event id in `stripe_events` (unique), returns 200 fast, and a job processes it.
