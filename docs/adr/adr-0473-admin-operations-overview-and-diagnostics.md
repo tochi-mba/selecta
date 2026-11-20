@@ -12,7 +12,7 @@ The current Overview renders internal metric names and raw values. That is usefu
 ## Decision
 
 1. The first screen answers four questions in order: Are customers affected? What capability is affected? Is a fallback active? What should I do next?
-2. Show one card per customer capability—sign in, browse/listen, uploads/storage, processing, Lucy, billing, email and telemetry—with its contributing dependencies underneath.
+2. Show one card per customer capability: sign in, browse/listen, uploads/storage, processing, Lucy, billing, email and telemetry, with its contributing dependencies underneath.
 3. Status words and icons accompany colour: Healthy, Degraded, Down, Unknown and Not configured. Stale data shows its last successful measurement and never appears green.
 4. Each dependency row shows latency, utilization/limit where available, last checked, active incident and runbook. Technical identifiers are available in details, not used as the primary label.
 5. Environment is always visible. Production and staging data cannot be combined into one status.
