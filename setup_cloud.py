@@ -792,6 +792,47 @@ def apply_domain(domain: str) -> None:
     )
 
 
+def fill_known_values(email_provider: str | None, email_from: str | None) -> None:
+    """Fill deterministic defaults and generate missing deployment secrets in both vaults."""
+    generated_names = {item.name for item in SETTINGS if item.generated}
+    for environment in ("staging", "production"):
+        values = load_values(environment)
+        additions = {
+            "SELECTA_R2_BUCKET_ORIGINALS": f"selecta-{environment}-originals",
+            "SELECTA_R2_BUCKET_DERIVED": f"selecta-{environment}-derived",
+            "SELECTA_R2_BUCKET_EXPORTS": f"selecta-{environment}-exports",
+            "SELECTA_R2_BUCKET_STAGING": f"selecta-{environment}-staging",
+            "SELECTA_R2_BUCKET_DELETION_LEDGER": f"selecta-{environment}-deletion-ledger",
+            "SELECTA_MODAL_APP": f"selecta-workers-{environment}",
+        }
+        if email_provider:
+            additions["SELECTA_EMAIL_PROVIDER"] = email_provider.strip().lower()
+        if email_from:
+            additions["SELECTA_EMAIL_FROM"] = email_from.strip()
+        client_id = values.get("SELECTA_WORKOS_CLIENT_ID")
+        if client_id:
+            additions["VITE_WORKOS_CLIENT_ID"] = client_id
+        consent = values.get("SELECTA_CHECKOUT_CONSENT_VERSION")
+        if consent:
+            additions["VITE_CHECKOUT_CONSENT_VERSION"] = consent
+
+        added = 0
+        for name, value in additions.items():
+            if value and name not in values:
+                values[name] = value
+                added += 1
+        generated = 0
+        for name in generated_names:
+            if name not in values:
+                values[name] = secrets.token_urlsafe(48)
+                generated += 1
+        save_values(environment, values)
+        print(
+            f"Filled {added} known value(s) and generated {generated} secret(s) for "
+            f"{environment}; existing values were preserved."
+        )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--environment", "-e", choices=("staging", "production"), default="staging")
@@ -818,6 +859,13 @@ def parse_args() -> argparse.Namespace:
         metavar="DOMAIN",
         help="populate derived URLs/hosts in both staging and production vaults",
     )
+    parser.add_argument(
+        "--fill-known",
+        action="store_true",
+        help="fill deterministic defaults and generate missing internal secrets in both vaults",
+    )
+    parser.add_argument("--email-provider", help="provider to save with --fill-known")
+    parser.add_argument("--email-from", help="verified sender to save with --fill-known")
     return parser.parse_args()
 
 
@@ -826,6 +874,9 @@ def main() -> int:
     try:
         if args.set_domain:
             apply_domain(args.set_domain)
+            return 0
+        if args.fill_known:
+            fill_known_values(args.email_provider, args.email_from)
             return 0
         values = load_values(args.environment)
         if args.unset:

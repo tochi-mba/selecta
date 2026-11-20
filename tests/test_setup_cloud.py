@@ -73,6 +73,29 @@ def test_values_for_domain_rejects_urls():
         raise AssertionError("a URL must not be accepted as an apex domain")
 
 
+def test_fill_known_values_preserves_existing_and_copies_workos_client(tmp_path, monkeypatch):
+    monkeypatch.setenv("SELECTA_SETUP_HOME", str(tmp_path))
+    setup_cloud.save_values(
+        "staging",
+        {
+            "SELECTA_WORKOS_CLIENT_ID": "client_staging",
+            "SELECTA_ROOMS_PEPPER": "keep-me",
+        },
+    )
+    setup_cloud.fill_known_values("resend", "SelectaDJ <mail@selectadj.app>")
+    staging = setup_cloud.load_values("staging")
+    production = setup_cloud.load_values("production")
+    assert staging["SELECTA_ROOMS_PEPPER"] == "keep-me"
+    assert staging["VITE_WORKOS_CLIENT_ID"] == "client_staging"
+    assert staging["SELECTA_R2_BUCKET_ORIGINALS"] == "selecta-staging-originals"
+    assert production["SELECTA_R2_BUCKET_ORIGINALS"] == "selecta-production-originals"
+    assert production["SELECTA_EMAIL_PROVIDER"] == "resend"
+    assert production["SELECTA_EMAIL_FROM"] == "SelectaDJ <mail@selectadj.app>"
+    generated = {item.name for item in setup_cloud.SETTINGS if item.generated}
+    assert generated <= staging.keys()
+    assert generated <= production.keys()
+
+
 def test_checklist_hides_configured_names_by_default(capsys):
     setup_cloud.checklist("staging", {"ANTHROPIC_API_KEY": "never print me"})
     output = capsys.readouterr().out
