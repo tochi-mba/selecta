@@ -48,6 +48,12 @@ def test_every_group_has_an_acquisition_guide():
     assert {item.group for item in setup_cloud.SETTINGS} == set(setup_cloud.SETUP_GUIDES)
 
 
+def test_every_setting_has_field_level_instructions():
+    names = {item.name for item in setup_cloud.SETTINGS}
+    assert set(setup_cloud.FIELD_GUIDES) == names
+    assert all(setup_cloud.FIELD_GUIDES[name] for name in names)
+
+
 def test_workos_guide_explains_issuer_and_audience_source():
     guide = setup_cloud.SETUP_GUIDES["WorkOS"][1]
     assert ".well-known/openid-configuration" in guide

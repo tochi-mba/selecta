@@ -94,6 +94,18 @@ python setup_cloud.py --environment production
 python setup_cloud.py --checklist
 ```
 
+Every prompt includes the exact dashboard click path or command, what object to create, the value
+format to copy, environment-specific cautions, and whether the value does not exist yet. Pressing
+Enter skips any item, and completed items disappear on the next run. Use `--update` to revisit
+configured items and `--checklist --all` to print the full value-free acquisition guide.
+
+On Windows Command Prompt, enter the entire command on one line. A PowerShell backtick is not a
+Command Prompt line-continuation character. For example:
+
+```cmd
+python setup_cloud.py --fill-known --email-provider resend --email-from "SelectaDJ <selectadjmail@selectadj.app>"
+```
+
 The vault is stored outside the repository and encrypted with Windows DPAPI. The canonical hostnames
 are `app.selectadj.app`, `api.selectadj.app`, `gateway.selectadj.app`, and `auth.selectadj.app`;
 staging inserts `staging.` before `selectadj.app`. See the
