@@ -157,7 +157,7 @@ def test_the_command_line_refuses_production_and_prints_the_capture_commands(
     monkeypatch.setenv("SELECTA_STRIPE_WEBHOOK_SECRET", WEBHOOK_SECRET)
     with pytest.raises(SystemExit):
         tool.main(
-            ["--url", "https://api.selecta.app/api/webhooks/stripe", "--events", str(CAPTURE)]
+            ["--url", "https://api.selectadj.app/api/webhooks/stripe", "--events", str(CAPTURE)]
         )
     monkeypatch.setenv("SELECTA_STRIPE_WEBHOOK_SECRET", "sk_live_nope")
     with pytest.raises(SystemExit):

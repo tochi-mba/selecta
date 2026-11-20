@@ -11,7 +11,7 @@ export type AuthEnv = { DEV?: boolean; VITE_WORKOS_API_HOSTNAME?: string };
 export type AuthKitConfig = { devMode: boolean; apiHostname: string | undefined };
 
 export const MISSING_AUTH_DOMAIN =
-  'This build has no custom sign-in domain. Set VITE_WORKOS_API_HOSTNAME (for example auth.selecta.app) and rebuild. Without it, sign-in would keep tokens in browser storage.';
+  'This build has no custom sign-in domain. Set VITE_WORKOS_API_HOSTNAME (auth.selectadj.app in production) and rebuild. Without it, sign-in would keep tokens in browser storage.';
 
 export function authKitConfig(env: AuthEnv): AuthKitConfig | { error: string } {
   const apiHostname = (env.VITE_WORKOS_API_HOSTNAME ?? '').trim();

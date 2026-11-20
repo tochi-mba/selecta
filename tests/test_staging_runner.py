@@ -56,7 +56,10 @@ def test_a_missing_input_stops_the_task_before_anything_runs(name, capsys):
 
 
 def test_a_production_url_is_refused():
-    env = {"STAGING_API": "https://api.selecta.app", "STAGING_GATEWAY": "https://gw.selecta.app"}
+    env = {
+        "STAGING_API": "https://api.selectadj.app",
+        "STAGING_GATEWAY": "https://gateway.selectadj.app",
+    }
     assert staging.main(["smoke"], env=env, run=lambda c: 0) == 2
 
 
@@ -78,8 +81,11 @@ def test_the_commands_run_in_order_and_stop_at_the_first_failure(tmp_path, capsy
 
 
 def test_a_dry_run_prints_the_commands_and_masks_the_token(capsys):
-    env = {"STAGING_API": "https://api.staging.example", "SYNTHETIC_TOKEN": "secret-token",
-           "STAGING_GATEWAY": "https://gateway.staging.example"}
+    env = {
+        "STAGING_API": "https://api.staging.example",
+        "SYNTHETIC_TOKEN": "secret-token",
+        "STAGING_GATEWAY": "https://gateway.staging.example",
+    }
     assert staging.main(["smoke", "--dry-run"], env=env, run=lambda c: 1 / 0) == 0
     out = capsys.readouterr().out
     assert "infra/deploy/smoke.py" in out and "secret-token" not in out and "***" in out

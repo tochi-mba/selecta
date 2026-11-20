@@ -8,7 +8,7 @@ Selecta never sees a password. Sign-up, sign-in, Google sign-in, "forgot passwor
 
 | Piece | Where | Job |
 |---|---|---|
-| AuthKit hosted pages | WorkOS, on our auth domain (`auth.selecta.app`) | Sign-up, sign-in, Google, forgot password, email verification, MFA |
+| AuthKit hosted pages | WorkOS, on our auth domain (`auth.selectadj.app`) | Sign-up, sign-in, Google, forgot password, email verification, MFA |
 | `@workos-inc/authkit-react` | `web/src/cloud/CloudRoot.tsx` | Starts sign-in (PKCE), holds the access token in memory, refreshes it |
 | Token check | `selecta.identity.tokens` | RS256 only, issuer, expiry, JWKS with rotation |
 | WorkOS API client | `selecta.identity.workos` | Look up users, list and revoke sessions, delete users, verify WorkOS webhooks |
@@ -99,7 +99,7 @@ Each refusal has its own code, so the app can show the right message instead of 
 | `user.deleted` | Mark the account for deletion, if it isn't already being deleted |
 | `session.revoked` | Add the session id to the revoked list |
 | password reset succeeded | Revoke the user's other sessions |
-| `email_verification.succeeded` | Mark the email verified |
+| `authentication.email_verification_succeeded` | Mark the email verified (`email_verification.succeeded` remains accepted for older queued events) |
 
 Unknown event types are stored and ignored. Events can arrive late, twice or out of order, so each one is a "poke": Selecta re-reads the user from WorkOS rather than trusting the payload's snapshot. The route is owned by a core cloud flag, so it can't be switched off.
 
@@ -137,7 +137,7 @@ Unknown event types are stored and ignored. Events can arrive late, twice or out
 ### 7A.7 Setting it up (runbook outline)
 
 1. In WorkOS, create staging and production environments; set the redirect URIs to exactly the app origins.
-2. Set the custom auth domain (`auth.selecta.app`) for production, with DNS from WorkOS.
+2. Set custom auth domains `auth.selectadj.app` for production and `auth.staging.selectadj.app` for staging, with DNS targets supplied by WorkOS.
 3. Enable email and password, Magic Auth and Google. Production uses our own Google OAuth client, so Google's consent screen says "SelectaDJ"; staging may use WorkOS's demo credentials.
 4. Keep email verification required (the default) and turn on bot protection.
 5. Create the "Selecta Staff" organization with MFA required.

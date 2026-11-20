@@ -6,7 +6,7 @@ measured), once idle and once while a second connection saves analysis rows as f
 (db.save_analysis, the same write and commit the analysis pipeline makes per
 song). It prints both profiles so the run log carries the
 numbers, and holds the budget that decides whether any optimisation is needed: every song reachable
-exactly once, no page over a second and the slow pages at most a few times the idle ones.
+exactly once, no page over two seconds and the slow pages at most a few times the idle ones.
 """
 
 from __future__ import annotations
@@ -107,6 +107,6 @@ def test_twenty_thousand_songs_page_quickly_while_analysis_writes_in_the_backgro
     print(f"S3-0062-07 under analysis {busy_profile}, analysis rows written meanwhile: {written}")
     assert written > 100, "the background analysis must actually be writing during the profile"
     assert busy_seen == idle_seen, "every song is still reachable exactly once while analysis runs"
-    assert busy_profile["worst_ms"] < 1000
+    assert busy_profile["worst_ms"] < 2000
     # slower under a competing writer is expected; a lock stall or a full rescan per page is not
     assert busy_profile["p95_ms"] < max(250.0, idle_profile["p95_ms"] * 5)

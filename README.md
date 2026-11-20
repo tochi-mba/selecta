@@ -84,6 +84,33 @@ and stops at 80% of its storage limit.
 
 ## Cloud development on your PC
 
+For hosted staging/production configuration, run the encrypted provider-by-provider setup wizard
+from the repository root. It knows the owned `selectadj.app` host plan, explains where every value
+comes from, and hides fields already configured:
+
+```powershell
+python setup_cloud.py
+python setup_cloud.py --environment production
+python setup_cloud.py --checklist
+```
+
+Every prompt includes the exact dashboard click path or command, what object to create, the value
+format to copy, environment-specific cautions, and whether the value does not exist yet. Pressing
+Enter skips any item, and completed items disappear on the next run. Use `--update` to revisit
+configured items and `--checklist --all` to print the full value-free acquisition guide.
+
+On Windows Command Prompt, enter the entire command on one line. A PowerShell backtick is not a
+Command Prompt line-continuation character. For example:
+
+```cmd
+python setup_cloud.py --fill-known --email-provider resend --email-from "SelectaDJ <selectadjmail@selectadj.app>"
+```
+
+The vault is stored outside the repository and encrypted with Windows DPAPI. The canonical hostnames
+are `app.selectadj.app`, `api.selectadj.app`, `gateway.selectadj.app`, and `auth.selectadj.app`;
+staging inserts `staging.` before `selectadj.app`. See the
+[launch operator checklist](docs/saas/launch-operator-checklist.md) before provisioning services.
+
 The explicit `dev.cmd cloud` command starts the real Cloud API, its migrations and
 background worker, together with a **local-only** identity provider (WorkOS-compatible),
 disk-backed object storage, pretend Stripe billing and a hot-reloading Cloud site. No
