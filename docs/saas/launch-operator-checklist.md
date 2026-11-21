@@ -56,6 +56,7 @@ Repository: [Cloudflare OpenTofu](../../infra/cloudflare/main.tf), [env variable
 Repository: [Render Blueprint](../../infra/render/render.yaml), [Cloud engineering guide](../engineering/README.md).
 
 - [ ] Create **staging** and **production** Render projects/services in Frankfurt, separate PostgreSQL databases, backups/PITR and connection policies.
+- [ ] In Render Workspace Settings, add a GitHub Container Registry credential named exactly `ghcr`, using a token that can read the private `tochi-mba/selecta-service` package. Merge or manually run the deploy workflow once and confirm `ghcr.io/tochi-mba/selecta-service:main` exists before creating the Blueprint.
 - [ ] Validate the checked-in Blueprint with `render blueprints validate infra/render/render.yaml --workspace <workspace-id>` before provisioning (Render CLI 2.7.1 or newer).
 - [ ] Deploy separate `selecta-api-ENV`, `selecta-gateway-ENV`, and `selecta-maintain-ENV` (two maintenance instances, one fenced leader); never route bulky audio through Render.
 - [ ] Give API requests pooled DB connections; use direct DB connections for PostgreSQL `LISTEN` and leader locks. Use separate privileged maintenance/migration credentials.
