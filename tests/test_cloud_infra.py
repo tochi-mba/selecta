@@ -41,6 +41,8 @@ def test_render_has_staging_and_a_protected_production():
     assert set(found) == set(ENVIRONMENTS)
     assert found["staging"]["permissions"]["protection"] == "disabled"
     assert found["production"]["permissions"]["protection"] == "enabled"
+    assert all("scaling" not in service for env in found.values() for service in env["services"])
+    assert render_service(found["production"], "web")["numInstances"] == 2
 
 
 @pytest.mark.parametrize("name", ENVIRONMENTS)
