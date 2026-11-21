@@ -353,7 +353,9 @@ def test_the_worker_reads_the_pool_the_modal_function_names(monkeypatch):
 
 def test_the_service_image_runs_as_a_user_and_installs_the_locked_closure():
     dockerfile = (INFRA / "docker" / "service.Dockerfile").read_text("utf-8")
+    assert "apt-get install --yes --no-install-recommends libatomic1" in dockerfile
     assert "uv export --frozen --no-dev --extra observability" in dockerfile
+    assert 'python -c "import pedalboard"' in dockerfile
     assert re.search(r"^USER selecta$", dockerfile, re.M)
     assert "SELECTA_MODE=cloud" in dockerfile
 
