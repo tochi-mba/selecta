@@ -69,7 +69,7 @@ SETTINGS = (
         "SELECTA_AUTH_ISSUER",
         "WorkOS",
         "Render value",
-        "Exact iss claim: normally https://api.workos.com/; use the custom Authentication API "
+        "Exact iss claim: normally https://api.workos.com; use the custom Authentication API "
         "origin after WorkOS verifies that domain",
         secret=False,
     ),
@@ -443,7 +443,7 @@ SETUP_GUIDES = {
     "WorkOS": (
         "https://dashboard.workos.com",
         "Select the matching staging/production environment. Applications shows the client ID. "
-        "The standard AuthKit issuer is https://api.workos.com/; Selecta binds a token to the "
+        "The standard AuthKit issuer is https://api.workos.com; Selecta binds a token to the "
         "application using its client_id claim. API Keys has "
         "the server key; create the signing secret under Webhooks. Organizations contains the "
         "staff organisation ID.",
@@ -556,7 +556,7 @@ FIELD_GUIDES: dict[str, tuple[str, ...]] = {
         "Copy Client ID. It starts with client_. Use the same value for VITE_WORKOS_CLIENT_ID in that environment.",
     ),
     "SELECTA_AUTH_ISSUER": (
-        "For the standard WorkOS Authentication API, enter https://api.workos.com/ including the trailing slash.",
+        "For the standard WorkOS Authentication API, enter https://api.workos.com without a trailing slash.",
         "Use a custom Authentication API origin only after WorkOS verifies it. AuthKit session tokens identify the application with client_id, which Selecta checks separately.",
     ),
     "SELECTA_WORKOS_API_KEY": (

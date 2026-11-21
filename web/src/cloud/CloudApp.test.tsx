@@ -5,13 +5,13 @@ import { cloudAccount } from '../test/cloudAccount';
 import type { Account } from './api';
 
 const SIGNED_IN = { id: 'user-1', email: 'listener@example.test', emailVerified: true };
-const auth = vi.hoisted(() => ({ user: null as unknown, signOut: vi.fn() }));
+const auth = vi.hoisted(() => ({ user: null as unknown, signIn: vi.fn(), signOut: vi.fn() }));
 vi.mock('@workos-inc/authkit-react', () => ({
   useAuth: () => ({
     isLoading: false,
     user: auth.user,
     getAccessToken: async () => 'token',
-    signIn: vi.fn(), signUp: vi.fn(), signOut: auth.signOut,
+    signIn: auth.signIn, signUp: vi.fn(), signOut: auth.signOut,
   }),
 }));
 
@@ -34,6 +34,7 @@ beforeEach(() => {
   signOutEverywhere = null;
   deleted = null;
   auth.user = SIGNED_IN;
+  auth.signIn.mockReset();
   auth.signOut.mockReset();
   let accountCalls = 0;
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
@@ -134,6 +135,18 @@ describe('the Cloud app', () => {
     expect(screen.getByText(/password reset/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Sign in again' }));
     expect(auth.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts a new sign-in when AuthKit no longer has the stale session to sign out', async () => {
+    events = 'event: selecta\ndata: {"topic":"session.revoked","payload":{}}\n\n';
+    revokedFromCall = 2;
+    auth.signOut.mockRejectedValueOnce(new Error('no active session'));
+    render(<CloudApp />);
+    expect(await screen.findByRole('heading', { name: 'You were signed out' }, { timeout: 5000 })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in again' }));
+
+    await waitFor(() => expect(auth.signIn).toHaveBeenCalledWith({ state: { returnTo: '/' } }));
   });
 
   it('signs out here after signing out everywhere, and says so when some devices stay signed in', async () => {
