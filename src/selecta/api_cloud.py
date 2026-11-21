@@ -86,7 +86,6 @@ from selecta.usage import meters, quota
 from selecta.work.fanout import OutboxFanout
 from selecta.work.schema import outbox_events
 
-
 log = logging.getLogger(__name__)
 
 
