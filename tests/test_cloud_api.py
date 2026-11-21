@@ -370,6 +370,21 @@ def test_cloud_settings_refuse_local_or_incomplete_configuration(monkeypatch):
         CloudSettings.from_environment()
 
 
+def test_cloud_settings_allow_authkit_without_audience(monkeypatch):
+    monkeypatch.setenv("SELECTA_DATABASE_URL", "postgresql+psycopg://user:pass@db/selecta")
+    monkeypatch.setenv("SELECTA_WORKOS_CLIENT_ID", "client_selecta")
+    monkeypatch.setenv("SELECTA_AUTH_ISSUER", "https://api.workos.com/")
+    monkeypatch.delenv("SELECTA_AUTH_AUDIENCE", raising=False)
+    monkeypatch.setenv("SELECTA_ALLOWED_HOSTS", "api.test")
+    monkeypatch.setenv("SELECTA_ALLOWED_ORIGINS", "https://app.test")
+    monkeypatch.setenv("SELECTA_WORKOS_API_KEY", "sk_test_cloud")
+    monkeypatch.setenv("SELECTA_WORKOS_WEBHOOK_SECRET", "whsec_cloud")
+
+    settings = CloudSettings.from_environment()
+
+    assert settings.audience is None
+
+
 def test_serve_defaults_to_local_and_cloud_does_not_start_local_workers(monkeypatch, tmp_path):
     monkeypatch.delenv("SELECTA_MODE", raising=False)
     assert current_mode() is Mode.LOCAL

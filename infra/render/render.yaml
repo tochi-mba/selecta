@@ -36,9 +36,6 @@ projects:
               - &auth_issuer
                 key: SELECTA_AUTH_ISSUER
                 sync: false
-              - &auth_audience
-                key: SELECTA_AUTH_AUDIENCE
-                sync: false
               - &workos_api_key
                 key: SELECTA_WORKOS_API_KEY
                 sync: false
@@ -230,7 +227,6 @@ projects:
                 value: api.selectadj.app,selecta-api-production.onrender.com
               - *allowed_origins
               - *auth_issuer
-              - *auth_audience
               - *workos_api_key
               - *workos_client_id
               - *workos_webhook_secret

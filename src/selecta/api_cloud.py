@@ -102,7 +102,7 @@ class CloudSettings:
     database_url: str
     workos_client_id: str
     issuer: str
-    audience: str
+    audience: str | None
     allowed_hosts: tuple[str, ...]
     allowed_origins: tuple[str, ...]
     workos_api_base: str = "https://api.workos.com"
@@ -128,10 +128,9 @@ class CloudSettings:
         client_id = os.environ.get("SELECTA_WORKOS_CLIENT_ID", "").strip()
         issuer = os.environ.get("SELECTA_AUTH_ISSUER", "").strip()
         audience = os.environ.get("SELECTA_AUTH_AUDIENCE", "").strip()
-        if not all((client_id, issuer, audience)):
+        if not all((client_id, issuer)):
             raise CloudConfigurationError(
-                "Set SELECTA_WORKOS_CLIENT_ID, SELECTA_AUTH_ISSUER and "
-                "SELECTA_AUTH_AUDIENCE before starting Cloud mode."
+                "Set SELECTA_WORKOS_CLIENT_ID and SELECTA_AUTH_ISSUER before starting Cloud mode."
             )
         api_key = os.environ.get("SELECTA_WORKOS_API_KEY", "").strip()
         webhook_secret = os.environ.get("SELECTA_WORKOS_WEBHOOK_SECRET", "").strip()
@@ -165,7 +164,7 @@ class CloudSettings:
             database_url=url,
             workos_client_id=client_id,
             issuer=issuer,
-            audience=audience,
+            audience=audience or None,
             allowed_hosts=hosts,
             allowed_origins=origins,
             workos_api_base=os.environ.get("SELECTA_WORKOS_API_BASE", "https://api.workos.com"),
