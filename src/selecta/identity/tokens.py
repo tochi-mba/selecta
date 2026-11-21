@@ -273,7 +273,7 @@ def authkit_verifier(
     base = api_base.rstrip("/")
     cache = JwksCache(f"{base}/sso/jwks/{client_id}", fetcher or httpx_fetcher())
     return TokenVerifier(
-        issuer=issuer or f"{base}/",
+        issuer=issuer or base,
         jwks=cache,
         audience=audience,
         client_id=client_id,

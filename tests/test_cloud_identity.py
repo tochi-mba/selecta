@@ -94,7 +94,7 @@ def test_authkit_verifier_checks_client_id_without_requiring_audience():
                 "sub": "auth-user-1",
                 "iat": now,
                 "exp": now + 600,
-                "iss": "https://api.workos.com/",
+                "iss": "https://api.workos.com",
                 "client_id": client_id,
             },
             private,
