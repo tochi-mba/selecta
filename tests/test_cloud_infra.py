@@ -50,6 +50,9 @@ def test_render_runs_api_gateway_and_two_maintenance_copies_in_frankfurt(name):
     assert set(services) == {"web", "gateway", "maintain"}
     assert all(service["region"] == "frankfurt" for service in env["services"])
     assert services["web"]["healthCheckPath"] == services["gateway"]["healthCheckPath"]
+    assert services["web"]["preDeployCommand"] == "selecta db upgrade"
+    assert "preDeployCommand" not in services["gateway"]
+    assert "preDeployCommand" not in services["maintain"]
     assert services["maintain"]["type"] == "worker" and services["maintain"]["numInstances"] == 2
     (database,) = env["databases"]
     assert database["region"] == "frankfurt" and database["ipAllowList"] == []

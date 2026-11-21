@@ -22,6 +22,7 @@ projects:
             plan: starter
             numInstances: 1
             healthCheckPath: /api/ready
+            preDeployCommand: selecta db upgrade
             dockerCommand: selecta web --no-open --port 10000
             envVars:
               - &api_mode
@@ -226,6 +227,7 @@ projects:
               maxInstances: 6
               targetCPUPercent: 70
             healthCheckPath: /api/ready
+            preDeployCommand: selecta db upgrade
             dockerCommand: selecta web --no-open --port 10000
             envVars:
               - *api_mode
