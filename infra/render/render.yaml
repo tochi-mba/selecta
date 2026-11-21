@@ -222,10 +222,7 @@ projects:
             image: *image
             region: frankfurt
             plan: standard
-            scaling:
-              minInstances: 2
-              maxInstances: 6
-              targetCPUPercent: 70
+            numInstances: 2
             healthCheckPath: /api/ready
             preDeployCommand: selecta db upgrade
             dockerCommand: selecta web --no-open --port 10000
