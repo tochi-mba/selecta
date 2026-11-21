@@ -78,6 +78,35 @@ def test_token_verification_checks_signature_issuer_audience_and_times(auth_keys
         verifier.verify(issue(private, exp=int(time.time()) - 600))
 
 
+def test_authkit_verifier_checks_client_id_without_requiring_audience():
+    private = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    public_jwk = jwt.algorithms.RSAAlgorithm.to_jwk(private.public_key(), as_dict=True)
+    public_jwk.update(kid="test-key", use="sig", alg="RS256")
+    verifier = tokens.authkit_verifier(
+        "client_selecta",
+        fetcher=lambda _url: {"keys": [public_jwk]},
+    )
+    now = int(time.time())
+
+    def signed(client_id: str):
+        return jwt.encode(
+            {
+                "sub": "auth-user-1",
+                "iat": now,
+                "exp": now + 600,
+                "iss": "https://api.workos.com/",
+                "client_id": client_id,
+            },
+            private,
+            algorithm="RS256",
+            headers={"kid": "test-key"},
+        )
+
+    assert verifier.verify(signed("client_selecta")).subject == "auth-user-1"
+    with pytest.raises(tokens.WrongClient):
+        verifier.verify(signed("client_someone_else"))
+
+
 def test_token_verifier_rejects_non_rs256_and_unknown_key(auth_keys):
     private, verifier, _fetches = auth_keys
     unsigned = jwt.encode(

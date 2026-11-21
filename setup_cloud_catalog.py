@@ -69,15 +69,8 @@ SETTINGS = (
         "SELECTA_AUTH_ISSUER",
         "WorkOS",
         "Render value",
-        "Exact iss claim: normally https://api.workos.com/user_management/<client-id>; use "
-        "https://<custom-auth-domain>/user_management/<client-id> after adding that domain",
-        secret=False,
-    ),
-    s(
-        "SELECTA_AUTH_AUDIENCE",
-        "WorkOS",
-        "Render value",
-        "Exact aud claim; for AuthKit sessions this is normally the WorkOS client ID",
+        "Exact iss claim: normally https://api.workos.com/; use the custom Authentication API "
+        "origin after WorkOS verifies that domain",
         secret=False,
     ),
     s("SELECTA_WORKOS_API_KEY", "WorkOS", "Render secret", "WorkOS server API key"),
@@ -450,9 +443,8 @@ SETUP_GUIDES = {
     "WorkOS": (
         "https://dashboard.workos.com",
         "Select the matching staging/production environment. Applications shows the client ID. "
-        "For the issuer, open https://api.workos.com/user_management/<client-id>/.well-known/"
-        "openid-configuration and copy its issuer field; audience is normally the client ID. "
-        "Confirm both against the iss and aud claims of a real staging access token. API Keys has "
+        "The standard AuthKit issuer is https://api.workos.com/; Selecta binds a token to the "
+        "application using its client_id claim. API Keys has "
         "the server key; create the signing secret under Webhooks. Organizations contains the "
         "staff organisation ID.",
     ),
@@ -564,12 +556,8 @@ FIELD_GUIDES: dict[str, tuple[str, ...]] = {
         "Copy Client ID. It starts with client_. Use the same value for VITE_WORKOS_CLIENT_ID in that environment.",
     ),
     "SELECTA_AUTH_ISSUER": (
-        "Replace <client-id> in https://api.workos.com/user_management/<client-id>/.well-known/openid-configuration and open it in a browser.",
-        "Copy the JSON issuer value exactly, without the /.well-known/openid-configuration suffix. Do not switch to auth.selectadj.app until WorkOS has verified that custom auth domain.",
-    ),
-    "SELECTA_AUTH_AUDIENCE": (
-        "For normal AuthKit sessions, enter the same client_... value as SELECTA_WORKOS_CLIENT_ID.",
-        "Before launch, decode a real access token and confirm its aud claim matches exactly.",
+        "For the standard WorkOS Authentication API, enter https://api.workos.com/ including the trailing slash.",
+        "Use a custom Authentication API origin only after WorkOS verifies it. AuthKit session tokens identify the application with client_id, which Selecta checks separately.",
     ),
     "SELECTA_WORKOS_API_KEY": (
         "WorkOS Dashboard > matching environment > API Keys > Create API key.",
