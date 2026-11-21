@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import time
 from contextlib import asynccontextmanager
@@ -84,6 +85,9 @@ from selecta.storage import playback_api as playback_api
 from selecta.usage import meters, quota
 from selecta.work.fanout import OutboxFanout
 from selecta.work.schema import outbox_events
+
+
+log = logging.getLogger(__name__)
 
 
 class CloudConfigurationError(RuntimeError):
@@ -255,6 +259,10 @@ def _bearer(request: Request, verifier: Verifier) -> Claims:
             },
         ) from error
     except TokenError as error:
+        # Keep the response deliberately generic, but leave operators enough information to
+        # distinguish an issuer/audience configuration mistake from a bad signature. Never log
+        # the credential or exception text: both can contain attacker-controlled material.
+        log.warning("AuthKit token rejected: %s", type(error).__name__)
         raise HTTPException(
             status_code=401,
             detail={"code": "token_invalid", "message": "Sign in again to continue."},
