@@ -408,6 +408,13 @@ def test_the_service_image_copies_every_file_the_package_build_reads():
         assert (ROOT / name).exists(), name
 
 
+def test_cloudflare_worker_serves_the_vite_build_as_an_spa():
+    config = (ROOT / "web" / "wrangler.jsonc").read_text("utf-8")
+    assert '"name": "selecta"' in config
+    assert '"directory": "./dist"' in config
+    assert '"not_found_handling": "single-page-application"' in config
+
+
 # --- Smoke test -------------------------------------------------------------------------------
 
 
