@@ -11,6 +11,7 @@ from selecta.modes import Mode, current_mode
 from selecta.persistence import make_engine, metadata
 from selecta.persistence.migrate import current, downgrade, head, pending_changes, upgrade
 from selecta.persistence.registry import load_all_tables
+from selecta.rooms.cloud_ports import RoomPorts
 
 
 class FakeVerifier:
@@ -61,6 +62,37 @@ def test_cloud_health_and_readiness_are_explicit(cloud):
         result = client.get("/api/ready")
         assert result.status_code == 200
         assert result.json()["schema"] == head() == current(engine)
+
+
+def test_cloud_factory_does_not_query_database_before_server_binds(tmp_path):
+    """A slow database must not prevent Uvicorn from opening the service port."""
+    load_all_tables()
+    engine = make_engine(f"sqlite:///{tmp_path / 'cloud.sqlite'}")
+    metadata.create_all(engine)
+    statements: list[str] = []
+    sa.event.listen(
+        engine,
+        "before_cursor_execute",
+        lambda _conn, _cursor, statement, _parameters, _context, _many: statements.append(
+            statement
+        ),
+    )
+
+    create_cloud_app(
+        CloudSettings(
+            database_url="sqlite:///test-only",
+            workos_client_id="client_test",
+            issuer="https://issuer.test",
+            audience="selecta-test",
+            allowed_hosts=("testserver",),
+            allowed_origins=("https://app.test",),
+        ),
+        engine=engine,
+        verifier=FakeVerifier(),
+        room_ports=RoomPorts(pepper=b"production-room-pepper"),
+    )
+
+    assert statements == []
 
 
 def test_account_routes_require_a_verified_bearer_token(cloud):
