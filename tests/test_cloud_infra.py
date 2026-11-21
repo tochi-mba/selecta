@@ -79,7 +79,10 @@ def test_render_never_holds_a_secret_value_in_the_repo():
                     continue
                 secretish = re.search(r"KEY|SECRET|TOKEN|PEPPER|HEADERS|URL|HOSTS|ORIGINS|ISSUER|"
                                       r"AUDIENCE|PRICES|CLIENT_ID", item["key"])
-                if secretish and "fromDatabase" not in item:
+                public_host_allowlist = item["key"] in {
+                    "SELECTA_ALLOWED_HOSTS", "SELECTA_GATEWAY_ALLOWED_HOSTS"
+                }
+                if secretish and "fromDatabase" not in item and not public_host_allowlist:
                     assert item.get("sync") is False and "value" not in item, item["key"]
 
 
@@ -156,6 +159,20 @@ def test_every_variable_a_service_reads_at_start_is_declared_in_the_blueprint(na
     for command, needed in read_at_start().items():
         declared = {item["key"] for item in render_items(env, command)}
         assert sorted(needed - declared) == [], (name, command)
+
+
+@pytest.mark.parametrize("name", ENVIRONMENTS)
+def test_render_health_probe_hosts_are_allowed(name):
+    env = environments()[name]
+    suffix = ".staging.selectadj.app" if name == "staging" else ".selectadj.app"
+    expected = {
+        "web": {f"api{suffix}", f"selecta-api-{name}.onrender.com"},
+        "gateway": {f"gateway{suffix}", f"selecta-gateway-{name}.onrender.com"},
+    }
+    keys = {"web": "SELECTA_ALLOWED_HOSTS", "gateway": "SELECTA_GATEWAY_ALLOWED_HOSTS"}
+    for command, hosts in expected.items():
+        values = render_values(env, command)
+        assert set(values[keys[command]].split(",")) == hosts
 
 
 def test_the_checklist_lists_what_each_render_service_reads():

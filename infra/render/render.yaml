@@ -28,9 +28,8 @@ projects:
               - &api_mode
                 key: SELECTA_MODE
                 value: cloud
-              - &allowed_hosts
-                key: SELECTA_ALLOWED_HOSTS
-                sync: false
+              - key: SELECTA_ALLOWED_HOSTS
+                value: api.staging.selectadj.app,selecta-api-staging.onrender.com
               - &allowed_origins
                 key: SELECTA_ALLOWED_ORIGINS
                 sync: false
@@ -119,9 +118,8 @@ projects:
             dockerCommand: selecta gateway --port 10000
             envVars:
               - *api_mode
-              - &gateway_allowed_hosts
-                key: SELECTA_GATEWAY_ALLOWED_HOSTS
-                sync: false
+              - key: SELECTA_GATEWAY_ALLOWED_HOSTS
+                value: gateway.staging.selectadj.app,selecta-gateway-staging.onrender.com
               - &worker_token_secret
                 key: SELECTA_WORKER_TOKEN_SECRET
                 sync: false
@@ -228,7 +226,8 @@ projects:
             dockerCommand: selecta web --no-open --port 10000
             envVars:
               - *api_mode
-              - *allowed_hosts
+              - key: SELECTA_ALLOWED_HOSTS
+                value: api.selectadj.app,selecta-api-production.onrender.com
               - *allowed_origins
               - *auth_issuer
               - *auth_audience
@@ -275,7 +274,8 @@ projects:
             dockerCommand: selecta gateway --port 10000
             envVars:
               - *api_mode
-              - *gateway_allowed_hosts
+              - key: SELECTA_GATEWAY_ALLOWED_HOSTS
+                value: gateway.selectadj.app,selecta-gateway-production.onrender.com
               - *worker_token_secret
               - *worker_bootstrap_token
               - *r2_account_id
