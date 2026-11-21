@@ -95,13 +95,14 @@ def test_cloud_factory_does_not_query_database_before_server_binds(tmp_path):
     assert statements == []
 
 
-def test_account_routes_require_a_verified_bearer_token(cloud):
+def test_account_routes_require_a_verified_bearer_token(cloud, caplog):
     app, _, _ = cloud
     with TestClient(app) as client:
         assert client.get("/api/account").status_code == 401
         bad = client.get("/api/account", headers={"Authorization": "Bearer forged"})
         assert bad.status_code == 401
         assert bad.json()["detail"]["code"] == "token_invalid"
+    assert "AuthKit token rejected: BadSignature" in caplog.text
 
 
 def test_onboarding_requires_age_confirmation_and_starts_free_plan(cloud):
