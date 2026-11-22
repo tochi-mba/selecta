@@ -6,7 +6,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Icon } from '../ui/Icon';
 import { countOf, Truncate } from '../ui/format';
 import { EmptyState } from './LocalFirstEmpty';
-import { Account, Api, Asset, bytes, Page } from './api';
+import { Account, Api, Asset, bytes, holdsHostedStorage, Page } from './api';
 import { INITIAL_LIBRARY, isBusy, libraryReducer, overviewOf, songWords } from './libraryState';
 import { unfinishedUploads } from './uploadParts';
 import { useSharedLibraryPlayer } from './cloudTransport';
@@ -142,7 +142,7 @@ export function LibraryPanel({ api, workspaceId, setError, refreshAccount, go, r
   const track = player.track;
   const busy = truthful ? isBusy(state) : loading;
   const overview = overviewOf(state, unfinished);
-  const storage = account ? (account.usage?.storage.used_bytes ?? account.entitlement.storage_used_bytes) : null;
+  const storage = account && holdsHostedStorage(account) ? (account.usage?.storage.used_bytes ?? account.entitlement.storage_used_bytes) : null;
   const limit = account ? (account.usage?.storage.limit_bytes ?? account.entitlement.storage_limit_bytes) : null;
   const list = (assets.length > 0 || nextCursor) && (
     <>

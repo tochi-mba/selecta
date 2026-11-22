@@ -7,7 +7,8 @@ A feature reaches someone only if four layers all say yes (docs/saas/11b-feature
 3. Plan: the account's plan includes it, if any plan gates it. This is the only layer that can
    lock a feature for an account; targeting rules can never undo it.
 4. Rules: the admin's targeting rules for that flag, in order, the first that matches deciding.
-   When none match, the flag stays as the layers above left it: on.
+   When none match, the flag stays as the layers above left it: on. A grant flag
+   (`rules_default: false`) is the exception: with no matching rule it is off.
 
 Then today's `requires` cascade runs over the result, and the person's own preference comes last.
 `user_prefs` maps a flag to `True` or `False`. `False` switches any feature off for that person.
@@ -78,6 +79,8 @@ BUILD_OFF = "build_off"
 MODE_OFF = "mode_off"
 PLAN_LOCKED = "plan_locked"
 RULE_OFF = "rule_off"
+# A grant flag (`rules_default: false`) that no rule granted to this account.
+NOT_GRANTED = "not_granted"
 USER_OFF = "user_off"
 NEEDS = "needs:"
 # Why a feature is on, when it isn't core.
@@ -166,6 +169,8 @@ class _Evaluator:
                 continue
             reason = RULE_ON if verdict else RULE_OFF
             return Decision(verdict, Layer.RULES, reason), f"rule {position} ({rule.kind}) decided"
+        if not flag.rules_default:
+            return Decision(False, Layer.RULES, NOT_GRANTED), "no rule granted it"
         return Decision(True, Layer.RULES, DEFAULT), "no rule matched"
 
     def layers(self, flag: flags.Flag) -> Decision:

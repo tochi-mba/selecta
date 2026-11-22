@@ -116,6 +116,7 @@ FIELDS = {
     "owner",
     "review_by",
     "cloud_default",
+    "rules_default",
     "cloud_surface_kind",
     "cloud_surface_reason",
 }
@@ -169,6 +170,10 @@ class Flag:
     # A cloud product can start more conservatively than the local app. An explicit
     # `SELECTA_FLAGS=+name` still enables it, so licensing/operations is configuration.
     cloud_default: bool | None = None
+    # What the targeting rules layer answers when no rule matches (ADR-0414). True keeps a
+    # feature on for everyone the rules don't name; False makes it a grant: on only where a rule
+    # says so, as hosted media is (ADR-0456).
+    rules_default: bool = True
     cloud_surface_kind: str | None = None
     cloud_surface_reason: str | None = None
 
@@ -212,6 +217,7 @@ def registry() -> dict[str, Flag]:
                 owner=spec.get("owner"),
                 review_by=spec.get("review_by"),
                 cloud_default=spec.get("cloud_default"),
+                rules_default=spec.get("rules_default", True),
                 cloud_surface_kind=spec.get("cloud_surface_kind"),
                 cloud_surface_reason=spec.get("cloud_surface_reason"),
             )
@@ -280,6 +286,8 @@ def _cloud_problems(flag: Flag) -> list[str]:
             found.append(f"{flag.id}: review_by {flag.review_by!r} isn't a date like 2027-01-31")
     if flag.cloud_default is not None and not isinstance(flag.cloud_default, bool):
         found.append(f"{flag.id}: cloud_default should be true or false")
+    if not isinstance(flag.rules_default, bool):
+        found.append(f"{flag.id}: rules_default should be true or false")
     if flag.cloud_surface_kind is not None:
         if flag.cloud_surface_kind not in CLOUD_SURFACE_KINDS:
             allowed = ", ".join(CLOUD_SURFACE_KINDS)

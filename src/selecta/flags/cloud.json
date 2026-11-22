@@ -66,10 +66,11 @@
     },
     "cloud.hosted_media": {
       "label": "Hosted media",
-      "about": "The umbrella grant for uploading and processing audio in Cloud (ADR-0456). The build ships on; per-account gating is a cutover allowlist rule followed by a catch-all off rule, since rules can never grant what the build denies (ADR-0414).",
+      "about": "The umbrella grant for uploading and processing audio in Cloud (ADR-0456). The build ships on so a rule can grant it, and with no matching rule it is off: browser-first is the default and hosted media is a staff grant (ADR-0455).",
       "surfaces": ["cloud.uploads"],
       "modes": ["cloud"],
       "default": true,
+      "rules_default": false,
       "kind": "release",
       "owner": "playback"
     },
@@ -113,7 +114,7 @@
       "about": "Selects the local-first navigation and browser-owned playback in personal Cloud; the legacy pages remain when off (ADR-0455).",
       "surfaces": ["cloud.home", "cloud.listen", "cloud.library", "cloud.settings"],
       "modes": ["cloud"],
-      "default": false,
+      "default": true,
       "kind": "release",
       "owner": "playback"
     },
@@ -122,7 +123,7 @@
       "about": "Draws the hosted Cloud pages (overview, Listen, Make a Mix, Library and the account places in More) inside the same shell as browser-first Cloud; the legacy side rail remains when off.",
       "surfaces": ["cloud.home", "cloud.listen", "cloud.library", "cloud.settings"],
       "modes": ["cloud"],
-      "default": false,
+      "default": true,
       "kind": "release",
       "owner": "playback"
     },
@@ -131,7 +132,7 @@
       "about": "A folder import keeps running while the member moves on: onboarding unlocks as songs land, a shell chip shows progress, and an interrupted import offers to carry on (ADR-0463 BF-0463-02).",
       "surfaces": ["cloud.home", "cloud.library", "cloud.listen"],
       "modes": ["cloud"],
-      "default": false,
+      "default": true,
       "kind": "release",
       "owner": "playback"
     },
@@ -140,7 +141,7 @@
       "about": "Derived data on this device (cached song bytes) is keyed by the song's content hash, computed here from the file itself, so the same file under another account or another title reuses it; off, the cache is keyed per workspace and nothing is shared (ADR-0469).",
       "surfaces": ["cloud.library", "cloud.listen"],
       "modes": ["cloud"],
-      "default": false,
+      "default": true,
       "kind": "release",
       "owner": "playback"
     },
@@ -184,7 +185,7 @@
       ],
       "surfaces": ["cloud.library"],
       "modes": ["cloud"],
-      "default": false,
+      "default": true,
       "kind": "release",
       "owner": "playback"
     },
@@ -337,7 +338,7 @@
       "requires": ["devices"],
       "surfaces": ["cloud.listen"],
       "modes": ["cloud"],
-      "default": false,
+      "default": true,
       "kind": "release",
       "owner": "playback"
     },
@@ -347,7 +348,7 @@
       "requires": ["devices.browser_player"],
       "surfaces": ["cloud.listen"],
       "modes": ["cloud"],
-      "default": false,
+      "default": true,
       "kind": "release",
       "owner": "playback"
     },
@@ -357,7 +358,7 @@
       "requires": ["cloud.browser_dsp"],
       "surfaces": ["cloud.listen", "edit"],
       "modes": ["cloud"],
-      "default": false,
+      "default": true,
       "kind": "release",
       "owner": "playback"
     },
@@ -387,7 +388,7 @@
       "requires": ["devices.browser_player"],
       "surfaces": ["cloud.listen"],
       "modes": ["cloud"],
-      "default": false,
+      "default": true,
       "kind": "release",
       "owner": "playback"
     },
