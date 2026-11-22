@@ -108,7 +108,8 @@ def test_authkit_verifier_checks_client_id_without_requiring_audience():
                 "sub": "auth-user-1",
                 "iat": now,
                 "exp": now + 600,
-                "iss": "https://api.workos.com",
+                # What a real staging token carried: the per-client issuer, not the bare host.
+                "iss": f"https://api.workos.com/user_management/{client_id}",
                 "client_id": client_id,
             },
             private,
@@ -117,8 +118,15 @@ def test_authkit_verifier_checks_client_id_without_requiring_audience():
         )
 
     assert verifier.verify(signed("client_selecta")).subject == "auth-user-1"
-    with pytest.raises(tokens.WrongClient):
+    # Another client's token fails on its issuer before its client_id is even read.
+    with pytest.raises(tokens.WrongIssuer):
         verifier.verify(signed("client_someone_else"))
+    # The older guidance's bare host, with or without a slash, means the per-client issuer.
+    for configured in ("https://api.workos.com", "https://api.workos.com/"):
+        legacy = tokens.authkit_verifier(
+            "client_selecta", issuer=configured, fetcher=lambda _url: {"keys": [public_jwk]}
+        )
+        assert legacy.verify(signed("client_selecta")).subject == "auth-user-1"
 
 
 def test_token_verifier_rejects_non_rs256_and_unknown_key(auth_keys):

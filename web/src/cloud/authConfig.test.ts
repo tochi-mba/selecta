@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { authKitConfig, BLOCKED_MESSAGES, blockedCode, callbackProblem, followReturnTo, MISSING_AUTH_DOMAIN, refusalMessage, safeReturnPath, withoutCallbackError } from './authConfig';
+import { authKitConfig, BLOCKED_MESSAGES, STAGING_DEV_MODE_WITH_DOMAIN, blockedCode, callbackProblem, followReturnTo, MISSING_AUTH_DOMAIN, refusalMessage, safeReturnPath, withoutCallbackError } from './authConfig';
 
 const origin = 'https://app.selecta.test';
 
@@ -13,6 +13,16 @@ describe('AuthKit configuration', () => {
     expect(authKitConfig({ DEV: false })).toEqual({ error: MISSING_AUTH_DOMAIN });
     expect(authKitConfig({ DEV: false, VITE_WORKOS_API_HOSTNAME: '   ' })).toEqual({ error: MISSING_AUTH_DOMAIN });
     expect(authKitConfig({})).toEqual({ error: MISSING_AUTH_DOMAIN });
+    // Naming WorkOS's own host is not a custom domain: its cookie would be third-party.
+    expect(authKitConfig({ DEV: false, VITE_WORKOS_API_HOSTNAME: 'api.workos.com' })).toEqual({ error: MISSING_AUTH_DOMAIN });
+  });
+
+  it('lets a staging build opt into dev mode, never alongside a custom domain', () => {
+    expect(authKitConfig({ DEV: false, VITE_WORKOS_DEV_MODE: 'staging' })).toEqual({ devMode: true, apiHostname: undefined });
+    expect(authKitConfig({ DEV: false, VITE_WORKOS_DEV_MODE: 'staging', VITE_WORKOS_API_HOSTNAME: 'api.workos.com' })).toEqual({ devMode: true, apiHostname: undefined });
+    expect(authKitConfig({ DEV: false, VITE_WORKOS_DEV_MODE: 'staging', VITE_WORKOS_API_HOSTNAME: 'auth.selectadj.app' })).toEqual({ error: STAGING_DEV_MODE_WITH_DOMAIN });
+    // Anything but the exact word stays off.
+    expect(authKitConfig({ DEV: false, VITE_WORKOS_DEV_MODE: 'true' })).toEqual({ error: MISSING_AUTH_DOMAIN });
   });
 });
 

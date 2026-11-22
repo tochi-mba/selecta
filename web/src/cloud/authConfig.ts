@@ -1,23 +1,35 @@
 // How the Cloud site talks to AuthKit, kept apart from the components so the rules are testable.
 //
-// - Development mode (refresh token in localStorage) is on only for `vite dev`.
-// - A production build must name the custom auth domain, so AuthKit keeps the refresh token in
+// - Development mode (refresh token in localStorage) is on for `vite dev`, and for a staging
+//   build that sets VITE_WORKOS_DEV_MODE=staging: WorkOS only allows a custom auth domain in
+//   production environments, and without one the refresh cookie on api.workos.com is
+//   third-party, which browsers block. That switch is refused when a custom domain is named.
+// - Any other built site must name the custom auth domain, so AuthKit keeps the refresh token in
 //   an HttpOnly cookie there; without it the site shows a configuration error instead of quietly
 //   falling back to development mode.
 // - After sign-in, only a same-origin path is followed; anything else goes to the home page.
 // - The access token itself is never stored by us: AuthKit keeps it in memory.
 
-export type AuthEnv = { DEV?: boolean; VITE_WORKOS_API_HOSTNAME?: string };
+export type AuthEnv = { DEV?: boolean; VITE_WORKOS_API_HOSTNAME?: string; VITE_WORKOS_DEV_MODE?: string };
+
+/** The WorkOS host itself: naming it is not a custom domain, so it never earns cookie mode. */
+const WORKOS_API_HOST = 'api.workos.com';
 export type AuthKitConfig = { devMode: boolean; apiHostname: string | undefined };
 
 export const MISSING_AUTH_DOMAIN =
   'This build has no custom sign-in domain. Set VITE_WORKOS_API_HOSTNAME (auth.selectadj.app in production) and rebuild. Without it, sign-in would keep tokens in browser storage.';
 
+export const STAGING_DEV_MODE_WITH_DOMAIN =
+  'This build sets both VITE_WORKOS_DEV_MODE=staging and a custom sign-in domain. A custom domain keeps the refresh token in a secure cookie, so remove VITE_WORKOS_DEV_MODE.';
+
 export function authKitConfig(env: AuthEnv): AuthKitConfig | { error: string } {
-  const apiHostname = (env.VITE_WORKOS_API_HOSTNAME ?? '').trim();
-  const devMode = env.DEV === true;
-  if (!devMode && !apiHostname) return { error: MISSING_AUTH_DOMAIN };
-  return { devMode, apiHostname: apiHostname || undefined };
+  const named = (env.VITE_WORKOS_API_HOSTNAME ?? '').trim();
+  const customDomain = named && named !== WORKOS_API_HOST ? named : '';
+  const stagingDevMode = (env.VITE_WORKOS_DEV_MODE ?? '').trim() === 'staging';
+  if (stagingDevMode && customDomain) return { error: STAGING_DEV_MODE_WITH_DOMAIN };
+  const devMode = env.DEV === true || stagingDevMode;
+  if (!devMode && !customDomain) return { error: MISSING_AUTH_DOMAIN };
+  return { devMode, apiHostname: customDomain || undefined };
 }
 
 // A path on this site, or null. Rejects other origins, protocol-relative `//host`, backslash
