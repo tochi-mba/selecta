@@ -73,6 +73,7 @@ from selecta.identity.tokens import (
 )
 from selecta.identity.workos import WorkOSClient
 from selecta.local_media import api as local_media_routes
+from selecta.local_media import links as local_links_routes
 from selecta.local_media import recipe_api as local_recipe_routes
 from selecta.local_media.catalog import LocalMediaCatalog
 from selecta.lucy import cloud_settings as lucy_cloud_settings
@@ -84,7 +85,7 @@ from selecta.persistence.migrate import head as migration_head
 from selecta.playback import api as device_playback_routes
 from selecta.playback.zones import SQL_ZONES
 from selecta.rooms import wiring as rooms_wiring
-from selecta.rooms.cloud_ports import OutboxPlaybackEvents, RoomPorts
+from selecta.rooms.cloud_ports import BrowserPlanner, OutboxPlaybackEvents, RoomPorts
 from selecta.routes import business_hours as business_hours_routes
 from selecta.routes import business_kiosk as business_kiosk_routes
 from selecta.routes import business_zones as business_zones_routes
@@ -315,7 +316,10 @@ def create_cloud_app(
     # Without explicit ports, Rooms read the metadata-only local media catalogue (ADR-0458), so
     # a local-first account can host a Room from its device-available tracks. The pepper still
     # comes from `rooms.wiring.pepper_from_environment` when the ports carry none.
-    room_ports = room_ports or RoomPorts(catalog=LocalMediaCatalog(engine))
+    # The planner is the host's browser mix: accepted room requests wait for it (BrowserPlanner).
+    room_ports = room_ports or RoomPorts(
+        catalog=LocalMediaCatalog(engine), planner=BrowserPlanner(engine)
+    )
 
     # One LISTEN connection per instance wakes event streams and reloads flag rules the moment
     # another instance commits (ADR-0407, ADR-0414). None on SQLite, which keeps polling.
@@ -850,6 +854,11 @@ def create_cloud_app(
     )
     # Portable recipes over that catalogue (BF-0462-05); refused while cloud.local_media is off.
     local_recipe_routes.install_routes(
+        app, engine=engine, current_claims=current_claims, principal_for=_principal
+    )
+    # Word connections over that catalogue's cached LRCLIB lyrics; refused while
+    # discover.word_links is off (dark in Cloud until lyrics.display is cleared, SC-0406-03).
+    local_links_routes.install_routes(
         app, engine=engine, current_claims=current_claims, principal_for=_principal
     )
     business_org_routes.install_routes(

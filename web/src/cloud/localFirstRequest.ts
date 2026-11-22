@@ -1,7 +1,10 @@
 import { ApiError, LibraryPage, LibrarySong, MixData, Request, SongAvailability, Status } from '../api';
 import { browserMoveNames, browserMovesOn } from './browserMoves';
+import { linksFamily } from './localFirstLinks';
 import { mixFamily, type PlayableSong } from './localFirstMixes';
+import { discoveriesFamily, type DiscoveriesSources } from './localFirstDiscoveries';
 import { DEFAULT_STEERING, WORKED_OUT_LIVE, type RecipeStore } from './recipeStore';
+import { requestsFamily } from './localFirstRequests';
 
 /** The local-first shell's request adapter (ADR-0462 "one adapter per route family").
  *
@@ -53,6 +56,12 @@ export type AvailabilitySources = {
   hosted?: (songs: readonly CatalogueSong[]) => Promise<ReadonlySet<number>>;
   /** Where browser mixes are kept (BF-0462-05); without it the current mix is empty. */
   recipes?: RecipeStore;
+  /** Harmonic matches from key profiles measured on this device (cloud.browser_harmonic);
+   * without it `/discoveries` is refused as not here yet. */
+  tonal?: Omit<DiscoveriesSources, 'songs'>;
+  /** The workspace whose song requests this browser keeps (localFirstRequests.ts); with the
+   * recipe store, Request a song works here. */
+  workspaceId?: string;
 };
 export type Availability = { here: ReadonlyMap<number, 'here' | 'reauth' | 'reconnect'>; hosted: ReadonlySet<number> };
 export const NO_AVAILABILITY: Availability = { here: new Map(), hosted: new Set() };
@@ -165,6 +174,21 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
     });
   };
   const mixes = sources.recipes ? mixFamily(sources.recipes, playable) : null;
+  const discoveries = sources.tonal ? discoveriesFamily({
+    ...sources.tonal,
+    songs: async () => {
+      const list = await songs();
+      const known = await availability(list);
+      // only a file on this device can be measured here, so a hosted copy is not offered
+      return list.map((song) => ({ id: song.id, title: song.title, artist: song.artist, playable: known.here.get(song.id) === 'here' }));
+    },
+  }) : null;
+  // requests join the current recipe through the mix routes above, so they need the store too
+  const requests = sources.recipes && sources.workspaceId
+    ? requestsFamily({ cloud, workspaceId: sources.workspaceId, songs: playable, send: (<T,>(path: string, init?: RequestInit) => adapted<T>(path, init)) as Request })
+    : null;
+  // Word connections (discover.word_links): answers nothing while that flag is off
+  const links = linksFamily(cloud, sources.recipes, playable);
   const adapted = async <T,>(path: string, init?: RequestInit): Promise<T> => {
     const method = (init?.method ?? 'GET').toUpperCase();
     const [route, query = ''] = path.split('?');
@@ -176,8 +200,14 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
       const list = await songs();
       return statusFrom(list, await availability(list), mixes?.steering()) as T;
     }
+    const requestAnswer = requests?.answer(method, route, new URLSearchParams(query), init);
+    if (requestAnswer) return (await requestAnswer) as T;
     const mixAnswer = mixes?.answer(method, route, new URLSearchParams(query), init);
     if (mixAnswer) return (await mixAnswer) as T;
+    const discoveryAnswer = discoveries?.answer(method, route, new URLSearchParams(query), init);
+    if (discoveryAnswer) return (await discoveryAnswer) as T;
+    const linkAnswer = links.answer(method, route, new URLSearchParams(query), init);
+    if (linkAnswer) return (await linkAnswer) as T;
     if (method === 'GET' && route === '/mix' && !query) return EMPTY_MIX as T;
     // without a recipe store there is nothing to build a mix into
     if (method === 'GET' && route === '/vibes') return [] as T;

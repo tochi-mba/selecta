@@ -30,6 +30,8 @@ export type RequestRow = {
   stage?: Stage; waiting_on?: string; seconds?: number | null; after?: string | null;
   never?: boolean; no_cues?: boolean; declined?: boolean; bridge_choice?: boolean | null;
   saving?: boolean; picked?: number[] | null; behind?: string; bridge_lost?: boolean;
+  /** Cloud in the browser (localFirstRequests.ts): what happens to this request, instead of the planner's words. */
+  browser_note?: string;
 };
 type RequestList = { requests: RequestRow[]; settled?: string[] };
 export type BridgeOption = {
@@ -113,6 +115,11 @@ export function requestWords(row: RequestRow, stage: Stage): { label: string; to
   const leading = [coming && `with ${coming} leading in`, going && `${coming ? 'and' : 'with'} ${going} leading out`].filter(Boolean).join(' ');
   const place = row.after ? `Joins after ${row.after}${leading ? `, ${leading}` : ''}.` : 'A spot has been found.';
   const together = extras.length ? ` They all join together once every transition is ready, and none of them can play before that.` : '';
+  // Cloud in the browser can't look for a spot, so it says in its own words what happens instead
+  if (row.browser_note && (stage === 'waiting' || stage === 'searching' || stage === 'no_mix')) {
+    const label = stage === 'no_mix' ? 'Waiting for a mix' : stage === 'searching' ? 'Add it yourself' : 'Requested · waiting';
+    return { label, tone: 'quiet', detail: row.browser_note };
+  }
   switch (stage) {
     case 'adding':
       return { label: 'Adding', tone: 'active', detail: 'Saving your request.' };

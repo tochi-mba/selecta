@@ -10,7 +10,8 @@ The planner is called outside any Rooms transaction. A request is first marked a
 committed, then the planner is asked, then its request id is saved. If the planner fails, the mark
 is taken off and the next pass tries again; if the process dies in between, the mark goes stale
 after five minutes and the request is tried again. The planner already returns the same request
-for a song that's waiting, so trying twice can't make two.
+for a song that's waiting, so trying twice can't make two. A planner that says it doesn't exist
+at all (`PlannerUnavailable`) is not retried: the request is marked as not fitting.
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from sqlalchemy.engine import Connection
 
 from selecta.persistence import transaction
 from selecta.rooms.ordering import accepted_order
+from selecta.rooms.ports import PlannerUnavailable
 from selecta.rooms.schema import room_requests
 from selecta.rooms.store import (
     RequestStatus,
@@ -124,6 +126,24 @@ def _hand_over(ctx: RoomContext, room: Room, request: RoomRequest) -> bool:
                 guest_id=request.guest_id,
             )
         )
+    except PlannerUnavailable:
+        # No planner exists for this workspace, so every retry would fail the same way: the
+        # request is marked as not fitting (the guest sees "Can't fit this into the mix right
+        # now") instead of being handed over again on every pass.
+        log.warning("No request planner for room request %s; marked as not fitting", request.id)
+        with transaction(ctx.engine, workspace_id) as conn:
+            unfit = conn.execute(
+                sa.update(room_requests)
+                .where(
+                    room_requests.c.id == request.id,
+                    room_requests.c.status == RequestStatus.ACCEPTED.value,
+                    room_requests.c.song_request_id.is_(None),
+                )
+                .values(status=RequestStatus.UNFIT.value, reason="no_planner", submitted_at=None)
+            ).rowcount
+            if unfit:
+                ctx.publish(conn, room, "room.request", {"request_id": request.id})
+        return False
     except Exception:
         log.exception("The planner refused room request %s; it will be tried again", request.id)
         with transaction(ctx.engine, workspace_id) as conn:

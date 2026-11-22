@@ -327,7 +327,8 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
 }
 
 /** Memoised (r8c): typing in the search or a poll that brings back the same link redraws no card. */
-const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: (link: Link, move: string, draft: number | null) => Promise<void>; names: Record<string, string>; onRated: () => void; drafts: { id: number; name: string }[] }) {
+/** `live`: the browser runtime, where nothing is rendered ahead and each transition is worked out as the mix plays. */
+const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts, live = false }: { live?: boolean; link: Link; onAdd: (link: Link, move: string, draft: number | null) => Promise<void>; names: Record<string, string>; onRated: () => void; drafts: { id: number; name: string }[] }) {
   const { get, post } = useApi();
   const [move, setMove] = useState(link.move);
   const [cardError, setCardError] = useState('');
@@ -444,7 +445,9 @@ const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts }:
             ? state.passed === false ? 'The transition is rendered, with a rough spot.' : 'The transition is rendered and is what you’d hear.'
             : state.status === 'failed'
               ? 'This transition didn’t render, so for now the shared words are only a match to check.'
-              : 'The transition isn’t rendered yet: the shared words are a match to check, and SelectaDJ renders it after they go in.'}
+              : live
+                ? 'Nothing is rendered ahead here: the shared words are a match to check, and SelectaDJ works the transition out in your browser as the mix plays.'
+                : 'The transition isn’t rendered yet: the shared words are a match to check, and SelectaDJ renders it after they go in.'}
         </span>
       </p>
       {state.status === 'ready' && playing && (
@@ -455,7 +458,7 @@ const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts }:
   );
 });
 
-function LinksView({ mix, setMixData, setView, notify, status, tab = 'words' }: ViewProps & { tab?: 'words' | 'harmonic' }) {
+function LinksView({ mix, setMixData, setView, notify, status, analysisAvailable = true, tab = 'words' }: ViewProps & { tab?: 'words' | 'harmonic' }) {
   const { get, post } = useApi();
   // it's in the address, so a search survives a reload, a shared link and coming Back
   const addressQuery = useQueryParam('q') ?? '';
@@ -555,6 +558,7 @@ function LinksView({ mix, setMixData, setView, notify, status, tab = 'words' }: 
       link={link}
       names={status.moves}
       drafts={drafts}
+      live={!analysisAvailable}
       onAdd={onAdd}
       onRated={onRated}
     />
@@ -590,8 +594,8 @@ function LinksView({ mix, setMixData, setView, notify, status, tab = 'words' }: 
           )}
           {data?.links.length === 0 && (
             <p className="lede">
-              {query ? `No links on “${query}” yet. ` : 'No links yet. Analysing more songs will find more. '}
-              {query ? <button type="button" onClick={() => setQuery('')}>Clear search</button> : <LinkIfThere to="/workshop">See analysis progress</LinkIfThere>}
+              {query ? `No links on “${query}” yet. ` : analysisAvailable ? 'No links yet. Analysing more songs will find more. ' : 'No links yet. More appear as lyrics are found for more of your songs.'}
+              {query ? <button type="button" onClick={() => setQuery('')}>Clear search</button> : analysisAvailable && <LinkIfThere to="/workshop">See analysis progress</LinkIfThere>}
             </p>
           )}
           {flagOn('discover.relationship_map') && data && <RelationshipMap links={data.links} />}

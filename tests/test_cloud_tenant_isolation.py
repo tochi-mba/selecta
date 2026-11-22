@@ -328,6 +328,9 @@ FLAG_DARK = {
     ("POST", "/api/local-media/recipes/{mix_id}/revisions"),
     ("POST", "/api/local-media/recipes/{mix_id}/duplicate"),
     ("DELETE", "/api/local-media/recipes/{mix_id}"),
+    # Word connections between catalogue songs ride `discover.word_links`, dark in Cloud while
+    # `lyrics.display` is (SC-0406-03); every query is scoped to the caller's workspace.
+    ("GET", "/api/local-media/links"),
     # The Labs opening for browser-first Cloud ships dark (`cloud.local_first_labs` off); its
     # routes act only on the caller's own user id and workspace (`test_bf_local_first_labs.py`).
     ("POST", "/api/account/labs/local-first/join"),

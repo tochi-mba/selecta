@@ -20,7 +20,7 @@ from sqlalchemy.engine import Engine
 
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
-from selecta.rooms import api_guest, api_host, codes
+from selecta.rooms import api_guest, api_host, browser_requests, codes
 from selecta.rooms.cloud_ports import (
     CloudPlans,
     CloudSpeakers,
@@ -88,6 +88,14 @@ def install(
     )
     api_guest.install_routes(
         app, rooms=rooms, allowed_origins=allowed_origins, limiter=limiter, rules=rules
+    )
+    # the queue the host's browser mix reads when the planner is `BrowserPlanner`
+    browser_requests.install_routes(
+        app,
+        engine=engine,
+        current_claims=current_claims,
+        principal_for=principal_for,
+        rooms=rooms,
     )
 
 

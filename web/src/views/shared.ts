@@ -48,6 +48,9 @@ export type ViewProps = {
   /** Where songs aren't analysed (browser-first Cloud), a song's waveform drawn from its own file
    * on this device, for Listen's strip; null when the file can't be read here. */
   waveformOf?: (songId: number) => Promise<number[] | null>;
+  /** Whether this person has made a mix before, from somewhere that outlives this browser (browser-first
+   * Cloud: the account's saved recipes). Local mode leaves it out and this browser's own note decides. */
+  startedAMix?: boolean;
   /** The name of the current mix, whatever is being edited, for saying what a change will or won't touch. */
   currentMixName?: string;
 };

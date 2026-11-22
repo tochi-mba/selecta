@@ -118,6 +118,16 @@
       "kind": "release",
       "owner": "playback"
     },
+    "cloud.workspace": {
+      "label": "Browser Workspace",
+      "about": "Workspace in browser-first Cloud: an overview of the library and what this browser is doing in the background, the interface choices, connecting music, this browser's storage and a browser diagnostics panel. Analysis and learning stay on a computer running SelectaDJ. When off, the device cards stay in More as This device.",
+      "requires": ["cloud.local_first"],
+      "surfaces": ["cloud.settings"],
+      "modes": ["cloud"],
+      "default": true,
+      "kind": "release",
+      "owner": "playback"
+    },
     "cloud.hosted_shell": {
       "label": "Hosted Cloud on the shared shell",
       "about": "Draws the hosted Cloud pages (overview, Listen, Make a Mix, Library and the account places in More) inside the same shell as browser-first Cloud; the legacy side rail remains when off.",
@@ -362,6 +372,16 @@
       "kind": "release",
       "owner": "playback"
     },
+    "cloud.browser_harmonic": {
+      "label": "Browser harmonic matches",
+      "about": "Make a Mix's Harmonic matches in a browser library: each song this device can play gets a whole-song key profile measured here in spare time, songs whose profiles and keys line up are offered as pairs to hear, and the audition plays the end of one into the start of the other from the files on this device. It is not local mode's bar-by-bar chord search.",
+      "requires": ["cloud.browser_dsp", "discover.harmonic"],
+      "surfaces": ["discover.harmonic"],
+      "modes": ["cloud"],
+      "default": true,
+      "kind": "release",
+      "owner": "playback"
+    },
     "cloud.browser_stems": {
       "label": "Browser stem moves",
       "about": "Splitting songs into voice, drums, bass and melody on this device, only around each transition, for vocal ride, strip and land and intertwined stems in browser mixes (ADR-0459 Tier 3). Each device reports unsupported until the stem model's licence review and that device's evidence record pass.",
@@ -409,6 +429,9 @@
         "POST /api/rooms/{room_id}/guests/{guest_id}/approve",
         "POST /api/rooms/{room_id}/guests/{guest_id}/remove",
         "POST /api/rooms/{room_id}/guests/{guest_id}/ban",
+        "GET /api/room-requests",
+        "POST /api/room-requests/{request_id}/played",
+        "POST /api/room-requests/{request_id}/dismiss",
         "POST /api/guest/join",
         "GET /api/guest/rooms/{room_id}",
         "GET /api/guest/rooms/{room_id}/search",

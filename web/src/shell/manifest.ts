@@ -109,8 +109,10 @@ export const DESTINATIONS: Destination[] = [
   { id: 'explore', label: 'Make a Mix', path: '/mixes', icon: 'explore', about: 'Choose an idea, shape the journey, then play, edit or save it', requires: { anyFlag: ['cloud.local_first', 'cloud.mix_create'] } },
   { id: 'mine', label: 'My Mixes', path: '/mixes/mine', icon: 'mixes', about: 'Your current mix, your drafts and the render line', requires: { flag: 'cloud.local_first' } },
   { id: 'library', label: 'Library', path: '/library', icon: 'library', about: 'Every song, with its details and corrections', requires: { anyFlag: ['cloud.local_first', 'cloud.stored_media'] } },
-  // Analysis, folders and diagnostics are this computer's server; Cloud keeps its device extras in More.
-  { id: 'workspace', label: 'Workspace', path: '/workshop', icon: 'settings', about: 'Analysis, folders, storage, learning and diagnostics', requires: { modes: ['local'] } },
+  // Analysis and learning are this computer's server. Browser-first Cloud has its own Workspace
+  // (`cloud.workspace`, cloud/CloudWorkspace.tsx) with the tabs a browser can fill; the hosted
+  // shell reads that flag as off. Local mode is permissive, so it is untouched.
+  { id: 'workspace', label: 'Workspace', path: '/workshop', icon: 'settings', about: 'Analysis, folders, storage, learning and diagnostics', requires: { flag: 'cloud.workspace' } },
 ];
 
 /** The kill switch's navigation: the older labels, over the very same pages. */

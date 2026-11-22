@@ -394,16 +394,18 @@ export function Shell({
                   </li>
                 ))}
             {!classic && workspace && (
-              <li className="nav-more">
+              // Browser-first Cloud (cloud.workspace) has its own More: on a phone Workspace is
+              // listed there, so this item is the side bar's link only and takes no phone slot.
+              <li className={cloudMore ? 'nav-more nav-more-cloud-workspace' : 'nav-more'}>
                 <PageLink className="nav-more-desktop" to={workspace.path} data-tip={workspace.label} aria-label={workspace.label} aria-current={here === workspace.id ? 'page' : undefined}>
                   <Icon name={workspace.icon} />
                   <span className="nav-label">{workspace.label}</span>
                 </PageLink>
-                <button className="nav-more-mobile" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={here === workspace.id ? 'page' : undefined} aria-description={attention > 0 ? 'Workspace needs your attention' : undefined} onClick={() => setMoreOpen(true)}>
+                {!cloudMore && <button className="nav-more-mobile" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={here === workspace.id ? 'page' : undefined} aria-description={attention > 0 ? 'Workspace needs your attention' : undefined} onClick={() => setMoreOpen(true)}>
                   <Icon name={workspace.icon} />
                   {attention > 0 && <span className="nav-attention" aria-hidden="true" />}
                   <span className="nav-label">More</span>
-                </button>
+                </button>}
               </li>
             )}
             {!classic && cloudMore && (
@@ -455,6 +457,12 @@ export function Shell({
         <Drawer title="More" onClose={() => setMoreOpen(false)}>
           <nav className="more-nav" aria-label="More">
             <ul>
+              {workspace && (
+                <li className="more-nav-workspace">
+                  <PageLink to={workspace.path} aria-current={here === workspace.id ? 'page' : undefined} onClick={() => setMoreOpen(false)}>{workspace.label}</PageLink>
+                  <p className="hint">Your library at a glance, connecting music, this browser’s storage and diagnostics.</p>
+                </li>
+              )}
               {more.map((item) => (
                 <li key={item.id}>
                   <PageLink to={item.path} aria-current={route.page === 'more' && route.id === item.id ? 'page' : undefined} onClick={() => setMoreOpen(false)}>{item.label}</PageLink>

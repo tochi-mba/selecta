@@ -152,6 +152,8 @@ a.button:hover { border-color: var(--text); }
   .nav li a i { font-size: var(--text-md); line-height: 1; }
   .nav-context { display: none; }
   .nav-more-desktop { display: none !important; }
+  /* browser-first Cloud lists Workspace in its More drawer on a phone, so its rail item takes no slot */
+  .nav li.nav-more-cloud-workspace { display: none; }
   .nav-more-mobile {
     width: 100%;
     height: 100%;

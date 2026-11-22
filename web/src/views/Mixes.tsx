@@ -41,7 +41,7 @@ function rememberLength(songs: number) {
 }
 
 /** The front door. One tap plays something good, and everything can be changed afterwards. */
-export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshMix, refreshStatus, request, readyNeeded = READY_NEEDED, analysisAvailable = true, transitionEditingAvailable = true }: ViewProps) {
+export function Mixes({ status, mix, mixName, player, setMixData, setView, notify, now, refreshMix, refreshStatus, request, readyNeeded = READY_NEEDED, analysisAvailable = true, transitionEditingAvailable = true, startedAMix }: ViewProps) {
   // ADR-0462: this page's own reads and writes go through the injected request, never the local client.
   const via = useRequest(request);
   const { get, post } = useApi(via);
@@ -188,7 +188,8 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
 
   if (readyCount < readyNeeded) return <Preparing status={status} onAnalyse={analyse} />;
 
-  const firstMix = !mix.length && !hasStartedAMix();
+  // Browser-first Cloud also knows from the account's saved mixes, so a new device is not a first run.
+  const firstMix = !mix.length && !startedAMix && !hasStartedAMix();
   return (
     <main className="page mixes" id="main">
       {firstMix && <SetupSteps stage="listen" />}
