@@ -4,7 +4,7 @@ import { setAccountFeatures, setFlags } from '../flags';
 import { cloudAccount } from '../test/cloudAccount';
 import type { ImportEvent, ImportSummary } from '../media';
 import type { Account } from './api';
-import { cancelImportSession, clearImportMarker, clearImportSession, importSnapshot, startImportSession } from './importSession';
+import { cancelImportSession, clearImportMarker, clearImportSession, IMPORT_SUSPENDED, importSnapshot, readImportMarker, startImportSession } from './importSession';
 
 // ADR-0462/0463 mounting rules: the shared shell only for an account with the local-first
 // experience AND `cloud.local_first` on; otherwise the hosted pages exactly as before. New
@@ -403,7 +403,9 @@ describe('the account chrome in the local-first shell (hosted frame parity)', ()
 });
 
 /** An import the test drives by hand, started on the session the shell subscribes to. */
-function heldImport() {
+/** Starts an import the test drives; resolves once the run has begun (with cloud.resilient_import
+ * the session first claims the import across tabs, so the run starts a moment later). */
+async function heldImport() {
   let emit: (event: ImportEvent) => void = () => {};
   let finish: (summary: ImportSummary) => void = () => {};
   let signal: AbortSignal | null = null;
@@ -421,6 +423,7 @@ function heldImport() {
       },
     });
   });
+  await waitFor(() => expect(signal).not.toBeNull());
   return { emit: (event: ImportEvent) => act(() => emit(event)), finish: (summary: ImportSummary) => finish(summary), signal: () => signal };
 }
 
@@ -433,8 +436,9 @@ describe('the import session in the shell (BF-0463-02 progressive import)', () =
     window.history.replaceState({}, '', '/listen');
     render(<CloudApp />);
     await screen.findByRole('navigation', { name: 'Main' });
-    const held = heldImport();
+    const held = await heldImport();
     held.emit({ kind: 'collected', total: 4, skipped: 0 });
+    held.emit({ kind: 'checked', name: 'a.mp3', resumed: false });
     held.emit({ kind: 'file', name: 'a.mp3', stage: 'done', songId: 2 });
     expect(await screen.findByText('Checking your music: 1 of 4 checked.')).toBeVisible();
     expect(screen.getByRole('button', { name: 'See import progress' })).toBeVisible();
@@ -450,7 +454,7 @@ describe('the import session in the shell (BF-0463-02 progressive import)', () =
     render(<CloudApp />);
     await screen.findByRole('navigation', { name: 'Main' });
     await waitFor(() => expect(songListings()).toBeGreaterThan(0));
-    const held = heldImport();
+    const held = await heldImport();
     const before = songListings();
     held.emit({ kind: 'batch', registered: 5 });
     await waitFor(() => expect(songListings()).toBeGreaterThan(before));
@@ -460,7 +464,7 @@ describe('the import session in the shell (BF-0463-02 progressive import)', () =
     account = withExperience(true, false, true);
     render(<CloudApp />);
     expect(await screen.findByLabelText('Onboarding')).toBeVisible();
-    const held = heldImport();
+    const held = await heldImport();
     songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
     const before = songListings();
     held.emit({ kind: 'batch', registered: 1 });
@@ -469,14 +473,16 @@ describe('the import session in the shell (BF-0463-02 progressive import)', () =
     expect(screen.getByLabelText('Onboarding')).toBeVisible();
   });
 
-  it('cancels the import when the shell itself goes', async () => {
+  it('pauses the import and keeps its record when the shell itself goes (cloud.resilient_import)', async () => {
     account = withExperience(true, false, true);
     songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
     const view = render(<CloudApp />);
     await screen.findByRole('navigation', { name: 'Main' });
-    const held = heldImport();
+    const held = await heldImport();
     view.unmount();
     expect(held.signal()?.aborted).toBe(true);
+    expect(held.signal()?.reason).toBe(IMPORT_SUSPENDED);
+    expect(readImportMarker('ws-1')).toMatchObject({ kept: true });
   });
 });
 
