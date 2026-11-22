@@ -96,7 +96,7 @@ describe('the browser mix choice', () => {
   });
 });
 
-describe('a saved browser mix's name', () => {
+describe("a saved browser mix's name", () => {
   const song = (id: number, title: string): PlayableSong => ({ id, title, artist: 'A', duration: 200, playable: true });
   const songs = [song(1, 'Ocean'), song(2, 'Obvious'), song(3, 'Counting the Days')];
 
