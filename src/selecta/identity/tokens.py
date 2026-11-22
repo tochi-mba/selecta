@@ -58,7 +58,12 @@ class WrongAudience(TokenError):
 
 
 class WrongIssuer(TokenError):
-    pass
+    """The signature verified, but `iss` isn't the configured issuer. `observed` is the
+    token's own `iss`, safe to report because a trusted key signed it."""
+
+    def __init__(self, message: str, *, observed: object = None) -> None:
+        super().__init__(message)
+        self.observed = observed if isinstance(observed, str) else None
 
 
 class WrongClient(TokenError):
@@ -230,12 +235,14 @@ class TokenVerifier:
                 token,
                 key,
                 algorithms=[ALGORITHM],
-                issuer=self.issuer,
                 audience=audience,
                 leeway=self.leeway,
                 options={
                     "require": ["exp", "iat", "iss", "sub"],
                     "verify_aud": audience is not None,
+                    # Checked below, after the signature, so a trailing slash in the configured
+                    # issuer can't lock everyone out and the observed issuer can be reported.
+                    "verify_iss": False,
                 },
             )
         except jwt.ExpiredSignatureError as exc:
@@ -252,6 +259,9 @@ class TokenVerifier:
             raise BadSignature("algorithm is not allowed") from exc
         except jwt.PyJWTError as exc:
             raise MalformedToken(f"token rejected: {type(exc).__name__}") from exc
+        observed = payload.get("iss")
+        if not isinstance(observed, str) or observed.rstrip("/") != self.issuer.rstrip("/"):
+            raise WrongIssuer("token is from another issuer", observed=observed)
         if self.client_id is not None and payload.get("client_id") != self.client_id:
             raise WrongClient("token belongs to a different WorkOS client")
         return Claims.from_payload(payload)

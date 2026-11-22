@@ -78,6 +78,20 @@ def test_token_verification_checks_signature_issuer_audience_and_times(auth_keys
         verifier.verify(issue(private, exp=int(time.time()) - 600))
 
 
+def test_issuer_ignores_a_trailing_slash_and_reports_what_the_token_carried(auth_keys):
+    private, verifier, _fetches = auth_keys
+    # A configured issuer with or without a trailing slash accepts the same tokens.
+    assert verifier.verify(issue(private, iss="https://issuer.test/")).subject == "auth-user-1"
+    slashed = tokens.TokenVerifier("https://issuer.test/", verifier.jwks, audience="selecta")
+    assert slashed.verify(issue(private)).subject == "auth-user-1"
+    with pytest.raises(tokens.WrongIssuer) as raised:
+        verifier.verify(issue(private, iss="https://issuer.test/user_management/client_x"))
+    assert raised.value.observed == "https://issuer.test/user_management/client_x"
+    # An issuer that is merely a prefix is still another issuer.
+    with pytest.raises(tokens.WrongIssuer):
+        verifier.verify(issue(private, iss="https://issuer.test.attacker.example"))
+
+
 def test_authkit_verifier_checks_client_id_without_requiring_audience():
     private = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     public_jwk = jwt.algorithms.RSAAlgorithm.to_jwk(private.public_key(), as_dict=True)
