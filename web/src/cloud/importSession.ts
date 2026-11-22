@@ -278,6 +278,8 @@ export function startImportSession(options: {
   resume?: ImportMarker | null;
 }): Promise<ImportSummary> {
   const resilient = flagOn('cloud.resilient_import');
+  // a run this tab is stopping still holds the cross-tab claim until it settles
+  const prior = session && !session.settled ? lastRun : null;
   if (session && !session.settled) cancelImportSession();
   stopFollowing();
   const resume = resilient ? options.resume ?? null : null;
@@ -293,6 +295,7 @@ export function startImportSession(options: {
   const running = (async () => {
     let unhook = () => {};
     if (resilient) {
+      if (prior) await prior.catch(() => undefined);
       const claim = await claimImport(owner.workspaceId);
       if (!claim) {
         // another tab is importing for this workspace: follow it, never start a second run
@@ -334,8 +337,11 @@ export function startImportSession(options: {
     }
   })();
   running.catch(() => {});
+  lastRun = running;
   return running;
 }
+
+let lastRun: Promise<ImportSummary> | null = null;
 
 const EMPTY_SUMMARY: ImportSummary = { imported: 0, duplicates: 0, failed: 0, skipped: 0, cancelled: false, paused: false };
 
