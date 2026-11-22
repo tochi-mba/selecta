@@ -3,6 +3,8 @@ import type { Engine, EngineContext, EngineState, ProbeResult } from '../../engi
 import { dirPicker, directoryInput, MediaStore, runImport } from '../../media';
 import type { Capability, DirectoryHandleLike, ImportEvent, ImportSource, ImportSummary } from '../../media';
 import { browserStorage, KeyValue } from './state';
+import { flagOn } from '../../flags';
+import { importRunnerFor } from '../importResume';
 
 /** What the onboarding spine needs from the world, injectable so tests can drive every branch.
  *
@@ -142,6 +144,8 @@ export function defaultDeps(request: Request, workspaceId: string): SpineDeps {
       },
     },
     importMusic: async (source, onProgress, signal) => {
+      // cloud.resilient_import: the journalled runner every import surface shares
+      if (flagOn('cloud.resilient_import')) return importRunnerFor({ request, openStore: () => MediaStore.open(workspaceId), workspaceId })(source, onProgress, signal);
       const store = await MediaStore.open(workspaceId);
       return runImport({ source, request, store, deviceId: browserProfileId(storage, workspaceId), onProgress, signal });
     },

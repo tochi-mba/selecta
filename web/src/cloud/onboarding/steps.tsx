@@ -3,7 +3,10 @@ import { playbackStatusText } from '../../copy';
 import type { ImportSource } from '../../media';
 import { Icon } from '../../ui/Icon';
 import { Meter } from '../../ui/Meter';
+import { useFlag } from '../../flags';
 import type { ImportSnapshot } from '../importSession';
+import { carryOnNow } from '../importResume';
+import { CancelImportButton, checkedOf, ImportProgressLine, ResumeOfferNotice } from '../ImportStatus';
 import type { AudioSession, SpineDeps, WakeSentinel } from './deps';
 import { forkToController, ImportTally, OutputRoute, settle, skipPlayback, SpineState } from './state';
 
@@ -27,7 +30,7 @@ function SkipButton({ children, onClick }: { children: string; onClick: () => vo
 
 /* ---------- connect ---------- */
 
-export function ConnectStep({ state, onChange, deps, onPick }: StepProps & { onPick: (source: ImportSource) => void }) {
+export function ConnectStep({ state, onChange, deps, onPick, workspaceId }: StepProps & { onPick: (source: ImportSource) => void; workspaceId?: string }) {
   const id = useId();
   const picker = deps.pickers.dirPicker();
   const folderInput = deps.pickers.directoryInput();
@@ -49,6 +52,8 @@ export function ConnectStep({ state, onChange, deps, onPick }: StepProps & { onP
   return (
     <>
       <p>Choose the music you want to mix. It stays on this device: SelectaDJ reads it here and keeps only its details, like titles and lengths, in your account.</p>
+      {/* cloud.resilient_import: an interrupted import, with its one next step */}
+      {workspaceId && <ResumeOfferNotice workspaceId={workspaceId} />}
       <div className="cloud-actions">
         <label className="cloud-spine-pick primary" htmlFor={`${id}-files`}>
           <Icon name="music" size="toolbar" /> Choose music files
@@ -86,6 +91,43 @@ export type VerifyProps = StepProps & {
 
 /** Never blocking: while the import runs, the member sees honest counts and may carry on. */
 export function VerifyStep({ state, onChange, live, earlyContinue, onStop, onContinueEarly }: VerifyProps) {
+  const resilient = useFlag('cloud.resilient_import');
+  if (live.phase === 'running' && resilient) {
+    const known = typeof live.total === 'number';
+    const checked = checkedOf(live);
+    return (
+      <>
+        <p>SelectaDJ is reading each song on this device to recognise it by its contents. Your files are not changed or moved. If this tab closes, the import carries on from where it got to next time.</p>
+        <Meter
+          className="cloud-spine-progress"
+          label="Checking your music"
+          showLabel={false}
+          value={known ? checked : undefined}
+          max={known ? Math.max(live.total ?? 0, 1) : undefined}
+          valueText={known ? `${checked} of ${live.total} files` : undefined}
+        />
+        <ImportProgressLine live={live} className="cloud-actions" />
+        {live.current && !live.elsewhere && <p className="cloud-hint" dir="auto">Now: {live.current}</p>}
+        <div className="cloud-actions">
+          {earlyContinue && <button type="button" className="primary" onClick={onContinueEarly}>Continue while it finishes</button>}
+          <CancelImportButton label="Stop here" />
+        </div>
+      </>
+    );
+  }
+  if (live.phase === 'failed' && resilient) {
+    return (
+      <>
+        <p className="cloud-inline-error" role="alert">{live.error ?? 'The import stopped part way. Everything already checked is kept, and it carries on from there.'}</p>
+        <div className="cloud-actions">
+          {/* a remembered folder carries on at once (connect then shows its progress); picked files
+              are asked for again on connect, where the offer says why */}
+          <button type="button" className="primary" onClick={() => { carryOnNow(); onChange({ ...state, step: 'connect' }); }}>Try again</button>
+          <SkipButton onClick={() => onChange(settle(state, 'verify', 'skipped'))}>Carry on without it</SkipButton>
+        </div>
+      </>
+    );
+  }
   if (live.phase === 'running') {
     const known = typeof live.total === 'number';
     return (
