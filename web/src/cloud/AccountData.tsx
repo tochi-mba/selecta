@@ -34,7 +34,7 @@ export function settingsWords(features: Record<string, boolean> = {}) {
   return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0];
 }
 
-export function AccountData({ token, workspaceId, features }: { token: () => Promise<string>; workspaceId: string; features?: Record<string, boolean> }) {
+export function AccountData({ token, workspaceId, features, withAudio = true }: { token: () => Promise<string>; workspaceId: string; features?: Record<string, boolean>; withAudio?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [problem, setProblem] = useState('');
@@ -50,7 +50,7 @@ export function AccountData({ token, workspaceId, features }: { token: () => Pro
     <section className="cloud-card" aria-labelledby="cloud-data-title">
       <p className="cloud-eyebrow">Your data</p>
       <h2 id="cloud-data-title">Download a copy</h2>
-      <p>One ZIP file with your original audio, your settings ({settingsWords(features)}) as settings.json, and what Cloud keeps about your mixes as mixes.json. Mix revisions themselves aren’t stored in Cloud yet.</p>
+      <p>{withAudio ? <>One ZIP file with your original audio, your settings ({settingsWords(features)}) as settings.json, and what Cloud keeps about your mixes as mixes.json.</> : <>One ZIP file with your settings ({settingsWords(features)}) as settings.json and what Cloud keeps about your mixes as mixes.json. Your music files stay on your devices, so they are not in it.</>} Mix revisions themselves aren’t stored in Cloud yet.</p>
       <button className="primary" disabled={busy} onClick={() => void start()} aria-busy={busy || undefined}>{busy ? 'Preparing export…' : 'Download my data'}</button>
       {notice && <p role="status">{notice}</p>}
       {problem && <p className="cloud-inline-error" role="alert">{problem}</p>}

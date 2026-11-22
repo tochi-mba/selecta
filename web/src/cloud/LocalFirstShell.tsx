@@ -278,7 +278,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   useEffect(() => {
     setJobsSource(false);
     setFlags({ ...NOT_IN_THE_BROWSER });
-    return () => { setJobsSource(true); setFlags(null); };
+    // Cloud has no jobs server at all, so the source stays off when this shell unmounts.
+    return () => { setFlags(null); };
   }, []);
 
   const { player, refusal, device: playback, seams: scheduled, prefetch } = useLocalFirstPlayer({
