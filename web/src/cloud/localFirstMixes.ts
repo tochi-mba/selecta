@@ -38,6 +38,17 @@ export function pickCard(songs: readonly PlayableSong[]): VibeCard {
   };
 }
 
+/** A saved browser mix's own name, from its first and last songs, so My Mixes never lists the
+ * same title twice for different mixes: "Ocean to Counting the Days". */
+export function mixNameFor(songs: readonly PlayableSong[], ids: readonly number[]): string {
+  const title = (id: number | undefined) => songs.find((song) => song.id === id)?.title.trim() ?? '';
+  const first = title(ids[0]);
+  const last = title(ids[ids.length - 1]);
+  if (!first || !last) return PICK_NAME;
+  const name = first === last ? first : `${first} to ${last}`;
+  return name.length > 80 ? `${name.slice(0, 79).trimEnd()}…` : name;
+}
+
 /** Which songs a browser mix plays, in order: `start` first, the chosen ending last. */
 export function chooseSongs(songs: readonly PlayableSong[], count: number, { start, end }: { start?: number | null; end?: number | null } = {}): number[] {
   const playable = songs.filter((song) => song.playable);
@@ -78,7 +89,7 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     if (ids.length < BROWSER_MIX_NEEDS) {
       throw refuse(`A mix needs at least ${BROWSER_MIX_NEEDS} songs you can play on this device. Connect more music first.`, 'not_enough_songs');
     }
-    const recipe = await store.create(PICK_NAME, ids);
+    const recipe = await store.create(mixNameFor(all, ids), ids);
     // Save draft keeps it in My Mixes without touching what's playing, as local mode's does
     if (asDraft) return { id: 0, mix_id: recipe.mix_id, name: recipe.name, count: ids.length };
     store.setCurrent(recipe.mix_id);

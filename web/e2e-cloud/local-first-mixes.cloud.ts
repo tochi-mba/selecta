@@ -49,7 +49,8 @@ test('a new member makes a mix from the songs on this device, and it is still th
   // a reload keeps the current mix: My Mixes reads it back from the recipe store
   await page.goto('/mixes/mine');
   await expect(page.getByRole('heading', { name: 'My Mixes' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Your songs, in your browser' })).toBeVisible();
+  // named after its own songs, so two mixes never share a title
+  await expect(page.getByRole('heading', { name: 'Bravo here to Alpha here' })).toBeVisible();
   await expect(page.getByText(/^2 songs, about/)).toBeVisible();
   // and Listen plays it in the order the recipe keeps: the ending chosen in MixSetup last
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Listen', exact: true }).click();
