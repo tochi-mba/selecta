@@ -405,9 +405,11 @@ export function withOutbox(server: RecipeStore, workspaceId: string): RecipeStor
         await box.keepList(workspaceId, listed);
         if (ops.length) void flush();
       } catch (problem) {
-        const cached = unreachable(problem) ? await box.list(workspaceId) : null;
-        if (!cached) throw problem;
-        listed = cached;
+        const away = unreachable(problem);
+        const cached = away ? await box.list(workspaceId) : null;
+        // no list kept yet, but changes made here: show those rather than an error
+        if (!cached && !(away && ops.length)) throw problem;
+        listed = cached ?? [];
       }
       const shown = await Promise.all(listed.map(async (summary) => {
         if (!waiting.has(summary.mix_id)) return summary;

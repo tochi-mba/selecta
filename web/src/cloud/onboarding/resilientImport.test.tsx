@@ -16,6 +16,8 @@ function verify(snapshot: ImportSnapshot, onChange = vi.fn()) {
       state={{ ...FRESH, step: 'verify' }}
       onChange={onChange}
       deps={{} as never}
+      session={null as never}
+      openSession={vi.fn() as never}
       live={snapshot}
       earlyContinue
       onStop={vi.fn()}

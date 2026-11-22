@@ -100,12 +100,12 @@ describe('playing through a dropped connection (cloud.offline_playback)', () => 
 
   it('another device took over meanwhile: stops here on return and says so', async () => {
     const sound = speaker();
-    sound.position.mockReturnValue(null);
+    vi.mocked(sound.position).mockReturnValue(null);
     const { api, setDown } = harness({ reconnect: () => ({ action: 'stop_moved', session: session({ active_device_id: 'd2' }), message: null, moved_to_name: 'Tablet' }) });
     const hook = renderHook(() => usePlaybackDevice({ api, workspaceId: 'ws-off-2', speaker: sound }));
     try {
       await waitFor(() => expect(sound.start).toHaveBeenCalledTimes(1));
-      sound.position.mockReturnValue(null);
+      vi.mocked(sound.position).mockReturnValue(null);
       setDown(true);
       act(() => reportOffline());
       await waitFor(() => expect(hook.result.current.offline).toBe(true), { timeout: 3_000 });

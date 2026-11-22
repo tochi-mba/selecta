@@ -106,7 +106,7 @@ describe('runImport with a journal', () => {
       return inner(path, init);
     }) as Request;
     const store = await MediaStore.open('ws-journal-1');
-    const summary = await runImport({ source: files('a.mp3', 'b.mp3'), request, store, journal, readTags: countingTags().readTags, reportDevice: () => 'dev-1' });
+    const summary = await runImport({ source: files('a.mp3', 'b.mp3'), request, store, journal, readTags: countingTags().readTags, deviceId: 'dev-1', reportDevice: () => 'dev-1' });
     expect(summary).toMatchObject({ imported: 2, failed: 0, cancelled: false });
     expect(seenAtSend[0]).toBeGreaterThanOrEqual(1);
     expect(songsPosts(calls).length).toBeGreaterThan(0);
@@ -126,7 +126,7 @@ describe('runImport with a journal', () => {
     const store = await MediaStore.open('ws-journal-2');
     const summary = await runImport({
       source: files('a.mp3', 'b.mp3', 'c.mp3'), request, store, journal, retry: eagerRetry,
-      readTags: countingTags().readTags, reportDevice: () => 'dev-1', onProgress: (event) => events.push(event),
+      readTags: countingTags().readTags, deviceId: 'dev-1', reportDevice: () => 'dev-1', onProgress: (event) => events.push(event),
     });
     expect(summary).toMatchObject({ imported: 3, failed: 0 });
     expect(songsPosts(calls).length).toBeGreaterThan(0);
@@ -144,14 +144,14 @@ describe('runImport with a journal', () => {
     }) as Request;
     const store = await MediaStore.open('ws-journal-3');
     const first = countingTags();
-    await expect(runImport({ source: picked, request: refusing, store, journal, readTags: first.readTags, reportDevice: () => 'dev-1' })).rejects.toMatchObject({ status: 422 });
+    await expect(runImport({ source: picked, request: refusing, store, journal, readTags: first.readTags, deviceId: 'dev-1', reportDevice: () => 'dev-1' })).rejects.toMatchObject({ status: 422 });
     expect(first.read.sort()).toEqual(['a.mp3', 'b.mp3']);
     expect(journal.unsent().map((row) => row.state)).toEqual(['fingerprinted', 'fingerprinted']);
 
     const second = countingTags();
     const { request, calls } = captureRequest();
     const events: ImportEvent[] = [];
-    const summary = await runImport({ source: picked, request, store, journal, readTags: second.readTags, reportDevice: () => 'dev-1', onProgress: (event) => events.push(event) });
+    const summary = await runImport({ source: picked, request, store, journal, readTags: second.readTags, deviceId: 'dev-1', reportDevice: () => 'dev-1', onProgress: (event) => events.push(event) });
     expect(summary.imported).toBe(2);
     expect(second.read).toEqual([]);
     expect(events.filter((event) => event.kind === 'checked' && event.resumed)).toHaveLength(2);
@@ -163,12 +163,12 @@ describe('runImport with a journal', () => {
     const store = await MediaStore.open('ws-journal-4');
     const handles = [fakeHandle(files('a.mp3')[0]), fakeHandle(files('b.mp3')[0])];
     const folder = fakeDirectory('Music', [fakeDirectory('Set', handles)]);
-    await runImport({ source: folder, request: captureRequest().request, store, journal, readTags: countingTags().readTags, reportDevice: () => 'dev-1' });
+    await runImport({ source: folder, request: captureRequest().request, store, journal, readTags: countingTags().readTags, deviceId: 'dev-1', reportDevice: () => 'dev-1' });
     expect(journal.get(fileKey('Set/a.mp3', (await handles[0].getFile()).size, 1_000))).toMatchObject({ state: 'saved' });
 
     const again = countingTags();
     const { request, calls } = captureRequest();
-    const summary = await runImport({ source: folder, request, store, journal, readTags: again.readTags, reportDevice: () => 'dev-1' });
+    const summary = await runImport({ source: folder, request, store, journal, readTags: again.readTags, deviceId: 'dev-1', reportDevice: () => 'dev-1' });
     expect(again.read).toEqual([]);
     expect(songsPosts(calls)).toHaveLength(0);
     expect(summary.imported).toBe(2);
@@ -177,7 +177,7 @@ describe('runImport with a journal', () => {
     const changed = bytesFile('a longer set of bytes', 'a.mp3');
     Object.defineProperty(changed, 'lastModified', { value: 1_000 });
     const third = countingTags();
-    await runImport({ source: fakeDirectory('Music', [fakeDirectory('Set', [fakeHandle(changed)])]), request: captureRequest().request, store, journal, readTags: third.readTags, reportDevice: () => 'dev-1' });
+    await runImport({ source: fakeDirectory('Music', [fakeDirectory('Set', [fakeHandle(changed)])]), request: captureRequest().request, store, journal, readTags: third.readTags, deviceId: 'dev-1', reportDevice: () => 'dev-1' });
     expect(third.read).toEqual(['a.mp3']);
   });
 
@@ -189,11 +189,11 @@ describe('runImport with a journal', () => {
       return inner(path, init);
     }) as Request;
     const store = await MediaStore.open('ws-journal-5');
-    await expect(runImport({ source: files('a.mp3'), request, store, journal, readTags: countingTags().readTags, reportDevice: () => 'dev-1' }))
+    await expect(runImport({ source: files('a.mp3'), request, store, journal, readTags: countingTags().readTags, deviceId: 'dev-1', reportDevice: () => 'dev-1' }))
       .resolves.toMatchObject({ imported: 1, failed: 0 });
 
     const quiet = captureRequest();
-    await runImport({ source: files('b.mp3'), request: quiet.request, store, journal: ImportJournal.inMemory('ws-1'), readTags: countingTags().readTags, reportDevice: () => null });
+    await runImport({ source: files('b.mp3'), request: quiet.request, store, journal: ImportJournal.inMemory('ws-1'), readTags: countingTags().readTags, deviceId: 'dev-1', reportDevice: () => null });
     expect(quiet.calls.some((call) => call.path === '/api/local-media/availability')).toBe(false);
     expect(calls.length).toBeGreaterThan(0);
   });
@@ -209,7 +209,7 @@ describe('runImport with a journal', () => {
       return {};
     }) as Request;
     const store = await MediaStore.open('ws-journal-6');
-    const summary = await runImport({ source: files('a.mp3', 'b.mp3'), request, store, journal, signal: controller.signal, readTags: countingTags().readTags, reportDevice: () => 'dev-1' });
+    const summary = await runImport({ source: files('a.mp3', 'b.mp3'), request, store, journal, signal: controller.signal, readTags: countingTags().readTags, deviceId: 'dev-1', reportDevice: () => 'dev-1' });
     expect(summary.cancelled).toBe(true);
     expect(journal.size).toBeGreaterThan(0);
     expect(journal.unsent().every((row) => row.state === 'fingerprinted')).toBe(true);
@@ -226,7 +226,7 @@ describe('runImport with a journal', () => {
     }) as Request;
     const events: ImportEvent[] = [];
     const store = await MediaStore.open('ws-journal-7');
-    const running = runImport({ source: files('a.mp3', 'b.mp3', 'c.mp3'), request, store, journal, batchSize: 1, readTags: countingTags().readTags, reportDevice: () => 'dev-1', onProgress: (event) => events.push(event) });
+    const running = runImport({ source: files('a.mp3', 'b.mp3', 'c.mp3'), request, store, journal, batchSize: 1, readTags: countingTags().readTags, deviceId: 'dev-1', reportDevice: () => 'dev-1', onProgress: (event) => events.push(event) });
     await vi.waitFor(() => expect(events.some((event) => event.kind === 'read')).toBe(true));
     expect(events.filter((event) => event.kind === 'checked')).toHaveLength(3);
     expect(journal.size).toBe(3);
