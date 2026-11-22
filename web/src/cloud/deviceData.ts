@@ -1,5 +1,6 @@
 import { cacheClearAll, deleteDatabase, forgetFolder, MEDIA_DB_PREFIX, MediaStore } from '../media';
 import { clearImportMarker } from './importSession';
+import { forgetCached } from './offlineCache';
 
 // What this browser keeps for an account, and how it is let go (ADR-0469).
 //
@@ -28,6 +29,8 @@ export async function forgetWorkspaceOnDevice(workspaceId: string): Promise<void
   }
   await forgetFolder(workspaceId);
   await MediaStore.forget(workspaceId);
+  // the kept catalogue and account snapshot for an offline open (cloud.offline_shell)
+  await forgetCached(workspaceId);
 }
 
 /** The business venue offline cache's database (business/offline/zoneCache.ts). */
