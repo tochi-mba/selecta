@@ -1,7 +1,7 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MixData, Request, Status } from '../api';
 import { setFlags, useFlags } from '../flags';
-import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, reportDeviceAvailability, deviceAvailabilitySnapshot, runImport, type ImportEvent, type ImportSource, type LapsedWhy, type MediaResolver } from '../media';
+import { findLapsed, makeCoexistingResolver, makeResolver, makeSourceBook, MediaStore, reportDeviceAvailability, deviceAvailabilitySnapshot, type LapsedWhy, type MediaResolver } from '../media';
 import type { NowState } from '../player';
 import { BytesContext, noBytesHere, RequestContext } from '../requestContext';
 import { navigate, parseRoute, useLocationText } from '../router';
@@ -28,7 +28,7 @@ import { Now } from '../views/Now';
 import { RequestsContext, RequestsPanel, useRequests, waitingRequestCount } from '../views/Requests';
 import type { View, ViewProps } from '../views/shared';
 import type { Account, Api } from './api';
-import { ConnectMusic, mediaDeviceId, registeredDeviceId } from './ConnectMusic';
+import { ConnectMusic, registeredDeviceId } from './ConnectMusic';
 import { hostedResolver, matchAsset, readHostedAssets, type HostedAsset } from './hostedMedia';
 import { isHostedAccount } from './localFirstGate';
 import { CloudWorkspace } from './CloudWorkspace';
@@ -47,6 +47,7 @@ import { browserStorage, onboardingFinished, recordImportOutcome } from './onboa
 import { ImportChip } from './ImportChip';
 import { StorageCard } from './StorageCard';
 import { bindImportWorkspace, endImportSession, useImportSession } from './importSession';
+import { importRunnerFor, useImportCarryOn } from './importResume';
 import { useServerFreeControls } from './serverFreeControls';
 import { BrowserHarmonicMatches } from './BrowserHarmonicMatches';
 import { profilesBySong, startTonalProfiler, tonalStore } from './tonalProfiles';
@@ -463,10 +464,12 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   // The spine must import into the same index instance this shell reads (memory mirror and
   // session files are per-instance), or freshly connected songs read as on another device
   // until the page reloads.
+  // cloud.resilient_import: the runner journals, retries and skips what an interrupted run did
+  // (off, it is the plain import); the shell also carries an interrupted import on by itself
   const spineDeps = useMemo(() => ({
-    importMusic: async (source: ImportSource, onProgress: (event: ImportEvent) => void, signal: AbortSignal) =>
-      runImport({ source, request: media, store: await openStore(), deviceId: mediaDeviceId(workspaceId), onProgress, signal }),
+    importMusic: importRunnerFor({ request: media, openStore, workspaceId }),
   }), [media, openStore, workspaceId]);
+  useImportCarryOn({ request: media, openStore, workspaceId });
   const connect = <ConnectMusic request={media} workspaceId={workspaceId} openStore={openStore} onAvailabilityChanged={() => sweepLapsed(true)} />;
 
   const page = (): ReactNode => {

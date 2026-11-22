@@ -6,6 +6,10 @@ import type { DirectoryHandleLike, ImportEvent, ImportSource, ImportSummary, Lap
 import { importSummaryWords, useImportAnnouncer } from './importAnnouncer';
 import { countOf } from '../ui/format';
 import { cancelImportSession, clearImportMarker, readImportMarker, startImportSession, useImportSession, type ImportRunner } from './importSession';
+import { preloadImportCode } from '../media/importer';
+import { deleteImportJournal } from '../media/importJournal';
+import { carryOnNow, dropResumeOffer, startImport } from './importResume';
+import { CancelImportButton, checkedOf, formatCount, ImportProgressLine, ResumeOfferNotice } from './ImportStatus';
 
 /** Connect Music in the local-first Library (ADR-0458 import, ADR-0463 surfaces).
  *
@@ -77,6 +81,7 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
   const live = useImportSession(workspaceId);
   useImportAnnouncer();
   const progressive = useFlag('cloud.progressive_import');
+  const resilient = useFlag('cloud.resilient_import');
   const [problem, setProblem] = useState('');
   const [lapsed, setLapsed] = useState<LapsedItem[]>([]);
   const [regranted, setRegranted] = useState<Record<number, string>>({});
@@ -85,7 +90,8 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
   const folderInput = directoryInput();
   // the resume offer: an import that stopped part way last visit, and the folder it read if the
   // browser kept a handle to it
-  const [marker, setMarker] = useState(() => (progressive ? readImportMarker(workspaceId) : null));
+  // (with `cloud.resilient_import` the shell's carry-on check owns this offer instead)
+  const [marker, setMarker] = useState(() => (progressive && !flagOn('cloud.resilient_import') ? readImportMarker(workspaceId) : null));
   // undefined until the folder store has answered, so the offer never flickers between its forms
   const [recalled, setRecalled] = useState<StoredFolderHandle | null | undefined>(undefined);
   const [refused, setRefused] = useState(false);
@@ -101,6 +107,8 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
     } catch { setLapsed([]); }
   }, [openStore]);
   useEffect(() => { void checkLapsed(); }, [checkLapsed]);
+  // load the fingerprinting code now, so going offline later never fails every file
+  useEffect(() => { if (flagOn('cloud.resilient_import')) preloadImportCode(); }, []);
   // With `cloud.progressive_import` off, leaving this panel stops the import as it always did;
   // on, the import belongs to the session and keeps going.
   useEffect(() => () => { if (!flagOn('cloud.progressive_import')) cancelImportSession(); }, []);
@@ -118,6 +126,11 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
 
   const start = (source: ImportSource, folder?: string) => {
     setProblem(''); setRefused(false); setMarker(null);
+    if (flagOn('cloud.resilient_import')) {
+      // the same files picked again carry on the interrupted import: done files are skipped
+      startImport({ request, openStore, workspaceId, importer }, source, { folder, kind: folder ? 'folder' : 'files', resume: readImportMarker(workspaceId) });
+      return;
+    }
     const run: ImportRunner = async (given, onProgress, signal) => importer({
       source: given, request, store: await openStore(), deviceId: mediaDeviceId(workspaceId), onProgress, signal,
     });
@@ -131,7 +144,9 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
       start(handle, handle.name);
     } catch (error) {
       // closing the picker is a choice, not a failure
-      if ((error as Error).name !== 'AbortError') setProblem((error as Error).message);
+      if ((error as Error).name !== 'AbortError') {
+        setProblem(flagOn('cloud.resilient_import') ? 'SelectaDJ could not open that folder. Try again, or choose songs instead.' : (error as Error).message);
+      }
     }
   };
   const chosen = (event: ChangeEvent<HTMLInputElement>) => {
@@ -147,6 +162,7 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
   const forget = () => {
     void forgetFolder(workspaceId);
     clearImportMarker(workspaceId);
+    if (flagOn('cloud.resilient_import')) { void deleteImportJournal(workspaceId); dropResumeOffer(); }
     setMarker(null); setRecalled(null); setRefused(false);
   };
 
@@ -164,7 +180,7 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
   };
 
   const running = live.phase === 'running';
-  const checked = live.registered + live.failures.length;
+  const checked = checkedOf(live);
   const failures = live.failures;
   const shownProblem = problem || (live.phase === 'failed' ? live.error || 'The import stopped. Nothing after the last connected song was changed.' : '');
   const offer = progressive && live.phase === 'idle' && marker && recalled !== undefined;
@@ -173,6 +189,7 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
     <section className="panel stack connect-music" aria-labelledby="connect-music-title">
       <h2 id="connect-music-title">Connect music</h2>
       <p className="hint">Your music stays on this device. SelectaDJ keeps only each song’s title, artist and a fingerprint, so your library and mixes work on your other devices.</p>
+      {resilient && !running && <ResumeOfferNotice workspaceId={workspaceId} onChoose={() => (picker.supported ? void chooseFolder() : (folderInput.supported ? folderPick : songsPick).current?.click())} onForget={forget} />}
       {offer && recalled && !refused && (
         <div className="stack" role="note">
           <p>{`An import of ${folderName} was interrupted. Anything already checked is in your library.`}</p>
@@ -201,7 +218,17 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
       )}
       {!picker.supported && <p className="hint">{picker.reason}</p>}
       {degraded && <p className="hint" role="note">This browser is not keeping SelectaDJ’s list of connected files, so you will need to connect them again next visit.</p>}
-      {running && (
+      {running && resilient && (
+        <div className="stack">
+          <ImportProgressLine live={live} />
+          {typeof live.total === 'number'
+            ? <progress max={Math.max(live.total, 1)} value={checked} aria-label="Files checked" />
+            : <progress aria-label="Files checked" />}
+          {!live.elsewhere && !live.read && <p className="hint">If this tab closes, the import carries on from {formatCount(checked)} next time you open SelectaDJ.</p>}
+          <CancelImportButton />
+        </div>
+      )}
+      {running && !resilient && (
         <div className="stack">
           <p><b>Connecting your music…</b> {checked} of {live.total ?? '…'} files checked so far.</p>
           {typeof live.total === 'number'
@@ -212,6 +239,7 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
       )}
       {(live.phase === 'finished' || live.phase === 'paused') && live.summary && <p>{summaryWords(live.summary)}</p>}
       {shownProblem && <p className="error" role="alert">{shownProblem}</p>}
+      {resilient && live.phase === 'failed' && <div className="row wrap"><button type="button" className="primary" onClick={carryOnNow}>Try again</button></div>}
       {failures.length > 0 && (
         <details open={failures.length <= 5}>
           <summary>{countOf(failures.length, 'file')} could not be connected</summary>

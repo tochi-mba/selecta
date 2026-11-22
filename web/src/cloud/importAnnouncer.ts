@@ -26,7 +26,12 @@ export function importSummaryWords(summary: ImportSummary): string {
  * `run` counts imports so a second import's "started" is news again. */
 export function milestoneOf(live: ImportSnapshot, run: number): Milestone | null {
   if (live.phase === 'running') {
-    const checked = live.registered + live.failures.length;
+    // `checked` is counted by the journalled import (cloud.resilient_import); else what landed
+    const checked = live.checked ?? live.registered + live.failures.length;
+    if (live.elsewhere) return { key: `${run}:elsewhere`, words: 'Another tab is importing your music. Progress shows here too.' };
+    if (live.waiting?.why === 'offline') return { key: `${run}:wait:offline`, words: 'You are offline. Checking your music carries on when the connection is back.' };
+    if (live.waiting?.why === 'server') return { key: `${run}:wait:server`, words: 'SelectaDJ’s service is not answering. The import keeps trying by itself.' };
+    if (live.waiting?.why === 'signin') return { key: `${run}:wait:signin`, words: 'Sign in again to carry on. Your import is kept.' };
     if (typeof live.total !== 'number' || live.total <= 0) return { key: `${run}:started`, words: 'Checking your music has started.' };
     const quarter = Math.min(3, Math.floor((checked / live.total) * 4));
     if (quarter === 0) return { key: `${run}:started`, words: 'Checking your music has started.' };
