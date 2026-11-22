@@ -99,6 +99,8 @@ class LocalIdentity:
             "iss": self.config.issuer,
             "sub": person.id,
             "aud": self.config.client_id,
+            # Real AuthKit session tokens name their application here, and the API checks it.
+            "client_id": self.config.client_id,
             "sid": session_id,
             "iat": now,
             "exp": now + TOKEN_SECONDS,
