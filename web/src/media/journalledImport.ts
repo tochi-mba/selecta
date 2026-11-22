@@ -257,6 +257,7 @@ export async function runJournalled(options: ImportOptions & { journal: ImportJo
         if (isAbort(error)) { summary.cancelled = true; break; }
         summary.failed += 1;
         emit({ kind: 'file', name: candidate.name, stage: 'failed', reason: 'SelectaDJ could not read this file. It stays where it is; nothing was changed.' });
+        emit({ kind: 'checked', name: candidate.name, resumed: false });
         continue;
       }
       const key = fileKey(candidate.path, file.size, file.lastModified);
@@ -285,6 +286,7 @@ export async function runJournalled(options: ImportOptions & { journal: ImportJo
         if (isAbort(error)) { summary.cancelled = true; break; }
         summary.failed += 1;
         emit({ kind: 'file', name: candidate.name, stage: 'failed', reason: 'SelectaDJ could not read this file. It stays where it is; nothing was changed.' });
+        emit({ kind: 'checked', name: candidate.name, resumed: false });
         continue;
       }
       // written down before any network call: an interruption from here on loses nothing
