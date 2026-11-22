@@ -13,6 +13,7 @@ import { isBusinessPath } from './cloudRoutes';
 // AuthKit's getAccessToken keeps its identity across renders, so the mock does too.
 const auth = vi.hoisted(() => ({ user: { id: 'user-1', email: 'listener@example.test', emailVerified: true } as unknown, token: async () => 'token' }));
 vi.mock('@workos-inc/authkit-react', () => ({
+  LoginRequiredError: class LoginRequiredError extends Error {},
   useAuth: () => ({ isLoading: false, user: auth.user, getAccessToken: auth.token, signIn: vi.fn(), signUp: vi.fn(), signOut: vi.fn() }),
 }));
 

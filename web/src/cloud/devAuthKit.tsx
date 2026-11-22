@@ -181,6 +181,11 @@ function signOut(options: { returnTo?: string } = {}) {
   }
 }
 
+/** Matches AuthKit's own export: a token was asked for while no one is signed in. */
+export class LoginRequiredError extends Error {
+  constructor() { super('No access token available'); }
+}
+
 export function AuthKitProvider({ clientId, children, onRedirectCallback }: Props) {
   const [session, setSession] = useState<Session | null>(active);
   const [isLoading, setLoading] = useState(true);

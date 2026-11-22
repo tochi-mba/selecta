@@ -5,12 +5,20 @@ import { cloudAccount } from '../test/cloudAccount';
 import type { Account } from './api';
 
 const SIGNED_IN = { id: 'user-1', email: 'listener@example.test', emailVerified: true };
-const auth = vi.hoisted(() => ({ user: null as unknown, signIn: vi.fn(), signOut: vi.fn() }));
+const auth = vi.hoisted(() => {
+  class LoginRequiredError extends Error {}
+  return { user: null as unknown, signIn: vi.fn(), signOut: vi.fn(), LoginRequiredError, noTokenFor: 0 };
+});
 vi.mock('@workos-inc/authkit-react', () => ({
+  LoginRequiredError: auth.LoginRequiredError,
   useAuth: () => ({
     isLoading: false,
     user: auth.user,
-    getAccessToken: async () => 'token',
+    // `noTokenFor` calls answer as AuthKit does mid-redirect: a user, but no token yet.
+    getAccessToken: async () => {
+      if (auth.noTokenFor > 0) { auth.noTokenFor -= 1; throw new auth.LoginRequiredError('No access token available'); }
+      return 'token';
+    },
     signIn: auth.signIn, signUp: vi.fn(), signOut: auth.signOut,
   }),
 }));
@@ -85,6 +93,15 @@ describe('the Cloud app', () => {
   it('says it is polling when the event stream is blocked', async () => {
     render(<CloudApp />);
     expect(await screen.findByText(/Live updates are paused on this network/)).toBeInTheDocument();
+  });
+
+  it('shows no error when AuthKit has a user but no token yet, as mid sign-in redirect', async () => {
+    auth.noTokenFor = 1;
+    render(<CloudApp />);
+    await waitFor(() => expect(auth.noTokenFor).toBe(0));
+    await new Promise((settle) => setTimeout(settle, 50));
+    expect(screen.queryByText('No access token available')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('confirms a return from Checkout from the server, not the address', async () => {

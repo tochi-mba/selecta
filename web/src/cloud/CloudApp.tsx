@@ -1,4 +1,4 @@
-import { useAuth } from '@workos-inc/authkit-react';
+import { LoginRequiredError, useAuth } from '@workos-inc/authkit-react';
 import { FormEvent, lazy, ReactNode, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { VenueSetup } from '../autopilot/VenueSetup';
 import { DevicesPanel } from '../devices/DevicesPanel';
@@ -175,6 +175,9 @@ export function CloudApp() {
       setNeedsOnboarding(false);
       setProblem(null);
     } catch (problem) {
+      // During the sign-in redirect AuthKit can report a user a moment before it holds a token.
+      // That is not an account problem: AuthKit's own state decides what shows next.
+      if (problem instanceof LoginRequiredError) return;
       if (problem instanceof CloudError && problem.status === 409 && problem.code === 'not_onboarded') {
         setNeedsOnboarding(true);
         setAccountFeatures(null);
