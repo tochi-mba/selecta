@@ -1,5 +1,6 @@
 import type { MixData, MixItem, Request, Status } from '../api';
 import { BROWSER_MOVE_WORDS, browserMovesOn, defaultBrowserMove, type BrowserMove } from './browserMoves';
+import { withOutbox, type KnownSong, type RecipeChange } from './outbox';
 
 /** The local-first recipe store (ADR-0458 portable recipes, BF-0462-05).
  *
@@ -33,7 +34,8 @@ export type Recipe = {
   songs: RecipeSong[];
   seams: RecipeSeam[];
 };
-export type RecipeSummary = { mix_id: string; name: string; revision: string; number: number; songs: number; updated_at: number };
+/** `pending`: made or changed in this browser while offline and not yet on the server (cloud.mix_outbox). */
+export type RecipeSummary = { mix_id: string; name: string; revision: string; number: number; songs: number; updated_at: number; pending?: boolean };
 
 /** Words for a seam the browser works out as it plays (ADR-0459): nothing is rendered ahead. */
 export const WORKED_OUT_LIVE = 'Worked out in your browser as the mix plays.';
@@ -56,21 +58,29 @@ export type RecipeStore = {
   setCurrent: (mixId: string | null) => void;
   steering: () => Status['steering'];
   setSteering: (next: Status['steering']) => void;
-  create: (name: string, songIds: number[]) => Promise<Recipe>;
+  /** `known` names the songs, so a mix made while offline can be shown before the server answers. */
+  create: (name: string, songIds: number[], known?: readonly KnownSong[]) => Promise<Recipe>;
   read: (mixId: string) => Promise<Recipe>;
   list: () => Promise<RecipeSummary[]>;
   /** A new revision of the recipe: the editor's writes, checked against `baseRevision`. */
-  edit: (mixId: string, baseRevision: string, change: { songIds?: number[]; name?: string; seamMoves?: Record<number, string | null> }) => Promise<Recipe>;
+  edit: (mixId: string, baseRevision: string, change: RecipeChange, known?: readonly KnownSong[]) => Promise<Recipe>;
   /** A saved copy under its own id, so "Save a copy" lands in My Mixes. */
   duplicate: (mixId: string, name?: string) => Promise<Recipe>;
   /** Delete a saved recipe and all its revisions. Music files are never touched. */
   remove: (mixId: string) => Promise<void>;
+  /** Send changes made while offline (cloud.mix_outbox); resolves once this attempt is over. */
+  flush?: () => Promise<void>;
 };
 
 export const DEFAULT_STEERING: Status['steering'] = { mix_language: 'any', stems: 'auto', energy_arc: null, target: null };
 
 /** The store for one workspace. `cloud` is the authenticated Cloud client (paths without /api). */
 export function recipeStore(cloud: Request, workspaceId: string): RecipeStore {
+  // cloud.mix_outbox: changes that can't reach the server wait in this browser (outbox.ts)
+  return withOutbox(serverRecipes(cloud, workspaceId), workspaceId);
+}
+
+function serverRecipes(cloud: Request, workspaceId: string): RecipeStore {
   return {
     current: () => read(pointerKey(workspaceId)),
     setCurrent: (mixId) => write(pointerKey(workspaceId), mixId),
