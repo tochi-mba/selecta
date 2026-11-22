@@ -136,7 +136,9 @@ def check_flip(
             f"no USERS or WORKSPACES grant with on=true exists for {HOSTED_MEDIA}: the"
             " grandfathered accounts (every account with a completed upload) have no grant"
         )
-    if not enabled or not _is_catch_all_off(enabled[-1]):
+    hosted = flags.registry().get(HOSTED_MEDIA)
+    closed_by_default = hosted is not None and not hosted.rules_default
+    if not closed_by_default and (not enabled or not _is_catch_all_off(enabled[-1])):
         refusals.append(
             f"the last enabled rule for {HOSTED_MEDIA} is not a catch-all off rule (a percentage"
             " rule at 0 percent with no segment conditions): unmatched accounts would keep"

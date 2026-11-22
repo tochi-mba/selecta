@@ -131,8 +131,18 @@ export function planName(account: Account) {
   return account.entitlement.plan_label ?? `${id[0]?.toUpperCase() ?? ''}${id.slice(1)}`;
 }
 
-export function isOverQuota(account: Account | null) {
+/** Whether this account holds hosted storage at all (ADR-0464, BF-0456-06): the hosted media
+ * grant, or bytes already stored. Browser-first accounts have none, so no storage amount, meter
+ * or quota warning is ever shown to them. */
+export function holdsHostedStorage(account: Account | null): boolean {
   if (!account) return false;
+  const mode = (account.usage as (Account['usage'] & { storage_mode?: string }) | undefined)?.storage_mode;
+  if (mode) return mode !== 'none';
+  return account.experience?.hosted !== false;
+}
+
+export function isOverQuota(account: Account | null) {
+  if (!account || !holdsHostedStorage(account)) return false;
   return (account.usage?.storage.state ?? account.entitlement.storage_state) === OVER_QUOTA;
 }
 

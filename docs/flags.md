@@ -221,7 +221,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `account.data_export` | **Account data export.** Download a portable copy of available account data and original files. **Core:** People must be able to take a copy of their personal data. |  |
 | `account.lucy_settings` | **Lucy settings in Cloud.** Choose whether to use Lucy, its phases and what it may share; see this month's Lucy turns. | `lucy` |
 | `cloud.signups` | **New accounts.** Allow new Cloud users to complete account onboarding. |  |
-| `cloud.hosted_media` | **Hosted media.** The umbrella grant for uploading and processing audio in Cloud (ADR-0456). The build ships on; per-account gating is a cutover allowlist rule followed by a catch-all off rule, since rules can never grant what the build denies (ADR-0414). |  |
+| `cloud.hosted_media` | **Hosted media.** The umbrella grant for uploading and processing audio in Cloud (ADR-0456). The build ships on so a rule can grant it, and with no matching rule it is off: browser-first is the default and hosted media is a staff grant (ADR-0455). |  |
 | `cloud.uploads` | **Cloud uploads.** Upload private audio files to a Cloud workspace. | `cloud.hosted_media` |
 | `cloud.stored_media` | **Stored media.** List, play, export and delete audio already stored in Cloud. Reads of stored media stay open without the hosted media grant, so nobody's library goes dark (ADR-0456). |  |
 | `cloud.local_first` | **Browser-first personal Cloud.** Selects the local-first navigation and browser-owned playback in personal Cloud; the legacy pages remain when off (ADR-0455). |  |

@@ -33,34 +33,37 @@ from selecta.storage import api as storage_api
 STRIPE_TEST_MODE_ENV = "SELECTA_DEV_STRIPE_TEST_MODE"
 
 HOSTED_DEV_ENV = "SELECTA_DEV_HOSTED"
-# The browser-first experience (ADR-0455): what personal Cloud becomes after the flip, so it is
-# what `dev.cmd cloud` shows. A developer's own SELECTA_FLAGS wins outright.
-BROWSER_FIRST_FLAGS = (
-    "+cloud.local_first +cloud.local_media +devices.browser_player"
-    " +cloud.browser_dsp +cloud.browser_moves +cloud.local_export"
-    " +cloud.progressive_import +cloud.hosted_shell"
-    " +cloud.content_cache"
+# The browser-first experience (ADR-0455) is the shipped default: these flags default on and
+# hosted media is a grant (`rules_default: false`). `SELECTA_DEV_HOSTED=1` turns them back off
+# and grants hosted media to every dev account, for working on the hosted pages.
+BROWSER_FIRST = (
+    "cloud.local_first", "cloud.local_media", "devices.browser_player", "cloud.browser_dsp",
+    "cloud.browser_moves", "cloud.local_export", "cloud.progressive_import",
+    "cloud.hosted_shell", "cloud.content_cache",
 )
+HOSTED_FLAGS = " ".join(f"-{flag}" for flag in BROWSER_FIRST)
+HOSTED_GRANT_NOTE = "dev: hosted media for every dev account"
 
 
 def browser_first_posture(engine) -> None:
-    """Make dev look like Cloud after the cutover (ADR-0456): the build runs the browser-first
-    flags, and the hosted catch-all off rule leaves hosted media admin-granted only, so a dev
-    account keeps playing its stored songs but is not offered uploads or a storage pitch.
-    `SELECTA_DEV_HOSTED=1` skips both and gives the hosted-by-default Cloud instead."""
+    """`dev.cmd cloud` shows what Cloud ships: nothing to set for browser-first. With
+    `SELECTA_DEV_HOSTED=1` the build drops the browser-first flags (a developer's own
+    SELECTA_FLAGS wins outright) and a 100 percent rule grants hosted media to everyone."""
     from selecta.flags import rules as flag_rules
-    from selecta.hosted_coexistence.grandfather import build_grandfather_rules
+    from selecta.flags.matching import Rule, RuleKind
     from selecta.persistence import transaction
 
-    if os.environ.get(HOSTED_DEV_ENV) == "1":
+    if os.environ.get(HOSTED_DEV_ENV) != "1":
         return
-    os.environ.setdefault("SELECTA_FLAGS", BROWSER_FIRST_FLAGS)
+    os.environ.setdefault("SELECTA_FLAGS", HOSTED_FLAGS)
     with transaction(engine) as conn:
         if not flag_rules.current_rules(conn, "cloud.hosted_media"):
+            grant = Rule(
+                RuleKind.PERCENTAGE, {"percent": 100, "salt": "dev", "note": HOSTED_GRANT_NOTE}
+            )
             flag_rules.save(
-                conn, "cloud.hosted_media", build_grandfather_rules(()),
-                author="dev.cmd cloud",
-                reason="dev default: hosted media is admin-granted only (ADR-0456)",
+                conn, "cloud.hosted_media", (grant,), author="dev.cmd cloud",
+                reason="SELECTA_DEV_HOSTED=1: hosted media for every dev account",
             )
 
 

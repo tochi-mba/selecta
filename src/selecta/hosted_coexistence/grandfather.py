@@ -173,6 +173,8 @@ def _rules_verdict(
         verdict = rule.matcher(flag, context, now)
         if verdict is not None:
             return verdict, f"rule {position} ({rule.kind})"
+    if not flag.rules_default:
+        return False, "no rule granted it"
     return True, "no rule matched"
 
 

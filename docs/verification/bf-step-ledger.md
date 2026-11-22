@@ -9,7 +9,7 @@ release truth lives in the [gate register](bf-gate-register.md) and the operatio
 
 ## Current step
 
-**Step 1 - dark.**
+**Default on (2026-11-22).** The owner chose to ship the browser-first flags default on before launch: there are no customer accounts, so nothing needs grandfathering and Steps 2 to 4 are skipped. Hosted media is a staff grant (`cloud.hosted_media`, `rules_default: false`). The ADR-0466 gates still apply to launch itself.
 
 ## The steps
 
