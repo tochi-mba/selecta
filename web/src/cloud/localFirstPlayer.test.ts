@@ -173,3 +173,19 @@ describe('planned transitions on the runtime (BF-0459-04)', () => {
     expect(elsewhere.seamAt).toBeNull();
   });
 });
+
+describe('playing offline (cloud.offline_playback)', () => {
+  it('a volume set here while offline wins over the session’s last word until it is sent', () => {
+    expect(nowStateFrom(facts({ view: view({}, { volume: 80 }), heldVolume: 30 }), SOUND).volume).toBeCloseTo(0.3);
+    expect(nowStateFrom(facts({ view: view({}, { volume: 80 }), heldVolume: 0 }), SOUND).muted).toBe(true);
+    expect(nowStateFrom(facts({ view: view({}, { volume: 80 }), heldVolume: null }), SOUND).volume).toBeCloseTo(0.8);
+  });
+
+  it('says why playing offline ended until the next press', () => {
+    const player = new LocalFirstPlayer(facts(), actions());
+    const heard: string[] = [];
+    player.onChange = (now) => heard.push(now.notice);
+    player.say('Another device took over while this one was offline, so playback stopped here.');
+    expect(heard.at(-1)).toBe('Another device took over while this one was offline, so playback stopped here.');
+  });
+});
