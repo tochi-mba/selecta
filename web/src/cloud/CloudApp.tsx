@@ -166,7 +166,10 @@ export function CloudApp() {
   }, []);
   const busy = (operation: Operation) => running.has(operation);
 
-  const refreshAccount = useCallback(async () => {
+  const [signInAgain, setSignInAgain] = useState(false);
+  const loginRetry = useRef(0);
+  useEffect(() => () => window.clearTimeout(loginRetry.current), []);
+  const refreshAccount = useCallback(async (): Promise<void> => {
     if (!user) return;
     try {
       const next = await api<Account>('/account');
@@ -175,10 +178,18 @@ export function CloudApp() {
       setAccount(next);
       setNeedsOnboarding(false);
       setProblem(null);
+      setSignInAgain(false);
+      loginRetry.current = 0;
     } catch (problem) {
       // During the sign-in redirect AuthKit can report a user a moment before it holds a token.
       // That is not an account problem: AuthKit's own state decides what shows next.
-      if (problem instanceof LoginRequiredError) return;
+      // If it still has no token a moment later, the sign-in has lapsed: say so and offer one
+      // way back. Nothing on this device is cleared (songs, mixes, the import journal).
+      if (problem instanceof LoginRequiredError) {
+        if (loginRetry.current) { setSignInAgain(true); return; }
+        loginRetry.current = window.setTimeout(() => void refreshAccount(), 1500);
+        return;
+      }
       if (problem instanceof CloudError && problem.status === 409 && problem.code === 'not_onboarded') {
         setNeedsOnboarding(true);
         setAccountFeatures(null);
@@ -356,6 +367,7 @@ export function CloudApp() {
 
   if (isLoading) return <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p>Checking your sign-in…</p></main>;
   if (!user) return <main className="cloud-welcome"><BrandMark className="cloud-mark" /><p className="cloud-eyebrow cloud-caps">SelectaDJ Cloud</p><h1>Your music, ready to move.</h1><p>Build your library, shape the set and keep the transitions ready on every device.</p>{signInProblem && <p className="cloud-feedback error" role="alert">{signInProblem}</p>}<div className="cloud-actions"><button className="primary" onClick={() => void signUp()}>Create your account</button><button onClick={startSignIn}>Sign in</button></div><small>Your music stays private to your workspace.</small><footer className="cloud-footer"><CloudCredit /></footer></main>;
+  if (signInAgain) return <main className="cloud-runtime-message" role="alert"><BrandMark className="cloud-mark" /><h1>Sign in again to carry on</h1><p>Your sign-in ended. Everything on this device is kept, including your songs, your mixes and any import in progress, which carries on after you sign in.</p><button className="primary" onClick={startSignIn}>Sign in again</button></main>;
   if (blocked) return <BlockedAccount code={blocked} distinct={exact} onSignOut={() => void restartSignIn()} />;
   if (!user.emailVerified) return <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><h1>Verify your email</h1><p>Open the verification email for {user.email}, then refresh this page.</p><button onClick={() => window.location.reload()}>I’ve verified my email</button><button onClick={() => signOut({ returnTo: window.location.origin })}>Sign out</button></main>;
   if (needsOnboarding) return <main className="cloud-onboarding"><BrandMark className="cloud-mark" /><p className="cloud-eyebrow cloud-caps">One quick check</p><h1>Set up your SelectaDJ workspace</h1><p>Your music stays on your own devices. SelectaDJ plans the mixes and plays them here.</p><form onSubmit={(event) => void completeOnboarding(event)}><label className="cloud-check"><input type="checkbox" checked={ageConfirmed} onChange={(event) => setAgeConfirmed(event.target.checked)} /> I confirm that I’m at least 13 years old.</label><button className="primary" disabled={!ageConfirmed || busy('onboarding')} aria-busy={busy('onboarding') || undefined}>Create workspace</button></form><Feedback error={error} notice="" /></main>;
