@@ -15,12 +15,14 @@ const BACK_MS = 4_000;
  * - just back: "Back online. Catching up..." for a moment.
  * `cachedAt` adds "Showing what this device knows. Last checked 14:05." while the Library is
  * served from this device. Nothing shows while everything is fine. */
-export function ConnectionBanner({ plays = false, cachedAt }: {
+export function ConnectionBanner({ plays = false, cachedAt, signedOutOffline = false }: {
   /** The music plays from this device, so the banner can promise it keeps playing. */
   plays?: boolean;
   /** When the library shown was last checked with the server, while it is served from this
    * device; null when it never has been here; undefined when it comes from the server. */
   cachedAt?: number | null;
+  /** Opened offline before the sign-in could be renewed (CloudApp's offline mode). */
+  signedOutOffline?: boolean;
 }) {
   const state = useConnection();
   const [now, setNow] = useState(() => Date.now());
@@ -34,13 +36,16 @@ export function ConnectionBanner({ plays = false, cachedAt }: {
     return () => window.clearInterval(timer);
   }, [ticking, state.backAt, state.nextTryAt]);
 
-  const kept = cachedAt !== undefined
+  const kept = cachedAt !== undefined && !signedOutOffline
     ? cachedAt === null ? 'Showing what this device knows.' : `Showing what this device knows. Last checked ${checkedAt(cachedAt)}.`
     : null;
 
   let words: string | null = null;
   let action: { label: string; run: () => void; busy: boolean } | null = null;
-  if (state.status === 'offline') {
+  if (signedOutOffline && state.status !== 'online') {
+    words = 'You’re offline. Showing what this device knows; you’ll be signed in again when the connection is back.';
+    if (state.status === 'unreachable') action = { label: 'Try now', run: () => void probeNow(), busy: state.reconnecting };
+  } else if (state.status === 'offline') {
     words = plays
       ? 'You’re offline. SelectaDJ keeps playing and will carry on when the connection is back.'
       : 'You’re offline. SelectaDJ will carry on when the connection is back.';

@@ -42,7 +42,7 @@ import { forgetWorkspaceOnDevice } from './deviceData';
 import type { HostedView } from './HostedShell';
 import { onReconnect, reportOk, useConnection } from './connection';
 import { ConnectionBanner } from './ConnectionBanner';
-import { rememberAccount, rememberedAccount } from './offlineCache';
+import { forgetAccountSnapshot, rememberAccount, rememberedAccount } from './offlineCache';
 import { syncOfflineShell } from './offlineShell';
 import { canHeal, classify, resilient } from './resilientRequest';
 import './cloud.css';
@@ -116,7 +116,10 @@ function dockPage(view: HostedView): Page {
 const TITLES: Record<Page, string> = { home: 'Your music workspace', listen: 'Listen', library: 'Your library', uploads: 'Add music', billing: 'Plan & billing', settings: 'Account settings' };
 
 export function CloudApp() {
-  const { isLoading, user, getAccessToken, signIn, signUp, signOut } = useAuth();
+  const { isLoading, user, getAccessToken, signIn, signUp, signOut: authSignOut } = useAuth();
+  // Every way out (sign out, sign out everywhere, delete, sign in again) forgets the account kept
+  // for an offline open first (cloud.offline_shell privacy: only while signed in, only the last).
+  const signOut = useCallback((...args: Parameters<typeof authSignOut>) => { forgetAccountSnapshot(); return authSignOut(...args); }, [authSignOut]);
   const [account, setAccount] = useState<Account | null>(null);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [blocked, setBlocked] = useState<BlockedCode | null>(null);
@@ -269,7 +272,35 @@ export function CloudApp() {
   // has used SelectaDJ here is told that plainly instead of seeing the welcome page, and the page
   // opens by itself on reconnect.
   const connectionDown = flagOn(OFFLINE_SHELL) && connectionNow.status !== 'online';
-  const waitingOffline = !isLoading && !user && connectionDown && rememberedAccount() !== null;
+  // A local-first account opens the browser shell from the account this device last saw, in an
+  // explicit offline mode: the library from this device, local files play, mixes are queued, and
+  // anything only the server can do waits with its reason. Any other account waits on a page.
+  const offlineCandidate = !isLoading && !user && connectionDown ? rememberedAccount() : null;
+  const offlineUsable = offlineCandidate !== null && localFirstDecided(offlineCandidate.value);
+  const [offlineMode, setOfflineMode] = useState(false);
+  useEffect(() => {
+    if (!offlineUsable || offlineMode || !offlineCandidate) return;
+    setAccountFeatures(offlineCandidate.value.features);
+    setAccount(offlineCandidate.value);
+    setOfflineMode(true);
+  }, [offlineUsable, offlineMode, offlineCandidate]);
+  // Signed in again: the normal path takes over with the same shell still mounted, and the
+  // account is read fresh. AuthKit is asked on reconnect; if it says the sign-in has ended, the
+  // offline mode closes and the sign-in page shows.
+  useEffect(() => { if (user && offlineMode) setOfflineMode(false); }, [user, offlineMode]);
+  useEffect(() => {
+    if (!offlineMode || user) return undefined;
+    return onReconnect(() => {
+      getAccessToken().catch((problem: unknown) => {
+        if (classify(problem) !== 'signed_out') return;
+        forgetAccountSnapshot();
+        setOfflineMode(false);
+        setAccountFeatures(null);
+        setAccount(null);
+      });
+    });
+  }, [offlineMode, user, getAccessToken]);
+  const waitingOffline = !isLoading && !user && !offlineMode && offlineCandidate !== null && !offlineUsable;
   useEffect(() => (waitingOffline ? onReconnect(() => window.location.reload()) : undefined), [waitingOffline]);
 
   const checkout = useCheckoutReturn(account, refreshAccount);
@@ -410,6 +441,15 @@ export function CloudApp() {
 
   if (isLoading) return <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p>Checking your sign-in…</p></main>;
   if (waitingOffline) return <main className="cloud-runtime-message cloud-offline-wait"><BrandMark className="cloud-mark" /><h1>You’re offline</h1><p>SelectaDJ needs the connection for a moment to check your sign-in. Everything on this device is kept, and this page opens by itself when you’re back online.</p><ConnectionBanner /></main>;
+  if (!user && (offlineMode || offlineUsable)) {
+    return (
+      <Suspense fallback={<main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p>Opening SelectaDJ…</p></main>}>
+        {offlineMode && account
+          ? <LocalFirstShell api={api} account={account} more={() => <p className="needs-connection">This needs the internet. You’ll be signed in again when the connection is back.</p>} offlineReadOnly />
+          : <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p>Opening SelectaDJ…</p></main>}
+      </Suspense>
+    );
+  }
   if (!user) return <main className="cloud-welcome"><BrandMark className="cloud-mark" /><p className="cloud-eyebrow cloud-caps">SelectaDJ Cloud</p><h1>Your music, ready to move.</h1><p>Build your library, shape the set and keep the transitions ready on every device.</p>{signInProblem && <p className="cloud-feedback error" role="alert">{signInProblem}</p>}<div className="cloud-actions"><button className="primary" onClick={() => void signUp()}>Create your account</button><button onClick={startSignIn}>Sign in</button></div><small>Your music stays private to your workspace.</small><footer className="cloud-footer"><CloudCredit /></footer></main>;
   if (signInAgain) return <main className="cloud-runtime-message" role="alert"><BrandMark className="cloud-mark" /><h1>Sign in again to carry on</h1><p>Your sign-in ended. Everything on this device is kept, including your songs, your mixes and any import in progress, which carries on after you sign in.</p><button className="primary" onClick={startSignIn}>Sign in again</button></main>;
   if (blocked) return <BlockedAccount code={blocked} distinct={exact} onSignOut={() => void restartSignIn()} />;

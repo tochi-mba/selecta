@@ -112,10 +112,12 @@ export function rememberedAccount(userId?: string): Cached<Account> | null {
   }
 }
 
-function forgetAccountSnapshot(workspaceId: string) {
+/** Forget the kept account: always with no workspace given (sign out, sign out everywhere, a
+ * sign-in that ended), or only when it is that workspace's (forget this account here, delete). */
+export function forgetAccountSnapshot(workspaceId?: string): void {
   try {
     const kept = rememberedAccount();
-    if (kept && kept.value.workspace.id === workspaceId) localStorage.removeItem(ACCOUNT_KEY);
+    if (kept && (workspaceId === undefined || kept.value.workspace.id === workspaceId)) localStorage.removeItem(ACCOUNT_KEY);
   } catch {
     // nothing kept
   }

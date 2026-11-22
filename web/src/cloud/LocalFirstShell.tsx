@@ -104,7 +104,7 @@ const VIEW_PATHS: Record<View, string> = { Mixes: '/mixes', Now: '/listen', Edit
 const IDLE = (): void => {};
 const AVAILABILITY_REFRESH_MS = 12 * 60 * 60 * 1000;
 
-export function LocalFirstShell({ api, account, more, notices, feedback }: {
+export function LocalFirstShell({ api, account, more, notices, feedback, offlineReadOnly = false }: {
   api: Api;
   account: Account;
   /** The account panel for a More destination, drawn by CloudApp with its own handlers. */
@@ -113,6 +113,9 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
    * by CloudApp from the same sources as the hosted frame, shown first in the banner. */
   notices?: ReactNode;
   feedback?: ReactNode;
+  /** cloud.offline_shell: opened offline from the account this device last saw, before AuthKit
+   * could sign in again. The banner says so; server-only actions wait with their reason. */
+  offlineReadOnly?: boolean;
 }) {
   const workspaceId = account.workspace.id;
   const on = useFlags();
@@ -583,7 +586,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
         onCommands={controls.onCommands}
         mode="cloud"
         more={moreItems}
-        banner={<>{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} />}{notices}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
+        banner={<>{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
       >
         {/* one page's render error stays inside that page, as in the hosted shell */}
         <Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}>{page()}</Section>
