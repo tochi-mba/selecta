@@ -360,7 +360,9 @@ def add_routes(app, ctx) -> None:
         """'Your export was interrupted. Start it again?' A new job from the same frozen songs and
         transitions, so it saves what the first one set out to, whatever the mix is now."""
         if durable is not None:
-            raise HTTPException(409, "This export carries on by itself.")
+            # never offered in this mode (the list says can_start_again is false); answer with
+            # the export as it stands, which the job host is already carrying on
+            return {**durable.record(durable_or_404(job_id)), "can_start_again": False}
         job = job_or_404(job_id)
         shown = as_shown(job)
         if not shown["can_start_again"]:
@@ -372,7 +374,12 @@ def add_routes(app, ctx) -> None:
     @app.get("/api/exports/jobs")
     def list_exports() -> dict:
         if durable is not None:
-            return {"jobs": [durable.record(job) for job in durable.every()]}
+            # the durable job host resumes an interrupted export itself: nothing to offer again
+            return {
+                "jobs": [
+                    {**durable.record(job), "can_start_again": False} for job in durable.every()
+                ]
+            }
         return {"jobs": [as_shown(job) for job in every_job()]}
 
     def job_or_404(job_id: str) -> dict:

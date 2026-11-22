@@ -176,16 +176,47 @@ def add_routes(app, ctx) -> None:
         with connect() as conn:
             lyrics = db.preference(conn, LYRICS_KEY, None) is not None
             scan_state = interrupted_scan(conn)
+        work = getattr(ctx, "work", None)
+        if work is not None:
+            # core.durable_local_jobs: the job host resumes exports and lyric lookups itself,
+            # so nothing is offered again; the Workspace only says what is carrying on
+            return {"lyrics": False, "scan": scan_state, "carrying_on": carrying_on(work)}
         return {
             "lyrics": lyrics and not lyrics_running.is_set() and flags.on("lyrics.lookup"),
             "scan": scan_state,
+            "carrying_on": {"lyrics": False, "exports": 0},
         }
+
+    def carrying_on(work) -> dict:
+        """Lyric lookups and exports queued or under way in the durable job host."""
+        import sqlalchemy as sa
+
+        from selecta.work.model import TERMINAL
+        from selecta.work.schema import jobs as jobs_table
+        from selecta.workers.local_exports import EXPORT_JOB
+        from selecta.workers.local_host import LOCAL_WORKSPACE
+
+        with work.store.engine.connect() as connection:
+            rows = connection.execute(
+                sa.select(jobs_table.c.type, sa.func.count())
+                .where(
+                    jobs_table.c.workspace_id == LOCAL_WORKSPACE,
+                    jobs_table.c.type.in_(["lyrics.fetch", EXPORT_JOB]),
+                    jobs_table.c.state.not_in([str(state) for state in TERMINAL]),
+                )
+                .group_by(jobs_table.c.type)
+            ).all()
+        counts = {kind: number for kind, number in rows}
+        return {"lyrics": bool(counts.get("lyrics.fetch")), "exports": counts.get(EXPORT_JOB, 0)}
 
     @app.post("/api/library/lyrics/again")
     def lyrics_again() -> dict:
         """'Looking up lyrics was interrupted. Start it again?'"""
         if not flags.on("lyrics.lookup"):
             raise HTTPException(409, "Lyric lookup is turned off, so nothing is sent anywhere.")
+        if getattr(ctx, "work", None) is not None:
+            look_up_lyrics()  # durable jobs: queued at most once more, never twice at once
+            return {"started": True}
         if not lyrics_running.is_set():
             threading.Thread(target=look_up_lyrics, daemon=True).start()
         return {"started": True}

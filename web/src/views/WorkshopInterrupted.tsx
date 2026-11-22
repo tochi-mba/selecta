@@ -9,7 +9,12 @@ import { ViewProps } from './shared';
 type ResumedScan = { status: string; folder?: string; resumed?: { done: number; found: number | null } };
 
 /** What a restart cut off, from GET /api/library/interrupted. */
-type Interrupted = { lyrics: boolean; scan: { folder: string; done: number; found: number | null } | null };
+type Interrupted = {
+  lyrics: boolean;
+  scan: { folder: string; done: number; found: number | null } | null;
+  /** core.durable_local_jobs: work the job host is carrying on by itself, never offered again */
+  carrying_on?: { lyrics: boolean; exports: number };
+};
 
 const count = (value: number) => value.toLocaleString();
 
@@ -34,7 +39,8 @@ export function InterruptedWork({ status, request }: { status: ViewProps['status
     await post('/library/lyrics/again');
     setInterrupted((now) => now && { ...now, lyrics: false });
   };
-  if (!resumed && !interrupted?.lyrics) return null;
+  const going = interrupted?.carrying_on;
+  if (!resumed && !interrupted?.lyrics && !going?.lyrics && !going?.exports) return null;
   return (
     <section className="panel stack" aria-label="Interrupted work">
       {resumed && (
@@ -45,6 +51,10 @@ export function InterruptedWork({ status, request }: { status: ViewProps['status
           {' '}Songs already read are not read again.
         </p>
       )}
+      {!!going?.exports && (
+        <p role="status">{going.exports === 1 ? 'Your export is carrying on by itself.' : `${going.exports} exports are carrying on by themselves.`} Nothing needs starting again.</p>
+      )}
+      {going?.lyrics && <p role="status">Looking up lyrics is carrying on by itself. Nothing needs starting again.</p>}
       {interrupted?.lyrics && (
         <div className="row wrap">
           <p>Looking up lyrics was interrupted. Start it again?</p>
