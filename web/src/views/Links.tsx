@@ -406,13 +406,14 @@ const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts, l
           </Action>
         ))}
       </div>
-      <p className="link-status"><Status kind={facts.kind}>{facts.words}</Status></p>
+      {/* the browser renders nothing ahead, so there is no render state or render button to show */}
+      {!live && <p className="link-status"><Status kind={facts.kind}>{facts.words}</Status></p>}
       {facts.asked && state.status === 'ready' && state.label && facts.asked !== state.label && <p className="hint">You asked for {facts.asked}. What you’d hear is {state.label}.</p>}
       {cardError && <p className="warn" role="alert">{cardError}</p>}
       {state.status === 'failed' && <p className="warn">{state.error}</p>}
       {state.status === 'ready' && !state.passed && <p className="warn">This one has a rough spot. Hear it and decide.</p>}
       <div className="row wrap">
-        {state.status === 'ready' ? (
+        {live ? null : state.status === 'ready' ? (
           <button className="primary" onClick={() => setPlaying(!playing)}>{playing ? 'Hide' : 'Play it'}</button>
         ) : (
           <Action className="primary" disabled={busy} waiting={rendering} working="Starting…" run={() => render(move)}>
@@ -505,7 +506,8 @@ function LinksView({ mix, setMixData, setView, notify, status, analysisAvailable
   useVisiblePoll(load, 6000, tab === 'words');
 
   useEffect(() => {
-    if (flagOn('drafts')) getDraftNames().then((list) => setDrafts(list.drafts)).catch(() => {});
+    // The browser's pair cards only add to the current mix, so they need no draft names.
+    if (analysisAvailable && flagOn('drafts')) getDraftNames().then((list) => setDrafts(list.drafts)).catch(() => {});
   }, []);
 
   // Both songs and their transition must insert atomically. The mix-order
@@ -572,8 +574,9 @@ function LinksView({ mix, setMixData, setView, notify, status, analysisAvailable
       {tab === 'words' && (
         <>
           <p className="lede">
-            One song ends a line on these words, another opens a line with them, and the music fits too. SelectaDJ prepares the
-            best ones in the background, so they’re ready to play.<TermHint term="word-link" />
+            One song ends a line on these words, another opens a line with them, {analysisAvailable
+              ? <>and the music fits too. SelectaDJ prepares the best ones in the background, so they’re ready to play.</>
+              : <>found from your songs’ lyrics. Pair two songs and SelectaDJ works out the transition as the mix plays.</>}<TermHint term="word-link" />
           </p>
           {data && data.preparing > 0 && (
             <p className="hint" role="status">

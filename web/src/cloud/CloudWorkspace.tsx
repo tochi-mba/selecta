@@ -11,6 +11,7 @@ import { InterfaceChoices } from '../views/InterfaceChoices';
 import { DeviceDataCard } from './DeviceDataCard';
 import { summaryWords } from './ConnectMusic';
 import { useImportSession } from './importSession';
+import { bytes } from './api';
 import { OnlyOnYourComputer } from './LocalFirstEmpty';
 import { readPersistState, type PersistState } from './persistence';
 import { StorageCard } from './StorageCard';
@@ -214,7 +215,7 @@ async function gather(openStore: () => Promise<MediaStore>, playback: PlaybackFa
     { key: 'index', kind: index.opened && !index.degraded ? 'ready' : 'warning', words: index.opened && !index.degraded ? 'The list of connected songs is kept in this browser (IndexedDB).' : 'This browser is not keeping the list of connected songs, so they need connecting again next visit.' },
     { key: 'opfs', kind: opfs === null ? 'unavailable' : yes(opfs), words: opfs === null ? 'This browser has no private file storage (OPFS).' : opfs ? 'Private file storage (OPFS) opens.' : 'Private file storage (OPFS) did not open.' },
     { key: 'persist', kind: persist === 'granted' ? 'ready' : 'warning', words: persist === 'granted' ? 'The browser has agreed to keep SelectaDJ’s details on this device.' : 'The browser may clear SelectaDJ’s details if the device runs short of space.' },
-    { key: 'space', kind: space.supported ? 'ready' : 'unavailable', words: space.supported ? `Browser storage in use: ${((space.usage ?? 0) / 1_000_000).toFixed(1)} MB of ${((space.quota ?? 0) / 1_000_000).toFixed(0)} MB allowed.` : space.reason ?? 'The browser does not say how much storage SelectaDJ may use.' },
+    { key: 'space', kind: space.supported ? 'ready' : 'unavailable', words: space.supported ? `Browser storage in use: ${bytes(space.usage ?? 0)} of ${bytes(space.quota ?? 0)} allowed.` : space.reason ?? 'The browser does not say how much storage SelectaDJ may use.' },
     { key: 'folders', kind: yes(folderPicker), words: folderPicker ? 'Folders can be chosen and remembered here.' : 'Folders cannot be remembered here; songs are chosen each visit.' },
     { key: 'online', kind: online === false ? 'warning' : 'ready', words: online === false ? 'This browser says it is offline.' : 'This browser says it is online.' },
     { key: 'flags', kind: 'ready', words: `${countOf(FLAG_IDS.length - off.length, 'feature')} on and ${off.length} off for this account in this browser.` },

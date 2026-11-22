@@ -1,3 +1,4 @@
+import { flagOn } from '../flags';
 import { Icon } from '../ui/Icon';
 import { RouteDiagram, SongMotif } from '../ui/MusicObjects';
 import { Action, Problem, Skeleton } from '../ui/controls';
@@ -888,7 +889,10 @@ export function RequestsPanel() {
       {message && <p className="hint" role="status">{message}</p>}
       {requests === null && !error && <p className="hint">Loading your requests…</p>}
       {requests?.length === 0 && !text && (
-        <p className="hint">Ask for a song any time. SelectaDJ finds a spot where it fits, without interrupting the mix.<TermHint term="request" /></p>
+        <p className="hint">{flagOn('requests.bridges')
+          ? 'Ask for a song any time. SelectaDJ finds a spot where it fits, without interrupting the mix.'
+          // Cloud in the browser has no planner (requests.bridges is off there): you choose when it goes in.
+          : 'Ask for a song any time. It waits here until you add it after the song that’s playing.'}<TermHint term="request" /></p>
       )}
       {!!requests?.length && <p className="hint">Requested means saved, not scheduled. Only a placed song is in your current mix. Waiting requests have no reliable play-time estimate or guaranteed queue order.<TermHint term="request" /></p>}
        {!!requests?.length && (
