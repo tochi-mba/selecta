@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { flagOn } from '../flags';
 import { apiOrigin } from './api';
 
 // One connection state for the whole Cloud tab (plan "Nothing is lost", section 1).
@@ -251,3 +252,10 @@ export const connection = {
   reportOffline,
   reportSignedOut,
 };
+
+/** Why server-only work cannot run right now, while `cloud.offline_shell` is on; null when it can
+ * (or the flag is off, so the page is exactly as it was). For a button: disable it and show this. */
+export function useNeedsConnection(): string | null {
+  const current = useConnection();
+  return flagOn('cloud.offline_shell') ? needsConnectionReason(current) : null;
+}

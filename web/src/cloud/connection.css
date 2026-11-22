@@ -28,3 +28,8 @@
 
 /* the page Cloud shows while offline before the sign-in can be checked */
 .cloud-offline-wait p { max-width: 36rem; }
+
+/* why a server-only button is disabled right now (useNeedsConnection) */
+.needs-connection { margin: var(--space-1) 0 0; color: var(--text-soft); font-size: var(--text-sm); }
+/* groups server-only controls so one `disabled` covers them, with no box of its own */
+.offline-fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }

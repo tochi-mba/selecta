@@ -3,6 +3,7 @@ import { accountFlagOn, FlagId } from '../flags';
 import { Account, lockedTo, planName } from './api';
 import { CheckoutPhase, Consent, consentComplete, NO_CONSENT } from './checkout';
 import { Meters } from './Meters';
+import { useNeedsConnection } from './connection';
 
 // Plan & billing (docs/saas/11-ui-ux.md §11.1): the current plan, the usage meters, and the way
 // to change plan. A free account subscribes through Checkout, after the three UK consents; a paid
@@ -125,7 +126,9 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
   // Each way to change plan is its own feature: with one off, it's gone from the page.
   const checkout = accountFlagOn('billing.checkout', account.features);
   const portal = accountFlagOn('billing.portal', account.features);
-  const ready = consentComplete(consent) && Boolean(consentVersion) && !busy;
+  // cloud.offline_shell: checkout and the billing portal open on the server
+  const offline = useNeedsConnection();
+  const ready = consentComplete(consent) && Boolean(consentVersion) && !busy && !offline;
   const confirming = phase === 'confirming';
   const local = localFirst ?? sellsLocalFirst(account);
   return (
@@ -137,7 +140,8 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
           <h2>{planName(account)}</h2>
           {account.lucy && accountFlagOn('lucy', account.features) && <p>Includes {account.lucy.tier}.</p>}
         </div>
-        {paid && portal && <button className="primary" disabled={busy} onClick={onPortal}>Change plan or cancel</button>}
+        {paid && portal && <button className="primary" disabled={busy || !!offline} onClick={onPortal}>Change plan or cancel</button>}
+        {offline && <p className="needs-connection">{offline}</p>}
       </section>
       <h2 className="cloud-section-title">This period’s usage</h2>
       <Meters account={account} />
@@ -165,6 +169,7 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
               </section>
             ))}
           </div>
+          {offline && <p className="needs-connection">{offline}</p>}
           {!consentComplete(consent) && <p className="cloud-hint">Tick all three boxes above to choose a plan.</p>}
           {/* a slow checkout answer otherwise looks like nothing happened (2026-11-12 flow walk) */}
           {busy && consentComplete(consent) && <p className="cloud-hint" role="status">Opening secure checkout…</p>}
