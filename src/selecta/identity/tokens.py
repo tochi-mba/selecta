@@ -282,8 +282,13 @@ def authkit_verifier(
     """
     base = api_base.rstrip("/")
     cache = JwksCache(f"{base}/sso/jwks/{client_id}", fetcher or httpx_fetcher())
+    # AuthKit session tokens carry `iss` = {base}/user_management/{client_id}. A configured
+    # issuer of the bare API base (older setup guidance) means that same per-client issuer.
+    per_client = f"{base}/user_management/{client_id}"
+    if not issuer or issuer.rstrip("/") == base:
+        issuer = per_client
     return TokenVerifier(
-        issuer=issuer or base,
+        issuer=issuer,
         jwks=cache,
         audience=audience,
         client_id=client_id,

@@ -16,7 +16,7 @@ export function CloudRoot({ clientId }: { clientId: string }) {
     <AuthKitProvider
       clientId={clientId}
       apiHostname={config.apiHostname}
-      devMode={import.meta.env.DEV}
+      devMode={config.devMode}
       onRedirectCallback={({ state }) => followReturnTo(state)}
     >
       <CloudApp />
