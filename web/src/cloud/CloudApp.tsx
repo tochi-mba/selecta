@@ -13,6 +13,7 @@ import { DESTINATIONS, type MoreDestinationId } from '../shell/manifest';
 import { AccountDanger, AccountData } from './AccountData';
 import { AccountProblem, accountProblem, blockedMessage } from './accountStates';
 import { Account, apiOrigin, CloudError, holdsHostedStorage, idempotencyKey, isOverQuota, lockedTo, messageOf, Page, pageShown, planName } from './api';
+import { keptImportWaiting } from './importSession';
 import { BlockedCode, blockedCode, callbackProblem, refusalMessage, SUSPENDED_NOTICE, withoutCallbackError } from './authConfig';
 import { Billing } from './Billing';
 import { PrivacyNoticeDraft, showsPrivacyDraft } from './PrivacyNoticeDraft';
@@ -119,7 +120,12 @@ export function CloudApp() {
   const { isLoading, user, getAccessToken, signIn, signUp, signOut: authSignOut } = useAuth();
   // Every way out (sign out, sign out everywhere, delete, sign in again) forgets the account kept
   // for an offline open first (cloud.offline_shell privacy: only while signed in, only the last).
-  const signOut = useCallback((...args: Parameters<typeof authSignOut>) => { forgetAccountSnapshot(); return authSignOut(...args); }, [authSignOut]);
+  // Every way out forgets the kept offline account. AuthKit's signOut is overloaded, so the wrapper
+  // keeps its whole type instead of only its last signature.
+  const signOut = useCallback(((...args: unknown[]) => {
+    forgetAccountSnapshot();
+    return (authSignOut as (...given: unknown[]) => unknown)(...args);
+  }) as typeof authSignOut, [authSignOut]);
   const [account, setAccount] = useState<Account | null>(null);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [blocked, setBlocked] = useState<BlockedCode | null>(null);
@@ -626,7 +632,9 @@ export function CloudCredit() {
 
 function BlockedAccount({ code, distinct, onSignOut }: { code: BlockedCode; distinct: boolean; onSignOut: () => void }) {
   const message = blockedMessage(code, distinct);
+  const signIn = code === 'session_revoked' || code === 'token_invalid' || code === 'token_expired';
   return <main className="cloud-runtime-message" role="alert"><BrandMark className="cloud-mark" /><h1>{message.title}</h1><p>{message.detail}</p>
+    {signIn && keptImportWaiting() && <p>Your music import is kept on this device and carries on after you sign in.</p>}
     {code === 'verified_email_required' && <button onClick={() => window.location.reload()}>I’ve verified my email</button>}
     <button onClick={onSignOut}>{code === 'session_revoked' || code === 'token_invalid' || code === 'token_expired' ? 'Sign in again' : 'Sign out'}</button>
   </main>;
