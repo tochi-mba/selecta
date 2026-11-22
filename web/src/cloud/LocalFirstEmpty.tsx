@@ -34,10 +34,13 @@ export function LibraryEmpty() {
 }
 
 /** `connected` is how many songs are in the catalogue; ideas need songs measured in the browser. */
-export function MixesEmpty({ connected, checking }: { connected: number; checking?: { checked: number; total: number | null } }) {
+/** `current` is the current mix's card, when there is one: it stays in view even while too few
+ * songs can play here to make a new mix. */
+export function MixesEmpty({ connected, checking, current }: { connected: number; checking?: { checked: number; total: number | null }; current?: ReactNode }) {
   return (
     <main className="page" id="main">
       <h1 className="display small">Make a Mix</h1>
+      {current}
       <section className="empty-state" aria-labelledby="mixes-empty-title">
         {checking ? (
           <>

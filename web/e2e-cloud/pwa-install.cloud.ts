@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { accessible, listener } from './cloud';
 import { openLocalFirst, seeded } from './localFirst';
 
-// Plan W5b: the Cloud site is installable and the This device card can ask the browser to keep
+// Plan W5b: the Cloud site is installable and the Browser storage card (Workspace > Storage) can ask the browser to keep
 // SelectaDJ's details. What the browser answers to persist() is its own decision (headless Edge
 // usually says no to a site it has never seen), so the test accepts either honest answer and
 // checks the words match it; it never forces a grant.
@@ -23,7 +23,8 @@ test('the manifest is served with its type, parses, and every icon it names is t
 test('the page links the manifest, and the storage card offers to keep this device’s details', async ({ page, request }) => {
   const user = listener('pwa-storage');
   await seeded(request, user, { local_songs: 1 });
-  await openLocalFirst(page, user, '/workshop');
+  // with cloud.workspace the storage card lives on Workspace > Storage
+  await openLocalFirst(page, user, '/workshop/storage');
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.webmanifest');
 
   const card = page.getByRole('region', { name: 'Browser storage' });

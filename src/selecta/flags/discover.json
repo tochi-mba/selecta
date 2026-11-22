@@ -5,7 +5,12 @@
       "label": "Word connections",
       "about": "Lyric links between songs, where a word in one hands off to the same word in the next.",
       "requires": ["lyrics.display"],
-      "routes": ["GET /api/links", "POST /api/seams", "POST /api/mix/pair"],
+      "routes": [
+        "GET /api/links",
+        "POST /api/seams",
+        "POST /api/mix/pair",
+        "GET /api/local-media/links"
+      ],
       "surfaces": ["discover.words", "mixes", "overlay.palette"],
       "words": ["Word connections"],
       "cli": ["discover"]

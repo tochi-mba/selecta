@@ -50,6 +50,7 @@ export const POLLING: readonly PollRule[] = [
   { file: 'devices/PlayingBar.tsx', reads: null, everyMs: 1000, hidden: 'continues', why: 'clock text only' },
   { file: 'devices/audioSpeaker.ts', reads: null, everyMs: 'fade steps', hidden: 'continues', why: 'volume fade' },
   { file: 'rooms/RoomPanel.tsx', reads: '/rooms/current', everyMs: 3000, hidden: 'pauses', why: 'useVisiblePoll: the host panel reads the room only while it is on screen, and at once on return (W3 adoption)' },
+  { file: 'cloud/BrowserHarmonicMatches.tsx', reads: '/discoveries, /discoveries/progress (answered in this browser)', everyMs: 15000, hidden: 'pauses', why: 'useVisiblePoll; songs are measured in spare time, so new pairs turn up while the page is open, and both reads are answered from this browser, never a server (cloud.browser_harmonic)' },
   { file: 'cloud/localFirstPlayer.ts', reads: null, everyMs: 500, hidden: 'continues', why: 'redraws the browser player position only; never reads the server (ADR-0457)' },
   { file: 'engine/scheduler.ts', reads: null, everyMs: 'audio clock tick', hidden: 'continues', why: 'schedules the next song and seam on the audio clock while music plays in a hidden tab (ADR-0457)' },
 ];

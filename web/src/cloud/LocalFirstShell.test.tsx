@@ -96,9 +96,145 @@ describe('which shell an account gets', () => {
     const main = await screen.findByRole('navigation', { name: 'Main' });
     for (const label of ['Listen', 'Make a Mix', 'My Mixes', 'Library']) expect(main.querySelector(`[aria-label="${label}"]`)).not.toBeNull();
     expect(screen.queryByRole('navigation', { name: 'Cloud workspace' })).toBeNull();
-    // no Workspace in the Cloud rail: it lives in More
+    // the browser Workspace (cloud.workspace) is linked from the rail, beside More
+    expect(main.querySelector('a[aria-label="Workspace"]')).toHaveAttribute('href', '/workshop');
+    expect(main.querySelector('[aria-label="More"]')).not.toBeNull();
+  });
+
+  it('keeps Workspace out of the rail with cloud.workspace off', async () => {
+    account = { ...withExperience(true, false, true), features: { 'cloud.local_first': true, 'cloud.hosted_media': false, 'cloud.workspace': false } };
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    window.history.replaceState({}, '', '/library');
+    render(<CloudApp />);
+    const main = await screen.findByRole('navigation', { name: 'Main' });
     expect(main.querySelector('[aria-label="Workspace"]')).toBeNull();
     expect(main.querySelector('[aria-label="More"]')).not.toBeNull();
+  });
+});
+
+describe('Workspace in the local-first shell (cloud.workspace)', () => {
+  const member = (features: Record<string, boolean> = {}): Account => ({
+    ...withExperience(true, false, true),
+    features: { 'cloud.local_first': true, 'cloud.hosted_media': false, ...features },
+  });
+  const openMore = async () => {
+    const main = await screen.findByRole('navigation', { name: 'Main' });
+    fireEvent.click(main.querySelector('button[aria-label="More"]')!);
+    return screen.findByRole('navigation', { name: 'More' });
+  };
+
+  it('opens the browser Workspace at /workshop, with the tabs a browser can fill', async () => {
+    account = member();
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    window.history.replaceState({}, '', '/workshop');
+    render(<CloudApp />);
+    // the page settles once the shell has set what a browser cannot do, so each look is retried
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'Workspace' })).toBeVisible());
+    await waitFor(() => expect(within(screen.getByRole('navigation', { name: 'Workspace' })).getAllByRole('link').map((tab) => tab.textContent))
+      .toEqual(['Overview', 'Sources', 'Storage', 'Diagnostics']));
+    await waitFor(() => expect(screen.getByRole('region', { name: 'In the background' })).toBeVisible());
+    expect(screen.queryByRole('heading', { level: 1, name: 'This device' })).toBeNull();
+  });
+
+  it('says Analysis belongs to SelectaDJ on a computer', async () => {
+    account = member();
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    window.history.replaceState({}, '', '/workshop/analysis');
+    render(<CloudApp />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Analysis is part of SelectaDJ on your computer' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Go to Workspace' })).toHaveAttribute('href', '/workshop');
+  });
+
+  it('lists Workspace first in More, and This device no longer', async () => {
+    account = member();
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    window.history.replaceState({}, '', '/library');
+    render(<CloudApp />);
+    const links = within(await openMore()).getAllByRole('link').map((link) => link.textContent);
+    expect(links[0]).toBe('Workspace');
+    expect(links).toContain('Account');
+    expect(links).not.toContain('This device');
+  });
+
+  it('moves what this browser keeps off Account and onto Workspace > Storage', async () => {
+    account = member();
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    window.history.replaceState({}, '', '/account');
+    const onAccount = render(<CloudApp />);
+    await screen.findByRole('region', { name: 'Signed in as' });
+    expect(screen.queryByRole('heading', { name: 'What SelectaDJ keeps here' })).toBeNull();
+    onAccount.unmount();
+    window.history.replaceState({}, '', '/workshop/storage');
+    render(<CloudApp />);
+    expect(await screen.findByRole('heading', { name: 'What SelectaDJ keeps here' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Browser storage' })).toBeVisible();
+  });
+
+  it('keeps This device in More and the device card on Account with the flag off', async () => {
+    account = member({ 'cloud.workspace': false });
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    window.history.replaceState({}, '', '/workshop');
+    const device = render(<CloudApp />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'This device' })).toBeVisible();
+    expect(screen.queryByRole('navigation', { name: 'Workspace' })).toBeNull();
+    const links = within(await openMore()).getAllByRole('link').map((link) => link.textContent);
+    expect(links).toContain('This device');
+    expect(links).not.toContain('Workspace');
+    device.unmount();
+    window.history.replaceState({}, '', '/account');
+    render(<CloudApp />);
+    expect(await screen.findByRole('heading', { name: 'What SelectaDJ keeps here' })).toBeVisible();
+  });
+});
+
+describe('what the shell answers in the browser for the newer pages', () => {
+  const member = (features: Record<string, boolean> = {}): Account => ({
+    ...withExperience(true, false, true),
+    features: { 'cloud.local_first': true, 'cloud.hosted_media': false, ...features },
+  });
+  const called = () => vi.mocked(fetch).mock.calls.map(([url]) => String(url));
+
+  it('shows Harmonic matches from this browser, never asking a server for discoveries', async () => {
+    account = member();
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    window.history.replaceState({}, '', '/discover/harmonic');
+    render(<CloudApp />);
+    expect(await screen.findByRole('heading', { level: 2, name: 'Songs whose keys line up' })).toBeVisible();
+    expect(await screen.findByText(/No harmonic matches yet\. They turn up as more of the songs on this device are measured\./)).toBeVisible();
+    expect(called().some((url) => url.includes('/discoveries'))).toBe(false);
+  });
+
+  it('has no Harmonic matches page with cloud.browser_harmonic off', async () => {
+    account = member({ 'cloud.browser_harmonic': false });
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
+    window.history.replaceState({}, '', '/discover/harmonic');
+    render(<CloudApp />);
+    await screen.findByRole('navigation', { name: 'Main' });
+    await waitFor(() => expect(screen.getAllByRole('main')).toHaveLength(1));
+    expect(screen.queryByRole('heading', { level: 2, name: 'Songs whose keys line up' })).toBeNull();
+  });
+
+  it('shows Word connections from the Cloud lyric links, with the browser’s own words', async () => {
+    account = member();
+    songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }, { id: 2, title: 'Red', artist: 'Sun', available_on: 1 }];
+    const fetcher = vi.mocked(globalThis.fetch as unknown as (url: string, init?: RequestInit) => Promise<Response>);
+    const fallback = fetcher.getMockImplementation()!;
+    fetcher.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.startsWith('/api/local-media/links')) {
+        return new Response(JSON.stringify({
+          links: [{ phrase: 'all night', kind: 'echo', a: 1, b: 2, artist_a: 'Moon', title_a: 'Blue', artist_b: 'Sun', title_b: 'Red', line_a: 'we ran all night', line_b: 'all night I waited', score: 0.9, moves: [] }],
+          found: 1, lyrics: { songs: 2, checked: 2, synced: 2, waiting: 0, looked_up: 2, looking_up: false },
+        }), { status: 200, headers: { 'content-type': 'application/json' } });
+      }
+      return fallback(url, init);
+    });
+    window.history.replaceState({}, '', '/discover');
+    render(<CloudApp />);
+    expect(await screen.findByRole('button', { name: 'Add both to the mix' }, { timeout: 10_000 })).toBeVisible();
+    expect(screen.getByRole('main')).toHaveTextContent(/found from your songs’ lyrics\. Pair two songs and SelectaDJ works out the transition as the mix plays\./);
+    expect(screen.queryByRole('button', { name: 'Render it now' })).toBeNull();
+    // the browser's pair cards need no draft names, and no local draft route is asked
+    expect(called().some((url) => url.includes('/api/drafts'))).toBe(false);
   });
 });
 
@@ -360,9 +496,11 @@ describe('the server-free palette and keys in the local-first shell (W5 subset)'
     press('k', { ctrlKey: true });
     const palette = await screen.findByRole('dialog', { name: 'Search and commands' });
     const options = within(palette).getAllByRole('option').map((option) => option.getAttribute('aria-label'));
-    for (const place of ['Page: Listen', 'Page: Make a Mix', 'Page: My Mixes', 'Page: Library', 'Page: Account']) expect(options).toContain(place);
+    // Workspace is one of this shell's places now (cloud.workspace): the browser's own page
+    for (const place of ['Page: Listen', 'Page: Make a Mix', 'Page: My Mixes', 'Page: Library', 'Page: Workspace', 'Page: Account']) expect(options).toContain(place);
+    expect(options).not.toContain('Page: This device');
     expect(options.some((label) => /Play|Pause/.test(label ?? ''))).toBe(true);
-    for (const local of [/Request a song/, /Undo/, /Analyse/, /Workspace/, /Edit current mix/]) expect(options.some((label) => local.test(label ?? ''))).toBe(false);
+    for (const local of [/Request a song/, /Undo/, /Analyse/, /Edit current mix/]) expect(options.some((label) => local.test(label ?? ''))).toBe(false);
     const box = within(palette).getByRole('combobox');
     fireEvent.change(box, { target: { value: 'blue moon' } });
     await new Promise((settled) => setTimeout(settled, 250));

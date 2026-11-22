@@ -1,3 +1,4 @@
+import { flagOn } from '../flags';
 import { Icon } from '../ui/Icon';
 import { RouteDiagram, SongMotif } from '../ui/MusicObjects';
 import { Action, Problem, Skeleton } from '../ui/controls';
@@ -30,6 +31,8 @@ export type RequestRow = {
   stage?: Stage; waiting_on?: string; seconds?: number | null; after?: string | null;
   never?: boolean; no_cues?: boolean; declined?: boolean; bridge_choice?: boolean | null;
   saving?: boolean; picked?: number[] | null; behind?: string; bridge_lost?: boolean;
+  /** Cloud in the browser (localFirstRequests.ts): what happens to this request, instead of the planner's words. */
+  browser_note?: string;
 };
 type RequestList = { requests: RequestRow[]; settled?: string[] };
 export type BridgeOption = {
@@ -113,6 +116,11 @@ export function requestWords(row: RequestRow, stage: Stage): { label: string; to
   const leading = [coming && `with ${coming} leading in`, going && `${coming ? 'and' : 'with'} ${going} leading out`].filter(Boolean).join(' ');
   const place = row.after ? `Joins after ${row.after}${leading ? `, ${leading}` : ''}.` : 'A spot has been found.';
   const together = extras.length ? ` They all join together once every transition is ready, and none of them can play before that.` : '';
+  // Cloud in the browser can't look for a spot, so it says in its own words what happens instead
+  if (row.browser_note && (stage === 'waiting' || stage === 'searching' || stage === 'no_mix')) {
+    const label = stage === 'no_mix' ? 'Waiting for a mix' : stage === 'searching' ? 'Add it yourself' : 'Requested · waiting';
+    return { label, tone: 'quiet', detail: row.browser_note };
+  }
   switch (stage) {
     case 'adding':
       return { label: 'Adding', tone: 'active', detail: 'Saving your request.' };
@@ -881,7 +889,10 @@ export function RequestsPanel() {
       {message && <p className="hint" role="status">{message}</p>}
       {requests === null && !error && <p className="hint">Loading your requests…</p>}
       {requests?.length === 0 && !text && (
-        <p className="hint">Ask for a song any time. SelectaDJ finds a spot where it fits, without interrupting the mix.<TermHint term="request" /></p>
+        <p className="hint">{flagOn('requests.bridges')
+          ? 'Ask for a song any time. SelectaDJ finds a spot where it fits, without interrupting the mix.'
+          // Cloud in the browser has no planner (requests.bridges is off there): you choose when it goes in.
+          : 'Ask for a song any time. It waits here until you add it after the song that’s playing.'}<TermHint term="request" /></p>
       )}
       {!!requests?.length && <p className="hint">Requested means saved, not scheduled. Only a placed song is in your current mix. Waiting requests have no reliable play-time estimate or guaranteed queue order.<TermHint term="request" /></p>}
        {!!requests?.length && (

@@ -1,4 +1,4 @@
-import { Gate, gateOpen } from '../flags';
+import { flagOn, Gate, gateOpen } from '../flags';
 import { words } from '../copy';
 
 /** Music and Selecta words, in plain language, with what each one changes and how to take it back.
@@ -278,7 +278,11 @@ export const GLOSSARY: GlossaryTerm[] = [
     id: 'harmonic-match',
     term: 'Harmonic match',
     aka: ['harmonic link', 'chords', 'chord match', 'shared chords'],
-    plain: 'Two songs that may share a chord pattern. You hear the chords SelectaDJ detected, then each song with them underneath, then both. Your Yes or No only teaches SelectaDJ what you hear. It never adds anything to a mix.',
+    get plain() {
+      return flagOn('cloud.browser_harmonic')
+        ? 'Two songs whose keys line up, measured across each whole song on this device. You hear the end of one, then the start of the other. Your Yes or No only records what you hear. It never adds anything to a mix.'
+        : 'Two songs that may share a chord pattern. You hear the chords SelectaDJ detected, then each song with them underneath, then both. Your Yes or No only teaches SelectaDJ what you hear. It never adds anything to a mix.';
+    },
     reversible: 'You can change an answer later.',
     related: ['key', 'word-link'],
   },

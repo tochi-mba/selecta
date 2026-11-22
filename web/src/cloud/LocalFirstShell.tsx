@@ -10,10 +10,11 @@ import { Shell } from '../shell/Shell';
 import { useMediaKeys } from '../shell/useMediaKeys';
 import { ControllerNotices } from '../devices/ControllerNotices';
 import { setJobsSource } from '../state/jobs';
-import { Section, Skeleton } from '../ui/controls';
+import { Drawer, Section, Skeleton } from '../ui/controls';
 import { countOf } from '../ui/format';
 import { showToast } from '../ui/toasts';
 import { Library } from '../views/Library';
+import { Links } from '../views/Links';
 import { Mix } from '../views/Mix';
 import { PlayedTransitions, StemSurfacesContext } from '../views/liveTransitions';
 import { StemsCard } from './stems/StemsCard';
@@ -24,15 +25,19 @@ import { peaksFrom } from '../dsp/waveform';
 import { Mixes } from '../views/Mixes';
 import { MyMixes } from '../views/MyMixes';
 import { Now } from '../views/Now';
+import { RequestsContext, RequestsPanel, useRequests, waitingRequestCount } from '../views/Requests';
 import type { View, ViewProps } from '../views/shared';
 import type { Account, Api } from './api';
-import { ConnectMusic, mediaDeviceId } from './ConnectMusic';
+import { ConnectMusic, mediaDeviceId, registeredDeviceId } from './ConnectMusic';
 import { hostedResolver, matchAsset, readHostedAssets, type HostedAsset } from './hostedMedia';
 import { isHostedAccount } from './localFirstGate';
+import { CloudWorkspace } from './CloudWorkspace';
+import { CurrentMix } from '../views/CurrentMix';
 import { CannotPlayHere, LibraryEmpty, ListenEmpty, MixesEmpty, NotOnThisAccount, OnlyOnYourComputer } from './LocalFirstEmpty';
 import { useLocalFirstPlayer } from './localFirstPlayer';
 import { BROWSER_MIX_NEEDS } from './localFirstMixes';
 import { EMPTY_MIX, localFirstRequest, mediaRequest, type AvailabilitySources } from './localFirstRequest';
+import { ROOM_REQUEST_EVENT } from './localFirstRequests';
 import { recipeStore } from './recipeStore';
 import { SavedBrowserMixes } from './SavedBrowserMixes';
 import { QueueSources } from './QueueSources';
@@ -43,6 +48,8 @@ import { ImportChip } from './ImportChip';
 import { StorageCard } from './StorageCard';
 import { bindImportWorkspace, endImportSession, useImportSession } from './importSession';
 import { useServerFreeControls } from './serverFreeControls';
+import { BrowserHarmonicMatches } from './BrowserHarmonicMatches';
+import { profilesBySong, startTonalProfiler, tonalStore } from './tonalProfiles';
 
 /** Local-first personal Cloud on the shared shell (ADR-0462, ADR-0463).
  *
@@ -58,7 +65,10 @@ import { useServerFreeControls } from './serverFreeControls';
  * command palette and the keyboard shortcuts stay: this shell offers their server-free subset
  * (serverFreeControls.tsx), which needs nothing but this browser and its own player. */
 export const NOT_IN_THE_BROWSER = {
-  requests: false,
+  // Request a song is here (localFirstRequests.ts): a request joins only when the member adds it,
+  // right after the playing song. Bridge songs need measured keys and tempos, which a browser
+  // library has none of.
+  'requests.bridges': false,
   // The editor is here (reorder, add, remove, clear, Save a copy, through the recipe store).
   // What it can't do in a browser: lock songs to analysed positions, draw an energy horizon
   // from measurements, or open a transition to re-render it (every one is worked out live).
@@ -70,8 +80,8 @@ export const NOT_IN_THE_BROWSER = {
   lucy: false,
   // lyrics are looked up by this computer's own server; the browser has none to show or require
   'lyrics.lookup': false,
-  // harmonic matches pair songs by measured key; a browser library has no keys measured
-  'discover.harmonic': false,
+  // Harmonic matches are here with cloud.browser_harmonic (BrowserHarmonicMatches.tsx), from
+  // whole-song key profiles measured on this device; without it the tab is off (browserFlags)
   // tempo and key corrections and "is it music?" are written to this computer's own analysis
   'library.corrections': false,
   // a browser mix has no measured feel, energy or stems to shape by; its ending can be chosen
@@ -79,6 +89,12 @@ export const NOT_IN_THE_BROWSER = {
   'mixes.shaping.energy_arc': false,
   'mixes.shaping.stem_moves': false,
 } as const;
+
+/** What this shell turns off, with Harmonic matches off too unless the browser's own version
+ * (cloud.browser_harmonic) is on for the account. */
+function browserFlags(browserHarmonic: boolean): Record<string, boolean> {
+  return browserHarmonic ? { ...NOT_IN_THE_BROWSER } : { ...NOT_IN_THE_BROWSER, 'discover.harmonic': false };
+}
 
 const VIEW_PATHS: Record<View, string> = { Mixes: '/mixes', Now: '/listen', Edit: '/mix/current/edit', Library: '/library', Words: '/discover', Workshop: '/workshop' };
 const IDLE = (): void => {};
@@ -122,11 +138,14 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   const lastAvailabilitySweep = useRef(0);
   const lastAvailabilityReport = useRef(0);
   const forceSweepPending = useRef(false);
+  // what Workspace says about the sweep: running now, and when it last looked at the files
+  const [fileCheck, setFileCheck] = useState<{ running: boolean; at: number | null }>({ running: false, at: null });
   const sweepLapsed = useCallback((forceReport = false): Promise<void> => {
     if (forceReport) forceSweepPending.current = true;
     if (sweeping.current) return sweeping.current;
 
     const task = (async () => {
+      setFileCheck((was) => ({ ...was, running: true }));
       try {
         do {
           const force = forceSweepPending.current;
@@ -148,11 +167,12 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
           // Send a complete snapshot on startup and at most twice a day while active. The
           // report contains only catalogue ids and the same profile id used for playback-device
           // auth; no filename, handle, tag or audio bytes leave this browser.
-          if (on('cloud.local_media')) {
+          const reportingDevice = registeredDeviceId(workspaceId);
+          if (on('cloud.local_media') && reportingDevice) {
             const snapshot = await deviceAvailabilitySnapshot(opened, lapsedItems);
             try {
               if (!mediaRef.current) throw new Error('not ready');
-              await reportDeviceAvailability(mediaRef.current, mediaDeviceId(workspaceId), snapshot, true);
+              await reportDeviceAvailability(mediaRef.current, reportingDevice, snapshot, true);
               lastAvailabilityReport.current = Date.now();
             } catch {
               // A transient auth/network failure leaves the report clock due, so the next
@@ -163,6 +183,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
         } while (forceSweepPending.current);
       } finally {
         sweeping.current = null;
+        setFileCheck({ running: false, at: lastAvailabilitySweep.current || null });
         // A force arriving at the very end of the active pass must not be dropped.
         if (forceSweepPending.current) void sweepLapsed();
       }
@@ -171,6 +192,18 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
     return task;
   }, [on, openStore, workspaceId]);
   const recipes = useMemo(() => recipeStore(cloud, workspaceId), [cloud, workspaceId]);
+  // How many mixes the account has saved, from the server: a mix made on another device means
+  // Make a Mix is past its first run here too, and Workspace counts them. null until it answers.
+  const [savedMixes, setSavedMixes] = useState<number | null>(null);
+  useEffect(() => {
+    let live = true;
+    setSavedMixes(null);
+    recipes.list().then((list) => { if (live) setSavedMixes(list.length); }).catch(() => undefined);
+    return () => { live = false; };
+  }, [recipes]);
+  // Harmonic matches (cloud.browser_harmonic): key profiles measured here, kept in this browser
+  const browserHarmonic = on('cloud.browser_harmonic');
+  const tonal = useMemo(() => tonalStore(workspaceId), [workspaceId]);
   const sources = useMemo<AvailabilitySources>(() => ({
     here: async () => {
       const opened = await openStore();
@@ -195,7 +228,15 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
     } : undefined,
     // Make a Mix and My Mixes: recipes on the server, this browser's current mix and shaping here
     recipes,
-  }), [api, cloud, workspaceId, coexisting, openStore, recipes]);
+    // Harmonic matches: answered from the profiles this browser measured, answers kept here
+    tonal: browserHarmonic ? {
+      profiles: async () => profilesBySong(tonal, await openStore()),
+      reviews: () => tonal.reviews(),
+      review: (pair, verdict) => tonal.review(pair, verdict),
+    } : undefined,
+    // Request a song: this browser's requests per workspace, and the room's from the server
+    workspaceId,
+  }), [api, cloud, workspaceId, coexisting, openStore, recipes, browserHarmonic, tonal]);
   const request = useMemo(() => localFirstRequest(cloud, sources), [cloud, sources]);
   // imports register through the adapted request, so each landed batch reads a fresh catalogue
   const media = useMemo(() => mediaRequest(request), [request]);
@@ -209,9 +250,10 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
       if (present) lapsed.current.delete(songId);
       else lapsed.current.set(songId, why ?? 'missing');
       refreshStatusRef.current?.();
-      if (on('cloud.local_media')) {
+      const reportingDevice = registeredDeviceId(workspaceId);
+      if (on('cloud.local_media') && reportingDevice) {
         const snapshot = present ? { present: [songId], absent: [] } : { present: [], absent: [songId] };
-        void reportDeviceAvailability(media, mediaDeviceId(workspaceId), snapshot).then(() => {
+        void reportDeviceAvailability(media, reportingDevice, snapshot).then(() => {
           refreshStatusRef.current?.();
         }).catch(() => undefined);
       }
@@ -271,11 +313,14 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
 
   // This shell has no local server: the shell's job badge and the local-only buttons stand down
   // while it is open, and come back exactly as they were when it closes.
+  // Before any child subscribes to jobs (children's effects run first): this shell has no jobs server.
+  useState(() => setJobsSource(false));
   useEffect(() => {
     setJobsSource(false);
-    setFlags({ ...NOT_IN_THE_BROWSER });
-    return () => { setJobsSource(true); setFlags(null); };
-  }, []);
+    setFlags(browserFlags(browserHarmonic));
+    // Cloud has no jobs server at all, so the source stays off when this shell unmounts.
+    return () => { setFlags(null); };
+  }, [browserHarmonic]);
 
   const { player, refusal, device: playback, seams: scheduled, prefetch } = useLocalFirstPlayer({
     api, workspaceId, mix: data.mix, remoteControl: on('devices.remote_control'), resolver,
@@ -287,6 +332,19 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   const stems = useStemsEngine({ role: playback.view?.speaker === 'elsewhere' ? 'controller' : 'speaker', programme: songOrder, prefetch });
   useSplitterNotices(stems.store, (words) => showToast(words));
   const resolveTrack = useCallback<MediaResolver>(async (songId) => (await resolver())?.(songId) ?? null, [resolver]);
+  // Harmonic matches read only this device's own files (never a hosted copy), to measure and to
+  // preview: the music stays here. Measuring waits for spare time, one song at a time.
+  const deviceResolving = useRef<{ workspaceId: string; made: Promise<MediaResolver> } | null>(null);
+  const deviceTrack = useCallback<MediaResolver>(async (songId) => {
+    if (deviceResolving.current?.workspaceId !== workspaceId) deviceResolving.current = { workspaceId, made: openStore().then((opened) => makeResolver(opened)) };
+    return (await deviceResolving.current.made)(songId);
+  }, [openStore, workspaceId]);
+  const playingNow = useRef<() => boolean>(() => false);
+  playingNow.current = () => player.state.phase === 'playing';
+  useEffect(() => {
+    if (!browserHarmonic) return undefined;
+    return startTonalProfiler({ store: tonal, openMedia: openStore, resolve: deviceTrack, playing: () => playingNow.current() });
+  }, [browserHarmonic, tonal, openStore, deviceTrack]);
   // Listen's strip: each song's waveform from its own file here, decoded once and kept for the visit
   const waveforms = useRef(new Map<number, Promise<number[] | null>>());
   const waveformOf = useCallback((songId: number) => {
@@ -336,8 +394,11 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   }, [player]);
 
   const path = useLocationText().split('?')[0];
-  const route: ShellRoute = moreRouteOf(path) ?? parseRoute(path);
-  const moreItems = moreDestinationsFor({ mode: 'cloud', feature: on, experience: account.experience ?? null });
+  // With the browser Workspace (cloud.workspace), /workshop is that page and More has no This device
+  const workspacePage = on('cloud.workspace');
+  const moreRoute = moreRouteOf(path);
+  const route: ShellRoute = (moreRoute && !(workspacePage && moreRoute.id === 'workspace') ? moreRoute : null) ?? parseRoute(path);
+  const moreItems = moreDestinationsFor({ mode: 'cloud', feature: on, experience: account.experience ?? null }).filter((place) => !(workspacePage && place.id === 'workspace'));
   const connected = status?.counts.music ?? 0;
   const [spine, setSpine] = useState(() => !onboardingFinished(workspaceId));
   // frozen at the first status: songs landing mid-import must not unmount the spine under the member
@@ -348,10 +409,23 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   const notify = useCallback<ViewProps['notify']>((message, undo) => {
     showToast(message, typeof undo === 'function' ? { undo } : {});
   }, []);
+  // Request a song (flag `requests`): the same hook and panel as local mode, answered in the
+  // browser; room requests the host accepted arrive on the event stream and join this list
+  const songRequests = useRequests({ mix: data.mix, player: shellPlayer, onMix: setMixData }, notify, request);
+  const [requesting, setRequesting] = useState(false);
+  useEffect(() => {
+    const heard = (event: Event) => {
+      if ((event as CustomEvent<{ action?: string }>).detail?.action !== 'pending' || !on('requests')) return;
+      showToast('A room request is waiting in Requests. It joins your mix when you add it.');
+    };
+    window.addEventListener(ROOM_REQUEST_EVENT, heard);
+    return () => window.removeEventListener(ROOM_REQUEST_EVENT, heard);
+  }, [on]);
   const shared: ViewProps | null = status && {
     status, mix: data.mix, mixName: data.name, currentMixName: data.name, canUndo: data.can_undo, mixEta: data.eta,
     refreshMix, setMixData, refreshStatus, request, player: shellPlayer, now, readyNeeded: BROWSER_MIX_NEEDS,
     analysisAvailable: false, transitionEditingAvailable: false, visualizerAvailable: false, waveformOf,
+    startedAMix: (savedMixes ?? 0) > 0,
     setView: (view: View) => navigate(VIEW_PATHS[view]), notify, stage: false, toggleStage: IDLE,
   };
   const song = data.mix[now.position];
@@ -359,9 +433,9 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
   // Ctrl K, the single keys and their help, for what this shell really has (W5's server-free
   // subset); the media keys and what the OS shows as playing drive the browser player.
   const places = [
-    ...destinationsFor({ mode: 'cloud', feature: on, experience: account.experience ?? null }).filter((place) => place.id !== 'workspace'),
+    ...destinationsFor({ mode: 'cloud', feature: on, experience: account.experience ?? null }),
     ...moreItems,
-  ].map((place) => ({ id: place.id, label: place.label, path: place.path, about: place.about }));
+  ].map((place) => ({ id: place.id, label: place.label, path: place.path, about: place.id === 'workspace' && 'icon' in place ? 'Your library at a glance, connecting music, this browser’s storage and diagnostics' : place.about }));
   const controls = useServerFreeControls({ places, player: shellPlayer, now, hasMix: data.mix.length > 0, hasNext: data.mix.length > now.position + 1 });
   const currentMix = useCallback(() => data.mix, [data.mix]);
   useMediaKeys({ on: on('listen.media_keys'), player: shellPlayer, getMix: currentMix, mixName: data.name, now });
@@ -392,6 +466,26 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
         </main>
       );
     }
+    // Make a Mix > Harmonic matches, from key profiles measured on this device
+    if (route.page === 'discover' && route.tab === 'harmonic' && browserHarmonic && on('discover.harmonic')) return <BrowserHarmonicMatches resolveTrack={deviceTrack} />;
+    // Workspace, with the tabs a browser can fill (cloud.workspace)
+    if (route.page === 'workshop' && workspacePage) {
+      return (
+        <CloudWorkspace
+          tab={route.tab}
+          status={shared.status}
+          workspaceId={workspaceId}
+          openStore={openStore}
+          connect={connect}
+          stems={<StemsCard enabled={stems.enabled} store={stems.store} />}
+          stemsShown={stems.enabled && !!stems.store}
+          measuringKeys={browserHarmonic && on('discover.harmonic')}
+          savedMixes={savedMixes}
+          fileCheck={fileCheck}
+          playback={{ refusal, speaker: playback.view?.speaker ?? null, phase: now.phase }}
+        />
+      );
+    }
     switch (route.page) {
       case 'library':
         return connected === 0
@@ -411,6 +505,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
         if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts>{on('drafts') && <SavedBrowserMixes workspaceId={workspaceId} recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} player={shellPlayer} notify={notify} />}</MyMixes>{localExport}</>;
         return <>{(status?.counts.ready ?? 0) >= BROWSER_MIX_NEEDS ? <Mixes {...shared} /> : (
           <MixesEmpty
+            current={data.mix.length > 0 ? <CurrentMix mix={data.mix} mixName={data.name} now={now} player={shellPlayer} setView={shared.setView} analysisAvailable={false} /> : undefined}
             connected={connected}
             checking={importLive.phase === 'running' ? { checked: importLive.registered, total: importLive.total } : undefined}
           />
@@ -430,6 +525,11 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
         return <Mix {...shared} key="current" />;
       case 'missing':
         return <OnlyOnYourComputer title="That page" nearest={{ label: 'Library', path: '/library' }} />;
+      case 'discover':
+        // Word connections are answered in the browser (localFirstLinks.ts) while
+        // discover.word_links is on for the account; with it off this page is as it was
+        if (route.tab === 'words' && on('discover.word_links')) return <Links {...shared} tab="words" />;
+        // falls through
       default: {
         const nearest = DESTINATIONS.find((place) => place.id === destinationOf(route) && place.id !== 'workspace') ?? DESTINATIONS.find((place) => place.id === 'library')!;
         return <OnlyOnYourComputer title={describeRoute(route).title} nearest={{ label: nearest.label, path: nearest.path }} />;
@@ -439,6 +539,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
 
   return (
     <RequestContext.Provider value={request}>
+    <RequestsContext.Provider value={songRequests}>
     <PlayedTransitions.Provider value={played}>
     <StemSurfacesContext.Provider value={stems.surfaces}>
     <BytesContext.Provider value={noBytesHere}>
@@ -451,8 +552,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
         hasMix={data.mix.length > 0}
         hasNext={data.mix.length > now.position + 1}
         stage={false}
-        waitingRequests={0}
-        onRequests={IDLE}
+        waitingRequests={on('requests') ? waitingRequestCount(songRequests.requests) : 0}
+        onRequests={() => setRequesting(true)}
         onHelp={controls.onHelp}
         onCommands={controls.onCommands}
         mode="cloud"
@@ -463,10 +564,16 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
         <Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}>{page()}</Section>
         <footer className="cloud-footer">SelectaDJ Cloud. Your music files stay on your devices; your account keeps their details.</footer>
       </Shell>
+      {requesting && on('requests') && (
+        <Drawer title="Requests" onClose={() => setRequesting(false)}>
+          <RequestsPanel />
+        </Drawer>
+      )}
       {controls.overlays}
     </BytesContext.Provider>
     </StemSurfacesContext.Provider>
     </PlayedTransitions.Provider>
+    </RequestsContext.Provider>
     </RequestContext.Provider>
   );
 }

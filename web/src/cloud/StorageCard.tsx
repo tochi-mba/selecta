@@ -16,7 +16,7 @@ export const PERSIST_COPY: Record<PersistState, string> = {
 
 export const MUSIC_NEVER_STORED = 'Your music files are never in browser storage, so clearing it never touches them.';
 
-const megabytes = (bytes?: number) => (bytes === undefined ? '?' : `${(bytes / 1_000_000).toFixed(1)} MB`);
+const megabytes = (bytes?: number) => (bytes === undefined ? '?' : bytes >= 1_000_000_000 ? `${(bytes / 1_000_000_000).toFixed(1)} GB` : `${(bytes / 1_000_000).toFixed(1)} MB`);
 
 /** More > This device: the browser storage SelectaDJ uses and whether the browser keeps it.
  * The keep-safe button and install offer sit behind `cloud.local_media` and reflow away when it

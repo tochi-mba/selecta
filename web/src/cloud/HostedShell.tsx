@@ -28,6 +28,8 @@ export type HostedView = 'home' | 'listen' | 'mixes' | 'library' | { more: MoreD
  * and it is what drops My Mixes from the shared navigation. */
 export const NOT_IN_HOSTED = {
   'cloud.local_first': false,
+  // the browser Workspace belongs to browser-first Cloud, so the hosted rail has none
+  'cloud.workspace': false,
   requests: false,
   editor: false,
   drafts: false,
@@ -94,7 +96,9 @@ export function HostedShell({ account, page, notices, dock, footer }: {
   useLayoutEffect(() => {
     setJobsSource(false);
     setFlags({ ...NOT_IN_HOSTED });
-    return () => { setJobsSource(true); setFlags(null); };
+    // Cloud has no jobs server at all, so the source stays off (React's dev double-mount would
+    // otherwise switch it back on before the shell's child subscribes).
+    return () => { setFlags(null); };
   }, []);
 
   const place = useLocationText().split('?')[0];

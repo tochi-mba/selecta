@@ -3,10 +3,19 @@ hold, and passes when they all do (BF-0467-01, `src/selecta/flags/flip_guard.py`
 
 Rule shapes are the real ones from `selecta.flags.matching`, so these tests break if the rule
 language moves under the guard. The guard is pure: every test hands in rule state, build states,
-and the two human answers (grandfather verified, gates green)."""
+and the two human answers (grandfather verified, gates green).
+
+`cloud.hosted_media` now ships closed by default (`rules_default: false`, ADR-0455), so the guard
+no longer asks it for a trailing catch-all off rule. The catch-all tests keep that rule honest
+for a flag that is on when no rule matches, through the `open_by_default` fixture."""
 
 from __future__ import annotations
 
+import dataclasses
+
+import pytest
+
+from selecta import flags
 from selecta.flags import State
 from selecta.flags.flip_guard import (
     DASHBOARDS_MARKER,
@@ -39,6 +48,14 @@ def catch_all_off() -> Rule:
         kind=RuleKind.PERCENTAGE,
         params={"percent": 0, "salt": "bf-local-first", "note": "catch-all off"},
     )
+
+
+@pytest.fixture
+def open_by_default(monkeypatch):
+    """The hosted flag as it was before it became a grant: on for whoever no rule matches."""
+    registry = dict(flags.registry())
+    registry[HOSTED_MEDIA] = dataclasses.replace(registry[HOSTED_MEDIA], rules_default=True)
+    monkeypatch.setattr(flags, "registry", lambda: registry)
 
 
 def ready_rules() -> list[Rule]:
@@ -94,13 +111,21 @@ def test_a_disabled_grant_is_not_a_grant():
     assert any("no USERS or WORKSPACES grant" in refusal for refusal in found)
 
 
-def test_refuses_when_the_trailing_catch_all_is_missing():
+def test_a_closed_by_default_flag_needs_no_catch_all():
+    refusals = check_flip(
+        [workspace_grant()], BUILD_ON, grandfather_verified=True, gates_green=True
+    )
+    assert refusals == []
+    assert flags.registry()[HOSTED_MEDIA].rules_default is False
+
+
+def test_refuses_when_the_trailing_catch_all_is_missing(open_by_default):
     found = check_flip([workspace_grant()], BUILD_ON, grandfather_verified=True, gates_green=True)
     assert len(found) == 1
     assert "catch-all off rule" in found[0]
 
 
-def test_refuses_when_the_catch_all_is_not_last():
+def test_refuses_when_the_catch_all_is_not_last(open_by_default):
     found = check_flip(
         [catch_all_off(), workspace_grant()],
         BUILD_ON,
@@ -110,7 +135,7 @@ def test_refuses_when_the_catch_all_is_not_last():
     assert any("last enabled rule" in refusal for refusal in found)
 
 
-def test_a_disabled_catch_all_does_not_count_but_an_enabled_one_before_it_does():
+def test_a_disabled_catch_all_does_not_count_but_an_enabled_one_before_it_does(open_by_default):
     # The last *enabled* rule decides: a disabled trailing rule is skipped at decision time.
     rules = [
         workspace_grant(),
@@ -128,7 +153,7 @@ def test_a_disabled_catch_all_does_not_count_but_an_enabled_one_before_it_does()
     assert any("catch-all off rule" in refusal for refusal in found)
 
 
-def test_a_nonzero_percentage_is_not_a_catch_all():
+def test_a_nonzero_percentage_is_not_a_catch_all(open_by_default):
     dialled_up = Rule(kind=RuleKind.PERCENTAGE, params={"percent": 5, "salt": "bf-local-first"})
     found = check_flip(
         [workspace_grant(), dialled_up], BUILD_ON, grandfather_verified=True, gates_green=True
@@ -136,7 +161,7 @@ def test_a_nonzero_percentage_is_not_a_catch_all():
     assert any("catch-all off rule" in refusal for refusal in found)
 
 
-def test_a_segmented_zero_percent_rule_is_not_a_catch_all():
+def test_a_segmented_zero_percent_rule_is_not_a_catch_all(open_by_default):
     # A segment condition means some contexts fall through to the default-on answer.
     segmented = Rule(
         kind=RuleKind.PERCENTAGE,
@@ -197,10 +222,11 @@ def test_every_missing_condition_is_named_at_once():
     said = "\n".join(found)
     assert "not in this build's flags" in said
     assert "no USERS or WORKSPACES grant" in said
-    assert "catch-all off rule" in said
+    # closed by default (`rules_default: false`), so no catch-all off rule is asked for
+    assert "catch-all off rule" not in said
     assert GRANDFATHER_MARKER in said
     assert "bf-gate-register" in said
-    assert len(found) == 5
+    assert len(found) == 4
 
 
 def test_marker_recorded_in_a_rules_change_reason():

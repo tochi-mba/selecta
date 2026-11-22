@@ -32,9 +32,19 @@ describe('shared-shell destination requirements (BF-0462-01)', () => {
     expect(destinationsFor({ mode: 'local', feature: () => false }).map((item) => item.id)).toEqual(DESTINATIONS.map((item) => item.id));
   });
 
-  it('moves Workspace out of the Cloud rail and into More', () => {
+  it('keeps Workspace out of the Cloud rail without cloud.workspace: its device cards are More > This device', () => {
     expect(destinationsFor(context('cloud')).map((item) => item.id)).not.toContain('workspace');
-    expect(moreDestinationsFor(context('cloud', [], LOCAL_FIRST)).map((item) => item.id)).toContain('workspace');
+    expect(destinationsFor(context('cloud', ['cloud.local_first'], LOCAL_FIRST)).map((item) => item.id)).not.toContain('workspace');
+    const more = moreDestinationsFor(context('cloud', [], LOCAL_FIRST)).find((item) => item.id === 'workspace');
+    expect(more).toMatchObject({ label: 'This device', path: '/workshop' });
+  });
+
+  it('puts Workspace in the Cloud rail with cloud.workspace, after the four music destinations', () => {
+    const rail = destinationsFor(context('cloud', ['cloud.local_first', 'cloud.workspace'], LOCAL_FIRST));
+    expect(rail.map((item) => item.label)).toEqual(['Listen', 'Make a Mix', 'My Mixes', 'Library', 'Workspace']);
+    expect(rail[rail.length - 1]).toMatchObject({ id: 'workspace', path: '/workshop' });
+    // local mode has no such flag to pass: its gate is permissive, so its Workspace is untouched
+    expect(destinationsFor({ mode: 'local', feature: () => false }).map((item) => item.id)).toContain('workspace');
   });
 
   it('requires mode, account flag, experience and measured capability together in Cloud', () => {

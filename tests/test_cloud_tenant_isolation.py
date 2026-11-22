@@ -21,7 +21,7 @@ import time
 
 import pytest
 import sqlalchemy as sa
-from cloud_helpers import cloud_settings
+from cloud_helpers import cloud_settings, grant_hosted_media
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
@@ -328,6 +328,9 @@ FLAG_DARK = {
     ("POST", "/api/local-media/recipes/{mix_id}/revisions"),
     ("POST", "/api/local-media/recipes/{mix_id}/duplicate"),
     ("DELETE", "/api/local-media/recipes/{mix_id}"),
+    # Word connections between catalogue songs ride `discover.word_links`, dark in Cloud while
+    # `lyrics.display` is (SC-0406-03); every query is scoped to the caller's workspace.
+    ("GET", "/api/local-media/links"),
     # The Labs opening for browser-first Cloud ships dark (`cloud.local_first_labs` off); its
     # routes act only on the caller's own user id and workspace (`test_bf_local_first_labs.py`).
     ("POST", "/api/account/labs/local-first/join"),
@@ -440,6 +443,10 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/rooms/{room_id}/end"): None,
     ("POST", "/api/rooms/{room_id}/requests/{request_id}/approve"): None,
     ("POST", "/api/rooms/{room_id}/requests/{request_id}/pass"): None,
+    # the host's browser reads and resolves accepted room requests (rooms/browser_requests.py)
+    ("GET", "/api/room-requests"): None,
+    ("POST", "/api/room-requests/{request_id}/played"): None,
+    ("POST", "/api/room-requests/{request_id}/dismiss"): None,
     ("POST", "/api/rooms/{room_id}/guests/{guest_id}/approve"): None,
     ("POST", "/api/rooms/{room_id}/guests/{guest_id}/remove"): None,
     ("POST", "/api/rooms/{room_id}/guests/{guest_id}/ban"): None,
@@ -535,6 +542,9 @@ def world(tmp_path, monkeypatch):
 
     engine = make_engine(f"sqlite:///{tmp_path / 'cloud.sqlite'}")
     migrate.upgrade(engine)
+    # Hosted media is a staff grant (ADR-0455); granted here so the upload and asset routes
+    # reach their workspace checks rather than the flag guard.
+    grant_hosted_media(engine)
     app = create_cloud_app(cloud_settings(), engine=engine, verifier=People())
     with TestClient(app) as client:
         workspace = {}

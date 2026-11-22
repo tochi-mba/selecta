@@ -12,7 +12,8 @@ when no explicit ports are passed, so a local-first account can host a Room from
 device-available tracks. `NoCloudLibrary` remains here for callers that pass their own
 `RoomPorts`: it reports no requestable songs, so opening a room is refused with `no_songs`
 rather than letting guests ask for songs nothing can play. `RoomPorts` lets the app (and tests,
-and the browser-test server) supply a real library when one exists.
+and the browser-test server) supply a real library when one exists. The cloud app's planner is
+`BrowserPlanner`: an accepted request waits for the host's browser mix, which inserts it.
 """
 
 from __future__ import annotations
@@ -29,6 +30,7 @@ from selecta.playback import session as playback_session
 from selecta.rooms.ports import (
     NothingPlaying,
     NowPlayingPort,
+    PlannerUnavailable,
     RequestPlannerPort,
     RoomEntitlement,
     SongCatalogPort,
@@ -107,14 +109,63 @@ class NoCloudLibrary:
 
 
 class NoCloudPlanner:
-    """Nothing reaches it while `NoCloudLibrary` makes every song unrequestable."""
+    """No planner at all: a caller's own `RoomPorts` without one. Handing a request over says so
+    (`PlannerUnavailable`), and the room marks it as not fitting instead of retrying it."""
 
     def submit(
         self, workspace_id: str, song_id: int, *, source: str = "room", room_id: str, guest_id: str
     ) -> str:
-        raise RuntimeError("The cloud request planner isn't available yet")
+        raise PlannerUnavailable("There is no request planner for this workspace")
 
     def withdraw(self, workspace_id: str, song_request_id: str) -> None:
+        return None
+
+
+BROWSER_REQUEST_PREFIX = "browser:"
+ROOM_REQUEST_TOPIC = "requests.room"
+
+
+def browser_request_id(room_id: str, song_id: int) -> str:
+    """One planner id per room and song, so handing the same song over twice can't make two."""
+    return f"{BROWSER_REQUEST_PREFIX}{room_id}:{int(song_id)}"
+
+
+class BrowserPlanner:
+    """The browser-first Cloud's planner is the host's own browser mix (ADR-0462).
+
+    The server can't place a song in a mix it doesn't play, so an accepted room request is
+    recorded as pending for the host's workspace: the room request keeps its `accepted` status
+    with a `browser:` planner id, and a `requests.room` event on the workspace stream tells the
+    host's open browser to show it under Request a song. The host inserts it (reported back as
+    played) or dismisses it (passed), through `rooms.browser_requests`.
+    """
+
+    def __init__(self, engine: Engine) -> None:
+        self.engine = engine
+
+    def _announce(self, workspace_id: str, payload: dict[str, Any]) -> None:
+        with transaction(self.engine, workspace_id) as conn:
+            outbox.emit(conn, ROOM_REQUEST_TOPIC, workspace_id, payload, db_now(conn))
+
+    def submit(
+        self, workspace_id: str, song_id: int, *, source: str = "room", room_id: str, guest_id: str
+    ) -> str:
+        song_request_id = browser_request_id(room_id, song_id)
+        self._announce(
+            workspace_id,
+            {
+                "action": "pending",
+                "room_id": room_id,
+                "song_id": int(song_id),
+                "song_request_id": song_request_id,
+            },
+        )
+        return song_request_id
+
+    def withdraw(self, workspace_id: str, song_request_id: str) -> None:
+        if not song_request_id.startswith(BROWSER_REQUEST_PREFIX):
+            return None
+        self._announce(workspace_id, {"action": "withdrawn", "song_request_id": song_request_id})
         return None
 
 
@@ -130,6 +181,9 @@ class RoomPorts:
 
 
 __all__ = [
+    "BROWSER_REQUEST_PREFIX",
+    "ROOM_REQUEST_TOPIC",
+    "BrowserPlanner",
     "CloudPlans",
     "CloudSpeakers",
     "NoCloudLibrary",

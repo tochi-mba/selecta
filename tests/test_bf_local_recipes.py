@@ -1,6 +1,6 @@
 """Portable recipes over the metadata-only catalogue (ADR-0458, BF-0462-05): a mix made in the
 browser is saved as immutable revisions of the shared mix contract, read back on any device,
-edited only from its latest revision, and kept apart per workspace. Ships dark with
+edited only from its latest revision, and kept apart per workspace. Rides on
 `cloud.local_media`. Migration up and down is covered by `tests/test_cloud_migrations.py`.
 """
 
@@ -49,7 +49,9 @@ def _make(party, token: str, song_ids: list[int], name: str = "Friday") -> dict:
     return answer.json()["mix"]
 
 
-def test_recipes_ship_dark_in_the_build(party):
+def test_recipes_ship_on_and_the_build_can_turn_them_off(party):
+    assert party.client.get("/api/local-media/recipes", headers=auth(ALICE)).status_code == 200
+    flags.use("-cloud.local_media")
     answer = party.client.get("/api/local-media/recipes", headers=auth(ALICE))
     assert answer.status_code == 403
     assert answer.json()["flag"] == "cloud.local_media"

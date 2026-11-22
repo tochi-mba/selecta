@@ -46,6 +46,11 @@ class SongCatalogPort(Protocol):
         ...
 
 
+class PlannerUnavailable(RuntimeError):
+    """There is no planner for this workspace at all, so handing the request over again can't
+    help. The room marks the request as not fitting instead of retrying it for ever."""
+
+
 class RequestPlannerPort(Protocol):
     def submit(
         self,

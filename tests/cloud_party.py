@@ -93,8 +93,10 @@ class Party:
         return device
 
 
-def make_party(engine) -> Party:
-    catalog, planner, now_playing = FakeSongCatalog(), FakeRequestPlanner(), FakeNowPlaying()
+def make_party(engine, planner=None) -> Party:
+    """`planner` replaces the fake request planner (the browser planner's tests pass theirs)."""
+    catalog, now_playing = FakeSongCatalog(), FakeNowPlaying()
+    planner = planner or FakeRequestPlanner()
     ports = RoomPorts(pepper=PEPPER, catalog=catalog, planner=planner, now_playing=now_playing)
     app = create_cloud_app(cloud_settings(), engine=engine, verifier=People(), room_ports=ports)
     client = TestClient(app, base_url="https://testserver")

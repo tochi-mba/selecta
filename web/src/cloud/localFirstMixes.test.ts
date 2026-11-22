@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MixData, Request, SongRow, Status, VibeCard } from '../api';
-import { BROWSER_MIX_NEEDS, chooseSongs, mixFamily, pickCard, type PlayableSong } from './localFirstMixes';
+import { BROWSER_MIX_NEEDS, chooseSongs, mixFamily, mixNameFor, pickCard, PICK_NAME, type PlayableSong } from './localFirstMixes';
 import { localFirstRequest } from './localFirstRequest';
 import { setFlags } from '../flags';
 import { asMixData, DEFAULT_STEERING, PICKED_LIVE, recipeStore, WORKED_OUT_LIVE, type Recipe } from './recipeStore';
@@ -93,6 +93,23 @@ describe('the browser mix choice', () => {
     expect(card).toMatchObject({ key: 'pick', songs: 1, ready: false, needs: BROWSER_MIX_NEEDS - 1 });
     expect(card.blurb).toContain(WORKED_OUT_LIVE);
     expect(pickCard([playable(1, 'A'), playable(2, 'B')]).ready).toBe(true);
+  });
+});
+
+describe("a saved browser mix's name", () => {
+  const song = (id: number, title: string): PlayableSong => ({ id, title, artist: 'A', duration: 200, playable: true });
+  const songs = [song(1, 'Ocean'), song(2, 'Obvious'), song(3, 'Counting the Days')];
+
+  it('names a mix after its first and last songs, so different mixes read differently', () => {
+    expect(mixNameFor(songs, [1, 2, 3])).toBe('Ocean to Counting the Days');
+    expect(mixNameFor(songs, [3, 1])).toBe('Counting the Days to Ocean');
+  });
+
+  it('keeps the general name only when it cannot name the songs, and stays short', () => {
+    expect(mixNameFor(songs, [])).toBe(PICK_NAME);
+    expect(mixNameFor(songs, [9, 1])).toBe(PICK_NAME);
+    const long = [song(4, 'x'.repeat(60)), song(5, 'y'.repeat(60))];
+    expect(mixNameFor(long, [4, 5]).length).toBeLessThanOrEqual(60);
   });
 });
 

@@ -58,6 +58,13 @@ export function mediaDeviceId(workspaceId: string): string {
   return made;
 }
 
+/** This browser's playback device id once it is registered with the server, else null.
+ * Availability reports need it: the server accepts them only for the member's own registered
+ * device, so reporting under the unregistered profile id is always refused (`unknown_device`). */
+export function registeredDeviceId(workspaceId: string): string | null {
+  try { return localStorage.getItem(`selecta.device.${workspaceId}`); } catch { return null; }
+}
+
 export function ConnectMusic({ request, workspaceId, openStore, importer = runImport, onAvailabilityChanged }: {
   /** Asks with full /api paths, as the media importer does. */
   request: Request;
@@ -151,7 +158,7 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
       // must not undo the local recovery or replace its truthful confirmation.
       try {
         if (onAvailabilityChanged) await onAvailabilityChanged();
-        else await refreshDeviceAvailability(request, await openStore(), mediaDeviceId(workspaceId));
+        else { const device = registeredDeviceId(workspaceId); if (device) await refreshDeviceAvailability(request, await openStore(), device); }
       } catch { /* startup and the next periodic refresh can retry the catalogue report */ }
     }
   };

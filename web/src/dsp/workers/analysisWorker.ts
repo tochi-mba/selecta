@@ -12,15 +12,17 @@
 import { detectOnsets } from '../analysis/onsets';
 import { estimateKey, type KeyEstimate } from '../analysis/key';
 import { estimateTempo, type TempoEstimate } from '../analysis/tempo';
+import { tonalProfile, type TonalProfile } from '../analysis/tonalProfile';
 
-export type AnalysisTask = 'onsets' | 'tempo' | 'key';
+/** `profile` (whole-song tonal profile, cloud.browser_harmonic) is only run when asked for. */
+export type AnalysisTask = 'onsets' | 'tempo' | 'key' | 'profile';
 
 export interface AnalysisRequest {
   id: number;
   sampleRate: number;
   /** Mono PCM; the buffer is transferred, not copied. */
   pcm: Float32Array;
-  /** Which estimates to run; all three when omitted. */
+  /** Which estimates to run; onsets, tempo and key when omitted. */
   tasks?: AnalysisTask[];
 }
 
@@ -29,6 +31,7 @@ export interface AnalysisResponse {
   tempo?: TempoEstimate;
   key?: KeyEstimate;
   onsetTimes?: number[];
+  profile?: TonalProfile;
   error?: string;
 }
 
@@ -48,6 +51,9 @@ export function analyse(request: AnalysisRequest): AnalysisResponse {
     }
     if (tasks.has('key')) {
       response.key = estimateKey(request.pcm, request.sampleRate);
+    }
+    if (tasks.has('profile')) {
+      response.profile = tonalProfile(request.pcm, request.sampleRate);
     }
   } catch (problem) {
     response.error = problem instanceof Error ? problem.message : String(problem);

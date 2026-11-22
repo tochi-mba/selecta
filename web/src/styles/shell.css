@@ -152,6 +152,8 @@ a.button:hover { border-color: var(--text); }
   .nav li a i { font-size: var(--text-md); line-height: 1; }
   .nav-context { display: none; }
   .nav-more-desktop { display: none !important; }
+  /* browser-first Cloud lists Workspace in its More drawer on a phone, so its rail item takes no slot */
+  .nav li.nav-more-cloud-workspace { display: none; }
   .nav-more-mobile {
     width: 100%;
     height: 100%;
@@ -634,4 +636,16 @@ button.song-open b { display: block; white-space: normal; overflow-wrap: anywher
   :root[data-keyboard='open'] :is(.overlay-drawer, .overlay-sheet) .overlay-panel {
     max-height: calc(100dvh - max(var(--keyboard-inset), var(--safe-bottom)) - var(--space-2));
   }
+}
+
+/* A page's heading takes focus after a route change so screen readers announce it; it is not a
+   control, so it shows no focus ring (the skip link and every real control keep theirs). */
+main.page h1[tabindex='-1']:focus { outline: none; }
+
+/* The Cloud footer lines up with the page column above it, not the rail's edge. */
+.content > .cloud-footer {
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding-inline: var(--page-gutter);
+  padding-block: var(--space-loose);
 }

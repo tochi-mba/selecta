@@ -50,6 +50,7 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | `selecta.onboarding.<workspace>` | local | `web/src/cloud/onboarding/state.ts` | How far local-first Cloud onboarding got, so an interrupted step resumes (Cloud, ADR-0463) | Cloud |
 | `selecta.venue.last-heard.<workspace>` | local | `web/src/cloud/venue/deps.ts` | When a person last confirmed hearing the venue check tone, shown only as history and never trusted as a current check (Cloud, ADR-0460) | Cloud |
 | `selecta.venue.record.<workspace>` | local | `web/src/cloud/venue/deps.ts` | The newest capability record measured on this device, filed under its full tuple (Cloud, ADR-0460) | Cloud |
+| `selecta-requests:<workspace>` | local | `web/src/cloud/localFirstRequests.ts` | The songs asked for under Request a song in a browser mix, and which room requests this browser has already placed, so a reload keeps the queue (Cloud, ADR-0462) | Requests |
 | `selecta-cloud-dev:refresh` | local | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The local identity service's refresh token, so a reload signs back in; removed on sign-out or a failed refresh | Cloud (local dev stack) |
 | `selecta-cloud-dev:login` | session | `web/src/devcloud/authkit.tsx` (development builds only, `vite.cloud-dev.config.ts`) | The PKCE verifier, CSRF state and return path of a sign-in in flight; removed when the code comes back | Cloud (local dev stack) |
 
@@ -249,6 +250,8 @@ Metadata only: no audio leaves the member's devices. Dark in the build until `cl
 | `POST /api/rooms/{room_id}/end` | Ends a room |
 | `POST /api/rooms/{room_id}/requests/{request_id}/approve` | Approves a guest request |
 | `POST /api/rooms/{room_id}/requests/{request_id}/pass` | Passes on a guest request |
+| `POST /api/room-requests/{request_id}/played` | Records that the host's browser mix placed an accepted room request, so the room shows it as played |
+| `POST /api/room-requests/{request_id}/dismiss` | Lets an accepted room request go from the host's browser list, so the guest sees the host passed on it |
 | `POST /api/rooms/{room_id}/guests/{guest_id}/approve` | Lets a guest in |
 | `POST /api/rooms/{room_id}/guests/{guest_id}/remove` | Removes a guest |
 | `POST /api/rooms/{room_id}/guests/{guest_id}/ban` | Bans a guest |

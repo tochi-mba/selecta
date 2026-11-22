@@ -39,19 +39,9 @@ export function storageMode(account: Pick<Account, 'usage'>): StorageMode {
   return mode === 'none' ? 'none' : 'hosted';
 }
 
-/** The truthful card for an account with no hosted storage: no bar, no zero-byte limit, no warning. */
-export function NoHostedStorage() {
-  return (
-    <section className="cloud-card cloud-meter-card cloud-meter-none" aria-label="Storage">
-      <p className="cloud-eyebrow">Storage</p>
-      <h2>No hosted storage</h2>
-      <p className="cloud-meter-free">Your music stays on your own devices, so SelectaDJ Cloud keeps no audio for you and there is nothing here to fill up.</p>
-    </section>
-  );
-}
-
 export function StorageMeter({ account }: { account: Account }) {
-  if (storageMode(account) === 'none') return <NoHostedStorage />;
+  // No hosted storage means no storage line at all: there is nothing to meter (BF-0464-02).
+  if (storageMode(account) === 'none') return null;
   const storage = account.usage?.storage;
   const used = storage?.used_bytes ?? account.entitlement.storage_used_bytes;
   const limit = storage?.limit_bytes ?? account.entitlement.storage_limit_bytes;
@@ -66,17 +56,20 @@ export function Meters({ account }: { account: Account }) {
   if (!usage) return <div className="cloud-meters"><StorageMeter account={account} /></div>;
   const lucy = usage.lucy_turns_month;
   const exports = usage.exports_month;
+  // Analysis and export allowances count server work on hosted audio. A browser-first account
+  // analyses and exports on its own device, so showing them would meter something never used.
+  const hosted = storageMode(account) === 'hosted';
   return (
     <div className="cloud-meters">
       <StorageMeter account={account} />
-      <Meter label="Analysis today" used={usage.analysis_today.used} limit={usage.analysis_today.limit}
-        words={allowanceWords(usage.analysis_today, 'songs')} reset={resetWords(usage.analysis_today.resets_at, 'day', zone)} />
+      {hosted && <Meter label="Analysis today" used={usage.analysis_today.used} limit={usage.analysis_today.limit}
+        words={allowanceWords(usage.analysis_today, 'songs')} reset={resetWords(usage.analysis_today.resets_at, 'day', zone)} />}
       {accountFlagOn('lucy', account.features) && <Meter label="Lucy turns this month" used={lucy.used} limit={lucy.limit}
         words={lucy.limit === null ? `${lucy.used} turns` : `${lucy.used} of ${lucy.limit} turns${lucy.fair_use ? ', plus fair-use quick turns' : ''}`}
         reset={lucy.resets_at ? resetWords(lucy.resets_at, 'month', zone) : undefined} />}
-      {accountFlagOn('export', account.features) && <Meter label="Exports this month" used={exports.used} limit={exports.limit} warn={exports.blocked}
+      {hosted && accountFlagOn('export', account.features) && <Meter label="Exports this month" used={exports.used} limit={exports.limit} warn={exports.blocked}
         words={exports.limit === null ? `${exports.used} exports` : `${exports.used} of ${exports.limit} exports`}
-        reset={exports.blocked && storageMode(account) === 'hosted' ? 'Paused while you are over your storage limit' : `${resetWords(exports.resets_at, 'month', zone)} · kept ${exports.retention_days} days`} />}
+        reset={exports.blocked ? 'Paused while you are over your storage limit' : `${resetWords(exports.resets_at, 'month', zone)} · kept ${exports.retention_days} days`} />}
     </div>
   );
 }

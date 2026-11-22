@@ -9,6 +9,7 @@ import io
 import json
 import zipfile
 
+from cloud_helpers import grant_hosted_media
 from cloud_party import ALICE, CAROL, auth
 from cloud_world import HEADERS, signed_up
 from fastapi.routing import APIRoute
@@ -23,6 +24,10 @@ from selecta.scheduling.policy import Lane
 from selecta.work.catalogue import flag_for
 
 pytest_plugins = ("cloud_party",)
+
+# Browser-first is what Cloud ships (owner decision 2026-11-22, ADR-0455): these default on.
+# The venue tablet stays dark until its own evidence passes.
+SHIPS_DARK = {"cloud.venue_tablet"}
 
 # Every Browser-first Cloud flag and its exact requires edge (ADR-0455, ADR-0456).
 BF_FLAGS = {
@@ -52,11 +57,13 @@ def test_the_bf_flags_are_registered_with_their_exact_requires_edges():
     # The uploads plane hangs off the umbrella grant (BF-0456-01).
     assert registry["cloud.uploads"].requires == ("cloud.hosted_media",)
     # The build ships the grant on: rules can never grant past a build-off (ADR-0414 layer
-    # order), so per-account default off happens through the cutover catch-all rule instead.
+    # order), so per-account default off is the rules layer's answer (`rules_default: false`).
     assert registry["cloud.hosted_media"].default is True
+    assert registry["cloud.hosted_media"].rules_default is False
     for flag_id in BF_FLAGS:
+        assert registry[flag_id].default is (flag_id not in SHIPS_DARK), flag_id
         if flag_id != "cloud.hosted_media":
-            assert registry[flag_id].default is False, f"{flag_id} must ship dark"
+            assert registry[flag_id].rules_default is True, f"{flag_id} is not a grant"
 
 
 def test_every_bf_flag_is_cloud_mode_only_and_local_mode_never_serves_it(tmp_path):
@@ -77,18 +84,19 @@ def test_every_bf_flag_is_cloud_mode_only_and_local_mode_never_serves_it(tmp_pat
     assert not owned & local_routes, "the local app serves routes owned by BF cloud flags"
     # Local resolve() leaves them at their registry defaults; nothing else moves.
     states = flags.resolve("")
-    assert states["cloud.hosted_media"].why == "default"
     for flag_id in BF_FLAGS:
-        if flag_id != "cloud.hosted_media":
-            assert states[flag_id].why == "off by default"
+        expected = "off by default" if flag_id in SHIPS_DARK else "default"
+        assert states[flag_id].why == expected, flag_id
 
 
 def test_turning_hosted_media_off_for_one_account_gates_its_uploads_only(party):
     """ADR-0456 gate scope: with the grant revoked by a USERS rule, upload planning answers 403
     `flag_off` for that account alone, while reads of stored media stay open and every other
-    account keeps uploading."""
+    granted account keeps uploading."""
     carol = party.client.get("/api/account", headers=auth(CAROL)).json()["user"]["id"]
-    _rules(party, "cloud.hosted_media", [Rule(RuleKind.USERS, {"ids": [carol], "on": False})])
+    grant_hosted_media(
+        party.engine, party.app, Rule(RuleKind.USERS, {"ids": [carol], "on": False})
+    )
     refused = party.client.post(
         "/api/uploads/plan",
         headers=auth(CAROL),
@@ -110,7 +118,7 @@ def test_turning_hosted_media_off_for_one_account_gates_its_uploads_only(party):
     assert party.client.get("/api/uploads", headers=auth(CAROL)).status_code == 403
     # The account payload tells the shell the hosted experience is gone for Carol only.
     assert party.client.get("/api/account", headers=auth(CAROL)).json()["experience"] == {
-        "local_first": False,
+        "local_first": True,
         "hosted": False,
     }
     alice = party.client.get("/api/account", headers=auth(ALICE)).json()
@@ -131,9 +139,16 @@ def test_the_account_payload_carries_the_experience_block(party):
     """BF-0455-03: the web shell renders the per-account experience from one answer."""
     body = party.client.get("/api/account", headers=auth(ALICE)).json()
     assert set(body["experience"]) == {"local_first", "hosted"}
-    # No rules yet: the build grant is on, the local-first rollout has not begun.
-    assert body["experience"]["hosted"] is True
-    assert body["experience"]["local_first"] is False
+    # No rules: browser-first is the default and nobody has been granted hosted media.
+    assert body["experience"]["hosted"] is False
+    assert body["experience"]["local_first"] is True
+    grant_hosted_media(party.engine, party.app)
+    granted = party.client.get("/api/account", headers=auth(ALICE)).json()
+    assert granted["experience"]["hosted"] is True
+    # and the build can still turn browser-first off
+    flags.use("-cloud.local_first")
+    without = party.client.get("/api/account", headers=auth(ALICE)).json()
+    assert without["experience"]["local_first"] is False
 
 
 def test_an_account_with_no_stored_originals_still_gets_a_complete_export(tmp_path, monkeypatch):

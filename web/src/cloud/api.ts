@@ -138,7 +138,8 @@ export function holdsHostedStorage(account: Account | null): boolean {
   if (!account) return false;
   const mode = (account.usage as (Account['usage'] & { storage_mode?: string }) | undefined)?.storage_mode;
   if (mode) return mode !== 'none';
-  return account.experience?.hosted !== false;
+  // The server's own rule (usage/meters.py storage_mode): the grant, or bytes already stored.
+  return account.experience?.hosted !== false || account.entitlement.storage_used_bytes > 0;
 }
 
 export function isOverQuota(account: Account | null) {

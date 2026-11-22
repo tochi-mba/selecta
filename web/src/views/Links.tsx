@@ -327,7 +327,8 @@ export function HarmonicDiscoveries({ secondsToPrepare }: { onListen?: () => voi
 }
 
 /** Memoised (r8c): typing in the search or a poll that brings back the same link redraws no card. */
-const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts }: { link: Link; onAdd: (link: Link, move: string, draft: number | null) => Promise<void>; names: Record<string, string>; onRated: () => void; drafts: { id: number; name: string }[] }) {
+/** `live`: the browser runtime, where nothing is rendered ahead and each transition is worked out as the mix plays. */
+const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts, live = false }: { live?: boolean; link: Link; onAdd: (link: Link, move: string, draft: number | null) => Promise<void>; names: Record<string, string>; onRated: () => void; drafts: { id: number; name: string }[] }) {
   const { get, post } = useApi();
   const [move, setMove] = useState(link.move);
   const [cardError, setCardError] = useState('');
@@ -405,13 +406,14 @@ const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts }:
           </Action>
         ))}
       </div>
-      <p className="link-status"><Status kind={facts.kind}>{facts.words}</Status></p>
+      {/* the browser renders nothing ahead, so there is no render state or render button to show */}
+      {!live && <p className="link-status"><Status kind={facts.kind}>{facts.words}</Status></p>}
       {facts.asked && state.status === 'ready' && state.label && facts.asked !== state.label && <p className="hint">You asked for {facts.asked}. What you’d hear is {state.label}.</p>}
       {cardError && <p className="warn" role="alert">{cardError}</p>}
       {state.status === 'failed' && <p className="warn">{state.error}</p>}
       {state.status === 'ready' && !state.passed && <p className="warn">This one has a rough spot. Hear it and decide.</p>}
       <div className="row wrap">
-        {state.status === 'ready' ? (
+        {live ? null : state.status === 'ready' ? (
           <button className="primary" onClick={() => setPlaying(!playing)}>{playing ? 'Hide' : 'Play it'}</button>
         ) : (
           <Action className="primary" disabled={busy} waiting={rendering} working="Starting…" run={() => render(move)}>
@@ -444,7 +446,9 @@ const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts }:
             ? state.passed === false ? 'The transition is rendered, with a rough spot.' : 'The transition is rendered and is what you’d hear.'
             : state.status === 'failed'
               ? 'This transition didn’t render, so for now the shared words are only a match to check.'
-              : 'The transition isn’t rendered yet: the shared words are a match to check, and SelectaDJ renders it after they go in.'}
+              : live
+                ? 'Nothing is rendered ahead here: the shared words are a match to check, and SelectaDJ works the transition out in your browser as the mix plays.'
+                : 'The transition isn’t rendered yet: the shared words are a match to check, and SelectaDJ renders it after they go in.'}
         </span>
       </p>
       {state.status === 'ready' && playing && (
@@ -455,7 +459,7 @@ const LinkCard = memo(function LinkCard({ link, onAdd, names, onRated, drafts }:
   );
 });
 
-function LinksView({ mix, setMixData, setView, notify, status, tab = 'words' }: ViewProps & { tab?: 'words' | 'harmonic' }) {
+function LinksView({ mix, setMixData, setView, notify, status, analysisAvailable = true, tab = 'words' }: ViewProps & { tab?: 'words' | 'harmonic' }) {
   const { get, post } = useApi();
   // it's in the address, so a search survives a reload, a shared link and coming Back
   const addressQuery = useQueryParam('q') ?? '';
@@ -502,7 +506,8 @@ function LinksView({ mix, setMixData, setView, notify, status, tab = 'words' }: 
   useVisiblePoll(load, 6000, tab === 'words');
 
   useEffect(() => {
-    if (flagOn('drafts')) getDraftNames().then((list) => setDrafts(list.drafts)).catch(() => {});
+    // The browser's pair cards only add to the current mix, so they need no draft names.
+    if (analysisAvailable && flagOn('drafts')) getDraftNames().then((list) => setDrafts(list.drafts)).catch(() => {});
   }, []);
 
   // Both songs and their transition must insert atomically. The mix-order
@@ -555,6 +560,7 @@ function LinksView({ mix, setMixData, setView, notify, status, tab = 'words' }: 
       link={link}
       names={status.moves}
       drafts={drafts}
+      live={!analysisAvailable}
       onAdd={onAdd}
       onRated={onRated}
     />
@@ -568,8 +574,9 @@ function LinksView({ mix, setMixData, setView, notify, status, tab = 'words' }: 
       {tab === 'words' && (
         <>
           <p className="lede">
-            One song ends a line on these words, another opens a line with them, and the music fits too. SelectaDJ prepares the
-            best ones in the background, so they’re ready to play.<TermHint term="word-link" />
+            One song ends a line on these words, another opens a line with them, {analysisAvailable
+              ? <>and the music fits too. SelectaDJ prepares the best ones in the background, so they’re ready to play.</>
+              : <>found from your songs’ lyrics. Pair two songs and SelectaDJ works out the transition as the mix plays.</>}<TermHint term="word-link" />
           </p>
           {data && data.preparing > 0 && (
             <p className="hint" role="status">
@@ -590,8 +597,8 @@ function LinksView({ mix, setMixData, setView, notify, status, tab = 'words' }: 
           )}
           {data?.links.length === 0 && (
             <p className="lede">
-              {query ? `No links on “${query}” yet. ` : 'No links yet. Analysing more songs will find more. '}
-              {query ? <button type="button" onClick={() => setQuery('')}>Clear search</button> : <LinkIfThere to="/workshop">See analysis progress</LinkIfThere>}
+              {query ? `No links on “${query}” yet. ` : analysisAvailable ? 'No links yet. Analysing more songs will find more. ' : 'No links yet. More appear as lyrics are found for more of your songs.'}
+              {query ? <button type="button" onClick={() => setQuery('')}>Clear search</button> : analysisAvailable && <LinkIfThere to="/workshop">See analysis progress</LinkIfThere>}
             </p>
           )}
           {flagOn('discover.relationship_map') && data && <RelationshipMap links={data.links} />}
