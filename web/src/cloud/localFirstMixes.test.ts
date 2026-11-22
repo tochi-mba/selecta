@@ -109,7 +109,7 @@ describe("a saved browser mix's name", () => {
     expect(mixNameFor(songs, [])).toBe(PICK_NAME);
     expect(mixNameFor(songs, [9, 1])).toBe(PICK_NAME);
     const long = [song(4, 'x'.repeat(60)), song(5, 'y'.repeat(60))];
-    expect(mixNameFor(long, [4, 5]).length).toBeLessThanOrEqual(80);
+    expect(mixNameFor(long, [4, 5]).length).toBeLessThanOrEqual(60);
   });
 });
 

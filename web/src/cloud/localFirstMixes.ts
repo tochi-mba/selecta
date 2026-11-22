@@ -38,6 +38,8 @@ export function pickCard(songs: readonly PlayableSong[]): VibeCard {
   };
 }
 
+const MIX_NAME_MAX = 60;
+
 /** A saved browser mix's own name, from its first and last songs, so My Mixes never lists the
  * same title twice for different mixes: "Ocean to Counting the Days". */
 export function mixNameFor(songs: readonly PlayableSong[], ids: readonly number[]): string {
@@ -46,7 +48,8 @@ export function mixNameFor(songs: readonly PlayableSong[], ids: readonly number[
   const last = title(ids[ids.length - 1]);
   if (!first || !last) return PICK_NAME;
   const name = first === last ? first : `${first} to ${last}`;
-  return name.length > 80 ? `${name.slice(0, 79).trimEnd()}…` : name;
+  // The recipe store keeps at most 60 characters (local_media/api.py).
+  return name.length > MIX_NAME_MAX ? `${name.slice(0, MIX_NAME_MAX - 1).trimEnd()}…` : name;
 }
 
 /** Which songs a browser mix plays, in order: `start` first, the chosen ending last. */
