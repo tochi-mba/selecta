@@ -68,6 +68,7 @@ from selecta.identity.tokens import (
     JwksUnavailable,
     TokenError,
     TokenExpired,
+    WrongIssuer,
     authkit_verifier,
 )
 from selecta.identity.workos import WorkOSClient
@@ -272,7 +273,14 @@ def _bearer(request: Request, verifier: Verifier) -> Claims:
         # Keep the response deliberately generic, but leave operators enough information to
         # distinguish an issuer/audience configuration mistake from a bad signature. Never log
         # the credential or exception text: both can contain attacker-controlled material.
-        log.warning("AuthKit token rejected: %s", type(error).__name__)
+        if isinstance(error, WrongIssuer) and error.observed is not None:
+            # The issuer comes from a token whose signature already verified, so it names
+            # what to set SELECTA_AUTH_ISSUER to. Quoted and capped, never the token itself.
+            log.warning(
+                "AuthKit token rejected: WrongIssuer (token iss %r)", error.observed[:120]
+            )
+        else:
+            log.warning("AuthKit token rejected: %s", type(error).__name__)
         raise HTTPException(
             status_code=401,
             detail={"code": "token_invalid", "message": "Sign in again to continue."},
