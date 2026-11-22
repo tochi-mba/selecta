@@ -217,7 +217,8 @@ export async function runJournalled(options: ImportOptions & { journal: ImportJo
       try {
         await sendBatch(sending);
       } catch (error) {
-        if (isAbort(error)) return;
+        // a stop may carry its own reason (a pause for sign-in) rather than an AbortError
+        if (isAbort(error) || signal?.aborted) return;
         if (isQuotaError(error)) stopped = true;
         fatal = error;
         return;
@@ -304,7 +305,7 @@ export async function runJournalled(options: ImportOptions & { journal: ImportJo
   } catch (error) {
     producing = false;
     if (sender) await sender;
-    if (isAbort(error)) summary.cancelled = true;
+    if (isAbort(error) || signal?.aborted) summary.cancelled = true;
     else if (!isQuotaError(error)) throw error;
     else {
       summary.paused = true;

@@ -9,6 +9,7 @@ import {
   clearImportSession, IMPORT_SUSPENDED, IMPORT_TAB_FREED, importRunningHere, importSnapshot, readImportMarker, startImportSession,
   type ImportMarker, type ImportRunner,
 } from './importSession';
+import { getConnection } from './connection';
 import { canHeal, withRetry } from './resilientRequest';
 
 // Carrying an interrupted import on (flag `cloud.resilient_import`).
@@ -49,6 +50,8 @@ export function useResumeOffer(workspaceId: string): ResumeOffer | null {
 /** The import's patient retry, through the shared request layer where it is present. */
 export const importRetry: RetryPolicy = (work, { signal, onWait } = {}) => {
   let waited = false;
+  // the shared retry waits quietly while the connection store already knows it is offline
+  if (getConnection().status === 'offline') { waited = true; onWait?.({ why: 'offline', retryAt: null }); }
   return withRetry(work, {
     attempts: Number.POSITIVE_INFINITY,
     baseMs: 2_000,
