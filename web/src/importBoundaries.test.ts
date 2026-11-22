@@ -66,8 +66,8 @@ describe('frontend import direction', () => {
         .flatMap((match) => match[1].split(',').map((part) => part.trim().replace(/^type\s+/, '').split(/\s+as\s+/)[0]))
         .filter((imported) => ['get', 'post', 'del', 'request', 'send', 'fetchBytes'].includes(imported))
         .map((imported) => `${file}: imports ${imported}`);
-      // clientFor() or getVia() with nothing passed falls back to the local client silently
-      const defaulted = [...source.matchAll(/\b(clientFor|getVia|postVia|delVia)\(\s*\)/g)].map((match) => `${file}: ${match[1]}() with no request`);
+      // clientFor() with nothing passed falls back to the local client silently
+      const defaulted = [...source.matchAll(/\b(clientFor)\(\s*\)/g)].map((match) => `${file}: ${match[1]}() with no request`);
       return [...named, ...defaulted];
     });
     expect(offending).toEqual([]);

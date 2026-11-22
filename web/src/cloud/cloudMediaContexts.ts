@@ -15,6 +15,8 @@ export type MediaContext = {
 };
 
 export const CLOUD_MEDIA_CONTEXTS: MediaContext[] = [
+  { file: 'devices/useZoneSpeaker.ts', count: 1, kind: 'audio element',
+    owner: 'Business zone speaker; fenced server lease, heartbeat expiry and Cloud transport focus stop competing playback.' },
   {
     file: 'cloud/Library.tsx', count: 1, kind: 'audio element',
     owner: 'Library page-local player. Rendered only with cloud.single_audio_owner off; with it on the page plays through the dock.',

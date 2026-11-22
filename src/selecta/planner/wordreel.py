@@ -32,7 +32,6 @@ from selecta.styles.wordplay import (
     Stem,
     felt_bpm,
     phrase_roll,
-    vocal_ride,
     word_blend,
     word_cut,
     word_exchange,
@@ -89,13 +88,6 @@ class Phrase:
     voice: Stem
     band: Stem
 
-
-@dataclass
-class RideTake:
-    line_a: Line
-    line_b: Line
-    rendered: Rendered
-    report: AuditReport
 
 
 @dataclass
@@ -343,63 +335,6 @@ def ride_entry_line(b: SongInfo) -> Line | None:
             best_b = (score, line)
     return best_b[1] if best_b else None
 
-
-def build_rides(
-    conn: sqlite3.Connection,
-    settings: Settings,
-    pairs: list[tuple[int, int]],
-    wanted: int,
-    cache: SongCache | None = None,
-    log: Callable[[str], None] = print,
-    on_take: Callable[[RideTake], None] | None = None,
-) -> list[RideTake]:
-    """Vocal rides between songs that can play together, for as many pairs as it takes."""
-    cache = cache or SongCache(capacity=6)
-    aligner = Aligner(str(settings.models_dir))
-    takes: list[RideTake] = []
-    for a_id, b_id in pairs:
-        if len(takes) >= wanted:
-            break
-        a = load_song(conn, settings, a_id)
-        b = load_song(conn, settings, b_id)
-        label = f"{a.name[:32]} > {b.name[:32]}"
-        lines = ride_lines(a, b)
-        if lines is None:
-            log(f"  skip ride {label}: no line for A's voice to ride on")
-            continue
-        try:
-            edge_a = locate_line_edge(settings, aligner, a, lines[0], at_end=True)
-            edge_b = locate_line_edge(settings, aligner, b, lines[1], at_end=False)
-        except CannotTrust as problem:
-            log(f"  skip ride {label}: {problem}")
-            continue
-        for bars in ride_lengths(a, edge_a.words[0].end):
-            script = vocal_ride(
-                a,
-                b,
-                edge_a.words[0],
-                edge_b.words[0],
-                edge_a.voice,
-                edge_a.band,
-                edge_b.band,
-                bars,
-            )
-            if script is not None:
-                break
-        if script is None:
-            log(f"  no ride for {label}: the timing doesn't work out")
-            continue
-        rendered = render(script, cache)
-        report = audit(rendered)
-        if not report.passed:
-            failed = [f"{c.name} {c.value}{c.unit}" for c in report.failures]
-            log(f"  reject ride {label}: {failed}")
-            continue
-        takes.append(RideTake(lines[0], lines[1], rendered, report))
-        if on_take:
-            on_take(takes[-1])
-        log(f"  keep ride {label}: {lines[0].text[:40]} / {lines[1].text[:40]}")
-    return takes
 
 
 def modes_for(a: SongInfo, b: SongInfo, space: TimbreSpace | None = None) -> tuple[str, ...]:

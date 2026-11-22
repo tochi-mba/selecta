@@ -7,13 +7,14 @@ import { showToast } from '../../ui/toasts';
 import { businessOn, useBusiness } from '../context';
 import { VENUE_COPY } from '../copy/venue';
 import type { ContentRules, Daypart, Venue } from '../types';
+import { ContentTools } from '../content/ContentTools';
 import { BlocklistEditor } from './BlocklistEditor';
 import { ContentRulesEditor, type CrateChoice } from './ContentRulesEditor';
 import { ExplicitBulkEditor } from './ExplicitBulkEditor';
 import { refusal, useLoad } from './useVenue';
 
 const EMPTY_RULES: ContentRules = { explicit: 'block', blocklist: [], allowed_crates: [], brand: {}, volume_caps: {}, quiet_hours: [] };
-const EMPTY_POOL_CODES = new Set(['rules_empty_pool', 'empty_pool', 'no_allowed_songs']);
+const EMPTY_POOL_CODES = new Set(['rules_empty_pool', 'empty_pool', 'no_allowed_songs', 'block_empty']);
 
 /** The words for a refused rules save: the ADR-0450 empty-pool refusal names the zone. */
 export function rulesRefusalWords(error: unknown, venue: Venue): string {
@@ -28,6 +29,8 @@ export function rulesRefusalWords(error: unknown, venue: Venue): string {
 export function RulesTab({ venue, disabled }: { venue: Venue; disabled: string | null }) {
   const { client, org, bizApi } = useBusiness();
   const [refused, setRefused] = useState<string | null>(null);
+  // ADR-0450: a save leaving a block under 2 hours of music warns with numbers first
+  const [short, setShort] = useState<{ rules: ContentRules; words: string } | null>(null);
   const rules = useLoad(async () => (await client.rules(org.id, venue.id)) ?? EMPTY_RULES, [client, org.id, venue.id]);
   const songs = useLoad(async () => (await client.librarySongs(org.id)) ?? [], [client, org.id]);
   const crates = useLoad<CrateChoice[]>(async () => (bizApi ? (await bizApi.listCrates(venue.id)).map((crate) => ({ id: crate.id, name: crate.name })) : []), [bizApi, venue.id]);
@@ -36,14 +39,17 @@ export function RulesTab({ venue, disabled }: { venue: Venue; disabled: string |
     return Object.fromEntries(entries);
   }, [client, venue.zones]);
 
-  const save = async (next: ContentRules) => {
+  const save = async (next: ContentRules, confirm = false) => {
     setRefused(null);
+    setShort(null);
     try {
-      const saved = await client.saveRules(org.id, venue.id, next);
+      const saved = await client.saveRules(org.id, venue.id, next, confirm);
       rules.set(saved ?? next);
       showToast(VENUE_COPY.rulesSaved);
     } catch (error) {
-      setRefused(rulesRefusalWords(error, venue));
+      const { code, detail } = refusal(error);
+      if (code === 'short_pool') setShort({ rules: next, words: typeof detail.message === 'string' ? detail.message : VENUE_COPY.rulesFailed });
+      else setRefused(rulesRefusalWords(error, venue));
     }
   };
 
@@ -54,6 +60,9 @@ export function RulesTab({ venue, disabled }: { venue: Venue; disabled: string |
   return <div className="biz-stack">
     <h2>{VENUE_COPY.rulesHeading}</h2>
     <div className="biz-card">
+      {short && <div className="warn biz-stack" role="alert"><p>{short.words}</p>
+        <div className="biz-row"><button type="button" onClick={() => { void save(short.rules, true); }}>Save anyway</button>
+          <button type="button" onClick={() => setShort(null)}>Keep editing</button></div></div>}
       <ContentRulesEditor rules={current} zones={venue.zones} crates={crates.data ?? []} dayparts={dayparts.data ?? {}} onSave={save} disabled={disabled} refusal={refused} />
     </div>
     <div className="biz-card">
@@ -67,5 +76,6 @@ export function RulesTab({ venue, disabled }: { venue: Venue; disabled: string |
         }} />
       )}
     </div>}
+    <ContentTools venue={venue} disabled={disabled} />
   </div>;
 }

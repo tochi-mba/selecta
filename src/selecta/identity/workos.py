@@ -254,6 +254,15 @@ class WorkOSClient:
     def delete_user(self, user_id: str) -> None:
         self._request("DELETE", f"/user_management/users/{_segment(user_id, 'user')}")
 
+    def get_directory_user(self, directory_user_id: str) -> dict[str, Any]:
+        """A Directory Sync user as WorkOS holds it now (`id`, `directory_id`, `state`, `emails`).
+        Raises `WorkOSNotFound` once the directory has deleted them."""
+        path = f"/directory_users/{_segment(directory_user_id, 'directory user')}"
+        body = self._json(self._request("GET", path))
+        if not isinstance(body, dict):
+            raise WorkOSError("WorkOS returned a directory user that isn't an object.")
+        return body
+
 
 __all__ = [
     "WORKOS_API",

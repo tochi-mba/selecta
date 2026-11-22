@@ -1,5 +1,5 @@
 // The SelectaDJ for Business app (ADR-0453 D2, BZ-0453-01). CloudApp renders it, as its own lazy
-// chunk, for `/b/{org}/...` when `business.workspaces` is on for the account.
+// chunk, for `/b/{org}/...` when `business.workspaces` is on for the account (cloudRoutes.ts).
 //
 // It loads the organisation named in the route (its `workspace_id` then goes as X-Workspace-ID on
 // every call), keeps `now` ticking every 10 s, tracks Offline (browser events plus three failed
@@ -13,6 +13,8 @@ import { CloudEvent, StreamState, useCloudEvents } from '../cloud/events';
 import { LiveRegion, Problem } from '../ui/controls';
 import { showToast, Toaster } from '../ui/toasts';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
+import { heldZoneName, useHeldZone } from '../devices/zonePlayback';
+import { businessApi } from './api';
 import { businessClient } from './client';
 import { AssertiveRegion } from './components/Notices';
 import { BusinessContext, BusinessCtx, businessOn, BusinessRoute, parseBusinessPath } from './context';
@@ -53,7 +55,10 @@ export type BusinessAppProps = {
 export default function BusinessApp({ api, route, account, onLeaveToPersonal, token, clock, forceOffline, stream: forcedStream, device }: BusinessAppProps) {
   const on = businessOn(account.features, 'business.workspaces');
   const [current, setCurrent] = useState<BusinessRoute>(route);
-  useEffect(() => { setCurrent(route); }, [route]);
+  // The host may hand a fresh route object on every render; follow it only when it says
+  // something new, or the landing redirect below and the host would undo each other forever.
+  const routeKey = JSON.stringify(route);
+  useEffect(() => { setCurrent(JSON.parse(routeKey) as BusinessRoute); }, [routeKey]);
   const leave = useRef(onLeaveToPersonal);
   leave.current = onLeaveToPersonal;
 
@@ -100,12 +105,12 @@ export default function BusinessApp({ api, route, account, onLeaveToPersonal, to
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const workspaceId = overview?.org.workspace_id;
   const client = useMemo(() => businessClient(api, workspaceId), [api, workspaceId]);
+  const bizApi = useMemo(() => (workspaceId ? businessApi(api, workspaceId) : undefined), [api, workspaceId]);
 
+  // One read: the organisation id is its workspace id, so the overview names both.
   const read = useCallback(async (target: string, scoped?: string) => {
-    const org = scoped ? null : await businessClient(api).org(target);
-    const wsId = scoped ?? org!.workspace_id;
-    const next = await businessClient(api, wsId).overview(target);
-    return { org: org ?? next.org, next };
+    const next = await businessClient(api, scoped ?? target).overview(target);
+    return { org: next.org, next };
   }, [api]);
 
   useEffect(() => {
@@ -180,12 +185,25 @@ export default function BusinessApp({ api, route, account, onLeaveToPersonal, to
     }
   }, [org, current]);
 
+  // This browser may be one of the organisation's zone speakers (ADR-0443): the switcher must
+  // not leave the workspace while it is, so ask the server and name the zone it holds.
+  const heldZoneId = useHeldZone(api, on ? workspaceId : null, updatedAt);
+  const switcherDevice = useMemo<SwitcherDevice | undefined>(() => {
+    const zones = (overview?.venues ?? []).flatMap((venue) => venue.zones ?? []);
+    const held = heldZoneName(heldZoneId, zones);
+    if (!held) return device;
+    return { ...device, leaseZone: device?.leaseZone ?? held };
+  }, [device, heldZoneId, overview]);
+
   const value = useMemo<BusinessCtx | null>(() => overview && {
     org: overview.org,
     venues: overview.venues,
     devices: overview.devices ?? [],
     activity: overview.activity ?? [],
     client,
+    bizApi,
+    api,
+    personalWorkspaceId: account.workspace.id,
     now,
     offline,
     updatedAt,
@@ -194,7 +212,7 @@ export default function BusinessApp({ api, route, account, onLeaveToPersonal, to
     readOnly: isReadOnly(overview.org, now),
     refresh,
     go,
-  }, [overview, client, now, offline, updatedAt, stream, load, refresh, go]);
+  }, [overview, client, bizApi, api, account.workspace.id, now, offline, updatedAt, stream, load, refresh, go]);
 
   // With `business.workspaces` off, business pages are unreachable: CloudApp shows personal.
   if (!on || !current || current.page === 'start') return null;
@@ -217,7 +235,7 @@ export default function BusinessApp({ api, route, account, onLeaveToPersonal, to
   return (
     <BusinessContext.Provider value={value}>
       <BusinessShell org={value.org} route={page} api={api} account={account} now={now} readOnly={value.readOnly} offline={offline}
-        wall={wall} device={device} go={go} onLeaveToPersonal={() => leave.current()}>
+        wall={wall} device={switcherDevice} go={go} onLeaveToPersonal={() => leave.current()}>
         {staff && !staffVenue
           ? <section className="biz-stack"><h1>Staff controls</h1><p>{SHELL_COPY.staffNoVenue}</p></section>
           : <BusinessPage route={page} org={value.org} wall={wall} />}

@@ -633,9 +633,22 @@ verified test identity.</p>
             "Local inbox",
             "<p class='soft'>Every email SelectaDJ sends on this computer lands here. Nothing "
             "is delivered anywhere.</p>"
-            "<p class='row'><a class='button' href='/dev/mail'>Refresh</a></p>" + table,
+            "<form class='row' method='post' action='/dev/mail/clear'>"
+            "<a class='button' href='/dev/mail'>Refresh</a>"
+            + ("<button class='button' type='submit'>Clear the inbox</button>" if letters else "")
+            + "</form>"
+            + table,
             wide=True,
         )
+
+    @app.post("/dev/mail/clear")
+    def clear_inbox(request: Request):
+        # Only this inbox's own page may empty it, never a form on another site.
+        origin = request.headers.get("origin")
+        if origin and origin.split("://", 1)[-1] != request.headers.get("host"):
+            return JSONResponse({"message": "Clear the inbox from its own page"}, status_code=403)
+        store.clear_mail()
+        return RedirectResponse("/dev/mail", status_code=303)
 
     @app.get("/dev/mail.json")
     def inbox_json(to: str = ""):

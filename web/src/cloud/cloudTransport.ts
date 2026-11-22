@@ -15,7 +15,7 @@ import type { useCloudPlayer } from './useCloudPlayer';
 // its lease while paused; its next heartbeat tells the session it is paused, so every remote
 // shows the truth.
 
-export type FocusId = 'library' | 'device';
+export type FocusId = 'library' | 'device' | `zone:${string}`;
 export type FocusHolder = { id: FocusId; pause: () => void };
 export type SharedPlayer = ReturnType<typeof useCloudPlayer>;
 
@@ -42,7 +42,7 @@ function set(next: Partial<TransportState>) {
   for (const listener of listeners) listener();
 }
 
-const NOTICES: Record<FocusId, string> = {
+const NOTICES: Record<'library' | 'device', string> = {
   library: 'The speaker on this device is paused while your library plays.',
   device: 'Your library is paused while this device plays the session.',
 };
@@ -53,7 +53,8 @@ export function claimFocus(next: FocusHolder) {
   holder = next;
   if (before && before.id !== next.id) {
     before.pause();
-    set({ focus: next.id, notice: NOTICES[next.id] });
+    set({ focus: next.id, notice: next.id === 'library' || next.id === 'device'
+      ? NOTICES[next.id] : 'Other playback on this device is paused while the zone plays.' });
   } else if (state.focus !== next.id) {
     set({ focus: next.id });
   }

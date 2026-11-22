@@ -246,7 +246,7 @@ def plan_turn(
         if spent + limits.max_cost_usd > ceiling:
             limited = "spend"  # a smaller class's cheaper model may still fit
             continue
-        start = try_start_turn(conn, workspace_id, tier, served, month)
+        start = _start_turn(conn, workspace_id, tier, served, month)
         if not start.admitted:
             used_up.add(bucket_here)
             limited = "allowance"
@@ -254,7 +254,7 @@ def plan_turn(
         reservation = reserve(conn, limits.max_cost_usd, policy, now)
         alerts.extend(reservation.alerts)
         if not reservation.admitted:
-            refund_turn(conn, workspace_id, month, start.bucket)
+            _refund_turn(conn, workspace_id, month, start.bucket)
             limited = "platform"
             from selecta.observability import metrics
 
@@ -287,6 +287,23 @@ def plan_turn(
         fallback_used=chosen.fallback_used, limited=limited, alerts=tuple(alerts),
         skipped=chosen.skipped,
     )
+
+
+def _start_turn(conn, workspace_id: str, tier: Tier, served: RequestClass, month: str):
+    """A business organisation's turn counts against its venues' pooled Lucy allowance
+    (ADR-0448, while `business.entitlements` is on); every other account's against its plan."""
+    from selecta.business import entitlement_gates
+
+    pooled = entitlement_gates.lucy_start(conn, workspace_id, served, month)
+    return pooled if pooled is not None else try_start_turn(conn, workspace_id, tier, served, month)
+
+
+def _refund_turn(conn, workspace_id: str, month: str, bucket) -> bool:
+    from selecta.business import entitlement_gates
+
+    if entitlement_gates.lucy_refund(conn, workspace_id, bucket):
+        return True
+    return refund_turn(conn, workspace_id, month, bucket)
 
 
 def _clamp(name: str, value: int) -> int:
@@ -349,7 +366,7 @@ def _close(
             tokens_out=tokens_out, cost_usd=account_cost, cache_read_tokens=cache_read_tokens,
         )
         if outcome in REFUNDED:
-            refund_turn(conn, run.workspace_id, run.usage_month, run.allowance_class)
+            _refund_turn(conn, run.workspace_id, run.usage_month, run.allowance_class)
     alerts: tuple[SpendAlert, ...] = ()
     if run.spend_day is not None:
         alerts = reconcile(conn, run.spend_day, run.reserved_usd, platform_cost, policy)

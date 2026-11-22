@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Row
 
+from selecta.business.weight import lane_tier
 from selecta.persistence import lock_rows, new_id
 from selecta.scheduling import policy
 from selecta.scheduling.policy import Lane, WorkerCaps
@@ -125,7 +126,7 @@ class ClaimSession:
     def cap(self, standing: AccountStanding, lane: str) -> int:
         if standing.caps is not None and lane in standing.caps:
             return int(standing.caps[lane])
-        return self.config.cap(standing.tier, lane, self.pool)
+        return self.config.cap(lane_tier(standing.tier, lane), lane, self.pool)
 
     def _flag_on(self, workspace_id: str, flag_id: str | None) -> bool:
         if flag_id is None:
@@ -213,9 +214,8 @@ class ClaimSession:
         if not rows:
             self._fix_empty_head(head)
             return None
-        rows.sort(
-            key=lambda r: policy.job_key(r.urgency, r.needed_by, r.line_position, r.created_at)
-        )
+        # Zones of one organisation take turns inside its account (ADR-0443 BZ-0443-10).
+        rows = policy.zone_fair_order(list(rows), served=self._zones_served(head.workspace_id))
         for row in rows:
             if not self._flag_on(head.workspace_id, row.flag_id):
                 # Its feature is off: drain blocks it, stop cancels it (`flag_gates`).
@@ -292,7 +292,7 @@ class ClaimSession:
             self.connection,
             head,
             job.est_cost_s,
-            config.weight(standing.tier),
+            config.weight(lane_tier(standing.tier, job.lane)),
             config.lane_weight(job.lane),
             self.now,
         )
@@ -300,13 +300,32 @@ class ClaimSession:
 
     # --- deadline boost ---
 
-    def _boosts_in_window(self, workspace_id: str) -> int:
+    def _zones_served(self, workspace_id: str) -> dict[str, int]:
+        """How many jobs of each zone started in the boost window, so zones keep their turns
+        across claims (ADR-0443 BZ-0443-10)."""
         since = self.now - self.config.boost_window_s
-        return self.connection.execute(
-            sa.select(sa.func.count()).where(
-                jobs.c.workspace_id == workspace_id, jobs.c.boosted_at >= since
+        rows = self.connection.execute(
+            sa.select(jobs.c.zone_id, sa.func.count())
+            .select_from(jobs.join(job_attempts, job_attempts.c.job_id == jobs.c.id))
+            .where(
+                jobs.c.workspace_id == workspace_id,
+                jobs.c.zone_id.is_not(None),
+                job_attempts.c.started_at >= since,
             )
-        ).scalar_one()
+            .group_by(jobs.c.zone_id)
+        ).all()
+        return {zone: int(count) for zone, count in rows}
+
+    def _boosts_in_window(self, workspace_id: str, zone_id: str | None = None) -> int:
+        """Recent boosts in this account, counted per zone for zone work (ADR-0443), so one
+        zone's flood of seams cannot use up another zone's boosts."""
+        since = self.now - self.config.boost_window_s
+        query = sa.select(sa.func.count()).where(
+            jobs.c.workspace_id == workspace_id, jobs.c.boosted_at >= since
+        )
+        if zone_id is not None:
+            query = query.where(jobs.c.zone_id == zone_id)
+        return self.connection.execute(query).scalar_one()
 
     def _try_boost(self) -> Claim | None:
         """Playback seams about to miss their hand-off go before other interactive work."""
@@ -337,7 +356,8 @@ class ClaimSession:
             context = self._context(head, standing, row)
             if policy.why_ineligible(_candidate(row), self.caps, context) is not None:
                 continue
-            if not policy.boost_allowed(self._boosts_in_window(row.workspace_id), self.config):
+            boosts = self._boosts_in_window(row.workspace_id, getattr(row, "zone_id", None))
+            if not policy.boost_allowed(boosts, self.config):
                 continue
             return self._dispatch(head, row, standing, boosted=True)
         return None

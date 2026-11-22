@@ -46,12 +46,14 @@ export type KioskView = {
   network?: 'online' | 'offline' | 'unknown';
   version?: string;
   pins_on?: boolean;
+  /** Seconds a clocked close has left to fade: close now (60 s) or an exact close (ADR-0444). */
+  closing_fade_s?: number | null;
 };
 
 export const VIEW_FIELDS = [
   'venue_name', 'zone_name', 'state', 'now', 'next', 'opens_at', 'theme', 'screen_sleep_when_closed',
   'burn_in', 'diagnostic_code', 'saved_hours_ahead', 'last_sync_at', 'device_name', 'network',
-  'version', 'pins_on',
+  'version', 'pins_on', 'closing_fade_s',
 ] as const;
 
 const ALIASES: Record<string, (typeof VIEW_FIELDS)[number]> = {

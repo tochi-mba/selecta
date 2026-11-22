@@ -92,7 +92,10 @@ def test_every_guest_and_display_route_is_classified(party):
         for method in route.methods - {"HEAD"}
     }
     assert routes == set(GUEST) | ANONYMOUS | DISPLAY
-    assert set(GUEST) | ANONYMOUS | DISPLAY == CAPABILITY_ONLY
+    assert set(GUEST) | ANONYMOUS | DISPLAY == {
+        route for route in CAPABILITY_ONLY
+        if route[1].startswith(("/api/guest", "/api/display"))
+    }
 
 
 def test_the_guest_reaches_its_own_room(two_rooms):

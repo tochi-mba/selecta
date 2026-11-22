@@ -16,6 +16,9 @@ the forced workspace policy in migration `bz0444hour01`, like every other tenant
 - `zone_commands`: remote commands, keyed by the device's own command id, so a kiosk or remote
   that replays its offline queue never applies a command twice.
 - `zone_cache_reports`: what each kiosk holds for its zone (seconds of mix ahead, bytes, cap).
+- `venue_closing_modes`: natural (the song ends, within 4 minutes) or exact closing (bz0444hour02).
+- `zone_plan_states`: the zone autoplanner's last plan and the zone's staff steering, with a
+  `dirty` mark the hours and programme routes set so the next pass replans (bz0444hour02).
 """
 
 from __future__ import annotations
@@ -29,6 +32,7 @@ JSONColumn = sa.JSON().with_variant(postgresql.JSONB(), "postgresql")
 
 OVERRIDE_KINDS = ("stay_open_late", "close_now")
 ZONE_STATES = ("closed", "warming", "opening", "open", "closing")
+CLOSING_MODES = ("natural", "exact")
 
 
 def _one_of(column: str, values: tuple[str, ...]) -> sa.TextClause:
@@ -165,7 +169,33 @@ zone_cache_reports = sa.Table(
     sa.Index("ix_zone_cache_reports_zone_id", "zone_id"),
 )
 
+venue_closing_modes = sa.Table(
+    "venue_closing_modes",
+    metadata,
+    sa.Column("venue_id", Id, primary_key=True),
+    sa.Column("workspace_id", Id, nullable=False),
+    sa.Column("closing_mode", sa.String(16), nullable=False),
+    sa.Column("updated_by", Id, nullable=False),
+    sa.Column("updated_at", Epoch, nullable=False),
+    sa.CheckConstraint(_one_of("closing_mode", CLOSING_MODES), name="mode"),
+    sa.Index("ix_venue_closing_modes_workspace_id", "workspace_id"),
+)
+
+zone_plan_states = sa.Table(
+    "zone_plan_states",
+    metadata,
+    sa.Column("zone_id", Id, primary_key=True),
+    sa.Column("workspace_id", Id, nullable=False),
+    sa.Column("plan_json", JSONColumn),
+    sa.Column("steering_json", JSONColumn),
+    sa.Column("dirty", sa.Boolean, nullable=False, server_default=sa.true()),
+    sa.Column("updated_at", Epoch, nullable=False),
+    sa.Index("ix_zone_plan_states_workspace_id", "workspace_id"),
+)
+
 TENANT_TABLES = (
+    "venue_closing_modes",
+    "zone_plan_states",
     "venue_hours",
     "venue_hour_exceptions",
     "venue_hour_overrides",

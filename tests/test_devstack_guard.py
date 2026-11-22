@@ -109,3 +109,19 @@ def test_disk_objects_keep_every_key_inside_the_folder(tmp_path, bucket, key):
     store = DiskObjects(tmp_path / "objects", SITE, b"secret")
     with pytest.raises(R2Error):
         store.path(bucket, key)
+
+
+def test_inbox_clears_from_its_own_page_only(tmp_path, monkeypatch):
+    app = identity_app(tmp_path, monkeypatch)
+    app.state.provider.store.send_mail("dev@selectadj.test", "Verify", "Body", None)
+    client = TestClient(app, base_url="http://127.0.0.1:8742", client=("127.0.0.1", 50000))
+    assert "Clear the inbox" in client.get("/dev/mail").text
+    elsewhere = client.post("/dev/mail/clear", headers={"origin": "http://evil.example"})
+    assert elsewhere.status_code == 403
+    assert len(client.get("/dev/mail.json").json()["messages"]) == 1
+    cleared = client.post(
+        "/dev/mail/clear", headers={"origin": "http://127.0.0.1:8742"}, follow_redirects=False
+    )
+    assert cleared.status_code == 303
+    assert client.get("/dev/mail.json").json()["messages"] == []
+    assert "Clear the inbox" not in client.get("/dev/mail").text

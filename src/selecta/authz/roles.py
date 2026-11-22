@@ -121,6 +121,8 @@ _BUNDLES: dict[StaffRole, frozenset[str]] = {
             "billing.subscriptions.read",
             "billing.subscriptions.reconcile",
             "billing.overrides.create",
+            "business.billing.refund",
+            "business.billing.contracts",
             "flags.read",
         }
     ),

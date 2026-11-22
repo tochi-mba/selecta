@@ -1,14 +1,17 @@
-// The seam between the kiosk screen and the kiosk player. This screen does not play music.
+// The kiosk's sound: autoplay detection and the zone audio (ADR-0445 "Autoplay", ADR-0446).
 //
-// BZ-2 (the zone player, ADR-0443) and BZ-3 (the offline horizon cache, ADR-0446) plug in here:
-// a real implementation plays the zone's horizon, reports `playing()`, and answers
-// `savedHoursAhead()` from the offline cache. The kiosk entry must never import from
-// web/src/business (customerSeparation.test.ts), so the offline zone cache that BZ-3 keeps in
-// web/src/business/offline is reached only through an implementation of this interface that
-// lives outside the business folder (or a kiosk-side copy of its rules).
+// Browsers allow sound without a tap only in some cases, so the kiosk detects rather than
+// assumes: it resumes an AudioContext and plays one silent buffer. If the context stays
+// suspended, autoplay is blocked: the screen shows Tap to start and the manager is alerted.
+// One tap is enough for the life of the page.
 //
-// The stub below only does autoplay detection (ADR-0445): it resumes a silent AudioContext and
-// plays one silent buffer. If the context stays suspended, the browser wants a tap first.
+// `zoneAudio` joins the player (player.ts) to the saved horizon (zoneCache): it plays only
+// from saved files, reports whether music is coming out, and how many hours are saved ahead.
+// The kiosk entry may import exactly two files from web/src/business: the offline zone cache
+// and the offline clock, which import nothing (kioskBundle.test.ts keeps it that way).
+
+import type { ZoneCache } from '../business/offline/zoneCache';
+import { createPlayer, type KioskPlayer, type LogEntry, type PlayableSegment } from './player';
 
 export interface KioskAudio {
   /** Try to allow sound. Resolves true when the browser lets this page play. */
@@ -27,33 +30,67 @@ type AudioContextLike = {
   destination: unknown;
 };
 
-export function stubAudio(make: () => AudioContextLike | null = defaultContext): KioskAudio {
-  let context: AudioContextLike | null = null;
-  let unlocked = false;
-  return {
-    async unlock() {
-      if (unlocked) return true;
-      try {
-        context = context ?? make();
-        if (!context) return false;
-        const source = context.createBufferSource();
-        source.buffer = context.createBuffer(1, 1, 22050);
-        source.connect(context.destination);
-        source.start(0);
-        await Promise.race([context.resume(), new Promise((resolve) => setTimeout(resolve, 500))]);
-        unlocked = context.state === 'running';
-      } catch {
-        unlocked = false;
-      }
-      return unlocked;
-    },
-    playing: () => unlocked,
-    savedHoursAhead: () => 0,
-  };
+/** Plays one silent buffer and reports whether the context runs: no sound either way. */
+export async function detectAutoplay(context: AudioContextLike | null, waitMs = 500): Promise<boolean> {
+  if (!context) return false;
+  try {
+    const source = context.createBufferSource();
+    source.buffer = context.createBuffer(1, 1, 22050);
+    source.connect(context.destination);
+    source.start(0);
+    await Promise.race([context.resume(), new Promise((resolve) => setTimeout(resolve, waitMs))]);
+    return context.state === 'running';
+  } catch {
+    return false;
+  }
 }
 
-function defaultContext(): AudioContextLike | null {
-  const Ctor = (globalThis as { AudioContext?: new () => AudioContextLike; webkitAudioContext?: new () => AudioContextLike }).AudioContext
-    ?? (globalThis as { webkitAudioContext?: new () => AudioContextLike }).webkitAudioContext;
-  return Ctor ? new Ctor() : null;
+export function makeAudioContext(): AudioContext | null {
+  const scope = globalThis as { AudioContext?: new () => AudioContext; webkitAudioContext?: new () => AudioContext };
+  const Ctor = scope.AudioContext ?? scope.webkitAudioContext;
+  try {
+    return Ctor ? new Ctor() : null;
+  } catch {
+    return null;
+  }
+}
+
+export type ZoneAudio = KioskAudio & {
+  player: KioskPlayer;
+  context: AudioContext | null;
+  unlocked(): boolean;
+};
+
+export function zoneAudio(options: {
+  cache: ZoneCache;
+  now: () => number | null;
+  onLog?: (entry: LogEntry) => void;
+  context?: AudioContext | null;
+  createAudio?: () => HTMLAudioElement;
+}): ZoneAudio {
+  const context = options.context === undefined ? makeAudioContext() : options.context;
+  let isUnlocked = false;
+  const player = createPlayer({
+    context,
+    now: options.now,
+    createAudio: options.createAudio,
+    onLog: options.onLog,
+    saved: (segment: PlayableSegment) => options.cache.has(segment),
+    blob: (segment: PlayableSegment) => options.cache.get(segment),
+  });
+  return {
+    player,
+    context,
+    unlocked: () => isUnlocked,
+    async unlock() {
+      if (isUnlocked) return true;
+      isUnlocked = await detectAutoplay(context as unknown as AudioContextLike | null);
+      return isUnlocked;
+    },
+    playing: () => player.playing(),
+    savedHoursAhead() {
+      const now = options.now();
+      return now === null ? 0 : Math.round((options.cache.coverageSeconds(now) / 3600) * 10) / 10;
+    },
+  };
 }

@@ -28,7 +28,7 @@
   border: 1px solid var(--edge-interactive); border-radius: var(--radius); background: var(--surface-control); color: var(--text);
   font: inherit; font-weight: var(--weight-strong); text-align: center; overflow-wrap: anywhere; touch-action: manipulation; cursor: pointer;
 }
-.biz-big-action[aria-pressed='true'] { background: var(--surface-selected); border-color: var(--edge-selected); }
+.biz-big-action[aria-pressed='true'] { background: var(--surface-selected); border-color: var(--edge-selected); color: var(--text); }
 .biz-big-action:disabled, .biz-big-action[aria-disabled='true'] { cursor: not-allowed; color: var(--text-soft); }
 .biz-big-action:focus-visible { outline: 2px solid var(--edge-focus); outline-offset: 2px; }
 .biz-big-detail { font-weight: var(--weight-body); font: var(--type-meta); color: var(--text-soft); }

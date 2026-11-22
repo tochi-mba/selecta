@@ -21,7 +21,7 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 | [Unified finish (UF)](selecta-unified-finish-implementation-checklist.md) | 192 | 192 | 0 | 0 | 0 | 0 | 123 | 0 |
 | [Selecta Cloud (SC)](selecta-cloud-implementation-checklist.md) | 136 | 93 | 38 | 5 | 0 | 0 | 91 | 0 |
 | [selecta-autopilot-implementation-checklist.md](selecta-autopilot-implementation-checklist.md) | 120 | 10 | 0 | 110 | 0 | 0 | 0 | 0 |
-| [selecta-business-implementation-checklist.md](selecta-business-implementation-checklist.md) | 179 | 0 | 0 | 179 | 0 | 0 | 0 | 0 |
+| [selecta-business-implementation-checklist.md](selecta-business-implementation-checklist.md) | 179 | 23 | 1 | 155 | 0 | 0 | 0 | 0 |
 | [selecta-service-operations-implementation-checklist.md](selecta-service-operations-implementation-checklist.md) | 30 | 0 | 4 | 26 | 0 | 0 | 0 | 0 |
 <!-- checklist-summary:end -->
 
@@ -36,6 +36,12 @@ Recounted from each checklist's own task lines by `src/selecta/audit/checklist_s
 **Proposed follow-on to ADR-0410:** [ADR-0470](adr-0470-live-dependency-health-and-readiness.md) to [ADR-0474](adr-0474-monitoring-plane-security-reliability-and-release-gates.md), programme prefix OP. These ADRs turn the existing admin health placeholders into a complete contract for live dependency probes, provider quotas and cost guardrails, incident routing, a truthful operator overview and an independently survivable monitoring plane. They cover Render, Postgres, Cloudflare R2, Modal, WorkOS, Stripe, Anthropic, Resend, Grafana and Sentry. No provider monitoring is claimed complete merely because a UI row or mock fixture exists. Track all 30 tasks in the [Service Operations implementation checklist](selecta-service-operations-implementation-checklist.md).
 
 **Start here:** [goal and two Cloud modes (0455)](adr-0455-browser-first-cloud-goal-and-two-cloud-modes.md), [hosted-media gating (0456)](adr-0456-hosted-media-mode-preservation-and-flag-gating.md), [remote-control fencing (0461)](adr-0461-remote-control-protocol-commands-fencing-takeover.md), [release gates (0466)](adr-0466-release-gates-tests-and-independent-verification.md), [one shell and the design system (0468)](adr-0468-one-shell-and-design-system-consolidation.md).
+
+---
+
+# SelectaDJ for Business (2026-11-12)
+
+**Proposed programme, prefix BZ:** [ADR-0441](adr-0441-business-goal-boundary-and-pricing.md) (goal, product boundary and per-venue pricing) to [ADR-0454](adr-0454-business-edge-cases-stress-and-release-gates.md) (edge cases, stress and the two release gates), chapter [docs/saas/19-business-venues.md](../saas/19-business-venues.md). Venues pay per venue for unattended, automatically mixed music from their own library; nothing is sold until the owner turns `business.signups` on after Gate S (docs/verification/bz-gate-register.md) and a signed GO record. Individual Free, Standard and Premium plans, local SelectaDJ and every personal guarantee are unchanged; the business plan entry sits beside the individual catalogue, never inside it. Each ADR's header carries its own implementation count; 0 independently Verified.
 
 ---
 

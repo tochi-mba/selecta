@@ -50,7 +50,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from selecta.audit.business_kiosk_support import (
+from business_kiosk_support import (
     KIOSK_COOKIE,
     SAFE_HOSTS,
     Answer,

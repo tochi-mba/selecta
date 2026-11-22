@@ -258,6 +258,13 @@ def change(
         refusals = flip_guard.check_percentage_step_now(conn, proposed, reason=reason)
         if refusals:
             raise flag_rules.RuleError(refusals)
+    if flag_id == "business.signups":
+        # Selling stays with named pilots until Gate S and the signed GO (BZ-0441-09).
+        from selecta.business import rollout as business_rollout
+
+        refusals = business_rollout.check_signups_rules_now(conn, proposed)
+        if refusals:
+            raise flag_rules.RuleError(refusals)
 
     if action == "kill_switch":
         match = authorize(conn, actor, "flags.kill_switch", _flag_resource(flag_id))

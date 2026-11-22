@@ -4,7 +4,8 @@
 Staff routes resolve the caller to a `BusinessActor` (a signed-in member through
 `guard.actor_for`, or a kiosk or shared tablet through `guard.device_actor` from the
 `X-Device-Token` header) and check one permission with `guard.require` at the zone:
-`business.requests.moderate` for the queue, approvals and abuse tools,
+`business.requests.moderate` for the queue, approvals and abuse tools (the zone's player,
+`business.kiosk.play`, may also take the next approved request and mark it played),
 `business.requests.settings` for modes, limits, codes, branding and print, and
 `business.venue.read` to view a room's settings. The screen code is for the zone's display
 (`business.kiosk.play`) or staff. Every route answers 404 `flag_off` while its flag is off.
@@ -80,8 +81,14 @@ def install_routes(
             from selecta.rooms.wiring import pepper_from_environment
 
             try:
-                built.append(ZoneRooms(engine, pepper or pepper_from_environment(),
-                                       directory=directory, songs=songs, flag_on=flag_on))
+                from selecta.business.content.library import SqlSongFacts
+                from selecta.business.rooms import ports
+
+                built.append(ZoneRooms(
+                    engine, pepper or pepper_from_environment(), directory=directory,
+                    songs=songs or SqlSongFacts(), flag_on=flag_on,
+                    dayparts=ports.ContentDayparts(directory),
+                    playback=ports.SessionPlayback()))
             except ValueError as error:
                 raise HTTPException(status_code=503, detail={
                     "code": "rooms_unavailable",
@@ -97,9 +104,11 @@ def install_routes(
         token = request.headers.get(DEVICE_HEADER)
         if token:
             return guard.device_actor(conn, token=token)
+        from selecta.business.content.claims import user_id_for
+
         claims = current_claims(request)
-        return guard.actor_for(conn, user_id=claims.subject, organisation_id=organisation_id,
-                               workspace_id=workspace_id)
+        return guard.actor_for(conn, user_id=user_id_for(conn, claims),
+                               organisation_id=organisation_id, workspace_id=workspace_id)
 
     def staff(request: Request, zone_id: str | None, permissions: tuple[str, ...],
               work: Callable[[ZoneRooms, Any, BusinessActor], Any], *,
@@ -147,6 +156,23 @@ def install_routes(
     def pass_request(zone_id: str, request_id: str, request: Request) -> dict[str, Any]:
         return staff(request, zone_id, moderate,
                      lambda s, c, a: s.decide(c, a, zone_id, request_id, "pass"))
+
+    player = ("business.kiosk.play", "business.requests.moderate")
+
+    @app.get("/api/zones/{zone_id}/requests/next")
+    def next_request(zone_id: str, request: Request) -> dict[str, Any]:
+        """The zone's next approved request, re-checked now (the planner's slot)."""
+        def work(s, c, a):
+            s.scoped_zone(c, a, zone_id)
+            return {"request": s.slot_up_in(c, zone_id)}
+        return staff(request, zone_id, player, work)
+
+    @app.post("/api/zones/{zone_id}/requests/{request_id}/played")
+    def played(zone_id: str, request_id: str, request: Request) -> dict[str, Any]:
+        def work(s, c, a):
+            s.scoped_zone(c, a, zone_id)
+            return {"id": request_id, "played": s.mark_played_in(c, zone_id, request_id)}
+        return staff(request, zone_id, player, work)
 
     @app.get("/api/zones/{zone_id}/room")
     def room_settings(zone_id: str, request: Request) -> dict[str, Any]:

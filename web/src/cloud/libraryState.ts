@@ -68,11 +68,6 @@ export function libraryReducer(state: LibraryState, event: LibraryEvent): Librar
   }
 }
 
-/** The songs on screen in a state (none unless the server listed some). */
-export function shownAssets(state: LibraryState): Asset[] {
-  return state.status === 'ready' ? state.assets : [];
-}
-
 export function isBusy(state: LibraryState) {
   return state.status === 'loading' || (state.status === 'failed' && state.retrying) || ('refreshing' in state && state.refreshing);
 }

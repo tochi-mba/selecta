@@ -377,17 +377,6 @@ class IdentityStore:
                 ).rowcount
             )
 
-    def end_sessions(self, person_id: str) -> list[str]:
-        with self._db() as db:
-            rows = db.execute(
-                "SELECT id FROM sessions WHERE person_id = ? AND status = 'active'", (person_id,)
-            ).fetchall()
-            db.execute(
-                "UPDATE sessions SET status = 'revoked', ended_at = ? "
-                "WHERE person_id = ? AND status = 'active'",
-                (time.time(), person_id),
-            )
-        return [row["id"] for row in rows]
 
     # -- verification and reset links ---------------------------------------------------------
 

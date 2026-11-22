@@ -16,6 +16,7 @@ const ROLES: Record<NavId, Role[]> = {
   library: ['owner', 'admin', 'viewer', 'venue_manager'],
   requests: ['owner', 'admin', 'venue_manager'],
   people: ['owner', 'admin', 'venue_manager'],
+  usage: ['owner', 'admin', 'venue_manager'],
   billing: ['owner', 'admin'],
   settings: ['owner', 'admin'],
 };
@@ -27,11 +28,12 @@ const FLAGS: Partial<Record<NavId, string[]>> = {
   venues: ['business.console', 'business.venue_view'],
   schedules: ['business.schedules'],
   requests: ['business.rooms'],
-  people: ['business.people'],
+  people: ['business.roles'],
+  usage: ['business.entitlements'],
   billing: ['business.billing'],
 };
 
-const ORDER: NavId[] = ['overview', 'venues', 'schedules', 'library', 'requests', 'people', 'billing', 'settings'];
+const ORDER: NavId[] = ['overview', 'venues', 'schedules', 'library', 'requests', 'people', 'usage', 'billing', 'settings'];
 
 export function flagOn(org: Org, id: NavId) {
   const flags = FLAGS[id];

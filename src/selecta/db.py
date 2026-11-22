@@ -10,7 +10,6 @@ import json
 import os
 import sqlite3
 import threading
-from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -362,18 +361,6 @@ def is_analysed(conn: sqlite3.Connection, song_id: int, version: int) -> bool:
 def song_by_id(conn: sqlite3.Connection, song_id: int) -> sqlite3.Row | None:
     return conn.execute("SELECT * FROM songs WHERE id = ?", (song_id,)).fetchone()
 
-
-def find_songs(conn: sqlite3.Connection, text: str) -> Iterable[sqlite3.Row]:
-    like = containing(text)
-    return conn.execute(
-        "SELECT s.*, COALESCE(o.bpm, a.bpm) bpm, COALESCE(o.camelot, a.camelot) camelot, "
-        "a.grid_confidence FROM songs s "
-        "LEFT JOIN analysis a ON a.song_id = s.id "
-        "LEFT JOIN song_overrides o ON o.song_id = s.id "
-        f"WHERE s.is_music = 1 AND s.duplicate_of IS NULL AND {SEARCHING_NAMES} "
-        "ORDER BY s.artist, s.title",
-        (like, like),
-    ).fetchall()
 
 
 def preference(conn: sqlite3.Connection, key: str, default: Any = None) -> Any:

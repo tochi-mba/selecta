@@ -5,8 +5,21 @@
       "label": "SelectaDJ for Business sign-up",
       "about": "Self-serve business sign-up and selling of business plans. Off until the legal review passes; pilots work without it.",
       "default": false,
+      "routes": [
+        "GET /api/business/pricing"
+      ],
       "modes": ["cloud"],
       "scope": "global",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.start": {
+      "label": "Business start page",
+      "about": "The /business/start page: while sign-up is off, a pilot contact form that emails REX Technologies; once sign-up is on, naming a new organisation.",
+      "default": false,
+      "routes": ["POST /api/business/pilot-interest"],
+      "modes": ["cloud"],
+      "scope": "user",
       "kind": "release",
       "owner": "business"
     },
@@ -23,6 +36,7 @@
         "GET /api/business/venues/{venue_id}",
         "PATCH /api/business/venues/{venue_id}",
         "POST /api/business/venues/{venue_id}/archive",
+        "GET /api/business/venues/{venue_id}/activity",
         "GET /api/business/zones",
         "POST /api/business/zones",
         "PATCH /api/business/zones/{zone_id}",
@@ -31,7 +45,32 @@
         "POST /api/business/crates",
         "GET /api/business/crates/{crate_id}",
         "PUT /api/business/crates/{crate_id}/songs",
-        "DELETE /api/business/crates/{crate_id}"
+        "DELETE /api/business/crates/{crate_id}",
+        "GET /api/business/orgs/{org_id}/overview",
+        "PATCH /api/business/orgs/{org_id}",
+        "PUT /api/business/orgs/{org_id}/setup",
+        "POST /api/business/library/copy-from-personal"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.zones": {
+      "label": "Zone playback",
+      "about": "One playback session per business zone: a kiosk or a staff member's browser plays a zone, remotes steer the zones in their scope, and the home kiosk takes its zone back at a song boundary.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": [
+        "GET /api/zones/holding",
+        "GET /api/zones/playback",
+        "GET /api/zones/{zone_id}/playback/session",
+        "POST /api/zones/{zone_id}/playback/heartbeat",
+        "POST /api/zones/{zone_id}/playback/take-over",
+        "POST /api/zones/{zone_id}/playback/reconnect",
+        "POST /api/zones/{zone_id}/playback/commands",
+        "POST /api/zones/{zone_id}/playback/commands/{command_id}/ack",
+        "POST /api/zones/{zone_id}/playback/hand-back"
       ],
       "modes": ["cloud"],
       "scope": "workspace",
@@ -46,6 +85,7 @@
       "routes": [
         "GET /api/business/venues/{venue_id}/hours",
         "PUT /api/business/venues/{venue_id}/hours",
+        "PUT /api/business/venues/{venue_id}/closing-mode",
         "POST /api/business/venues/{venue_id}/hour-exceptions",
         "DELETE /api/business/venues/{venue_id}/hour-exceptions/{exception_id}",
         "GET /api/business/venues/{venue_id}/holiday-suggestions",
@@ -54,7 +94,23 @@
         "POST /api/business/venues/{venue_id}/close-now/{override_id}/undo",
         "GET /api/business/zones/{zone_id}/state",
         "GET /api/business/zones/{zone_id}/programme",
-        "PUT /api/business/zones/{zone_id}/programme"
+        "PUT /api/business/zones/{zone_id}/programme",
+        "POST /api/business/schedules/apply"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.entitlements": {
+      "label": "Business allowances and continuity",
+      "about": "Pooled storage that grows with venues, paid zone limits, the opening-hours processing weight, the usage meters for managers, and the monthly continuity figure with service credits proposed for staff approval.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": [
+        "GET /api/business/usage",
+        "GET /api/business/slo",
+        "PUT /api/business/always-open"
       ],
       "modes": ["cloud"],
       "scope": "workspace",
@@ -63,13 +119,42 @@
     },
     "business.offline": {
       "label": "Offline zone controls",
-      "about": "Kiosk offline manifests, idempotent command resync and device cache reports for business zones.",
+      "about": "Kiosk players keep about four hours of music saved ahead with a signed offline permit, so the music never stops when the venue internet drops; plus offline manifests, command resync and cache reports. Off, a player keeps only the next three songs and plays only while connected.",
       "default": false,
-      "requires": ["business.schedules"],
+      "requires": ["business.kiosk"],
       "routes": [
         "GET /api/business/zones/{zone_id}/offline-manifest",
         "POST /api/business/zones/{zone_id}/commands",
         "PUT /api/business/zones/{zone_id}/cache-report"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.kiosk": {
+      "label": "Kiosk players",
+      "about": "Pair a small dedicated player to a zone with a code; it starts the music by itself, reports its health, keeps saved music for outages and tells managers when a zone goes quiet.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": [
+        "POST /api/kiosk/pairings",
+        "GET /api/kiosk/pairings/status",
+        "POST /api/kiosk/pair",
+        "POST /api/kiosk/heartbeat",
+        "POST /api/kiosk/health",
+        "GET /api/kiosk/view",
+        "GET /api/kiosk/horizon",
+        "POST /api/kiosk/segment-url",
+        "POST /api/kiosk/resync",
+        "POST /api/kiosk/pin",
+        "GET /api/kiosk/requests/next",
+        "POST /api/kiosk/requests/{request_id}/played",
+        "GET /api/kiosk/screen-code",
+        "GET /api/business/kiosks",
+        "GET /api/business/zone-alerts",
+        "POST /api/business/zone-alerts/{alert_id}/acknowledge",
+        "DELETE /api/devices/{device_id}/kiosk"
       ],
       "modes": ["cloud"],
       "scope": "workspace",
@@ -81,9 +166,136 @@
       "about": "Switch between your personal SelectaDJ and the organisations you belong to. Personal and business data never mix.",
       "default": false,
       "requires": ["business.orgs"],
-      "routes": ["GET /api/workspaces"],
+      "routes": ["GET /api/workspaces", "POST /api/business/invitations/accept"],
       "modes": ["cloud"],
       "scope": "user",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.billing": {
+      "label": "Business billing",
+      "about": "The owner and admin billing page: quantities and prices, a cost preview before adding venues, zones or seats, PO number and cost centres for invoices, a cost breakdown CSV, and dunning that stops a venue only at its close after warnings. Stripe test mode only.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": [
+        "GET /api/business/billing",
+        "POST /api/business/billing/preview",
+        "PUT /api/business/billing/po-number",
+        "PUT /api/business/billing/venues/{venue_id}/cost-centre",
+        "PUT /api/business/billing/collection-method",
+        "GET /api/business/billing/cost-breakdown",
+        "POST /api/business/billing/checkout",
+        "POST /api/business/billing/checkout/complete",
+        "POST /api/business/billing/stripe-webhook",
+        "POST /api/business/billing/downgrade",
+        "POST /api/business/billing/venues/{venue_id}/resume",
+        "GET /api/business/billing/transfers",
+        "POST /api/business/billing/transfers",
+        "POST /api/business/billing/transfers/{transfer_id}/accept",
+        "POST /api/business/billing/transfers/{transfer_id}/cancel"
+      ],
+      "cli": ["business-stripe-setup"],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.licensing": {
+      "label": "Licensing and play logs",
+      "about": "Music licences gate when a venue may start playing, with reminders and the owner's one-off extension; every play is logged with its source and kept 3 years by default; owners, admins and venue managers download a venue's play log as CSV; ISRC entry and coverage; acceptance of the business terms.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": [
+        "GET /api/business/play-log/export",
+        "PUT /api/business/venues/{venue_id}/licence",
+        "GET /api/business/play-log/retention",
+        "PUT /api/business/play-log/retention",
+        "GET /api/business/venues/{venue_id}/licence/state",
+        "POST /api/business/venues/{venue_id}/licence/extend",
+        "PUT /api/business/library/songs/{song_id}/isrc",
+        "GET /api/business/venues/{venue_id}/isrc-coverage",
+        "GET /api/business/venues/{venue_id}/isrc-tracks",
+        "GET /api/business/terms",
+        "POST /api/business/terms/accept",
+        "GET /api/business/uploads/statement",
+        "POST /api/business/uploads/attestation",
+        "GET /api/business/settings/mix-exports",
+        "PUT /api/business/settings/mix-exports"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.roles": {
+      "label": "Business people and roles",
+      "about": "The People page: owners, admins and venue managers invite people by link into a role at chosen venues, see seats, revoke invitations and remove someone, which signs them out at once.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": [
+        "GET /api/business/people",
+        "POST /api/business/invitations",
+        "POST /api/business/invitations/{invitation_id}/revoke",
+        "DELETE /api/business/people/{user_id}",
+        "PUT /api/business/seats"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.devices.shared": {
+      "label": "Shared staff tablets and PINs",
+      "about": "A staff member confirms an action on a shared tablet with their personal venue PIN, so the activity log names them.",
+      "default": false,
+      "requires": ["business.roles"],
+      "routes": ["POST /api/business/venues/{venue_id}/pin"],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.console": {
+      "label": "Business HQ console",
+      "about": "The multi-venue overview for owners, admins and viewers: venue health, zone states and what needs attention.",
+      "default": false,
+      "requires": ["business.workspaces"],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.venue_view": {
+      "label": "Venue manager view",
+      "about": "One venue's page for its managers: now playing, schedule, rules, devices and people.",
+      "default": false,
+      "requires": ["business.workspaces"],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.staff_controls": {
+      "label": "Staff quick controls",
+      "about": "The staff screen for a venue: skip, steer, volume within the cap, requests, and Play here to make this browser the zone's speaker.",
+      "default": false,
+      "requires": ["business.workspaces"],
+      "routes": [
+        "GET /api/business/zones/{zone_id}/speaker/horizon",
+        "POST /api/business/zones/{zone_id}/speaker/segment-url"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.mix_exports": {
+      "label": "Business mix exports",
+      "about": "Lets a business organisation save a mix as a file, which could be redistributed. Off by default; also needs the owner's setting.",
+      "default": false,
+      "requires": ["business.licensing"],
+      "modes": ["cloud"],
+      "scope": "workspace",
       "kind": "release",
       "owner": "business"
     },
@@ -95,6 +307,131 @@
       "modes": ["cloud"],
       "scope": "global",
       "kind": "ops",
+      "owner": "business"
+    },
+    "business.content_controls": {
+      "label": "Venue content controls",
+      "about": "Organisation and venue music rules, the blocklist, 24-hour overrides, explicit flags from managers and file tags, and each zone's volume cap with quiet hours.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": [
+        "GET /api/business/content/rules",
+        "PUT /api/business/content/rules",
+        "GET /api/business/venues/{venue_id}/content/rules",
+        "PUT /api/business/venues/{venue_id}/content/rules",
+        "GET /api/business/content/blocklist",
+        "POST /api/business/content/blocklist",
+        "DELETE /api/business/content/blocklist/{entry_id}",
+        "POST /api/business/zones/{zone_id}/content/overrides",
+        "DELETE /api/business/zones/{zone_id}/content/overrides/{override_id}",
+        "PUT /api/business/content/songs/{song_id}/explicit",
+        "GET /api/business/library/songs",
+        "POST /api/business/library/explicit",
+        "GET /api/business/zones/{zone_id}/content/pool",
+        "GET /api/business/zones/{zone_id}/content/snapshot",
+        "GET /api/business/content/artist-variants",
+        "PUT /api/business/content/songs/{song_id}/clean-link",
+        "GET /api/business/content/songs/{song_id}"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.content_controls.bulk": {
+      "label": "Bulk explicit editor and CSV import",
+      "about": "Mark many organisation songs explicit, clean or not checked at once with a count and undo, and import marks from a CSV matched by ISRC, then artist and title.",
+      "default": false,
+      "requires": ["business.content_controls"],
+      "routes": [
+        "POST /api/business/content/bulk/preview",
+        "POST /api/business/content/bulk/apply",
+        "POST /api/business/content/bulk/{batch_id}/undo",
+        "POST /api/business/content/import/preview",
+        "POST /api/business/content/import/apply"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.content_controls.lyrics_hint": {
+      "label": "Worth checking list",
+      "about": "Lists organisation songs whose lyrics contain words on a review list, for a person to check. It never marks a song clean or explicit by itself.",
+      "default": false,
+      "requires": ["business.content_controls"],
+      "routes": [
+        "GET /api/business/content/worth-checking"
+      ],
+      "modes": ["cloud"],
+      "scope": "workspace",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.rooms": {
+      "label": "Rooms for Business",
+      "about": "Standing guest request rooms for business zones: guests join with a table-card code, staff approve or pass requests, and managers set modes and limits.",
+      "default": false,
+      "requires": ["business.orgs"],
+      "routes": [
+        "GET /api/zones/{zone_id}/requests",
+        "GET /api/zones/{zone_id}/requests/next",
+        "POST /api/zones/{zone_id}/requests/{request_id}/played",
+        "POST /api/zones/{zone_id}/requests/{request_id}/approve",
+        "POST /api/zones/{zone_id}/requests/{request_id}/pass",
+        "GET /api/zones/{zone_id}/room",
+        "PATCH /api/zones/{zone_id}/room",
+        "POST /api/zones/{zone_id}/room/rotate",
+        "POST /api/zones/{zone_id}/room/guests/{guest_id}/remove",
+        "POST /api/zones/{zone_id}/room/guests/{guest_id}/ban",
+        "POST /api/zones/{zone_id}/room/pause",
+        "POST /api/zones/{zone_id}/room/resume",
+        "POST /api/zones/{zone_id}/venue-network",
+        "POST /api/venue-rooms/{code}/join",
+        "GET /api/venue-rooms/{code}/state",
+        "GET /api/venue-rooms/{code}/search",
+        "POST /api/venue-rooms/{code}/requests",
+        "POST /api/venue-rooms/{code}/requests/{request_id}/vote"
+      ],
+      "modes": ["cloud"],
+      "scope": "global",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.rooms.branding": {
+      "label": "Rooms for Business branding",
+      "about": "The venue's logo, colour and welcome line on the guest request page.",
+      "default": false,
+      "requires": ["business.rooms"],
+      "modes": ["cloud"],
+      "scope": "global",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.rooms.print": {
+      "label": "Rooms for Business print sheet",
+      "about": "A printable sheet of table cards with each zone's join code.",
+      "default": false,
+      "requires": ["business.rooms"],
+      "routes": [
+        "GET /api/venues/{venue_id}/room-print"
+      ],
+      "modes": ["cloud"],
+      "scope": "global",
+      "kind": "release",
+      "owner": "business"
+    },
+    "business.rooms.screen_code": {
+      "label": "Rooms for Business screen code",
+      "about": "A rotating join code shown on the zone's display screen.",
+      "default": false,
+      "requires": ["business.rooms"],
+      "routes": [
+        "GET /api/zones/{zone_id}/room/screen-code"
+      ],
+      "modes": ["cloud"],
+      "scope": "global",
+      "kind": "release",
       "owner": "business"
     }
   }

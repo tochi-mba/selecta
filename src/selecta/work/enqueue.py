@@ -51,6 +51,8 @@ class JobSpec:
     created_by: str | None = None
     entitlement_version: int | None = None
     flag_id: str | None = CATALOGUE_FLAG
+    zone_id: str | None = None
+    """The business zone the work is for (ADR-0443): zones take turns, boosts count per zone."""
     pool: str | None = None
     """None: the catalogue's pool. The local app gives analysis a pool of its own, because its
     analysis worker is a separate process from its seam worker (SC-0394-04)."""
@@ -132,6 +134,7 @@ def values_for(spec: JobSpec, state: JobState, now: float) -> dict[str, Any]:
         "created_by": spec.created_by,
         "flag_id": flag_id,
         "parent_id": spec.parent_id,
+        "zone_id": spec.zone_id,
         "lease_generation": 0,
         "progress_done": 0.0,
         "created_at": now,
@@ -141,11 +144,51 @@ def values_for(spec: JobSpec, state: JobState, now: float) -> dict[str, Any]:
     }
 
 
+MIX_EXPORT_TYPES = frozenset({"export", "export.render"})
+
+
+def _require_mix_exports(connection: Connection, workspace_id: str) -> None:
+    """Business mix exports are off unless the owner and `business.mix_exports` allow them
+    (ADR-0449 BZ-0449-10); personal workspaces are unaffected."""
+    from selecta import flags
+    from selecta.business.derived_limits import require_mix_exports
+
+    def on(flag: str) -> bool:
+        try:
+            return flags.on(flag)
+        except KeyError:
+            return False
+
+    require_mix_exports(connection, workspace_id, on)
+
+
+def _within_analysis_allowance(connection: Connection, spec: JobSpec, now: float) -> JobSpec:
+    """A business organisation analyses up to 10,000 new songs a local day (ADR-0448
+    BZ-0448-06); songs a live zone needs come first, the rest wait for local midnight. Personal
+    workspaces, and every workspace while `business.entitlements` is off, are unchanged."""
+    from dataclasses import replace
+
+    from selecta.business import entitlement_gates
+
+    ref = spec.input_ref if isinstance(spec.input_ref, dict) else {}
+    key = str(ref.get("source_sha256") or spec.idempotency_key or "")
+    priority = bool(spec.zone_id or ref.get("zone_id") or spec.needed_by is not None)
+    wait_until = entitlement_gates.analysis_not_before(
+        connection, spec.workspace_id, key, priority, now)
+    if wait_until is None:
+        return spec
+    return replace(spec, not_before=max(float(spec.not_before or 0.0), wait_until))
+
+
 def enqueue(connection: Connection, spec: JobSpec, now: float) -> Enqueued:
     """Create the job (or find its live twin), its dependency edges and its head counts."""
+    if spec.type in MIX_EXPORT_TYPES:
+        _require_mix_exports(connection, spec.workspace_id)
     existing = _live_duplicate(connection, spec)
     if existing is not None:
         return Enqueued(existing, False)
+    if spec.type == "analyse.song":
+        spec = _within_analysis_allowance(connection, spec, now)
     kind = lookup(spec.type)
     state = dependents.initial_state(_prerequisite_states(connection, spec), kind.workflow)
     values = values_for(spec, state, now)

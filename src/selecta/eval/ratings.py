@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import random
 import sqlite3
 from collections import defaultdict
 
@@ -33,7 +32,3 @@ def results(conn: sqlite3.Connection) -> dict[str, dict[str, float]]:
     }
 
 
-def randomised(items: list[dict], seed: int = 7) -> list[dict]:
-    hidden = [dict(item, method_hidden=True) for item in items]
-    random.Random(seed).shuffle(hidden)
-    return hidden

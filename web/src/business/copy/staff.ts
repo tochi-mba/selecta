@@ -43,6 +43,9 @@ export const STAFF_COPY = {
   close: 'Close',
   playHere: 'Play here instead',
   playHereConfirm: 'Play here',
+  playingHere: 'Playing here',
+  handBack: 'Hand back',
+  keepPlayingHere: 'Keep this tablet playing until you hand back. Closing this page hands the music back.',
   cancel: 'Cancel',
   pinTitle: 'Enter your PIN',
   pinHelp: 'Enter your staff PIN to keep going',
@@ -91,6 +94,11 @@ export function pausedByWords(who: string): string {
   return `Paused by ${who}`;
 }
 
+/** The player is back: the tablet offers to give the zone back. */
+export function handBackOffer(zone: string): string {
+  return `The ${zone} player is back. Hand ${zone} back when the song ends.`;
+}
+
 export function playHereQuestion(zone: string): string {
   return `Play ${zone} music from this tablet? The ${zone} player will stop.`;
 }
@@ -118,7 +126,6 @@ export function commandWord(command: ZoneCommand): string {
     case 'resume': return 'resume';
     case 'volume': return 'volume change';
     case 'undo': return 'undo';
-    case 'play_here': return 'Play here';
     case 'test': return 'test';
   }
 }

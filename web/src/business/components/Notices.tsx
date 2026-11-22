@@ -108,4 +108,3 @@ export function PilotBadge({ pilot, now }: { pilot?: Pilot | null; now: number }
   return <span className="biz-pilot-badge" data-pilot-badge=""><Status kind={ended ? 'needs-action' : 'planned'}>{ended ? 'Pilot ended' : `Pilot until ${dayWords(pilot.ends_at)}`}</Status></span>;
 }
 
-export function kindStatus(kind: StateKind): StatusKind { return KIND_STATUS[kind]; }

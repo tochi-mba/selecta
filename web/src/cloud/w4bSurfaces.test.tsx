@@ -125,7 +125,7 @@ describe('People remove', () => {
   it('asks before removing someone, and removes only on yes', async () => {
     const confirm = vi.spyOn(window, 'confirm');
     const removeMember = vi.fn(async () => {});
-    const client = { members: vi.fn(async () => [{ id: 'm1', name: 'Ada', email: 'ada@example.test', role: 'staff', venue_ids: null }]), removeMember, invite: vi.fn() };
+    const client = { people: vi.fn(async () => ({ members: [{ id: 'm1', name: 'Ada', email: 'ada@example.test', role: 'staff', venue_ids: null }], invitations: [] })), removeMember, invite: vi.fn() };
     const value = { org: { id: 'o1', role: 'owner' }, venues: [], client, readOnly: false, offline: false } as unknown as BusinessCtx;
     render(<BusinessContext.Provider value={value}><PeoplePage /></BusinessContext.Provider>);
     expect((await screen.findByText('Ada')).closest('li')).toHaveTextContent(/Ada \(ada@example\.test\): \w/);

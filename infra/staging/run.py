@@ -190,6 +190,35 @@ def _rollout(env: Env, out: str) -> list[list[str]]:
     return [command + (["--dry-run"] if env.get("DRY_RUN") else [])]
 
 
+def _business(name: str) -> Callable[[Env, str], list[list[str]]]:
+    """A full-size business scenario (ADR-0454): the kiosk fleet against staging in real time
+    while the person injects the scenario's event, judged by B1 to B9."""
+
+    def commands(env: Env, out: str) -> list[list[str]]:
+        return [[
+            _py(), "tests/load/business_scenarios.py", "staging", name,
+            "--base-url", env["STAGING_BASE_URL"], "--seed", env["BUSINESS_SEED"],
+            "--owner-token", env["BUSINESS_OWNER_TOKEN"],
+            "--minutes", env.get("MINUTES", "60"), "--out", f"{out}/{name}.json",
+        ]]
+
+    return commands
+
+
+BUSINESS_SCENARIOS = (
+    ("business_peak", "BZ-0454-07", "ST1: 500 venues x 3 zones opening at once."),
+    ("business_reconnect", "BZ-0454-08", "ST2: 1,000 kiosks reconnect after a 30-minute outage."),
+    ("business_bulk_schedule", "BZ-0454-09", "ST3: one schedule edit across 200 venues."),
+    ("business_grace_close", "BZ-0454-10", "ST4: billing grace ending at closing time."),
+    ("business_request_flood", "BZ-0454-11", "ST5: 500 zones x 50 guests requesting at lunch."),
+    ("business_sso_outage", "BZ-0454-11", "ST6: SSO outage at shift change."),
+    ("business_mass_offboard", "BZ-0454-11", "ST7: Directory Sync offboards 2,000 people."),
+    ("business_playlog_export", "BZ-0454-11", "ST8: a month's play-log export streams."),
+    ("business_rule_change", "BZ-0454-11", "ST9: organisation-wide rule change at peak."),
+    ("business_soak", "BZ-0454-11", "ST10: 72-hour soak with network flaps (MINUTES=4320)."),
+)
+
+
 TASKS = {
     task.name: task
     for task in (
@@ -287,6 +316,12 @@ TASKS = {
             _rollout,
             ("DRY_RUN",),
         ),
+        *(
+            Task(name, (task_id,), about,
+                 ("STAGING_BASE_URL", "BUSINESS_SEED", "BUSINESS_OWNER_TOKEN"),
+                 _business(name), ("MINUTES",), ("STAGING_BASE_URL",))
+            for name, task_id, about in BUSINESS_SCENARIOS
+        ),
     )
 }
 
@@ -294,7 +329,7 @@ TASKS = {
 def shown(command: list[str]) -> str:
     """The command as printed: a token passed on the command line is masked."""
     masked = [
-        "***" if before == "--synthetic-token" else part
+        "***" if before in ("--synthetic-token", "--owner-token") else part
         for before, part in zip(["", *command[:-1]], command, strict=True)
     ]
     return shlex.join(masked)

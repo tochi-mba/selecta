@@ -205,3 +205,5 @@ Still open:
 - [ ] Reconcile the contents of this WIP guide with changes made while outstanding PRs are merged.
 
 **Do not equate opening accounts or merging this documentation with launch readiness.** The Cloud programme's verification criteria in [the implementation checklist](../adr/selecta-cloud-implementation-checklist.md) still apply.
+
+Business runtime settings: `SELECTA_BUSINESS_SALES_EMAIL` is the sales destination for pilot enquiries and billing email. `SELECTA_BUSINESS_STRIPE_WEBHOOK_SECRET` is the business webhook signing secret (comma-separated during rotation). `SELECTA_KIOSK_PERMIT_KEYS` is a comma-separated list of base64url raw 32-byte Ed25519 private keys; the first signs and all public keys are advertised. Configure stable keys across replicas and retain overlap during rotation; the development-only process key does not survive restart.

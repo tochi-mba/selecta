@@ -51,12 +51,6 @@ class StaticDirectory:
         self._venues = {venue.id: venue for venue in venues}
         self._zones = {zone.id: zone for zone in zones}
 
-    def add_venue(self, venue: VenueRef) -> None:
-        self._venues[venue.id] = venue
-
-    def add_zone(self, zone: ZoneRef) -> None:
-        self._zones[zone.id] = zone
-
     def venue(self, conn: Connection, venue_id: str) -> VenueRef | None:
         return self._venues.get(venue_id)
 

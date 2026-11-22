@@ -10,10 +10,11 @@ zone lookups read BZ-1's tables through `SqlDirectory`; tests pass their own dir
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import FastAPI
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 
 from selecta.business.access.directory import Directory, SqlDirectory
 from selecta.identity.tokens import Claims
@@ -26,20 +27,45 @@ def install(
     current_claims: Callable[..., Claims],
     principal_for: Callable[..., Any],
     directory: Directory | None = None,
+    pepper: bytes | None = None,
 ) -> None:
     from selecta.business.content import api as content_api
+    from selecta.business.content import api_tools as content_tools
+    from selecta.business.content import library
     from selecta.business.rooms import api as rooms_api
 
     directory = directory or SqlDirectory()
     app.state.business_directory = directory
-    for module in (content_api, rooms_api):
-        module.install_routes(
-            app,
-            engine=engine,
-            current_claims=current_claims,
-            principal_for=principal_for,
-            directory=directory,
-        )
+    common = {"engine": engine, "current_claims": current_claims, "principal_for": principal_for,
+              "directory": directory}
+    # The organisation library is the song-facts source: venue rule saves refuse a block with
+    # nothing allowed in it, and guest search and the request planner read the same songs.
+    content_api.install_routes(app, songs_for=library.songs_for, **common)
+    content_tools.install_routes(app, **common)
+    # The Rooms pepper the cloud app was built with (else the environment's), as party rooms use.
+    rooms_api.install_routes(app, pepper=pepper, **common)
 
 
-__all__ = ["install"]
+def zone_volume_cap(
+    conn: Connection, workspace_id: str, venue_id: str, zone_id: str, now: float,
+    *, directory: Directory | None = None,
+) -> int | None:
+    """The zone's volume ceiling now (0 to 100): its cap, lowered by quiet hours in force.
+
+    None while `business.content_controls` is off or the zone has no business record, so the
+    zone player keeps its plain maximum. `selecta.playback.zones.SqlZones.volume_cap` calls it.
+    """
+    from selecta.business.content import service
+    from selecta.business.content import volume as vol
+    from selecta.business.rooms.service import default_flag_on
+
+    if not default_flag_on("business.content_controls"):
+        return None
+    zone = (directory or SqlDirectory()).zone(conn, zone_id)
+    if zone is None or zone.workspace_id != workspace_id or zone.venue_id != venue_id:
+        return None
+    cap = vol.cap_at(service.volume_rules(conn, zone), datetime.fromtimestamp(now, UTC))
+    return round(cap * 100)
+
+
+__all__ = ["install", "zone_volume_cap"]

@@ -62,6 +62,8 @@ class OrgFacts:
     members: tuple[MemberFacts, ...] = ()
     currency: str = "GBP"
     time_zone: str = "Europe/London"
+    # Extra seats an owner or admin bought on the People page (`business_seats`, ADR-0452).
+    paid_seats: int = 0
 
     def venue(self, venue_id: str) -> VenueFacts | None:
         return next((v for v in self.venues if v.id == venue_id), None)
@@ -235,6 +237,17 @@ def is_open(hours_source: HoursSource, conn: Connection | None, venue: VenueFact
     )
 
 
+def _paid_seats(conn: Connection, organisation_id: str) -> int:
+    """Seats bought beyond the included ones (`business_seats`), 0 when none were."""
+    import sqlalchemy as sa
+
+    from selecta.business.people.schema import business_seats
+
+    found = conn.execute(sa.select(business_seats.c.paid_seats).where(
+        business_seats.c.organisation_id == organisation_id)).scalar()
+    return int(found or 0)
+
+
 class SqlFacts:
     """Reads BZ-1's tables: the organisation is a `workspaces` row of kind `business`.
 
@@ -284,4 +297,5 @@ class SqlFacts:
                 for v in venue_rows
             ),
             members=tuple(MemberFacts(user_id=u, role=r) for u, r in members),
+            paid_seats=_paid_seats(conn, organisation_id),
         )

@@ -198,8 +198,9 @@ class RequestsMixin:
             .order_by(requests_t.c.votes.desc(), requests_t.c.created_at, requests_t.c.id)
         ).mappings().all()
         return [{"id": r["id"], "zone_id": zone.id, "title": r["title"], "artist": r["artist"],
-                 "nickname": r["nickname"], "waited_seconds": int(now - r["created_at"]),
-                 "votes": r["votes"]} for r in rows]
+                 "nickname": r["nickname"], "guest_id": r["guest_id"],
+                 "waited_seconds": int(now - r["created_at"]), "votes": r["votes"]}
+                for r in rows]
 
     def seen_staff(self, conn: Connection, actor: BusinessActor, zone) -> None:
         kind, actor_id, _name = decider(actor)
@@ -267,28 +268,58 @@ class RequestsMixin:
                 status="withdrawn", reason="content", resolved_at=now))
         return ok
 
-    # ---- the planner ---------------------------------------------------------------------
+    # ---- the zone's song planner (ADR-0451 "when its slot comes up") ---------------------
 
     def slot_up(self, zone_id: str) -> dict | None:
-        """The next approved request for the planner, re-checked now; refused ones are
-        withdrawn on the way. Bridges the planner adds are its own allowed songs."""
+        """The next approved request for the zone's queue, re-checked against the content rules
+        now. A refused one is withdrawn on the way, unless its linked clean edit (ADR-0450) is
+        allowed, which then plays in its place. Bridges the planner adds are its own allowed
+        songs. `local_song_id` is the catalogue id a zone programme plays it by."""
         with transaction(self.engine) as conn:
-            room = self.room_row(conn, zone_id)
-            if room is None:
-                return None
-            now = self.clock()
-            for row in self.approved_order(conn, room):
-                if self._still_fits(conn, room, row, now):
-                    return {"id": row["id"], "song_id": row["song_id"], "title": row["title"],
-                            "artist": row["artist"], "votes": row["votes"]}
-            return None
+            return self.slot_up_in(conn, zone_id)
 
-    def mark_played(self, zone_id: str, request_id: str) -> None:
+    def slot_up_in(self, conn: Connection, zone_id: str) -> dict | None:
+        room = self.room_row(conn, zone_id)
+        if room is None:
+            return None
+        now = self.clock()
+        self.expire_due(conn, room, now)
+        for row in self.approved_order(conn, room):
+            song_id = row["song_id"]
+            if not self._fits_now(conn, room, song_id, now):
+                song_id = self._clean_edit(conn, room, song_id, now)
+                if song_id is None:
+                    conn.execute(requests_t.update().where(requests_t.c.id == row["id"])
+                                 .values(status="withdrawn", reason="content",
+                                         resolved_at=now))
+                    continue
+            local = getattr(self.songs, "local_id", None)
+            return {"id": row["id"], "song_id": song_id, "title": row["title"],
+                    "artist": row["artist"], "votes": row["votes"],
+                    "swapped": song_id != row["song_id"],
+                    "local_song_id": local(conn, room["workspace_id"], song_id)
+                    if local else None}
+        return None
+
+    def mark_played(self, zone_id: str, request_id: str) -> bool:
         with transaction(self.engine) as conn:
-            conn.execute(requests_t.update().where(
-                requests_t.c.id == request_id, requests_t.c.zone_id == zone_id,
-                requests_t.c.status == "approved").values(status="played",
-                                                          resolved_at=self.clock()))
+            return self.mark_played_in(conn, zone_id, request_id)
+
+    def mark_played_in(self, conn: Connection, zone_id: str, request_id: str) -> bool:
+        return bool(conn.execute(requests_t.update().where(
+            requests_t.c.id == request_id, requests_t.c.zone_id == zone_id,
+            requests_t.c.status == "approved").values(status="played",
+                                                      resolved_at=self.clock())).rowcount)
+
+    def _fits_now(self, conn: Connection, room, song_id: str, now: float) -> bool:
+        song = self.songs.facts(conn, room["workspace_id"], [song_id]).get(song_id)
+        return song is not None and self.content.check(
+            conn, room["zone_id"], song, utc(now), directory=self.directory).allowed
+
+    def _clean_edit(self, conn: Connection, room, song_id: str, now: float) -> str | None:
+        swap = getattr(self.content, "clean_swap", None)
+        clean = swap(conn, room["zone_id"], song_id, directory=self.directory) if swap else None
+        return clean if clean and self._fits_now(conn, room, clean, now) else None
 
 
 def room_ids(room) -> dict:

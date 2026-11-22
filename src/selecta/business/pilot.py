@@ -95,3 +95,19 @@ def seed_demo(conn: Connection, *, owner_user_id: str, now: int) -> dict:
         now=now,
     )
     return {**pilot, "crates": [brand, friday]}
+
+
+def pilot_stop(conn: Connection, workspace_id: str, venue_id: str | None,
+               pilot_until: float) -> float:
+    """When a pilot's end stops a venue's music: the venue's first close at or after the pilot
+    end, the same stop-at-close rule as a billing grace (ADR-0454 B6), never mid-service. A
+    venue without hours set (or open 24 hours) stops at the owner's quiet point, else 04:00."""
+    if venue_id is None:
+        return float(pilot_until)
+    from selecta.business.commercial_facts import Bz3Hours, SqlFacts, next_close
+
+    org = SqlFacts().organisation(conn, workspace_id)
+    venue = org.venue(venue_id) if org is not None else None
+    if venue is None:
+        return float(pilot_until)
+    return next_close(Bz3Hours(), conn, venue, float(pilot_until))

@@ -1,4 +1,47 @@
+import { useEffect, useState } from 'react';
 import type { Api, OutputWire, SessionState, SessionView } from './usePlaybackDevice';
+
+// Which zone this browser is the speaker for (ADR-0443, `GET /api/zones/holding`). A device that
+// holds a zone's playback lease is that venue's speaker, so the workspace switcher refuses to
+// leave the organisation until the zone is handed back, and the server refuses personal
+// "Play here" on the same browser (`holding_zone_lease`). The server reads this workspace's own
+// device cookie, so the page doesn't need to know its device id; a browser with no device in the
+// organisation holds nothing.
+
+export const HOLDING_ROUTE = '/zones/holding';
+
+/** The zone id this browser holds in `workspaceId`, or null. Never throws: a refusal, a missing
+ * device or no network all read as "holding nothing", so the guard never blocks on an error. */
+export async function heldZone(api: Api, workspaceId: string): Promise<string | null> {
+  try {
+    const answer = await api<{ zone_id?: unknown }>(HOLDING_ROUTE, {}, workspaceId);
+    return typeof answer?.zone_id === 'string' && answer.zone_id ? answer.zone_id : null;
+  } catch {
+    return null;
+  }
+}
+
+/** `heldZone` for a mounted page: asks again whenever `workspaceId` or `refreshKey` changes
+ * (the business shell passes its last refresh time). Null while unknown. */
+export function useHeldZone(api: Api, workspaceId: string | null | undefined, refreshKey?: unknown): string | null {
+  const [zoneId, setZoneId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!workspaceId) { setZoneId(null); return; }
+    let live = true;
+    void heldZone(api, workspaceId).then((found) => { if (live) setZoneId(found); });
+    return () => { live = false; };
+  }, [api, workspaceId, refreshKey]);
+  return zoneId;
+}
+
+/** The words the switcher names a held zone by: its name when this page lists it, else "a zone"
+ * (the switcher's own generic sentence). Null when nothing is held. */
+export function heldZoneName(zoneId: string | null, zones: { id: string; name: string }[]): string | null {
+  if (!zoneId) return null;
+  return zones.find((zone) => zone.id === zoneId)?.name ?? 'a zone';
+}
+
+// The zone playback calls (ADR-0443) that Play here (useZoneSpeaker.ts) uses.
 
 // Typed calls to the zone playback routes (ADR-0443). A business workspace has one playback
 // session per zone; these mirror the personal /playback routes with the zone in the path. Every
@@ -48,7 +91,6 @@ export class ZonePlaybackError extends Error {
 const enc = encodeURIComponent;
 export const ZONE_ROUTES = {
   list: '/zones/playback',
-  holding: (deviceId: string) => `/zones/holding?device_id=${enc(deviceId)}`,
   session: (zoneId: string, deviceId: string) => `/zones/${enc(zoneId)}/playback/session?device_id=${enc(deviceId)}`,
   action: (zoneId: string, name: 'heartbeat' | 'take-over' | 'reconnect' | 'commands' | 'hand-back') => `/zones/${enc(zoneId)}/playback/${name}`,
 } as const;
@@ -103,9 +145,6 @@ export function zonePlayback(api: Api, workspaceId: string) {
   };
   return {
     zones: () => call<{ zones: ZoneSummary[] }>(ZONE_ROUTES.list).then((answer) => answer.zones),
-    /** The zone this device holds the lease of, or null. A phone holding one hands back before
-     * it can switch to its personal workspace. */
-    holdingZone: (deviceId: string) => call<{ zone_id: string | null }>(ZONE_ROUTES.holding(deviceId)).then((answer) => answer.zone_id),
     session: (zoneId: string, deviceId: string) => call<ZoneSessionView>(ZONE_ROUTES.session(zoneId, deviceId)),
     heartbeat: (zoneId: string, body: HeartbeatBody) => call<HeartbeatAnswer>(ZONE_ROUTES.action(zoneId, 'heartbeat'), body),
     /** Play here. Without `confirm`, a zone whose kiosk is playing answers `confirm_needed`. */

@@ -72,3 +72,5 @@ Export makes no sound. Its result is a downloaded file. `tests/test_s3_docs_cont
 ## What was deliberately not changed
 
 Seam scheduling in `SetPlayer` is untouched: the sample-accurate start, 30 ms crossfade and fallback fade work exactly as before. `S3-0069-07` asks for continuity measured apart from animation. The existing Listen browser tests measure scheduling from the real `AudioBufferSourceNode.start` calls, and no animation is involved in those numbers.
+
+Business playback: `web/src/devices/useZoneSpeaker.ts` owns the browser zone speaker and its fenced lease; it yields through Cloud transport focus. The separate kiosk entry owns two crossfade decks in `web/src/kiosk/player.ts`, playing signed cached segments. These are full session players, not additional audition elements.

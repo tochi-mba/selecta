@@ -34,6 +34,7 @@ Feature-local sheets live beside the one component that imports them and style n
 | `business/business.css` | business console shared surfaces, notices, statuses and controls | `cloud/CloudApp.tsx` |
 | `devices/devices.css` | device list and playing bar | `devices/DevicesPanel.tsx`, `devices/PlayingBar.tsx` |
 | `display/display.css` | the display page | `display/main.ts` |
+| `kiosk/kiosk.css` | Dedicated kiosk screens and staff panel, shared tokens, fitted room-scale type | `kiosk/main.ts` |
 | `guest/guest.css` | the guest request page | `guest/main.ts` |
 | `rooms/rooms.css` | the rooms panel | `rooms/RoomPanel.tsx` |
 | `autopilot/autopilot.css` | venue setup instructions and autopilot guide controls | `autopilot/VenueSetup.tsx` |

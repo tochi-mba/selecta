@@ -28,7 +28,7 @@ from collections.abc import Callable, Iterator, Mapping
 from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any
 
 from selecta import jobs as engine_jobs
 from selecta.storage.artifacts import ArtifactStore
@@ -64,19 +64,6 @@ class JobOutput:
     result: Any = None
     artifacts: tuple[ArtifactOutput, ...] = ()
 
-
-class ArtifactSink(Protocol):
-    def publish(
-        self,
-        kind: str,
-        input_hash: str,
-        keys: Any,
-        *,
-        checksum: str | None = None,
-        size_bytes: int | None = None,
-        provenance: Mapping[str, Any] | None = None,
-        protected: bool = False,
-    ) -> None: ...
 
 
 @dataclass

@@ -102,3 +102,5 @@ There is no service worker, and adding one was rejected: it would imply offline 
 ## Installed app
 
 The manifest stays as it was (`display: standalone`, start URL `/`), and any address reloads correctly because the server's page list knows every address. `theme-color` now has a dark and a light value so the title bar matches. A real install on Chrome and Edge, including closing and reopening with and without the server, still needs a person to try it.
+
+Business billing checks a supplied VAT country and number with `ec.europa.eu` (VIES); it sends no music. Licence guidance links in the business console open only when clicked, with no background requests.

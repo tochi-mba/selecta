@@ -68,7 +68,6 @@ export type StemsStore = {
 export type StemMove = 'vocal_ride' | 'stem_arrange' | 'stem_intertwine';
 
 /** Make a Mix's stem preference, as local mode's `steering.stems`. */
-export type StemPreferenceValue = 'never' | 'sometimes' | 'often';
 
 /** Why the scheduler played a non-stem move where a stem move was asked for or picked. */
 export type StemDegradeCode = 'not_ready' | 'not_connected' | 'split_failed';

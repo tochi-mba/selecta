@@ -7,10 +7,12 @@ import type { BusinessRoute } from '../context';
 import { SHELL_COPY } from '../copy/shell';
 import type { Org } from '../types';
 import { access } from './nav';
+import { TermsGate } from '../settings/LicensingCards';
 
 const HqConsole = lazy(() => import('../console/HqConsole').then((m) => ({ default: m.HqConsole })));
 const VenuesPage = lazy(() => import('../console/VenuesPage').then((m) => ({ default: m.VenuesPage })));
 const SchedulesPage = lazy(() => import('../console/SchedulesPage').then((m) => ({ default: m.SchedulesPage })));
+const UsagePage = lazy(() => import('../console/UsagePage').then((m) => ({ default: m.UsagePage })));
 const BillingPage = lazy(() => import('../console/BillingPage').then((m) => ({ default: m.BillingPage })));
 const VenueManager = lazy(() => import('../venue/VenueManager').then((m) => ({ default: m.VenueManager })));
 const PeoplePage = lazy(() => import('../venue/PeoplePage').then((m) => ({ default: m.PeoplePage })));
@@ -47,9 +49,10 @@ export function BusinessPage({ route, org, wall }: { route: NonNullable<Business
         case 'library': page = <OrgLibrary />; break;
         case 'requests': page = <RequestsPage />; break;
         case 'people': page = <PeoplePage venueId={org.role === 'venue_manager' ? one : undefined} />; break;
+        case 'usage': page = <UsagePage />; break;
         case 'billing': page = <BillingPage />; break;
         case 'settings': page = <SettingsPage />; break;
       }
   }
-  return <Suspense fallback={<PageFallback />}>{page}</Suspense>;
+  return <Suspense fallback={<PageFallback />}><TermsGate skip={route.page === 'control'}>{page}</TermsGate></Suspense>;
 }

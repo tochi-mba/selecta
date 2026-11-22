@@ -1,0 +1,45 @@
+// The business pricing page and the product boundary (ADR-0441 BZ-0441-04, -05). Plain words,
+// ex VAT, says SelectaDJ. Manager-facing only: the kiosk, guest and display bundles never import
+// this module.
+
+export const BOUNDARY_COPY = {
+  title: 'What SelectaDJ for Business is',
+  ownMusic: 'You bring the music. SelectaDJ mixes the songs your business uploads; it does not supply a catalogue.',
+  ownLicence: 'You hold the licences. Playing music in public needs your own public performance licence for each venue, and no zone plays until it is confirmed.',
+  noGuestAudio: 'Guests never receive audio. They can send requests from their phones, and the music plays only from your venue speakers.',
+  separate: 'Personal and business libraries stay apart. A personal SelectaDJ account and its plan are not touched when you join an organisation.',
+} as const;
+
+export const PRICING_COPY = {
+  title: 'SelectaDJ for Business pricing',
+  lead: 'One price per venue, with automatic mixing, scheduled opening hours and guest requests.',
+  perVenue: 'per venue per month',
+  perVenueYear: 'per venue per year',
+  includes: (zones: number, seats: number) => `Includes ${zones} zone and ${seats} staff seats. Owners and admins are free.`,
+  extraZone: 'Each extra zone',
+  extraSeat: 'Each extra staff seat',
+  perMonth: 'a month',
+  perYear: 'a year',
+  exVat: 'All prices exclude VAT.',
+  volume: (min: number, off: number) => `${off}% off from ${min} venues.`,
+  enterprise: (min: number) => `${min} or more venues is SelectaDJ Enterprise, quoted by REX Technologies sales rather than sold here.`,
+  trial: (days: number) => `${days}-day trial for 1 venue and 1 zone. A card is needed, and you are not charged until the trial ends.`,
+  calculator: 'Work out your price',
+  venues: 'Venues',
+  zones: 'Zones in all',
+  seats: 'Staff seats in all',
+  monthly: 'Monthly',
+  yearly: 'Yearly',
+  billing: 'Billing',
+  currency: 'Currency',
+  subtotal: 'Before discount',
+  discount: (off: number) => `Volume discount (${off}%)`,
+  total: (interval: 'month' | 'year') => (interval === 'month' ? 'Total a month, ex VAT' : 'Total a year, ex VAT'),
+  extraZones: (n: number) => `${n} extra ${n === 1 ? 'zone' : 'zones'}`,
+  extraSeats: (n: number) => `${n} extra staff ${n === 1 ? 'seat' : 'seats'}`,
+  venueLine: (n: number) => `${n} ${n === 1 ? 'venue' : 'venues'}`,
+  loading: 'Loading prices',
+  failed: "Prices didn't load. Check your connection and try again.",
+  retry: 'Try again',
+  back: 'Back to SelectaDJ',
+} as const;
