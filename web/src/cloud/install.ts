@@ -6,8 +6,9 @@ import { useSyncExternalStore } from 'react';
 // button to use later. Safari on iPad and iPhone has no such event: the person installs through
 // Share, then Add to Home Screen, so those browsers get guidance instead of a button. Which one
 // applies is decided by the browser's own APIs (`navigator.standalone` exists only in Safari on
-// iOS and iPadOS), never by reading the user agent. No service worker: current Chromium installs
-// a site with a manifest and no worker, and SelectaDJ caches nothing for offline use here.
+// iOS and iPadOS), never by reading the user agent. Installing needs no service worker (current
+// Chromium installs a site with a manifest alone); the app-shell worker that lets Cloud open
+// offline is separate, behind `cloud.offline_shell` (offlineShell.ts).
 
 /** The Chromium event, which is not in the DOM typings. */
 export type InstallPromptEvent = Event & {
