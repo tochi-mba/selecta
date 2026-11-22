@@ -33,6 +33,9 @@ from selecta.library.relevance import match_label
 from selecta.library.scan import ScanStopped
 from selecta.library.search_cache import RankedSearches
 
+LYRICS_KEY = "lyrics_lookup_in_progress"
+"""library.scan_resume: set while a lyric lookup runs; left after a restart, it is offered again."""
+
 
 class BatchEntry(BaseModel):
     id: int
@@ -131,9 +134,12 @@ def add_routes(app, ctx) -> None:
             background.scan_stop.set()
         return background.scan
 
+    lyrics_running = threading.Event()
+
     def look_up_lyrics() -> None:
         """Lyrics for every song that has none yet, unless lyric lookup is turned off, in which
-        case nothing is sent anywhere."""
+        case nothing is sent anywhere. With library.scan_resume a lookup cut off by a restart is
+        remembered, and the Workspace offers to start it again."""
         if not flags.on("lyrics.lookup"):
             return
         work = getattr(ctx, "work", None)
@@ -142,13 +148,47 @@ def add_routes(app, ctx) -> None:
 
             ask_for_lyrics(work)
             return
-        subprocess.run(
-            [sys.executable, "-m", "selecta.cli", "lyrics"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            env={**os.environ, "SELECTA_HOME": str(settings.home)},
-            check=False,
-        )
+        marking = flags.on("library.scan_resume")
+        lyrics_running.set()
+        try:
+            if marking:
+                with connect() as conn:
+                    db.set_preference(conn, LYRICS_KEY, {"at": time.time()})
+            subprocess.run(
+                [sys.executable, "-m", "selecta.cli", "lyrics"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                env={**os.environ, "SELECTA_HOME": str(settings.home)},
+                check=False,
+            )
+            if marking:
+                with connect() as conn:
+                    conn.execute("DELETE FROM preferences WHERE key = ?", (LYRICS_KEY,))
+                    conn.commit()
+        finally:
+            lyrics_running.clear()
+
+    @app.get("/api/library/interrupted")
+    def interrupted_work() -> dict:
+        """What a restart cut off: a lyric lookup to offer again, and the scan carrying on."""
+        from selecta.library.scan import interrupted_scan
+
+        with connect() as conn:
+            lyrics = db.preference(conn, LYRICS_KEY, None) is not None
+            scan_state = interrupted_scan(conn)
+        return {
+            "lyrics": lyrics and not lyrics_running.is_set() and flags.on("lyrics.lookup"),
+            "scan": scan_state,
+        }
+
+    @app.post("/api/library/lyrics/again")
+    def lyrics_again() -> dict:
+        """'Looking up lyrics was interrupted. Start it again?'"""
+        if not flags.on("lyrics.lookup"):
+            raise HTTPException(409, "Lyric lookup is turned off, so nothing is sent anywhere.")
+        if not lyrics_running.is_set():
+            threading.Thread(target=look_up_lyrics, daemon=True).start()
+        return {"started": True}
 
     def remember_folder(conn: sqlite3.Connection, folder: Path) -> None:
         folders = db.preference(conn, "library_folders", [])
