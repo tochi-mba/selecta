@@ -24,6 +24,7 @@ vi.mock('@workos-inc/authkit-react', () => ({
 }));
 
 const { CloudApp, pageFor } = await import('./CloudApp');
+const { configureConnection } = await import('./connection');
 
 let account: Account;
 const requests: string[] = [];
@@ -35,6 +36,8 @@ let signOutEverywhere: Response | null = null;
 let deleted: Response | null = null;
 
 beforeEach(() => {
+  // the connection store is one per tab: a test that left it unreachable must not leak
+  configureConnection({ reset: true });
   account = cloudAccount();
   requests.length = 0;
   events = null;
@@ -53,7 +56,7 @@ beforeEach(() => {
       if (accountCalls >= revokedFromCall) return json({ detail: { code: 'session_revoked', message: 'You were signed out. Sign in again.' } }, 401);
       return json(account);
     }
-    if (url === '/api/account' && init?.method === 'DELETE') return deleted ?? new Response(null, { status: 204 });
+    if (url === '/api/account' && init?.method === 'DELETE') return deleted ? deleted.clone() : new Response(null, { status: 204 });
     if (url === '/api/account/sign-out-everywhere') return signOutEverywhere ?? json({ revoked_before: 1, sessions_revoked: 2, devices_signed_out: 1, playback_stopped: true });
     if (url === '/api/events') {
       if (events === null) throw new TypeError('blocked');
