@@ -145,8 +145,14 @@ export async function checkForInterruptedImport(parts: RunnerParts): Promise<voi
   if (!flagOn('cloud.resilient_import') || importRunningHere()) return;
   const live = importSnapshot();
   if (live.phase === 'running') return;
-  const marker = readImportMarker(parts.workspaceId);
-  if (!marker) { if (offerWorkspace === parts.workspaceId) setOffer(null, null); return; }
+  const kept = readImportMarker(parts.workspaceId);
+  if (!kept) { if (offerWorkspace === parts.workspaceId) setOffer(null, null); return; }
+  // The marker is rewritten per sent batch; the journal holds every file already checked, which is
+  // what a resume skips, so the offer counts from it.
+  const journal = await ImportJournal.open(parts.workspaceId).catch(() => null);
+  const checked = Math.max(kept.checked ?? kept.registered ?? 0, journal?.size ?? 0);
+  journal?.close();
+  const marker = { ...kept, checked };
   if (marker.kind !== 'folder') {
     setOffer(parts.workspaceId, { kind: 'repick', folder: marker.folder, marker });
     return;
