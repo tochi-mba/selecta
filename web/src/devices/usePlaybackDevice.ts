@@ -196,6 +196,8 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const reconciling = useRef(false);
   // a volume set here while offline, sent once the connection is back
   const heldVolume = useRef<number | null>(null);
+  // the speaker an offline start made, until it reaches this hook as the `speaker` prop
+  const offlineSpeaker = useRef<Speaker | null>(null);
   const [offline, setOffline] = useState(false);
   const [offlineNotice, setOfflineNotice] = useState('');
   // offline at page open: the id this browser registered before stands in until it can register
@@ -605,17 +607,18 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
   const send = useCallback(async (name: string, args?: Record<string, unknown>): Promise<boolean> => {
     // cloud.offline_playback: while SelectaDJ can't be reached, this speaker's own presses act
     // here at once; its next heartbeat after the return tells the session where the music is
-    const hereOffline = () => offlinePlaybackOn() && speaking.current && !!speaker && LOCAL_PRESSES.has(name);
+    const sound = speaker ?? offlineSpeaker.current;
+    const hereOffline = () => offlinePlaybackOn() && speaking.current && !!sound && LOCAL_PRESSES.has(name);
     const actHere = async () => {
-      if (!speaker) return false;
-      const at = speaker.position();
-      if (name === 'pause') speaker.pause();
-      else if (name === 'play') speaker.resume();
-      else if (name === 'skip') await speaker.start((at?.song_index ?? 0) + 1, 0, true);
-      else if (name === 'seek') await speaker.start(Number(args?.song_index ?? at?.song_index ?? 0), Number(args?.offset_ms ?? 0), true);
+      if (!sound) return false;
+      const at = sound.position();
+      if (name === 'pause') sound.pause();
+      else if (name === 'play') sound.resume();
+      else if (name === 'skip') await sound.start((at?.song_index ?? 0) + 1, 0, true);
+      else if (name === 'seek') await sound.start(Number(args?.song_index ?? at?.song_index ?? 0), Number(args?.offset_ms ?? 0), true);
       else if (name === 'set_volume') {
         const volume = Math.max(0, Math.min(100, Number(args?.volume ?? 100)));
-        speaker.setVolume?.(volume / 100);
+        sound.setVolume?.(volume / 100);
         heldVolume.current = volume;
       }
       if (!adrift.current) beatTrouble.current = true;
@@ -669,6 +672,7 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     setOfflineNotice('');
     setMessage('');
     setError('');
+    offlineSpeaker.current = sound;
     if (!wake.current) wake.current = holdWakeLock();
     wakeWasHeld.current = false;
     await sound.start(songIndex, offsetMs, true);
