@@ -162,7 +162,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `lyrics.display` | **Lyric display.** Shows lyric text in listening and discovery views where its use is permitted. | `lyrics.lookup` |
 | `lyrics.word_timing` | **Word timing.** When each sung word lands, for moves that hand over on a word. | `lyrics.lookup` |
 | `analysis.time_estimates` | **Time estimates.** How long analysing the rest of the library will take, and how accurate past estimates were, from this computer's own speeds. |  |
-| `library.scan_resume` | **Scans carry on after a stop.** A library scan saves its progress as it goes, so a scan interrupted by closing SelectaDJ or the computer carries on where it stopped. |  |
+| `library.scan_resume` | **Scans carry on after a stop.** A library scan saves its progress as it goes, so a scan interrupted by closing SelectaDJ or the computer carries on where it stopped. An interrupted export or lyric lookup is offered again. |  |
 
 ## Learning
 
