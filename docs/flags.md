@@ -162,6 +162,7 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `lyrics.display` | **Lyric display.** Shows lyric text in listening and discovery views where its use is permitted. | `lyrics.lookup` |
 | `lyrics.word_timing` | **Word timing.** When each sung word lands, for moves that hand over on a word. | `lyrics.lookup` |
 | `analysis.time_estimates` | **Time estimates.** How long analysing the rest of the library will take, and how accurate past estimates were, from this computer's own speeds. |  |
+| `library.scan_resume` | **Scans carry on after a stop.** A library scan saves its progress as it goes, so a scan interrupted by closing SelectaDJ or the computer carries on where it stopped. |  |
 
 ## Learning
 
@@ -226,6 +227,10 @@ anything. `uv run selecta flags` shows what's on in the current shell and why.
 | `cloud.stored_media` | **Stored media.** List, play, export and delete audio already stored in Cloud. Reads of stored media stay open without the hosted media grant, so nobody's library goes dark (ADR-0456). |  |
 | `cloud.local_first` | **Browser-first personal Cloud.** Selects the local-first navigation and browser-owned playback in personal Cloud; the legacy pages remain when off (ADR-0455). |  |
 | `cloud.workspace` | **Browser Workspace.** Workspace in browser-first Cloud: an overview of the library and what this browser is doing in the background, the interface choices, connecting music, this browser's storage and a browser diagnostics panel. Analysis and learning stay on a computer running SelectaDJ. When off, the device cards stay in More as This device. | `cloud.local_first` |
+| `cloud.resilient_import` | **Import that survives interruptions.** A durable import journal in this browser: it retries, waits for the connection, and carries on after a reload or sign-in without re-reading finished files. | `cloud.local_media` |
+| `cloud.offline_shell` | **Cloud opens offline.** The app opens without a connection and the library shows what this device already knows. | `cloud.local_first` |
+| `cloud.offline_playback` | **Playback through a dropped connection.** A playing device keeps playing its own files while the connection is down and settles the playback lease when it returns. | `devices.browser_player` |
+| `cloud.mix_outbox` | **Mix changes wait for the connection.** Mixes made or edited offline are kept in this browser and sent when the connection returns. | `cloud.local_first` |
 | `cloud.hosted_shell` | **Hosted Cloud on the shared shell.** Draws the hosted Cloud pages (overview, Listen, Make a Mix, Library and the account places in More) inside the same shell as browser-first Cloud; the legacy side rail remains when off. |  |
 | `cloud.progressive_import` | **Import continues in the background.** A folder import keeps running while the member moves on: onboarding unlocks as songs land, a shell chip shows progress, and an interrupted import offers to carry on (ADR-0463 BF-0463-02). |  |
 | `cloud.content_cache` | **Reuse work on the same song by fingerprint.** Derived data on this device (cached song bytes) is keyed by the song's content hash, computed here from the file itself, so the same file under another account or another title reuses it; off, the cache is keyed per workspace and nothing is shared (ADR-0469). |  |
