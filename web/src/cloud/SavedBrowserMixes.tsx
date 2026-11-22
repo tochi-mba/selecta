@@ -8,6 +8,8 @@ import { MenuItem } from '../ui/primitives';
 import type { ViewProps } from '../views/shared';
 import { EMPTY_MIX } from './localFirstRequest';
 import type { RecipeStore, RecipeSummary } from './recipeStore';
+import { flagOn } from '../flags';
+import { MIX_OUTBOX_EVENT, takeOutboxNotices, WAITING_TO_SYNC } from './outbox';
 
 /** My Mixes' saved browser mixes, laid out as local mode lays out its drafts (views/Drafts.tsx):
  * a section with its own action, a line on what saving means here, and a row per mix with Edit,
@@ -38,6 +40,23 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
     setList(null);
     void load();
   }, [load, workspaceId]);
+  // cloud.mix_outbox: redraw when changes made offline are queued or sent, and say once when one
+  // had to be saved as a copy
+  const outbox = flagOn('cloud.mix_outbox');
+  const [synced, setSynced] = useState('');
+  useEffect(() => {
+    if (!outbox) return;
+    const heard = (event: Event) => {
+      if ((event as CustomEvent<string>).detail !== workspaceId) return;
+      void load();
+      const notices = takeOutboxNotices(workspaceId);
+      if (notices.length) setSynced(notices[notices.length - 1]);
+    };
+    window.addEventListener(MIX_OUTBOX_EVENT, heard);
+    const waiting = takeOutboxNotices(workspaceId);
+    if (waiting.length) setSynced(waiting[waiting.length - 1]);
+    return () => window.removeEventListener(MIX_OUTBOX_EVENT, heard);
+  }, [outbox, load, workspaceId]);
 
   /** Make a saved mix the current one; the old pointer comes back if that fails. */
   const makeCurrent = async (recipe: RecipeSummary) => {
@@ -105,6 +124,7 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
       <p className="hint">
         Every mix you make here is saved to your account, so it opens on any device that has the same music. Editing or playing one makes it your current mix; the others stay as they are.
       </p>
+      {outbox && synced && <p className="hint" role="status">{synced} <button onClick={() => setSynced('')}>Dismiss</button></p>}
       {problem && <p className="warn" role="alert">{problem} <button onClick={() => void load()}>Try again</button></p>}
       {list === null && !problem && <Skeleton variant="rows" lines={2} label="Loading saved mixes" />}
       {list?.length === 0 && (
@@ -126,8 +146,9 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
                   ) : (
                     <b className="draft-open">{recipe.name}</b>
                   )}
-                  <span className="soft">{countOf(recipe.songs, 'song')}. Saved {relativeTime(now - recipe.updated_at)}.</span>
+                  <span className="soft">{countOf(recipe.songs, 'song')}. {outbox && recipe.pending ? 'Saved on this device; it goes to your account when the connection is back.' : `Saved ${relativeTime(now - recipe.updated_at)}.`}</span>
                   {current && <Status kind="ready">Your current mix</Status>}
+                  {outbox && recipe.pending && <Status kind="queued">{WAITING_TO_SYNC}</Status>}
                 </div>
                 <div className="row wrap draft-actions">
                   <Action className="draft-edit" working="Opening…" aria-label={`Edit ${recipe.name}`} run={() => edit(recipe)}>Edit</Action>

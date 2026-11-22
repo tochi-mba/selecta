@@ -1,5 +1,7 @@
 import type { Recipe, RecipeSeam, RecipeSong, RecipeStore, RecipeSummary } from './recipeStore';
 import { flagOn } from '../flags';
+import { isOnline, onReconnect } from './connection';
+import { canHeal, classify } from './resilientRequest';
 
 /** The mix outbox (cloud.mix_outbox): mixes made or edited while the connection is down are
  * applied in this browser at once and sent, in the order they were made, when it returns.
@@ -122,14 +124,12 @@ const box = {
 
 // ---------- what the server said, and what "unreachable" means ----------
 
-/** True when a request failed because the server could not be reached (the network is down, it
- * timed out, or the service is not answering), as opposed to the server refusing it. */
+/** True when a request failed because SelectaDJ could not be reached or could not answer just
+ * now (no network, a timeout, the service down or busy), as opposed to the server refusing it.
+ * The connection store (connection.ts) is the one judge of "offline". */
 export function unreachable(problem: unknown): boolean {
-  if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
-  const status = (problem as { status?: unknown } | null)?.status;
-  if (typeof status === 'number') return status === 0 || status === 408 || status >= 500;
-  const name = (problem as { name?: unknown } | null)?.name;
-  return problem instanceof TypeError || name === 'AbortError' || name === 'TimeoutError' || name === 'NetworkError';
+  if (!isOnline()) return true;
+  return canHeal(classify(problem));
 }
 
 const codeOf = (problem: unknown) => (problem as { code?: unknown } | null)?.code;
@@ -332,7 +332,7 @@ export function withOutbox(server: RecipeStore, workspaceId: string): RecipeStor
 
   if (typeof window !== 'undefined' && !listening.has(workspaceId)) {
     listening.add(workspaceId);
-    window.addEventListener('online', () => void flush());
+    onReconnect(() => void flush());
     window.setTimeout(() => void flush(), 0);
   }
 
@@ -340,7 +340,7 @@ export function withOutbox(server: RecipeStore, workspaceId: string): RecipeStor
     ...server,
     create: async (name, songIds, known = []) => {
       if (!on()) return server.create(name, songIds, known);
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) return queueCreate(name, songIds, known);
+      if (!isOnline()) return queueCreate(name, songIds, known);
       try {
         return await kept(await server.create(name, songIds, known));
       } catch (problem) {
