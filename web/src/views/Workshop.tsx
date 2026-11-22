@@ -17,6 +17,7 @@ import { LocalBackup } from './LocalBackup';
 import { sameApartFromClock } from './clockMemo';
 import { ViewProps } from './shared';
 import { InterfaceChoices } from './InterfaceChoices';
+import { InterruptedWork } from './WorkshopInterrupted';
 import { Diagnostics, FoldersPanel, JobsPanel, MemoryPanel, NeedsYou, StoragePanel } from './WorkshopPanels';
 import { words } from '../copy';
 
@@ -37,6 +38,8 @@ function Overview({ status, request }: { status: ViewProps['status']; request?: 
   }, [status.scan.status]);
   return (
     <>
+      {/* library.scan_resume: what a restart cut off comes first, with its one next step */}
+      <InterruptedWork status={status} request={request} />
       {/* MP-0293-01: what can be repaired comes before the passive counts. The placeholder holds its
           place until the jobs answer arrives, so the metrics don't jump down under the reader. */}
       {jobs

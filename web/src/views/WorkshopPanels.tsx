@@ -579,7 +579,9 @@ export function FoldersPanel({ status, refreshStatus, notify }: Pick<ViewProps, 
       {status.scan.status === 'done' && (
         <p className="hint">Read {status.scan.folder}: {status.scan.music} songs, {status.scan.set_aside} set aside. Analysing them now.</p>
       )}
-      {status.scan.status === 'cancelled' && <p className="hint" role="status">Stopped reading {status.scan.folder}. Nothing in your library changed. Read it again whenever you like.</p>}
+      {status.scan.status === 'cancelled' && <p className="hint" role="status">{flagOn('library.scan_resume')
+        ? `Stopped reading ${status.scan.folder}. Songs read before you stopped are kept, and nothing else in your library changed. Read it again whenever you like.`
+        : `Stopped reading ${status.scan.folder}. Nothing in your library changed. Read it again whenever you like.`}</p>}
       {status.scan.status === 'failed' && <p className="warn" role="alert">{status.scan.error}</p>}
     </section>
   );
