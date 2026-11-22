@@ -100,15 +100,27 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
     await load();
   };
   const remove = async (recipe: RecipeSummary) => {
-    await recipes.remove(recipe.mix_id);
-    if (recipes.current() === recipe.mix_id) {
+    const wasCurrent = recipes.current() === recipe.mix_id;
+    const queued = (await recipes.remove(recipe.mix_id)) === 'queued';
+    if (wasCurrent) {
       recipes.setCurrent(null);
       setMixData(EMPTY_MIX);
       refreshStatus();
     }
     setDeleting(null);
     await load();
-    notify(`Deleted ${recipe.name}.`);
+    // cloud.mix_outbox: deleted while offline, it is sent on reconnect and can be taken back until then
+    if (queued && recipes.restore) {
+      notify(`Deleted ${recipe.name}. This reaches your account when the connection is back.`, async () => {
+        await recipes.restore?.(recipe.mix_id);
+        if (wasCurrent && !recipes.current()) {
+          recipes.setCurrent(recipe.mix_id);
+          setMixData(await request<MixData>('/mix'));
+          refreshStatus();
+        }
+        await load();
+      });
+    } else notify(`Deleted ${recipe.name}.`);
   };
 
   const currentId = recipes.current();

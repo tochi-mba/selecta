@@ -67,7 +67,9 @@ export type RecipeStore = {
   /** A saved copy under its own id, so "Save a copy" lands in My Mixes. */
   duplicate: (mixId: string, name?: string) => Promise<Recipe>;
   /** Delete a saved recipe and all its revisions. Music files are never touched. */
-  remove: (mixId: string) => Promise<void>;
+  /** 'queued': deleted here while offline and sent on reconnect; `restore` takes it back until then. */
+  remove: (mixId: string) => Promise<void | 'queued'>;
+  restore?: (mixId: string) => Promise<void>;
   /** Send changes made while offline (cloud.mix_outbox); resolves once this attempt is over. */
   flush?: () => Promise<void>;
 };

@@ -22,12 +22,15 @@ export type KnownSong = { id: number; title: string; artist: string | null; dura
 
 type Op =
   | { id?: number; workspaceId: string; kind: 'create'; mixId: string; revision: string; name: string; songIds: number[]; at: number }
-  | { id?: number; workspaceId: string; kind: 'edit'; mixId: string; baseRevision: string; revision: string; change: RecipeChange; at: number };
+  | { id?: number; workspaceId: string; kind: 'edit'; mixId: string; baseRevision: string; revision: string; change: RecipeChange; at: number }
+  /** A delete made offline: sent only if the mix is still at `baseRevision` on the server. */
+  | { id?: number; workspaceId: string; kind: 'remove'; mixId: string; baseRevision: string; at: number };
 
 /** Fired on window when the outbox changes (queued, sent, or saved as a copy). `detail` is the workspace id. */
 export const MIX_OUTBOX_EVENT = 'selecta-mix-outbox';
 export const SAVED_AS_COPY = 'Saved as a copy because this mix changed on another device.';
 export const WAITING_TO_SYNC = 'Waiting to sync';
+export const NOT_DELETED = 'A mix you deleted while offline was kept, because it changed on another device in the meantime.';
 
 const DB_NAME = 'selecta-mix-outbox';
 const DB_VERSION = 1;
@@ -274,11 +277,36 @@ export function withOutbox(server: RecipeStore, workspaceId: string): RecipeStor
   const sendQueued = async () => {
     const ops = await box.ops(workspaceId);
     if (!ops.length) return;
-    const folded = new Set<string>();
+    // a mix made and deleted here before it was ever sent: nothing of it goes to the server
+    const folded = new Set<string>(ops.filter((op) => op.kind === 'remove' && isLocalMix(resolveId(op.mixId))).map((op) => op.mixId));
+    for (const mixId of folded) await box.forget(workspaceId, mixId);
     const lastMade = new Map<string, Recipe>();
     for (const op of ops) {
       if (folded.has(op.mixId)) { await box.drop(op.id); continue; }
       const target = resolveId(op.mixId);
+      if (op.kind === 'remove') {
+        try {
+          const there = await server.read(target).catch((problem) => {
+            if (statusOf(problem) === 404) return null;
+            throw problem;
+          });
+          // changed on another device since it was deleted here: kept, and the member is told
+          if (there && there.revision !== resolveId(op.baseRevision)) note(workspaceId, NOT_DELETED);
+          else {
+            if (there) await server.remove(target);
+            await box.forget(workspaceId, op.mixId);
+            if (server.current() === op.mixId || server.current() === target) server.setCurrent(null);
+          }
+          lastMade.delete(op.mixId);
+          folded.add(op.mixId);
+          await box.drop(op.id);
+        } catch (problem) {
+          if (unreachable(problem)) break;
+          note(workspaceId, `A mix deleted while offline couldn’t be deleted: ${(problem as Error).message || 'the server refused it'}.`);
+          await box.drop(op.id);
+        }
+        continue;
+      }
       try {
         const made = op.kind === 'create'
           ? await server.create(op.name, op.songIds)
@@ -370,6 +398,7 @@ export function withOutbox(server: RecipeStore, workspaceId: string): RecipeStor
       if (!on()) return server.list();
       const ops = await box.ops(workspaceId);
       const waiting = new Set(ops.map((op) => op.mixId));
+      const removed = new Set(ops.filter((op) => op.kind === 'remove').map((op) => resolveId(op.mixId)));
       let listed: RecipeSummary[];
       try {
         listed = await server.list();
@@ -387,7 +416,8 @@ export function withOutbox(server: RecipeStore, workspaceId: string): RecipeStor
       }));
       const madeHere = await Promise.all(ops.filter((op) => op.kind === 'create' && !listed.some((one) => one.mix_id === resolveId(op.mixId)))
         .map(async (op) => { const mine = await box.recipe(workspaceId, op.mixId); return mine ? summaryOf(mine, true, op.at) : null; }));
-      return [...madeHere.filter((one): one is RecipeSummary => one !== null).reverse(), ...shown];
+      // a delete waiting to be sent hides the mix at once
+      return [...madeHere.filter((one): one is RecipeSummary => one !== null).reverse(), ...shown].filter((one) => !removed.has(resolveId(one.mix_id)));
     },
     edit: async (asked, baseRevision, change, known = []) => {
       if (!on()) return server.edit(asked, baseRevision, change, known);
@@ -408,32 +438,52 @@ export function withOutbox(server: RecipeStore, workspaceId: string): RecipeStor
     duplicate: async (asked, name) => {
       if (!on()) return server.duplicate(asked, name);
       const mixId = resolveId(asked);
-      if (isLocalMix(mixId) || (await pendingFor(mixId))) {
+      // a copy made here from this browser's version of the mix, sent when the connection is back
+      const copyHere = async () => {
         const mine = await box.recipe(workspaceId, mixId);
-        if (!mine) throw new Error('Couldn’t copy this mix. Try again.');
-        return queueCreate(name ?? copyName(mine.name), mine.songs.map((song) => song.song_id), []).then(async (copy) => {
-          const moves = Object.fromEntries(mine.seams.filter((seam) => seam.settings?.move).map((seam) => [seam.into, seam.settings!.move!]));
-          const shaped = Object.keys(moves).length ? await queueEdit(copy.mix_id, copy.revision, { seamMoves: moves }, []) : copy;
-          void flush();
-          return shaped;
-        });
+        if (!mine) throw new Error('This mix hasn’t been opened on this device yet, so it can’t be copied until the connection is back.');
+        const known = mine.songs.map((song) => ({ id: song.song_id, title: song.title, artist: song.artist, duration: song.duration }));
+        const copy = await queueCreate(name ?? copyName(mine.name), mine.songs.map((song) => song.song_id), known);
+        const moves = Object.fromEntries(mine.seams.filter((seam) => seam.settings?.move).map((seam) => [seam.into, seam.settings!.move!]));
+        const shaped = Object.keys(moves).length ? await queueEdit(copy.mix_id, copy.revision, { seamMoves: moves }, []) : copy;
+        void flush();
+        return shaped;
+      };
+      if (isLocalMix(mixId) || (await pendingFor(mixId)) || !isOnline()) return copyHere();
+      try {
+        return await kept(await server.duplicate(mixId, name));
+      } catch (problem) {
+        if (unreachable(problem)) return copyHere();
+        throw problem;
       }
-      return kept(await server.duplicate(mixId, name));
     },
     remove: async (asked) => {
       if (!on()) return server.remove(asked);
       const mixId = resolveId(asked);
-      const ops = (await box.ops(workspaceId)).filter((op) => op.mixId === mixId);
-      if (isLocalMix(mixId)) {
-        // never sent: deleting it here is the whole of it
-        for (const op of ops) await box.drop(op.id);
-        await box.forget(workspaceId, mixId);
+      const queue = async (): Promise<'queued'> => {
+        const mine = await box.recipe(workspaceId, mixId);
+        const listed = (await box.list(workspaceId))?.find((one) => one.mix_id === mixId);
+        await box.add({ workspaceId, kind: 'remove', mixId, baseRevision: mine?.revision ?? listed?.revision ?? '', at: Date.now() / 1000 });
         changed(workspaceId);
-        return;
+        void flush();
+        return 'queued';
+      };
+      // made here, or offline: hidden at once, with Undo until it is sent
+      if (isLocalMix(mixId) || (await pendingFor(mixId)) || !isOnline()) return queue();
+      try {
+        await server.remove(mixId);
+      } catch (problem) {
+        if (unreachable(problem)) return queue();
+        throw problem;
       }
-      await server.remove(mixId);
-      for (const op of ops) await box.drop(op.id);
       await box.forget(workspaceId, mixId);
+      changed(workspaceId);
+    },
+    restore: async (asked) => {
+      const mixId = resolveId(asked);
+      for (const op of await box.ops(workspaceId)) {
+        if (op.kind === 'remove' && resolveId(op.mixId) === mixId) await box.drop(op.id);
+      }
       changed(workspaceId);
     },
     flush,
