@@ -33,6 +33,11 @@ have vanished at once, since that's a drive that's partly away more often than a
 SETTLE_SECONDS = 30.0
 """A file changed more recently than this may still be being copied in."""
 MISSING_WORDS = "the file has gone"
+SCAN_STATE_KEY = "scan_in_progress"
+"""library.scan_resume: the folder being read and how far it got, kept until the scan finishes.
+Left behind after a restart, it means the scan was interrupted and should carry on."""
+CHECKPOINT_EVERY = 200
+"""With checkpoints on, newly read songs are saved in batches of this many."""
 
 _SPOKEN_GENRE = re.compile(
     r"audio\s*book|audiobook|spoken|speech|podcast|lecture|h[öo]rbuch|audiolibro|livre audio",
@@ -280,7 +285,42 @@ def _inside(path: str, root_text: str) -> bool:
 
 
 class ScanStopped(Exception):
-    """Someone asked for this scan to stop. Nothing's been written yet, so nothing is half done."""
+    """Someone asked for this scan to stop. Without checkpoints nothing's been written yet; with
+    them, songs already read are kept (they are real songs) and nothing is removed."""
+
+
+def interrupted_scan(conn: sqlite3.Connection) -> dict | None:
+    """The scan a restart should carry on, if one was cut off: folder, files read, files found."""
+    state = db.preference(conn, SCAN_STATE_KEY, None)
+    if not isinstance(state, dict) or state.get("state") != "scanning" or not state.get("folder"):
+        return None
+    return state
+
+
+def forget_interrupted_scan(conn: sqlite3.Connection) -> None:
+    conn.execute("DELETE FROM preferences WHERE key = ?", (SCAN_STATE_KEY,))
+    conn.commit()
+
+
+def _note_progress(conn: sqlite3.Connection, root: Path, found: int | None, done: int) -> None:
+    db.set_preference(
+        conn,
+        SCAN_STATE_KEY,
+        {"state": "scanning", "folder": str(root), "found": found, "done": done, "at": time.time()},
+    )
+
+
+def _save_batch(
+    conn: sqlite3.Connection, batch: list[dict], subtitled: set[str], root: Path
+) -> None:
+    """Newly read songs saved before the scan ends, so a restart doesn't read them again. Their
+    set-aside votes are provisional: the scan's last step classifies the whole folder again."""
+    classify(batch, subtitled, root)
+    for song in batch:
+        db.upsert_song(
+            conn,
+            {k: v for k, v in song.items() if k not in {"id", "duplicate_of", "music_override"}},
+        )
 
 
 def _listing(root: Path, should_stop: Callable[[], bool]) -> Iterator[Path]:
@@ -295,10 +335,36 @@ def scan_folder(
     root: Path,
     careful: bool = False,
     should_stop: Callable[[], bool] = lambda: False,
+    checkpoint: bool = False,
 ) -> ScanReport:
     """Read a folder into the library. All the slow reading comes before any of the writing, and
-    that's where it can be stopped, so stopping leaves the library exactly as it was."""
+    that's where it can be stopped, so stopping leaves the library exactly as it was.
+
+    With `checkpoint` (library.scan_resume) the folder and a `scanning` state are remembered at
+    the start, and newly read songs are saved in batches, so a scan cut off by a restart carries
+    on: files already saved match on size and time and are not read again. Songs that have gone
+    are only removed at the very end, so a partial scan never removes anything."""
     root = root.resolve()
+    if not checkpoint:
+        return _scan(conn, root, careful, should_stop, False)
+    _note_progress(conn, root, None, 0)
+    try:
+        report = _scan(conn, root, careful, should_stop, True)
+    except ScanStopped:
+        conn.commit()  # songs read so far stay; a stop asked for is not an interruption
+        forget_interrupted_scan(conn)
+        raise
+    forget_interrupted_scan(conn)
+    return report
+
+
+def _scan(
+    conn: sqlite3.Connection,
+    root: Path,
+    careful: bool,
+    should_stop: Callable[[], bool],
+    checkpoint: bool,
+) -> ScanReport:
     report = ScanReport(root=root)
     known = db.known_files(conn)
 
@@ -313,17 +379,24 @@ def scan_folder(
         elif suffix == ".srt":
             subtitled.update(str(path.with_suffix(ext)) for ext in AUDIO_EXTENSIONS)
     report.found = len(files)
+    if checkpoint:
+        _note_progress(conn, root, report.found, 0)
 
     songs: list[dict] = []
+    batch: list[dict] = []
     seen: set[str] = set()
     now = time.time()
     # a file that can't be read isn't read again until it changes, or someone asks for a full look,
     # or it would set off a scan of the whole folder every minute for ever
     tried = db.preference(conn, "unreadable_files", {})
     unreadable: dict[str, list] = {}
-    for path in files:
+    for done, path in enumerate(files):
         if should_stop():
             raise ScanStopped
+        if checkpoint and len(batch) >= CHECKPOINT_EVERY:
+            _save_batch(conn, batch, subtitled, root)
+            batch = []
+            _note_progress(conn, root, report.found, done)  # commits the batch with it
         key = str(path)
         seen.add(key)
         try:
@@ -350,6 +423,8 @@ def scan_folder(
         relative = path.relative_to(root)
         song["folder"] = relative.parts[0] if len(relative.parts) > 1 else "."
         songs.append(song)
+        if checkpoint:
+            batch.append(song)
         report.new_or_changed += 1
 
     classify(songs, subtitled, root)

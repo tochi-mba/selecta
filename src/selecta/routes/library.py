@@ -60,19 +60,27 @@ def add_routes(app, ctx) -> None:
 
     @app.post("/api/scan")
     def scan(body: ScanRequest) -> dict:
-        from selecta.library.scan import scan_folder
-
         folder = Path(body.folder).expanduser()
         if not folder.is_dir():
             raise HTTPException(400, "That folder doesn't exist on this PC.")
         if background.scan.get("status") == "running":
             return background.scan
+        return start_scan(folder)
+
+    def start_scan(folder: Path, resumed: dict | None = None) -> dict:
+        """Read a folder on a thread. With library.scan_resume the folder is remembered at the
+        start and songs are saved in batches, so a restart carries on (resume_interrupted_scan)."""
+        from selecta.library.scan import scan_folder
+
         background.scan_stop.clear()
+        checkpoint = flags.on("library.scan_resume")
 
         def run() -> None:
             conn = connect()
             try:
-                report = scan_folder(conn, folder, should_stop=background.scan_stop.is_set)
+                report = scan_folder(
+                    conn, folder, should_stop=background.scan_stop.is_set, checkpoint=checkpoint
+                )
                 remember_folder(conn, folder)
                 background.scan = {
                     "status": "done",
@@ -91,8 +99,29 @@ def add_routes(app, ctx) -> None:
                 conn.close()
 
         background.scan = {"status": "running", "folder": str(folder)}
+        if resumed is not None:
+            # the Workspace says "A scan was interrupted. Carrying on from N of M files."
+            background.scan["resumed"] = {
+                "done": int(resumed.get("done") or 0),
+                "found": resumed.get("found"),
+            }
         threading.Thread(target=run, daemon=True).start()
         return background.scan
+
+    def resume_interrupted_scan() -> None:
+        """A scan cut off by closing SelectaDJ or the computer carries on by itself at startup.
+        A folder that isn't there right now (an unplugged drive) waits for the next start."""
+        if not flags.on("library.scan_resume"):
+            return
+        from selecta.library.scan import interrupted_scan
+
+        with connect() as conn:
+            state = interrupted_scan(conn)
+        if state is None or background.scan.get("status") == "running":
+            return
+        folder = Path(state["folder"])
+        if folder.is_dir():
+            start_scan(folder, resumed=state)
 
     @app.post("/api/scan/cancel")
     def cancel_scan() -> dict:
@@ -180,6 +209,10 @@ def add_routes(app, ctx) -> None:
                 background.analysis = background.analyse()
 
     def watch_for_new_songs() -> None:
+        try:
+            resume_interrupted_scan()
+        except (OSError, sqlite3.Error, ValueError, RuntimeError):
+            pass  # the scan state stays, and is tried again at the next start
         time.sleep(FIRST_LOOK_SECONDS)
         while True:
             try:
