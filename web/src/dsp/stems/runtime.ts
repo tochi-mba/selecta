@@ -30,7 +30,10 @@ export function hasWebGpu(): boolean {
 }
 
 async function defaultImport(): Promise<OrtLike> {
-  return (await import('onnxruntime-web/webgpu')) as unknown as OrtLike;
+  // Cloudflare Pages rejects the WebGPU/JSEP and Asyncify binaries because each exceeds its
+  // 25 MiB per-file limit. The portable WASM build is 14 MiB and keeps local stem splitting
+  // available; callers can still inject a WebGPU-capable runtime when hosted elsewhere.
+  return (await import('onnxruntime-web/wasm')) as unknown as OrtLike;
 }
 
 export async function loadStemRuntime(model: Uint8Array, options: StemRuntimeOptions = {}): Promise<StemRuntime> {

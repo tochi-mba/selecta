@@ -3,6 +3,9 @@
 # Installs exactly the locked runtime closure plus the observability extra, the same set the
 # licence register covers (src/selecta/modes/licence_register.json).
 FROM python:3.12-slim-bookworm
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends libatomic1 \
+    && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir uv==0.12.15
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
@@ -12,7 +15,8 @@ COPY pyproject.toml uv.lock ./
 RUN uv export --frozen --no-dev --extra observability --no-emit-project -o /tmp/requirements.txt \
     && uv pip install --system --no-cache \
         --extra-index-url https://download.pytorch.org/whl/cpu --index-strategy unsafe-best-match \
-        -r /tmp/requirements.txt
+        -r /tmp/requirements.txt \
+    && python -c "import pedalboard"
 COPY src ./src
 # the build backend reads pyproject's readme, so the package can't build without it
 COPY README.md ./

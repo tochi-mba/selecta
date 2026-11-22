@@ -37,10 +37,27 @@ def test_permissions_default_to_none_and_each_job_asks_for_the_least():
 
 def test_staging_follows_the_image_and_production_waits_for_staging_and_approval():
     assert JOBS["staging"]["needs"] == "image"
+    assert "SELECTA_CREDENTIAL_BROKER_URL" in JOBS["staging"]["if"]
     assert set(JOBS["production"]["needs"]) == {"image", "staging"}
     assert JOBS["staging"]["environment"]["name"] == "staging"
     assert JOBS["production"]["environment"]["name"] == "production"
     assert FLOW["concurrency"]["cancel-in-progress"] is False
+
+
+def test_the_service_image_publishes_the_blueprints_bootstrap_tag():
+    build = next(step["run"] for step in JOBS["image"]["steps"]
+                 if step.get("name") == "Build and push")
+    assert 'docker push "${IMAGE}:${GITHUB_SHA}"' in build
+    assert 'docker tag "${IMAGE}:${GITHUB_SHA}" "${IMAGE}:main"' in build
+    assert 'docker push "${IMAGE}:main"' in build
+    blueprint = yaml.safe_load((ROOT / "infra" / "render" / "render.yaml").read_text("utf-8"))
+    image_urls = {
+        service["image"]["url"]
+        for project in blueprint["projects"]
+        for environment in project["environments"]
+        for service in environment["services"]
+    }
+    assert image_urls == {"ghcr.io/tochi-mba/selecta-service:main"}
 
 
 def test_no_stored_secret_is_used_only_oidc_and_the_ephemeral_job_token():

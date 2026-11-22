@@ -84,7 +84,7 @@ pnpm e2e:flags
 
 To run the Cloud API locally, set `SELECTA_MODE=cloud` and configure
 `SELECTA_DATABASE_URL`, `SELECTA_WORKOS_CLIENT_ID`, `SELECTA_AUTH_ISSUER`,
-`SELECTA_AUTH_AUDIENCE`, `SELECTA_ALLOWED_HOSTS`, and `SELECTA_ALLOWED_ORIGINS`. Apply migrations
+`SELECTA_ALLOWED_HOSTS`, and `SELECTA_ALLOWED_ORIGINS`. Apply migrations
 with `uv run selecta db upgrade`, then run `uv run selecta web --no-open`. Cloud mode binds to
 `0.0.0.0` by default for container hosting and serves the API only; the React app is hosted
 separately. Keep local development on the default `SELECTA_MODE=local` unless you have a disposable

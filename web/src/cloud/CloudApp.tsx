@@ -337,10 +337,20 @@ export function CloudApp() {
   }, [exact, problem?.kind, refreshAccount]);
   const retryAccount = async () => { setRetrying(true); try { await refreshAccount(); } finally { setRetrying(false); } };
   const workspaceRequest = useCallback(<T,>(path: string, init?: RequestInit) => api<T>(path, init, account?.workspace.id), [api, account?.workspace.id]);
+  const restartSignIn = async () => {
+    try {
+      await signOut({ returnTo: window.location.origin });
+    } catch {
+      // AuthKit can retain a user in memory after its server-side session is already gone. In
+      // that recovery state signOut throws; start a new authorization flow instead of trapping
+      // the person on the token-invalid page.
+      await signIn({ state: { returnTo: window.location.pathname } });
+    }
+  };
 
   if (isLoading) return <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p>Checking your sign-in…</p></main>;
   if (!user) return <main className="cloud-welcome"><BrandMark className="cloud-mark" /><p className="cloud-eyebrow cloud-caps">SelectaDJ Cloud</p><h1>Your music, ready to move.</h1><p>Build your library, shape the set and keep the transitions ready on every device.</p>{signInProblem && <p className="cloud-feedback error" role="alert">{signInProblem}</p>}<div className="cloud-actions"><button className="primary" onClick={() => void signUp()}>Create your account</button><button onClick={startSignIn}>Sign in</button></div><small>Your music stays private to your workspace.</small><footer className="cloud-footer"><CloudCredit /></footer></main>;
-  if (blocked) return <BlockedAccount code={blocked} distinct={exact} onSignOut={() => signOut({ returnTo: window.location.origin })} />;
+  if (blocked) return <BlockedAccount code={blocked} distinct={exact} onSignOut={() => void restartSignIn()} />;
   if (!user.emailVerified) return <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><h1>Verify your email</h1><p>Open the verification email for {user.email}, then refresh this page.</p><button onClick={() => window.location.reload()}>I’ve verified my email</button><button onClick={() => signOut({ returnTo: window.location.origin })}>Sign out</button></main>;
   if (needsOnboarding) return <main className="cloud-onboarding"><BrandMark className="cloud-mark" /><p className="cloud-eyebrow cloud-caps">One quick check</p><h1>Set up your SelectaDJ workspace</h1><p>Your personal space starts with 10 GB of private music storage.</p><form onSubmit={(event) => void completeOnboarding(event)}><label className="cloud-check"><input type="checkbox" checked={ageConfirmed} onChange={(event) => setAgeConfirmed(event.target.checked)} /> I confirm that I’m at least 13 years old.</label><button className="primary" disabled={!ageConfirmed || busy('onboarding')} aria-busy={busy('onboarding') || undefined}>Create workspace</button></form><Feedback error={error} notice="" /></main>;
 

@@ -1,13 +1,14 @@
 # Render Blueprint for Selecta Cloud (ADR-0409). One project, two environments.
 # Frankfurt only. API, gateway and maintenance run here; workers never do (see infra/modal/).
-# Secrets are `sync: false`: they are typed into Render once per environment, never committed.
+# Secrets are service-level `sync: false` entries: Render prompts for them during initial setup.
 # Images come from GHCR, built on `main` by .github/workflows/deploy.yml; a deploy sets the tag.
 # Checked by tests/test_cloud_infra.py.
 projects:
   - name: selecta-cloud
     environments:
       - name: staging
-        protectedEnvironment: false
+        permissions:
+          protection: disabled
         services:
           - type: web
             name: selecta-api-staging
@@ -21,9 +22,74 @@ projects:
             plan: starter
             numInstances: 1
             healthCheckPath: /api/ready
+            preDeployCommand: selecta db upgrade
             dockerCommand: selecta web --no-open --port 10000
             envVars:
-              - fromGroup: selecta-staging-api
+              - &api_mode
+                key: SELECTA_MODE
+                value: cloud
+              - key: SELECTA_ALLOWED_HOSTS
+                value: api.staging.selectadj.app,selecta-api-staging.onrender.com
+              - &allowed_origins
+                key: SELECTA_ALLOWED_ORIGINS
+                sync: false
+              - &auth_issuer
+                key: SELECTA_AUTH_ISSUER
+                sync: false
+              - &workos_api_key
+                key: SELECTA_WORKOS_API_KEY
+                sync: false
+              - &workos_client_id
+                key: SELECTA_WORKOS_CLIENT_ID
+                sync: false
+              - &workos_webhook_secret
+                key: SELECTA_WORKOS_WEBHOOK_SECRET
+                sync: false
+              - &stripe_secret_key
+                key: SELECTA_STRIPE_SECRET_KEY
+                sync: false
+              - &stripe_webhook_secrets
+                key: SELECTA_STRIPE_WEBHOOK_SECRETS
+                sync: false
+              - &stripe_prices
+                key: SELECTA_STRIPE_PRICES
+                sync: false
+              - &r2_account_id
+                key: SELECTA_R2_ACCOUNT_ID
+                sync: false
+              - &r2_access_key_id
+                key: SELECTA_R2_ACCESS_KEY_ID
+                sync: false
+              - &r2_secret_access_key
+                key: SELECTA_R2_SECRET_ACCESS_KEY
+                sync: false
+              - &r2_jurisdiction
+                key: SELECTA_R2_JURISDICTION
+                value: eu
+              - &ip_hash_key
+                key: SELECTA_IP_HASH_KEY
+                sync: false
+              - &rooms_pepper
+                key: SELECTA_ROOMS_PEPPER
+                sync: false
+              - &checkout_consent_version
+                key: SELECTA_CHECKOUT_CONSENT_VERSION
+                sync: false
+              - &staff_organization_id
+                key: SELECTA_STAFF_ORGANIZATION_ID
+                sync: false
+              - &anthropic_api_key
+                key: ANTHROPIC_API_KEY
+                sync: false
+              - &client_ip_header
+                key: SELECTA_CLIENT_IP_HEADER
+                value: cf-connecting-ip
+              - &otel_endpoint
+                key: OTEL_EXPORTER_OTLP_ENDPOINT
+                sync: false
+              - &otel_headers
+                key: OTEL_EXPORTER_OTLP_HEADERS
+                sync: false
               - key: SELECTA_ENV
                 value: staging
               - key: SELECTA_R2_BUCKET_ORIGINALS
@@ -48,7 +114,21 @@ projects:
             healthCheckPath: /api/ready
             dockerCommand: selecta gateway --port 10000
             envVars:
-              - fromGroup: selecta-staging-gateway
+              - *api_mode
+              - key: SELECTA_GATEWAY_ALLOWED_HOSTS
+                value: gateway.staging.selectadj.app,selecta-gateway-staging.onrender.com
+              - &worker_token_secret
+                key: SELECTA_WORKER_TOKEN_SECRET
+                sync: false
+              - &worker_bootstrap_token
+                key: SELECTA_WORKER_BOOTSTRAP_TOKEN
+                sync: false
+              - *r2_account_id
+              - *r2_access_key_id
+              - *r2_secret_access_key
+              - *r2_jurisdiction
+              - *otel_endpoint
+              - *otel_headers
               - key: SELECTA_ENV
                 value: staging
               - key: SELECTA_R2_BUCKET_ORIGINALS
@@ -72,7 +152,35 @@ projects:
             numInstances: 2
             dockerCommand: selecta maintain
             envVars:
-              - fromGroup: selecta-staging-maintenance
+              - *api_mode
+              - *workos_api_key
+              - *stripe_secret_key
+              - *stripe_prices
+              - *r2_account_id
+              - *r2_access_key_id
+              - *r2_secret_access_key
+              - *r2_jurisdiction
+              - *rooms_pepper
+              - &backup_s3_endpoint
+                key: SELECTA_BACKUP_S3_ENDPOINT
+                sync: false
+              - &backup_access_key_id
+                key: SELECTA_BACKUP_ACCESS_KEY_ID
+                sync: false
+              - &backup_secret_access_key
+                key: SELECTA_BACKUP_SECRET_ACCESS_KEY
+                sync: false
+              - &modal_token_id
+                key: SELECTA_MODAL_TOKEN_ID
+                sync: false
+              - &modal_token_secret
+                key: SELECTA_MODAL_TOKEN_SECRET
+                sync: false
+              - &dmca_agent_registered_on
+                key: SELECTA_DMCA_AGENT_REGISTERED_ON
+                sync: false
+              - *otel_endpoint
+              - *otel_headers
               - key: SELECTA_ENV
                 value: staging
               - key: SELECTA_R2_BUCKET_ORIGINALS
@@ -100,7 +208,8 @@ projects:
             postgresMajorVersion: "17"
             ipAllowList: []
       - name: production
-        protectedEnvironment: true
+        permissions:
+          protection: enabled
         services:
           - type: web
             name: selecta-api-production
@@ -108,14 +217,34 @@ projects:
             image: *image
             region: frankfurt
             plan: standard
-            scaling:
-              minInstances: 2
-              maxInstances: 6
-              targetCPUPercent: 70
+            numInstances: 2
             healthCheckPath: /api/ready
+            preDeployCommand: selecta db upgrade
             dockerCommand: selecta web --no-open --port 10000
             envVars:
-              - fromGroup: selecta-production-api
+              - *api_mode
+              - key: SELECTA_ALLOWED_HOSTS
+                value: api.selectadj.app,selecta-api-production.onrender.com
+              - *allowed_origins
+              - *auth_issuer
+              - *workos_api_key
+              - *workos_client_id
+              - *workos_webhook_secret
+              - *stripe_secret_key
+              - *stripe_webhook_secrets
+              - *stripe_prices
+              - *r2_account_id
+              - *r2_access_key_id
+              - *r2_secret_access_key
+              - *r2_jurisdiction
+              - *ip_hash_key
+              - *rooms_pepper
+              - *checkout_consent_version
+              - *staff_organization_id
+              - *anthropic_api_key
+              - *client_ip_header
+              - *otel_endpoint
+              - *otel_headers
               - key: SELECTA_ENV
                 value: production
               - key: SELECTA_R2_BUCKET_ORIGINALS
@@ -140,7 +269,17 @@ projects:
             healthCheckPath: /api/ready
             dockerCommand: selecta gateway --port 10000
             envVars:
-              - fromGroup: selecta-production-gateway
+              - *api_mode
+              - key: SELECTA_GATEWAY_ALLOWED_HOSTS
+                value: gateway.selectadj.app,selecta-gateway-production.onrender.com
+              - *worker_token_secret
+              - *worker_bootstrap_token
+              - *r2_account_id
+              - *r2_access_key_id
+              - *r2_secret_access_key
+              - *r2_jurisdiction
+              - *otel_endpoint
+              - *otel_headers
               - key: SELECTA_ENV
                 value: production
               - key: SELECTA_R2_BUCKET_ORIGINALS
@@ -164,7 +303,23 @@ projects:
             numInstances: 2
             dockerCommand: selecta maintain
             envVars:
-              - fromGroup: selecta-production-maintenance
+              - *api_mode
+              - *workos_api_key
+              - *stripe_secret_key
+              - *stripe_prices
+              - *r2_account_id
+              - *r2_access_key_id
+              - *r2_secret_access_key
+              - *r2_jurisdiction
+              - *rooms_pepper
+              - *backup_s3_endpoint
+              - *backup_access_key_id
+              - *backup_secret_access_key
+              - *modal_token_id
+              - *modal_token_secret
+              - *dmca_agent_registered_on
+              - *otel_endpoint
+              - *otel_headers
               - key: SELECTA_ENV
                 value: production
               - key: SELECTA_R2_BUCKET_ORIGINALS
@@ -193,124 +348,3 @@ projects:
             highAvailability:
               enabled: true
             ipAllowList: []
-
-# Secret groups: every secret value is entered in the Render dashboard (sync: false).
-envVarGroups:
-  - name: selecta-staging-api
-    envVars: &api_vars
-      - key: SELECTA_MODE
-        value: cloud
-      - key: SELECTA_ALLOWED_HOSTS
-        sync: false
-      - key: SELECTA_ALLOWED_ORIGINS
-        sync: false
-      - key: SELECTA_AUTH_ISSUER
-        sync: false
-      - key: SELECTA_AUTH_AUDIENCE
-        sync: false
-      - key: SELECTA_WORKOS_API_KEY
-        sync: false
-      - key: SELECTA_WORKOS_CLIENT_ID
-        sync: false
-      - key: SELECTA_WORKOS_WEBHOOK_SECRET
-        sync: false
-      - key: SELECTA_STRIPE_SECRET_KEY
-        sync: false
-      - key: SELECTA_STRIPE_WEBHOOK_SECRETS
-        sync: false
-      - key: SELECTA_STRIPE_PRICES
-        sync: false
-      - key: SELECTA_R2_ACCOUNT_ID
-        sync: false
-      - key: SELECTA_R2_ACCESS_KEY_ID
-        sync: false
-      - key: SELECTA_R2_SECRET_ACCESS_KEY
-        sync: false
-      - key: SELECTA_R2_JURISDICTION
-        value: eu
-      - key: SELECTA_IP_HASH_KEY
-        sync: false
-      - key: SELECTA_ROOMS_PEPPER
-        sync: false
-      - key: SELECTA_CHECKOUT_CONSENT_VERSION
-        sync: false
-      # The WorkOS organization whose members may open the staff console.
-      - key: SELECTA_STAFF_ORGANIZATION_ID
-        sync: false
-      - key: ANTHROPIC_API_KEY
-        sync: false
-      # The visitor's address for Rooms' per-IP limits and code-guessing lockouts. Without it
-      # every guest shares Render's proxy address, so one guesser locks every party out.
-      - key: SELECTA_CLIENT_IP_HEADER
-        value: cf-connecting-ip
-      - key: OTEL_EXPORTER_OTLP_ENDPOINT
-        sync: false
-      - key: OTEL_EXPORTER_OTLP_HEADERS
-        sync: false
-  - name: selecta-production-api
-    envVars: *api_vars
-  - name: selecta-staging-gateway
-    envVars: &gateway_vars
-      - key: SELECTA_MODE
-        value: cloud
-      - key: SELECTA_GATEWAY_ALLOWED_HOSTS
-        sync: false
-      - key: SELECTA_WORKER_TOKEN_SECRET
-        sync: false
-      - key: SELECTA_WORKER_BOOTSTRAP_TOKEN
-        sync: false
-      - key: SELECTA_R2_ACCOUNT_ID
-        sync: false
-      - key: SELECTA_R2_ACCESS_KEY_ID
-        sync: false
-      - key: SELECTA_R2_SECRET_ACCESS_KEY
-        sync: false
-      - key: SELECTA_R2_JURISDICTION
-        value: eu
-      - key: OTEL_EXPORTER_OTLP_ENDPOINT
-        sync: false
-      - key: OTEL_EXPORTER_OTLP_HEADERS
-        sync: false
-  - name: selecta-production-gateway
-    envVars: *gateway_vars
-  - name: selecta-staging-maintenance
-    envVars: &maintenance_vars
-      - key: SELECTA_MODE
-        value: cloud
-      - key: SELECTA_WORKOS_API_KEY
-        sync: false
-      - key: SELECTA_STRIPE_SECRET_KEY
-        sync: false
-      - key: SELECTA_STRIPE_PRICES
-        sync: false
-      - key: SELECTA_R2_ACCOUNT_ID
-        sync: false
-      - key: SELECTA_R2_ACCESS_KEY_ID
-        sync: false
-      - key: SELECTA_R2_SECRET_ACCESS_KEY
-        sync: false
-      - key: SELECTA_R2_JURISDICTION
-        value: eu
-      - key: SELECTA_ROOMS_PEPPER
-        sync: false
-      # Backup freshness: a read-only key for the backup account's database-dump bucket.
-      - key: SELECTA_BACKUP_S3_ENDPOINT
-        sync: false
-      - key: SELECTA_BACKUP_ACCESS_KEY_ID
-        sync: false
-      - key: SELECTA_BACKUP_SECRET_ACCESS_KEY
-        sync: false
-      # The autoscale leader scales the Modal app named on each maintenance service.
-      - key: SELECTA_MODAL_TOKEN_ID
-        sync: false
-      - key: SELECTA_MODAL_TOKEN_SECRET
-        sync: false
-      # ISO date of the last DMCA designated-agent registration or renewal.
-      - key: SELECTA_DMCA_AGENT_REGISTERED_ON
-        sync: false
-      - key: OTEL_EXPORTER_OTLP_ENDPOINT
-        sync: false
-      - key: OTEL_EXPORTER_OTLP_HEADERS
-        sync: false
-  - name: selecta-production-maintenance
-    envVars: *maintenance_vars

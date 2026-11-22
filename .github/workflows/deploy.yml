@@ -1,8 +1,10 @@
 name: deploy
 
-# Selecta Cloud deploys (ADR-0409, SC-0409-03). A push to main builds one image, migrates and
-# deploys staging, runs the smoke test, then waits for an approval on the protected production
-# environment before doing the same there. Pull requests never trigger this workflow, and no
+# Selecta Cloud deploys (ADR-0409, SC-0409-03). With the repository credential broker URL
+# configured, a push to main builds one image, migrates and deploys staging, runs the smoke test,
+# then waits for an approval on the protected production environment before doing the same there.
+# Image publication does not depend on deployment credentials, so a fresh Render Blueprint can
+# pull the `main` bootstrap tag before the first full release. Pull requests never trigger this workflow, and no
 # long-lived deploy secret is stored in GitHub: each deploy job trades its OIDC token for
 # credentials that expire within the hour (infra/deploy/oidc_credentials.sh).
 # tests/test_cloud_deploy_workflow.py checks these rules; actionlint runs in test.yml.
@@ -48,6 +50,8 @@ jobs:
           echo "${REGISTRY_TOKEN}" | docker login ghcr.io -u "${ACTOR}" --password-stdin
           docker build -f infra/docker/service.Dockerfile -t "${IMAGE}:${GITHUB_SHA}" .
           docker push "${IMAGE}:${GITHUB_SHA}"
+          docker tag "${IMAGE}:${GITHUB_SHA}" "${IMAGE}:main"
+          docker push "${IMAGE}:main"
           # The backup cron jobs' own image (infra/backup/render-cron.yaml); no app code in it.
           docker build -f infra/backup/Dockerfile -t "${BACKUP_IMAGE}:${GITHUB_SHA}" .
           docker push "${BACKUP_IMAGE}:${GITHUB_SHA}"
@@ -58,6 +62,9 @@ jobs:
   staging:
     name: Deploy staging
     needs: image
+    # Publishing the bootstrap image is useful before the credential broker exists. The full
+    # release starts automatically once this repository variable is configured.
+    if: vars.SELECTA_CREDENTIAL_BROKER_URL != ''
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:

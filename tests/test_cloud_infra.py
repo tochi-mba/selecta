@@ -39,7 +39,10 @@ def environments() -> dict[str, dict]:
 def test_render_has_staging_and_a_protected_production():
     found = environments()
     assert set(found) == set(ENVIRONMENTS)
-    assert found["production"]["protectedEnvironment"] is True
+    assert found["staging"]["permissions"]["protection"] == "disabled"
+    assert found["production"]["permissions"]["protection"] == "enabled"
+    assert all("scaling" not in service for env in found.values() for service in env["services"])
+    assert render_service(found["production"], "web")["numInstances"] == 2
 
 
 @pytest.mark.parametrize("name", ENVIRONMENTS)
@@ -49,6 +52,9 @@ def test_render_runs_api_gateway_and_two_maintenance_copies_in_frankfurt(name):
     assert set(services) == {"web", "gateway", "maintain"}
     assert all(service["region"] == "frankfurt" for service in env["services"])
     assert services["web"]["healthCheckPath"] == services["gateway"]["healthCheckPath"]
+    assert services["web"]["preDeployCommand"] == "selecta db upgrade"
+    assert "preDeployCommand" not in services["gateway"]
+    assert "preDeployCommand" not in services["maintain"]
     assert services["maintain"]["type"] == "worker" and services["maintain"]["numInstances"] == 2
     (database,) = env["databases"]
     assert database["region"] == "frankfurt" and database["ipAllowList"] == []
@@ -66,12 +72,18 @@ def test_no_audio_worker_runs_on_render():
 
 
 def test_render_never_holds_a_secret_value_in_the_repo():
-    for group in blueprint()["envVarGroups"]:
-        for item in group["envVars"]:
-            secretish = re.search(r"KEY|SECRET|TOKEN|PEPPER|HEADERS|URL|HOSTS|ORIGINS|ISSUER|"
-                                  r"AUDIENCE|PRICES|CLIENT_ID", item["key"])
-            if secretish:
-                assert item.get("sync") is False and "value" not in item, item["key"]
+    for env in environments().values():
+        for service in env["services"]:
+            for item in service["envVars"]:
+                if "key" not in item:
+                    continue
+                secretish = re.search(r"KEY|SECRET|TOKEN|PEPPER|HEADERS|URL|HOSTS|ORIGINS|ISSUER|"
+                                      r"AUDIENCE|PRICES|CLIENT_ID", item["key"])
+                public_host_allowlist = item["key"] in {
+                    "SELECTA_ALLOWED_HOSTS", "SELECTA_GATEWAY_ALLOWED_HOSTS"
+                }
+                if secretish and "fromDatabase" not in item and not public_host_allowlist:
+                    assert item.get("sync") is False and "value" not in item, item["key"]
 
 
 def test_every_env_var_render_sets_is_one_the_code_reads():
@@ -82,8 +94,7 @@ def test_every_env_var_render_sets_is_one_the_code_reads():
     read.add("OTEL_EXPORTER_OTLP_HEADERS")  # read by the OpenTelemetry exporter itself
     # storage.api._bucket constructs these four names from the bucket kind at runtime.
     read.update(name for name in _R2 if name.startswith("SELECTA_R2_BUCKET_"))
-    set_by_render = {item["key"] for group in blueprint()["envVarGroups"]
-                     for item in group["envVars"]}
+    set_by_render = set()
     for env in environments().values():
         for service in env["services"]:
             set_by_render |= {item["key"] for item in service["envVars"] if "key" in item}
@@ -96,13 +107,8 @@ def render_service(env: dict, command: str) -> dict:
 
 
 def render_items(env: dict, command: str) -> list[dict]:
-    """Every variable a service gets: its own and those of the groups it pulls in."""
-    service = render_service(env, command)
-    groups = {group["name"]: group["envVars"] for group in blueprint()["envVarGroups"]}
-    found = []
-    for item in service["envVars"]:
-        found += groups[item["fromGroup"]] if "fromGroup" in item else [item]
-    return found
+    """Every variable declared directly on a Render service."""
+    return render_service(env, command)["envVars"]
 
 
 def render_values(env: dict, command: str) -> dict[str, str]:
@@ -127,7 +133,7 @@ def read_at_start() -> dict[str, set[str]]:
         "web": {
             "SELECTA_MODE", "SELECTA_ENV", "SELECTA_DATABASE_URL", "SELECTA_ALLOWED_HOSTS",
             "SELECTA_ALLOWED_ORIGINS", "SELECTA_WORKOS_CLIENT_ID", "SELECTA_AUTH_ISSUER",
-            "SELECTA_AUTH_AUDIENCE", "SELECTA_WORKOS_API_KEY", "SELECTA_WORKOS_WEBHOOK_SECRET",
+            "SELECTA_WORKOS_API_KEY", "SELECTA_WORKOS_WEBHOOK_SECRET",
             PEPPER_ENV, "SELECTA_STRIPE_SECRET_KEY", "SELECTA_STRIPE_WEBHOOK_SECRETS",
             "SELECTA_STRIPE_PRICES", "SELECTA_CHECKOUT_CONSENT_VERSION", "SELECTA_IP_HASH_KEY",
             "ANTHROPIC_API_KEY", "SELECTA_STAFF_ORGANIZATION_ID", "SELECTA_CLIENT_IP_HEADER",
@@ -153,6 +159,20 @@ def test_every_variable_a_service_reads_at_start_is_declared_in_the_blueprint(na
     for command, needed in read_at_start().items():
         declared = {item["key"] for item in render_items(env, command)}
         assert sorted(needed - declared) == [], (name, command)
+
+
+@pytest.mark.parametrize("name", ENVIRONMENTS)
+def test_render_health_probe_hosts_are_allowed(name):
+    env = environments()[name]
+    suffix = ".staging.selectadj.app" if name == "staging" else ".selectadj.app"
+    expected = {
+        "web": {f"api{suffix}", f"selecta-api-{name}.onrender.com"},
+        "gateway": {f"gateway{suffix}", f"selecta-gateway-{name}.onrender.com"},
+    }
+    keys = {"web": "SELECTA_ALLOWED_HOSTS", "gateway": "SELECTA_GATEWAY_ALLOWED_HOSTS"}
+    for command, hosts in expected.items():
+        values = render_values(env, command)
+        assert set(values[keys[command]].split(",")) == hosts
 
 
 def test_the_checklist_lists_what_each_render_service_reads():
@@ -355,7 +375,9 @@ def test_the_worker_reads_the_pool_the_modal_function_names(monkeypatch):
 
 def test_the_service_image_runs_as_a_user_and_installs_the_locked_closure():
     dockerfile = (INFRA / "docker" / "service.Dockerfile").read_text("utf-8")
+    assert "apt-get install --yes --no-install-recommends libatomic1" in dockerfile
     assert "uv export --frozen --no-dev --extra observability" in dockerfile
+    assert 'python -c "import pedalboard"' in dockerfile
     assert re.search(r"^USER selecta$", dockerfile, re.M)
     assert "SELECTA_MODE=cloud" in dockerfile
 

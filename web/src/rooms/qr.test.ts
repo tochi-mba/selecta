@@ -23,22 +23,22 @@ function decode(text: string): string | null {
 
 describe('the room QR encoder', () => {
   it.each([
-    'https://selecta.app/r/K7QDM2XP',
+    'https://app.selectadj.app/r/K7QDM2XP',
     'http://127.0.0.1:8740/r/23456789',
     'A',
-    'https://selecta.app/r/' + 'Z'.repeat(60),
+    'https://app.selectadj.app/r/' + 'Z'.repeat(60),
     'https://example.test/' + 'x'.repeat(200),
   ])('makes a code that scans back to %s', (text) => {
     expect(decode(text)).toBe(text);
   });
 
   it('uses the smallest version that fits', () => {
-    expect(encodeQr('https://selecta.app/r/K7QDM2XP').size).toBe(29); // version 3
+    expect(encodeQr('https://app.selectadj.app/r/K7QDM2XP').size).toBe(29); // version 3
     expect(encodeQr('A').size).toBe(21); // version 1
   });
 
   it('draws an SVG with a quiet zone and an accessible label', () => {
-    const svg = qrSvg('https://selecta.app/r/K7QDM2XP', 'Scan to join "Garden" & request');
+    const svg = qrSvg('https://app.selectadj.app/r/K7QDM2XP', 'Scan to join "Garden" & request');
     expect(svg).toContain('viewBox="0 0 37 37"');
     expect(svg).toContain('aria-label="Scan to join &quot;Garden&quot; &amp; request"');
   });

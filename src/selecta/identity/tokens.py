@@ -61,6 +61,10 @@ class WrongIssuer(TokenError):
     pass
 
 
+class WrongClient(TokenError):
+    """The token was issued for a different WorkOS application."""
+
+
 class UnknownKey(TokenError):
     """The token's `kid` isn't in the JWKS, even after a refetch."""
 
@@ -204,6 +208,7 @@ class TokenVerifier:
     issuer: str
     jwks: JwksCache
     audience: str | Sequence[str] | None = None
+    client_id: str | None = None
     leeway: float = LEEWAY_SECONDS
 
     def verify(self, token: str) -> Claims:
@@ -247,6 +252,8 @@ class TokenVerifier:
             raise BadSignature("algorithm is not allowed") from exc
         except jwt.PyJWTError as exc:
             raise MalformedToken(f"token rejected: {type(exc).__name__}") from exc
+        if self.client_id is not None and payload.get("client_id") != self.client_id:
+            raise WrongClient("token belongs to a different WorkOS client")
         return Claims.from_payload(payload)
 
 
@@ -258,12 +265,16 @@ def authkit_verifier(
     api_base: str = WORKOS_API,
     fetcher: JwksFetcher | None = None,
 ) -> TokenVerifier:
-    """A verifier for one AuthKit client. Check the issuer against a real token before launch:
-    with a custom auth domain it is that domain rather than the WorkOS API."""
+    """A verifier for one AuthKit client.
+
+    AuthKit session tokens identify the application with ``client_id`` rather than ``aud``.
+    ``audience`` remains available for deployments that deliberately add an audience claim.
+    """
     base = api_base.rstrip("/")
     cache = JwksCache(f"{base}/sso/jwks/{client_id}", fetcher or httpx_fetcher())
     return TokenVerifier(
-        issuer=issuer or f"{base}/user_management/{client_id}",
+        issuer=issuer or base,
         jwks=cache,
         audience=audience,
+        client_id=client_id,
     )

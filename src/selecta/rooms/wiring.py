@@ -11,6 +11,7 @@ routes are wired separately and don't need it.
 from __future__ import annotations
 
 import os
+import time
 from collections.abc import Callable, Iterable
 from typing import Any
 
@@ -19,7 +20,6 @@ from sqlalchemy.engine import Engine
 
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
-from selecta.persistence import db_now
 from selecta.rooms import api_guest, api_host, codes
 from selecta.rooms.cloud_ports import (
     CloudPlans,
@@ -35,12 +35,6 @@ PEPPER_ENV = "SELECTA_ROOMS_PEPPER"
 
 def pepper_from_environment() -> bytes:
     return os.environ.get(PEPPER_ENV, "").strip().encode()
-
-
-def _database_now(engine: Engine) -> float:
-    """When this instance came up, on the database's clock (the one presence is written with)."""
-    with engine.connect() as conn:
-        return db_now(conn)
 
 
 def install(
@@ -66,7 +60,13 @@ def install(
             speakers=CloudSpeakers(engine),
             now_playing=ports.now_playing,
             events=OutboxRoomEvents(),
-            started_at=_database_now(engine),
+            # Do not open PostgreSQL while the ASGI factory is being built. Uvicorn cannot bind
+            # its port until this function returns, so a slow database connection can make the
+            # platform time out an otherwise healthy deployment. Render and PostgreSQL both use
+            # UTC-synchronised clocks; presence already has a grace window, so the process clock
+            # is the right startup boundary without making database availability a bind-time
+            # dependency.
+            started_at=time.time(),
         )
     app.state.rooms = service
     limiter = Limiter()

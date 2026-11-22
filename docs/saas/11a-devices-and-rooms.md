@@ -45,13 +45,13 @@ These two belong together: a Room needs one device that is *the speaker*, and a 
 
 Moderation: approve/pass requests, remove a guest, ban a guest for the room's lifetime (by guest id and a hashed IP), lock the room, make a new code (old code stops working; existing guests stay unless the host also chooses "remove everyone").
 
-**Guest experience** (`selecta.app/r/K7QDM2XP`): a tiny separate page bundle (target under 100 KB of JavaScript) that works on old phones and weak signal. It shows the room name the host chose (never the host's email or real name), now playing, next up, a search box over requestable songs (title, artist and length only), and "My requests" with honest states: Sent → "Accepted, playing in about 12 min" / "The host passed on this one" / "Can't fit this into the mix right now" / "Played recently, try again later". Optional nickname picked from a generated list, votes, leave room. Same accessibility bar as the app.
+**Guest experience** (`app.selectadj.app/r/K7QDM2XP`): a tiny separate page bundle (target under 100 KB of JavaScript) that works on old phones and weak signal. It shows the room name the host chose (never the host's email or real name), now playing, next up, a search box over requestable songs (title, artist and length only), and "My requests" with honest states: Sent → "Accepted, playing in about 12 min" / "The host passed on this one" / "Can't fit this into the mix right now" / "Played recently, try again later". Optional nickname picked from a generated list, votes, leave room. Same accessibility bar as the app.
 
 **Guest identity.** An anonymous guest token in an HttpOnly cookie scoped to that room. Rate limits per guest, per IP and per room. A signed-in Selecta user who joins is just a guest in that room; nothing about their account is shown to the host.
 
 **Codes and QR.** Eight characters from an unambiguous alphabet (no 0/O/1/I), shown as `K7QD-M2XP`, about 40 bits, looked up by hash. The QR code encodes only the link and is generated in the browser. Join attempts are rate-limited per IP with a Cloudflare rule on `/r/*`, so brute-forcing codes is impractical. Codes of closed rooms are never reused within 30 days.
 
-**Big-screen display.** A TV or projector browser opens `selecta.app/display` and shows a pairing code; the host types it into the room panel; the display gets a read-only token for that room and shows the QR code, now playing, upcoming requests and "Scan to request a song". No audio. It reconnects by itself.
+**Big-screen display.** A TV or projector browser opens `app.selectadj.app/display` and shows a pairing code; the host types it into the room panel; the display gets a read-only token for that room and shows the QR code, now playing, upcoming requests and "Scan to request a song". No audio. It reconnects by itself.
 
 **How requests flow into the existing system.**
 - A room request becomes a `song_requests` row with `source = room`, `room_id` and `guest_id`, so the current planner (`request_planner.py`, `requests.py`, PairBook, bridges with consent) does the musical work unchanged.

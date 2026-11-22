@@ -11,6 +11,7 @@ from selecta.modes import Mode, current_mode
 from selecta.persistence import make_engine, metadata
 from selecta.persistence.migrate import current, downgrade, head, pending_changes, upgrade
 from selecta.persistence.registry import load_all_tables
+from selecta.rooms.cloud_ports import RoomPorts
 
 
 class FakeVerifier:
@@ -63,13 +64,45 @@ def test_cloud_health_and_readiness_are_explicit(cloud):
         assert result.json()["schema"] == head() == current(engine)
 
 
-def test_account_routes_require_a_verified_bearer_token(cloud):
+def test_cloud_factory_does_not_query_database_before_server_binds(tmp_path):
+    """A slow database must not prevent Uvicorn from opening the service port."""
+    load_all_tables()
+    engine = make_engine(f"sqlite:///{tmp_path / 'cloud.sqlite'}")
+    metadata.create_all(engine)
+    statements: list[str] = []
+    sa.event.listen(
+        engine,
+        "before_cursor_execute",
+        lambda _conn, _cursor, statement, _parameters, _context, _many: statements.append(
+            statement
+        ),
+    )
+
+    create_cloud_app(
+        CloudSettings(
+            database_url="sqlite:///test-only",
+            workos_client_id="client_test",
+            issuer="https://issuer.test",
+            audience="selecta-test",
+            allowed_hosts=("testserver",),
+            allowed_origins=("https://app.test",),
+        ),
+        engine=engine,
+        verifier=FakeVerifier(),
+        room_ports=RoomPorts(pepper=b"production-room-pepper"),
+    )
+
+    assert statements == []
+
+
+def test_account_routes_require_a_verified_bearer_token(cloud, caplog):
     app, _, _ = cloud
     with TestClient(app) as client:
         assert client.get("/api/account").status_code == 401
         bad = client.get("/api/account", headers={"Authorization": "Bearer forged"})
         assert bad.status_code == 401
         assert bad.json()["detail"]["code"] == "token_invalid"
+    assert "AuthKit token rejected: BadSignature" in caplog.text
 
 
 def test_onboarding_requires_age_confirmation_and_starts_free_plan(cloud):
@@ -335,6 +368,21 @@ def test_cloud_settings_refuse_local_or_incomplete_configuration(monkeypatch):
     monkeypatch.setenv("SELECTA_DATABASE_URL", "postgresql+psycopg://user:pass@db/selecta")
     with pytest.raises(CloudConfigurationError, match="SELECTA_WORKOS_CLIENT_ID"):
         CloudSettings.from_environment()
+
+
+def test_cloud_settings_allow_authkit_without_audience(monkeypatch):
+    monkeypatch.setenv("SELECTA_DATABASE_URL", "postgresql+psycopg://user:pass@db/selecta")
+    monkeypatch.setenv("SELECTA_WORKOS_CLIENT_ID", "client_selecta")
+    monkeypatch.setenv("SELECTA_AUTH_ISSUER", "https://api.workos.com/")
+    monkeypatch.delenv("SELECTA_AUTH_AUDIENCE", raising=False)
+    monkeypatch.setenv("SELECTA_ALLOWED_HOSTS", "api.test")
+    monkeypatch.setenv("SELECTA_ALLOWED_ORIGINS", "https://app.test")
+    monkeypatch.setenv("SELECTA_WORKOS_API_KEY", "sk_test_cloud")
+    monkeypatch.setenv("SELECTA_WORKOS_WEBHOOK_SECRET", "whsec_cloud")
+
+    settings = CloudSettings.from_environment()
+
+    assert settings.audience is None
 
 
 def test_serve_defaults_to_local_and_cloud_does_not_start_local_workers(monkeypatch, tmp_path):
