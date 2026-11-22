@@ -17,7 +17,6 @@ import '../rooms/rooms.css';
 import '../devices/devices.css';
 import { AccountProblemNote, NotFound, SuspendedPanel } from '../cloud/CloudStates';
 import { CannotPlayHere, EmptyState, NotOnThisAccount } from '../cloud/LocalFirstEmpty';
-import { NoHostedStorage } from '../cloud/Meters';
 import { BrandMark } from '../ui/BrandMark';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Action, LiveRegion, Problem, Skeleton, Status } from '../ui/controls';
@@ -56,7 +55,6 @@ export function CloudGallery() {
           <Meter label="Files checked, total unknown" valueText="Still counting" />
           <Meter label="Hosted storage" kind="meter" value={88} warnAt={0.8} dangerAt={0.95} valueText="88 percent" detail="Resets on the 1st." />
         </div>
-        <NoHostedStorage />
       </section>
 
       <section className="cloud-card stack" aria-labelledby="g-onboarding"><h2 id="g-onboarding">Onboarding and connecting music</h2>

@@ -11,22 +11,15 @@ function withMode(mode: 'hosted' | 'none' | undefined, overrides: Parameters<typ
 }
 
 describe('storage meter by storage_mode', () => {
-  it('shows the truthful no-hosted-storage line for "none", with no bar and no quota warning', () => {
-    const account = withMode('none', { used: 0, limit: 0 });
-    render(<Meters account={account} />);
-    const storage = screen.getByRole('region', { name: 'Storage' });
-    expect(storage).toHaveTextContent('No hosted storage');
-    expect(storage).toHaveTextContent('Your music stays on your own devices');
-    expect(within(storage).queryByRole('meter')).toBeNull();
-    expect(storage).not.toHaveClass('warn');
-    expect(document.body.textContent).not.toMatch(/0 B of 0 B|over your plan|0 B free/);
-  });
-
-  it('never says exports are paused for storage when there is no hosted storage', () => {
+  it('shows no storage, analysis or export meters for "none": only what the account uses', () => {
     const account = withMode('none', { used: 0, limit: 0 });
     account.usage!.exports_month = { ...account.usage!.exports_month, blocked: true };
     render(<Meters account={account} />);
-    expect(screen.getByRole('region', { name: 'Exports this month' })).not.toHaveTextContent('storage limit');
+    expect(screen.queryByRole('region', { name: 'Storage' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Analysis today' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Exports this month' })).toBeNull();
+    expect(screen.getByRole('region', { name: 'Lucy turns this month' })).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/storage|GB|0 B/i);
   });
 
   it('keeps the hosted meter exactly as before for "hosted"', () => {
