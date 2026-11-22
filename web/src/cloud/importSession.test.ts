@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setFlags } from '../flags';
 import type { ImportEvent, ImportSummary } from '../media';
 import {
   cancelImportSession,
@@ -56,6 +57,13 @@ beforeEach(() => {
   // Leave no session from a previous test running.
   cancelImportSession();
 });
+
+// These describe the session as it always was: with cloud.resilient_import off the run starts at
+// once, in the same tick. With it on, the run first claims the import across tabs; that path is
+// below and in importTabs.test.ts / importResume.test.ts.
+describe('importSession with cloud.resilient_import off', () => {
+  beforeEach(() => { setFlags({ 'cloud.resilient_import': false }); });
+
 
 afterEach(async () => {
   await flush();
@@ -219,5 +227,47 @@ describe('importSession', () => {
     await flush();
     clearImportSession();
     expect(importSnapshot()).toBe(IDLE_IMPORT);
+  });
+});
+});
+
+describe('importSession with cloud.resilient_import on', () => {
+  it('writes the marker once the run holds the import, with its kind, id and checked count', async () => {
+    const { storage } = fakeStorage();
+    vi.stubGlobal('localStorage', storage);
+    const runner = manualRunner();
+    startImportSession({ source: [], run: runner.run, workspaceId: 'ws-r1', folder: 'Music', kind: 'folder' });
+    await vi.waitFor(() => expect(runner.signal()).not.toBeNull());
+    expect(readImportMarker('ws-r1')).toMatchObject({ version: 1, folder: 'Music', kind: 'folder', importId: expect.any(String), checked: 0 });
+    runner.emit({ kind: 'collected', total: 30, skipped: 0 });
+    for (let at = 0; at < 25; at += 1) runner.emit({ kind: 'checked', name: `${at}.mp3`, resumed: at < 5 });
+    expect(importSnapshot()).toMatchObject({ checked: 25, resumed: 5 });
+    expect(readImportMarker('ws-r1')).toMatchObject({ checked: 25 });
+    runner.emit({ kind: 'waiting', wait: { why: 'offline', retryAt: null } });
+    expect(importSnapshot().waiting).toEqual({ why: 'offline', retryAt: null });
+    runner.resolve(summaryOf({ imported: 30 }));
+    await flush();
+    expect(readImportMarker('ws-r1')).toBeNull();
+  });
+
+  it('a resumed import keeps its id and start time', async () => {
+    const runner = manualRunner();
+    const resume = { version: 1 as const, folder: 'Music', startedAt: 42, total: 9, registered: 3, kind: 'folder' as const, importId: 'imp-9', checked: 4 };
+    startImportSession({ source: [], run: runner.run, workspaceId: 'ws-r2', kind: 'folder', resume });
+    await vi.waitFor(() => expect(runner.signal()).not.toBeNull());
+    expect(readImportMarker('ws-r2')).toMatchObject({ importId: 'imp-9', startedAt: 42 });
+    runner.resolve(summaryOf());
+  });
+
+  it('a rejected run says what is kept in plain words and keeps the marker', async () => {
+    const runner = manualRunner();
+    const result = startImportSession({ source: [], run: runner.run, workspaceId: 'ws-r3' });
+    await vi.waitFor(() => expect(runner.signal()).not.toBeNull());
+    runner.reject(new TypeError('Failed to fetch'));
+    await expect(result).rejects.toThrow('Failed to fetch');
+    expect(importSnapshot().phase).toBe('failed');
+    expect(importSnapshot().error).toMatch(/Everything already checked is kept/);
+    expect(importSnapshot().error).not.toMatch(/failed to fetch/i);
+    expect(readImportMarker('ws-r3')).not.toBeNull();
   });
 });
