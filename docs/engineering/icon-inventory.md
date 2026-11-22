@@ -19,9 +19,9 @@ The box and stroke live in `ICON_SLOTS` and `ICON_STROKES` (`web/src/ui/Icon.tsx
 
 | Icon | Purpose | Slots | Owners | Named by |
 | --- | --- | --- | --- | --- |
-| `play` | Start playing or previewing | standard, compact | `shell/Shell.tsx`, `views/EditorRows.tsx`, `views/EditorStory.tsx`, `views/Links.tsx`, `views/Requests.tsx`, `views/Studio.tsx`, `cloud/onboarding/steps.tsx`, `cloud/venue/VenuePosture.tsx` | The button's words or `aria-label`; "Playing now" tag words |
+| `play` | Start playing or previewing | standard, compact | `shell/Shell.tsx`, `views/EditorRows.tsx`, `views/EditorStory.tsx`, `views/Links.tsx`, `views/Requests.tsx`, `views/Studio.tsx`, `cloud/onboarding/steps.tsx`, `cloud/venue/VenuePosture.tsx`, `cloud/BrowserHarmonicMatches.tsx` | The button's words or `aria-label`; "Playing now" tag words |
 | `pause` | Pause playback | standard | `shell/Shell.tsx`, `harness/CloudGallery.tsx` | Mini-player button `aria-label` |
-| `stop` | Stop a preview, voice input or Lucy run | standard | `views/Links.tsx`, `views/LucyComposer.tsx`, `views/Requests.tsx`, `views/Studio.tsx` | The button's words, or the mic button's hidden words |
+| `stop` | Stop a preview, voice input or Lucy run | standard | `views/Links.tsx`, `views/LucyComposer.tsx`, `views/Requests.tsx`, `views/Studio.tsx`, `cloud/BrowserHarmonicMatches.tsx` | The button's words, or the mic button's hidden words |
 | `next` | Go to the next song | standard | `shell/Shell.tsx`, `views/Now.tsx`, `harness/CloudGallery.tsx` | `aria-label` "Next song" and `title` |
 | `previous` | Go back a song | standard | `views/Now.tsx` | `aria-label` "Previous song" and `title` |
 | `backspace` | Take back the last PIN digit on the staff keypad | standard | `business/staff/PinKeypad.tsx` | `aria-label` and `title` "Back one digit" |

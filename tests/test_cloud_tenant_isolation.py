@@ -21,7 +21,7 @@ import time
 
 import pytest
 import sqlalchemy as sa
-from cloud_helpers import cloud_settings
+from cloud_helpers import cloud_settings, grant_hosted_media
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
@@ -443,6 +443,10 @@ SCOPED: dict[tuple[str, str], dict | None] = {
     ("POST", "/api/rooms/{room_id}/end"): None,
     ("POST", "/api/rooms/{room_id}/requests/{request_id}/approve"): None,
     ("POST", "/api/rooms/{room_id}/requests/{request_id}/pass"): None,
+    # the host's browser reads and resolves accepted room requests (rooms/browser_requests.py)
+    ("GET", "/api/room-requests"): None,
+    ("POST", "/api/room-requests/{request_id}/played"): None,
+    ("POST", "/api/room-requests/{request_id}/dismiss"): None,
     ("POST", "/api/rooms/{room_id}/guests/{guest_id}/approve"): None,
     ("POST", "/api/rooms/{room_id}/guests/{guest_id}/remove"): None,
     ("POST", "/api/rooms/{room_id}/guests/{guest_id}/ban"): None,
@@ -538,6 +542,9 @@ def world(tmp_path, monkeypatch):
 
     engine = make_engine(f"sqlite:///{tmp_path / 'cloud.sqlite'}")
     migrate.upgrade(engine)
+    # Hosted media is a staff grant (ADR-0455); granted here so the upload and asset routes
+    # reach their workspace checks rather than the flag guard.
+    grant_hosted_media(engine)
     app = create_cloud_app(cloud_settings(), engine=engine, verifier=People())
     with TestClient(app) as client:
         workspace = {}

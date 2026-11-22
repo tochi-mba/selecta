@@ -11,6 +11,7 @@ Migration up and down for `local_songs` and `local_song_availability` is covered
 from __future__ import annotations
 
 import pytest
+from cloud_helpers import grant_hosted_media
 from cloud_party import ALICE, BOB, CAROL, auth
 
 from selecta import flags
@@ -65,7 +66,7 @@ STORED_MEDIA_REQUESTS = (
 
 @pytest.fixture
 def local_media_on():
-    """`cloud.local_media` ships dark; these tests switch the build flag on, as a rollout
+    """`cloud.local_media` ships on now; these tests still name the build flag, as a rollout
     would, and put the process flags back afterwards."""
     flags.use("+cloud.local_media")
     yield
@@ -159,7 +160,9 @@ def test_paging_hands_back_a_cursor(party, local_media_on):
 # -- flag gating -------------------------------------------------------------------------------
 
 
-def test_the_catalogue_ships_dark_in_the_build(party):
+def test_the_catalogue_ships_on_and_the_build_can_turn_it_off(party):
+    assert party.client.get("/api/local-media/songs", headers=auth(ALICE)).status_code == 200
+    flags.use("-cloud.local_media")
     answer = party.client.get("/api/local-media/songs", headers=auth(ALICE))
     assert answer.status_code == 403
     assert answer.json()["code"] == "flag_off"
@@ -406,10 +409,10 @@ def test_the_stored_media_routes_moved_off_the_uploads_flag():
 def test_stored_media_reads_stay_open_while_hosted_media_is_ruled_off(party):
     """The read carve-out: revoking `cloud.hosted_media` darks the upload writes alone; listing
     and reading stored media keeps answering, so nobody's library goes dark (ADR-0456)."""
-    _rules(
-        party,
-        "cloud.hosted_media",
-        [Rule(RuleKind.USERS, {"ids": [_user_id(party, CAROL)], "on": False})],
+    grant_hosted_media(
+        party.engine,
+        party.app,
+        Rule(RuleKind.USERS, {"ids": [_user_id(party, CAROL)], "on": False}),
     )
     refused = party.client.post(
         "/api/uploads/plan",

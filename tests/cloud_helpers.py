@@ -53,3 +53,26 @@ def make_cloud_app(tmp_path: Path) -> tuple[FastAPI, Engine, FakeVerifier]:
     migrate.upgrade(engine)
     verifier = FakeVerifier()
     return create_cloud_app(cloud_settings(), engine=engine, verifier=verifier), engine, verifier
+
+
+HOSTED_MEDIA = "cloud.hosted_media"
+
+
+def grant_hosted_media(engine: Engine, app: FastAPI | None = None, *before) -> None:
+    """Grant `cloud.hosted_media` to every account, as staff would (ADR-0455).
+
+    Hosted media is a grant (`rules_default: false`): with no rule it is off, and uploads and
+    hosted jobs with it. Tests of the hosted pages call this first. `before` are rules placed
+    ahead of the grant (a USERS rule that revokes it for one account, say). Pass the running
+    `app` so its rule cache reads the grant at once."""
+    from selecta.flags import rules as flag_rules
+    from selecta.flags.matching import Rule, RuleKind
+    from selecta.persistence import transaction
+
+    grant = Rule(RuleKind.PERCENTAGE, {"percent": 100, "salt": "tests", "note": "hosted tests"})
+    with transaction(engine) as conn:
+        flag_rules.save(
+            conn, HOSTED_MEDIA, (*before, grant), author="tests", reason="hosted media granted"
+        )
+    if app is not None:
+        app.state.flag_rules.invalidate()

@@ -135,7 +135,8 @@ def test_the_kill_switch_beats_an_existing_member(world):
 
 
 def test_without_the_build_layer_opt_in_is_refused_truthfully(world):
-    flags.use(f"+{labs.LABS_FLAG}")
+    # browser-first ships on, so the build has to take it away for this refusal to show
+    flags.use(f"+{labs.LABS_FLAG},-{labs.LOCAL_FIRST}")
     refused = world.post(f"{BASE}/join", who="customer")
     assert refused.status_code == 409
     assert refused.json()["detail"]["reason"] == "build_off"

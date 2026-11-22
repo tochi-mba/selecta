@@ -54,6 +54,8 @@ Each press of play in `usePreview` has a session number. `onended`, `onerror` an
 | Venue codec probe (Cloud mode only, `cloud.venue_tablet`) | `web/src/cloud/venue/probeSuite.ts` | A detached `Audio` element asked `canPlayType`, never given a source | Nobody: it never plays a sound |
 | Cloud media context ownership (Cloud mode only) | `web/src/cloud/cloudMediaContexts.ts` | Acquires and releases Cloud media contexts | The active Cloud playback lease |
 | Cloud transport dock (Cloud mode only) | `web/src/cloud/CloudTransportDock.tsx` | Dock transport and managed audio controls | The Cloud speaker session |
+| Browser harmonic matches (Cloud mode only, `cloud.browser_harmonic`) | `web/src/cloud/BrowserHarmonicMatches.tsx` | One `<audio>` element playing the end of one song, then the start of the other, from the files on this device | `browser-harmonic-matches` |
+| Browser Workspace diagnostics (Cloud mode only, `cloud.workspace`) | `web/src/cloud/CloudWorkspace.tsx` | A Web Audio context opened on a press to probe what this browser can do, closed straight after | Nobody: it never plays a sound |
 
 Export makes no sound. Its result is a downloaded file. `tests/test_s3_docs_contracts.py` fails if a file under `web/src` starts sound (`takeAudio(`, `new Audio(`, `<audio`, `new AudioContext(`) and isn't named in this table (audit rerun 2026-11-11).
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+from cloud_helpers import grant_hosted_media
 from cloud_party import ALICE, CAROL, auth
 from fastapi import HTTPException
 from fastapi.routing import APIRoute
@@ -115,6 +116,7 @@ def test_a_kill_switch_refuses_every_routes_feature_for_every_account(party):
 
 
 def test_a_rule_for_one_account_refuses_only_that_account(party):
+    grant_hosted_media(party.engine, party.app)  # uploads need the hosted-media grant
     carol = party.client.get("/api/account", headers=auth(CAROL)).json()["user"]["id"]
     _rules(party, "cloud.uploads", [Rule(RuleKind.USERS, {"ids": [carol], "on": False})])
     refused = party.client.get("/api/uploads", headers=auth(CAROL))
