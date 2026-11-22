@@ -15,6 +15,10 @@ Keys ending in `<...>` are prefixes: one key per workspace, conversation, room, 
 | Key | Storage | Written by | Holds | Owner |
 |---|---|---|---|---|
 | `selecta.dsp.calibration.` | local | `web/src/cloud/localFirstPlayer.ts` | This device's worker-analysis calibration (one entry per device identity), re-measured when missing or 30 days old | Listen |
+| `selecta.dsp.stems.model` | local | `web/src/dsp/stems/model.ts` | Which stem splitter file this browser downloaded and checked (implementation, checksum, size, when), so a ready splitter is not downloaded again; removed when the member removes the splitter | This device |
+| `selecta.dsp.stems.crashGuard` | local | `web/src/dsp/stems/gate.ts` | Written just before a stem split runs and removed after, so a page that loads with it still present knows the last split stopped the page | This device |
+| `selecta.dsp.stems.crashTripped` | local | `web/src/dsp/stems/gate.ts` | That a stem split stopped the page here, so stems stay off on this device until the member chooses to try again | This device |
+| `selecta.dsp.stems.calibration.` | local | `web/src/dsp/stems/gate.ts` | This device's stem-splitting benchmark (one entry per device identity), re-measured when missing or 30 days old | This device |
 | `selecta.persist.asked` | local | `web/src/cloud/persistence.ts` | That the one storage-persistence ask after the first import has been made, so no browser re-asks on every import | Cloud storage card |
 | `selecta.` | local | `web/src/cloud/deviceData.ts` | A clearing prefix, not a key: Clear everything in this browser removes every `selecta.`-prefixed entry | Cloud device data |
 | `selecta.prefs` | local | `web/src/state/prefs.ts` | Theme, motion, density, rail and library layout choices | Shared foundation |

@@ -197,16 +197,16 @@ jobs:
   cloud:
     # Cloud code on Linux against a real PostgreSQL: row locks, SKIP LOCKED, LISTEN/NOTIFY,
     # advisory locks and row-level security only exist there. The Windows shards run the same
-    # tests on SQLite. See docs/saas/18-test-plan.md. Three shards, each under half its limit;
-    # verify combines their coverage and runs the gate.
-    name: Cloud / PostgreSQL (shard ${{ matrix.shard }}/3)
+    # tests on SQLite. See docs/saas/18-test-plan.md. Four shards of about 15 to 20 minutes of
+    # tests after about 11 minutes of setup; verify combines their coverage and runs the gate.
+    name: Cloud / PostgreSQL (shard ${{ matrix.shard }}/4)
     needs: [lint]
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
     services:
       postgres:
         image: postgres:16
@@ -264,7 +264,7 @@ jobs:
           exit 1
       - name: Cloud tests on SQLite and PostgreSQL, with branch coverage
         env:
-          SELECTA_TEST_SHARD: ${{ matrix.shard }}/3
+          SELECTA_TEST_SHARD: ${{ matrix.shard }}/4
           COVERAGE_FILE: .coverage.cloud-${{ matrix.shard }}
         run: >-
           uv run pytest
@@ -452,7 +452,9 @@ jobs:
     # Every cloud browser test in Edge against the one cloud test server (tests/e2e_cloud_server.py):
     # meters, over quota, checkout consent, upload resume, signed URL refresh, prefetch, export,
     # the event-stream fallback, the cloud origin allowlist, Rooms, guests, displays and devices.
-    name: Cloud E2E (Linux)
+    # Two shards: the cloud suite alone outgrew one 30-minute job. The engine-truth and alignment
+    # gates run once, in shard 1.
+    name: Cloud E2E (Linux, shard ${{ matrix.shard }}/2)
     needs: [changes, lint, web]
     if: ${{ needs.changes.outputs.code == 'true' }}
     # Pinned: Playwright's `install --with-deps` only knows the system packages of the Ubuntu
@@ -460,6 +462,10 @@ jobs:
     # Playwright in web/package.json supports it (and update the browser cache key below).
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     services:
       postgres:
         image: postgres:16
@@ -513,7 +519,7 @@ jobs:
         # steps pass on as SELECTA_E2E_CHANNEL. Remove once the mirror is reliable.
         run: |
           for attempt in 1 2 3; do
-            if pnpm exec playwright install --with-deps chrome msedge firefox webkit; then
+            if pnpm exec playwright install --with-deps chrome msedge chromium firefox webkit; then
               echo "channel=" >> "$GITHUB_OUTPUT"
               exit 0
             fi
@@ -532,12 +538,22 @@ jobs:
           exit 1
         working-directory: web
       - name: Cloud browser tests, in Edge, muted
-        run: pnpm e2e:cloud
+        run: pnpm e2e:cloud --shard=${{ matrix.shard }}/2
         working-directory: web
         env:
           SELECTA_E2E_CHANNEL: ${{ steps.browsers.outputs.channel }}
+      # Firefox only starts an AudioContext when there is an output device, and the runner has
+      # none, so engine truth gets a silent PulseAudio sink. Chromium and WebKit fake their own.
+      - name: Give Firefox a silent audio output
+        if: ${{ matrix.shard == 1 }}
+        run: |
+          sudo apt-get install -y --no-install-recommends pulseaudio
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=silent
+          pactl set-default-sink silent
       - name: Browser engine truth in Chromium, Firefox and WebKit, muted
         id: engine-truth
+        if: ${{ matrix.shard == 1 }}
         run: pnpm e2e:engine-truth
         working-directory: web
       - name: Require browser engine truth evidence
@@ -551,7 +567,7 @@ jobs:
           fi
         working-directory: web
       - name: Keep browser engine truth records
-        if: always()
+        if: ${{ always() && matrix.shard == 1 }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: browser-engine-truth
@@ -562,6 +578,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
       - name: Playback proxy sample alignment in Chrome, Edge, Firefox and WebKit
+        if: ${{ matrix.shard == 1 }}
         run: pnpm e2e:alignment
         working-directory: web
         env:
@@ -570,7 +587,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: cloud-browser-test-results
+          name: cloud-browser-test-results-${{ matrix.shard }}
           path: web/test-results/cloud
           if-no-files-found: ignore
           retention-days: 7

@@ -56,7 +56,7 @@ export function GalleryParts() {
           { key: 'when', label: 'Changed', render: (row) => relativeTime(row.when) },
         ]} />
         <DataTable caption="Specimen empty table" rowKey={(row: Row) => row.name} rows={[]} columns={[{ key: 'name', label: 'Mix' }]} empty="No mixes yet." />
-        <div className="row wrap"><ThemeMenu /><ThemeChoices /></div>
+        <div className="row wrap theme-specimens"><ThemeMenu /><ThemeChoices /></div>
       </section>
       <section className="stack"><h3>Compact density</h3>
         <p className="hint">The same rows at the compact preference: shorter controls and tighter rows, still 44px targets on touch.</p>

@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { build } from 'vite';
 import { limiterProcessorOptions } from '../src/engine/limiter';
@@ -177,10 +178,11 @@ test('the shipped probe and limiter worklets genuinely process audio, with recor
     baseLatency: probed.baseLatency,
   };
   testInfo.annotations.push({ type: 'engine-truth', description: JSON.stringify(recorded) });
-  await testInfo.attach('engine-truth.json', {
-    body: JSON.stringify(recorded, null, 2),
-    contentType: 'application/json',
-  });
+  // Written to disk as well as attached: a body attachment never reaches test-results on a
+  // passing run, and CI requires these records as evidence.
+  const record = testInfo.outputPath('engine-truth.json');
+  writeFileSync(record, JSON.stringify(recorded, null, 2));
+  await testInfo.attach('engine-truth.json', { path: record, contentType: 'application/json' });
 });
 
 // BF-0466-03: the application's own capability probe is the subject. engine/probe.ts (the
@@ -267,5 +269,7 @@ test('the application probe (engine/probe.ts) passes on this engine with real wo
     schedulingMisses: probed.result.schedulingMisses,
   };
   testInfo.annotations.push({ type: 'engine-truth-probe', description: JSON.stringify(recorded) });
-  await testInfo.attach('engine-truth-probe.json', { body: JSON.stringify(recorded, null, 2), contentType: 'application/json' });
+  const record = testInfo.outputPath('engine-truth-probe.json');
+  writeFileSync(record, JSON.stringify(recorded, null, 2));
+  await testInfo.attach('engine-truth-probe.json', { path: record, contentType: 'application/json' });
 });
