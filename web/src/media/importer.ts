@@ -2,6 +2,8 @@ import { assertNoPath, fileSha256, normalise } from './identity';
 import { readFileTags } from './tags';
 import { isQuotaError, MediaStore } from './store';
 import type { DirectoryHandleLike, FileHandleLike, FileRef } from './store';
+import type { ImportJournal } from './importJournal';
+import { runJournalled } from './journalledImport';
 
 // The import pipeline (ADR-0458, BF-0458-01 and BF-0458-02).
 //
@@ -52,12 +54,27 @@ export type ImportEvent =
   | { kind: 'collected'; total: number; skipped: number }
   | { kind: 'batch'; registered: number }
   | { kind: 'paused'; paused: 'storage_full' }
+  /** Journalled imports only: a file is fingerprinted and recorded on this device (or was
+   * already, from an interrupted run: `resumed`). Counts what has been checked so far. */
+  | { kind: 'checked'; name: string; resumed: boolean }
+  /** Journalled imports only: sending is waiting (offline, service not answering, signed out);
+   * null once it carries on. `retryAt` is when the next try happens by itself, if known. */
+  | { kind: 'waiting'; wait: ImportWait | null }
+  /** Journalled imports only: every file has been read; only sending may still be going on. */
+  | { kind: 'read' }
   | ({ kind: 'finished' } & ImportSummary);
 
 /** Reads display tags and duration from a file. The default parses the filename and probes
  * duration through an audio element; a real tag parser can be injected without touching the
  * pipeline. Must never return a path. */
 export type TagReader = (file: File) => Promise<{ title?: string; artist?: string; album?: string; duration_s?: number; codec?: string; sample_rate?: number }>;
+
+export type ImportWait = { why: 'offline' | 'server' | 'signin'; retryAt: number | null };
+
+/** Runs one request, waiting and trying again while the failure is one that passes (offline,
+ * timeout, server error, rate limit, sign-in being renewed). Rejects with the original error for
+ * a refusal that would only repeat, or with an AbortError when `signal` fires. */
+export type RetryPolicy = <T>(work: () => Promise<T>, options: { signal?: AbortSignal; onWait?: (wait: ImportWait | null) => void }) => Promise<T>;
 
 export type ImportSource = FileList | File[] | FileHandleLike[] | DirectoryHandleLike;
 
@@ -71,17 +88,28 @@ export type ImportOptions = {
   signal?: AbortSignal;
   readTags?: TagReader;
   batchSize?: number;
+  /** `cloud.resilient_import`: with a journal the import records each file before any network
+   * call, skips files an interrupted run already did, keeps reading while offline, and sends
+   * batches from the journal with `retry`. Without one, the import behaves as it always has. */
+  journal?: ImportJournal;
+  retry?: RetryPolicy;
+  /** The registered playback device id for the availability report, or null while there is
+   * none yet. Journalled imports never fail on the report; without a device it is left to the
+   * shell's periodic reconcile. */
+  reportDevice?: () => string | null;
+  /** The import this run belongs to (kept across resumes), for the journal rows. */
+  importId?: string;
 };
 
 /** Metadata-only JSON mutation through the injected client. FastAPI must see JSON; relying on
  * the browser's text/plain default would turn an otherwise valid import into a 422. */
-const postJson = <T>(request: Request, path: string, body: unknown): Promise<T> => request<T>(path, {
+export const postJson = <T>(request: Request, path: string, body: unknown): Promise<T> => request<T>(path, {
   method: 'POST',
   headers: { 'content-type': 'application/json' },
   body: JSON.stringify(body),
 });
 
-function extensionOf(name: string): string {
+export function extensionOf(name: string): string {
   const dot = name.lastIndexOf('.');
   return dot < 0 ? '' : name.slice(dot + 1).toLowerCase();
 }
@@ -90,7 +118,7 @@ export function isAudioName(name: string): boolean {
   return AUDIO_EXTENSIONS.has(extensionOf(name));
 }
 
-function stemOf(name: string): string {
+export function stemOf(name: string): string {
   const dot = name.lastIndexOf('.');
   return dot > 0 ? name.slice(0, dot) : name;
 }
@@ -155,21 +183,23 @@ function probeDuration(file: File): Promise<number> {
   });
 }
 
-type Candidate = { name: string; ref: FileRef; open: () => Promise<File>; sessionFile?: File };
+/** `path` is the file's place inside what the member picked (never a full path), for the
+ * journal's stable key. */
+export type Candidate = { name: string; path: string; ref: FileRef; open: () => Promise<File>; sessionFile?: File };
 
 function isDirectorySource(source: ImportSource): source is DirectoryHandleLike {
   return (source as { kind?: string }).kind === 'directory';
 }
 
-async function walk(dir: DirectoryHandleLike, add: (handle: FileHandleLike) => void, cancelled: () => boolean): Promise<void> {
+async function walk(dir: DirectoryHandleLike, add: (handle: FileHandleLike, path: string) => void, cancelled: () => boolean, prefix = ''): Promise<void> {
   for await (const entry of dir.values()) {
     if (cancelled()) return;
-    if (entry.kind === 'directory') await walk(entry, add, cancelled);
-    else add(entry);
+    if (entry.kind === 'directory') await walk(entry, add, cancelled, `${prefix}${entry.name}/`);
+    else add(entry, `${prefix}${entry.name}`);
   }
 }
 
-async function collect(source: ImportSource, signal?: AbortSignal): Promise<{ candidates: Candidate[]; skipped: number }> {
+export async function collect(source: ImportSource, signal?: AbortSignal): Promise<{ candidates: Candidate[]; skipped: number }> {
   const candidates: Candidate[] = [];
   let skipped = 0;
   const addFile = (file: File) => {
@@ -177,14 +207,15 @@ async function collect(source: ImportSource, signal?: AbortSignal): Promise<{ ca
       skipped += 1;
       return;
     }
-    candidates.push({ name: file.name, ref: { kind: 'repick', name: file.name, size: file.size }, open: async () => file, sessionFile: file });
+    const path = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
+    candidates.push({ name: file.name, path, ref: { kind: 'repick', name: file.name, size: file.size }, open: async () => file, sessionFile: file });
   };
-  const addHandle = (handle: FileHandleLike) => {
+  const addHandle = (handle: FileHandleLike, path = handle.name) => {
     if (!isAudioName(handle.name)) {
       skipped += 1;
       return;
     }
-    candidates.push({ name: handle.name, ref: { kind: 'handle', handle }, open: () => handle.getFile() });
+    candidates.push({ name: handle.name, path, ref: { kind: 'handle', handle }, open: () => handle.getFile() });
   };
   if (isDirectorySource(source)) {
     await walk(source, addHandle, () => signal?.aborted ?? false);
@@ -198,14 +229,49 @@ async function collect(source: ImportSource, signal?: AbortSignal): Promise<{ ca
   return { candidates, skipped };
 }
 
-function isAbort(error: unknown): boolean {
+export function isAbort(error: unknown): boolean {
   return typeof error === 'object' && error !== null && (error as { name?: string }).name === 'AbortError';
+}
+
+/** One file's registration: its content fingerprint and display tags, with blanks recovered
+ * locally. Shared by both import paths. */
+export async function registrationOf(file: File, name: string, readTags: TagReader, signal?: AbortSignal): Promise<SongRegistration> {
+  const content_sha256 = await fileSha256(file, { signal });
+  const tags = await readTags(file);
+  const normalised = normalise({
+    title: tags.title ?? stemOf(name),
+    artist: tags.artist ?? 'Unknown artist',
+    album: tags.album,
+  });
+  // Tag readers are allowed to return blank or whitespace-only values. Cloud requires
+  // non-empty display metadata, so recover locally instead of turning a readable file
+  // into a 422 that rejects its whole registration batch.
+  const names = {
+    ...normalised,
+    title: normalised.title || stemOf(name) || 'Untitled track',
+    artist: normalised.artist || 'Unknown artist',
+  };
+  const codec = tags.codec ?? (extensionOf(name) || undefined);
+  const duration = tags.duration_s;
+  return {
+    content_sha256,
+    ...names,
+    // A codec the browser cannot probe has an unknown duration, represented by an
+    // omitted field. Sending zero would violate the API/DB > 0 invariant and make the
+    // otherwise valid import fail.
+    ...(duration !== undefined && Number.isFinite(duration) && duration > 0
+      ? { duration_s: duration }
+      : {}),
+    ...(codec ? { codec } : {}),
+    ...(tags.sample_rate ? { sample_rate: tags.sample_rate } : {}),
+  };
 }
 
 /** Runs one import. Resolves with an honest summary whatever happened: cancelled, paused on a
  * full store, or finished. Only a failing registration request itself rejects, so the caller
  * can show a retry; everything registered before the failure is already recorded. */
 export async function runImport(options: ImportOptions): Promise<ImportSummary> {
+  if (options.journal) return runJournalled(options as ImportOptions & { journal: ImportJournal });
   const { source, request, store, deviceId, signal } = options;
   const emit = options.onProgress ?? (() => {});
   const readTags = options.readTags ?? defaultTagReader;
@@ -287,35 +353,7 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
       let entry: SongRegistration;
       try {
         const file = await candidate.open();
-        const content_sha256 = await fileSha256(file, { signal });
-        const tags = await readTags(file);
-        const normalised = normalise({
-          title: tags.title ?? stemOf(candidate.name),
-          artist: tags.artist ?? 'Unknown artist',
-          album: tags.album,
-        });
-        // Tag readers are allowed to return blank or whitespace-only values. Cloud requires
-        // non-empty display metadata, so recover locally instead of turning a readable file
-        // into a 422 that rejects its whole registration batch.
-        const names = {
-          ...normalised,
-          title: normalised.title || stemOf(candidate.name) || 'Untitled track',
-          artist: normalised.artist || 'Unknown artist',
-        };
-        const codec = tags.codec ?? (extensionOf(candidate.name) || undefined);
-        const duration = tags.duration_s;
-        entry = {
-          content_sha256,
-          ...names,
-          // A codec the browser cannot probe has an unknown duration, represented by an
-          // omitted field. Sending zero would violate the API/DB > 0 invariant and make the
-          // otherwise valid import fail.
-          ...(duration !== undefined && Number.isFinite(duration) && duration > 0
-            ? { duration_s: duration }
-            : {}),
-          ...(codec ? { codec } : {}),
-          ...(tags.sample_rate ? { sample_rate: tags.sample_rate } : {}),
-        };
+        entry = await registrationOf(file, candidate.name, readTags, signal);
       } catch (error) {
         if (isAbort(error)) {
           summary.cancelled = true;
@@ -336,4 +374,10 @@ export async function runImport(options: ImportOptions): Promise<ImportSummary> 
   }
   emit({ kind: 'finished', ...summary });
   return summary;
+}
+
+/** Starts loading the fingerprinting code now, so an import begun later (or carried on while
+ * offline) never waits on a network fetch for it. Safe to call any number of times. */
+export function preloadImportCode(): void {
+  void import('@noble/hashes/sha2.js').catch(() => undefined);
 }
