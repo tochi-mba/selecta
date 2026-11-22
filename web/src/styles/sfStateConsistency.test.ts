@@ -16,7 +16,7 @@ const parts = (selector: string) => selector.split(',').map((part) => part.trim(
 
 // Things focused by the app itself (a page, a heading after navigation, a panel), never by Tab, so a
 // ring there would only be noise. None of them is a control.
-const PROGRAMMATIC = new Set(['.content:focus', '.overlay-panel:focus', '.now:focus', '.glossary-entry h3:focus', '.drafts-head .section-title:focus']);
+const PROGRAMMATIC = new Set(['.content:focus', '.overlay-panel:focus', '.now:focus', '.glossary-entry h3:focus', '.drafts-head .section-title:focus', "main.page h1[tabindex='-1']:focus"]);
 
 describe('SF-0245-05 shared primitives keep one hover, focus and active language', () => {
   it('gives every native control the same focus ring in the focus colour', () => {

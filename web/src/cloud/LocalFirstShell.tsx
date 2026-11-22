@@ -26,7 +26,7 @@ import { MyMixes } from '../views/MyMixes';
 import { Now } from '../views/Now';
 import type { View, ViewProps } from '../views/shared';
 import type { Account, Api } from './api';
-import { ConnectMusic, mediaDeviceId } from './ConnectMusic';
+import { ConnectMusic, mediaDeviceId, registeredDeviceId } from './ConnectMusic';
 import { hostedResolver, matchAsset, readHostedAssets, type HostedAsset } from './hostedMedia';
 import { isHostedAccount } from './localFirstGate';
 import { CannotPlayHere, LibraryEmpty, ListenEmpty, MixesEmpty, NotOnThisAccount, OnlyOnYourComputer } from './LocalFirstEmpty';
@@ -148,11 +148,12 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
           // Send a complete snapshot on startup and at most twice a day while active. The
           // report contains only catalogue ids and the same profile id used for playback-device
           // auth; no filename, handle, tag or audio bytes leave this browser.
-          if (on('cloud.local_media')) {
+          const reportingDevice = registeredDeviceId(workspaceId);
+          if (on('cloud.local_media') && reportingDevice) {
             const snapshot = await deviceAvailabilitySnapshot(opened, lapsedItems);
             try {
               if (!mediaRef.current) throw new Error('not ready');
-              await reportDeviceAvailability(mediaRef.current, mediaDeviceId(workspaceId), snapshot, true);
+              await reportDeviceAvailability(mediaRef.current, reportingDevice, snapshot, true);
               lastAvailabilityReport.current = Date.now();
             } catch {
               // A transient auth/network failure leaves the report clock due, so the next
@@ -209,9 +210,10 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
       if (present) lapsed.current.delete(songId);
       else lapsed.current.set(songId, why ?? 'missing');
       refreshStatusRef.current?.();
-      if (on('cloud.local_media')) {
+      const reportingDevice = registeredDeviceId(workspaceId);
+      if (on('cloud.local_media') && reportingDevice) {
         const snapshot = present ? { present: [songId], absent: [] } : { present: [], absent: [songId] };
-        void reportDeviceAvailability(media, mediaDeviceId(workspaceId), snapshot).then(() => {
+        void reportDeviceAvailability(media, reportingDevice, snapshot).then(() => {
           refreshStatusRef.current?.();
         }).catch(() => undefined);
       }
@@ -271,6 +273,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback }: {
 
   // This shell has no local server: the shell's job badge and the local-only buttons stand down
   // while it is open, and come back exactly as they were when it closes.
+  // Before any child subscribes to jobs (children's effects run first): this shell has no jobs server.
+  useState(() => setJobsSource(false));
   useEffect(() => {
     setJobsSource(false);
     setFlags({ ...NOT_IN_THE_BROWSER });
