@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import logging
 from urllib.parse import parse_qs
 
 import httpx
 import pytest
 
-from selecta.billing.stripe_sync import StripeUnavailable
+from selecta.billing.stripe_sync import StripeRefused, StripeUnavailable
 from selecta.billing.webhooks import HttpStripeClient
 
 API_KEY = "sk_test_never_log_this"
@@ -304,3 +305,118 @@ def test_an_idempotency_key_longer_than_stripe_allows_fails_before_request() -> 
 
     with pytest.raises(ValueError, match="idempotency key"):
         client.create_customer(workspace_id="w1", idempotency_key="k" * 256)
+
+
+# What Stripe said when it refused, and telling a refusal from an outage ---------------------------
+
+LOG = "selecta.billing.webhooks"
+NO_SUCH_PRICE = {
+    "error": {
+        "type": "invalid_request_error",
+        "code": "resource_missing",
+        "param": "line_items[0][price]",
+        "message": "No such price: 'price_standard_month'",
+    }
+}
+
+
+def start_checkout(client: HttpStripeClient):
+    return client.create_checkout_session(
+        workspace_id="workspace-1",
+        customer_id="cus_123",
+        price_id="price_standard_month",
+        success_url="https://app.example/success?session=secret-return",
+        cancel_url="https://app.example/cancel",
+        idempotency_key="checkout-workspace-1",
+    )
+
+
+def test_a_refusal_is_logged_with_stripes_own_reason_and_nothing_secret(caplog) -> None:
+    client = make_client(lambda request: httpx.Response(400, json=NO_SUCH_PRICE))
+
+    with caplog.at_level(logging.WARNING, logger=LOG), pytest.raises(StripeRefused) as raised:
+        start_checkout(client)
+
+    assert (raised.value.status, raised.value.code) == (400, "resource_missing")
+    [line] = [record.getMessage() for record in caplog.records]
+    assert "400" in line
+    assert "/v1/checkout/sessions" in line
+    assert "type=invalid_request_error" in line
+    assert "code=resource_missing" in line
+    assert "param=line_items[0][price]" in line
+    assert "No such price: 'price_standard_month'" in line
+    # never the key, the Authorization header, or anything that was sent
+    assert API_KEY not in line
+    assert "Bearer" not in line
+    assert "secret-return" not in line
+    assert "cus_123" not in line
+
+
+@pytest.mark.parametrize("status", [400, 401, 403, 409])
+def test_a_4xx_from_stripe_is_a_refusal_and_still_stripe_unavailable(status) -> None:
+    """Ours to fix, not an outage; and still a `StripeUnavailable`, so webhooks and
+    reconciliation, which catch that, leave the work and try later exactly as before."""
+    client = make_client(lambda request: httpx.Response(status, json={"error": {"code": "x"}}))
+
+    with pytest.raises(StripeRefused) as raised:
+        start_checkout(client)
+
+    assert isinstance(raised.value, StripeUnavailable)
+    assert raised.value.status == status
+
+
+@pytest.mark.parametrize("status", [408, 429, 500, 502, 503])
+def test_a_busy_or_broken_stripe_is_unavailable_not_a_refusal(status, caplog) -> None:
+    client = make_client(lambda request: httpx.Response(status))
+
+    with caplog.at_level(logging.WARNING, logger=LOG), pytest.raises(StripeUnavailable) as raised:
+        start_checkout(client)
+
+    assert not isinstance(raised.value, StripeRefused)
+    # an answer with no error body is still logged, with what is known
+    [line] = [record.getMessage() for record in caplog.records]
+    assert str(status) in line
+    assert "type=None" in line
+
+
+def test_a_key_stripe_echoes_back_is_never_logged_and_the_message_is_bounded(caplog) -> None:
+    message = f"Bad key {API_KEY} " + "x" * 500
+    body = {"error": {"type": "invalid_request_error", "message": message}}
+    client = make_client(lambda request: httpx.Response(401, json=body))
+
+    with caplog.at_level(logging.WARNING, logger=LOG), pytest.raises(StripeRefused):
+        start_checkout(client)
+
+    [line] = [record.getMessage() for record in caplog.records]
+    assert API_KEY not in line
+    assert "[key]" in line
+    assert len(line) < 400
+
+
+def test_the_logged_path_names_the_resource_and_no_id(caplog) -> None:
+    broken = make_client(lambda request: httpx.Response(500))
+    with caplog.at_level(logging.WARNING, logger=LOG):
+        with pytest.raises(StripeUnavailable):
+            broken.get_charge("ch_3PabcDEF123")
+        with pytest.raises(StripeUnavailable):
+            broken.cancel_subscription("sub_1Qxyz789")
+
+    lines = [record.getMessage() for record in caplog.records]
+    assert "/v1/charges/:id" in lines[0]
+    assert "ch_3PabcDEF123" not in lines[0]
+    assert "/v1/subscriptions/:id" in lines[1]
+    assert "sub_1Qxyz789" not in lines[1]
+
+
+def test_a_network_failure_is_logged_by_its_class_only(caplog) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError(f"failed with {API_KEY}", request=request)
+
+    with caplog.at_level(logging.WARNING, logger=LOG), pytest.raises(StripeUnavailable) as raised:
+        start_checkout(make_client(handler))
+
+    assert not isinstance(raised.value, StripeRefused)
+    [line] = [record.getMessage() for record in caplog.records]
+    assert "ConnectError" in line
+    assert "/v1/checkout/sessions" in line
+    assert API_KEY not in line

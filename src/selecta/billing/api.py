@@ -19,7 +19,7 @@ from selecta.admin import state as emergency_state
 from selecta.authz.roles import WorkspaceAction
 from selecta.billing import plans, stripe_sync
 from selecta.billing.schema import checkout_consents, stripe_customers
-from selecta.billing.stripe_sync import PricePlan, parse_price_map
+from selecta.billing.stripe_sync import PricePlan, StripeRefused, parse_price_map
 from selecta.billing.webhooks import (
     HttpStripeClient,
     SignatureError,
@@ -72,10 +72,21 @@ def _checkout_prices() -> dict[str, PricePlan]:
         raise HTTPException(status_code=503, detail={"code": "billing_not_configured"}) from error
 
 
+def _misconfigured(error: StripeRefused) -> HTTPException:
+    """Stripe answered and said no (a wrong key, a price that is not in that account or mode):
+    ours to fix, not Stripe being down. The client has already logged Stripe's own reason."""
+    return HTTPException(status_code=503, detail={"code": "billing_misconfigured"})
+
+
 def checkout_available() -> bool:
     """Whether a checkout could be started on this site at all: the Stripe key is set and the
     price map parses and names at least one price. `/api/account` says so, so the page does not
-    offer an upgrade the server would only refuse with `billing_not_configured`."""
+    offer an upgrade the server would only refuse with `billing_not_configured`.
+
+    This only knows what the environment says. Whether Stripe accepts the key, and whether the
+    prices exist in that Stripe account and mode, is only learned by asking Stripe, which is
+    never done to build the account: a checkout Stripe refuses answers `billing_misconfigured`.
+    """
     if not os.environ.get("SELECTA_STRIPE_SECRET_KEY", "").strip():
         return False
     try:
@@ -203,6 +214,8 @@ def install_routes(
                         stripe_subscription_id=None,
                     )
                 )
+        except StripeRefused as error:
+            raise _misconfigured(error) from error
         except StripeUnavailable as error:
             raise HTTPException(
                 status_code=503, detail={"code": "billing_temporarily_unavailable"}
@@ -238,6 +251,8 @@ def install_routes(
                     "portal", principal.workspace.id, idempotency_key
                 ),
             )
+        except StripeRefused as error:
+            raise _misconfigured(error) from error
         except StripeUnavailable as error:
             raise HTTPException(
                 status_code=503, detail={"code": "billing_temporarily_unavailable"}

@@ -26,7 +26,12 @@ from test_cloud_billing_fakes import (
 
 from selecta.billing import api as billing_api
 from selecta.billing.schema import checkout_consents, stripe_customers, stripe_events
-from selecta.billing.stripe_sync import StripeUnavailable, current_snapshot, write_snapshot
+from selecta.billing.stripe_sync import (
+    StripeRefused,
+    StripeUnavailable,
+    current_snapshot,
+    write_snapshot,
+)
 from selecta.billing.stripe_sync import snapshot_from_subscription as decide
 from selecta.billing.webhooks import TOLERANCE_SECONDS
 from selecta.identity.tokens import Claims
@@ -228,6 +233,37 @@ def test_a_stripe_outage_during_checkout_records_nothing(client, stripe, cloud_e
     assert response.json()["detail"]["code"] == "billing_temporarily_unavailable"
     assert rows(cloud_engine, checkout_consents) == []
     assert rows(cloud_engine, stripe_customers) == []
+
+
+def refuse(*_args, **_fields):
+    """Stripe answering no: a price that is not in that account, or a key it does not accept."""
+    raise StripeRefused(
+        "Stripe answered 400 for /v1/checkout/sessions.", status=400, code="resource_missing"
+    )
+
+
+def test_a_checkout_stripe_refuses_is_a_misconfiguration_not_an_outage(
+    client, stripe, cloud_engine, monkeypatch
+):
+    monkeypatch.setattr(stripe, "create_checkout_session", refuse)
+
+    response = checkout(client)
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == {"code": "billing_misconfigured"}
+    assert rows(cloud_engine, checkout_consents) == []
+
+
+def test_a_portal_stripe_refuses_is_a_misconfiguration_not_an_outage(
+    client, stripe, cloud_engine, monkeypatch
+):
+    with_customer(cloud_engine)
+    monkeypatch.setattr(stripe, "create_portal_session", refuse)
+
+    response = portal(client)
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == {"code": "billing_misconfigured"}
 
 
 def test_checkout_without_an_ip_key_stores_no_ip_at_all(client, stripe, cloud_engine,

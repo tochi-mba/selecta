@@ -96,7 +96,7 @@ export function answeredByApi(error: unknown): boolean {
 
 /** Coded 5xx answers that asking again cannot change: the site is not set up for it. Every other
  * coded 5xx (`billing_temporarily_unavailable`, say) may be tried again. */
-const SETTLED_CODES = new Set(['billing_not_configured', 'price_unavailable', 'webhook_not_configured']);
+const SETTLED_CODES = new Set(['billing_not_configured', 'billing_misconfigured', 'price_unavailable', 'webhook_not_configured']);
 
 /** Whether this failure may be tried again: one that can heal, and not a settled refusal. */
 export function worthRetrying(kind: FailureKind, error: unknown): boolean {

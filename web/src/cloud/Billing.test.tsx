@@ -152,6 +152,7 @@ describe('a checkout that could not start', () => {
   it('gives every billing refusal plain words, never its code', () => {
     const said = (code: string) => checkoutProblem(new CloudError(code.replaceAll('_', ' '), 503, code));
     expect(said('price_unavailable')).toBe('Upgrades aren’t available right now. Nothing was charged. Try again later.');
+    expect(said('billing_misconfigured')).toBe('Upgrades aren’t available right now. Nothing was charged. Try again later.');
     expect(said('billing_temporarily_unavailable')).toBe('The payment service didn’t answer. Nothing was charged. Try again in a moment.');
     expect(said('subscription_exists')).toBe('This workspace already has a plan. Manage it from the billing portal.');
     expect(said('billing_customer_not_found')).toBe('There’s no billing record for this workspace yet.');

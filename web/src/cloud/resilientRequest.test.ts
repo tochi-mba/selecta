@@ -174,7 +174,7 @@ describe('resilient', () => {
     await expect(wrapped('/billing/checkout', { method: 'POST', headers: { 'Idempotency-Key': 'one' } })).rejects.toMatchObject({ code: 'billing_not_configured' });
     expect(calls).toBe(1);
     expect(getConnection().status).toBe('online');
-    for (const code of ['price_unavailable', 'webhook_not_configured']) {
+    for (const code of ['price_unavailable', 'webhook_not_configured', 'billing_misconfigured']) {
       expect(worthRetrying('server', new CloudError('x', 503, code))).toBe(false);
     }
   });

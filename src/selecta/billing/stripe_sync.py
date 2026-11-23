@@ -69,6 +69,22 @@ class StripeUnavailable(RuntimeError):
     """Stripe couldn't be reached or answered with a server error. Retry later."""
 
 
+class StripeRefused(StripeUnavailable):
+    """Stripe answered, and refused the request (a 4xx other than 408 and 429): a wrong key, a
+    price that does not exist in that account or mode, a bad API version. Trying again will not
+    help; our configuration or request is wrong.
+
+    A subclass of `StripeUnavailable`, so every caller that already treats a failed Stripe call
+    as "leave it and try later" (webhooks, reconciliation, account closing) behaves as before;
+    the checkout and portal routes tell the two apart.
+    """
+
+    def __init__(self, message: str, *, status: int, code: str | None = None) -> None:
+        super().__init__(message)
+        self.status = status
+        self.code = code
+
+
 class StripeClient(Protocol):
     """Stripe operations used by billing and account lifecycle workflows."""
 

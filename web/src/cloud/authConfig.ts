@@ -93,6 +93,8 @@ const REFUSAL_MESSAGES: Record<string, string> = {
   // was being started, that nothing was charged.
   billing_not_configured: UPGRADES_CLOSED,
   price_unavailable: UPGRADES_CLOSED,
+  // Stripe refused what the site asked (a wrong key, a price it does not have): the same to a person
+  billing_misconfigured: UPGRADES_CLOSED,
   billing_temporarily_unavailable: 'The payment service didn’t answer. Nothing was charged. Try again in a moment.',
   subscription_exists: 'This workspace already has a plan. Manage it from the billing portal.',
   billing_customer_not_found: 'There’s no billing record for this workspace yet.',

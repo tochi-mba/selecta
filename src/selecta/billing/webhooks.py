@@ -16,6 +16,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import logging
 import re
 import time
 from collections.abc import Iterator, Mapping, Sequence
@@ -31,6 +32,7 @@ from selecta.billing.schema import insert_ignore, stripe_events, subscriptions
 from selecta.billing.stripe_sync import (
     PriceMap,
     StripeClient,
+    StripeRefused,
     StripeUnavailable,
     attach_consent,
     recompute_snapshot,
@@ -39,6 +41,8 @@ from selecta.billing.stripe_sync import (
     workspace_for,
 )
 from selecta.persistence import db_now, lock_rows, new_id
+
+log = logging.getLogger(__name__)
 
 TOLERANCE_SECONDS = 300
 HANDLED_TYPES = frozenset(
@@ -350,6 +354,19 @@ def pending_events(conn: Connection, limit: int = 50, max_attempts: int = 10) ->
     )
 
 
+STRIPE_LOG_FIELD = 200  # the most of one Stripe error field a log line carries
+
+
+def _resource_path(path: str) -> str:
+    """A Stripe path for a log line: no query, and every id (`sub_1Abc`, `cus_9x`) as `:id`, so
+    the line says which kind of resource was asked for and nothing about whose."""
+    parts = path.split("?", 1)[0].split("/")
+    return "/".join(
+        ":id" if re.fullmatch(r"[a-z]+_(?=[A-Za-z0-9]*[A-Z0-9])[A-Za-z0-9]+", part) else part
+        for part in parts
+    )
+
+
 class HttpStripeClient:
     """Stripe's REST API over httpx. Nothing is sent until a method is called."""
 
@@ -372,6 +389,50 @@ class HttpStripeClient:
     def __repr__(self) -> str:
         return f"HttpStripeClient(base_url={self._base_url!r})"  # never the key
 
+    def _bounded(self, value: Any, limit: int = STRIPE_LOG_FIELD) -> str | None:
+        """One field of Stripe's error body for the log: a string, cut short, never the key."""
+        if not isinstance(value, str) or not value:
+            return None
+        key = self._headers["Authorization"].removeprefix("Bearer ")
+        return value.replace(key, "[key]")[:limit] if key else value[:limit]
+
+    def _failed(self, response: httpx.Response, path: str) -> StripeUnavailable:
+        """The error for a Stripe answer of 400 or above, logged once so the reason can be read.
+
+        The log line carries the status, the path with ids taken out, and from Stripe's own error
+        body its type, code, param and the first 200 characters of its message (which may name a
+        price or customer id: that is what makes it useful). It never carries the Authorization
+        header, the key or anything that was sent. A 4xx other than 408 and 429 is Stripe refusing
+        what we asked (`StripeRefused`); anything else is Stripe being unavailable.
+        """
+        status = response.status_code
+        try:
+            body = response.json()
+        except (ValueError, json.JSONDecodeError):
+            body = None
+        error = body.get("error") if isinstance(body, dict) else None
+        fields = error if isinstance(error, dict) else {}
+        code = self._bounded(fields.get("code"), 80)
+        log.warning(
+            "Stripe answered %s for %s: type=%s code=%s param=%s message=%s",
+            status,
+            _resource_path(path),
+            self._bounded(fields.get("type"), 80),
+            code,
+            self._bounded(fields.get("param"), 80),
+            self._bounded(fields.get("message")),
+        )
+        words = f"Stripe answered {status} for {path}."
+        if 400 <= status < 500 and status not in (408, 429):
+            return StripeRefused(words, status=status, code=code)
+        return StripeUnavailable(words)
+
+    @staticmethod
+    def _unreachable(problem: Exception, path: str) -> None:
+        """A network failure, logged by its class only: httpx messages can carry request details."""
+        where = _resource_path(path)
+        log.warning("Could not reach Stripe for %s (%s)", where, type(problem).__name__)
+
     def _get(self, path: str, params: list[tuple[str, str]]) -> dict[str, Any] | None:
         try:
             with httpx.Client(
@@ -379,11 +440,12 @@ class HttpStripeClient:
             ) as client:
                 response = client.get(path, params=params, headers=self._headers)
         except httpx.HTTPError as problem:
+            self._unreachable(problem, path)
             raise StripeUnavailable(f"Can't reach Stripe: {problem}") from problem
         if response.status_code == 404:
             return None
         if response.status_code >= 400:
-            raise StripeUnavailable(f"Stripe answered {response.status_code} for {path}.")
+            raise self._failed(response, path)
         return response.json()
 
     def _post(self, path: str, data: Mapping[str, str], idempotency_key: str) -> dict[str, Any]:
@@ -405,9 +467,10 @@ class HttpStripeClient:
                 response = client.post(path, data=data, headers=headers)
         except httpx.HTTPError as problem:
             # httpx exceptions can contain request details. Keep the public error bounded.
+            self._unreachable(problem, path)
             raise StripeUnavailable(f"Can't reach Stripe ({type(problem).__name__}).") from problem
         if response.status_code >= 400:
-            raise StripeUnavailable(f"Stripe answered {response.status_code} for {path}.")
+            raise self._failed(response, path)
         try:
             payload = response.json()
         except (ValueError, json.JSONDecodeError) as problem:
@@ -526,11 +589,12 @@ class HttpStripeClient:
             ) as client:
                 response = client.delete(path, headers=self._headers)
         except httpx.HTTPError as problem:
+            self._unreachable(problem, path)
             raise StripeUnavailable(f"Can't reach Stripe ({type(problem).__name__}).") from problem
         if response.status_code == 404:
             return None
         if response.status_code >= 400:
-            raise StripeUnavailable(f"Stripe answered {response.status_code} for {path}.")
+            raise self._failed(response, path)
         try:
             payload = response.json()
         except (ValueError, json.JSONDecodeError) as problem:
