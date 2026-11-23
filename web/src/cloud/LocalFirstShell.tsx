@@ -49,7 +49,7 @@ import { NOTHING_PLAYABLE_NOTICE } from '../engine/scheduler';
 import { runningTime } from '../lib';
 import { CutoverNotice } from './migration/CutoverNotice';
 import { OnboardingSpine } from './onboarding/OnboardingSpine';
-import { browserStorage, onboardingFinished, recordImportOutcome } from './onboarding/state';
+import { browserStorage, onboardingFinished, onboardingPutOff, recordImportOutcome } from './onboarding/state';
 import { ImportChip } from './ImportChip';
 import { StorageCard } from './StorageCard';
 import { bindImportWorkspace, endImportSession, useImportSession } from './importSession';
@@ -435,11 +435,13 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const route: ShellRoute = (moreRoute && !(workspacePage && moreRoute.id === 'workspace') ? moreRoute : null) ?? parseRoute(path);
   const moreItems = moreDestinationsFor({ mode: 'cloud', feature: on, experience: account.experience ?? null }).filter((place) => !(workspacePage && place.id === 'workspace'));
   const connected = status?.counts.music ?? 0;
-  const [spine, setSpine] = useState(() => !onboardingFinished(workspaceId));
+  // Finish later is remembered on this browser: the spine then opens only when asked for
+  const [spine, setSpine] = useState(() => !onboardingFinished(workspaceId) && !onboardingPutOff(workspaceId));
+  const [spineAsked, setSpineAsked] = useState(false);
   // frozen at the first status: songs landing mid-import must not unmount the spine under the member
   const startedEmpty = useRef<boolean | null>(null);
   if (status !== null && startedEmpty.current === null) startedEmpty.current = connected === 0;
-  const newMember = spine && startedEmpty.current === true;
+  const newMember = spine && (startedEmpty.current === true || spineAsked);
 
   const notify = useCallback<ViewProps['notify']>((message, undo) => {
     showToast(message, typeof undo === 'function' ? { undo } : {});
@@ -558,7 +560,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       return (
         <main className="page" id="main">
           <h1 className="display small">Welcome to SelectaDJ</h1>
-          <OnboardingSpine request={media} workspaceId={workspaceId} deps={spineDeps} onDone={() => { setSpine(false); refreshStatus(); }} />
+          <OnboardingSpine request={media} workspaceId={workspaceId} deps={spineDeps} onDone={() => { setSpine(false); setSpineAsked(false); refreshStatus(); }} />
         </main>
       );
     }
@@ -591,6 +593,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
           <MixesEmpty
             current={data.mix.length > 0 ? <CurrentMix mix={data.mix} mixName={data.name} now={now} player={shellPlayer} setView={shared.setView} analysisAvailable={false} /> : undefined}
             connected={connected}
+            onSetUp={onboardingFinished(workspaceId) ? undefined : () => { setSpineAsked(true); setSpine(true); }}
             checking={importLive.phase === 'running' ? { checked: importLive.registered, total: importLive.total } : undefined}
           />
         )}{localExport}</>;
