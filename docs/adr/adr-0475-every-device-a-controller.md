@@ -1,7 +1,7 @@
 # ADR-0475 - Every device a controller: who holds a song, who makes the sound
 
 - **Decision:** Proposed (owner asked for the design on 2026-11-23; approval is the owner's).
-- **Implementation:** In progress on branch `feat/controller`.
+- **Implementation:** In progress on branch `feat/controller`. Built so far: holdings that other devices can read, adding a request from any device (R4, in part), account-wide request search (R5, in part). Not started: R1 picker, R2 "Play on {device}", R3, R6, R7, R8, R9. See "What is built, and where it differs" below.
 - **Independent verification:** None.
 - **Programme/date/baseline:** Browser-first Cloud (BF); 2026-11-23; `main` at `bfcc5ed7`.
 - **Existing ADR owners:** ADR-0415 (playback devices and sessions), ADR-0461 (remote control protocol: signed commands, fencing, take-over), ADR-0458 and ADR-0469 (song identity: one song, one fingerprint), ADR-0462 and ADR-0463 (shared shell, local-first surfaces), ADR-0416 (Rooms). None is replaced. This ADR adds the rules for a device that does not hold the music.
@@ -140,6 +140,20 @@ A mix made on any device is the account's mix. Making one on a device that canno
 | An older app version that reports no holdings | Treated as unknown: the device is listed without a song count, can still be asked to play, and answers for itself. |
 | Privacy | Holdings are catalogue ids per device. No path, file name or folder name ever leaves a device. |
 
+## What is built, and where it differs (kept true to the code)
+
+**Holdings use what the server already kept.** The account already stored, for each device and song, a `present` flag and when it was reported (`local_song_availability`, written by `POST /api/local-media/availability`, with reports older than 30 days no longer counted). That is the holding. No second table was added. `GET /api/local-media/holdings` (under `devices.remote_control`) returns the person's signed-in devices with a song count, the time of the newest report and `online`; with `?device_id=` it also returns that device's catalogue ids. Ids only.
+
+**The three states are two facts, not a stored state.** The server keeps "this device reported it holds the song" and "this device was seen in the last 30 seconds". `now` is read as held and online; `before` as held and not online. A device whose browser dropped its folder but which has not yet sent a new report still counts as holding until it reports, so `now` can be wrong for the first moments after such a reload. The stricter rule in "The model" (a report made since the last page load) is not built.
+
+**Online** comes from the device's own playback reads: every signed-in page reads its playback session every one to two seconds, and that read notes the device as seen at most once every 10 seconds. Before this, a device's last-seen time only moved when the page loaded.
+
+**R4 as built.** A device that is not the speaker adds a song by sending the speaker `set_programme` with the song placed after the one that is playing and `keep_position` true (new: the session keeps its offset, so the music does not move). The speaker compares its own mix with the session's programme: when its mix changed it sends its own; when only the session changed it takes that order into its own mix (a new revision of the recipe it is playing) and keeps playing; when a song in it does not play there, it keeps its own mix and sends it again, so the asker sees the song did not join. The account's saved mix is therefore changed by the speaker, not by the asking device. A room request is settled by the speaker's own periodic look, exactly as when the host adds it there; on the asking device the row leaves the list for up to 30 seconds while that happens, and comes back if the speaker did not take it.
+
+Of the R4 table, two rows are built: "on the speaker" (Add next, with "Plays on {speaker}") and "not on the speaker" ("{Speaker} can't play this: its file isn't there." with Dismiss and no Connect music button). The rows that need to know every other device's holdings for one song ("Only on {device}", "needs its music folder again", "No device has this song's file right now") are not built; they read as the second row. "Nothing playing" keeps the earlier behaviour. The separate "waiting on a device" count is not built. When the speaker has reported nothing, it is treated as able to answer for itself, and the row offers Add next.
+
+**R5 as built.** With another device playing, "Request a song" looks through the whole account catalogue, with this device's own songs first. Results do not yet say where each would play (the row made from a result does), and the order does not yet put songs held nowhere last. The Library search is unchanged. With nothing playing elsewhere the search is as before.
+
 ## What is not decided here
 
 - Shared volume for a personal session (the server refuses `set_volume` outside a venue zone).
@@ -148,13 +162,13 @@ A mix made on any device is the account's mix. Making one on a device that canno
 
 ## Implementation checklist
 
-1. Holdings: device reports, storage, expiry, and the devices list returning counts. Tests for report, replace, sign-out and expiry.
-2. R4 add from any device, with room request bookkeeping. Tests for each row of the table.
-3. R5 account-wide search.
-4. R2 "Play on {device}" with each refusal reason. Tests for each.
-5. R1 picker and R3 pre-flight line.
-6. R6 Library header, row status, filters and the quiet line.
-7. R7 wording for folder access that does not persist.
-8. R8 mixes from any device.
-9. R9 wording pass.
-10. Browser proof with two real devices' worth of contexts: a laptop with all the music, a phone with none, and a phone with some.
+1. Holdings: device reports, storage, expiry, and the devices list returning counts. Tests for report, replace, sign-out and expiry. **Partly done:** read route, counts, online, tests for report, replace, another person's device, a removed song and a stale device. Not done: the per-page-load `now` rule, a test for sign-out.
+2. R4 add from any device, with room request bookkeeping. Tests for each row of the table. **Partly done:** two of five rows, with tests; proved in a browser with a laptop playing and a phone with no music, against a local API that had not loaded `keep_position` or the holdings route (so the song restarted on the laptop and the "not on the speaker" row was not seen live).
+3. R5 account-wide search. **Partly done:** Request a song, with a test and seen in a browser. Not done: the result order and labels, the Library search.
+4. R2 "Play on {device}" with each refusal reason. Tests for each. **Not started.**
+5. R1 picker and R3 pre-flight line. **Not started** (the rule for the best holder exists as a function with a test, unused).
+6. R6 Library header, row status, filters and the quiet line. **Not started.**
+7. R7 wording for folder access that does not persist. **Not started.**
+8. R8 mixes from any device. **Not started.**
+9. R9 wording pass. **Not started** ("Plays on {device}" is new and follows it).
+10. Browser proof with two real devices' worth of contexts: a laptop with all the music, a phone with none, and a phone with some. **Partly done:** laptop and phone with none, for R4 and R5 only.
