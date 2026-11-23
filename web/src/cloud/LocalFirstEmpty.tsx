@@ -3,6 +3,7 @@ import { flagOn } from '../flags';
 import { PageLink } from '../shell/PageLink';
 import { countOf } from '../ui/format';
 import { Icon } from '../ui/Icon';
+import { BlendArt } from './BlendArt';
 import './cloudMusic.css';
 
 /** Designed empty and failure states for the local-first shell (ADR-0463 BF-0463-04).
@@ -147,38 +148,51 @@ export function CannotPlayHere({ reason }: { reason: string }) {
   );
 }
 
+/** The frame of a page that is not there: what happened and the ways back, beside the drawing of a
+ * song with nothing after it (BlendArt). The address asked for is shown when it is the problem. */
+function Lost({ eyebrow, title, path, actions, children }: { eyebrow: string; title: string; path?: string; actions: ReactNode; children: ReactNode }) {
+  return (
+    <main className="page lost-page" id="main">
+      <div className="lost-words">
+        <p className="page-eyebrow">{eyebrow}</p>
+        <h1 className="display small">{title}</h1>
+        {children}
+        {path && <p className="lost-path"><span className="visually-hidden">The address asked for: </span>{path}</p>}
+        <div className="row wrap">{actions}</div>
+      </div>
+      <BlendArt variant="missing" />
+    </main>
+  );
+}
+
 /** A More address this account does not have (a flag off, or uploads without the hosted grant). */
 export function NotOnThisAccount() {
   return (
-    <main className="page" id="main">
-      <h1 className="display small">That page isn’t part of your account</h1>
+    <Lost eyebrow="Not on this account" title="That page isn’t part of your account" actions={<PageLink to="/library" className="button primary">Go to Library</PageLink>}>
       <p className="lede">Your music and mixes are fine.</p>
-      <PageLink to="/library" className="button primary">Go to Library</PageLink>
-    </main>
+    </Lost>
   );
 }
 
 /** A local-only address opened in Cloud: say so and offer the nearest place (ADR-0462). */
 export function OnlyOnYourComputer({ title, nearest }: { title: string; nearest: { label: string; path: string } }) {
   return (
-    <main className="page" id="main">
-      <h1 className="display small">{title} is part of SelectaDJ on your computer</h1>
+    <Lost eyebrow="On your computer" title={`${title} is part of SelectaDJ on your computer`} actions={<PageLink to={nearest.path} className="button primary">Go to {nearest.label}</PageLink>}>
       <p className="lede">This page needs the SelectaDJ app running on your own computer, so it isn’t in your browser. Your music and mixes are fine.</p>
-      <PageLink to={nearest.path} className="button primary">Go to {nearest.label}</PageLink>
-    </main>
+    </Lost>
   );
 }
 
 /** An address that is no page at all (a mistyped or stale link): say so, and offer the way back. */
 export function PageNotFound() {
   return (
-    <main className="page" id="main">
-      <h1 className="display small">We can’t find that page</h1>
+    <Lost
+      eyebrow="Error 404"
+      title="We can’t find that page"
+      path={window.location.pathname}
+      actions={<><PageLink to="/mixes" className="button primary">Go to Make a Mix</PageLink><PageLink to="/library" className="button">Library</PageLink></>}
+    >
       <p className="lede">The link may be old or mistyped. Your music and mixes are fine.</p>
-      <div className="row wrap">
-        <PageLink to="/mixes" className="button primary">Go to Make a Mix</PageLink>
-        <PageLink to="/library" className="button">Library</PageLink>
-      </div>
-    </main>
+    </Lost>
   );
 }

@@ -259,6 +259,7 @@
   --motion-loop-slide: 1.6s;     /* Lucy's indeterminate bar */
   --motion-loop-pulse: 1.8s;     /* a request pill at work */
   --motion-loop-flow: 2.4s;      /* the pending handoff line */
+  --motion-loop-blend: 8s;       /* the playhead crossing the blend drawing (Welcome, page not found) */
   --motion-clock: 70ms;          /* the handoff bar follows the audio clock */
 
   /* what sits on top of what */

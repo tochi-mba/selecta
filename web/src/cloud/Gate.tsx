@@ -115,13 +115,15 @@ export function GateScreen({ eyebrow, icon, tone, title, children, actions, acco
   );
 }
 
-/** A moment of waiting before anything is known: the brand, breathing, and what is happening. */
+/** A moment of waiting before anything is known: the brand, breathing, what is happening, and a
+ * line that keeps moving so the page never looks stuck. */
 export function GateLoading({ label }: { label: string }) {
   return (
     <main className="gate gate-loading" aria-busy="true">
       <div className="gate-wait">
         <BrandMark className="gate-pulse" />
         <p role="status">{label}</p>
+        <span className="gate-line" aria-hidden="true"><i /></span>
       </div>
     </main>
   );

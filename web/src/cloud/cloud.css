@@ -310,12 +310,35 @@
 .cloud-confirm[data-tone='plain'] { border-inline-start-color: var(--edge-interactive); }
 .cloud-card .cloud-confirm p { margin: 0; color: var(--text); }
 .cloud-confirm .cloud-actions { margin: var(--space-3) 0 0; }
-/* an address no page answers: a mark, what happened, and the two ways back */
-.cloud-not-found { display: grid; justify-items: start; gap: var(--space-2); max-width: 40rem; padding: var(--space-6); }
-.cloud-not-found > * { margin: 0; }
-.cloud-not-found h2 { font: var(--type-section); overflow-wrap: anywhere; }
-.cloud-not-found-icon { display: grid; place-items: center; inline-size: 40px; block-size: 40px; margin-bottom: var(--space-2); border: var(--separator) solid var(--edge-decorative); border-radius: var(--radius-sm); background: var(--surface-control); color: var(--text-soft); }
-.cloud-not-found .cloud-actions { margin: var(--space-3) 0 0; }
+/* A page that is not there (LocalFirstEmpty.tsx Lost, CloudStates.tsx NotFound): what happened and
+   the ways back, beside the drawing of a song with nothing after it (styles/boot.css .welcome-art).
+   One column on a phone, the words first; side by side once there is room. */
+.lost-page,
+.cloud-not-found { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: var(--space-6); }
+.cloud-not-found { padding: var(--space-6); }
+.lost-words { display: grid; justify-items: start; gap: var(--space-3); min-width: 0; }
+.lost-words > * { margin: 0; }
+.lost-words h1,
+.cloud-not-found h2 { overflow-wrap: anywhere; }
+.cloud-not-found h2 { font: var(--type-section); }
+.lost-path {
+  max-inline-size: 100%;
+  padding: var(--space-1) var(--space-snug);
+  border: var(--separator) solid var(--edge-decorative);
+  border-radius: var(--radius-sm);
+  background: var(--surface-control);
+  color: var(--text-soft);
+  font: var(--type-counter);
+  overflow-wrap: anywhere;
+}
+.lost-words .row,
+.cloud-not-found .cloud-actions { margin: var(--space-2) 0 0; }
+:is(.lost-page, .cloud-not-found) .welcome-art { inline-size: 100%; max-inline-size: 30rem; animation-delay: var(--motion-feedback); }
+@media (min-width: 901px) {
+  .lost-page,
+  .cloud-not-found { grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr); gap: var(--space-7); }
+  :is(.lost-page, .cloud-not-found) .welcome-art { justify-self: end; }
+}
 /* Labs, the device check and the draft notice: the same card rhythm as the rest of Account */
 .cloud-labs-feedback { display: grid; gap: var(--space-2); margin-top: var(--space-3); }
 .cloud-labs-feedback label { font: var(--type-label); }

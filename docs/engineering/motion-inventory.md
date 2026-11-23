@@ -44,6 +44,10 @@ every token to 0ms.
 | Spectrum visualizer | playing on Listen | canvas redrawn from the analyser | at most 15fps, stops when hidden or off screen | one still frame |
 | Lyric focus | the player clock | current line and word colour | `--motion-reveal` | instant, still follows the clock |
 | Hand-over progress | the player clock | width follows the transition | 70ms linear, exception: it tracks the clock tick | instant, still follows the clock |
+| Welcome page (`cloud/Welcome.tsx`) | the page opens; a step scrolls into view | `rise-in`: the headline a word at a time, then the lead, the buttons, the drawing, the benefits and the steps | `--motion-slow`, each `--motion-feedback` after the last | none: everything rests in place |
+| Blend drawing (`cloud/BlendArt.tsx`: Welcome, page not found) | shown | the playhead crosses (`blend-head`; `blend-skip` when nothing is up next), the blend point answers it (`blend-ring`), the two tags trade emphasis (`blend-tag`); with Expressive each bar lifts as the playhead passes (`blend-kick`) and the card leans toward the pointer | `--motion-loop-blend` 8s loop; the lean `--motion-slow` | a still drawing, the playhead resting on the blend; Subtle has no bar lift and no lean |
+| Gate screens (`cloud/Gate.tsx`) | shown; waiting | the card and the account line `rise-in`; the waiting line runs `lucy-slide` | `--motion-slow`; `--motion-loop-slide` 1.6s loop | none |
+| Cloud pages (`styles/cloud-ui.css`) | page change; a card grid or a meter appears | the page and each card `cloud-arrive`, cards one after another; a meter fills from empty (`meter-fill`) | `--motion-slow`, cards `--motion-feedback` apart | none; the words still say the value |
 | Countdown, playhead, beat pips | the player clock | position set from player time each tick, no transition | clock | unchanged (it is data) |
 
 ## Cloud, Rooms, devices and the other surfaces
@@ -69,12 +73,14 @@ These are longer or shorter than the six tokens on purpose. Each is an ambient l
 follows the player clock. Their lengths are named tokens in `tokens.css` (`--motion-loop-*`, `--motion-clock`), so no sheet holds a raw duration.
 
 - `button-working` 0.9s, `skeleton-breathe` 1.4s, `lucy-slide` 1.6s, `request-pulse` 1.8s, `pending-flow` 2.4s: loops, longer than any token by design.
+- `blend-head`, `blend-skip`, `blend-ring`, `blend-kick`, `blend-tag` 8s (`--motion-loop-blend`): one slow pass of the playhead over the blend drawing. Decoration that shows what a blend is; it never claims to follow real audio.
 - `.handoff-progress i` width 70ms linear: smooths the gap between clock ticks; a token would lag the music.
 
 ## Keyframes
 
 `pending-flow`, `request-pulse`, `lucy-slide`, `feeling-reveal`, `skeleton-reveal`, `toast-appear`,
 `overlay-appear`, `route-reveal`, `skeleton-breathe`, `button-working`, `drawer-appear`, `pop-appear`,
-`fade-exit`, `dialog-exit`, `drawer-exit`, `toast-exit`.
+`fade-exit`, `dialog-exit`, `drawer-exit`, `toast-exit`, `rise-in`, `blend-head`, `blend-skip`, `blend-ring`, `blend-kick`,
+`blend-tag`, `cloud-arrive`, `meter-fill`.
 
 Kiosk `k-slide` is a waiting indicator while music is prepared; the dedicated sheet disables it under reduced motion. The playing motif is static.
