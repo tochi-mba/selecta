@@ -372,8 +372,9 @@ export function Shell({
   const workspace = destinations.find((item) => item.id === 'workspace');
   const cloudMore = mode === 'cloud' && more.length > 0;
   // The side bar lists the places themselves; the account's own pages sit in the account menu
-  const accountPlaces = more.filter((item) => ACCOUNT_PLACES.has(item.id));
-  const railPlaces = more.filter((item) => !ACCOUNT_PLACES.has(item.id));
+  // without an account menu (no one to show) the account pages stay plain links, never unreachable
+  const accountPlaces = account ? more.filter((item) => ACCOUNT_PLACES.has(item.id)) : [];
+  const railPlaces = account ? more.filter((item) => !ACCOUNT_PLACES.has(item.id)) : more;
   const classic = prefs.classicNav && on('app.classic_nav');
   return (
     <div className={`shell ${stage ? 'on-stage' : ''} ${withPlayer ? 'with-player' : ''}`} data-mode={mode}>

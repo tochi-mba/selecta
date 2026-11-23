@@ -557,6 +557,7 @@ export function CloudApp() {
       <Suspense fallback={<main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p>Opening SelectaDJ…</p></main>}>
         <HostedShell
           account={account}
+          signedIn={{ email: user.email, plan: planName(account), onSignOut: signOutHere }}
           page={hostedPage}
           notices={<>{shellNotices}{shellFeedback}</>}
           dock={singleAudioOwner(account) ? (view) => <CloudTransportDock api={api} account={account} page={dockPage(view)} reload={libraryVersion} /> : undefined}

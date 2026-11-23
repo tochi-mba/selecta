@@ -4,7 +4,7 @@ import type { NowState } from '../player';
 import type { PlayerLike } from '../playerContract';
 import { navigate, useLocationText } from '../router';
 import { describeRoute, moreDestinationsFor, moreRouteOf, type Experience, type MoreDestinationId, type ShellRoute } from '../shell/manifest';
-import { Shell } from '../shell/Shell';
+import { Shell, type ShellAccount } from '../shell/Shell';
 import { setJobsSource } from '../state/jobs';
 import { Section } from '../ui/controls';
 import { pageShown, type Account } from './api';
@@ -77,8 +77,10 @@ export function hostedRoute(pathname: string, more: readonly { id: MoreDestinati
   return { view: { missing: pathname }, route: { page: 'missing', path: pathname } };
 }
 
-export function HostedShell({ account, page, notices, dock, footer }: {
+export function HostedShell({ account, page, notices, dock, footer, signedIn }: {
   account: Pick<Account, 'features'>;
+  /** Who is signed in, for the side bar's account menu with Sign out. */
+  signedIn?: ShellAccount;
   /** Draws a hosted page or account place; CloudApp owns the pages and their handlers. */
   page: (view: HostedView) => ReactNode;
   /** The account's notices and the page feedback, first in the banner (one source for both frames). */
@@ -126,6 +128,7 @@ export function HostedShell({ account, page, notices, dock, footer }: {
       onHelp={() => {}}
       mode="cloud"
       more={moreItems}
+      account={signedIn}
       banner={<>{notices}{dock?.(view)}</>}
     >
       {/* one page at a time, each in its own Section: a page that fails to draw says so and can
