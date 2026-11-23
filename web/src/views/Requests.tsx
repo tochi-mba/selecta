@@ -177,7 +177,6 @@ export type RequestsState = {
   playback?: Playback;
   /** ADR-0462: the client every requests surface shares, so previews and searches use the same one. */
   request: Request;
-  /** Refresh the Requests drawer now (e.g. when a room event reaches the host). */
   refresh?: () => Promise<void>;
   add: (song: SongRow) => Promise<void>;
   cancel: (request: RequestRow) => Promise<void>;
@@ -328,8 +327,6 @@ export function useRequests(playback?: Playback, notify?: Notify, override?: Req
   useEffect(() => { checkNow.current(); }, [mixNow, playerNow?.position, playerNow?.phase, playerNow?.inSeam]);
 
   const mounted = useRef(true);
-  // A stream notification may start a new read while an older poll is in flight.
-  // Never let the old response hide the newly accepted room request.
   const listGeneration = useRef(0);
   const refreshList = () => {
     if (inFlight.current) return Promise.resolve();
