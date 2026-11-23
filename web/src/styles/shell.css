@@ -721,6 +721,11 @@ main.page h1[tabindex='-1']:focus { outline: none; }
   .more-nav-workspace { display: none; }
 }
 
+/* On a phone Cloud has no other way in to Search and commands, so its button stays, as an icon */
+@media (max-width: 760px) {
+  .shell[data-mode='cloud'] .palette-button { display: inline-flex; border-color: transparent; color: inherit; }
+}
+
 /* The keyboard shortcuts list: each key beside what it does, the keys in one column */
 dl.keys { display: grid; gap: var(--space-2); width: auto; margin: 0 0 var(--space-4); }
 dl.keys > div { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: var(--space-3); align-items: baseline; }
