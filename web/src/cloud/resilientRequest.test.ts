@@ -4,7 +4,7 @@ import type { Api } from './api';
 import { CloudError } from './api';
 import { configureConnection, getConnection, reportOffline, reportOk } from './connection';
 import {
-  backoffMs, canHeal, classify, isIdempotent, OfflineError, plainMessage, resilient, TimeoutError, withRetry,
+  answeredByApi, backoffMs, canHeal, classify, isIdempotent, OfflineError, plainMessage, resilient, TimeoutError, withRetry, worthRetrying,
 } from './resilientRequest';
 
 // The resilient request layer (plan "Nothing is lost", section 1): failures are named in a few
@@ -165,6 +165,38 @@ describe('resilient', () => {
     await expect(resilient(api, { baseMs: 1, readTimeoutMs: 0 })('/status')).rejects.toMatchObject({ status: 503 });
     expect(calls).toBe(1);
     expect(getConnection().status).toBe('unreachable');
+  });
+
+  it('a 503 our own API wrote is the service answering: the store stays online and it is not retried', async () => {
+    let calls = 0;
+    const api = (async () => { calls += 1; throw new CloudError('Upgrades aren’t available right now.', 503, 'billing_not_configured'); }) as Api;
+    const wrapped = resilient(api, { baseMs: 1 });
+    await expect(wrapped('/billing/checkout', { method: 'POST', headers: { 'Idempotency-Key': 'one' } })).rejects.toMatchObject({ code: 'billing_not_configured' });
+    expect(calls).toBe(1);
+    expect(getConnection().status).toBe('online');
+    for (const code of ['price_unavailable', 'webhook_not_configured', 'billing_misconfigured']) {
+      expect(worthRetrying('server', new CloudError('x', 503, code))).toBe(false);
+    }
+  });
+
+  it('a coded 503 that may heal is tried again, and still leaves the store online', async () => {
+    let calls = 0;
+    const api = (async () => {
+      calls += 1;
+      if (calls < 3) throw new CloudError('The payment service didn’t answer.', 503, 'billing_temporarily_unavailable');
+      return 'opened';
+    }) as Api;
+    const wrapped = resilient(api, { baseMs: 1 });
+    await expect(wrapped('/billing/checkout', { method: 'POST', headers: { 'Idempotency-Key': 'one' } })).resolves.toBe('opened');
+    expect(calls).toBe(3);
+    expect(getConnection().status).toBe('online');
+  });
+
+  it('only an answer with the API’s own code counts as answered by it', () => {
+    expect(answeredByApi(new CloudError('x', 503, 'billing_not_configured'))).toBe(true);
+    expect(answeredByApi(new CloudError('Request failed (503)', 503))).toBe(false);
+    expect(answeredByApi(new CloudError('x', 0, 'offline'))).toBe(false);
+    expect(answeredByApi(new TypeError('Failed to fetch'))).toBe(false);
   });
 
   it('never sends a POST without an idempotency key twice', async () => {

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Account } from './api';
+import { CloudError, type Account } from './api';
+import { refusalMessage } from './authConfig';
+import { classify, plainMessage } from './resilientRequest';
 
 // Checkout, the parts that aren't drawing (docs/saas/08-billing.md §8.2 and §8.4).
 //
@@ -32,6 +34,26 @@ export function checkoutBody(plan: 'standard' | 'premium', interval: 'month' | '
     requested_immediate_access: consent.immediate,
     acknowledged_cancellation_right: consent.cancellation,
   };
+}
+
+/** Whether this site can start a checkout at all. The server says so in the account's billing
+ * block; an older server that does not say means it can, as before. */
+export function checkoutAvailable(account: Account | null): boolean {
+  return account?.billing?.checkout_available !== false;
+}
+
+export const UPGRADES_NOT_OPEN = 'Upgrades aren’t open yet on this site.';
+const CHECKOUT_FAILED = 'SelectaDJ couldn’t start the payment. Nothing was charged. Try again in a moment.';
+
+/** Why pressing Continue did not open Checkout, in plain words: the refusal's own sentence when
+ * the server's code has one, never the code itself or a raw network error. */
+export function checkoutProblem(problem: unknown): string {
+  if (problem instanceof CloudError && problem.code) {
+    if (problem.code === 'consent_version_changed') return 'The subscription terms have just been updated. Refresh the page to read the new wording, then try again.';
+    return refusalMessage(problem.code) ?? CHECKOUT_FAILED;
+  }
+  const kind = classify(problem);
+  return kind === 'refused' || kind === 'aborted' ? CHECKOUT_FAILED : plainMessage(problem);
 }
 
 function returnedFromCheckout(): 'success' | 'cancelled' | null {

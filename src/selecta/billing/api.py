@@ -18,8 +18,8 @@ from sqlalchemy.engine import Engine
 from selecta.admin import state as emergency_state
 from selecta.authz.roles import WorkspaceAction
 from selecta.billing import plans, stripe_sync
-from selecta.billing.schema import checkout_consents, stripe_customers
-from selecta.billing.stripe_sync import PricePlan, parse_price_map
+from selecta.billing.schema import checkout_consents, insert_ignore, stripe_customers
+from selecta.billing.stripe_sync import PricePlan, StripeRefused, parse_price_map
 from selecta.billing.webhooks import (
     HttpStripeClient,
     SignatureError,
@@ -70,6 +70,29 @@ def _checkout_prices() -> dict[str, PricePlan]:
         return prices
     except (ValueError, TypeError) as error:
         raise HTTPException(status_code=503, detail={"code": "billing_not_configured"}) from error
+
+
+def _misconfigured(error: StripeRefused) -> HTTPException:
+    """Stripe answered and said no (a wrong key, a price that is not in that account or mode):
+    ours to fix, not Stripe being down. The client has already logged Stripe's own reason."""
+    return HTTPException(status_code=503, detail={"code": "billing_misconfigured"})
+
+
+def checkout_available() -> bool:
+    """Whether a checkout could be started on this site at all: the Stripe key is set and the
+    price map parses and names at least one price. `/api/account` says so, so the page does not
+    offer an upgrade the server would only refuse with `billing_not_configured`.
+
+    This only knows what the environment says. Whether Stripe accepts the key, and whether the
+    prices exist in that Stripe account and mode, is only learned by asking Stripe, which is
+    never done to build the account: a checkout Stripe refuses answers `billing_misconfigured`.
+    """
+    if not os.environ.get("SELECTA_STRIPE_SECRET_KEY", "").strip():
+        return False
+    try:
+        return bool(parse_price_map(json.loads(os.environ.get("SELECTA_STRIPE_PRICES", "{}"))))
+    except (ValueError, TypeError):
+        return False
 
 
 def install_routes(
@@ -134,51 +157,59 @@ def install_routes(
             billing = stripe()
         except HTTPException:
             raise
+        workspace_id = principal.workspace.id
+        customer_of = select(stripe_customers.c.stripe_customer_id).where(
+            stripe_customers.c.workspace_id == workspace_id
+        )
+        # No transaction is held open across a call to Stripe: each step that writes commits
+        # in its own short one. So the workspace's customer row outlives a session Stripe
+        # refuses, and the next attempt reuses that customer instead of making a second one
+        # in Stripe once its idempotency window for the first has passed.
         try:
-            with transaction(engine, principal.workspace.id) as conn:
-                entitlement = stripe_sync.effective_entitlement(conn, principal.workspace.id)
+            with transaction(engine, workspace_id) as conn:
+                entitlement = stripe_sync.effective_entitlement(conn, workspace_id)
                 if entitlement.plan_id != "free":
                     raise HTTPException(status_code=409, detail={"code": "subscription_exists"})
-                customer_id = conn.execute(
-                    select(stripe_customers.c.stripe_customer_id).where(
-                        stripe_customers.c.workspace_id == principal.workspace.id
-                    )
-                ).scalar_one_or_none()
-                if customer_id is None:
-                    customer = billing.create_customer(
-                        workspace_id=principal.workspace.id,
-                        idempotency_key=f"selecta-customer-{principal.workspace.id}",
-                        email=principal.user.email,
-                    )
-                    customer_id = customer["id"]
-                    conn.execute(
-                        stripe_customers.insert().values(
-                            workspace_id=principal.workspace.id,
-                            stripe_customer_id=customer_id,
-                            created_at=db_now(conn),
-                        )
-                    )
-                success_url = (
-                    origin + "/account/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}"
+                customer_id = conn.execute(customer_of).scalar_one_or_none()
+            if customer_id is None:
+                customer = billing.create_customer(
+                    workspace_id=workspace_id,
+                    idempotency_key=f"selecta-customer-{workspace_id}",
+                    email=principal.user.email,
                 )
-                cancel_url = origin + "/account/billing?checkout=cancelled"
-                session = billing.create_checkout_session(
-                    workspace_id=principal.workspace.id,
-                    customer_id=customer_id,
-                    price_id=price_id,
-                    success_url=success_url,
-                    cancel_url=cancel_url,
-                    idempotency_key=_stripe_idempotency(
-                        "checkout", principal.workspace.id, idempotency_key
-                    ),
-                )
-                ip_key = os.environ.get("SELECTA_IP_HASH_KEY", "").encode()
-                client_ip = request.client.host if request.client else ""
-                ip_hash = (
-                    hmac.new(ip_key, client_ip.encode(), hashlib.sha256).hexdigest()
-                    if ip_key and client_ip
-                    else None
-                )
+                with transaction(engine, workspace_id) as conn:
+                    # two presses at once: whichever row went in first is the workspace's customer
+                    insert_ignore(
+                        conn,
+                        stripe_customers,
+                        {
+                            "workspace_id": workspace_id,
+                            "stripe_customer_id": customer["id"],
+                            "created_at": db_now(conn),
+                        },
+                        ["workspace_id"],
+                    )
+                    customer_id = conn.execute(customer_of).scalar_one()
+            success_url = (
+                origin + "/account/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}"
+            )
+            cancel_url = origin + "/account/billing?checkout=cancelled"
+            session = billing.create_checkout_session(
+                workspace_id=workspace_id,
+                customer_id=customer_id,
+                price_id=price_id,
+                success_url=success_url,
+                cancel_url=cancel_url,
+                idempotency_key=_stripe_idempotency("checkout", workspace_id, idempotency_key),
+            )
+            ip_key = os.environ.get("SELECTA_IP_HASH_KEY", "").encode()
+            client_ip = request.client.host if request.client else ""
+            ip_hash = (
+                hmac.new(ip_key, client_ip.encode(), hashlib.sha256).hexdigest()
+                if ip_key and client_ip
+                else None
+            )
+            with transaction(engine, workspace_id) as conn:
                 conn.execute(
                     checkout_consents.insert().values(
                         id=new_id(),
@@ -191,6 +222,8 @@ def install_routes(
                         stripe_subscription_id=None,
                     )
                 )
+        except StripeRefused as error:
+            raise _misconfigured(error) from error
         except StripeUnavailable as error:
             raise HTTPException(
                 status_code=503, detail={"code": "billing_temporarily_unavailable"}
@@ -226,6 +259,8 @@ def install_routes(
                     "portal", principal.workspace.id, idempotency_key
                 ),
             )
+        except StripeRefused as error:
+            raise _misconfigured(error) from error
         except StripeUnavailable as error:
             raise HTTPException(
                 status_code=503, detail={"code": "billing_temporarily_unavailable"}

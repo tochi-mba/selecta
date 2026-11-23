@@ -21,7 +21,7 @@ import { noteAuthProblem, sessionEnded } from './authTrail';
 import { BlockedCode, blockedCode, callbackProblem, refusalMessage, SUSPENDED_NOTICE, withoutCallbackError } from './authConfig';
 import { Billing } from './Billing';
 import { PrivacyNoticeDraft, showsPrivacyDraft } from './PrivacyNoticeDraft';
-import { checkoutBody, Consent, consentVersionFor, useCheckoutReturn } from './checkout';
+import { checkoutBody, checkoutProblem, Consent, consentVersionFor, useCheckoutReturn } from './checkout';
 import { CloudTransportDock, singleAudioOwner } from './CloudTransportDock';
 import { ACCOUNT_STATES_FLAG, BUSINESS_FLAG, BUSINESS_JOIN_PATH, isBusinessPath, resolveRoute } from './cloudRoutes';
 import { parseBusinessPath } from '../business/context';
@@ -210,6 +210,8 @@ export function CloudApp() {
   }, []);
   const busy = (operation: Operation) => running.has(operation);
 
+  // why the last press of "Continue with ..." did not open Checkout; shown beside that button
+  const [checkoutError, setCheckoutError] = useState('');
   const [signInAgain, setSignInAgain] = useState(false);
   const againShown = useRef(signInAgain);
   againShown.current = signInAgain;
@@ -451,6 +453,7 @@ export function CloudApp() {
 
   const openCheckout = async (plan: 'standard' | 'premium', interval: 'month' | 'year', consent: Consent) => {
     if (!account) return;
+    setCheckoutError('');
     await operate('checkout', async () => {
       try {
         const result = await api<{ url: string }>('/billing/checkout', {
@@ -459,9 +462,8 @@ export function CloudApp() {
         }, account.workspace.id);
         window.location.assign(result.url);
       } catch (problem) {
-        throw problem instanceof CloudError && problem.code === 'consent_version_changed'
-          ? new Error('The subscription terms have just been updated. Refresh the page to read the new wording, then try again.')
-          : problem;
+        // said beside the button that was pressed (Billing's hint line), not in a banner far above
+        setCheckoutError(checkoutProblem(problem));
       }
     });
   };
@@ -655,7 +657,7 @@ export function CloudApp() {
     ]}
     danger={[(exact || hostedShell) && <AccountDanger busy={busy('everywhere') || busy('delete')} onSignOutEverywhere={signOutEverywhere} onDelete={deleteAccount} />]}
   /> : null;
-  const billing = account && <SettingsLayout current="billing" places={places}><Billing account={account} busy={busy('checkout') || busy('portal')} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} /></SettingsLayout>;
+  const billing = account && <SettingsLayout current="billing" places={places}><Billing account={account} busy={busy('checkout') || busy('portal')} phase={checkout} consentVersion={consentVersion} error={checkoutError} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} /></SettingsLayout>;
   const uploads = account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} perFile={flagOn(LIBRARY_STATES_FLAG)} />;
   // The account places behind More, one drawing for both shared shells.
   const morePanel = (id: MoreDestinationId): ReactNode => {

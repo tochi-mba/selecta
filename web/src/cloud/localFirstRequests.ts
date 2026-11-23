@@ -161,7 +161,16 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
       room,
     };
   };
-  const list = async () => ({ requests: (await rows()).rows });
+  /** The list the Requests hook polls every four seconds. With nothing waiting (no request of
+   * this browser's own, none from the open room) there are no titles to look up, so the library
+   * is not read: an idle page used to read the whole catalogue on every poll. */
+  const list = async () => {
+    const handed = await roomRequests();
+    const openNow = openRoomId();
+    const waiting = openNow === undefined ? handed.length : handed.filter((asked) => asked.room_id === openNow).length;
+    if (!waiting && !load(workspaceId).local.length) return { requests: [] as RequestRow[] };
+    return { requests: (await rows()).rows };
+  };
 
   /** Let a request go: this browser's own is forgotten, a room's is reported to the room. */
   const finish = async (id: number, outcome: 'played' | 'dismiss') => {

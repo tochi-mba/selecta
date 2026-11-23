@@ -2,8 +2,9 @@ import { act, render, renderHook, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cloudAccount } from '../test/cloudAccount';
-import { Billing } from './Billing';
-import { checkoutBody, consentVersionFor, NO_CONSENT, useCheckoutReturn } from './checkout';
+import { CloudError } from './api';
+import { Billing, yearlyComparison } from './Billing';
+import { checkoutAvailable, checkoutBody, checkoutProblem, consentVersionFor, NO_CONSENT, useCheckoutReturn } from './checkout';
 import { Meters } from './Meters';
 
 afterEach(() => { window.history.replaceState({}, '', '/'); vi.useRealTimers(); });
@@ -133,6 +134,78 @@ describe('coming back from Checkout', () => {
     window.history.replaceState({}, '', '/account/billing?checkout=cancelled');
     const { result } = renderHook(() => useCheckoutReturn(cloudAccount(), async () => {}));
     expect(result.current).toBe('cancelled');
+  });
+});
+
+describe('a checkout that could not start', () => {
+  const draw = (props: Partial<Parameters<typeof Billing>[0]> = {}) => render(<Billing account={cloudAccount()} busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} {...props} />);
+
+  it('says why beside the button, as an alert, and the button is back to normal', () => {
+    draw({ error: checkoutProblem(new CloudError('x', 503, 'billing_not_configured')) });
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Upgrades aren’t available right now. Nothing was charged. Try again later.');
+    // in the hint slot, in the same row as the button it is about
+    expect(within(alert.parentElement!).getByRole('button', { name: 'Continue with Premium' })).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/billing.not.configured/i);
+  });
+
+  it('gives every billing refusal plain words, never its code', () => {
+    const said = (code: string) => checkoutProblem(new CloudError(code.replaceAll('_', ' '), 503, code));
+    expect(said('price_unavailable')).toBe('Upgrades aren’t available right now. Nothing was charged. Try again later.');
+    expect(said('billing_misconfigured')).toBe('Upgrades aren’t available right now. Nothing was charged. Try again later.');
+    expect(said('billing_temporarily_unavailable')).toBe('The payment service didn’t answer. Nothing was charged. Try again in a moment.');
+    expect(said('subscription_exists')).toBe('This workspace already has a plan. Manage it from the billing portal.');
+    expect(said('billing_customer_not_found')).toBe('There’s no billing record for this workspace yet.');
+    expect(said('untrusted_origin')).toBe('This address isn’t allowed to start a payment.');
+    expect(said('untrusted_return_url')).toBe('This address isn’t allowed to start a payment.');
+    expect(said('consent_required')).toBe('Tick all three boxes to continue.');
+    expect(said('billing_not_permitted')).toBe('Only the workspace owner can change the plan.');
+    expect(said('consent_version_changed')).toMatch(/terms have just been updated/);
+    // a code with no sentence of its own, and a raw network failure, are never shown as they came
+    expect(said('some_new_code')).toBe('SelectaDJ couldn’t start the payment. Nothing was charged. Try again in a moment.');
+    expect(checkoutProblem(new TypeError('Failed to fetch'))).not.toMatch(/failed to fetch/i);
+  });
+
+  it('when the site cannot start a payment, shows the plans to read with one quiet line and no form', () => {
+    draw({ account: { ...cloudAccount(), billing: { consent_version: 'v1', checkout_available: false } } });
+    expect(screen.getByTestId('upgrades-not-open')).toHaveTextContent('Upgrades aren’t open yet on this site.');
+    expect(screen.getByText('Standard')).toBeInTheDocument();
+    expect(screen.getByText('Premium')).toBeInTheDocument();
+    expect(screen.queryByText('Before subscribing')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Continue with/ })).toBeNull();
+    expect(screen.queryByRole('radio')).toBeNull();
+    expect(screen.queryByText(/Upgrade whenever you like/)).toBeNull();
+  });
+
+  it('an older server that does not say is treated as able to, as before', () => {
+    expect(checkoutAvailable({ ...cloudAccount(), billing: { consent_version: 'v1' } })).toBe(true);
+    expect(checkoutAvailable({ ...cloudAccount(), billing: undefined })).toBe(true);
+    draw();
+    expect(screen.getByText('Before subscribing')).toBeInTheDocument();
+    expect(screen.getAllByRole('radio')).toHaveLength(2);
+  });
+});
+
+describe('the annual price', () => {
+  it('says what it comes to a month and what it saves, from the two prices', () => {
+    expect(yearlyComparison('£6.99 / month', '£59 / year')).toBe('£4.92 a month, billed yearly. Save £24.88.');
+    expect(yearlyComparison('£12.99 / month', '£109 / year')).toBe('£9.08 a month, billed yearly. Save £46.88.');
+  });
+
+  it('claims no saving when there is none, and says nothing when a price cannot be read', () => {
+    expect(yearlyComparison('£5 / month', '£60 / year')).toBe('£5.00 a month, billed yearly.');
+    expect(yearlyComparison('£5 / month', '£72 / year')).toBe('£6.00 a month, billed yearly.');
+    expect(yearlyComparison('', '£59 / year')).toBeNull();
+    expect(yearlyComparison('£6.99 / month', 'Ask us')).toBeNull();
+    expect(yearlyComparison('$6.99 / month', '£59 / year')).toBeNull();
+  });
+
+  it('shows under each card only when Annual is chosen', async () => {
+    render(<Billing account={cloudAccount()} busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
+    expect(screen.queryByText(/billed yearly/)).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Annual' }));
+    expect(screen.getByText('£4.92 a month, billed yearly. Save £24.88.')).toBeInTheDocument();
+    expect(screen.getByText('£9.08 a month, billed yearly. Save £46.88.')).toBeInTheDocument();
   });
 });
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import pytest
 from cloud_world import HEADERS, add_asset, signed_up
+from test_cloud_billing_fakes import PRICES_JSON
 
 from selecta.billing import stripe_sync
 from selecta.billing.plans import plan_for
@@ -87,9 +88,35 @@ def test_account_reports_every_meter_with_its_reset(tmp_path, monkeypatch):
                 "period": "month",
             }
         ]
-        assert body["billing"] == {"consent_version": "terms-2026-11"}
+        # no Stripe key or prices here, so the page is told an upgrade cannot be started
+        assert body["billing"] == {"consent_version": "terms-2026-11", "checkout_available": False}
         assert body["lucy"] == {"tier": "Lucy Basic"}
         assert body["entitlement"]["plan_label"] == "Free"
+
+
+@pytest.mark.parametrize(
+    ("key", "prices", "available"),
+    [
+        ("sk_test_x", PRICES_JSON, True),
+        ("", PRICES_JSON, False),
+        ("   ", PRICES_JSON, False),
+        ("sk_test_x", "", False),
+        ("sk_test_x", "{}", False),
+        ("sk_test_x", "not json", False),
+        ("sk_test_x", '{"price_x": "nonsense"}', False),
+    ],
+)
+def test_account_says_whether_a_checkout_can_be_started(
+    tmp_path, monkeypatch, key, prices, available
+):
+    """True only with a Stripe key and a price map that parses and is not empty: the same two
+    things `POST /api/billing/checkout` refuses without (`billing_not_configured`)."""
+    monkeypatch.setenv("SELECTA_STRIPE_SECRET_KEY", key)
+    monkeypatch.setenv("SELECTA_STRIPE_PRICES", prices)
+    with signed_up(tmp_path, monkeypatch) as world:
+        account = world.client.get("/api/account", headers=HEADERS)
+        assert account.status_code == 200, account.text
+        assert account.json()["billing"]["checkout_available"] is available
 
 
 def test_allowances_reset_at_the_listeners_own_midnight(tmp_path, monkeypatch):
