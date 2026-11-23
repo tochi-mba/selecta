@@ -78,3 +78,103 @@
   /* the notice's one action is a full-width, finger-sized button under its words */
   .devices-panel .banner.acct-notice > button { flex: 1 1 100%; min-height: 44px; justify-content: center; }
 }
+
+/* ==========================================================================================
+   The remote on Listen (devices/RemoteListen.tsx, flag devices.remote_control): what is playing
+   on the speaker, a seek bar, previous / play / next, volume and what is up next, on a device
+   that is not the speaker. Built for a 360px phone first: one column, thumb-sized controls.
+   Phone landscape (a short window) puts the song beside the transport so the controls and the
+   seek bar fit without scrolling; a wide window puts Up next beside the card.
+   Nothing here loops or animates; the page arrives with the shell's own page motion.
+   ========================================================================================== */
+.remote-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); align-items: start; min-width: 0; }
+.remote-card {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-5) var(--space-4);
+  border: var(--separator) solid var(--edge-decorative);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+}
+.remote-where { display: flex; align-items: center; gap: var(--icon-gap); margin: 0; color: var(--text-soft); font: var(--type-meta); font-weight: var(--weight-label); overflow-wrap: anywhere; }
+.remote-where > svg { flex: none; }
+.remote-listen[data-speaker=offline] .remote-where { color: var(--status-warning); }
+.remote-song { display: grid; gap: var(--space-1); min-width: 0; }
+.remote-song h2 { margin: 0; font: var(--type-section); overflow-wrap: anywhere; }
+.remote-song p { margin: 0; color: var(--text-soft); font: var(--type-song); font-weight: var(--weight-body); overflow-wrap: anywhere; }
+.remote-song p.remote-place { font: var(--type-caption); font-variant-numeric: tabular-nums; }
+.remote-state { margin: 0; padding-inline-start: var(--space-2); border-inline-start: var(--marker) solid var(--status-warning); color: var(--text); font: var(--type-meta); }
+.remote-seek { display: grid; gap: var(--space-hair); min-width: 0; }
+.remote-seek input[type=range],
+.remote-volume input[type=range] {
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: var(--control-height);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  accent-color: var(--selected);
+  touch-action: pan-y;
+}
+.remote-seek input[type=range]:focus-visible,
+.remote-volume input[type=range]:focus-visible { outline: 2px solid var(--focus); outline-offset: var(--space-hair); border-radius: var(--radius-sm); }
+.remote-times { display: flex; justify-content: space-between; gap: var(--space-3); margin: 0; color: var(--text-soft); font: var(--type-meta); font-variant-numeric: tabular-nums; }
+.remote-no-length { margin: 0; color: var(--text-soft); font: var(--type-meta); }
+.remote-transport { display: flex; align-items: center; justify-content: center; gap: var(--space-5); }
+.remote-transport button { display: grid; place-items: center; flex: none; padding: 0; border-radius: var(--radius-pill); }
+.remote-transport .remote-step { inline-size: 56px; block-size: 56px; min-height: 56px; }
+.remote-transport .remote-play { inline-size: 72px; block-size: 72px; min-height: 72px; }
+.remote-transport button:focus-visible { outline: 2px solid var(--focus); outline-offset: var(--space-hair); }
+.remote-volume { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--space-3); color: var(--text-soft); }
+.remote-side { display: grid; gap: var(--space-4); min-width: 0; }
+.remote-next { display: grid; gap: var(--space-2); min-width: 0; }
+.remote-next h2 { margin: 0; font: var(--type-song); }
+.remote-next ol { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-hair); }
+.remote-next li button {
+  display: grid;
+  grid-template-columns: var(--space-6) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  inline-size: 100%;
+  min-height: 52px;
+  padding: var(--space-1) var(--space-2);
+  border-color: transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  text-align: start;
+}
+.remote-next li button:hover { background: var(--surface-control); }
+.remote-next li button:focus-visible { outline: 2px solid var(--focus); outline-offset: var(--space-hair); }
+.remote-next-place { color: var(--text-soft); font: var(--type-meta); font-variant-numeric: tabular-nums; text-align: center; }
+.remote-next-words { display: grid; min-width: 0; }
+.remote-next-words > * { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.remote-next-words b { font: var(--type-song); font-size: var(--text-sm); }
+.remote-next-words span { color: var(--text-soft); font: var(--type-meta); }
+.remote-device { margin: 0; color: var(--text-soft); font: var(--type-meta); }
+
+/* a wide window: Up next sits beside the card */
+@media (min-width: 901px) {
+  .remote-layout { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--space-6); }
+  .remote-card { padding: var(--space-6); gap: var(--space-5); }
+}
+
+/* phone landscape (about 740 by 360): the page title gives its line to the controls (it stays
+   for screen readers), the song sits beside the transport, and Up next takes the other column */
+@media (orientation: landscape) and (max-height: 480px) {
+  .remote-listen .page-header { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .remote-layout { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--space-4); }
+  .remote-card { grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-3); padding: var(--space-3); align-items: center; }
+  .remote-card > .remote-where,
+  .remote-card > .remote-state,
+  .remote-card > .remote-seek,
+  .remote-card > .remote-volume { grid-column: 1 / -1; }
+  .remote-song h2 { font: var(--type-song); }
+  .remote-song p { font: var(--type-meta); }
+  .remote-song p.remote-place { display: none; }
+  .remote-transport { gap: var(--space-2); }
+  .remote-transport .remote-step { inline-size: 48px; block-size: 48px; min-height: 48px; }
+  .remote-transport .remote-play { inline-size: 56px; block-size: 56px; min-height: 56px; }
+  .remote-next li button { min-height: 48px; }
+}

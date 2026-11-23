@@ -37,7 +37,9 @@ import { CurrentMix } from '../views/CurrentMix';
 import { CannotPlayHere, ListenEmpty, MixesEmpty, NotOnThisAccount, OnlyOnYourComputer, PageNotFound } from './LocalFirstEmpty';
 import { useLocalFirstPlayer } from './localFirstPlayer';
 import { BROWSER_MIX_NEEDS } from './localFirstMixes';
-import { EMPTY_MIX, localFirstRequest, mediaRequest, type AvailabilitySources } from './localFirstRequest';
+import { EMPTY_MIX, localFirstRequest, mediaRequest, readCatalogue, type AvailabilitySources } from './localFirstRequest';
+import { RemoteListen } from '../devices/RemoteListen';
+import { useRemote } from '../devices/useRemote';
 import { ROOM_REQUEST_EVENT } from './localFirstRequests';
 import { askWords, roomLine, useRoomLive, useRoomSession, waitingCount, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
 import { recipeStore } from './recipeStore';
@@ -368,6 +370,10 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // the browser stem splitter (cloud.browser_stems): absent while the stem model's licence is held
   const songOrder = useMemo(() => data.mix.map((item) => item.song_id), [data.mix]);
   const stems = useStemsEngine({ role: playback.view?.speaker === 'elsewhere' ? 'controller' : 'speaker', programme: songOrder, prefetch });
+  // devices.remote_control: a device that is not the speaker, and does not hold the mix that is
+  // playing, steers it from Listen and the mini player (devices/useRemote.ts); null otherwise
+  const loadRemoteSongs = useCallback(() => readCatalogue(cloud), [cloud]);
+  const remote = useRemote({ remoteControl: on('devices.remote_control'), device: playback, mixSongIds: songOrder, loadSongs: loadRemoteSongs });
   useSplitterNotices(stems.store, (words) => showToast(words));
   const resolveTrack = useCallback<MediaResolver>(async (songId) => (await resolver())?.(songId) ?? null, [resolver]);
   // Harmonic matches read only this device's own files (never a hosted copy), to measure and to
@@ -601,6 +607,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
           />
         )}{localExport}</>;
       case 'listen':
+        // something is playing on another device and this one does not hold that mix: the remote
+        if (remote) return <RemoteListen remote={remote} playableHere={status?.counts.ready ?? 0} />;
         return (
           <>
             {refusal && <div className="page"><CannotPlayHere reason={refusal} /></div>}
@@ -635,12 +643,13 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     <BytesContext.Provider value={noBytesHere}>
       <Shell
         route={route}
-        player={shellPlayer}
-        now={now}
-        song={song}
-        showPlayer={route.page !== 'listen' && !!song && now.phase !== 'idle'}
+        // a controller's mini player is the remote session through the same contract (useRemote)
+        player={remote ? remote.player : shellPlayer}
+        now={remote ? remote.now : now}
+        song={remote ? remote.song : song}
+        showPlayer={route.page !== 'listen' && (remote ? remote.now.phase !== 'idle' : !!song && now.phase !== 'idle')}
         hasMix={data.mix.length > 0}
-        hasNext={data.mix.length > now.position + 1}
+        hasNext={remote ? remote.hasNext : data.mix.length > now.position + 1}
         stage={false}
         waitingRequests={on('requests') ? waitingCount(roomShown, songRequests.requests) : 0}
         onRequests={() => setRequesting(true)}
