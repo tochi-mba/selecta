@@ -1,6 +1,6 @@
 import { ApiError, MixData, SongRow, Status, Suggestion, VibeCard } from '../api';
 import { browserMovesAllowed, browserMovesOn } from './browserMoves';
-import { asMixData, RecipeStore, WORKED_OUT_LIVE } from './recipeStore';
+import { asMixData, copyName, RecipeStore, WORKED_OUT_LIVE } from './recipeStore';
 
 /** The mix route family of the local-first adapter (ADR-0462 "one adapter per route family",
  * BF-0462-05): `/vibes`, `/vibes/{key}/build`, `/mix`, `/steer` and the destination search the
@@ -185,7 +185,9 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
     if (!body.copy_current) throw refuse('SelectaDJ can’t make that kind of draft in your browser yet.', 'flag_off', 404);
     const id = store.current();
     if (!id) throw refuse('There is no current browser mix to copy. Press Play on Make a Mix first.', 'no_mix', 404);
-    const made = await store.duplicate(id, body.name?.trim() || undefined);
+    // a tidy "… copy" name from the current one; if it cannot be read, the server names the copy
+    const name = body.name?.trim() || await store.read(id).then((mix) => copyName(mix.name), () => undefined);
+    const made = await store.duplicate(id, name);
     return { name: made.name };
   };
 

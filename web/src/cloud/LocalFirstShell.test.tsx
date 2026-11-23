@@ -283,8 +283,8 @@ describe('designed empty states, never a blank table', () => {
     songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
     window.history.replaceState({}, '', '/listen');
     render(<CloudApp />);
-    expect(await screen.findByRole('heading', { name: 'Nothing is playing' })).toBeVisible();
-    expect(screen.getAllByRole('link', { name: 'Make a Mix' }).length).toBeGreaterThan(0);
+    expect(await screen.findByRole('heading', { name: 'Choose your music again to listen' })).toBeVisible();
+    expect(screen.getAllByRole('link', { name: 'Connect music' }).length).toBeGreaterThan(0);
     expect(screen.queryByRole('table')).toBeNull();
   });
 
@@ -293,8 +293,8 @@ describe('designed empty states, never a blank table', () => {
     songs = [{ id: 1, title: 'Blue', artist: 'Moon', available_on: 1 }];
     window.history.replaceState({}, '', '/mixes');
     render(<CloudApp />);
-    expect(await screen.findByRole('heading', { name: 'Your songs are connected' })).toBeVisible();
-    expect(screen.getByText(/fewer than two can play on this device/)).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Choose your music again to make a mix' })).toBeVisible();
+    expect(screen.getByText(/this browser can open fewer than two of them/)).toBeVisible();
   });
 
   it('My Mixes with no current mix offers a next step', async () => {

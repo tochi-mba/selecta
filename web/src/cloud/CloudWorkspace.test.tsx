@@ -180,7 +180,8 @@ describe('browser diagnostics', () => {
     expect(panel).toHaveTextContent('The list of connected songs is kept in this browser (IndexedDB).');
     expect(panel).toHaveTextContent('The browser has agreed to keep SelectaDJ’s details on this device.');
     expect(panel).toHaveTextContent(/Browser storage in use: .* of .* allowed\./);
-    expect(panel).toHaveTextContent(/features? on and 0 off for this account in this browser\./);
+    // no feature counts: that is internal detail, not something a member can act on
+    expect(panel).not.toHaveTextContent(/features? on/);
     expect(panel).toHaveTextContent('Nothing is sent anywhere unless you copy it and share it yourself.');
   });
 

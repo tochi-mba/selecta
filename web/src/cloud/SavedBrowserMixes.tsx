@@ -7,7 +7,7 @@ import { Icon } from '../ui/Icon';
 import { MenuItem } from '../ui/primitives';
 import type { ViewProps } from '../views/shared';
 import { EMPTY_MIX } from './localFirstRequest';
-import type { RecipeStore, RecipeSummary } from './recipeStore';
+import { copyName, MIX_NAME_LIMIT, type RecipeStore, type RecipeSummary } from './recipeStore';
 import { flagOn } from '../flags';
 import { MIX_OUTBOX_EVENT, takeOutboxNotices, WAITING_TO_SYNC } from './outbox';
 
@@ -81,14 +81,15 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
     await player.playFrom(0);
   };
   const copy = async (recipe: RecipeSummary) => {
-    const made = await recipes.duplicate(recipe.mix_id);
+    const made = await recipes.duplicate(recipe.mix_id, copyName(recipe.name));
     await load();
     notify(`Saved a copy: ${made.name}.`);
   };
   const saveCurrent = async () => {
     const current = recipes.current();
     if (!current) return;
-    const made = await recipes.duplicate(current);
+    const known = list?.find((recipe) => recipe.mix_id === current);
+    const made = await recipes.duplicate(current, known ? copyName(known.name) : undefined);
     await load();
     notify(`Saved a copy: ${made.name}.`);
   };
@@ -156,7 +157,7 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
                   {renaming === recipe.mix_id ? (
                     <RenameMix name={recipe.name} onCancel={() => setRenaming(null)} onSave={(name) => rename(recipe, name)} />
                   ) : (
-                    <b className="draft-open">{recipe.name}</b>
+                    <b className="draft-open" dir="auto">{recipe.name}</b>
                   )}
                   <span className="soft">{countOf(recipe.songs, 'song')}. {outbox && recipe.pending ? 'Saved on this device; it goes to your account when the connection is back.' : `Saved ${relativeTime(now - recipe.updated_at)}.`}</span>
                   {current && <Status kind="ready">Your current mix</Status>}
@@ -167,7 +168,7 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
                   <Action working="Starting…" aria-label={`Play ${recipe.name}`} run={() => play(recipe)}>Play</Action>
                   <Menu title={`More actions for ${recipe.name}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {recipe.name}</span></>}>
                     <MenuItem aria-label={`Rename ${recipe.name}`} onClick={() => setRenaming(recipe.mix_id)}>Rename</MenuItem>
-                    <MenuItem aria-label={`Copy ${recipe.name}`} onClick={() => void copy(recipe).catch((error: Error) => setProblem(error.message))}>Copy</MenuItem>
+                    <MenuItem aria-label={`Copy ${recipe.name}`} onClick={() => void copy(recipe).catch(() => setProblem(`Couldn’t copy ${recipe.name}. Your mixes are as they were.`))}>Copy</MenuItem>
                     <MenuItem danger aria-label={`Delete ${recipe.name}`} onClick={() => setDeleting(recipe)}><Icon name="trash" /> Delete</MenuItem>
                   </Menu>
                 </div>
@@ -204,13 +205,15 @@ function RenameMix({ name, onSave, onCancel }: { name: string; onSave: (name: st
     try {
       await onSave(clean);
     } catch (error) {
-      setProblem((error as Error).message || 'Couldn’t rename it.');
+      // a bare "Request failed (422)" tells nobody what to do next
+      const words = (error as Error).message ?? '';
+      setProblem(!words || /^Request failed/i.test(words) ? 'Couldn’t save that name. Check your connection and try again.' : words);
       setBusy(false);
     }
   };
   return (
-    <form className="row" onSubmit={submit}>
-      <input autoFocus value={value} onChange={(event) => setValue(event.target.value)} aria-label="New name" onKeyDown={(event) => { if (event.key === 'Escape') onCancel(); }} />
+    <form className="row wrap rename-draft" onSubmit={submit}>
+      <input autoFocus maxLength={MIX_NAME_LIMIT} value={value} onChange={(event) => setValue(event.target.value)} onFocus={(event) => event.target.select()} aria-label="New name" onKeyDown={(event) => { if (event.key === 'Escape') onCancel(); }} />
       <button className="primary" disabled={!value.trim()} aria-busy={busy || undefined}>{busy ? 'Saving…' : 'Save'}</button>
       <button type="button" onClick={onCancel}>Cancel</button>
       {problem && <p className="warn" role="alert">{problem}</p>}

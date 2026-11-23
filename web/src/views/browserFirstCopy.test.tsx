@@ -145,7 +145,7 @@ describe('Make a Mix while too few songs can play here', () => {
   it('keeps the current mix card in view above the empty state', () => {
     render(<MixesEmpty connected={5} current={<section aria-label="Current mix">Friday is playing</section>} />);
     const card = screen.getByRole('region', { name: 'Current mix' });
-    const empty = screen.getByRole('heading', { name: 'Your songs are connected' });
+    const empty = screen.getByRole('heading', { name: 'Choose your music again to make a mix' });
     expect(card).toBeVisible();
     expect(card.compareDocumentPosition(empty) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole('heading', { level: 1, name: 'Make a Mix' }).compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

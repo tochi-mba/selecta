@@ -74,6 +74,17 @@ export type RecipeStore = {
   flush?: () => Promise<void>;
 };
 
+/** The longest name a saved mix may have (the server's own limit, `mix_contract.NAME_LIMIT`). */
+export const MIX_NAME_LIMIT = 60;
+const COPY_SUFFIX = ' copy';
+/** A copy's name: the original's with " copy", shortened with an ellipsis instead of being cut
+ * mid-word when the two together would pass the limit. */
+export function copyName(name: string): string {
+  const room = MIX_NAME_LIMIT - COPY_SUFFIX.length;
+  const letters = [...name];
+  return `${letters.length > room ? `${letters.slice(0, room - 1).join('').trimEnd()}…` : name}${COPY_SUFFIX}`;
+}
+
 export const DEFAULT_STEERING: Status['steering'] = { mix_language: 'any', stems: 'auto', energy_arc: null, target: null };
 
 /** The store for one workspace. `cloud` is the authenticated Cloud client (paths without /api). */
