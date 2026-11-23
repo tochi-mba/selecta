@@ -21,8 +21,17 @@
 /* ---- Library: what needs the member, straight under the header ---- */
 .lw-lead, .lw-connect-status { display: grid; gap: var(--space-3); min-width: 0; }
 .lw-lead { margin-bottom: var(--space-4); }
-.lw-lead:not(:has(.banner, .lw-import, .lw-disclosure)), .lw-connect-status:not(:has(> :not(input))) { display: none; }
+.lw-lead:not(:has(.banner, .lw-import, .lw-disclosure, .lw-welcome)), .lw-connect-status:not(:has(> :not(input))) { display: none; }
 .lw-lead .banner b { font-weight: var(--weight-label); }
+
+/* a browser that has the library but none of its files: one friendly step */
+.lw-welcome { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-4); min-width: 0; padding: var(--space-4) var(--space-5); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border)); border-radius: var(--radius); background: var(--surface-selected); }
+.lw-welcome > div { flex: 1 1 320px; display: grid; gap: var(--space-1); min-width: 0; }
+.lw-welcome h2 { margin: 0; font: var(--weight-strong) var(--text-lg) / 1.3 var(--body); }
+.lw-welcome p { margin: 0; color: var(--text-soft); line-height: 1.5; }
+.lw-welcome-mark { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--text); }
+.lw-welcome > button { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: var(--icon-gap); min-height: 44px; padding-inline: var(--space-4); }
+.lw-lead:has(.lw-welcome) { display: grid; }
 
 /* ---- adding music: the progress card ---- */
 .lw-import { display: grid; gap: var(--space-3); min-width: 0; padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-raised); text-align: start; }
@@ -82,7 +91,7 @@
 .library-browser:has(.lw-check) { --lw-check: calc(32px + var(--space-3)); }
 .library-browser .library-column-head { grid-template-columns: var(--lw-columns); gap: var(--space-3); padding: var(--space-2) var(--space-2) var(--space-2) calc(var(--space-2) + var(--lw-check)); font-weight: var(--weight-label); }
 .library-browser .library-column-head span:last-child { min-width: 0; }
-.library-browser .library-rows { gap: 0; --library-row-estimate: 57px; }
+.library-browser .library-rows { gap: 0; margin: 0; padding: 0; --library-row-estimate: 57px; }
 .library-browser .skeleton-library { --library-row-estimate: 57px; --row-pad: var(--space-2); --row-gap: 0px; }
 .library-browser .library-rows .song-row.lw-row {
   grid-template-columns: var(--lw-columns);
@@ -251,6 +260,8 @@
   .library-browser .library-rows:not(.library-cards) .lw-start { padding: 0; }
   .library-browser .library-rows:not(.library-cards) .lw-start > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .lw-meta-end { margin-inline-start: auto; }
+  .lw-welcome { padding: var(--space-4); }
+  .lw-welcome > button { flex: 1 1 100%; }
   .lw-connect-actions { width: 100%; }
   .lw-connect-actions button { flex: 1 1 auto; min-height: var(--control-height); }
   .lw-import { padding: var(--space-3); }

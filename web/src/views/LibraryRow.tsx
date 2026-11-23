@@ -58,7 +58,7 @@ const HERE: Record<string, { kind: StatusKind; words: string }> = {
   hosted: { kind: 'ready', words: 'Ready' },
   reauth: { kind: 'needs-action', words: 'Allow again to play here' },
   reconnect: { kind: 'needs-action', words: 'Choose again to play here' },
-  elsewhere: { kind: 'unavailable', words: 'On another device' },
+  elsewhere: { kind: 'unavailable', words: 'Not in this browser yet' },
   nowhere: { kind: 'failed', words: 'Missing' },
 };
 
@@ -79,7 +79,7 @@ export const LibraryRow = memo(function LibraryRow({
     const chip = facts.setAside || song.never
       ? { kind: 'paused' as StatusKind, words: facts.setAside ? 'Set aside' : 'Never played', why: facts.setAside ? facts.reason : 'SelectaDJ will not pick this song for mixes.' }
       : song.availability && HERE[song.availability]
-        ? { ...HERE[song.availability], why: where?.reason ?? '' }
+        ? { ...HERE[song.availability], why: song.availability === 'elsewhere' ? 'Choose your music folder in this browser to play it here.' : where?.reason ?? '' }
         : { kind: facts.kind, words: facts.words, why: facts.reason };
     return (
       <li data-library-page={page} className={`song-row lw-row ${song.never ? 'never' : ''} ${selected ? 'selected' : ''}`}>

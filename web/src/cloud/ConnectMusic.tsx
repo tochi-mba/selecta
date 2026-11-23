@@ -96,7 +96,12 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
   /** Reconcile this device's catalogue availability after a permission is restored. */
   onAvailabilityChanged?: () => void | Promise<void>;
   variant?: ConnectMusicVariant;
-}>(function ConnectMusic({ request, workspaceId, openStore, importer = runImport, onAvailabilityChanged, variant = 'card' }, ref) {
+  /** What a finished import says, where the page knows more than the import does (how many of
+   * the library's songs can now play here). Stopped and paused imports keep their own words. */
+  doneWords?: (summary: ImportSummary) => string;
+  /** The member put a finished import's result away. */
+  onResultDismissed?: (summary: ImportSummary) => void;
+}>(function ConnectMusic({ request, workspaceId, openStore, importer = runImport, onAvailabilityChanged, variant = 'card', doneWords, onResultDismissed }, ref) {
   const live = useImportSession(workspaceId);
   useImportAnnouncer();
   const progressive = useFlag('cloud.progressive_import');
@@ -238,7 +243,7 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
       <Meter label="Files checked" showLabel={false} value={typeof live.total === 'number' ? checked : undefined} max={Math.max(live.total ?? 1, 1)} valueText={checkedWords(live)} />
       {resilient && (live.waiting || live.elsewhere) && <ImportProgressLine live={live} className="lw-import-wait" />}
       <p className="lw-import-next">
-        {resilient && !live.elsewhere && !live.read
+        {resilient && !live.elsewhere && !live.read && checked > 0
           ? `Songs appear in your library as they are checked, so you can keep using SelectaDJ. If this tab closes, it carries on from ${formatCount(checked)} next time.`
           : 'Songs appear in your library as they are checked, so you can keep using SelectaDJ.'}
       </p>
@@ -269,8 +274,8 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
       {result && (
         <div className="banner" data-tone={result.paused ? 'warn' : 'ok'} role="status">
           <Icon name={result.paused ? 'pause' : 'check'} size="toolbar" />
-          <p>{summaryWords(result)}</p>
-          <button type="button" className="quiet" onClick={() => setDismissed(result)}>Dismiss</button>
+          <p>{doneWords && !result.paused && !result.cancelled ? doneWords(result) : summaryWords(result)}</p>
+          <button type="button" className="quiet" onClick={() => { setDismissed(result); onResultDismissed?.(result); }}>Dismiss</button>
         </div>
       )}
       {shownProblem && (

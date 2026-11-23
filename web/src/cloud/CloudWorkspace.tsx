@@ -88,7 +88,7 @@ export function CloudWorkspace({ tab, status, workspaceId, openStore, connect, s
           <h1 className="display small">Workspace</h1>
           <p className="page-lead">{SUBS[tab]}</p>
         </div>
-        {tab !== 'sources' && <div className="page-header-actions"><PageLink to="/workshop/sources" className={`button${tab === 'overview' ? ' primary' : ''}`}><Icon name="plus" size="toolbar" />Connect music</PageLink></div>}
+        {tab !== 'sources' && <div className="page-header-actions"><PageLink to="/workshop/sources" className="button"><Icon name="plus" size="toolbar" />Connect music</PageLink></div>}
       </header>
       <LinkTabs label="Workspace" items={TABS} current={here} />
       {tab === 'overview' && <Overview status={status} workspaceId={workspaceId} connect={connect} degraded={degraded} savedMixes={savedMixes} fileCheck={fileCheck} stemsShown={stemsShown} measuringKeys={measuringKeys} />}
@@ -153,9 +153,9 @@ function Overview({ status, workspaceId, connect, degraded, savedMixes, fileChec
   } else if (playable < songs - missing && !running && !interrupted) {
     needs.push({
       key: 'choose', icon: 'folder',
-      title: playable === 0 ? 'Your songs are not open in this browser yet' : `${formatCount(songs - missing - playable)} songs are not open in this browser`,
-      words: 'Choose your folder again to play them here. Songs on your other devices stay listed.',
-      action: <button type="button" onClick={() => handle.current?.chooseFolder()}>Choose your folder again</button>,
+      title: playable * 5 < songs ? 'This browser hasn’t been given your music yet' : `${formatCount(songs - missing - playable)} songs are not open in this browser`,
+      words: playable * 5 < songs ? 'Each browser needs the folder once. Your library, mixes and settings are already here.' : 'Choose your music folder to play them here.',
+      action: <button type="button" className={playable * 5 < songs ? 'primary' : undefined} onClick={() => handle.current?.chooseFolder()}>Choose your music folder</button>,
     });
   }
   if (missing > 0) {
