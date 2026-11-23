@@ -147,7 +147,6 @@
 .acct .cloud-plan-card { background: var(--surface-control); padding: var(--space-5); gap: var(--space-3); }
 .acct .cloud-plan-card .cloud-plan-kind { margin: 0; color: var(--text-soft); font: var(--type-meta); }
 .acct .cloud-plan-card h3 { margin: 0; font: var(--type-song); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-.acct .cloud-plan-card.featured { box-shadow: none; }
 .acct .cloud-legal { border: 0; padding: 0; background: none; display: grid; gap: var(--space-1); }
 .acct .cloud-legal label { align-items: center; min-height: var(--control-height); padding: 0; font: var(--type-meta); color: var(--text); }
 .acct .cloud-legal input { margin: 0; flex: none; }
