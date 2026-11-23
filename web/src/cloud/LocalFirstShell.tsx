@@ -549,7 +549,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       const item = moreItems.find((place) => place.id === route.id);
       if (!item) return <NotOnThisAccount />;
       if (item.id === 'workspace') return <ThisDevice openStore={openStore}>{connect}<StemsCard enabled={stems.enabled} store={stems.store} /></ThisDevice>;
-      return <main className="page" id="main"><h1 className="display small">{item.label}</h1><div className="stack">{more(item.id)}</div></main>;
+      return <main className="page" id="main" data-place={item.id}><h1 className="display small">{item.label}</h1><div className="stack">{more(item.id)}</div></main>;
     }
     if (!shared) {
       return <main className="page" id="main" aria-busy={!statusProblem}><h1 className="display small">{describeRoute(route).title}</h1>{statusProblem ? (offlineShell ? <StatusProblem words={statusProblem} onRetry={() => { setStatusProblem(''); refreshStatus(); refreshMix(); }} /> : <p role="alert">{statusProblem}</p>) : <Skeleton variant="rows" lines={4} label="Opening your library" />}</main>;
@@ -643,14 +643,15 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
         mode="cloud"
         more={moreItems}
         account={onSignOut ? { email: account.user.email, plan: planName(account), onSignOut } : undefined}
-        banner={<>{room && roomsPlace && !(route.page === 'more' && route.id === 'rooms') && (
-          <p className="room-open-line" role="status" data-testid="room-open-line">
-            <a href={roomsPlace.path} onClick={(event) => { event.preventDefault(); navigate(roomsPlace.path); }}>{roomLine(room)}</a>
+        status={room && roomsPlace && !(route.page === 'more' && route.id === 'rooms') ? (
+          <a className="room-open-line" role="status" data-testid="room-open-line" href={roomsPlace.path} title={`${roomLine(room)}. Open Rooms.`} onClick={(event) => { event.preventDefault(); navigate(roomsPlace.path); }}>
+            <b>{roomLine(room)}</b>
             <span>{countOf(room.guestsHere, 'guest')} here</span>
             {roomWaiting > 0 && <span className="room-open-waiting">{countOf(roomWaiting, 'request')} to approve</span>}
             {room.toAdd > 0 && <span className="room-open-waiting">{countOf(room.toAdd, 'request')} to add</span>}
-          </p>
-        )}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
+          </a>
+        ) : undefined}
+        banner={<>{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
       >
         {/* one page's render error stays inside that page, as in the hosted shell */}
         <Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}>{page()}</Section>

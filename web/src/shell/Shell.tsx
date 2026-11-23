@@ -78,7 +78,7 @@ function MiniPlayer({ player, now, song, hasNext, onRequests, waiting }: { playe
 }
 
 /** Where this page sits, and the things you can reach from anywhere. */
-function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting, palette }: { route: ShellRoute; onCommands: () => void; onActivity: () => void; onHelp: () => void; onRequests: () => void; waiting: number; palette: boolean }) {
+function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting, palette, status }: { route: ShellRoute; onCommands: () => void; onActivity: () => void; onHelp: () => void; onRequests: () => void; waiting: number; palette: boolean; status?: ReactNode }) {
   const { crumbs } = describeRoute(route);
   const unseen = useUnseenActivity();
   const { jobs } = useJobsStatus();
@@ -106,6 +106,7 @@ function ContextBar({ route, onCommands, onActivity, onHelp, onRequests, waiting
           ))}
         </ol>
       </nav>
+      {status && <div className="context-status">{status}</div>}
       <div className="context-actions">
         {palette && on('app.command_palette') && (
           <button className="context-button palette-button" onClick={onCommands} title="Search and commands (Ctrl K)">
@@ -293,6 +294,7 @@ export function Shell({
   mode = 'local',
   more = [],
   account,
+  status,
 }: {
   route: ShellRoute;
   player: PlayerLike;
@@ -315,6 +317,8 @@ export function Shell({
   more?: readonly MoreDestination[];
   /** Cloud only: who is signed in, shown at the foot of the side bar with Sign out in plain sight. */
   account?: ShellAccount;
+  /** Cloud only: one compact live status for the top bar (an open room), never a page banner. */
+  status?: ReactNode;
 }) {
   const place = useLocationText().split('?')[0];
   const content = useRef<HTMLDivElement>(null);
@@ -534,7 +538,7 @@ export function Shell({
         </nav>
       )}
       <div className="content" id="content" tabIndex={-1} ref={content}>
-        {!stage && <ContextBar route={route} onCommands={onCommands} onActivity={onActivity} onHelp={onHelp} onRequests={onRequests} waiting={waitingRequests} palette={prefs.palette} />}
+        {!stage && <ContextBar route={route} onCommands={onCommands} onActivity={onActivity} onHelp={onHelp} onRequests={onRequests} waiting={waitingRequests} palette={prefs.palette} status={status} />}
         {/* Cloud: every notice sits in one stack on the page column, in the page's flow, so
             two at once never overlap each other or cover a control */}
         {mode === 'cloud' && banner ? <div className="shell-banners">{banner}</div> : banner}

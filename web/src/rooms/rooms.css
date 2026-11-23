@@ -193,3 +193,8 @@
 .room-open-line { display: flex; flex-wrap: wrap; gap: var(--space-hair) var(--space-2); align-items: center; min-width: 0; margin: 0; font-size: var(--text-sm); color: var(--text-soft); }
 .room-open-line a { color: inherit; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 .room-open-line .status { white-space: normal; }
+
+/* Layout pass: with a room open, the room is the page's title. "Rooms" steps back to a small
+   label above it, so the page never opens with two headings stacked. */
+.shell[data-mode='cloud'] main[data-place='rooms']:has(.room-head) > h1 { margin: 0 0 var(--space-1); font: var(--type-label); letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; color: var(--text-soft); }
+.shell[data-mode='cloud'] main[data-place='rooms'] .room-head h2 { font: var(--type-page); }

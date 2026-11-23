@@ -88,7 +88,7 @@
 :where(:root[data-cloud='on']) .field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4); align-items: start; }
 
 /* ---- page header: title, one line, the page's actions ---- */
-:where(:root[data-cloud='on']) .page-header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-4) var(--space-5); margin: 0 0 var(--space-5); min-width: 0; }
+:where(:root[data-cloud='on']) .page-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4) var(--space-5); margin: 0 0 var(--space-5); min-width: 0; }
 :where(:root[data-cloud='on']) .page-header-text { flex: 1 1 320px; display: grid; gap: var(--space-2); min-width: 0; }
 :where(:root[data-cloud='on']) .page-header .display { margin: 0; }
 :where(:root[data-cloud='on']) .page-eyebrow { margin: 0; color: var(--text-soft); font: var(--type-eyebrow); letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; }

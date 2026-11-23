@@ -73,6 +73,10 @@ export function registeredDeviceId(workspaceId: string): string | null {
 }
 
 /** What a page's own button can ask Connect music to do (the Library header's main action). */
+/** Results the member has put away (or that cleared themselves), across pages of this visit. */
+const putAway = new WeakSet<ImportSummary>();
+const RESULT_STAYS_MS = 8000;
+
 export type ConnectMusicHandle = {
   /** Opens the folder picker where the browser has one, else the file picker. */
   chooseFolder: () => void;
@@ -214,8 +218,17 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
   const pickSongs = () => songsPick.current?.click();
   useImperativeHandle(ref, () => ({ chooseFolder: pickFolder, chooseSongs: pickSongs, folders }));
   // a finished import's result can be put away; a new result shows again
-  const [dismissed, setDismissed] = useState<ImportSummary | null>(null);
-  const result = (live.phase === 'finished' || live.phase === 'paused') && live.summary && live.summary !== dismissed ? live.summary : null;
+  // A result put away stays away on the next page too, and a clean finish clears itself: it is
+  // news for a moment, not a fixture above the page.
+  const [dismissed, setDismissedHere] = useState<ImportSummary | null>(null);
+  const setDismissed = useCallback((summary: ImportSummary) => { putAway.add(summary); setDismissedHere(summary); }, []);
+  const result = (live.phase === 'finished' || live.phase === 'paused') && live.summary && live.summary !== dismissed && !putAway.has(live.summary) ? live.summary : null;
+  const cleanFinish = result && !result.paused && !result.cancelled && !result.failed ? result : null;
+  useEffect(() => {
+    if (!cleanFinish) return;
+    const timer = window.setTimeout(() => { setDismissed(cleanFinish); onResultDismissed?.(cleanFinish); }, RESULT_STAYS_MS);
+    return () => window.clearTimeout(timer);
+  }, [cleanFinish, setDismissed, onResultDismissed]);
 
   // the pickers are always in the page, so a header button (or a test) can reach them
   const inputs = (

@@ -380,3 +380,15 @@
   .shell[data-mode='cloud'] .page.mix .timeline .song-actions { flex-wrap: wrap; }
 }
 .shell[data-mode='cloud'] .now .next-song > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+/* Layout pass, phone: the same reading order as on a computer (song, seek bar, controls, then
+   notices), with even gaps; the transport itself stays docked above the tab bar. */
+@media (max-width: 760px) {
+  .shell[data-mode='cloud'] .now:not(.stage) .listen-main { display: flex; flex-direction: column; gap: var(--space-3); }
+  .shell[data-mode='cloud'] .now:not(.stage) .listen-main > * { order: 6; margin-block: 0; }
+  .shell[data-mode='cloud'] .now:not(.stage) .listen-main > .listen-identity { order: 1; }
+  .shell[data-mode='cloud'] .now:not(.stage) .listen-main > :is(.strip, .skeleton-strip) { order: 2; }
+  .shell[data-mode='cloud'] .now:not(.stage) .listen-main > .seek-note { order: 3; min-height: 0; }
+  .shell[data-mode='cloud'] .now:not(.stage) .listen-main > .transport-more { order: 4; }
+  .shell[data-mode='cloud'] .now:not(.stage) .listen-main > :is(.notice, .banner) { order: 5; }
+}
