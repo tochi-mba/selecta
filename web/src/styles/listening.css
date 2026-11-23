@@ -30,6 +30,9 @@
 .mix-length .chips, .mix-length .hint { margin: 0; }
 /* MP-0283-01: the pick's facts share the title's left edge and sit between it and the description */
 .mix-quick-facts { margin: var(--space-2) 0 0; }
+/* Browser-first Cloud has one pick and no feelings, so its name is a heading, not a poster: Play
+   stays in the first screen on a laptop */
+.shell[data-mode='cloud'] .mixes .mix-quick .display { font: var(--type-page); margin-block: var(--space-2); }
 /* Keep long explanatory paragraphs readable at desktop and ultrawide widths. */
 .mixes p, .mixes li > span, .mixes dd { max-inline-size: 60em; }
 .card-actions { gap: var(--space-2); }

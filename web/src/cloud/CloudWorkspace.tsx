@@ -82,7 +82,7 @@ export function CloudWorkspace({ tab, status, workspaceId, openStore, connect, s
   );
 }
 
-const clock = (at: number) => new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const clock = (at: number) => new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
 function Overview({ status, workspaceId, savedMixes, fileCheck, stemsShown, measuringKeys }: {
   status: AppStatus;
@@ -100,7 +100,7 @@ function Overview({ status, workspaceId, savedMixes, fileCheck, stemsShown, meas
       <div className="metrics">
         <div><strong>{counts.music ?? 0}</strong><span>songs in your library</span></div>
         <div><strong>{counts.ready ?? 0}</strong><span>can play in this browser</span></div>
-        {(counts.missing ?? 0) > 0 && <div><strong>{counts.missing}</strong><span>not reported by any of your devices lately</span></div>}
+        {(counts.missing ?? 0) > 0 && <div><strong>{counts.missing}</strong><span>missing from every device right now</span></div>}
         <div><strong>{savedMixes ?? '…'}</strong><span>{savedMixes === 1 ? 'saved mix' : 'saved mixes'}</span></div>
       </div>
       <section className="panel stack" aria-labelledby="cloud-background-title">

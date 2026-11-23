@@ -88,8 +88,11 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
   const saveCurrent = async () => {
     const current = recipes.current();
     if (!current) return;
-    const known = list?.find((recipe) => recipe.mix_id === current);
-    const made = await recipes.duplicate(current, known ? copyName(known.name) : undefined);
+    // the name comes from the list when it is there, else from the mix itself; failing both the
+    // server names the copy
+    const known = list?.find((recipe) => recipe.mix_id === current)?.name
+      ?? await recipes.read(current).then((mix) => mix.name, () => undefined);
+    const made = await recipes.duplicate(current, known ? copyName(known) : undefined);
     await load();
     notify(`Saved a copy: ${made.name}.`);
   };

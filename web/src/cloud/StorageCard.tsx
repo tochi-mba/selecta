@@ -45,7 +45,7 @@ export function StorageCard({ degraded }: { degraded: boolean }) {
       <h2 id="this-device-storage">Browser storage</h2>
       {space === null && <Skeleton lines={1} label="Checking this browser’s storage" />}
       {space && !space.supported && <p>{space.reason}</p>}
-      {space?.supported && <p data-persist={state}>{`SelectaDJ is using ${megabytes(space.usage)} of the ${megabytes(space.quota)} this browser allows.`} {PERSIST_COPY[state]} {MUSIC_NEVER_STORED}</p>}
+      {space?.supported && <p data-persist={state}>SelectaDJ keeps a few details in this browser, such as which of your files are which songs. {`SelectaDJ is using ${megabytes(space.usage)} of the ${megabytes(space.quota)} this browser allows.`} {PERSIST_COPY[state]} {MUSIC_NEVER_STORED}</p>}
       {offers && (state === 'not_granted' || state === 'refused') && (
         <div className="cloud-actions">
           <button type="button" onClick={keep} aria-busy={asking || undefined}>Keep this device's details safe</button>

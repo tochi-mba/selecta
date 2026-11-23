@@ -90,7 +90,8 @@ export function EditorHeader(props: {
             : 'Changes here change what’s playing.'}
         </span>
         {viewName && <span className="scope-view">{viewName} view</span>}
-        <span className="scope-revision" title="Changes whenever the order of songs changes">Revision {revisionOf(mix)}</span>
+        {/* the revision ties an export or a render to an exact song order; a browser mix has neither */}
+        {!live && <span className="scope-revision" title="Changes whenever the order of songs changes">Revision {revisionOf(mix)}</span>}
         <Status kind={facts.kind}>{facts.words}</Status>
       </div>
       <div className="mix-head">
