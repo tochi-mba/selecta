@@ -85,9 +85,11 @@ export type RequestsFamily = {
 };
 
 /** `cloud` is the authenticated Cloud client; `send` is the adapted request, for the mix routes. */
-export function requestsFamily({ cloud, workspaceId, songs, send }: {
+export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRooms }: {
   cloud: Request;
   workspaceId: string;
+  /** False for an account without Rooms: its room list is empty and the server is never asked. */
+  rooms?: boolean;
   songs: () => Promise<PlayableSong[]>;
   send: Request;
 }): RequestsFamily {
@@ -98,6 +100,7 @@ export function requestsFamily({ cloud, workspaceId, songs, send }: {
   let lastJoin: { order: string; at: number } | null = null;
 
   const roomRequests = (): Promise<RoomRequest[]> => {
+    if (hasRooms === false) return Promise.resolve([]);
     if (!rooms || roomsVersion !== roomVersion || performance.now() - roomsAt > ROOM_REFRESH_MS) {
       roomsVersion = roomVersion;
       roomsAt = performance.now();

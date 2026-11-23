@@ -33,6 +33,9 @@ export type SpineState = {
   heardAt?: number;
   wakeLock?: 'held' | 'unsupported' | 'refused';
   finished?: boolean;
+  /** The member pressed Finish later: this browser stops opening the spine by itself, and it stays
+   * reachable from Make a Mix until it is finished. */
+  later?: boolean;
 };
 
 export const FRESH: SpineState = { version: 1, step: 'connect', outcomes: {} };
@@ -85,6 +88,13 @@ export function saveState(storage: KeyValue | null, workspaceId: string, state: 
 /** Whether this account already went through the spine on this browser. */
 export function onboardingFinished(workspaceId: string, storage: KeyValue | null = browserStorage()): boolean {
   return loadState(storage, workspaceId).finished === true;
+}
+
+/** Whether the member put the spine off on this browser (Finish later). A put-off spine keeps its
+ * step and outcomes, so opening it again carries on where they were. */
+export function onboardingPutOff(workspaceId: string, storage: KeyValue | null = browserStorage()): boolean {
+  const state = loadState(storage, workspaceId);
+  return state.later === true && state.finished !== true;
 }
 
 export function nextStep(step: StepId): StepId | null {

@@ -114,13 +114,14 @@ describe('CloudApp offline and after a sign-in ends', () => {
   });
 
   it('a sign-in that ended says so, keeps everything, and says the import is kept', async () => {
-    auth.state.noTokenFor = 5;
+    // AuthKit keeps saying a sign-in is needed, so the button's quiet try fails and it redirects
+    auth.state.noTokenFor = Number.POSITIVE_INFINITY;
     localStorage.setItem(importMarkerKey('ws-1'), JSON.stringify({ version: 1, folder: 'Music', startedAt: 1, total: 9, registered: 3, kept: true }));
     render(<CloudApp />);
     expect(await screen.findByRole('heading', { name: 'Sign in again to carry on' }, { timeout: 4_000 })).toBeInTheDocument();
     expect(screen.getByText(/any import in progress, which carries on after you sign in/)).toBeInTheDocument();
     expect(localStorage.getItem(importMarkerKey('ws-1'))).not.toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Sign in again' }));
-    expect(auth.state.signIn).toHaveBeenCalled();
+    await waitFor(() => expect(auth.state.signIn).toHaveBeenCalled());
   });
 });

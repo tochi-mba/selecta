@@ -242,7 +242,9 @@
 .welcome-words h1 { margin: 0; font: var(--type-display); letter-spacing: -0.035em; text-wrap: balance; }
 /* each word of the headline arrives after the one before; the last is lit like the sung word on Listen */
 .welcome-word { display: inline-block; animation: rise-in var(--motion-slow) var(--motion-ease) backwards; animation-delay: calc(var(--i) * var(--motion-feedback)); }
-.welcome-word.lit { padding-inline: 0.06em; border-radius: var(--radius-hair); background: var(--word-fill); color: var(--word-ink); text-shadow: 0 0 var(--space-5) var(--word-glow); }
+/* the block needs its padding (Light fills it), so an equal negative margin puts the glyphs back on
+   the left edge of the lines above when the word wraps to a line of its own */
+.welcome-word.lit { padding-inline: 0.06em; margin-inline: -0.06em; border-radius: var(--radius-hair); background: var(--word-fill); color: var(--word-ink); text-shadow: 0 0 var(--space-5) var(--word-glow); }
 .welcome-lead { margin: 0; max-inline-size: 34rem; color: var(--text-soft); font-size: var(--text-lg); text-wrap: pretty; }
 .welcome-lead,
 .welcome-words > .gate-actions,
@@ -272,7 +274,8 @@
 }
 .welcome-art svg { display: block; inline-size: 100%; block-size: auto; }
 .welcome-art-out { fill: var(--text); }
-.welcome-art-in { fill: var(--primary-fill); stroke: var(--primary-edge); stroke-width: 0.5; }
+/* in Light, lime is only ever a filled shape with a dark edge: the edge has to be thick enough to read */
+.welcome-art-in { fill: var(--primary-fill); stroke: var(--primary-edge); stroke-width: 1; }
 .welcome-art-curve { fill: none; stroke: var(--text-soft); stroke-width: 1.5; stroke-dasharray: 3 5; stroke-linecap: round; }
 .welcome-art-curve.rising { stroke: var(--motif); stroke-dasharray: none; stroke-width: 2; }
 .welcome-art-seam { fill: var(--surface-panel); stroke: var(--motif); stroke-width: 2; }

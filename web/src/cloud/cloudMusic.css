@@ -187,7 +187,11 @@
   .shell[data-mode='cloud'] .now .transport-more { justify-content: space-between; }
 }
 
-/* ---------- Guided empty pages: Make a Mix and Listen before music is connected ---------- */
+/* ---------- Guided empty pages: Make a Mix, Listen, My Mixes and the Library before music is
+   connected. One hero card on every page, and the same page width: the idle Listen page takes the
+   browsing width the other three already have. The words are styled as the card's own children,
+   so what the Library card carries below them (import progress, notices) keeps its own type. ---------- */
+.shell[data-mode='cloud'] .content:has(> main.page.listen-idle) { --page-max: var(--content-browse); }
 .shell[data-mode='cloud'] .music-empty {
   position: relative;
   display: grid;
@@ -204,8 +208,8 @@
 }
 .shell[data-mode='cloud'] .music-empty > * { margin-block: 0; }
 .shell[data-mode='cloud'] .music-empty .empty-state-icon { width: 56px; height: 56px; margin-bottom: var(--space-3); border-radius: var(--radius-pill); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); background: color-mix(in srgb, var(--accent) 12%, var(--surface-control)); color: var(--text); }
-.shell[data-mode='cloud'] .music-empty :is(h2, h3) { font: var(--type-section); }
-.shell[data-mode='cloud'] .music-empty p { max-width: 52ch; color: var(--text-soft); font-size: var(--text-md); line-height: 1.5; }
+.shell[data-mode='cloud'] .music-empty > :is(h2, h3) { font: var(--type-section); }
+.shell[data-mode='cloud'] .music-empty > p:not(.hint) { max-width: 52ch; color: var(--text-soft); font-size: var(--text-md); line-height: 1.5; }
 .shell[data-mode='cloud'] .music-empty .empty-state-actions { margin-top: var(--space-4); }
 .shell[data-mode='cloud'] .music-empty .setup-steps {
   justify-content: center;
