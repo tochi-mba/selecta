@@ -284,6 +284,20 @@ describe('room requests the host accepted', () => {
     expect((await request(2)).map((row) => row.song_id)).toEqual([2]);
   });
 
+  it('does not read the library while nothing is waiting, and reads it once something is', async () => {
+    let reads = 0;
+    const cloud = (async () => ({ requests: [] })) as unknown as Request;
+    const made = requestsFamily({ cloud, workspaceId: 'ws-idle', songs: async () => { reads += 1; return SONGS; }, send: cloud });
+    const ask = (method: string, body?: unknown) => made.answer(method, '/requests', new URLSearchParams(), { method, body: body === undefined ? undefined : JSON.stringify(body) }) as Promise<{ requests: RequestRow[] }>;
+    // the list is polled every few seconds: an idle page must not read the catalogue each time
+    for (let poll = 0; poll < 3; poll += 1) expect((await ask('GET')).requests).toEqual([]);
+    expect(reads).toBe(0);
+    await ask('POST', { song_id: 2 });
+    const before = reads;
+    expect((await ask('GET')).requests.map((row) => row.title)).toEqual(['Bravo']);
+    expect(reads).toBeGreaterThan(before);
+  });
+
   it('never asks the server for a room’s requests on an account without Rooms', async () => {
     const asked: string[] = [];
     const cloud = (async (path: string) => { asked.push(path); throw new Error('not found'); }) as Request;
