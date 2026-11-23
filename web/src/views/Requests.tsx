@@ -14,7 +14,7 @@ import { AudioPreview } from '../ui/AudioPreview';
 import { TermHint } from '../ui/Glossary';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { useFlag, useFlagHeard } from '../flags';
-import { BrowserRequests } from './BrowserRequests';
+import { BrowserRequests, useRoomLive } from './BrowserRequests';
 
 export type Stage =
   | 'adding' | 'unavailable' | 'never' | 'in_mix' | 'analysing' | 'no_cues' | 'no_mix'
@@ -35,7 +35,7 @@ export type RequestRow = {
   /** Cloud in the browser (localFirstRequests.ts): what happens to this request, instead of the planner's words. */
   browser_note?: string;
   /** Cloud in the browser: the room a guest asked in, and the guest's nickname when it is known. */
-  room_name?: string; asked_by?: string | null;
+  room_name?: string; asked_by?: string | null; room_request_id?: string;
 };
 type RequestList = { requests: RequestRow[]; settled?: string[] };
 export type BridgeOption = {
@@ -88,11 +88,11 @@ function groupOf(stage: Stage): RequestGroup {
   return 'waiting';
 }
 
-function playingNow(playback?: Playback): boolean {
+export function playingNow(playback?: Playback): boolean {
   return !!playback && ['playing', 'paused'].includes(playback.player.state.phase);
 }
 
-function stageOf(row: RequestRow, playback?: Playback): Stage {
+export function stageOf(row: RequestRow, playback?: Playback): Stage {
   if (row.saving && row.id < 0) return 'adding';
   if (!row.available) return 'unavailable';
   if (row.never) return 'never';
@@ -800,7 +800,10 @@ export function RequestsPanel() {
   const availableMatches = matches?.map((song, index) => canPick(song) ? index : -1).filter((index) => index >= 0) ?? [];
   const orderedRequests = [...(requests ?? [])].sort((a, b) => GROUP_ORDER[stageOf(a, playback)] - GROUP_ORDER[stageOf(b, playback)]);
   // Cloud in the browser marks its rows (browser_note): a short Waiting list, not the planner's groups
-  const browser = !!requests?.some((row) => row.browser_note);
+  const roomLive = useRoomLive();
+  const browser = !!requests?.some((row) => row.browser_note) || !!roomLive;
+  const waitingCount = waitingRequestCount(requests) + (roomLive?.inbox.length ?? 0);
+  const browserList = { rows: requests && requests.map((request) => ({ request, stage: stageOf(request, playback) })), live: playingNow(playback), playback, send: state.request ?? provided, refresh: state.refresh, onAdd: addAnyway, onDismiss: (request: RequestRow) => { box.current?.focus(); return cancel(request); } };
   // the list stays open, so a few songs can be asked for from one search
   const pick = (song: SongRow) => { void add(song); box.current?.focus(); };
   const finish = () => { setQuery(''); box.current?.focus(); };
@@ -827,11 +830,12 @@ export function RequestsPanel() {
   };
 
   return (
-    <section className="requests" aria-label="Song requests">
+    <section className={browser ? 'requests requests-browser' : 'requests'} aria-label="Song requests">
       <div className="requests-head">
         <h2>Requests</h2>
-        {waitingRequestCount(requests) > 0 && <span className="hint">{waitingRequestCount(requests)} waiting</span>}
+        {waitingCount > 0 && <span className="hint" data-testid="requests-waiting">{waitingCount} waiting</span>}
       </div>
+      {browser && <BrowserRequests part="room" {...browserList} />}
       <label htmlFor="request-song-search">Request a song</label>
       <div className="request-search">
         <input
@@ -884,7 +888,7 @@ export function RequestsPanel() {
       {error && <p className="warn" role="alert">{error}</p>}
       {message && <p className="hint" role="status">{message}</p>}
       {requests === null && !error && <p className="hint">Loading your requests…</p>}
-      {requests?.length === 0 && !text && (
+      {requests?.filter((row) => !row.room_name).length === 0 && !text && (
         <p className="hint">{flagOn('requests.bridges')
           ? 'Ask for a song any time. SelectaDJ finds a spot where it fits, without interrupting the mix.'
           // Cloud in the browser has no planner (requests.bridges is off there): you choose when it goes in.
@@ -892,7 +896,7 @@ export function RequestsPanel() {
       )}
       {!!requests?.length && !browser && <p className="hint">Requested means saved, not scheduled. Only a placed song is in your current mix. Waiting requests have no reliable play-time estimate or guaranteed queue order.<TermHint term="request" /></p>}
       {!!requests?.length && browser && (
-        <BrowserRequests rows={(requests ?? []).map((request) => ({ request, stage: stageOf(request, playback) }))} live={playingNow(playback)} playback={playback} send={state.request ?? provided} refresh={state.refresh} onAdd={addAnyway} onDismiss={(request) => { void cancel(request); box.current?.focus(); }} />
+        <BrowserRequests part="own" {...browserList} />
       )}
       {!!requests?.length && !browser && (
         <ul className="request-list" aria-label="Your requests">

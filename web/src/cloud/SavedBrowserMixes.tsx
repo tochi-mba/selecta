@@ -9,6 +9,9 @@ import type { ViewProps } from '../views/shared';
 import { EMPTY_MIX } from './localFirstRequest';
 import { copyName, MIX_NAME_LIMIT, type RecipeStore, type RecipeSummary } from './recipeStore';
 import { flagOn } from '../flags';
+import { length } from '../lib';
+import { CoverArt } from '../views/CoverArt';
+import './cloudMusic.css';
 import { MIX_OUTBOX_EVENT, takeOutboxNotices, WAITING_TO_SYNC } from './outbox';
 
 /** My Mixes' saved browser mixes, laid out as local mode lays out its drafts (views/Drafts.tsx):
@@ -16,7 +19,7 @@ import { MIX_OUTBOX_EVENT, takeOutboxNotices, WAITING_TO_SYNC } from './outbox';
  * Play and a menu (Rename, Copy, Delete). A browser mix is a recipe on the account (ADR-0458), so
  * it opens on any device holding the same music; the editor and player work on the current mix,
  * so Edit and Play first make the chosen mix current. */
-export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, refreshStatus, player, notify }: {
+export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, refreshStatus, player, notify, phase = 'idle', currentSeconds }: {
   workspaceId: string;
   recipes: RecipeStore;
   request: NonNullable<ViewProps['request']>;
@@ -24,6 +27,10 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
   refreshStatus: ViewProps['refreshStatus'];
   player: ViewProps['player'];
   notify: ViewProps['notify'];
+  /** Whether the current mix is playing, paused or idle, so its row can say so. */
+  phase?: ViewProps['now']['phase'];
+  /** How long the current mix's songs run, in seconds; the only mix whose songs are loaded. */
+  currentSeconds?: number;
 }) {
   const [list, setList] = useState<RecipeSummary[] | null>(null);
   const [problem, setProblem] = useState('');
@@ -100,6 +107,7 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
     const fresh = await recipes.read(recipe.mix_id);
     await recipes.edit(recipe.mix_id, fresh.revision, { name });
     setRenaming(null);
+    notify(`Renamed to ${name}.`);
     if (recipes.current() === recipe.mix_id) setMixData(await request<MixData>('/mix'));
     await load();
   };
@@ -129,46 +137,51 @@ export function SavedBrowserMixes({ workspaceId, recipes, request, setMixData, r
 
   const currentId = recipes.current();
   const now = Date.now() / 1000;
+  const live = phase === 'playing' || phase === 'loading';
   return (
-    <section className="drafts" aria-labelledby="saved-browser-mixes">
-      <div className="row wrap drafts-head">
-        <h2 className="section-title" id="saved-browser-mixes">Your saved mixes</h2>
-        <div className="row wrap">
-          <Action working="Saving…" run={saveCurrent} disabled={!currentId}>Save a copy of the current mix</Action>
-        </div>
+    <section className="saved-mixes" aria-labelledby="saved-browser-mixes">
+      <div className="section-head">
+        <h2 className="section-title" id="saved-browser-mixes">Saved mixes{!!list?.length && <span className="badge">{list.length}</span>}</h2>
+        <Action className="small" working="Saving…" run={saveCurrent} disabled={!currentId}>Save a copy of the current mix</Action>
       </div>
-      <p className="hint">
-        Every mix you make here is saved to your account, so it opens on any device that has the same music. Editing or playing one makes it your current mix; the others stay as they are.
-      </p>
-      {outbox && synced && <p className="hint" role="status">{synced} <button onClick={() => setSynced('')}>Dismiss</button></p>}
-      {problem && <p className="warn" role="alert">{problem} <button onClick={() => void load()}>Try again</button></p>}
-      {list === null && !problem && <Skeleton variant="rows" lines={2} label="Loading saved mixes" />}
+      {outbox && synced && <p className="hint" role="status">{synced} <button className="small quiet" onClick={() => setSynced('')}>Dismiss</button></p>}
+      {problem && <p className="warn" role="alert">{problem} <button className="small" onClick={() => void load()}>Try again</button></p>}
+      {list === null && !problem && <Skeleton variant="rows" lines={3} label="Loading saved mixes" />}
       {list?.length === 0 && (
-        <div className="empty-state">
-          <h3>A place for your next mix</h3>
-          <p>Make a mix from your songs, and it’s saved here as you go.</p>
-          <button className="primary" onClick={() => navigate('/mixes')}>Make a Mix</button>
+        <div className="empty-state boxed music-empty">
+          <span className="empty-state-icon" aria-hidden="true"><Icon name="mixes" /></span>
+          <h3>No saved mixes yet</h3>
+          <p>Make a mix and it is saved here as you go.</p>
+          <div className="empty-state-actions"><button className="primary big" onClick={() => navigate('/mixes')}>Make a Mix</button></div>
         </div>
       )}
       {!!list?.length && (
-        <ul className="draft-list density">
+        <ul className="mix-rows">
           {list.map((recipe) => {
             const current = recipe.mix_id === currentId;
+            const waiting = outbox && recipe.pending;
             return (
-              <li className="draft" key={recipe.mix_id}>
-                <div className="draft-name">
+              <li className="mix-row" key={recipe.mix_id} data-current={current || undefined}>
+                <CoverArt seed={recipe.mix_id} />
+                <div className="mix-row-words">
                   {renaming === recipe.mix_id ? (
                     <RenameMix name={recipe.name} onCancel={() => setRenaming(null)} onSave={(name) => rename(recipe, name)} />
                   ) : (
-                    <b className="draft-open" dir="auto">{recipe.name}</b>
+                    <b className="mix-row-name" dir="auto" title={recipe.name}>{recipe.name}</b>
                   )}
-                  <span className="soft">{countOf(recipe.songs, 'song')}. {outbox && recipe.pending ? 'Saved on this device; it goes to your account when the connection is back.' : `Saved ${relativeTime(now - recipe.updated_at)}.`}</span>
-                  {current && <Status kind="ready">Your current mix</Status>}
-                  {outbox && recipe.pending && <Status kind="queued">{WAITING_TO_SYNC}</Status>}
+                  <span className="mix-row-meta">
+                    {current && <span className="badge" data-tone="accent">{live ? 'Playing now' : phase === 'paused' ? 'Paused' : 'Current mix'}</span>}
+                    <span>{countOf(recipe.songs, 'song')}</span>
+                    {current && !!currentSeconds && <span>About {length(currentSeconds)}</span>}
+                    <span>{waiting ? 'Saved on this device' : `Saved ${relativeTime(now - recipe.updated_at)}`}</span>
+                    {waiting && <Status kind="queued">{WAITING_TO_SYNC}</Status>}
+                  </span>
                 </div>
-                <div className="row wrap draft-actions">
-                  <Action className="draft-edit" working="Opening…" aria-label={`Edit ${recipe.name}`} run={() => edit(recipe)}>Edit</Action>
-                  <Action working="Starting…" aria-label={`Play ${recipe.name}`} run={() => play(recipe)}>Play</Action>
+                <div className="mix-row-actions">
+                  {current && phase !== 'idle'
+                    ? <button className="primary" aria-label={`Open ${recipe.name} in Listen`} onClick={() => navigate('/listen')}>Open</button>
+                    : <Action className={current ? 'primary' : 'mix-row-play'} working="Starting…" aria-label={`Play ${recipe.name}`} run={() => play(recipe)}><Icon name="play" /> Play</Action>}
+                  <Action className="quiet" working="Opening…" aria-label={`Edit ${recipe.name}`} run={() => edit(recipe)}>Edit</Action>
                   <Menu title={`More actions for ${recipe.name}`} label={<><Icon name="more" /><span className="visually-hidden">More actions for {recipe.name}</span></>}>
                     <MenuItem aria-label={`Rename ${recipe.name}`} onClick={() => setRenaming(recipe.mix_id)}>Rename</MenuItem>
                     <MenuItem aria-label={`Copy ${recipe.name}`} onClick={() => void copy(recipe).catch(() => setProblem(`Couldn’t copy ${recipe.name}. Your mixes are as they were.`))}>Copy</MenuItem>
@@ -215,10 +228,10 @@ function RenameMix({ name, onSave, onCancel }: { name: string; onSave: (name: st
     }
   };
   return (
-    <form className="row wrap rename-draft" onSubmit={submit}>
+    <form className="rename-draft" onSubmit={submit}>
       <input autoFocus maxLength={MIX_NAME_LIMIT} value={value} onChange={(event) => setValue(event.target.value)} onFocus={(event) => event.target.select()} aria-label="New name" onKeyDown={(event) => { if (event.key === 'Escape') onCancel(); }} />
-      <button className="primary" disabled={!value.trim()} aria-busy={busy || undefined}>{busy ? 'Saving…' : 'Save'}</button>
-      <button type="button" onClick={onCancel}>Cancel</button>
+      <button className="small primary" disabled={!value.trim()} aria-busy={busy || undefined}>{busy ? 'Saving…' : 'Save'}</button>
+      <button type="button" className="small quiet" onClick={onCancel}>Cancel</button>
       {problem && <p className="warn" role="alert">{problem}</p>}
     </form>
   );

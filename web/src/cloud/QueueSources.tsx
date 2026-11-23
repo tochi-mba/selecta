@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { MixItem } from '../api';
 import type { SourceBook, SourceEntry } from '../media';
+import { PageLink } from '../shell/PageLink';
+import { Icon } from '../ui/Icon';
 
 /** Where each queued song plays from (ADR-0465, BF-0465-03): this device, the hosted library,
  * or not at all with the reason. Filled as the engine resolves songs, so a song not reached yet
@@ -32,23 +34,35 @@ export function QueueSources({ mix, book, problemsOnly = false }: { mix: readonl
     ? `${shown.length} ${shown.length === 1 ? 'song' : 'songs'} can’t play here`
     : [count('device') && `${count('device')} from this device`, count('hosted') && `${count('hosted')} from Cloud`, count('unavailable') && `${count('unavailable')} can’t play`]
       .filter(Boolean).join(', ');
+  if (problemsOnly) {
+    // one calm line and the one thing that fixes it: the songs are named, never listed like a log
+    const names = shown.map((row) => row.item.title);
+    const said = names.length <= 2 ? names.join(' and ') : `${names[0]}, ${names[1]} and ${names.length - 2} more`;
+    return (
+      <div className="banner queue-sources" data-tone="warn" role="status" data-testid="queue-sources">
+        <Icon name="warning" />
+        <p className="banner-text">
+          <b>{summary}.</b>{' '}
+          <span>Connect {names.length === 1 ? 'it' : 'them'} again to hear {said}.</span>
+        </p>
+        <div className="banner-actions"><PageLink to="/library" className="button small">Connect music</PageLink></div>
+      </div>
+    );
+  }
   return (
-    <div className="page">
-    <details className="panel queue-sources" open={problemsOnly || undefined}>
+    <details className="queue-sources queue-sources-list">
       <summary>
         <span id="queue-sources">Where each song plays from</span>
         {summary && <span className="soft"> · {summary}</span>}
       </summary>
-      <ol className="stack" data-testid="queue-sources">
+      <ol data-testid="queue-sources">
         {shown.map(({ item, index, entry }) => (
           <li key={`${index}-${item.song_id}`} data-source={entry?.source ?? 'pending'}>
             <strong>{item.artist ? `${item.artist} - ${item.title}` : item.title}</strong>
-            {': '}
             <span>{sourceWords(entry)}</span>
           </li>
         ))}
       </ol>
     </details>
-    </div>
   );
 }

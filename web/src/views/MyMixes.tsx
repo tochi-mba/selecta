@@ -9,6 +9,8 @@ import { Drafts } from './Drafts';
 import { selectInEditor } from './Mix';
 import { ViewProps } from './shared';
 import { Action } from '../ui/controls';
+import { Icon } from '../ui/Icon';
+import { PageLink } from '../shell/PageLink';
 
 const RECENT_DRAFT_KEY = 'selecta.recentDraft';
 // r8a: My Mixes redraws with the music clock (the current mix says Playing or Paused), and its list of
@@ -116,7 +118,15 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
   const continuing = !!recent && on('mymixes.continue_working') && on('editor');
   return (
     <main className="page mixes my-mixes" id="main">
-      <h1 className="display small">My Mixes</h1>
+      {suppressDrafts ? (
+        <header className="page-header">
+          <div className="page-header-text">
+            <h1 className="display small">My Mixes</h1>
+            <p className="page-lead">Every mix you make is saved to your account. Play one to make it your current mix.</p>
+          </div>
+          <div className="page-header-actions"><PageLink to="/mixes" className="button"><Icon name="plus" /> Make a mix</PageLink></div>
+        </header>
+      ) : <h1 className="display small">My Mixes</h1>}
       {recent && continuing && <section className="panel stack" aria-label="Continue working">
         <h2>Continue working</h2>
         <p>Return to <b>{recent.name}</b> at its last saved song order. This only opens the editor - no playback starts and no pending Studio edits are applied.</p>
@@ -145,7 +155,8 @@ export function MyMixes({ mix, mixName, now, player, setView, notify, openDraft,
         )}
       </section>}
       {problem && <p className="warn" role="alert">{problem}</p>}
-      {mix.length > 0
+      {/* in a browser the saved list below carries the current mix, highlighted, so it is not said twice */}
+      {suppressDrafts && on('drafts') ? null : mix.length > 0
         ? <CurrentMix prominent lead={!continuing && !showDrafts} mix={mix} mixName={mixName} now={now} player={player} setView={setView} analysisAvailable={analysisAvailable} />
         : <NoCurrentMix lead={!continuing && !on('drafts')} />}
       {showDrafts && <StableDrafts lead={!continuing} notify={stableNotify} openDraft={stableOpen} playDraft={stablePlay} setView={stableSetView} />}

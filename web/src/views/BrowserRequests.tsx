@@ -1,99 +1,87 @@
-import { useState } from 'react';
 import { ApiError, type MixData, type MixItem, type Request } from '../api';
 import type { PlayerLike } from '../playerContract';
 import { navigate } from '../router';
 import { Action } from '../ui/controls';
-import { JOINS_BY_HAND } from '../cloud/localFirstRequests';
+import { showToast } from '../ui/toasts';
+import { ROOM_REQUEST_EVENT } from '../cloud/localFirstRequests';
+import { AskRow, held, RoomRequests } from '../rooms/RoomRequests';
+import { roomControl, ROOM_EVENT, useRoomLive } from '../rooms/useRoomSession';
 import type { RequestRow, Stage } from './Requests';
 
-// The Requests drawer's list in Cloud in the browser (rows that carry `browser_note`,
+export { useRoomLive };
+
+// The Requests drawer in Cloud in the browser (rows that carry `browser_note`,
 // localFirstRequests.ts). There is no planner there, so there is nothing to explain about spots,
-// bridges or play times: one short Waiting list, each row saying who asked and offering one
-// thing to do, Add next (it plays after the current song), plus Dismiss. With no mix at all the
-// one thing is Start a mix with this song: a browser mix that begins with it, playing at once.
-// Local mode keeps its own list in Requests.tsx, with the planner's words.
+// bridges or play times. Two parts, drawn around the panel's own search box:
+//
+// - `room`, first: the open room's requests, the same list as the Rooms page (RoomRequests):
+//   who asked, Approve or Pass when the room asks for approval, then Add next and Dismiss.
+// - `own`, under the Request a song search: the songs the host lined up here, each with the one
+//   thing to do, Add next (it plays after the current song), plus Dismiss.
+//
+// With no mix at all the one thing is Start a mix with this song: a browser mix that begins with
+// it, playing at once. Local mode keeps its own list in Requests.tsx, with the planner's words.
 
-const HELP_IDLE = 'Add to mix puts a song at the end. While a mix plays, Add next plays it after the current song.';
-const HELP_NO_MIX = 'No mix is playing yet. Start one with a request and add the others after it.';
+type Row = { request: RequestRow; stage: Stage };
+type Playback = { mix: MixItem[]; player: PlayerLike; onMix: (data: MixData) => void };
 
-/** "Asked by Mia in Friday room" for a room guest's request; nothing for the member's own. */
-function whoAsked(request: RequestRow): string {
-  if (!request.room_name) return '';
-  return `Asked by ${request.asked_by ?? 'a guest'} in ${request.room_name}`;
-}
-
-/** Why a row has no Add button, in a few words; empty when it can be added. */
-function held(request: RequestRow, stage: Stage): string {
-  if (stage === 'adding') return 'Saving…';
-  if (stage === 'unavailable') return 'No longer in your library.';
-  if (stage === 'never') return 'Set to never play in your Library.';
-  if (stage === 'in_mix') return 'Already in your mix.';
-  // the browser family marks a song this device can play as `searching`
-  if (request.stage !== 'searching') return request.browser_note ?? '';
-  return '';
-}
-
-export function BrowserRequests({ rows, live, playback, send, refresh, onAdd, onDismiss }: {
-  rows: { request: RequestRow; stage: Stage }[];
-  /** a mix is playing or paused, so Add next has a current song to follow */
-  live: boolean;
-  playback?: { mix: MixItem[]; player: PlayerLike; onMix: (data: MixData) => void };
-  /** the adapted request client: builds the mix and settles the request */
-  send: Request;
-  refresh?: () => Promise<unknown> | void;
-  onAdd: (request: RequestRow) => Promise<unknown>;
-  onDismiss: (request: RequestRow) => void;
-}) {
-  const noMix = rows.some((row) => row.stage === 'no_mix');
-  const [tooFew, setTooFew] = useState('');
-  // No mix yet: make one that begins with the requested song, play it, and the request is done
-  // (the same look the playing mix gives every few seconds settles it, and tells the room).
-  const startWith = async (request: RequestRow) => {
-    setTooFew('');
+/** No mix yet: make one that begins with the requested song, play it, and the request is done
+ * (the same look the playing mix gives every few seconds settles it, and tells the room). */
+export function startMixWith(send: Request, playback: Playback | undefined, refresh?: () => Promise<unknown> | void) {
+  return async (request: RequestRow) => {
     try {
       const data = await send<MixData>(`/vibes/pick/build?start=${request.song_id}`, { method: 'POST', headers: { 'x-mix-order': '' } });
       playback?.onMix(data);
       void playback?.player.playFrom(0);
       await send('/requests/consider', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ order: data.mix.map((item) => item.song_id), position: 0 }) }).catch(() => undefined);
       await refresh?.();
+      showToast(`Your mix starts with ${request.title ?? 'that song'}.`);
     } catch (problem) {
-      if (problem instanceof ApiError && problem.code === 'not_enough_songs') { setTooFew('A mix needs at least two songs that can play on this device.'); return; }
-      throw problem;
+      if (!(problem instanceof ApiError && problem.code === 'not_enough_songs')) throw problem;
+      showToast('A mix needs at least two songs that can play on this device.', { tone: 'problem', actions: [{ label: 'Connect music', run: () => navigate('/library') }] });
     }
   };
+}
+
+export function BrowserRequests({ part = 'own', rows, live, playback, send, refresh, onAdd, onDismiss }: {
+  part?: 'room' | 'own';
+  /** null while the list is loading */
+  rows: Row[] | null;
+  /** a mix is playing or paused, so Add next has a current song to follow */
+  live: boolean;
+  playback?: Playback;
+  /** the adapted request client: builds the mix and settles the request */
+  send: Request;
+  refresh?: () => Promise<unknown> | void;
+  onAdd: (request: RequestRow) => Promise<unknown>;
+  onDismiss: (request: RequestRow) => Promise<unknown> | void;
+}) {
+  const onStart = startMixWith(send, playback, refresh);
+  if (part === 'room') {
+    return (
+      <RoomRequests
+        variant="drawer"
+        control={roomControl()}
+        mix={{ rows, live, onAdd, onDismiss: async (request) => { await onDismiss(request); }, onStart, inMix: (songId) => !!playback?.mix.some((item) => item.song_id === songId) }}
+        onChanged={() => { window.dispatchEvent(new Event(ROOM_EVENT)); }}
+        onMissing={() => window.dispatchEvent(new Event(ROOM_REQUEST_EVENT))}
+      />
+    );
+  }
+  const own = (rows ?? []).filter((row) => !row.request.room_name);
+  if (!own.length) return null;
   return (
-    <ul className="request-list browser-requests" aria-label="Your requests">
-      <li className="request-group">
-        <h3>Waiting</h3>
-        <p>{live ? JOINS_BY_HAND : noMix ? HELP_NO_MIX : HELP_IDLE}</p>
-        {tooFew && <p className="warn" role="alert">{tooFew} <a href="/library" onClick={(event) => { event.preventDefault(); navigate('/library'); }}>Connect music</a></p>}
-      </li>
-      {rows.map(({ request, stage }) => {
+    <ul className="ask-list browser-requests" aria-label="Your requests">
+      {own.map(({ request, stage }) => {
         const title = request.title ?? 'Unavailable song';
-        const who = whoAsked(request);
         const why = held(request, stage);
+        const start = stage === 'no_mix';
+        const label = start ? 'Start a mix with this song' : live ? 'Add next' : 'Add to mix';
         return (
-          <li key={request.id} className={`request-row browser-request ${why && stage !== 'adding' ? 'stuck' : 'quiet'}`} data-stage={stage}>
-            <span className="request-name">
-              <b>{title}</b>
-              <span>{request.artist ?? 'Unknown artist'}</span>
-              {who && <span className="request-who">{who}</span>}
-            </span>
-            <span className="browser-request-actions">
-              {!why && stage === 'no_mix' && (
-                <Action className="primary" aria-label={`Start a mix with this song: ${title}`} run={() => startWith(request)} working="Starting…">Start a mix with this song</Action>
-              )}
-              {!why && stage !== 'no_mix' && (
-                <Action className="primary" aria-label={`${live ? 'Add next' : 'Add to mix'}: ${title}`} run={() => onAdd(request)} working="Adding…">
-                  {live ? 'Add next' : 'Add to mix'}
-                </Action>
-              )}
-              <button className="request-cancel" disabled={request.id < 0} aria-label={`Dismiss: ${title}`} onClick={() => onDismiss(request)}>
-                Dismiss
-              </button>
-            </span>
-            {why && <p className="request-detail">{why}</p>}
-          </li>
+          <AskRow key={request.id} title={title} artist={request.artist} note={stage === 'adding' ? '' : why} stage={stage}>
+            {!why && <Action className="primary" aria-label={`${label}: ${title}`} run={() => (start ? onStart(request) : onAdd(request))} working="Working…">{label}</Action>}
+            <button className="quiet" disabled={request.id < 0} aria-label={`Dismiss: ${title}`} onClick={() => { void onDismiss(request); }}>Dismiss</button>
+          </AskRow>
         );
       })}
     </ul>

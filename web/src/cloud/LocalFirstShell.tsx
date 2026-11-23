@@ -13,7 +13,6 @@ import { setJobsSource } from '../state/jobs';
 import { Drawer, Section, Skeleton } from '../ui/controls';
 import { countOf } from '../ui/format';
 import { showToast } from '../ui/toasts';
-import { Library } from '../views/Library';
 import { Links } from '../views/Links';
 import { Mix } from '../views/Mix';
 import { PlayedTransitions, StemSurfacesContext } from '../views/liveTransitions';
@@ -32,9 +31,10 @@ import { planName } from './api';
 import { ConnectMusic, registeredDeviceId } from './ConnectMusic';
 import { hostedResolver, matchAsset, readHostedAssets, type HostedAsset } from './hostedMedia';
 import { isHostedAccount } from './localFirstGate';
+import { CloudLibrary } from './CloudLibrary';
 import { CloudWorkspace } from './CloudWorkspace';
 import { CurrentMix } from '../views/CurrentMix';
-import { CannotPlayHere, LibraryEmpty, ListenEmpty, MixesEmpty, NotOnThisAccount, OnlyOnYourComputer, PageNotFound } from './LocalFirstEmpty';
+import { CannotPlayHere, ListenEmpty, MixesEmpty, NotOnThisAccount, OnlyOnYourComputer, PageNotFound } from './LocalFirstEmpty';
 import { useLocalFirstPlayer } from './localFirstPlayer';
 import { BROWSER_MIX_NEEDS } from './localFirstMixes';
 import { EMPTY_MIX, localFirstRequest, mediaRequest, type AvailabilitySources } from './localFirstRequest';
@@ -44,6 +44,7 @@ import { recipeStore } from './recipeStore';
 import { SavedBrowserMixes } from './SavedBrowserMixes';
 import { SoundCheck } from './SoundCheck';
 import { QueueSources } from './QueueSources';
+import { ListenQueue } from './ListenQueue';
 import { CutoverNotice } from './migration/CutoverNotice';
 import { OnboardingSpine } from './onboarding/OnboardingSpine';
 import { browserStorage, onboardingFinished, recordImportOutcome } from './onboarding/state';
@@ -580,28 +581,9 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     }
     switch (route.page) {
       case 'library':
-        return connected === 0
-          ? <main className="page" id="main"><h1 className="display small">Library</h1><LibraryEmpty />{connect}</main>
-          // nothing playable this visit (picked files close with the page): connecting comes first
-          : (status?.counts.ready ?? 0) === 0
-            ? (
-              <Library {...shared} lead={(
-                <div className="stack library-reconnect">
-                  <p className="notice" role="status">None of your songs can play here right now. Music you pick in the browser stays open only while the page does, so choose your folder or songs again to play them.</p>
-                  {connect}
-                </div>
-              )} />
-            )
-            : (
-              <Library {...shared} tail={connect} lead={(status?.counts.ready ?? 0) < connected ? (
-                <p className="notice library-partial" role="status">
-                  <span>{`${status?.counts.ready ?? 0} of ${countOf(connected, 'song')} can play in this browser. The rest are on your other devices, or need choosing again here.`}</span>
-                  <a className="button" href="#connect-music-title">Connect more music</a>
-                </p>
-              ) : undefined} />
-            );
+        return <CloudLibrary shared={shared} connected={connected} connect={{ request: media, workspaceId, openStore, onAvailabilityChanged: () => sweepLapsed(true) }} />;
       case 'mixes':
-        if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts>{on('drafts') && <SavedBrowserMixes workspaceId={workspaceId} recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} player={shellPlayer} notify={notify} />}</MyMixes>{localExport}</>;
+        if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts>{on('drafts') && <SavedBrowserMixes workspaceId={workspaceId} recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} player={shellPlayer} notify={notify} phase={now.phase} currentSeconds={data.mix.reduce((seconds, item) => seconds + item.duration, 0)} />}</MyMixes>{localExport}</>;
         return <>{(status?.counts.ready ?? 0) >= BROWSER_MIX_NEEDS ? <Mixes {...shared} /> : (
           <MixesEmpty
             current={data.mix.length > 0 ? <CurrentMix mix={data.mix} mixName={data.name} now={now} player={shellPlayer} setView={shared.setView} analysisAvailable={false} /> : undefined}
@@ -613,8 +595,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
         return (
           <>
             {refusal && <div className="page"><CannotPlayHere reason={refusal} /></div>}
-            {data.mix.length ? <Now {...shared} noticeAction={output?.state === 'output_unverified' ? <SoundCheck /> : undefined} /> : mixProblem ? <MixProblem onRetry={refreshMix} /> : <ListenEmpty connected={connected} playable={status?.counts.ready ?? 0} saved={savedMixes} />}
-            {on('cloud.local_media') && data.mix.length > 0 && <QueueSources mix={data.mix} book={book} problemsOnly={!coexisting} />}
+            {data.mix.length ? <Now {...shared} listenQueue={<ListenQueue mix={data.mix} now={now} player={shellPlayer} />} noticeAction={<>{output?.state === 'output_unverified' && <SoundCheck />}{on('cloud.local_media') && <QueueSources mix={data.mix} book={book} problemsOnly={!coexisting} />}</>} /> : mixProblem ? <MixProblem onRetry={refreshMix} /> : <ListenEmpty connected={connected} playable={status?.counts.ready ?? 0} saved={savedMixes} />}
           </>
         );
       case 'edit':
@@ -663,7 +644,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
           <p className="room-open-line" role="status" data-testid="room-open-line">
             <a href={roomsPlace.path} onClick={(event) => { event.preventDefault(); navigate(roomsPlace.path); }}>{roomLine(room)}</a>
             <span>{countOf(room.guestsHere, 'guest')} here</span>
-            {roomWaiting > 0 && <span>{countOf(roomWaiting, 'request')} to approve</span>}
+            {roomWaiting > 0 && <span className="room-open-waiting">{countOf(roomWaiting, 'request')} to approve</span>}
           </p>
         )}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
       >

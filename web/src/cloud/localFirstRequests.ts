@@ -146,7 +146,7 @@ export function requestsFamily({ cloud, workspaceId, songs, send }: {
         stage: song?.playable ? 'searching' : 'waiting',
         browser_note: song?.playable ? JOINS_BY_HAND : NOT_ON_THIS_DEVICE,
         // a room request says who asked and in which room; the member's own says neither
-        ...(from ? { room_name: from.room_name, asked_by: askerOf(from.id) } : {}),
+        ...(from ? { room_name: from.room_name, asked_by: askerOf(from.id), room_request_id: from.id } : {}),
       };
     };
     return {

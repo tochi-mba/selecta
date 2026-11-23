@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useFlag } from '../flags';
-import { Status } from '../ui/controls';
+import { Icon } from '../ui/Icon';
+import { Meter } from '../ui/Meter';
+import { IconButton } from '../ui/primitives';
 import { useImportAnnouncer } from './importAnnouncer';
 import { allowAndCarryOn, carryOnNow, retryImportNow, useResumeOffer } from './importResume';
 import { useImportSession } from './importSession';
-import { offerWords, progressWords } from './ImportStatus';
+import { checkedOf, checkedWords, offerWords, progressWords } from './ImportStatus';
+import './libraryWorkspace.css';
 
 /** The import chip in the local-first shell's banner (ADR-0463 BF-0463-02, flag
  * `cloud.progressive_import`): while an import keeps checking in the background, it says how far
@@ -33,25 +36,26 @@ export function ImportChip({ onView, workspaceId }: { onView: () => void; worksp
     return () => window.clearInterval(timer);
   }, [retryAt]);
   if (hiddenIn === waitKey) return null;
-  const hide = <button type="button" className="quiet" onClick={() => setHiddenIn(waitKey)}>Hide this notice</button>;
+  const hide = <IconButton icon="close" label="Hide this notice" className="lw-chip-hide" onClick={() => setHiddenIn(waitKey)} />;
 
   if (resilient && live.phase !== 'running' && offer) {
     return (
-      <div className="cloud-import-chip">
-        <Status kind="paused">{offerWords(offer)}</Status>
-        {refused && <span role="alert">The browser did not allow it.</span>}
+      <div className="cloud-import-chip banner" data-tone="warn">
+        <Icon name="pause" size="toolbar" />
+        <p>{offerWords(offer)}{refused && <span role="alert"> The browser did not allow it.</span>}</p>
         {offer.kind === 'allow'
-          ? <button type="button" className="primary" onClick={() => { void allowAndCarryOn(offer).then((ok) => setRefused(!ok)); }}>{`Allow access to ${offer.folder} to carry on`}</button>
-          : <button type="button" className="quiet" onClick={onView}>Choose them again</button>}
+          ? <button type="button" className="primary" onClick={() => { void allowAndCarryOn(offer).then((ok) => setRefused(!ok)); }}>{`Allow ${offer.folder}`}</button>
+          : <button type="button" onClick={onView}>Choose them again</button>}
         {hide}
       </div>
     );
   }
   if (resilient && live.phase === 'failed') {
     return (
-      <div className="cloud-import-chip">
-        <Status kind="paused">{live.error ?? 'The import stopped part way. Everything already checked is kept.'}</Status>
-        <button type="button" className="quiet" onClick={carryOnNow}>Try again</button>
+      <div className="cloud-import-chip banner" data-tone="warn">
+        <Icon name="warning" size="toolbar" />
+        <p>{live.error ?? 'Adding your music stopped part way. Songs already added are kept.'}</p>
+        <button type="button" onClick={carryOnNow}>Try again</button>
         {hide}
       </div>
     );
@@ -59,18 +63,28 @@ export function ImportChip({ onView, workspaceId }: { onView: () => void; worksp
   const paused = live.phase === 'paused';
   if (live.phase !== 'running' && !paused) return null;
   const seconds = retryAt ? Math.max(0, Math.ceil((retryAt - Date.now()) / 1000)) : null;
+  const waiting = paused || (resilient && !!live.waiting);
   const words = paused
     ? resilient
-      ? 'Import paused: browser storage is full. Everything checked so far is in your library. Free some space and it carries on.'
-      : 'Import paused: browser storage is full. Everything checked so far is in your library.'
-    : resilient
+      ? 'Paused: browser storage is full. Songs added so far are in your library. Free some space and it carries on.'
+      : 'Paused: browser storage is full. Songs added so far are in your library.'
+    : resilient && (live.waiting || live.elsewhere)
       ? progressWords(live, seconds)
-      : `Checking your music: ${live.registered} of ${live.total ?? '…'} checked.`;
+      : null;
+  const checked = checkedOf(live);
   return (
-    <div className="cloud-import-chip">
-      <Status kind={paused || (resilient && live.waiting) ? 'paused' : 'working'}>{words}</Status>
-      {resilient && live.waiting?.why === 'server' && !live.elsewhere && <button type="button" className="quiet" onClick={retryImportNow}>Try now</button>}
-      <button type="button" className="quiet" onClick={onView}>{paused && resilient ? 'Free up space' : 'See import progress'}</button>
+    <div className="cloud-import-chip banner" data-tone={waiting ? 'warn' : 'info'}>
+      <Icon name={waiting ? 'pause' : 'music'} size="toolbar" />
+      {words
+        ? <p>{words}</p>
+        : (
+          <div className="lw-chip-progress">
+            <p><b>Adding your music</b> <span>{checkedWords(live)}</span></p>
+            <Meter label="Files checked" showLabel={false} value={typeof live.total === 'number' ? checked : undefined} max={Math.max(live.total ?? 1, 1)} valueText={checkedWords(live)} />
+          </div>
+        )}
+      {resilient && live.waiting?.why === 'server' && !live.elsewhere && <button type="button" onClick={retryImportNow}>Try now</button>}
+      <button type="button" className="quiet" onClick={onView}>{paused && resilient ? 'Free up space' : 'See progress'}</button>
       {hide}
     </div>
   );

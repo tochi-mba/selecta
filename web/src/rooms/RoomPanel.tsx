@@ -1,35 +1,43 @@
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
-import { Action, Menu, Skeleton, Status } from '../ui/controls';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { Action, Menu, Problem, Skeleton, Status } from '../ui/controls';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { countOf, ELLIPSIS } from '../ui/format';
 import { Icon } from '../ui/Icon';
 import { MenuItem, VisuallyHidden } from '../ui/primitives';
+import { showProblem, showToast } from '../ui/toasts';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
-import { groupGuests, guestPresence, guestsHeading, presenceChanges, screenPresence } from './presence';
-import { qrSvg } from './qr';
+import { startMixWith } from '../views/BrowserRequests';
+import { playingNow, RequestsContext, stageOf } from '../views/Requests';
+import { groupGuests, guestPresence, presenceChanges, screenPresence } from './presence';
 import type { LimitBounds } from './RoomLimits';
-import { RoomSettings, type RoomSettingsValue, type SettingsGroup } from './RoomSettings';
-import { ROOM_EVENT } from './useRoomSession';
+import { RoomRequests, type RoomRequestsMix } from './RoomRequests';
+import { RoomSettings, SettingsSection, type RoomSettingsValue, type SettingsGroup } from './RoomSettings';
+import { CopyWords, RoomQrScreen, RoomShare, useCopyLink } from './RoomShare';
+import { RoomStart } from './RoomStart';
+import { noteRoom, ROOM_EVENT, type RoomAsk, type RoomControl } from './useRoomSession';
 import './rooms.css';
 import { useNeedsConnection } from '../cloud/connection';
+import { ROOM_REQUEST_EVENT } from '../cloud/localFirstRequests';
 import '../cloud/connection.css';
 
-// The host's room page (ADR-0416), in the order a host needs it: a status line (open or locked,
-// guests here, music playing or not), a share card (QR code, room code, link with Copy link),
-// requests waiting for approval, the guests, the settings under plain headings (RoomSettings),
-// display screens, and a separate area for the things that cut people off: lock, a new code,
-// close the room. Rooms are Premium; other plans see what it is and which plan has it.
+// The host's room page (ADR-0416): a live control room.
 //
-// Guests and screens show whether they are really here ("Here now", "Away · last seen 5 min
-// ago", "Screen 1 · offline since 21:04") from the server's heartbeat, updated by the 3 s poll
-// (useVisiblePoll: paused while the tab is hidden, read at once on return); changes are announced
-// politely, at most once every 10 s. Every button is an Action, busy until its answer is back;
-// Remove, Ban, a new code and closing the room ask first in a ConfirmDialog that says what
-// happens, since none of them can be undone.
+// - Header: the room's name, Open or Locked, how many guests are here, whether music is playing;
+//   Copy link, Show QR full screen, and a menu for the things that cut people off (lock, a new
+//   code, close the room), each asked about first.
+// - Left: the share card (QR code, room code, link) and the guests, each with a menu to remove
+//   or ban them.
+// - Right, the heart of the page: the requests (RoomRequests), the same list as the Requests
+//   drawer. What needs approval, what is accepted and ready to add to the mix, what was added.
+// - Below: settings, saved as they change, with "Saved" beside the group that changed.
+//
+// Before a room exists the page is RoomStart. Rooms are Premium; other plans see what it is and
+// which plan has it. What happened after a press is said in a toast, never in a line that stays
+// on the page. Guests and screens show whether they are really here from the server's heartbeat,
+// updated by the 3 s poll (paused while the tab is hidden); changes are announced politely.
 
 type Api = <T>(path: string, init?: RequestInit, workspaceId?: string) => Promise<T>;
-type Song = { song_id: number; title: string; artist: string; length_s: number };
-type Item = { request_id: string; song: Song | null; status: string; votes: number; nickname: string | null };
+type Item = RoomAsk & { status: string };
 type Guest = { id: string; nickname: string; status: string; joined_at?: number; last_seen_at?: number; online?: boolean };
 type Screen = { id: string; label: string; paired_at: number | null; last_seen_at: number | null; online: boolean };
 type Confirm = { title: string; body: string; confirmLabel: string; run: () => Promise<unknown> };
@@ -37,15 +45,14 @@ type Settings = RoomSettingsValue;
 type Panel = {
   room: { id: string; name: string; status: string; settings: Settings; ends_at: number };
   code: string | null; join_path: string | null; guests: Guest[]; inbox: Item[]; coming_up: Item[]; unfit: Item[];
-  renders_left: number; music_paused: boolean; displays: number; screens?: Screen[]; now?: number;
-  /** false when the host's browser is the planner: nothing is rendered, so no render count applies */
+  music_paused: boolean; displays: number; screens?: Screen[]; now?: number;
+  /** false when the host adds each accepted request to the mix in this browser */
   renders_apply?: boolean; bounds?: LimitBounds;
 };
 
 const POLL_MS = 3000;
 const ANNOUNCE_EVERY_MS = 10_000;
 const SAID_MS = 2500;
-const songText = (song: Song | null) => (song ? `${song.title} - ${song.artist}` : 'A song');
 
 export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn = true, playHereOn = true, freshOnly = false, origin = window.location.origin }: {
   api: Api; workspaceId: string; locked?: string; votesOn?: boolean; displayOn?: boolean; playHereOn?: boolean; origin?: string;
@@ -56,22 +63,24 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
   const hostChanges = useRef(0);
   const [panel, setPanel] = useState<Panel | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [name, setName] = useState('');
+  const [loadError, setLoadError] = useState('');
   const [pairing, setPairing] = useState('');
-  const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState<SettingsGroup | null>(null);
-  const fading = useRef({ copied: 0, saved: 0 });
-  useEffect(() => () => { window.clearTimeout(fading.current.copied); window.clearTimeout(fading.current.saved); }, []);
+  const [qrOpen, setQrOpen] = useState(false);
+  const savedTimer = useRef(0);
+  useEffect(() => () => window.clearTimeout(savedTimer.current), []);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
-  const [error, setError] = useState('');
   // cloud.offline_shell: a room lives on the server, so its controls wait for the connection
   const offline = useNeedsConnection();
-  const [said, setSaid] = useState('');
   const [presenceSaid, setPresenceSaid] = useState('');
   const seen = useRef<{ guests: Guest[]; screens: Screen[] } | null>(null);
   const queued = useRef<string[]>([]);
   const lastAnnounced = useRef(0);
   const announceTimer = useRef(0);
+  // the browser's own Requests list, where this shell has one: its rows add a request to the mix
+  const requests = useContext(RequestsContext);
+  const requestsError = requests?.error ?? '';
+  useEffect(() => { if (requestsError) showProblem(requestsError); }, [requestsError]);
 
   // Polite, rate-limited: changes that arrive within 10 s of the last announcement wait and are
   // said together, so a room full of phones locking and unlocking doesn't chatter.
@@ -99,8 +108,10 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
     try {
       const answer = await api<{ room: Panel | null }>('/rooms/current', {}, workspaceId);
       if (freshOnly && asked !== hostChanges.current) return;
-      setPanel(answer.room); setLoaded(true);
-    } catch (problem) { setError((problem as Error).message); setLoaded(true); }
+      setPanel(answer.room); setLoaded(true); setLoadError('');
+      // the Requests drawer and this page list the same requests from this one read
+      noteRoom(answer.room);
+    } catch (problem) { setLoadError((problem as Error).message || 'Check your connection.'); setLoaded(true); }
   }, [api, workspaceId, freshOnly]);
   useEffect(() => {
     if (!locked) void load();
@@ -112,13 +123,18 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
     try {
       const next = await api<Panel>(path, init, workspaceId);
       hostChanges.current += 1;
-      setPanel(next.room.status === 'ended' ? null : next);
-      setError(''); setSaid(success);
+      const ended = next.room.status === 'ended';
+      setPanel(ended ? null : next);
+      noteRoom(ended ? null : next);
+      if (success) showToast(success);
       // the shell's room session (useRoomSession) hears at once that the room opened, changed or ended
       window.dispatchEvent(new Event(ROOM_EVENT));
       return true;
-    } catch (problem) { setError((problem as Error).message); return false; }
+    } catch (problem) { showProblem((problem as Error).message || 'That didn’t work. Try again.'); return false; }
   };
+
+  const link = panel?.join_path ? `${origin}${panel.join_path}` : '';
+  const { copied, copy } = useCopyLink(link, showProblem);
 
   if (locked) {
     const plan = `${locked[0]?.toUpperCase()}${locked.slice(1)}`;
@@ -130,38 +146,25 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
     );
   }
 
-  if (!loaded) return <section className="room-panel room-card" aria-labelledby="room-title" aria-busy="true"><h2 id="room-title" className="visually-hidden">Room</h2><Skeleton variant="rows" lines={3} label="Loading your room" /></section>;
-
-  if (!panel) {
-    const open = () => act('/rooms', { method: 'POST', body: JSON.stringify({ name: name || 'Party', settings: {} }) }, 'Room open.');
+  if (!loaded) {
     return (
-      <section className="room-panel room-card room-invite" aria-labelledby="room-title">
-        <h2 id="room-title">Open a room</h2>
-        {/* After the room is closed the page comes back here, so the ending is said here, not lost. */}
-        {said && <p className="room-said" role="status">{said}</p>}
-        <p className="room-lede">Let your guests pick the music. They scan a QR code and ask for songs from your library on their own phones.</p>
-        <ul className="room-points">
-          <li><Icon name="check" size="compact" /> No app and no account for guests</li>
-          <li><Icon name="check" size="compact" /> Nothing plays on their phones</li>
-          <li><Icon name="check" size="compact" /> You stay in charge: approve requests, set limits, remove anyone</li>
-        </ul>
-        {/* one field, so Enter still sends the form; the button is an Action so it shows it's busy */}
-        <form onSubmit={(event: FormEvent) => { event.preventDefault(); void open(); }} className="room-open">
-          <label htmlFor="room-name">Room name guests will see</label>
-          <div className="room-row">
-            <input id="room-name" value={name} maxLength={40} placeholder="Party" onChange={(event) => setName(event.target.value)} />
-            <fieldset className="offline-fieldset" disabled={!!offline}><Action type="button" className="primary" run={open} working={`Opening${ELLIPSIS}`}>Open room</Action></fieldset>
-          </div>
-        </form>
-        {offline && <p className="needs-connection">{offline}</p>}
-        {error && <p className="room-error" role="alert">{error}</p>}
+      <section className="room-panel" aria-labelledby="room-title" aria-busy="true">
+        <h2 id="room-title" className="visually-hidden">Room</h2>
+        <div className="room-grid">
+          <div className="room-side"><div className="room-card"><Skeleton variant="rows" lines={3} label="Loading your room" /></div></div>
+          <div className="room-card room-requests-card" aria-hidden="true"><Skeleton variant="rows" lines={5} label="Loading requests" /></div>
+        </div>
       </section>
     );
   }
 
+  if (!panel) {
+    if (loadError) return <section className="room-panel" aria-labelledby="room-title"><h2 id="room-title" className="visually-hidden">Room</h2><Problem retry={load}>Couldn’t load your room. {loadError}</Problem></section>;
+    return <RoomStart offline={offline ?? ''} open={(name) => act('/rooms', { method: 'POST', body: JSON.stringify({ name, settings: {} }) }, `${name} is open. Share the code to let guests in.`)} />;
+  }
+
   const room = panel.room;
   const base = `/rooms/${encodeURIComponent(room.id)}`;
-  const link = panel.join_path ? `${origin}${panel.join_path}` : '';
   const host = origin.replace(/^https?:\/\//, '');
   const settings = room.settings;
   const isLocked = room.status === 'locked';
@@ -170,22 +173,16 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
     void act(`${base}/settings`, { method: 'PATCH', body: JSON.stringify(change) }).then((ok) => {
       if (!ok) return;
       setSaved(group);
-      window.clearTimeout(fading.current.saved);
-      fading.current.saved = window.setTimeout(() => setSaved(null), SAID_MS);
+      window.clearTimeout(savedTimer.current);
+      savedTimer.current = window.setTimeout(() => setSaved(null), SAID_MS);
     });
-  };
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied(true); setError('');
-      window.clearTimeout(fading.current.copied);
-      fading.current.copied = window.setTimeout(() => setCopied(false), SAID_MS);
-    } catch { setError('Couldn’t copy the link. Select it and copy it yourself.'); }
   };
   const now = panel.now ?? Date.now() / 1000;
   const groups = groupGuests(panel.guests, now);
+  const away = groups.away.length + groups.gone.length;
   const pair = () => act(`${base}/displays`, { method: 'POST', body: JSON.stringify({ pairing_code: pairing }) }, 'Screen paired.').then((ok) => { if (ok) setPairing(''); });
   const screens = panel.screens ?? [];
+  const lock = () => act(`${base}/${isLocked ? 'unlock' : 'lock'}`, { method: 'POST' }, isLocked ? 'Room unlocked. New guests can join.' : 'Room locked. Nobody new can join.');
   const newCode = (removeEveryone: boolean) => setConfirm(removeEveryone ? {
     title: 'Make a new code and remove everyone?',
     body: 'Every guest leaves the room now, and the old QR code and link stop working. Share the new code with the people you want back. Requests already made stay.',
@@ -197,11 +194,18 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
     confirmLabel: 'Make a new code',
     run: () => act(`${base}/code`, { method: 'POST', body: JSON.stringify({ remove_everyone: false }) }, 'New code made. The old one no longer works.'),
   });
+  const close = () => setConfirm({
+    title: `Close ${room.name}?`,
+    body: 'Everyone leaves, the code stops working and requests still waiting are withdrawn. Songs already in your mix stay. You can open a new room afterwards.',
+    confirmLabel: 'Close room',
+    run: () => act(`${base}/end`, { method: 'POST' }, `${room.name} is closed.`),
+  });
   const guestRow = (guest: Guest) => (
     <li key={guest.id} data-testid="room-guest" data-presence={guest.online ? 'here' : 'away'}>
+      <span className="ask-face room-face" aria-hidden="true">{guest.nickname.trim()[0]?.toUpperCase() ?? '?'}</span>
       <span className="room-who"><b>{guest.nickname}</b>
         <span className={guest.online ? 'room-presence room-here' : 'room-presence room-muted'} data-testid="room-guest-presence">{guest.status === 'pending' ? 'Waiting to be let in · ' : ''}{guestPresence(guest, now)}</span></span>
-      {guest.status === 'pending' && <Action type="button" className="primary" run={() => act(`${base}/guests/${guest.id}/approve`)} aria-label={`Let ${guest.nickname} in`}>Let in</Action>}
+      {guest.status === 'pending' && <Action type="button" className="primary" run={() => act(`${base}/guests/${guest.id}/approve`, { method: 'POST' }, `${guest.nickname} is in.`)} aria-label={`Let ${guest.nickname} in`}>Let in</Action>}
       <Menu className="room-guest-menu" title={`Options for ${guest.nickname}`} label={<><Icon name="more" /><VisuallyHidden>Options for {guest.nickname}</VisuallyHidden></>}>
         <MenuItem aria-label={`Remove ${guest.nickname}`} onClick={() => setConfirm({
           title: `Remove ${guest.nickname}?`,
@@ -213,148 +217,138 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
           title: `Ban ${guest.nickname}?`,
           body: "They can't come back to this room. Their waiting requests are withdrawn and their votes taken back.",
           confirmLabel: 'Ban',
-          run: () => act(`${base}/guests/${guest.id}/ban`, { method: 'POST' }, `${guest.nickname} is banned for this room.`),
+          run: () => act(`${base}/guests/${guest.id}/ban`, { method: 'POST' }, `${guest.nickname} is banned from this room.`),
         })}>Ban from room</MenuItem>
       </Menu></li>
   );
-  const approving = settings.request_mode === 'approve' || panel.inbox.length > 0;
+
+  // The host adds each accepted request in this browser when its Requests list is here and the
+  // room hands every request over; otherwise SelectaDJ places them and the page only lists them.
+  const hostAdds = !!requests && panel.renders_apply === false;
+  const playback = requests?.playback;
+  const mix: RoomRequestsMix | null = hostAdds && requests ? {
+    rows: requests.requests && requests.requests.map((request) => ({ request, stage: stageOf(request, playback) })),
+    live: playingNow(playback),
+    onAdd: requests.addAnyway,
+    onDismiss: requests.cancel,
+    onStart: startMixWith(requests.request, playback, requests.refresh),
+    inMix: (songId) => !!playback?.mix.some((item) => item.song_id === songId),
+  } : null;
+  const control: RoomControl = {
+    approve: async (id) => { await act(`${base}/requests/${encodeURIComponent(id)}/approve`); },
+    pass: async (id) => { await act(`${base}/requests/${encodeURIComponent(id)}/pass`); },
+  };
+  const phase = playback?.player.state.phase;
+  const music = hostAdds ? (phase === 'playing' ? 'Music playing' : phase === 'paused' ? 'Music paused' : 'Nothing playing') : panel.music_paused ? 'Nothing playing' : 'Music playing';
+  const waiting = panel.inbox.length + panel.coming_up.length;
+  const requestMode = settings.request_mode === 'off' ? 'Requests off' : settings.request_mode === 'approve' ? 'You approve each' : 'Accepted automatically';
 
   return (
-    <section className="room-panel" aria-labelledby="room-title">
+    <section className="room-panel room-live" aria-labelledby="room-title">
       {offline && <p className="needs-connection">{offline}</p>}
       <fieldset className="offline-fieldset" disabled={!!offline}>
       <div className="room-page">
       <header className="room-head">
-        <h2 id="room-title">{room.name}</h2>
-        <p className="room-status-line">
-          <span data-testid="room-status"><Status kind={isLocked ? 'paused' : 'ready'}>{isLocked ? 'Locked: no new guests' : 'Open'}</Status></span>
-          <span>{countOf(groups.here.length, 'guest')} here</span>
-          <span>{panel.music_paused ? 'Nothing playing' : 'Music playing'}</span>
-        </p>
+        <div className="room-head-main">
+          <h2 id="room-title">{room.name}</h2>
+          <p className="room-facts">
+            <span data-testid="room-status" className={`room-pill ${isLocked ? 'is-locked' : 'is-open'}`}><Status kind={isLocked ? 'paused' : 'ready'}>{isLocked ? 'Locked' : 'Open'}</Status></span>
+            <span><Icon name="users" size="compact" /> {countOf(groups.here.length, 'guest')} here</span>
+            <span><Icon name="music" size="compact" /> {music}</span>
+          </p>
+        </div>
+        <div className="room-head-actions">
+          <Action type="button" className="primary" run={copy}><CopyWords copied={copied}>Copy link</CopyWords></Action>
+          <button type="button" onClick={() => setQrOpen(true)}><Icon name="expand" size="toolbar" /> Show QR full screen</button>
+          <Menu className="room-menu" title="Room options" label={<><Icon name="more" /><VisuallyHidden>Room options</VisuallyHidden></>}>
+            <MenuItem onClick={() => void lock()}>{isLocked ? 'Unlock room' : 'Lock room'}</MenuItem>
+            <MenuItem onClick={() => newCode(false)}>Make a new code</MenuItem>
+            <MenuItem danger onClick={() => newCode(true)}>New code and remove everyone</MenuItem>
+            <MenuItem danger onClick={close}>Close room</MenuItem>
+          </Menu>
+        </div>
       </header>
-      {panel.music_paused && <p className="room-banner">{panel.renders_apply === false
-        ? 'Guests can still ask for songs while nothing is playing. Each one reaches your Requests on any page while this browser is open.'
-        : `No speaker is playing, so guests see "The music's paused".${playHereOn ? ' Press Play here on a device to start.' : ''}`}</p>}
-      {said && <p className="room-said" role="status">{said}</p>}
-      <p className="room-sr" role="status" aria-live="polite" data-testid="room-presence-said">{presenceSaid}</p>
-      {error && <p className="room-error" role="alert">{error}</p>}
+      {!hostAdds && panel.music_paused && <p className="room-note">Guests see "The music's paused" until a device plays.{playHereOn ? ' Press Play here on a device to start.' : ''}</p>}
+      {loadError && <p className="room-note" role="status">Trying to reach your room again{ELLIPSIS}</p>}
+      <p className="visually-hidden" role="status" aria-live="polite" data-testid="room-presence-said">{presenceSaid}</p>
 
-      <div className="room-columns">
-        <section className="room-card room-share" aria-labelledby="share-title">
-          <h3 id="share-title">Invite guests</h3>
-          {link && <div className="room-qr" data-testid="room-qr" data-link={link} dangerouslySetInnerHTML={{ __html: qrSvg(link, `QR code to join ${room.name}`) }} />}
-          <div className="room-share-words">
-            <p className="room-code-label">Room code</p>
-            <p className="room-code" data-testid="room-code">{panel.code}</p>
-            {link && (
-              <div className="room-link">
-                <a href={link} target="_blank" rel="noreferrer" title={link}>{link.replace(/^https?:\/\//, '')}</a>
-                <Action type="button" run={copy}>{copied ? <><Icon name="check" size="compact" /> Copied</> : 'Copy link'}</Action>
-                <span className="room-sr" role="status">{copied ? 'Link copied.' : ''}</span>
-              </div>
+      <div className="room-grid">
+        <div className="room-side">
+          <RoomShare name={room.name} code={panel.code} link={link} copied={copied} copy={copy} onFullScreen={() => setQrOpen(true)} />
+          <section className="room-card room-guests" aria-labelledby="guests-title">
+            <header className="room-card-head">
+              <h3 id="guests-title" data-testid="room-guests-heading">Guests</h3>
+              <span className="room-count">{groups.here.length} here{away ? ` · ${away} away` : ''}</span>
+            </header>
+            {!groups.here.length && !away && (
+              <div className="room-empty room-empty-small"><Icon name="users" /><p>No guests yet. They join with the code.</p></div>
             )}
-            <p className="room-help">Guests scan the code with their phone camera, or open the link. No app and no account.</p>
-            {displayOn && <p className="room-help">For a TV or projector, open {host}/display on it and pair it under Display screens.</p>}
-          </div>
-        </section>
-
-        <div className="room-stack">
-          {approving && (
-            <section className="room-card" aria-labelledby="inbox-title">
-              <h3 id="inbox-title">Requests waiting for approval ({panel.inbox.length})</h3>
-              {panel.inbox.length === 0 ? <p className="room-muted">Nothing waiting. New requests appear here for you to approve or pass.</p> : (
-                <ul className="room-list">{panel.inbox.map((item) => (
-                  <li key={item.request_id}><span>{songText(item.song)}<span className="room-muted"> · {item.nickname}{votesOn && settings.votes ? ` · ${countOf(item.votes, 'vote')}` : ''}</span></span>
-                    <Action type="button" className="primary" run={() => act(`${base}/requests/${item.request_id}/approve`)} aria-label={`Approve ${songText(item.song)}`}>Approve</Action>
-                    <Action type="button" run={() => act(`${base}/requests/${item.request_id}/pass`)} aria-label={`Pass on ${songText(item.song)}`}>Pass</Action></li>
-                ))}</ul>
-              )}
-            </section>
-          )}
-          <section className="room-card" aria-labelledby="coming-title">
-            <h3 id="coming-title">Accepted requests ({panel.coming_up.length})</h3>
-            {panel.coming_up.length === 0 ? <p className="room-muted">{settings.request_mode === 'off' ? 'Requests are off for this room.' : 'No accepted guest requests yet.'}</p> : (
-              <>
-                <p className="room-muted">These wait in Request a song on the device that plays the music. Add them to the mix there.</p>
-                <ol className="room-list">{panel.coming_up.map((item) => <li key={item.request_id}><span>{songText(item.song)}<span className="room-muted"> · {item.nickname}</span></span></li>)}</ol>
-              </>
-            )}
-            {panel.unfit.length > 0 && (<>
-              <h4>Couldn't fit</h4>
-              <ul className="room-list">{panel.unfit.map((item) => (
-                <li key={item.request_id}><span>{songText(item.song)}</span><Action type="button" run={() => act(`${base}/requests/${item.request_id}/approve`)}>Try again</Action></li>
-              ))}</ul>
-            </>)}
-            {panel.renders_apply !== false && <p className="room-muted">{countOf(panel.renders_left, 'request render')} left this hour.</p>}
-          </section>
-          <section className="room-card" aria-labelledby="guests-title">
-            <h3 id="guests-title" data-testid="room-guests-heading">{guestsHeading(groups)}</h3>
-            {!groups.here.length && !groups.away.length && !groups.gone.length && <p className="room-muted">No guests yet. They join with the code or the QR code.</p>}
             {(groups.here.length > 0 || groups.away.length > 0) && <ul className="room-list">{[...groups.here, ...groups.away].map(guestRow)}</ul>}
             {groups.gone.length > 0 && (
               <details className="room-gone" data-testid="room-guests-gone">
-                <summary>Left or away ({groups.gone.length})</summary>
+                <summary>Away for a while ({groups.gone.length})</summary>
                 <ul className="room-list">{groups.gone.map(guestRow)}</ul>
               </details>
             )}
           </section>
         </div>
+
+        <section className="room-card room-requests-card" aria-labelledby="requests-title">
+          <header className="room-card-head">
+            <h3 id="requests-title">Requests</h3>
+            {waiting > 0 && <span className="ask-count" data-testid="room-waiting-count">{waiting}</span>}
+            <span className="room-count room-mode">{requestMode}</span>
+          </header>
+          <RoomRequests
+            variant="page" mix={mix} control={control} votes={votesOn && settings.votes}
+            off={settings.request_mode === 'off'} approving={settings.request_mode === 'approve'}
+            unfit={panel.unfit} onRetry={(id) => act(`${base}/requests/${encodeURIComponent(id)}/approve`)}
+            onChanged={load} onMissing={() => window.dispatchEvent(new Event(ROOM_REQUEST_EVENT))}
+            empty={settings.request_mode === 'off' ? (
+              <div className="room-empty"><Icon name="request" size="hero" /><p><b>Requests are off</b></p><p>Guests can see what is playing. Turn requests on in Settings below.</p></div>
+            ) : (
+              <div className="room-empty">
+                <Icon name="request" size="hero" />
+                <p><b>No requests yet</b></p>
+                <p>Songs your guests ask for appear here, ready to add to your mix.</p>
+                <Action type="button" run={copy}><CopyWords copied={copied}>Copy invite link</CopyWords></Action>
+              </div>
+            )}
+          />
+        </section>
       </div>
 
       <section className="room-card" aria-labelledby="settings-title">
-        <h3 id="settings-title">Settings</h3>
-        <p className="room-muted">Changes are saved as you make them.</p>
-        <RoomSettings settings={settings} bounds={panel.bounds} votesOn={votesOn} saved={saved} save={save} />
-        {displayOn && (
-          <section className="room-group room-screens" aria-labelledby="screen-title">
-            <header className="room-group-head"><h4 id="screen-title">Display screens</h4></header>
-            <p className="room-help">Show the QR code and what is playing on a TV or projector. Open {host}/display on it, then type the code it shows here.</p>
-            {screens.length > 0 && (
-              <ul className="room-list" data-testid="room-screens">{screens.map((screen) => (
-                <li key={screen.id} data-testid="room-screen" data-presence={screen.online ? 'online' : 'offline'}>
-                  <span className={screen.online ? 'room-here' : 'room-muted'}>{screenPresence(screen)}</span>
-                  <Action type="button" run={() => act(`${base}/displays/${encodeURIComponent(screen.id)}`, { method: 'DELETE' }, `${screen.label} disconnected.`)} aria-label={`Disconnect ${screen.label}`}>Disconnect</Action></li>
-              ))}</ul>
-            )}
-            <form className="room-open" onSubmit={(event) => { event.preventDefault(); void pair(); }}>
-              <label htmlFor="pairing-code">Code on the screen</label>
-              <div className="room-row">
-                <input id="pairing-code" value={pairing} maxLength={8} autoComplete="off" onChange={(event) => setPairing(event.target.value)} />
-                <Action type="button" run={pair} working={`Pairing${ELLIPSIS}`}>Pair screen</Action>
-                {panel.displays > 0 && <Action type="button" run={() => act(`${base}/displays`, { method: 'DELETE' }, 'Screens disconnected.')}>Disconnect screens</Action>}
-              </div>
-            </form>
-          </section>
-        )}
-      </section>
-
-      <section className="room-card room-danger" aria-labelledby="danger-title">
-        <h3 id="danger-title">Lock, new code and closing</h3>
-        <ul className="room-danger-list">
-          <li>
-            <span><b>{isLocked ? 'The room is locked' : 'Lock the room'}</b><span className="room-help">{isLocked ? 'Nobody new can join. Unlock it to let guests in again.' : 'Stops anyone new joining. Guests already here stay.'}</span></span>
-            <Action type="button" run={() => act(`${base}/${isLocked ? 'unlock' : 'lock'}`, { method: 'POST' }, isLocked ? 'Room unlocked.' : 'Room locked.')}>{isLocked ? 'Unlock' : 'Lock room'}</Action>
-          </li>
-          <li>
-            <span><b>Make a new code</b><span className="room-help">The old QR code and link stop working. Use it when the code has gone further than you wanted.</span></span>
-            <span className="room-row">
-              <Action type="button" run={() => newCode(false)}>Make a new code</Action>
-              <Action type="button" className="destructive" run={() => newCode(true)}>New code and remove everyone</Action>
-            </span>
-          </li>
-          <li>
-            <span><b>Close the room</b><span className="room-help">Ends it for everyone. Requests still waiting are withdrawn.</span></span>
-            <Action type="button" className="destructive" run={() => setConfirm({
-              title: `Close ${room.name}?`,
-              body: 'Everyone leaves, the code stops working and requests still waiting are withdrawn. Songs already in your mix stay. You can open a new room afterwards.',
-              confirmLabel: 'Close room',
-              run: () => act(`${base}/end`, { method: 'POST' }, 'Room ended.'),
-            })}>Close room</Action>
-          </li>
-        </ul>
+        <header className="room-card-head">
+          <h3 id="settings-title">Settings</h3>
+          <span className="room-count">Saved as you change them</span>
+        </header>
+        <RoomSettings settings={settings} bounds={panel.bounds} votesOn={votesOn} saved={saved} save={save} locked={isLocked} onLock={lock}>
+          {displayOn && (
+            <SettingsSection title="Display screens" saved={false} wide>
+              <p className="room-help">Show the QR code and what is playing on a TV. Open {host}/display on it, then type its code here.</p>
+              {screens.length > 0 && (
+                <ul className="room-list" data-testid="room-screens">{screens.map((screen) => (
+                  <li key={screen.id} data-testid="room-screen" data-presence={screen.online ? 'online' : 'offline'}>
+                    <span className={screen.online ? 'room-who room-here' : 'room-who room-muted'}>{screenPresence(screen)}</span>
+                    <Action type="button" run={() => act(`${base}/displays/${encodeURIComponent(screen.id)}`, { method: 'DELETE' }, `${screen.label} disconnected.`)} aria-label={`Disconnect ${screen.label}`}>Disconnect</Action></li>
+                ))}</ul>
+              )}
+              <form className="room-open" onSubmit={(event) => { event.preventDefault(); void pair(); }}>
+                <label htmlFor="pairing-code">Code on the screen</label>
+                <div className="room-open-row">
+                  <input id="pairing-code" value={pairing} maxLength={8} autoComplete="off" onChange={(event) => setPairing(event.target.value)} />
+                  <Action type="button" run={pair} working={`Pairing${ELLIPSIS}`}>Pair screen</Action>
+                </div>
+                {panel.displays > 1 && <Action type="button" className="quiet" run={() => act(`${base}/displays`, { method: 'DELETE' }, 'Screens disconnected.')}>Disconnect all screens</Action>}
+              </form>
+            </SettingsSection>
+          )}
+        </RoomSettings>
       </section>
       </div>
       </fieldset>
+      {qrOpen && link && <RoomQrScreen name={room.name} code={panel.code} link={link} onClose={() => setQrOpen(false)} />}
       {confirm && (
         <ConfirmDialog title={confirm.title} body={confirm.body} confirmLabel={confirm.confirmLabel} destructive
           working={`Working${ELLIPSIS}`} onConfirm={confirm.run} onClose={() => setConfirm(null)} />

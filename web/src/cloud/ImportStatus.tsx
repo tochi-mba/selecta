@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useFlag } from '../flags';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { Icon } from '../ui/Icon';
 import { userLocale } from '../ui/format';
 import { allowAndCarryOn, retryImportNow, useResumeOffer, type ResumeOffer } from './importResume';
 import { cancelImportSession, type ImportSnapshot } from './importSession';
@@ -75,8 +76,8 @@ export function offerWords(given: ResumeOffer): string {
   const counts = typeof given.marker.total === 'number'
     ? `${formatCount(checked)} of ${formatCount(given.marker.total)} checked`
     : `${formatCount(checked)} checked`;
-  if (given.kind === 'allow') return `Your import of ${given.folder} stopped part way: ${counts}. The browser needs your permission again before SelectaDJ can carry on.`;
-  return `Your import stopped part way: ${counts}. This browser can’t reopen picked files after a reload, so choose the same ${given.folder ? `folder (${given.folder})` : 'files'} again. SelectaDJ skips everything already done.`;
+  if (given.kind === 'allow') return `Adding ${given.folder} stopped part way: ${counts}. Allow the folder again and SelectaDJ carries on.`;
+  return `Adding your music stopped part way: ${counts}. Choose the same ${given.folder ? `folder (${given.folder})` : 'songs'} again and SelectaDJ carries on from there.`;
 }
 
 /** The interrupted-import offer: one Allow button when a folder's permission lapsed, an honest
@@ -87,15 +88,13 @@ export function ResumeOfferNotice({ workspaceId, onChoose, onForget }: { workspa
   const resilient = useFlag('cloud.resilient_import');
   if (!resilient || !given) return null;
   return (
-    <div className="stack" role="note">
-      <p>{offerWords(given)}</p>
-      {refused && <p role="alert">The browser did not allow it. Press Allow again, or choose the folder again.</p>}
-      <div className="row wrap">
-        {given.kind === 'allow'
-          ? <button type="button" className="primary" onClick={() => { void allowAndCarryOn(given).then((ok) => setRefused(!ok)); }}>{`Allow access to ${given.folder} to carry on`}</button>
-          : onChoose && <button type="button" className="primary" onClick={onChoose}>Choose them again</button>}
-        {onForget && <button type="button" className="quiet" onClick={onForget}>Forget this</button>}
-      </div>
+    <div className="banner" data-tone="warn" role="note">
+      <Icon name="pause" size="toolbar" />
+      <p>{offerWords(given)}{refused && <span role="alert"> The browser did not allow it. Press Allow again, or choose the folder again.</span>}</p>
+      {given.kind === 'allow'
+        ? <button type="button" className="primary" onClick={() => { void allowAndCarryOn(given).then((ok) => setRefused(!ok)); }}>{`Allow ${given.folder}`}</button>
+        : onChoose && <button type="button" className="primary" onClick={onChoose}>Choose them again</button>}
+      {onForget && <button type="button" className="quiet" onClick={onForget}>Forget this</button>}
     </div>
   );
 }

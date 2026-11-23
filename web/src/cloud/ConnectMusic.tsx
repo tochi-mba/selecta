@@ -1,15 +1,18 @@
-import { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { ChangeEvent, forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type { Request } from '../api';
 import { flagOn, useFlag } from '../flags';
 import { dirPicker, directoryInput, findLapsed, forgetFolder, recallFolder, refreshDeviceAvailability, rememberFolder, runImport } from '../media';
 import type { DirectoryHandleLike, ImportEvent, ImportSource, ImportSummary, LapsedItem, MediaStore, RegrantOutcome, StoredFolderHandle } from '../media';
 import { importSummaryWords, useImportAnnouncer } from './importAnnouncer';
 import { countOf } from '../ui/format';
+import { Icon } from '../ui/Icon';
+import { Meter } from '../ui/Meter';
 import { cancelImportSession, clearImportMarker, readImportMarker, startImportSession, useImportSession, type ImportRunner } from './importSession';
 import { preloadImportCode } from '../media/importer';
 import { deleteImportJournal } from '../media/importJournal';
 import { carryOnNow, dropResumeOffer, startImport } from './importResume';
-import { CancelImportButton, checkedOf, formatCount, ImportProgressLine, ResumeOfferNotice } from './ImportStatus';
+import { CancelImportButton, checkedOf, checkedWords, formatCount, ImportProgressLine, ResumeOfferNotice } from './ImportStatus';
+import './libraryWorkspace.css';
 
 /** Connect Music in the local-first Library (ADR-0458 import, ADR-0463 surfaces).
  *
@@ -69,7 +72,22 @@ export function registeredDeviceId(workspaceId: string): string | null {
   try { return localStorage.getItem(`selecta.device.${workspaceId}`); } catch { return null; }
 }
 
-export function ConnectMusic({ request, workspaceId, openStore, importer = runImport, onAvailabilityChanged }: {
+/** What a page's own button can ask Connect music to do (the Library header's main action). */
+export type ConnectMusicHandle = {
+  /** Opens the folder picker where the browser has one, else the file picker. */
+  chooseFolder: () => void;
+  chooseSongs: () => void;
+  /** Whether "folder" is something this browser can pick at all. */
+  folders: boolean;
+};
+
+/** `variant`: `card` is the whole card with its own buttons (Workspace > Sources); `hero` is the
+ * empty Library's first step; `status` shows only what is happening or needs the member (progress,
+ * an interrupted import, results, files that failed, lapsed permissions), for a page whose header
+ * holds the buttons. */
+export type ConnectMusicVariant = 'card' | 'hero' | 'status';
+
+export const ConnectMusic = forwardRef<ConnectMusicHandle, {
   /** Asks with full /api paths, as the media importer does. */
   request: Request;
   workspaceId: string;
@@ -77,7 +95,8 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
   importer?: typeof runImport;
   /** Reconcile this device's catalogue availability after a permission is restored. */
   onAvailabilityChanged?: () => void | Promise<void>;
-}) {
+  variant?: ConnectMusicVariant;
+}>(function ConnectMusic({ request, workspaceId, openStore, importer = runImport, onAvailabilityChanged, variant = 'card' }, ref) {
   const live = useImportSession(workspaceId);
   useImportAnnouncer();
   const progressive = useFlag('cloud.progressive_import');
@@ -182,89 +201,142 @@ export function ConnectMusic({ request, workspaceId, openStore, importer = runIm
   const running = live.phase === 'running';
   const checked = checkedOf(live);
   const failures = live.failures;
-  const shownProblem = problem || (live.phase === 'failed' ? live.error || 'The import stopped. Nothing after the last connected song was changed.' : '');
+  const shownProblem = problem || (live.phase === 'failed' ? live.error || 'The import stopped. Songs already added are still in your library.' : '');
   const offer = progressive && live.phase === 'idle' && marker && recalled !== undefined;
   const folderName = marker?.folder ?? recalled?.name;
-  return (
-    <section className="panel stack connect-music" aria-labelledby="connect-music-title">
-      <h2 id="connect-music-title">Connect music</h2>
-      <p className="hint">Your music stays on this device. SelectaDJ keeps only each song’s title, artist and a fingerprint, so your library and mixes work on your other devices.</p>
-      {resilient && !running && <ResumeOfferNotice workspaceId={workspaceId} onChoose={() => (picker.supported ? void chooseFolder() : (folderInput.supported ? folderPick : songsPick).current?.click())} onForget={forget} />}
+  const folders = picker.supported || folderInput.supported;
+  const pickFolder = () => (picker.supported ? void chooseFolder() : (folderInput.supported ? folderPick : songsPick).current?.click());
+  const pickSongs = () => songsPick.current?.click();
+  useImperativeHandle(ref, () => ({ chooseFolder: pickFolder, chooseSongs: pickSongs, folders }));
+  // a finished import's result can be put away; a new result shows again
+  const [dismissed, setDismissed] = useState<ImportSummary | null>(null);
+  const result = (live.phase === 'finished' || live.phase === 'paused') && live.summary && live.summary !== dismissed ? live.summary : null;
+
+  // the pickers are always in the page, so a header button (or a test) can reach them
+  const inputs = (
+    <>
+      {!picker.supported && folderInput.supported && <input ref={folderPick} type="file" hidden tabIndex={-1} aria-hidden="true" multiple {...{ webkitdirectory: '' }} onChange={chosen} />}
+      <input ref={songsPick} type="file" hidden tabIndex={-1} aria-hidden="true" multiple accept="audio/*" onChange={chosen} />
+    </>
+  );
+  const buttons = !running && (
+    <div className="lw-connect-actions">
+      {folders && <button type="button" className="primary" onClick={pickFolder}><Icon name="folder" size="toolbar" />Choose a folder</button>}
+      <button type="button" className={folders ? undefined : 'primary'} onClick={pickSongs}><Icon name="music" size="toolbar" />Choose songs</button>
+    </div>
+  );
+  const progress = running && (
+    <section className="lw-import" aria-label="Adding your music">
+      <div className="lw-import-head">
+        <span className="lw-import-mark" aria-hidden="true"><Icon name="music" /></span>
+        <div>
+          <strong>{(live.resumed ?? 0) > 0 ? 'Carrying on adding your music' : 'Adding your music'}</strong>
+          <span className="lw-import-count">{checkedWords(live)}</span>
+        </div>
+        <CancelImportButton label="Stop" className="quiet" />
+      </div>
+      <Meter label="Files checked" showLabel={false} value={typeof live.total === 'number' ? checked : undefined} max={Math.max(live.total ?? 1, 1)} valueText={checkedWords(live)} />
+      {resilient && (live.waiting || live.elsewhere) && <ImportProgressLine live={live} className="lw-import-wait" />}
+      <p className="lw-import-next">
+        {resilient && !live.elsewhere && !live.read
+          ? `Songs appear in your library as they are checked, so you can keep using SelectaDJ. If this tab closes, it carries on from ${formatCount(checked)} next time.`
+          : 'Songs appear in your library as they are checked, so you can keep using SelectaDJ.'}
+      </p>
+    </section>
+  );
+  const notices = (
+    <>
+      {resilient && !running && <ResumeOfferNotice workspaceId={workspaceId} onChoose={pickFolder} onForget={forget} />}
       {offer && recalled && !refused && (
-        <div className="stack" role="note">
-          <p>{`An import of ${folderName} was interrupted. Anything already checked is in your library.`}</p>
-          <div className="row wrap">
-            <button className="primary" onClick={() => void keepChecking(recalled)}>{`Keep checking ${folderName}`}</button>
+        <div className="banner" data-tone="warn" role="note">
+          <Icon name="pause" size="toolbar" />
+          <p>{`Adding ${folderName} was interrupted. Songs already added are in your library.`}</p>
+          
+            <button className="primary" onClick={() => void keepChecking(recalled)}>{`Carry on with ${folderName}`}</button>
             <button className="quiet" onClick={forget}>Forget this</button>
-          </div>
+          
         </div>
       )}
-      {offer && refused && <p role="alert">The browser did not allow it. Choose the folder again.</p>}
+      {offer && refused && <p className="banner" data-tone="danger" role="alert">The browser did not allow it. Choose the folder again.</p>}
       {offer && !recalled && !refused && (
-        <p role="note">An import stopped part way last time. Anything already checked is in your library. Choose the same folder or files again and SelectaDJ will recognise them; nothing is duplicated.</p>
-      )}
-      {!running && (
-        <div className="row wrap">
-          {picker.supported && <button className="primary" onClick={() => void chooseFolder()}>Choose a folder</button>}
-          {!picker.supported && folderInput.supported && (
-            <>
-              <button type="button" className="primary" onClick={() => folderPick.current?.click()}>Choose a folder</button>
-              <input ref={folderPick} type="file" hidden tabIndex={-1} aria-hidden="true" multiple {...{ webkitdirectory: '' }} onChange={chosen} />
-            </>
-          )}
-          <button type="button" onClick={() => songsPick.current?.click()}>Choose songs</button>
-          <input ref={songsPick} type="file" hidden tabIndex={-1} aria-hidden="true" multiple accept="audio/*" onChange={chosen} />
+        <div className="banner" data-tone="warn" role="note">
+          <Icon name="pause" size="toolbar" />
+          <p>Adding your music stopped part way last time. Choose the same folder or songs again and SelectaDJ carries on; nothing is added twice.</p>
+          <button type="button" className="primary" onClick={pickFolder}>{folders ? 'Choose the folder again' : 'Choose the songs again'}</button>
         </div>
       )}
-      {!picker.supported && <p className="hint">{picker.reason}</p>}
-      {degraded && <p className="hint" role="note">This browser is not keeping SelectaDJ’s list of connected files, so you will need to connect them again next visit.</p>}
-      {running && resilient && (
-        <div className="stack">
-          <ImportProgressLine live={live} />
-          {typeof live.total === 'number'
-            ? <progress max={Math.max(live.total, 1)} value={checked} aria-label="Files checked" />
-            : <progress aria-label="Files checked" />}
-          {!live.elsewhere && !live.read && <p className="hint">If this tab closes, the import carries on from {formatCount(checked)} next time you open SelectaDJ.</p>}
-          <CancelImportButton />
+      {progress}
+      {result && (
+        <div className="banner" data-tone={result.paused ? 'warn' : 'ok'} role="status">
+          <Icon name={result.paused ? 'pause' : 'check'} size="toolbar" />
+          <p>{summaryWords(result)}</p>
+          <button type="button" className="quiet" onClick={() => setDismissed(result)}>Dismiss</button>
         </div>
       )}
-      {running && !resilient && (
-        <div className="stack">
-          <p><b>Connecting your music…</b> {checked} of {live.total ?? '…'} files checked so far.</p>
-          {typeof live.total === 'number'
-            ? <progress max={Math.max(live.total, 1)} value={checked} aria-label="Files checked" />
-            : <progress aria-label="Files checked" />}
-          <button onClick={cancelImportSession}>Cancel</button>
+      {shownProblem && (
+        <div className="banner" data-tone="danger" role="alert">
+          <Icon name="warning" size="toolbar" />
+          <p className="error">{shownProblem}</p>
+          {resilient && live.phase === 'failed' && <button type="button" className="primary" onClick={carryOnNow}>Try again</button>}
         </div>
       )}
-      {(live.phase === 'finished' || live.phase === 'paused') && live.summary && <p>{summaryWords(live.summary)}</p>}
-      {shownProblem && <p className="error" role="alert">{shownProblem}</p>}
-      {resilient && live.phase === 'failed' && <div className="row wrap"><button type="button" className="primary" onClick={carryOnNow}>Try again</button></div>}
+      {degraded && <p className="banner" data-tone="warn" role="note"><Icon name="warning" size="toolbar" /><span>This browser is not keeping your list of connected songs, so you will need to choose them again next visit.</span></p>}
       {failures.length > 0 && (
-        <details open={failures.length <= 5}>
-          <summary>{countOf(failures.length, 'file')} could not be connected</summary>
+        <details className="lw-disclosure" open={failures.length <= 5}>
+          <summary>{countOf(failures.length, 'file')} could not be added</summary>
           <ul>
-            {failures.map((failure, index) => <li key={`${failure.name}-${index}`}><b dir="auto">{failure.name}</b>: {failure.reason}</li>)}
+            {failures.map((failure, index) => <li key={`${failure.name}-${index}`}><b dir="auto">{failure.name}</b><span>{failure.reason}</span></li>)}
           </ul>
         </details>
       )}
       {lapsed.length > 0 && (
-        <div className="stack" aria-labelledby="connect-music-lapsed">
-          <h3 id="connect-music-lapsed">Songs this browser needs permission for again</h3>
-          <p className="hint">Browsers forget file permissions between visits. Allow each one to play it from this device again.</p>
+        <details className="lw-disclosure" open={lapsed.length <= 5} aria-labelledby="connect-music-lapsed">
+          <summary id="connect-music-lapsed">{lapsed.length === 1 ? '1 song needs your permission again' : `${formatCount(lapsed.length)} songs need your permission again`}</summary>
+          <p className="hint">Browsers forget file permissions between visits. Allow a song to play it here again.</p>
           <ul>
             {lapsed.map((item) => (
-              <li key={item.songId} className="row wrap">
-                <span dir="auto">{item.title}</span>
-                <span className="hint">{item.why === 'permission' ? 'Needs permission' : item.why === 'changed' ? 'File contents changed' : 'File not found'}</span>
+              <li key={item.songId}>
+                <b dir="auto">{item.title}</b>
+                <span>{item.why === 'permission' ? 'Needs permission' : item.why === 'changed' ? 'The file has changed' : 'File not found'}</span>
                 {regranted[item.songId]
                   ? <span role="status">{regranted[item.songId]}</span>
                   : <button onClick={() => void allow(item)}>{item.why === 'permission' ? 'Allow' : item.why === 'changed' ? 'Check file' : 'Look again'}</button>}
               </li>
             ))}
           </ul>
-        </div>
+        </details>
       )}
+    </>
+  );
+
+  if (variant === 'status') {
+    return <div className="lw-connect-status connect-music">{inputs}{notices}</div>;
+  }
+  if (variant === 'hero') {
+    return (
+      <section className="empty-state boxed lw-hero connect-music" aria-labelledby="connect-music-title">
+        <span className="empty-state-icon" aria-hidden="true"><Icon name="music" /></span>
+        <h2 id="connect-music-title">Add your music</h2>
+        <p>Choose the folder your songs are in and SelectaDJ turns them into mixes. Your files stay on this device; nothing is uploaded.</p>
+        {buttons}
+        {inputs}
+        {!folders && <p className="hint">This browser cannot pick a whole folder, so choose the songs themselves.</p>}
+        <div className="lw-hero-status">{notices}</div>
+      </section>
+    );
+  }
+  return (
+    <section className="ui-card connect-music" aria-labelledby="connect-music-title">
+      <div className="ui-card-head">
+        <div>
+          <h2 className="section-title" id="connect-music-title">Add music</h2>
+          <p className="section-lead">Your files stay on this device. SelectaDJ keeps only each song’s title, artist and a fingerprint.</p>
+        </div>
+        {buttons}
+      </div>
+      {inputs}
+      {!picker.supported && <p className="hint">{picker.reason}</p>}
+      {notices}
     </section>
   );
-}
+});
