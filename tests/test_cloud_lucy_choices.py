@@ -20,7 +20,7 @@ def test_the_defaults_match_local_lucy_without_the_server_owned_parts(tmp_path, 
         body = answer.json()
         assert body["enabled"] is True
         assert body["phases"] == {
-            "chat": True, "proposals": True, "commit": True, "memory": False, "voice": False,
+            "chat": True, "proposals": True, "commit": True, "memory": True, "voice": False,
         }
         assert body["privacy"] == {"share_lyrics": False, "share_history": False}
         assert body["tier"] == "Lucy Basic"
@@ -34,11 +34,11 @@ def test_choices_are_saved_and_read_back(tmp_path, monkeypatch):
         saved = world.client.put(
             "/api/account/lucy",
             headers=HEADERS,
-            json={"phases": {"memory": True}, "privacy": {"share_history": True}},
+            json={"phases": {"memory": False}, "privacy": {"share_history": True}},
         )
         assert saved.status_code == 200, saved.text
         again = world.client.get("/api/account/lucy", headers=HEADERS).json()
-        assert again["phases"]["memory"] is True
+        assert again["phases"]["memory"] is False
         assert again["privacy"]["share_history"] is True
         assert again["enabled"] is True  # untouched choices keep their value
 
