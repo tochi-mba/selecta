@@ -17,6 +17,10 @@
 .setup-explain dd { margin: 0; color: var(--text-soft); }
 .setup .warn, .setup [role='status'] { overflow-wrap: anywhere; }
 
+/* A guided empty page (browser-first Cloud): the steps sit close under the page title and lead the words */
+.empty-state:has(> .setup-steps) { padding-top: 0; }
+.empty-state > .setup-steps { margin-bottom: var(--space-4); }
+
 /* Explore */
 .build-summary { color: var(--text); }
 .setup-group { font: var(--type-section); margin: var(--space-5) 0 var(--space-2); }

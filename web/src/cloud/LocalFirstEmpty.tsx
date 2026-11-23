@@ -1,6 +1,8 @@
 import { ReactNode, useId } from 'react';
 import { flagOn } from '../flags';
 import { PageLink } from '../shell/PageLink';
+import { countOf } from '../ui/format';
+import { Icon } from '../ui/Icon';
 
 /** Designed empty and failure states for the local-first shell (ADR-0463 BF-0463-04).
  *
@@ -33,32 +35,60 @@ export function LibraryEmpty() {
   );
 }
 
-/** `connected` is how many songs are in the catalogue; ideas need songs measured in the browser. */
-/** `current` is the current mix's card, when there is one: it stays in view even while too few
+/** The three steps from nothing to a playing mix in a browser, with the one the member is on
+ * marked. Drawn like local mode's getting-started steps (`.setup-steps`). */
+type Step = 'connect' | 'mix' | 'listen';
+const STEPS: { id: Step; label: string }[] = [
+  { id: 'connect', label: 'Connect music' },
+  { id: 'mix', label: 'Make a mix' },
+  { id: 'listen', label: 'Listen' },
+];
+
+function StepsToAMix({ at }: { at: Step }) {
+  const here = STEPS.findIndex((step) => step.id === at);
+  return (
+    <ol className="setup-steps" aria-label="Steps to a playing mix">
+      {STEPS.map((step, index) => (
+        <li key={step.id} className={index < here ? 'done' : undefined} aria-current={index === here ? 'step' : undefined}>
+          {index < here && <span className="setup-step-mark"><Icon name="check" size="compact" /></span>}
+          <span className="setup-step-label">{step.label}</span>
+          {index < here && <span className="visually-hidden"> (done)</span>}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** Why a library with songs in it cannot play here yet, in one honest sentence. */
+const chooseAgain = (connected: number) => `Your library lists ${countOf(connected, 'song')}, but this browser can open fewer than two of them right now. A browser only keeps the songs you pick while the page is open, so choose your folder or songs again. Nothing has been lost.`;
+
+/** `connected` is how many songs are in the catalogue; ideas need songs this browser can open.
+ * `current` is the current mix's card, when there is one: it stays in view even while too few
  * songs can play here to make a new mix. */
 export function MixesEmpty({ connected, checking, current }: { connected: number; checking?: { checked: number; total: number | null }; current?: ReactNode }) {
   return (
-    <main className="page" id="main">
+    <main className="page mixes" id="main">
       <h1 className="display small">Make a Mix</h1>
       {current}
       <section className="empty-state" aria-labelledby="mixes-empty-title">
+        <StepsToAMix at="connect" />
         {checking ? (
           <>
             <h2 id="mixes-empty-title">Still checking your music</h2>
             <p>{`${checking.checked} of ${checking.total ?? 'your'} songs checked so far. Mixes open as soon as two songs can play here; you can keep using SelectaDJ while it finishes.`}</p>
-            <PageLink to="/library" className="button">See your library</PageLink>
+            <div className="row wrap"><PageLink to="/library" className="button">See your library</PageLink></div>
           </>
         ) : connected === 0 ? (
           <>
             <h2 id="mixes-empty-title">Mixes start with your music</h2>
-            <p>Connect the songs on this device and SelectaDJ can shape them into a mix.</p>
-            <PageLink to="/library" className="button primary">Connect music</PageLink>
+            <p>Connect the songs on this device and SelectaDJ shapes them into a mix, working out each transition as it plays. Your files stay where they are.</p>
+            <div className="row wrap"><PageLink to="/library" className="button primary">Connect music</PageLink></div>
           </>
         ) : (
           <>
-            <h2 id="mixes-empty-title">Your songs are connected</h2>
-            <p>{`${connected} ${connected === 1 ? 'song is' : 'songs are'} in your library, but fewer than two can play on this device right now. Connect them here and SelectaDJ can shape them into a mix in your browser. Nothing has been lost.`}</p>
-            <PageLink to="/library" className="button">See your library</PageLink>
+            <h2 id="mixes-empty-title">Choose your music again to make a mix</h2>
+            <p>{chooseAgain(connected)}</p>
+            <div className="row wrap"><PageLink to="/library" className="button primary">Connect music</PageLink></div>
           </>
         )}
       </section>
@@ -66,19 +96,42 @@ export function MixesEmpty({ connected, checking, current }: { connected: number
   );
 }
 
-export function ListenEmpty({ connected }: { connected: number }) {
+/** `playable` is how many songs this browser can open now; `saved` how many mixes the account
+ * holds (null before the server has said). */
+export function ListenEmpty({ connected, playable = connected, saved = null }: { connected: number; playable?: number; saved?: number | null }) {
+  const canMix = playable >= 2;
   return (
     <main className="page" id="main">
       <h1 className="display small">Listen</h1>
       <section className="empty-state" aria-labelledby="listen-empty-title">
-        <h2 id="listen-empty-title">Nothing is playing</h2>
-        <p>{connected === 0
-          ? 'Connect your music first, then make a mix to hear it here.'
-          : 'Make a mix from your connected songs to hear it here.'}</p>
-        <div className="row wrap">
-          <PageLink to={connected === 0 ? '/library' : '/mixes'} className="button primary">{connected === 0 ? 'Connect music' : 'Make a Mix'}</PageLink>
-          <PageLink to="/mixes/mine" className="button">My Mixes</PageLink>
-        </div>
+        <StepsToAMix at={canMix ? 'mix' : 'connect'} />
+        {connected === 0 ? (
+          <>
+            <h2 id="listen-empty-title">Nothing is playing yet</h2>
+            <p>Connect the songs on this device first. Then make a mix, and it plays here with what’s next and each transition as it happens.</p>
+            <div className="row wrap"><PageLink to="/library" className="button primary">Connect music</PageLink></div>
+          </>
+        ) : !canMix ? (
+          <>
+            <h2 id="listen-empty-title">Choose your music again to listen</h2>
+            <p>{chooseAgain(connected)}</p>
+            <div className="row wrap">
+              <PageLink to="/library" className="button primary">Connect music</PageLink>
+              {!!saved && <PageLink to="/mixes/mine" className="button">My Mixes</PageLink>}
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 id="listen-empty-title">Nothing is playing yet</h2>
+            <p>{saved
+              ? `Make a new mix, or play one of your ${countOf(saved, 'saved mix', 'saved mixes')}. It plays here with what’s next and each transition as it happens.`
+              : 'Make a mix from your songs and it plays here, with what’s next and each transition as it happens.'}</p>
+            <div className="row wrap">
+              <PageLink to="/mixes" className="button primary">Make a Mix</PageLink>
+              {!!saved && <PageLink to="/mixes/mine" className="button">My Mixes</PageLink>}
+            </div>
+          </>
+        )}
       </section>
     </main>
   );

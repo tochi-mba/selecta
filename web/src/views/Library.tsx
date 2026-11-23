@@ -49,8 +49,9 @@ const pagesFrom = (text: string | null) => {
   return Number.isInteger(pages) && pages > 1 ? Math.min(pages, 200) : 1;
 };
 
-/** `lead`: what a shell puts first under the header, such as connecting music again in a browser. */
-export function Library({ mix, now, player, setMixData, setView, notify, status, refreshMix, refreshStatus, request, analysisAvailable = true, lead }: ViewProps & { lead?: ReactNode }) {
+/** `lead`: what a shell puts first under the header, such as connecting music again in a browser.
+ * `tail`: what it puts after the songs, inside the same page column. */
+export function Library({ mix, now, player, setMixData, setView, notify, status, refreshMix, refreshStatus, request, analysisAvailable = true, lead, tail }: ViewProps & { lead?: ReactNode; tail?: ReactNode }) {
   // ADR-0462: every read and write on this page goes through the injected request.
   const { get, post } = useApi(request);
   const query = useQueryParam('q') ?? '';
@@ -575,6 +576,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
   return (
     <main className="page library density" id="main">
       <header className="library-head">
+        <div className="library-head-line">
         <h1 className="display small">Library</h1>
         <p className="library-summary">
           <Counter value={counts.ready} words="ready for mixes" />
@@ -588,6 +590,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
             </button>
           )}
         </p>
+        </div>
         <p className="library-readiness-help">{words().libraryReadyMeaning}</p>
       </header>
       {lead}
@@ -725,6 +728,7 @@ export function Library({ mix, now, player, setMixData, setView, notify, status,
           {' '}<button type="button" onClick={closeDetails}>Dismiss</button>
         </p>
       )}
+      {tail}
       {shownDetails && <SongDetails song={shownDetails} onClose={closeDetails} onChanged={() => void load()} notify={notify} onPriority={setPriority} onNever={never} measured={analysisAvailable} />}
       {confirmBatch && <Dialog title="Apply batch Library action?" onClose={() => setConfirmBatch(null)}
         footer={<>

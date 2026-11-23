@@ -5,7 +5,6 @@ import { forgetFolder, recallFolder, storageSpace, type MediaStore, type Storage
 import { ENGINE_VERSION, probeCapability, type ProbeResult } from '../engine/probe';
 import type { WorkshopTab } from '../router';
 import { Action, Skeleton, Status, type StatusKind } from '../ui/controls';
-import { countOf } from '../ui/format';
 import { LinkTabs } from '../ui/primitives';
 import { InterfaceChoices } from '../views/InterfaceChoices';
 import { DeviceDataCard } from './DeviceDataCard';
@@ -107,7 +106,7 @@ function Overview({ status, workspaceId, savedMixes, fileCheck, stemsShown, meas
       <section className="panel stack" aria-labelledby="cloud-background-title">
         <h2 id="cloud-background-title">In the background</h2>
         <p className="hint">What this browser is doing for SelectaDJ while this page is open. It stops when the page closes.</p>
-        <ul className="stack">
+        <ul className="diagnostic-facts">
           {importing.phase === 'running' && (
             <li><Status kind="working">{`Connecting music: ${checked} of ${importing.total ?? '…'} files checked so far.`}</Status></li>
           )}
@@ -218,7 +217,6 @@ async function gather(openStore: () => Promise<MediaStore>, playback: PlaybackFa
     { key: 'space', kind: space.supported ? 'ready' : 'unavailable', words: space.supported ? `Browser storage in use: ${bytes(space.usage ?? 0)} of ${bytes(space.quota ?? 0)} allowed.` : space.reason ?? 'The browser does not say how much storage SelectaDJ may use.' },
     { key: 'folders', kind: yes(folderPicker), words: folderPicker ? 'Folders can be chosen and remembered here.' : 'Folders cannot be remembered here; songs are chosen each visit.' },
     { key: 'online', kind: online === false ? 'warning' : 'ready', words: online === false ? 'This browser says it is offline.' : 'This browser says it is online.' },
-    { key: 'flags', kind: 'ready', words: `${countOf(FLAG_IDS.length - off.length, 'feature')} on and ${off.length} off for this account in this browser.` },
   ];
   const summary = {
     engine: ENGINE_VERSION,
@@ -276,10 +274,10 @@ function BrowserDiagnostics({ openStore, playback }: { openStore: () => Promise<
         {gathered.facts.map((fact) => <li key={fact.key}><Status kind={fact.kind}>{fact.words}</Status></li>)}
       </ul>
       <details className="diagnostic-raw">
-        <summary>The raw details</summary>
+        <summary>Details to copy for support</summary>
         <pre className="diagnostics" tabIndex={0}>{text}</pre>
       </details>
-      <p className="hint">The copy holds what this browser can do and which features are off. It has no names, emails, songs, folders or account details.</p>
+      <p className="hint">The copy holds only what this browser can do and how SelectaDJ is set up in it. It has no names, emails, songs, folders or account details.</p>
       <div className="row wrap">
         <Action run={runCheck}>{probe ? 'Run the audio check again' : 'Run the audio check'}</Action>
         {canCopy && (
