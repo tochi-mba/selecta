@@ -44,7 +44,8 @@
 }
 .shell[data-mode='cloud'] .now .notice { margin: 0; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-raised); font-size: var(--text-sm); }
 .shell[data-mode='cloud'] :is(.now, .mixes) .banner[data-tone='warn'] { border-color: color-mix(in srgb, var(--status-warning) 45%, var(--border)); }
-.shell[data-mode='cloud'] :is(.now, .mixes) .banner > .ui-icon { color: var(--status-warning); }
+.shell[data-mode='cloud'] :is(.now, .mixes) .banner > .ui-icon { color: var(--text-soft); }
+.shell[data-mode='cloud'] :is(.now, .mixes) .banner[data-tone='warn'] > .ui-icon { color: var(--status-warning); }
 .shell[data-mode='cloud'] :is(.now, .mixes) .banner-text { margin: 0; max-inline-size: none; }
 .shell[data-mode='cloud'] :is(.now, .mixes) .banner-text b { color: var(--text); }
 .shell[data-mode='cloud'] :is(.now, .mixes) .banner-actions { display: flex; align-items: center; gap: var(--space-2); }
