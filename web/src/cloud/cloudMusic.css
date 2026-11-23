@@ -12,13 +12,13 @@
   aspect-ratio: 1;
   border-radius: var(--radius-sm);
   color: var(--text);
-  background: linear-gradient(var(--art-turn, 135deg), color-mix(in srgb, var(--accent) 45%, var(--surface-control)), var(--surface-control));
+  background: linear-gradient(var(--art-turn, 135deg), color-mix(in srgb, var(--motif) 45%, var(--surface-control)), var(--surface-control));
   overflow: hidden;
 }
 @supports (color: oklch(from red l c h)) {
   .shell[data-mode='cloud'] .cover-art {
-    color: oklch(from var(--accent) 0.97 0.03 calc(h + var(--art-hue, 0)));
-    background: linear-gradient(var(--art-turn, 135deg), oklch(from var(--accent) 0.6 0.15 calc(h + var(--art-hue, 0))), oklch(from var(--accent) 0.3 0.1 calc(h + var(--art-hue, 0) + 55)));
+    color: oklch(from var(--motif) 0.97 0.03 calc(h + var(--art-hue, 0)));
+    background: linear-gradient(var(--art-turn, 135deg), oklch(from var(--motif) 0.6 0.15 calc(h + var(--art-hue, 0))), oklch(from var(--motif) 0.3 0.1 calc(h + var(--art-hue, 0) + 55)));
   }
 }
 .shell[data-mode='cloud'] .cover-art .song-motif { width: 62%; height: 62%; margin: 0; color: inherit; }
@@ -116,8 +116,8 @@
 /* the seek bar: the clock sits under the bar, elapsed and total together */
 .shell[data-mode='cloud'] .now .strip { height: 84px; }
 .shell[data-mode='cloud'] .now .strip .time { top: auto; bottom: 0; }
-.shell[data-mode='cloud'] .now .strip .peaks .played { stroke: var(--accent); }
-.shell[data-mode='cloud'] .now .strip .playhead { background: var(--accent); }
+.shell[data-mode='cloud'] .now .strip .peaks .played { stroke: var(--playing); }
+.shell[data-mode='cloud'] .now .strip .playhead { background: var(--playing); }
 .shell[data-mode='cloud'] .now .music-visualizer { height: 64px; }
 
 /* what is coming: one panel, three parts */
@@ -202,12 +202,12 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background:
-    radial-gradient(ellipse 60% 70% at 50% 0%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 70%),
+    radial-gradient(ellipse 60% 70% at 50% 0%, color-mix(in srgb, var(--motif) 9%, transparent), transparent 70%),
     var(--surface-raised);
   text-align: center;
 }
 .shell[data-mode='cloud'] .music-empty > * { margin-block: 0; }
-.shell[data-mode='cloud'] .music-empty .empty-state-icon { width: 56px; height: 56px; margin-bottom: var(--space-3); border-radius: var(--radius-pill); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); background: color-mix(in srgb, var(--accent) 12%, var(--surface-control)); color: var(--text); }
+.shell[data-mode='cloud'] .music-empty .empty-state-icon { width: 56px; height: 56px; margin-bottom: var(--space-3); border-radius: var(--radius-pill); border-color: color-mix(in srgb, var(--motif) 40%, var(--border)); background: color-mix(in srgb, var(--motif) 12%, var(--surface-control)); color: var(--text); }
 .shell[data-mode='cloud'] .music-empty > :is(h2, h3) { font: var(--type-section); }
 .shell[data-mode='cloud'] .music-empty > p:not(.hint) { max-width: 52ch; color: var(--text-soft); font-size: var(--text-md); line-height: 1.5; }
 .shell[data-mode='cloud'] .music-empty .empty-state-actions { margin-top: var(--space-4); }

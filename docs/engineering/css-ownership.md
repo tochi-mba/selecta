@@ -14,15 +14,17 @@ Later sheets win ties of equal specificity. A sheet only refines what an earlier
 | 4 | `styles/shell.css` | The frame around every page: rail, phone tab bar, context bar, mini-player, overlays, notifications, skeletons. |
 | 5 | `styles/polish.css` | Shared finish over legacy layouts: hit targets, focus that never moves, reveal and pop-in motion, the exit protocol's `[data-closing]` animations and their reduced-motion fade, reduced-motion overrides. |
 | 6 | `styles/foundation.css` | Small building blocks every page uses: primary action, Activity, command palette parts. |
-| 7 | `styles/listening.css` | Onboarding, Explore (Make a Mix), Listen, My Mixes and Requests. |
-| 8 | `styles/creation.css` | The editor, the transition inspector and the Studio. |
-| 9 | `styles/operations.css` | Discovery, Library, Workspace, export and listening studies. |
-| 10 | `styles/music-objects.css` | Cross-scene musical objects: motifs, verified transition, energy and request path. |
-| 11 | `styles/glossary.css` | The glossary dialog and inline term hints. |
-| 12 | `styles/palette.css` | Search and command palette result groups. |
-| 13 | `styles/icons.css` | Icon slots, badge baselines and icon-only control geometry (ADR-0277). |
-| 14 | `styles/depth.css` | Surface depth, borders, shadows and accent hierarchy beyond a token (ADR-0276). |
-| 15 | `styles/typography.css` | Type roles applied where an earlier rule left a gap; loaded last so it owns type (ADR-0275). |
+| 7 | `styles/cloud-ui.css` | The Cloud look for the shared primitives, scoped to `:root[data-cloud='on']` so local mode is untouched: buttons, fields, page headers, cards, card grids, badges, empty states and the page arriving. |
+| 8 | `styles/cloud-shell.css` | The Cloud shell, scoped to `.shell[data-mode='cloud']`: the rail and its account foot, the top bar and room pill, the phone tab bar and the mini player. It refines `styles/shell.css` and never restates one of its Cloud-scoped rules. |
+| 9 | `styles/listening.css` | Onboarding, Explore (Make a Mix), Listen, My Mixes and Requests. |
+| 10 | `styles/creation.css` | The editor, the transition inspector and the Studio. |
+| 11 | `styles/operations.css` | Discovery, Library, Workspace, export and listening studies. |
+| 12 | `styles/music-objects.css` | Cross-scene musical objects: motifs, verified transition, energy and request path. |
+| 13 | `styles/glossary.css` | The glossary dialog and inline term hints. |
+| 14 | `styles/palette.css` | Search and command palette result groups. |
+| 15 | `styles/icons.css` | Icon slots, badge baselines and icon-only control geometry (ADR-0277). |
+| 16 | `styles/depth.css` | Surface depth, borders, shadows and accent hierarchy beyond a token (ADR-0276). |
+| 17 | `styles/typography.css` | Type roles applied where an earlier rule left a gap; loaded last so it owns type (ADR-0275). |
 
 `styles/lucy.css` is not loaded by `main.tsx`: `views/Lucy.tsx` and `views/LucyCloudSettings.tsx` import it, so it only exists once Lucy is on screen. It owns the Lucy page and uses only meanings from `tokens.css`.
 

@@ -25,12 +25,14 @@ every token to 0ms.
 | --- | --- | --- | --- | --- |
 | Buttons and links | hover, focus | colour, border, background (no transform, so a pressed control never moves) | `--motion-fast` | instant |
 | Busy button | an `Action` is running | `button-working` pulse | 0.9s loop, exception | none |
+| Busy button in Cloud (`styles/cloud-ui.css`) | a button is `aria-busy` or `data-working` | a small ring before its words turns (`cloud-spin`) | `--motion-loop-working` 0.9s loop, the same exception as `button-working` | none; the button's words still say it is working |
 | Chips, cards, vibe tempo | hover, focus, selection | colour and border | `--motion-fast` | instant |
 | Listen side cards | selection | border and shadow | `--motion-fast` | instant |
 | Dialog, sheet, drawer | opened | `overlay-appear` (dialog); `drawer-appear` from its side (drawer, sheet) | `--motion-overlay`; `--motion-slow` | none |
 | Dialog | closing (`data-closing`) | `dialog-exit` (fade and shrink 2%) with the scrim's `fade-exit` | `--motion-exit-dialog` | reduced: `fade-exit` 120ms; Still: none |
 | Drawer, sheet | closing (`data-closing`) | `drawer-exit` back out of its side, scrim `fade-exit` | `--motion-exit-drawer` | reduced: `fade-exit` 120ms; Still: none |
 | Menu, popover, tooltip | opened (`data-motion='pop'`); closing | `pop-appear`; `fade-exit` | `--motion-fast`; `--motion-exit-menu` | reduced: exit `fade-exit` in the sheet, but cut short in practice (see [Known gap](#known-gap)); Still: none |
+| Room request row (`rooms/RoomRequests.tsx`) | a guest's request arrives in the host's list | the row slides down into place with its edge in the request colour (`ask-in`) | `--motion-reveal` | none |
 | Toast | shown | `toast-appear` | `--motion-reveal` | none |
 | Toast | closing (`data-closing`) | `toast-exit` (fade and drop 4px) | `--motion-exit-toast` | reduced: `fade-exit` 120ms; Still: none |
 | Route | page change | `route-reveal` | `--motion-reveal` | none |

@@ -98,12 +98,18 @@ describe('one type scale (BF overhaul cross-wave contract)', () => {
    * - Listen and Stage fit their focal text (lyrics, countdown, phrase, the title) to the window or
    *   the player's container with clamp() (MP-0275-03, the --title-floor fit); a step would not fit.
    * - display.css sizes in em of a body size fitted to the big screen, so the room display scales as
-   *   one; it loads without tokens.css (palette-drift.test.ts).
+   *   one; it loads without tokens.css (palette-drift.test.ts). Two of its lines (the pairing title
+   *   and the pairing code) also stop at a share of the screen's width, `min(Nem, Nvw)`, so a long
+   *   code never runs off a narrow screen.
+   * - The room code beside the host's QR code (rooms.css `.room-code`) is read across a room from
+   *   the host's screen, so it grows with the window between two steps; nothing else in rooms.css may.
    */
   const FITTED = /\.(?:lyrics|countdown-number|phrase|stage|now|listen-identity)(?![\w-])/;
   const exempt = (file: string, selector: string, value: string) =>
     (['style.css', 'styles/listening.css'].includes(file) && FITTED.test(selector) && /clamp\(/.test(value))
-    || (['display/display.css', 'kiosk/kiosk.css'].includes(file) && (/^[\d.]+em$/.test(value) || (selector === 'body' && /^clamp\(/.test(value))));
+    || (file === 'rooms/rooms.css' && selector === '.room-qr-words .room-code' && /^clamp\(var\(--text-2xl\), /.test(value))
+    || (['display/display.css', 'kiosk/kiosk.css'].includes(file) && (/^[\d.]+em$/.test(value) || (selector === 'body' && /^clamp\(/.test(value))))
+    || (file === 'display/display.css' && /^min\([\d.]+em, [\d.]+vw\)$/.test(value));
 
   it('every font size outside tokens.css is a type role or a step, or one of the named fitted exceptions', () => {
     const sizes = rulesOf(COMPONENT_SHEETS).flatMap((rule) => [...rule.body.matchAll(/(?:^|;|\s)(font-size|font)\s*:\s*([^;]+)/g)]
@@ -116,6 +122,6 @@ describe('one type scale (BF overhaul cross-wave contract)', () => {
 
   it('the fitted exceptions stay where they are named, and no other sheet uses one', () => {
     const fitted = rulesOf(COMPONENT_SHEETS).filter((rule) => /(?:^|;|\s)font(?:-size)?\s*:[^;]*clamp\(/.test(rule.body)).map((rule) => rule.file);
-    expect([...new Set(fitted)].sort()).toEqual(['display/display.css', 'kiosk/kiosk.css', 'style.css', 'styles/listening.css']);
+    expect([...new Set(fitted)].sort()).toEqual(['display/display.css', 'kiosk/kiosk.css', 'rooms/rooms.css', 'style.css', 'styles/listening.css']);
   });
 });

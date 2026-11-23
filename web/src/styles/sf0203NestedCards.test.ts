@@ -203,6 +203,7 @@ const nestings = (cards: Set<string>) => {
  */
 const ALLOWED: Record<string, string> = {
   'panel > card': 'ControlGallery is the development-only specimen sheet (DEV or VITE_SELECTA_GALLERY builds); it shows a card as a specimen on the gallery panel, not a product surface.',
+  'welcome-art > welcome-art-tag': 'The blend drawing on the welcome and not-found pages (cloud/BlendArt.tsx) is one picture in a frame, and the two tags are its captions ("Now playing", "Up next"): pill labels inside the drawing, read as part of it, not a second panel of content.',
   'lucy-approve > problem': 'Library/Lucy (later work, ADR-0362 approval and commit UX): the refusal and retry note keeps its own warn box beside the pending decision; an older Flow task does not restyle it.',
 };
 
