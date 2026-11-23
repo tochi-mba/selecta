@@ -235,18 +235,8 @@
 @media (max-width: 900px) {
   .lw-columns { grid-template-columns: minmax(0, 1fr); }
   .lw-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 768px) {
-  .lw-toolbar .search-field { flex-basis: 100%; max-width: none; }
-  .lw-toolbar .search-field input, .lw-sort select { min-height: var(--control-height); }
-  .lw-chips { flex: 1 1 100%; overflow-x: auto; scrollbar-width: none; margin-inline: calc(-1 * var(--page-gutter)); padding-inline: var(--page-gutter); }
-  /* a finger's target, and slimmer sides so the four filters fit a 360px phone without scrolling */
-  .lw-chips button { min-height: var(--control-height); padding-inline: var(--space-snug); }
-  .lw-toolbar-end { flex: 1 1 100%; justify-content: space-between; margin: 0; }
-  .lw-segment button { min-width: 44px; min-height: var(--control-height); }
-  .lw-meta button, .lw-disclosure li button { min-height: var(--control-height); }
-  .lw-connect-menu, .lw-connect-menu > button { width: 100%; justify-content: center; }
-  .lw-connect-menu .menu-list { inset-inline: 0; }
+  /* Beside the side bar a window this narrow leaves the table about 600px: its fixed columns
+     squeezed each song's name to a few letters, so the two-line row starts here, not at 768px. */
   .library-browser .library-column-head { display: none; }
   /* a phone's row: the song, then whether it plays here; its length sits under the actions */
   .library-browser .library-rows .song-row.lw-row,
@@ -260,6 +250,18 @@
   .library-browser .library-rows .lw-actions button { min-height: var(--control-height); min-width: var(--control-height); }
   .library-browser .library-rows:not(.library-cards) .lw-start { padding: 0; }
   .library-browser .library-rows:not(.library-cards) .lw-start > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+@media (max-width: 768px) {
+  .lw-toolbar .search-field { flex-basis: 100%; max-width: none; }
+  .lw-toolbar .search-field input, .lw-sort select { min-height: var(--control-height); }
+  .lw-chips { flex: 1 1 100%; overflow-x: auto; scrollbar-width: none; margin-inline: calc(-1 * var(--page-gutter)); padding-inline: var(--page-gutter); }
+  /* a finger's target, and slimmer sides so the four filters fit a 360px phone without scrolling */
+  .lw-chips button { min-height: var(--control-height); padding-inline: var(--space-snug); }
+  .lw-toolbar-end { flex: 1 1 100%; justify-content: space-between; margin: 0; }
+  .lw-segment button { min-width: 44px; min-height: var(--control-height); }
+  .lw-meta button, .lw-disclosure li button { min-height: var(--control-height); }
+  .lw-connect-menu, .lw-connect-menu > button { width: 100%; justify-content: center; }
+  .lw-connect-menu .menu-list { inset-inline: 0; }
   .lw-meta-end { margin-inline-start: auto; }
   .lw-welcome { padding: var(--space-4); }
   .lw-welcome-mark { display: none; }
