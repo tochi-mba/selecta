@@ -5,6 +5,8 @@ import { countOf, ELLIPSIS } from '../ui/format';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { groupGuests, guestPresence, guestsHeading, presenceChanges, screenPresence } from './presence';
 import { qrSvg } from './qr';
+import { RoomLimits, type LimitBounds, type LimitSettings } from './RoomLimits';
+import { ROOM_EVENT } from './useRoomSession';
 import './rooms.css';
 import { useNeedsConnection } from '../cloud/connection';
 import '../cloud/connection.css';
@@ -26,11 +28,13 @@ type Item = { request_id: string; song: Song | null; status: string; votes: numb
 type Guest = { id: string; nickname: string; status: string; joined_at?: number; last_seen_at?: number; online?: boolean };
 type Screen = { id: string; label: string; paired_at: number | null; last_seen_at: number | null; online: boolean };
 type Confirm = { title: string; body: string; confirmLabel: string; run: () => Promise<unknown> };
-type Settings = { join_mode: string; request_mode: string; votes: boolean; names_shown: boolean; display: boolean };
+type Settings = { join_mode: string; request_mode: string; votes: boolean; names_shown: boolean; display: boolean } & LimitSettings;
 type Panel = {
   room: { id: string; name: string; status: string; settings: Settings; ends_at: number };
   code: string | null; join_path: string | null; guests: Guest[]; inbox: Item[]; coming_up: Item[]; unfit: Item[];
   renders_left: number; music_paused: boolean; displays: number; screens?: Screen[]; now?: number;
+  /** false when the host's browser is the planner: nothing is rendered, so no render count applies */
+  renders_apply?: boolean; bounds?: LimitBounds;
 };
 
 const POLL_MS = 3000;
@@ -102,6 +106,8 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
       hostChanges.current += 1;
       setPanel(next.room.status === 'ended' ? null : next);
       setError(''); setSaid(success);
+      // the shell's room session (useRoomSession) hears at once that the room opened, changed or ended
+      window.dispatchEvent(new Event(ROOM_EVENT));
       return true;
     } catch (problem) { setError((problem as Error).message); return false; }
   };
@@ -173,7 +179,9 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
         <h2 id="room-title">{room.name}</h2>
         <span className="room-status" data-testid="room-status">{room.status === 'locked' ? 'Locked: no new guests' : 'Open'}</span>
       </header>
-      {panel.music_paused && <p className="room-banner">{`No speaker is playing, so guests see "The music's paused".${playHereOn ? ' Press Play here on a device to start.' : ''}`}</p>}
+      {panel.music_paused && <p className="room-banner">{panel.renders_apply === false
+        ? 'Nothing is playing right now. Guests can still ask for songs, and each one reaches your Requests on any page while this browser is open.'
+        : `No speaker is playing, so guests see "The music's paused".${playHereOn ? ' Press Play here on a device to start.' : ''}`}</p>}
       <div className="room-share">
         {link && <div className="room-qr" data-testid="room-qr" data-link={link} dangerouslySetInnerHTML={{ __html: qrSvg(link, `QR code to join ${room.name}`) }} />}
         <div>
@@ -206,6 +214,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
         </select></label>
         {votesOn && <label className="room-check"><input type="checkbox" checked={settings.votes} onChange={(event) => save({ votes: event.target.checked })} /> Guests can vote</label>}
         <label className="room-check"><input type="checkbox" checked={settings.names_shown} onChange={(event) => save({ names_shown: event.target.checked })} /> Show guest nicknames to everyone</label>
+        {settings.request_mode !== 'off' && <RoomLimits settings={settings} bounds={panel.bounds} save={save} />}
       </fieldset>
 
       <section aria-labelledby="inbox-title">
@@ -232,7 +241,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
             <li key={item.request_id}><span>{songText(item.song)}</span><Action type="button" run={() => act(`${base}/requests/${item.request_id}/approve`)}>Try again</Action></li>
           ))}</ul>
         </>)}
-        <p className="room-muted">{countOf(panel.renders_left, 'request render')} left this hour.</p>
+        {panel.renders_apply !== false && <p className="room-muted">{countOf(panel.renders_left, 'request render')} left this hour.</p>}
       </section>
       <section aria-labelledby="guests-title">
         <h3 id="guests-title" data-testid="room-guests-heading">{guestsHeading(groups)}</h3>

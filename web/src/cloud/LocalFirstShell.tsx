@@ -25,7 +25,7 @@ import { peaksFrom } from '../dsp/waveform';
 import { Mixes } from '../views/Mixes';
 import { MyMixes } from '../views/MyMixes';
 import { Now } from '../views/Now';
-import { RequestsContext, RequestsPanel, useRequests, waitingRequestCount } from '../views/Requests';
+import { RequestsContext, RequestsPanel, useRequests, waitingRequestCount, type RequestRow } from '../views/Requests';
 import type { View, ViewProps } from '../views/shared';
 import type { Account, Api } from './api';
 import { ConnectMusic, registeredDeviceId } from './ConnectMusic';
@@ -33,11 +33,12 @@ import { hostedResolver, matchAsset, readHostedAssets, type HostedAsset } from '
 import { isHostedAccount } from './localFirstGate';
 import { CloudWorkspace } from './CloudWorkspace';
 import { CurrentMix } from '../views/CurrentMix';
-import { CannotPlayHere, LibraryEmpty, ListenEmpty, MixesEmpty, NotOnThisAccount, OnlyOnYourComputer } from './LocalFirstEmpty';
+import { CannotPlayHere, LibraryEmpty, ListenEmpty, MixesEmpty, NotOnThisAccount, OnlyOnYourComputer, PageNotFound } from './LocalFirstEmpty';
 import { useLocalFirstPlayer } from './localFirstPlayer';
 import { BROWSER_MIX_NEEDS } from './localFirstMixes';
 import { EMPTY_MIX, localFirstRequest, mediaRequest, type AvailabilitySources } from './localFirstRequest';
 import { ROOM_REQUEST_EVENT } from './localFirstRequests';
+import { askWords, roomLine, useRoomSession, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
 import { recipeStore } from './recipeStore';
 import { SavedBrowserMixes } from './SavedBrowserMixes';
 import { QueueSources } from './QueueSources';
@@ -443,18 +444,66 @@ export function LocalFirstShell({ api, account, more, notices, feedback, offline
   const refreshRoomRequests = useRef(songRequests.refresh);
   refreshRoomRequests.current = songRequests.refresh;
   useEffect(() => {
-    const heard = (event: Event) => {
+    const heard = () => {
       if (!on('requests')) return;
       // Every pending/withdrawn room event refreshes the existing Requests drawer and
       // the request-count badge. The browser-first planner never queues audio itself.
       void refreshRoomRequests.current?.();
-      if ((event as CustomEvent<{ action?: string }>).detail?.action === 'pending') {
-        showToast('A room request is waiting in Requests. It joins your mix when you add it.');
-      }
     };
     window.addEventListener(ROOM_REQUEST_EVENT, heard);
     return () => window.removeEventListener(ROOM_REQUEST_EVENT, heard);
   }, [on]);
+  // The host's room session (flag `rooms`): the open room is read here, on every page, so the
+  // room stays live and the host hears about each request wherever they are (useRoomSession).
+  const roomsPlace = moreItems.find((place) => place.id === 'rooms');
+  const roomsOn = on('rooms') && !!roomsPlace && !account.feature_locks.rooms && !offlineReadOnly;
+  const roomPlayback = useRef({ mix: data.mix, player: shellPlayer });
+  roomPlayback.current = { mix: data.mix, player: shellPlayer };
+  const requestsOn = on('requests');
+  const onAsked = useCallback((ask: RoomAsk, kind: AskKind, roomId: string) => {
+    const words = askWords(ask);
+    const title = ask.song?.title ?? 'That song';
+    const openRoom = { label: 'Open room', run: () => { if (roomsPlace) navigate(roomsPlace.path); } };
+    if (kind === 'approve') {
+      showToast(`${words}. It waits for your yes.`, { actions: [{
+        label: 'Approve',
+        run: async () => {
+          try {
+            await api(`/rooms/${encodeURIComponent(roomId)}/requests/${encodeURIComponent(ask.request_id)}/approve`, { method: 'POST' }, workspaceId);
+            window.dispatchEvent(new Event(ROOM_EVENT));
+            void refreshRoomRequests.current?.();
+            showToast(`${title} is approved. It is in Requests for you to add to the mix.`);
+          } catch (problem) { showToast((problem as Error).message || 'Couldn’t approve that request.', { tone: 'problem' }); }
+        },
+      }, openRoom] });
+      return;
+    }
+    void refreshRoomRequests.current?.();
+    showToast(`${words}.`, { actions: [{
+      label: 'Add next',
+      run: async () => {
+        try {
+          // the Requests list gives the row its number here; the same add the panel's button uses
+          const list = await request<{ requests: RequestRow[] }>('/requests');
+          const row = list.requests.find((one) => one.song_id === ask.song?.song_id);
+          if (!row) { showToast(`${title} isn’t waiting any more.`); return; }
+          const { mix, player: playing } = roomPlayback.current;
+          const live = ['playing', 'paused'].includes(playing.state.phase);
+          const changed = await request<MixData>(`/requests/${row.id}/add`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: live ? JSON.stringify({ order: mix.map((item) => item.song_id), position: playing.state.position }) : undefined,
+          });
+          setMixData(changed);
+          void refreshRoomRequests.current?.();
+          window.dispatchEvent(new Event(ROOM_EVENT));
+          showToast(live ? `${title} plays after the current song.` : `${title} is in your mix.`);
+        } catch (problem) { showToast((problem as Error).message || 'Couldn’t add it. Try again.', { tone: 'problem' }); }
+      },
+    }, requestsOn ? { label: 'Requests', run: () => setRequesting(true) } : openRoom] });
+  }, [api, workspaceId, request, setMixData, roomsPlace, requestsOn]);
+  const room = useRoomSession({ api, workspaceId, enabled: roomsOn, onAsked });
+  const roomWaiting = room ? room.toApprove : 0;
   const shared: ViewProps | null = status && {
     status, mix: data.mix, mixName: data.name, currentMixName: data.name, canUndo: data.can_undo, mixEta: data.eta,
     refreshMix, setMixData, refreshStatus, request, player: shellPlayer, now, readyNeeded: BROWSER_MIX_NEEDS,
@@ -536,7 +585,14 @@ export function LocalFirstShell({ api, account, more, notices, feedback, offline
                 </div>
               )} />
             )
-            : <><Library {...shared} /><div className="page">{connect}</div></>;
+            : (
+              <Library {...shared} tail={connect} lead={(status?.counts.ready ?? 0) < connected ? (
+                <p className="notice library-partial" role="status">
+                  <span>{`${status?.counts.ready ?? 0} of ${countOf(connected, 'song')} can play in this browser. The rest are on your other devices, or need choosing again here.`}</span>
+                  <a className="button" href="#connect-music-title">Connect more music</a>
+                </p>
+              ) : undefined} />
+            );
       case 'mixes':
         if (route.tab === 'mine') return <><MyMixes {...shared} suppressDrafts>{on('drafts') && <SavedBrowserMixes workspaceId={workspaceId} recipes={recipes} request={request} setMixData={setMixData} refreshStatus={refreshStatus} player={shellPlayer} notify={notify} />}</MyMixes>{localExport}</>;
         return <>{(status?.counts.ready ?? 0) >= BROWSER_MIX_NEEDS ? <Mixes {...shared} /> : (
@@ -550,7 +606,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, offline
         return (
           <>
             {refusal && <div className="page"><CannotPlayHere reason={refusal} /></div>}
-            {data.mix.length ? <Now {...shared} /> : mixProblem ? <MixProblem onRetry={refreshMix} /> : <ListenEmpty connected={connected} />}
+            {data.mix.length ? <Now {...shared} /> : mixProblem ? <MixProblem onRetry={refreshMix} /> : <ListenEmpty connected={connected} playable={status?.counts.ready ?? 0} saved={savedMixes} />}
             {on('cloud.local_media') && data.mix.length > 0 && <QueueSources mix={data.mix} book={book} problemsOnly={!coexisting} />}
           </>
         );
@@ -561,7 +617,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, offline
         if (mixProblem && !data.mix.length) return <MixProblem onRetry={refreshMix} />;
         return <Mix {...shared} key="current" />;
       case 'missing':
-        return <OnlyOnYourComputer title="That page" nearest={{ label: 'Library', path: '/library' }} />;
+        return <PageNotFound />;
       case 'discover':
         // Word connections are answered in the browser (localFirstLinks.ts) while
         // discover.word_links is on for the account; with it off this page is as it was
@@ -595,7 +651,12 @@ export function LocalFirstShell({ api, account, more, notices, feedback, offline
         onCommands={controls.onCommands}
         mode="cloud"
         more={moreItems}
-        banner={<>{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
+        banner={<>{room && roomsPlace && !(route.page === 'more' && route.id === 'rooms') && (
+          <p className="room-open-line" role="status" data-testid="room-open-line">
+            <a href={roomsPlace.path} onClick={(event) => { event.preventDefault(); navigate(roomsPlace.path); }}>{roomLine(room)}</a>
+            {roomWaiting > 0 && <span>{` · ${countOf(roomWaiting, 'request')} waiting for your yes`}</span>}
+          </p>
+        )}{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
       >
         {/* one page's render error stays inside that page, as in the hosted shell */}
         <Section key={route.page === 'more' ? `more-${route.id}` : route.page} name={describeRoute(route).title}>{page()}</Section>

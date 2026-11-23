@@ -5,6 +5,11 @@
 // fails if its JavaScript passes 100 KB. The guest token lives in an HttpOnly cookie the page
 // can't read; the page only remembers which room id its code opened, to find its way back.
 //
+// A guest can choose several songs and send them together. The page says how many more they can
+// add ("You can add 2 more"), and when the room's limit is reached it says which limit and when
+// it frees up, in the server's own words (`limit_text`). The server decides what is added: each
+// song of a batch comes back added or with its reason.
+//
 // Each read of the room also tells the host this guest is here, so the page reads it every 5 s
 // while it's on screen. If the signal or the server drops, it says "Reconnecting..." and keeps
 // trying (backing off to 15 s, and at once when the phone comes back online), with the same
@@ -21,7 +26,10 @@ type View = {
   votes_on: boolean; requests_open: boolean; music_paused: boolean;
   now_playing: Song | null; up_next: Song[]; coming_up: Item[]; waiting: Item[]; my_requests: Mine[];
   nickname_confirm?: boolean;
+  /** How many more songs this guest can ask for now; at 0, `limit_text` says why and until when. */
+  requests_left?: number; limit_text?: string;
 };
+type Sent = { song_id: number; added: boolean; became_vote?: boolean; already_queued?: boolean; message?: string };
 
 const POLL_MS = 5000;
 const MAX_WAIT_MS = 15_000;
@@ -35,6 +43,13 @@ let timer = 0;
 let failures = 0;
 let notice = '';
 let searchSeq = 0;
+// the songs chosen but not sent yet, and the last search answer they were chosen from
+let basket: Song[] = [];
+let found: Song[] = [];
+let sending = false;
+const songsWord = (count: number) => (count === 1 ? '1 song' : `${count} songs`);
+// a server that doesn't say (an older one) leaves the choosing open and still enforces its limits
+const leftNow = () => view?.requests_left ?? 99;
 // Every read of the room (a poll, a vote, a request) takes a ticket when it goes out. An answer older
 // than the one on screen is dropped, so a slow poll can't undo a vote that was answered after it left.
 let reads = 0;
@@ -212,13 +227,14 @@ function draw(): void {
     v.nickname_confirm && nameSave?.state === 'failed' ? h('p', { className: 'g-error', role: 'alert' }, `${nameSave.name} wasn't saved. ${nameSave.error ?? ''}`.trim(), ' ', h('button', { type: 'button', className: 'g-link', onclick: () => void saveNickname(nameSave?.name ?? '') }, 'Try again')) : null);
   patch(parts.banners,
     v.guest_status === 'pending' ? h('p', { className: 'g-banner' }, "The host hasn't let you in yet. This page will update when they do.") : null,
-    v.music_paused ? h('p', { className: 'g-banner' }, "The music's paused. Requests will wait until it starts again.") : null);
+    v.music_paused ? h('p', { className: 'g-banner' }, "Nothing is playing right now. You can still ask for songs: the host sees each one and adds it to the mix.") : null);
   const active = v.guest_status === 'active';
   patch(parts.now, active
     ? section('Now playing', v.now_playing ? h('p', { className: 'g-now' }, songLine(v.now_playing)) : h('p', { className: 'g-muted' }, 'Nothing is playing right now.'),
       v.up_next.length ? h('ol', { className: 'g-list' }, ...v.up_next.slice(0, 3).map((song, index) => songItem(song, `next-${index}-${song.song_id}`))) : null)
     : null);
   parts.search.hidden = !(active && v.requests_open);
+  if (!parts.search.hidden) { drawResults(); drawBasket(); }
   patch(parts.lists,
     active && !v.requests_open ? section('Requests', h('p', { className: 'g-muted' }, 'Requests are off in this room.')) : null,
     active && v.coming_up.length ? section('Coming up from guests', h('ol', { className: 'g-list' }, ...v.coming_up.map((item) => songItem(item.song, item.request_id, item.nickname ? h('span', { className: 'g-muted' }, item.nickname) : null, voteButton(item))))) : null,
@@ -247,36 +263,96 @@ function searchPanel(): HTMLElement {
     h('h2', {}, 'Request a song'),
     h('label', { for: 'g-q' }, 'Search the host\'s songs'),
     input,
-    results);
+    results,
+    h('div', { id: 'g-basket' }));
+}
+
+function chosen(song: Song): boolean {
+  return basket.some((one) => one.song_id === song.song_id);
+}
+
+function choose(song: Song): void {
+  basket = chosen(song) ? basket.filter((one) => one.song_id !== song.song_id) : [...basket, song];
+  drawResults();
+  drawBasket();
+}
+
+// Each match has one button: Choose puts it in the basket, Chosen takes it back out. Once the
+// basket holds as many as the room still allows, the rest can't be chosen.
+function drawResults(): void {
+  const results = document.getElementById('g-results');
+  if (!results || !found.length) return;
+  const full = basket.length >= leftNow();
+  patch(results, ...found.map((song) => {
+    const picked = chosen(song);
+    return songItem(song, `found-${song.song_id}`, h('button', {
+      type: 'button', className: `${picked ? 'g-quiet' : 'g-primary'} g-small-button`, 'aria-pressed': String(picked),
+      'aria-label': `${picked ? 'Chosen, press to take out' : 'Choose'} ${songLine(song)}`,
+      disabled: !picked && full,
+      onclick: () => choose(song),
+    }, picked ? 'Chosen' : 'Choose'));
+  }));
+}
+
+function drawBasket(): void {
+  const target = document.getElementById('g-basket');
+  if (!target || !view) return;
+  const left = leftNow();
+  const room = left - basket.length;
+  const words = left <= 0
+    ? (view.limit_text || "You can't ask for more songs right now.")
+    : room > 0 ? `You can add ${room} more.` : "That's as many as you can ask for right now.";
+  patch(target,
+    basket.length ? h('ul', { className: 'g-list', 'data-key': 'chosen' }, ...basket.map((song) => songItem(song, `chosen-${song.song_id}`,
+      h('button', { type: 'button', className: 'g-quiet', 'aria-label': `Take out ${songLine(song)}`, onclick: () => choose(song) }, 'Take out')))) : null,
+    h('p', { className: left <= 0 ? 'g-banner' : 'g-muted', 'data-key': 'left', role: left <= 0 ? 'status' : undefined },
+      basket.length ? `${songsWord(basket.length)} chosen. ` : '', words),
+    basket.length ? h('button', { type: 'button', className: 'g-primary', 'data-key': 'send', disabled: sending || left <= 0, onclick: () => void sendBasket() },
+      sending ? 'Sending...' : basket.length === 1 ? 'Send request' : 'Send requests') : null);
+}
+
+async function sendBasket(): Promise<void> {
+  if (sending || !basket.length) return;
+  const songs = basket;
+  const ticket = ++reads;
+  sending = true;
+  drawBasket();
+  try {
+    const answer = await call<{ results: Sent[]; room: View }>(`${base()}/requests/batch`, { method: 'POST', body: JSON.stringify({ song_ids: songs.map((song) => song.song_id) }) });
+    const title = (id: number) => songs.find((song) => song.song_id === id)?.title ?? 'A song';
+    const added = answer.results.filter((one) => one.added);
+    const refused = answer.results.filter((one) => !one.added);
+    const votes = added.filter((one) => one.became_vote).length;
+    // what was sent leaves the basket; what was refused stays, so it can go again when there's room
+    basket = songs.filter((song) => refused.some((one) => one.song_id === song.song_id));
+    sending = false;
+    if (newer(ticket)) view = answer.room;
+    draw();
+    say([
+      added.length ? `Sent ${songsWord(added.length)}.` : '',
+      votes ? `${songsWord(votes)} had been asked for already, so ${votes === 1 ? 'it counts' : 'they count'} as your vote.` : '',
+      ...refused.map((one) => `Not added: ${title(one.song_id)}. ${one.message ?? ''}`.trim()),
+    ].filter(Boolean).join(' '));
+  } catch (error) {
+    sending = false;
+    drawBasket();
+    say((error as Error).message);
+    if ((error as ApiError).status === 401) void refresh();
+  }
 }
 
 async function search(query: string, results: HTMLElement): Promise<void> {
   const seq = ++searchSeq;
-  if (query.trim().length < 2) { replace(results); return; }
+  if (query.trim().length < 2) { found = []; replace(results); return; }
   try {
-    const found = await call<{ songs: Song[] }>(`${base()}/search?q=${encodeURIComponent(query.trim())}`);
+    const answer = await call<{ songs: Song[] }>(`${base()}/search?q=${encodeURIComponent(query.trim())}`);
     if (seq !== searchSeq) return;
-    if (!found.songs.length) { replace(results, h('li', { className: 'g-muted' }, 'No songs match that.')); return; }
-    replace(results, ...found.songs.map((song) => songItem(song, undefined, h('button', {
-      type: 'button', className: 'g-primary g-small-button', 'aria-label': `Request ${songLine(song)}`,
-      onclick: () => void request(song),
-    }, 'Request'))));
+    found = answer.songs;
+    if (!found.length) { replace(results, h('li', { className: 'g-muted' }, 'No songs match that.')); return; }
+    replace(results);
+    drawResults();
   } catch (error) {
-    if (seq === searchSeq) replace(results, h('li', { className: 'g-error' }, (error as Error).message));
-  }
-}
-
-async function request(song: Song): Promise<void> {
-  const ticket = ++reads;
-  try {
-    const sent = await call<{ became_vote: boolean; already_queued: boolean; room: View }>(`${base()}/requests`, { method: 'POST', body: JSON.stringify({ song_id: song.song_id }) });
-    if (newer(ticket)) {
-      view = sent.room;
-      draw();
-    }
-    say(sent.became_vote ? 'Someone already asked for that, so it counts as your vote.' : sent.already_queued ? "That one's already coming up." : `Sent: ${song.title}.`);
-  } catch (error) {
-    say((error as Error).message);
+    if (seq === searchSeq) { found = []; replace(results, h('li', { className: 'g-error' }, (error as Error).message)); }
   }
 }
 
@@ -344,6 +420,8 @@ async function leave(): Promise<void> {
   store(roomKey, null);
   roomId = null;
   view = null;
+  basket = [];
+  found = [];
   screen('You left the room', 'The host still sees the songs you asked for.', h('button', { type: 'button', className: 'g-primary', onclick: () => joinScreen() }, 'Join again'));
 }
 

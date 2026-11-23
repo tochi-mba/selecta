@@ -7,6 +7,7 @@ import { PLAYBACK_COMMAND_EVENT } from '../devices/usePlaybackDevice';
 import { Icon } from '../ui/Icon';
 import { CloudListen } from '../rooms/CloudListen';
 import { RoomPanel } from '../rooms/RoomPanel';
+import { ROOM_EVENT } from '../rooms/useRoomSession';
 import { LucyCloudSettings } from '../views/LucyCloudSettings';
 import { accountFlagOn, flagOn, setAccountFeatures, useFlags } from '../flags';
 import { DESTINATIONS, type MoreDestinationId } from '../shell/manifest';
@@ -264,6 +265,9 @@ export function CloudApp() {
     if (event.topic === 'playback.command') window.dispatchEvent(new CustomEvent(PLAYBACK_COMMAND_EVENT, { detail: event.payload }));
     // a room request the host accepted, waiting for (or gone from) the browser mix's Requests
     if (event.topic === 'requests.room') window.dispatchEvent(new CustomEvent(ROOM_REQUEST_EVENT, { detail: event.payload }));
+    // anything about the open room (a request, a guest, its settings, its end) reaches the shell's
+    // room session, which reads the room again on whichever page the host is (useRoomSession)
+    if (event.topic === 'requests.room' || event.topic.startsWith('room.')) window.dispatchEvent(new Event(ROOM_EVENT));
     if (event.topic.startsWith('upload.') || event.topic.startsWith('asset.')) { void refreshAccount(); setLibraryVersion((value) => value + 1); }
   }, [refreshAccount]);
   const refreshAll = useCallback(async () => { await refreshAccount(); }, [refreshAccount]);
