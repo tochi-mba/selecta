@@ -91,6 +91,10 @@
 .asks-page > .room-empty { align-self: center; }
 .asks-head { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); align-items: center; }
 .asks-head h3 { font-size: var(--text-md); }
+/* In the Requests drawer the list starts at the drawer's own padding: the drawer's title is the
+   heading, so the hidden one takes no row and the first section heading adds no space above. */
+.overlay-body > .requests-browser > .requests-head { position: absolute; }
+.overlay-body > .requests-browser .asks-head h3 { margin-block: 0; }
 .asks-head p { flex: 1 1 100%; color: var(--text-soft); font-size: var(--text-sm); }
 .asks-none { color: var(--text-soft); font-size: var(--text-sm); list-style: none; }
 .ask-group { display: grid; gap: var(--space-2); min-width: 0; }
@@ -178,7 +182,9 @@
   .room-card { padding: var(--space-4); }
   .room-start-card { padding: var(--space-4); gap: var(--space-5); }
   .room-head-actions { width: 100%; flex-wrap: nowrap; }
-  .room-head-actions > button { flex: 1 1 auto; min-width: 0; padding-inline: var(--space-2); }
+  .room-head-actions > button { flex: 1 1 auto; min-width: 0; padding-inline: var(--space-2); white-space: nowrap; }
+  /* one row of three on a phone: the button says "Show QR"; "full screen" is still read out */
+  .room-qr-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .room-head-actions > .menu { flex: none; }
   .room-share-body { grid-template-columns: minmax(0, 1fr); justify-items: center; }
   .room-share-words { justify-items: center; text-align: center; }
