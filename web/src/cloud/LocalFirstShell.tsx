@@ -222,6 +222,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // where the library shown came from: null from the server, or this device's kept copy
   const [servedFrom, setServedFrom] = useState<{ at: number | null } | null>(null);
   const tonal = useMemo(() => tonalStore(workspaceId), [workspaceId]);
+  const roomsHere = on('rooms') && !account.feature_locks.rooms;
   const sources = useMemo<AvailabilitySources>(() => ({
     here: async () => {
       const opened = await openStore();
@@ -254,6 +255,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     } : undefined,
     // Request a song: this browser's requests per workspace, and the room's from the server
     workspaceId,
+    // an account without Rooms (off, or locked to a plan) never asks for a room's requests
+    rooms: roomsHere,
     // cloud.offline_shell: the last catalogue is kept here and served, with this device's own
     // songs, while SelectaDJ cannot be reached; the banner says the library is from this device
     offline: offlineShell ? {
@@ -263,7 +266,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       })),
       onServed: (from) => setServedFrom(from.cached ? { at: from.at } : null),
     } : undefined,
-  }), [api, cloud, workspaceId, coexisting, openStore, recipes, browserHarmonic, tonal, offlineShell]);
+  }), [api, cloud, workspaceId, coexisting, openStore, recipes, browserHarmonic, tonal, offlineShell, roomsHere]);
   const request = useMemo(() => localFirstRequest(cloud, sources), [cloud, sources]);
   // imports register through the adapted request, so each landed batch reads a fresh catalogue
   const media = useMemo(() => mediaRequest(request), [request]);
