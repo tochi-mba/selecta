@@ -91,11 +91,33 @@ describe('the player’s controls', () => {
     expect(heard).toHaveBeenCalledTimes(1);
   });
 
-  it('takes the lease first when this device is not the speaker, then seeks through the session', async () => {
+  it('takes the lease when this device is not the speaker, starting at the song pressed, with no seek', async () => {
     const act = actions();
-    const player = new LocalFirstPlayer(facts(), act);
+    const player = new LocalFirstPlayer(facts({ view: view() }), act);
     await player.playFrom(2, 10);
     expect(act.playHere).toHaveBeenCalledTimes(1);
+    // the new speaker begins where the press asked, not where the session last was (song 1, 30 s)
+    expect(act.playHere).toHaveBeenCalledWith({ song_index: 2, offset_ms: 10_000 });
+    expect(act.command).not.toHaveBeenCalled();
+  });
+
+  it('starts a new speaker at the top of the song when no offset is given, rounding to whole ms', async () => {
+    const act = actions();
+    const player = new LocalFirstPlayer(facts(), act);
+    await player.playFrom(1);
+    expect(act.playHere).toHaveBeenLastCalledWith({ song_index: 1, offset_ms: 0 });
+    await player.playFrom(0, 1.2504);
+    expect(act.playHere).toHaveBeenLastCalledWith({ song_index: 0, offset_ms: 1250 });
+    expect(act.command).not.toHaveBeenCalled();
+  });
+
+  it('seeks through the session when this device is already the speaker', async () => {
+    const act = actions();
+    const here = facts({ speaking: true, view: view({ speaker: 'here' }), here: { song_index: 0, offset_ms: 0, state: 'playing' },
+      engine: { phase: 'playing', output: { status: 'output_unverified' }, notice: '' } });
+    const player = new LocalFirstPlayer(here, act);
+    await player.playFrom(2, 10);
+    expect(act.playHere).not.toHaveBeenCalled();
     expect(act.command).toHaveBeenCalledWith('seek', { song_index: 2, offset_ms: 10_000 });
   });
 
