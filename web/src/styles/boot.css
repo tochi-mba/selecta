@@ -108,6 +108,7 @@
   border-radius: var(--radius);
   background: var(--surface-panel);
   box-shadow: var(--shadow-raised);
+  animation: rise-in var(--motion-slow) var(--motion-ease) backwards;
 }
 .gate-card h1 { margin: 0; font: var(--type-section); overflow-wrap: anywhere; }
 .gate-card p { margin: 0; color: var(--text-soft); overflow-wrap: anywhere; }
@@ -186,6 +187,7 @@
   color: var(--text-soft);
   font: var(--type-meta);
 }
+.gate-body > .gate-account { animation: rise-in var(--motion-slow) var(--motion-ease) backwards; animation-delay: calc(var(--motion-feedback) * 2); }
 .gate-account > span { min-width: 0; overflow-wrap: anywhere; }
 .gate-account strong { color: var(--text); font-weight: var(--weight-label); }
 .gate-foot {
@@ -202,7 +204,16 @@
 .gate-wait { display: grid; justify-items: center; gap: var(--space-4); }
 .gate-wait p { margin: 0; color: var(--text-soft); }
 .gate-pulse { animation: skeleton-breathe var(--motion-loop-breathe) ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) { .gate-pulse { animation: none; } }
+/* the same sliding line a meter shows while a length is unknown (foundation.css lucy-slide) */
+.gate-line { display: block; inline-size: 120px; block-size: var(--marker); overflow: hidden; border-radius: var(--radius-pill); background: var(--surface-control); }
+.gate-line i { display: block; inline-size: 30%; block-size: 100%; border-radius: inherit; background: var(--status-working); animation: lucy-slide var(--motion-loop-slide) ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .gate-pulse,
+  .gate-line i { animation: none; }
+}
+/* Arriving: a card, a word or a row comes up into its place once. Only the start is described, so
+   with Still, reduced motion or low power (animation: none) everything is simply where it rests. */
+@keyframes rise-in { from { opacity: 0; transform: translateY(var(--space-3)); } }
 @media (max-width: 480px) {
   .gate { padding-top: var(--space-5); align-items: start; }
   .gate-card { padding: var(--space-5) var(--space-4); }
@@ -213,7 +224,7 @@
 
 /* ---------- The landing page for a signed-out visitor (cloud/Welcome.tsx) ---------- */
 .welcome {
-  grid-template-rows: auto 1fr auto auto;
+  grid-template-rows: auto 1fr auto auto auto;
   gap: var(--space-5);
   inline-size: 100%;
   max-inline-size: var(--content-browse);
@@ -229,9 +240,19 @@
 }
 .welcome-words { display: grid; justify-items: start; gap: var(--space-4); min-width: 0; }
 .welcome-words h1 { margin: 0; font: var(--type-display); letter-spacing: -0.035em; text-wrap: balance; }
+/* each word of the headline arrives after the one before; the last is lit like the sung word on Listen */
+.welcome-word { display: inline-block; animation: rise-in var(--motion-slow) var(--motion-ease) backwards; animation-delay: calc(var(--i) * var(--motion-feedback)); }
+.welcome-word.lit { padding-inline: 0.06em; border-radius: var(--radius-hair); background: var(--word-fill); color: var(--word-ink); text-shadow: 0 0 var(--space-5) var(--word-glow); }
 .welcome-lead { margin: 0; max-inline-size: 34rem; color: var(--text-soft); font-size: var(--text-lg); text-wrap: pretty; }
+.welcome-lead,
+.welcome-words > .gate-actions,
+.welcome-words > .gate-problem { animation: rise-in var(--motion-slow) var(--motion-ease) backwards; animation-delay: calc(var(--motion-feedback) * 4); }
+.welcome-words > .gate-actions { animation-delay: calc(var(--motion-feedback) * 5); }
 .welcome-words .gate-problem { justify-self: start; }
-/* the drawing: one song fading out over the next fading in, with the two volume curves crossing */
+/* The drawing (cloud/BlendArt.tsx): one song fading out over the next fading in, the two volume
+   curves crossing, and a playhead moving through the blend. With nothing in the second lane it is
+   the drawing on a page that is not there. The light inside the card rests bottom right and follows
+   the pointer; with Expressive the card also leans a few degrees toward it. */
 .welcome-art {
   position: relative;
   display: grid;
@@ -239,10 +260,15 @@
   border: var(--separator) solid var(--edge-decorative);
   border-radius: var(--radius);
   background:
-    radial-gradient(120% 90% at 85% 100%, var(--word-glow), transparent 60%),
+    radial-gradient(120% 90% at var(--spot-x, 85%) var(--spot-y, 100%), var(--word-glow), transparent 60%),
+    radial-gradient(70% 60% at var(--spot-x, 85%) var(--spot-y, 100%), color-mix(in srgb, var(--motif) 12%, transparent), transparent 70%),
     var(--surface-panel);
   box-shadow: var(--shadow-raised);
   overflow: hidden;
+  transform: perspective(900px) rotateX(var(--lean-x, 0deg)) rotateY(var(--lean-y, 0deg));
+  transition: transform var(--motion-slow) var(--motion-ease);
+  animation: rise-in var(--motion-slow) var(--motion-ease) backwards;
+  animation-delay: calc(var(--motion-feedback) * 3);
 }
 .welcome-art svg { display: block; inline-size: 100%; block-size: auto; }
 .welcome-art-out { fill: var(--text); }
@@ -250,6 +276,11 @@
 .welcome-art-curve { fill: none; stroke: var(--text-soft); stroke-width: 1.5; stroke-dasharray: 3 5; stroke-linecap: round; }
 .welcome-art-curve.rising { stroke: var(--motif); stroke-dasharray: none; stroke-width: 2; }
 .welcome-art-seam { fill: var(--surface-panel); stroke: var(--motif); stroke-width: 2; }
+.welcome-art-empty { fill: none; stroke: var(--edge-interactive); stroke-width: 1.5; stroke-dasharray: 2 8; stroke-linecap: round; }
+/* the playhead rests on the blend, and crosses the whole drawing once a loop */
+.welcome-art-head { stroke: var(--text); stroke-width: 1.5; stroke-linecap: round; opacity: 0.5; animation: blend-head var(--motion-loop-blend) linear infinite; }
+/* the blend point answers the playhead as it passes */
+.welcome-art-ring { fill: none; stroke: var(--motif); stroke-width: 1.5; vector-effect: non-scaling-stroke; opacity: 0; transform-box: fill-box; transform-origin: center; animation: blend-ring var(--motion-loop-blend) linear infinite; }
 .welcome-art-tag {
   justify-self: start;
   padding: var(--space-1) var(--space-snug);
@@ -260,8 +291,29 @@
   font: var(--type-eyebrow);
   letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
+  animation: blend-tag var(--motion-loop-blend) linear infinite;
 }
-.welcome-art-tag.next { justify-self: end; color: var(--text); }
+/* half a loop behind: "Up next" is the lit one once the playhead is through the blend */
+.welcome-art-tag.next { justify-self: end; color: var(--text); animation-delay: calc(var(--motion-loop-blend) / -2); }
+/* a page that is not there: the song plays up to the blend, finds nothing, and skips back */
+.welcome-art[data-variant='missing'] .welcome-art-head { animation-name: blend-skip; }
+.welcome-art[data-variant='missing'] .welcome-art-ring,
+.welcome-art[data-variant='missing'] .welcome-art-tag { animation: none; }
+.welcome-art[data-variant='missing'] .welcome-art-tag { color: var(--text); }
+.welcome-art[data-variant='missing'] .welcome-art-tag.next { border-style: dashed; border-color: var(--edge-interactive); color: var(--text-soft); }
+/* Expressive only: each bar lifts as the playhead reaches it. Its place in the row (--i of 46) sets
+   when, so the lift travels with the line. */
+:root[data-motion='expressive'] .welcome-art rect:not(.spent) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: blend-kick var(--motion-loop-blend) linear infinite;
+  animation-delay: calc(var(--motion-loop-blend) * (var(--i) - 46) / 46);
+}
+@keyframes blend-head { from { transform: translateX(-228px); } to { transform: translateX(232px); } }
+@keyframes blend-skip { 0% { transform: translateX(-228px); } 50%, 60%, 70%, 80%, 100% { transform: translateX(0); } 55%, 65%, 75% { transform: translateX(-34px); } }
+@keyframes blend-ring { 0%, 49% { opacity: 0; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1); } 64%, 100% { opacity: 0; transform: scale(5); } }
+@keyframes blend-kick { 0%, 7%, 100% { transform: scaleY(1); } 2.5% { transform: scaleY(1.32); } }
+@keyframes blend-tag { 0%, 44% { border-color: var(--edge-interactive); color: var(--text); } 56%, 100% { border-color: var(--edge-decorative); color: var(--text-soft); } }
 .welcome-benefits {
   list-style: none;
   margin: 0;
@@ -280,7 +332,11 @@
   border: var(--separator) solid var(--edge-decorative);
   border-radius: var(--radius);
   background: var(--surface-panel);
+  animation: rise-in var(--motion-slow) var(--motion-ease) backwards;
+  animation-delay: calc((var(--i) + 6) * var(--motion-feedback));
+  transition: border-color var(--motion-fast) var(--motion-ease);
 }
+.welcome-benefits li:hover { border-color: var(--edge-interactive); }
 .welcome-benefit-icon {
   display: grid;
   place-items: center;
@@ -293,8 +349,56 @@
 }
 .welcome-benefits h2 { margin: 0; font: var(--weight-strong) var(--text-md) / 1.3 var(--body); }
 .welcome-benefits p { grid-column: 1 / -1; margin: 0; color: var(--text-soft); font: var(--type-meta); }
+/* three steps, numbered, joined by one line: across on a wide page, down the side on a phone */
+.welcome-steps { display: grid; gap: var(--space-5); padding-block: var(--space-5); }
+.welcome-steps h2 { margin: 0; font: var(--type-section); text-wrap: balance; }
+.welcome-steps ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); }
+.welcome-steps li {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: start;
+  column-gap: var(--space-4);
+  row-gap: var(--space-1);
+  animation: rise-in var(--motion-slow) var(--motion-ease) backwards;
+  animation-delay: calc((var(--i) + 9) * var(--motion-feedback));
+}
+.welcome-step-number {
+  position: relative;
+  grid-row: 1 / span 2;
+  display: grid;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  border: var(--separator) solid var(--edge-interactive);
+  border-radius: 50%;
+  background: var(--surface-base);
+  color: var(--text);
+  font: var(--type-counter);
+}
+.welcome-steps li:first-child .welcome-step-number { border-color: var(--primary-edge); background: var(--primary-fill); color: var(--primary-ink); }
+/* the line from one number to the next */
+.welcome-steps li:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  inset-block: 40px calc(-1 * var(--space-5));
+  inset-inline-start: 20px;
+  border-inline-start: var(--separator) solid var(--edge-decorative);
+}
+.welcome-steps h3 { margin: 0; align-self: end; font: var(--weight-strong) var(--text-md) / 1.3 var(--body); }
+.welcome-steps p { grid-column: 2; margin: 0; max-inline-size: 34ch; color: var(--text-soft); font: var(--type-meta); }
+/* where the browser can tie an animation to scrolling, a step arrives as it comes into view */
+@supports (animation-timeline: view()) {
+  .welcome-steps li { animation-timeline: view(); animation-range: entry 0% entry 80%; animation-delay: 0s; }
+}
 .welcome .gate-foot { justify-content: space-between; padding-top: var(--space-4); border-top: var(--separator) solid var(--edge-decorative); }
 @media (min-width: 769px) {
+  .welcome-steps ol { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .welcome-steps li { grid-template-columns: minmax(0, 1fr); row-gap: var(--space-2); }
+  .welcome-step-number { grid-row: auto; }
+  .welcome-steps h3 { align-self: start; }
+  .welcome-steps p { grid-column: auto; }
+  .welcome-steps li:not(:last-child)::before { inset-block: 20px auto; inset-inline: 40px calc(-1 * var(--space-5)); border-inline-start: 0; border-block-start: var(--separator) solid var(--edge-decorative); }
   .welcome-benefits { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .welcome-benefits li { grid-template-columns: minmax(0, 1fr); row-gap: var(--space-2); align-items: start; padding: var(--space-5); }
 }

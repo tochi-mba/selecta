@@ -222,3 +222,16 @@
 :where(:root[data-cloud='on']) .hint { line-height: 1.5; }
 :where(:root[data-cloud='on']) .problem { border-color: color-mix(in srgb, var(--danger) 55%, var(--border)); box-shadow: inset var(--marker) 0 0 var(--danger); }
 :where(:root[data-cloud='on']) .tooltip { border-radius: var(--radius-sm); font-size: var(--text-xs); line-height: 1.45; }
+
+/* ---- arriving: a page comes up into its place, its cards one after another, a meter fills ----
+   Each keyframe only describes the start, and every length is a motion token: Subtle shortens them,
+   and Still, reduced motion and low power leave everything simply where it rests. */
+:where(:root[data-cloud='on']) .content > main.page { animation: cloud-arrive var(--motion-slow) var(--motion-ease) backwards; }
+:where(:root[data-cloud='on']) .card-grid > * { animation: cloud-arrive var(--motion-slow) var(--motion-ease) backwards; }
+:where(:root[data-cloud='on']) .card-grid > :nth-child(2) { animation-delay: var(--motion-feedback); }
+:where(:root[data-cloud='on']) .card-grid > :nth-child(3) { animation-delay: calc(var(--motion-feedback) * 2); }
+:where(:root[data-cloud='on']) .card-grid > :nth-child(4) { animation-delay: calc(var(--motion-feedback) * 3); }
+:where(:root[data-cloud='on']) .card-grid > :nth-child(n + 5) { animation-delay: calc(var(--motion-feedback) * 4); }
+:where(:root[data-cloud='on']) .meter:not([data-indeterminate]) .meter-fill { transform-origin: 0 50%; animation: meter-fill var(--motion-slow) var(--motion-ease) backwards; }
+@keyframes cloud-arrive { from { opacity: 0; transform: translateY(var(--space-2)); } }
+@keyframes meter-fill { from { transform: scaleX(0); } }
