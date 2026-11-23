@@ -537,7 +537,7 @@ export function CloudApp() {
   if (account && localFirst) {
     return (
       <Suspense fallback={<main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p>Opening SelectaDJ…</p></main>}>
-        <LocalFirstShell api={api} account={account} more={morePanel} notices={shellNotices} feedback={shellFeedback} />
+        <LocalFirstShell api={api} account={account} more={morePanel} notices={shellNotices} feedback={shellFeedback} onSignOut={signOutHere} />
       </Suspense>
     );
   }

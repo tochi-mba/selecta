@@ -28,6 +28,7 @@ import { Now } from '../views/Now';
 import { RequestsContext, RequestsPanel, useRequests, waitingRequestCount, type RequestRow } from '../views/Requests';
 import type { View, ViewProps } from '../views/shared';
 import type { Account, Api } from './api';
+import { planName } from './api';
 import { ConnectMusic, registeredDeviceId } from './ConnectMusic';
 import { hostedResolver, matchAsset, readHostedAssets, type HostedAsset } from './hostedMedia';
 import { isHostedAccount } from './localFirstGate';
@@ -106,7 +107,7 @@ const VIEW_PATHS: Record<View, string> = { Mixes: '/mixes', Now: '/listen', Edit
 const IDLE = (): void => {};
 const AVAILABILITY_REFRESH_MS = 12 * 60 * 60 * 1000;
 
-export function LocalFirstShell({ api, account, more, notices, feedback, offlineReadOnly = false }: {
+export function LocalFirstShell({ api, account, more, notices, feedback, onSignOut, offlineReadOnly = false }: {
   api: Api;
   account: Account;
   /** The account panel for a More destination, drawn by CloudApp with its own handlers. */
@@ -115,6 +116,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, offline
    * by CloudApp from the same sources as the hosted frame, shown first in the banner. */
   notices?: ReactNode;
   feedback?: ReactNode;
+  /** Sign out of this device, from the side bar's account menu. */
+  onSignOut?: () => void;
   /** cloud.offline_shell: opened offline from the account this device last saw, before AuthKit
    * could sign in again. The banner says so; server-only actions wait with their reason. */
   offlineReadOnly?: boolean;
@@ -655,6 +658,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, offline
         onCommands={controls.onCommands}
         mode="cloud"
         more={moreItems}
+        account={onSignOut ? { email: account.user.email, plan: planName(account), onSignOut } : undefined}
         banner={<>{room && roomsPlace && !(route.page === 'more' && route.id === 'rooms') && (
           <p className="room-open-line" role="status" data-testid="room-open-line">
             <a href={roomsPlace.path} onClick={(event) => { event.preventDefault(); navigate(roomsPlace.path); }}>{roomLine(room)}</a>

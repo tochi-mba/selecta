@@ -8,7 +8,7 @@ import { setPrefs, usePrefs } from '../state/prefs';
 import { useUnseenActivity } from '../state/activity';
 import { attentionWords, jobAttention, useJobsStatus } from '../state/jobs';
 import { announce, Drawer, LiveRegion } from '../ui/controls';
-import { Icon } from '../ui/Icon';
+import { Icon, type IconName } from '../ui/Icon';
 import { playLabel, SEAM_LABEL, songArtist, songTitle, timeLabel, transportClock } from '../audio/transportWords';
 import { pageStart } from '../ui/focusReturn';
 import { ThemeMenu } from '../ui/ThemeChoice';
@@ -292,6 +292,7 @@ export function Shell({
   children,
   mode = 'local',
   more = [],
+  account,
 }: {
   route: ShellRoute;
   player: PlayerLike;
@@ -312,6 +313,8 @@ export function Shell({
   mode?: ShellMode;
   /** Cloud only: the account-shaped places the manifest puts behind More (ADR-0463). */
   more?: readonly MoreDestination[];
+  /** Cloud only: who is signed in, shown at the foot of the side bar with Sign out in plain sight. */
+  account?: ShellAccount;
 }) {
   const place = useLocationText().split('?')[0];
   const content = useRef<HTMLDivElement>(null);
@@ -368,6 +371,9 @@ export function Shell({
   const primaryDestinations = destinations.filter((item) => item.id !== 'workspace');
   const workspace = destinations.find((item) => item.id === 'workspace');
   const cloudMore = mode === 'cloud' && more.length > 0;
+  // The side bar lists the places themselves; the account's own pages sit in the account menu
+  const accountPlaces = more.filter((item) => ACCOUNT_PLACES.has(item.id));
+  const railPlaces = more.filter((item) => !ACCOUNT_PLACES.has(item.id));
   const classic = prefs.classicNav && on('app.classic_nav');
   return (
     <div className={`shell ${stage ? 'on-stage' : ''} ${withPlayer ? 'with-player' : ''}`} data-mode={mode}>
@@ -408,12 +414,16 @@ export function Shell({
                 </button>}
               </li>
             )}
+            {!classic && cloudMore && railPlaces.map((item) => (
+              <li key={item.id} className="nav-place">
+                <PageLink to={item.path} data-tip={item.label} aria-label={item.label} aria-current={route.page === 'more' && route.id === item.id ? 'page' : undefined}>
+                  <Icon name={MORE_ICONS[item.id]} />
+                  <span className="nav-label">{item.label}</span>
+                </PageLink>
+              </li>
+            ))}
             {!classic && cloudMore && (
-              <li className="nav-more">
-                <button className="nav-more-desktop" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={route.page === 'more' ? 'page' : undefined} data-tip="More" aria-label="More" onClick={() => setMoreOpen(true)}>
-                  <Icon name="more" />
-                  <span className="nav-label">More</span>
-                </button>
+              <li className="nav-more nav-more-phone">
                 <button className="nav-more-mobile" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={route.page === 'more' ? 'page' : undefined} onClick={() => setMoreOpen(true)}>
                   <Icon name="more" />
                   <span className="nav-label">More</span>
@@ -434,6 +444,9 @@ export function Shell({
               <button className="nav-request" onClick={onRequests} aria-label={waitingRequests ? `Requests: Request a song, ${waitingRequests} waiting` : 'Requests: Request a song'} title={on('app.shortcuts') ? 'Request a song (R)' : 'Request a song'}>
                 <Icon name="request" /><span className="nav-label">Request a song</span>{waitingRequests ? <span className="count"> {waitingRequests}</span> : ''}
               </button>
+            )}
+            {account && (
+              <AccountMenu account={account} places={accountPlaces} current={route.page === 'more' ? route.id : null} />
             )}
             <button
               className="nav-collapse quiet"
@@ -472,6 +485,12 @@ export function Shell({
                 </li>
               ))}
             </ul>
+            {account && (
+              <div className="more-account">
+                <p><span className="account-avatar" aria-hidden="true">{account.email.slice(0, 1).toUpperCase()}</span><span className="account-who"><b>{account.email}</b><span>{account.plan} plan</span></span></p>
+                <button onClick={account.onSignOut}><Icon name="signout" /> Sign out</button>
+              </div>
+            )}
           </nav>
         </Drawer>
       )}
@@ -492,6 +511,46 @@ export function Shell({
       )}
       <Toaster />
       <LiveRegion />
+    </div>
+  );
+}
+
+/** Who is signed in, for the side bar's account menu. */
+export type ShellAccount = { email: string; plan: string; onSignOut: () => void };
+
+const ACCOUNT_PLACES: ReadonlySet<string> = new Set(['account', 'billing']);
+const MORE_ICONS: Record<MoreDestination['id'], IconName> = {
+  account: 'user', billing: 'card', devices: 'system', rooms: 'users', workspace: 'settings', uploads: 'plus',
+};
+
+/** The foot of the Cloud side bar: who is signed in, their plan, their account pages and Sign out. */
+function AccountMenu({ account, places, current }: { account: ShellAccount; places: readonly MoreDestination[]; current: string | null }) {
+  const [open, setOpen] = useState(false);
+  const holder = useRef<HTMLDivElement>(null);
+  const opener = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (event: MouseEvent) => { if (!holder.current?.contains(event.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', away);
+    return () => document.removeEventListener('mousedown', away);
+  }, [open]);
+  return (
+    <div className="nav-account" ref={holder} onKeyDown={(event) => { if (event.key === 'Escape' && open) { event.stopPropagation(); setOpen(false); opener.current?.focus(); } }}>
+      <button ref={opener} className="nav-account-button" aria-haspopup="menu" aria-expanded={open} aria-label={`Account: ${account.email}, ${account.plan} plan`} data-tip="Account" aria-current={current !== null && places.some((item) => item.id === current) ? 'page' : undefined} onClick={() => setOpen(!open)}>
+        <span className="account-avatar" aria-hidden="true">{account.email.slice(0, 1).toUpperCase()}</span>
+        <span className="account-who nav-label"><b>{account.email}</b><span>{account.plan} plan</span></span>
+        <span className="nav-label account-caret" aria-hidden="true"><Icon name="up" /></span>
+      </button>
+      {open && (
+        <div className="nav-account-menu" role="menu" aria-label="Account" data-motion="pop">
+          {places.map((item) => (
+            <PageLink key={item.id} role="menuitem" to={item.path} aria-current={current === item.id ? 'page' : undefined} onClick={() => setOpen(false)}>
+              <Icon name={MORE_ICONS[item.id]} /> {item.label}
+            </PageLink>
+          ))}
+          <button role="menuitem" className="nav-account-signout" onClick={() => { setOpen(false); account.onSignOut(); }}><Icon name="signout" /> Sign out</button>
+        </div>
+      )}
     </div>
   );
 }
