@@ -277,7 +277,8 @@ def test_holdings_say_what_each_of_my_devices_can_open_by_id_only(party, local_m
     assert after["song_ids"] == []
     assert {entry["device_id"]: entry["songs"] for entry in after["devices"]}[laptop] == 3
     # a song removed from the account takes its holdings with it
-    assert party.client.delete(f"/api/local-media/songs/{one}", headers=auth(ALICE)).status_code == 200
+    removed = party.client.delete(f"/api/local-media/songs/{one}", headers=auth(ALICE))
+    assert removed.status_code == 200
     laptop_now = party.client.get(
         f"/api/local-media/holdings?device_id={laptop}", headers=auth(ALICE)
     ).json()
