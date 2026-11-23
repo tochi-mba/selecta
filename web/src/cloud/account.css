@@ -11,7 +11,8 @@
 .acct-content > .acct-card + .cloud-feedback { margin-top: calc(var(--space-2) * -1); }
 
 /* the section list */
-.acct-nav { position: sticky; top: var(--space-4); display: grid; gap: var(--space-hair); }
+/* pinned below the top bar (--header-block is its real height), never underneath it */
+.acct-nav { position: sticky; top: calc(var(--header-block) + var(--space-4)); display: grid; gap: var(--space-hair); }
 .acct-nav a {
   display: flex;
   align-items: center;
