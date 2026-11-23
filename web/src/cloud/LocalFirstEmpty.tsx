@@ -93,18 +93,23 @@ function MusicEmpty({ page, title, lead, at, heading, children, actions, current
 /** `connected` is how many songs are in the catalogue; ideas need songs this browser can open.
  * `current` is the current mix's card, when there is one: it stays in view even while too few
  * songs can play here to make a new mix. */
-export function MixesEmpty({ connected, checking, current }: { connected: number; checking?: { checked: number; total: number | null }; current?: ReactNode }) {
+export function MixesEmpty({ connected, checking, current, onSetUp }: {
+  connected: number; checking?: { checked: number; total: number | null }; current?: ReactNode;
+  /** given while getting started is unfinished (Finish later): opens it again where it was left */
+  onSetUp?: () => void;
+}) {
   const shared = { page: 'mixes', title: 'Make a Mix', lead: 'Choose a length and press Play. SelectaDJ lines up your songs and blends each one into the next.', at: 'connect' as const, current };
+  const setUp = onSetUp && <button type="button" className="quiet" onClick={onSetUp}>Finish setting up</button>;
   if (checking) {
     return (
-      <MusicEmpty {...shared} heading="Checking your music" actions={<PageLink to="/library" className="button">See your library</PageLink>}>
+      <MusicEmpty {...shared} heading="Checking your music" actions={<><PageLink to="/library" className="button">See your library</PageLink>{setUp}</>}>
         {`${checking.checked} of ${checking.total ?? 'your'} songs checked. You can make a mix as soon as two can play here.`}
       </MusicEmpty>
     );
   }
   return (
     <MusicEmpty {...shared} heading={connected === 0 ? 'Connect your music to make a mix' : 'Choose your music again to make a mix'}
-      actions={<PageLink to="/library" className="button primary big">Connect music</PageLink>}>
+      actions={<><PageLink to="/library" className="button primary big">Connect music</PageLink>{setUp}</>}>
       {connected === 0 ? 'Pick the songs on this device and SelectaDJ turns them into a mix. Your files stay where they are.' : chooseAgain(connected)}
     </MusicEmpty>
   );

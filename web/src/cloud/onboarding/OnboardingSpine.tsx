@@ -109,6 +109,9 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
   // so going back to look never undoes a sound check someone really heard.
   // While music is being checked, Back would only offer a second import over the first.
   const back = state.step === 'verify' && live.phase === 'running' ? null : previousStep(state);
+  // Finish later is remembered for this account on this browser, so a reload or a link to another
+  // page opens that page and not the spine again; the step and outcomes are kept for carrying on.
+  const later = () => { change({ ...state, later: true }); onDone(); };
   const goBack = () => { if (back) change({ ...state, step: back }); };
 
   const props: StepProps = { state, onChange: change, deps, session: () => audio.current, openSession };
@@ -161,7 +164,7 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
       </div>
       <div className="cloud-actions">
         {back && <button type="button" onClick={goBack}>Back</button>}
-        <button type="button" className="cloud-spine-later" onClick={onDone}>Finish later</button>
+        <button type="button" className="cloud-spine-later" onClick={later}>Finish later</button>
       </div>
     </section>
   );

@@ -64,6 +64,9 @@ export type AvailabilitySources = {
   /** The workspace whose song requests this browser keeps (localFirstRequests.ts); with the
    * recipe store, Request a song works here. */
   workspaceId?: string;
+  /** Whether this account has Rooms. False: a room's requests are never asked for (the server
+   * answers 404 to an account without Rooms). Left out: asked, as before. */
+  rooms?: boolean;
   /** `cloud.offline_shell`: keep the last catalogue in this browser and serve it, merged with
    * `deviceSongs`, while SelectaDJ cannot be reached. Needs `workspaceId`. */
   offline?: {
@@ -233,7 +236,7 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
   }) : null;
   // requests join the current recipe through the mix routes above, so they need the store too
   const requests = sources.recipes && sources.workspaceId
-    ? requestsFamily({ cloud, workspaceId: sources.workspaceId, songs: playable, send: (<T,>(path: string, init?: RequestInit) => adapted<T>(path, init)) as Request })
+    ? requestsFamily({ cloud, workspaceId: sources.workspaceId, rooms: sources.rooms, songs: playable, send: (<T,>(path: string, init?: RequestInit) => adapted<T>(path, init)) as Request })
     : null;
   // Word connections (discover.word_links): answers nothing while that flag is off
   const links = linksFamily(cloud, sources.recipes, playable);

@@ -25,12 +25,14 @@ const PLANS: { id: Paid; name: string; storage: string; month: string; year: str
  * on their own devices; prices are the same as the hosted cards. `flag` hides an axis whose
  * feature is off for this account, and Rooms shows only where it is on or a plan-locked teaser. */
 type Axis = { name: string; words: string; flag?: FlagId };
+/* Each line is drawn as its bold name then its words, so the words never start with the name
+   again: "Lucy" then "Standard: ...", which reads "Lucy Standard: ..." once. */
 const LOCAL_FIRST_AXES: Record<Paid, { headline: string; eyebrow: string; axes: Axis[] }> = {
   standard: {
     headline: 'More from Lucy',
     eyebrow: 'For everyday mixing',
     axes: [
-      { name: 'Lucy', words: 'Lucy Standard: 400 everyday turns and 40 planning turns a month.', flag: 'lucy' },
+      { name: 'Lucy', words: 'Standard: 400 everyday turns and 40 planning turns a month.', flag: 'lucy' },
       { name: 'Discovery', words: 'Scheduled discovery sweeps for new links between your songs.' },
       { name: 'Devices', words: 'Sign in on up to 10 devices and play on one at a time.' },
     ],
@@ -40,7 +42,7 @@ const LOCAL_FIRST_AXES: Record<Paid, { headline: string; eyebrow: string; axes: 
     eyebrow: 'For hosting',
     axes: [
       { name: 'Rooms', words: 'Open a room for up to 100 guests, for up to 12 hours, with song requests.', flag: 'rooms' },
-      { name: 'Lucy', words: 'Lucy Advanced: 150 everyday turns, 25 deep plans a month, and quick turns on fair use.', flag: 'lucy' },
+      { name: 'Lucy', words: 'Advanced: 150 everyday turns, 25 deep plans a month, and quick turns on fair use.', flag: 'lucy' },
       { name: 'Discovery', words: 'Larger scheduled discovery sweeps.' },
       { name: 'Devices', words: 'Sign in on up to 10 devices and play on one at a time.' },
     ],
@@ -100,7 +102,7 @@ function currentIncludes(account: Account, local: boolean): Axis[] {
   if (local && (plan === 'standard' || plan === 'premium')) return shownAxes(plan, account);
   const lines: Axis[] = [];
   if (holdsHostedStorage(account)) lines.push({ name: 'Storage', words: `${bytes(account.usage?.storage.limit_bytes ?? account.entitlement.storage_limit_bytes)} for your music.` });
-  if (account.lucy && accountFlagOn('lucy', account.features)) lines.push({ name: 'Lucy', words: `${account.lucy.tier}.` });
+  if (account.lucy && accountFlagOn('lucy', account.features)) lines.push({ name: 'Lucy', words: `${account.lucy.tier.replace(/^Lucy\s+/, '')}.` });
   const sold = PLANS.find((item) => item.id === plan);
   if (sold && !local) lines.push({ name: 'Extras', words: aboutPlan(sold, account) });
   return lines;

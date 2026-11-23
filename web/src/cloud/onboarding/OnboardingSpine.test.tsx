@@ -6,7 +6,7 @@ import type { ImportEvent, ImportSummary } from '../../media';
 import { cancelImportSession, clearImportMarker, clearImportSession, importSnapshot } from '../importSession';
 import type { AudioSession, SpineDeps } from './deps';
 import { OnboardingSpine } from './OnboardingSpine';
-import { FRESH, ImportTally, loadState, recordImportOutcome, settleVerifyLater, SpineState, storageKey } from './state';
+import { FRESH, ImportTally, loadState, onboardingPutOff, recordImportOutcome, settleVerifyLater, SpineState, storageKey } from './state';
 
 const WS = 'ws-1';
 const NOW = 1_800_000_000;
@@ -182,6 +182,8 @@ describe('onboarding resume', () => {
     await heading('Check this device');
     await user.click(screen.getByRole('button', { name: 'Finish later' }));
     expect(first.onDone).toHaveBeenCalled();
+    // the choice is remembered, so the shell stops opening the spine by itself on this browser
+    expect(onboardingPutOff(WS, first.storage)).toBe(true);
     const stored = first.storage.getItem(storageKey(WS));
     first.view.unmount();
     const second = setup({ saved: JSON.parse(stored!) as SpineState });

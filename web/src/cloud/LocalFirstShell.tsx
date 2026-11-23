@@ -49,7 +49,7 @@ import { NOTHING_PLAYABLE_NOTICE } from '../engine/scheduler';
 import { runningTime } from '../lib';
 import { CutoverNotice } from './migration/CutoverNotice';
 import { OnboardingSpine } from './onboarding/OnboardingSpine';
-import { browserStorage, onboardingFinished, recordImportOutcome } from './onboarding/state';
+import { browserStorage, onboardingFinished, onboardingPutOff, recordImportOutcome } from './onboarding/state';
 import { ImportChip } from './ImportChip';
 import { StorageCard } from './StorageCard';
 import { bindImportWorkspace, endImportSession, useImportSession } from './importSession';
@@ -222,6 +222,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // where the library shown came from: null from the server, or this device's kept copy
   const [servedFrom, setServedFrom] = useState<{ at: number | null } | null>(null);
   const tonal = useMemo(() => tonalStore(workspaceId), [workspaceId]);
+  const roomsHere = on('rooms') && !account.feature_locks.rooms;
   const sources = useMemo<AvailabilitySources>(() => ({
     here: async () => {
       const opened = await openStore();
@@ -254,6 +255,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     } : undefined,
     // Request a song: this browser's requests per workspace, and the room's from the server
     workspaceId,
+    // an account without Rooms (off, or locked to a plan) never asks for a room's requests
+    rooms: roomsHere,
     // cloud.offline_shell: the last catalogue is kept here and served, with this device's own
     // songs, while SelectaDJ cannot be reached; the banner says the library is from this device
     offline: offlineShell ? {
@@ -263,7 +266,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       })),
       onServed: (from) => setServedFrom(from.cached ? { at: from.at } : null),
     } : undefined,
-  }), [api, cloud, workspaceId, coexisting, openStore, recipes, browserHarmonic, tonal, offlineShell]);
+  }), [api, cloud, workspaceId, coexisting, openStore, recipes, browserHarmonic, tonal, offlineShell, roomsHere]);
   const request = useMemo(() => localFirstRequest(cloud, sources), [cloud, sources]);
   // imports register through the adapted request, so each landed batch reads a fresh catalogue
   const media = useMemo(() => mediaRequest(request), [request]);
@@ -435,11 +438,13 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const route: ShellRoute = (moreRoute && !(workspacePage && moreRoute.id === 'workspace') ? moreRoute : null) ?? parseRoute(path);
   const moreItems = moreDestinationsFor({ mode: 'cloud', feature: on, experience: account.experience ?? null }).filter((place) => !(workspacePage && place.id === 'workspace'));
   const connected = status?.counts.music ?? 0;
-  const [spine, setSpine] = useState(() => !onboardingFinished(workspaceId));
+  // Finish later is remembered on this browser: the spine then opens only when asked for
+  const [spine, setSpine] = useState(() => !onboardingFinished(workspaceId) && !onboardingPutOff(workspaceId));
+  const [spineAsked, setSpineAsked] = useState(false);
   // frozen at the first status: songs landing mid-import must not unmount the spine under the member
   const startedEmpty = useRef<boolean | null>(null);
   if (status !== null && startedEmpty.current === null) startedEmpty.current = connected === 0;
-  const newMember = spine && startedEmpty.current === true;
+  const newMember = spine && (startedEmpty.current === true || spineAsked);
 
   const notify = useCallback<ViewProps['notify']>((message, undo) => {
     showToast(message, typeof undo === 'function' ? { undo } : {});
@@ -558,7 +563,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
       return (
         <main className="page" id="main">
           <h1 className="display small">Welcome to SelectaDJ</h1>
-          <OnboardingSpine request={media} workspaceId={workspaceId} deps={spineDeps} onDone={() => { setSpine(false); refreshStatus(); }} />
+          <OnboardingSpine request={media} workspaceId={workspaceId} deps={spineDeps} onDone={() => { setSpine(false); setSpineAsked(false); refreshStatus(); }} />
         </main>
       );
     }
@@ -591,6 +596,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
           <MixesEmpty
             current={data.mix.length > 0 ? <CurrentMix mix={data.mix} mixName={data.name} now={now} player={shellPlayer} setView={shared.setView} analysisAvailable={false} /> : undefined}
             connected={connected}
+            onSetUp={onboardingFinished(workspaceId) ? undefined : () => { setSpineAsked(true); setSpine(true); }}
             checking={importLive.phase === 'running' ? { checked: importLive.registered, total: importLive.total } : undefined}
           />
         )}{localExport}</>;

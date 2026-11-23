@@ -283,4 +283,13 @@ describe('room requests the host accepted', () => {
     const { request } = family({ roomFails: true });
     expect((await request(2)).map((row) => row.song_id)).toEqual([2]);
   });
+
+  it('never asks the server for a room’s requests on an account without Rooms', async () => {
+    const asked: string[] = [];
+    const cloud = (async (path: string) => { asked.push(path); throw new Error('not found'); }) as Request;
+    const made = requestsFamily({ cloud, workspaceId: 'ws-no-rooms', rooms: false, songs: async () => SONGS, send: cloud });
+    const answer = await (made.answer('GET', '/requests', new URLSearchParams(), { method: 'GET' }) as Promise<{ requests: RequestRow[] }>);
+    expect(answer.requests).toEqual([]);
+    expect(asked).toEqual([]);
+  });
 });

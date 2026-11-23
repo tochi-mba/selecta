@@ -26,7 +26,7 @@ vi.mock('./onboarding/OnboardingSpine', () => ({
   },
 }));
 const recorded = vi.hoisted(() => [] as unknown[]);
-vi.mock('./onboarding/state', () => ({ onboardingFinished: () => false, browserStorage: () => null, recordImportOutcome: (_storage: unknown, _ws: string, summary: unknown) => { recorded.push(summary); } }));
+vi.mock('./onboarding/state', () => ({ onboardingFinished: () => false, onboardingPutOff: () => false, browserStorage: () => null, recordImportOutcome: (_storage: unknown, _ws: string, summary: unknown) => { recorded.push(summary); } }));
 vi.mock('./migration/CutoverNotice', () => ({
   CutoverNotice: ({ accountId }: { accountId: string }) => <aside aria-label="Cutover notice">{`notice for ${accountId}`}</aside>,
 }));
