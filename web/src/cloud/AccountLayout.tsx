@@ -60,17 +60,28 @@ export function SettingsLayout({ current, places, children }: {
     return undefined;
   }, [onAccount]);
 
-  // Which section of Account is on screen, so the list on the left always says where you are.
+  // Which section of Account is on screen, so the list on the left always says where you are; and
+  // which sections turned out to have nothing in them, so the list never points at an empty place.
+  const [empty, setEmpty] = useState<SettingsPlaceId[]>([]);
   useEffect(() => {
-    if (!onAccount || !places || typeof IntersectionObserver === 'undefined') return undefined;
+    if (!onAccount || !places) return undefined;
     const anchored = places.filter((place) => place.anchor);
-    const watcher = new IntersectionObserver((entries) => {
-      const first = entries.filter((entry) => entry.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-      const found = first && anchored.find((place) => place.anchor === first.target.id);
-      if (found) setInView(found.id);
-    }, { rootMargin: '-15% 0px -70% 0px' });
-    for (const place of anchored) { const node = document.getElementById(place.anchor!); if (node) watcher.observe(node); }
-    return () => watcher.disconnect();
+    const read = () => {
+      const line = window.innerHeight * 0.35;
+      let found: SettingsPlaceId = 'profile';
+      const gone: SettingsPlaceId[] = [];
+      for (const place of anchored) {
+        const node = document.getElementById(place.anchor!);
+        if (!node || node.getClientRects().length === 0) { gone.push(place.id); continue; }
+        if (node.getBoundingClientRect().top <= line) found = place.id;
+      }
+      setInView(found);
+      setEmpty((was) => (was.join() === gone.join() ? was : gone));
+    };
+    read();
+    const timer = window.setInterval(read, 1500);
+    document.addEventListener('scroll', read, { capture: true, passive: true });
+    return () => { window.clearInterval(timer); document.removeEventListener('scroll', read, { capture: true }); };
   }, [onAccount, places]);
 
   if (!places) return <div className="acct"><div className="acct-content">{children}</div></div>;
@@ -87,7 +98,7 @@ export function SettingsLayout({ current, places, children }: {
   return (
     <div className="acct acct-layout">
       <nav className="acct-nav" aria-label="Settings sections">
-        {places.map((place) => (
+        {places.filter((place) => !onAccount || !empty.includes(place.id)).map((place) => (
           <a
             key={place.id}
             href={place.anchor && place.id !== 'profile' ? `${place.path}#${place.anchor}` : place.path}
