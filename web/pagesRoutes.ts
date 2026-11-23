@@ -3,13 +3,16 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const PAGE_ENTRIES = ['index.html', 'guest.html', 'display.html', 'kiosk.html'] as const;
+// Pages canonicalises /guest.html to /guest. Proxying the room code to .html can
+// turn an internal rewrite into an external redirect, discarding /r/:code.
+// The other dedicated-page rules remain unchanged in this targeted fix.
 const REWRITES = [
   ['/display', '/display.html'],
   ['/display/', '/display.html'],
   ['/kiosk', '/kiosk.html'],
   ['/kiosk/', '/kiosk.html'],
-  ['/r/:code', '/guest.html'],
-  ['/r/:code/', '/guest.html'],
+  ['/r/:code', '/guest'],
+  ['/r/:code/', '/guest'],
 ] as const;
 
 export function validatePagesRedirects(contents: string): string[] {

@@ -1,8 +1,9 @@
-# Cloudflare Pages proxies: preserve the public URL and serve a dedicated HTML entry.
-# Static routes first, then the dynamic room link. No catch-all SPA rewrite.
+# Cloudflare Pages internal 200 proxies: keep /r/CODE visible in the address bar.
+# Only the room route needs a new target: Pages canonicalizes /guest.html -> /guest.
+# Keep display and kiosk rewrites unchanged; this PR fixes room-code loss.
 /display /display.html 200
 /display/ /display.html 200
 /kiosk /kiosk.html 200
 /kiosk/ /kiosk.html 200
-/r/:code /guest.html 200
-/r/:code/ /guest.html 200
+/r/:code /guest 200
+/r/:code/ /guest 200

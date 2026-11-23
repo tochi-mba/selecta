@@ -15,12 +15,18 @@ test('a directly opened guest link survives refresh without a signed-in session'
     const page = await context.newPage();
     const response = await page.goto(joinPath);
     expect(response?.status()).toBe(200);
+    // A 200 internal rewrite must preserve the original room-code path; a CDN
+    // canonical redirect to /guest would lose it and show "No room code".
+    expect(new URL(page.url()).pathname).toBe(joinPath);
     await expect(page.locator('#guest')).toBeVisible();
     await expect(page.locator('#root')).toHaveCount(0); // not the signed-in React shell
     await expect(page.getByRole('heading', { name: 'Request a song' })).toBeVisible();
+    await expect(page.getByText('No room code')).toHaveCount(0);
     await page.getByRole('button', { name: 'Join the room' }).click();
     await expect(page.getByRole('heading', { name: 'Garden party' })).toBeVisible();
+    expect(new URL(page.url()).pathname).toBe(joinPath);
     await page.reload();
+    expect(new URL(page.url()).pathname).toBe(joinPath);
     await expect(page.getByRole('heading', { name: 'Garden party' })).toBeVisible();
   } finally {
     await Promise.all([context.close(), hostContext.close()]);
