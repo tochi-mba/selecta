@@ -200,6 +200,11 @@ export function CloudApp() {
   // how many times in a row AuthKit had a user but no token, and the timer for the next try
   const loginTries = useRef(0);
   const loginRetry = useRef(0);
+  // when the current run of token misses began (0: none), and whether the workspace set-up screen
+  // is up: a screen the person is in the middle of is only replaced once the miss has lasted
+  const missingSince = useRef(0);
+  const settingUp = useRef(needsOnboarding);
+  settingUp.current = needsOnboarding;
   useEffect(() => () => window.clearTimeout(loginRetry.current), []);
   const refreshAccount = useCallback(async (): Promise<void> => {
     if (!user) return;
@@ -212,6 +217,7 @@ export function CloudApp() {
       setProblem(null);
       setSignInAgain(false);
       loginTries.current = 0;
+      missingSince.current = 0;
       if (flagOn(OFFLINE_SHELL)) rememberAccount(user.id, next);
     } catch (problem) {
       // During the sign-in redirect AuthKit can report a user a moment before it holds a token.
@@ -222,16 +228,28 @@ export function CloudApp() {
         // A slow phone connection can take several seconds to finish the sign-in, so try a few
         // times over about ten seconds before saying the sign-in ended.
         const waits = [1500, 3000, 6000];
-        if (loginTries.current >= waits.length) {
+        if (!missingSince.current) missingSince.current = Date.now();
+        // The tries count calls, and anything that asks for the account again (a redraw with a new
+        // token getter, an event, polling) spends one, so a short renewal can use them all up in a
+        // moment. With a page already open (the workspace set-up, or the app itself) the miss must
+        // also have lasted as long as the waits add up to before that page is replaced.
+        const open = settingUp.current || shownAccount.current !== null;
+        const lasted = Date.now() - missingSince.current >= 10_000;
+        if (loginTries.current >= waits.length && (!open || lasted)) {
           console.warn('SelectaDJ: AuthKit reports a user but no token after retries; asking to sign in again.');
           setSignInAgain(true);
           return;
         }
         window.clearTimeout(loginRetry.current);
-        loginRetry.current = window.setTimeout(() => void refreshAccount(), waits[loginTries.current]);
-        loginTries.current += 1;
+        loginRetry.current = window.setTimeout(() => void refreshAccount(), waits[loginTries.current] ?? 3000);
+        loginTries.current = Math.min(loginTries.current + 1, waits.length);
         return;
       }
+      // Any other answer got past the token, so a run of token misses has ended. Without this, the
+      // tries spent during sign-in stayed spent on the set-up screen (its 409 is not a success),
+      // and one later miss replaced that screen at once.
+      loginTries.current = 0;
+      missingSince.current = 0;
       // Offline or the service down (`cloud.offline_shell`): keep the account already shown, or
       // open with the one this device last saw; the connection banner says what is happening and
       // the account is read again when the connection is back.
