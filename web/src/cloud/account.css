@@ -166,6 +166,11 @@
     margin-inline: calc(var(--page-gutter) * -1);
     padding: var(--space-hair) var(--page-gutter);
     scroll-padding-inline: var(--page-gutter);
+    /* the row fades out at both ends, so a pill running off the screen reads as "more this way",
+       not as a cut-off word; the end padding lets the last pill stop clear of the fade */
+    padding-inline-end: calc(var(--page-gutter) + var(--space-6));
+    -webkit-mask-image: linear-gradient(to right, transparent, black var(--page-gutter), black calc(100% - var(--space-7)), transparent);
+    mask-image: linear-gradient(to right, transparent, black var(--page-gutter), black calc(100% - var(--space-7)), transparent);
   }
   .acct-nav::-webkit-scrollbar { display: none; }
   .acct-nav a { flex: none; border: var(--separator) solid var(--edge-decorative); border-radius: var(--radius-pill); padding: var(--space-2) var(--space-cozy); white-space: nowrap; }
