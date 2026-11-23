@@ -16,7 +16,9 @@ export type Account = {
   workspace: { id: string; name: string; role: string };
   entitlement: { plan: string; plan_label?: string; plan_version: number; snapshot_version?: number | null; storage_limit_bytes: number; storage_used_bytes: number; storage_state: string };
   usage?: Usage;
-  billing?: { consent_version: string };
+  /** `checkout_available` false: this site cannot start a payment (no Stripe key or prices). Left
+   * out by an older server, which means it can. */
+  billing?: { consent_version: string; checkout_available?: boolean };
   lucy?: { tier: string };
   /** One server-decided answer for the two independent Cloud grants (BF-0455-03). */
   experience?: { local_first: boolean; hosted: boolean };

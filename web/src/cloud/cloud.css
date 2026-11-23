@@ -258,6 +258,10 @@
 .cloud-plan-card h2 { margin: 0; }
 .cloud-plan-card p.cloud-price { margin: 0; font: var(--type-figure); color: var(--text); font-variant-numeric: tabular-nums; }
 .cloud-plan-card .cloud-price small { font: var(--type-meta); color: var(--text-soft); }
+/* under an annual price: what it comes to a month and what it saves, worked out from the card */
+.cloud-plan-card p.cloud-price-note { margin: 0; color: var(--text-soft); font: var(--type-meta); font-variant-numeric: tabular-nums; }
+/* plans shown to read only (the site cannot start a payment): nothing to choose */
+.cloud-plan-grid[data-info] .cloud-plan-card { cursor: default; }
 .cloud-plan-card .cloud-plan-headline { font: var(--type-song); margin: var(--space-2) 0 0; }
 .cloud-plan-card p:not(.cloud-eyebrow, .cloud-price) { margin: 0; }
 .cloud-plan-card button { margin-top: auto; }

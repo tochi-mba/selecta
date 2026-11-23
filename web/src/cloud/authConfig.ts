@@ -84,10 +84,22 @@ export const BLOCKED_MESSAGES: Record<BlockedCode, { title: string; detail: stri
 
 export const SUSPENDED_NOTICE = 'This account is suspended. You can still view your library, download your data, sign out or delete your account.';
 
+const UPGRADES_CLOSED = 'Upgrades aren’t available right now. Nothing was charged. Try again later.';
 const REFUSAL_MESSAGES: Record<string, string> = {
   account_suspended: SUSPENDED_NOTICE,
   workspace_not_found: 'That workspace isn’t available to this account.',
   not_onboarded: 'Finish setting up your account first.',
+  // Billing refusals (billing/api.py): always plain words, never the code, and where a payment
+  // was being started, that nothing was charged.
+  billing_not_configured: UPGRADES_CLOSED,
+  price_unavailable: UPGRADES_CLOSED,
+  billing_temporarily_unavailable: 'The payment service didn’t answer. Nothing was charged. Try again in a moment.',
+  subscription_exists: 'This workspace already has a plan. Manage it from the billing portal.',
+  billing_customer_not_found: 'There’s no billing record for this workspace yet.',
+  untrusted_origin: 'This address isn’t allowed to start a payment.',
+  untrusted_return_url: 'This address isn’t allowed to start a payment.',
+  consent_required: 'Tick all three boxes to continue.',
+  billing_not_permitted: 'Only the workspace owner can change the plan.',
 };
 
 export function blockedCode(code: string | undefined): BlockedCode | null {

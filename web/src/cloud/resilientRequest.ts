@@ -87,11 +87,29 @@ export function canHeal(kind: FailureKind): boolean {
   return kind === 'offline' || kind === 'timeout' || kind === 'server' || kind === 'busy';
 }
 
+/** Whether SelectaDJ's own API wrote this answer: it carries the API's `detail.code`. A refusal
+ * like that is the service answering, whatever its status (a 503 `billing_not_configured` is one
+ * route saying it is not set up, not the service being down). */
+export function answeredByApi(error: unknown): boolean {
+  return error instanceof CloudError && error.status > 0 && typeof error.code === 'string' && error.code.length > 0;
+}
+
+/** Coded 5xx answers that asking again cannot change: the site is not set up for it. Every other
+ * coded 5xx (`billing_temporarily_unavailable`, say) may be tried again. */
+const SETTLED_CODES = new Set(['billing_not_configured', 'price_unavailable', 'webhook_not_configured']);
+
+/** Whether this failure may be tried again: one that can heal, and not a settled refusal. */
+export function worthRetrying(kind: FailureKind, error: unknown): boolean {
+  if (!canHeal(kind)) return false;
+  return !(error instanceof CloudError && error.code !== undefined && SETTLED_CODES.has(error.code));
+}
+
 /** Whether a failure says the connection itself is in trouble (not just this request). */
 function troubleOf(kind: FailureKind, error: unknown): boolean {
   if (kind === 'offline' || kind === 'timeout') return true;
-  // a 502/503/504 is the service (or the way to it) being down; a 500 is one route's bug
-  return kind === 'server' && error instanceof CloudError && error.status >= 502 && error.status <= 504;
+  // a 502/503/504 with no answer of our own is a proxy or a dead instance: the service (or the
+  // way to it) is down. One our API wrote, or a 500, is one route's trouble.
+  return kind === 'server' && error instanceof CloudError && error.status >= 502 && error.status <= 504 && !answeredByApi(error);
 }
 
 /** Feed the connection store from one outcome. */
@@ -264,7 +282,7 @@ export function resilient(api: Api, options: ResilientOptions = {}): Api {
       waitWhileOffline: false,
       signal: init?.signal ?? undefined,
       // once the store says it is down, stop: the page falls back and the probe takes over
-      retryOn: (kind) => canHeal(kind) && isOnline(),
+      retryOn: (kind, error) => worthRetrying(kind, error) && isOnline(),
     });
   }) as Api;
 }
