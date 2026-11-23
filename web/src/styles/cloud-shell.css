@@ -144,7 +144,9 @@
   .shell[data-mode='cloud'] .nav .brand { margin-inline-end: calc(var(--nav-row) + var(--space-1)); }
   .shell[data-mode='cloud'] .nav-collapse {
     position: absolute;
-    top: calc((var(--header-height) - var(--nav-row)) / 2);
+    /* centred in the brand row, which is the nominal bar height tall; it is inside the rail, not
+       pinned below the context bar, so it does not follow --header-block */
+    inset-block-start: calc((var(--header-height) - var(--nav-row)) / 2);
     inset-inline-end: var(--nav-pad);
     display: grid;
     place-items: center;
@@ -300,7 +302,7 @@
   /* Request a song is in the side bar here; the bar's copy is the phone's */
   .shell[data-mode='cloud'] .context-actions .context-button.context-request { display: none; }
 }
-@media (max-width: 1000px) and (min-width: 761px) {
+@media (max-width: 1100px) and (min-width: 761px) {
   .shell[data-mode='cloud'] .palette-button { min-width: 0; }
 }
 
