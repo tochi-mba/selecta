@@ -5,7 +5,7 @@ import { MixesEmpty } from './LocalFirstEmpty';
 describe('MixesEmpty library-check count (BF-0463-04)', () => {
   it('updates the count silently: no live region, so milestones stay with the import announcer', () => {
     const { container, rerender } = render(<MixesEmpty connected={3} checking={{ checked: 1, total: 3 }} />);
-    const count = screen.getByText(/1 of 3 songs checked so far/);
+    const count = screen.getByText(/1 of 3 songs checked\./);
     expect(screen.queryByRole('status')).toBeNull();
     expect(count).not.toHaveAttribute('role');
     expect(count).not.toHaveAttribute('aria-live');
@@ -17,7 +17,7 @@ describe('MixesEmpty library-check count (BF-0463-04)', () => {
     rerender(<MixesEmpty connected={3} checking={{ checked: 2, total: 3 }} />);
 
     // the visual count still moves, in the same paragraph, and focus stays put
-    expect(screen.getByText(/2 of 3 songs checked so far/)).toBe(count);
+    expect(screen.getByText(/2 of 3 songs checked\./)).toBe(count);
     expect(container.querySelector('[aria-live], [role="status"]')).toBeNull();
     expect(link).toHaveFocus();
   });

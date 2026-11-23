@@ -42,7 +42,7 @@ export const CLOUD_MEDIA_CONTEXTS: MediaContext[] = [
     owner: 'Harmonic matches preview: plays a short excerpt of each side of a match on a press, then stops. Never plays alongside the mix by itself.',
   },
   {
-    file: 'cloud/CloudWorkspace.tsx', count: 1, kind: 'audio context',
+    file: 'cloud/BrowserDiagnostics.tsx', count: 1, kind: 'audio context',
     owner: 'Workspace > Diagnostics capability check: made inside the press, probed and closed at once. Silent; never takes focus.',
   },
 ];

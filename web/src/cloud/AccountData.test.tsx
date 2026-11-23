@@ -26,7 +26,11 @@ describe('Download my data', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(new TextEncoder().encode('zip'), { status: 200 })));
     render(<AccountData token={async () => 'tok'} workspaceId="ws-1" />);
     await userEvent.click(screen.getByRole('button', { name: 'Download my data' }));
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('original files, settings.json and mixes.json'));
+    // the notice says it arrived and where to look; what the archive holds is the list above it
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(`Your export has downloaded (0.0 MB). Look for ${EXPORT_FILE} in your downloads.`));
+    const holds = screen.getByRole('list', { name: 'What is in the file' });
+    expect(holds).toHaveTextContent('as settings.json');
+    expect(holds).toHaveTextContent('as mixes.json');
   });
 
   it('shows the server’s reason when the export fails', async () => {

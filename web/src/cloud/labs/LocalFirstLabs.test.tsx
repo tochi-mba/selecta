@@ -36,7 +36,7 @@ describe('LocalFirstLabs', () => {
     expect(await screen.findByRole('button', { name: 'Leave Labs' })).toBeInTheDocument();
     expect(calls.some((call) => call.path.endsWith('/join') && call.init?.method === 'POST')).toBe(true);
     expect(onChanged).toHaveBeenCalled();
-    expect(screen.getByText(/You are in/)).toBeInTheDocument();
+    expect(screen.getByText('You are in. Browser-first Cloud is on for your account.')).toBeInTheDocument();
   });
 
   it('sends feedback as the member wrote it', async () => {

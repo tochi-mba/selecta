@@ -51,10 +51,9 @@ describe('import words', () => {
     const marker = { version: 1 as const, folder: 'Chill Hits', startedAt: 1, total: 1280, registered: 300, checked: 412, kind: 'folder' as const };
     const allow = offerWords({ kind: 'allow', folder: 'Chill Hits', handle: {} as never, marker });
     expect(allow).toContain('412 of 1,280 checked');
-    expect(allow).toContain('permission again');
+    expect(allow).toContain('Allow the folder again and SelectaDJ carries on.');
     const repick = offerWords({ kind: 'repick', folder: null, marker: { ...marker, kind: 'files' } });
-    expect(repick).toContain('choose the same files again');
-    expect(repick).toContain('skips everything already done');
+    expect(repick).toContain('Choose the same songs again and SelectaDJ carries on from there.');
     const dash = String.fromCharCode(8212);
     for (const text of [allow, repick]) {
       expect(text).not.toMatch(/failed to fetch/i);
@@ -117,7 +116,10 @@ describe('ImportChip', () => {
     void startImportSession({ source: [], run: runner.run, workspaceId: 'ws-1' });
     render(<ImportChip onView={() => undefined} workspaceId="ws-1" />);
     runner.emit({ kind: 'collected', total: 4, skipped: 0 });
-    expect(screen.getByText('Checking your music: 0 of 4 checked.')).toBeInTheDocument();
+    // a running import is a title, its count and a meter (the chip's current drawing, flag on or off)
+    expect(screen.getByText('Adding your music')).toBeInTheDocument();
+    expect(screen.getAllByText('0 of 4 checked').length).toBeGreaterThan(0);
+    expect(screen.getByRole('progressbar', { name: 'Files checked' })).toHaveAttribute('aria-valuetext', '0 of 4 checked');
   });
 });
 

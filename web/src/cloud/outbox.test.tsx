@@ -252,7 +252,7 @@ describe('My Mixes with the outbox', () => {
         setMixData={vi.fn()} refreshStatus={() => undefined} player={{ playFrom: vi.fn() } as never} notify={notify} />,
     );
     expect(await screen.findByText(WAITING_TO_SYNC)).toBeVisible();
-    expect(screen.getByText(/Saved on this device; it goes to your account when the connection is back\./)).toBeVisible();
+    expect(screen.getByText('Saved on this device')).toBeVisible();
 
     await userEvent.click(screen.getByRole('button', { name: 'More actions for Saved' }));
     await userEvent.click(screen.getByRole('menuitem', { name: /Delete Saved/ }));
