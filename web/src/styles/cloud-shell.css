@@ -305,7 +305,8 @@
   .shell[data-mode='cloud'] .context-actions .context-counted { padding-inline: 0; }
   .shell[data-mode='cloud'] .context-actions .context-counted .count { top: var(--space-1); translate: none; inset-inline-start: 50%; background: var(--request); color: var(--surface); }
 
-  .shell[data-mode='cloud'] .nav { background: color-mix(in srgb, var(--surface-panel) 92%, transparent); backdrop-filter: blur(var(--space-3)); -webkit-backdrop-filter: blur(var(--space-3)); }
+  /* solid: the page scrolls under the tab bar, and its words must never show behind the labels */
+  .shell[data-mode='cloud'] .nav { background: var(--surface-panel); }
   .shell[data-mode='cloud'] .nav .nav-place,
   .shell[data-mode='cloud'] .nav .nav-context { display: none; }
   .shell[data-mode='cloud'] .nav ul { overflow-x: visible; }
@@ -392,7 +393,7 @@
 .shell[data-mode='cloud'] .mini-requests .count[aria-hidden='true'] { display: none; }
 .shell[data-mode='cloud'] .mini-requests .count:not([aria-hidden='true']) { min-width: 18px; padding: 0 var(--space-1); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--request) 20%, transparent); font: var(--weight-strong) var(--text-xs) / 18px var(--mono); text-align: center; }
 @media (max-width: 760px) {
-  .shell[data-mode='cloud'] .mini { gap: var(--space-2); padding: 0 var(--space-3); }
+  .shell[data-mode='cloud'] .mini { gap: var(--space-2); padding: 0 var(--space-3); background: var(--surface-panel); backdrop-filter: none; -webkit-backdrop-filter: none; }
   .shell[data-mode='cloud'] .mini .mini-next { min-width: var(--control-height); min-height: var(--control-height); }
   .shell[data-mode='cloud'] .mini-requests { min-height: var(--control-height); }
 }
@@ -441,7 +442,27 @@
 /* On a phone the pill keeps its dot and counts; the room's name is one press away. */
 @media (max-width: 760px) {
   .shell[data-mode='cloud'] .context-status .room-open-line b { display: none; }
-  .shell[data-mode='cloud'] .context-status .room-open-line { padding-inline: var(--space-2); gap: var(--space-1); }
+  /* The pill looks 36px tall and takes a 44px press: the extra is a clear border around it. */
+  .shell[data-mode='cloud'] .context-status { margin-inline-start: calc(-1 * var(--space-1)); }
+  .shell[data-mode='cloud'] .context-status .room-open-line {
+    gap: var(--space-1);
+    height: calc(var(--nav-row) + 2 * var(--space-1));
+    min-height: 0;
+    padding: 0 var(--space-2);
+    border: var(--space-1) solid transparent;
+    background-clip: padding-box;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--status-ready) 40%, var(--border));
+  }
+  /* The pill never outgrows the room the bar leaves it: each count shrinks to an ellipsis, so
+     nothing is cut off at the pill's edge or drawn under the bar's buttons. */
+  .shell[data-mode='cloud'] .context-status .room-open-line > span { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  /* One count at a time. Requests waiting matter more than the guest count, and requests to
+     approve come before requests to add (the Requests button beside the pill counts them all).
+     The counts not shown are still read out. */
+  .shell[data-mode='cloud'] .context-status .room-open-line:has(> .room-open-waiting) > span:not(.room-open-waiting),
+  .shell[data-mode='cloud'] .context-status .room-open-line > .room-open-waiting ~ .room-open-waiting { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  /* a touch phone has no keyboard to list shortcuts for; Search and commands still opens the list */
+  .shell[data-mode='cloud'] .context-actions .context-help { display: none; }
 }
 /* Phone: with a live status in the bar, the page's own heading carries its name (a squeezed
    "L.." helps nobody), and the status sits at the bar's start. */
