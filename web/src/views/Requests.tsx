@@ -14,7 +14,7 @@ import { AudioPreview } from '../ui/AudioPreview';
 import { TermHint } from '../ui/Glossary';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { useFlag, useFlagHeard } from '../flags';
-import { BrowserRequests, useRoomLive } from './BrowserRequests';
+import { BrowserRequests, useRoomLive, waitingCount as countWaiting } from './BrowserRequests';
 
 export type Stage =
   | 'adding' | 'unavailable' | 'never' | 'in_mix' | 'analysing' | 'no_cues' | 'no_mix'
@@ -802,7 +802,7 @@ export function RequestsPanel() {
   // Cloud in the browser marks its rows (browser_note): a short Waiting list, not the planner's groups
   const roomLive = useRoomLive();
   const browser = !!requests?.some((row) => row.browser_note) || !!roomLive;
-  const waitingCount = waitingRequestCount(requests) + (roomLive?.inbox.length ?? 0);
+  const waitingCount = browser ? countWaiting(roomLive, requests) : waitingRequestCount(requests);
   const browserList = { rows: requests && requests.map((request) => ({ request, stage: stageOf(request, playback) })), live: playingNow(playback), playback, send: state.request ?? provided, refresh: state.refresh, onAdd: addAnyway, onDismiss: (request: RequestRow) => { box.current?.focus(); return cancel(request); } };
   // the list stays open, so a few songs can be asked for from one search
   const pick = (song: SongRow) => { void add(song); box.current?.focus(); };

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { VibeCard } from '../api';
-import { length, SET_LENGTHS } from '../lib';
+import { SET_LENGTHS } from '../lib';
 import { PageLink } from '../shell/PageLink';
 import { Action } from '../ui/controls';
 import { countOf } from '../ui/format';
@@ -74,7 +74,7 @@ export function QuickMix({ hero, pending, playable, total, songs, onSongs, build
             <>
               <b>{hero?.name ?? 'SelectaDJ’s pick'}</b>
               <span>
-                {hero && hero.songs > 0 ? `${countOf(Math.min(songs, hero.songs), 'song')}, about ${length((hero.seconds / hero.songs) * Math.min(songs, hero.songs))}. ` : ''}
+                {hero && hero.songs > 0 ? `${countOf(Math.min(songs, hero.songs), 'song')}. ` : ''}
                 {replacing ?? 'Each transition is worked out as it plays.'}
               </span>
             </>

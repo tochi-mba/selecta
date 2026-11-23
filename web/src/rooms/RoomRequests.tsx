@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Action, Skeleton } from '../ui/controls';
 import { countOf, ELLIPSIS } from '../ui/format';
 import { Icon } from '../ui/Icon';
+import { navigate } from '../router';
 import { showToast } from '../ui/toasts';
 import type { RequestRow, Stage } from '../views/Requests';
 import { useRoomLive, type RoomAsk, type RoomControl } from './useRoomSession';
@@ -116,10 +117,9 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
       ?? roomRows.find((row) => !row.request.room_request_id && row.request.song_id === ask.song?.song_id);
   };
   const coming = room?.coming ?? [];
-  const known = new Set(coming.map((ask) => ask.request_id));
-  // room requests the browser holds that the last read of the room didn't list (or no room read yet)
-  const loose = roomRows.filter((row) => !row.request.room_request_id || !known.has(row.request.room_request_id))
-    .filter((row) => !coming.some((ask) => ask.song?.song_id === row.request.song_id));
+  // room requests the browser holds while no read of the room is here to list them; once the room
+  // has been read, its list is the only one, so every count and every list agree
+  const loose = room ? [] : roomRows;
   const missing = !!mix && rows !== null && coming.some((ask) => !rowOf(ask));
   const asked = useRef(0);
   useEffect(() => {
@@ -144,11 +144,12 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
     }
   };
   const titleOf = (ask: RoomAsk) => ask.song?.title ?? 'A song';
-  const voteWords = (ask: RoomAsk) => (votes && ask.votes > 0 ? countOf(ask.votes, 'vote') : undefined);
+  const voteWords = (ask: RoomAsk) => (votes && ask.votes > 1 ? countOf(ask.votes, 'vote') : undefined);
 
   const inbox = room?.inbox ?? [];
   const done = variant === 'page' && mix ? (room?.done ?? []).filter((ask) => ask.song && mix.inMix(ask.song.song_id)) : [];
   const waiting = inbox.length + coming.length + loose.length;
+  const noMix = roomRows.some((row) => row.stage === 'no_mix');
 
   const acceptedActions = (id: string, title: string, row: Row | undefined) => {
     const pass = control && (
@@ -162,7 +163,8 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
       <Action className="quiet" aria-label={`Dismiss: ${title}`} working={`Dismissing${ELLIPSIS}`} waiting={row.request.id < 0}
         run={() => settle(id, row.request, async () => { await mix.onDismiss(row.request); showToast(`${title} was dismissed.`); })}>Dismiss</Action>
     );
-    if (why) return { note: why, buttons: dismiss };
+    // a song whose file is on another device: say so, and offer the way to bring it here
+    if (why) return { note: why, buttons: <>{why === row.request.browser_note && row.stage !== 'in_mix' && <button type="button" onClick={() => navigate('/library')}>Connect music</button>}{dismiss}</> };
     const start = row.stage === 'no_mix';
     const label = start ? 'Start a mix with this song' : mix.live ? 'Add next' : 'Add to mix';
     return {
@@ -204,7 +206,7 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
       )}
       {(coming.length > 0 || loose.length > 0) && (
         <Group title={mix ? 'Ready to add' : 'Accepted'} count={coming.length + loose.length}
-          help={!mix ? undefined : mix.live ? 'Add next plays a song right after the current one.' : 'Nothing is playing. Start a mix with a request, or add it to the mix you have.'}>
+          help={!mix ? undefined : noMix ? 'No mix yet. Start one with a request, then add the others.' : mix.live ? 'Add next plays a song right after the current one.' : 'Add to mix puts a song at the end of your mix.'}>
           {coming.map((ask) => {
             const row = rowOf(ask);
             const { note, buttons } = acceptedActions(ask.request_id, titleOf(ask), row);

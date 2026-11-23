@@ -42,7 +42,7 @@
   color: var(--text-soft);
   font-size: var(--text-sm);
 }
-.shell[data-mode='cloud'] .now .notice { margin: 0; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-raised); font-size: var(--text-sm); }
+.shell[data-mode='cloud'] .now .notice { margin: 0; font-size: var(--text-sm); }
 .shell[data-mode='cloud'] :is(.now, .mixes) .banner[data-tone='warn'] { border-color: color-mix(in srgb, var(--status-warning) 45%, var(--border)); }
 .shell[data-mode='cloud'] :is(.now, .mixes) .banner > .ui-icon { color: var(--text-soft); }
 .shell[data-mode='cloud'] :is(.now, .mixes) .banner[data-tone='warn'] > .ui-icon { color: var(--status-warning); }
@@ -53,7 +53,8 @@
 .shell[data-mode='cloud'] .now .sound-check-more { grid-column: 1 / -1; margin: 0; }
 .shell[data-mode='cloud'] .now .sound-check-help ul { margin: 0; }
 /* the player's own sentence stays for a screen reader; the sound check beside it says it to the eye */
-.shell[data-mode='cloud'] .now .notice:has(+ .sound-check) { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.shell[data-mode='cloud'] .now .notice:has(+ .sound-check),
+.shell[data-mode='cloud'] .now .notice:has(~ .queue-sources[data-all]) { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (max-width: 560px) {
   .shell[data-mode='cloud'] :is(.now, .mixes) .banner { grid-template-columns: auto minmax(0, 1fr); }
   .shell[data-mode='cloud'] :is(.now, .mixes) .banner-actions { grid-column: 1 / -1; }
@@ -96,8 +97,8 @@
   .shell[data-mode='cloud'] .now:not(.stage) .listen-main > .listen-identity { order: 1; }
   .shell[data-mode='cloud'] .now:not(.stage) .listen-main > :is(.strip, .skeleton-strip) { order: 2; margin-top: var(--space-5); }
   .shell[data-mode='cloud'] .now:not(.stage) .listen-main > .seek-note { order: 3; min-height: 0; }
-  .shell[data-mode='cloud'] .now:not(.stage) .listen-main > .transport { order: 4; grid-column: 1; }
-  .shell[data-mode='cloud'] .now:not(.stage) .listen-main > .transport-more { order: 4; grid-column: 2; justify-content: flex-end; flex-wrap: nowrap; }
+  .shell[data-mode='cloud'] .now:not(.stage) .listen-main > .transport { order: 4; justify-content: center; }
+  .shell[data-mode='cloud'] .now:not(.stage) .listen-main > .transport-more { order: 4; justify-content: space-between; }
   .shell[data-mode='cloud'] .now:not(.stage) .listen-main > :is(.notice, .banner) { order: 5; }
 }
 .shell[data-mode='cloud'] .now .transport { gap: var(--space-3); min-height: 0; }
@@ -108,7 +109,9 @@
 .shell[data-mode='cloud'] .now .transport-more > .tooltip-anchor > button { border-color: transparent; background: none; color: var(--text-soft); }
 .shell[data-mode='cloud'] .now .transport-more > button:hover:not(:disabled),
 .shell[data-mode='cloud'] .now .transport-more > .tooltip-anchor > button:hover:not(:disabled) { background: var(--surface-control); color: var(--text); }
+.shell[data-mode='cloud'] .now .transport-more button { white-space: nowrap; }
 .shell[data-mode='cloud'] .now .volume input { width: 112px; }
+.shell[data-mode='cloud'] .now .volume { flex: none; }
 .shell[data-mode='cloud'] .now .volume button.icon { border-color: transparent; background: none; }
 /* the seek bar: the clock sits under the bar, elapsed and total together */
 .shell[data-mode='cloud'] .now .strip { height: 84px; }
@@ -309,7 +312,7 @@
   .shell[data-mode='cloud'] .quick-step { grid-template-columns: auto minmax(0, 1fr); padding: var(--space-4); }
   .shell[data-mode='cloud'] .quick-step > :is(button, a.button) { grid-column: 2; justify-self: start; }
   .shell[data-mode='cloud'] .choice-cards { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
-  .shell[data-mode='cloud'] .choice-card { grid-template-columns: minmax(0, 1fr) auto; align-items: center; min-height: 56px; padding-inline-end: var(--space-7); }
+  .shell[data-mode='cloud'] .choice-card { min-height: 60px; padding-inline-end: var(--space-7); }
   .shell[data-mode='cloud'] .choice-card-check { inset-block-start: 50%; translate: 0 -50%; inset-inline-end: var(--space-3); }
   .shell[data-mode='cloud'] .quick-play { padding: var(--space-4); }
   .shell[data-mode='cloud'] .quick-play .primary.big { flex: 1 1 100%; }
@@ -340,6 +343,8 @@
 .shell[data-mode='cloud'] .mix-row-meta > span:not(.badge) + span:not(.badge)::before { content: '·'; margin-inline-end: var(--space-2); }
 .shell[data-mode='cloud'] .mix-row-actions { display: flex; align-items: center; gap: var(--space-2); }
 .shell[data-mode='cloud'] .mix-row-actions > button { min-height: 36px; padding-block: var(--space-1); }
+.shell[data-mode='cloud'] .mix-row-actions .menu > button { min-height: 36px; border-color: transparent; background: none; color: var(--text-soft); }
+.shell[data-mode='cloud'] .mix-row-actions .menu > button:hover { background: var(--surface-control); color: var(--text); }
 .shell[data-mode='cloud'] .mix-row-actions > .mix-row-play { border-color: var(--border-strong); font-weight: 600; }
 .shell[data-mode='cloud'] .mix-row-actions > .mix-row-play:hover:not(:disabled) { border-color: var(--text); background: var(--surface-control); }
 .shell[data-mode='cloud'] .mix-row .rename-draft { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
@@ -370,3 +375,8 @@
 .shell[data-mode='cloud'] .page.mix .timeline .seam .music-seam-diagram.is-plan { display: none; }
 .shell[data-mode='cloud'] .page.mix .timeline .seam-name b { font: var(--type-meta); color: var(--text-soft); }
 .shell[data-mode='cloud'] .page.mix .timeline .seam-move select { min-height: 36px; }
+@media (max-width: 760px) {
+  .shell[data-mode='cloud'] .page.mix .mix-head .display { font-size: var(--text-xl); }
+  .shell[data-mode='cloud'] .page.mix .timeline .song-actions { flex-wrap: wrap; }
+}
+.shell[data-mode='cloud'] .now .next-song > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

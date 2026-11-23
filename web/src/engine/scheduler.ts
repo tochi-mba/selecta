@@ -46,6 +46,8 @@ import type { EngineStore } from './state';
 export const SEAM_FADE = SEAM_FADE_SECONDS;
 export const END_FADE = FALLBACK_FADE_SECONDS;
 export const TICK_MS = 50;
+/** What the player says when no song left in the mix can be opened here; a shell may draw its own banner for it. */
+export const NOTHING_PLAYABLE_NOTICE = 'None of the songs left in this mix can play on this device right now. Connect your music in Library, then press Play.';
 export const LOAD_NEXT_WITHIN = 45;
 const START_LEAD = 0.05;
 
@@ -721,7 +723,7 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
       // reached by skipping songs this device can't play: say so, rather than stop in silence
       deps.store.set(clearNotice
         ? { phase: 'idle', notice: '' }
-        : { phase: 'idle', notice: 'None of the songs left in this mix can play on this device right now. Connect your music in Library, then press Play.' });
+        : { phase: 'idle', notice: NOTHING_PLAYABLE_NOTICE });
       return;
     }
     if (loaded.kind === 'failed') {

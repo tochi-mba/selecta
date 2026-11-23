@@ -44,7 +44,7 @@
 .room-mode { padding: var(--space-hair) var(--space-2); border-radius: var(--radius-pill); background: var(--surface-control); font-size: var(--text-xs); }
 
 .room-share-body { display: grid; gap: var(--space-4); justify-items: center; min-width: 0; }
-.room-panel .room-qr-button { display: block; padding: 0; border: 0; background: none; border-radius: var(--radius); min-height: 0; width: 100%; max-width: 12rem; cursor: zoom-in; }
+.room-panel .room-qr-button { display: block; padding: 0; border: 0; background: none; border-radius: var(--radius); min-height: 0; width: min(100%, 11rem); cursor: zoom-in; }
 .room-qr-button:hover .room-qr { box-shadow: 0 0 0 var(--space-hair) var(--focus); }
 .room-qr { display: block; width: 100%; background: var(--surface-scan); border-radius: var(--radius); padding: var(--space-2); transition: box-shadow var(--motion-fast) var(--motion-ease); }
 .room-qr svg { display: block; width: 100%; height: auto; }

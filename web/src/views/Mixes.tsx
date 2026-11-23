@@ -100,7 +100,8 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       if (hereNow.current) {
         const actual = data.mix.length;
         const duration = data.mix.reduce((seconds, item) => seconds + item.duration, 0);
-        notify(`${name}: generated ${actual} of ${songs} requested songs, about ${length(duration)} of source audio before transitions. Review the actual order in Edit.`, true);
+        // a browser mix says what is playing; the local build also says how it compares with what was asked
+        notify(analysisAvailable ? `${name}: generated ${actual} of ${songs} requested songs, about ${length(duration)} of source audio before transitions. Review the actual order in Edit.` : `Your new mix is playing: ${actual} ${actual === 1 ? 'song' : 'songs'}.`, true);
         if (open) {
           setView('Edit');
         } else {
@@ -213,7 +214,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
           building={building.startsWith('pick')} blocked={!!building && !building.startsWith('pick')}
           onPlay={() => hero && ask({ key: 'pick', name: hero.name, open: false })}
           shape={shaping ? { summary: buildSummary(status.steering), open: () => setCustomizing(true) } : undefined}
-          replacing={replacing ? `Takes over from “${mixName}”, which stays in My Mixes.` : undefined}
+          replacing={replacing ? 'The mix that is playing stays in My Mixes.' : undefined}
           problem={problem ? <p className="warn" role="alert">{problem}</p> : undefined}
         />
       )}
