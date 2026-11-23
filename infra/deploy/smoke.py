@@ -51,7 +51,33 @@ def _synthetic(client: httpx.Client, api: str, token: str) -> list[Check]:
     return checks
 
 
+def _pages_entries(client: httpx.Client, web: str) -> list[Check]:
+    """Check the public CDN serves dedicated pages, not the authenticated React shell.
+
+    Use after the Pages site is published: its deployment is separate from Render's API.
+    These synthetic, anonymous GETs neither join a room nor mutate its state.
+    """
+    entries = (
+        ("/r/K7QDM2XP", "guest", 'id="guest"'),
+        ("/display", "display", 'id="display"'),
+        ("/kiosk", "kiosk", 'id="kiosk"'),
+    )
+    checks = []
+    for path, name, marker in entries:
+        response = client.get(f"{web}{path}")
+        ok = (
+            response.status_code == 200
+            and response.headers.get("content-type", "").lower().startswith("text/html")
+            and marker in response.text
+            and 'id="root"' not in response.text
+        )
+        checks.append(Check(f"Pages {name} deep link serves its own entry", ok,
+                            f"HTTP {response.status_code}"))
+    return checks
+
+
 def run(api: str, gateway: str, *, synthetic_token: str | None = None,
+        web: str | None = None,
         transport: httpx.BaseTransport | None = None) -> list[Check]:
     api, gateway = api.rstrip("/"), gateway.rstrip("/")
     steps: list[Callable[[httpx.Client], list[Check] | Check]] = [
@@ -63,6 +89,8 @@ def run(api: str, gateway: str, *, synthetic_token: str | None = None,
     ]
     if synthetic_token:
         steps.append(lambda c: _synthetic(c, api, synthetic_token))
+    if web:
+        steps.append(lambda c: _pages_entries(c, web.rstrip('/')))
     results: list[Check] = []
     with httpx.Client(timeout=15.0, transport=transport, follow_redirects=False) as client:
         for step in steps:
@@ -79,8 +107,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--api", required=True)
     parser.add_argument("--gateway", required=True)
     parser.add_argument("--synthetic-token", default=None)
+    parser.add_argument("--web", default=None, help="Optional Pages origin; run after site publish")
     args = parser.parse_args(argv)
-    results = run(args.api, args.gateway, synthetic_token=args.synthetic_token)
+    results = run(args.api, args.gateway, synthetic_token=args.synthetic_token, web=args.web)
     for check in results:
         print(f"{'PASS' if check.ok else 'FAIL'}  {check.name}  ({check.detail})")
     return 0 if results and all(check.ok for check in results) else 1

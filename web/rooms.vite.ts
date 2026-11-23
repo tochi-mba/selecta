@@ -10,6 +10,7 @@
 // A static host must answer /r/* with guest.html, /display with display.html and /kiosk with kiosk.html.
 
 import { resolve } from 'node:path';
+import { validateCloudflarePagesBuild } from './pagesRoutes.ts';
 import type { Plugin } from 'vite';
 import { BundleItem, GUEST_JS_LIMIT, jsBytesFor } from './src/guest/budget.ts';
 import { FenceItem, forbiddenModules } from './src/kiosk/bundleFence.ts';
@@ -17,7 +18,11 @@ import { FenceItem, forbiddenModules } from './src/kiosk/bundleFence.ts';
 export { GUEST_JS_LIMIT, jsBytesFor };
 
 export function roomPages(root: string): Plugin {
+  let outputDir: string | null = null;
   return {
+    configResolved(config) {
+      if (config.command === 'build') outputDir = resolve(config.root, config.build.outDir);
+    },
     name: 'selecta-room-pages',
     config(_config, env) {
       if (env.command !== 'build') return;
@@ -41,6 +46,13 @@ export function roomPages(root: string): Plugin {
         else if (path === '/kiosk' || path === '/kiosk/') req.url = '/kiosk.html';
         next();
       });
+    },
+    writeBundle() {
+      // The CDN does not use Vite's dev-server route middleware. Check the actual output,
+      // including files copied from public/, for production and browser-test builds.
+      if (!outputDir) return;
+      const errors = validateCloudflarePagesBuild(outputDir);
+      if (errors.length) this.error(`Cloudflare Pages routing contract failed:\n${errors.join('\n')}`);
     },
     generateBundle(_options, bundle) {
       const bytes = jsBytesFor(bundle as unknown as Record<string, BundleItem>, 'guest');

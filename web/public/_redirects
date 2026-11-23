@@ -1,0 +1,8 @@
+# Cloudflare Pages proxies: preserve the public URL and serve a dedicated HTML entry.
+# Static routes first, then the dynamic room link. No catch-all SPA rewrite.
+/display /display.html 200
+/display/ /display.html 200
+/kiosk /kiosk.html 200
+/kiosk/ /kiosk.html 200
+/r/:code /guest.html 200
+/r/:code/ /guest.html 200
