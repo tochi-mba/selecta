@@ -29,7 +29,7 @@ type View = {
   /** How many more songs this guest can ask for now; at 0, `limit_text` says why and until when. */
   requests_left?: number; limit_text?: string;
 };
-type Sent = { song_id: number; added: boolean; became_vote?: boolean; already_queued?: boolean; message?: string };
+type Sent = { song_id: number; added: boolean; became_vote?: boolean; already_queued?: boolean; code?: string; message?: string; retry_after_s?: number | null };
 
 const POLL_MS = 5000;
 const MAX_WAIT_MS = 15_000;
@@ -59,6 +59,20 @@ const seen = new Map<string, string>();
 const lit = new Map<string, number>();
 const LIT_MS = 4000;
 const PENDING = ['sent', 'accepted'];
+// Why a song was not added when it was last sent, by song id: said under the song until the guest
+// takes it out or sends again. `until` is when it can be asked for again, if the server said;
+// `never` is a song this room does not take. Either one stops the song being sent or chosen.
+type Why = { message: string; until?: number; never?: boolean };
+const whyNot = new Map<number, Why>();
+let whyTimer = 0;
+const waitingOn = (song: Song) => { const why = whyNot.get(song.song_id); return Boolean(why && (why.never || (why.until !== undefined && why.until > Date.now()))); };
+const whyWords = (song: Song) => { const why = whyNot.get(song.song_id); return !why ? '' : why.until !== undefined && why.until <= Date.now() ? 'You can ask for it now.' : why.message; };
+/** Draw again the moment the next wait is over, so the song says it can be asked for and Send comes back. */
+function watchWaits(): void {
+  window.clearTimeout(whyTimer);
+  const next = Math.min(...[...whyNot.values()].map((why) => why.until ?? Infinity).filter((until) => until > Date.now()));
+  if (Number.isFinite(next)) whyTimer = window.setTimeout(() => { drawResults(); drawBasket(); watchWaits(); }, Math.min(next - Date.now() + 250, 2 ** 30));
+}
 // the songs chosen but not sent yet, and the last search answer they were chosen from
 let basket: Song[] = [];
 let found: Song[] = [];
@@ -411,6 +425,9 @@ function chosen(song: Song): boolean {
 }
 
 function choose(song: Song): void {
+  if (!chosen(song) && waitingOn(song)) return;
+  // taking a song out puts its reason away, unless it is a wait that still holds (the search row says it)
+  if (chosen(song) && !waitingOn(song)) whyNot.delete(song.song_id);
   basket = chosen(song) ? basket.filter((one) => one.song_id !== song.song_id) : [...basket, song];
   drawResults();
   drawBasket();
@@ -437,6 +454,8 @@ function drawResults(): void {
         return songItem(song, `found-${song.song_id}`, h('button', { type: 'button', className: 'g-quiet g-small-button', 'data-done': true, 'aria-disabled': 'true', 'aria-label': `Requested ${songLine(song)}` }, check(), 'Requested'));
       }
       const picked = chosen(song);
+      // a song that can't be asked for yet says why on its row, in place of Choose
+      if (!picked && waitingOn(song)) return songItem(song, `found-${song.song_id}`, h('p', { className: 'g-why' }, whyWords(song)));
       return songItem(song, `found-${song.song_id}`, h('button', {
         type: 'button', className: `${picked ? 'g-quiet' : 'g-primary'} g-small-button`, 'aria-pressed': String(picked),
         'aria-label': `${picked ? 'Chosen, press to take out' : 'Choose'} ${songLine(song)}`,
@@ -469,12 +488,14 @@ function drawBasket(): void {
     : room > 0 ? `You can add ${room} more.` : "That's as many as you can ask for right now.";
   patch(target,
     basket.length ? h('ul', { className: 'g-list', 'data-key': 'chosen' }, ...basket.map((song) => songItem(song, `chosen-${song.song_id}`,
-      h('button', { type: 'button', className: 'g-quiet', 'aria-label': `Take out ${songLine(song)}`, onclick: () => choose(song) }, 'Take out')))) : null,
+      h('button', { type: 'button', className: 'g-quiet', 'aria-label': `Take out ${songLine(song)}`, onclick: () => choose(song) }, 'Take out'),
+      // why it was not added last time, kept here until it is taken out or sent again
+      whyNot.has(song.song_id) ? h('p', { className: waitingOn(song) ? 'g-why' : 'g-why g-why-ready', role: 'status' }, whyWords(song)) : null))) : null,
     // the count and Send stay in reach at the bottom of the screen, above the keyboard (guest.css)
     h('div', { className: 'g-send', 'data-key': 'bar', 'data-on': basket.length > 0 },
       h('p', { className: left <= 0 ? 'g-banner' : 'g-muted', 'data-key': 'left', role: left <= 0 ? 'status' : undefined },
         basket.length ? `${songsWord(basket.length)} chosen. ` : '', words),
-      basket.length ? h('button', { type: 'button', className: 'g-primary', 'data-key': 'send', 'aria-busy': sending ? 'true' : undefined, disabled: sending || left <= 0, onclick: () => void sendBasket() },
+      basket.length ? h('button', { type: 'button', className: 'g-primary', 'data-key': 'send', 'aria-busy': sending ? 'true' : undefined, disabled: sending || left <= 0 || basket.every(waitingOn), onclick: () => void sendBasket() },
         sending ? 'Sending...' : basket.length === 1 ? 'Send request' : 'Send requests') : null));
   // the notice floats above that bar, never over it
   const bar = target.querySelector<HTMLElement>('.g-send');
@@ -482,26 +503,32 @@ function drawBasket(): void {
 }
 
 async function sendBasket(): Promise<void> {
-  if (sending || !basket.length) return;
-  const songs = basket;
+  // a song still waiting out its time stays in the basket with its reason; the rest go
+  const held = basket.filter(waitingOn);
+  const songs = basket.filter((song) => !waitingOn(song));
+  if (sending || !songs.length) return;
   const ticket = ++reads;
   sending = true;
   drawBasket();
   try {
     const answer = await call<{ results: Sent[]; room: View }>(`${base()}/requests/batch`, { method: 'POST', body: JSON.stringify({ song_ids: songs.map((song) => song.song_id) }) });
-    const title = (id: number) => songs.find((song) => song.song_id === id)?.title ?? 'A song';
     const added = answer.results.filter((one) => one.added);
     const refused = answer.results.filter((one) => !one.added);
     const votes = added.filter((one) => one.became_vote).length;
     // what was sent leaves the basket; what was refused stays, so it can go again when there's room
-    basket = songs.filter((song) => refused.some((one) => one.song_id === song.song_id));
+    basket = [...held, ...songs.filter((song) => refused.some((one) => one.song_id === song.song_id))];
+    for (const song of songs) whyNot.delete(song.song_id);
+    for (const one of refused) {
+      whyNot.set(one.song_id, { message: one.message || "This one wasn't added. Try again.", until: one.retry_after_s ? Date.now() + one.retry_after_s * 1000 : undefined, never: one.code === 'not_requestable' });
+    }
+    watchWaits();
     sending = false;
     if (newer(ticket)) view = answer.room;
     draw();
     say([
       added.length ? `Sent ${songsWord(added.length)}.` : '',
       votes ? `${songsWord(votes)} had been asked for already, so ${votes === 1 ? 'it counts' : 'they count'} as your vote.` : '',
-      ...refused.map((one) => `Not added: ${title(one.song_id)}. ${one.message ?? ''}`.trim()),
+      refused.length === 1 ? "1 song wasn't added: the reason is under it." : refused.length ? `${songsWord(refused.length)} weren't added: the reason is under each one.` : '',
     ].filter(Boolean).join(' '));
   } catch (error) {
     sending = false;
