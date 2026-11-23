@@ -2,6 +2,7 @@ import { AuthKitProvider } from '@workos-inc/authkit-react';
 import { useEffect } from 'react';
 import { CloudApp } from './CloudApp';
 import { authKitConfig, followReturnTo } from './authConfig';
+import { noteSessionEnded } from './authTrail';
 import { BrandMark } from '../ui/BrandMark';
 import { persistAfterFirstImport } from './persistence';
 
@@ -18,6 +19,8 @@ export function CloudRoot({ clientId }: { clientId: string }) {
       apiHostname={config.apiHostname}
       devMode={config.devMode}
       onRedirectCallback={({ state }) => followReturnTo(state)}
+      // the only real sign-out: AuthKit could not renew the session and removed it (authTrail.ts)
+      onRefreshFailure={() => noteSessionEnded()}
     >
       <CloudApp />
     </AuthKitProvider>

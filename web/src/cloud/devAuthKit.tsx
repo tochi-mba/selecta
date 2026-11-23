@@ -27,6 +27,8 @@ type Props = {
   apiHostname?: string;
   devMode?: boolean;
   onRedirectCallback?: (input: { state?: { returnTo?: string } }) => void;
+  /** Accepted so CloudRoot can pass it as it does to the real SDK; the local stand-in never calls it. */
+  onRefreshFailure?: (input: { signIn: () => Promise<void> }) => void;
 };
 
 const Context = createContext<Auth | null>(null);

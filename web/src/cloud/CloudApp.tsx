@@ -17,6 +17,7 @@ import { AccountPage, AccountStrip } from './AccountPage';
 export { AccountStrip } from './AccountPage';
 import { AccountProblem, accountProblem } from './accountStates';
 import { Account, apiOrigin, CloudError, holdsHostedStorage, idempotencyKey, isOverQuota, lockedTo, messageOf, Page, pageShown, planName } from './api';
+import { noteAuthProblem, sessionEnded } from './authTrail';
 import { BlockedCode, blockedCode, callbackProblem, refusalMessage, SUSPENDED_NOTICE, withoutCallbackError } from './authConfig';
 import { Billing } from './Billing';
 import { PrivacyNoticeDraft, showsPrivacyDraft } from './PrivacyNoticeDraft';
@@ -107,6 +108,12 @@ export function pageFor(pathname: string): Page {
 }
 
 const OFFLINE_SHELL = 'cloud.offline_shell';
+/** How long a page that is open waits out a missing token before "Sign in again" replaces it. */
+const OPEN_PAGE_PATIENCE_MS = 30_000;
+/** "Sign in again" asking by itself: the first wait, and the longest. */
+const HEAL_FIRST_MS = 3_000;
+const HEAL_MAX_MS = 30_000;
+const RENEWING_WORDS = 'Renewing your sign-in. Everything on this page is kept.';
 
 const PATHS: Record<Page, string> ={ home: '/', listen: '/listen', library: '/library', uploads: '/upload', billing: '/account/billing', settings: '/account' };
 const sharedLabel = (id: 'listen' | 'library') => DESTINATIONS.find((destination) => destination.id === id)!.label;
@@ -153,7 +160,14 @@ export function CloudApp() {
   }, [signInProblem]);
 
   const rawApi = useCallback(async <T,>(path: string, init: RequestInit = {}, workspaceId?: string): Promise<T> => {
-    const token = await getAccessToken();
+    let token: string;
+    try {
+      token = await getAccessToken();
+    } catch (problem) {
+      // leave a trail (name, message, status, isTransient; never a token) and carry on as before
+      noteAuthProblem('getAccessToken', problem);
+      throw problem;
+    }
     const headers = new Headers(init.headers);
     headers.set('Authorization', `Bearer ${token}`);
     if (workspaceId) headers.set('X-Workspace-ID', workspaceId);
@@ -197,6 +211,10 @@ export function CloudApp() {
   const busy = (operation: Operation) => running.has(operation);
 
   const [signInAgain, setSignInAgain] = useState(false);
+  const againShown = useRef(signInAgain);
+  againShown.current = signInAgain;
+  // a quiet line while a page that is open waits for the sign-in to renew
+  const [renewing, setRenewing] = useState(false);
   // how many times in a row AuthKit had a user but no token, and the timer for the next try
   const loginTries = useRef(0);
   const loginRetry = useRef(0);
@@ -205,7 +223,21 @@ export function CloudApp() {
   const missingSince = useRef(0);
   const settingUp = useRef(needsOnboarding);
   settingUp.current = needsOnboarding;
+  // Every retry asks through the newest refreshAccount. A timer that called the refreshAccount it
+  // was made in kept that render's token getter for good; on a fresh page load AuthKit can report
+  // the user one render before it puts its real client in place of the stand-in whose getter
+  // always rejects, so that timer chain could never succeed, kept counting behind a working app,
+  // and showed "Sign in again" about twelve seconds after the load.
+  const refreshLatest = useRef<() => Promise<void>>(async () => undefined);
   useEffect(() => () => window.clearTimeout(loginRetry.current), []);
+  /** An answer got past the token: the run of misses is over, and so is its retry timer. */
+  const tokenFound = useCallback(() => {
+    window.clearTimeout(loginRetry.current);
+    loginRetry.current = 0;
+    loginTries.current = 0;
+    missingSince.current = 0;
+    setRenewing(false);
+  }, []);
   const refreshAccount = useCallback(async (): Promise<void> => {
     if (!user) return;
     try {
@@ -216,40 +248,51 @@ export function CloudApp() {
       setNeedsOnboarding(false);
       setProblem(null);
       setSignInAgain(false);
-      loginTries.current = 0;
-      missingSince.current = 0;
+      tokenFound();
       if (flagOn(OFFLINE_SHELL)) rememberAccount(user.id, next);
     } catch (problem) {
       // During the sign-in redirect AuthKit can report a user a moment before it holds a token.
       // That is not an account problem: AuthKit's own state decides what shows next.
-      // If it still has no token a moment later, the sign-in has lapsed: say so and offer one
-      // way back. Nothing on this device is cleared (songs, mixes, the import journal).
+      // If it still has no token after a while, say so and offer one way back; the screen then
+      // keeps asking by itself (below). Nothing on this device is cleared (songs, mixes, the
+      // import journal).
       if (problem instanceof LoginRequiredError) {
-        // A slow phone connection can take several seconds to finish the sign-in, so try a few
-        // times over about ten seconds before saying the sign-in ended.
-        const waits = [1500, 3000, 6000];
         if (!missingSince.current) missingSince.current = Date.now();
-        // The tries count calls, and anything that asks for the account again (a redraw with a new
-        // token getter, an event, polling) spends one, so a short renewal can use them all up in a
-        // moment. With a page already open (the workspace set-up, or the app itself) the miss must
-        // also have lasted as long as the waits add up to before that page is replaced.
+        // "Sign in again" is already up: its own loop keeps asking, so nothing is scheduled here.
+        if (againShown.current) return;
+        // The numbers:
+        // - Nothing open yet (a page load, the sign-in redirect): three more tries after 1.5 s,
+        //   3 s and 6 s, about ten seconds in all, then "Sign in again". As before.
+        // - A page already open (the workspace set-up, or the app): the same tries, then one
+        //   every 5 s, behind a quiet "Renewing your sign-in" line from the second miss on. The
+        //   page is only replaced once the miss has lasted 30 s, three times the longest the
+        //   known harmless miss can last, or at once when AuthKit itself has said the session
+        //   could not be renewed (onRefreshFailure, the only real sign-out).
+        const waits = [1500, 3000, 6000];
         const open = settingUp.current || shownAccount.current !== null;
-        const lasted = Date.now() - missingSince.current >= 10_000;
-        if (loginTries.current >= waits.length && (!open || lasted)) {
+        const lasted = Date.now() - missingSince.current >= OPEN_PAGE_PATIENCE_MS;
+        const spent = loginTries.current >= waits.length;
+        if (sessionEnded() || (spent && (!open || lasted))) {
           console.warn('SelectaDJ: AuthKit reports a user but no token after retries; asking to sign in again.');
+          window.clearTimeout(loginRetry.current);
+          setRenewing(false);
           setSignInAgain(true);
           return;
         }
+        if (open && loginTries.current >= 1) setRenewing(true);
         window.clearTimeout(loginRetry.current);
-        loginRetry.current = window.setTimeout(() => void refreshAccount(), waits[loginTries.current] ?? 3000);
+        loginRetry.current = window.setTimeout(() => void refreshLatest.current(), waits[loginTries.current] ?? 5000);
         loginTries.current = Math.min(loginTries.current + 1, waits.length);
         return;
       }
-      // Any other answer got past the token, so a run of token misses has ended. Without this, the
-      // tries spent during sign-in stayed spent on the set-up screen (its 409 is not a success),
-      // and one later miss replaced that screen at once.
-      loginTries.current = 0;
-      missingSince.current = 0;
+      // A server's answer got past the token, so a run of token misses has ended and "Sign in
+      // again" has nothing left to say (a refusal has its own page). Without this, the tries spent
+      // during sign-in stayed spent on the set-up screen (its 409 is not a success), and one later
+      // miss replaced that screen at once. A failure with no answer proves nothing either way.
+      if (problem instanceof CloudError && problem.status > 0) {
+        tokenFound();
+        setSignInAgain(false);
+      }
       // Offline or the service down (`cloud.offline_shell`): keep the account already shown, or
       // open with the one this device last saw; the connection banner says what is happening and
       // the account is read again when the connection is back.
@@ -272,9 +315,43 @@ export function CloudApp() {
         setProblem({ kind: accountProblem(problem), message: (problem as Error).message });
       }
     }
-  }, [api, user]);
+  }, [api, user, tokenFound]);
+  refreshLatest.current = refreshAccount;
 
   useEffect(() => { void refreshAccount(); }, [refreshAccount]);
+  // "Sign in again" heals by itself. While it is up the account is asked for again in the
+  // background: first after 3 s, each wait half as long again, never more than 30 s apart, and
+  // never stopping while the screen shows. It is also asked at once when the tab is looked at
+  // again, the window gets focus, the browser comes back online, or another tab stores a new
+  // AuthKit refresh token. The moment a token comes back and the account reads, refreshAccount
+  // takes the screen away and the person is where they were.
+  useEffect(() => {
+    if (!signInAgain) return undefined;
+    let timer = 0;
+    let wait = HEAL_FIRST_MS;
+    const ask = () => { void refreshLatest.current(); };
+    const next = () => {
+      timer = window.setTimeout(() => {
+        ask();
+        wait = Math.min(Math.round(wait * 1.5), HEAL_MAX_MS);
+        next();
+      }, wait);
+    };
+    const looked = () => { if (document.visibilityState === 'visible') ask(); };
+    const stored = (event: StorageEvent) => { if (event.key === null || event.key.startsWith('workos:refresh-token')) ask(); };
+    next();
+    document.addEventListener('visibilitychange', looked);
+    window.addEventListener('focus', ask);
+    window.addEventListener('online', ask);
+    window.addEventListener('storage', stored);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('visibilitychange', looked);
+      window.removeEventListener('focus', ask);
+      window.removeEventListener('online', ask);
+      window.removeEventListener('storage', stored);
+    };
+  }, [signInAgain]);
   // The account's features leave with the app, so nothing after it gates on a stale account.
   useEffect(() => () => setAccountFeatures(null), []);
   useFlags();
@@ -349,6 +426,19 @@ export function CloudApp() {
   const consentVersion = consentVersionFor(account);
 
   const startSignIn = () => signIn({ state: { returnTo: `${window.location.pathname}${window.location.search}` } });
+  // The button on "Sign in again" first asks quietly: a token that is there after all reads the
+  // account and takes the screen away. Only AuthKit saying a sign-in is needed starts the redirect.
+  const signInAgainPressed = async () => {
+    try {
+      await tokenRef.current();
+    } catch (problem) {
+      noteAuthProblem('sign-in-again button', problem);
+      if (problem instanceof LoginRequiredError) { await startSignIn(); return; }
+      // it could not be asked (no connection, say): stay here, the screen keeps trying
+      return;
+    }
+    await refreshLatest.current();
+  };
 
   const completeOnboarding = async (event: FormEvent) => {
     event.preventDefault();
@@ -493,7 +583,7 @@ export function CloudApp() {
     );
   }
   if (!user) return <Welcome problem={signInProblem} onSignIn={startSignIn} onSignUp={() => signUp()} />;
-  if (signInAgain) return <SignInAgain onSignIn={startSignIn} />;
+  if (signInAgain) return <SignInAgain onSignIn={signInAgainPressed} />;
   if (blocked) return <BlockedAccount code={blocked} distinct={exact} email={user.email} onSignOut={() => restartSignIn()} />;
   if (!user.emailVerified) return <VerifyEmail email={user.email} onSignOut={() => signOut({ returnTo: window.location.origin })} />;
   if (needsOnboarding) return <WorkspaceCheck email={user.email} confirmed={ageConfirmed} onConfirmed={setAgeConfirmed} busy={busy('onboarding')} error={error} onSubmit={(event) => void completeOnboarding(event)} onSignOut={() => signOut({ returnTo: window.location.origin })} />;
@@ -587,6 +677,7 @@ export function CloudApp() {
     {account.user.suspended && (exact ? <SuspendedPanel go={goShell} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>)}
     {problem && <AccountProblemNote kind={problem.kind} onRetry={() => void retryAccount()} />}
     <OverQuotaBanner account={account} go={goShell} />
+    {renewing && <p className="cloud-stream-note" role="status">{RENEWING_WORDS}</p>}
     {stream === 'polling' && !connectionDown && <p className="cloud-stream-note" role="status">Live updates are paused on this network, so this page checks for changes every few seconds.</p>}
   </>;
   const shellFeedback = <Feedback error={problem && error === problem.message ? '' : error} notice={notice} />;
@@ -651,6 +742,7 @@ export function CloudApp() {
         {account?.user.suspended && (exact ? <SuspendedPanel go={choosePage} /> : <div className="cloud-feedback" role="status">{SUSPENDED_NOTICE}</div>)}
         {exact && account && problem && <AccountProblemNote kind={problem.kind} onRetry={() => void retryAccount()} />}
         <OverQuotaBanner account={account} go={choosePage} />
+        {renewing && <p className="cloud-stream-note" role="status">{RENEWING_WORDS}</p>}
         {stream === 'polling' && !connectionDown && <p className="cloud-stream-note" role="status">Live updates are paused on this network, so this page checks for changes every few seconds.</p>}
         {flagOn(OFFLINE_SHELL) && <ConnectionBanner />}
         <Feedback error={exact && problem && error === problem.message ? '' : error} notice={notice} />
