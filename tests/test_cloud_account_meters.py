@@ -191,3 +191,25 @@ def test_a_cross_origin_app_may_send_the_headers_checkout_and_events_need(
         )
         assert answer.status_code == 200, answer.text
         assert header.lower() in answer.headers["access-control-allow-headers"].lower()
+
+
+def test_a_cross_origin_app_may_send_every_method_the_api_serves(tmp_path, monkeypatch):
+    """The app is on another origin, so a method the CORS rules leave out never reaches its
+    route: the browser refuses it and the page says it is offline (Lucy settings used PUT)."""
+    with signed_up(tmp_path, monkeypatch) as world:
+        served = {
+            method
+            for route in world.client.app.routes
+            if str(getattr(route, "path", "")).startswith("/api/")
+            for method in (getattr(route, "methods", None) or ())
+        } - {"HEAD"}
+        assert "PUT" in served
+        refused = []
+        for method in sorted(served):
+            answer = world.client.options(
+                "/api/account",
+                headers={"Origin": "https://app.test", "Access-Control-Request-Method": method},
+            )
+            if answer.status_code != 200:
+                refused.append(f"{method}: {answer.status_code} {answer.text}")
+        assert refused == []

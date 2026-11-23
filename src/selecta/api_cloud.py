@@ -483,7 +483,11 @@ def create_cloud_app(
         CORSMiddleware,
         allow_origins=list(settings.allowed_origins),
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        # Every method a route below is served with: the app and the guest page live on another
+        # origin, so a method missing here is refused by the browser before it is ever sent
+        # (Lucy settings, Labs and the guest nickname use PUT). test_cloud_account_meters checks
+        # this list against the routes.
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=[
             "Authorization",
             "Content-Type",
