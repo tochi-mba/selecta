@@ -3,14 +3,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const PAGE_ENTRIES = ['index.html', 'guest.html', 'display.html', 'kiosk.html'] as const;
-// Pages canonicalises /guest.html to /guest. Proxying the room code to .html can
-// turn an internal rewrite into an external redirect, discarding /r/:code.
-// The other dedicated-page rules remain unchanged in this targeted fix.
+// Pages canonicalises every page.html to /page with a redirect. So a rewrite whose target ends in
+// .html never arrives: for /r/:code it drops the room code, and for /display or /kiosk it loops
+// forever (ERR_TOO_MANY_REDIRECTS), because Pages already serves those two at their clean paths.
 const REWRITES = [
-  ['/display', '/display.html'],
-  ['/display/', '/display.html'],
-  ['/kiosk', '/kiosk.html'],
-  ['/kiosk/', '/kiosk.html'],
   ['/r/:code', '/guest'],
   ['/r/:code/', '/guest'],
 ] as const;
@@ -27,6 +23,7 @@ export function validatePagesRedirects(contents: string): string[] {
       continue;
     }
     const [from, to, status] = words;
+    if (to.endsWith('.html')) errors.push(`Cloudflare rewrite to a .html target redirects or loops: ${line}`);
     if (routes.has(from)) errors.push(`Duplicate Cloudflare route: ${from}`);
     else routes.set(from, `${to} ${status}`);
   }
