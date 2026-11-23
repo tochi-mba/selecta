@@ -347,7 +347,8 @@ export function withOutbox(server: RecipeStore, workspaceId: string): RecipeStor
   const flush = (): Promise<void> => {
     if (!on()) return Promise.resolve();
     const running = flushing.get(workspaceId);
-    if (running) return running;
+    // A reconnect while a send is failing would otherwise be lost: run once more after it.
+    if (running) return running.then(() => (flushing.has(workspaceId) ? undefined : flush()));
     const locks = typeof navigator !== 'undefined' ? (navigator as Navigator & { locks?: LockManager }).locks : undefined;
     // one tab sends at a time; another tab that finds the lock taken leaves it to that one
     const task = (locks

@@ -23,7 +23,7 @@ Stored additions: a preference key, `deleted_drafts`, with `last_deleted_draft` 
 
 ## Every call the frontend makes
 
-Reads, all retry-safe, with stale answers ignored by the caller: `/status`, `/mix`, `/mix/suggest`, `/mix/{n}/options`, `/drafts`, `/drafts/names`, `/vibes`, `/songs`, `/songs/{id}`, `/library`, `/links`, `/discoveries`, `/seams/{key}`, `/requests`, `/jobs`, `/storage`, `/folders`, `/folders/check`, `/memory`, `/diagnostics`, `/listening`, `/exports/jobs`.
+Reads, all retry-safe, with stale answers ignored by the caller: `/status`, `/mix`, `/mix/suggest`, `/mix/{n}/options`, `/drafts`, `/drafts/names`, `/vibes`, `/songs`, `/songs/{id}`, `/library`, `/links`, `/discoveries`, `/seams/{key}`, `/requests`, `/jobs`, `/storage`, `/folders`, `/folders/check`, `/memory`, `/diagnostics`, `/listening`, `/exports/jobs`, `/library/interrupted`.
 
 ## How each kind of write stays safe
 
@@ -58,6 +58,8 @@ Added to the inventory on 2026-11-10. `web/src/s3-0071-api-inventory.test.ts` fa
 |---|---|---|---|
 | `POST /scan`, `POST /scan/cancel` | The folder, or the running scan | The server runs one scan at a time | Safe: a second scan finds nothing new, and cancelling twice is harmless |
 | `POST /library/check` | None | | Safe: it only looks for new songs |
+| `POST /library/lyrics/again` | None | | Safe: it starts a lyric lookup only if none is running (`library.scan_resume`) |
+| `POST /exports/jobs/{id}/again` | The interrupted export | Refused once the export is no longer interrupted, or while durable jobs own it | Safe: a second press finds it running and changes nothing |
 | `POST /analysis/start` | None | | Safe: it starts analysis only if none is running |
 | `POST /library/batch` | Exact song ids with the values the page showed | The whole batch is refused if any id or value changed | Refused the same way, so nothing applies twice by surprise |
 | `POST /vibes/pick/build` | The starting song, with `x-mix-order` | Refused if the mix changed since the page read it | Refused the same way, and the page re-reads |
