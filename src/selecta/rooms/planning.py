@@ -90,9 +90,14 @@ def pump(ctx: RoomContext, workspace_id: str, room_id: str, *, now: float | None
     """Hand the next accepted requests to the planner, as far as the window and the render cap
     allow. Returns how many were handed over.
 
-    With no speaker online the music's paused, so requests wait here, in order, until one is
-    back (the regular sweep then hands them on)."""
-    if not ctx.speakers.speaker_online(workspace_id):
+    Planners that schedule actual playback need an online speaker. The browser-first
+    planner is different: it puts an accepted song in the host's Requests drawer,
+    where the host can add it once their player and audio are available. Do not
+    hide requests from that drawer just because no server speaker lease exists."""
+    if (
+        not getattr(ctx.planner, "accepts_requests_without_speaker", False)
+        and not ctx.speakers.speaker_online(workspace_id)
+    ):
         return 0
     with transaction(ctx.engine, workspace_id) as conn:
         now = resolve_now(conn, now)

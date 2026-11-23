@@ -220,8 +220,11 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
       </section>
       <section aria-labelledby="coming-title">
         <h3 id="coming-title">Coming up</h3>
-        {panel.coming_up.length === 0 ? <p className="room-muted">No guest requests in the queue.</p> : (
-          <ol className="room-list">{panel.coming_up.map((item) => <li key={item.request_id}><span>{songText(item.song)}<span className="room-muted"> · {item.nickname}</span></span></li>)}</ol>
+        {panel.coming_up.length === 0 ? <p className="room-muted">No accepted guest requests.</p> : (
+          <>
+            <p className="room-muted">Accepted requests appear in Request a song on the host's playing device. Add them there to put them in the mix.</p>
+            <ol className="room-list">{panel.coming_up.map((item) => <li key={item.request_id}><span>{songText(item.song)}<span className="room-muted"> · {item.nickname}</span></span></li>)}</ol>
+          </>
         )}
         {panel.unfit.length > 0 && (<>
           <h3>Couldn't fit</h3>

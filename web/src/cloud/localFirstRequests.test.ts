@@ -219,6 +219,22 @@ describe('room requests the host accepted', () => {
     expect(await request(3)).toHaveLength(1);
   });
 
+  it('shows a newly accepted room request and adds it through the existing Requests UI', async () => {
+    const { ask, list, state, sent, cloudCalls } = family({ mix: [1, 2] });
+    expect(await list()).toEqual([]);
+    state.room.push(roomRequest('room-accepted', 3, 'Tochi\'s Crib'));
+    window.dispatchEvent(new CustomEvent(ROOM_REQUEST_EVENT, { detail: { action: 'pending' } }));
+    const [newRequest] = await list();
+    expect(newRequest).toMatchObject({ song_id: 3, title: 'Charlie', stage: 'searching' });
+    expect(newRequest.browser_note).toContain('Asked for in Tochi\'s Crib.');
+    expect(sent).toHaveLength(0); // nothing enters playback merely because the room accepted it
+
+    await ask('POST', `/requests/${newRequest.id}/add`, { order: [1, 2], position: 0 });
+    expect(state.mix).toEqual([1, 3, 2]);
+    expect(cloudCalls).toContain('POST /room-requests/room-accepted/played');
+    expect(await list()).toEqual([]);
+  });
+
   it('tells the room when its request joins the mix', async () => {
     const { ask, list, cloudCalls, state } = family({ mix: [1, 2], room: [roomRequest('rr 1', 3)] });
     const [row] = await list();
@@ -252,10 +268,10 @@ describe('room requests the host accepted', () => {
       clock.mockReturnValue(1000);
       const { list, cloudCalls } = family({ room: [roomRequest('rr-1', 3)] });
       await list();
-      clock.mockReturnValue(1000 + 29_000);
+      clock.mockReturnValue(1000 + 5_000);
       await list();
       expect(cloudCalls.filter((call) => call === 'GET /room-requests')).toHaveLength(1);
-      clock.mockReturnValue(1000 + 31_000);
+      clock.mockReturnValue(1000 + 7_000);
       await list();
       expect(cloudCalls.filter((call) => call === 'GET /room-requests')).toHaveLength(2);
     } finally {

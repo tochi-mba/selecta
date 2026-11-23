@@ -131,6 +131,10 @@ def browser_request_id(room_id: str, song_id: int) -> str:
 
 
 class BrowserPlanner:
+    # This planner records requests for the host to review; it does not schedule
+    # audio. The host's browser may play locally without a server speaker lease.
+    accepts_requests_without_speaker = True
+
     """The browser-first Cloud's planner is the host's own browser mix (ADR-0462).
 
     The server can't place a song in a mix it doesn't play, so an accepted room request is
