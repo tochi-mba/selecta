@@ -483,21 +483,12 @@ def create_cloud_app(
         CORSMiddleware,
         allow_origins=list(settings.allowed_origins),
         allow_credentials=True,
-        # Every method a route below is served with: the app and the guest page live on another
-        # origin, so a method missing here is refused by the browser before it is ever sent
-        # (Lucy settings, Labs and the guest nickname use PUT). test_cloud_account_meters checks
-        # this list against the routes.
+        # Every method a route is served with, PUT included: test_cloud_account_meters checks it.
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=[
-            "Authorization",
-            "Content-Type",
-            "Idempotency-Key",
-            "Last-Event-ID",
-            "X-Workspace-ID",
-            "X-Operation-ID",
-            "X-Admin-Session",
-            "X-Upload-Batch",
-        ],
+        allow_headers=(
+            "Authorization Content-Type Idempotency-Key Last-Event-ID "
+            "X-Workspace-ID X-Operation-ID X-Admin-Session X-Upload-Batch"
+        ).split(),
         expose_headers=["X-Request-ID"],
         max_age=600,
     )
