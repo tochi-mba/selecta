@@ -156,7 +156,8 @@ describe('ConnectionBanner', () => {
     for (const step of [reportOffline, reportUnreachable]) {
       act(() => step());
       const text = screen.getByRole('status').textContent ?? '';
-      expect(text).not.toMatch(/failed to fetch|networkerror|—/i);
+      expect(text).not.toMatch(/failed to fetch|networkerror/i);
+      expect(text.includes(String.fromCharCode(8212))).toBe(false);
     }
   });
 });

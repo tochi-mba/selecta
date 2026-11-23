@@ -55,7 +55,11 @@ describe('import words', () => {
     const repick = offerWords({ kind: 'repick', folder: null, marker: { ...marker, kind: 'files' } });
     expect(repick).toContain('choose the same files again');
     expect(repick).toContain('skips everything already done');
-    for (const text of [allow, repick]) expect(text).not.toMatch(/—|failed to fetch/i);
+    const dash = String.fromCharCode(8212);
+    for (const text of [allow, repick]) {
+      expect(text).not.toMatch(/failed to fetch/i);
+      expect(text.includes(dash)).toBe(false);
+    }
   });
 });
 
