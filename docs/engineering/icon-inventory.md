@@ -62,6 +62,10 @@ The box and stroke live in `ICON_SLOTS` and `ICON_STROKES` (`web/src/ui/Icon.tsx
 | `system` | Match this computer's theme | standard | `ui/ThemeChoice.tsx` | The option words, or the trigger's hidden words and `title` |
 | `mic` | Speak instead of typing | standard | `views/LucyComposer.tsx` | Hidden words and `title` |
 | `thread` | Lucy's mark | hero | `views/Lucy.tsx` | The Lucy heading beside it |
+| `users` | Rooms, in the Cloud side bar and phone More menu | standard | `shell/Shell.tsx` | The destination label |
+| `user` | Account, in the Cloud account menu | standard | `shell/Shell.tsx` | The destination label |
+| `signout` | Sign out, in the Cloud account menu and phone More menu | standard | `shell/Shell.tsx` | The button's words |
+| `card` | Plan & billing, in the Cloud account menu | standard | `shell/Shell.tsx` | The destination label |
 
 ## Gaps, badges, states and targets (MP-0277-03 to -08)
 

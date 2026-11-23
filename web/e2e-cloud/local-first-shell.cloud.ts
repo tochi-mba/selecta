@@ -29,19 +29,23 @@ test('a local-first account sees the shared music destinations', async ({ page, 
   await expect(page.getByText(/upload tracks/i)).toHaveCount(0);
 });
 
-test('a local-first account finds account places in More, and no dead button', async ({ page, request }) => {
+test('a local-first account finds its account places in the side bar account menu, and no dead button', async ({ page, request }) => {
   const user = listener('local-first-more');
   await seededWith(request, user, 1);
   await openLocalFirst(page, user, '/listen');
   await expect(page.getByRole('heading', { name: 'Nothing is playing' })).toBeVisible();
-  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: 'More' }).first().click();
-  const more = page.getByRole('navigation', { name: 'More' });
-  await expect(more.getByRole('link', { name: 'Account' })).toBeVisible();
-  await expect(more.getByRole('link', { name: 'Plan & billing' })).toBeVisible();
-  await expect(more.getByRole('link', { name: 'Add music' })).toHaveCount(0);
+  // on a computer there is no More: the account's pages and Sign out sit in the account menu
+  const main = page.getByRole('navigation', { name: 'Main' });
+  await expect(main.getByRole('button', { name: 'More' })).toBeHidden();
+  await main.getByRole('button', { name: /^Account: / }).click();
+  const menu = page.getByRole('menu', { name: 'Account' });
+  await expect(menu.getByRole('menuitem', { name: 'Account' })).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: 'Plan & billing' })).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: 'Sign out' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Add music' })).toHaveCount(0);
 
-  // the hosted rail's account controls all live in More > Account, and each one is there to press
-  await more.getByRole('link', { name: 'Account' }).click();
+  // the hosted rail's account controls all live on Account, and each one is there to press
+  await menu.getByRole('menuitem', { name: 'Account' }).click();
   const signedIn = page.getByRole('region', { name: 'Signed in as' });
   await expect(signedIn).toContainText(`${user}@example.test`);
   await expect(signedIn.getByRole('button', { name: 'Sign out' })).toBeVisible();
@@ -69,16 +73,16 @@ test('a flag switched off for a local-first account reflows its open shell over 
   await seededWith(request, user, 1);
   await openLocalFirst(page, user, '/listen');
   await page.evaluate(() => { (window as unknown as { stayed: boolean }).stayed = true; });
-  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: 'More' }).first().click();
-  const more = page.getByRole('navigation', { name: 'More' });
+  // Devices is listed in the side bar itself
+  const more = page.getByRole('navigation', { name: 'Main' });
   await expect(more.getByRole('link', { name: 'Devices' })).toBeVisible();
 
   // a real per-user rule: the server publishes `flags.changed`, the shell reads its account again
-  // and the one flag read closes More up around the feature, without a reload
+  // and the one flag read closes the side bar up around the feature, without a reload
   const off = await request.post('/test/flags/off', { data: { user, flags: ['devices'] } });
   expect(off.ok(), await off.text()).toBeTruthy();
   await expect(more.getByRole('link', { name: 'Devices' })).toHaveCount(0, { timeout: 10_000 });
-  await expect(more.getByRole('link', { name: 'Account' })).toBeVisible();
+  await expect(more.getByRole('button', { name: /^Account: / })).toBeVisible();
 
   const back = await request.post('/test/flags/off', { data: { user, flags: [] } });
   expect(back.ok(), await back.text()).toBeTruthy();
