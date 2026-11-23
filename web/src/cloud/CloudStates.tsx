@@ -1,4 +1,5 @@
 import type { Page } from './api';
+import { Icon } from '../ui/Icon';
 import { ACCOUNT_PROBLEMS, AccountProblem, SUSPENDED_STATE } from './accountStates';
 
 // The Cloud site's honest states (ADR-0420, `cloud.account_states`): an address that isn't a
@@ -9,8 +10,9 @@ import { ACCOUNT_PROBLEMS, AccountProblem, SUSPENDED_STATE } from './accountStat
 export function NotFound({ path, go }: { path: string; go: (page: Page) => void }) {
   return (
     <section className="cloud-card cloud-not-found" aria-labelledby="cloud-not-found-title">
-      <p className="cloud-eyebrow">Nothing at this address</p>
-      <h2 id="cloud-not-found-title">There’s no SelectaDJ Cloud page at {path}</h2>
+      <span className="cloud-not-found-icon" aria-hidden="true"><Icon name="search" /></span>
+      <p className="cloud-eyebrow">Page not found</p>
+      <h2 id="cloud-not-found-title">There’s nothing at {path}</h2>
       <p>The link may be mistyped or out of date. Your music and settings are unaffected.</p>
       <div className="cloud-actions"><button className="primary" onClick={() => go('home')}>Go to Overview</button><button onClick={() => go('library')}>Open your library</button></div>
     </section>
