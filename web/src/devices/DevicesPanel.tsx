@@ -1,8 +1,10 @@
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react';
-import { Action, Problem, Skeleton } from '../ui/controls';
+import { Badge, Notice, SettingsCard } from '../cloud/AccountLayout';
+import { Action } from '../ui/controls';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { ELLIPSIS, relativeTime, userLocale } from '../ui/format';
-import { Icon } from '../ui/Icon';
+import { Icon, IconName } from '../ui/Icon';
+import { showToast } from '../ui/toasts';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { Api, Device, DEVICE_REGISTERED } from './usePlaybackDevice';
 import './devices.css';
@@ -12,18 +14,20 @@ import './devices.css';
 // browsers with the same name can still be told apart. Each can be renamed and signed out. The
 // limit is ten; signing in an eleventh signs out the one used least recently, and the notice from
 // that registration is shown here too. The list is read again every 15 s while the tab is on screen
-// (useVisiblePoll); signing a device out asks first.
+// (useVisiblePoll); signing a device out asks first. At the limit the card says what that means
+// and offers the way to free the places: sign out every other device in one press, after asking.
 
 export function seen(epochSeconds: number, nowSeconds = Date.now() / 1000) {
   const age = nowSeconds - epochSeconds;
   if (age < 120) return 'Active now';
-  return `Seen ${relativeTime(age)}`;
+  return `Last active ${relativeTime(age)}`;
 }
 
 /** The server also says when a device first signed in; an older server leaves it out. */
 type Listed = Device & { created_at?: number };
 
 const KINDS: Record<string, string> = { laptop: 'Computer', desktop: 'Computer', phone: 'Phone', tablet: 'Tablet', tv: 'TV' };
+const KIND_ICONS: Record<string, IconName> = { phone: 'phone', tablet: 'tablet' };
 
 /** This device first, then the most recently active. */
 export function inOrder<T extends Pick<Device, 'this_device' | 'last_seen_at'>>(devices: T[]): T[] {
@@ -43,7 +47,7 @@ export function DevicesPanel({ api, workspaceId, notice = '', titled = true }: {
   api: Api;
   workspaceId: string;
   notice?: string;
-  /** false on a page whose own title is already "Devices", so the heading is not shown twice */
+  /** false on a page whose own title is already "Devices", so the card says what the list is instead */
   titled?: boolean;
 }) {
   const [devices, setDevices] = useState<Listed[] | null>(null);
@@ -52,8 +56,8 @@ export function DevicesPanel({ api, workspaceId, notice = '', titled = true }: {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [renameError, setRenameError] = useState('');
-  const [said, setSaid] = useState('');
   const [forgetting, setForgetting] = useState<Device | null>(null);
+  const [clearing, setClearing] = useState(false);
   const [thisDevice, setThisDevice] = useState<string | null>(() => { try { return localStorage.getItem(`selecta.device.${workspaceId}`); } catch { return null; } });
   // after a rename ends (saved or cancelled), focus goes back to that row's Rename button
   const renamed = useRef<string | null>(null);
@@ -89,14 +93,17 @@ export function DevicesPanel({ api, workspaceId, notice = '', titled = true }: {
     if (next === device.name) { stopEditing(device); return; }
     try {
       await api(`/devices/${encodeURIComponent(device.id)}`, { method: 'PATCH', body: JSON.stringify({ name: next }) }, workspaceId);
-      stopEditing(device); setSaid(`Renamed to ${next}.`);
+      // the row shows its new name at once; the list is read again behind it
+      setDevices((was) => was && was.map((row) => (row.id === device.id ? { ...row, name: next } : row)));
+      stopEditing(device);
+      showToast(`Renamed to ${next}.`);
       await load();
     } catch (problem) { setRenameError((problem as Error).message); }
   };
   // Throws on refusal, so the confirmation stays open and says what went wrong.
   const signOut = async (device: Device) => {
     await api(`/devices/${encodeURIComponent(device.id)}/sign-out`, { method: 'POST' }, workspaceId);
-    setSaid(`${device.name} was signed out.`);
+    showToast(`${device.name} was signed out.`);
     setError('');
     await load();
   };
@@ -106,82 +113,148 @@ export function DevicesPanel({ api, workspaceId, notice = '', titled = true }: {
   for (const device of ordered) names.set(device.name, (names.get(device.name) ?? 0) + 1);
   const sameNames = [...names.values()].some((count) => count > 1);
   const signedIn = ordered.filter((device) => device.signed_in !== false).length;
+  // "the others" only means something once this browser knows which row is its own
+  const here = ordered.find((device) => device.this_device);
+  const others = here ? ordered.filter((device) => !device.this_device && device.signed_in !== false) : [];
+  const full = devices !== null && signedIn >= limit;
+  const otherWords = others.length === 1 ? '1 other device' : `${others.length} other devices`;
+
+  // One at a time, so a refusal part-way says how many are still signed in.
+  const signOutOthers = async () => {
+    let failed = 0;
+    for (const device of others) {
+      try { await api(`/devices/${encodeURIComponent(device.id)}/sign-out`, { method: 'POST' }, workspaceId); }
+      catch { failed += 1; }
+    }
+    await load();
+    const done = others.length - failed;
+    if (failed) throw new Error(done ? `${done} signed out, but ${failed} could not be. Try again.` : 'Those devices could not be signed out. Try again.');
+    showToast(done === 1 ? '1 other device was signed out.' : `${done} other devices were signed out.`);
+  };
+
+  const bulk = others.length > 0 ? (
+    <Action type="button" className={full ? 'primary' : undefined} run={() => setClearing(true)} busy={clearing}>
+      <Icon name="signout" size="toolbar" />Sign out all other devices
+    </Action>
+  ) : undefined;
 
   return (
-    <section className="cloud-card devices-panel" aria-labelledby="devices-title">
-      <div className="devices-head">
-        <h2 id="devices-title" className={titled ? undefined : 'visually-hidden'}>Devices</h2>
-        {devices && devices.length > 0 && <span className="devices-count">{`${signedIn} of ${limit} signed in`}</span>}
-      </div>
-      <p className="devices-help">{`You can be signed in on ${limit} devices. One plays at a time; the others are remotes.`}</p>
-      {notice && <p className="devices-notice" role="status">{notice}</p>}
-      {said && <p className="devices-notice" role="status">{said}</p>}
-      {error && devices && <p className="devices-error" role="alert">{error}</p>}
-      {!devices && (error
-        ? <Problem retry={load}>SelectaDJ couldn’t load your devices. {error}</Problem>
-        : <Skeleton variant="rows" lines={3} label="Loading your devices" />)}
-      {devices && devices.length === 0 && <p className="devices-help">No devices are signed in yet. This browser appears here a moment after it opens SelectaDJ.</p>}
-      {sameNames && <p className="devices-help">Some devices share a name. Rename them, for example “Kitchen laptop”, to tell them apart at a glance.</p>}
-      <ul className="devices-list" ref={list}>
-        {ordered.map((device) => (
-          <li key={device.id} data-testid="device-row" data-this={device.this_device || undefined}>
-            {editing === device.id ? (
-              <form
-                onSubmit={(event: FormEvent) => { event.preventDefault(); void rename(device); }}
-                onKeyDown={(event: KeyboardEvent) => { if (event.key === 'Escape') { event.stopPropagation(); stopEditing(device); } }}
-              >
-                <label htmlFor={`rename-${device.id}`}>Device name</label>
-                <input
-                  id={`rename-${device.id}`}
-                  value={name}
-                  maxLength={60}
-                  onChange={(event) => { setName(event.target.value); setRenameError(''); }}
-                  onFocus={(event) => event.target.select()}
-                  aria-invalid={renameError ? true : undefined}
-                  aria-describedby={renameError ? `rename-${device.id}-error` : undefined}
-                  autoFocus
-                />
-                <span className="devices-actions">
-                  <Action type="button" className="primary" run={() => rename(device)} working={`Saving${ELLIPSIS}`}>Save</Action>
-                  <button type="button" onClick={() => stopEditing(device)}>Cancel</button>
-                </span>
-                {renameError && <p className="devices-error" id={`rename-${device.id}-error`} role="alert">{renameError}</p>}
-              </form>
-            ) : (
-              <>
-                <div className="devices-main">
-                  <span className="devices-name">
-                    <strong dir="auto">{device.name}</strong>
-                    {device.this_device && <span className="devices-this"><Icon name="check" size="compact" />This device</span>}
-                  </span>
-                  <span className="devices-seen">
-                    {KINDS[device.kind] && <span>{KINDS[device.kind]}</span>}
-                    <span title={exactWords(device.last_seen_at)}>{device.signed_in === false ? 'Signed out' : seen(device.last_seen_at)}</span>
-                    {device.created_at ? <span>Signed in {dayWords(device.created_at)}</span> : null}
-                    {device.poor_speaker ? <span>Best as a remote</span> : null}
-                  </span>
-                </div>
-                <span className="devices-actions">
-                  <button type="button" data-rename={device.id} onClick={() => { setEditing(device.id); setName(device.name); setRenameError(''); setSaid(''); }} aria-label={`Rename ${device.name}`}>Rename</button>
-                  {device.signed_in !== false && <Action type="button" run={() => setForgetting(device)} busy={forgetting?.id === device.id} aria-label={`Sign out this device: ${device.name}`}>Sign out</Action>}
-                </span>
-              </>
-            )}
-          </li>
-        ))}
-      </ul>
+    <SettingsCard
+      id="devices"
+      className="devices-panel"
+      title={titled ? 'Devices' : 'Signed-in devices'}
+      badge={devices && devices.length > 0 ? <Badge tone={full ? 'warn' : undefined}><span className="devices-count">{`${signedIn} of ${limit} signed in`}</span></Badge> : undefined}
+      about={`Sign in on up to ${limit} devices. One plays the music at a time; the others work as remotes.`}
+      actions={full ? undefined : bulk}
+      busy={!devices && !error}
+    >
+      {full && (
+        <Notice tone="warn" action={bulk}>
+          <strong>{`All ${limit} places are in use`}</strong>
+          <span>The next device to sign in will sign out the one used least recently. To choose which stay, sign out the ones you no longer use.</span>
+        </Notice>
+      )}
+      {notice && <Notice tone="info">{notice}</Notice>}
+      {error && devices && <Notice tone="danger" role="alert" action={<Action type="button" className="small" run={load} working={`Trying${ELLIPSIS}`}>Try again</Action>}><strong>This list may be out of date</strong><span>{error}</span></Notice>}
+      {!devices && error && (
+        <div className="empty-state boxed devices-empty" data-tone="error" role="alert">
+          <span className="empty-state-icon"><Icon name="warning" /></span>
+          <h3>Your devices could not be loaded</h3>
+          <p>{error}</p>
+          <div className="empty-state-actions"><Action type="button" run={load} working={`Trying${ELLIPSIS}`}>Try again</Action></div>
+        </div>
+      )}
+      {!devices && !error && (
+        <div className="devices-loading" role="status" aria-label="Loading your devices">
+          {[0, 1, 2].map((row) => <div className="devices-row" key={row} aria-hidden="true"><i className="devices-icon skeleton-box" /><div className="devices-main"><i className="skeleton-line devices-skeleton-name" /><i className="skeleton-line devices-skeleton-meta" /></div></div>)}
+        </div>
+      )}
+      {devices && devices.length === 0 && (
+        <div className="empty-state boxed devices-empty">
+          <span className="empty-state-icon"><Icon name="system" /></span>
+          <h3>No devices yet</h3>
+          <p>This browser appears here a moment after it opens SelectaDJ.</p>
+        </div>
+      )}
+      {sameNames && <p className="acct-help">Some devices share a name. Rename them, for example “Kitchen laptop”, to tell them apart.</p>}
+      {ordered.length > 0 && (
+        <ul className="devices-list" ref={list}>
+          {ordered.map((device) => {
+            const out = device.signed_in === false;
+            return (
+              <li key={device.id} className="devices-row" data-testid="device-row" data-this={device.this_device || undefined} data-out={out || undefined}>
+                <span className="devices-icon" aria-hidden="true"><Icon name={KIND_ICONS[device.kind] ?? 'system'} /></span>
+                {editing === device.id ? (
+                  <form
+                    onSubmit={(event: FormEvent) => { event.preventDefault(); void rename(device); }}
+                    onKeyDown={(event: KeyboardEvent) => { if (event.key === 'Escape') { event.stopPropagation(); stopEditing(device); } }}
+                  >
+                    <label htmlFor={`rename-${device.id}`} className="visually-hidden">Device name</label>
+                    <input
+                      id={`rename-${device.id}`}
+                      value={name}
+                      maxLength={60}
+                      placeholder="For example, Kitchen laptop"
+                      onChange={(event) => { setName(event.target.value); setRenameError(''); }}
+                      onFocus={(event) => event.target.select()}
+                      aria-invalid={renameError ? true : undefined}
+                      aria-describedby={renameError ? `rename-${device.id}-error` : undefined}
+                      autoFocus
+                    />
+                    <span className="devices-actions">
+                      <Action type="button" className="primary small" run={() => rename(device)} working={`Saving${ELLIPSIS}`}>Save</Action>
+                      <button type="button" className="quiet small" onClick={() => stopEditing(device)}>Cancel</button>
+                    </span>
+                    {renameError && <p className="devices-error" id={`rename-${device.id}-error`} role="alert">{renameError}</p>}
+                  </form>
+                ) : (
+                  <>
+                    <div className="devices-main">
+                      <span className="devices-name">
+                        <strong dir="auto">{device.name}</strong>
+                        {device.this_device && <span className="devices-this"><Icon name="check" size="compact" />This device</span>}
+                      </span>
+                      <span className="devices-seen">
+                        {KINDS[device.kind] && <span>{KINDS[device.kind]}</span>}
+                        <span title={exactWords(device.last_seen_at)} data-live={!out && seen(device.last_seen_at) === 'Active now' ? '' : undefined}>{out ? 'Signed out' : seen(device.last_seen_at)}</span>
+                        {device.created_at ? <span>Signed in {dayWords(device.created_at)}</span> : null}
+                        {device.poor_speaker ? <span>Best as a remote</span> : null}
+                      </span>
+                    </div>
+                    <span className="devices-actions">
+                      <button type="button" className="quiet small" data-rename={device.id} onClick={() => { setEditing(device.id); setName(device.name); setRenameError(''); }} aria-label={`Rename ${device.name}`}><Icon name="edit" size="toolbar" />Rename</button>
+                      {!out && <Action type="button" className="small" run={() => setForgetting(device)} busy={forgetting?.id === device.id} aria-label={`Sign out this device: ${device.name}`}>Sign out</Action>}
+                    </span>
+                  </>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
       {forgetting && (
         <ConfirmDialog
           title={`Sign out ${forgetting.name}?`}
           body={forgetting.this_device
-            ? 'That device is signed out of your account. It can sign in again any time. This is the device you are using now.'
-            : 'That device is signed out of your account. It can sign in again any time.'}
+            ? 'This is the device you are using now. You will need to sign in again to carry on here.'
+            : 'It stops playing and leaves your account. It can sign in again any time.'}
           confirmLabel="Sign out this device"
           working={`Signing out${ELLIPSIS}`}
           onConfirm={() => signOut(forgetting)}
           onClose={() => setForgetting(null)}
         />
       )}
-    </section>
+      {clearing && (
+        <ConfirmDialog
+          title={`Sign out ${otherWords}?`}
+          body={`Every device except this one leaves your account, and any music playing on them stops. This device stays signed in. That frees ${others.length} of your ${limit} places, and any of them can sign in again.`}
+          confirmLabel={`Sign out ${otherWords}`}
+          cancelLabel="Keep them signed in"
+          working={`Signing out${ELLIPSIS}`}
+          onConfirm={signOutOthers}
+          onClose={() => setClearing(false)}
+        />
+      )}
+    </SettingsCard>
   );
 }

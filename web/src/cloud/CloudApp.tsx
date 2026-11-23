@@ -12,6 +12,9 @@ import { LucyCloudSettings } from '../views/LucyCloudSettings';
 import { accountFlagOn, flagOn, setAccountFeatures, useFlags } from '../flags';
 import { DESTINATIONS, type MoreDestinationId } from '../shell/manifest';
 import { AccountDanger, AccountData } from './AccountData';
+import { SettingsLayout, settingsPlaces } from './AccountLayout';
+import { AccountPage, AccountStrip } from './AccountPage';
+export { AccountStrip } from './AccountPage';
 import { AccountProblem, accountProblem } from './accountStates';
 import { Account, apiOrigin, CloudError, holdsHostedStorage, idempotencyKey, isOverQuota, lockedTo, messageOf, Page, pageShown, planName } from './api';
 import { BlockedCode, blockedCode, callbackProblem, refusalMessage, SUSPENDED_NOTICE, withoutCallbackError } from './authConfig';
@@ -505,8 +508,35 @@ export function CloudApp() {
   const goShell = (next: Page) => navigate(PATHS[next]);
   // the shared shells have no rail, so the account page says who is signed in and offers leaving
   const framed = localFirst || hostedShell;
-  const settingsPanel = account ? <div className="cloud-settings">{framed && <AccountStrip email={user.email} onSignOut={signOutHere} onStaffConsole={showsAdmin(account) ? openAdmin : undefined} />}{framed && businessEntry}{framed && lockedTo(account, 'rooms') && <RoomsCard account={account} go={goShell} />}{localFirst && isHostedAccount(account) && accountFlagOn('cloud.stored_media', account.features) && <ReconciliationPanel request={workspaceRequest} />}<AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} withAudio={holdsHostedStorage(account)} />{flagOn('devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />}{accountFlagOn('lucy', account.features) && accountFlagOn('account.lucy_settings', account.features) && <LucyCloudSettings request={workspaceRequest} features={account.features} />}{showsDeviceCheck(account.features) && <DeviceCheck />}{flagOn('cloud.venue_tablet') && <Suspense fallback={null}><VenuePosture workspaceId={account.workspace.id} places={{ localFirst, devices: flagOn('devices'), rooms: flagOn('rooms'), library: localFirst || pageShown(account, 'library') }} /></Suspense>}{(flagOn('cloud.local_first_labs') || account.experience?.local_first === true) && <LocalFirstLabs request={<T,>(path: string, init?: RequestInit) => api<T>(path, init, account.workspace.id)} onChanged={() => void refreshAccount()} />}{showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />}{flagOn('autopilot.venue_mode') && flagOn('autopilot.venue_policy') && <VenueSetup api={api} workspaceId={account.workspace.id} />}{localFirst && flagOn('cloud.local_media') && !flagOn('cloud.workspace') && <DeviceDataCard workspaceId={account.workspace.id} onCleared={() => window.location.reload()} />}{(exact || hostedShell) && <AccountDanger busy={busy('everywhere') || busy('delete')} onSignOutEverywhere={() => void signOutEverywhere()} onDelete={() => void deleteAccount()} />}</div> : null;
-  const billing = account && <Billing account={account} busy={busy('checkout') || busy('portal')} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} />;
+  // Account, Plan & billing and Devices share one section list; the legacy frame has no pages for it.
+  const lucySettings = !!account && accountFlagOn('lucy', account.features) && accountFlagOn('account.lucy_settings', account.features);
+  const labsShown = !!account && (flagOn('cloud.local_first_labs') || account.experience?.local_first === true);
+  const venueSetup = flagOn('autopilot.venue_mode') && flagOn('autopilot.venue_policy');
+  const places = account && framed ? settingsPlaces({ devices: flagOn('devices'), lucy: lucySettings, advanced: showsDeviceCheck(account.features) || flagOn('cloud.venue_tablet') || labsShown || venueSetup }) : undefined;
+  const settingsPanel = account ? <AccountPage
+    places={places}
+    profile={[
+      <AccountStrip email={user.email} plan={planName(account)} workspace={account.workspace.name} onSignOut={signOutHere} onStaffConsole={showsAdmin(account) ? openAdmin : undefined} />,
+      framed && businessEntry,
+      framed && lockedTo(account, 'rooms') && <RoomsCard account={account} go={goShell} />,
+      !framed && flagOn('devices') && <DevicesPanel api={api} workspaceId={account.workspace.id} />,
+    ]}
+    lucy={[lucySettings && <LucyCloudSettings request={workspaceRequest} features={account.features} />]}
+    data={[
+      <AccountData token={getAccessToken} workspaceId={account.workspace.id} features={account.features} withAudio={holdsHostedStorage(account)} />,
+      localFirst && isHostedAccount(account) && accountFlagOn('cloud.stored_media', account.features) && <ReconciliationPanel request={workspaceRequest} />,
+      localFirst && flagOn('cloud.local_media') && !flagOn('cloud.workspace') && <DeviceDataCard workspaceId={account.workspace.id} onCleared={() => window.location.reload()} />,
+      showsPrivacyDraft(account.features) && <PrivacyNoticeDraft />,
+    ]}
+    advanced={[
+      labsShown && <LocalFirstLabs request={<T,>(path: string, init?: RequestInit) => api<T>(path, init, account.workspace.id)} onChanged={() => void refreshAccount()} />,
+      showsDeviceCheck(account.features) && <DeviceCheck />,
+      flagOn('cloud.venue_tablet') && <Suspense fallback={null}><VenuePosture workspaceId={account.workspace.id} places={{ localFirst, devices: flagOn('devices'), rooms: flagOn('rooms'), library: localFirst || pageShown(account, 'library') }} /></Suspense>,
+      venueSetup && <VenueSetup api={api} workspaceId={account.workspace.id} />,
+    ]}
+    danger={[(exact || hostedShell) && <AccountDanger busy={busy('everywhere') || busy('delete')} onSignOutEverywhere={signOutEverywhere} onDelete={deleteAccount} />]}
+  /> : null;
+  const billing = account && <SettingsLayout current="billing" places={places}><Billing account={account} busy={busy('checkout') || busy('portal')} phase={checkout} consentVersion={consentVersion} blocked={isOverQuota(account)} onCheckout={(plan, interval, consent) => void openCheckout(plan, interval, consent)} onPortal={() => void openPortal()} /></SettingsLayout>;
   const uploads = account && <UploadsPanel api={api} workspaceId={account.workspace.id} setError={setError} setNotice={setNotice} blocked={quotaBlock} onAccepted={() => void refreshAccount()} perFile={flagOn(LIBRARY_STATES_FLAG)} />;
   // The account places behind More, one drawing for both shared shells.
   const morePanel = (id: MoreDestinationId): ReactNode => {
@@ -514,7 +544,7 @@ export function CloudApp() {
     switch (id) {
       case 'account': return settingsPanel;
       case 'billing': return billing;
-      case 'devices': return <DevicesPanel api={api} workspaceId={account.workspace.id} titled={false} />;
+      case 'devices': return <SettingsLayout current="devices" places={places}><DevicesPanel api={api} workspaceId={account.workspace.id} titled={false} /></SettingsLayout>;
       case 'rooms': return <RoomPanel api={api} workspaceId={account.workspace.id} locked={account.feature_locks.rooms} votesOn={flagOn('rooms.votes')} displayOn={flagOn('rooms.display')} playHereOn={flagOn('devices')} freshOnly={account.features['rooms.nickname_confirm'] === true} />;
       case 'uploads': return uploads;
       case 'workspace': return null;
@@ -613,22 +643,6 @@ export function CloudApp() {
       <LiveRegion />
       {deleteDialog}
     </div>
-  );
-}
-
-/** Who is signed in, for the local-first shell's Account panel (the hosted frame shows it in its rail). */
-export function AccountStrip({ email, onSignOut, onStaffConsole }: { email: string; onSignOut: () => void; onStaffConsole?: () => void }) {
-  return (
-    <section className="cloud-card cloud-account-strip" aria-label="Signed in as">
-      <div>
-        <p className="cloud-eyebrow cloud-caps">Signed in as</p>
-        <p className="cloud-account-email">{email}</p>
-      </div>
-      <div className="cloud-actions">
-        {onStaffConsole && <button onClick={onStaffConsole}>Staff console</button>}
-        <button className="quiet" onClick={onSignOut}>Sign out</button>
-      </div>
-    </section>
   );
 }
 

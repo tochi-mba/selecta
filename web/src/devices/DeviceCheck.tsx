@@ -1,3 +1,5 @@
+import { SettingsCard } from '../cloud/AccountLayout';
+import { showToast } from '../ui/toasts';
 import { useMemo, useState } from 'react';
 import { browserName, capabilities, currentFacts, deviceKind, speakerWarning, type BrowserFacts } from './deviceInfo';
 
@@ -54,24 +56,26 @@ export function DeviceCheck({ facts, now = () => new Date() }: { facts?: CheckFa
   const record = deviceRecord(measured, results, notes, now());
   const mark = (id: string, value: 'pass' | 'fail') => setResults((was) => ({ ...was, [id]: was[id] === value ? undefined : value }));
   return (
-    <section className="cloud-card cloud-device-check" aria-labelledby="cloud-device-check-title">
-      <p className="cloud-eyebrow">Device check</p>
-      <h2 id="cloud-device-check-title">Check this device</h2>
-      <p>For the checks only a person can do on a real device. Mark each one as you go, then copy the record into the checklist.</p>
+    <SettingsCard
+      id="cloud-device-check"
+      className="cloud-device-check"
+      title="Check this device"
+      about="For the checks only a person can do on a real device. Mark each one as you go, then copy the record."
+      actions={<button type="button" onClick={() => { void navigator.clipboard?.writeText(record); showToast('Record copied.'); }}>Copy record</button>}
+    >
       <ol>
         {DEVICE_CHECK_STEPS.map((step) => (
           <li key={step.id}>
             <p>{step.text}</p>
             <div role="group" aria-label={`Result for ${step.task} ${step.id}`}>
-              <button aria-pressed={results[step.id] === 'pass'} onClick={() => mark(step.id, 'pass')}>Worked</button>{' '}
-              <button aria-pressed={results[step.id] === 'fail'} onClick={() => mark(step.id, 'fail')}>Didn’t work</button>
+              <button type="button" className="small" aria-pressed={results[step.id] === 'pass'} onClick={() => mark(step.id, 'pass')}>Worked</button>{' '}
+              <button type="button" className="small" aria-pressed={results[step.id] === 'fail'} onClick={() => mark(step.id, 'fail')}>Didn’t work</button>
             </div>
           </li>
         ))}
       </ol>
       <label>Notes <textarea value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
       <label>Record <textarea readOnly value={record} rows={8} /></label>
-      <div className="cloud-actions"><button onClick={() => void navigator.clipboard?.writeText(record)}>Copy record</button></div>
-    </section>
+    </SettingsCard>
   );
 }

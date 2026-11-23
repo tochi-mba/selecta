@@ -66,6 +66,9 @@ The box and stroke live in `ICON_SLOTS` and `ICON_STROKES` (`web/src/ui/Icon.tsx
 | `user` | Account, in the Cloud account menu | standard | `shell/Shell.tsx` | The destination label |
 | `signout` | Sign out, in the Cloud account menu and phone More menu | standard | `shell/Shell.tsx` | The button's words |
 | `card` | Plan & billing, in the Cloud account menu | standard | `shell/Shell.tsx` | The destination label |
+| `phone` | A phone, in the list of signed-in devices | standard | `devices/DevicesPanel.tsx` | The device's name beside it |
+| `tablet` | A tablet, in the list of signed-in devices | standard | `devices/DevicesPanel.tsx` | The device's name beside it |
+| `download` | Download, on the account export button | toolbar | `cloud/AccountData.tsx` | The button's words |
 
 ## Gaps, badges, states and targets (MP-0277-03 to -08)
 

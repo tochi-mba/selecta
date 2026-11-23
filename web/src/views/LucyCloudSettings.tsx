@@ -3,9 +3,11 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import type { PhaseName, Phases } from '../lucy/types';
 import { PHASES } from './LucySettings';
 import '../styles/lucy.css';
+import { Badge, Notice, SettingsCard } from '../cloud/AccountLayout';
 import { Skeleton } from '../ui/controls';
 import { userLocale } from '../ui/format';
 import { Meter } from '../ui/Meter';
+import { showToast } from '../ui/toasts';
 
 /** Lucy's settings in Cloud mode (docs/saas/09-lucy-ai-gateway.md §9.5). Only the person's own
  * choices are here: Use Lucy, the phases, and what may be shared with Selecta's AI provider. The
@@ -62,7 +64,15 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
     return () => { live = false; };
   }, []);
 
-  if (!status || !phases) return <section className="cloud-card lucy-settings" aria-busy={!problem || undefined}><h2>Lucy</h2>{problem ? <p className="warn" role="alert">{problem}</p> : <Skeleton variant="rows" lines={3} label="Loading Lucy’s settings" />}</section>;
+  if (!status || !phases) {
+    return (
+      <SettingsCard id="lucy-cloud" className="lucy-settings" title="Lucy" about="Whether to use Lucy, and what it may share." busy={!problem}>
+        {problem
+          ? <Notice tone="danger" role="alert"><strong>Lucy’s settings could not be loaded</strong><span>{problem}</span></Notice>
+          : <Skeleton variant="rows" lines={3} label="Loading Lucy’s settings" />}
+      </SettingsCard>
+    );
+  }
 
   const shown = PHASES.filter((phase) => ([] as FlagId[]).concat(phase.flag ?? []).every((flag) => accountFlagOn(flag, features)));
   const save = async (event: FormEvent) => {
@@ -70,21 +80,28 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
     setSaving(true); setProblem(''); setSaved('');
     try {
       const next = await request<CloudLucy>('/account/lucy', { method: 'PUT', body: JSON.stringify({ enabled, phases, privacy }) });
-      setStatus(next);
+      setStatus(next); setEnabled(next.enabled); setPhases(next.phases); setPrivacy(next.privacy);
       setSaved('Saved.');
+      showToast('Lucy settings saved.');
     } catch (error) { setProblem((error as Error).message); }
     finally { setSaving(false); }
   };
 
+  const changed = enabled !== status.enabled || JSON.stringify(phases) !== JSON.stringify(status.phases)
+    || privacy.share_lyrics !== status.privacy.share_lyrics || privacy.share_history !== status.privacy.share_history;
+
   return (
-    <section className="cloud-card lucy-settings" aria-labelledby="lucy-cloud-title">
-      <p className="cloud-eyebrow">Lucy</p>
-      <h2 id="lucy-cloud-title">{status.tier}</h2>
-      <p className="hint">Your plan sets which AI model Lucy uses and how much each request may do. You choose whether to use Lucy and what it may share.</p>
+    <SettingsCard
+      id="lucy-cloud"
+      className="lucy-settings"
+      title="Lucy on your plan"
+      badge={<Badge>{status.tier}</Badge>}
+      about="Your plan sets how much Lucy can do. You choose whether to use it and what it may share."
+    >
       <LucyTurnsMeter usage={status.usage} />
       <form onSubmit={(event) => void save(event)}>
         <fieldset>
-          <legend>Lucy</legend>
+          <legend>Use</legend>
           <label className="choice"><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} /> Use Lucy</label>
           <p className="hint">Turning Lucy off never changes your mixes or your music.</p>
           {shown.map((phase) => (
@@ -106,12 +123,12 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
             <span><b>Share a summary of your listening</b> <span className="soft">most played and most skipped, never a full log.</span></span>
           </label>
         </fieldset>
-        {problem && <p className="warn" role="alert">{problem}</p>}
-        <div className="row wrap">
-          <button type="submit" className="primary" disabled={saving} aria-busy={saving || undefined}>{saving ? 'Saving…' : 'Save Lucy settings'}</button>
-          {saved && <span className="hint" role="status">{saved}</span>}
+        {problem && <Notice tone="danger" role="alert"><strong>Your changes were not saved</strong><span>{problem}</span></Notice>}
+        <div className="row wrap lucy-cloud-save">
+          <button type="submit" className={changed ? 'primary' : undefined} disabled={saving || !changed} aria-busy={saving || undefined}>{saving ? 'Saving…' : 'Save changes'}</button>
+          <span className="hint" role="status">{saving ? '' : changed ? 'You have changes that are not saved yet.' : saved ? 'All changes saved.' : ''}</span>
         </div>
       </form>
-    </section>
+    </SettingsCard>
   );
 }

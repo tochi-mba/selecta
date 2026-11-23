@@ -1,3 +1,4 @@
+import { SettingsCard } from './AccountLayout';
 import { KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { clearEverythingOnDevice, forgetWorkspaceOnDevice } from './deviceData';
 
@@ -34,30 +35,31 @@ export function DeviceDataCard({ workspaceId, onCleared }: { workspaceId: string
     onCleared();
   };
   return (
-    <section className="cloud-card" aria-labelledby="cloud-device-data-title">
-      <p className="cloud-eyebrow">This browser</p>
-      <h2 id="cloud-device-data-title">What SelectaDJ keeps here</h2>
-      <p>This browser remembers which of your files are which songs, the folder you connected, and work it has already done on your music, so signing back in is quick. Your music files and your account are not affected by either choice below.</p>
+    <SettingsCard
+      id="cloud-device-data"
+      title="What this browser keeps"
+      about="Which of your files are which songs, the folder you connected, and work already done on your music. Clearing it never touches your music files or your account."
+    >
       <div className="cloud-danger-row">
         <div><h3>Forget this account here</h3><p>Removes this account's song list, connected folder and unfinished import from this browser. You would connect your music again next time.</p></div>
-        <button ref={forget} className="cloud-quiet" disabled={working} aria-expanded={asking === 'forget'} onClick={() => setAsking('forget')}>Forget this account here…</button>
+        <button ref={forget} type="button" disabled={working} aria-expanded={asking === 'forget'} onClick={() => setAsking('forget')}>Forget this account here…</button>
       </div>
       {asking === 'forget' && (
         <div className="cloud-confirm" role="group" aria-label="Confirm forgetting this account in this browser" onKeyDown={escape}>
           <p>Forget this account in this browser? Your music files stay where they are. This can’t be undone, and the page reloads afterwards.</p>
-          <div className="cloud-actions"><button ref={keep} disabled={working} onClick={() => setAsking(null)}>Keep it</button><button className="cloud-danger-action" disabled={working} aria-busy={working || undefined} onClick={() => void run('forget')}>{working ? 'Forgetting…' : 'Forget this account here'}</button></div>
+          <div className="cloud-actions"><button ref={keep} disabled={working} onClick={() => setAsking(null)}>Keep it</button><button className="destructive" disabled={working} aria-busy={working || undefined} onClick={() => void run('forget')}>{working ? 'Forgetting…' : 'Forget this account here'}</button></div>
         </div>
       )}
       <div className="cloud-danger-row">
         <div><h3>Clear everything in this browser</h3><p>Removes what SelectaDJ keeps here for every account that has signed in, including work already done on your music and your preferences on this browser.</p></div>
-        <button ref={everything} className="cloud-quiet cloud-danger-text" disabled={working} aria-expanded={asking === 'everything'} onClick={() => setAsking('everything')}>Clear everything…</button>
+        <button ref={everything} type="button" className="destructive" disabled={working} aria-expanded={asking === 'everything'} onClick={() => setAsking('everything')}>Clear everything…</button>
       </div>
       {asking === 'everything' && (
         <div className="cloud-confirm" role="group" aria-label="Confirm clearing everything SelectaDJ keeps in this browser" onKeyDown={escape}>
           <p>Clear everything SelectaDJ keeps in this browser, for every account? Your music files and accounts stay as they are. This can’t be undone, and the page reloads afterwards.</p>
-          <div className="cloud-actions"><button ref={keep} disabled={working} onClick={() => setAsking(null)}>Keep it</button><button className="cloud-danger-action" disabled={working} aria-busy={working || undefined} onClick={() => void run('everything')}>{working ? 'Clearing…' : 'Clear everything'}</button></div>
+          <div className="cloud-actions"><button ref={keep} disabled={working} onClick={() => setAsking(null)}>Keep it</button><button className="destructive" disabled={working} aria-busy={working || undefined} onClick={() => void run('everything')}>{working ? 'Clearing…' : 'Clear everything'}</button></div>
         </div>
       )}
-    </section>
+    </SettingsCard>
   );
 }
