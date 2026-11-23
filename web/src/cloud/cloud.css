@@ -317,6 +317,17 @@
 .cloud-card.lucy-settings label.choice { border: 0; border-radius: 0; background: none; box-shadow: none; padding: var(--space-2) 0; margin: 0; width: auto; }
 .cloud-card.lucy-settings .lucy-cloud-meter { margin-top: var(--space-3); }
 .cloud-card.lucy-settings form > .row { margin-top: var(--space-4); }
+/* Labs, the device check and the draft notice: the same card rhythm as the rest of Account */
+.cloud-labs-feedback { display: grid; gap: var(--space-2); margin-top: var(--space-3); }
+.cloud-labs-feedback label { font: var(--type-label); }
+.cloud-labs-feedback textarea { width: 100%; box-sizing: border-box; min-height: 6rem; }
+.cloud-labs-feedback .cloud-actions { margin: 0; }
+.cloud-prose h3 { margin: var(--space-4) 0 var(--space-1); font: var(--type-song); }
+.cloud-card.cloud-prose p { max-width: var(--content-reading); margin: 0 0 var(--space-2); }
+.cloud-device-check ol { margin: var(--space-3) 0; padding-left: var(--space-5); display: grid; gap: var(--space-3); }
+.cloud-card.cloud-device-check li p { margin: 0 0 var(--space-2); color: var(--text); }
+.cloud-device-check > label { display: grid; gap: var(--space-1); margin-top: var(--space-3); font: var(--type-label); }
+.cloud-device-check textarea { width: 100%; box-sizing: border-box; }
 
 /* uploads */
 .cloud-upload-panel { display: grid; gap: var(--space-4); }

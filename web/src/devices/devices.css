@@ -39,7 +39,8 @@
   white-space: nowrap;
 }
 .devices-seen { display: flex; flex-wrap: wrap; gap: var(--space-hair) var(--space-2); color: var(--text-soft); font: var(--type-meta); }
-.devices-seen > span + span::before { content: '\00b7'; margin-right: var(--space-2); }
+/* the dot trails its own fact, so a wrapped line never starts with one */
+.devices-seen > span:not(:last-child)::after { content: '\00b7'; margin-left: var(--space-2); }
 .devices-help { color: var(--text-soft); }
 .devices-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 .devices-list form { flex: 1 1 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-3); align-items: center; }

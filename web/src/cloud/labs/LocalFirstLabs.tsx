@@ -81,18 +81,19 @@ export function LocalFirstLabs({ request, onChanged }: { request: Request; onCha
 
   if (!status || (!status.labs_open && !status.enrolled)) return null;
   return (
-    <section className="cloud-labs" aria-label="Labs: browser-first Cloud">
+    <section className="cloud-card cloud-labs" aria-label="Labs: browser-first Cloud">
+      <p className="cloud-eyebrow">Preview</p>
       <h2>Labs: browser-first Cloud</h2>
       <p>Your music stays on your own devices and plays in this browser. It is a preview, and you can leave at any time.</p>
       {status.enrolled && !status.on && <p role="status">You are in Labs, but browser-first Cloud is paused for your account right now.</p>}
       {status.enrolled
-        ? <button ref={main} type="button" aria-disabled={busy || undefined} onClick={() => { if (!busy) setAsking(true); }}>Leave Labs</button>
-        : <button ref={main} type="button" aria-disabled={busy || undefined} onClick={() => { if (!busy) void act('join'); }}>Join Labs</button>}
+        ? <div className="cloud-actions"><button ref={main} type="button" aria-disabled={busy || undefined} onClick={() => { if (!busy) setAsking(true); }}>Leave Labs</button></div>
+        : <div className="cloud-actions"><button ref={main} type="button" className="primary" aria-disabled={busy || undefined} onClick={() => { if (!busy) void act('join'); }}>Join Labs</button></div>}
       {status.enrolled && status.labs_open && (
         <div className="cloud-labs-feedback">
           <label htmlFor="cloud-labs-feedback">Tell us what you noticed</label>
           <textarea id="cloud-labs-feedback" maxLength={2000} value={feedback} onChange={(event) => setFeedback(event.target.value)} />
-          <button type="button" disabled={busy || !feedback.trim()} onClick={() => void send()}>Send feedback</button>
+          <div className="cloud-actions"><button type="button" disabled={busy || !feedback.trim()} onClick={() => void send()}>Send feedback</button></div>
         </div>
       )}
       {note && <p role="status">{note}</p>}

@@ -11,8 +11,8 @@ export function showsPrivacyDraft(features: Record<string, boolean> | undefined)
 
 export function PrivacyNoticeDraft() {
   return (
-    <section className="cloud-card" aria-labelledby="cloud-privacy-draft-title">
-      <p className="cloud-eyebrow">PRIVACY NOTICE (DRAFT)</p>
+    <section className="cloud-card cloud-prose" aria-labelledby="cloud-privacy-draft-title">
+      <p className="cloud-eyebrow">Privacy notice (draft)</p>
       <h2 id="cloud-privacy-draft-title">Privacy notice</h2>
       <p role="note"><strong>{DRAFT_BANNER}</strong></p>
       {PRIVACY_NOTICE_DRAFT.map((section) => (

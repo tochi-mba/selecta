@@ -177,7 +177,6 @@ export function DevicesPanel({ api, workspaceId, notice = '', titled = true }: {
             ? 'That device is signed out of your account. It can sign in again any time. This is the device you are using now.'
             : 'That device is signed out of your account. It can sign in again any time.'}
           confirmLabel="Sign out this device"
-          destructive
           working={`Signing out${ELLIPSIS}`}
           onConfirm={() => signOut(forgetting)}
           onClose={() => setForgetting(null)}

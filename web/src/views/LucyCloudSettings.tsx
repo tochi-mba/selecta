@@ -78,7 +78,7 @@ export function LucyCloudSettings({ request, features = {} }: { request: Request
 
   return (
     <section className="cloud-card lucy-settings" aria-labelledby="lucy-cloud-title">
-      <p className="cloud-eyebrow">LUCY</p>
+      <p className="cloud-eyebrow">Lucy</p>
       <h2 id="lucy-cloud-title">{status.tier}</h2>
       <p className="hint">Your plan sets which AI model Lucy uses and how much each request may do. You choose whether to use Lucy and what it may share.</p>
       <LucyTurnsMeter usage={status.usage} />
