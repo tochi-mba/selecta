@@ -14,6 +14,8 @@ overlap or a new breakpoint fails the test until it is given an owner here.
 | `styles/shell.css` | rail/bottom bar, context bar, mini-player, toasts, overlays, menus, tooltips, skeletons, inspector resize | `main.tsx` |
 | `styles/polish.css` | interaction feedback, card disclosure, skeleton reveal, reduced-motion overrides | `main.tsx` |
 | `styles/foundation.css` | base element meanings: primary fill, popovers, word highlight; the shared primitives Meter, ConfirmDialog, Truncate and DataTable (moved here from admin.css and business/console.css) | `main.tsx` |
+| `styles/cloud-ui.css` | the Cloud look for shared primitives, scoped to `:root[data-cloud='on']`: buttons, fields, page headers, cards, card grids, empty states and the page arriving | `main.tsx` |
+| `styles/cloud-shell.css` | the Cloud shell, scoped to `.shell[data-mode='cloud']`: the rail and its account foot, the top bar and its room pill, the phone tab bar and mini player | `main.tsx` |
 | `styles/listening.css` | Listen layout, Stage, seek ghost, energy arc inputs, forced-colour fallbacks for music graphics | `main.tsx` |
 | `styles/creation.css` | editor scope bar, inspector, Studio, Story view, energy overview and thumb | `main.tsx` |
 | `styles/operations.css` | Library columns, Workspace panels, export jobs | `main.tsx` |
@@ -43,12 +45,15 @@ Feature-local sheets live beside the one component that imports them and style n
 | `business/shell/shell.css` | business shell navigation, page layouts and headers | `business/shell/BusinessShell.tsx` |
 | `business/staff/staff.css` | venue staff playback controls and zone selection | `business/staff/StaffControlDeck.tsx` |
 | `business/switcher/switcher.css` | workspace switcher menu and context display band | `business/switcher/WorkspaceSwitcher.tsx` |
+| `cloud/account.css` | the settings area: the section list, titled cards, plan and usage rows | `cloud/AccountLayout.tsx` |
+| `cloud/cloudMusic.css` | the Cloud shell's music pages: Make a Mix, Listen, My Mixes and their guided empty pages | `cloud/LocalFirstEmpty.tsx`, `cloud/QuickMix.tsx`, `cloud/SavedBrowserMixes.tsx`, `cloud/SoundCheck.tsx` |
+| `cloud/libraryWorkspace.css` | the Cloud Library and Workspace: connect music, import progress, the song list toolbar and the storage card | `cloud/CloudLibrary.tsx`, `cloud/CloudWorkspace.tsx`, `cloud/ConnectMusic.tsx`, `cloud/ImportChip.tsx`, `cloud/StorageCard.tsx` |
 | `cloud/makeCloudMix.css` | Cloud mix creation interface layout and controls | `cloud/MakeCloudMix.tsx` |
 | `cloud/connection.css` | the connection banner and the buttons that wait for the server while offline | `cloud/ConnectionBanner.tsx`, `rooms/RoomPanel.tsx` |
 | `venueops/staffDashboard.css` | unattended playback dashboard and staff controls | `venueops/StaffDashboard.tsx` |
 | `views/mixIntent.css` | mix intent and setting-scope explanatory surfaces | `views/MixIntent.tsx` |
 
-Load order (`web/src/main.tsx`): tokens, boot, style.css, shell, polish, foundation, listening, creation,
+Load order (`web/src/main.tsx`): tokens, boot, style.css, shell, polish, foundation, cloud-ui, cloud-shell, listening, creation,
 operations, music-objects, glossary, palette, icons, depth, typography. Later files refine earlier
 ones; feature files come after the legacy sheet so they win at equal specificity. New work goes into
 the file that owns the feature; `style.css` only shrinks.
@@ -64,8 +69,8 @@ and `@media` preludes ignored).
 | `.card` | `style.css` | `styles/depth.css`, `styles/polish.css` | intentional: `style.css` owns the card; polish adds name wrapping and the phone padding; depth drops the seam diagram's own fill inside a card |
 | `.panel` | `style.css` | `styles/depth.css`, `styles/polish.css` | intentional: polish owns only the phone padding (24 to 16 px at 760 px), shared with `.card`; depth drops the seam diagram's own fill inside a panel |
 | `.row` | `style.css` | `styles/listening.css`, `styles/lucy.css`, `styles/operations.css`, `styles/polish.css` | intentional: `.row` is the layout helper; every refinement is scoped under its feature's container (`.hero .row`, `.lucy-approve .row`, `.link-card > .row`, `.start .row`) |
-| `.display` | `style.css` | `styles/listening.css`, `styles/lucy.css`, `styles/music-objects.css`, `styles/operations.css`, `styles/polish.css`, `styles/shell.css` | intentional: `style.css` owns the metrics (MP-0275-02); the others place it within a feature, and shell sets its text direction |
-| `.count` | `style.css` (`.song .count`) | `styles/icons.css`, `styles/polish.css`, `styles/shell.css` | was accidental (the badge inherited `grid-area: count`); now the grid rule is `.song .count`, badges are `.nav .count`, `.mini .count`, `.context-bar .count`, and polish only makes every count tabular |
+| `.display` | `style.css` | `styles/cloud-ui.css`, `styles/listening.css`, `styles/lucy.css`, `styles/music-objects.css`, `styles/operations.css`, `styles/polish.css`, `styles/shell.css` | intentional: `style.css` owns the metrics (MP-0275-02); the others place it within a feature, shell sets its text direction, and cloud-ui only clears its margin inside a Cloud page header |
+| `.count` | `style.css` (`.song .count`) | `styles/cloud-shell.css`, `styles/icons.css`, `styles/polish.css`, `styles/shell.css` | was accidental (the badge inherited `grid-area: count`); now the grid rule is `.song .count`, badges are `.nav .count`, `.mini .count`, `.context-bar .count`, polish only makes every count tabular, and cloud-shell restyles the same badges inside the Cloud shell only |
 | `.song` | `style.css` | `styles/creation.css`, `styles/depth.css`, `styles/polish.css`, `styles/shell.css` | intentional: timeline rows (creation scopes to `.timeline .song`); depth adds forced-colour state edges; Requests draws ghost rows that look like timeline rows on purpose |
 | `.seam` | `style.css` | `styles/creation.css`, `styles/shell.css` | intentional: the seam between two timeline rows, its timeline refinements (creation) and its phone indent (shell) |
 
@@ -102,7 +107,15 @@ wins, and the row says which.
 | `min-width: 641px` | `styles/listening.css` | render queue names and move buttons use consistent columns once the list has room: above the canonical 640 phone width (moved from a stray 768 in the BF overhaul; the grid already fitted the narrower 768px-with-rail column, so the 641 to 767 band gains it rather than an upright tablet losing it) |
 | `min-width: 761px` | `styles/listening.css` | Stage visualizer and lyrics fit shorter desktop windows without hiding controls |
 | `min-width: 761px` | `styles/shell.css` | the side rail |
+| `min-width: 761px` | `styles/cloud-shell.css` | the Cloud rail: its account foot, the collapse toggle and the collapsed rail (same number as `styles/shell.css`, scoped to `.shell[data-mode='cloud']`) |
+| `min-width: 761px` | `styles/cloud-ui.css` | Cloud card grids go to two columns |
+| `min-width: 1101px` | `styles/cloud-ui.css` | Cloud card grids asked for three columns get them |
+| `max-width: 1100px` | `styles/cloud-shell.css` | between the rail breakpoint and here the top bar's search button gives up its minimum width |
+| `min-width: 769px` | `styles/boot.css` | the welcome page: benefits and steps sit three across |
+| `min-width: 901px` | `styles/boot.css` | the welcome page: the words and the blend drawing sit side by side |
 | `max-width: 760px` | `styles/tokens.css` | shell geometry: no rail offset, bottom bar and smaller header |
+| `max-width: 760px` | `styles/cloud-shell.css` | the Cloud top bar, tab bar and mini player on a phone (same number as `styles/shell.css`; scoped to the Cloud shell, so it wins there by specificity) |
+| `max-width: 760px` | `styles/cloud-ui.css` | Cloud page headers stack and their actions take the full width |
 | `max-width: 760px` | `styles/shell.css` | bottom bar, More drawer, context actions, overlays become sheets, keyboard yield |
 | `max-width: 760px` | `styles/creation.css` | editor actions grid, scope status |
 | `max-width: 760px` | `styles/listening.css` | Listen stacks transport before display options |
@@ -128,6 +141,7 @@ wins, and the row says which.
 | `max-width: 420px` | `styles/shell.css` | mini-player Request button tightens |
 | `max-width: 360px` | `styles/shell.css` | context-bar breadcrumb text shrinks at 320px so single-word page names remain intact (SF-0207-05) |
 | `max-height: 760px` | `styles/listening.css` | short Stage windows: visualiser and countdown give up height so the current lyric stays above the fold (MP-0285-01) |
+| `max-height: 450px` | `styles/cloud-shell.css` | very short windows: the Cloud rail's list fades above its account foot |
 | `max-height: 450px` | `styles/shell.css` | very short windows: context bar enters normal flow and phone navigation stops covering content |
 | `max-height: 520px` | `styles/shell.css` | short landscape: dialogs scroll inside, title and actions stay |
 | `max-height: 420px` | `styles/typography.css` | 400% zoom: the editor scope bar stops sticking |

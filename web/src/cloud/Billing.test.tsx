@@ -10,13 +10,15 @@ import { Meters } from './Meters';
 afterEach(() => { window.history.replaceState({}, '', '/'); vi.useRealTimers(); });
 
 const noop = () => {};
+/** A plan's card in the picker: the label around its radio, whose name starts with the plan's. */
+const planCard = (plan: string) => screen.getByRole('radio', { name: new RegExp(`^${plan}`) }).closest('label') as HTMLElement;
 
 describe('the meters', () => {
   it('show storage, analysis today, Lucy turns and exports, each with when it resets', () => {
     render(<Meters account={cloudAccount()} />);
     expect(screen.getByRole('region', { name: 'Storage' })).toHaveTextContent('4.2 GB of 10.0 GB');
-    expect(screen.getByRole('region', { name: 'Analysis today' })).toHaveTextContent('12 of 150 songs');
-    expect(screen.getByRole('region', { name: 'Analysis today' })).toHaveTextContent(/Resets .*Wed/);
+    expect(screen.getByRole('region', { name: 'Songs analysed today' })).toHaveTextContent('12 of 150 songs');
+    expect(screen.getByRole('region', { name: 'Songs analysed today' })).toHaveTextContent(/Resets .*Wed/);
     expect(screen.getByRole('region', { name: 'Lucy turns this month' })).toHaveTextContent('9 of 40 turns');
     expect(screen.getByRole('region', { name: 'Lucy turns this month' })).toHaveTextContent(/Resets (1 Dec|Dec 1)/);
     expect(screen.getByRole('region', { name: 'Exports this month' })).toHaveTextContent('1 of 3 exports');
@@ -46,7 +48,9 @@ describe('checkout consent', () => {
   it('keeps the plan buttons off until all three consents are ticked, then sends them', async () => {
     const onCheckout = vi.fn();
     render(<Billing account={cloudAccount()} busy={false} phase="idle" consentVersion="terms-2026-11" onCheckout={onCheckout} onPortal={noop} />);
-    const premium = screen.getByRole('button', { name: 'Choose Premium' });
+    // one button for the chosen plan (Premium to begin with), off until every consent is ticked
+    expect(screen.getByRole('radio', { name: /^Premium/ })).toBeChecked();
+    const premium = screen.getByRole('button', { name: 'Continue with Premium' });
     expect(premium).toBeDisabled();
     await userEvent.click(screen.getByLabelText('I agree to the subscription terms.'));
     await userEvent.click(screen.getByLabelText('I ask for access to start immediately.'));
@@ -81,8 +85,9 @@ describe('checkout consent', () => {
   it('sends a paid plan to the portal to upgrade, downgrade or cancel', async () => {
     const onPortal = vi.fn();
     render(<Billing account={cloudAccount({ plan: 'standard' })} busy={false} phase="idle" consentVersion="v" onCheckout={noop} onPortal={onPortal} />);
-    expect(screen.queryByRole('button', { name: /Choose/ })).toBeNull();
-    await userEvent.click(screen.getByRole('button', { name: 'Change plan or cancel' }));
+    expect(screen.queryByRole('button', { name: /^Continue with/ })).toBeNull();
+    expect(screen.queryByRole('radio')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Change plan' }));
     expect(onPortal).toHaveBeenCalled();
   });
 });
@@ -92,7 +97,7 @@ describe('coming back from Checkout', () => {
     render(<Billing account={cloudAccount()} busy={false} phase="confirming" consentVersion="v" onCheckout={noop} onPortal={noop} />);
     expect(screen.getByRole('status')).toHaveTextContent('Confirming your payment…');
     expect(screen.queryByText(/You’re on/)).toBeNull();
-    expect(screen.queryByRole('button', { name: /Choose/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Continue with/ })).toBeNull();
   });
 
   it('confirms only once the account answer shows the new plan', async () => {
@@ -214,13 +219,15 @@ describe('Plan & billing with a way to change plan switched off', () => {
     const free = { ...cloudAccount(), features: { 'billing.checkout': false } };
     const { unmount } = render(<Billing account={free} busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
     expect(screen.queryByText('Before subscribing')).toBeNull();
-    expect(screen.queryByRole('button', { name: /^Choose / })).toBeNull();
-    expect(screen.getByRole('heading', { name: 'Free' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Continue with/ })).toBeNull();
+    expect(screen.queryByRole('radio')).toBeNull();
+    expect(document.querySelector('.acct-plan-name')).toHaveTextContent('Free');
     unmount();
     const paid = { ...cloudAccount({ plan: 'premium' }), features: { 'billing.portal': false } };
     render(<Billing account={paid} busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
-    expect(screen.queryByRole('button', { name: 'Change plan or cancel' })).toBeNull();
-    expect(screen.queryByText(/Stripe portal/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Open billing portal' })).toBeNull();
+    expect(screen.queryByText(/Stripe billing portal/)).toBeNull();
   });
 
   it('never names Lucy or exports when they are off, nor rooms when a rule switched them off', () => {
@@ -236,8 +243,8 @@ describe('Plan & billing for a local-first account (BF-0464-03)', () => {
 
   it('sells Rooms, Lucy, devices and discovery with no storage headline, at the same prices', async () => {
     render(<Billing account={localFirst()} busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
-    const standard = screen.getByRole('region', { name: 'Standard' });
-    const premium = screen.getByRole('region', { name: 'Premium' });
+    const standard = planCard('Standard');
+    const premium = planCard('Premium');
     expect(standard).toHaveTextContent('£6.99 / month');
     expect(premium).toHaveTextContent('£12.99 / month');
     for (const card of [standard, premium]) {
@@ -256,12 +263,12 @@ describe('Plan & billing for a local-first account (BF-0464-03)', () => {
   it('keeps the hosted cards for a hosted account, and for one that holds both', () => {
     const both = { ...cloudAccount(), experience: { local_first: true, hosted: true } };
     render(<Billing account={both} busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
-    expect(screen.getByRole('region', { name: 'Standard' })).toHaveTextContent('50 GB');
+    expect(planCard('Standard')).toHaveTextContent('50 GB');
   });
 
   it('an explicit localFirst prop wins over the account read', () => {
     render(<Billing account={cloudAccount()} localFirst busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
-    expect(screen.getByRole('region', { name: 'Standard' })).not.toHaveTextContent('50 GB');
+    expect(planCard('Standard')).not.toHaveTextContent('50 GB');
   });
 
   it('never names Lucy or Rooms when they are off, and shows Rooms as a teaser when plan-locked', () => {
@@ -269,7 +276,7 @@ describe('Plan & billing for a local-first account (BF-0464-03)', () => {
     expect(document.body.textContent).not.toMatch(/Lucy|Rooms/);
     unmount();
     render(<Billing account={localFirst({ rooms: false }, { rooms: 'premium' })} busy={false} phase="idle" consentVersion="v1" onCheckout={noop} onPortal={noop} />);
-    expect(screen.getByRole('region', { name: 'Premium' })).toHaveTextContent('Rooms');
+    expect(planCard('Premium')).toHaveTextContent('Rooms');
   });
 
   it('does not tie a paid downgrade or a pause to library size', () => {

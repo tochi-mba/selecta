@@ -19,11 +19,14 @@ from sqlalchemy.engine import Engine
 from selecta.authz.roles import WorkspaceAction
 from selecta.identity.tokens import Claims
 from selecta.local_media import store
-from selecta.persistence import transaction
+from selecta.persistence import db_now, transaction
 from selecta.playback.schema import devices as playback_devices
 
 _MAX_PAGE_SIZE = 100
 _MAX_AVAILABILITY_SNAPSHOT_IDS = 20_000
+# ADR-0475: a device counts as online when it was seen this recently. A device with the app
+# open reads its playback session every second or two, which keeps its last-seen time fresh.
+ONLINE_WITHIN_SECONDS = 30.0
 
 
 class SongRegistration(BaseModel):
@@ -136,6 +139,50 @@ def install_routes(
                 raise HTTPException(status_code=404, detail={"code": "song_not_found"})
             deleted = store.soft_delete(conn, workspace_id, song_id)
         return {"id": song_id, "deleted": True, "already_deleted": not deleted}
+
+    @app.get("/api/local-media/holdings")
+    def holdings(
+        request: Request,
+        claims: Claims = Depends(current_claims),  # noqa: B008
+        device_id: str | None = Query(default=None, max_length=64),
+    ) -> dict[str, Any]:
+        """ADR-0475: what each signed-in device of this person can open, as counts, and for one
+        named device its catalogue ids. Ids only: no path, file name or folder name exists here.
+        A device is online when it was seen in the last 30 seconds."""
+        principal = principal_for(engine, claims, request.headers.get("x-workspace-id"))
+        if not principal.can(WorkspaceAction.LIBRARY_READ):
+            raise HTTPException(status_code=403, detail={"code": "not_allowed"})
+        workspace_id = principal.workspace.id
+        with transaction(engine, workspace_id) as conn:
+            now = db_now(conn)
+            mine = conn.execute(
+                sa.select(playback_devices)
+                .where(playback_devices.c.workspace_id == workspace_id)
+                .where(playback_devices.c.user_id == principal.user.id)
+                .where(playback_devices.c.signed_out_at.is_(None))
+                .order_by(playback_devices.c.last_seen_at.desc(), playback_devices.c.id)
+            ).mappings().all()
+            counts = store.holding_counts(conn, workspace_id)
+            answer: dict[str, Any] = {
+                "devices": [
+                    {
+                        "device_id": row["id"],
+                        "name": row["name"],
+                        "last_seen_at": row["last_seen_at"],
+                        "online": now - float(row["last_seen_at"]) <= ONLINE_WITHIN_SECONDS,
+                        "songs": counts.get(row["id"], {}).get("songs", 0),
+                        "reported_at": counts.get(row["id"], {}).get("reported_at"),
+                    }
+                    for row in mine
+                ],
+                "server_time": now,
+            }
+            if device_id is not None:
+                if not any(row["id"] == device_id for row in mine):
+                    raise HTTPException(status_code=404, detail={"code": "unknown_device"})
+                answer["device_id"] = device_id
+                answer["song_ids"] = store.device_holdings(conn, workspace_id, device_id)
+        return answer
 
     @app.post("/api/local-media/availability")
     def report_availability(

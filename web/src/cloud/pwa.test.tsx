@@ -46,6 +46,10 @@ afterEach(() => {
   clearImportSession();
 });
 
+/** The button that asks the browser to keep SelectaDJ's details, and the line that says what it will do. */
+const KEEP = 'Keep these details safe';
+const stateLine = () => document.querySelector('[data-persist]')?.textContent ?? '';
+
 describe('storage persistence (W5b)', () => {
   it('reads unsupported, not granted and granted from the browser', async () => {
     expect(await readPersistState(undefined)).toBe('unsupported');
@@ -62,12 +66,12 @@ describe('storage persistence (W5b)', () => {
   });
 
   it('only the granted copy says the browser keeps anything', () => {
-    expect(PERSIST_COPY.granted).toBe("This browser keeps SelectaDJ's details on this device; it will not clear them to make room.");
+    expect(PERSIST_COPY.granted).toBe('This browser keeps SelectaDJ’s details on this device; it will not clear them to make room.');
     for (const state of ['not_granted', 'refused', 'unsupported'] as const) {
       expect(PERSIST_COPY[state]).toMatch(/^The browser may clear them/);
       expect(PERSIST_COPY[state]).not.toMatch(/keeps SelectaDJ/);
     }
-    expect(PERSIST_COPY.not_granted).toMatch(/Installing SelectaDJ/);
+    expect(PERSIST_COPY.not_granted).toMatch(/Ask it to keep them, or install SelectaDJ; the browser decides./);
     expect(PERSIST_COPY.refused).toMatch(/decided not to keep them/);
     expect(MUSIC_NEVER_STORED).toMatch(/music files are never in browser storage/);
   });
@@ -76,29 +80,31 @@ describe('storage persistence (W5b)', () => {
     const storage = storageWith({ grants: false });
     const user = userEvent.setup();
     render(<StorageCard degraded={false} />);
-    const button = await screen.findByRole('button', { name: "Keep this device's details safe" });
-    expect(screen.getByText(/SelectaDJ is using 2.5 MB of the 100.0 MB/).textContent).toContain(PERSIST_COPY.not_granted);
+    const button = await screen.findByRole('button', { name: KEEP });
+    // how much is used is a meter; what the browser will do with it is the line under it
+    expect(screen.getByRole('meter', { name: 'Used by SelectaDJ' })).toHaveAttribute('aria-valuetext', '2.5 MB of 100.0 MB');
+    expect(stateLine()).toBe(PERSIST_COPY.not_granted);
     await user.click(button);
     expect(storage.persist).toHaveBeenCalledOnce();
     await waitFor(() => expect(document.querySelector('[data-persist]')?.getAttribute('data-persist')).toBe('refused'));
-    expect(screen.getByText(/SelectaDJ is using/).textContent).toContain(PERSIST_COPY.refused);
-    expect(screen.getByText(/SelectaDJ is using/).textContent).toContain(MUSIC_NEVER_STORED);
+    expect(stateLine()).toBe(PERSIST_COPY.refused);
+    expect(screen.getByText(new RegExp(MUSIC_NEVER_STORED.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))).toBeInTheDocument();
   });
 
   it('a grant changes the copy and the button goes away', async () => {
     storageWith({ grants: true });
     const user = userEvent.setup();
     render(<StorageCard degraded={false} />);
-    await user.click(await screen.findByRole('button', { name: "Keep this device's details safe" }));
-    await waitFor(() => expect(screen.getByText(/SelectaDJ is using/).textContent).toContain(PERSIST_COPY.granted));
-    expect(screen.queryByRole('button', { name: "Keep this device's details safe" })).toBeNull();
+    await user.click(await screen.findByRole('button', { name: KEEP }));
+    await waitFor(() => expect(stateLine()).toBe(PERSIST_COPY.granted));
+    expect(screen.queryByRole('button', { name: KEEP })).toBeNull();
   });
 
   it('no button where the browser cannot ask, and none with cloud.local_media off', async () => {
     storageWith({ persist: false });
     const { unmount } = render(<StorageCard degraded={false} />);
-    await screen.findByText(/SelectaDJ is using/);
-    expect(screen.getByText(/SelectaDJ is using/).textContent).toContain(PERSIST_COPY.unsupported);
+    await screen.findByRole('meter', { name: 'Used by SelectaDJ' });
+    expect(stateLine()).toBe(PERSIST_COPY.unsupported);
     expect(screen.queryByRole('button')).toBeNull();
     unmount();
     storageWith();
@@ -192,7 +198,7 @@ describe('install capture and standalone detection (W5b)', () => {
     const target = new EventTarget();
     captureInstallPrompt(target, browserEnv());
     render(<StorageCard degraded={false} />);
-    await screen.findByRole('button', { name: "Keep this device's details safe" });
+    await screen.findByRole('button', { name: KEEP });
     expect(screen.queryByRole('button', { name: 'Install SelectaDJ' })).toBeNull();
     act(() => { target.dispatchEvent(offer()); });
     expect(screen.getByRole('button', { name: 'Install SelectaDJ' })).toBeTruthy();

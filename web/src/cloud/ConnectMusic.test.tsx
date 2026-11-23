@@ -59,6 +59,9 @@ afterEach(async () => {
   media.items = []; media.folder = null; media.forgotten = []; media.remembered = [];
 });
 
+/** The count beside "Adding your music" while an import runs (the meter says the same in its own words). */
+const importCount = () => document.querySelector('.lw-import-count')?.textContent ?? null;
+
 describe('Connect Music', () => {
   it('folds importer events into one row per file, replacing in-progress stages', () => {
     let rows = applyImportEvent([], { kind: 'file', name: 'a.mp3', stage: 'hashing' });
@@ -81,23 +84,24 @@ describe('Connect Music', () => {
     await pick(['one.mp3', 'two.mp3']);
     await waitFor(() => expect(run.importer).toHaveBeenCalled());
     expect(run.options()?.request).toBeTypeOf('function');
-    expect(screen.getByText(/0 of … files checked so far/)).toBeVisible();
-    expect(screen.getByRole('progressbar', { name: 'Files checked' })).not.toHaveAttribute('value');
+    // before the files are counted there is no total to measure against
+    expect(importCount()).toBe('0 checked');
+    expect(screen.getByRole('progressbar', { name: 'Files checked' })).not.toHaveAttribute('aria-valuenow');
     act(() => {
       run.progress({ kind: 'collected', total: 2, skipped: 0 });
       run.progress({ kind: 'file', name: 'one.mp3', stage: 'hashing' });
       run.progress({ kind: 'file', name: 'one.mp3', stage: 'done', songId: 1 });
     });
-    expect(screen.getByText(/1 of 2 files checked so far/)).toBeVisible();
-    expect(screen.getByRole('progressbar', { name: 'Files checked' })).toHaveAttribute('value', '1');
-    expect(screen.getByRole('button', { name: 'Cancel' })).toBeVisible();
+    expect(importCount()).toBe('1 of 2 checked');
+    expect(screen.getByRole('progressbar', { name: 'Files checked' })).toHaveAttribute('aria-valuetext', '1 of 2 checked');
+    expect(screen.getByRole('button', { name: 'Stop' })).toBeVisible();
     // pickers stay hidden while an import runs
     expect(screen.queryByText('Choose songs')).toBeNull();
     act(() => run.progress({ kind: 'file', name: 'two.mp3', stage: 'failed', reason: 'This file is not audio SelectaDJ can read.' }));
-    expect(screen.getByText(/2 of 2 files checked so far/)).toBeVisible();
+    expect(importCount()).toBe('2 of 2 checked');
     await act(async () => run.finish(SUMMARY));
     expect(await screen.findByText('1 song connected, 1 could not be read.')).toBeVisible();
-    expect(screen.getByText(/1 file could not be connected/)).toBeVisible();
+    expect(screen.getByText('1 file could not be added')).toBeVisible();
     expect(screen.getByText(/This file is not audio SelectaDJ can read\./)).toBeVisible();
     // another folder or set of files can be added straight away
     expect(screen.getByText('Choose songs')).toBeVisible();
@@ -108,10 +112,10 @@ describe('Connect Music', () => {
     const run = controlledImport();
     mount(run.importer);
     await pick(['one.mp3']);
-    await userEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Stop' }));
     expect(run.options()?.signal?.aborted).toBe(true);
     expect(await screen.findByText(/^Stopped\./)).toBeVisible();
-    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Stop' })).toBeNull();
     expect(readImportMarker(WS)).toBeNull();
   });
 
@@ -143,12 +147,12 @@ describe('Connect Music', () => {
     const run = controlledImport();
     mount(run.importer);
     const note = await screen.findByRole('note');
-    expect(note).toHaveTextContent('An import of Crates was interrupted. Anything already checked is in your library.');
-    await userEvent.click(screen.getByRole('button', { name: 'Keep checking Crates' }));
+    expect(note).toHaveTextContent('Adding Crates was interrupted. Songs already added are in your library.');
+    await userEvent.click(screen.getByRole('button', { name: 'Carry on with Crates' }));
     expect(requestPermission).toHaveBeenCalledWith({ mode: 'read' });
     await waitFor(() => expect(run.importer).toHaveBeenCalled());
     expect(run.options()?.source).toBe(handle);
-    expect(await screen.findByText(/files checked so far/)).toBeVisible();
+    expect(await screen.findByRole('region', { name: 'Adding your music' })).toBeVisible();
   });
 
   it('with cloud.resilient_import off, asks for the folder again when the browser refuses it', async () => {
@@ -157,7 +161,7 @@ describe('Connect Music', () => {
     media.folder = { kind: 'directory', name: 'Crates', values: async function* () {}, requestPermission: async () => 'denied' } satisfies StoredFolderHandle;
     const run = controlledImport();
     mount(run.importer);
-    await userEvent.click(await screen.findByRole('button', { name: 'Keep checking Crates' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Carry on with Crates' }));
     expect(await screen.findByText('The browser did not allow it. Choose the folder again.')).toBeVisible();
     expect(run.importer).not.toHaveBeenCalled();
     expect(screen.getByText('Choose songs')).toBeVisible();
@@ -178,7 +182,7 @@ describe('Connect Music', () => {
     setAccountFeatures({ 'cloud.resilient_import': false });
     localStorage.setItem(importMarkerKey(WS), JSON.stringify({ version: 1, folder: null, startedAt: 1, total: 4, registered: 2 }));
     mount();
-    expect(await screen.findByRole('note')).toHaveTextContent('An import stopped part way last time. Anything already checked is in your library. Choose the same folder or files again and SelectaDJ will recognise them; nothing is duplicated.');
+    expect(await screen.findByRole('note')).toHaveTextContent('Adding your music stopped part way last time. Choose the same folder or songs again and SelectaDJ carries on; nothing is added twice.');
     expect(screen.getByText('Choose songs')).toBeVisible();
   });
 
@@ -203,11 +207,12 @@ describe('Connect Music', () => {
       run.progress({ kind: 'collected', total: 2, skipped: 0 });
       run.progress({ kind: 'checked', name: 'one.mp3', resumed: false });
     });
-    expect(screen.getByText('Checking your music: 1 of 2 checked.')).toBeVisible();
-    expect(screen.getByText('If this tab closes, the import carries on from 1 next time you open SelectaDJ.')).toBeVisible();
+    expect(screen.getByText('Adding your music')).toBeVisible();
+    expect(importCount()).toBe('1 of 2 checked');
+    expect(screen.getByText('Songs appear in your library as they are checked, so you can keep using SelectaDJ. If this tab closes, it carries on from 1 next time.')).toBeVisible();
     act(() => run.progress({ kind: 'waiting', wait: { why: 'offline', retryAt: null } }));
     expect(screen.getByRole('status')).toHaveTextContent('Offline. 1 of 2 checked. Carries on when you’re back online.');
-    expect(screen.getByRole('progressbar', { name: 'Files checked' })).toHaveAttribute('value', '1');
+    expect(screen.getByRole('progressbar', { name: 'Files checked' })).toHaveAttribute('aria-valuetext', '1 of 2 checked');
   });
 
   it('Cancel asks first, and only a confirmed stop clears the record (cloud.resilient_import)', async () => {
@@ -215,11 +220,11 @@ describe('Connect Music', () => {
     mount(run.importer);
     await pick(['one.mp3']);
     await waitFor(() => expect(run.importer).toHaveBeenCalled());
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Stop' }));
     await userEvent.click(screen.getByRole('button', { name: 'Keep importing' }));
     expect(run.options()?.signal?.aborted).toBe(false);
     expect(readImportMarker(WS)).not.toBeNull();
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Stop' }));
     await userEvent.click(screen.getByRole('button', { name: 'Stop the import' }));
     expect(run.options()?.signal?.aborted).toBe(true);
     expect(await screen.findByText(/^Stopped\./)).toBeVisible();

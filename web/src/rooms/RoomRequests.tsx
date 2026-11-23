@@ -185,11 +185,13 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
         run={() => settle(id, row.request, async () => { await mix.onDismiss(row.request); showToast(`${title} was dismissed.`); })}>Dismiss</Action>
     );
     // a song whose file is on another device: say so, and offer the way to bring it here
-    if (why) return { note: why, buttons: <>{why === row.request.browser_note && row.stage !== 'in_mix' && <button type="button" onClick={() => navigate('/library')}>Connect music</button>}{dismiss}</> };
+    // (with another device playing, connecting music here would not help: that device plays it)
+    if (why) return { note: why, buttons: <>{why === row.request.browser_note && row.stage !== 'in_mix' && !row.request.plays_on && <button type="button" onClick={() => navigate('/library')}>Connect music</button>}{dismiss}</> };
     const start = row.stage === 'no_mix';
     const label = start ? 'Start a mix with this song' : mix.live ? 'Add next' : 'Add to mix';
     return {
-      note: '',
+      // where it will make sound, when that is not this device (ADR-0475 R4)
+      note: row.request.where_note ?? '',
       buttons: <>
         <Action className="primary" aria-label={`${label}: ${title}`} working={start ? `Starting${ELLIPSIS}` : `Adding${ELLIPSIS}`}
           run={() => settle(id, row.request, () => (start ? mix.onStart(row.request) : mix.onAdd(row.request)))}>{label}</Action>

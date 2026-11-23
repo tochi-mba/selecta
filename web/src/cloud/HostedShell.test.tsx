@@ -80,7 +80,7 @@ describe('hosted Cloud on the shared shell', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Account' })).toBeInTheDocument();
     const signedIn = screen.getByRole('region', { name: 'Signed in as' });
     expect(signedIn).toHaveTextContent('listener@example.test');
-    for (const name of ['Sign out everywhere…', 'Delete account…']) expect(screen.getByRole('button', { name })).toBeInTheDocument();
+    for (const name of ['Sign out everywhere', 'Delete account']) expect(screen.getByRole('button', { name })).toBeInTheDocument();
   });
 
   it('opens Make a Mix as its own page and leaves a page switched off out of the navigation', async () => {

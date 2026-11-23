@@ -108,11 +108,13 @@ export function pageFor(pathname: string): Page {
 }
 
 const OFFLINE_SHELL = 'cloud.offline_shell';
-/** How long a page that is open waits out a missing token before "Sign in again" replaces it. */
-const OPEN_PAGE_PATIENCE_MS = 30_000;
-/** "Sign in again" asking by itself: the first wait, and the longest. */
-const HEAL_FIRST_MS = 3_000;
-const HEAL_MAX_MS = 30_000;
+/** The waits around a missing token, in one place so a test can shorten them (never changed at
+ * run time otherwise):
+ * - `waits`: the tries after the first miss, before "Sign in again" shows with no page open;
+ * - `patienceMs`: how long a page that is open waits out a miss before that screen replaces it,
+ *   asking again every `openRetryMs` once the first tries are spent;
+ * - `healFirstMs`, `healMaxMs`: "Sign in again" asking by itself, the first wait and the longest. */
+export const SIGN_IN_TIMING = { waits: [1500, 3000, 6000], patienceMs: 30_000, openRetryMs: 5_000, healFirstMs: 3_000, healMaxMs: 30_000 };
 const RENEWING_WORDS = 'Renewing your sign-in. Everything on this page is kept.';
 
 const PATHS: Record<Page, string> ={ home: '/', listen: '/listen', library: '/library', uploads: '/upload', billing: '/account/billing', settings: '/account' };
@@ -270,9 +272,9 @@ export function CloudApp() {
         //   page is only replaced once the miss has lasted 30 s, three times the longest the
         //   known harmless miss can last, or at once when AuthKit itself has said the session
         //   could not be renewed (onRefreshFailure, the only real sign-out).
-        const waits = [1500, 3000, 6000];
+        const waits = SIGN_IN_TIMING.waits;
         const open = settingUp.current || shownAccount.current !== null;
-        const lasted = Date.now() - missingSince.current >= OPEN_PAGE_PATIENCE_MS;
+        const lasted = Date.now() - missingSince.current >= SIGN_IN_TIMING.patienceMs;
         const spent = loginTries.current >= waits.length;
         if (sessionEnded() || (spent && (!open || lasted))) {
           console.warn('SelectaDJ: AuthKit reports a user but no token after retries; asking to sign in again.');
@@ -283,7 +285,7 @@ export function CloudApp() {
         }
         if (open && loginTries.current >= 1) setRenewing(true);
         window.clearTimeout(loginRetry.current);
-        loginRetry.current = window.setTimeout(() => void refreshLatest.current(), waits[loginTries.current] ?? 5000);
+        loginRetry.current = window.setTimeout(() => void refreshLatest.current(), waits[loginTries.current] ?? SIGN_IN_TIMING.openRetryMs);
         loginTries.current = Math.min(loginTries.current + 1, waits.length);
         return;
       }
@@ -330,12 +332,12 @@ export function CloudApp() {
   useEffect(() => {
     if (!signInAgain) return undefined;
     let timer = 0;
-    let wait = HEAL_FIRST_MS;
+    let wait = SIGN_IN_TIMING.healFirstMs;
     const ask = () => { void refreshLatest.current(); };
     const next = () => {
       timer = window.setTimeout(() => {
         ask();
-        wait = Math.min(Math.round(wait * 1.5), HEAL_MAX_MS);
+        wait = Math.min(Math.round(wait * 1.5), SIGN_IN_TIMING.healMaxMs);
         next();
       }, wait);
     };

@@ -35,6 +35,7 @@
   --radius-sm: 8px;         /* tokens.css --radius-sm */
   --radius-pill: 99px;      /* tokens.css --radius-pill */
   --radius-hair: 2px;       /* tokens.css --radius-hair */
+  --marker: 3px;            /* tokens.css --marker */
   --space-1: 4px;           /* tokens.css --space-1 */
   --space-2: 8px;           /* tokens.css --space-2 */
   --space-3: 12px;          /* tokens.css --space-3 */
@@ -130,7 +131,7 @@ h1:focus { outline: none; }
    largest thing on the page */
 .g-head { margin-bottom: var(--space-3); padding: 0 var(--space-1); }
 .g-topline { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: var(--control-height); }
-.g-head h1 { font-size: clamp(1.75rem, 9vw, 2.5rem); margin: var(--space-2) 0 0; }
+.g-head h1 { font-size: var(--text-2xl); margin: var(--space-2) 0 0; }
 .g-head p { margin: var(--space-1) 0 0; }
 .g-name { display: inline-flex; align-items: center; gap: var(--space-2); min-width: 0; max-width: 70%; padding: 0 var(--space-3); border-radius: var(--radius-pill); background: var(--surface-raised); border: 1px solid var(--line); color: var(--ink); font-size: var(--text-sm); font-weight: var(--weight-label); }
 .g-name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -143,7 +144,7 @@ h1:focus { outline: none; }
 .g-card { padding: var(--space-5) var(--space-4); margin: auto 0; text-align: center; }
 #guest > .g-card { margin-bottom: max(var(--space-5), 18vh); }
 .g-card .g-brandline { margin-bottom: var(--space-4); }
-.g-card h1 { font-size: clamp(1.75rem, 9vw, 2.4rem); }
+.g-card h1 { font-size: var(--text-2xl); }
 .g-lede { color: var(--soft); margin: 0 auto var(--space-4); max-width: 22rem; }
 .g-card .g-section { text-align: left; margin: var(--space-4) 0 0; background: var(--surface-base); }
 .g-big { width: 100%; min-height: 52px; margin-top: var(--space-3); font-size: var(--text-md); }
@@ -250,7 +251,7 @@ input:focus-visible { border-color: var(--focus); outline: none; box-shadow: 0 0
 .g-add-pill { display: inline-flex; align-items: center; gap: var(--space-1); min-height: 30px; padding: 0 var(--space-3); border-radius: var(--radius-pill); border: 1px solid var(--soft); font-size: var(--text-sm); font-weight: var(--weight-strong); transition: background-color var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease); }
 .g-add-pill .g-icon-check { display: none; }
 .g-add-hint { font-size: var(--text-xs); line-height: 1.15; color: var(--soft); white-space: nowrap; animation: g-settle var(--motion-reveal) var(--motion-ease) backwards; }
-.g-row[data-state="picked"] .g-pick { background: var(--tint); box-shadow: inset 3px 0 0 var(--selected); }
+.g-row[data-state="picked"] .g-pick { background: var(--tint); box-shadow: inset var(--marker) 0 0 var(--selected); }
 .g-row[data-state="picked"] .g-art-check { display: grid; animation: g-pop var(--motion-slow) var(--motion-ease); }
 .g-row[data-state="picked"] .g-add-pill { background: var(--primary-fill); color: var(--primary-ink); border-color: var(--primary-edge); animation: g-pop var(--motion-slow) var(--motion-ease); }
 .g-row[data-state="picked"] .g-add-hint { color: var(--ink); }

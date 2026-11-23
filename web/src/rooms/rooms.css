@@ -93,7 +93,8 @@
 .asks-head h3 { font-size: var(--text-md); }
 /* In the Requests drawer the list starts at the drawer's own padding: the drawer's title is the
    heading, so the hidden one takes no row and the first section heading adds no space above. */
-.overlay-body > .requests-browser > .requests-head { position: absolute; }
+/* (only while it holds nothing to read: with a waiting count it is a row of its own) */
+.overlay-body > .requests-browser > .requests-head:not(:has(.hint)) { position: absolute; }
 .overlay-body > .requests-browser .asks-head h3 { margin-block: 0; }
 .asks-head p { flex: 1 1 100%; color: var(--text-soft); font-size: var(--text-sm); }
 .asks-none { color: var(--text-soft); font-size: var(--text-sm); list-style: none; }
@@ -139,7 +140,7 @@
 .room-lede { font-size: var(--text-md); color: var(--text-soft); max-width: 34rem; }
 .room-start-card { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: var(--space-6); align-items: center; padding: var(--space-6); }
 .room-start-main { display: grid; gap: var(--space-4); min-width: 0; }
-.room-start-main h2 { font: var(--type-section); font-size: clamp(var(--text-xl), 3vw, var(--text-2xl)); }
+.room-start-main h2 { font: var(--type-section); font-size: var(--text-xl); }
 .room-start .room-open { max-width: 28rem; margin-top: var(--space-2); }
 .room-points { list-style: none; margin: 0; padding: var(--space-5); display: grid; gap: var(--space-5); border-radius: var(--radius); background: var(--surface-base); border: var(--separator) solid var(--edge-decorative); }
 .room-points li { display: flex; gap: var(--space-3); align-items: flex-start; }

@@ -433,6 +433,33 @@ def test_a_programme_is_identities_and_other_workspaces_songs_do_not_exist(
         _send(engine, phone, "set_programme", {"songs": [one], "song_index": 3}, key="range")
 
 
+def test_a_programme_change_can_keep_where_the_music_is(engine, laptop, phone):
+    """ADR-0475 R4: a song added from another device changes what is coming up, not the place
+    in the song that is playing."""
+    with transaction(engine, WORKSPACE) as conn:
+        one = _song(conn, WORKSPACE, "1", "One")
+        two = _song(conn, WORKSPACE, "2", "Two")
+        asked = _song(conn, WORKSPACE, "3", "Asked for")
+    _speaker(engine, laptop)
+    _send(engine, laptop, "set_programme", {"songs": [one, two], "song_index": 0}, key="mine")
+    _send(engine, phone, "seek", {"song_index": 0, "offset_ms": 42_000}, key="seek")
+    before = _current(engine)
+    sent = _send(
+        engine, phone, "set_programme",
+        {"songs": [one, asked, two], "song_index": 0, "keep_position": True}, key="add",
+    )
+    assert sent.status is CommandStatus.APPLIED
+    assert [ref.song_id for ref in sent.session.programme] == [one, asked, two]
+    assert sent.session.song_index == 0
+    assert sent.session.offset_ms == before.offset_ms == 42_000
+    assert sent.session.anchor_at == before.anchor_at
+    with pytest.raises(InvalidCommand):
+        _send(
+            engine, phone, "set_programme",
+            {"songs": [one], "keep_position": "yes"}, key="bad-keep",
+        )
+
+
 def test_unavailable_here_offers_what_the_speaker_holds(engine, laptop, phone):
     with transaction(engine, WORKSPACE) as conn:
         missing = _song(conn, WORKSPACE, "1", "Missing")

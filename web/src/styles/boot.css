@@ -160,7 +160,6 @@
 .gate-check:has(input:checked) { border-color: var(--edge-selected); background: var(--surface-selected); }
 .gate-check:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 .gate-check input { flex: none; inline-size: 18px; block-size: 18px; min-height: 0; margin: 0; padding: 0; accent-color: var(--selected); }
-.gate-check input:focus-visible { outline: none; }
 .gate-actions { display: flex; flex-wrap: wrap; gap: var(--space-snug); margin-top: var(--space-2); }
 .gate-button {
   min-height: 44px;

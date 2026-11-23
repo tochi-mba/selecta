@@ -233,6 +233,86 @@ def test_no_payload_with_a_path_in_it_is_accepted(party, local_media_on):
             )
 
 
+# -- ADR-0475 holdings: what each device can open, as other devices see it --------------------
+
+
+def test_holdings_say_what_each_of_my_devices_can_open_by_id_only(party, local_media_on):
+    flags.use("+cloud.local_media,+devices,+devices.remote_control")
+    made = _register(party, ALICE, [song(SHA_A, "One"), song(SHA_B, "Two"), song(SHA_C, "Three")])
+    one, two, three = (entry["song_id"] for entry in made)
+    laptop = party.register(ALICE, "Laptop")["device"]["id"]
+    phone = party.register(ALICE, "Phone")["device"]["id"]
+    for device, present in ((laptop, [one, two, three]), (phone, [two])):
+        sent = party.client.post(
+            "/api/local-media/availability",
+            headers=auth(ALICE),
+            json={"device_id": device, "present": present, "absent": [], "snapshot": True},
+        )
+        assert sent.status_code == 200, sent.text
+
+    answer = party.client.get("/api/local-media/holdings", headers=auth(ALICE))
+    assert answer.status_code == 200, answer.text
+    by_id = {entry["device_id"]: entry for entry in answer.json()["devices"]}
+    assert by_id[laptop]["songs"] == 3 and by_id[phone]["songs"] == 1
+    assert by_id[laptop]["name"] == "Laptop" and by_id[laptop]["online"] is True
+    assert "song_ids" not in answer.json()
+    # nothing but ids, counts, names and times: no path or file name exists to leak
+    assert set(by_id[laptop]) == {
+        "device_id", "name", "last_seen_at", "online", "songs", "reported_at",
+    }
+
+    one_device = party.client.get(
+        f"/api/local-media/holdings?device_id={phone}", headers=auth(ALICE)
+    ).json()
+    assert one_device["song_ids"] == [two]
+    # the phone lets go of its file: its holding goes, the laptop's stays
+    party.client.post(
+        "/api/local-media/availability",
+        headers=auth(ALICE),
+        json={"device_id": phone, "present": [], "absent": [], "snapshot": True},
+    )
+    after = party.client.get(
+        f"/api/local-media/holdings?device_id={phone}", headers=auth(ALICE)
+    ).json()
+    assert after["song_ids"] == []
+    assert {entry["device_id"]: entry["songs"] for entry in after["devices"]}[laptop] == 3
+    # a song removed from the account takes its holdings with it
+    removed = party.client.delete(f"/api/local-media/songs/{one}", headers=auth(ALICE))
+    assert removed.status_code == 200
+    laptop_now = party.client.get(
+        f"/api/local-media/holdings?device_id={laptop}", headers=auth(ALICE)
+    ).json()
+    assert laptop_now["song_ids"] == [two, three]
+
+
+def test_holdings_are_only_my_own_devices_and_a_stale_device_is_not_online(party, local_media_on):
+    flags.use("+cloud.local_media,+devices,+devices.remote_control")
+    laptop = party.register(ALICE, "Laptop")["device"]["id"]
+    theirs = party.register(BOB, "Bob phone")["device"]["id"]
+    mine = party.client.get("/api/local-media/holdings", headers=auth(ALICE)).json()["devices"]
+    assert [entry["device_id"] for entry in mine] == [laptop]
+    refused = party.client.get(
+        f"/api/local-media/holdings?device_id={theirs}", headers=auth(ALICE)
+    )
+    assert refused.status_code == 404
+    # not seen for a minute: listed, with its name, and not online
+    from selecta.playback.schema import devices as playback_devices
+
+    with transaction(party.engine, party.workspaces[ALICE]) as conn:
+        conn.execute(
+            playback_devices.update()
+            .where(playback_devices.c.id == laptop)
+            .values(last_seen_at=playback_devices.c.last_seen_at - 60)
+        )
+    [stale] = party.client.get("/api/local-media/holdings", headers=auth(ALICE)).json()["devices"]
+    assert stale["online"] is False and stale["name"] == "Laptop"
+    # reading its own playback session is how a device with the app open stays online
+    seen = party.client.get(f"/api/playback/session?device_id={laptop}", headers=auth(ALICE))
+    assert seen.status_code == 200, seen.text
+    [fresh] = party.client.get("/api/local-media/holdings", headers=auth(ALICE)).json()["devices"]
+    assert fresh["online"] is True
+
+
 # -- availability and Rooms requestability -----------------------------------------------------
 
 
