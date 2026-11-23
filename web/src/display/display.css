@@ -1,4 +1,6 @@
-/* The big screen: readable from across a room, high contrast, no motion.
+/* The big screen: readable from across a room, high contrast, and still. The only motion is a line
+   arriving when it is new (the next song, a new request) and a very slow drift of the whole picture,
+   a few pixels over minutes, so a TV left on all night never holds one bright shape in one place.
    It loads without tokens.css (its own small entry, rooms.vite.ts), so it keeps a small token block.
    Every colour below is copied from the tokens.css token of the same name; change tokens.css first,
    then this block to match. Sizes are in em of a body size fitted to the screen, the big-screen
@@ -15,32 +17,50 @@
   --weight-heading: 800;    /* tokens.css --weight-heading */
   --radius: 10px;           /* tokens.css --radius */
   --radius-sm: 8px;         /* tokens.css --radius-sm */
+  --motion-slow: 240ms;     /* tokens.css --motion-slow */
+  --motion-ease: cubic-bezier(0.2, 0.7, 0.2, 1); /* tokens.css --motion-ease */
   /* the roles this page paints with, as tokens.css names them */
   --surface-base: var(--bg);
   --focus: var(--accent);
   --selected: var(--accent);
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--surface-base); color: var(--ink); font: clamp(1rem, 2vw, 1.75rem)/1.35 var(--body); }
-main { min-height: 100vh; display: grid; place-items: center; padding: 4vmin; }
-h1 { font-size: 2.2em; margin: 0 0 0.3em; overflow-wrap: anywhere; }
-h2 { font-size: 1em; color: var(--soft); margin: 1em 0 0.3em; letter-spacing: 0.04em; }
+body { margin: 0; background: var(--surface-base); color: var(--ink); font: clamp(1rem, min(2.1vw, 3.2vh), 3.5rem)/1.35 var(--body); overflow: hidden; }
+main { min-height: 100vh; display: grid; place-items: center; padding: 5vmin; }
+h1 { font-size: 2.4em; line-height: 1.05; font-weight: var(--weight-heading); margin: 0 0 0.4em; overflow-wrap: anywhere; }
+h2 { font-size: 0.8em; color: var(--soft); margin: 1.4em 0 0.3em; letter-spacing: 0.14em; text-transform: uppercase; font-weight: var(--weight-strong); }
+p { margin: 0.4em 0; }
 /* small capitals over the code: a frame of lime, the words in ink, never lime as text */
 .d-eyebrow { text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink); font-weight: var(--weight-strong); margin: 0 0 0.6em; }
 .d-muted { color: var(--soft); }
-.d-pair { text-align: center; max-width: 40em; }
-.d-code { font-size: 4.5em; font-weight: var(--weight-heading); letter-spacing: 0.12em; margin: 0.2em 0; font-variant-numeric: tabular-nums; }
-.d-room { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 5vmin; align-items: center; }
-.d-qr { background: var(--scan-white); padding: 2vmin; border-radius: var(--radius); width: min(42vmin, 100%); }
+.d-waiting { color: var(--soft); font-size: 1.2em; }
+.d-lede { font-size: 1.1em; }
+.d-pair { text-align: center; max-width: 34em; animation: d-drift 300s ease-in-out infinite alternate; }
+.d-code { font-size: 5em; line-height: 1.1; font-weight: var(--weight-heading); letter-spacing: 0.12em; margin: 0.2em 0; font-variant-numeric: tabular-nums; }
+.d-room { width: 100%; max-width: 68em; display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr); gap: 6vmin; align-items: center; animation: d-drift 300s ease-in-out infinite alternate; }
+.d-left { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.d-left .d-eyebrow { font-size: 1.15em; }
+.d-qr { background: var(--scan-white); padding: 2vmin; border-radius: var(--radius); width: min(46vmin, 100%); }
 .d-qr svg { display: block; width: 100%; height: auto; }
-.d-join { color: var(--soft); }
-.d-join strong { color: var(--ink); letter-spacing: 0.08em; }
-.d-now { font-size: 1.5em; font-weight: var(--weight-strong); overflow-wrap: anywhere; }
-.d-list { margin: 0; padding-left: 1.2em; }
-.d-list li { margin: 0.2em 0; overflow-wrap: anywhere; }
-.d-banner { border: 2px solid var(--selected); border-radius: var(--radius-sm); padding: 0.3em 0.6em; display: inline-block; }
-.d-disconnect { margin-top: 1.5em; font: inherit; font-size: 0.7em; color: var(--soft); background: transparent; border: 1px solid var(--soft); border-radius: var(--radius-sm); padding: 0.4em 0.9em; cursor: pointer; }
-.d-disconnect:hover, .d-disconnect:focus-visible { color: var(--ink); border-color: var(--ink); }
+/* the room code, large enough to read from the back of the room, with the address under it */
+.d-join { display: flex; flex-direction: column; align-items: center; margin: 0.8em 0 0; }
+.d-label { font-size: 0.7em; letter-spacing: 0.14em; text-transform: uppercase; color: var(--soft); font-weight: var(--weight-strong); }
+.d-roomcode { font-size: 2.2em; line-height: 1.15; font-weight: var(--weight-heading); letter-spacing: 0.1em; font-variant-numeric: tabular-nums; color: var(--ink); }
+.d-url { font-size: 0.75em; color: var(--soft); overflow-wrap: anywhere; }
+.d-right { min-width: 0; }
+.d-now { font-size: 2em; line-height: 1.15; font-weight: var(--weight-heading); overflow-wrap: anywhere; margin: 0; animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
+.d-by { display: block; font-size: 0.6em; font-weight: var(--weight-strong); color: var(--soft); margin-top: 0.2em; }
+.d-list { margin: 0; padding-left: 1.4em; font-size: 1.1em; }
+.d-list li { margin: 0.25em 0; overflow-wrap: anywhere; animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
+.d-list li::marker { color: var(--soft); font-variant-numeric: tabular-nums; }
+.d-banner { border: 2px solid var(--selected); border-radius: var(--radius-sm); padding: 0.3em 0.7em; display: inline-block; margin: 0; }
+.d-disconnect { margin-top: 1.6em; font: inherit; font-size: 0.6em; color: var(--soft); background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm); padding: 0.5em 1em; min-height: 44px; cursor: pointer; opacity: 0.7; }
+.d-disconnect:hover, .d-disconnect:focus-visible { color: var(--ink); border-color: var(--ink); opacity: 1; }
 .d-disconnect:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
-.d-reconnecting { position: fixed; top: 2vmin; right: 2vmin; margin: 0; padding: 0.3em 0.8em; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--surface-base) 85%, transparent); border: 1px solid var(--soft); color: var(--soft); font-size: 0.8em; }
-@media (max-width: 640px) { .d-room { grid-template-columns: 1fr; } }
+.d-disconnect[aria-busy] { cursor: progress; }
+.d-reconnecting { position: fixed; top: 3vmin; right: 3vmin; margin: 0; padding: 0.4em 0.9em; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--surface-base) 85%, transparent); border: 1px solid var(--soft); color: var(--ink); font-size: 0.8em; animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
+/* a tall or narrow screen (a portrait TV, a tablet on a stand): the code on top, the room under it */
+@media (max-width: 900px), (orientation: portrait) { .d-room { grid-template-columns: 1fr; gap: 4vmin; } .d-right { text-align: center; } .d-list { list-style-position: inside; padding-left: 0; } .d-qr { width: min(38vmin, 100%); } body { overflow: auto; } }
+@keyframes d-arrive { from { opacity: 0; transform: translateY(0.4em); } }
+@keyframes d-drift { from { transform: translate(-0.8vmin, -0.6vmin); } to { transform: translate(0.8vmin, 0.6vmin); } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; } }

@@ -7,7 +7,7 @@
 // used on the header band and the main button only when the server says it passes 4.5:1 in
 // both themes. The guest token lives in an HttpOnly cookie the page can't read.
 
-import { ApiError, call, h, replace } from '../rooms/dom';
+import { ApiError, call, h, patch, replace } from '../rooms/dom';
 
 type Branding = { venue_name: string; zone_name: string; footer: string; logo_url: string | null; welcome: string | null; accent: string | null; accent_ink: string | null };
 type Asked = { request_id: string; title: string; artist: string; votes: number; mine: boolean };
@@ -34,6 +34,11 @@ export function startVenue(root: HTMLElement, code: string): void {
   let query = '';
   let notice = '';
   let screenCode = '';
+  let wait = 0;
+  let searching = false;
+  // taps being answered ("ask:12", "vote:r1"): that button shows it is working and ignores a second tap
+  const busy = new Set<string>();
+  const working = (on: boolean): Record<string, string> => (on ? { 'aria-busy': 'true', 'aria-disabled': 'true' } : {});
 
   const card = (...children: (Node | string | null)[]) => replace(root, h('section', { className: 'g-card' }, ...children));
   const fail = (error: unknown) => {
@@ -55,7 +60,10 @@ export function startVenue(root: HTMLElement, code: string): void {
   }
 
   async function join(button: HTMLButtonElement): Promise<void> {
-    button.disabled = true;
+    if (button.getAttribute('aria-busy')) return;
+    button.setAttribute('aria-busy', 'true');
+    button.setAttribute('aria-disabled', 'true');
+    button.textContent = 'Joining...';
     try {
       await call(`${base}/join`, { method: 'POST' });
       await refresh();
@@ -76,70 +84,99 @@ export function startVenue(root: HTMLElement, code: string): void {
     timer = window.setTimeout(() => { if (document.visibilityState === 'visible') void refresh(); }, POLL_MS);
   }
 
-  async function search(text: string): Promise<void> {
+  // typing waits a moment before asking, and the list shows the outline of rows meanwhile
+  function typed(text: string): void {
     query = text;
-    if (!text.trim()) { found = []; draw(); return; }
+    window.clearTimeout(wait);
+    if (!text.trim()) { found = []; searching = false; draw(); return; }
+    searching = true;
+    draw();
+    wait = window.setTimeout(() => void search(text), 250);
+  }
+
+  async function search(text: string): Promise<void> {
     try {
       const answer = await call<{ songs: Found[] }>(`${base}/search?q=${encodeURIComponent(text.slice(0, 100))}`);
-      if (query === text) { found = answer.songs; draw(); }
-    } catch (error) { if (!fail(error)) draw(); }
+      if (query === text) { found = answer.songs; searching = false; draw(); }
+    } catch (error) { if (query === text) { searching = false; if (!fail(error)) draw(); } }
   }
 
   async function ask(song: Found): Promise<void> {
+    const key = `ask:${song.song_id}`;
+    if (busy.has(key)) return;
+    busy.add(key);
+    draw();
     try {
       const body = JSON.stringify({ song_id: song.song_id, screen_code: screenCode || null });
       const answer = await call<{ became_vote: boolean }>(`${base}/requests`, { method: 'POST', body });
       notice = answer.became_vote ? `Someone already asked for ${song.title}. Your vote is in.` : `Asked for ${song.title}.`;
       found = [];
       query = '';
+      busy.delete(key);
+      const box = root.querySelector<HTMLInputElement>('input[type=search]');
+      if (box) box.value = '';
       await refresh();
-    } catch (error) { if (!fail(error)) draw(); }
+    } catch (error) { busy.delete(key); if (!fail(error)) draw(); }
   }
 
   async function vote(item: Asked): Promise<void> {
+    const key = `vote:${item.request_id}`;
+    if (busy.has(key)) return;
+    busy.add(key);
+    draw();
     try {
       await call(`${base}/requests/${encodeURIComponent(item.request_id)}/vote`, { method: 'POST' });
+      busy.delete(key);
       await refresh();
-    } catch (error) { if (!fail(error)) draw(); }
+    } catch (error) { busy.delete(key); if (!fail(error)) draw(); }
   }
 
   function draw(): void {
     if (!state) return;
     const brand = state.branding;
-    const band = h('header', { className: 'g-banner', style: accentStyle(brand) },
-      brand.logo_url ? h('img', { src: brand.logo_url, alt: '', className: 'g-logo', width: 40, height: 40 }) : null,
+    const band = h('header', { className: 'g-brand', 'data-key': 'brand', style: accentStyle(brand) },
+      brand.logo_url ? h('img', { src: brand.logo_url, alt: '', className: 'g-logo', width: 48, height: 48 }) : null,
       h('p', { className: 'g-eyebrow' }, brand.venue_name),
       h('h1', {}, brand.zone_name));
     const parts: (Node | null)[] = [band];
-    if (brand.welcome) parts.push(h('p', {}, brand.welcome));
-    parts.push(h('p', { className: 'g-status' }, state.text));
-    if (state.now_playing) parts.push(h('p', { className: 'g-now' }, `Now: ${state.now_playing.title} by ${state.now_playing.artist}`));
+    if (brand.welcome) parts.push(h('p', { 'data-key': 'welcome' }, brand.welcome));
+    parts.push(h('p', { className: 'g-status', 'data-key': 'state' }, state.text));
+    if (state.now_playing) parts.push(h('p', { className: 'g-now', 'data-key': 'now' }, `Now: ${state.now_playing.title} by ${state.now_playing.artist}`));
     if (state.can_request) {
       if (state.needs_screen_code) {
-        parts.push(h('label', {}, 'Code on the screen', h('input', { value: screenCode, inputMode: 'text', maxLength: 8, autocomplete: 'off', oninput: (event: Event) => { screenCode = (event.target as HTMLInputElement).value.toUpperCase(); } })));
+        parts.push(h('label', { className: 'g-field', 'data-key': 'code' }, 'Code on the screen', h('input', { value: screenCode, inputmode: 'text', maxlength: 8, autocomplete: 'off', autocapitalize: 'characters', oninput: (event: Event) => { screenCode = (event.target as HTMLInputElement).value.toUpperCase(); } })));
       }
-      const input = h('input', { type: 'search', value: query, placeholder: 'Search songs', 'aria-label': 'Search songs', oninput: (event: Event) => void search((event.target as HTMLInputElement).value) });
-      parts.push(input);
+      parts.push(h('div', { className: 'g-search-box', 'data-key': 'search' },
+        h('input', { type: 'search', placeholder: 'Search songs', 'aria-label': 'Search songs', autocomplete: 'off', enterkeyhint: 'search', oninput: (event: Event) => typed((event.target as HTMLInputElement).value) })));
       if (found.length) {
-        parts.push(h('ul', { className: 'g-list' }, ...found.map((song) => h('li', { className: 'g-song' },
-          h('span', {}, `${song.title} by ${song.artist}`),
-          h('button', { type: 'button', className: 'g-primary', style: accentStyle(brand), onclick: () => void ask(song) }, 'Ask')))));
-      } else if (query.trim()) parts.push(h('p', { className: 'g-muted' }, 'Nothing here matches. Try another search.'));
+        parts.push(h('ul', { className: 'g-list', 'data-key': 'found', 'aria-busy': searching ? 'true' : undefined }, ...found.map((song) => {
+          const asking = busy.has(`ask:${song.song_id}`);
+          return h('li', { 'data-key': `found-${song.song_id}` },
+            h('span', { className: 'g-song' }, `${song.title} by ${song.artist}`),
+            h('button', { type: 'button', className: 'g-primary g-small-button', style: accentStyle(brand), ...working(asking), 'aria-label': `Ask for ${song.title} by ${song.artist}`, onclick: () => void ask(song) }, asking ? 'Asking...' : 'Ask'));
+        })));
+      } else if (searching) {
+        parts.push(h('ul', { className: 'g-list', 'data-key': 'outline', 'aria-hidden': 'true' }, ...[0, 1, 2].map((index) => h('li', { className: 'g-skel', 'data-key': `skel-${index}` }, h('span', { className: 'g-song' }, h('i'), h('i')), h('i')))));
+      } else if (query.trim()) parts.push(h('p', { className: 'g-muted', 'data-key': 'none' }, `Nothing here matches "${query.trim()}". Try another search.`));
     }
     if (state.coming_up.length) {
-      parts.push(h('h2', {}, 'Coming up'), h('ul', { className: 'g-list' }, ...state.coming_up.map((item) => h('li', { className: 'g-song' },
-        h('span', {}, `${item.title} by ${item.artist}`),
-        item.mine ? h('span', { className: 'g-muted' }, 'Yours') : h('button', { type: 'button', className: 'g-vote', onclick: () => void vote(item) }, `Vote (${item.votes})`)))));
+      parts.push(h('h2', { 'data-key': 'coming-title' }, 'Coming up'), h('ul', { className: 'g-list', 'data-key': 'coming' }, ...state.coming_up.map((item) => h('li', { 'data-key': item.request_id },
+        h('span', { className: 'g-song' }, `${item.title} by ${item.artist}`),
+        item.mine ? h('span', { className: 'g-muted' }, 'Yours') : h('button', { type: 'button', className: 'g-vote', ...working(busy.has(`vote:${item.request_id}`)), 'aria-label': `Vote for ${item.title} by ${item.artist}, ${item.votes} so far`, onclick: () => void vote(item) }, String(item.votes))))));
     }
     if (state.my_requests.length) {
-      parts.push(h('h2', {}, 'Your requests'), h('ul', { className: 'g-list' }, ...state.my_requests.map((item) => h('li', { className: 'g-song' },
-        h('span', {}, `${item.title} by ${item.artist}`), h('span', { className: 'g-status' }, item.text)))));
+      parts.push(h('h2', { 'data-key': 'mine-title' }, 'Your requests'), h('ul', { className: 'g-list', 'data-key': 'mine' }, ...state.my_requests.map((item) => h('li', { 'data-key': item.request_id },
+        h('span', { className: 'g-song' }, `${item.title} by ${item.artist}`),
+        h('p', { className: `g-status g-${item.status}` }, item.text)))));
     }
-    parts.push(h('p', { className: 'g-notice', role: 'status' }, notice));
-    parts.push(h('footer', { className: 'g-small g-muted' }, `You're ${state.nickname}. ${brand.footer}`));
-    replace(root, h('section', { className: 'g-card' }, ...parts));
-    const box = root.querySelector('input[type=search]') as HTMLInputElement | null;
-    if (box && query) { box.focus(); box.setSelectionRange(query.length, query.length); }
+    parts.push(h('footer', { className: 'g-small g-muted', 'data-key': 'footer' }, `You're ${state.nickname}. ${brand.footer}`));
+    // what just happened floats over the bottom of the page, so it never pushes the page down
+    parts.push(h('div', { className: 'g-dock', 'data-key': 'dock', 'data-open': notice ? true : undefined },
+      h('div', { className: 'g-toast', onclick: () => { notice = ''; draw(); } }, h('p', { className: 'g-notice', role: 'status' }, notice))));
+    // patched in place (keyed), so a poll never takes focus or typing from the guest
+    let card = root.querySelector(':scope > .g-venue');
+    if (!card) { card = h('section', { className: 'g-card g-venue' }); replace(root, card); }
+    patch(card, ...parts);
   }
 
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && state) void refresh(); });
