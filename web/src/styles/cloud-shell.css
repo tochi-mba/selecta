@@ -461,6 +461,8 @@
      The counts not shown are still read out. */
   .shell[data-mode='cloud'] .context-status .room-open-line:has(> .room-open-waiting) > span:not(.room-open-waiting),
   .shell[data-mode='cloud'] .context-status .room-open-line > .room-open-waiting ~ .room-open-waiting { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  /* the theme choices are pressed with a finger here */
+  .shell[data-mode='cloud'] .theme-menu .menu-list button { min-height: var(--control-height); }
   /* a touch phone has no keyboard to list shortcuts for; Search and commands still opens the list */
   .shell[data-mode='cloud'] .context-actions .context-help { display: none; }
 }

@@ -48,7 +48,7 @@ what is playing. Each row names the CSS that makes it so.
 | Stage + notices | notices hide visually | the Stage and its own controls | `:root[data-keyboard='open'] .toasts, :root[data-stage='on'] .toasts {` |
 | Stage + shell frame | rail, header, tab bar and mini-player reservations drop to zero | Stage controls, inside the safe area | `:root[data-stage='on'] { --rail-offset: 0px; --nav-bottom: 0px; --player-height: 0px; --header-height: 0px; }` |
 | Dialog + notices | a notice sits under the dialog's scrim (sheet < dialog) | the dialog's consent and destructive actions are never covered | `.toasts` on `--layer-sheet`, `.overlay` on `--layer-dialog` |
-| Dialog in short landscape | the dialog panel caps at the viewport and scrolls its body | title and actions | `.overlay-dialog .overlay-panel { max-height: calc(100dvh - 2 * var(--space-2)); }` |
+| Dialog in short landscape | the dialog panel caps at the viewport and scrolls its body | title and actions | `.overlay-dialog .overlay-panel { max-height: calc(100dvh - 2 * var(--space-4)); }` |
 | Menu or popover + player | menus open above the player and tab bar (sheet > player > nav) | the menu's items | `.menu-list` and `.popover-panel` on `--layer-sheet` |
 
 Hiding the mini-player or the notices is visual only: no layer in this table pauses, seeks, resumes or
