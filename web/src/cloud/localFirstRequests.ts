@@ -1,7 +1,7 @@
 import { ApiError, type MixData, type Request } from '../api';
 import type { RequestRow } from '../views/Requests';
 import type { PlayableSong } from './localFirstMixes';
-import { askerOf } from '../rooms/useRoomSession';
+import { askerOf, openRoomId } from '../rooms/useRoomSession';
 
 /** The requests route family of the local-first adapter (ADR-0462 "one adapter per route family"):
  * `/requests`, `/requests/consider`, `/requests/insert` and `/requests/{id}/add` as the shared
@@ -123,7 +123,11 @@ export function requestsFamily({ cloud, workspaceId, songs, send }: {
 
   /** Every waiting request, this browser's own first, then the room's in the order they came. */
   const rows = async (): Promise<{ rows: RequestRow[]; saved: Saved; room: RoomRequest[] }> => {
-    const [all, room] = await Promise.all([knownSongs(), roomRequests()]);
+    const [all, handed] = await Promise.all([knownSongs(), roomRequests()]);
+    // a room that has closed takes its unplayed requests with it: the server lists open rooms
+    // only, and once this browser knows which room is open (or that none is) it holds to that
+    const openNow = openRoomId();
+    const room = openNow === undefined ? handed : handed.filter((asked) => asked.room_id === openNow);
     const saved = load(workspaceId);
     // a room request gets a number of its own here, kept so its row keeps its place on screen
     const kept: Record<string, number> = {};

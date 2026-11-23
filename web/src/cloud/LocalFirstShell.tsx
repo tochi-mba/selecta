@@ -505,6 +505,9 @@ export function LocalFirstShell({ api, account, more, notices, feedback, offline
   }, [api, workspaceId, request, setMixData, roomsPlace, requestsOn]);
   const room = useRoomSession({ api, workspaceId, enabled: roomsOn, onAsked });
   const roomWaiting = room ? room.toApprove : 0;
+  // a room that opened or closed changes which requests wait: a closed room's leave the list and the count
+  const openRoomNow = room?.id;
+  useEffect(() => { if (requestsOn) void refreshRoomRequests.current?.(); }, [openRoomNow, requestsOn]);
   const shared: ViewProps | null = status && {
     status, mix: data.mix, mixName: data.name, currentMixName: data.name, canUndo: data.can_undo, mixEta: data.eta,
     refreshMix, setMixData, refreshStatus, request, player: shellPlayer, now, readyNeeded: BROWSER_MIX_NEEDS,

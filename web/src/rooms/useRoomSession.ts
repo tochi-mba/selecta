@@ -54,6 +54,14 @@ export type RoomSession = {
 export type AskKind = 'approve' | 'add';
 
 const askers = new Map<string, string>();
+// the open room's id as last read: null when no room is open, undefined before the first read
+let openRoom: string | null | undefined;
+
+/** The id of the room that is open now, null when none is, undefined while that isn't known
+ * (no read yet, or Rooms is off). The Requests drawer drops a closed room's requests by it. */
+export function openRoomId(): string | null | undefined {
+  return openRoom;
+}
 
 const OPEN_MS = 8_000;
 const IDLE_MS = 60_000;
@@ -71,7 +79,7 @@ export function useRoomSession({ api, workspaceId, enabled, onAsked }: {
   told.current = onAsked;
 
   useEffect(() => {
-    if (!enabled) { setSession(null); return undefined; }
+    if (!enabled) { openRoom = undefined; setSession(null); return undefined; }
     let live = true;
     let timer = 0;
     let reading = false;
@@ -93,10 +101,12 @@ export function useRoomSession({ api, workspaceId, enabled, onAsked }: {
         if (!panel) {
           seen = { room: '', approve: new Set(), add: new Set() };
           open = false;
+          openRoom = null;
           askers.clear();
           setSession(null);
         } else {
           open = true;
+          openRoom = panel.room.id;
           askers.clear();
           for (const ask of [...panel.inbox, ...panel.coming_up]) if (ask.nickname) askers.set(ask.request_id, ask.nickname);
           const first = seen === null || seen.room !== panel.room.id;

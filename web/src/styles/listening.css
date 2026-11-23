@@ -342,8 +342,9 @@
 .request-preview button { min-height: var(--control-height); }
 .request-name b, .request-name span { white-space: normal; overflow-wrap: anywhere; unicode-bidi: plaintext; }
 /* Cloud in the browser (BrowserRequests): song and who asked on the left, Add next and Dismiss on the right, wrapping under on a phone */
-.browser-request { grid-template-columns: minmax(0, 1fr) auto; }
-.browser-request .request-name { display: grid; gap: var(--space-hair); }
+.browser-request { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-snug); }
+.browser-request .request-name { display: grid; gap: var(--space-hair); flex: 1 1 11rem; min-width: 0; }
+.browser-request .request-detail { flex: 1 1 100%; margin: 0; }
 .browser-request .request-who { color: var(--text-soft); font-size: var(--text-sm); }
 .browser-request-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: flex-end; }
 .browser-request-actions button { min-height: var(--control-height); }

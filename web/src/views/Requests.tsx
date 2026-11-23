@@ -895,7 +895,7 @@ export function RequestsPanel() {
       )}
       {!!requests?.length && !browser && <p className="hint">Requested means saved, not scheduled. Only a placed song is in your current mix. Waiting requests have no reliable play-time estimate or guaranteed queue order.<TermHint term="request" /></p>}
       {!!requests?.length && browser && (
-        <BrowserRequests rows={(requests ?? []).map((request) => ({ request, stage: stageOf(request, playback) }))} live={playingNow(playback)} onAdd={addAnyway} onDismiss={(request) => { void cancel(request); box.current?.focus(); }} />
+        <BrowserRequests rows={(requests ?? []).map((request) => ({ request, stage: stageOf(request, playback) }))} live={playingNow(playback)} playback={playback} send={state.request ?? provided} refresh={state.refresh} onAdd={addAnyway} onDismiss={(request) => { void cancel(request); box.current?.focus(); }} />
       )}
       {!!requests?.length && !browser && (
         <ul className="request-list" aria-label="Your requests">

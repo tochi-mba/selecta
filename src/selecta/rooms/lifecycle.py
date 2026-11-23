@@ -246,9 +246,13 @@ def end_in(
     withdraw once it commits."""
     save_room(conn, room.id, status=RoomStatus.ENDED, ended_at=now, end_reason=reason)
     withdrawn: list[str | None] = []
+    # When the host adds each request by hand (the browser-first planner), an accepted request
+    # nobody added is still only waiting: it leaves with the room, and the host's Requests list
+    # hears `withdrawn`. A planner that schedules audio keeps what it was handed.
+    host_adds = bool(getattr(ctx.planner, "host_adds_requests", False))
     for request in room_requests_where(conn, room, WAITING):
         handed_over = request.song_request_id is not None
-        if request.status is RequestStatus.ACCEPTED and handed_over:
+        if request.status is RequestStatus.ACCEPTED and handed_over and not host_adds:
             continue  # the planner has it; it plays into the host's mix
         set_request(
             conn, request.id, status=RequestStatus.WITHDRAWN, reason="room_ended", resolved_at=now
