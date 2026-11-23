@@ -64,6 +64,9 @@ export type AvailabilitySources = {
   /** The workspace whose song requests this browser keeps (localFirstRequests.ts); with the
    * recipe store, Request a song works here. */
   workspaceId?: string;
+  /** ADR-0475: the device that is playing when it is not this one; null when this device is the
+   * speaker or nothing is playing. Read each time, so it is always the newest session. */
+  controller?: () => import('../devices/controller').ControllerLink | null;
   /** Whether this account has Rooms. False: a room's requests are never asked for (the server
    * answers 404 to an account without Rooms). Left out: asked, as before. */
   rooms?: boolean;
@@ -224,7 +227,7 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
       return { id: song.id, title: song.title, artist: song.artist, duration: song.duration_s ?? 0, playable: where === 'here' || where === 'hosted' };
     });
   };
-  const mixes = sources.recipes ? mixFamily(sources.recipes, playable) : null;
+  const mixes = sources.recipes ? mixFamily(sources.recipes, playable, () => !!sources.controller?.()) : null;
   const discoveries = sources.tonal ? discoveriesFamily({
     ...sources.tonal,
     songs: async () => {
@@ -236,7 +239,7 @@ export function localFirstRequest(cloud: Request, sources: AvailabilitySources =
   }) : null;
   // requests join the current recipe through the mix routes above, so they need the store too
   const requests = sources.recipes && sources.workspaceId
-    ? requestsFamily({ cloud, workspaceId: sources.workspaceId, rooms: sources.rooms, songs: playable, send: (<T,>(path: string, init?: RequestInit) => adapted<T>(path, init)) as Request })
+    ? requestsFamily({ cloud, workspaceId: sources.workspaceId, rooms: sources.rooms, controller: sources.controller, songs: playable, send: (<T,>(path: string, init?: RequestInit) => adapted<T>(path, init)) as Request })
     : null;
   // Word connections (discover.word_links): answers nothing while that flag is off
   const links = linksFamily(cloud, sources.recipes, playable);

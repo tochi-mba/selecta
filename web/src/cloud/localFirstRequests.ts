@@ -2,6 +2,7 @@ import { ApiError, type MixData, type Request } from '../api';
 import type { RequestRow } from '../views/Requests';
 import type { PlayableSong } from './localFirstMixes';
 import { askerOf, openRoomId } from '../rooms/useRoomSession';
+import { addedOnReturn, comingUp, notOnSpeaker, playsOn, programmeWithNext, speakerHolds, type ControllerLink } from '../devices/controller';
 
 /** The requests route family of the local-first adapter (ADR-0462 "one adapter per route family"):
  * `/requests`, `/requests/consider`, `/requests/insert` and `/requests/{id}/add` as the shared
@@ -85,8 +86,11 @@ export type RequestsFamily = {
 };
 
 /** `cloud` is the authenticated Cloud client; `send` is the adapted request, for the mix routes. */
-export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRooms }: {
+export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRooms, controller }: {
   cloud: Request;
+  /** ADR-0475: the device that is playing, when it is not this one. Requests are then added to
+   * its programme, and a row is judged by what that device can play, not this one. */
+  controller?: () => ControllerLink | null;
   workspaceId: string;
   /** False for an account without Rooms: its room list is empty and the server is never asked. */
   rooms?: boolean;
@@ -98,6 +102,12 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
   let roomsVersion = -1;
   // the last request this browser put in the mix, so its Undo can take exactly that back out
   let lastJoin: { order: string; at: number } | null = null;
+  // the same for a request put into another device's programme: what the programme was before
+  let lastSent: { order: string; before: number[]; index: number } | null = null;
+  // room requests this device has just sent to the speaker: hidden here until the speaker's own
+  // look settles them with the room, or the wait runs out and the row is shown again
+  const sentToSpeaker = new Map<string, number>();
+  const SENT_HIDES_MS = 30_000;
 
   const roomRequests = (): Promise<RoomRequest[]> => {
     if (hasRooms === false) return Promise.resolve([]);
@@ -140,22 +150,30 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
     const changed = JSON.stringify(kept) !== JSON.stringify(saved.room);
     saved.room = kept;
     if (changed) save(workspaceId, saved);
+    const link = controller?.() ?? null;
     const row = (id: number, songId: number, from?: RoomRequest): RequestRow => {
       const song = all.find((one) => one.id === songId);
+      // another device is playing: what matters is whether that device can play the song
+      const there = link && song ? speakerHolds(link, songId) : false;
       return {
         id, song_id: songId, title: song?.title ?? null, artist: song?.artist ?? null, status: 'waiting',
         // a song no longer in the catalogue really has gone from the library
         available: song ? 1 : 0,
-        stage: song?.playable ? 'searching' : 'waiting',
-        browser_note: song?.playable ? JOINS_BY_HAND : NOT_ON_THIS_DEVICE,
+        stage: (link ? there : song?.playable) ? 'searching' : 'waiting',
+        browser_note: link ? (there ? JOINS_BY_HAND : notOnSpeaker(link.speakerName)) : song?.playable ? JOINS_BY_HAND : NOT_ON_THIS_DEVICE,
+        ...(link ? { plays_on: link.speakerName, ...(there ? { where_note: link.online ? playsOn(link.speakerName) : addedOnReturn(link.speakerName) } : {}) } : {}),
         // a room request says who asked and in which room; the member's own says neither
         ...(from ? { room_name: from.room_name, asked_by: askerOf(from.id), room_request_id: from.id } : {}),
       };
     };
+    // on its way to the speaker: not offered again here while that device takes it in
+    const nowMs = Date.now();
+    for (const [roomId, until] of sentToSpeaker) if (until < nowMs || !room.some((asked) => asked.id === roomId)) sentToSpeaker.delete(roomId);
+    const shown = link ? room.filter((asked) => !sentToSpeaker.has(asked.id)) : room;
     return {
       rows: [
         ...saved.local.map((asked) => row(asked.id, asked.song_id)),
-        ...room.map((asked) => row(kept[asked.id], asked.song_id, asked)),
+        ...shown.map((asked) => row(kept[asked.id], asked.song_id, asked)),
       ],
       saved,
       room,
@@ -206,10 +224,44 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
 
   /** Into the current recipe, right after the song that is playing (or at the end when nothing
    * is), through the mix family's own add, so its checks (plays here, mix unchanged) apply. */
+  /** ADR-0475 R4: another device is the speaker, so the song goes into its programme, right
+   * after the one it is playing, and the music there does not move. This device's own request is
+   * done at once; a room's is settled by the speaker when the song is in its mix, exactly as
+   * when the host adds it there. */
+  const joinOnSpeaker = async (link: ControllerLink, asked: RequestRow): Promise<MixData> => {
+    if (!speakerHolds(link, asked.song_id)) throw refuse(notOnSpeaker(link.speakerName), 'not_on_speaker', 409);
+    const before = [...link.programme];
+    let order = before;
+    if (!comingUp(link, asked.song_id)) {
+      const change = programmeWithNext(link, asked.song_id);
+      if (!(await link.send('set_programme', change))) throw refuse(`${link.speakerName} didn’t take that. Try again.`, 'speaker_refused', 409);
+      order = change.songs;
+      lastSent = { order: order.join(','), before, index: change.song_index };
+    }
+    const { saved, room } = await rows();
+    if (saved.local.some((own) => own.id === asked.id)) {
+      saved.local = saved.local.filter((own) => own.id !== asked.id);
+      save(workspaceId, saved);
+    } else {
+      const roomId = Object.entries(saved.room).find(([, number]) => number === asked.id)?.[0];
+      if (roomId && room.some((one) => one.id === roomId)) sentToSpeaker.set(roomId, Date.now() + SENT_HIDES_MS);
+    }
+    const all = await knownSongs();
+    return {
+      name: '', can_undo: false,
+      mix: order.map((songId, position) => {
+        const song = all.find((one) => one.id === songId);
+        return { position, song_id: songId, artist: song?.artist ?? '', title: song?.title ?? 'A song', duration: song?.duration ?? 0, bpm: null, key: null, locked: false, seam: null };
+      }),
+    };
+  };
+
   const join = async (id: number, where: Where | undefined): Promise<MixData> => {
     const { rows: now } = await rows();
     const asked = now.find((row) => row.id === id);
     if (!asked) throw refuse('That request isn’t waiting any more.', 'no_request', 404);
+    const link = controller?.() ?? null;
+    if (link) return joinOnSpeaker(link, asked);
     const mix = await send<MixData>('/mix');
     if (!mix.mix.length) throw refuse(NO_MIX_YET, 'no_mix', 409);
     const order = (where?.order?.length ? where.order : mix.mix.map((item) => item.song_id)).join(',');
@@ -236,8 +288,12 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
     const inMix = new Set(order.slice(from));
     const { rows: now } = await rows();
     const settled: string[] = [];
+    // with another device playing, a room's request is settled by that device, which knows the
+    // song really is in its mix; only this device's own requests are let go of here
+    const remote = !!controller?.();
     for (const row of now) {
       if (!inMix.has(row.song_id)) continue;
+      if (remote && row.room_request_id) continue;
       if (await finish(row.id, 'played').catch(() => false)) settled.push(row.title ?? 'A requested song');
     }
     return { ...(await list()), settled };
@@ -246,6 +302,14 @@ export function requestsFamily({ cloud, workspaceId, songs, send, rooms: hasRoom
   const undo = (init?: RequestInit): Promise<MixData> | undefined => {
     let expected: string | null = null;
     try { expected = new Headers(init?.headers).get('x-mix-order'); } catch { /* no header */ }
+    const sent = lastSent;
+    const link = controller?.() ?? null;
+    if (link && sent && expected === sent.order) {
+      lastSent = null;
+      // put the speaker's programme back as it was, without moving the music
+      return link.send('set_programme', { songs: sent.before, song_index: Math.min(sent.index, sent.before.length - 1), keep_position: true })
+        .then(() => ({ mix: [], name: '', can_undo: false }) as MixData);
+    }
     const last = lastJoin;
     // only the request this browser just added; any other undo is the mix family's to answer
     if (!last || expected !== last.order) return undefined;
