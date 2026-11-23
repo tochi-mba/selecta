@@ -9,7 +9,7 @@
 // When the host disconnects the screen, the next look says `unpaired` and a new code appears;
 // "Disconnect this screen" does the same from the screen's side.
 
-import { ApiError, call, h, patch, replace, Song, songLine } from '../rooms/dom';
+import { ApiError, call, h, patch, replace, Song } from '../rooms/dom';
 import { qrSvg } from '../rooms/qr';
 import './display.css';
 
@@ -39,7 +39,7 @@ function reconnecting(on: boolean): void {
   const note = document.getElementById('d-reconnecting');
   if (!on) { note?.remove(); return; }
   if (note) return;
-  document.body.append(h('p', { className: 'd-reconnecting', id: 'd-reconnecting', role: 'status' }, 'Reconnecting...'));
+  document.body.append(h('p', { className: 'd-reconnecting', id: 'd-reconnecting', role: 'status' }, h('i', { className: 'd-spin', 'aria-hidden': 'true' }), 'Reconnecting...'));
 }
 
 async function disconnect(button: HTMLButtonElement): Promise<void> {
@@ -54,9 +54,19 @@ async function disconnect(button: HTMLButtonElement): Promise<void> {
   schedule();
 }
 
+/** The product's mark and name, over whatever the screen shows. */
+function brand(): HTMLElement {
+  return h('p', { className: 'd-brand' }, h('i', { className: 'd-mark', 'aria-hidden': 'true' }), 'SelectaDJ');
+}
+
 /** A calm full-screen line while there is nothing else to show yet. */
 function waiting(text: string): HTMLElement {
-  return h('p', { className: 'd-waiting', role: 'status' }, text);
+  return h('p', { className: 'd-waiting', role: 'status' }, h('i', { className: 'd-spin', 'aria-hidden': 'true' }), text);
+}
+
+/** A whole-screen message: the room ended, or the big screen is off. */
+function notice(title: string, text: string): HTMLElement {
+  return h('section', { className: 'd-pair' }, brand(), h('h1', {}, title), h('p', { className: 'd-lede' }, text));
 }
 
 async function pair(): Promise<void> {
@@ -68,13 +78,24 @@ async function pair(): Promise<void> {
 /** The pairing screen for the code we already hold; drawn again after a missed look replaced it. */
 function drawPairing(): void {
   shownCode = '';
+  const step = (number: string, text: string) => h('li', {}, h('span', { className: 'd-step', 'aria-hidden': 'true' }, number), text);
   replace(root,
     h('section', { className: 'd-pair' },
-      h('p', { className: 'd-eyebrow' }, 'SelectaDJ display'),
+      brand(),
       h('h1', {}, 'Pair this screen'),
-      h('p', { className: 'd-lede' }, 'In SelectaDJ, open your room, find Big screen, and type this code:'),
-      h('p', { className: 'd-code', id: 'd-pairing', 'aria-label': `Pairing code ${pairingCode.split('').join(' ')}` }, pairingCode),
+      h('ol', { className: 'd-steps' },
+        step('1', 'Open your room in SelectaDJ'),
+        step('2', 'Find Big screen'),
+        step('3', 'Type this code')),
+      // one box a letter, so it reads from the sofa; the label says it letter by letter
+      h('p', { className: 'd-code', id: 'd-pairing', 'aria-label': `Pairing code ${pairingCode.split('').join(' ')}` }, ...pairingCode.split('').map((letter) => h('span', { 'aria-hidden': 'true' }, letter))),
       h('p', { className: 'd-muted' }, 'The code works once and lasts ten minutes.')));
+}
+
+/** A song on the big screen: its place, its title, then its artist (and who asked) more quietly. */
+function line(song: Song | null, key: string, by: string | null = null): HTMLElement {
+  return h('li', { 'data-key': key },
+    h('span', { className: 'd-song' }, h('strong', {}, song?.title ?? 'A song'), h('span', { className: 'd-muted' }, [song?.artist, by ? `asked by ${by}` : ''].filter(Boolean).join(' · '))));
 }
 
 function drawRoom(view: View): void {
@@ -83,12 +104,12 @@ function drawRoom(view: View): void {
   if (!qr || shownCode !== view.code) {
     replace(root,
       h('section', { className: 'd-room' },
-        h('div', { className: 'd-left' },
+        h('div', { className: 'd-right', id: 'd-info' }),
+        h('aside', { className: 'd-left' },
           h('p', { className: 'd-eyebrow' }, 'Scan to request a song'),
           h('div', { className: 'd-qr', id: 'd-qr' }),
           h('p', { className: 'd-join', id: 'd-join' }),
-          h('button', { type: 'button', className: 'd-disconnect', id: 'd-disconnect', onclick: (event: Event) => void disconnect(event.currentTarget as HTMLButtonElement) }, 'Disconnect this screen')),
-        h('div', { className: 'd-right', id: 'd-info' })));
+          h('button', { type: 'button', className: 'd-disconnect', id: 'd-disconnect', onclick: (event: Event) => void disconnect(event.currentTarget as HTMLButtonElement) }, 'Disconnect this screen'))));
     qr = document.getElementById('d-qr') as HTMLElement;
     qr.innerHTML = qrSvg(link, `QR code to join ${view.room_name ?? 'the room'}`); // our own SVG, no user text unescaped
     qr.dataset.link = link;
@@ -102,17 +123,22 @@ function drawRoom(view: View): void {
   // Patched in place and keyed by song, so the screen stays still between looks and only a line
   // that is new (the next song, a new request) arrives.
   const now = view.now_playing;
+  const playing = Boolean(now) && !view.music_paused;
+  const next = view.up_next.slice(0, 3);
   patch(document.getElementById('d-info') as HTMLElement,
-    h('h1', {}, view.room_name ?? 'Room'),
-    view.music_paused ? h('p', { className: 'd-banner', 'data-key': 'paused' }, "The music's paused.") : null,
-    h('h2', { 'data-key': 'now-title' }, 'Now playing'),
-    h('p', { className: now ? 'd-now' : 'd-now d-muted', id: 'd-now', 'data-key': `now-${now?.song_id ?? 'none'}` }, now ? now.title : 'Nothing right now', now ? h('span', { className: 'd-by' }, now.artist) : null),
-    view.up_next.length ? h('h2', { 'data-key': 'next-title' }, 'Next up') : null,
-    view.up_next.length ? h('ol', { className: 'd-list', 'data-key': 'next' }, ...view.up_next.slice(0, 3).map((song) => h('li', { 'data-key': `next-${song.song_id}` }, songLine(song)))) : null,
-    h('h2', { 'data-key': 'asked-title' }, 'Requests coming up'),
-    view.upcoming.length
-      ? h('ol', { className: 'd-list', id: 'd-upcoming' }, ...view.upcoming.slice(0, 6).map((item) => h('li', { 'data-key': item.request_id }, songLine(item.song), item.nickname ? h('span', { className: 'd-muted' }, ` · ${item.nickname}`) : null)))
-      : h('p', { className: 'd-muted', id: 'd-upcoming' }, 'No requests yet. Scan the code and ask for a song.'));
+    h('header', { className: 'd-top', 'data-key': 'top' }, brand(), h('h1', {}, view.room_name ?? 'Room')),
+    h('div', { className: 'd-playing', 'data-key': 'playing', 'data-on': playing },
+      h('h2', { 'data-key': 'now-title' }, h('span', { className: 'd-eq', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), now && view.music_paused ? 'Paused' : 'Now playing'),
+      h('p', { className: now ? 'd-now' : 'd-now d-muted', id: 'd-now', 'data-key': `now-${now?.song_id ?? 'none'}` }, now ? now.title : 'Nothing playing yet', h('span', { className: 'd-by' }, now ? now.artist : 'Scan the code and pick the first song.'))),
+    h('div', { className: 'd-lists', 'data-key': 'lists' },
+      next.length ? h('div', { 'data-key': 'next-col' },
+        h('h2', { 'data-key': 'next-title' }, 'Up next'),
+        h('ol', { className: 'd-list', 'data-key': 'next' }, ...next.map((song) => line(song, `next-${song.song_id}`)))) : null,
+      h('div', { 'data-key': 'asked-col' },
+        h('h2', { 'data-key': 'asked-title' }, 'Requests coming up'),
+        view.upcoming.length
+          ? h('ol', { className: 'd-list', id: 'd-upcoming' }, ...view.upcoming.slice(0, next.length ? 3 : 5).map((item) => line(item.song, item.request_id, item.nickname)))
+          : h('p', { className: 'd-muted d-none', id: 'd-upcoming' }, 'No requests yet. Scan the code and ask for a song.'))));
 }
 
 async function tick(): Promise<void> {
@@ -127,13 +153,13 @@ async function tick(): Promise<void> {
     else if (view.state === 'ended') {
       if (!endedAt) {
         endedAt = Date.now();
-        replace(root, h('section', { className: 'd-pair' }, h('p', { className: 'd-eyebrow' }, 'SelectaDJ display'), h('h1', {}, view.room_name ? `${view.room_name} has ended` : 'The room has ended'), h('p', { className: 'd-lede' }, 'Thanks for coming.')));
+        replace(root, notice(view.room_name ? `${view.room_name} has ended` : 'The room has ended', 'Thanks for coming.'));
       } else if (Date.now() - endedAt > 30_000) { endedAt = 0; await pair(); }
     }
   } catch (error) {
     const problem = error as ApiError;
     if (problem.code === 'flag_off') {
-      replace(root, h('section', { className: 'd-pair' }, h('p', { className: 'd-eyebrow' }, 'SelectaDJ display'), h('h1', {}, 'The big screen is off'), h('p', { className: 'd-lede' }, problem.message)));
+      replace(root, notice('The big screen is off', problem.message));
       return;
     }
     if (problem.status === 404) {
