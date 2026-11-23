@@ -391,7 +391,8 @@
 .shell[data-mode='cloud'] .mini-requests .count:not([aria-hidden='true']) { min-width: 18px; padding: 0 var(--space-1); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--request) 20%, transparent); font: var(--weight-strong) var(--text-xs) / 18px var(--mono); text-align: center; }
 @media (max-width: 760px) {
   .shell[data-mode='cloud'] .mini { gap: var(--space-2); padding: 0 var(--space-3); }
-  .shell[data-mode='cloud'] .mini .mini-next { min-width: var(--control-height); min-height: var(--control-height); }
+  /* the same selector as the 36px rule above, so this one wins on a phone */
+  .shell[data-mode='cloud'] .mini :is(.mini-next, .volume .icon) { min-width: var(--control-height); min-height: var(--control-height); }
   .shell[data-mode='cloud'] .mini-requests { min-height: var(--control-height); }
 }
 
