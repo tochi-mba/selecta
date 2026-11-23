@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type KeyboardEvent as ReactKeyboardEvent, ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { MixItem } from '../api';
 import { useFlags } from '../flags';
 import { NowState } from '../player';
@@ -361,6 +361,14 @@ export function Shell({
     if (stage) root.dataset.stage = 'on';
     else delete root.dataset.stage;
   }, [withPlayer, prefs.railCollapsed, stage]);
+  // Cloud's shared look (styles/cloud-ui.css) also reaches what is drawn outside the frame: dialogs,
+  // drawers and toasts. Local mode never carries the mark, so it is exactly as it was.
+  useEffect(() => {
+    if (mode !== 'cloud') return;
+    const root = document.documentElement;
+    root.dataset.cloud = 'on';
+    return () => { delete root.dataset.cloud; };
+  }, [mode]);
 
   const editing = route.page === 'edit';
   const here = destinationOf(route);
@@ -376,6 +384,20 @@ export function Shell({
   const accountPlaces = account ? more.filter((item) => ACCOUNT_PLACES.has(item.id)) : [];
   const railPlaces = account ? more.filter((item) => !ACCOUNT_PLACES.has(item.id)) : more;
   const classic = prefs.classicNav && on('app.classic_nav');
+  // Cloud's side bar is grouped: the music, the party (Rooms and requests), then settings
+  const cloudNav = cloudMore && !classic;
+  const partyPlaces = railPlaces.filter((item) => item.id === 'rooms');
+  const musicPlaces = railPlaces.filter((item) => item.id === 'uploads');
+  const settingsPlaces = railPlaces.filter((item) => item.id !== 'rooms' && item.id !== 'uploads');
+  const railPlace = (item: MoreDestination, group?: string) => (
+    <li key={item.id} className="nav-place" data-group={group}>
+      <PageLink to={item.path} data-tip={item.label} aria-label={item.label} aria-current={route.page === 'more' && route.id === item.id ? 'page' : undefined}>
+        <Icon name={MORE_ICONS[item.id]} />
+        <span className="nav-label">{item.label}</span>
+      </PageLink>
+    </li>
+  );
+  const requestsLabel = waitingRequests ? `Requests: Request a song, ${waitingRequests} waiting` : 'Requests: Request a song';
   return (
     <div className={`shell ${stage ? 'on-stage' : ''} ${withPlayer ? 'with-player' : ''}`} data-mode={mode}>
       {!stage && <a className="skip-link" href="#content">Skip to the page</a>}
@@ -383,66 +405,115 @@ export function Shell({
         <nav className="nav" aria-label="Main">
           <PageLink to="/mixes" className="brand" aria-label="SelectaDJ, go to Make a Mix"><span className="brand-word">SelectaDJ</span><span className="brand-mark" aria-hidden="true">S</span></PageLink>
           <ul>
-            {classic
-              ? classicDestinations().map((item) => (
-                  <li key={item.path}>
-                    <PageLink to={item.path} data-tip={item.label} aria-label={item.label} aria-current={(item.pages as string[]).includes(route.page) && !editing ? 'page' : undefined}>
-                      <Icon name={item.icon} />
-                      <span className="nav-label">{item.label}</span>
-                    </PageLink>
-                  </li>
-                ))
-              : primaryDestinations.map((item) => (
-                  <li key={item.id}>
+            {cloudNav ? (
+              <>
+                {primaryDestinations.map((item, index) => (
+                  <li key={item.id} data-group={index === 0 ? 'Music' : undefined}>
                     <PageLink to={item.path} data-tip={item.label} aria-label={item.label} aria-current={here === item.id && !editing ? 'page' : here === item.id ? 'true' : undefined}>
                       <Icon name={item.icon} />
                       <span className="nav-label">{item.label}</span>
                     </PageLink>
                   </li>
                 ))}
-            {!classic && workspace && (
-              // Browser-first Cloud (cloud.workspace) has its own More: on a phone Workspace is
-              // listed there, so this item is the side bar's link only and takes no phone slot.
-              <li className={cloudMore ? 'nav-more nav-more-cloud-workspace' : 'nav-more'}>
-                <PageLink className="nav-more-desktop" to={workspace.path} data-tip={workspace.label} aria-label={workspace.label} aria-current={here === workspace.id ? 'page' : undefined}>
-                  <Icon name={workspace.icon} />
-                  <span className="nav-label">{workspace.label}</span>
-                </PageLink>
-                {!cloudMore && <button className="nav-more-mobile" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={here === workspace.id ? 'page' : undefined} aria-description={attention > 0 ? 'Workspace needs your attention' : undefined} onClick={() => setMoreOpen(true)}>
-                  <Icon name={workspace.icon} />
-                  {attention > 0 && <span className="nav-attention" aria-hidden="true" />}
-                  <span className="nav-label">More</span>
-                </button>}
-              </li>
-            )}
-            {!classic && cloudMore && railPlaces.map((item) => (
-              <li key={item.id} className="nav-place">
-                <PageLink to={item.path} data-tip={item.label} aria-label={item.label} aria-current={route.page === 'more' && route.id === item.id ? 'page' : undefined}>
-                  <Icon name={MORE_ICONS[item.id]} />
-                  <span className="nav-label">{item.label}</span>
-                </PageLink>
-              </li>
-            ))}
-            {!classic && cloudMore && (
-              <li className="nav-more nav-more-phone">
-                <button className="nav-more-mobile" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={route.page === 'more' ? 'page' : undefined} onClick={() => setMoreOpen(true)}>
-                  <Icon name="more" />
-                  <span className="nav-label">More</span>
-                </button>
-              </li>
-            )}
-            {hasMix && on('editor') && (
-              <li className="nav-context">
-                <PageLink to="/mix/current/edit" data-tip="Edit" aria-label="Edit" aria-current={editing ? 'page' : undefined}>
-                  <Icon name="edit" />
-                  <span className="nav-label">Edit</span>
-                </PageLink>
-              </li>
+                {musicPlaces.map((item) => railPlace(item))}
+                {hasMix && on('editor') && (
+                  <li className="nav-context">
+                    <PageLink to="/mix/current/edit" data-tip="Edit mix" aria-label="Edit mix" aria-current={editing ? 'page' : undefined}>
+                      <Icon name="edit" />
+                      <span className="nav-label">Edit mix</span>
+                    </PageLink>
+                  </li>
+                )}
+                {partyPlaces.map((item, index) => railPlace(item, index === 0 ? 'Party' : undefined))}
+                {on('requests') && (
+                  <li className="nav-place nav-request-item" data-group={partyPlaces.length ? undefined : 'Party'}>
+                    <button className="nav-request" data-tip="Request a song" onClick={onRequests} aria-label={requestsLabel} title={on('app.shortcuts') ? 'Request a song (R)' : undefined}>
+                      <Icon name="request" /><span className="nav-label">Request a song</span>{waitingRequests ? <span className="count nav-badge">{waitingRequests}</span> : null}
+                    </button>
+                  </li>
+                )}
+                {workspace && (
+                  // On a phone Workspace is listed in More, so this item takes no slot in the tab bar
+                  <li className="nav-more nav-more-cloud-workspace" data-group="Settings">
+                    <PageLink className="nav-more-desktop" to={workspace.path} data-tip={workspace.label} aria-label={workspace.label} aria-current={here === workspace.id ? 'page' : undefined}>
+                      <Icon name={workspace.icon} />
+                      <span className="nav-label">{workspace.label}</span>
+                    </PageLink>
+                  </li>
+                )}
+                {settingsPlaces.map((item, index) => railPlace(item, !workspace && index === 0 ? 'Settings' : undefined))}
+                <li className="nav-more nav-more-phone">
+                  <button className="nav-more-mobile" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={route.page === 'more' || here === 'workspace' ? 'page' : undefined} aria-description={attention > 0 ? 'Workspace needs your attention' : undefined} onClick={() => setMoreOpen(true)}>
+                    <Icon name="more" />
+                    {attention > 0 && <span className="nav-attention" aria-hidden="true" />}
+                    <span className="nav-label">More</span>
+                  </button>
+                </li>
+              </>
+            ) : (
+              <>
+              {classic
+                ? classicDestinations().map((item) => (
+                    <li key={item.path}>
+                      <PageLink to={item.path} data-tip={item.label} aria-label={item.label} aria-current={(item.pages as string[]).includes(route.page) && !editing ? 'page' : undefined}>
+                        <Icon name={item.icon} />
+                        <span className="nav-label">{item.label}</span>
+                      </PageLink>
+                    </li>
+                  ))
+                : primaryDestinations.map((item) => (
+                    <li key={item.id}>
+                      <PageLink to={item.path} data-tip={item.label} aria-label={item.label} aria-current={here === item.id && !editing ? 'page' : here === item.id ? 'true' : undefined}>
+                        <Icon name={item.icon} />
+                        <span className="nav-label">{item.label}</span>
+                      </PageLink>
+                    </li>
+                  ))}
+              {!classic && workspace && (
+                // Browser-first Cloud (cloud.workspace) has its own More: on a phone Workspace is
+                // listed there, so this item is the side bar's link only and takes no phone slot.
+                <li className={cloudMore ? 'nav-more nav-more-cloud-workspace' : 'nav-more'}>
+                  <PageLink className="nav-more-desktop" to={workspace.path} data-tip={workspace.label} aria-label={workspace.label} aria-current={here === workspace.id ? 'page' : undefined}>
+                    <Icon name={workspace.icon} />
+                    <span className="nav-label">{workspace.label}</span>
+                  </PageLink>
+                  {!cloudMore && <button className="nav-more-mobile" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={here === workspace.id ? 'page' : undefined} aria-description={attention > 0 ? 'Workspace needs your attention' : undefined} onClick={() => setMoreOpen(true)}>
+                    <Icon name={workspace.icon} />
+                    {attention > 0 && <span className="nav-attention" aria-hidden="true" />}
+                    <span className="nav-label">More</span>
+                  </button>}
+                </li>
+              )}
+              {!classic && cloudMore && railPlaces.map((item) => (
+                <li key={item.id} className="nav-place">
+                  <PageLink to={item.path} data-tip={item.label} aria-label={item.label} aria-current={route.page === 'more' && route.id === item.id ? 'page' : undefined}>
+                    <Icon name={MORE_ICONS[item.id]} />
+                    <span className="nav-label">{item.label}</span>
+                  </PageLink>
+                </li>
+              ))}
+              {!classic && cloudMore && (
+                <li className="nav-more nav-more-phone">
+                  <button className="nav-more-mobile" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={route.page === 'more' ? 'page' : undefined} onClick={() => setMoreOpen(true)}>
+                    <Icon name="more" />
+                    <span className="nav-label">More</span>
+                  </button>
+                </li>
+              )}
+              {hasMix && on('editor') && (
+                <li className="nav-context">
+                  <PageLink to="/mix/current/edit" data-tip="Edit" aria-label="Edit" aria-current={editing ? 'page' : undefined}>
+                    <Icon name="edit" />
+                    <span className="nav-label">Edit</span>
+                  </PageLink>
+                </li>
+              )}
+              </>
             )}
           </ul>
           <div className="nav-foot">
-            {on('requests') && (
-              <button className="nav-request" onClick={onRequests} aria-label={waitingRequests ? `Requests: Request a song, ${waitingRequests} waiting` : 'Requests: Request a song'} title={on('app.shortcuts') ? 'Request a song (R)' : 'Request a song'}>
+            {on('requests') && !cloudNav && (
+              <button className="nav-request" onClick={onRequests} aria-label={requestsLabel} title={on('app.shortcuts') ? 'Request a song (R)' : 'Request a song'}>
                 <Icon name="request" /><span className="nav-label">Request a song</span>{waitingRequests ? <span className="count"> {waitingRequests}</span> : ''}
               </button>
             )}
@@ -451,6 +522,7 @@ export function Shell({
             )}
             <button
               className="nav-collapse quiet"
+              data-tip={collapsed ? 'Expand the side bar' : undefined}
               aria-pressed={collapsed}
               aria-label={collapsed ? 'Expand the side bar' : 'Collapse the side bar'}
               title={collapsed ? 'Expand the side bar' : 'Collapse the side bar'}
@@ -471,25 +543,23 @@ export function Shell({
       {withPlayer && song && <MiniPlayer player={player} now={now} song={song} hasNext={hasNext ?? true} onRequests={onRequests} waiting={waitingRequests} />}
       {moreOpen && cloudMore && (
         <Drawer title="More" onClose={() => setMoreOpen(false)}>
-          <nav className="more-nav" aria-label="More">
+          <nav className="more-nav more-sheet" aria-label="More">
             <ul>
               {workspace && (
                 <li className="more-nav-workspace">
-                  <PageLink to={workspace.path} aria-current={here === workspace.id ? 'page' : undefined} onClick={() => setMoreOpen(false)}>{workspace.label}</PageLink>
-                  <p className="hint">Your library at a glance, connecting music, this browser’s storage and diagnostics.</p>
+                  <MoreRow to={workspace.path} icon={workspace.icon} label={workspace.label} about="Storage and connected music" current={here === workspace.id} onGo={() => setMoreOpen(false)} />
                 </li>
               )}
               {more.map((item) => (
                 <li key={item.id}>
-                  <PageLink to={item.path} aria-current={route.page === 'more' && route.id === item.id ? 'page' : undefined} onClick={() => setMoreOpen(false)}>{item.label}</PageLink>
-                  <p className="hint">{item.about}.</p>
+                  <MoreRow to={item.path} icon={MORE_ICONS[item.id]} label={item.label} about={MORE_LINES[item.id]} current={route.page === 'more' && route.id === item.id} onGo={() => setMoreOpen(false)} />
                 </li>
               ))}
             </ul>
             {account && (
               <div className="more-account">
-                <p><span className="account-avatar" aria-hidden="true">{account.email.slice(0, 1).toUpperCase()}</span><span className="account-who"><b>{account.email}</b><span>{account.plan} plan</span></span></p>
-                <button onClick={account.onSignOut}><Icon name="signout" /> Sign out</button>
+                <p><span className="account-avatar" aria-hidden="true">{account.email.slice(0, 1).toUpperCase()}</span><span className="account-who"><b title={account.email}>{account.email}</b><span>{account.plan} plan</span></span></p>
+                <button className="more-signout" onClick={account.onSignOut}><Icon name="signout" /> Sign out</button>
               </div>
             )}
           </nav>
@@ -524,32 +594,98 @@ const MORE_ICONS: Record<MoreDestination['id'], IconName> = {
   account: 'user', billing: 'card', devices: 'system', rooms: 'users', workspace: 'settings', uploads: 'plus',
 };
 
-/** The foot of the Cloud side bar: who is signed in, their plan, their account pages and Sign out. */
+/** One line each for the phone's More sheet: short enough to stay on one line at 375 px. */
+const MORE_LINES: Record<MoreDestination['id'], string> = {
+  account: 'Sign-in, your data and settings',
+  billing: 'Your plan, usage and payments',
+  devices: 'Browsers signed in to play',
+  rooms: 'Let guests ask for songs',
+  workspace: 'Connected music and storage here',
+  uploads: 'Upload tracks to your library',
+};
+
+/** A place in the phone's More sheet: its icon, its name and one line about it. The link is named by
+ * the place alone; the line describes it. */
+function MoreRow({ to, icon, label, about, current, onGo }: { to: string; icon: IconName; label: string; about: string; current: boolean; onGo: () => void }) {
+  const aboutId = useId();
+  return (
+    <PageLink to={to} aria-label={label} aria-describedby={aboutId} aria-current={current ? 'page' : undefined} onClick={onGo}>
+      <span className="more-icon" aria-hidden="true"><Icon name={icon} /></span>
+      <span className="more-words"><b>{label}</b><span id={aboutId}>{about}</span></span>
+      <span className="more-chevron" aria-hidden="true"><Icon name="up" size="toolbar" /></span>
+    </PageLink>
+  );
+}
+
+/** The foot of the Cloud side bar: who is signed in, their plan, their account pages and Sign out.
+ * A menu button: Enter, Space or an arrow opens it with focus on an item; the arrows, Home and End
+ * move through the items; Escape or a press outside closes it and gives focus back to the button. */
 function AccountMenu({ account, places, current }: { account: ShellAccount; places: readonly MoreDestination[]; current: string | null }) {
   const [open, setOpen] = useState(false);
   const holder = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  const start = useRef<'first' | 'last'>('first');
+  const menuId = useId();
+  const items = () => [...(menu.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
+  const close = (returnFocus: boolean) => {
+    setOpen(false);
+    if (returnFocus) opener.current?.focus();
+  };
   useEffect(() => {
     if (!open) return;
+    const all = items();
+    (start.current === 'last' ? all[all.length - 1] : all[0])?.focus();
     const away = (event: MouseEvent) => { if (!holder.current?.contains(event.target as Node)) setOpen(false); };
     document.addEventListener('mousedown', away);
     return () => document.removeEventListener('mousedown', away);
   }, [open]);
+  const keys = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (!open) {
+      if (event.target === opener.current && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+        event.preventDefault();
+        start.current = event.key === 'ArrowUp' ? 'last' : 'first';
+        setOpen(true);
+      }
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      close(true);
+      return;
+    }
+    if (event.key === 'Tab') {
+      setOpen(false);
+      return;
+    }
+    const all = items();
+    const at = all.indexOf(document.activeElement as HTMLElement);
+    const to = event.key === 'ArrowDown' ? (at + 1) % all.length
+      : event.key === 'ArrowUp' ? (at - 1 + all.length) % all.length
+      : event.key === 'Home' ? 0
+      : event.key === 'End' ? all.length - 1
+      : -1;
+    if (to < 0) return;
+    event.preventDefault();
+    all[to]?.focus();
+  };
+  const onPlace = current !== null && places.some((item) => item.id === current);
   return (
-    <div className="nav-account" ref={holder} onKeyDown={(event) => { if (event.key === 'Escape' && open) { event.stopPropagation(); setOpen(false); opener.current?.focus(); } }}>
-      <button ref={opener} className="nav-account-button" aria-haspopup="menu" aria-expanded={open} aria-label={`Account: ${account.email}, ${account.plan} plan`} data-tip="Account" aria-current={current !== null && places.some((item) => item.id === current) ? 'page' : undefined} onClick={() => setOpen(!open)}>
+    <div className="nav-account" ref={holder} onKeyDown={keys}>
+      <button ref={opener} className="nav-account-button" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} aria-label={`Account: ${account.email}, ${account.plan} plan`} data-tip="Account" data-current={onPlace ? 'true' : undefined} onClick={() => { start.current = 'first'; setOpen(!open); }}>
         <span className="account-avatar" aria-hidden="true">{account.email.slice(0, 1).toUpperCase()}</span>
         <span className="account-who nav-label"><b>{account.email}</b><span>{account.plan} plan</span></span>
-        <span className="nav-label account-caret" aria-hidden="true"><Icon name="up" /></span>
+        <span className="nav-label account-caret" aria-hidden="true"><Icon name="up" size="toolbar" /></span>
       </button>
       {open && (
-        <div className="nav-account-menu" role="menu" aria-label="Account" data-motion="pop">
+        <div ref={menu} id={menuId} className="nav-account-menu" role="menu" aria-label="Account" data-motion="pop">
+          <p className="nav-account-id" role="presentation"><b title={account.email}>{account.email}</b><span>{account.plan} plan</span></p>
           {places.map((item) => (
-            <PageLink key={item.id} role="menuitem" to={item.path} aria-current={current === item.id ? 'page' : undefined} onClick={() => setOpen(false)}>
-              <Icon name={MORE_ICONS[item.id]} /> {item.label}
+            <PageLink key={item.id} role="menuitem" tabIndex={-1} to={item.path} aria-current={current === item.id ? 'page' : undefined} onClick={() => close(false)}>
+              <Icon name={MORE_ICONS[item.id]} size="toolbar" /> {item.label}
             </PageLink>
           ))}
-          <button role="menuitem" className="nav-account-signout" onClick={() => { setOpen(false); account.onSignOut(); }}><Icon name="signout" /> Sign out</button>
+          <button role="menuitem" tabIndex={-1} className="nav-account-signout" onClick={() => { close(true); account.onSignOut(); }}><Icon name="signout" size="toolbar" /> Sign out</button>
         </div>
       )}
     </div>

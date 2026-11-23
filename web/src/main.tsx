@@ -8,6 +8,8 @@ import './style.css';
 import './styles/shell.css';
 import './styles/polish.css';
 import './styles/foundation.css';
+import './styles/cloud-ui.css';
+import './styles/cloud-shell.css';
 import './styles/listening.css';
 import './styles/creation.css';
 import './styles/operations.css';

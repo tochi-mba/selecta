@@ -1,0 +1,224 @@
+/* Cloud's shared parts, defined once: buttons, fields, cards, headings, the page header, the empty
+   state, banners, badges, lists, tabs, toasts, dialogs, drawers, menus and skeletons. Pages inherit
+   them; the guide for page authors is design-shared.md.
+
+   Scope: `:root[data-cloud='on']`, which the Cloud shell sets (shell/Shell.tsx). The desktop app never
+   carries it, so nothing here reaches local mode. The scope sits inside :where(), so every rule
+   keeps the weight of its own selector and a page rule with one class still wins. Values come from
+   tokens.css. */
+
+/* ---- buttons ---- */
+:where(:root[data-cloud='on']) button,
+:where(:root[data-cloud='on']) a.button {
+  background: var(--surface-raised);
+  border-color: var(--border);
+  font-weight: var(--weight-label);
+  line-height: 1.25;
+  transition: background-color var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease), opacity var(--motion-fast) var(--motion-ease);
+}
+:where(:root[data-cloud='on']) a.button { font-weight: var(--weight-label); }
+/* hover: the edge firms up and the fill lifts a step; a control with its own fill keeps it */
+:where(:root[data-cloud='on']) button:hover:not(:disabled),
+:where(:root[data-cloud='on']) a.button:hover { border-color: var(--edge-interactive); }
+:where(:root[data-cloud='on']) button:where(:hover:not(:disabled)),
+:where(:root[data-cloud='on']) a.button:where(:hover) { background: var(--surface-control); }
+/* pressed: a tint over whatever the button's own colour is, inside its edge, so nothing moves */
+:where(:root[data-cloud='on']) button:not(:disabled):not([aria-disabled='true']):active,
+:where(:root[data-cloud='on']) a.button:active { box-shadow: inset 0 0 0 999px color-mix(in srgb, currentColor 12%, transparent); }
+:where(:root[data-cloud='on']) button:disabled { opacity: 0.45; }
+
+/* primary: the one accent action of a view */
+:where(:root[data-cloud='on']) button.primary,
+:where(:root[data-cloud='on']) a.button.primary { background: var(--primary-fill); border-color: var(--primary-edge); color: var(--primary-ink); font-weight: var(--weight-strong); }
+/* quiet: a minor action, no edge until the pointer or the keyboard is on it */
+:where(:root[data-cloud='on']) button.quiet,
+:where(:root[data-cloud='on']) a.button.quiet { background: none; border-color: transparent; color: var(--text-soft); }
+:where(:root[data-cloud='on']) button.quiet:hover:not(:disabled),
+:where(:root[data-cloud='on']) a.button.quiet:hover { background: var(--surface-control); border-color: transparent; color: var(--text); }
+/* destructive: marked before it is pressed, filled once the pointer is on it */
+:where(:root[data-cloud='on']) button:is(.destructive, .danger),
+:where(:root[data-cloud='on']) a.button:is(.destructive, .danger) { background: none; border-color: color-mix(in srgb, var(--danger) 55%, var(--border)); color: var(--danger); }
+:where(:root[data-cloud='on']) button:is(.destructive, .danger):hover:not(:disabled),
+:where(:root[data-cloud='on']) a.button:is(.destructive, .danger):hover { background: color-mix(in srgb, var(--danger) 14%, transparent); border-color: var(--danger); }
+/* sizes: small for dense rows, big for the one action of a first screen */
+:where(:root[data-cloud='on']) button.small,
+:where(:root[data-cloud='on']) a.button.small { min-height: 32px; padding: var(--space-1) var(--space-snug); font-size: var(--text-sm); }
+:where(:root[data-cloud='on']) button.big,
+:where(:root[data-cloud='on']) a.button.big { min-height: 48px; padding: var(--space-3) var(--space-5); font-size: var(--text-md); }
+@media (pointer: coarse) {
+  :where(:root[data-cloud='on']) button.small,
+  :where(:root[data-cloud='on']) a.button.small { min-height: var(--control-height); }
+}
+/* an icon alone: a square target */
+:where(:root[data-cloud='on']) button.icon-button { min-height: 40px; background: none; border-color: transparent; color: var(--text-soft); }
+:where(:root[data-cloud='on']) button.icon-button:hover:not(:disabled) { background: var(--surface-control); border-color: transparent; color: var(--text); }
+/* busy: a spinner before the words (which say what is happening), and no second press */
+:where(:root[data-cloud='on']) button:is([aria-busy='true'], [data-working]):not(.round, .icon, .icon-button, .mini-next) { cursor: progress; pointer-events: none; }
+:where(:root[data-cloud='on']) button:is([aria-busy='true'], [data-working]):not(.round, .icon, .icon-button, .mini-next)::before {
+  content: '';
+  flex: none;
+  display: inline-block;
+  inline-size: 0.9em;
+  block-size: 0.9em;
+  margin-inline-end: var(--space-2);
+  vertical-align: -0.1em;
+  border: 2px solid currentColor;
+  border-inline-end-color: transparent;
+  border-radius: 50%;
+  animation: cloud-spin var(--motion-loop-working) linear infinite;
+}
+:where(:root[data-cloud='on']) button:has(> .ui-icon):is([aria-busy='true'], [data-working])::before { margin-inline-end: 0; }
+:where(:root[data-cloud='on']) button[data-working]::after { content: none; }
+@keyframes cloud-spin { to { transform: rotate(360deg); } }
+/* a chosen toggle */
+:where(:root[data-cloud='on']) button[aria-pressed='true']:hover:not(:disabled) { border-color: var(--ink); }
+
+/* ---- fields ---- */
+:where(:root[data-cloud='on']) :is(input, select, textarea) { border-color: var(--border); }
+:where(:root[data-cloud='on']) textarea { font: inherit; color: inherit; width: 100%; min-width: 0; padding: var(--control-pad-block) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-raised); }
+:where(:root[data-cloud='on']) :is(input, select, textarea):where(:hover:not(:disabled, :focus)) { border-color: var(--edge-interactive); }
+:where(:root[data-cloud='on']) :is(input, select, textarea):where(:focus-visible) { border-color: var(--focus); }
+:where(:root[data-cloud='on']) :is(input, select, textarea):disabled { opacity: 0.55; cursor: not-allowed; }
+:where(:root[data-cloud='on']) input:is([type='checkbox'], [type='radio']) { accent-color: var(--primary-fill); }
+:where(:root[data-cloud='on']) ::placeholder { color: var(--text-soft); opacity: 0.8; }
+:where(:root[data-cloud='on']) .field { gap: var(--space-dense); }
+:where(:root[data-cloud='on']) .field > label { font-size: var(--text-sm); font-weight: var(--weight-label); }
+:where(:root[data-cloud='on']) .field-help { margin: 0; color: var(--text-soft); font: var(--type-caption); }
+:where(:root[data-cloud='on']) .field > .warn { margin: 0; color: var(--danger); font-size: var(--text-sm); }
+:where(:root[data-cloud='on']) .field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4); align-items: start; }
+
+/* ---- page header: title, one line, the page's actions ---- */
+:where(:root[data-cloud='on']) .page-header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-4) var(--space-5); margin: 0 0 var(--space-5); min-width: 0; }
+:where(:root[data-cloud='on']) .page-header-text { flex: 1 1 320px; display: grid; gap: var(--space-2); min-width: 0; }
+:where(:root[data-cloud='on']) .page-header .display { margin: 0; }
+:where(:root[data-cloud='on']) .page-eyebrow { margin: 0; color: var(--text-soft); font: var(--type-eyebrow); letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; }
+:where(:root[data-cloud='on']) .page-lead { margin: 0; max-width: 64ch; color: var(--text-soft); font-size: var(--text-md); line-height: 1.5; }
+:where(:root[data-cloud='on']) .page-header-actions { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); max-width: 100%; }
+@media (max-width: 760px) {
+  :where(:root[data-cloud='on']) .page-header { flex-direction: column; align-items: stretch; gap: var(--space-4); }
+  :where(:root[data-cloud='on']) .page-header-text { flex: none; }
+  :where(:root[data-cloud='on']) .page-header-actions > * { flex: 1 1 auto; justify-content: center; }
+}
+
+/* ---- section headings ---- */
+:where(:root[data-cloud='on']) .section-title { margin: 0; font: var(--weight-strong) var(--text-md) / 1.3 var(--body); color: var(--text); }
+:where(:root[data-cloud='on']) .section-lead { margin: var(--space-1) 0 0; max-width: 64ch; color: var(--text-soft); font-size: var(--text-sm); line-height: 1.5; }
+:where(:root[data-cloud='on']) .section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); margin: 0 0 var(--space-3); min-width: 0; }
+
+/* ---- cards ---- */
+:where(:root[data-cloud='on']) .ui-card { display: grid; align-content: start; gap: var(--space-3); min-width: 0; padding: var(--space-5); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-raised); }
+:where(:root[data-cloud='on']) .ui-card > * { margin-block: 0; min-width: 0; }
+:where(:root[data-cloud='on']) .ui-card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); }
+:where(:root[data-cloud='on']) .ui-card-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--border); }
+:where(:root[data-cloud='on']) .ui-card.interactive { color: inherit; text-decoration: none; cursor: pointer; transition: border-color var(--motion-fast) var(--motion-ease), background-color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease); }
+:where(:root[data-cloud='on']) .ui-card.interactive:hover { border-color: var(--edge-interactive); box-shadow: var(--shadow-raised); }
+:where(:root[data-cloud='on']) .ui-card.interactive:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+:where(:root[data-cloud='on']) .ui-card[aria-current], :where(:root[data-cloud='on']) .ui-card[data-selected='true'] { border-color: var(--selected); background: var(--surface-selected); }
+:where(:root[data-cloud='on']) .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: var(--space-4); align-items: stretch; min-width: 0; }
+@media (min-width: 761px) {
+  :where(:root[data-cloud='on']) .card-grid[data-cols='2'] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1001px) {
+  :where(:root[data-cloud='on']) .card-grid[data-cols='3'] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  :where(:root[data-cloud='on']) .ui-card { padding: var(--space-4); }
+  :where(:root[data-cloud='on']) .card-grid { gap: var(--space-3); }
+}
+
+/* ---- lists: rows with hairlines inside one frame ---- */
+:where(:root[data-cloud='on']) .ui-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-raised); overflow: hidden; }
+:where(:root[data-cloud='on']) .ui-list-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); min-height: 56px; padding: var(--space-snug) var(--space-4); min-width: 0; }
+:where(:root[data-cloud='on']) .ui-list-row + .ui-list-row { border-top: 1px solid var(--border); }
+:where(:root[data-cloud='on']) .ui-list-row > :first-child { flex: 1 1 200px; min-width: 0; }
+
+/* ---- empty state: an icon, one line, one action ---- */
+:where(:root[data-cloud='on']) .empty-state.boxed { display: grid; justify-items: center; gap: var(--space-2); max-width: none; padding: var(--space-7) var(--space-5); border: 1px dashed var(--edge-interactive); border-radius: var(--radius); background: color-mix(in srgb, var(--surface-raised) 60%, transparent); text-align: center; }
+:where(:root[data-cloud='on']) .empty-state.boxed > * { margin-block: 0; }
+:where(:root[data-cloud='on']) .empty-state-icon { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-control); color: var(--text-soft); }
+:where(:root[data-cloud='on']) .empty-state.boxed :is(h2, h3) { font: var(--weight-strong) var(--text-lg) / 1.3 var(--body); }
+:where(:root[data-cloud='on']) .empty-state.boxed p { max-width: 46ch; color: var(--text-soft); font-size: var(--text-sm); line-height: 1.5; }
+:where(:root[data-cloud='on']) .empty-state-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); margin-top: var(--space-3); }
+:where(:root[data-cloud='on']) .empty-state:not(.boxed) .empty-state-actions { justify-content: flex-start; }
+:where(:root[data-cloud='on']) .empty-state[data-tone='error'] { border-color: color-mix(in srgb, var(--danger) 50%, var(--border)); }
+:where(:root[data-cloud='on']) .empty-state[data-tone='error'] .empty-state-icon { border-color: color-mix(in srgb, var(--danger) 50%, var(--border)); color: var(--danger); }
+@media (max-width: 760px) {
+  :where(:root[data-cloud='on']) .empty-state.boxed { padding: var(--space-6) var(--space-4); }
+  :where(:root[data-cloud='on']) .empty-state-actions > * { flex: 1 1 auto; justify-content: center; }
+}
+
+/* ---- banners and badges ---- */
+:where(:root[data-cloud='on']) .banner { --tone: var(--text-soft); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); min-width: 0; margin: 0; padding: var(--space-snug) var(--space-4); border: 1px solid color-mix(in srgb, var(--tone) 40%, var(--border)); border-radius: var(--radius); background: color-mix(in srgb, var(--tone) 7%, var(--surface-raised)); color: var(--text); font-size: var(--text-sm); line-height: 1.45; }
+:where(:root[data-cloud='on']) .banner[data-tone='info'] { --tone: var(--request); }
+:where(:root[data-cloud='on']) .banner[data-tone='ok'] { --tone: var(--status-ready); }
+:where(:root[data-cloud='on']) .banner[data-tone='warn'] { --tone: var(--status-warning); }
+:where(:root[data-cloud='on']) .banner[data-tone='danger'] { --tone: var(--danger); }
+:where(:root[data-cloud='on']) .banner > .ui-icon { color: var(--tone); }
+:where(:root[data-cloud='on']) .banner > :is(p, span, div):not(.ui-icon) { flex: 1 1 200px; min-width: 0; margin: 0; }
+:where(:root[data-cloud='on']) .banner > :is(button, a.button) { flex: none; min-height: 32px; padding: var(--space-1) var(--space-3); font-size: var(--text-sm); }
+:where(:root[data-cloud='on']) .badge { --tone: var(--text-soft); display: inline-flex; align-items: center; gap: var(--icon-gap-dense); padding: 0 var(--space-2); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--tone) 16%, transparent); color: var(--tone); font: var(--weight-label) var(--text-xs) / 22px var(--body); white-space: nowrap; }
+:where(:root[data-cloud='on']) .badge:not([data-tone]) { background: var(--surface-control); color: var(--text); }
+:where(:root[data-cloud='on']) .badge[data-tone='accent'] { background: var(--primary-fill); color: var(--primary-ink); }
+:where(:root[data-cloud='on']) .badge[data-tone='ok'] { --tone: var(--status-ready); }
+:where(:root[data-cloud='on']) .badge[data-tone='warn'] { --tone: var(--status-warning); }
+:where(:root[data-cloud='on']) .badge[data-tone='request'] { --tone: var(--request); }
+:where(:root[data-cloud='on']) .count-badge { display: inline-block; min-width: 20px; padding: 0 var(--space-dense); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--request) 20%, transparent); color: var(--request); font: var(--weight-strong) var(--text-xs) / 20px var(--mono); font-variant-numeric: tabular-nums; text-align: center; }
+
+/* ---- tabs ---- */
+:where(:root[data-cloud='on']) .tabs { gap: var(--space-1); }
+:where(:root[data-cloud='on']) .tabs a { display: inline-flex; align-items: center; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm) var(--radius-sm) 0 0; font-size: var(--text-sm); font-weight: 500; }
+:where(:root[data-cloud='on']) .tabs a:hover { background: color-mix(in srgb, var(--surface-control) 70%, transparent); }
+:where(:root[data-cloud='on']) .tabs a[aria-current='page'] { font-weight: var(--weight-label); }
+:where(:root[data-cloud='on']) [role='tablist'] > button:where([role='tab']) { min-height: var(--control-height); padding: var(--space-2) var(--space-3); border: 0; border-bottom: 2px solid transparent; border-radius: var(--radius-sm) var(--radius-sm) 0 0; background: none; color: var(--text-soft); font-size: var(--text-sm); font-weight: 500; }
+:where(:root[data-cloud='on']) [role='tablist'] > button:where([role='tab'][aria-selected='true']) { border-bottom-color: var(--selected); color: var(--text); font-weight: var(--weight-label); }
+
+/* ---- toasts: a raised card with a marker for what kind of news it is ---- */
+:where(:root[data-cloud='on']) .toasts { gap: var(--space-2); padding: var(--space-1); }
+:where(:root[data-cloud='on']) .toast-row { gap: var(--space-3); padding: var(--space-snug) var(--space-2) var(--space-snug) var(--space-4); border: 1px solid var(--edge-overlay); border-radius: var(--radius); background: var(--surface-overlay); box-shadow: var(--shadow-overlay), inset var(--marker) 0 0 var(--status-ready); color: var(--text); font-size: var(--text-sm); line-height: 1.45; }
+:where(:root[data-cloud='on']) .toast-row.problem { background: var(--surface-overlay); box-shadow: var(--shadow-overlay), inset var(--marker) 0 0 var(--danger); color: var(--text); }
+:where(:root[data-cloud='on']) .toast-row > .toast-where { color: var(--text-soft); }
+:where(:root[data-cloud='on']) .toast-row button { min-height: 32px; padding: var(--space-1) var(--space-3); border-color: var(--border); background: none; color: var(--text); font-size: var(--text-sm); }
+:where(:root[data-cloud='on']) .toast-row button:hover { background: var(--surface-control); border-color: var(--edge-interactive); }
+:where(:root[data-cloud='on']) .toast-row .toast-close { min-width: 32px; padding: 0; border: 0; color: var(--text-soft); }
+:where(:root[data-cloud='on']) .toast-row .toast-close:hover { color: var(--text); }
+@media (max-width: 760px) {
+  :where(:root[data-cloud='on']) .toasts { right: var(--space-3); left: var(--space-3); width: auto; }
+  :where(:root[data-cloud='on']) .toast-row button { min-height: var(--control-height); }
+  :where(:root[data-cloud='on']) .toast-row .toast-close { min-width: var(--control-height); }
+}
+
+/* ---- dialogs, drawers and sheets ---- */
+:where(:root[data-cloud='on']) .overlay { backdrop-filter: blur(var(--space-hair)); -webkit-backdrop-filter: blur(var(--space-hair)); }
+:where(:root[data-cloud='on']) .overlay-head { padding: var(--space-3) var(--space-3) var(--space-3) var(--space-5); }
+:where(:root[data-cloud='on']) .overlay-head h2 { font: var(--weight-strong) var(--text-lg) / 1.3 var(--body); }
+:where(:root[data-cloud='on']) .overlay-close { min-width: 40px; min-height: 40px; padding: 0; border: 0; background: none; color: var(--text-soft); }
+:where(:root[data-cloud='on']) .overlay-close:hover { background: var(--surface-control); color: var(--text); }
+:where(:root[data-cloud='on']) .overlay-body { padding: var(--space-5); }
+:where(:root[data-cloud='on']) .overlay-foot { padding: var(--space-3) var(--space-5); background: color-mix(in srgb, var(--surface-control) 45%, transparent); }
+:where(:root[data-cloud='on']) .overlay-dialog .overlay-foot { border-radius: 0 0 var(--radius) var(--radius); }
+@media (max-width: 760px) {
+  :where(:root[data-cloud='on']) .overlay-head { padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); }
+  :where(:root[data-cloud='on']) .overlay-body { padding: var(--space-4); }
+  :where(:root[data-cloud='on']) .overlay-foot { padding: var(--space-3) var(--space-4); }
+  :where(:root[data-cloud='on']) .overlay-foot > * { flex: 1 1 auto; justify-content: center; }
+  :where(:root[data-cloud='on']) .overlay-close { min-width: var(--control-height); min-height: var(--control-height); }
+  /* a sheet from the bottom edge shows a grip, so it reads as something that slides away */
+  :where(:root[data-cloud='on']) :is(.overlay-drawer, .overlay-sheet) .overlay-panel::before { content: ''; flex: none; align-self: center; width: var(--space-7); height: var(--space-1); margin-top: var(--space-2); border-radius: var(--radius-pill); background: var(--border); }
+}
+
+/* ---- menus and popovers ---- */
+:where(:root[data-cloud='on']) .menu-list { min-width: 200px; padding: var(--space-1); border-radius: var(--radius); }
+:where(:root[data-cloud='on']) .menu-list button { min-height: 36px; padding: var(--space-dense) var(--space-3); border: 0; border-radius: var(--radius-sm); font-size: var(--text-sm); font-weight: 500; }
+:where(:root[data-cloud='on']) .popover-panel { border-radius: var(--radius); padding: var(--space-4); }
+
+/* ---- skeletons: loading shaped like what is coming ---- */
+:where(:root[data-cloud='on']) :is(.skeleton-line, .skeleton-box) { display: block; border-radius: var(--radius-sm); background: var(--surface-control); animation: skeleton-breathe var(--motion-loop-breathe) ease-in-out infinite; }
+:where(:root[data-cloud='on']) .skeleton-line { height: 14px; width: 100%; max-width: 100%; }
+:where(:root[data-cloud='on']) .skeleton-line[data-w='short'] { width: 32%; }
+:where(:root[data-cloud='on']) .skeleton-line[data-w='mid'] { width: 60%; }
+:where(:root[data-cloud='on']) .skeleton-box { height: 96px; border-radius: var(--radius); }
+
+/* ---- small things every page leans on ---- */
+:where(:root[data-cloud='on']) .hint { line-height: 1.5; }
+:where(:root[data-cloud='on']) .problem { border-color: color-mix(in srgb, var(--danger) 55%, var(--border)); box-shadow: inset var(--marker) 0 0 var(--danger); }
+:where(:root[data-cloud='on']) .tooltip { border-radius: var(--radius-sm); font-size: var(--text-xs); line-height: 1.45; }
