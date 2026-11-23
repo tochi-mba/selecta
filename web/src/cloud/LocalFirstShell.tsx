@@ -40,7 +40,8 @@ import { BROWSER_MIX_NEEDS } from './localFirstMixes';
 import { EMPTY_MIX, localFirstRequest, mediaRequest, readCatalogue, type AvailabilitySources } from './localFirstRequest';
 import { RemoteListen } from '../devices/RemoteListen';
 import { useRemote } from '../devices/useRemote';
-import { sameProgramme } from '../devices/remoteNow';
+import { programmeTurn, type ControllerLink } from '../devices/controller';
+import { useHoldings } from '../devices/useHoldings';
 import { ROOM_REQUEST_EVENT } from './localFirstRequests';
 import { addable, askWords, roomLine, useRoomLive, useRoomSession, waitingCount, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
 import { recipeStore } from './recipeStore';
@@ -112,6 +113,7 @@ function browserFlags(browserHarmonic: boolean): Record<string, boolean> {
 const VIEW_PATHS: Record<View, string> = { Mixes: '/mixes', Now: '/listen', Edit: '/mix/current/edit', Library: '/library', Words: '/discover', Workshop: '/workshop' };
 const IDLE = (): void => {};
 const NO_SONGS: readonly number[] = [];
+const NOT_THIS_MIX = (): void => {};
 /** How long the speaker waits before telling the session its programme again after a refusal. */
 const PUBLISH_RETRY_MS = 10_000;
 const AVAILABILITY_REFRESH_MS = 12 * 60 * 60 * 1000;
@@ -229,7 +231,11 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const [servedFrom, setServedFrom] = useState<{ at: number | null } | null>(null);
   const tonal = useMemo(() => tonalStore(workspaceId), [workspaceId]);
   const roomsHere = on('rooms') && !account.feature_locks.rooms;
+  // ADR-0475: the device that is playing when it is not this one, for the request adapter. Set
+  // further down each render, once the session is known; read by the adapter at each press.
+  const controllerLink = useRef<ControllerLink | null>(null);
   const sources = useMemo<AvailabilitySources>(() => ({
+    controller: () => controllerLink.current,
     here: async () => {
       const opened = await openStore();
       const found = new Map<number, 'here' | 'reauth' | 'reconnect'>();
@@ -381,6 +387,21 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // current mix is the very one that is playing: it is a remote too.
   const followsHere = (status?.counts.ready ?? 0) > 0;
   const remote = useRemote({ remoteControl: on('devices.remote_control'), device: playback, mixSongIds: followsHere ? songOrder : NO_SONGS, loadSongs: loadRemoteSongs });
+  // ADR-0475: what the speaker can open, so a request is judged by the device that will play it
+  const holdings = useHoldings(cloud, on('devices.remote_control'), remote ? playback.view?.speaker_device_id ?? null : null);
+  const remoteProgramme = remote ? remote.session.programme.map((entry) => entry.song_id).join(',') : '';
+  const remoteMix = useMemo<MixData['mix']>(() => (remoteProgramme ? remoteProgramme.split(',').map(Number).map((songId, position) => {
+    const known = remote?.book.get(songId);
+    return { position, song_id: songId, artist: known?.artist ?? '', title: known?.title ?? `Song ${position + 1}`, duration: (known?.duration_s ?? 0), bpm: null, key: null, locked: false, seam: null };
+  }) : []), [remoteProgramme, remote?.book]);
+  controllerLink.current = remote ? {
+    speakerName: remote.view.speaker_name ?? 'the other device',
+    online: remote.view.speaker === 'elsewhere',
+    programme: remoteMix.map((item) => item.song_id),
+    songIndex: remote.session.song_index,
+    holds: holdings.speakerSongs,
+    send: playback.send,
+  } : null;
   useSplitterNotices(stems.store, (words) => showToast(words));
   const resolveTrack = useCallback<MediaResolver>(async (songId) => (await resolver())?.(songId) ?? null, [resolver]);
   // Harmonic matches read only this device's own files (never a hosted copy), to measure and to
@@ -447,15 +468,35 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const remoteControlOn = on('devices.remote_control');
   const audible = now.phase !== 'idle';
   const playingAt = now.position;
+  // ADR-0475 R4: the order this device's mix and the session last agreed on. When the session's
+  // programme then changes and this mix has not, another device changed what is coming up (a
+  // request added from a phone): this device takes that into its mix and keeps playing. When
+  // this mix changed, it is sent as before.
+  const agreed = useRef<string | null>(null);
+  const adopting = useRef(false);
   useEffect(() => {
     if (!remoteControlOn || !sessionNow || !audible || !songOrder.length) return;
-    if (sameProgramme(sessionNow.programme ?? [], songOrder)) return;
+    const theirs = (sessionNow.programme ?? []).map((entry) => entry.song_id);
+    const turn = programmeTurn(songOrder, theirs, agreed.current);
+    if (turn === 'agree') { agreed.current = songOrder.join(','); return; }
+    if (turn === 'adopt') {
+      // the song that is playing must stay where it is; anything else is not an add
+      if (theirs[playingAt] !== songOrder[playingAt]) { agreed.current = null; return; }
+      if (adopting.current) return;
+      adopting.current = true;
+      void request<MixData>('/mix/order', { method: 'PUT', headers: { 'content-type': 'application/json', 'x-mix-order': songOrder.join(',') }, body: JSON.stringify({ song_ids: theirs }) })
+        .then((changed) => { agreed.current = changed.mix.map((item) => item.song_id).join(','); setMixData(changed); })
+        // a song this device cannot play: its own mix stands and is sent again
+        .catch(() => { agreed.current = null; })
+        .finally(() => { adopting.current = false; });
+      return;
+    }
     // one try per programme and ownership; again after a pause if the session still lacks it
     const key = `${sessionNow.fence ?? ''}:${songOrder.join(',')}`;
     if (published.current.key === key && Date.now() - published.current.at < PUBLISH_RETRY_MS) return;
     published.current = { key, at: Date.now() };
     void publishProgramme(songOrder, playingAt);
-  }, [audible, playingAt, publishProgramme, remoteControlOn, sessionNow, songOrder]);
+  }, [audible, playingAt, publishProgramme, remoteControlOn, request, sessionNow, setMixData, songOrder]);
   useEffect(() => {
     player.onChange = setNow;
     setNow(player.state);
@@ -482,7 +523,10 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   }, []);
   // Request a song (flag `requests`): the same hook and panel as local mode, answered in the
   // browser; room requests the host accepted arrive on the event stream and join this list
-  const songRequests = useRequests({ mix: data.mix, player: shellPlayer, onMix: setMixData }, notify, request);
+  // with another device playing, requests are added to its programme: the list is judged against
+  // what that device is playing, and nothing here changes this device's own mix
+  const requestsPlayback = useMemo(() => (remote ? { mix: remoteMix, player: remote.player, onMix: NOT_THIS_MIX } : { mix: data.mix, player: shellPlayer, onMix: setMixData }), [data.mix, remote?.player, remoteMix, setMixData, shellPlayer, !!remote]);
+  const songRequests = useRequests(requestsPlayback, notify, request);
   const [requesting, setRequesting] = useState(false);
   const refreshRoomRequests = useRef(songRequests.refresh);
   refreshRoomRequests.current = songRequests.refresh;

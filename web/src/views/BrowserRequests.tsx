@@ -78,7 +78,7 @@ export function BrowserRequests({ part = 'own', rows, live, playback, send, refr
         const start = stage === 'no_mix';
         const label = start ? 'Start a mix with this song' : live ? 'Add next' : 'Add to mix';
         return (
-          <AskRow key={request.id} title={title} artist={request.artist} note={stage === 'adding' ? '' : why} stage={stage}>
+          <AskRow key={request.id} title={title} artist={request.artist} note={stage === 'adding' ? '' : why || request.where_note} stage={stage}>
             {!why && <Action className="primary" aria-label={`${label}: ${title}`} run={() => (start ? onStart(request) : onAdd(request))} working="Working…">{label}</Action>}
             <button className="quiet" disabled={request.id < 0} aria-label={`Dismiss: ${title}`} onClick={() => { void onDismiss(request); }}>Dismiss</button>
           </AskRow>

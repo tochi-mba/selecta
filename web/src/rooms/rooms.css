@@ -93,7 +93,8 @@
 .asks-head h3 { font-size: var(--text-md); }
 /* In the Requests drawer the list starts at the drawer's own padding: the drawer's title is the
    heading, so the hidden one takes no row and the first section heading adds no space above. */
-.overlay-body > .requests-browser > .requests-head { position: absolute; }
+/* (only while it holds nothing to read: with a waiting count it is a row of its own) */
+.overlay-body > .requests-browser > .requests-head:not(:has(.hint)) { position: absolute; }
 .overlay-body > .requests-browser .asks-head h3 { margin-block: 0; }
 .asks-head p { flex: 1 1 100%; color: var(--text-soft); font-size: var(--text-sm); }
 .asks-none { color: var(--text-soft); font-size: var(--text-sm); list-style: none; }

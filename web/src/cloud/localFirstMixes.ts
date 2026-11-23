@@ -69,7 +69,9 @@ export type MixFamily = {
   steering: () => Status['steering'];
 };
 
-export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[]>): MixFamily {
+/** `everySong` (ADR-0475 R5): another device is playing, so Request a song looks through the
+ * whole account library, not only what this device can play. */
+export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[]>, everySong: () => boolean = () => false): MixFamily {
   const current = async (): Promise<MixData | null> => {
     const id = store.current();
     if (!id) return null;
@@ -194,8 +196,11 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
   const destinations = async (query: URLSearchParams): Promise<SongRow[]> => {
     const wanted = (query.get('q') ?? '').trim().toLowerCase();
     const limit = Math.max(1, Number(query.get('limit') ?? 20) || 20);
+    const all = everySong();
     return (await songs())
-      .filter((song) => song.playable && `${song.title} ${song.artist}`.toLowerCase().includes(wanted))
+      .filter((song) => (all || song.playable) && `${song.title} ${song.artist}`.toLowerCase().includes(wanted))
+      // what this device can play itself comes first; the rest plays on the speaker
+      .sort((one, other) => Number(other.playable) - Number(one.playable))
       .slice(0, limit)
       .map((song) => ({ id: song.id, artist: song.artist, title: song.title, genre: null, duration: song.duration, bpm: null, camelot: null, lyric_status: null, never: false, priority: false }));
   };
@@ -245,6 +250,18 @@ export function mixFamily(store: RecipeStore, songs: () => Promise<PlayableSong[
           if (position < 0 || position >= ids.length) throw refuse('That position isn’t in this mix any more.', 'mix_changed', 409);
           return ids.filter((_, at) => at !== position);
         });
+      }
+      // ADR-0475 R4: the whole order at once, as another device changed it. Every song must play
+      // here, because this device is the one making the sound.
+      if (method === 'PUT' && route === '/mix/order') {
+        const body = JSON.parse(String(init?.body ?? '{}')) as { song_ids?: number[] };
+        return (async () => {
+          const wanted = (body.song_ids ?? []).map(Number);
+          const all = await songs();
+          const missing = wanted.find((id) => !all.some((one) => one.id === id && one.playable));
+          if (missing !== undefined) throw refuse('One of those songs doesn’t play on this device.', 'not_playable');
+          return editCurrent(init, () => wanted);
+        })();
       }
       if (method === 'POST' && route === '/mix/clear') {
         return (async () => {
