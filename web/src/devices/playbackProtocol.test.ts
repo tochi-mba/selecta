@@ -1,4 +1,4 @@
-import { act, cleanup, render, renderHook, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { alternativeCommand, ControllerNotices } from './ControllerNotices';
@@ -152,8 +152,12 @@ describe('what controllers are told (BF-0461-04/05)', () => {
       { song_id: 6, title: 'Next', artist: 'B', programme_index: 1, same_song: false },
     ] };
     render(createElement(ControllerNotices, { notices: notices({ unavailable: [unavailable] }), speakerName: 'Bar tablet', session: current, send }));
-    expect(screen.getByTestId('unavailable-here').textContent).toContain("Bar tablet couldn't play that song: its file isn't on that device.");
-    screen.getByRole('button', { name: 'Copy - A (another copy)' }).click();
+    // one line and two actions; the alternatives open in a sheet
+    expect(screen.getByTestId('unavailable-here').textContent).toBe('Bar tablet couldn’t play “Copy”: its file isn’t there.Choose anotherDismiss');
+    expect(screen.queryByTestId('unavailable-alternatives')).toBeNull();
+    act(() => { screen.getByRole('button', { name: 'Choose another' }).click(); });
+    expect(within(screen.getByTestId('unavailable-alternatives')).getAllByRole('button')).toHaveLength(2);
+    act(() => { screen.getByRole('button', { name: 'Copy - A (another copy)' }).click(); });
     expect(send).toHaveBeenCalledWith('set_programme', { songs: [9, 6], song_index: 0 });
     expect(alternativeCommand(unavailable.alternatives[1], 5, current)).toEqual({ name: 'skip', args: { song_index: 1 } });
     await waitFor(() => expect(screen.queryByTestId('unavailable-here')).toBeNull());

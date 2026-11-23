@@ -8,8 +8,27 @@
 .playing-bar-message, .playing-bar-error, .playing-bar-output { margin: 0; }
 .playing-bar-error { color: var(--danger); }
 .playing-bar-notices { display: grid; gap: var(--space-1); }
-.playing-bar-notices p { margin: 0; }
+.playing-bar-notices p { margin: 0; min-width: 0; }
 .playing-bar-notices button { margin-left: var(--space-2); }
+/* A song the speaker could not play: one line and two small actions; the alternatives open in a
+   sheet, so the notice never pushes the page down. */
+.notice-unavailable { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); min-width: 0; }
+.notice-unavailable > p { flex: 1 1 14rem; }
+.notice-actions { display: flex; align-items: center; gap: var(--space-2); margin-inline-start: auto; }
+.playing-bar-notices .notice-actions button { margin: 0; min-height: var(--control-height); padding: 0 var(--space-3); font-size: var(--text-sm); white-space: nowrap; }
+.notice-alternatives { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.notice-alternatives button { width: 100%; min-height: var(--control-height); display: grid; gap: var(--space-hair); justify-items: start; padding: var(--space-2) var(--space-3); text-align: start; }
+.notice-alternatives button span { color: var(--text-soft); font: var(--type-meta); }
+.notice-alternatives b, .notice-alternatives span { max-width: 100%; overflow-wrap: anywhere; }
+/* phone: each notice is one line, so the page starts within about 88px of the top bar */
+@media (max-width: 640px) {
+  .shell[data-mode='cloud'] .shell-banners > .playing-bar-notices { padding-block: var(--space-2); }
+  .shell[data-mode='cloud'] .shell-banners:has(> .playing-bar-notices) { padding-top: var(--space-2); }
+  .playing-bar-notices .notice-actions button { min-height: calc(var(--control-height) - var(--space-2)); }
+  .playing-bar-notices > p, .notice-unavailable > p { flex: 1 1 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .notice-why { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .notice-actions { margin-inline-start: 0; }
+}
 
 /* Account > Devices: one row per signed-in browser inside the settings card (cloud/account.css):
    what it is, its name, when it was last used, and its two actions at the right. */
@@ -104,6 +123,7 @@
 .remote-song h2 { margin: 0; font: var(--type-section); overflow-wrap: anywhere; }
 .remote-song p { margin: 0; color: var(--text-soft); font: var(--type-song); font-weight: var(--weight-body); overflow-wrap: anywhere; }
 .remote-song p.remote-place { font: var(--type-caption); font-variant-numeric: tabular-nums; }
+.remote-sound { margin: 0; color: var(--text-soft); font: var(--type-caption); }
 .remote-state { margin: 0; padding-inline-start: var(--space-2); border-inline-start: var(--marker) solid var(--status-warning); color: var(--text); font: var(--type-meta); }
 .remote-seek { display: grid; gap: var(--space-hair); min-width: 0; }
 .remote-seek input[type=range],
@@ -168,6 +188,7 @@
   .remote-card { grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-3); padding: var(--space-3); align-items: center; }
   .remote-card > .remote-where,
   .remote-card > .remote-state,
+  .remote-card > .remote-sound,
   .remote-card > .remote-seek,
   .remote-card > .remote-volume { grid-column: 1 / -1; }
   .remote-song h2 { font: var(--type-song); }

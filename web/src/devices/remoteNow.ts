@@ -92,6 +92,17 @@ export function whereWords(view: SessionView): string {
   return `Playing on ${name}`;
 }
 
+/** What the speaker says about its own sound, told to someone holding a remote: about that
+ * device by name, and never an instruction only the speaker could follow (the check tone plays
+ * there, not here). Null when its sound is confirmed or it has said nothing. */
+export function soundWords(view: SessionView, output: { state: string } | null): string | null {
+  const who = view.speaker_name ?? 'The speaker';
+  if (output?.state === 'output_unverified') return `${who} hasn’t confirmed its sound yet.`;
+  if (output?.state === 'interrupted') return `Sound on ${who} was interrupted, so you may not hear it.`;
+  if (output?.state === 'uncertain') return `${who} can’t be sure it is making sound right now.`;
+  return null;
+}
+
 /** A small honest line under the song when the session is anything other than plainly playing
  * on a speaker that is checking in; null when there is nothing to add. */
 export function stateWords(view: SessionView, session: RemoteSession): string | null {

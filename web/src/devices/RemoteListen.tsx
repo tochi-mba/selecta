@@ -1,9 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { playbackStatusText } from '../copy';
 import { PageLink } from '../shell/PageLink';
 import { Icon } from '../ui/Icon';
 import { OPTIMISTIC_MS, speakerOutput } from './PlayingBar';
-import { advancing, clock, stateWords, upNext, whereWords } from './remoteNow';
+import { advancing, clock, soundWords, stateWords, upNext, whereWords } from './remoteNow';
 import type { Remote } from './useRemote';
 import './devices.css';
 
@@ -67,8 +66,8 @@ export function RemoteListen({ remote, playableHere }: {
   const position = seek.dragged ?? held ?? remote.positionMs();
   const reportedVolume = typeof session.volume === 'number' && Number.isFinite(session.volume) ? Math.round(session.volume) : null;
   const shownVolume = volume.dragged ?? (level && level.seq === session.seq ? level.percent : reportedVolume);
-  const output = speakerOutput(session);
-  const sound = output && output.state !== 'playing' ? playbackStatusText(output) : null;
+  // said about the speaker, by name: this device cannot play its check tone
+  const sound = soundWords(view, speakerOutput(session));
   const state = stateWords(view, session);
   const coming = upNext(session, remote.book);
   const playLabel = remote.playing ? 'Pause' : 'Play';
@@ -88,9 +87,8 @@ export function RemoteListen({ remote, playableHere }: {
             {current.artist && <p dir="auto" data-testid="remote-artist">{current.artist}</p>}
             {current.known && <p className="remote-place">Song {session.song_index + 1} of {session.programme.length}</p>}
           </div>
-          {(state || sound) && (
-            <p className="remote-state" role="status" data-testid="remote-state">{[state, sound].filter(Boolean).join(' ')}</p>
-          )}
+          {state && <p className="remote-state" role="status" data-testid="remote-state">{state}</p>}
+          {sound && <p className="remote-sound" role="status" data-testid="remote-sound">{sound}</p>}
           <div className="remote-seek">
             {duration !== null ? (
               <input
