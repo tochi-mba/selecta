@@ -202,8 +202,8 @@ describe('room requests the host accepted', () => {
     await request(2);
     const rows = await list();
     expect(rows.map((row) => row.song_id)).toEqual([2, 3, 4]);
-    expect(rows[1].browser_note).toBe(`Asked for in Friday room. ${JOINS_BY_HAND}`);
-    expect(rows[2].browser_note).toBe(`Asked for in Bar. ${NOT_ON_THIS_DEVICE}`);
+    expect(rows[1]).toMatchObject({ browser_note: JOINS_BY_HAND, room_name: "Friday room" });
+    expect(rows[2]).toMatchObject({ browser_note: NOT_ON_THIS_DEVICE, room_name: "Bar" });
     expect(new Set(rows.map((row) => row.id)).size).toBe(3);
   });
 
@@ -226,7 +226,7 @@ describe('room requests the host accepted', () => {
     window.dispatchEvent(new CustomEvent(ROOM_REQUEST_EVENT, { detail: { action: 'pending' } }));
     const [newRequest] = await list();
     expect(newRequest).toMatchObject({ song_id: 3, title: 'Charlie', stage: 'searching' });
-    expect(newRequest.browser_note).toContain('Asked for in Tochi\'s Crib.');
+    expect(newRequest.room_name).toContain("Crib");
     expect(sent).toHaveLength(0); // nothing enters playback merely because the room accepted it
 
     await ask('POST', `/requests/${newRequest.id}/add`, { order: [1, 2], position: 0 });

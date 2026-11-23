@@ -97,7 +97,7 @@ describe('Request a song in the browser', () => {
     fakeBackend({});
     panel([row({ stage: 'searching', browser_note: JOINS_BY_HAND })]);
     const list = within(screen.getByRole('list', { name: 'Your requests' }));
-    expect(list.getByText('Add it yourself')).toBeInTheDocument();
+    expect(list.getByRole('button', { name: /^Add (next|to mix)/ })).toBeInTheDocument();
     expect(list.getByText(JOINS_BY_HAND)).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Your requests' })).not.toHaveTextContent(/looking for a spot|Finding a spot/i);
   });
