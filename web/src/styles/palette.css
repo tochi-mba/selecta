@@ -17,3 +17,8 @@
 @media (forced-colors: active) {
   .palette-item.on { outline: 2px solid Highlight; outline-offset: -2px; }
 }
+
+/* a finger has no arrow keys: the palette's footnote keeps only what it promises */
+@media (pointer: coarse) {
+  .palette-keys { display: none; }
+}
