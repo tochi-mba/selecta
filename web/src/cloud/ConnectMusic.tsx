@@ -332,7 +332,7 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
   }
   if (variant === 'hero') {
     return (
-      <section className="empty-state boxed lw-hero connect-music" aria-labelledby="connect-music-title">
+      <section className="empty-state boxed music-empty lw-hero connect-music" aria-labelledby="connect-music-title">
         <span className="empty-state-icon" aria-hidden="true"><Icon name="music" /></span>
         <h2 id="connect-music-title">Add your music</h2>
         <p>Choose the folder your songs are in and SelectaDJ turns them into mixes. Your files stay on this device; nothing is uploaded.</p>
