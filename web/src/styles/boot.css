@@ -70,3 +70,234 @@
 .brand-mark-badge.small,
 .cloud-brand .cloud-mark,
 .biz-shell-brand .cloud-mark { inline-size: 34px; block-size: 34px; font-size: var(--text-lg); }
+
+/* ---------- The gate: every Cloud screen before the app (cloud/Gate.tsx) ----------
+   One frame for checking the sign-in, signing in again, verifying an email, the workspace check,
+   an account that is blocked or unreadable, and waiting offline: the brand, one card with one
+   clear action, who is signed in, and the credit at the foot. */
+.gate,
+.welcome {
+  box-sizing: border-box;
+  min-height: 100vh;
+  display: grid;
+  background: var(--surface-base);
+  color: var(--text);
+}
+.gate {
+  grid-template-rows: 1fr auto;
+  justify-items: center;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-4) var(--space-4);
+}
+.gate-body { inline-size: min(100%, 30rem); display: grid; gap: var(--space-4); }
+.gate-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-snug);
+  margin: 0;
+  font: var(--weight-heading) var(--text-lg) / 1.2 var(--display);
+  color: var(--text);
+}
+.gate-card {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  border: var(--separator) solid var(--edge-decorative);
+  border-radius: var(--radius);
+  background: var(--surface-panel);
+  box-shadow: var(--shadow-raised);
+}
+.gate-card h1 { margin: 0; font: var(--type-section); overflow-wrap: anywhere; }
+.gate-card p { margin: 0; color: var(--text-soft); overflow-wrap: anywhere; }
+.gate-card p strong { color: var(--text); font-weight: var(--weight-label); }
+.gate-card p.gate-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--icon-gap-dense);
+  font: var(--type-eyebrow);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+}
+.gate-card[data-tone='problem'] p.gate-eyebrow { color: var(--status-warning); }
+.gate-card p.gate-hint { font: var(--type-meta); }
+.gate-note,
+.gate-problem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  justify-self: stretch;
+  margin: 0;
+  padding: var(--space-snug) var(--space-3);
+  border: var(--separator) solid var(--edge-decorative);
+  border-radius: var(--radius-sm);
+  background: var(--surface-control);
+  font: var(--type-meta);
+}
+.gate-note > svg,
+.gate-problem > svg { flex: none; margin-top: var(--space-hair); }
+.gate-card p.gate-note { color: var(--text); }
+.gate-note > svg { color: var(--status-warning); }
+.gate-problem,
+.gate-card p.gate-problem { color: var(--danger); border-color: var(--edge-error); }
+.gate-form { display: grid; gap: var(--space-3); justify-self: stretch; }
+.gate-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-snug);
+  min-height: 44px;
+  padding: var(--space-snug) var(--space-3);
+  border: var(--separator) solid var(--edge-interactive);
+  border-radius: var(--radius-sm);
+  background: var(--surface-control);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color var(--motion-fast) var(--motion-ease), background-color var(--motion-fast) var(--motion-ease);
+}
+.gate-check:hover { border-color: var(--text); }
+.gate-check:has(input:checked) { border-color: var(--edge-selected); background: var(--surface-selected); }
+.gate-check:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+.gate-check input { flex: none; inline-size: 18px; block-size: 18px; min-height: 0; margin: 0; padding: 0; accent-color: var(--selected); }
+.gate-check input:focus-visible { outline: none; }
+.gate-actions { display: flex; flex-wrap: wrap; gap: var(--space-snug); margin-top: var(--space-2); }
+.gate-button {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  border: var(--separator) solid var(--edge-interactive);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font-weight: var(--weight-label);
+  cursor: pointer;
+}
+.gate-button.primary { padding-inline: var(--space-5); font-weight: var(--weight-strong); }
+.gate-button.quiet { border-color: transparent; color: var(--text-soft); padding-inline: var(--space-3); }
+.gate-button.quiet:hover:not(:disabled) { border-color: var(--edge-interactive); color: var(--text); }
+/* who is signed in, under the card, and the way out */
+.gate-account {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  padding-inline: var(--space-1);
+  color: var(--text-soft);
+  font: var(--type-meta);
+}
+.gate-account > span { min-width: 0; overflow-wrap: anywhere; }
+.gate-account strong { color: var(--text); font-weight: var(--weight-label); }
+.gate-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-1) var(--space-4);
+  color: var(--text-soft);
+  font: var(--type-caption);
+  text-align: center;
+}
+/* waiting before anything is known: the brand breathes, one line says what is happening */
+.gate-loading { grid-template-rows: 1fr; }
+.gate-wait { display: grid; justify-items: center; gap: var(--space-4); }
+.gate-wait p { margin: 0; color: var(--text-soft); }
+.gate-pulse { animation: skeleton-breathe var(--motion-loop-breathe) ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .gate-pulse { animation: none; } }
+@media (max-width: 480px) {
+  .gate { padding-top: var(--space-5); align-items: start; }
+  .gate-card { padding: var(--space-5) var(--space-4); }
+  .gate-actions { flex-direction: column; }
+  .gate-card .gate-actions,
+  .welcome-words .gate-actions { inline-size: 100%; }
+}
+
+/* ---------- The landing page for a signed-out visitor (cloud/Welcome.tsx) ---------- */
+.welcome {
+  grid-template-rows: auto 1fr auto auto;
+  gap: var(--space-6);
+  inline-size: 100%;
+  max-inline-size: var(--content-browse);
+  margin-inline: auto;
+  padding: var(--space-5) clamp(var(--space-4), 5vw, var(--space-7)) var(--space-5);
+}
+.welcome-top { display: flex; align-items: center; justify-content: space-between; }
+.welcome-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-6);
+}
+.welcome-words { display: grid; justify-items: start; gap: var(--space-4); min-width: 0; }
+.welcome-words h1 { margin: 0; font: var(--type-display); letter-spacing: -0.035em; text-wrap: balance; }
+.welcome-lead { margin: 0; max-inline-size: 34rem; color: var(--text-soft); font-size: var(--text-lg); text-wrap: pretty; }
+.welcome-words .gate-problem { justify-self: start; }
+/* the drawing: one song fading out over the next fading in, with the two volume curves crossing */
+.welcome-art {
+  position: relative;
+  display: grid;
+  padding: var(--space-5) var(--space-4);
+  border: var(--separator) solid var(--edge-decorative);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(120% 90% at 85% 100%, var(--word-glow), transparent 60%),
+    var(--surface-panel);
+  box-shadow: var(--shadow-raised);
+  overflow: hidden;
+}
+.welcome-art svg { display: block; inline-size: 100%; block-size: auto; }
+.welcome-art-out { fill: var(--text); }
+.welcome-art-in { fill: var(--primary-fill); stroke: var(--primary-edge); stroke-width: 0.5; }
+.welcome-art-curve { fill: none; stroke: var(--text-soft); stroke-width: 1.5; stroke-dasharray: 3 5; stroke-linecap: round; }
+.welcome-art-curve.rising { stroke: var(--motif); stroke-dasharray: none; stroke-width: 2; }
+.welcome-art-seam { fill: var(--surface-panel); stroke: var(--motif); stroke-width: 2; }
+.welcome-art-tag {
+  justify-self: start;
+  padding: var(--space-1) var(--space-snug);
+  border: var(--separator) solid var(--edge-decorative);
+  border-radius: var(--radius-pill);
+  background: var(--surface-control);
+  color: var(--text-soft);
+  font: var(--type-eyebrow);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+}
+.welcome-art-tag.next { justify-self: end; color: var(--text); }
+.welcome-benefits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+.welcome-benefits li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  align-items: center;
+  padding: var(--space-4);
+  border: var(--separator) solid var(--edge-decorative);
+  border-radius: var(--radius);
+  background: var(--surface-panel);
+}
+.welcome-benefit-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  border: var(--separator) solid var(--edge-decorative);
+  border-radius: var(--radius-sm);
+  background: var(--surface-control);
+  color: var(--text);
+}
+.welcome-benefits h2 { margin: 0; font: var(--weight-strong) var(--text-md) / 1.3 var(--body); }
+.welcome-benefits p { grid-column: 1 / -1; margin: 0; color: var(--text-soft); font: var(--type-meta); }
+.welcome .gate-foot { justify-content: space-between; padding-top: var(--space-4); border-top: var(--separator) solid var(--edge-decorative); }
+@media (min-width: 769px) {
+  .welcome-benefits { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .welcome-benefits li { grid-template-columns: minmax(0, 1fr); row-gap: var(--space-2); align-items: start; padding: var(--space-5); }
+}
+@media (min-width: 901px) {
+  .welcome-hero { grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); gap: var(--space-7); }
+}

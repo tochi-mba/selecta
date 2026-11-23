@@ -1,6 +1,5 @@
 import type { Page } from './api';
 import { ACCOUNT_PROBLEMS, AccountProblem, SUSPENDED_STATE } from './accountStates';
-import { BrandMark } from '../ui/BrandMark';
 
 // The Cloud site's honest states (ADR-0420, `cloud.account_states`): an address that isn't a
 // page, an account that couldn't be read, and a suspended account. Each says what happened and
@@ -15,22 +14,6 @@ export function NotFound({ path, go }: { path: string; go: (page: Page) => void 
       <p>The link may be mistyped or out of date. Your music and settings are unaffected.</p>
       <div className="cloud-actions"><button className="primary" onClick={() => go('home')}>Go to Overview</button><button onClick={() => go('library')}>Open your library</button></div>
     </section>
-  );
-}
-
-/** The account couldn't be read at all, so nothing else can show: why, and the way back. */
-export function AccountProblemPage({ kind, onRetry, onSignOut, retrying }: { kind: AccountProblem; onRetry: () => void; onSignOut: () => void; retrying: boolean }) {
-  const words = ACCOUNT_PROBLEMS[kind];
-  return (
-    <main className="cloud-runtime-message" data-account-problem={kind}>
-      <BrandMark className="cloud-mark" />
-      <h1>{words.title}</h1>
-      <p role="alert">{words.detail}</p>
-      <div className="cloud-actions">
-        <button className="primary" onClick={onRetry} disabled={retrying} aria-busy={retrying || undefined}>{retrying ? 'Trying again…' : words.retry}</button>
-        <button onClick={onSignOut}>Sign out</button>
-      </div>
-    </main>
   );
 }
 
