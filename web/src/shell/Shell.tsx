@@ -370,7 +370,7 @@ export function Shell({
   const cloudMore = mode === 'cloud' && more.length > 0;
   const classic = prefs.classicNav && on('app.classic_nav');
   return (
-    <div className={`shell ${stage ? 'on-stage' : ''} ${withPlayer ? 'with-player' : ''}`}>
+    <div className={`shell ${stage ? 'on-stage' : ''} ${withPlayer ? 'with-player' : ''}`} data-mode={mode}>
       {!stage && <a className="skip-link" href="#content">Skip to the page</a>}
       {!stage && (
         <nav className="nav" aria-label="Main">
@@ -411,11 +411,11 @@ export function Shell({
             {!classic && cloudMore && (
               <li className="nav-more">
                 <button className="nav-more-desktop" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={route.page === 'more' ? 'page' : undefined} data-tip="More" aria-label="More" onClick={() => setMoreOpen(true)}>
-                  <Icon name="settings" />
+                  <Icon name="more" />
                   <span className="nav-label">More</span>
                 </button>
                 <button className="nav-more-mobile" aria-haspopup="dialog" aria-expanded={moreOpen} aria-current={route.page === 'more' ? 'page' : undefined} onClick={() => setMoreOpen(true)}>
-                  <Icon name="settings" />
+                  <Icon name="more" />
                   <span className="nav-label">More</span>
                 </button>
               </li>
@@ -449,7 +449,9 @@ export function Shell({
       )}
       <div className="content" id="content" tabIndex={-1} ref={content}>
         {!stage && <ContextBar route={route} onCommands={onCommands} onActivity={onActivity} onHelp={onHelp} onRequests={onRequests} waiting={waitingRequests} palette={prefs.palette} />}
-        {banner}
+        {/* Cloud: every notice sits in one stack on the page column, in the page's flow, so
+            two at once never overlap each other or cover a control */}
+        {mode === 'cloud' && banner ? <div className="shell-banners">{banner}</div> : banner}
         {children}
       </div>
       {withPlayer && song && <MiniPlayer player={player} now={now} song={song} hasNext={hasNext ?? true} onRequests={onRequests} waiting={waitingRequests} />}

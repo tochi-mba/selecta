@@ -476,6 +476,7 @@
         "GET /api/guest/rooms/{room_id}",
         "GET /api/guest/rooms/{room_id}/search",
         "POST /api/guest/rooms/{room_id}/requests",
+        "POST /api/guest/rooms/{room_id}/requests/batch",
         "DELETE /api/guest/rooms/{room_id}/requests/{request_id}",
         "GET /api/guest/rooms/{room_id}/nicknames",
         "PUT /api/guest/rooms/{room_id}/nickname",

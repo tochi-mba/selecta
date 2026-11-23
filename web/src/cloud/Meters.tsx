@@ -11,22 +11,28 @@ function percentOf(used: number, limit: number | null) {
   return Math.min(100, (used / limit) * 100);
 }
 
-function Meter({ label, used, limit, words, reset, warn }: { label: string; used: number; limit: number | null; words: string; reset?: string; warn?: boolean }) {
+/** One meter: what is counted on the left, the figure on the right, the bar under both, then
+ * anything else worth knowing (a note about the allowance, when it resets) in one quiet line. */
+function Meter({ label, used, limit, words, note, reset, warn }: { label: string; used: number; limit: number | null; words: string; note?: string; reset?: string; warn?: boolean }) {
   const percent = percentOf(used, limit);
+  const under = [note, reset].filter(Boolean).join(' · ');
   return (
     <section className={`cloud-card cloud-meter-card${warn ? ' warn' : ''}`} aria-label={label}>
-      <p className="cloud-eyebrow">{label.toUpperCase()}</p>
+      <p className="cloud-meter-name">{label}</p>
       <h2>{words}</h2>
       {limit !== null
         ? <Bar kind="meter" label={label} showLabel={false} value={Math.round(percent)} max={100} valueText={words} warnAt={0.8} dangerAt={1} tone={warn ? 'danger' : undefined} />
         : <p className="cloud-meter-free">Fair use: counted, never cut off.</p>}
-      {reset && <p className="cloud-meter-reset">{reset}</p>}
+      {under && <p className="cloud-meter-reset">{under}</p>}
     </section>
   );
 }
 
+/** A count in the reader's own grouping, so 5000 reads as 5,000. */
+const count = (value: number) => value.toLocaleString();
+
 function allowanceWords(allowance: Allowance, unit: string) {
-  return allowance.limit === null ? `${allowance.used} ${unit}` : `${allowance.used} of ${allowance.limit} ${unit}`;
+  return allowance.limit === null ? `${count(allowance.used)} ${unit}` : `${count(allowance.used)} of ${count(allowance.limit)} ${unit}`;
 }
 
 /** Where the meters payload says whether this account has hosted storage at all (ADR-0464,
@@ -65,10 +71,11 @@ export function Meters({ account }: { account: Account }) {
       {hosted && <Meter label="Analysis today" used={usage.analysis_today.used} limit={usage.analysis_today.limit}
         words={allowanceWords(usage.analysis_today, 'songs')} reset={resetWords(usage.analysis_today.resets_at, 'day', zone)} />}
       {accountFlagOn('lucy', account.features) && <Meter label="Lucy turns this month" used={lucy.used} limit={lucy.limit}
-        words={lucy.limit === null ? `${lucy.used} turns` : `${lucy.used} of ${lucy.limit} turns${lucy.fair_use ? ', plus fair-use quick turns' : ''}`}
+        words={lucy.limit === null ? `${count(lucy.used)} turns` : `${count(lucy.used)} of ${count(lucy.limit)} turns`}
+        note={lucy.limit !== null && lucy.fair_use ? 'Quick turns are extra, on fair use' : undefined}
         reset={lucy.resets_at ? resetWords(lucy.resets_at, 'month', zone) : undefined} />}
       {hosted && accountFlagOn('export', account.features) && <Meter label="Exports this month" used={exports.used} limit={exports.limit} warn={exports.blocked}
-        words={exports.limit === null ? `${exports.used} exports` : `${exports.used} of ${exports.limit} exports`}
+        words={exports.limit === null ? `${count(exports.used)} exports` : `${count(exports.used)} of ${count(exports.limit)} exports`}
         reset={exports.blocked ? 'Paused while you are over your storage limit' : `${resetWords(exports.resets_at, 'month', zone)} · kept ${exports.retention_days} days`} />}
     </div>
   );

@@ -18,7 +18,9 @@
 .discovery-step-number { font: var(--type-counter); }
 
 /* Library */
-.library-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2) var(--space-4); margin-bottom: var(--space-4); }
+/* the title and its counts share one baseline; what "ready" means reads on its own line under them */
+.library-head { display: grid; gap: var(--space-2); margin-bottom: var(--space-4); }
+.library-head-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-5); min-width: 0; }
 .library-head .display.small { margin: 0; }
 .library-summary { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: 0; color: var(--text-soft); font-size: var(--text-sm); }
 .library-summary b { color: var(--text); font-variant-numeric: tabular-nums; }
@@ -26,6 +28,10 @@
 .library-summary .library-summary-link { display: inline-flex; align-items: center; min-height: 24px; }
 /* a flex box drops the space after the count, so it read "1set aside" (owner-delegated visual check 2026-11-12) */
 .library-summary .library-summary-link b { margin-inline-end: var(--space-1); }
+/* browser-first Cloud: how much of the library plays here, and the way to connect the rest */
+.page.library .library-partial { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); margin: 0 0 var(--space-4); }
+.page.library .library-reconnect { margin-bottom: var(--space-4); }
+.page.library > .connect-music { margin-top: var(--rhythm-section); scroll-margin-top: var(--space-7); }
 .library-find { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
 .library-find .search-field { flex: 1 1 260px; }
 .library-density button { min-height: var(--control-height); padding-inline: var(--space-3); font-size: var(--text-sm); }
@@ -199,7 +205,7 @@
 .library-rows .song-columns > span { white-space: nowrap; }
 
 /* Scoped Library hierarchy: source-backed counts and exact recording identity. */
-.library-readiness-help { flex-basis: 100%; max-width: 75ch; margin: 0; font-size: var(--text-sm); color: var(--text-soft); line-height: 1.5; }
+.library-readiness-help { max-width: 75ch; margin: 0; font-size: var(--text-sm); color: var(--text-soft); line-height: 1.5; }
 .library-recording-id { display: inline-flex; width: fit-content; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 1px var(--space-2); color: var(--text-soft); font-variant-numeric: tabular-nums; }
 .library-rows .song-row .song-actions { justify-content: flex-end; }
 .library-rows.library-cards .song-row .song-actions { justify-content: flex-start; }

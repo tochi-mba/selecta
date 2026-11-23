@@ -87,13 +87,13 @@ describe('Workspace overview in the browser', () => {
     expect(metric('can play in this browser')).toBe('9');
     expect(metric('saved mix')).toBe('1');
     // nothing is missing, so no count of missing songs is drawn
-    expect(screen.queryByText(/not reported by any of your devices/)).toBeNull();
+    expect(screen.queryByText(/missing from every device/)).toBeNull();
   });
 
   it('holds the saved-mix count open until the server has said, and shows missing songs when there are some', () => {
     show('overview', { savedMixes: null, counts: { missing: 2 } });
     expect(screen.getByText('saved mixes').parentElement?.querySelector('strong')?.textContent).toBe('…');
-    expect(screen.getByText('not reported by any of your devices lately').parentElement?.querySelector('strong')?.textContent).toBe('2');
+    expect(screen.getByText('missing from every device right now').parentElement?.querySelector('strong')?.textContent).toBe('2');
   });
 
   it('says what this browser is doing in the background, and only what it is doing', () => {
@@ -180,7 +180,8 @@ describe('browser diagnostics', () => {
     expect(panel).toHaveTextContent('The list of connected songs is kept in this browser (IndexedDB).');
     expect(panel).toHaveTextContent('The browser has agreed to keep SelectaDJ’s details on this device.');
     expect(panel).toHaveTextContent(/Browser storage in use: .* of .* allowed\./);
-    expect(panel).toHaveTextContent(/features? on and 0 off for this account in this browser\./);
+    // no feature counts: that is internal detail, not something a member can act on
+    expect(panel).not.toHaveTextContent(/features? on/);
     expect(panel).toHaveTextContent('Nothing is sent anywhere unless you copy it and share it yourself.');
   });
 

@@ -17,6 +17,10 @@
 .setup-explain dd { margin: 0; color: var(--text-soft); }
 .setup .warn, .setup [role='status'] { overflow-wrap: anywhere; }
 
+/* A guided empty page (browser-first Cloud): the steps sit close under the page title and lead the words */
+.empty-state:has(> .setup-steps) { padding-top: 0; }
+.empty-state > .setup-steps { margin-bottom: var(--space-4); }
+
 /* Explore */
 .build-summary { color: var(--text); }
 .setup-group { font: var(--type-section); margin: var(--space-5) 0 var(--space-2); }
@@ -26,6 +30,9 @@
 .mix-length .chips, .mix-length .hint { margin: 0; }
 /* MP-0283-01: the pick's facts share the title's left edge and sit between it and the description */
 .mix-quick-facts { margin: var(--space-2) 0 0; }
+/* Browser-first Cloud has one pick and no feelings, so its name is a heading, not a poster: Play
+   stays in the first screen on a laptop */
+.shell[data-mode='cloud'] .mixes .mix-quick .display { font: var(--type-page); margin-block: var(--space-2); }
 /* Keep long explanatory paragraphs readable at desktop and ultrawide widths. */
 .mixes p, .mixes li > span, .mixes dd { max-inline-size: 60em; }
 .card-actions { gap: var(--space-2); }
@@ -215,6 +222,11 @@
    its own viewport-dependent minimum above. */
 .now:not(.stage) .lyrics:not(.focus) { min-height: 18rem; }
 
+/* the sound check sits with the notice that asks for it (browser-first Cloud) */
+.now .sound-check { display: grid; gap: var(--space-2); justify-items: start; margin: 0 0 var(--space-3); }
+.now .sound-check p { margin: 0; }
+.now .sound-check-help ul { margin: var(--space-2) 0 0; padding-inline-start: var(--list-indent); display: grid; gap: var(--space-1); color: var(--text-soft); }
+
 /* a phone keeps play and pause in reach however far down the page goes */
 @media (max-width: 760px) {
   .listen-layout { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-3); }
@@ -227,7 +239,7 @@
   .music-visualizer { order: 4; }
   .seek-note { order: 5; }
   .lyrics, .now .problem, .now .skeleton { order: 6; }
-  .now .notice { order: 7; }
+  .now .notice, .now .sound-check { order: 7; }
   .now .transport-more { order: 8; margin: 0; }
   .listen-side { order: 9; }
   .now .transport {
@@ -329,6 +341,13 @@
 .request-pair { flex: 1 1 160px; white-space: normal; overflow-wrap: anywhere; }
 .request-preview button { min-height: var(--control-height); }
 .request-name b, .request-name span { white-space: normal; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+/* Cloud in the browser (BrowserRequests): song and who asked on the left, Add next and Dismiss on the right, wrapping under on a phone */
+.browser-request { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-snug); }
+.browser-request .request-name { display: grid; gap: var(--space-hair); flex: 1 1 11rem; min-width: 0; }
+.browser-request .request-detail { flex: 1 1 100%; margin: 0; }
+.browser-request .request-who { color: var(--text-soft); font-size: var(--text-sm); }
+.browser-request-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: flex-end; }
+.browser-request-actions button { min-height: var(--control-height); }
 
 /* Seeking shows a proposed location without moving the real audio playhead.
    Vertical touch scrolling still works; only the scrub strip owns horizontal drags. */

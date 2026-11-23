@@ -5,7 +5,8 @@ handed to `BrowserPlanner`, which keeps it accepted with a `browser:` planner id
 it on the workspace event stream (`requests.room`). These routes are how the host's browser
 reads that queue and says what became of each request:
 
-- `GET /api/room-requests`: accepted room requests waiting for the browser mix, oldest first.
+- `GET /api/room-requests`: accepted requests from open rooms waiting for the browser mix,
+  oldest first. A closed room's requests are never listed.
 - `POST /api/room-requests/{request_id}/played`: the host put it in the mix; the room shows it
   as played and the next accepted request is handed over.
 - `POST /api/room-requests/{request_id}/dismiss`: the host let it go; the guest sees "The host
@@ -34,7 +35,7 @@ from selecta.rooms.requesting import Outcome
 from selecta.rooms.schema import room_requests
 from selecta.rooms.schema import rooms as rooms_table
 from selecta.rooms.service import Rooms
-from selecta.rooms.store import WAITING, RequestStatus, load_room, set_request
+from selecta.rooms.store import WAITING, RequestStatus, RoomStatus, load_room, set_request
 
 WAITING_SHOWN = 100
 
@@ -68,6 +69,8 @@ def install_routes(
                     room_requests.c.workspace_id == workspace_id,
                     room_requests.c.status == RequestStatus.ACCEPTED.value,
                     room_requests.c.song_request_id.like(f"{BROWSER_REQUEST_PREFIX}%"),
+                    # a room that has closed takes its unplayed requests with it
+                    rooms_table.c.status != RoomStatus.ENDED.value,
                 )
                 .order_by(room_requests.c.submitted_at, room_requests.c.id)
                 .limit(WAITING_SHOWN)

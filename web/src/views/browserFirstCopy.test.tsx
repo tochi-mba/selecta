@@ -97,7 +97,7 @@ describe('Request a song in the browser', () => {
     fakeBackend({});
     panel([row({ stage: 'searching', browser_note: JOINS_BY_HAND })]);
     const list = within(screen.getByRole('list', { name: 'Your requests' }));
-    expect(list.getByText('Add it yourself')).toBeInTheDocument();
+    expect(list.getByRole('button', { name: /^Add (next|to mix)/ })).toBeInTheDocument();
     expect(list.getByText(JOINS_BY_HAND)).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Your requests' })).not.toHaveTextContent(/looking for a spot|Finding a spot/i);
   });
@@ -145,7 +145,7 @@ describe('Make a Mix while too few songs can play here', () => {
   it('keeps the current mix card in view above the empty state', () => {
     render(<MixesEmpty connected={5} current={<section aria-label="Current mix">Friday is playing</section>} />);
     const card = screen.getByRole('region', { name: 'Current mix' });
-    const empty = screen.getByRole('heading', { name: 'Your songs are connected' });
+    const empty = screen.getByRole('heading', { name: 'Choose your music again to make a mix' });
     expect(card).toBeVisible();
     expect(card.compareDocumentPosition(empty) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole('heading', { level: 1, name: 'Make a Mix' }).compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

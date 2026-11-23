@@ -54,9 +54,9 @@ export function AccountData({ token, workspaceId, features, withAudio = true }: 
       <p className="cloud-eyebrow">Your data</p>
       <h2 id="cloud-data-title">Download a copy</h2>
       <p>{withAudio ? <>One ZIP file with your original audio, your settings ({settingsWords(features)}) as settings.json, and what Cloud keeps about your mixes as mixes.json.</> : <>One ZIP file with your settings ({settingsWords(features)}) as settings.json and what Cloud keeps about your mixes as mixes.json. Your music files stay on your devices, so they are not in it.</>} Mix revisions themselves aren’t stored in Cloud yet.</p>
-      <button className="primary" disabled={busy || !!offline} onClick={() => void start()} aria-busy={busy || undefined}>{busy ? 'Preparing export…' : 'Download my data'}</button>
+      <div className="cloud-actions"><button className="primary" disabled={busy || !!offline} onClick={() => void start()} aria-busy={busy || undefined}>{busy ? 'Preparing export…' : 'Download my data'}</button></div>
       {offline && <p className="needs-connection">{offline}</p>}
-      {notice && <p role="status">{notice}</p>}
+      {notice && !busy && <p role="status">{notice}</p>}
       {problem && <p className="cloud-inline-error" role="alert">{problem}</p>}
     </section>
   );
@@ -97,7 +97,7 @@ export function AccountDanger({ busy, onSignOutEverywhere, onDelete }: {
         <button ref={everywhere} className="cloud-quiet" disabled={busy || !!offline} aria-expanded={confirming === 'everywhere'} onClick={() => setConfirming('everywhere')}>Sign out everywhere…</button>
       </div>
       {confirming === 'everywhere' && (
-        <div className="cloud-confirm" role="group" aria-label="Confirm signing out everywhere" onKeyDown={escape}>
+        <div className="cloud-confirm" data-tone="plain" role="group" aria-label="Confirm signing out everywhere" onKeyDown={escape}>
           <p>Every device will need to sign in again. Music playing on another device stops.</p>
           <div className="cloud-actions"><button ref={keep} onClick={back}>Stay signed in</button><button className="cloud-danger-action" disabled={busy} onClick={() => { back(); onSignOutEverywhere(); }}>Sign out everywhere</button></div>
         </div>

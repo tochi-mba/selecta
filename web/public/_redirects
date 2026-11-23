@@ -1,9 +1,6 @@
 # Cloudflare Pages internal 200 proxies: keep /r/CODE visible in the address bar.
-# Only the room route needs a new target: Pages canonicalizes /guest.html -> /guest.
-# Keep display and kiosk rewrites unchanged; this PR fixes room-code loss.
-/display /display.html 200
-/display/ /display.html 200
-/kiosk /kiosk.html 200
-/kiosk/ /kiosk.html 200
+# Pages serves display.html at /display and kiosk.html at /kiosk by itself, and redirects the
+# .html address to the clean one. A rewrite from /display to /display.html therefore loops
+# (ERR_TOO_MANY_REDIRECTS), so those two have no rule here.
 /r/:code /guest 200
 /r/:code/ /guest 200

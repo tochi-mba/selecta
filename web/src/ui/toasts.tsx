@@ -17,7 +17,11 @@ export type Toast = {
   activity: number;
   /** UF-0380-07: the mix this change was made in, said on the toast itself, not only in Activity. */
   where?: string;
+  /** Things to do about the news itself (a room request: Add next, Requests). Each runs once and
+   * the toast goes; a failure is the action's own to say. Unlike Undo, nothing is kept in Activity. */
+  actions?: ToastAction[];
 };
+export type ToastAction = { label: string; run: () => Promise<unknown> | void };
 
 const SHOWN = 3;
 const PLAIN_MS = 4500;
@@ -53,11 +57,11 @@ export function setToastsQuiet(on: boolean) {
   }
 }
 
-export function showToast(message: string, options: { undo?: Toast['undo']; tone?: ToastTone; scope?: string | null; where?: string } = {}): number {
+export function showToast(message: string, options: { undo?: Toast['undo']; tone?: ToastTone; scope?: string | null; where?: string; actions?: ToastAction[] } = {}): number {
   const clean = message.replace(/\.\.$/, '.');
   const tone = options.tone ?? 'info';
   const key = `${options.scope ?? ''}\u0000${clean}`;
-  if (tone === 'info' && !options.undo) {
+  if (tone === 'info' && !options.undo && !options.actions?.length) {
     const recent = recentRoutine.get(key);
     if (recent && Date.now() - recent.at < ROUTINE_WINDOW_MS) return recent.id;
   }
@@ -71,7 +75,7 @@ export function showToast(message: string, options: { undo?: Toast['undo']; tone
     recentRoutine.set(key, { at: Date.now(), id: -activity });
   }
   if (quiet && tone !== 'problem') return -activity;
-  const toast: Toast = { id: next++, message: clean, undo: options.undo, tone, activity, where: options.where || undefined };
+  const toast: Toast = { id: next++, message: clean, undo: options.undo, tone, activity, where: options.where || undefined, actions: options.actions?.length ? options.actions : undefined };
   const all = [...toasts, toast];
   // room is made from the oldest with no Undo first. One with an Undo can go too, because Activity has it.
   // UF-0371-07: routine news goes before a problem, so background completions never push an error away.
@@ -122,7 +126,7 @@ function ToastRow({ toast, closing = false, onGone }: { toast: Toast; closing?: 
   const start = () => {
     if (inFlight.current) return;
     if (timer.current !== null) window.clearTimeout(timer.current);
-    const wait = toast.undo ? UNDO_MS : toast.tone === 'problem' ? PROBLEM_MS : PLAIN_MS;
+    const wait = toast.undo || toast.actions ? UNDO_MS : toast.tone === 'problem' ? PROBLEM_MS : PLAIN_MS;
     timer.current = window.setTimeout(() => dismissToast(toast.id), wait);
   };
   const hold = () => {
@@ -172,7 +176,7 @@ function ToastRow({ toast, closing = false, onGone }: { toast: Toast; closing?: 
   return (
     <div
       ref={row}
-      className={`toast-row ${toast.tone}`}
+      className={`toast-row ${toast.tone}${toast.actions?.length ? ' with-actions' : ''}`}
       aria-busy={undoing || undefined}
       role={toast.tone === 'problem' ? 'alert' : 'status'}
       data-closing={closing ? '' : undefined}
@@ -192,6 +196,9 @@ function ToastRow({ toast, closing = false, onGone }: { toast: Toast; closing?: 
           title={canUndo(toast.activity) ? undefined : 'Undo the newer change first; this stays in Activity'}
         >{undoing ? 'Undoing…' : 'Undo'}</button>
       )}
+      {toast.actions?.map((action) => (
+        <button key={action.label} onClick={() => { restoreFocus(); dismissToast(toast.id); void action.run(); }}>{action.label}</button>
+      ))}
       <button className="toast-close" aria-label="Dismiss" title="Dismiss" onClick={() => { restoreFocus(); dismissToast(toast.id); }}><Icon name="close" /></button>
     </div>
   );

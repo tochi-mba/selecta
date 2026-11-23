@@ -143,6 +143,13 @@ class BrowserPlanner:
     # This planner only records host-side requests; it never schedules audio.
     # The host's browser can play locally without holding a server speaker lease.
     accepts_requests_without_speaker = True
+    # Nothing is rendered and nothing is queued for the host: every accepted request goes to
+    # the Requests panel at once, so neither the planner window (three at a time) nor the hourly
+    # render cap applies. Holding requests back there only hid them from the host.
+    takes_every_request = True
+    # The host puts each song in the mix by hand, so a guest is told "waiting for the host to
+    # add it" and then "added to the mix", never a play time the server cannot know.
+    host_adds_requests = True
 
     def __init__(self, engine: Engine) -> None:
         self.engine = engine

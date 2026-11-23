@@ -4,11 +4,19 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { validateCloudflarePagesBuild, validatePagesRedirects } from '../../pagesRoutes';
 
-const rules = readFileSync(new URL('../../public/_redirects', import.meta.url), 'utf8');
+// From the web folder the suite runs in: a file URL is not available under the jsdom environment.
+const rules = readFileSync(join(process.cwd(), 'public', '_redirects'), 'utf8');
 
 describe('Cloudflare Pages dedicated entry-point routes', () => {
-  it('routes the guest, display and kiosk paths to their own HTML entries', () => {
+  it('routes the guest path to its own entry and leaves display and kiosk to Pages', () => {
     expect(validatePagesRedirects(rules)).toEqual([]);
+    expect(rules).not.toMatch(/^\/(display|kiosk)/m);
+  });
+
+  it('rejects a rewrite to a .html target, which made /display redirect forever on staging', () => {
+    expect(validatePagesRedirects(`${rules}/display /display.html 200\n`)).toContain(
+      'Cloudflare rewrite to a .html target redirects or loops: /display /display.html 200',
+    );
   });
 
   it('rejects a guest route pointing at the SPA and duplicate route definitions', () => {

@@ -56,8 +56,8 @@ Outside that scan, the remaining feature sheets keep motion to almost nothing:
 | --- | --- | --- |
 | `venueops/staffDashboard.css` | Staff buttons and Stop change background at `--motion-fast`, only under `prefers-reduced-motion: no-preference` | none |
 | `business/business.css`, `business/staff/staff.css` | No animation of their own; each resets animation and transition inside `.biz` and `.biz-staff` | reset under reduced motion and Still |
-| `guest/guest.css` | No animation of its own; a reduced-motion reset for the whole guest page | reset under reduced motion |
-| `display/display.css` | None: the big screen never moves | - |
+| `guest/guest.css` | Its own small set, timed by copies of the app's tokens (`palette-drift.test.ts` keeps the copies equal): buttons squeeze and change colour on a press (`--motion-feedback`, `--motion-fast`); a working button runs `g-working` under its label (0.9s loop); cards, rows and banners arrive with `g-settle` and the notice slides up (`--motion-reveal`); a check draws in with `g-draw` and a vote pops with `g-pop` (`--motion-slow`); a request whose status changed is lit by `g-flash`; outline rows and the waiting dot breathe with `g-breathe` (1.4s and 1.8s loops); the now-playing bars rise and fall with `g-eq` while music plays | every transition and animation is reset; each keyframe only animates from a start state, so the resting state shows |
+| `display/display.css` | A line that is new (the next song, a new request, the reconnecting note) arrives with `d-arrive` (twice `--motion-slow`); the whole picture drifts under 1% of the screen over five minutes with `d-drift`, so a TV left on never holds one bright shape in place | every animation is reset |
 
 ## Known gap
 

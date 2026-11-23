@@ -196,7 +196,8 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       <h1 className="display small">Make a Mix</h1>
       <LinkTabs label="Make a Mix" items={exploreTabs()} current={exploreTabs().some((tab) => tab.path === here) ? here : '/mixes'} />
       {mix.length > 0 && <CurrentMix mix={mix} mixName={mixName} now={now} player={player} setView={setView} />}
-      {on('mixes.intent_language') && !firstMix && <MixIntentGuide replacing={replacing} mixName={mixName} savesEveryMix={!analysisAvailable} />}
+      {/* in a browser the page is short (one pick, no feelings), so Play leads and the guide follows it */}
+      {on('mixes.intent_language') && !firstMix && analysisAvailable && <MixIntentGuide replacing={replacing} mixName={mixName} savesEveryMix={false} />}
 
       <div className="mix-paths" role="group" aria-label="Ways to make a mix">
       <section className="hero mix-quick" aria-labelledby="mix-quick-title">
@@ -263,6 +264,7 @@ export function Mixes({ status, mix, mixName, player, setMixData, setView, notif
       </div>
 
       {problem && <p className="warn" role="alert">{problem}</p>}
+      {on('mixes.intent_language') && !firstMix && !analysisAvailable && <MixIntentGuide replacing={replacing} mixName={mixName} savesEveryMix />}
 
       {/* Loaded and empty reflows away: a header with no feelings under it promises nothing
           (the waiting and nudge sections below say what would unlock ideas). */}

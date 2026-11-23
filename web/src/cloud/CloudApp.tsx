@@ -7,6 +7,7 @@ import { PLAYBACK_COMMAND_EVENT } from '../devices/usePlaybackDevice';
 import { Icon } from '../ui/Icon';
 import { CloudListen } from '../rooms/CloudListen';
 import { RoomPanel } from '../rooms/RoomPanel';
+import { ROOM_EVENT } from '../rooms/useRoomSession';
 import { LucyCloudSettings } from '../views/LucyCloudSettings';
 import { accountFlagOn, flagOn, setAccountFeatures, useFlags } from '../flags';
 import { DESTINATIONS, type MoreDestinationId } from '../shell/manifest';
@@ -264,6 +265,9 @@ export function CloudApp() {
     if (event.topic === 'playback.command') window.dispatchEvent(new CustomEvent(PLAYBACK_COMMAND_EVENT, { detail: event.payload }));
     // a room request the host accepted, waiting for (or gone from) the browser mix's Requests
     if (event.topic === 'requests.room') window.dispatchEvent(new CustomEvent(ROOM_REQUEST_EVENT, { detail: event.payload }));
+    // anything about the open room (a request, a guest, its settings, its end) reaches the shell's
+    // room session, which reads the room again on whichever page the host is (useRoomSession)
+    if (event.topic === 'requests.room' || event.topic.startsWith('room.')) window.dispatchEvent(new Event(ROOM_EVENT));
     if (event.topic.startsWith('upload.') || event.topic.startsWith('asset.')) { void refreshAccount(); setLibraryVersion((value) => value + 1); }
   }, [refreshAccount]);
   const refreshAll = useCallback(async () => { await refreshAccount(); }, [refreshAccount]);
@@ -445,7 +449,7 @@ export function CloudApp() {
     }
   };
 
-  if (isLoading) return <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p>Checking your sign-in…</p></main>;
+  if (isLoading) return <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><p role="status">Checking your sign-in…</p></main>;
   if (waitingOffline) return <main className="cloud-runtime-message cloud-offline-wait"><BrandMark className="cloud-mark" /><h1>You’re offline</h1><p>SelectaDJ needs the connection for a moment to check your sign-in. Everything on this device is kept, and this page opens by itself when you’re back online.</p><ConnectionBanner /></main>;
   if (!user && (offlineMode || offlineUsable)) {
     return (
@@ -456,11 +460,11 @@ export function CloudApp() {
       </Suspense>
     );
   }
-  if (!user) return <main className="cloud-welcome"><BrandMark className="cloud-mark" /><p className="cloud-eyebrow cloud-caps">SelectaDJ Cloud</p><h1>Your music, ready to move.</h1><p>Build your library, shape the set and keep the transitions ready on every device.</p>{signInProblem && <p className="cloud-feedback error" role="alert">{signInProblem}</p>}<div className="cloud-actions"><button className="primary" onClick={() => void signUp()}>Create your account</button><button onClick={startSignIn}>Sign in</button></div><small>Your music stays private to your workspace.</small><footer className="cloud-footer"><CloudCredit /></footer></main>;
-  if (signInAgain) return <main className="cloud-runtime-message" role="alert"><BrandMark className="cloud-mark" /><h1>Sign in again to carry on</h1><p>Your sign-in ended. Everything on this device is kept, including your songs, your mixes and any import in progress, which carries on after you sign in.</p><button className="primary" onClick={startSignIn}>Sign in again</button></main>;
+  if (!user) return <main className="cloud-welcome"><BrandMark className="cloud-mark" /><p className="cloud-eyebrow cloud-caps">SelectaDJ Cloud</p><h1>Your music, ready to move.</h1><p>Build your library, shape the set and keep the transitions ready on every device.</p>{signInProblem && <p className="cloud-feedback error" role="alert">{signInProblem}</p>}<div className="cloud-actions"><button className="primary" onClick={() => void signUp()}>Create your account</button><button onClick={startSignIn}>Sign in</button></div><small>Your music stays private to your account.</small><footer className="cloud-footer"><CloudCredit /></footer></main>;
+  if (signInAgain) return <main className="cloud-runtime-message" role="alert"><BrandMark className="cloud-mark" /><h1>Sign in again to carry on</h1><p>Your sign-in ended. Everything on this device is kept, including your songs, your mixes and any import in progress, which carries on after you sign in.</p><div className="cloud-actions"><button className="primary" onClick={startSignIn}>Sign in again</button></div></main>;
   if (blocked) return <BlockedAccount code={blocked} distinct={exact} onSignOut={() => void restartSignIn()} />;
-  if (!user.emailVerified) return <main className="cloud-runtime-message"><BrandMark className="cloud-mark" /><h1>Verify your email</h1><p>Open the verification email for {user.email}, then refresh this page.</p><button onClick={() => window.location.reload()}>I’ve verified my email</button><button onClick={() => signOut({ returnTo: window.location.origin })}>Sign out</button></main>;
-  if (needsOnboarding) return <main className="cloud-onboarding"><BrandMark className="cloud-mark" /><p className="cloud-eyebrow cloud-caps">One quick check</p><h1>Set up your SelectaDJ workspace</h1><p>Your music stays on your own devices. SelectaDJ plans the mixes and plays them here.</p><form onSubmit={(event) => void completeOnboarding(event)}><label className="cloud-check"><input type="checkbox" checked={ageConfirmed} onChange={(event) => setAgeConfirmed(event.target.checked)} /> I confirm that I’m at least 13 years old.</label><button className="primary" disabled={!ageConfirmed || busy('onboarding')} aria-busy={busy('onboarding') || undefined}>Create workspace</button></form><Feedback error={error} notice="" /></main>;
+  if (!user.emailVerified) return <VerifyEmail email={user.email} onSignOut={() => signOut({ returnTo: window.location.origin })} />;
+  if (needsOnboarding) return <main className="cloud-onboarding"><BrandMark className="cloud-mark" /><p className="cloud-eyebrow cloud-caps">One quick check</p><h1>Set up your SelectaDJ workspace</h1><p>Your music stays on your own devices. SelectaDJ plans the mixes and plays them here.</p><form onSubmit={(event) => void completeOnboarding(event)}><label className="cloud-check"><input type="checkbox" checked={ageConfirmed} onChange={(event) => setAgeConfirmed(event.target.checked)} /> I confirm that I’m at least 13 years old.</label><div className="cloud-actions"><button className="primary" disabled={!ageConfirmed || busy('onboarding')} aria-busy={busy('onboarding') || undefined}>{busy('onboarding') ? 'Creating your workspace…' : 'Create workspace'}</button></div></form><Feedback error={error} notice="" /><p className="cloud-signed-in-note">Signed in as <strong>{user.email}</strong>. Not you? <button type="button" onClick={() => signOut({ returnTo: window.location.origin })}>Sign out</button></p></main>;
 
   // No account could be read at all: say why, instead of an empty workspace (AV-0420-03).
   if (exact && !account && problem) return <AccountProblemPage kind={problem.kind} retrying={retrying} onRetry={() => void retryAccount()} onSignOut={() => signOut({ returnTo: window.location.origin })} />;
@@ -510,7 +514,7 @@ export function CloudApp() {
     switch (id) {
       case 'account': return settingsPanel;
       case 'billing': return billing;
-      case 'devices': return <DevicesPanel api={api} workspaceId={account.workspace.id} />;
+      case 'devices': return <DevicesPanel api={api} workspaceId={account.workspace.id} titled={false} />;
       case 'rooms': return <RoomPanel api={api} workspaceId={account.workspace.id} locked={account.feature_locks.rooms} votesOn={flagOn('rooms.votes')} displayOn={flagOn('rooms.display')} playHereOn={flagOn('devices')} freshOnly={account.features['rooms.nickname_confirm'] === true} />;
       case 'uploads': return uploads;
       case 'workspace': return null;
@@ -615,11 +619,13 @@ export function CloudApp() {
 export function AccountStrip({ email, onSignOut, onStaffConsole }: { email: string; onSignOut: () => void; onStaffConsole?: () => void }) {
   return (
     <section className="cloud-card cloud-account-strip" aria-label="Signed in as">
-      <p className="cloud-eyebrow cloud-caps">Signed in as</p>
-      <p className="cloud-account-email">{email}</p>
+      <div>
+        <p className="cloud-eyebrow cloud-caps">Signed in as</p>
+        <p className="cloud-account-email">{email}</p>
+      </div>
       <div className="cloud-actions">
-        <button className="quiet" onClick={onSignOut}>Sign out</button>
         {onStaffConsole && <button onClick={onStaffConsole}>Staff console</button>}
+        <button className="quiet" onClick={onSignOut}>Sign out</button>
       </div>
     </section>
   );
@@ -630,13 +636,41 @@ export function CloudCredit() {
   return <span className="cloud-credit">SelectaDJ is a REX Technologies product. © {new Date().getFullYear()} REX Technologies</span>;
 }
 
+/** Remembers, across the reload, that the member said they had verified, so a page that comes back
+ * unchanged can say the address still isn't verified instead of looking as if nothing happened. */
+const VERIFY_ASKED = 'selecta.cloud.verify-asked';
+
+function VerifyEmail({ email, onSignOut }: { email: string; onSignOut: () => void }) {
+  const [asked] = useState(() => { try { return sessionStorage.getItem(VERIFY_ASKED) === email; } catch { return false; } });
+  const check = () => {
+    try { sessionStorage.setItem(VERIFY_ASKED, email); } catch { /* the page still reloads */ }
+    window.location.reload();
+  };
+  return (
+    <main className="cloud-runtime-message">
+      <BrandMark className="cloud-mark" />
+      <p className="cloud-eyebrow cloud-caps">One more step</p>
+      <h1>Verify your email</h1>
+      <p>Open the verification email sent to <strong>{email}</strong> and follow its link, then come back to this page.</p>
+      {asked && <p className="cloud-feedback" role="status">That address isn’t verified yet. Open the link in the email, then check again.</p>}
+      <div className="cloud-actions">
+        <button className="primary" onClick={check}>I’ve verified my email</button>
+        <button onClick={onSignOut}>Sign out</button>
+      </div>
+      <p className="cloud-hint">Can’t find the email? Look in your spam or junk folder.</p>
+    </main>
+  );
+}
+
 function BlockedAccount({ code, distinct, onSignOut }: { code: BlockedCode; distinct: boolean; onSignOut: () => void }) {
   const message = blockedMessage(code, distinct);
   const signIn = code === 'session_revoked' || code === 'token_invalid' || code === 'token_expired';
   return <main className="cloud-runtime-message" role="alert"><BrandMark className="cloud-mark" /><h1>{message.title}</h1><p>{message.detail}</p>
     {signIn && keptImportWaiting() && <p>Your music import is kept on this device and carries on after you sign in.</p>}
-    {code === 'verified_email_required' && <button onClick={() => window.location.reload()}>I’ve verified my email</button>}
-    <button onClick={onSignOut}>{code === 'session_revoked' || code === 'token_invalid' || code === 'token_expired' ? 'Sign in again' : 'Sign out'}</button>
+    <div className="cloud-actions">
+      {code === 'verified_email_required' && <button className="primary" onClick={() => window.location.reload()}>I’ve verified my email</button>}
+      <button className={signIn ? 'primary' : undefined} onClick={onSignOut}>{signIn ? 'Sign in again' : 'Sign out'}</button>
+    </div>
   </main>;
 }
 

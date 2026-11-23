@@ -5,6 +5,7 @@
 .cloud-runtime-message,
 .cloud-welcome,
 .cloud-onboarding {
+  box-sizing: border-box;
   min-height: 100vh;
   display: grid;
   align-content: center;
@@ -14,12 +15,41 @@
   max-width: var(--content-reading);
   margin: auto;
 }
+/* The welcome page is the one first screen, so it alone takes the hero headline. Every other
+   message here is a step or a state on the way in, and reads as a page title. */
+.cloud-welcome h1 { font: var(--type-hero); letter-spacing: -0.035em; margin: 0; max-width: 40rem; }
 .cloud-runtime-message h1,
-.cloud-welcome h1,
-.cloud-onboarding h1 { font: var(--type-hero); letter-spacing: -0.035em; margin: 0; max-width: 40rem; }
+.cloud-onboarding h1 { font: var(--type-page); margin: 0; max-width: 40rem; overflow-wrap: anywhere; }
 .cloud-runtime-message p,
 .cloud-welcome p,
-.cloud-onboarding p { color: var(--text-soft); max-width: 35rem; }
+.cloud-onboarding p { color: var(--text-soft); max-width: 35rem; margin: 0; overflow-wrap: anywhere; }
+.cloud-runtime-message p strong,
+.cloud-onboarding p strong { color: var(--text); font-weight: var(--weight-label); }
+.cloud-welcome small { color: var(--text-soft); font-size: var(--text-sm); }
+/* their buttons sit in one row under the words, the main one first, and stack on a phone */
+:is(.cloud-runtime-message, .cloud-welcome, .cloud-onboarding) .cloud-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-snug);
+  margin: var(--space-3) 0 0;
+}
+.cloud-runtime-message > .brand-mark-badge,
+.cloud-welcome > .brand-mark-badge,
+.cloud-onboarding > .brand-mark-badge { margin-bottom: var(--space-3); }
+/* who is signed in on a page with no frame, and the way out */
+.cloud-signed-in-note { font-size: var(--text-sm); }
+.cloud-signed-in-note button {
+  border: 0;
+  background: none;
+  padding: 0;
+  min-height: 0;
+  color: var(--link);
+  text-decoration: underline;
+  font: inherit;
+}
+@media (max-width: 480px) {
+  :is(.cloud-runtime-message, .cloud-welcome, .cloud-onboarding) .cloud-actions { width: 100%; flex-direction: column; }
+}
 
 /* The brand mark: the "S" in a round lime badge (BrandMark.tsx draws .brand-mark-badge; .cloud-mark is
    the same badge on the screens written before it). Always decoration: its words sit beside it. In

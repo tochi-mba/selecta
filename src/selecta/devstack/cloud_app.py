@@ -26,8 +26,9 @@ from selecta.billing import api as billing_api
 from selecta.devstack import billing, guard, objects
 from selecta.devstack.rooms import LibraryCatalog, QueuePlanner
 from selecta.devstack.settings import CLIENT_ID, DevSettings
+from selecta.local_media.catalog import LocalMediaCatalog
 from selecta.persistence import make_engine, migrate
-from selecta.rooms.cloud_ports import RoomPorts
+from selecta.rooms.cloud_ports import BrowserPlanner, RoomPorts
 from selecta.storage import api as storage_api
 
 STRIPE_TEST_MODE_ENV = "SELECTA_DEV_STRIPE_TEST_MODE"
@@ -108,11 +109,17 @@ def application() -> FastAPI:
     test_mode = stripe_test_mode()
     if not test_mode:
         os.environ.update(billing.environment())
-    ports = RoomPorts(
-        pepper=settings.secret("rooms-pepper").encode(),
-        catalog=LibraryCatalog(engine),
-        planner=QueuePlanner(),
-    )
+    pepper = settings.secret("rooms-pepper").encode()
+    if os.environ.get(HOSTED_DEV_ENV) == "1":
+        # the hosted pages: guests pick from the stored library and a stand-in queue plans
+        ports = RoomPorts(pepper=pepper, catalog=LibraryCatalog(engine), planner=QueuePlanner())
+    else:
+        # What Cloud ships (api_cloud.create_cloud_app): guests pick from the songs the host's
+        # devices can play and the host's browser mix takes the requests. Dev must run the same
+        # path, or a Rooms bug on staging cannot be seen here.
+        ports = RoomPorts(
+            pepper=pepper, catalog=LocalMediaCatalog(engine), planner=BrowserPlanner(engine)
+        )
     app = create_cloud_app(cloud_settings(settings), engine=engine, room_ports=ports)
     store = objects.DiskObjects.in_folder(settings.objects, settings.site_url)
     objects.install_routes(app, store)

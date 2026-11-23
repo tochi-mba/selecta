@@ -9,7 +9,7 @@
 // When the host disconnects the screen, the next look says `unpaired` and a new code appears;
 // "Disconnect this screen" does the same from the screen's side.
 
-import { ApiError, call, h, replace, Song, songLine } from '../rooms/dom';
+import { ApiError, call, h, patch, replace, Song, songLine } from '../rooms/dom';
 import { qrSvg } from '../rooms/qr';
 import './display.css';
 
@@ -44,13 +44,19 @@ function reconnecting(on: boolean): void {
 
 async function disconnect(button: HTMLButtonElement): Promise<void> {
   button.disabled = true;
+  button.setAttribute('aria-busy', 'true');
   button.textContent = 'Disconnecting...';
   try {
     await call('/api/display/pairing', { method: 'DELETE' });
   } catch { /* gone already, or unreachable: a new pairing replaces the old token either way */ }
   shownCode = '';
-  try { await pair(); } catch { failures += 1; replace(root, h('p', {}, 'Reconnecting...')); }
+  try { await pair(); } catch { failures += 1; replace(root, waiting('Reconnecting...')); }
   schedule();
+}
+
+/** A calm full-screen line while there is nothing else to show yet. */
+function waiting(text: string): HTMLElement {
+  return h('p', { className: 'd-waiting', role: 'status' }, text);
 }
 
 async function pair(): Promise<void> {
@@ -66,7 +72,7 @@ function drawPairing(): void {
     h('section', { className: 'd-pair' },
       h('p', { className: 'd-eyebrow' }, 'SelectaDJ display'),
       h('h1', {}, 'Pair this screen'),
-      h('p', {}, 'In SelectaDJ, open your room on Listen, choose Big screen, and type this code:'),
+      h('p', { className: 'd-lede' }, 'In SelectaDJ, open your room, find Big screen, and type this code:'),
       h('p', { className: 'd-code', id: 'd-pairing', 'aria-label': `Pairing code ${pairingCode.split('').join(' ')}` }, pairingCode),
       h('p', { className: 'd-muted' }, 'The code works once and lasts ten minutes.')));
 }
@@ -88,17 +94,24 @@ function drawRoom(view: View): void {
     qr.dataset.link = link;
     shownCode = view.code ?? '';
   }
-  replace(document.getElementById('d-join') as HTMLElement, `Or go to ${location.host}${view.join_path ?? ''} and enter `, h('strong', {}, view.code ?? ''));
-  replace(document.getElementById('d-info') as HTMLElement,
+  // for a phone with no camera to hand: the address, and the room code large enough to read from the back
+  patch(document.getElementById('d-join') as HTMLElement,
+    h('span', { className: 'd-label' }, 'Room code'),
+    h('strong', { className: 'd-roomcode' }, view.code ?? ''),
+    h('span', { className: 'd-url' }, `No camera? Open ${location.host}${view.join_path ?? ''}`));
+  // Patched in place and keyed by song, so the screen stays still between looks and only a line
+  // that is new (the next song, a new request) arrives.
+  const now = view.now_playing;
+  patch(document.getElementById('d-info') as HTMLElement,
     h('h1', {}, view.room_name ?? 'Room'),
-    view.music_paused ? h('p', { className: 'd-banner' }, "The music's paused.") : null,
-    h('h2', {}, 'Now playing'),
-    h('p', { className: 'd-now', id: 'd-now' }, view.now_playing ? songLine(view.now_playing) : 'Nothing right now'),
-    view.up_next.length ? h('h2', {}, 'Next up') : null,
-    view.up_next.length ? h('ol', { className: 'd-list' }, ...view.up_next.slice(0, 3).map((song) => h('li', {}, songLine(song)))) : null,
-    h('h2', {}, 'Requests coming up'),
+    view.music_paused ? h('p', { className: 'd-banner', 'data-key': 'paused' }, "The music's paused.") : null,
+    h('h2', { 'data-key': 'now-title' }, 'Now playing'),
+    h('p', { className: now ? 'd-now' : 'd-now d-muted', id: 'd-now', 'data-key': `now-${now?.song_id ?? 'none'}` }, now ? now.title : 'Nothing right now', now ? h('span', { className: 'd-by' }, now.artist) : null),
+    view.up_next.length ? h('h2', { 'data-key': 'next-title' }, 'Next up') : null,
+    view.up_next.length ? h('ol', { className: 'd-list', 'data-key': 'next' }, ...view.up_next.slice(0, 3).map((song) => h('li', { 'data-key': `next-${song.song_id}` }, songLine(song)))) : null,
+    h('h2', { 'data-key': 'asked-title' }, 'Requests coming up'),
     view.upcoming.length
-      ? h('ol', { className: 'd-list', id: 'd-upcoming' }, ...view.upcoming.slice(0, 6).map((item) => h('li', {}, songLine(item.song), item.nickname ? h('span', { className: 'd-muted' }, ` · ${item.nickname}`) : null)))
+      ? h('ol', { className: 'd-list', id: 'd-upcoming' }, ...view.upcoming.slice(0, 6).map((item) => h('li', { 'data-key': item.request_id }, songLine(item.song), item.nickname ? h('span', { className: 'd-muted' }, ` · ${item.nickname}`) : null)))
       : h('p', { className: 'd-muted', id: 'd-upcoming' }, 'No requests yet. Scan the code and ask for a song.'));
 }
 
@@ -114,13 +127,13 @@ async function tick(): Promise<void> {
     else if (view.state === 'ended') {
       if (!endedAt) {
         endedAt = Date.now();
-        replace(root, h('section', { className: 'd-pair' }, h('h1', {}, view.room_name ? `${view.room_name} has ended` : 'The room has ended'), h('p', {}, 'Thanks for coming.')));
+        replace(root, h('section', { className: 'd-pair' }, h('p', { className: 'd-eyebrow' }, 'SelectaDJ display'), h('h1', {}, view.room_name ? `${view.room_name} has ended` : 'The room has ended'), h('p', { className: 'd-lede' }, 'Thanks for coming.')));
       } else if (Date.now() - endedAt > 30_000) { endedAt = 0; await pair(); }
     }
   } catch (error) {
     const problem = error as ApiError;
     if (problem.code === 'flag_off') {
-      replace(root, h('section', { className: 'd-pair' }, h('h1', {}, 'The big screen is off'), h('p', {}, problem.message)));
+      replace(root, h('section', { className: 'd-pair' }, h('p', { className: 'd-eyebrow' }, 'SelectaDJ display'), h('h1', {}, 'The big screen is off'), h('p', { className: 'd-lede' }, problem.message)));
       return;
     }
     if (problem.status === 404) {
@@ -128,7 +141,7 @@ async function tick(): Promise<void> {
     } else {
       failures += 1;
       if (root.querySelector('.d-room, #d-pairing')) reconnecting(true);
-      else replace(root, h('p', {}, 'Reconnecting...'));
+      else replace(root, waiting('Reconnecting...'));
     }
   }
   schedule();

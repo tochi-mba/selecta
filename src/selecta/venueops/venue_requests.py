@@ -96,6 +96,7 @@ ROOMS_CONTROLS: tuple[RoomsControl, ...] = tuple(
         ("guest", "GET", "/api/guest/rooms/{room_id}"),
         ("guest", "GET", "/api/guest/rooms/{room_id}/search"),
         ("guest", "POST", "/api/guest/rooms/{room_id}/requests"),
+        ("guest", "POST", "/api/guest/rooms/{room_id}/requests/batch"),
         ("guest", "DELETE", "/api/guest/rooms/{room_id}/requests/{request_id}"),
         ("guest", "POST", "/api/guest/rooms/{room_id}/requests/{request_id}/vote"),
         ("guest", "DELETE", "/api/guest/rooms/{room_id}/requests/{request_id}/vote"),

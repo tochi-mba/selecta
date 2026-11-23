@@ -24,6 +24,8 @@ export type Warning = { code: string; text: string };
 export type Device = { id: string; name: string; kind: string; signed_in: boolean; this_device: boolean; poor_speaker: boolean; last_seen_at: number; warnings: Warning[] };
 /** A programme entry as an ADR-0458 identity: resolved locally on the speaker, never a path. */
 export type ProgrammeRef = { song_id: number; sha256: string };
+/** Where a new speaker's first sound begins. */
+export type StartAt = { song_index: number; offset_ms: number };
 export type SessionState = { mix_revision_id: string | null; song_index: number; offset_ms: number; anchor_at: number | null; state: 'playing' | 'paused' | 'stopped'; active_device_id: string | null; lease_expires_at: number | null; seq: number; fence?: number; state_confidence?: 'fresh' | 'uncertain'; programme?: ProgrammeRef[]; track?: ProgrammeRef | null; output_status?: OutputWire; output_verified_at?: number | null; volume?: number | null };
 /** The speaker's sound-output status as it reaches controllers (ADR-0457 truthful states, BF-0457-03). */
 export type OutputWire = 'playing' | 'output_unverified' | 'uncertain' | 'interrupted';
@@ -562,7 +564,9 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
     wakeWasHeld.current = false;
   }, [speaker]);
 
-  const playHere = useCallback(async (observedOwnerId?: string | null) => {
+  /** `startAt`: where this device's first sound begins (a press on a song, a new mix from a
+   * request). Without it the new speaker carries on from the session's position. */
+  const playHere = useCallback(async (observedOwnerId?: string | null, startAt?: StartAt) => {
     if (!deviceId || !speaker || claiming.current) return;
     expiredSpeaker.current = false;
     claiming.current = true;
@@ -591,7 +595,10 @@ export function usePlaybackDevice({ api, workspaceId, speaker, remoteControl = t
         setMessage('');
         return;
       }
-      await startSpeaking(current.session);
+      // the press named a place to start: begin there, and the heartbeat tells the session
+      await startSpeaking(startAt ? {
+        ...current.session, song_index: startAt.song_index, offset_ms: startAt.offset_ms, anchor_at: null, state: 'playing',
+      } : current.session);
       setMessage('');
     } catch (problem) {
       setError((problem as Error).message);

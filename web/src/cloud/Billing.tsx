@@ -4,6 +4,7 @@ import { Account, lockedTo, planName } from './api';
 import { CheckoutPhase, Consent, consentComplete, NO_CONSENT } from './checkout';
 import { Meters } from './Meters';
 import { useNeedsConnection } from './connection';
+import { Icon } from '../ui/Icon';
 
 // Plan & billing (docs/saas/11-ui-ux.md §11.1): the current plan, the usage meters, and the way
 // to change plan. A free account subscribes through Checkout, after the three UK consents; a paid
@@ -66,9 +67,9 @@ function LocalFirstPlan({ plan, account }: { plan: Paid; account: Account }) {
     : (lucy ? sells.headline : 'Scheduled discovery');
   return (
     <>
-      <strong>{headline}</strong>
+      <strong className="cloud-plan-headline">{headline}</strong>
       <ul className="cloud-plan-axes">
-        {axes.map((axis) => <li key={axis.name}><b>{axis.name}</b> {axis.words}</li>)}
+        {axes.map((axis) => <li key={axis.name}><Icon name="check" size="compact" /><span><b>{axis.name}</b> {axis.words}</span></li>)}
       </ul>
     </>
   );
@@ -79,6 +80,12 @@ function LocalFirstPlan({ plan, account }: { plan: Paid; account: Account }) {
 function aboutPlan(plan: (typeof PLANS)[number], account: Account) {
   const rooms = accountFlagOn('rooms', account.features) || Boolean(lockedTo(account, 'rooms'));
   return plan.id === 'premium' && !rooms ? 'Priority processing.' : plan.about;
+}
+
+/** A price as its figure and its period ("£6.99" and "/ month"), so the figure can be read at a glance. */
+function Price({ words }: { words: string }) {
+  const [figure, period] = words.split(' / ');
+  return <p className="cloud-price">{figure}{period && <small> / {period}</small>}</p>;
 }
 
 export function CheckoutStatus({ phase, account }: { phase: CheckoutPhase; account: Account }) {
@@ -140,20 +147,24 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
           <h2>{planName(account)}</h2>
           {account.lucy && accountFlagOn('lucy', account.features) && <p>Includes {account.lucy.tier}.</p>}
         </div>
-        {paid && portal && <button className="primary" disabled={busy || !!offline} onClick={onPortal}>Change plan or cancel</button>}
+        {paid && portal && <button className="primary" disabled={busy || !!offline} aria-busy={busy || undefined} onClick={onPortal}>{busy ? 'Opening the billing portal…' : 'Change plan or cancel'}</button>}
         {offline && <p className="needs-connection">{offline}</p>}
       </section>
       <h2 className="cloud-section-title">This period’s usage</h2>
       <Meters account={account} />
       {paid
-        ? portal && <section className="cloud-card"><p className="cloud-eyebrow">Upgrade or downgrade</p><p>{local
+        ? portal && <section className="cloud-card cloud-plan-note" aria-labelledby="cloud-plan-note-title"><h2 id="cloud-plan-note-title">Changing your plan</h2><p>{local
           ? 'Upgrades start now and are prorated. Downgrades take effect at the end of the period, and your music and mixes stay exactly as they are. Payment details and invoices are in the same secure Stripe portal.'
           : 'Upgrades start now and are prorated. Downgrades take effect at the end of the period; if your library is then bigger than the new plan, it stays playable and nothing is deleted. Payment details and invoices are in the same secure Stripe portal.'}</p></section>
         : checkout && !confirming && <>
+          <h2 className="cloud-section-title">Upgrade your plan</h2>
           <ConsentForm consent={consent} onChange={setConsent} version={consentVersion} />
-          <div className="cloud-interval" role="group" aria-label="Billing interval">
-            <button aria-pressed={interval === 'month'} onClick={() => setInterval('month')}>Monthly</button>
-            <button aria-pressed={interval === 'year'} onClick={() => setInterval('year')}>Annual</button>
+          <div className="cloud-plans-heading">
+            <p className="cloud-hint" role="status">{consentComplete(consent) ? 'Choose a plan to open secure checkout.' : 'Tick all three boxes above to choose a plan.'}</p>
+            <div className="cloud-interval" role="group" aria-label="Billing interval">
+              <button aria-pressed={interval === 'month'} onClick={() => setInterval('month')}>Monthly</button>
+              <button aria-pressed={interval === 'year'} onClick={() => setInterval('year')}>Annual</button>
+            </div>
           </div>
           <div className="cloud-plan-grid">
             {PLANS.map((plan) => (
@@ -161,16 +172,15 @@ export function Billing({ account, busy, phase, consentVersion, onCheckout, onPo
                 <p className="cloud-eyebrow">{local ? LOCAL_FIRST_AXES[plan.id].eyebrow : plan.featured ? 'Most room to play' : 'For your growing library'}</p>
                 <h2>{plan.name}</h2>
                 {local
-                  ? <><p className="cloud-price">{interval === 'month' ? plan.month : plan.year}</p><LocalFirstPlan plan={plan.id} account={account} /></>
-                  : <><strong>{plan.storage}</strong>
-                    <p className="cloud-price">{interval === 'month' ? plan.month : plan.year}</p>
+                  ? <><Price words={interval === 'month' ? plan.month : plan.year} /><LocalFirstPlan plan={plan.id} account={account} /></>
+                  : <><Price words={interval === 'month' ? plan.month : plan.year} />
+                    <strong className="cloud-plan-headline">{plan.storage}</strong>
                     <p>{aboutPlan(plan, account)}</p></>}
                 <button className={plan.featured ? 'primary' : ''} disabled={!ready} onClick={() => onCheckout(plan.id, interval, consent)}>Choose {plan.name}</button>
               </section>
             ))}
           </div>
           {offline && <p className="needs-connection">{offline}</p>}
-          {!consentComplete(consent) && <p className="cloud-hint">Tick all three boxes above to choose a plan.</p>}
           {/* a slow checkout answer otherwise looks like nothing happened (2026-11-12 flow walk) */}
           {busy && consentComplete(consent) && <p className="cloud-hint" role="status">Opening secure checkout…</p>}
         </>}

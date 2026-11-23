@@ -1,6 +1,7 @@
 import { ApiError, type MixData, type Request } from '../api';
 import type { RequestRow } from '../views/Requests';
 import type { PlayableSong } from './localFirstMixes';
+import { askerOf, openRoomId } from '../rooms/useRoomSession';
 
 /** The requests route family of the local-first adapter (ADR-0462 "one adapter per route family"):
  * `/requests`, `/requests/consider`, `/requests/insert` and `/requests/{id}/add` as the shared
@@ -11,7 +12,8 @@ import type { PlayableSong } from './localFirstMixes';
  * SelectaDJ cannot look for a spot where a request fits or a bridge song that leads to it, and a
  * request never joins the mix on its own. The host adds it, and it goes in right after the song
  * that is playing, with the browser's own blend. Bridges and hearing a request's transitions
- * ahead are refused with that reason.
+ * ahead are refused with that reason. The panel shows these rows as one short Waiting list
+ * (views/BrowserRequests.tsx): who asked, Add next, Dismiss.
  *
  * Where it is kept: this browser's own requests in localStorage per workspace, next to the
  * recipe store's current-mix pointer, so they survive a reload. Room requests stay on the server
@@ -22,8 +24,8 @@ import type { PlayableSong } from './localFirstMixes';
 /** CloudApp dispatches this on `window` for each `requests.room` event on the workspace stream. */
 export const ROOM_REQUEST_EVENT = 'selecta:room-request';
 
-export const JOINS_BY_HAND = 'In your browser SelectaDJ can’t check which songs fit around a request, so it never joins on its own. While your mix plays, press Add to mix anyway and it plays right after the current song, with a browser blend.';
-export const NOT_ON_THIS_DEVICE = 'This song isn’t on this device, so a browser mix can’t play it. Connect its file on this device first.';
+export const JOINS_BY_HAND = 'Add next plays a song right after the current one.';
+export const NOT_ON_THIS_DEVICE = 'This song’s file isn’t on this device. Connect it here to play it.';
 export const NO_BRIDGES = 'SelectaDJ can’t look for bridge songs in your browser: nothing here is measured for key or tempo. Add the request to the mix directly instead.';
 export const NOTHING_TO_HEAR = 'A request’s transitions are worked out in your browser as the mix plays, so there is nothing to hear ahead.';
 export const NO_MIX_YET = 'There is no mix playing to add it to. Start a mix on Make a Mix first.';
@@ -121,7 +123,11 @@ export function requestsFamily({ cloud, workspaceId, songs, send }: {
 
   /** Every waiting request, this browser's own first, then the room's in the order they came. */
   const rows = async (): Promise<{ rows: RequestRow[]; saved: Saved; room: RoomRequest[] }> => {
-    const [all, room] = await Promise.all([knownSongs(), roomRequests()]);
+    const [all, handed] = await Promise.all([knownSongs(), roomRequests()]);
+    // a room that has closed takes its unplayed requests with it: the server lists open rooms
+    // only, and once this browser knows which room is open (or that none is) it holds to that
+    const openNow = openRoomId();
+    const room = openNow === undefined ? handed : handed.filter((asked) => asked.room_id === openNow);
     const saved = load(workspaceId);
     // a room request gets a number of its own here, kept so its row keeps its place on screen
     const kept: Record<string, number> = {};
@@ -131,21 +137,22 @@ export function requestsFamily({ cloud, workspaceId, songs, send }: {
     const changed = JSON.stringify(kept) !== JSON.stringify(saved.room);
     saved.room = kept;
     if (changed) save(workspaceId, saved);
-    const row = (id: number, songId: number, from?: string): RequestRow => {
+    const row = (id: number, songId: number, from?: RoomRequest): RequestRow => {
       const song = all.find((one) => one.id === songId);
-      const where = from ? `Asked for in ${from}. ` : '';
       return {
         id, song_id: songId, title: song?.title ?? null, artist: song?.artist ?? null, status: 'waiting',
         // a song no longer in the catalogue really has gone from the library
         available: song ? 1 : 0,
         stage: song?.playable ? 'searching' : 'waiting',
-        browser_note: `${where}${song?.playable ? JOINS_BY_HAND : NOT_ON_THIS_DEVICE}`,
+        browser_note: song?.playable ? JOINS_BY_HAND : NOT_ON_THIS_DEVICE,
+        // a room request says who asked and in which room; the member's own says neither
+        ...(from ? { room_name: from.room_name, asked_by: askerOf(from.id) } : {}),
       };
     };
     return {
       rows: [
         ...saved.local.map((asked) => row(asked.id, asked.song_id)),
-        ...room.map((asked) => row(kept[asked.id], asked.song_id, asked.room_name)),
+        ...room.map((asked) => row(kept[asked.id], asked.song_id, asked)),
       ],
       saved,
       room,
@@ -207,11 +214,14 @@ export function requestsFamily({ cloud, workspaceId, songs, send }: {
     return changed;
   };
 
-  /** A look while the mix plays: requests whose song is in the mix now are done. Nothing is
-   * offered to join on its own (`offer` stays empty), because nothing can say where it fits. */
+  /** A look while the mix plays: requests whose song is playing now or still to come are done.
+   * A song that already played earlier in this mix does not count: the guest who asked would be
+   * told it was added when they will not hear it again. Nothing is offered to join on its own
+   * (`offer` stays empty), because nothing can say where it fits. */
   const consider = async (init?: RequestInit) => {
-    const { order = [] } = bodyOf<Where>(init);
-    const inMix = new Set(order);
+    const { order = [], position } = bodyOf<Where>(init);
+    const from = Number.isInteger(position) ? Math.max(0, Number(position)) : 0;
+    const inMix = new Set(order.slice(from));
     const { rows: now } = await rows();
     const settled: string[] = [];
     for (const row of now) {

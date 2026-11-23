@@ -1,9 +1,14 @@
 """A room's settings, with the defaults from the proposal (11A.2).
 
 Anyone with the code can join, requests are accepted automatically from all mix-ready songs, each
-guest has one request waiting and three an hour, a song that played can't be asked for again for
-an hour, at most twenty wait in the room, votes are on, nicknames are seen by the host only, there
-is no big screen, and the room ends after twelve hours or an hour with no speaker online.
+guest can have three requests waiting and ask for twenty an hour, a song that played can't be
+asked for again for twenty minutes, at most fifty wait in the room, votes are on, nicknames are
+seen by the host only, there is no big screen, and the room ends after twelve hours or an hour
+with neither a speaker nor the host's browser online.
+
+The host chooses the per-guest numbers: 1 to 20 waiting at once, and 1 to 60 an hour or no hourly
+limit at all (stored as 0). These are not plan limits. A room that is already open keeps the
+numbers it was saved with; only the defaults for new rooms are set here.
 
 The plan's limits (guests, hours, request renders an hour) are copied into the settings when the
 room opens, so a host who downgrades mid-party keeps the room they opened until it ends.
@@ -36,10 +41,10 @@ class RequestMode(StrEnum):
 
 # The range each number may take, whatever the host asks for.
 BOUNDS: dict[str, tuple[float, float]] = {
-    "pending_per_guest": (1, 5),
-    "requests_per_guest_per_hour": (1, 30),
+    "pending_per_guest": (1, 20),
+    "requests_per_guest_per_hour": (0, 60),  # 0: no hourly limit
     "replay_cooldown_minutes": (0, 24 * 60),
-    "pending_per_room": (1, 100),
+    "pending_per_room": (1, 500),
     "max_hours": (0.5, 12),
     "no_speaker_minutes": (5, 12 * 60),
     "renders_per_hour": (1, 600),
@@ -52,10 +57,10 @@ class RoomSettings:
     join_mode: JoinMode = JoinMode.ANYONE
     request_mode: RequestMode = RequestMode.AUTO
     crate_song_ids: tuple[int, ...] | None = None  # None: every mix-ready song
-    pending_per_guest: int = 1
-    requests_per_guest_per_hour: int = 3
-    replay_cooldown_minutes: int = 60
-    pending_per_room: int = 20
+    pending_per_guest: int = 3
+    requests_per_guest_per_hour: int = 20  # 0: no hourly limit
+    replay_cooldown_minutes: int = 20
+    pending_per_room: int = 50
     votes: bool = True
     names_shown: bool = False  # nicknames seen by the host only
     display: bool = False

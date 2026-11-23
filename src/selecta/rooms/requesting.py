@@ -2,8 +2,12 @@
 
 A guest picks a song from the host's requestable songs; there's no free text. The request is
 checked against the room's crate and the library (mix-ready, not set aside), the replay cooldown,
-and the limits: by default one waiting request per guest, three an hour, twenty waiting in the
-room. A song someone has already asked for doesn't make a second request: the new ask becomes a
+and the limits the host set: by default three waiting requests per guest, twenty an hour, fifty
+waiting in the room. A refusal says which limit was hit and when the guest can ask again. A guest
+can send several songs together (`request_many`): the room is locked for the whole batch, each
+song is checked in turn, and the answer says which were added and why any were not.
+
+A song someone has already asked for doesn't make a second request: the new ask becomes a
 vote. In an auto-accept room the request is accepted at once; otherwise the host approves or
 passes it. Accepted requests reach the planner in round-robin order (see `planning`).
 
@@ -49,6 +53,7 @@ from selecta.rooms.store import (
 HOUR = 3600.0
 SEARCH_LIMIT_MAX = 50
 QUERY_MAX = 80
+BATCH_MAX = 20  # songs in one multi-song submit: the most a guest can ever have waiting
 
 
 class Outcome(StrEnum):
@@ -62,6 +67,25 @@ class RequestOutcome:
     request: RoomRequest
     became_vote: bool = False  # someone had asked already; this ask became a vote for it
     already_queued: bool = False  # it was already waiting and nothing changed
+
+
+@dataclass(frozen=True)
+class Allowance:
+    """How many more songs a guest can ask for right now, and which limit stops them at zero."""
+
+    left: int
+    refusal: Refusal | None = None
+    message: str = ""
+    retry_after_s: float | None = None
+
+
+@dataclass(frozen=True)
+class BatchItem:
+    """One song of a multi-song submit: the request it made or joined, or why it wasn't added."""
+
+    song_id: int
+    outcome: RequestOutcome | None = None
+    error: RoomError | None = None
 
 
 def search(ctx: RoomContext, guest_token: str, query: str, limit: int = 20) -> list[SongSummary]:
@@ -85,6 +109,7 @@ def request(
         raise RoomError(Refusal.NOT_REQUESTABLE)
     ref = resolve_guest(ctx, guest_token)
     workspace_id = ref.workspace_id
+    known = _look_up(ctx, workspace_id, [song_id])
     with transaction(ctx.engine, workspace_id) as conn:
         now = resolve_now(conn, now)
         room = live_room(conn, workspace_id, ref.room_id)
@@ -95,7 +120,7 @@ def request(
         if existing:
             outcome = _ask_again(conn, ctx, room, guest, existing[0], now)
         else:
-            _check_song(conn, ctx, room, song_id, now)
+            _check_song(conn, room, song_id, now, known[song_id])
             _check_limits(conn, room, guest, now)
             outcome = RequestOutcome(_create(conn, ctx, room, guest, song_id, now))
     if outcome.request.status is RequestStatus.ACCEPTED and not outcome.already_queued:
@@ -121,11 +146,36 @@ def _ask_again(
     return RequestOutcome(load_request(conn, room, existing.id), became_vote=True)
 
 
-def _check_song(conn: Connection, ctx: RoomContext, room: Room, song_id: int, now: float) -> None:
+@dataclass(frozen=True)
+class _Known:
+    """What the host's library says about a song, read before the room is locked."""
+
+    requestable: bool
+    last_played_at: float | None
+
+
+def _look_up(ctx: RoomContext, workspace_id: str, song_ids: list[int]) -> dict[int, _Known]:
+    """Ask the catalogue about each song, outside any Rooms transaction.
+
+    The catalogue opens its own connection. Asked from inside the transaction that holds the
+    room's lock, it waits on that very transaction: on SQLite (`BEGIN IMMEDIATE`) until the
+    30 second busy timeout, which is how a guest's request hung with no answer. So the library
+    is read first and the locked part only reads and writes Rooms' own tables."""
+    known: dict[int, _Known] = {}
+    for song_id in song_ids:
+        if isinstance(song_id, bool) or not isinstance(song_id, int) or song_id in known:
+            continue
+        requestable = ctx.catalog.is_requestable(workspace_id, song_id)
+        played = ctx.catalog.last_played_at(workspace_id, song_id) if requestable else None
+        known[song_id] = _Known(requestable, played)
+    return known
+
+
+def _check_song(conn: Connection, room: Room, song_id: int, now: float, known: _Known) -> None:
     crate = room.settings.crate
     if crate is not None and song_id not in crate:
         raise RoomError(Refusal.NOT_REQUESTABLE)
-    if not ctx.catalog.is_requestable(room.workspace_id, song_id):
+    if not known.requestable:
         raise RoomError(Refusal.NOT_REQUESTABLE)
     cooldown = room.settings.replay_cooldown_minutes * 60.0
     if cooldown <= 0:
@@ -137,10 +187,24 @@ def _check_song(conn: Connection, ctx: RoomContext, room: Room, song_id: int, no
             room_requests.c.status == RequestStatus.PLAYED.value,
         )
     ).scalar_one()
-    played_in_mix = ctx.catalog.last_played_at(room.workspace_id, song_id)
+    played_in_mix = known.last_played_at
     last = max((t for t in (played_in_room, played_in_mix) if t is not None), default=None)
     if last is not None and now - last < cooldown:
-        raise RoomError(Refusal.COOLDOWN, retry_after_s=cooldown - (now - last))
+        wait = cooldown - (now - last)
+        raise RoomError(
+            Refusal.COOLDOWN,
+            f"That song played {_minutes(now - last)} ago. "
+            f"It can be asked for again in about {_minutes(wait)}.",
+            retry_after_s=wait,
+        )
+
+
+def _minutes(seconds: float) -> str:
+    return f"{max(1, round(seconds / 60.0))} min"
+
+
+def _songs(count: int) -> str:
+    return "1 song" if count == 1 else f"{count} songs"
 
 
 def _count(conn: Connection, *conditions: sa.ColumnElement[bool]) -> int:
@@ -149,23 +213,96 @@ def _count(conn: Connection, *conditions: sa.ColumnElement[bool]) -> int:
     ).scalar_one()
 
 
-def _check_limits(conn: Connection, room: Room, guest: Guest, now: float) -> None:
+def allowance(conn: Connection, room: Room, guest: Guest, now: float) -> Allowance:
+    """What the room's limits leave this guest: the smallest of what's left of their waiting
+    requests, their hour, and the room's own queue. At zero it names the limit that binds, in
+    words for the guest, and when it frees up if that can be known."""
     settings = room.settings
     pending = [status.value for status in PENDING]
     mine = room_requests.c.guest_id == guest.id
-    if _count(conn, mine, room_requests.c.status.in_(pending)) >= settings.pending_per_guest:
-        raise RoomError(Refusal.GUEST_PENDING_LIMIT)
-    hour_ago = now - HOUR
-    recent = conn.execute(
-        sa.select(sa.func.count(), sa.func.min(room_requests.c.created_at)).where(
-            mine, room_requests.c.created_at > hour_ago
+    waiting = _count(conn, mine, room_requests.c.status.in_(pending))
+    left = settings.pending_per_guest - waiting
+    if left <= 0:
+        return Allowance(
+            0,
+            Refusal.GUEST_PENDING_LIMIT,
+            f"You have {_songs(waiting)} waiting, the most this room allows at once. "
+            "You can ask again when the host adds one to the mix, or withdraw one.",
         )
-    ).one()
-    if recent[0] >= settings.requests_per_guest_per_hour:
-        raise RoomError(Refusal.GUEST_HOURLY_LIMIT, retry_after_s=recent[1] + HOUR - now)
+    hourly = settings.requests_per_guest_per_hour
+    if hourly > 0:
+        asked, first = conn.execute(
+            sa.select(sa.func.count(), sa.func.min(room_requests.c.created_at)).where(
+                mine, room_requests.c.created_at > now - HOUR
+            )
+        ).one()
+        if asked >= hourly:
+            wait = max(1.0, first + HOUR - now)
+            return Allowance(
+                0,
+                Refusal.GUEST_HOURLY_LIMIT,
+                f"You've asked for {_songs(asked)} in the last hour, the most this room allows. "
+                f"You can ask again in about {_minutes(wait)}.",
+                wait,
+            )
+        left = min(left, hourly - asked)
     in_room = _count(conn, room_requests.c.room_id == room.id, room_requests.c.status.in_(pending))
     if in_room >= settings.pending_per_room:
-        raise RoomError(Refusal.ROOM_BUSY)
+        return Allowance(
+            0,
+            Refusal.ROOM_BUSY,
+            f"{in_room} requests are waiting in this room, the most it holds. "
+            "You can ask again when the host has added some to the mix.",
+        )
+    return Allowance(min(left, settings.pending_per_room - in_room))
+
+
+def _check_limits(conn: Connection, room: Room, guest: Guest, now: float) -> None:
+    left = allowance(conn, room, guest, now)
+    if left.refusal is not None:
+        raise RoomError(left.refusal, left.message, retry_after_s=left.retry_after_s)
+
+
+def request_many(
+    ctx: RoomContext, guest_token: str, song_ids: list[int], *, now: float | None = None
+) -> list[BatchItem]:
+    """A guest sends several songs together. The room stays locked for the whole batch, so the
+    limits hold exactly: songs are taken in the order given until a limit is reached, and every
+    song gets its own answer (added, a vote, already waiting, or why not)."""
+    wanted = list(dict.fromkeys(song_ids))[:BATCH_MAX]
+    ref = resolve_guest(ctx, guest_token)
+    workspace_id = ref.workspace_id
+    items: list[BatchItem] = []
+    known = _look_up(ctx, workspace_id, wanted)
+    with transaction(ctx.engine, workspace_id) as conn:
+        now = resolve_now(conn, now)
+        room = live_room(conn, workspace_id, ref.room_id)
+        guest = active_guest(conn, room, ref.guest_id, now)
+        if room.settings.request_mode is RequestMode.OFF:
+            raise RoomError(Refusal.REQUESTS_OFF)
+        for song_id in wanted:
+            try:
+                if isinstance(song_id, bool) or not isinstance(song_id, int):
+                    raise RoomError(Refusal.NOT_REQUESTABLE)
+                existing = room_requests_where(conn, room, WAITING, song_id=song_id)
+                if existing:
+                    outcome = _ask_again(conn, ctx, room, guest, existing[0], now)
+                else:
+                    _check_song(conn, room, song_id, now, known[song_id])
+                    _check_limits(conn, room, guest, now)
+                    outcome = RequestOutcome(_create(conn, ctx, room, guest, song_id, now))
+                items.append(BatchItem(song_id, outcome))
+            except RoomError as error:
+                # nothing was written for this song; the ones before it stand
+                items.append(BatchItem(song_id, error=error))
+    if any(
+        item.outcome is not None
+        and item.outcome.request.status is RequestStatus.ACCEPTED
+        and not item.outcome.already_queued
+        for item in items
+    ):
+        pump(ctx, workspace_id, room.id, now=now)
+    return items
 
 
 def _create(
@@ -320,7 +457,7 @@ def _check_reapproval(conn: Connection, room: Room, target: RoomRequest) -> None
     if mine >= room.settings.pending_per_guest:
         raise RoomError(
             Refusal.GUEST_PENDING_LIMIT,
-            "That guest already has as many requests waiting as the room allows.",
+            f"That guest already has {_songs(mine)} waiting, the most this room allows at once.",
         )
     if _count(conn, room_requests.c.room_id == room.id, pending) >= room.settings.pending_per_room:
         raise RoomError(

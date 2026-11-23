@@ -247,11 +247,21 @@ def _rooms(engine: Engine, env: Mapping[str, str], plan: Plan) -> None:
     if len(pepper) < codes.MIN_PEPPER_BYTES:
         plan.disabled["rooms"] = f"set {PEPPER_ENV}"
         return
-    from selecta.rooms.cloud_ports import CloudPlans, CloudSpeakers, OutboxRoomEvents, RoomPorts
+    from selecta.local_media.catalog import LocalMediaCatalog
+    from selecta.rooms.cloud_ports import (
+        BrowserPlanner,
+        CloudPlans,
+        CloudSpeakers,
+        OutboxRoomEvents,
+        RoomPorts,
+    )
     from selecta.rooms.purge import purge_guest_data
     from selecta.rooms.service import Rooms
 
-    ports = RoomPorts()
+    # The same catalogue and planner as the API (`api_cloud.create_cloud_app`). The sweep hands
+    # waiting requests on, and with the default "no planner" it marked every one it touched as
+    # "can't fit" while the host was playing.
+    ports = RoomPorts(catalog=LocalMediaCatalog(engine), planner=BrowserPlanner(engine))
     rooms = Rooms(
         engine,
         pepper,

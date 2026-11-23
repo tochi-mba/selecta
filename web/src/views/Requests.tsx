@@ -14,8 +14,9 @@ import { AudioPreview } from '../ui/AudioPreview';
 import { TermHint } from '../ui/Glossary';
 import { useVisiblePoll } from '../ui/useVisiblePoll';
 import { useFlag, useFlagHeard } from '../flags';
+import { BrowserRequests } from './BrowserRequests';
 
-type Stage =
+export type Stage =
   | 'adding' | 'unavailable' | 'never' | 'in_mix' | 'analysing' | 'no_cues' | 'no_mix'
   | 'waiting' | 'searching' | 'approve' | 'preparing' | 'ready';
 
@@ -33,6 +34,8 @@ export type RequestRow = {
   saving?: boolean; picked?: number[] | null; behind?: string; bridge_lost?: boolean;
   /** Cloud in the browser (localFirstRequests.ts): what happens to this request, instead of the planner's words. */
   browser_note?: string;
+  /** Cloud in the browser: the room a guest asked in, and the guest's nickname when it is known. */
+  room_name?: string; asked_by?: string | null;
 };
 type RequestList = { requests: RequestRow[]; settled?: string[] };
 export type BridgeOption = {
@@ -796,19 +799,14 @@ export function RequestsPanel() {
   const canPick = (song: SongRow) => !inMix.has(song.id) && !waitingIds.has(song.id) && !asBridges.has(song.id);
   const availableMatches = matches?.map((song, index) => canPick(song) ? index : -1).filter((index) => index >= 0) ?? [];
   const orderedRequests = [...(requests ?? [])].sort((a, b) => GROUP_ORDER[stageOf(a, playback)] - GROUP_ORDER[stageOf(b, playback)]);
+  // Cloud in the browser marks its rows (browser_note): a short Waiting list, not the planner's groups
+  const browser = !!requests?.some((row) => row.browser_note);
   // the list stays open, so a few songs can be asked for from one search
-  const pick = (song: SongRow) => {
-    void add(song);
-    box.current?.focus();
-  };
-  const finish = () => {
-    setQuery('');
-    box.current?.focus();
-  };
+  const pick = (song: SongRow) => { void add(song); box.current?.focus(); };
+  const finish = () => { setQuery(''); box.current?.focus(); };
   const keys = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Escape' && query) {
-      event.preventDefault();
-      event.stopPropagation();
+      event.preventDefault(); event.stopPropagation();
       setQuery('');
       setActiveMatch(-1);
       return;
@@ -858,12 +856,7 @@ export function RequestsPanel() {
       </div>
       {searchError && <Problem retry={() => setSearchAttempt((value) => value + 1)}>{searchError}</Problem>}
       {text && matches === null && !searchError && (
-        <Skeleton
-          variant="library"
-          lines={2}
-          label="Searching your library"
-          retry={() => setSearchAttempt((value) => value + 1)}
-        />
+        <Skeleton variant="library" lines={2} label="Searching your library" retry={() => setSearchAttempt((value) => value + 1)} />
       )}
       {text && matches && !searchError && matches.length === 0 && <p className="hint">Nothing in your library matches that.</p>}
       {text && !!matches?.length && (
@@ -897,8 +890,11 @@ export function RequestsPanel() {
           // Cloud in the browser has no planner (requests.bridges is off there): you choose when it goes in.
           : 'Ask for a song any time. It waits here until you add it after the song that’s playing.'}<TermHint term="request" /></p>
       )}
-      {!!requests?.length && <p className="hint">Requested means saved, not scheduled. Only a placed song is in your current mix. Waiting requests have no reliable play-time estimate or guaranteed queue order.<TermHint term="request" /></p>}
-       {!!requests?.length && (
+      {!!requests?.length && !browser && <p className="hint">Requested means saved, not scheduled. Only a placed song is in your current mix. Waiting requests have no reliable play-time estimate or guaranteed queue order.<TermHint term="request" /></p>}
+      {!!requests?.length && browser && (
+        <BrowserRequests rows={(requests ?? []).map((request) => ({ request, stage: stageOf(request, playback) }))} live={playingNow(playback)} playback={playback} send={state.request ?? provided} refresh={state.refresh} onAdd={addAnyway} onDismiss={(request) => { void cancel(request); box.current?.focus(); }} />
+      )}
+      {!!requests?.length && !browser && (
         <ul className="request-list" aria-label="Your requests">
           {orderedRequests.map((request, index) => {
             const stage = stageOf(request, playback);

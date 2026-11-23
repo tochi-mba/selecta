@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { MixEta, MixData, MixItem, Request, Status } from '../api';
 import { NowState } from '../player';
 import { PlayerLike } from '../playerContract';
@@ -48,6 +49,9 @@ export type ViewProps = {
   /** Where songs aren't analysed (browser-first Cloud), a song's waveform drawn from its own file
    * on this device, for Listen's strip; null when the file can't be read here. */
   waveformOf?: (songId: number) => Promise<number[] | null>;
+  /** What a shell puts straight under Listen's notice: the control the notice asks for, such as
+   * the browser's sound check while nobody has confirmed hearing this device. */
+  noticeAction?: ReactNode;
   /** Whether this person has made a mix before, from somewhere that outlives this browser (browser-first
    * Cloud: the account's saved recipes). Local mode leaves it out and this browser's own note decides. */
   startedAMix?: boolean;

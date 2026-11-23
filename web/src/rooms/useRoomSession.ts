@@ -1,0 +1,187 @@
+import { useEffect, useRef, useState } from 'react';
+
+// The host's room session, held by the shell and not by the Rooms page (flag `rooms`).
+//
+// A room lives on the server, but everything the host's browser did for it used to live in the
+// Rooms page: reading the room, hearing about new requests, showing who is waiting. On any other
+// page, or with the tab in the background, the host heard nothing, and a browser-first room with
+// no mix playing looked to the server like a room with nobody there. This hook reads the open room
+// on every page for as long as the host's browser is open:
+//
+// - each read is also the host's presence (GET /api/rooms/current marks the host as seen), so an
+//   open room is not ended for having "no speaker" while its host is between mixes;
+// - a request that was not there on the last read is handed to `onAsked` with the guest's
+//   nickname, so the shell can say "Mia asked for Song by Artist" with something to press;
+// - the room's code and how many guests are here feed the shell's "Room open" line;
+// - who asked for each accepted request is kept (`askerOf`) for the Requests drawer.
+//
+// It reads every few seconds while a room is open, and at once when the workspace stream says
+// the room changed (CloudApp passes `room.*` and `requests.room` events on as ROOM_EVENT). It
+// does not pause in a background tab: hearing about requests while doing something else is the
+// point. With no room open it only looks once a minute, and at once when the Rooms page opens one.
+
+/** Dispatched on `window` when the open room changed: by CloudApp for each `room.*` and
+ * `requests.room` event on the workspace stream, and by the Rooms page after the host acts. */
+export const ROOM_EVENT = 'selecta:room';
+
+type Api = <T>(path: string, init?: RequestInit, workspaceId?: string) => Promise<T>;
+type Song = { song_id: number; title: string; artist: string };
+export type RoomAsk = { request_id: string; song: Song | null; nickname: string | null; votes: number };
+type Guest = { status: string; online?: boolean };
+type Current = {
+  room: {
+    room: { id: string; name: string; status: string };
+    code: string | null;
+    guests: Guest[];
+    inbox: RoomAsk[];
+    coming_up: RoomAsk[];
+  } | null;
+};
+
+export type RoomSession = {
+  id: string;
+  name: string;
+  code: string | null;
+  /** Guests whose page checked in within the last moments. */
+  guestsHere: number;
+  /** Requests waiting for the host to approve (a room set to "I approve each"). */
+  toApprove: number;
+  /** Accepted requests waiting for the host to add them to the mix. */
+  toAdd: number;
+};
+
+/** `approve`: it waits for the host's yes. `add`: it is accepted and waits to be put in the mix. */
+export type AskKind = 'approve' | 'add';
+
+const askers = new Map<string, string>();
+// the open room's id as last read: null when no room is open, undefined before the first read
+let openRoom: string | null | undefined;
+
+/** The id of the room that is open now, null when none is, undefined while that isn't known
+ * (no read yet, or Rooms is off). The Requests drawer drops a closed room's requests by it. */
+export function openRoomId(): string | null | undefined {
+  return openRoom;
+}
+
+const OPEN_MS = 8_000;
+const IDLE_MS = 60_000;
+const SOON_MS = 250;
+
+export function useRoomSession({ api, workspaceId, enabled, onAsked }: {
+  api: Api;
+  workspaceId: string;
+  /** The `rooms` flag is on for this account and Rooms is not locked to another plan. */
+  enabled: boolean;
+  onAsked?: (ask: RoomAsk, kind: AskKind, roomId: string) => void;
+}): RoomSession | null {
+  const [session, setSession] = useState<RoomSession | null>(null);
+  const told = useRef(onAsked);
+  told.current = onAsked;
+
+  useEffect(() => {
+    if (!enabled) { openRoom = undefined; setSession(null); return undefined; }
+    let live = true;
+    let timer = 0;
+    let reading = false;
+    let again = false;
+    // request ids already seen in this room, so each is announced once; null until the first read,
+    // which only takes stock (a reload must not announce everything that was already waiting)
+    let seen: { room: string; approve: Set<string>; add: Set<string> } | null = null;
+
+    const read = async () => {
+      if (!live) return;
+      if (reading) { again = true; return; }
+      reading = true;
+      window.clearTimeout(timer);
+      let open = seen !== null && seen.room !== '';
+      try {
+        const answer = await api<Current>('/rooms/current', {}, workspaceId);
+        if (!live) return;
+        const panel = answer.room;
+        if (!panel) {
+          seen = { room: '', approve: new Set(), add: new Set() };
+          open = false;
+          openRoom = null;
+          askers.clear();
+          setSession(null);
+        } else {
+          open = true;
+          openRoom = panel.room.id;
+          askers.clear();
+          for (const ask of [...panel.inbox, ...panel.coming_up]) if (ask.nickname) askers.set(ask.request_id, ask.nickname);
+          const first = seen === null || seen.room !== panel.room.id;
+          const before = first ? { room: panel.room.id, approve: new Set<string>(), add: new Set<string>() } : seen!;
+          if (!first) {
+            for (const ask of panel.inbox) if (!before.approve.has(ask.request_id)) told.current?.(ask, 'approve', panel.room.id);
+            // one the host just approved was announced when it arrived; only say what is new
+            for (const ask of panel.coming_up) if (!before.add.has(ask.request_id) && !before.approve.has(ask.request_id)) told.current?.(ask, 'add', panel.room.id);
+          }
+          seen = {
+            room: panel.room.id,
+            approve: new Set([...before.approve, ...panel.inbox.map((ask) => ask.request_id)]),
+            add: new Set([...before.add, ...panel.coming_up.map((ask) => ask.request_id)]),
+          };
+          const next: RoomSession = {
+            id: panel.room.id,
+            name: panel.room.name,
+            code: panel.code,
+            guestsHere: panel.guests.filter((guest) => guest.status === 'active' && guest.online).length,
+            toApprove: panel.inbox.length,
+            toAdd: panel.coming_up.length,
+          };
+          setSession((old) => (old && JSON.stringify(old) === JSON.stringify(next) ? old : next));
+        }
+      } catch {
+        // the connection or the server is away: what was last known stays, and the next read tries again
+      } finally {
+        reading = false;
+        if (live) {
+          if (again) { again = false; void read(); }
+          else timer = window.setTimeout(() => void read(), open ? OPEN_MS : IDLE_MS);
+        }
+      }
+    };
+    // a burst of events (a guest sending several songs) is one read, a moment later
+    let soon = 0;
+    const changed = () => {
+      window.clearTimeout(soon);
+      soon = window.setTimeout(() => void read(), SOON_MS);
+    };
+    const back = () => { if (document.visibilityState === 'visible') changed(); };
+    window.addEventListener(ROOM_EVENT, changed);
+    window.addEventListener('online', changed);
+    document.addEventListener('visibilitychange', back);
+    void read();
+    return () => {
+      live = false;
+      window.clearTimeout(timer);
+      window.clearTimeout(soon);
+      window.removeEventListener(ROOM_EVENT, changed);
+      window.removeEventListener('online', changed);
+      document.removeEventListener('visibilitychange', back);
+    };
+  }, [api, workspaceId, enabled]);
+
+  return session;
+}
+
+/** "Mia asked for Song by Artist", or without a name when the room gave none. */
+export function askWords(ask: RoomAsk): string {
+  // a long credit line ("Ellie Goulding; Joe Kearns; ...") is said by its first name only
+  const artist = ask.song?.artist?.split(';')[0].trim();
+  const song = ask.song ? `${ask.song.title}${artist ? ` by ${artist}` : ''}` : 'a song';
+  return `${ask.nickname ?? 'A guest'} asked for ${song}`;
+}
+
+/** The link in the shell's line for an open room: "Room open: ABCD-EFGH". The shell adds how
+ * many guests are here and how many requests wait for approval as words of their own, so the
+ * line wraps between them on a phone. */
+export function roomLine(session: RoomSession): string {
+  return `Room open: ${session.code ?? session.name}`;
+}
+
+/** Who asked for an accepted room request, by its id, as the last read of the open room gave it.
+ * The Requests drawer in the browser (localFirstRequests.ts) names the guest from this. */
+export function askerOf(requestId: string): string | null {
+  return askers.get(requestId) ?? null;
+}

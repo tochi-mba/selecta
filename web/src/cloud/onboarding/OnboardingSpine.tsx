@@ -146,7 +146,7 @@ export function OnboardingSpine({ request, workspaceId, onDone, deps: given }: {
   const step = state.step;
   return (
     <section className="cloud-spine" aria-labelledby={`spine-${workspaceId}-title`}>
-      <p className="cloud-eyebrow">GETTING STARTED · STEP {STEPS.indexOf(step) + 1} OF {STEPS.length}</p>
+      <p className="cloud-eyebrow">Getting started · Step {STEPS.indexOf(step) + 1} of {STEPS.length}</p>
       <h2 id={`spine-${workspaceId}-title`} ref={heading} tabIndex={-1}>{STEP_TITLES[step]}</h2>
       <StepList state={state} />
       <div className="cloud-card cloud-spine-step" data-step={step}>
