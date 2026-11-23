@@ -53,8 +53,8 @@
 :where(:root[data-cloud='on']) button.icon-button { min-height: 40px; background: none; border-color: transparent; color: var(--text-soft); }
 :where(:root[data-cloud='on']) button.icon-button:hover:not(:disabled) { background: var(--surface-control); border-color: transparent; color: var(--text); }
 /* busy: a spinner before the words (which say what is happening), and no second press */
-:where(:root[data-cloud='on']) button:is([aria-busy='true'], [data-working]):not(.round, .icon, .icon-button, .mini-next) { cursor: progress; pointer-events: none; }
-:where(:root[data-cloud='on']) button:is([aria-busy='true'], [data-working]):not(.round, .icon, .icon-button, .mini-next)::before {
+:where(:root[data-cloud='on']) button:is([aria-busy='true'], [data-working]):not(.round):not(.icon):not(.icon-button):not(.mini-next) { cursor: progress; pointer-events: none; }
+:where(:root[data-cloud='on']) button:is([aria-busy='true'], [data-working]):not(.round):not(.icon):not(.icon-button):not(.mini-next)::before {
   content: '';
   flex: none;
   display: inline-block;
@@ -156,13 +156,13 @@
 :where(:root[data-cloud='on']) .banner > .ui-icon { color: var(--tone); }
 :where(:root[data-cloud='on']) .banner > :is(p, span, div):not(.ui-icon) { flex: 1 1 200px; min-width: 0; margin: 0; }
 :where(:root[data-cloud='on']) .banner > :is(button, a.button) { flex: none; min-height: 32px; padding: var(--space-1) var(--space-3); font-size: var(--text-sm); }
-:where(:root[data-cloud='on']) .badge { --tone: var(--text-soft); display: inline-flex; align-items: center; gap: var(--icon-gap-dense); padding: 0 var(--space-2); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--tone) 16%, transparent); color: var(--tone); font: var(--weight-label) var(--text-xs) / 22px var(--body); white-space: nowrap; }
+:where(:root[data-cloud='on']) .badge { --tone: var(--text-soft); display: inline-flex; align-items: center; gap: var(--icon-gap-dense); padding: 0 var(--space-2); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--tone) 16%, transparent); color: var(--tone); font: var(--weight-label) var(--text-xs) / 1.83 var(--body); white-space: nowrap; }
 :where(:root[data-cloud='on']) .badge:not([data-tone]) { background: var(--surface-control); color: var(--text); }
 :where(:root[data-cloud='on']) .badge[data-tone='accent'] { background: var(--primary-fill); color: var(--primary-ink); }
 :where(:root[data-cloud='on']) .badge[data-tone='ok'] { --tone: var(--status-ready); }
 :where(:root[data-cloud='on']) .badge[data-tone='warn'] { --tone: var(--status-warning); }
 :where(:root[data-cloud='on']) .badge[data-tone='request'] { --tone: var(--request); }
-:where(:root[data-cloud='on']) .count-badge { display: inline-block; min-width: 20px; padding: 0 var(--space-dense); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--request) 20%, transparent); color: var(--request); font: var(--weight-strong) var(--text-xs) / 20px var(--mono); font-variant-numeric: tabular-nums; text-align: center; }
+:where(:root[data-cloud='on']) .count-badge { display: inline-block; min-width: 20px; padding: 0 var(--space-dense); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--request) 20%, transparent); color: var(--request); font: var(--weight-strong) var(--text-xs) / 1.67 var(--mono); font-variant-numeric: tabular-nums; text-align: center; }
 
 /* ---- tabs ---- */
 :where(:root[data-cloud='on']) .tabs { gap: var(--space-1); }

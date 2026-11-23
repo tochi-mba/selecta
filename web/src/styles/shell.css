@@ -670,22 +670,12 @@ main.page h1[tabindex='-1']:focus { outline: none; }
   max-width: var(--page-max);
   margin-inline: var(--frame-start) auto;
 }
-.shell[data-mode='cloud'] .context-bar {
-  flex: none;
-  padding-inline: calc(var(--frame-start) + var(--gutter));
-}
 /* the page takes the spare height, so the footer rests at the bottom of a short page */
 .shell[data-mode='cloud'] .content > main.page { flex: 1 0 auto; padding-bottom: var(--space-7); }
 /* a page in two blocks (a notice or Connect music beside the page itself) reads as one page */
 .shell[data-mode='cloud'] .content > div.page { flex: none; padding-block: 0 var(--space-7); }
 .shell[data-mode='cloud'] .content > div.page:has(~ main.page) { padding-block: var(--space-5) 0; }
 .shell[data-mode='cloud'] .content > main.page:has(~ div.page) { flex: none; padding-bottom: var(--space-5); }
-.shell[data-mode='cloud'] .content > .cloud-footer {
-  flex: none;
-  margin-top: auto;
-  padding: var(--space-4) var(--page-gutter);
-  overflow-wrap: anywhere;
-}
 .shell[data-mode='cloud'] .listen-empty { min-height: 0; }
 
 /* Cloud notices (connection, account, import progress): one stack on the page column, in the
@@ -723,11 +713,6 @@ main.page h1[tabindex='-1']:focus { outline: none; }
   :root[data-rail='collapsed'] .nav-collapse { align-self: stretch; }
   /* Workspace is already in the rail beside More, so the drawer does not list it twice */
   .more-nav-workspace { display: none; }
-}
-
-/* On a phone Cloud has no other way in to Search and commands, so its button stays, as an icon */
-@media (max-width: 760px) {
-  .shell[data-mode='cloud'] .palette-button { display: inline-flex; border-color: transparent; color: inherit; }
 }
 
 /* The keyboard shortcuts list: each key beside what it does, the keys in one column */

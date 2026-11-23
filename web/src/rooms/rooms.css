@@ -139,7 +139,7 @@
 .room-lede { font-size: var(--text-md); color: var(--text-soft); max-width: 34rem; }
 .room-start-card { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: var(--space-6); align-items: center; padding: var(--space-6); }
 .room-start-main { display: grid; gap: var(--space-4); min-width: 0; }
-.room-start-main h2 { font: var(--type-section); font-size: clamp(var(--text-xl), 3vw, var(--text-2xl)); }
+.room-start-main h2 { font: var(--type-section); font-size: var(--text-xl); }
 .room-start .room-open { max-width: 28rem; margin-top: var(--space-2); }
 .room-points { list-style: none; margin: 0; padding: var(--space-5); display: grid; gap: var(--space-5); border-radius: var(--radius); background: var(--surface-base); border: var(--separator) solid var(--edge-decorative); }
 .room-points li { display: flex; gap: var(--space-3); align-items: flex-start; }
