@@ -563,7 +563,7 @@ function TransitionTruth({ seam, ready, names, live = false, pair }: { seam: Vie
 }
 
 export function Now(props: ViewProps) {
-  const { mix, mixName, now, player, setView, refreshMix, setMixData, notify, stage, stageFallback, toggleStage, status, openRequests, request, analysisAvailable, visualizerAvailable, waveformOf } = props;
+  const { mix, mixName, now, player, setView, refreshMix, setMixData, notify, stage, stageFallback, toggleStage, status, openRequests, request, analysisAvailable, visualizerAvailable, waveformOf, noticeAction } = props;
   // ADR-0462: the song detail read and the rating/swap writes go through the injected request.
   const { get, post } = useApi(request);
   const requests = useContext(RequestsContext);
@@ -767,6 +767,7 @@ export function Now(props: ViewProps) {
                 <VolumeControl player={player} now={now} />
               </div>
               {now.notice && <p className="notice" role="status">{now.notice}</p>}
+              {noticeAction}
               <FirstHandoff now={now} mix={mix} />
             </>
           )}

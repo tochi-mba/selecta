@@ -601,6 +601,7 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
     prefetcher?.plan(mix.map((item) => ({ songId: item.song_id, durationS: item.duration })), position);
   }, [prefetcher, position, mix]);
   const prefetch: Observable<PrefetchState> | null = prefetcher?.state ?? null;
-  return { player, device: pb, refusal, seams, prefetch };
+  // what this device's sound output can truthfully be called now, for the sound check on Listen
+  return { player, device: pb, refusal, seams, prefetch, output: statusOf(facts) };
 }
 

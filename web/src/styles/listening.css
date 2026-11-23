@@ -222,6 +222,11 @@
    its own viewport-dependent minimum above. */
 .now:not(.stage) .lyrics:not(.focus) { min-height: 18rem; }
 
+/* the sound check sits with the notice that asks for it (browser-first Cloud) */
+.now .sound-check { display: grid; gap: var(--space-2); justify-items: start; margin: 0 0 var(--space-3); }
+.now .sound-check p { margin: 0; }
+.now .sound-check-help ul { margin: var(--space-2) 0 0; padding-inline-start: var(--list-indent); display: grid; gap: var(--space-1); color: var(--text-soft); }
+
 /* a phone keeps play and pause in reach however far down the page goes */
 @media (max-width: 760px) {
   .listen-layout { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-3); }
@@ -234,7 +239,7 @@
   .music-visualizer { order: 4; }
   .seek-note { order: 5; }
   .lyrics, .now .problem, .now .skeleton { order: 6; }
-  .now .notice { order: 7; }
+  .now .notice, .now .sound-check { order: 7; }
   .now .transport-more { order: 8; margin: 0; }
   .listen-side { order: 9; }
   .now .transport {

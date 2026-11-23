@@ -41,6 +41,7 @@ import { ROOM_REQUEST_EVENT } from './localFirstRequests';
 import { askWords, roomLine, useRoomSession, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
 import { recipeStore } from './recipeStore';
 import { SavedBrowserMixes } from './SavedBrowserMixes';
+import { SoundCheck } from './SoundCheck';
 import { QueueSources } from './QueueSources';
 import { CutoverNotice } from './migration/CutoverNotice';
 import { OnboardingSpine } from './onboarding/OnboardingSpine';
@@ -350,7 +351,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, offline
 
   // cloud.offline_playback: said once when playing offline ended because another device took over
   const [takeoverSeen, setTakeoverSeen] = useState('');
-  const { player, refusal, device: playback, seams: scheduled, prefetch } = useLocalFirstPlayer({
+  const { player, refusal, device: playback, seams: scheduled, prefetch, output } = useLocalFirstPlayer({
     api, workspaceId, mix: data.mix, remoteControl: on('devices.remote_control'), resolver,
   });
   // what each transition really played on this device this visit, for the editor (cloud.browser_moves)
@@ -606,7 +607,7 @@ export function LocalFirstShell({ api, account, more, notices, feedback, offline
         return (
           <>
             {refusal && <div className="page"><CannotPlayHere reason={refusal} /></div>}
-            {data.mix.length ? <Now {...shared} /> : mixProblem ? <MixProblem onRetry={refreshMix} /> : <ListenEmpty connected={connected} playable={status?.counts.ready ?? 0} saved={savedMixes} />}
+            {data.mix.length ? <Now {...shared} noticeAction={output?.state === 'output_unverified' ? <SoundCheck /> : undefined} /> : mixProblem ? <MixProblem onRetry={refreshMix} /> : <ListenEmpty connected={connected} playable={status?.counts.ready ?? 0} saved={savedMixes} />}
             {on('cloud.local_media') && data.mix.length > 0 && <QueueSources mix={data.mix} book={book} problemsOnly={!coexisting} />}
           </>
         );
