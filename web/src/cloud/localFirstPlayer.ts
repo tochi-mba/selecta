@@ -13,7 +13,7 @@ import type { MusicSource, SeamRecord, SeamSettingsLike } from '../dsp/seamProvi
 /** A scheduled seam and the two songs (by id) it joined when it was planned. */
 export type PlayedRecord = SeamRecord & { pair?: readonly [number | null, number | null] };
 import { playbackStatusText, type PlaybackStatus } from '../copy';
-import { Api, extrapolate, Position, SessionView, usePlaybackDevice } from '../devices/usePlaybackDevice';
+import { Api, extrapolate, Position, SessionView, StartAt, usePlaybackDevice } from '../devices/usePlaybackDevice';
 import { createEngine, type BrowserSpeaker, type Engine, type EngineState } from '../engine';
 import { workerCalibrationState, type WorkerCalibration } from '../dsp/budget';
 import { mediaDeviceId } from './ConnectMusic';
@@ -118,7 +118,7 @@ export function nowStateFrom(facts: PlayerFacts, sound: { volume: number; muted:
 /** What the player can ask of the device session and the engine. */
 export type PlayerActions = {
   /** Make this device the speaker (from a press); resolves with a sentence when it could not. */
-  playHere(): Promise<string>;
+  playHere(startAt?: StartAt): Promise<string>;
   command(name: 'play' | 'pause' | 'skip' | 'seek' | 'set_volume', args?: Record<string, unknown>): Promise<void>;
   /** Whether remote commands work; when off, this device steers its own speaker directly. */
   remoteControl: boolean;
@@ -198,10 +198,10 @@ export class LocalFirstPlayer implements PlayerLike {
     if (!this.facts.mix.length) return this.publish(NOTHING_TO_PLAY);
     if (this.facts.refusal) return this.publish('');
     if (!this.speaking) {
-      // The session decides where a new speaker starts (ADR-0415); taking over first, then
-      // moving, never claims a position the server has not agreed.
-      const problem = await this.actions.playHere();
-      if (problem) return this.publish(problem);
+      // A new speaker starts where this press asked (the first play of a visit used to carry on
+      // from wherever the last mix was left); its heartbeat then tells the session (ADR-0415).
+      const problem = await this.actions.playHere({ song_index: position, offset_ms: Math.max(0, Math.round(offset * 1000)) });
+      return this.publish(problem);
     }
     await this.seekTo(position, offset);
   }
@@ -433,6 +433,8 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   // State, not a ref: the speaker usually lands (and this effect runs) before the session refresh
   // decides the lease is wanted, so the decision itself must re-run the effect.
   const [wantHere, setWantHere] = useState(false);
+  /** where the next new speaker begins, kept across the render that opens it */
+  const startAt = useRef<StartAt | undefined>(undefined);
   const [seams, setSeams] = useState<PlayedRecord[]>([]);
   const calibration = useRef<{ deviceId: string; record: WorkerCalibration | null; measuring: Promise<WorkerCalibration | null> | null } | null>(null);
   useEffect(() => {
@@ -514,11 +516,14 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
   useEffect(() => {
     if (!speaker || !wantHere || !pb.device) return;
     setWantHere(false);
-    void pb.playHere(owner.current);
+    const at = startAt.current;
+    startAt.current = undefined;
+    void pb.playHere(owner.current, at);
   }, [speaker, wantHere, pb.device, pb.playHere]);
 
-  const playHere = useCallback(async (): Promise<string> => {
+  const playHere = useCallback(async (at?: StartAt): Promise<string> => {
     if (refusal) return '';
+    startAt.current = at;
     // Open the AudioContext synchronously from the player's press, before the session fetch.
     // iOS Safari and autoplay policies may reject play() if setup waits on network first.
     const needsSpeaker = !speaker;
@@ -546,8 +551,9 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
       // with the server when it is back (usePlaybackDevice.playOffline)
       const made = needsSpeaker ? madeSpeaker : speaker;
       const session = pb.view?.session ?? null;
-      const index = session && session.state !== 'stopped' && session.song_index < songs.current.length ? session.song_index : 0;
-      const offset = session && index === session.song_index ? extrapolate(session, pb.serverNow()) : 0;
+      const carried = session && session.state !== 'stopped' && session.song_index < songs.current.length ? session.song_index : 0;
+      const index = at ? at.song_index : carried;
+      const offset = at ? at.offset_ms : session && index === session.song_index ? extrapolate(session, pb.serverNow()) : 0;
       if (await pb.playOffline(index, offset, made)) return '';
     }
     if (!latest) {
@@ -571,7 +577,8 @@ export function useLocalFirstPlayer({ api, workspaceId, mix, remoteControl, reso
       setWantHere(true);
       return '';
     }
-    await pb.playHere(owner.current);
+    startAt.current = undefined;
+    await pb.playHere(owner.current, at);
     return '';
   }, [pb, refusal, resolve, speaker, starter, wiring]);
 

@@ -22,20 +22,6 @@ function whoAsked(request: RequestRow): string {
   return `Asked by ${request.asked_by ?? 'a guest'} in ${request.room_name}`;
 }
 
-/** Play the new mix from its first song. The first play of a visit opens this device's speaker,
- * and the playback session then starts it wherever the last mix was left; so once it is playing
- * here, ask for the first song again. */
-async function beginAtFirst(player: PlayerLike | undefined) {
-  if (!player) return;
-  const wasHere = ['playing', 'paused'].includes(player.state.phase);
-  await player.playFrom(0);
-  if (wasHere) return;
-  for (let tries = 0; tries < 40; tries += 1) {
-    await new Promise((done) => window.setTimeout(done, 250));
-    if (player.state.phase === 'playing') { await player.playFrom(0); return; }
-  }
-}
-
 /** Why a row has no Add button, in a few words; empty when it can be added. */
 function held(request: RequestRow, stage: Stage): string {
   if (stage === 'adding') return 'Saving…';
@@ -67,7 +53,7 @@ export function BrowserRequests({ rows, live, playback, send, refresh, onAdd, on
     try {
       const data = await send<MixData>(`/vibes/pick/build?start=${request.song_id}`, { method: 'POST', headers: { 'x-mix-order': '' } });
       playback?.onMix(data);
-      void beginAtFirst(playback?.player);
+      void playback?.player.playFrom(0);
       await send('/requests/consider', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ order: data.mix.map((item) => item.song_id), position: 0 }) }).catch(() => undefined);
       await refresh?.();
     } catch (problem) {
