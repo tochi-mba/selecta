@@ -207,11 +207,14 @@ export function requestsFamily({ cloud, workspaceId, songs, send }: {
     return changed;
   };
 
-  /** A look while the mix plays: requests whose song is in the mix now are done. Nothing is
-   * offered to join on its own (`offer` stays empty), because nothing can say where it fits. */
+  /** A look while the mix plays: requests whose song is playing now or still to come are done.
+   * A song that already played earlier in this mix does not count: the guest who asked would be
+   * told it was added when they will not hear it again. Nothing is offered to join on its own
+   * (`offer` stays empty), because nothing can say where it fits. */
   const consider = async (init?: RequestInit) => {
-    const { order = [] } = bodyOf<Where>(init);
-    const inMix = new Set(order);
+    const { order = [], position } = bodyOf<Where>(init);
+    const from = Number.isInteger(position) ? Math.max(0, Number(position)) : 0;
+    const inMix = new Set(order.slice(from));
     const { rows: now } = await rows();
     const settled: string[] = [];
     for (const row of now) {

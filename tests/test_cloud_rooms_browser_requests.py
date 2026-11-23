@@ -142,16 +142,18 @@ def test_the_list_needs_a_signed_in_host(party):
     assert party.client.post(f"{WAITING}/anything/dismiss").status_code == 401
 
 
-def test_requests_wait_oldest_first_and_only_the_planner_s_window_is_handed_over(party):
+def test_requests_wait_oldest_first_and_every_one_reaches_the_host(party):
+    # The host's browser shows the whole list and renders nothing, so the planner's window of
+    # three does not hold a fourth request back where the host cannot see it.
     party.speaker_on(ALICE)
     opened = party.open_room(ALICE)
     room_id = opened["room"]["id"]
     guests = [join(party, opened["code"]) for _ in range(4)]
     asked = [ask(guest, room_id, song) for song, guest in enumerate(guests, 1)]
 
-    assert [entry["id"] for entry in waiting(party)] == asked[:3]
-    assert [entry["song_id"] for entry in waiting(party)] == [1, 2, 3]
-    assert len(announced(party.engine, party.workspaces[ALICE])) == 3
+    assert [entry["id"] for entry in waiting(party)] == asked
+    assert [entry["song_id"] for entry in waiting(party)] == [1, 2, 3, 4]
+    assert len(announced(party.engine, party.workspaces[ALICE])) == 4
 
 
 # ---- played
