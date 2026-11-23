@@ -260,6 +260,58 @@ def replace_device_availability(
     return set_availability(conn, workspace_id, device_id, present, absent - present)
 
 
+def device_holdings(conn: Connection, workspace_id: str, device_id: str) -> list[int]:
+    """The catalogue ids one device reported it can open, from reports still inside the freshness
+    window (ADR-0475: holdings are ids per device, never a path or a name)."""
+    fresh_after = db_now(conn) - AVAILABILITY_TTL_SECONDS
+    rows = conn.execute(
+        sa.select(local_song_availability.c.song_id)
+        .join(
+            local_songs,
+            sa.and_(
+                local_songs.c.id == local_song_availability.c.song_id,
+                local_songs.c.workspace_id == local_song_availability.c.workspace_id,
+            ),
+        )
+        .where(local_song_availability.c.workspace_id == workspace_id)
+        .where(local_song_availability.c.device_id == device_id)
+        .where(local_song_availability.c.present.is_(True))
+        .where(local_song_availability.c.reported_at >= fresh_after)
+        .where(local_songs.c.deleted_at.is_(None))
+        .order_by(local_song_availability.c.song_id)
+    )
+    return [int(row.song_id) for row in rows]
+
+
+def holding_counts(conn: Connection, workspace_id: str) -> dict[str, dict[str, Any]]:
+    """For each device with a fresh positive report: how many songs it holds and when it last
+    reported, so another device can say what that device is able to play."""
+    fresh_after = db_now(conn) - AVAILABILITY_TTL_SECONDS
+    rows = conn.execute(
+        sa.select(
+            local_song_availability.c.device_id,
+            sa.func.count().label("songs"),
+            sa.func.max(local_song_availability.c.reported_at).label("reported_at"),
+        )
+        .join(
+            local_songs,
+            sa.and_(
+                local_songs.c.id == local_song_availability.c.song_id,
+                local_songs.c.workspace_id == local_song_availability.c.workspace_id,
+            ),
+        )
+        .where(local_song_availability.c.workspace_id == workspace_id)
+        .where(local_song_availability.c.present.is_(True))
+        .where(local_song_availability.c.reported_at >= fresh_after)
+        .where(local_songs.c.deleted_at.is_(None))
+        .group_by(local_song_availability.c.device_id)
+    )
+    return {
+        str(row.device_id): {"songs": int(row.songs), "reported_at": float(row.reported_at)}
+        for row in rows
+    }
+
+
 def availability_counts(
     conn: Connection, workspace_id: str, song_ids: Iterable[int]
 ) -> dict[int, int]:
@@ -285,6 +337,8 @@ def availability_counts(
 __all__ = [
     "AVAILABILITY_TTL_SECONDS",
     "availability_counts",
+    "device_holdings",
+    "holding_counts",
     "exists",
     "get_song",
     "list_songs",

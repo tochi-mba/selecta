@@ -23,7 +23,7 @@ from selecta.business import device_cookie, entitlement_gates
 from selecta.flags import cloud_gate
 from selecta.flags.rules import RulesCache
 from selecta.identity.tokens import Claims
-from selecta.persistence import transaction
+from selecta.persistence import db_now, transaction
 from selecta.playback import devices, envelope, fencing, session, zone_session
 from selecta.playback import store as playback_store
 from selecta.playback.model import (
@@ -52,11 +52,13 @@ from selecta.playback.model import (
     ZonePaused,
 )
 from selecta.playback.ports import PlaybackEvents
-from selecta.playback.store import load_device, session_payload
+from selecta.playback.store import load_device, session_payload, touch_device
 from selecta.playback.zones import ZoneDirectory
 
 # The legacy name; each workspace now has its own cookie (`business.device_cookie`, ADR-0442).
 DEVICE_COOKIE = device_cookie.LEGACY_COOKIE
+# ADR-0475: how often a device seen through its own playback reads has that written down.
+SEEN_EVERY_SECONDS = 10.0
 NOT_FOUND = {"code": "unknown_device", "message": "That device isn't signed in here."}
 
 
@@ -223,6 +225,17 @@ def install_routes(
             raise HTTPException(status_code=404, detail=NOT_FOUND)
         with transaction(engine, found.workspace.id) as conn:
             device = load_device(conn, found.workspace.id, device_id)
+            # ADR-0475: other devices need to know this one is here. Every playback read or
+            # press comes through this check, so it notes the device as seen, at most once
+            # every few seconds (never a write per poll).
+            if (
+                device is not None
+                and device.user_id == found.user.id
+                and device.signed_in
+            ):
+                seen = db_now(conn)
+                if seen - device.last_seen_at >= SEEN_EVERY_SECONDS:
+                    touch_device(conn, device_id, seen)
         if device is None or device.user_id != found.user.id:
             raise HTTPException(status_code=404, detail=NOT_FOUND)
         return device_id
