@@ -109,6 +109,17 @@ export function waitingCount(live: RoomLive | null, rows: { room_name?: string }
   return own + (live ? live.inbox.length + live.coming.length : (rows?.length ?? 0) - own);
 }
 
+/** The accepted room requests, split by whether the host can add them now. A request can be
+ * added once the browser's own Requests list holds its row (matched by the room request's id);
+ * until then it is on its way. Before that list has loaded, every accepted request counts as
+ * ready, as the room says. So the room line, the drawer and the Rooms page agree. */
+export function addable(coming: readonly { request_id: string }[], rows: readonly { room_request_id?: string }[] | null | undefined): { ready: number; onTheWay: number } {
+  if (!rows) return { ready: coming.length, onTheWay: 0 };
+  const held = new Set(rows.map((row) => row.room_request_id).filter(Boolean));
+  const ready = coming.filter((ask) => held.has(ask.request_id)).length;
+  return { ready, onTheWay: coming.length - ready };
+}
+
 /** What the host can do to a room request from any page: say yes to one waiting for approval,
  * or pass on one. Set while the shell's room session runs; null when it doesn't. */
 export type RoomControl = { approve: (requestId: string) => Promise<void>; pass: (requestId: string) => Promise<void> };
