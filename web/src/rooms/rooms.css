@@ -186,6 +186,7 @@
   /* one row of three on a phone: the button says "Show QR"; "full screen" is still read out */
   .room-qr-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .room-head-actions > .menu { flex: none; }
+  .room-link .room-copy { min-height: var(--control-height); }
   .room-share-body { grid-template-columns: minmax(0, 1fr); justify-items: center; }
   .room-share-words { justify-items: center; text-align: center; }
   .ask { grid-template-columns: auto minmax(0, 1fr); }

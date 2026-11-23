@@ -256,7 +256,7 @@
   .lw-toolbar .search-field input, .lw-sort select { min-height: var(--control-height); }
   .lw-chips { flex: 1 1 100%; overflow-x: auto; scrollbar-width: none; margin-inline: calc(-1 * var(--page-gutter)); padding-inline: var(--page-gutter); }
   /* a finger's target, and slimmer sides so the four filters fit a 360px phone without scrolling */
-  .lw-chips button { min-height: var(--control-height); padding-inline: var(--space-snug); }
+  .lw-chips button { min-width: var(--control-height); min-height: var(--control-height); padding-inline: var(--space-snug); }
   .lw-toolbar-end { flex: 1 1 100%; justify-content: space-between; margin: 0; }
   .lw-segment button { min-width: 44px; min-height: var(--control-height); }
   .lw-meta button, .lw-disclosure li button { min-height: var(--control-height); }

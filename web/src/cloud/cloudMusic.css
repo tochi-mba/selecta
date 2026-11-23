@@ -222,6 +222,8 @@
   .shell[data-mode='cloud'] .music-empty .empty-state-actions > * { flex: 1 1 100%; justify-content: center; text-align: center; }
   /* three equal columns, each number over its name: no step can drop to a line of its own */
   .shell[data-mode='cloud'] .music-empty .setup-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: var(--space-2); }
+  /* each column has room for its name, so a finished step keeps it under its tick */
+  .shell[data-mode='cloud'] .music-empty .setup-steps li.done .setup-step-label { position: static; width: auto; height: auto; overflow: visible; clip-path: none; white-space: normal; }
   .shell[data-mode='cloud'] .music-empty .setup-steps li { flex-direction: column; gap: var(--space-dense); min-width: 0; font-size: var(--text-xs); line-height: 1.3; text-align: center; }
 }
 
