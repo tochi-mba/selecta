@@ -33,6 +33,7 @@ These sheets load with their own components rather than from `main.tsx`, so they
 | Sheet | Loaded by | Owns |
 | --- | --- | --- |
 | `cloud/cloud.css` | `cloud/CloudApp.tsx` | The legacy Cloud rail (`.cloud-shell`, kept for `cloud.hosted_shell` off), the words and actions every Cloud page shares (in either shell), the home hero and cards, account, billing, plan cards and meters, uploads, the hosted library, the local-first onboarding spine, the cutover notice and the reconciliation report. Re-expanded onto meaning, type and radius roles in `99d7acc8`. |
+| `cloud/libraryWorkspace.css` | `cloud/CloudLibrary.tsx`, `cloud/ConnectMusic.tsx`, `cloud/ImportChip.tsx`, `cloud/CloudWorkspace.tsx`, `cloud/StorageCard.tsx` | Browser-first Cloud's Library (toolbar, rows, selection bar, the banner for a browser without the music, the import card) and Workspace (tiles, attention list, sources, storage, grouped diagnostics). |
 | `rooms/rooms.css` | `rooms/RoomPanel.tsx` | Rooms hosting: the room panel, its share code and QR, settings, guests and presence (radius, surface and type roles since `0f8c0ba7`). |
 | `devices/devices.css` | `devices/DevicesPanel.tsx`, `devices/PlayingBar.tsx` | The devices list and the "playing on" bar (radius, surface and line roles since `cdefdf1d`). |
 

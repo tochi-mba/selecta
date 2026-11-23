@@ -1,7 +1,7 @@
 import { cloneElement, isValidElement, ReactElement, ReactNode, Ref, useEffect, useRef, useState } from 'react';
 import type { Status as AppStatus } from '../api';
 import { useFlags } from '../flags';
-import { forgetFolder, recallFolder, storageSpace, type MediaStore, type StorageSpace, type StoredFolderHandle } from '../media';
+import { forgetFolder, recallFolder, storageSpace, type ImportSummary, type MediaStore, type StorageSpace, type StoredFolderHandle } from '../media';
 import type { WorkshopTab } from '../router';
 import { PageLink } from '../shell/PageLink';
 import { Action, Skeleton, Status } from '../ui/controls';
@@ -47,8 +47,14 @@ export type FileCheck = { running: boolean; at: number | null };
 export type { PlaybackFacts };
 
 /** The shell's Connect music, drawn here in another form and reachable from this page's buttons. */
-function connectAs(connect: ReactNode, variant: 'card' | 'status', ref: Ref<ConnectMusicHandle>): ReactNode {
-  return isValidElement(connect) ? cloneElement(connect as ReactElement<{ variant?: string; ref?: Ref<ConnectMusicHandle> }>, { variant, ref }) : connect;
+function connectAs(connect: ReactNode, variant: 'card' | 'status', ref: Ref<ConnectMusicHandle>, status: AppStatus): ReactNode {
+  const songs = status.counts.music ?? 0;
+  const playable = status.counts.ready ?? 0;
+  // a finished import says what it changed for this browser, once the counts have caught up
+  const doneWords = (summary: ImportSummary) => (playable === 0 && summary.imported + summary.duplicates > 0
+    ? summaryWords(summary)
+    : `${formatCount(playable)} of ${formatCount(songs)} songs can now play here.`);
+  return isValidElement(connect) ? cloneElement(connect as ReactElement<{ variant?: string; ref?: Ref<ConnectMusicHandle>; doneWords?: (summary: ImportSummary) => string }>, { variant, ref, doneWords }) : connect;
 }
 
 export function CloudWorkspace({ tab, status, workspaceId, openStore, connect, stems, stemsShown, measuringKeys, savedMixes, fileCheck, playback }: {
@@ -153,7 +159,7 @@ function Overview({ status, workspaceId, connect, degraded, savedMixes, fileChec
   } else if (playable < songs - missing && !running && !interrupted) {
     needs.push({
       key: 'choose', icon: 'folder',
-      title: playable * 5 < songs ? 'This browser hasn’t been given your music yet' : `${formatCount(songs - missing - playable)} songs are not open in this browser`,
+      title: playable === 0 ? 'This browser hasn’t been given your music yet' : playable * 5 < songs ? `Only ${formatCount(playable)} of ${formatCount(songs)} songs can play in this browser` : `${formatCount(songs - missing - playable)} songs are not open in this browser`,
       words: playable * 5 < songs ? 'Each browser needs the folder once. Your library, mixes and settings are already here.' : 'Choose your music folder to play them here.',
       action: <button type="button" className={playable * 5 < songs ? 'primary' : undefined} onClick={() => handle.current?.chooseFolder()}>Choose your music folder</button>,
     });
@@ -188,7 +194,7 @@ function Overview({ status, workspaceId, connect, degraded, savedMixes, fileChec
         <Tile to="/mixes/mine" label="Saved mixes" value={savedMixes === null ? null : formatCount(savedMixes)} detail="in My Mixes" />
       </div>
       {/* progress, an interrupted import and results show here too, and own the pickers */}
-      {connectAs(connect, 'status', handle)}
+      {connectAs(connect, 'status', handle, status)}
       <div className="lw-columns">
         <section className="ui-card" aria-labelledby="cloud-needs-title">
           <h2 className="section-title" id="cloud-needs-title">Needs attention</h2>
@@ -244,7 +250,7 @@ function Sources({ status, workspaceId, connect }: { status: AppStatus; workspac
   const playable = status.counts.ready ?? 0;
   return (
     <div className="lw-stack">
-      {connectAs(connect, 'card', handle)}
+      {connectAs(connect, 'card', handle, status)}
       <section className="ui-card" aria-labelledby="remembered-folder-title">
         <h2 className="section-title" id="remembered-folder-title">Connected in this browser</h2>
         {folder === undefined ? <Skeleton variant="rows" lines={2} label="Looking for your folder" /> : (

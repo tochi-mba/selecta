@@ -71,7 +71,7 @@ export function CloudLibrary({ shared, connected, connect }: {
           <section className="lw-welcome" aria-labelledby="library-give-music">
             <span className="lw-welcome-mark" aria-hidden="true"><Icon name="folder" /></span>
             <div>
-              <h2 id="library-give-music">This browser hasn’t been given your music yet</h2>
+              <h2 id="library-give-music">{playable === 0 ? 'This browser hasn’t been given your music yet' : `Only ${formatCount(playable)} of ${countOf(connected, 'song')} can play in this browser`}</h2>
               <p>Each browser needs the folder once. Your library, mixes and settings are already here.</p>
             </div>
             <button type="button" className="primary" onClick={() => handle.current?.chooseFolder()}><Icon name="folder" size="toolbar" />{choose}</button>

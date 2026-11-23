@@ -261,6 +261,7 @@
   .library-browser .library-rows:not(.library-cards) .lw-start > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .lw-meta-end { margin-inline-start: auto; }
   .lw-welcome { padding: var(--space-4); }
+  .lw-welcome-mark { display: none; }
   .lw-welcome > button { flex: 1 1 100%; }
   .lw-connect-actions { width: 100%; }
   .lw-connect-actions button { flex: 1 1 auto; min-height: var(--control-height); }
