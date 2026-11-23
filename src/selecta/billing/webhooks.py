@@ -537,6 +537,9 @@ class HttpStripeClient:
             "automatic_tax[enabled]": "true",
             "tax_id_collection[enabled]": "true",
             "customer_update[address]": "auto",
+            # Tax ID collection on a session for an existing customer needs the business name
+            # saved to that customer too, or Stripe refuses the session with a 400.
+            "customer_update[name]": "auto",
             "client_reference_id": workspace_id,
             "line_items[0][price]": price_id,
             "line_items[0][quantity]": "1",

@@ -50,6 +50,8 @@ def test_create_checkout_session_sends_subscription_fields() -> None:
             "automatic_tax[enabled]": ["true"],
             "tax_id_collection[enabled]": ["true"],
             "customer_update[address]": ["auto"],
+            # required by Stripe when tax ids are collected for an existing customer
+            "customer_update[name]": ["auto"],
             "client_reference_id": ["workspace-1"],
             "line_items[0][price]": ["price_standard_month"],
             "line_items[0][quantity]": ["1"],
