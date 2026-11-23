@@ -18,6 +18,7 @@ show who asked.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from typing import Any
 
@@ -30,7 +31,7 @@ from selecta.persistence import db_now, transaction
 from selecta.rooms.api_common import refusal
 from selecta.rooms.cloud_ports import BROWSER_REQUEST_PREFIX
 from selecta.rooms.errors import RoomError
-from selecta.rooms.planning import withdraw_from_planner
+from selecta.rooms.planning import CLAIM_STALE_SECONDS, pump, withdraw_from_planner
 from selecta.rooms.requesting import Outcome
 from selecta.rooms.schema import room_requests
 from selecta.rooms.schema import rooms as rooms_table
@@ -38,6 +39,8 @@ from selecta.rooms.service import Rooms
 from selecta.rooms.store import WAITING, RequestStatus, RoomStatus, load_room, set_request
 
 WAITING_SHOWN = 100
+
+log = logging.getLogger(__name__)
 
 
 def install_routes(
@@ -50,6 +53,52 @@ def install_routes(
 ) -> None:
     def workspace(request: Request, claims: Claims) -> str:
         return principal_for(engine, claims, request.headers.get("x-workspace-id")).workspace.id
+
+    def hand_over_stranded(workspace_id: str) -> None:
+        """Hand over accepted requests that never reached the host's list.
+
+        A hand-over that failed (the planner raised, or the process stopped part way) leaves
+        the request accepted with no planner id, and only a later room action ran `pump`
+        again. A quiet room had none, so the request stayed out of this list for good while
+        the room still counted it. Reading the list is the host asking for exactly these, so
+        the read runs the same idempotent hand-over first.
+
+        Safe to call every couple of seconds: when nothing is stranded it is one read and no
+        write; a request being handed over right now (its mark is fresh) is left alone; and a
+        hand-over announces each request once, after which it is no longer stranded.
+        """
+        service = rooms()
+        if not getattr(service.planner, "host_adds_requests", False):
+            return
+        with transaction(engine, workspace_id) as conn:
+            stale = db_now(conn) - CLAIM_STALE_SECONDS
+            stranded = (
+                conn.execute(
+                    sa.select(room_requests.c.room_id)
+                    .select_from(
+                        room_requests.join(rooms_table, rooms_table.c.id == room_requests.c.room_id)
+                    )
+                    .where(
+                        room_requests.c.workspace_id == workspace_id,
+                        room_requests.c.status == RequestStatus.ACCEPTED.value,
+                        room_requests.c.song_request_id.is_(None),
+                        sa.or_(
+                            room_requests.c.submitted_at.is_(None),
+                            room_requests.c.submitted_at < stale,
+                        ),
+                        rooms_table.c.status != RoomStatus.ENDED.value,
+                    )
+                    .distinct()
+                )
+                .scalars()
+                .all()
+            )
+        for room_id in stranded:
+            try:
+                pump(service, workspace_id, room_id)
+            except Exception:
+                # the list is still answered; the next read tries again
+                log.exception("Couldn't hand over the waiting requests of room %s", room_id)
 
     def waiting(workspace_id: str) -> list[dict[str, Any]]:
         with transaction(engine, workspace_id) as conn:
@@ -110,7 +159,9 @@ def install_routes(
     def list_waiting(
         request: Request, claims: Claims = Depends(current_claims)  # noqa: B008
     ) -> dict[str, Any]:
-        return {"requests": waiting(workspace(request, claims))}
+        workspace_id = workspace(request, claims)
+        hand_over_stranded(workspace_id)
+        return {"requests": waiting(workspace_id)}
 
     @app.post("/api/room-requests/{request_id}/played")
     def played(
