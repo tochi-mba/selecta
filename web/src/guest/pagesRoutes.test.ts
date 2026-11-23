@@ -12,13 +12,34 @@ describe('Cloudflare Pages dedicated entry-point routes', () => {
   });
 
   it('rejects a guest route pointing at the SPA and duplicate route definitions', () => {
-    const wrong = rules.replace('/r/:code /guest.html 200', '/r/:code /index.html 200');
+    const wrong = rules.replace('/r/:code /guest 200', '/r/:code /index.html 200');
     expect(validatePagesRedirects(wrong)).toContain(
-      'Missing required Cloudflare rewrite: /r/:code /guest.html 200',
+      'Missing required Cloudflare rewrite: /r/:code /guest 200',
     );
-    expect(validatePagesRedirects(rules + '/r/:code /guest.html 200\n')).toContain(
+    expect(validatePagesRedirects(rules + '/r/:code /guest 200\n')).toContain(
       'Duplicate Cloudflare route: /r/:code',
     );
+  });
+
+  it('rejects the .html target that redirects a room URL to /guest', () => {
+    for (const suffix of ['', '/']) {
+      const wrong = rules.replace(
+        `/r/:code${suffix} /guest 200`,
+        `/r/:code${suffix} /guest.html 200`,
+      );
+      expect(validatePagesRedirects(wrong)).toContain(
+        `Missing required Cloudflare rewrite: /r/:code${suffix} /guest 200`,
+      );
+    }
+  });
+
+  it('rejects .html canonicalization on display and kiosk too', () => {
+    for (const entry of ['display', 'kiosk']) {
+      const wrong = rules.replace(`/${entry} /${entry} 200`, `/${entry} /${entry}.html 200`);
+      expect(validatePagesRedirects(wrong)).toContain(
+        `Missing required Cloudflare rewrite: /${entry} /${entry} 200`,
+      );
+    }
   });
 
   it('fails missing publish assets, and accepts a complete output directory', () => {

@@ -3,13 +3,16 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const PAGE_ENTRIES = ['index.html', 'guest.html', 'display.html', 'kiosk.html'] as const;
+// Pages canonicalises /guest.html to /guest. Proxying to the .html path can turn
+// an internal 200 rewrite into an external redirect, discarding /r/:code.
+// Use the canonical extensionless asset URLs for every dedicated page.
 const REWRITES = [
-  ['/display', '/display.html'],
-  ['/display/', '/display.html'],
-  ['/kiosk', '/kiosk.html'],
-  ['/kiosk/', '/kiosk.html'],
-  ['/r/:code', '/guest.html'],
-  ['/r/:code/', '/guest.html'],
+  ['/display', '/display'],
+  ['/display/', '/display'],
+  ['/kiosk', '/kiosk'],
+  ['/kiosk/', '/kiosk'],
+  ['/r/:code', '/guest'],
+  ['/r/:code/', '/guest'],
 ] as const;
 
 export function validatePagesRedirects(contents: string): string[] {

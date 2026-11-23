@@ -71,8 +71,13 @@ def _pages_entries(client: httpx.Client, web: str) -> list[Check]:
             and marker in response.text
             and 'id="root"' not in response.text
         )
-        checks.append(Check(f"Pages {name} deep link serves its own entry", ok,
-                            f"HTTP {response.status_code}"))
+        # Keep redirect destinations in failure output. A 301/302 to /guest
+        # causes "No room code" despite the guest HTML eventually loading.
+        location = response.headers.get("location")
+        detail = f"HTTP {response.status_code}"
+        if location:
+            detail += f" -> {location}"
+        checks.append(Check(f"Pages {name} deep link serves its own entry", ok, detail))
     return checks
 
 
