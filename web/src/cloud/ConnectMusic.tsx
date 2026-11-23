@@ -73,6 +73,10 @@ export function registeredDeviceId(workspaceId: string): string | null {
 }
 
 /** What a page's own button can ask Connect music to do (the Library header's main action). */
+/** Results the member has put away (or that cleared themselves), across pages of this visit. */
+const putAway = new WeakSet<ImportSummary>();
+const RESULT_STAYS_MS = 8000;
+
 export type ConnectMusicHandle = {
   /** Opens the folder picker where the browser has one, else the file picker. */
   chooseFolder: () => void;
@@ -96,7 +100,12 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
   /** Reconcile this device's catalogue availability after a permission is restored. */
   onAvailabilityChanged?: () => void | Promise<void>;
   variant?: ConnectMusicVariant;
-}>(function ConnectMusic({ request, workspaceId, openStore, importer = runImport, onAvailabilityChanged, variant = 'card' }, ref) {
+  /** What a finished import says, where the page knows more than the import does (how many of
+   * the library's songs can now play here). Stopped and paused imports keep their own words. */
+  doneWords?: (summary: ImportSummary) => string;
+  /** The member put a finished import's result away. */
+  onResultDismissed?: (summary: ImportSummary) => void;
+}>(function ConnectMusic({ request, workspaceId, openStore, importer = runImport, onAvailabilityChanged, variant = 'card', doneWords, onResultDismissed }, ref) {
   const live = useImportSession(workspaceId);
   useImportAnnouncer();
   const progressive = useFlag('cloud.progressive_import');
@@ -209,8 +218,17 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
   const pickSongs = () => songsPick.current?.click();
   useImperativeHandle(ref, () => ({ chooseFolder: pickFolder, chooseSongs: pickSongs, folders }));
   // a finished import's result can be put away; a new result shows again
-  const [dismissed, setDismissed] = useState<ImportSummary | null>(null);
-  const result = (live.phase === 'finished' || live.phase === 'paused') && live.summary && live.summary !== dismissed ? live.summary : null;
+  // A result put away stays away on the next page too, and a clean finish clears itself: it is
+  // news for a moment, not a fixture above the page.
+  const [dismissed, setDismissedHere] = useState<ImportSummary | null>(null);
+  const setDismissed = useCallback((summary: ImportSummary) => { putAway.add(summary); setDismissedHere(summary); }, []);
+  const result = (live.phase === 'finished' || live.phase === 'paused') && live.summary && live.summary !== dismissed && !putAway.has(live.summary) ? live.summary : null;
+  const cleanFinish = result && !result.paused && !result.cancelled && !result.failed ? result : null;
+  useEffect(() => {
+    if (!cleanFinish) return;
+    const timer = window.setTimeout(() => { setDismissed(cleanFinish); onResultDismissed?.(cleanFinish); }, RESULT_STAYS_MS);
+    return () => window.clearTimeout(timer);
+  }, [cleanFinish, setDismissed, onResultDismissed]);
 
   // the pickers are always in the page, so a header button (or a test) can reach them
   const inputs = (
@@ -238,7 +256,7 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
       <Meter label="Files checked" showLabel={false} value={typeof live.total === 'number' ? checked : undefined} max={Math.max(live.total ?? 1, 1)} valueText={checkedWords(live)} />
       {resilient && (live.waiting || live.elsewhere) && <ImportProgressLine live={live} className="lw-import-wait" />}
       <p className="lw-import-next">
-        {resilient && !live.elsewhere && !live.read
+        {resilient && !live.elsewhere && !live.read && checked > 0
           ? `Songs appear in your library as they are checked, so you can keep using SelectaDJ. If this tab closes, it carries on from ${formatCount(checked)} next time.`
           : 'Songs appear in your library as they are checked, so you can keep using SelectaDJ.'}
       </p>
@@ -269,8 +287,8 @@ export const ConnectMusic = forwardRef<ConnectMusicHandle, {
       {result && (
         <div className="banner" data-tone={result.paused ? 'warn' : 'ok'} role="status">
           <Icon name={result.paused ? 'pause' : 'check'} size="toolbar" />
-          <p>{summaryWords(result)}</p>
-          <button type="button" className="quiet" onClick={() => setDismissed(result)}>Dismiss</button>
+          <p>{doneWords && !result.paused && !result.cancelled ? doneWords(result) : summaryWords(result)}</p>
+          <button type="button" className="quiet" onClick={() => { setDismissed(result); onResultDismissed?.(result); }}>Dismiss</button>
         </div>
       )}
       {shownProblem && (

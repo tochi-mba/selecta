@@ -17,6 +17,17 @@ const WHY: Record<string, string> = {
 
 const label = (press: { command: string }) => LABEL[press.command] ?? press.command;
 
+// A dismissed notice stays dismissed across page loads, and a "couldn't play that song" notice
+// is only news for a few minutes: an old one from an earlier visit is not shown again.
+const SEEN_KEY = 'selecta.controller.notices.seen';
+const UNAVAILABLE_FRESH_SECONDS = 180;
+function seenBefore(): Set<string> {
+  try { return new Set(JSON.parse(window.localStorage.getItem(SEEN_KEY) ?? '[]') as string[]); } catch { return new Set(); }
+}
+function rememberSeen(ids: Set<string>) {
+  try { window.localStorage.setItem(SEEN_KEY, JSON.stringify([...ids].slice(-60))); } catch { /* private window: this visit only */ }
+}
+
 /** The command that plays `alternative` in place of the missing song. */
 export function alternativeCommand(alternative: Alternative, missing: number | null, session: SessionState | null): { name: string; args: Record<string, unknown> } | null {
   if (alternative.programme_index !== null) return { name: 'skip', args: { song_index: alternative.programme_index } };
@@ -29,15 +40,16 @@ export function alternativeCommand(alternative: Alternative, missing: number | n
 }
 
 export function ControllerNotices({ notices, speakerName, session, send }: { notices: Notices | null | undefined; speakerName: string | null; session: SessionState | null; send: (name: string, args?: Record<string, unknown>) => void }) {
-  const [dismissed, setDismissed] = useState<Set<string>>(() => new Set());
+  const [dismissed, setDismissed] = useState<Set<string>>(seenBefore);
   if (!notices) return null;
   const fresh = (press: { command_id: string }) => !dismissed.has(press.command_id);
   const waiting = notices.waiting.filter(fresh);
   const missed = notices.missed.filter(fresh);
-  const unavailable = notices.unavailable.filter(fresh)[0];
+  const recent = (notice: { acked_at: number }) => Date.now() / 1000 - notice.acked_at < UNAVAILABLE_FRESH_SECONDS;
+  const unavailable = notices.unavailable.filter(fresh).filter(recent)[0];
   if (!waiting.length && !missed.length && !unavailable) return null;
   const who = speakerName ?? 'The speaker';
-  const dismiss = (ids: string[]) => setDismissed((was) => new Set([...was, ...ids]));
+  const dismiss = (ids: string[]) => setDismissed((was) => { const next = new Set([...was, ...ids]); rememberSeen(next); return next; });
   return (
     <div className="playing-bar-notices" data-testid="controller-notices">
       {waiting.length > 0 && (
@@ -51,7 +63,7 @@ export function ControllerNotices({ notices, speakerName, session, send }: { not
       )}
       {unavailable && (
         <div data-testid="unavailable-here">
-          <p>{`${who} doesn't have that song on this device.`}{unavailable.alternatives.length ? ' Play one of these instead?' : ' Nothing similar is on it either.'}</p>
+          <p>{`${who} couldn't play that song: its file isn't on that device.`}{unavailable.alternatives.length ? ' Play one of these instead?' : ''}</p>
           {unavailable.alternatives.map((alternative) => {
             const next = alternativeCommand(alternative, unavailable.song_id, session);
             if (!next) return null;

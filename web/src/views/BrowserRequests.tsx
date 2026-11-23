@@ -5,10 +5,10 @@ import { Action } from '../ui/controls';
 import { showToast } from '../ui/toasts';
 import { ROOM_REQUEST_EVENT } from '../cloud/localFirstRequests';
 import { AskRow, held, RoomRequests } from '../rooms/RoomRequests';
-import { roomControl, ROOM_EVENT, useRoomLive } from '../rooms/useRoomSession';
+import { roomControl, ROOM_EVENT, useRoomLive, waitingCount } from '../rooms/useRoomSession';
 import type { RequestRow, Stage } from './Requests';
 
-export { useRoomLive };
+export { useRoomLive, waitingCount };
 
 // The Requests drawer in Cloud in the browser (rows that carry `browser_note`,
 // localFirstRequests.ts). There is no planner there, so there is nothing to explain about spots,
@@ -62,7 +62,7 @@ export function BrowserRequests({ part = 'own', rows, live, playback, send, refr
       <RoomRequests
         variant="drawer"
         control={roomControl()}
-        mix={{ rows, live, onAdd, onDismiss: async (request) => { await onDismiss(request); }, onStart, inMix: (songId) => !!playback?.mix.some((item) => item.song_id === songId) }}
+        mix={{ rows, live: live && !!playback?.mix.length, onAdd, onDismiss: async (request) => { await onDismiss(request); }, onStart, inMix: (songId) => !!playback?.mix.some((item) => item.song_id === songId) }}
         onChanged={() => { window.dispatchEvent(new Event(ROOM_EVENT)); }}
         onMissing={() => window.dispatchEvent(new Event(ROOM_REQUEST_EVENT))}
       />

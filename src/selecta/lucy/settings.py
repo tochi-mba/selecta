@@ -25,7 +25,7 @@ API_VERSION = 1
 
 DEFAULTS: dict[str, Any] = {
     "enabled": True,
-    "phases": {"chat": True, "proposals": True, "commit": True, "memory": False, "voice": False},
+    "phases": {"chat": True, "proposals": True, "commit": True, "memory": True, "voice": False},
     "provider": {"kind": "builtin", "model": None, "base_url": None, "consent": False},
     "budgets": {
         "max_cycles": 6,

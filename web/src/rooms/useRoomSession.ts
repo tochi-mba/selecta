@@ -100,6 +100,15 @@ export function useRoomLive(): RoomLive | null {
   return useSyncExternalStore(watch, () => liveRoom, () => null);
 }
 
+/** How many requests wait for the host: the one number behind the side bar badge, the Requests
+ * drawer's count and the Rooms page. The room's come from the shared read of the room (waiting
+ * for approval, and accepted); the host's own are the rows no room asked for. Before the room
+ * has been read, the room rows the browser already holds stand in. */
+export function waitingCount(live: RoomLive | null, rows: { room_name?: string }[] | null | undefined): number {
+  const own = rows?.filter((row) => !row.room_name).length ?? 0;
+  return own + (live ? live.inbox.length + live.coming.length : (rows?.length ?? 0) - own);
+}
+
 /** What the host can do to a room request from any page: say yes to one waiting for approval,
  * or pass on one. Set while the shell's room session runs; null when it doesn't. */
 export type RoomControl = { approve: (requestId: string) => Promise<void>; pass: (requestId: string) => Promise<void> };
@@ -219,7 +228,11 @@ export function useRoomSession({ api, workspaceId, enabled, onAsked }: {
     };
   }, [api, workspaceId, enabled]);
 
-  return session;
+  // the line and every list count from the same read of the room, whichever page made it
+  const shown = useRoomLive();
+  if (!session || !shown || shown.id !== session.id) return session;
+  if (session.toApprove === shown.inbox.length && session.toAdd === shown.coming.length) return session;
+  return { ...session, toApprove: shown.inbox.length, toAdd: shown.coming.length };
 }
 
 /** "Mia asked for Song by Artist", or without a name when the room gave none. */

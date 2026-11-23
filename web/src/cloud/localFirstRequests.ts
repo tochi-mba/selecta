@@ -25,7 +25,7 @@ import { askerOf, openRoomId } from '../rooms/useRoomSession';
 export const ROOM_REQUEST_EVENT = 'selecta:room-request';
 
 export const JOINS_BY_HAND = 'Add next plays a song right after the current one.';
-export const NOT_ON_THIS_DEVICE = 'This song’s file isn’t on this device. Connect it here to play it.';
+export const NOT_ON_THIS_DEVICE = 'This song’s file isn’t on this device. Connect it in Library to play it.';
 export const NO_BRIDGES = 'SelectaDJ can’t look for bridge songs in your browser: nothing here is measured for key or tempo. Add the request to the mix directly instead.';
 export const NOTHING_TO_HEAR = 'A request’s transitions are worked out in your browser as the mix plays, so there is nothing to hear ahead.';
 export const NO_MIX_YET = 'There is no mix playing to add it to. Start a mix on Make a Mix first.';

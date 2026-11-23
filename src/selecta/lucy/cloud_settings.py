@@ -40,7 +40,7 @@ PRIVACY = ("share_lyrics", "share_history")
 # The same starting point as local Lucy (selecta.lucy.settings.DEFAULTS), minus what Cloud hides.
 DEFAULTS: dict[str, Any] = {
     "enabled": True,
-    "phases": {"chat": True, "proposals": True, "commit": True, "memory": False, "voice": False},
+    "phases": {"chat": True, "proposals": True, "commit": True, "memory": True, "voice": False},
     "privacy": {"share_lyrics": False, "share_history": False},
 }
 

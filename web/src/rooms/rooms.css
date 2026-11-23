@@ -36,6 +36,8 @@
 .room-head-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .room-menu > button, .room-guest-menu > button { display: inline-grid; place-items: center; min-width: var(--control-height); padding: var(--space-dense); }
 .room-menu .menu-list, .room-guest-menu .menu-list { right: 0; left: auto; }
+.room-panel .menu-list { min-width: 15rem; }
+.room-panel .menu-list button { display: flex; width: 100%; justify-content: flex-start; text-align: start; }
 
 /* share and guests beside the requests; the requests take the room that is left */
 .room-grid { display: grid; grid-template-columns: minmax(0, 20rem) minmax(0, 1fr); gap: var(--space-4); align-items: stretch; min-width: 0; }
@@ -44,7 +46,7 @@
 .room-mode { padding: var(--space-hair) var(--space-2); border-radius: var(--radius-pill); background: var(--surface-control); font-size: var(--text-xs); }
 
 .room-share-body { display: grid; gap: var(--space-4); justify-items: center; min-width: 0; }
-.room-panel .room-qr-button { display: block; padding: 0; border: 0; background: none; border-radius: var(--radius); min-height: 0; width: 100%; max-width: 12rem; cursor: zoom-in; }
+.room-panel .room-qr-button { display: block; padding: 0; border: 0; background: none; border-radius: var(--radius); min-height: 0; width: min(100%, 11rem); cursor: zoom-in; }
 .room-qr-button:hover .room-qr { box-shadow: 0 0 0 var(--space-hair) var(--focus); }
 .room-qr { display: block; width: 100%; background: var(--surface-scan); border-radius: var(--radius); padding: var(--space-2); transition: box-shadow var(--motion-fast) var(--motion-ease); }
 .room-qr svg { display: block; width: 100%; height: auto; }
@@ -175,8 +177,9 @@
 @media (max-width: 560px) {
   .room-card { padding: var(--space-4); }
   .room-start-card { padding: var(--space-4); gap: var(--space-5); }
-  .room-head-actions { width: 100%; }
-  .room-head-actions > button { flex: 1 1 auto; }
+  .room-head-actions { width: 100%; flex-wrap: nowrap; }
+  .room-head-actions > button { flex: 1 1 auto; min-width: 0; padding-inline: var(--space-2); }
+  .room-head-actions > .menu { flex: none; }
   .room-share-body { grid-template-columns: minmax(0, 1fr); justify-items: center; }
   .room-share-words { justify-items: center; text-align: center; }
   .ask { grid-template-columns: auto minmax(0, 1fr); }
@@ -190,3 +193,8 @@
 .room-open-line { display: flex; flex-wrap: wrap; gap: var(--space-hair) var(--space-2); align-items: center; min-width: 0; margin: 0; font-size: var(--text-sm); color: var(--text-soft); }
 .room-open-line a { color: inherit; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 .room-open-line .status { white-space: normal; }
+
+/* Layout pass: with a room open, the room is the page's title. "Rooms" steps back to a small
+   label above it, so the page never opens with two headings stacked. */
+.shell[data-mode='cloud'] main[data-place='rooms']:has(.room-head) > h1 { margin: 0 0 var(--space-1); font: var(--type-label); letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; color: var(--text-soft); }
+.shell[data-mode='cloud'] main[data-place='rooms'] .room-head h2 { font: var(--type-page); }

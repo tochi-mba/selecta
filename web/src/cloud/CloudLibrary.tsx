@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react';
+import type { ImportSummary } from '../media';
 import { Menu, Status } from '../ui/controls';
+import { countOf } from '../ui/format';
 import { Icon } from '../ui/Icon';
 import { Library } from '../views/Library';
 import type { ViewProps } from '../views/shared';
-import { ConnectMusic, type ConnectMusicHandle } from './ConnectMusic';
+import { ConnectMusic, summaryWords, type ConnectMusicHandle } from './ConnectMusic';
 import { formatCount } from './ImportStatus';
 import { useImportSession } from './importSession';
 import './libraryWorkspace.css';
@@ -21,9 +23,18 @@ export function CloudLibrary({ shared, connected, connect }: {
   connect: ConnectProps;
 }) {
   const handle = useRef<ConnectMusicHandle>(null);
-  const importing = useImportSession(connect.workspaceId).phase === 'running';
+  const session = useImportSession(connect.workspaceId);
+  const importing = session.phase === 'running';
   const [dismissed, setDismissed] = useState(false);
+  // the finished import's result stands in for the banner until it is put away
+  const [resultSeen, setResultSeen] = useState<ImportSummary | null>(null);
   const playable = shared.status.counts.ready ?? 0;
+  const doneWords = (summary: ImportSummary) => {
+    if (playable === 0 && summary.imported + summary.duplicates > 0) return summaryWords(summary);
+    const failed = summary.failed ? ` ${countOf(summary.failed, 'file')} could not be read.` : '';
+    return `${formatCount(playable)} of ${countOf(connected, 'song')} can now play here.${failed}`;
+  };
+  const connectProps = { ...connect, doneWords, onResultDismissed: setResultSeen };
 
   if (connected === 0) {
     return (
@@ -34,37 +45,47 @@ export function CloudLibrary({ shared, connected, connect }: {
             <p className="page-lead">Your songs, and which of them can play on this device.</p>
           </div>
         </header>
-        <ConnectMusic {...connect} variant="hero" />
+        <ConnectMusic {...connectProps} variant="hero" />
       </main>
     );
   }
 
   const folders = handle.current?.folders ?? true;
-  const none = playable === 0;
+  // none, or so few that the library reads as "not here": this browser has not been given the music
+  const fresh = playable === 0 || playable * 5 < connected;
+  const showingResult = (session.phase === 'finished' || session.phase === 'paused') && !!session.summary && session.summary !== resultSeen;
+  const needsFolder = playable < connected && !importing && !showingResult && (fresh || !dismissed);
+  const choose = folders ? 'Choose your music folder' : 'Choose your songs';
   const action = importing
     ? <Status kind="working">Adding music</Status>
     : (
-      <Menu className={none ? 'lw-connect-menu' : 'lw-connect-menu lw-primary'} label={<><Icon name="plus" size="toolbar" />Connect music</>}>
+      <Menu className={needsFolder && fresh ? 'lw-connect-menu' : 'lw-connect-menu lw-primary'} label={<><Icon name="plus" size="toolbar" />Connect music</>}>
         <button type="button" role="menuitem" onClick={() => handle.current?.chooseFolder()}><Icon name="folder" size="toolbar" />Choose a folder</button>
         <button type="button" role="menuitem" onClick={() => handle.current?.chooseSongs()}><Icon name="music" size="toolbar" />Choose songs</button>
       </Menu>
     );
-  const needsChoosing = playable < connected && !importing && (none || !dismissed);
   return (
     <Library {...shared} browser={{ action }} lead={(
       <div className="lw-lead">
-        {needsChoosing && (
-          <div className="banner" data-tone={none ? 'warn' : 'info'} role="status">
+        {needsFolder && fresh && (
+          <section className="lw-welcome" aria-labelledby="library-give-music">
+            <span className="lw-welcome-mark" aria-hidden="true"><Icon name="folder" /></span>
+            <div>
+              <h2 id="library-give-music">{playable === 0 ? 'This browser hasn’t been given your music yet' : `Only ${formatCount(playable)} of ${countOf(connected, 'song')} can play in this browser`}</h2>
+              <p>Each browser needs the folder once. Your library, mixes and settings are already here.</p>
+            </div>
+            <button type="button" className="primary" onClick={() => handle.current?.chooseFolder()}><Icon name="folder" size="toolbar" />{choose}</button>
+          </section>
+        )}
+        {needsFolder && !fresh && (
+          <div className="banner" data-tone="info" role="status">
             <Icon name="folder" size="toolbar" />
-            <p>
-              <b>{none ? 'Your songs are not open in this browser yet.' : `${formatCount(playable)} of ${formatCount(connected)} songs can play here.`}</b>{' '}
-              {none ? 'Choose your folder again to play them.' : 'Choose your folder again to open the rest.'}
-            </p>
-            <button type="button" className={none ? 'primary' : undefined} onClick={() => handle.current?.chooseFolder()}>{folders ? 'Choose your folder again' : 'Choose your songs again'}</button>
-            {!none && <button type="button" className="quiet" onClick={() => setDismissed(true)}>Dismiss</button>}
+            <p><b>{`${formatCount(playable)} of ${countOf(connected, 'song')} can play here.`}</b> Choose your music folder to open the rest.</p>
+            <button type="button" onClick={() => handle.current?.chooseFolder()}>{choose}</button>
+            <button type="button" className="quiet" onClick={() => setDismissed(true)}>Dismiss</button>
           </div>
         )}
-        <ConnectMusic {...connect} ref={handle} variant="status" />
+        <ConnectMusic {...connectProps} ref={handle} variant="status" />
       </div>
     )} />
   );

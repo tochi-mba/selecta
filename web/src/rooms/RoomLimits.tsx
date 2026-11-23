@@ -69,14 +69,14 @@ export function RoomLimits({ settings, bounds, save }: {
   return (
     <div className="room-limits" data-testid="room-limits">
       <NumberField
-        label="Songs a guest can have waiting at once"
-        help="After that, a guest waits until one of their songs is added or passed on."
+        label="Songs waiting per guest"
+        help="A guest at the limit waits until one is added or passed on."
         value={waiting} min={waitingMin} max={waitingMax}
         onSave={(value) => save({ pending_per_guest: value })}
       />
       <NumberField
-        label="Songs a guest can ask for per hour"
-        help={noHourly ? 'Only the waiting limit above holds a guest back.' : 'Counts every song a guest asked for in the last 60 minutes.'}
+        label="Songs per guest per hour"
+        help={noHourly ? 'Only the waiting limit above holds a guest back.' : 'Counted over the last 60 minutes.'}
         value={noHourly ? lastHourly : hourly} min={1} max={hourlyMax} disabled={noHourly}
         onSave={(value) => save({ requests_per_guest_per_hour: value })}
       />

@@ -88,7 +88,7 @@
 :where(:root[data-cloud='on']) .field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4); align-items: start; }
 
 /* ---- page header: title, one line, the page's actions ---- */
-:where(:root[data-cloud='on']) .page-header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-4) var(--space-5); margin: 0 0 var(--space-5); min-width: 0; }
+:where(:root[data-cloud='on']) .page-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4) var(--space-5); margin: 0 0 var(--space-5); min-width: 0; }
 :where(:root[data-cloud='on']) .page-header-text { flex: 1 1 320px; display: grid; gap: var(--space-2); min-width: 0; }
 :where(:root[data-cloud='on']) .page-header .display { margin: 0; }
 :where(:root[data-cloud='on']) .page-eyebrow { margin: 0; color: var(--text-soft); font: var(--type-eyebrow); letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; }
@@ -130,7 +130,7 @@
 :where(:root[data-cloud='on']) .ui-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-raised); overflow: hidden; }
 :where(:root[data-cloud='on']) .ui-list-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); min-height: 56px; padding: var(--space-snug) var(--space-4); min-width: 0; }
 :where(:root[data-cloud='on']) .ui-list-row + .ui-list-row { border-top: 1px solid var(--border); }
-:where(:root[data-cloud='on']) .ui-list-row > :first-child { flex: 1 1 200px; min-width: 0; }
+:where(:root[data-cloud='on']) .ui-list-row > :first-child { flex: 1 1 8rem; min-width: 0; }
 
 /* ---- empty state: an icon, one line, one action ---- */
 :where(:root[data-cloud='on']) .empty-state.boxed { display: grid; justify-items: center; gap: var(--space-2); max-width: none; padding: var(--space-7) var(--space-5); border: 1px dashed var(--edge-interactive); border-radius: var(--radius); background: color-mix(in srgb, var(--surface-raised) 60%, transparent); text-align: center; }

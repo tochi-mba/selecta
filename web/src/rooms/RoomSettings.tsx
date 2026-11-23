@@ -103,8 +103,8 @@ export function RoomSettings({ settings, bounds, votesOn, saved, save, locked, o
         <Group title="Limits" saved={saved === 'limits'}>
           <RoomLimits settings={settings} bounds={bounds} save={(change) => save(change, 'limits')} />
           <NumberField
-            label="Minutes before a song can be asked for again"
-            help={replay === 0 ? 'A song can be asked for again as soon as it has played.' : `A song that played in the last ${replay} minutes can’t be asked for.`}
+            label="Replay wait, in minutes"
+            help={replay === 0 ? 'A song can be asked for again as soon as it has played.' : 'How long before a song that played can be asked for again.'}
             value={replay} min={REPLAY_RANGE[0]} max={REPLAY_RANGE[1]}
             onSave={(value) => save({ replay_cooldown_minutes: value }, 'limits')}
           />

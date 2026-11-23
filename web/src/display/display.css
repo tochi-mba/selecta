@@ -8,59 +8,100 @@
 :root {
   color-scheme: dark;
   --bg: #100f0c;            /* tokens.css --bg */
+  --panel: #1a1814;         /* tokens.css --panel */
+  --line: #3a362c;          /* tokens.css --line */
   --ink: #f4f0e4;           /* tokens.css --ink */
   --soft: #a8a292;          /* tokens.css --soft */
   --accent: #e8ff3a;        /* tokens.css --accent */
+  --accent-ink: #14140a;    /* tokens.css --accent-ink */
   --scan-white: #fff;       /* tokens.css --scan-white: the QR quiet zone */
   --body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; /* tokens.css --body */
   --weight-strong: 700;     /* tokens.css --weight-strong */
   --weight-heading: 800;    /* tokens.css --weight-heading */
+  --weight-display: 900;    /* tokens.css --weight-display */
+  --display: 'Arial Black', 'Helvetica Neue', Impact, system-ui, sans-serif; /* tokens.css --display */
+  --radius-pill: 99px;      /* tokens.css --radius-pill */
+  --motion-loop-working: 0.9s; /* tokens.css --motion-loop-working */
   --radius: 10px;           /* tokens.css --radius */
   --radius-sm: 8px;         /* tokens.css --radius-sm */
   --motion-slow: 240ms;     /* tokens.css --motion-slow */
   --motion-ease: cubic-bezier(0.2, 0.7, 0.2, 1); /* tokens.css --motion-ease */
   /* the roles this page paints with, as tokens.css names them */
   --surface-base: var(--bg);
+  --surface-raised: var(--panel);
   --focus: var(--accent);
   --selected: var(--accent);
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--surface-base); color: var(--ink); font: clamp(1rem, min(2.1vw, 3.2vh), 3.5rem)/1.35 var(--body); overflow: hidden; }
-main { min-height: 100vh; display: grid; place-items: center; padding: 5vmin; }
-h1 { font-size: 2.4em; line-height: 1.05; font-weight: var(--weight-heading); margin: 0 0 0.4em; overflow-wrap: anywhere; }
-h2 { font-size: 0.8em; color: var(--soft); margin: 1.4em 0 0.3em; letter-spacing: 0.14em; text-transform: uppercase; font-weight: var(--weight-strong); }
+body { margin: 0; background: var(--surface-base); color: var(--ink); font: clamp(1rem, min(2.1vw, 3.4vh), 3.5rem)/1.35 var(--body); overflow: hidden; }
+main { min-height: 100vh; display: grid; place-items: center; padding: 4vmin 5vmin; }
+h1 { font: var(--weight-display) 2.6em/1.05 var(--display); letter-spacing: -0.01em; margin: 0 0 0.4em; overflow-wrap: anywhere; }
+h2 { display: flex; align-items: center; gap: 0.6em; font-size: 0.7em; color: var(--soft); margin: 0 0 0.5em; letter-spacing: 0.14em; text-transform: uppercase; font-weight: var(--weight-strong); }
 p { margin: 0.4em 0; }
-/* small capitals over the code: a frame of lime, the words in ink, never lime as text */
-.d-eyebrow { text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink); font-weight: var(--weight-strong); margin: 0 0 0.6em; }
+/* the product's mark (a record in the lime of the main button) and name */
+.d-brand { display: inline-flex; align-items: center; gap: 0.5em; margin: 0; font-size: 0.8em; font-weight: var(--weight-heading); }
+.d-mark { width: 1.15em; height: 1.15em; border-radius: 50%; background: radial-gradient(circle, var(--accent-ink) 0 22%, var(--accent) 24%); }
+.d-spin { display: inline-block; width: 0.9em; height: 0.9em; margin-right: 0.5em; vertical-align: -0.1em; border-radius: 50%; border: 0.12em solid currentColor; border-top-color: transparent; animation: d-turn var(--motion-loop-working) linear infinite; }
+/* small capitals over the code: the words in ink, never lime as text */
+.d-eyebrow { text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink); font-weight: var(--weight-strong); margin: 0 0 0.8em; }
 .d-muted { color: var(--soft); }
 .d-waiting { color: var(--soft); font-size: 1.2em; }
-.d-lede { font-size: 1.1em; }
-.d-pair { text-align: center; max-width: 34em; animation: d-drift 300s ease-in-out infinite alternate; }
-.d-code { font-size: 5em; line-height: 1.1; font-weight: var(--weight-heading); letter-spacing: 0.12em; margin: 0.2em 0; font-variant-numeric: tabular-nums; }
-.d-room { width: 100%; max-width: 68em; display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr); gap: 6vmin; align-items: center; animation: d-drift 300s ease-in-out infinite alternate; }
-.d-left { display: flex; flex-direction: column; align-items: center; text-align: center; }
-.d-left .d-eyebrow { font-size: 1.15em; }
-.d-qr { background: var(--scan-white); padding: 2vmin; border-radius: var(--radius); width: min(46vmin, 100%); }
-.d-qr svg { display: block; width: 100%; height: auto; }
-/* the room code, large enough to read from the back of the room, with the address under it */
-.d-join { display: flex; flex-direction: column; align-items: center; margin: 0.8em 0 0; }
-.d-label { font-size: 0.7em; letter-spacing: 0.14em; text-transform: uppercase; color: var(--soft); font-weight: var(--weight-strong); }
-.d-roomcode { font-size: 2.2em; line-height: 1.15; font-weight: var(--weight-heading); letter-spacing: 0.1em; font-variant-numeric: tabular-nums; color: var(--ink); }
-.d-url { font-size: 0.75em; color: var(--soft); overflow-wrap: anywhere; }
+.d-lede { font-size: 1.2em; color: var(--soft); }
+
+/* Pairing: three short steps, then the code, one box a letter */
+.d-pair { text-align: center; max-width: min(40em, 100%); animation: d-drift 300s ease-in-out infinite alternate; }
+.d-pair .d-brand { margin-bottom: 1.2em; }
+.d-pair h1 { font-size: min(2.6em, 10vw); }
+.d-steps { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6em 1.6em; margin: 0 0 1.2em; padding: 0; font-size: 0.95em; }
+.d-steps li { display: inline-flex; align-items: center; gap: 0.5em; }
+.d-step { display: inline-grid; place-items: center; width: 1.7em; height: 1.7em; border-radius: 50%; background: var(--surface-raised); border: 1px solid var(--line); font-size: 0.8em; font-weight: var(--weight-heading); font-variant-numeric: tabular-nums; }
+.d-code { display: flex; justify-content: center; gap: 0.12em; font: var(--weight-display) min(4.6em, 12.5vw)/1 var(--display); margin: 0 0 0.25em; font-variant-numeric: tabular-nums; }
+.d-code span { display: inline-grid; place-items: center; min-width: 1.15em; padding: 0.22em 0.08em; border-radius: var(--radius); background: var(--surface-raised); border: 1px solid var(--line); animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
+
+/* The room: what's playing takes the screen; the code to join sits in its own panel at the side */
+.d-room { width: 100%; max-width: 72em; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.8fr); gap: 6vmin; align-items: center; animation: d-drift 300s ease-in-out infinite alternate; }
 .d-right { min-width: 0; }
-.d-now { font-size: 2em; line-height: 1.15; font-weight: var(--weight-heading); overflow-wrap: anywhere; margin: 0; animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
-.d-by { display: block; font-size: 0.6em; font-weight: var(--weight-strong); color: var(--soft); margin-top: 0.2em; }
-.d-list { margin: 0; padding-left: 1.4em; font-size: 1.1em; }
-.d-list li { margin: 0.25em 0; overflow-wrap: anywhere; animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
-.d-list li::marker { color: var(--soft); font-variant-numeric: tabular-nums; }
-.d-banner { border: 2px solid var(--selected); border-radius: var(--radius-sm); padding: 0.3em 0.7em; display: inline-block; margin: 0; }
-.d-disconnect { margin-top: 1.6em; font: inherit; font-size: 0.6em; color: var(--soft); background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm); padding: 0.5em 1em; min-height: 44px; cursor: pointer; opacity: 0.7; }
+.d-top { margin-bottom: 1em; }
+.d-top h1 { font-size: 1.5em; margin: 0.25em 0 0; }
+.d-now { font: var(--weight-display) 3em/1.05 var(--display); letter-spacing: -0.01em; overflow-wrap: anywhere; margin: 0; animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
+.d-now.d-muted { font-size: 2.2em; }
+.d-by { display: block; font: var(--weight-strong) 0.42em/1.3 var(--body); letter-spacing: 0; color: var(--soft); margin-top: 0.5em; }
+.d-now.d-muted .d-by { font-size: 0.5em; font-weight: 400; }
+.d-playing[data-on] h2 { color: var(--ink); }
+/* three bars that rise and fall while music plays; still when it is paused or nothing is on */
+.d-eq { display: inline-flex; align-items: flex-end; gap: 0.18em; height: 1em; }
+.d-eq i { width: 0.24em; height: 100%; border-radius: var(--radius-sm); background: var(--accent); transform-origin: bottom; transform: scaleY(0.4); }
+.d-playing:not([data-on]) .d-eq i { background: var(--soft); }
+.d-playing[data-on] .d-eq i { animation: d-eq var(--motion-loop-working) ease-in-out infinite alternate; }
+.d-playing[data-on] .d-eq i:nth-child(2) { animation-delay: calc(var(--motion-loop-working) / -3); }
+.d-playing[data-on] .d-eq i:nth-child(3) { animation-delay: calc(var(--motion-loop-working) / -1.5); }
+.d-lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(12em, 1fr)); gap: 1.6em 2.4em; margin-top: 1.3em; padding-top: 1.1em; border-top: 1px solid var(--line); align-items: start; }
+.d-list { list-style: none; counter-reset: place; margin: 0; padding: 0; font-size: 1.05em; }
+.d-list li { counter-increment: place; display: flex; align-items: baseline; gap: 0.7em; margin: 0 0 0.55em; animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
+.d-list li::before { content: counter(place); flex: none; min-width: 1.1em; color: var(--soft); font-weight: var(--weight-strong); font-variant-numeric: tabular-nums; }
+.d-song { display: flex; flex-direction: column; min-width: 0; }
+.d-song strong { font-weight: var(--weight-strong); line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.d-song .d-muted { font-size: 0.72em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.d-none { margin: 0; font-size: 0.95em; }
+/* the panel to join from: the QR, then the room code large enough to read from the back */
+.d-left { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 1.4em 1.2em 0.8em; border-radius: calc(var(--radius) * 2); background: var(--surface-raised); border: 1px solid var(--line); }
+.d-left .d-eyebrow { font-size: 0.95em; }
+.d-qr { background: var(--scan-white); padding: 1.6vmin; border-radius: var(--radius); width: min(40vmin, 100%); }
+.d-qr svg { display: block; width: 100%; height: auto; }
+.d-join { display: flex; flex-direction: column; align-items: center; margin: 0.9em 0 0; }
+.d-label { font-size: 0.65em; letter-spacing: 0.14em; text-transform: uppercase; color: var(--soft); font-weight: var(--weight-strong); }
+.d-roomcode { font: var(--weight-display) 1.9em/1.15 var(--display); letter-spacing: 0.06em; font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; }
+.d-url { font-size: 0.7em; color: var(--soft); overflow-wrap: anywhere; margin-top: 0.3em; }
+.d-disconnect { margin-top: 0.8em; font: inherit; font-size: 0.55em; color: var(--soft); background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm); padding: 0.5em 1em; min-height: 44px; cursor: pointer; opacity: 0.75; transition: color var(--motion-slow) var(--motion-ease), border-color var(--motion-slow) var(--motion-ease), opacity var(--motion-slow) var(--motion-ease); }
 .d-disconnect:hover, .d-disconnect:focus-visible { color: var(--ink); border-color: var(--ink); opacity: 1; }
+.d-disconnect:active { transform: scale(0.97); }
 .d-disconnect:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 .d-disconnect[aria-busy] { cursor: progress; }
-.d-reconnecting { position: fixed; top: 3vmin; right: 3vmin; margin: 0; padding: 0.4em 0.9em; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--surface-base) 85%, transparent); border: 1px solid var(--soft); color: var(--ink); font-size: 0.8em; animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
-/* a tall or narrow screen (a portrait TV, a tablet on a stand): the code on top, the room under it */
-@media (max-width: 900px), (orientation: portrait) { .d-room { grid-template-columns: 1fr; gap: 4vmin; } .d-right { text-align: center; } .d-list { list-style-position: inside; padding-left: 0; } .d-qr { width: min(38vmin, 100%); } body { overflow: auto; } }
+.d-reconnecting { position: fixed; top: 3vmin; right: 3vmin; margin: 0; padding: 0.4em 0.9em; border-radius: var(--radius-pill); background: var(--ink); color: var(--surface-base); font-size: 0.75em; font-weight: var(--weight-strong); animation: d-arrive calc(var(--motion-slow) * 2) var(--motion-ease) backwards; }
+/* a tall or narrow screen (a portrait TV, a tablet on a stand): the room on top, the code under it */
+@media (max-width: 900px), (orientation: portrait) { .d-room { grid-template-columns: 1fr; gap: 5vmin; } .d-qr { width: min(38vmin, 100%); } body { overflow: auto; } }
 @keyframes d-arrive { from { opacity: 0; transform: translateY(0.4em); } }
 @keyframes d-drift { from { transform: translate(-0.8vmin, -0.6vmin); } to { transform: translate(0.8vmin, 0.6vmin); } }
-@media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+@keyframes d-turn { to { transform: rotate(360deg); } }
+@keyframes d-eq { to { transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

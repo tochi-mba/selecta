@@ -360,7 +360,7 @@ function draw(): void {
   drawBar();
   patch(parts.lists,
     active && !v.requests_open ? h('section', { className: 'g-section', 'data-key': 'Requests', 'aria-label': 'Requests' }, empty('lock', 'Requests are off in this room', 'The host is choosing the music for now.')) : null,
-    active && v.coming_up.length ? section('Coming up from guests', h('ol', { className: 'g-list' }, ...v.coming_up.map((item) => songItem(item.song, item.request_id, item.nickname ? h('span', { className: 'g-by' }, item.nickname) : null, voteButton(item))))) : null,
+    active && v.coming_up.length ? section('Coming up from guests', h('ol', { className: 'g-list' }, ...v.coming_up.map((item) => songItem(item.song, item.request_id, h('span', { className: 'g-tail' }, item.nickname ? h('span', { className: 'g-by' }, item.nickname) : null, voteButton(item)))))) : null,
     active && v.waiting.length ? section('Waiting for the host', h('ul', { className: 'g-list' }, ...v.waiting.map((item) => songItem(item.song, item.request_id, voteButton(item))))) : null);
   // nothing shows here until the guest has asked for something
   patch(parts.mine, active && v.my_requests.length ? myRequests(v) : null);
@@ -434,7 +434,7 @@ function myRequests(v: View): HTMLElement {
         songText(item.song,
           h('span', { className: 'g-status' }, chip(status.kind, status.label)),
           status.detail ? h('span', { className: 'g-detail' }, status.detail) : null),
-        PENDING.includes(item.status)
+        PENDING.includes(item.status) && v.room_status !== 'ended'
           ? h('button', { type: 'button', className: 'g-quiet g-small-button', ...working(leaving), 'aria-label': `Withdraw ${songLine(item.song)}`, onclick: () => void withdraw(item.request_id) }, leaving ? 'Withdrawing...' : 'Withdraw')
           : null);
     })));
@@ -594,7 +594,8 @@ function drawBar(): void {
   const room = left - count;
   const words = left <= 0
     ? (view.limit_text || "You can't ask for more songs right now.")
-    : room > 0 ? `You can add ${room} more` : "That's as many as you can ask for right now";
+    : count && basket.every(waitingOn) ? "Can't be sent yet. Take it out to carry on"
+      : room > 0 ? `You can add ${room} more` : "That's your limit for now";
   if (!count) listOpen = false;
   patch(bar,
     count && listOpen ? h('ul', { className: 'g-list g-chosen', id: 'g-chosen', 'data-key': 'chosen', 'aria-label': 'Chosen songs' }, ...basket.map((song) => h('li', { className: 'g-item', 'data-key': `chosen-${song.song_id}` },
@@ -665,7 +666,7 @@ async function sendBasket(): Promise<void> {
     if (newer(ticket)) view = answer.room;
     draw();
     if (added.length && !basket.length) document.getElementById('g-requests')?.scrollIntoView?.({ block: 'nearest' });
-    if (refused.length) say(refused.length === 1 ? "1 song wasn't added. The reason is under it." : `${songsWord(refused.length)} weren't added. The reason is under each one.`);
+    if (refused.length) say(`${added.length ? `Sent ${songsWord(added.length)}. ` : ''}${refused.length === 1 ? "1 song wasn't added. The reason is under it." : `${songsWord(refused.length)} weren't added. The reason is under each one.`}`);
   } catch (error) {
     sending = false;
     drawBar();

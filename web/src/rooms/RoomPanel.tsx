@@ -14,7 +14,7 @@ import { RoomRequests, type RoomRequestsMix } from './RoomRequests';
 import { RoomSettings, SettingsSection, type RoomSettingsValue, type SettingsGroup } from './RoomSettings';
 import { CopyWords, RoomQrScreen, RoomShare, useCopyLink } from './RoomShare';
 import { RoomStart } from './RoomStart';
-import { noteRoom, ROOM_EVENT, type RoomAsk, type RoomControl } from './useRoomSession';
+import { noteRoom, ROOM_EVENT, useRoomLive, type RoomAsk, type RoomControl } from './useRoomSession';
 import './rooms.css';
 import { useNeedsConnection } from '../cloud/connection';
 import { ROOM_REQUEST_EVENT } from '../cloud/localFirstRequests';
@@ -79,6 +79,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
   const announceTimer = useRef(0);
   // the browser's own Requests list, where this shell has one: its rows add a request to the mix
   const requests = useContext(RequestsContext);
+  const shown = useRoomLive();
   const requestsError = requests?.error ?? '';
   useEffect(() => { if (requestsError) showProblem(requestsError); }, [requestsError]);
 
@@ -228,7 +229,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
   const playback = requests?.playback;
   const mix: RoomRequestsMix | null = hostAdds && requests ? {
     rows: requests.requests && requests.requests.map((request) => ({ request, stage: stageOf(request, playback) })),
-    live: playingNow(playback),
+    live: playingNow(playback) && !!playback?.mix.length,
     onAdd: requests.addAnyway,
     onDismiss: requests.cancel,
     onStart: startMixWith(requests.request, playback, requests.refresh),
@@ -238,9 +239,10 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
     approve: async (id) => { await act(`${base}/requests/${encodeURIComponent(id)}/approve`); },
     pass: async (id) => { await act(`${base}/requests/${encodeURIComponent(id)}/pass`); },
   };
-  const phase = playback?.player.state.phase;
+  const phase = playback?.mix.length ? playback.player.state.phase : 'idle';
   const music = hostAdds ? (phase === 'playing' ? 'Music playing' : phase === 'paused' ? 'Music paused' : 'Nothing playing') : panel.music_paused ? 'Nothing playing' : 'Music playing';
-  const waiting = panel.inbox.length + panel.coming_up.length;
+  // the same read the Requests drawer and the side bar count from
+  const waiting = shown && shown.id === room.id ? shown.inbox.length + shown.coming.length : panel.inbox.length + panel.coming_up.length;
   const requestMode = settings.request_mode === 'off' ? 'Requests off' : settings.request_mode === 'approve' ? 'You approve each' : 'Accepted automatically';
 
   return (
@@ -258,7 +260,7 @@ export function RoomPanel({ api, workspaceId, locked, votesOn = true, displayOn 
           </p>
         </div>
         <div className="room-head-actions">
-          <Action type="button" className="primary" run={copy}><CopyWords copied={copied}>Copy link</CopyWords></Action>
+          <Action type="button" run={copy}><CopyWords copied={copied}>Copy link</CopyWords></Action>
           <button type="button" onClick={() => setQrOpen(true)}><Icon name="expand" size="toolbar" /> Show QR full screen</button>
           <Menu className="room-menu" title="Room options" label={<><Icon name="more" /><VisuallyHidden>Room options</VisuallyHidden></>}>
             <MenuItem onClick={() => void lock()}>{isLocked ? 'Unlock room' : 'Lock room'}</MenuItem>
