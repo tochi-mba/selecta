@@ -4,7 +4,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { validateCloudflarePagesBuild, validatePagesRedirects } from '../../pagesRoutes';
 
-const rules = readFileSync(new URL('../../public/_redirects', import.meta.url), 'utf8');
+// From the web folder the suite runs in: a file URL is not available under the jsdom environment.
+const rules = readFileSync(join(process.cwd(), 'public', '_redirects'), 'utf8');
 
 describe('Cloudflare Pages dedicated entry-point routes', () => {
   it('routes the guest path to its own entry and leaves display and kiosk to Pages', () => {
