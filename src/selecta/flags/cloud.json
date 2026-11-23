@@ -374,6 +374,7 @@
       "about": "Control the account's active playback session from another device.",
       "routes": [
         "POST /api/playback/commands",
+        "GET /api/local-media/holdings",
         "POST /api/playback/commands/{command_id}/ack"
       ],
       "requires": ["devices"],

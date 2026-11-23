@@ -106,6 +106,13 @@ def validate(command: str, args: Mapping[str, Any] | None) -> tuple[Command, dic
         if start >= len(songs):
             raise InvalidCommand("song_index must point into the programme")
         clean["song_index"] = start
+        # ADR-0475 R4: a song added from another device changes what is coming, not where the
+        # music is. With keep_position the session keeps its offset and anchor.
+        keep = raw.get("keep_position", False)
+        if not isinstance(keep, bool):
+            raise InvalidCommand("keep_position must be true or false")
+        if keep:
+            clean["keep_position"] = True
     elif name is Command.APPROVE_REQUEST:
         request_id = raw.get("request_id")
         if isinstance(request_id, bool) or not isinstance(request_id, (str, int)):
@@ -129,6 +136,8 @@ def apply(
     if name is Command.SET_PROGRAMME:
         if programme is None:
             raise CommandUnavailable("Those songs aren't in this library")
+        if args.get("keep_position"):
+            return replace(session, programme=programme, song_index=args["song_index"])
         return replace(
             session, programme=programme, song_index=args["song_index"], offset_ms=0,
             anchor_at=now,
