@@ -440,10 +440,17 @@ export function LocalFirstShell({ api, account, more, notices, feedback, offline
   // browser; room requests the host accepted arrive on the event stream and join this list
   const songRequests = useRequests({ mix: data.mix, player: shellPlayer, onMix: setMixData }, notify, request);
   const [requesting, setRequesting] = useState(false);
+  const refreshRoomRequests = useRef(songRequests.refresh);
+  refreshRoomRequests.current = songRequests.refresh;
   useEffect(() => {
     const heard = (event: Event) => {
-      if ((event as CustomEvent<{ action?: string }>).detail?.action !== 'pending' || !on('requests')) return;
-      showToast('A room request is waiting in Requests. It joins your mix when you add it.');
+      if (!on('requests')) return;
+      // Every pending/withdrawn room event refreshes the existing Requests drawer and
+      // the request-count badge. The browser-first planner never queues audio itself.
+      void refreshRoomRequests.current?.();
+      if ((event as CustomEvent<{ action?: string }>).detail?.action === 'pending') {
+        showToast('A room request is waiting in Requests. It joins your mix when you add it.');
+      }
     };
     window.addEventListener(ROOM_REQUEST_EVENT, heard);
     return () => window.removeEventListener(ROOM_REQUEST_EVENT, heard);

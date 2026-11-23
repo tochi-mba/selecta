@@ -36,8 +36,9 @@ type Saved = { next: number; local: LocalRequest[]; room: Record<string, number>
 // every `requests.room` event moves this on, so the next read asks the server again
 let roomVersion = 0;
 if (typeof window !== 'undefined') window.addEventListener(ROOM_REQUEST_EVENT, () => { roomVersion += 1; });
-/** Without an event, the room list is still asked again this often (the stream may be blocked). */
-const ROOM_REFRESH_MS = 30_000;
+/** SSE can be blocked or a browser can miss an event while sleeping. The visible Requests
+ * panel polls every 4 seconds, so refresh the room list on its next/second poll. */
+const ROOM_REFRESH_MS = 6_000;
 
 const queueKey = (workspaceId: string) => `selecta-requests:${workspaceId}`;
 // the last room list the server gave, so the panel still shows it while the connection is down

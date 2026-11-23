@@ -105,6 +105,37 @@ def test_an_accepted_request_reaches_the_host_s_list_and_the_workspace_stream(pa
     assert row["song_request_id"] == planner_id
 
 
+def test_auto_accepted_guest_request_reaches_existing_host_requests_without_speaker(party):
+    """A browser playing locally may not hold a cloud speaker lease.
+
+    Requests must still reach the existing Request a song panel; accepting is
+    not the same as inserting the song into the playing mix.
+    """
+    from selecta.playback import session as playback_session
+
+    workspace_id = party.workspaces[ALICE]
+    assert not playback_session.speaker_online(party.engine, workspace_id)
+    opened = party.open_room(ALICE)
+    room_id = opened["room"]["id"]
+    guest = join(party, opened["code"])
+    request_id = ask(guest, room_id, 5)
+
+    [entry] = waiting(party)
+    assert entry["id"] == request_id
+    assert entry["song_id"] == 5
+    assert entry["room_name"] == "Garden party"
+    assert entry["handed_at"] is not None
+    assert my_request(guest, room_id, request_id)["status"] == "accepted"
+    assert announced(party.engine, workspace_id)[0]["action"] == "pending"
+
+    # It stays accepted until the host adds it in Requests and acknowledges it.
+    [row] = request_rows(party.engine, workspace_id)
+    assert row["status"] == RequestStatus.ACCEPTED.value
+    answer = party.client.post(f"{WAITING}/{request_id}/played", headers=auth(ALICE))
+    assert answer.status_code == 200, answer.text
+    assert waiting(party) == []
+
+
 def test_the_list_needs_a_signed_in_host(party):
     assert party.client.get(WAITING).status_code == 401
     assert party.client.post(f"{WAITING}/anything/played").status_code == 401

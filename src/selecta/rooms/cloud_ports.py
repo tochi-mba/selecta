@@ -140,6 +140,10 @@ class BrowserPlanner:
     played) or dismisses it (passed), through `rooms.browser_requests`.
     """
 
+    # This planner only records host-side requests; it never schedules audio.
+    # The host's browser can play locally without holding a server speaker lease.
+    accepts_requests_without_speaker = True
+
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
 
