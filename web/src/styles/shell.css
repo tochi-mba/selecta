@@ -649,3 +649,80 @@ main.page h1[tabindex='-1']:focus { outline: none; }
   padding-inline: var(--page-gutter);
   padding-block: var(--space-loose);
 }
+
+/* Browser-first Cloud: one column system. Every page, the bar above it, the notices and the footer
+   start on the same left edge (the frame's), whatever width the page itself takes, so the title and
+   the top bar's actions stay put from page to page. The frame is the widest page column, centred
+   only once the window is wider than it. */
+.shell[data-mode='cloud'] .content {
+  --page-frame: var(--content-work);
+  --frame-start: max(0px, calc((100% - var(--page-frame)) / 2));
+  display: flex;
+  flex-direction: column;
+}
+.shell[data-mode='cloud'] .content > :is(.page, .shell-banners, .cloud-footer) {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max);
+  margin-inline: var(--frame-start) auto;
+}
+.shell[data-mode='cloud'] .context-bar {
+  flex: none;
+  padding-inline: calc(var(--frame-start) + var(--gutter));
+}
+/* the page takes the spare height, so the footer rests at the bottom of a short page */
+.shell[data-mode='cloud'] .content > main.page { flex: 1 0 auto; padding-bottom: var(--space-7); }
+/* a page in two blocks (a notice or Connect music beside the page itself) reads as one page */
+.shell[data-mode='cloud'] .content > div.page { flex: none; padding-block: 0 var(--space-7); }
+.shell[data-mode='cloud'] .content > div.page:has(~ main.page) { padding-block: var(--space-5) 0; }
+.shell[data-mode='cloud'] .content > main.page:has(~ div.page) { flex: none; padding-bottom: var(--space-5); }
+.shell[data-mode='cloud'] .content > .cloud-footer {
+  flex: none;
+  margin-top: auto;
+  padding: var(--space-4) var(--page-gutter);
+  overflow-wrap: anywhere;
+}
+.shell[data-mode='cloud'] .listen-empty { min-height: 0; }
+
+/* Cloud notices (connection, account, import progress): one stack on the page column, in the
+   page's flow under the bar. Each takes a row of its own; none floats over the page. */
+.shell-banners { display: grid; gap: var(--space-2); padding: var(--space-3) var(--page-gutter) 0; min-width: 0; }
+.shell-banners:not(:has(> :not([hidden]))) { display: none; }
+.shell-banners > * { margin: 0; min-width: 0; }
+.shell-banners > .cloud-import-chip { justify-self: start; max-width: 100%; border-radius: var(--radius); }
+
+/* Cloud's More opens a drawer, but in the rail it is one more destination, drawn like the rest */
+@media (min-width: 761px) {
+  .nav li button.nav-more-desktop {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--icon-gap);
+    min-height: var(--control-height);
+    padding: var(--control-pad-block) var(--space-2);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--text-soft);
+    position: relative;
+  }
+  .nav li button.nav-more-desktop:hover { color: var(--text); }
+  .nav li button.nav-more-desktop:is([aria-current='page'], [aria-expanded='true']) { color: var(--text); background: var(--surface-control); }
+  :root[data-rail='collapsed'] .nav li button.nav-more-desktop { justify-content: center; }
+  /* Request a song has a row of its own, on one line, with the side bar's toggle under it: side by
+     side the words wrapped onto two lines */
+  .nav-foot { flex-direction: column; align-items: stretch; gap: var(--space-1); padding-top: var(--space-3); border-top: 1px solid var(--border); }
+  .nav-request { flex: none; justify-content: flex-start; white-space: nowrap; }
+  .nav-collapse { align-self: flex-start; }
+  :root[data-rail='collapsed'] .nav-request { justify-content: center; }
+  :root[data-rail='collapsed'] .nav-collapse { align-self: stretch; }
+  /* Workspace is already in the rail beside More, so the drawer does not list it twice */
+  .more-nav-workspace { display: none; }
+}
+
+/* The keyboard shortcuts list: each key beside what it does, the keys in one column */
+dl.keys { display: grid; gap: var(--space-2); width: auto; margin: 0 0 var(--space-4); }
+dl.keys > div { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: var(--space-3); align-items: baseline; }
+dl.keys dt { min-width: 0; }
+dl.keys dd { overflow-wrap: anywhere; }

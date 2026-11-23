@@ -121,3 +121,17 @@ export function OnlyOnYourComputer({ title, nearest }: { title: string; nearest:
     </main>
   );
 }
+
+/** An address that is no page at all (a mistyped or stale link): say so, and offer the way back. */
+export function PageNotFound() {
+  return (
+    <main className="page" id="main">
+      <h1 className="display small">We can’t find that page</h1>
+      <p className="lede">The link may be old or mistyped. Your music and mixes are fine.</p>
+      <div className="row wrap">
+        <PageLink to="/mixes" className="button primary">Go to Make a Mix</PageLink>
+        <PageLink to="/library" className="button">Library</PageLink>
+      </div>
+    </main>
+  );
+}
