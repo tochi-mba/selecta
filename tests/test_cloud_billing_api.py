@@ -254,6 +254,32 @@ def test_a_checkout_stripe_refuses_is_a_misconfiguration_not_an_outage(
     assert rows(cloud_engine, checkout_consents) == []
 
 
+def test_a_failed_session_keeps_the_customer_and_the_next_attempt_reuses_it(
+    client, stripe, cloud_engine, monkeypatch
+):
+    """The customer exists in Stripe once it is created, so its row is committed before the
+    session is asked for. Rolled back with a failed session, a later attempt (past Stripe's
+    idempotency window) would have made a second Stripe customer for the workspace."""
+    working = stripe.create_checkout_session
+    monkeypatch.setattr(stripe, "create_checkout_session", refuse)
+
+    assert checkout(client).status_code == 503
+    [kept] = rows(cloud_engine, stripe_customers)
+    assert kept["stripe_customer_id"] == "cus_new"
+    assert rows(cloud_engine, checkout_consents) == []
+    assert [name for name, _ in stripe.posts] == ["customer"]
+
+    monkeypatch.setattr(stripe, "create_checkout_session", working)
+    again = checkout(client)
+
+    assert again.status_code == 200, again.text
+    # no second customer: the kept row is the one the session is made for
+    assert [name for name, _ in stripe.posts] == ["customer", "checkout"]
+    assert stripe.posts[-1][1]["customer_id"] == "cus_new"
+    assert len(rows(cloud_engine, stripe_customers)) == 1
+    assert len(rows(cloud_engine, checkout_consents)) == 1
+
+
 def test_a_portal_stripe_refuses_is_a_misconfiguration_not_an_outage(
     client, stripe, cloud_engine, monkeypatch
 ):

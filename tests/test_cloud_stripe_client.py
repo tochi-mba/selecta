@@ -354,6 +354,34 @@ def test_a_refusal_is_logged_with_stripes_own_reason_and_nothing_secret(caplog) 
     assert "cus_123" not in line
 
 
+# What staging's Stripe really answered to a checkout session, word for word: a bad request of
+# ours (no `code`, a `param`). It used to be reported as "temporarily unavailable", unlogged.
+TAX_ID_NEEDS_NAME = {
+    "error": {
+        "type": "invalid_request_error",
+        "param": "customer_update[name]",
+        "message": (
+            "Tax ID collection requires updating business name on the customer. To enable tax ID "
+            "collection for an existing customer, please set `customer_update[name]` to `auto`."
+        ),
+    }
+}
+
+
+def test_the_real_tax_id_refusal_is_a_refusal_and_its_message_is_logged(caplog) -> None:
+    client = make_client(lambda request: httpx.Response(400, json=TAX_ID_NEEDS_NAME))
+
+    with caplog.at_level(logging.WARNING, logger=LOG), pytest.raises(StripeRefused) as raised:
+        start_checkout(client)
+
+    assert (raised.value.status, raised.value.code) == (400, None)
+    [line] = [record.getMessage() for record in caplog.records]
+    assert "Stripe answered 400 for /v1/checkout/sessions" in line
+    assert "type=invalid_request_error" in line
+    assert "param=customer_update[name]" in line
+    assert "Tax ID collection requires updating business name on the customer." in line
+
+
 @pytest.mark.parametrize("status", [400, 401, 403, 409])
 def test_a_4xx_from_stripe_is_a_refusal_and_still_stripe_unavailable(status) -> None:
     """Ours to fix, not an outage; and still a `StripeUnavailable`, so webhooks and
