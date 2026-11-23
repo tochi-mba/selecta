@@ -109,6 +109,7 @@ def request(
         raise RoomError(Refusal.NOT_REQUESTABLE)
     ref = resolve_guest(ctx, guest_token)
     workspace_id = ref.workspace_id
+    known = _look_up(ctx, workspace_id, [song_id])
     with transaction(ctx.engine, workspace_id) as conn:
         now = resolve_now(conn, now)
         room = live_room(conn, workspace_id, ref.room_id)
@@ -119,7 +120,7 @@ def request(
         if existing:
             outcome = _ask_again(conn, ctx, room, guest, existing[0], now)
         else:
-            _check_song(conn, ctx, room, song_id, now)
+            _check_song(conn, room, song_id, now, known[song_id])
             _check_limits(conn, room, guest, now)
             outcome = RequestOutcome(_create(conn, ctx, room, guest, song_id, now))
     if outcome.request.status is RequestStatus.ACCEPTED and not outcome.already_queued:
@@ -145,11 +146,36 @@ def _ask_again(
     return RequestOutcome(load_request(conn, room, existing.id), became_vote=True)
 
 
-def _check_song(conn: Connection, ctx: RoomContext, room: Room, song_id: int, now: float) -> None:
+@dataclass(frozen=True)
+class _Known:
+    """What the host's library says about a song, read before the room is locked."""
+
+    requestable: bool
+    last_played_at: float | None
+
+
+def _look_up(ctx: RoomContext, workspace_id: str, song_ids: list[int]) -> dict[int, _Known]:
+    """Ask the catalogue about each song, outside any Rooms transaction.
+
+    The catalogue opens its own connection. Asked from inside the transaction that holds the
+    room's lock, it waits on that very transaction: on SQLite (`BEGIN IMMEDIATE`) until the
+    30 second busy timeout, which is how a guest's request hung with no answer. So the library
+    is read first and the locked part only reads and writes Rooms' own tables."""
+    known: dict[int, _Known] = {}
+    for song_id in song_ids:
+        if isinstance(song_id, bool) or not isinstance(song_id, int) or song_id in known:
+            continue
+        requestable = ctx.catalog.is_requestable(workspace_id, song_id)
+        played = ctx.catalog.last_played_at(workspace_id, song_id) if requestable else None
+        known[song_id] = _Known(requestable, played)
+    return known
+
+
+def _check_song(conn: Connection, room: Room, song_id: int, now: float, known: _Known) -> None:
     crate = room.settings.crate
     if crate is not None and song_id not in crate:
         raise RoomError(Refusal.NOT_REQUESTABLE)
-    if not ctx.catalog.is_requestable(room.workspace_id, song_id):
+    if not known.requestable:
         raise RoomError(Refusal.NOT_REQUESTABLE)
     cooldown = room.settings.replay_cooldown_minutes * 60.0
     if cooldown <= 0:
@@ -161,7 +187,7 @@ def _check_song(conn: Connection, ctx: RoomContext, room: Room, song_id: int, no
             room_requests.c.status == RequestStatus.PLAYED.value,
         )
     ).scalar_one()
-    played_in_mix = ctx.catalog.last_played_at(room.workspace_id, song_id)
+    played_in_mix = known.last_played_at
     last = max((t for t in (played_in_room, played_in_mix) if t is not None), default=None)
     if last is not None and now - last < cooldown:
         wait = cooldown - (now - last)
@@ -247,6 +273,7 @@ def request_many(
     ref = resolve_guest(ctx, guest_token)
     workspace_id = ref.workspace_id
     items: list[BatchItem] = []
+    known = _look_up(ctx, workspace_id, wanted)
     with transaction(ctx.engine, workspace_id) as conn:
         now = resolve_now(conn, now)
         room = live_room(conn, workspace_id, ref.room_id)
@@ -261,7 +288,7 @@ def request_many(
                 if existing:
                     outcome = _ask_again(conn, ctx, room, guest, existing[0], now)
                 else:
-                    _check_song(conn, ctx, room, song_id, now)
+                    _check_song(conn, room, song_id, now, known[song_id])
                     _check_limits(conn, room, guest, now)
                     outcome = RequestOutcome(_create(conn, ctx, room, guest, song_id, now))
                 items.append(BatchItem(song_id, outcome))
