@@ -72,6 +72,18 @@ def _checkout_prices() -> dict[str, PricePlan]:
         raise HTTPException(status_code=503, detail={"code": "billing_not_configured"}) from error
 
 
+def checkout_available() -> bool:
+    """Whether a checkout could be started on this site at all: the Stripe key is set and the
+    price map parses and names at least one price. `/api/account` says so, so the page does not
+    offer an upgrade the server would only refuse with `billing_not_configured`."""
+    if not os.environ.get("SELECTA_STRIPE_SECRET_KEY", "").strip():
+        return False
+    try:
+        return bool(parse_price_map(json.loads(os.environ.get("SELECTA_STRIPE_PRICES", "{}"))))
+    except (ValueError, TypeError):
+        return False
+
+
 def install_routes(
     app: FastAPI,
     *,
