@@ -351,14 +351,10 @@ def create_cloud_app(
         listener.subscribe(flag_rules.CHANNEL, fanout.notify)
     flags.effective()
 
-    # Per account (ADR-0414 §11B.4): a route whose feature a rule, kill switch or plan has
-    # switched off for this account is refused as the site's list says, 403 `flag_off` or
-    # `plan_required`, so the API and the page always agree. Added before the build guard, which
-    # therefore runs first and refuses a build-off feature without touching the database. Core,
-    # staff and admin features can't be targeted, and a request that isn't a signed-in account
-    # (a guest, a webhook, sign-up) goes on to its handler, which answers it as before. Rooms and
-    # playback gate each route themselves (`cloud_gate.require` in `rooms/api_host.py` and
-    # `playback/api.py`), on purpose leaving some reads open, such as a downgraded host's room.
+    # Per-account (ADR-0414): rules and plans gate routes with 403 `flag_off` or
+    # `plan_required`. The build guard runs first; core/staff and unauthenticated
+    # guest/webhook requests bypass account gating. Rooms and playback self-gate
+    # in their routers, preserving reads such as a downgraded host's existing room.
     self_gated = ("rooms", "devices")
 
     # A self-gated route (rooms and playback heartbeats, device polling) is refused or allowed
