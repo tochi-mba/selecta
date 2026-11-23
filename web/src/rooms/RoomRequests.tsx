@@ -21,6 +21,11 @@ import './rooms.css';
 
 type Row = { request: RequestRow; stage: Stage };
 const LEAVE_MS = 4000;
+/** The waits before each re-ask for the browser's list while an accepted request has no row in it. */
+export const MISSING_WAITS_MS = [0, 2000, 4000, 4000, 8000, 16000, 30000];
+/** After this many re-asks (ten seconds) a row stops saying "Getting ready". */
+export const STUCK_AFTER_ASKS = 4;
+export const NOT_HERE_YET = 'This request hasn’t reached this browser yet, so it can’t be added here. SelectaDJ keeps trying.';
 
 /** The browser's Requests list and what it can do with a row; null where there is no such list
  * (a workspace whose mix is not built in this browser): SelectaDJ places the songs itself. */
@@ -121,12 +126,25 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
   // has been read, its list is the only one, so every count and every list agree
   const loose = room ? [] : roomRows;
   const missing = !!mix && rows !== null && coming.some((ask) => !rowOf(ask));
-  const asked = useRef(0);
+  // An accepted request with no row in the browser's list yet: the list is asked for again at
+  // once, then after 2, 4 and 4 seconds, then ever less often up to every 30 seconds. "Getting
+  // ready" is only said for the first ten seconds; after that the row says plainly that the
+  // request has not reached this browser, with Try now and Dismiss, never a spinner for hours.
+  const [asks, setAsks] = useState(0);
+  const askAgain = useRef(onMissing);
+  askAgain.current = onMissing;
   useEffect(() => {
-    if (!missing || !onMissing || Date.now() - asked.current < 2000) return;
-    asked.current = Date.now();
-    onMissing();
-  });
+    if (!missing) {
+      if (asks) setAsks(0);
+      return undefined;
+    }
+    const timer = window.setTimeout(() => {
+      askAgain.current?.();
+      setAsks((count) => count + 1);
+    }, MISSING_WAITS_MS[Math.min(asks, MISSING_WAITS_MS.length - 1)]);
+    return () => window.clearTimeout(timer);
+  }, [missing, asks]);
+  const stuck = missing && asks >= STUCK_AFTER_ASKS;
 
   const latest = useRef(room);
   latest.current = room;
@@ -157,6 +175,9 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
     );
     // no list in this browser: SelectaDJ puts accepted songs in the mix on its own
     if (!mix) return { note: '', buttons: <>{<span className="ask-state">Joins the mix on its own</span>}{pass}</> };
+    if (!row && stuck) {
+      return { note: NOT_HERE_YET, buttons: <>{onMissing && <button type="button" aria-label={`Try now: ${title}`} onClick={() => onMissing()}>Try now</button>}{pass}</> };
+    }
     if (!row) return { note: '', buttons: <>{<span className="ask-state">{rows === null ? `Loading${ELLIPSIS}` : `Getting ready${ELLIPSIS}`}</span>}{rows !== null && pass}</> };
     const why = going[id] ? '' : held(row.request, row.stage);
     const dismiss = (
@@ -205,7 +226,8 @@ export function RoomRequests({ variant, mix, control, votes = false, off = false
         </Group>
       )}
       {(coming.length > 0 || loose.length > 0) && (
-        <Group title={mix ? 'Ready to add' : 'Accepted'} count={coming.length + loose.length}
+        // counted: what the host can act on now; a request still on its way says so in its own row
+        <Group title={mix ? 'Ready to add' : 'Accepted'} count={(mix && rows !== null ? coming.filter((ask) => rowOf(ask)).length : coming.length) + loose.length}
           help={!mix ? undefined : noMix ? 'No mix yet. Start one with a request, then add the others.' : mix.live ? 'Add next plays a song right after the current one.' : 'Add to mix puts a song at the end of your mix.'}>
           {coming.map((ask) => {
             const row = rowOf(ask);

@@ -41,7 +41,7 @@ import { EMPTY_MIX, localFirstRequest, mediaRequest, readCatalogue, type Availab
 import { RemoteListen } from '../devices/RemoteListen';
 import { useRemote } from '../devices/useRemote';
 import { ROOM_REQUEST_EVENT } from './localFirstRequests';
-import { askWords, roomLine, useRoomLive, useRoomSession, waitingCount, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
+import { addable, askWords, roomLine, useRoomLive, useRoomSession, waitingCount, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
 import { recipeStore } from './recipeStore';
 import { SavedBrowserMixes } from './SavedBrowserMixes';
 import { SoundCheck } from './SoundCheck';
@@ -523,6 +523,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   const room = useRoomSession({ api, workspaceId, enabled: roomsOn, onAsked });
   const roomWaiting = room ? room.toApprove : 0;
   const roomShown = useRoomLive();
+  // "N requests to add" counts only what the Requests list can add now; the rest are on the way
+  const roomAdd = roomShown && requestsOn ? addable(roomShown.coming, songRequests.requests) : { ready: room?.toAdd ?? 0, onTheWay: 0 };
   // a room that opened or closed changes which requests wait: a closed room's leave the list and the count
   const openRoomNow = room?.id;
   useEffect(() => { if (requestsOn) void refreshRoomRequests.current?.(); }, [openRoomNow, requestsOn]);
@@ -663,7 +665,8 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
             <b>{roomLine(room)}</b>
             <span>{countOf(room.guestsHere, 'guest')} here</span>
             {roomWaiting > 0 && <span className="room-open-waiting">{countOf(roomWaiting, 'request')} to approve</span>}
-            {room.toAdd > 0 && <span className="room-open-waiting">{countOf(room.toAdd, 'request')} to add</span>}
+            {roomAdd.ready > 0 && <span className="room-open-waiting">{countOf(roomAdd.ready, 'request')} to add</span>}
+            {roomAdd.onTheWay > 0 && <span className="room-open-waiting">{countOf(roomAdd.onTheWay, 'request')} on the way</span>}
           </a>
         ) : undefined}
         banner={<>{offlineShell && <ConnectionBanner plays={on('cloud.offline_playback')} cachedAt={servedFrom ? servedFrom.at : undefined} signedOutOffline={offlineReadOnly} />}{notices}{on('cloud.offline_playback') && playback.offlineNotice && playback.offlineNotice !== takeoverSeen && <p className="warn" role="alert">{playback.offlineNotice} <button onClick={() => setTakeoverSeen(playback.offlineNotice)}>Dismiss</button></p>}{on('devices.remote_control') && playback.view?.speaker !== 'here' && <ControllerNotices notices={playback.view?.notices} speakerName={playback.view?.speaker_name ?? null} session={playback.view?.session ?? null} send={(name, args) => { void playback.command(name, args); }} />}{on('cloud.progressive_import') && <ImportChip workspaceId={workspaceId} onView={() => navigate('/workshop')} />}{isHostedAccount(account) && <CutoverNotice accountId={account.user.id} />}{feedback}</>}
