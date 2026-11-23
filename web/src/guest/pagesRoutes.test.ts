@@ -33,15 +33,6 @@ describe('Cloudflare Pages dedicated entry-point routes', () => {
     }
   });
 
-  it('rejects .html canonicalization on display and kiosk too', () => {
-    for (const entry of ['display', 'kiosk']) {
-      const wrong = rules.replace(`/${entry} /${entry} 200`, `/${entry} /${entry}.html 200`);
-      expect(validatePagesRedirects(wrong)).toContain(
-        `Missing required Cloudflare rewrite: /${entry} /${entry} 200`,
-      );
-    }
-  });
-
   it('fails missing publish assets, and accepts a complete output directory', () => {
     const directory = mkdtempSync(join(tmpdir(), 'selecta-pages-'));
     try {

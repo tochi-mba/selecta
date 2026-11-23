@@ -15,12 +15,13 @@ These are Cloudflare Pages HTTP 200 **internal proxies**: the guest URL must rem
 `/r/CODE` so `guest/main.ts` can read the room code from `location.pathname`.
 Guests do not need sign-in; the API handles their scoped HttpOnly cookie.
 
-**Use the extensionless targets in `web/public/_redirects`: `/guest`,
-`/display` and `/kiosk`, not `.html` targets.** Cloudflare Pages automatically
-redirects a direct request for `/guest.html` to canonical `/guest`. If an
-internal rewrite exposes that redirect, the browser leaves `/r/CODE` and the
-guest script shows "No room code" even though the QR and text link are correct.
-The source paths stay `/r/:code`, and `200` must not be changed to a 3xx.
+**The guest route must proxy to the extensionless `/guest` target, not
+`/guest.html`.** Cloudflare Pages automatically redirects a direct request for
+`/guest.html` to canonical `/guest`. If an internal rewrite exposes that
+redirect, the browser leaves `/r/CODE` and the guest script shows "No room
+code" even though the QR and text link are correct. The source path must stay
+`/r/:code`, and `200` must not change to a 3xx. The display/kiosk rewrite
+targets are unchanged by this room-link fix.
 
 ## Build and regression checks
 

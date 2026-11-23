@@ -3,14 +3,14 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const PAGE_ENTRIES = ['index.html', 'guest.html', 'display.html', 'kiosk.html'] as const;
-// Pages canonicalises /guest.html to /guest. Proxying to the .html path can turn
-// an internal 200 rewrite into an external redirect, discarding /r/:code.
-// Use the canonical extensionless asset URLs for every dedicated page.
+// Pages canonicalises /guest.html to /guest. Proxying the room code to .html can
+// turn an internal rewrite into an external redirect, discarding /r/:code.
+// The other dedicated-page rules remain unchanged in this targeted fix.
 const REWRITES = [
-  ['/display', '/display'],
-  ['/display/', '/display'],
-  ['/kiosk', '/kiosk'],
-  ['/kiosk/', '/kiosk'],
+  ['/display', '/display.html'],
+  ['/display/', '/display.html'],
+  ['/kiosk', '/kiosk.html'],
+  ['/kiosk/', '/kiosk.html'],
   ['/r/:code', '/guest'],
   ['/r/:code/', '/guest'],
 ] as const;

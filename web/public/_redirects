@@ -1,9 +1,9 @@
 # Cloudflare Pages internal 200 proxies: keep /r/CODE visible in the address bar.
-# Rewrite to extensionless (canonical) Pages asset routes, NOT .html paths:
-# Pages' automatic .html -> extensionless redirect otherwise loses the room code.
-/display /display 200
-/display/ /display 200
-/kiosk /kiosk 200
-/kiosk/ /kiosk 200
+# Only the room route needs a new target: Pages canonicalizes /guest.html -> /guest.
+# Keep display and kiosk rewrites unchanged; this PR fixes room-code loss.
+/display /display.html 200
+/display/ /display.html 200
+/kiosk /kiosk.html 200
+/kiosk/ /kiosk.html 200
 /r/:code /guest 200
 /r/:code/ /guest 200
