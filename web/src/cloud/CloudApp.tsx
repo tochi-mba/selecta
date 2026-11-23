@@ -197,6 +197,8 @@ export function CloudApp() {
   const busy = (operation: Operation) => running.has(operation);
 
   const [signInAgain, setSignInAgain] = useState(false);
+  // how many times in a row AuthKit had a user but no token, and the timer for the next try
+  const loginTries = useRef(0);
   const loginRetry = useRef(0);
   useEffect(() => () => window.clearTimeout(loginRetry.current), []);
   const refreshAccount = useCallback(async (): Promise<void> => {
@@ -209,7 +211,7 @@ export function CloudApp() {
       setNeedsOnboarding(false);
       setProblem(null);
       setSignInAgain(false);
-      loginRetry.current = 0;
+      loginTries.current = 0;
       if (flagOn(OFFLINE_SHELL)) rememberAccount(user.id, next);
     } catch (problem) {
       // During the sign-in redirect AuthKit can report a user a moment before it holds a token.
@@ -217,8 +219,17 @@ export function CloudApp() {
       // If it still has no token a moment later, the sign-in has lapsed: say so and offer one
       // way back. Nothing on this device is cleared (songs, mixes, the import journal).
       if (problem instanceof LoginRequiredError) {
-        if (loginRetry.current) { setSignInAgain(true); return; }
-        loginRetry.current = window.setTimeout(() => void refreshAccount(), 1500);
+        // A slow phone connection can take several seconds to finish the sign-in, so try a few
+        // times over about ten seconds before saying the sign-in ended.
+        const waits = [1500, 3000, 6000];
+        if (loginTries.current >= waits.length) {
+          console.warn('SelectaDJ: AuthKit reports a user but no token after retries; asking to sign in again.');
+          setSignInAgain(true);
+          return;
+        }
+        window.clearTimeout(loginRetry.current);
+        loginRetry.current = window.setTimeout(() => void refreshAccount(), waits[loginTries.current]);
+        loginTries.current += 1;
         return;
       }
       // Offline or the service down (`cloud.offline_shell`): keep the account already shown, or
