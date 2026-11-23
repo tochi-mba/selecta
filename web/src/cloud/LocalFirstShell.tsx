@@ -40,6 +40,7 @@ import { BROWSER_MIX_NEEDS } from './localFirstMixes';
 import { EMPTY_MIX, localFirstRequest, mediaRequest, readCatalogue, type AvailabilitySources } from './localFirstRequest';
 import { RemoteListen } from '../devices/RemoteListen';
 import { useRemote } from '../devices/useRemote';
+import { sameProgramme } from '../devices/remoteNow';
 import { ROOM_REQUEST_EVENT } from './localFirstRequests';
 import { addable, askWords, roomLine, useRoomLive, useRoomSession, waitingCount, ROOM_EVENT, type AskKind, type RoomAsk } from '../rooms/useRoomSession';
 import { recipeStore } from './recipeStore';
@@ -110,6 +111,9 @@ function browserFlags(browserHarmonic: boolean): Record<string, boolean> {
 
 const VIEW_PATHS: Record<View, string> = { Mixes: '/mixes', Now: '/listen', Edit: '/mix/current/edit', Library: '/library', Words: '/discover', Workshop: '/workshop' };
 const IDLE = (): void => {};
+const NO_SONGS: readonly number[] = [];
+/** How long the speaker waits before telling the session its programme again after a refusal. */
+const PUBLISH_RETRY_MS = 10_000;
 const AVAILABILITY_REFRESH_MS = 12 * 60 * 60 * 1000;
 
 export function LocalFirstShell({ api, account, more, notices, feedback, onSignOut, offlineReadOnly = false }: {
@@ -373,7 +377,10 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
   // devices.remote_control: a device that is not the speaker, and does not hold the mix that is
   // playing, steers it from Listen and the mini player (devices/useRemote.ts); null otherwise
   const loadRemoteSongs = useCallback(() => readCatalogue(cloud), [cloud]);
-  const remote = useRemote({ remoteControl: on('devices.remote_control'), device: playback, mixSongIds: songOrder, loadSongs: loadRemoteSongs });
+  // A device with none of its music chosen cannot follow the mix itself, even when the account's
+  // current mix is the very one that is playing: it is a remote too.
+  const followsHere = (status?.counts.ready ?? 0) > 0;
+  const remote = useRemote({ remoteControl: on('devices.remote_control'), device: playback, mixSongIds: followsHere ? songOrder : NO_SONGS, loadSongs: loadRemoteSongs });
   useSplitterNotices(stems.store, (words) => showToast(words));
   const resolveTrack = useCallback<MediaResolver>(async (songId) => (await resolver())?.(songId) ?? null, [resolver]);
   // Harmonic matches read only this device's own files (never a hosted copy), to measure and to
@@ -431,6 +438,24 @@ export function LocalFirstShell({ api, account, more, notices, feedback, onSignO
     },
   }), [player]);
   const [now, setNow] = useState<NowState>(player.state);
+  // devices.remote_control: while this device is the speaker it tells the session which songs it
+  // is playing, in order, whenever that changes (a new mix, a request added, a reorder). Without
+  // this the session has no programme and another device has nothing to show or steer.
+  const publishProgramme = playback.publishProgramme;
+  const sessionNow = playback.view?.speaker === 'here' ? playback.view.session : null;
+  const published = useRef({ key: '', at: 0 });
+  const remoteControlOn = on('devices.remote_control');
+  const audible = now.phase !== 'idle';
+  const playingAt = now.position;
+  useEffect(() => {
+    if (!remoteControlOn || !sessionNow || !audible || !songOrder.length) return;
+    if (sameProgramme(sessionNow.programme ?? [], songOrder)) return;
+    // one try per programme and ownership; again after a pause if the session still lacks it
+    const key = `${sessionNow.fence ?? ''}:${songOrder.join(',')}`;
+    if (published.current.key === key && Date.now() - published.current.at < PUBLISH_RETRY_MS) return;
+    published.current = { key, at: Date.now() };
+    void publishProgramme(songOrder, playingAt);
+  }, [audible, playingAt, publishProgramme, remoteControlOn, sessionNow, songOrder]);
   useEffect(() => {
     player.onChange = setNow;
     setNow(player.state);
