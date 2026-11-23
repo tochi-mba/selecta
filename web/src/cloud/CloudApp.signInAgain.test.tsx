@@ -28,16 +28,22 @@ vi.mock('@workos-inc/authkit-react', () => ({
   }),
 }));
 
-const { CloudApp } = await import('./CloudApp');
+const { CloudApp, SIGN_IN_TIMING } = await import('./CloudApp');
+const REAL_TIMING = { ...SIGN_IN_TIMING };
+/** The same rules on a short clock, so the tests take moments and never race a real ten seconds. */
+const FAST = { waits: [20, 30, 40], patienceMs: 400, openRetryMs: 40, healFirstMs: 60, healMaxMs: 200 };
+/** Long enough that it never fires in a test: what is being tested is the other way out. */
+const NEVER = 600_000;
 const { configureConnection } = await import('./connection');
 const { AUTH_TRAIL_KEY, noteAuthProblem, noteSessionEnded, resetAuthTrail, sessionEnded } = await import('./authTrail');
 
 let account: Account;
 const SCREEN = { name: 'Sign in again to carry on' };
-const shown = () => screen.findByRole('heading', SCREEN, { timeout: 15_000 });
+const shown = () => screen.findByRole('heading', SCREEN, { timeout: 5_000 });
 const gone = () => waitFor(() => expect(screen.queryByRole('heading', SCREEN)).toBeNull(), { timeout: 5_000 });
 
 beforeEach(() => {
+  Object.assign(SIGN_IN_TIMING, FAST);
   configureConnection({ reset: true });
   resetAuthTrail();
   sessionStorage.clear();
@@ -55,10 +61,11 @@ beforeEach(() => {
   }));
 });
 
-afterEach(() => { vi.restoreAllMocks(); });
+afterEach(() => { Object.assign(SIGN_IN_TIMING, REAL_TIMING); vi.restoreAllMocks(); });
 
 describe('Sign in again, when AuthKit has a user but no token', () => {
   it('goes away by itself when the token is back and the window gets focus', async () => {
+    Object.assign(SIGN_IN_TIMING, { healFirstMs: NEVER, healMaxMs: NEVER });
     auth.state.tokens = false;
     render(<CloudApp />);
     await shown();
@@ -66,28 +73,30 @@ describe('Sign in again, when AuthKit has a user but no token', () => {
     window.dispatchEvent(new Event('focus'));
     await gone();
     expect(auth.state.signIn).not.toHaveBeenCalled();
-  }, 30_000);
+  }, 15_000);
 
   it('goes away by itself on its own timer, with nothing pressed', async () => {
     auth.state.tokens = false;
     render(<CloudApp />);
     await shown();
     auth.state.tokens = true;
-    // the first quiet ask comes about three seconds after the screen appears
-    await waitFor(() => expect(screen.queryByRole('heading', SCREEN)).toBeNull(), { timeout: 8_000 });
+    // nothing is pressed and nothing happens to the window: the screen's own timer asks
+    await gone();
     expect(auth.state.signIn).not.toHaveBeenCalled();
-  }, 30_000);
+  }, 15_000);
 
   it('asks again when another tab stores a new AuthKit refresh token', async () => {
+    Object.assign(SIGN_IN_TIMING, { healFirstMs: NEVER, healMaxMs: NEVER });
     auth.state.tokens = false;
     render(<CloudApp />);
     await shown();
     auth.state.tokens = true;
     window.dispatchEvent(new StorageEvent('storage', { key: 'workos:refresh-token:client_1', newValue: 'x' }));
     await gone();
-  }, 30_000);
+  }, 15_000);
 
   it('the button tries quietly first: a token that is back opens the app with no redirect', async () => {
+    Object.assign(SIGN_IN_TIMING, { healFirstMs: NEVER, healMaxMs: NEVER });
     auth.state.tokens = false;
     render(<CloudApp />);
     await shown();
@@ -95,7 +104,7 @@ describe('Sign in again, when AuthKit has a user but no token', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Sign in again' }));
     await gone();
     expect(auth.state.signIn).not.toHaveBeenCalled();
-  }, 30_000);
+  }, 15_000);
 
   it('the button starts the sign-in only when AuthKit still says one is needed', async () => {
     auth.state.tokens = false;
@@ -103,9 +112,10 @@ describe('Sign in again, when AuthKit has a user but no token', () => {
     await shown();
     await userEvent.click(screen.getByRole('button', { name: 'Sign in again' }));
     await waitFor(() => expect(auth.state.signIn).toHaveBeenCalledTimes(1));
-  }, 30_000);
+  }, 15_000);
 
   it('a page that is open is not replaced for a short miss, and says it is renewing', async () => {
+    Object.assign(SIGN_IN_TIMING, { patienceMs: NEVER });
     const view = render(<CloudApp />);
     await screen.findByRole('heading', { level: 1 });
     auth.state.tokens = false;
@@ -115,13 +125,27 @@ describe('Sign in again, when AuthKit has a user but no token', () => {
     auth.state.user = { ...SIGNED_IN };
     view.rerender(<CloudApp />);
     await waitFor(() => expect(auth.state.asked).toBeGreaterThan(before), { timeout: 10_000 });
-    // the quiet line shows from the second miss, about a second and a half later
+    // the quiet line shows from the second miss
     expect(await screen.findByText(/Renewing your sign-in/, undefined, { timeout: 8_000 })).toBeInTheDocument();
     expect(screen.queryByRole('heading', SCREEN)).toBeNull();
     auth.state.tokens = true;
     await waitFor(() => expect(screen.queryByText(/Renewing your sign-in/)).toBeNull(), { timeout: 10_000 });
     expect(screen.queryByRole('heading', SCREEN)).toBeNull();
-  }, 40_000);
+  }, 20_000);
+});
+
+describe('a miss that lasts', () => {
+  it('replaces a page that is open only once the miss has outlasted the patience', async () => {
+    const view = render(<CloudApp />);
+    await screen.findByRole('heading', { level: 1 });
+    auth.state.tokens = false;
+    auth.state.user = { ...SIGNED_IN };
+    view.rerender(<CloudApp />);
+    // the first tries are spent in under 100 ms here, and the page is still up after them
+    await new Promise((settle) => setTimeout(settle, 200));
+    expect(screen.queryByRole('heading', SCREEN)).toBeNull();
+    await shown();
+  }, 15_000);
 });
 
 describe('the sign-in trail', () => {

@@ -120,7 +120,7 @@ describe('the Cloud app', () => {
     window.history.replaceState({}, '', '/account');
     render(<CloudApp />);
     expect(await screen.findByRole('button', { name: 'Download my data' })).toBeInTheDocument();
-    expect(await screen.findByRole('heading', { name: 'Lucy Basic' })).toBeInTheDocument();
+    expect(await screen.findByText('Lucy Basic')).toBeInTheDocument();
     expect(requests).toContain('GET /api/account/lucy');
   });
 
@@ -197,7 +197,7 @@ describe('the Cloud app', () => {
   it('shows no sign-in problem on a plain visit', async () => {
     auth.user = null;
     render(<CloudApp />);
-    expect(await screen.findByRole('heading', { name: 'Your music, ready to move.' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: /^Your\s*music,\s*mixed\s*seamlessly\.$/ })).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 

@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { setFlags } from '../flags';
 import { cloudAccount } from '../test/cloudAccount';
 import type { Account } from './api';
@@ -29,7 +29,7 @@ vi.mock('@workos-inc/authkit-react', () => ({
   }),
 }));
 
-const { CloudApp } = await import('./CloudApp');
+const { CloudApp, SIGN_IN_TIMING } = await import('./CloudApp');
 const { configureConnection, reportOffline } = await import('./connection');
 const { rememberAccount, rememberedAccount } = await import('./offlineCache');
 const { importMarkerKey } = await import('./importSession');
@@ -91,8 +91,9 @@ describe('CloudApp offline and after a sign-in ends', () => {
     offline = true;
     act(() => reportOffline());
     render(<CloudApp />);
-    expect(await screen.findByText(/you’ll be signed in again when the connection is back/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Create your account' })).toBeNull();
+    // the shell is its own chunk: it arrives a moment after the first drawing
+    expect(await screen.findByText(/you’ll be signed in again when the connection is back/, undefined, { timeout: 15_000 })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Create account' })).toBeNull();
   });
 
   it('opened offline with no sign-in: any other account waits on a plain page that opens by itself', async () => {
@@ -110,16 +111,20 @@ describe('CloudApp offline and after a sign-in ends', () => {
     offline = true;
     act(() => reportOffline());
     render(<CloudApp />);
-    expect(await screen.findByRole('button', { name: 'Create your account' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Create account' })).toBeInTheDocument();
   });
 
   it('a sign-in that ended says so, keeps everything, and says the import is kept', async () => {
     // AuthKit keeps saying a sign-in is needed, so the button's quiet try fails and it redirects
     auth.state.noTokenFor = Number.POSITIVE_INFINITY;
+    // the real waits add up to ten seconds; the same rule on a short clock
+    const real = { ...SIGN_IN_TIMING };
+    Object.assign(SIGN_IN_TIMING, { waits: [20, 30, 40], healFirstMs: 600_000 });
+    onTestFinished(() => { Object.assign(SIGN_IN_TIMING, real); });
     localStorage.setItem(importMarkerKey('ws-1'), JSON.stringify({ version: 1, folder: 'Music', startedAt: 1, total: 9, registered: 3, kept: true }));
     render(<CloudApp />);
     expect(await screen.findByRole('heading', { name: 'Sign in again to carry on' }, { timeout: 4_000 })).toBeInTheDocument();
-    expect(screen.getByText(/any import in progress, which carries on after you sign in/)).toBeInTheDocument();
+    expect(screen.getByText(/Your songs, your mixes and any import in progress are kept on this device./)).toBeInTheDocument();
     expect(localStorage.getItem(importMarkerKey('ws-1'))).not.toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Sign in again' }));
     await waitFor(() => expect(auth.state.signIn).toHaveBeenCalled());
